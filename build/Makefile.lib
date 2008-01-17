@@ -1,0 +1,93 @@
+#####################################################################
+# Variables for Lib
+#
+
+# Add directories contained in DIRECTORIES to INCLUDE list.
+INCLUDES_LIST = $(DIRECTORIES_LIB) $(INCLUDES_LIB)
+INCLUDES = $(patsubst %,-I$(SRC)/%,$(INCLUDES_LIST))
+
+# Get ready to add command-line arguments
+CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
+
+# Add any definitions in directory.mk files inside DIRECTORIES list.
+include $(patsubst %,$(SRC)/%/directory.mk,$(DIRECTORIES_LIB))
+
+# List of objects to be built.
+OBJECTS := objects-lib/
+
+COBJ   += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC_LIB)))
+CXXOBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC_LIB)))
+ASMOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC_LIB)))
+ASMOBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC_LIB)))
+
+BARE_COBJ := $(patsubst $(OBJECTS)/%, %, $(COBJ))
+BARE_CXXOBJ := $(patsubst $(OBJECTS)/%, %, $(CXXOBJ))
+BARE_ASMOBJ := $(patsubst $(OBJECTS)/%, %, $(ASMOBJ))
+
+BUILD := $(shell pwd)
+
+# colorgcc support
+CC=$(BUILD)/gcc
+CXX=$(BUILD)/g++
+
+all: lib
+	@echo "*** Lib built successfully."
+
+lib: $(COBJ) $(CXXOBJ) $(ASMOBJ)
+#	Link
+ifndef LOUD
+	@echo "[lib]"
+else
+	@echo "copy and expand"
+endif
+	@mkdir $(OBJECTS)/tmp
+	@cd $(OBJECTS)/tmp; \
+	ar x ../../$(SRC)/lib/newlib-1.15.0-i586-elf-libc.a
+	@cd $(OBJECTS); \
+	cp $(BARE_COBJ) $(BARE_CXXOBJ) $(BARE_ASMOBJ) tmp/
+	@cd $(OBJECTS)/tmp; \
+	ar cru $(BUILD)/libc.a *.o
+	@ranlib libc.a
+	@rm -Rf $(OBJECTS)/tmp
+	@cp $(SRC)/lib/newlib-1.15.0-i586-elf-libm.a libm.a
+	@cp $(SRC)/lib/newlib-1.15.0-i586-elf-libg.a libg.a
+	@cp $(OBJECTS)/lib/crt0.o crt0.o
+
+$(OBJECTS):
+	@for NAME in ${DIRECTORIES_LIB} ;\
+	do mkdir -p $(OBJECTS)/$$NAME ;\
+	done
+
+$(OBJECTS)%.o: $(SRC)%.c $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.cc $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.S $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; nasm -felf -o $@ tmp.o; rm tmp.o"
+endif
+	@$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o
+	@nasm -felf -o $@ tmp.o
+	@rm tmp.o
+
+$(OBJECTS)%.o: $(SRC)%.s $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo nasm -felf -o $@ $<
+endif
+	@nasm -felf -o $@ $<

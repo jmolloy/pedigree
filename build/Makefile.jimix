@@ -1,0 +1,83 @@
+#####################################################################
+# Variables for Jimix
+#
+
+# Add directories contained in DIRECTORIES to INCLUDE list.
+INCLUDES = $(patsubst %,-I$(SRC)/%,$(DIRECTORIES))
+
+# Get ready to add command-line arguments
+CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
+
+# Add any definitions in directory.mk files inside DIRECTORIES list.
+include $(patsubst %,$(SRC)/%/directory.mk,$(DIRECTORIES))
+
+# List of objects to be built.
+OBJECTS := objects-jimix/
+
+COBJ   += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC)))
+CXXOBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC)))
+ASMOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC)))
+ASMOBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC)))
+FIRSTOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(FIRSTSRC)))
+
+BARE_COBJ := $(patsubst $(OBJECTS)/%, %, $(COBJ))
+BARE_CXXOBJ := $(patsubst $(OBJECTS)/%, %, $(CXXOBJ))
+BARE_ASMOBJ := $(patsubst $(OBJECTS)/%, %, $(ASMOBJ))
+BARE_FIRSTOBJ := $(patsubst $(OBJECTS)/%, %, $(FIRSTOBJ))
+
+BUILD := $(shell pwd)
+
+# colorgcc support
+CC=$(BUILD)/gcc
+CXX=$(BUILD)/g++
+
+all: kernel
+	@echo "*** Jimix built successfully."
+
+kernel: $(FIRSTOBJ) $(COBJ) $(CXXOBJ) $(ASMOBJ)
+#	Link
+ifndef LOUD
+	@echo "[kernel]"
+else
+	@echo "cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel .$(BARE_COBJ) .$(BARE_CXXOBJ) .$(BARE_ASMOBJ)"
+endif
+	@cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel $(BARE_FIRSTOBJ) $(BARE_COBJ) $(BARE_CXXOBJ) $(BARE_ASMOBJ)
+
+$(OBJECTS):
+	@for NAME in ${DIRECTORIES} ;\
+	do mkdir -p $(OBJECTS)/$$NAME ;\
+	done
+
+$(OBJECTS)%.o: $(SRC)%.c $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.cc $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.S $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; nasm -felf -o $@ tmp.o; rm tmp.o"
+endif
+	@$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o
+	@nasm -felf -o $@ tmp.o
+	@rm tmp.o
+
+$(OBJECTS)%.o: $(SRC)%.s $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo nasm -felf -o $@ $<
+endif
+	@nasm -felf -o $@ $<
