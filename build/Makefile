@@ -4,35 +4,53 @@ SILENTFLAG := -s
 endif
 
 COMMAND_LINE_FLAGS = $(MAKEFLAGS)
-SRC = ../src
+SRC = ..
 INCLUDES=
 
-# Cos eclipse is stupid.
-PATH += :/usr/jimix/bin
-export PATH
+include $(SRC)/modules/directory.mk
+
+CC=i686-elf-cc
+CXX=i686-elf-g++
+CPP=i686-elf-cpp
+AS=nasm
+CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
+CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
+LDFLAGS=
+ASFLAGS=-felf
 
 export COMMAND_LINE_FLAGS
 export SILENTFLAG
 export SRC
 export INCLUDES
+export CC
+export CXX
+export CPP
+export AS
+export CFLAGS
+export CXXFLAGS
+export LDFLAGS
+export ASFLAGS
 
-all: x86
+all: modules
 
-x86:
-	$(MAKE) $(SILENTFLAG) -f Makefile.x86
+bootstrap:
+	$(MAKE) $(SILENTFLAG) -f Makefile.bootstrap
+
+kernel:
+	$(MAKE) $(SILENTFLAG) -f Makefile.kernel
+
+modules:
+	@for NAME in ${MODULES} ; \
+	do export MODULE=$$NAME; \
+	$(MAKE) $(SILENTFLAG) -f Makefile.modules; \
+	done
 
 clean:
-	-@rm -Rf objects-jimix
-	-@rm -Rf objects-lib
-	-@rm libc.a libm.a libg.a kernel
-	-cd ../initrd/ && $(MAKE) clean
+	-@rm -Rf objects-kernel
+	-@rm -Rf objects-bootstrap
+	-@rm kernel bootstrap
+	-@for NAME in ${MODULES} ; \
+	do rm -Rf objects-modules-$$NAME;\
+	rm $$NAME; \
+	done
 
-bochs: x86
-	cd ../../scripts && \
-	./update_image.sh ../jimix/build/kernel ../jimix/initrd/initrd.img ../images/floppy.img && \
-	./run_bochs.sh ../images/floppy.img
-
-qemu: all
-	cd ../../scripts && \
-	./update_image.sh ../jimix/build/kernel ../jimix/initrd/initrd.img ../images/floppy.img && \
-	./run_qemu.sh ../images/floppy.img ../images/hdd_16h_63spt_100c

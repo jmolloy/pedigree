@@ -1,0 +1,72 @@
+#####################################################################
+# Makefile to build a module. The module name is passed in $(MODULE).
+
+# Add directories contained in DIRECTORIES to INCLUDE list.
+INCLUDES += -I$(SRC)/modules/$(MODULE)
+
+# Get ready to add command-line arguments.
+CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
+
+# Add any definitions in directory.mk files inside DIRECTORIES list.
+include $(SRC)/modules/$(MODULE)/directory.mk
+
+# List of objects to be built.
+OBJECTS := objects-modules-$(MODULE)/
+
+OBJ += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC)))
+OBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC)))
+OBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC)))
+OBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC)))
+
+BARE_OBJ := $(patsubst $(OBJECTS)/%, %, $(OBJ))
+
+BUILD := $(shell pwd)
+
+all: module
+	@echo "*** Module $(MODULE) built successfully."
+
+module: $(OBJ) $(OBJECTS)
+# Link
+ifndef LOUD
+	@echo "[$(MODULE)]"
+else
+	@echo "cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/$(MODULE) $(BARE_OBJ)"
+endif
+	@cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/$(MODULE) $(BARE_OBJ)
+
+$(OBJECTS):
+	mkdir -p $(OBJECTS)
+
+$(OBJECTS)%.o: $(SRC)%.c $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.cc $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+endif
+	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJECTS)%.o: $(SRC)%.S $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; $(AS) $(ASFLAGS) -o $@ tmp.o; rm tmp.o"
+endif
+	@$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o
+	@$(AS) $(ASFLAGS) -o $@ tmp.o
+	@rm tmp.o
+
+$(OBJECTS)%.o: $(SRC)%.s $(OBJECTS)
+ifndef LOUD
+	@echo "[$(@F)]"
+else
+	@echo $(AS) $(ASFLAGS) -o $@ $<
+endif
+	@$(AS) $(ASFLAGS) -o $@ $<
