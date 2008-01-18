@@ -1,0 +1,1 @@
+CXX += main.cc

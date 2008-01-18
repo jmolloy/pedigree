@@ -1,51 +1,51 @@
-#####################################################################
-# Variables for Jimix
-#
+###################################################################
+# \author James Molloy
+# \date   18-Jan-2008
+
+# All source directories for the bootstrapper.
+DIRECTORIES = kernel/ \
+              kernel/debugger \
+              kernel/fs \
+              kernel/memory \
+              kernel/process \
+              kernel/machine
 
 # Add directories contained in DIRECTORIES to INCLUDE list.
 INCLUDES = $(patsubst %,-I$(SRC)/%,$(DIRECTORIES))
 
-# Get ready to add command-line arguments
+# Get ready to add command-line arguments.
 CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
 
 # Add any definitions in directory.mk files inside DIRECTORIES list.
-include $(patsubst %,$(SRC)/%/directory.mk,$(DIRECTORIES))
+include $(patsubst %, $(SRC)/modules/$(MODULE)/directory.mk, $(DIRECTORIES))
+
+OBJECTS := objects-kernel/
 
 # List of objects to be built.
-OBJECTS := objects-jimix/
+OBJ += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC)))
+OBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC)))
+OBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC)))
+OBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC)))
 
-COBJ   += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC)))
-CXXOBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC)))
-ASMOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC)))
-ASMOBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC)))
-FIRSTOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(FIRSTSRC)))
-
-BARE_COBJ := $(patsubst $(OBJECTS)/%, %, $(COBJ))
-BARE_CXXOBJ := $(patsubst $(OBJECTS)/%, %, $(CXXOBJ))
-BARE_ASMOBJ := $(patsubst $(OBJECTS)/%, %, $(ASMOBJ))
-BARE_FIRSTOBJ := $(patsubst $(OBJECTS)/%, %, $(FIRSTOBJ))
+BARE_OBJ := $(patsubst $(OBJECTS)/%, %, $(OBJ))
 
 BUILD := $(shell pwd)
 
-# colorgcc support
-CC=$(BUILD)/gcc
-CXX=$(BUILD)/g++
+all: module
+	@echo "*** Kernel built successfully."
 
-all: kernel
-	@echo "*** Jimix built successfully."
-
-kernel: $(FIRSTOBJ) $(COBJ) $(CXXOBJ) $(ASMOBJ)
-#	Link
+module: $(OBJ) $(OBJECTS)
+# Link
 ifndef LOUD
 	@echo "[kernel]"
 else
-	@echo "cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel .$(BARE_COBJ) .$(BARE_CXXOBJ) .$(BARE_ASMOBJ)"
+	@echo "cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel $(BARE_OBJ)"
 endif
-	@cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel $(BARE_FIRSTOBJ) $(BARE_COBJ) $(BARE_CXXOBJ) $(BARE_ASMOBJ)
+	@cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/kernel $(BARE_OBJ)
 
 $(OBJECTS):
-	@for NAME in ${DIRECTORIES} ;\
-	do mkdir -p $(OBJECTS)/$$NAME ;\
+	@for NAME in ${DIRECTORIES}; \
+	do mkdir -p $(OBJECTS)/$$NAME; \
 	done
 
 $(OBJECTS)%.o: $(SRC)%.c $(OBJECTS)
@@ -68,16 +68,16 @@ $(OBJECTS)%.o: $(SRC)%.S $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; nasm -felf -o $@ tmp.o; rm tmp.o"
+	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; $(AS) $(ASFLAGS) -o $@ tmp.o; rm tmp.o"
 endif
 	@$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o
-	@nasm -felf -o $@ tmp.o
+	@$(AS) $(ASFLAGS) -o $@ tmp.o
 	@rm tmp.o
 
 $(OBJECTS)%.o: $(SRC)%.s $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo nasm -felf -o $@ $<
+	@echo $(AS) $(ASFLAGS) -o $@ $<
 endif
-	@nasm -felf -o $@ $<
+	@$(AS) $(ASFLAGS) -o $@ $<

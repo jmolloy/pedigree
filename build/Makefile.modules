@@ -1,7 +1,8 @@
 #####################################################################
 # Makefile to build a module. The module name is passed in $(MODULE).
+# \author James Molloy
+# \date   18-Jan-2008
 
-# Add directories contained in DIRECTORIES to INCLUDE list.
 INCLUDES += -I$(SRC)/modules/$(MODULE)
 
 # Get ready to add command-line arguments.

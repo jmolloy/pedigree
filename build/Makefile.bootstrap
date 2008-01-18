@@ -1,61 +1,46 @@
-#####################################################################
-# Variables for Lib
-#
+###################################################################
+# \author James Molloy
+# \date   18-Jan-2008
+
+# All source directories for the bootstrapper.
+DIRECTORIES = bootstrap/
 
 # Add directories contained in DIRECTORIES to INCLUDE list.
-INCLUDES_LIST = $(DIRECTORIES_LIB) $(INCLUDES_LIB)
-INCLUDES = $(patsubst %,-I$(SRC)/%,$(INCLUDES_LIST))
+INCLUDES = $(patsubst %,-I$(SRC)/%,$(DIRECTORIES))
 
-# Get ready to add command-line arguments
+# Get ready to add command-line arguments.
 CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
 
 # Add any definitions in directory.mk files inside DIRECTORIES list.
-include $(patsubst %,$(SRC)/%/directory.mk,$(DIRECTORIES_LIB))
+include $(patsubst %, $(SRC)/modules/$(MODULE)/directory.mk, $(DIRECTORIES))
+
+OBJECTS := objects-bootstrap/
 
 # List of objects to be built.
-OBJECTS := objects-lib/
+OBJ += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC)))
+OBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC)))
+OBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC)))
+OBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC)))
 
-COBJ   += $(patsubst $(SRC)%.c,$(OBJECTS)%.o,$(filter %.c,$(CSRC_LIB)))
-CXXOBJ += $(patsubst $(SRC)%.cc,$(OBJECTS)%.o,$(filter %.cc,$(CXXSRC_LIB)))
-ASMOBJ += $(patsubst $(SRC)%.s,$(OBJECTS)%.o,$(filter %.s,$(ASMSRC_LIB)))
-ASMOBJ += $(patsubst $(SRC)%.S,$(OBJECTS)%.o,$(filter %.S,$(ASMSRC_LIB)))
-
-BARE_COBJ := $(patsubst $(OBJECTS)/%, %, $(COBJ))
-BARE_CXXOBJ := $(patsubst $(OBJECTS)/%, %, $(CXXOBJ))
-BARE_ASMOBJ := $(patsubst $(OBJECTS)/%, %, $(ASMOBJ))
+BARE_OBJ := $(patsubst $(OBJECTS)/%, %, $(OBJ))
 
 BUILD := $(shell pwd)
 
-# colorgcc support
-CC=$(BUILD)/gcc
-CXX=$(BUILD)/g++
+all: module
+	@echo "*** Bootstrapper built successfully."
 
-all: lib
-	@echo "*** Lib built successfully."
-
-lib: $(COBJ) $(CXXOBJ) $(ASMOBJ)
-#	Link
+module: $(OBJ) $(OBJECTS)
+# Link
 ifndef LOUD
-	@echo "[lib]"
+	@echo "[bootstrap]"
 else
-	@echo "copy and expand"
+	@echo "cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/bootstrap $(BARE_OBJ)"
 endif
-	@mkdir $(OBJECTS)/tmp
-	@cd $(OBJECTS)/tmp; \
-	ar x ../../$(SRC)/lib/newlib-1.15.0-i586-elf-libc.a
-	@cd $(OBJECTS); \
-	cp $(BARE_COBJ) $(BARE_CXXOBJ) $(BARE_ASMOBJ) tmp/
-	@cd $(OBJECTS)/tmp; \
-	ar cru $(BUILD)/libc.a *.o
-	@ranlib libc.a
-	@rm -Rf $(OBJECTS)/tmp
-	@cp $(SRC)/lib/newlib-1.15.0-i586-elf-libm.a libm.a
-	@cp $(SRC)/lib/newlib-1.15.0-i586-elf-libg.a libg.a
-	@cp $(OBJECTS)/lib/crt0.o crt0.o
+	@cd $(OBJECTS); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/bootstrap $(BARE_OBJ)
 
 $(OBJECTS):
-	@for NAME in ${DIRECTORIES_LIB} ;\
-	do mkdir -p $(OBJECTS)/$$NAME ;\
+	@for NAME in ${DIRECTORIES}; \
+	do mkdir -p $(OBJECTS)/$$NAME; \
 	done
 
 $(OBJECTS)%.o: $(SRC)%.c $(OBJECTS)
@@ -78,16 +63,16 @@ $(OBJECTS)%.o: $(SRC)%.S $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; nasm -felf -o $@ tmp.o; rm tmp.o"
+	@echo "$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o; $(AS) $(ASFLAGS) -o $@ tmp.o; rm tmp.o"
 endif
 	@$(CPP) $(CMD_FLAGS) -I$(SRC) -P -x assembler-with-cpp $< tmp.o
-	@nasm -felf -o $@ tmp.o
+	@$(AS) $(ASFLAGS) -o $@ tmp.o
 	@rm tmp.o
 
 $(OBJECTS)%.o: $(SRC)%.s $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo nasm -felf -o $@ $<
+	@echo $(AS) $(ASFLAGS) -o $@ $<
 endif
-	@nasm -felf -o $@ $<
+	@$(AS) $(ASFLAGS) -o $@ $<
