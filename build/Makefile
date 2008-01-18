@@ -13,8 +13,9 @@ INCLUDES=
 # /modules/directory.mk contains a definition for $MODULES, with the name of all modules to make.
 include $(SRC)/modules/directory.mk
 
-CC=i686-elf-cc
-CXX=i686-elf-g++
+BUILD=$(shell pwd)
+CC=$(BUILD)/gcc
+CXX=$(BUILD)/g++
 CPP=i686-elf-cpp
 AS=nasm
 CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
@@ -34,6 +35,7 @@ export CFLAGS
 export CXXFLAGS
 export LDFLAGS
 export ASFLAGS
+export BUILD
 
 all: kernel bootstrap modules
 
