@@ -1,1 +1,1 @@
-CXX += main.cc
+CXX += $(SRC)/system/kernel/main.cc

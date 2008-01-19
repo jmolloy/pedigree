@@ -3,7 +3,7 @@
 # \date   18-Jan-2008
 
 # All source directories for the bootstrapper.
-DIRECTORIES = bootstrap/
+DIRECTORIES = system/boot/
 
 # Add directories contained in DIRECTORIES to INCLUDE list.
 INCLUDES = $(patsubst %,-I$(SRC)/%,$(DIRECTORIES))
