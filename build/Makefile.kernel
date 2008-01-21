@@ -17,7 +17,7 @@ INCLUDES = $(patsubst %,-I$(SRC)/%,$(DIRECTORIES))
 CMD_FLAGS = $(patsubst %,-D%,$(COMMAND_LINE_FLAGS))
 
 # Add any definitions in directory.mk files inside DIRECTORIES list.
-include $(patsubst %, $(SRC)/modules/$(MODULE)/directory.mk, $(DIRECTORIES))
+include $(patsubst %, $(SRC)/%/directory.mk, $(DIRECTORIES))
 
 OBJECTS := objects-kernel/
 

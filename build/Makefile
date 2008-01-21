@@ -7,11 +7,11 @@ SILENTFLAG := -s
 endif
 
 COMMAND_LINE_FLAGS = $(MAKEFLAGS)
-SRC = ..
+SRC = ../src
 INCLUDES=
 
-# /modules/directory.mk contains a definition for $MODULES, with the name of all modules to make.
-include $(SRC)/modules/directory.mk
+# /modules/modules.list contains a definition for $MODULES, with the name of all modules to make.
+include $(SRC)/system/modules/modules.list
 
 BUILD=$(shell pwd)
 CC=$(BUILD)/gcc
@@ -36,27 +36,40 @@ export CXXFLAGS
 export LDFLAGS
 export ASFLAGS
 export BUILD
+export X86                  # Was X86 specified on the cmdline?
+export X86_64               # Was X86_64 specified on the cmdline?
+export KERNEL_STANDALONE    # Was KERNEL_STANDALONE specified on the cmdline?
 
-all: kernel bootstrap modules
+all: kernel bootstrap modules drivers user subsys
 
 bootstrap:
-	$(MAKE) $(SILENTFLAG) -f Makefile.bootstrap
+	@cd $(SRC)/system/boot; $(MAKE) $(SILENTFLAG)
 
-kernel:
-	$(MAKE) $(SILENTFLAG) -f Makefile.kernel
+utilities:
+	@cd $(SRC)/system/utilities; $(MAKE) $(SILENTFLAG)
 
-modules: # For every module in $MODULES, export the module name and call the module makefile.
-	@for NAME in ${MODULES}; \
+kernel: utilities
+	@cd $(SRC)/system/kernel; $(MAKE) $(SILENTFLAG)
+
+modules: utilities # For every module in $MODULES, export the module name and call the module makefile.
+	@STARTDIR=`pwd`; \
+	for NAME in ${MODULES}; \
 	do export MODULE=$$NAME; \
-	$(MAKE) $(SILENTFLAG) -f Makefile.modules; \
+	cd $$STARTDIR; \
+	cd $(SRC)/system/modules/$$NAME; $(MAKE) $(SILENTFLAG); \
 	done
+
+drivers: kernel modules
+	@cd $(SRC)/drivers; $(MAKE) $(SILENTFLAG)
+
+user: kernel modules drivers subsys
+	@cd $(SRC)/user; $(MAKE) $(SILENTFLAG)
+
+subsys: kernel modules drivers
+	@cd $(SRC)/subsys; $(MAKE) $(SILENTFLAG)
 
 clean:
-	-@rm -Rf objects-kernel
-	-@rm -Rf objects-bootstrap
+	-@rm -Rf objects-*
 	-@rm kernel bootstrap
 	-@for NAME in ${MODULES} ; \
-	do rm -Rf objects-modules-$$NAME;\
-	rm $$NAME; \
-	done
-
+	do rm $$NAME; done
