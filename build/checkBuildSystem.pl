@@ -20,7 +20,8 @@ sub is_installed {
 sub is_cached {
   return 1 if (-d "./compilers/dl_cache" and
                -f "./compilers/dl_cache/gcc-core-$COMPILER_VERSION.tar.bz2" and
-               -f "./compilers/dl_cache/gcc-g++-$COMPILER_VERSION.tar.bz2");
+               -f "./compilers/dl_cache/gcc-g++-$COMPILER_VERSION.tar.bz2" and
+               -f "./compilers/dl_cache/binutils-$BINUTILS_VERSION.tar.bz2");
   return 0;
 }
 
@@ -38,7 +39,7 @@ sub download {
     `cd ./compilers/dl_cache; wget $FTP_DIR/gcc-core-$COMPILER_VERSION.tar.bz2`;
     if ($? != 0) {
       print "\e[31mError: gcc core files failed to download!\e[0m\n";
-      return 0;
+      return 1;
     }
   }
 
@@ -50,7 +51,7 @@ sub download {
     `cd ./compilers/dl_cache; wget $FTP_DIR/gcc-g++-$COMPILER_VERSION.tar.bz2`;
     if ($? != 0) {
       print "\e[31mError: g++ files failed to download!\e[0m\n";
-      return 0;
+      return 1;
     }
   }
 
@@ -61,8 +62,8 @@ sub download {
     print "\e[32mDownloading binutils, version $BINUTILS_VERSION...\e[0m\n";
     `cd ./compilers/dl_cache; wget $BINUTILS_FTP_DIR/binutils-$BINUTILS_VERSION.tar.bz2`;
     if ($? != 0) {
-      print "\e[31mError: binutils files failed to download!\e[0m\n";
-      return 0;
+  	print "\e[31mError: binutils files failed to download!\e[0m\n";
+      return 1;
     }
   }
 
@@ -71,7 +72,7 @@ sub download {
     print "\e[32mThe main compiler tarballs can be kept on disk, in case a new compiler build is needed. This will mean that new compiler builds will be faster, but will consume roughly 50MB of disk space.\nCache compiler files? [yes]\e[0m: ";
     $delete_cache = 1 if (<STDIN> =~ m/n/i);
   }
-  return 1;
+  return 0;
 }
 
 # Extract the compiler - assumed download() called and succeeded.
@@ -92,14 +93,15 @@ sub extract {
   print "\e[32mExtracting downloaded files [2/3]...\e[0m\n";
   `cd ./compilers/tmp_build/; tar -xf gcc-g++-$COMPILER_VERSION.tar`;
   return 1 if $? != 0;
-  `rm ./compilers/tmp_build/gcc-*.tar`;
-  return 1 if $? != 0;
 
   print "\e[32mExtracting downloaded files [3/3]...\e[0m\n";
   `cd ./compilers/tmp_build/; tar -xf binutils-$BINUTILS_VERSION.tar`;
   return 1 if $? != 0;
-  `rm ./compilers/tmp_build/binutils-*.tar`;
+
+  `rm ./compilers/tmp_build/*.tar*`;
   return 1 if $? != 0;
+
+  `rm -r ./compilers/dl_cache` if $delete_cache == 1;
 
   return 0;
 }
@@ -136,9 +138,40 @@ sub install {
   if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/gcc-make-install.{out|err})\e[0m\n"; return 1;}
   print "\n";
 
+  print "\e[32mCleaning up...\e[0m\n";
+  `rm -rf ./compilers/tmp_build`;
+
   return 0;
 }
-download();
-extract();
-install("i686-elf");
+
+#####################################################################################################
+# Script start.
+
+die("No target given!") unless scalar @ARGV > 0;
+
+my $target = $ARGV[0];
+if (is_installed($target)) {
+  print "\e[32mTarget $target has a suitable compiler already installed.\e[0m\n";
+  exit 0;
+}
+
+print "\e[32mTarget $target does not have a suitable compiler installed. One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
+exit 1 if <STDIN> =~ m/n/i;
+
+if (download() != 0) {
+  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+  exit 1;
+}
+
+if (extract() != 0) {
+  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+  exit 1;
+}
+
+if (install($target) != 0) {
+  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+  exit 1;
+}
+
+exit 0;
 

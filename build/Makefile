@@ -1,3 +1,4 @@
+#########################################################################################
 # \author James Molloy
 # \date   18-Jan-2008
 
@@ -23,6 +24,14 @@ CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostd
 LDFLAGS=
 ASFLAGS=-felf
 
+COMPILER=
+ifdef X86
+COMPILER=i686-elf
+endif
+ifdef X86_64
+COMPILER=amd64-elf
+endif
+
 export COMMAND_LINE_FLAGS
 export SILENTFLAG
 export SRC
@@ -39,19 +48,23 @@ export BUILD
 export X86                  # Was X86 specified on the cmdline?
 export X86_64               # Was X86_64 specified on the cmdline?
 export KERNEL_STANDALONE    # Was KERNEL_STANDALONE specified on the cmdline?
+export COMPILER
 
 all: kernel bootstrap modules drivers user subsys
 
-bootstrap:
+compiler:
+	@./checkBuildSystem.pl $(COMPILER)
+
+bootstrap: compiler
 	@cd $(SRC)/system/boot; $(MAKE) $(SILENTFLAG)
 
-utilities:
+utilities: compiler
 	@cd $(SRC)/system/utilities; $(MAKE) $(SILENTFLAG)
 
-kernel: utilities
+kernel: compiler utilities
 	@cd $(SRC)/system/kernel; $(MAKE) $(SILENTFLAG)
 
-modules: utilities # For every module in $MODULES, export the module name and call the module makefile.
+modules: compiler utilities # For every module in $MODULES, export the module name and call the module makefile.
 	@STARTDIR=`pwd`; \
 	for NAME in ${MODULES}; \
 	do export MODULE=$$NAME; \
@@ -59,13 +72,13 @@ modules: utilities # For every module in $MODULES, export the module name and ca
 	cd $(SRC)/system/modules/$$NAME; $(MAKE) $(SILENTFLAG); \
 	done
 
-drivers: kernel modules
+drivers: compiler kernel modules
 	@cd $(SRC)/drivers; $(MAKE) $(SILENTFLAG)
 
-user: kernel modules drivers subsys
+user: compiler kernel modules drivers subsys
 	@cd $(SRC)/user; $(MAKE) $(SILENTFLAG)
 
-subsys: kernel modules drivers
+subsys: compiler kernel modules drivers
 	@cd $(SRC)/subsys; $(MAKE) $(SILENTFLAG)
 
 clean:
