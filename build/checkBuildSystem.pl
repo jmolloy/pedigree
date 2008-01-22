@@ -106,6 +106,16 @@ sub extract {
   return 0;
 }
 
+# Patch the compiler for amd64
+sub patch_amd64
+{
+	print "\e[32mPatching gcc...\e[0m\n";
+	`patch ./compilers/tmp_build/gcc-4.2.2/gcc/config.gcc <gcc_amd64.patch`;
+	return 1 if $? != 0;
+	
+	return 0;
+}
+
 # Configure, make and make install the compiler.
 sub install {
   my ($arch) = @_;
@@ -175,6 +185,15 @@ if (download() != 0) {
 if (extract() != 0) {
   print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
   exit 1;
+}
+
+if ($target eq "amd64-elf")
+{
+	if (patch_amd64() != 0)
+	{
+		print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+		exit 1;
+	}
 }
 
 if (install($target) != 0) {
