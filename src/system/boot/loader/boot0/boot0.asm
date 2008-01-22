@@ -30,7 +30,7 @@ CheckEntry:	CMP		BYTE [SI], 0x80
 		ADD		SI, 0x10
 
 		LOOP		CheckEntry
-		INT		18
+		INT		0x18
 
 FoundActive:	MOV		DH, BYTE [SI+1]
 		MOV		CX, [SI+2]
