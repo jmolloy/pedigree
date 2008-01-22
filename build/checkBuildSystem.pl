@@ -142,7 +142,7 @@ sub install {
   `rm -rf ./compilers/tmp_build`;
 
   return 0;
-}
+} 
 
 #####################################################################################################
 # Script start.
@@ -157,6 +157,15 @@ if (is_installed($target)) {
 
 print "\e[32mTarget $target does not have a suitable compiler installed. One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
 exit 1 if <STDIN> =~ m/n/i;
+
+$ENV{CC} = "";
+$ENV{CXX} = "";
+$ENV{AS} = "";
+$ENV{CPP} = "";
+$ENV{CFLAGS} = "";
+$ENV{CXXFLAGS} = "";
+$ENV{LDFLAGS} = "";
+$ENV{ASFLAGS} = "";
 
 if (download() != 0) {
   print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";

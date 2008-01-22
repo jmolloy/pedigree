@@ -53,7 +53,7 @@ export COMPILER
 all: kernel bootstrap modules drivers user subsys
 
 compiler:
-	@./checkBuildSystem.pl $(COMPILER)
+	@perl ./checkBuildSystem.pl $(COMPILER)
 
 bootstrap: compiler
 	@cd $(SRC)/system/boot; $(MAKE) $(SILENTFLAG)
