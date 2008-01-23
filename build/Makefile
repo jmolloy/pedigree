@@ -11,18 +11,10 @@ COMMAND_LINE_FLAGS = $(MAKEFLAGS)
 SRC = ../src
 INCLUDES=
 
+CMD_FLAGS = $(patsubst %,-D%, $(COMMAND_LINE_FLAGS))
+
 # /modules/modules.list contains a definition for $MODULES, with the name of all modules to make.
 include $(SRC)/system/modules/modules.list
-
-BUILD=$(shell pwd)
-CC=$(BUILD)/gcc
-CXX=$(BUILD)/g++
-CPP=i686-elf-cpp
-AS=nasm
-CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
-CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
-LDFLAGS=
-ASFLAGS=-felf
 
 COMPILER=
 ifdef X86
@@ -32,7 +24,20 @@ ifdef X86_64
 COMPILER=amd64-elf
 endif
 
-export COMMAND_LINE_FLAGS
+BUILD=$(shell pwd)
+CC=$(BUILD)/gcc
+CXX=$(BUILD)/g++
+CPP=$(COMPILER)-cpp
+AS=nasm
+#CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
+#CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
+#LDFLAGS=-nostdlib -nostdinc
+ASFLAGS=-felf
+
+# Add compilers/bin to our path so we can pick up our custom compilers.
+PATH:=$(PATH):$(BUILD)/compilers/bin
+
+export CMD_FLAGS
 export SILENTFLAG
 export SRC
 export INCLUDES
@@ -49,6 +54,7 @@ export X86                  # Was X86 specified on the cmdline?
 export X86_64               # Was X86_64 specified on the cmdline?
 export KERNEL_STANDALONE    # Was KERNEL_STANDALONE specified on the cmdline?
 export COMPILER
+export PATH
 
 all: kernel bootstrap modules drivers user subsys
 

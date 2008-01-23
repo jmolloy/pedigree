@@ -2,12 +2,12 @@
 # \date   21-Jan-08
 
 ###################################################################
+# Subdirectory list.
+DIRECTORIES =
+
+###################################################################
 # Source file list.
-SRCFILES  = main.cc
-SRCFILES += bleh.S
-ifdef X86
-SRCFILES += wibble
-endif
+SRCFILES = main2.cc
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.

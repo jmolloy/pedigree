@@ -1,6 +1,11 @@
 #! /usr/bin/perl -w
 
 #
+# Haxxored by James Molloy 23-Jan-08, to use environment variables to find the correct compiler as opposed
+# to the config file.
+#
+
+#
 # colorgcc
 #
 # Version: 1.3.2
@@ -93,10 +98,10 @@ use IPC::Open3;
 
 sub initDefaults
 {
-   $compilerPaths{"gcc"} = "/usr/bin/gcc";
-   $compilerPaths{"g++"} = "/usr/bin/g++";
-   $compilerPaths{"cc"}  = "/usr/bin/cc";
-   $compilerPaths{"c++"} = "/usr/bin/c++";
+   $compilerPaths{"gcc"} = "$ENV{COMPILER}-gcc";
+   $compilerPaths{"g++"} = "$ENV{COMPILER}-g++";
+   $compilerPaths{"cc"}  = "$ENV{COMPILER}-cc";
+   $compilerPaths{"c++"} = "$ENV{COMPILER}-c++";
 
    $nocolor{"dumb"} = "true";
 
@@ -130,7 +135,7 @@ sub loadPreferences
 
       if ($option =~ m/cc|c\+\+|gcc|g\+\+/)
       {
-	 $compilerPaths{$option} = $value;
+	 #$compilerPaths{$option} = $value;
       }
       elsif ($option eq "nocolor")
       {
