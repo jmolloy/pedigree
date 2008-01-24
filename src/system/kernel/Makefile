@@ -7,11 +7,15 @@ DIRECTORIES =
 
 ###################################################################
 # Source file list.
-SRCFILES = main2.cc
+ifdef KERNEL_STANDALONE
+SRCFILES = boot-standalone.s
+endif
+SRCFILES += main.cc
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.
 
+LDFLAGS += -T $(shell pwd)/link-standalone.ld
 BUILD_NAME=kernel
 
 include $(BUILD)/buildCommon.mk

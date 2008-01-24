@@ -29,9 +29,9 @@ CC=$(BUILD)/gcc
 CXX=$(BUILD)/g++
 CPP=$(COMPILER)-cpp
 AS=nasm
-#CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
-#CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
-#LDFLAGS=-nostdlib -nostdinc
+CFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib
+CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
+LDFLAGS=-nostdlib -nostdinc
 ASFLAGS=-felf
 
 # Add compilers/bin to our path so we can pick up our custom compilers.
@@ -56,7 +56,7 @@ export KERNEL_STANDALONE    # Was KERNEL_STANDALONE specified on the cmdline?
 export COMPILER
 export PATH
 
-all: kernel bootstrap modules drivers user subsys
+all: kernel bootstrap modules drivers user subsys image
 
 compiler:
 	@perl ./checkBuildSystem.pl $(COMPILER)
@@ -89,6 +89,17 @@ subsys: compiler kernel modules drivers
 
 clean:
 	-@rm -Rf objects-*
-	-@rm kernel bootstrap
-	-@for NAME in ${MODULES} ; \
-	do rm $$NAME; done
+	-@rm built/*
+
+image: kernel
+	@perl -e "print \"\e[32m*** Writing disk images...\e[0m\n\";" # echo doesn't have support for colours.
+	-@mkdir -p /tmp/pedigree-image
+	@cp images/floppy.img built/
+	@sudo /sbin/losetup /dev/loop0 built/floppy.img
+	@sudo mount -o loop /dev/loop0 /tmp/pedigree-image
+	-@sudo rm /tmp/pedigree-image/kernel
+	@sudo cp built/kernel /tmp/pedigree-image/kernel
+	@sudo umount /dev/loop0
+	@sudo /sbin/losetup -d /dev/loop0
+	@perl -e "print \"\e[32m*** Build finished.\e[0m\n\";" # echo doesn't have support for colours.
+

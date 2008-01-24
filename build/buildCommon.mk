@@ -39,10 +39,11 @@ all: $(OBJ_DIR) $(OBJS_OBJ)
 ifndef LOUD
 	@echo "[$(BUILD_NAME)]"
 else
-	@echo "cd $(OBJ_DIR); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/$(BUILD_NAME) $(OBJS_BARE) $(LDADD)"
+	@echo "cd $(OBJ_DIR); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/built/$(BUILD_NAME) $(OBJS_BARE) $(LDADD)"
 endif
-	@cd $(OBJ_DIR); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/$(BUILD_NAME) $(OBJS_BARE) $(LDADD)
-	@echo "\e[32m*** $(BUILD_NAME) built successfully.\e[0m"
+	@cd $(OBJ_DIR); $(CXX) $(LDFLAGS) $(CXXFLAGS) -o $(BUILD)/built/$(BUILD_NAME) $(OBJS_BARE) $(LDADD)
+	# Alrighty then - I want this text to be in green, but echo doesn't support it. So use perl! Perl FTW!
+	@perl -e "print \"\\e[32m*** $(BUILD_NAME) built successfully.\\e[0m\n\";"
 
 $(OBJ_DIR):
 	@mkdir $(OBJ_DIR)
@@ -68,7 +69,7 @@ endif
 	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
 # .S files get run through the C preprocessor.
-$(OBJECTS)%.o: $(CUR_DIR)%.S $(OBJECTS)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.S $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
@@ -79,7 +80,7 @@ endif
 	@rm tmp.o
 
 # .s files don't get run through the preprocessor.
-$(OBJECTS)%.o: $(CUR_DIR)%.s $(OBJECTS)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.s $(OBJECTS)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
