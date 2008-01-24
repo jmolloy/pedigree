@@ -7,6 +7,15 @@
 struct BootstrapInfo;
 #endif // !KERNEL_STANDALONE
 
+#ifdef DEBUGGER
+#include <Debugger.h>
+#endif
+
+// Global variables, declared in main.h
+#ifdef DEBUGGER
+//Debugger debugger;
+#endif
+
 // Defined in the linker.
 unsigned int start_ctors;
 unsigned int end_ctors;
@@ -38,7 +47,11 @@ extern "C" void _main(BootstrapInfo *bsInf)
   asm volatile("mov $0x12345, %ecx");
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
-  
+
+#if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
+//  debugger.breakpoint(DEBUGGER_RUN_AT_START);
+#endif
+
   // We need a heap for dynamic memory allocation.
 //  initialiseMemory();
 
