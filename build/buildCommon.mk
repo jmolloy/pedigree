@@ -19,9 +19,15 @@
 # Note that if you're using the top level makefile (as you should be) you only have to deal with
 # the second (BUILD_NAME), fifth (SRCFILES) and sixth (DIRECTORIES) items. :-)
 
+-include $(DEPFILES)
+
 # Take the .cc, .c, .s, .S files and make .o files out of them.
 OBJS_BARE := $(SRCFILES:.cc=.o)
 OBJS_BARE := $(OBJS_BARE:.c=.o)
+
+# Only generate DEPFILES for the c and cc files!
+DEPFILES := $(patsubst %.o,%.d,$(OBJS_BARE))
+
 OBJS_BARE := $(OBJS_BARE:.s=.o)
 OBJS_BARE := $(OBJS_BARE:.S=.o)
 
@@ -56,7 +62,7 @@ $(OBJ_DIR)%.o: $(CUR_DIR)%.c $(OBJ_DIR)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CC) $(CFLAGS) -MMD -MP -MT "$*.d $*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
@@ -64,7 +70,7 @@ $(OBJ_DIR)%.o: $(CUR_DIR)%.cc $(OBJ_DIR)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CXX) $(CXXFLAGS) -MMD -MP -MT "$*.d $*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
