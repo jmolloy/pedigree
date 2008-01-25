@@ -159,7 +159,7 @@ bool LocalIO::readCli(char *str, int maxLen)
   if (m_bReady)
   {
     // Yes, output a prompt...
-    writeCli("(db) ", DebuggerIO::LightGrey, DebuggerIO::Black);
+    writeCli((char*)"(db) ", DebuggerIO::LightGrey, DebuggerIO::Black);
     // ...and zero the command string.
     m_pCommand[0] = '\0';
     m_bReady = false;

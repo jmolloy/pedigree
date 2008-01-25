@@ -13,6 +13,9 @@ INCLUDES=
 
 CMD_FLAGS = $(patsubst %,-D%, $(COMMAND_LINE_FLAGS))
 
+# /build/buildFlags.mk contains a list of standard build flags.
+include buildFlags.mk
+
 # /modules/modules.list contains a definition for $MODULES, with the name of all modules to make.
 include $(SRC)/system/modules/modules.list
 
@@ -58,6 +61,9 @@ export PATH
 
 all: kernel bootstrap modules drivers user subsys image
 
+buildFlags.mk:
+	@perl ./buildFlags.pl
+
 compiler:
 	@perl ./checkBuildSystem.pl $(COMPILER)
 
@@ -88,6 +94,7 @@ subsys: compiler kernel modules drivers
 	@cd $(SRC)/subsys; $(MAKE) $(SILENTFLAG)
 
 clean:
+	-@rm buildFlags.mk
 	-@rm -Rf objects-*
 	-@rm built/*
 
