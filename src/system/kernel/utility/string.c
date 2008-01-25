@@ -7,6 +7,23 @@ int strlen(const char *src)
   return i;
 }
 
+int strcpy(char *dest, const char *src)
+{
+  while (*src)
+    *dest++ = *src++;
+  *dest = '\0';
+}
+
+int strncpy(char *dest, const char *src, int len)
+{
+  while (*src && len)
+  {
+    *dest++ = *src++;
+    len--;
+  }
+  *dest = '\0';
+}
+
 int sprintf(char *buf, const char *fmt, ...)
 {
   va_list args;

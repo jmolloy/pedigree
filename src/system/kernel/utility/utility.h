@@ -10,6 +10,8 @@ extern "C" {
 int vsprintf(char *buf, const char *fmt, va_list arg);
 int sprintf(char *buf, const char *fmt, ...);
 int strlen(const char *buf);
+int strcpy(char *dest, const char *src);
+int strncpy(char *dest, const char *src, int len);
 int memset(unsigned char *buf, unsigned char c, unsigned int len);
 void memcpy(unsigned char *dest, unsigned char *src, unsigned int len);
 

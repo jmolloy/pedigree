@@ -72,7 +72,7 @@ public:
    * horizontal or vertical direction. Note that if the CLI is enabled,
    * anything drawn across the CLI area can be wiped without warning.
    */
-  virtual void drawHorizonalLine(char c, int row, int colStart, int colEnd, Colour foreColour, Colour backColour) {};
+  virtual void drawHorizontalLine(char c, int row, int colStart, int colEnd, Colour foreColour, Colour backColour) {};
   virtual void drawVerticalLine(char c, int col, int rowStart, int rowEnd, Colour foreColour, Colour backColour) {};
 
   /**

@@ -1,12 +1,25 @@
-/// LocalIO.h - interface for a concretion of the DebuggerIO class.
-/// \author James Molloy
+/*
+ * Copyright (c) 2008 James Molloy
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
 #include <DebuggerIO.h>
 
 #define CONSOLE_WIDTH  80
 #define CONSOLE_HEIGHT 25
 
-#define MAKE_SHORT(c,f,b) ( (b << 12) | ((f&0x0F) << 8) | (c&0xFF) )
+#define COMMAND_MAX    256
 
 /**
  * Provides an implementation of DebuggerIO, using the monitor and
@@ -37,14 +50,10 @@ public:
   void disableCli();
 
   /**
-   * Called when a command has completed, and a new prompt has to be shown.
-   */
-  void showPrompt();
-
-  /**
    * Writes the given text out to the CLI, in the given colour and background colour.
    */
   void writeCli(char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void writeCli(char ch, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
    * Reads a command from the interface. Blocks until a character is pressed, and then
@@ -87,7 +96,22 @@ public:
   void forceRefresh();
 
 private:
-  
+ 
+  /**
+   * Scrolls the CLI screen down a line, if needed.
+   */
+  void scroll();
+
+  /**
+   * Updates the hardware cursor position.
+   */
+  void moveCursor();
+
+  /**
+   * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
+   */
+  char getChar();
+
   /**
    * Framebuffer.
    */
@@ -96,7 +120,34 @@ private:
   /**
    * Current upper and lower CLI limits.
    */
-  int upperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
-  int lowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
+  int m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
+  int m_LowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
+
+  /**
+   * Current cursor position.
+   */
+  int m_CursorX, m_CursorY;
+
+  /**
+   * Should we auto-refresh the screen?
+   */
+  bool m_bRefreshesEnabled;
+
+  /**
+   * Are we ready to recieve a new command? (or are we recieving one already)
+   */
+  bool m_bReady;
+
+  /**
+   * Command buffer.
+   */
+  char m_pCommand[COMMAND_MAX];
+
+  /**
+   * Keyboard state.
+   */
+  bool m_bShift;
+  bool m_bCtrl;
+  bool m_bCapslock;
 };
 
