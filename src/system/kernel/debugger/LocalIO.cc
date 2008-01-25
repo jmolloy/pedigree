@@ -1,4 +1,5 @@
 #include <LocalIO.h>
+#include <utility.h>
 
 LocalIO::LocalIO() :
   upperCliLimit(0),
@@ -29,6 +30,7 @@ void LocalIO::setCliLowerLimit(int nlines)
 
 void LocalIO::enableCli()
 {
+  forceRefresh();
 }
 
 void LocalIO::disableCli()
@@ -66,5 +68,8 @@ void LocalIO::disableRefreshes()
 
 void LocalIO::forceRefresh()
 {
+  unsigned short *vidmem = (unsigned short *)0xB8000;
+
+  memcpy((unsigned char *)vidmem, (unsigned char *)m_pFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
 }
 

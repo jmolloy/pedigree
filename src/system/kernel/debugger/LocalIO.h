@@ -12,7 +12,7 @@
  * Provides an implementation of DebuggerIO, using the monitor and
  * keyboard.
  */
-class LocalIO
+class LocalIO : public DebuggerIO
 {
 public:
   /**

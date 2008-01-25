@@ -13,8 +13,11 @@ struct BootstrapInfo;
 
 // Global variables, declared in main.h
 #ifdef DEBUGGER
-//Debugger debugger;
+Debugger debugger;
 #endif
+
+// Required for G++ to link static init/destructors.
+void *__dso_handle;
 
 // Defined in the linker.
 unsigned int start_ctors;
@@ -49,7 +52,7 @@ extern "C" void _main(BootstrapInfo *bsInf)
   initialiseConstructors();
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
-//  debugger.breakpoint(DEBUGGER_RUN_AT_START);
+  debugger.breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
   // We need a heap for dynamic memory allocation.
