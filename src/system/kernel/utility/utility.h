@@ -15,6 +15,10 @@ int strncpy(char *dest, const char *src, int len);
 int memset(unsigned char *buf, unsigned char c, unsigned int len);
 void memcpy(unsigned char *dest, unsigned char *src, unsigned int len);
 
+int strcmp(char *p1, char *p2);
+int strncmp(char *p1, char *p2, int n);
+char *strcat(char *dest, const char *src);
+
 #ifdef __cplusplus
 }
 #endif

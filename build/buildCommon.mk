@@ -62,7 +62,7 @@ $(OBJ_DIR)%.o: $(CUR_DIR)%.c $(OBJ_DIR)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CC) $(CFLAGS) -MMD -MP -MT "$*.d $*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CC) $(CFLAGS) -MMD -MP -MT "$(OBJ_DIR)$*.d $(OBJ_DIR)$*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
@@ -70,7 +70,7 @@ $(OBJ_DIR)%.o: $(CUR_DIR)%.cc $(OBJ_DIR)
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CXX) $(CXXFLAGS) -MMD -MP -MT "$*.d $*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CXX) $(CXXFLAGS) -MMD -MP -MT "$(OBJ_DIR)$*.d $(OBJ_DIR)$*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 

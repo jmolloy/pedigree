@@ -4,12 +4,14 @@
 ###################################################################
 # Extra includes.
 INCLUDES += -I./debugger/ \
+            -I./debugger/commands \
             -I./debugger/libudis86 \
             -I./utility/
 
 ###################################################################
 # Subdirectory list.
 DIRECTORIES = debugger/ \
+              debugger/commands \
               debugger/libudis86 \
               utility/
 
@@ -21,7 +23,7 @@ endif
 ifdef DEBUGGER
 SRCFILES += debugger/libudis86/mnemonics.c debugger/libudis86/opcmap.c debugger/libudis86/input.c debugger/libudis86/decode.c \
             debugger/libudis86/syn.c debugger/libudis86/syn-intel.c debugger/libudis86/syn-att.c debugger/libudis86/udis86.c \
-            debugger/LocalIO.cc debugger/Debugger.cc
+            debugger/LocalIO.cc debugger/Debugger.cc debugger/commands/DisassembleCommand.cc
 endif
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c
 SRCFILES += main.cc

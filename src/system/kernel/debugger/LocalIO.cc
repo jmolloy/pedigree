@@ -97,51 +97,8 @@ void LocalIO::writeCli(char *str, DebuggerIO::Colour foreColour, DebuggerIO::Col
 
 void LocalIO::writeCli(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  // Backspace?
-  if (c == 0x08)
-  {
-    // Can we just move backwards? or do we have to go up?
-    if (m_CursorX)
-      m_CursorX--;
-    else
-    {
-      m_CursorX = CONSOLE_WIDTH-1;
-      m_CursorY--;
-    }
-  }
-
-  // Tab?
-  else if (c == 0x09 && ((m_CursorX+8)&~(8-1) < CONSOLE_WIDTH) )
-    m_CursorX = (m_CursorX+8) & ~(8-1);
-
-  // Carriage return?
-  else if (c == '\r')
-    m_CursorX = 0;
-
-  // Newline?
-  else if (c == '\n')
-  {
-    m_CursorX = 0;
-    m_CursorY++;
-  }
-
-  // Normal character?
-  else if (c >= ' ')
-  {
-    unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
-    m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = c | (attributeByte << 8);
-
-    // Increment the cursor.
-    m_CursorX++;
-  }
-
-  // Do we need to wrap?
-  if (m_CursorX >= 80)
-  {
-    m_CursorX = 0;
-    m_CursorY ++;
-  }
-
+  putChar(c, foreColour, backColour);
+  
   // Scroll if required.
   scroll();
 
@@ -178,12 +135,24 @@ bool LocalIO::readCli(char *str, int maxLen)
   else
   {
     // We've got a character, try and append it to our command string.
-    int len = strlen(m_pCommand);
-    if (len < COMMAND_MAX-1)
+    // But first, was it a backspace?
+    if (ch == 0x08)
     {
-      m_pCommand[len] = ch;
-      m_pCommand[len+1] = '\0';
+      // Try and erase one letter of the command string.
+      if (strlen(m_pCommand))
+        m_pCommand[strlen(m_pCommand)-1] = '\0';
+      
       writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
+    }
+    else
+    {
+      int len = strlen(m_pCommand);
+      if (len < COMMAND_MAX-1)
+      {
+	m_pCommand[len] = ch;
+	m_pCommand[len+1] = '\0';
+	writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
+      }
     }
   }
 
@@ -348,8 +317,22 @@ void LocalIO::drawString(char *str, int row, int col, DebuggerIO::Colour foreCol
   m_CursorX = col;
   m_CursorY = row;
   
-  // Then, we just call writeCli() to put the string out for us! :)
-  writeCli(str, foreColour, backColour);
+  bool bRefreshWasEnabled = false;
+  if (m_bRefreshesEnabled)
+  {
+    bRefreshWasEnabled = true;
+    m_bRefreshesEnabled = false;
+  }
+  
+  // Then, we just call putChar to put the string out for us! :)
+  while (*str)
+    putChar(*str++, foreColour, backColour);
+  
+  if (bRefreshWasEnabled)
+  {
+    m_bRefreshesEnabled = true;
+    forceRefresh();
+  }
   
   // And restore the cursor.
   m_CursorX = savedX;
@@ -405,5 +388,58 @@ void LocalIO::moveCursor()
   asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D5), "a" ((unsigned char)(tmp >> 8)));
   asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D4), "a" ((unsigned char)15));
   asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D5), "a" ((unsigned char)tmp));
+}
+
+void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+{
+  // Backspace?
+  if (c == 0x08)
+  {
+    // Can we just move backwards? or do we have to go up?
+    if (m_CursorX)
+      m_CursorX--;
+    else
+    {
+      m_CursorX = CONSOLE_WIDTH-1;
+      m_CursorY--;
+    }
+    
+    // Erase the contents of the cell currently.
+    unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
+    m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = ' ' | (attributeByte << 8);
+    
+  }
+
+  // Tab?
+  else if (c == 0x09 && ((m_CursorX+8)&~(8-1) < CONSOLE_WIDTH) )
+    m_CursorX = (m_CursorX+8) & ~(8-1);
+
+  // Carriage return?
+  else if (c == '\r')
+    m_CursorX = 0;
+
+  // Newline?
+  else if (c == '\n')
+  {
+    m_CursorX = 0;
+    m_CursorY++;
+  }
+
+  // Normal character?
+  else if (c >= ' ')
+  {
+    unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
+    m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = c | (attributeByte << 8);
+
+    // Increment the cursor.
+    m_CursorX++;
+  }
+
+  // Do we need to wrap?
+  if (m_CursorX >= 80)
+  {
+    m_CursorX = 0;
+    m_CursorY ++;
+  }
 }
 
