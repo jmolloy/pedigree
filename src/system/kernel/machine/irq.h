@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,9 +13,25 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialiseMachine.h>
+#ifndef KERNEL_MACHINE_IRQ_H
+#define KERNEL_MACHINE_IRQ_H
 
-void initialiseMachine1()
+class IrqHandler
 {
-  // TODO
-}
+  public:
+	virtual void irq(IrqId_t number) = 0;
+};
+
+class IrqManager
+{
+  public:
+	static IrqManager &instance();
+	virtual bool initialize() = 0;
+	virtual void uninitialize() = 0;
+	virtual IrqId_t registerIsaIrqHandler(IrqNumber_t, IrqHandler *handler) = 0;
+	virtual IrqId_t registerPciIrqHandler(irqHandler *handler) = 0;
+	virtual void acknoledgeIrq(IrqId_t Id) = 0;
+	virtual void unregisterHandler(IrqId_t Id) = 0;
+};
+
+#endif

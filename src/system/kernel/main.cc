@@ -19,8 +19,7 @@ Debugger debugger;
 // initialiseConstructors()
 #include <cppsupport.h>
 // initialiseArchitecture1(), initialiseArchitecture2()
-#include <initialiseMachine.h>
-#include <types.h>
+#include <machine/initialiseMachine.h>
 
 /// Kernel entry point.
 extern "C" void _main(BootstrapInfo *bsInf)

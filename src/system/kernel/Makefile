@@ -21,7 +21,6 @@ INCLUDES += -I . \
             -I./debugger/commands \
             -I./debugger/libudis86 \
             -I./utility/ \
-            -I./machine/
 
 ###################################################################
 # Subdirectory list.

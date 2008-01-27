@@ -13,9 +13,15 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialiseMachine.h>
+#ifndef KERNEL_MACHINE_X86_86_STATE_H
+#define KERNEL_MACHINE_X86_86_STATE_H
 
-void initialiseMachine1()
+struct InterruptState
 {
-  // TODO
-}
+};
+
+struct SyscallState
+{
+};
+
+#endif

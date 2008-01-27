@@ -16,11 +16,8 @@
 #ifndef KERNEL_MACHINE_TYPES_H
 #define KERNEL_MACHINE_TYPES_H
 
-#ifdef X86
-  #include <x86_common/type.h>
-#endif
-#ifdef X86_64
-  #include <x86_common/type.h>
+#ifdef X86_COMMON
+  #include <machine/x86_common/types.h>
 #endif
 
 #endif

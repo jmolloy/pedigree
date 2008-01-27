@@ -16,7 +16,7 @@
 #ifndef KERNEL_MACHINE_IO_H
 #define KERNEL_MACHINE_IO_H
 
-#include <type.h>
+#include <machine/types.h>
 
 /** Interface to the hardware's I/O ports.
  *\note Not synchronised */
@@ -137,11 +137,8 @@ IoPortManager &IoPortManager::instance()
   return m_Instance;
 }
 
-#ifdef X86
-  #include <x86_common/io.h>
-#endif
-#ifdef X86_64
-  #include <x86_common/io.h>
+#ifdef X86_COMMON
+  #include <machine/x86_common/io.h>
 #endif
 
 #endif

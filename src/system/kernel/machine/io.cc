@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <io.h>
+#include <machine/io.h>
 
 bool IoPort::allocate(IoPort_t ioPort, size_t size)
 {

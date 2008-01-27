@@ -27,6 +27,13 @@ ifdef X86_64
 COMPILER=amd64-elf
 endif
 
+ifdef X86
+CMD_FLAGS+= -DX86_COMMON
+endif
+ifdef X86_64
+CMD_FLAGS+= -DX86_COMMON
+endif
+
 BUILD=$(shell pwd)
 CC=$(BUILD)/gcc
 CXX=$(BUILD)/g++
@@ -36,6 +43,22 @@ CFLAGS=-fno-builtin -fno-stack-protector -m32 -nostdlib
 CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
 LDFLAGS=-nostdlib -nostdinc
 ASFLAGS=-felf
+ifdef OPTIMIZE_1
+CFLAGS+=-O1
+CXXFLAGS+=-O1
+endif
+ifdef OPTIMIZE_2
+CFLAGS+=-O2
+CXXFLAGS+=-O2
+endif
+ifdef OPTIMIZE_3
+CFLAGS+=-O3
+CXXFLAGS+=-O3
+endif
+ifdef OPTIMIZE_S
+CFLAGS+=-Os
+CXXFLAGS+=-Os
+endif
 
 # Add compilers/bin to our path so we can pick up our custom compilers.
 PATH:=$(PATH):$(BUILD)/compilers/bin
