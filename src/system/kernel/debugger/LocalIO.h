@@ -52,7 +52,7 @@ public:
   /**
    * Writes the given text out to the CLI, in the given colour and background colour.
    */
-  void writeCli(char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
   void writeCli(char ch, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
@@ -74,7 +74,7 @@ public:
    * Draws a string of text at the given location in the given colour.
    * note that wrapping is not performed, the string will be clipped.
    */
-  void drawString(char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
    * Returns the width and height respectively of the console.

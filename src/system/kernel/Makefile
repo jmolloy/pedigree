@@ -3,17 +3,20 @@
 
 ###################################################################
 # Extra includes.
-INCLUDES += -I./debugger/ \
+INCLUDES += -I . \
+            -I./debugger/ \
             -I./debugger/commands \
             -I./debugger/libudis86 \
-            -I./utility/
+            -I./utility/ \
+            -I./machine/
 
 ###################################################################
 # Subdirectory list.
 DIRECTORIES = debugger/ \
               debugger/commands \
               debugger/libudis86 \
-              utility/
+              utility/ \
+              machine/ machine/x86 machine/x86_64 machine/x86_common
 
 ###################################################################
 # Source file list.
@@ -25,8 +28,15 @@ SRCFILES += debugger/libudis86/mnemonics.c debugger/libudis86/opcmap.c debugger/
             debugger/libudis86/syn.c debugger/libudis86/syn-intel.c debugger/libudis86/syn-att.c debugger/libudis86/udis86.c \
             debugger/LocalIO.cc debugger/Debugger.cc debugger/commands/DisassembleCommand.cc
 endif
+SRCFILES += machine/io.cc
+ifdef X86
+SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
+endif
+ifdef X86_64
+SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
+endif
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c
-SRCFILES += main.cc
+SRCFILES += cppsupport.cc main.cc
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.

@@ -36,7 +36,7 @@ int sprintf(char *buf, const char *fmt, ...)
   return i;
 }
 
-int strcmp(char *p1, char *p2)
+int strcmp(const char *p1, const char *p2)
 {
   int i = 0;
   int failed = 0;
@@ -56,7 +56,7 @@ int strcmp(char *p1, char *p2)
   return failed;
 }
 
-int strncmp(char *p1, char *p2, int n)
+int strncmp(const char *p1, const char *p2, int n)
 {
   int i = 0;
   int failed = 0;

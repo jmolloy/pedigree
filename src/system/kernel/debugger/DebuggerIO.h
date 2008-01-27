@@ -58,7 +58,7 @@ public:
   /**
    * Writes the given text out to the CLI, in the given colour and background colour.
    */
-  virtual void writeCli(char *str, Colour foreColour, Colour backColour) {};
+  virtual void writeCli(const char *str, Colour foreColour, Colour backColour) {};
 
   /**
    * Reads a command from the interface. Blocks until a character is pressed, and then
@@ -79,7 +79,7 @@ public:
    * Draws a string of text at the given location in the given colour.
    * note that wrapping is not performed, the string will be clipped.
    */
-  virtual void drawString(char *str, int row, int col, Colour foreColour, Colour backColour) {};
+  virtual void drawString(const char *str, int row, int col, Colour foreColour, Colour backColour) {};
 
   /**
    * Returns the width and height respectively of the console.

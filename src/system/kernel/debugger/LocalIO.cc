@@ -75,7 +75,7 @@ void LocalIO::disableCli()
 {
 }
 
-void LocalIO::writeCli(char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void LocalIO::writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   bool bRefreshWasEnabled = false;
   if (m_bRefreshesEnabled)
@@ -116,7 +116,7 @@ bool LocalIO::readCli(char *str, int maxLen)
   if (m_bReady)
   {
     // Yes, output a prompt...
-    writeCli((char*)"(db) ", DebuggerIO::LightGrey, DebuggerIO::Black);
+    writeCli("(db) ", DebuggerIO::LightGrey, DebuggerIO::Black);
     // ...and zero the command string.
     m_pCommand[0] = '\0';
     m_bReady = false;
@@ -306,7 +306,7 @@ void LocalIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, Debugg
     forceRefresh();
 }
 
-void LocalIO::drawString(char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void LocalIO::drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   // Now then, this is a lesson in cheating. Listen up.
   // Firstly we save the current cursorX and cursorY positions.

@@ -16,47 +16,35 @@ struct BootstrapInfo;
 Debugger debugger;
 #endif
 
-// Required for G++ to link static init/destructors.
-void *__dso_handle;
-
-// Defined in the linker.
-unsigned int start_ctors;
-unsigned int end_ctors;
-
-/// Calls the constructors for all global objects.
-/// Call this before using any global objects.
-void initialiseConstructors()
-{
-  // Constructor list is defined in the linker script.
-  // The .ctors section is just an array of function pointers.
-  // iterate through, calling each in turn.
-  unsigned int *iterator = (unsigned int *)&start_ctors;
-  while (iterator < (unsigned int*)&end_ctors)
-  {
-    void (*fp)(void) = (void (*)(void))*iterator;
-    fp();
-    iterator++;
-  }
-}
-
-/// Required for G++ to compile code.
-extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)
-{
-}
+// initialiseConstructors()
+#include <cppsupport.h>
+// initialiseArchitecture1(), initialiseArchitecture2()
+#include <initialiseMachine.h>
+#include <types.h>
 
 /// Kernel entry point.
 extern "C" void _main(BootstrapInfo *bsInf)
 {
   asm volatile("mov $0x12345, %ecx");
-  // Firstly call the constructors of all global objects.
+  
+  /// Firstly call the constructors of all global objects.
   initialiseConstructors();
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   debugger.breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
+  /// First stage of the machine-dependant initialisation.
+  /// After that only the memory-management related classes and
+  /// functions can be used.
+  initialiseMachine1();
+
   // We need a heap for dynamic memory allocation.
 //  initialiseMemory();
+
+  /// First stage of the machine-dependant initialisation.
+  /// After that every machine dependant class & function can be used.
+  initialiseMachine2();
 
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.

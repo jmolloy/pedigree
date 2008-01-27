@@ -32,7 +32,7 @@ int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmd
 {
   for (int i = start; i < nCmds; i++)
   {
-    if (!strncmp((char*)pCommands[i]->getString(), prefix, strlen(prefix)))
+    if (!strncmp(pCommands[i]->getString(), prefix, strlen(prefix)))
       return i;
   }
   return -1;
@@ -40,7 +40,7 @@ int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmd
 
 bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 {
-  if (!strncmp((char*)pCommand->getString(), pStr, strlen(pCommand->getString())))
+  if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
   {
     int n = strlen(pCommand->getString());
     memcpy((unsigned char*)pStr, (unsigned char*)pStr+n, strlen(pStr)-n+1);
@@ -78,7 +78,7 @@ void Debugger::breakpoint(int type)
 
   pIo->drawHorizontalLine(' ', 0, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
   pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-  pIo->drawString((char*)"Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+  pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
 
   char pCommand[256];
   while(1)
