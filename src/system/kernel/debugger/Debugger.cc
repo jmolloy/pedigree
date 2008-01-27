@@ -20,15 +20,7 @@
 #include <DisassembleCommand.h>
 #include <utility.h>
 
-Debugger::Debugger()
-{
-}
-
-Debugger::~Debugger()
-{
-}
-
-int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmds, int start)
+static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmds, int start)
 {
   for (int i = start; i < nCmds; i++)
   {
@@ -38,7 +30,7 @@ int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmd
   return -1;
 }
 
-bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
+static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 {
   if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
   {
@@ -50,6 +42,14 @@ bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   {
     return false;
   }
+}
+
+Debugger::Debugger()
+{
+}
+
+Debugger::~Debugger()
+{
 }
 
 void Debugger::breakpoint(int type)
@@ -80,15 +80,17 @@ void Debugger::breakpoint(int type)
   pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
   pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
 
+  bool matchedCommand = false;
   char pCommand[256];
+  DebuggerCommand *pAutoComplete = 0;
   while(1)
   {
-    if (pIo->readCli(pCommand, 256))
+    if (pIo->readCli(pCommand, 256, pAutoComplete))
       break;
 
     char pStr[256];
     char pStr2[64];
-    bool matchedCommand = false;
+    matchedCommand = false;
     for (int i = 0; i < nCommands; i++)
     {
       if (matchesCommand(pCommand, pCommands[i]))
@@ -101,6 +103,7 @@ void Debugger::breakpoint(int type)
       }
     }
 
+    pAutoComplete = 0;
     if (!matchedCommand)
     {
       pStr2[0] = '\0';
@@ -108,6 +111,8 @@ void Debugger::breakpoint(int type)
       int i = -1;
       while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
       {
+        if (!pAutoComplete)
+          pAutoComplete = pCommands[i];
         strcat (pStr, pCommands[i]->getString());
         strcat (pStr, " ");
       }

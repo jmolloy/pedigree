@@ -16,6 +16,8 @@
 
 #include <DebuggerIO.h>
 
+class DebuggerCommand;
+
 #define CONSOLE_WIDTH  80
 #define CONSOLE_HEIGHT 25
 
@@ -60,7 +62,7 @@ public:
    * the current buffer is returned in *str, and the return value is true if the command
    * is complete (if enter has been pressed). *str will never exceed maxLen.
    */
-  bool readCli(char *str, int maxLen);
+  bool readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete);
 
   /**
    * Draw a line of characters in the given fore and back colours, in the 

@@ -1,8 +1,23 @@
-/// DebuggerIO.h - interface for the abstract DebuggerIO class.
-/// \author James Molloy
+/*
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
 #ifndef DEBUGGER_IO_H
 #define DEBUGGER_IO_H
+
+class DebuggerCommand;
 
 /**
  * Note that columns are numbered starting at 0 from the left, and rows are numbered
@@ -65,7 +80,7 @@ public:
    * the current buffer is returned in *str, and the return value is true if the command
    * is complete (if enter has been pressed). *str will never exceed maxLen.
    */
-  virtual bool readCli(char *str, int maxLen) {};
+  virtual bool readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete) {};
 
   /**
    * Draw a line of characters in the given fore and back colours, in the 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,6 +15,7 @@
  */
 
 #include <LocalIO.h>
+#include <DebuggerCommand.h>
 #include <utility.h>
 
 #ifdef DEBUGGER_QWERTY
@@ -110,7 +111,7 @@ void LocalIO::writeCli(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour
 
 }
 
-bool LocalIO::readCli(char *str, int maxLen)
+bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
 {
   // Are we ready to recieve another command?
   if (m_bReady)
@@ -140,9 +141,34 @@ bool LocalIO::readCli(char *str, int maxLen)
     {
       // Try and erase one letter of the command string.
       if (strlen(m_pCommand))
+      {
         m_pCommand[strlen(m_pCommand)-1] = '\0';
       
-      writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
+        writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
+      }
+    }
+    else if (ch == 0x09)
+    {
+      if (pAutoComplete)
+      {
+        // Get the full autocomplete string.
+        char *pACString = (char *)pAutoComplete->getString();
+        // Here we hack like complete bitches. Just find the last space in the string,
+        // and memcpy the full autocomplete string in.
+        int i;
+        for (i = strlen(m_pCommand); i >= 0; i--)
+          if (m_pCommand[i] == ' ')
+            break;
+        
+        // We also haxxor the cursor, by writing loads of backspaces, then rewriting the whole string.
+        int nBackspaces = strlen(m_pCommand)-i;
+        for (int j = 0; j < nBackspaces-1; j++)
+          putChar((char)0x08, DebuggerIO::White, DebuggerIO::Black);
+        
+        writeCli(pACString, DebuggerIO::White, DebuggerIO::Black);
+        
+        memcpy((unsigned char *)&m_pCommand[i+1], (unsigned char*)pACString, strlen(pACString)+1);
+      }
     }
     else
     {
