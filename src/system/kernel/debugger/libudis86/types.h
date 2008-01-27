@@ -21,7 +21,8 @@
   typedef __int32 int32_t;
   typedef __int64 int64_t;
 #else
-# define FMT64 "%ll"
+// Changed from %ll to %l to make it work. JAMESM
+# define FMT64 "%l"
 // include <inttypes.h>
 #endif
 

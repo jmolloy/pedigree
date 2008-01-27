@@ -3,6 +3,8 @@
 
 #include <DebuggerCommand.h>
 
+class DebuggerIO;
+
 class DisassembleCommand : public DebuggerCommand
 {
 public:
@@ -12,12 +14,12 @@ public:
   /**
    * Return an autocomplete string, given an input string.
    */
-  void autocomplete(char *input, char *output);
+  void autocomplete(char *input, char *output, int len);
 
   /**
    * Execute the command with the given screen.
    */
-  void execute(char *input, char *output);
+  bool execute(char *input, char *output, int len, DebuggerIO *screen);
   
   /**
    * Returns the string representation of this command.

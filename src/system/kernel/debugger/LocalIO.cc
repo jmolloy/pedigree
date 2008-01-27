@@ -17,9 +17,13 @@
 #include <LocalIO.h>
 #include <DebuggerCommand.h>
 #include <utility.h>
+#include <io.h>
 
 #ifdef DEBUGGER_QWERTY
 #include <keymap_qwerty.h>
+#endif
+#ifdef DEBUGGER_QWERTZ
+#include <keymap_qwertz.h>
 #endif
 
 
@@ -53,22 +57,31 @@ LocalIO::~LocalIO()
 
 void LocalIO::setCliUpperLimit(int nlines)
 {
+  // Do a quick sanity check.
   if (nlines < CONSOLE_HEIGHT)
     m_UpperCliLimit = nlines;
+
+  // If the cursor is now in an invalid area, move it back.
   if (m_CursorY < m_UpperCliLimit)
     m_CursorY = m_UpperCliLimit;
 }
 
 void LocalIO::setCliLowerLimit(int nlines)
 {
+  // Do a quick sanity check.
   if (nlines < CONSOLE_HEIGHT)
     m_LowerCliLimit = nlines;
+  
+  // If the cursor is now in an invalid area, move it back.
   if (m_CursorY >= CONSOLE_HEIGHT-m_LowerCliLimit)
     m_CursorY = m_LowerCliLimit;
 }
 
 void LocalIO::enableCli()
 {
+  // TODO clear the screen here.
+
+  // We've enabled the CLI, so let's make sure the screen is ready.
   forceRefresh();
 }
 
@@ -78,6 +91,7 @@ void LocalIO::disableCli()
 
 void LocalIO::writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
+  // We want to disable refreshes during writing, so the screen only gets updated once.
   bool bRefreshWasEnabled = false;
   if (m_bRefreshesEnabled)
   {
@@ -85,10 +99,11 @@ void LocalIO::writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerI
     m_bRefreshesEnabled = false;
   }
 
-  int i = 0;
-  while (str[i])
-    writeCli(str[i++], foreColour, backColour);
+  // For every character, call writeCli.
+  while (*str)
+    writeCli(*str++, foreColour, backColour);
 
+  // If refreshes were enabled to start with, reenable them, and force a refresh.
   if (bRefreshWasEnabled)
   {
     m_bRefreshesEnabled = true;
@@ -98,6 +113,7 @@ void LocalIO::writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerI
 
 void LocalIO::writeCli(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
+  // Write the character to the current cursor position.
   putChar(c, foreColour, backColour);
   
   // Scroll if required.
@@ -124,12 +140,15 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
   }
 
   char ch = 0;
+  // Spin in a loop until we get a printable character. getChar returns 0 if a non-printing
+  // character is recieved.
   while ( !(ch = getChar()) )
     ;
 
   // Was this a newline?
   if (ch == '\n')
   {
+    // Command finished, we're ready for the next.
     m_bReady = true;
     writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
   }
@@ -147,6 +166,7 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
         writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
       }
     }
+    // Tab?
     else if (ch == 0x09)
     {
       if (pAutoComplete)
@@ -163,20 +183,24 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
         // We also haxxor the cursor, by writing loads of backspaces, then rewriting the whole string.
         int nBackspaces = strlen(m_pCommand)-i;
         for (int j = 0; j < nBackspaces-1; j++)
-          putChar((char)0x08, DebuggerIO::White, DebuggerIO::Black);
+          putChar((char)0x08 /* backspace */, DebuggerIO::White, DebuggerIO::Black);
         
         writeCli(pACString, DebuggerIO::White, DebuggerIO::Black);
         
+        // Memcpy the full autocomplete string in.
         memcpy((unsigned char *)&m_pCommand[i+1], (unsigned char*)pACString, strlen(pACString)+1);
       }
     }
     else
     {
+      // Normal, printing character.
       int len = strlen(m_pCommand);
       if (len < COMMAND_MAX-1)
       {
+        // Add it to the command string, and null terminate.
 	m_pCommand[len] = ch;
 	m_pCommand[len+1] = '\0';
+	// And echo it back to the screen, too.
 	writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
       }
     }
@@ -192,15 +216,20 @@ char LocalIO::getChar()
 {
 
   // Let's get a character from the keyboard.
+  IoPort port;
+  port.allocate(0x60, 4);
   unsigned char scancode, status;
   do
   {
-    asm volatile("inb %1, %0" : "=a" (status) : "dN" ((unsigned short)0x64));
+    // Get the keyboard's status byte.
+    status = port.in8(4);
   }
-  while ( !(status & 0x01) );
+  while ( !(status & 0x01) ); // Spin until there's a key ready.
 
-  asm volatile("inb %1, %0" : "=a" (scancode) : "dN" ((unsigned short)0x60));
-
+  // Get the scancode for the pending keystroke.
+  scancode = port.in8(0);
+  
+  // We don't care about 'special' scancodes which start with 0xe0.
   if (scancode == 0xe0)
     return 0;
 
@@ -212,8 +241,8 @@ char LocalIO::getChar()
     scancode &= 0x7f;
   }
    
-  bool bUseUpper = false;
-  bool bUseNums = false;
+  bool bUseUpper = false;  // Use the upper case keymap.
+  bool bUseNums = false;   // Use the upper case keymap for numbers.
   // Certain scancodes have special meanings.
   switch (scancode)
   {
@@ -235,7 +264,8 @@ char LocalIO::getChar()
       m_bCtrl = false;
     return 0;
   }
-   
+
+
   if ( (m_bCapslock && !m_bShift) || (!m_bCapslock && m_bShift) )
     bUseUpper = true;
 
@@ -407,13 +437,15 @@ void LocalIO::scroll()
 
 void LocalIO::moveCursor()
 {
-  // TODO: use machine abstraction.
   unsigned short tmp = m_CursorY*80 + m_CursorX;
   
-  asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D4), "a" ((unsigned char)14));
-  asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D5), "a" ((unsigned char)(tmp >> 8)));
-  asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D4), "a" ((unsigned char)15));
-  asm volatile ("outb %1, %0" : : "dN" ((unsigned short)0x3D5), "a" ((unsigned char)tmp));
+  IoPort cursorPort;
+  cursorPort.allocate(0x3D4, 2);
+  
+  cursorPort.out8(14, 0);
+  cursorPort.out8(tmp>>8, 1);
+  cursorPort.out8(15, 0);
+  cursorPort.out8(tmp, 1);
 }
 
 void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
@@ -437,7 +469,7 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
   }
 
   // Tab?
-  else if (c == 0x09 && ((m_CursorX+8)&~(8-1) < CONSOLE_WIDTH) )
+  else if (c == 0x09 && ( ((m_CursorX+8)&~(8-1)) < CONSOLE_WIDTH) )
     m_CursorX = (m_CursorX+8) & ~(8-1);
 
   // Carriage return?
@@ -468,4 +500,3 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
     m_CursorY ++;
   }
 }
-

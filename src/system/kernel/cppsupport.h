@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,10 +13,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef KERNEL_CPPSUPPORT_H
 #define KERNEL_CPPSUPPORT_H
 
-/** Calls the constructors of global objects */
+/** 
+ * Calls the constructors of global objects
+ */
 void initialiseConstructors();
 
 #endif

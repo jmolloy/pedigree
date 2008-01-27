@@ -35,7 +35,7 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
   {
     int n = strlen(pCommand->getString());
-    memcpy((unsigned char*)pStr, (unsigned char*)pStr+n, strlen(pStr)-n+1);
+    memcpy((unsigned char*)pStr, (unsigned char*)pStr+n+1, strlen(pStr)-n);
     return true;
   }
   else
@@ -76,54 +76,78 @@ void Debugger::breakpoint(int type)
   pIo->setCliLowerLimit(1); // And a status bar on the bottom.
   pIo->enableCli();
 
-  pIo->drawHorizontalLine(' ', 0, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-  pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-  pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
-
-  bool matchedCommand = false;
-  char pCommand[256];
-  DebuggerCommand *pAutoComplete = 0;
-  while(1)
+  bool bKeepGoing = false;
+  do
   {
-    if (pIo->readCli(pCommand, 256, pAutoComplete))
-      break;
-
+    pIo->drawHorizontalLine(' ', 0, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+  
+    bool matchedCommand = false;
+    char pCommand[256];
+    DebuggerCommand *pAutoComplete = 0;
+    while(1)
+    {
+      if (pIo->readCli(pCommand, 256, pAutoComplete))
+	break;
+  
+      char pStr[256];
+      char pStr2[64];
+      matchedCommand = false;
+      for (int i = 0; i < nCommands; i++)
+      {
+	if (matchesCommand(pCommand, pCommands[i]))
+	{
+	  strcpy(pStr2, pCommands[i]->getString());
+	  strcat(pStr2, " ");
+	  pCommands[i]->autocomplete(pCommand, pStr, 256);
+	  matchedCommand = true;
+	  break;
+	}
+      }
+  
+      pAutoComplete = 0;
+      if (!matchedCommand)
+      {
+	pStr2[0] = '\0';
+	pStr[0] = '\0';
+	int i = -1;
+	while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
+	{
+	  if (!pAutoComplete)
+	    pAutoComplete = pCommands[i];
+	  strcat (pStr, pCommands[i]->getString());
+	  strcat (pStr, " ");
+	}
+      }
+      
+      pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
+      pIo->drawString(pStr2, 24, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
+      pIo->drawString(pStr, 24, strlen(pStr2), DebuggerIO::White, DebuggerIO::DarkGrey);
+    }
+  
+    // A command was entered.
+    bool bValidCommand = false;
     char pStr[256];
-    char pStr2[64];
-    matchedCommand = false;
     for (int i = 0; i < nCommands; i++)
     {
       if (matchesCommand(pCommand, pCommands[i]))
       {
-        strcpy(pStr2, pCommands[i]->getString());
-        strcat(pStr2, " ");
-        pCommands[i]->autocomplete(pCommand, pStr);
-        matchedCommand = true;
-        break;
-      }
-    }
-
-    pAutoComplete = 0;
-    if (!matchedCommand)
-    {
-      pStr2[0] = '\0';
-      pStr[0] = '\0';
-      int i = -1;
-      while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
-      {
-        if (!pAutoComplete)
-          pAutoComplete = pCommands[i];
-        strcat (pStr, pCommands[i]->getString());
-        strcat (pStr, " ");
+	pStr[0] = '\0';
+	bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, pIo);
+	pIo->writeCli(pStr, DebuggerIO::LightGrey, DebuggerIO::Black);
+	bValidCommand = true;
       }
     }
     
-    pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-    pIo->drawString(pStr2, 24, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-    pIo->drawString(pStr, 24, strlen(pStr2), DebuggerIO::White, DebuggerIO::DarkGrey);
+    if (!bValidCommand)
+    {
+      pIo->writeCli("Unrecognised command.\n", DebuggerIO::LightGrey, DebuggerIO::Black);
+      bKeepGoing = true;
+    }
+  
   }
-
-  for(;;);
+  while (bKeepGoing);
 
 }
 

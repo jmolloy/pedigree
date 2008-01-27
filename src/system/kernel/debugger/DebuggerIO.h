@@ -20,6 +20,16 @@
 class DebuggerCommand;
 
 /**
+ * Defines an interface for a console for the debugger to interact with the user.
+ *
+ * The console can be in "raw" or "cli" mode - In CLI mode it is expected that the 
+ * writeCli and readCli functions are heavily used - scrolling and backspacing is provided.
+ * In "raw" mode, any function (except writeCli and readCli) may be used.
+ *
+ * The CLI interface has support for contracting the available window used for the CLI. The
+ * setCli{Upper|Lower}Limit functions define how many lines the CLI should not touch from the
+ * top and bottom of the screen, respectively.
+ *
  * Note that columns are numbered starting at 0 from the left, and rows are numbered
  * starting at 0 from the top.
  */

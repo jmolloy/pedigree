@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
