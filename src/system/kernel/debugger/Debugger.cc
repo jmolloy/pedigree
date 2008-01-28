@@ -18,6 +18,7 @@
 #include <DebuggerIO.h>
 #include <LocalIO.h>
 #include <DisassembleCommand.h>
+#include <LogViewer.h>
 #include <utility.h>
 
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
@@ -68,9 +69,11 @@ void Debugger::breakpoint(int type)
   
   // Commands.
   DisassembleCommand disassembler;
+  LogViewer logViewer;
   
-  int nCommands = 1;
-  DebuggerCommand *pCommands[] = {&disassembler};
+  int nCommands = 2;
+  DebuggerCommand *pCommands[] = {&disassembler,
+                                  &logViewer};
   
   if (type == MONITOR)
   {
@@ -103,7 +106,7 @@ void Debugger::breakpoint(int type)
       // Try and get a character from the CLI, passing in a buffer to populate and an
       // autocomplete command for if the user presses TAB (if one is defined).
       if (pIo->readCli(pCommand, 256, pAutoComplete))
-	break; // Command complete, try and parse it.
+        break; // Command complete, try and parse it.
   
       // The command wasn't complete - let's parse it and try and get an autocomplete string.
       char pStr[256];
@@ -111,29 +114,30 @@ void Debugger::breakpoint(int type)
       matchedCommand = false;
       for (int i = 0; i < nCommands; i++)
       {
-	if (matchesCommand(pCommand, pCommands[i]))
-	{
-	  strcpy(pStr2, pCommands[i]->getString());
-	  strcat(pStr2, " ");
-	  pCommands[i]->autocomplete(pCommand, pStr, 256);
-	  matchedCommand = true;
-	  break;
-	}
+        if (matchesCommand(pCommand, pCommands[i]))
+        {
+          strcpy(pStr2, pCommands[i]->getString());
+          strcat(pStr2, " ");
+          pStr[0] = '\0';
+          pCommands[i]->autocomplete(pCommand, pStr, 256);
+          matchedCommand = true;
+          break;
+        }
       }
   
       pAutoComplete = 0;
       if (!matchedCommand)
       {
-	pStr2[0] = '\0';
-	pStr[0] = '\0';
-	int i = -1;
-	while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
-	{
-	  if (!pAutoComplete)
-	    pAutoComplete = pCommands[i];
-	  strcat (pStr, pCommands[i]->getString());
-	  strcat (pStr, " ");
-	}
+        pStr2[0] = '\0';
+        pStr[0] = '\0';
+        int i = -1;
+        while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
+        {
+          if (!pAutoComplete)
+            pAutoComplete = pCommands[i];
+          strcat (pStr, pCommands[i]->getString());
+          strcat (pStr, " ");
+        }
       }
       
       pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
@@ -148,10 +152,10 @@ void Debugger::breakpoint(int type)
     {
       if (matchesCommand(pCommand, pCommands[i]))
       {
-	pStr[0] = '\0';
-	bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, pIo);
-	pIo->writeCli(pStr, DebuggerIO::LightGrey, DebuggerIO::Black);
-	bValidCommand = true;
+        pStr[0] = '\0';
+        bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, pIo);
+        pIo->writeCli(pStr, DebuggerIO::LightGrey, DebuggerIO::Black);
+        bValidCommand = true;
       }
     }
     

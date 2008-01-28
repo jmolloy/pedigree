@@ -17,32 +17,29 @@
 #ifndef DEBUGGER_LOG_H
 #define DEBUGGER_LOG_H
 
-// Global Log object defined in main.
-#include <main.h>
-
 #define NOTICE(text) \
   do \
   { \
     g_Log << Log::Notice << text << Log::End; \
-  }
+  } while(0);
 
 #define WARNING(text) \
   do \
   { \
     g_Log << Log::Warning << text << Log::End; \
-  }
+  } while(0);
 
 #define ERROR(text) \
   do \
   { \
     g_Log << Log::Error << text << Log::End; \
-  }
+  } while(0);
 
 #define FATAL(text) \
   do \
   { \
     g_Log << Log::Fatal << text << Log::End; \
-  }
+  } while(0);
 
 /// The maximum length of an individual log entry.
 /// \todo Change to using dynamic memory.
@@ -50,6 +47,8 @@
 /// The maximum number of entries in the log.
 /// \todo Change to using dynamic memory.
 #define LOG_ENTRIES 64
+
+extern class Log g_Log;
 
 enum NumberType
 {
@@ -66,7 +65,17 @@ public:
     Error,
     Fatal,
     End
-  }
+  };
+  
+  /**
+   * Stores an entry in the log.
+   */
+  typedef struct LogEntry
+  {
+    unsigned int timestamp; ///< The time (since boot) that this log entry was added, in ticks.
+    SeverityLevel type;     ///< The severity level of this entry.
+    char str[LOG_LENGTH];   ///< The actual entry text. \todo Change this to using dynamic memory.
+  } LogEntry_t;
 
   /**
    * Default constructor - does nothing.
@@ -84,6 +93,7 @@ public:
   Log &operator<< (int n);
   /**
    * Starts an entry in the log (or stops, if level == SeverityLevel::End).
+   * \todo This function should gain and release spinlocks, depending on level.
    */
   Log &operator<< (SeverityLevel level);
   /**
@@ -91,12 +101,33 @@ public:
    */
   Log &operator<< (NumberType type);
 
-private:
+  /**
+   * Returns the n'th log entry, counting from the start.
+   */
+  LogEntry_t getEntry(int n)
+  {
+    return m_pLog[n];
+  }
+  
+  /**
+   * Returns the number of entries in the log.
+   */
+  int getEntryCount()
+  {
+    return m_nEntries;
+  }
+  
   /**
    * Buffer of log messages.
    * \todo Make this a dynamic vector.
    */
+  LogEntry_t m_pLog[LOG_ENTRIES];
+  int m_nEntries;
   
+  /**
+   * Temporary buffer which gets filled by calls to operator<<, and flushed by << End.
+   */
+  LogEntry m_Buffer;
 };
 
 #endif

@@ -18,6 +18,7 @@ void memcpy(unsigned char *dest, unsigned char *src, unsigned int len);
 int strcmp(const char *p1, const char *p2);
 int strncmp(const char *p1, const char *p2, int n);
 char *strcat(char *dest, const char *src);
+char *strncat(char *dest, const char *src, int n);
 
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 

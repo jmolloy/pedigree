@@ -87,6 +87,19 @@ char *strcat(char *dest, const char *src)
   dest[di] = '\0';
 }
 
+char *strncat(char *dest, const char *src, int n)
+{
+  int di = strlen(dest);
+  int si = 0;
+  while (src[si] && n)
+  {
+    dest[di++] = src[si++];
+    n--;
+  }
+  
+  dest[di] = '\0';
+}
+
 int isspace(char c)
 {
   return (c == ' ' || c == '\n' || c == '\r' || c == '\t');

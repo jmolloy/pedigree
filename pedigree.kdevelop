@@ -144,6 +144,9 @@
         <default/>
       </environments>
     </make>
+    <general>
+      <activedir>src/system/kernel/debugger/commands</activedir>
+    </general>
   </kdevcustomproject>
   <kdevdebugger>
     <general>
@@ -269,6 +272,7 @@
       <synchronize>true</synchronize>
       <orientation>Vertical</orientation>
     </splitheadersource>
+    <references/>
   </kdevcppsupport>
   <cppsupportpart>
     <filetemplates>
@@ -288,4 +292,14 @@
     <customTagfilePath>/home/james/pedigree/tags</customTagfilePath>
     <activeTagsFiles/>
   </ctagspart>
+  <kdevfileview>
+    <groups>
+      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonlocation>false</hidenonlocation>
+    </groups>
+    <tree>
+      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
+      <hidenonprojectfiles>true</hidenonprojectfiles>
+    </tree>
+  </kdevfileview>
 </kdevelop>
