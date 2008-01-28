@@ -10,8 +10,8 @@ endif
 COMMAND_LINE_FLAGS = $(MAKEFLAGS)
 SRC = ../src
 INCLUDES=
-
-CMD_FLAGS = $(patsubst %,-D%, $(COMMAND_LINE_FLAGS))
+CMD_FLAGS1 = $(patsubst -%,, $(COMMAND_LINE_FLAGS))
+CMD_FLAGS = $(patsubst %,-D%, $(CMD_FLAGS1))
 
 # /build/buildFlags.mk contains a list of standard build flags.
 include buildFlags.mk
@@ -35,8 +35,13 @@ CMD_FLAGS+= -DX86_COMMON
 endif
 
 BUILD=$(shell pwd)
+ifdef TERMINAL_DUMB
+CC=$(COMPILER)-gcc
+CXX=$(COMPILER)-g++
+else
 CC=$(BUILD)/gcc
 CXX=$(BUILD)/g++
+endif
 CPP=$(COMPILER)-cpp
 AS=nasm
 CFLAGS=-fno-builtin -fno-stack-protector -m32 -nostdlib

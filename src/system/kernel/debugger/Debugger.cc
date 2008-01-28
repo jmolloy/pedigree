@@ -58,11 +58,16 @@ Debugger::~Debugger()
 
 void Debugger::breakpoint(int type)
 {
-
+  
+  // IO interface.
   DebuggerIO *pIo;
+  
+  // IO implementations.
   LocalIO localIO;
-  DisassembleCommand disassembler;
   //SerialIO serialIO;
+  
+  // Commands.
+  DisassembleCommand disassembler;
   
   int nCommands = 1;
   DebuggerCommand *pCommands[] = {&disassembler};
@@ -78,13 +83,16 @@ void Debugger::breakpoint(int type)
   
   pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
   pIo->setCliLowerLimit(1); // And a status bar on the bottom.
-  pIo->enableCli();
+  pIo->enableCli(); // Start CLI mode.
 
+  // Main CLI loop.
   bool bKeepGoing = false;
   do
   {
+    // Clear the top and bottom status lines.
     pIo->drawHorizontalLine(' ', 0, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
     pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
+    // Write the correct text in the upper status line.
     pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
   
     bool matchedCommand = false;
@@ -92,9 +100,12 @@ void Debugger::breakpoint(int type)
     DebuggerCommand *pAutoComplete = 0;
     while(1)
     {
+      // Try and get a character from the CLI, passing in a buffer to populate and an
+      // autocomplete command for if the user presses TAB (if one is defined).
       if (pIo->readCli(pCommand, 256, pAutoComplete))
-	break;
+	break; // Command complete, try and parse it.
   
+      // The command wasn't complete - let's parse it and try and get an autocomplete string.
       char pStr[256];
       char pStr2[64];
       matchedCommand = false;

@@ -23,32 +23,38 @@
 #define NOTICE(text) \
   do \
   { \
-    g_Log << Log::Notice << text << Endl; \
+    g_Log << Log::Notice << text << Log::End; \
   }
 
 #define WARNING(text) \
   do \
   { \
-    g_Log << Log::Warning << text << Endl; \
+    g_Log << Log::Warning << text << Log::End; \
   }
 
 #define ERROR(text) \
   do \
   { \
-    g_Log << Log::Error << text << Endl; \
+    g_Log << Log::Error << text << Log::End; \
   }
 
 #define FATAL(text) \
   do \
   { \
-    g_Log << Log::Fatal << text << Endl; \
+    g_Log << Log::Fatal << text << Log::End; \
   }
+
+/// The maximum length of an individual log entry.
+/// \todo Change to using dynamic memory.
+#define LOG_LENGTH  128
+/// The maximum number of entries in the log.
+/// \todo Change to using dynamic memory.
+#define LOG_ENTRIES 64
 
 enum NumberType
 {
   Hex, Dec
 };
-#define Endl "\n"
 
 class Log
 {
@@ -58,7 +64,8 @@ public:
     Notice,
     Warning,
     Error,
-    Fatal
+    Fatal,
+    End
   }
 
   /**
@@ -71,9 +78,25 @@ public:
    * Adds an entry to the log.
    */
   Log &operator<< (const char *str);
-  Log &operator<< (SeverityLevel level);
-  Log &operator<< (NumberType type);
+  /**
+   * Adds an entry to the log.
+   */
   Log &operator<< (int n);
+  /**
+   * Starts an entry in the log (or stops, if level == SeverityLevel::End).
+   */
+  Log &operator<< (SeverityLevel level);
+  /**
+   * Changes the number type between hex and decimal.
+   */
+  Log &operator<< (NumberType type);
+
+private:
+  /**
+   * Buffer of log messages.
+   * \todo Make this a dynamic vector.
+   */
+  
 };
 
 #endif

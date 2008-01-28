@@ -19,7 +19,7 @@
 #include <machine/types.h>
 
 /** Interface to the hardware's I/O ports.
- *\note Not synchronised */
+ * \note Not synchronised */
 class IoPort
 {
   public:
