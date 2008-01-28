@@ -20,6 +20,8 @@
 #include <DisassembleCommand.h>
 #include <utility.h>
 
+/// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
+/// through pCommands at index start. Returns -1 if none found.
 static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmds, int start)
 {
   for (int i = start; i < nCmds; i++)
@@ -30,6 +32,8 @@ static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, i
   return -1;
 }
 
+/// Helper function. Returns true if the string in pStr matches pCommand. If so, pStr is changed
+/// so that on return, it contains the parameters to that command (everything after the first space).
 static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 {
   if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
