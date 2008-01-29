@@ -118,6 +118,11 @@ public:
   virtual void enableRefreshes() {};
   virtual void disableRefreshes() {};
   virtual void forceRefresh() {};
+  
+  /**
+   * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
+   */
+  virtual char getChar() {};
 
 };
 

@@ -79,14 +79,38 @@ void LocalIO::setCliLowerLimit(int nlines)
 
 void LocalIO::enableCli()
 {
-  // TODO clear the screen here.
+  // Clear the framebuffer.
+  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  {
+    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    unsigned short blank = ' ' | (attributeByte << 8);
+    m_pFramebuffer[i] = blank;
+  }
+  m_pCommand[0] = '\0';
 
+  // Reposition the cursor.
+  m_CursorX = 0;
+  m_CursorY = m_UpperCliLimit;
+  
   // We've enabled the CLI, so let's make sure the screen is ready.
   forceRefresh();
 }
 
 void LocalIO::disableCli()
 {
+  // Clear the framebuffer.
+  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  {
+    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    unsigned short blank = ' ' | (attributeByte << 8);
+    m_pFramebuffer[i] = blank;
+  }
+  
+  // Reposition the cursor.
+  m_CursorX = 0;
+  m_CursorY = m_UpperCliLimit;
+  
+  forceRefresh();
 }
 
 void LocalIO::writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)

@@ -97,6 +97,11 @@ public:
   void disableRefreshes();
   void forceRefresh();
 
+  /**
+   * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
+   */
+  char getChar();
+  
 private:
  
   /**
@@ -109,10 +114,6 @@ private:
    */
   void moveCursor();
 
-  /**
-   * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
-   */
-  char getChar();
   void putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
