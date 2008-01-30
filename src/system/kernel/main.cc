@@ -25,11 +25,6 @@ struct BootstrapInfo;
 #include <Debugger.h>
 #endif
 
-// Global variables, declared in main.h
-#ifdef DEBUGGER
-Debugger debugger;
-#endif
-
 // initialiseConstructors()
 #include <cppsupport.h>
 // initialiseArchitecture1(), initialiseArchitecture2()
@@ -38,7 +33,6 @@ Debugger debugger;
 /// Kernel entry point.
 extern "C" void _main(BootstrapInfo *bsInf)
 {
-  asm volatile("mov $0x12345, %ecx");
   
   /// Firstly call the constructors of all global objects.
   initialiseConstructors();
@@ -56,7 +50,7 @@ extern "C" void _main(BootstrapInfo *bsInf)
   initialiseMachine2();
   
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
-  debugger.breakpoint(DEBUGGER_RUN_AT_START);
+  g_Debugger.breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
   // Then get the BootstrapInfo object to convert its contents into

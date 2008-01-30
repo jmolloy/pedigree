@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMI xmlns:UML="http://schema.omg.org/spec/UML/1.3" verified="false" timestamp="2008-01-17T16:06:22" xmi.version="1.2" >
+<XMI xmlns:UML="http://schema.omg.org/spec/UML/1.3" verified="false" timestamp="2008-01-30T16:03:36" xmi.version="1.2" >
  <XMI.header>
   <XMI.documentation>
    <XMI.exporter>umbrello uml modeller http://uml.sf.net</XMI.exporter>
@@ -12,7 +12,12 @@
   <UML:Model isSpecification="false" isLeaf="false" isRoot="false" xmi.id="m1" isAbstract="false" name="UML Model" >
    <UML:Namespace.ownedElement>
     <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="2" isRoot="false" isAbstract="false" name="folder" />
-    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="11" isRoot="false" isAbstract="false" name="datatype" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="2" isRoot="false" isAbstract="false" name="folder" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="11" isRoot="false" isAbstract="false" name="datatype" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="2" isRoot="false" isAbstract="false" name="folder" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="11" isRoot="false" isAbstract="false" name="datatype" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="2" isRoot="false" isAbstract="false" name="folder" />
+    <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="11" isRoot="false" isAbstract="false" name="datatype" />
     <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="2" isRoot="false" isAbstract="false" name="folder" />
     <UML:Stereotype isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="11" isRoot="false" isAbstract="false" name="datatype" />
     <UML:Model stereotype="2" isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="1" isRoot="false" isAbstract="false" name="Logical View" >
@@ -32,55 +37,31 @@
         <UML:DataType stereotype="11" isSpecification="false" isLeaf="false" visibility="public" namespace="8" xmi.id="21" isRoot="false" isAbstract="false" name="string" />
        </UML:Namespace.ownedElement>
       </UML:Package>
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="22" isRoot="false" isAbstract="false" name="PhysicalMemoryManager" />
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="23" isRoot="false" isAbstract="false" name="VirtualMemoryManager" />
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="24" isRoot="false" isAbstract="false" name="Frame" />
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="25" isRoot="false" isAbstract="false" name="Page" />
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="26" isRoot="false" isAbstract="false" name="PageDirectory" >
-       <UML:ModelElement.templateParameter>
+      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="26" isRoot="false" isAbstract="false" name="PageDirectory" >
+       <UML:Namespace.ownedElement>
         <UML:TemplateParameter isSpecification="false" isLeaf="false" visibility="public" namespace="26" xmi.id="43" isRoot="false" isAbstract="false" name="Bitset&lt;Frame>" />
-       </UML:ModelElement.templateParameter>
-       <UML:Classifier.feature>
-        <UML:Attribute isSpecification="false" visibility="private" xmi.id="29" type="27" name="m_pPageTables" />
-        <UML:Attribute isSpecification="false" visibility="private" xmi.id="44" type="43" name="m_Frames" />
-       </UML:Classifier.feature>
+       </UML:Namespace.ownedElement>
       </UML:Class>
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="27" isRoot="false" isAbstract="false" name="PageTable" >
-       <UML:Classifier.feature>
-        <UML:Attribute isSpecification="false" visibility="private" xmi.id="35" type="25" name="m_pPages" />
-       </UML:Classifier.feature>
-      </UML:Class>
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="28" isRoot="false" isAbstract="false" name="Process" />
-      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="m1" xmi.id="41" isRoot="false" isAbstract="false" name="Bitset" />
+      <UML:Class isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="27" isRoot="false" isAbstract="false" name="PageTable" />
+      <UML:Package stereotype="11" isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="45" isRoot="false" isAbstract="false" name="Debugger" >
+       <UML:Namespace.ownedElement>
+        <UML:Class isSpecification="false" isLeaf="false" visibility="implementation" namespace="53" xmi.id="46" isRoot="false" isAbstract="false" name="bleh" />
+       </UML:Namespace.ownedElement>
+      </UML:Package>
+      <UML:Package isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="52" isRoot="false" isAbstract="false" name="Bleh2" >
+       <UML:Namespace.ownedElement/>
+      </UML:Package>
+      <UML:Package isSpecification="false" isLeaf="false" visibility="public" namespace="1" xmi.id="53" isRoot="false" isAbstract="false" name="Debugger::::" >
+       <UML:Namespace.ownedElement/>
+      </UML:Package>
+      <UML:Dependency isSpecification="false" visibility="public" namespace="1" xmi.id="47" client="46" name="" supplier="45" />
      </UML:Namespace.ownedElement>
      <XMI.extension xmi.extender="umbrello" >
       <diagrams>
        <diagram snapgrid="0" showattsig="1" fillcolor="#ffffc0" linewidth="0" zoom="100" showgrid="0" showopsig="1" usefillcolor="1" snapx="10" canvaswidth="823" snapy="10" showatts="1" xmi.id="9" documentation="" type="1" showops="1" showpackage="0" name="class diagram" localid="900000" showstereotype="0" showscope="1" snapcsgrid="0" font="Sans Serif,10,-1,5,50,0,0,0,0,0" linecolor="#ff0000" canvasheight="642" >
-        <widgets>
-         <classwidget usesdiagramfillcolour="1" width="59" showattsigs="601" usesdiagramusefillcolour="1" x="265" y="22" showopsigs="601" linewidth="none" fillcolour="none" height="36" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="24" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="none" />
-         <classwidget usesdiagramfillcolour="1" width="50" showattsigs="601" usesdiagramusefillcolour="1" x="106" y="242" showopsigs="601" linewidth="none" fillcolour="none" height="36" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="25" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="none" />
-         <classwidget usesdiagramfillcolour="0" width="257" showattsigs="601" usesdiagramusefillcolour="0" x="33" y="21" showopsigs="601" linewidth="none" fillcolour="#ffffc0" height="86" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="26" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="#ff0000" />
-         <classwidget usesdiagramfillcolour="0" width="132" showattsigs="601" usesdiagramusefillcolour="0" x="60" y="136" showopsigs="601" linewidth="none" fillcolour="#ffffc0" height="45" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="27" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="#ff0000" />
-         <classwidget usesdiagramfillcolour="1" width="70" showattsigs="601" usesdiagramusefillcolour="1" x="366" y="22" showopsigs="601" linewidth="none" fillcolour="none" height="36" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="28" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="none" />
-         <classwidget usesdiagramfillcolour="0" width="108" showattsigs="601" usesdiagramusefillcolour="0" x="536" y="60" showopsigs="601" linewidth="none" fillcolour="#ffffc0" height="59" usefillcolor="1" showpubliconly="0" showattributes="1" isinstance="0" xmi.id="41" showoperations="1" showpackage="0" showscope="1" font="Sans Serif,10,-1,5,75,0,0,0,0,0" linecolor="#ff0000" />
-        </widgets>
+        <widgets/>
         <messages/>
-        <associations>
-         <assocwidget totalcounta="2" indexa="1" visibilityB="201" totalcountb="2" indexb="1" linewidth="none" widgetbid="27" widgetaid="26" xmi.id="29" type="510" changeabilityA="900" changeabilityB="900" linecolor="none" visibilityA="200" >
-          <linepath>
-           <startpoint startx="161" starty="107" />
-           <endpoint endx="126" endy="136" />
-          </linepath>
-          <floatingtext usesdiagramfillcolour="1" width="114" usesdiagramusefillcolour="1" x="128" y="112" linewidth="none" posttext="" role="710" fillcolour="none" height="22" usefillcolor="1" pretext="-" isinstance="0" xmi.id="34" text="m_pPageTables" font="Sans Serif,10,-1,5,50,0,0,0,0,0" linecolor="none" />
-         </assocwidget>
-         <assocwidget totalcounta="2" indexa="1" visibilityB="201" totalcountb="2" indexb="1" linewidth="none" widgetbid="25" widgetaid="27" xmi.id="35" type="510" changeabilityA="900" changeabilityB="900" linecolor="none" visibilityA="200" >
-          <linepath>
-           <startpoint startx="126" starty="181" />
-           <endpoint endx="131" endy="242" />
-          </linepath>
-          <floatingtext usesdiagramfillcolour="1" width="80" usesdiagramusefillcolour="1" x="49" y="218" linewidth="none" posttext="" role="710" fillcolour="none" height="22" usefillcolor="1" pretext="-" isinstance="0" xmi.id="40" showstereotype="1" text="m_pPages" font="Sans Serif,10,-1,5,50,0,0,0,0,0" linecolor="none" />
-         </assocwidget>
-        </associations>
+        <associations/>
        </diagram>
       </diagrams>
      </XMI.extension>
@@ -101,25 +82,18 @@
   </UML:Model>
  </XMI.content>
  <XMI.extensions xmi.extender="umbrello" >
-  <docsettings viewid="9" documentation="" uniqueid="44" />
+  <docsettings viewid="9" documentation="" uniqueid="53" />
   <listview>
    <listitem open="1" type="800" label="Views" >
     <listitem open="1" type="801" id="1" >
      <listitem open="0" type="807" id="9" label="class diagram" />
-     <listitem open="1" type="813" id="41" />
-     <listitem open="1" type="813" id="24" />
-     <listitem open="1" type="813" id="25" />
-     <listitem open="1" type="813" id="26" >
-      <listitem open="0" type="814" id="29" />
-      <listitem open="0" type="814" id="44" />
-      <listitem open="0" type="816" id="43" />
+     <listitem open="1" type="813" id="26" />
+     <listitem open="1" type="813" id="27" />
+     <listitem open="1" type="818" id="52" />
+     <listitem open="1" type="818" id="45" >
+      <listitem open="0" type="813" id="46" />
      </listitem>
-     <listitem open="1" type="813" id="27" >
-      <listitem open="0" type="814" id="35" />
-     </listitem>
-     <listitem open="1" type="813" id="22" />
-     <listitem open="1" type="813" id="28" />
-     <listitem open="1" type="813" id="23" />
+     <listitem open="1" type="818" id="53" />
      <listitem open="0" type="830" id="8" >
       <listitem open="1" type="829" id="13" />
       <listitem open="1" type="829" id="12" />

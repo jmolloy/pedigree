@@ -20,6 +20,8 @@
 #define MONITOR 1
 #define SERIAL  2
 
+extern class Debugger g_Debugger;
+
 /**
  * Implements the main kernel debugger. This class interfaces with the machine
  * abstraction to provide trap and breakpoint services. It exposes a set of commands,
