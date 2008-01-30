@@ -30,6 +30,7 @@ mboot:
 [SECTION .text]
 start:
   cli
+  push ebx
   call _main
   jmp $
 

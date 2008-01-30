@@ -15,11 +15,7 @@
  */
 
 // If we're being called standalone, we don't get passed any BootstrapInfo.
-#ifndef KERNEL_STANDALONE
 #include "BootstrapInfo.h"
-#else // !KERNEL_STANDALONE
-struct BootstrapInfo;
-#endif // !KERNEL_STANDALONE
 
 #ifdef DEBUGGER
 #include <Debugger.h>
@@ -31,26 +27,29 @@ struct BootstrapInfo;
 #include <machine/initialiseMachine.h>
 
 /// Kernel entry point.
-extern "C" void _main(BootstrapInfo *bsInf)
+extern "C" void _main(BootstrapStruct_t *bsInf)
 {
   
-  /// Firstly call the constructors of all global objects.
+  // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
-  /// First stage of the machine-dependant initialisation.
-  /// After that only the memory-management related classes and
-  /// functions can be used.
+  // Create a BootstrapInfo object to parse bsInf.
+  BootstrapInfo bootstrapInfo(bsInf);
+  
+  // First stage of the machine-dependant initialisation.
+  // After that only the memory-management related classes and
+  // functions can be used.
   initialiseMachine1();
 
   // We need a heap for dynamic memory allocation.
 //  initialiseMemory();
 
-  /// First stage of the machine-dependant initialisation.
-  /// After that every machine dependant class & function can be used.
+  // First stage of the machine-dependant initialisation.
+  // After that every machine dependant class & function can be used.
   initialiseMachine2();
   
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
-  g_Debugger.breakpoint(DEBUGGER_RUN_AT_START);
+  Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
   // Then get the BootstrapInfo object to convert its contents into

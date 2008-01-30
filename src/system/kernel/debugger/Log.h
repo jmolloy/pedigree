@@ -20,25 +20,25 @@
 #define NOTICE(text) \
   do \
   { \
-    g_Log << Log::Notice << text << Log::End; \
+    Log::instance() << Log::Notice << text << Log::End; \
   } while(0);
 
 #define WARNING(text) \
   do \
   { \
-    g_Log << Log::Warning << text << Log::End; \
+    Log::instance() << Log::Warning << text << Log::End; \
   } while(0);
 
 #define ERROR(text) \
   do \
   { \
-    g_Log << Log::Error << text << Log::End; \
+    Log::instance() << Log::Error << text << Log::End; \
   } while(0);
 
 #define FATAL(text) \
   do \
   { \
-    g_Log << Log::Fatal << text << Log::End; \
+    Log::instance() << Log::Fatal << text << Log::End; \
   } while(0);
 
 /// The maximum length of an individual log entry.
@@ -48,13 +48,14 @@
 /// \todo Change to using dynamic memory.
 #define LOG_ENTRIES 64
 
-extern class Log g_Log;
-
 enum NumberType
 {
   Hex, Dec
 };
 
+/**
+ * Implements a kernel log that can be used to debug problems.
+ */
 class Log
 {
 public:
@@ -78,10 +79,12 @@ public:
   } LogEntry_t;
 
   /**
-   * Default constructor - does nothing.
+   * Retrieves the static Log instance.
    */
-  Log ();
-  ~Log ();
+  static Log &instance()
+  {
+    return m_Instance;
+  }
   
   /**
    * Adds an entry to the log.
@@ -116,6 +119,23 @@ public:
   {
     return m_nEntries;
   }
+
+private:
+  /**
+   * Default constructor - does nothing.
+   */
+  Log ();
+  ~Log ();
+  
+  /**
+   * Prints a hex number to the log.
+   */
+  void writeHex(unsigned int n);
+  
+  /**
+   * Prints a decimal number to the log.
+   */
+  void writeDec(unsigned int n);
   
   /**
    * Buffer of log messages.
@@ -128,6 +148,16 @@ public:
    * Temporary buffer which gets filled by calls to operator<<, and flushed by << End.
    */
   LogEntry m_Buffer;
+  
+  /**
+   * The number type mode that we are in.
+   */
+  NumberType m_NumberType;
+  
+  /**
+   * The Log instance (singleton class)
+   */
+  static Log m_Instance;
 };
 
 #endif

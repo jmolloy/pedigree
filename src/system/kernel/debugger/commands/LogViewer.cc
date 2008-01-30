@@ -33,38 +33,6 @@ void LogViewer::autocomplete(char *input, char *output, int len)
 
 bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
 {
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
-  WARNING("bleh");
-  ERROR("soouutt");
-  WARNING("gkjskgjg");
-  NOTICE("lllll");
   // Let's enter 'raw' screen mode.
   pScreen->disableCli();
   
@@ -88,7 +56,7 @@ bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
   int nLines = pScreen->getHeight()-2; // -2 for top and bottom status bars.
   
   // Starting line.
-  int line = g_Log.getEntryCount() - nLines;
+  int line = Log::instance().getEntryCount() - nLines;
 
   // Main loop.
   bool bStop = false;
@@ -110,16 +78,16 @@ bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
     }
     case 'k':
     {
-      if (line < g_Log.getEntryCount() - nLines)
+      if (line < Log::instance().getEntryCount() - nLines)
         line++;
       break;
     }
     case ' ':
     {
-      if (line+nLines <= g_Log.getEntryCount()-nLines)
+      if (line+nLines <= Log::instance().getEntryCount()-nLines)
         line += nLines;
       else
-        line = g_Log.getEntryCount()-nLines;
+        line = Log::instance().getEntryCount()-nLines;
       break;
     }
     case 0x08:
@@ -150,7 +118,7 @@ void LogViewer::refresh(int topLine, DebuggerIO *pScreen)
                                DebuggerIO::White, DebuggerIO::Black);
     if (line >= 0)
     {
-      Log::LogEntry_t entry = g_Log.getEntry(line);
+      Log::LogEntry_t entry = Log::instance().getEntry(line);
       
       char timestamp[16];
       sprintf(timestamp, "[%08d]", entry.timestamp);

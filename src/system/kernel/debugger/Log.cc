@@ -17,10 +17,11 @@
 #include <Log.h>
 #include <utility.h>
 
-Log g_Log;
+Log Log::m_Instance;
 
 Log::Log () :
-  m_nEntries(0)
+  m_nEntries(0),
+  m_NumberType(Dec)
 {
 }
 
@@ -39,7 +40,16 @@ Log &Log::operator<< (const char *str)
 
 Log &Log::operator<< (int n)
 {
-  // TODO
+  if (m_NumberType == Dec)
+    writeDec( (unsigned int) n);
+  else
+    writeHex( (unsigned int) n);
+  return *this;
+}
+
+Log &Log::operator<< (NumberType type)
+{
+  m_NumberType = type;
   return *this;
 }
 
@@ -64,7 +74,76 @@ Log &Log::operator<< (SeverityLevel level)
   return *this;
 }
 
-Log &Log::operator<< (NumberType type)
+void Log::writeHex(unsigned int n)
 {
-  return *this;
+  unsigned int tmp;
+
+  strcat(m_Buffer.str, "0x");
+
+  char tmpStr[2];
+  tmpStr[1] = '\0';
+  
+  bool noZeroes = true;
+
+  int i;
+  for (i = sizeof(unsigned int)*8-4; i > 0; i -= 4)
+  {
+    tmp = (n >> i) & 0xF;
+    if (tmp == 0 && noZeroes)
+      continue;
+    
+    if (tmp >= 0xA)
+    {
+      noZeroes = false;
+      tmpStr[0] = tmp-0xA+'a';
+      strcat(m_Buffer.str, tmpStr);
+    }
+    else
+    {
+      noZeroes = false;
+      tmpStr[0] = tmp+'0';
+      strcat(m_Buffer.str, tmpStr);
+    }
+  }
+  
+  tmp = n & 0xF;
+  if (tmp >= 0xA)
+  {
+    tmpStr[0] = tmp-0xA+'a';
+    strcat(m_Buffer.str, tmpStr);
+  }
+  else
+  {
+    tmpStr[0] = tmp+'0';
+    strcat(m_Buffer.str, tmpStr);
+  }
+}
+
+void Log::writeDec(unsigned int n)
+{
+  if (n == 0)
+  {
+    strcat(m_Buffer.str, "0");
+    return;
+  }
+  
+  unsigned int acc = n;
+  char c[32];
+  int i = 0;
+  while (acc > 0)
+  {
+    c[i] = '0' + acc%10;
+    acc /= 10;
+    i++;
+  }
+  c[i] = 0;
+
+  char c2[32];
+  c2[i--] = 0;
+  int j = 0;
+  while(i >= 0)
+  {
+    c2[i--] = c[j++];
+  }
+  strcat(m_Buffer.str, c2);
 }

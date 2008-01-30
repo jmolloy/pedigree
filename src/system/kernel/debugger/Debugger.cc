@@ -21,7 +21,7 @@
 #include <LogViewer.h>
 #include <utility.h>
 
-Debugger g_Debugger;
+Debugger Debugger::m_Instance;
 
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
 /// through pCommands at index start. Returns -1 if none found.

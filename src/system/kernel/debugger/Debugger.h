@@ -20,8 +20,6 @@
 #define MONITOR 1
 #define SERIAL  2
 
-extern class Debugger g_Debugger;
-
 /**
  * Implements the main kernel debugger. This class interfaces with the machine
  * abstraction to provide trap and breakpoint services. It exposes a set of commands,
@@ -32,12 +30,15 @@ extern class Debugger g_Debugger;
 class Debugger
 {
 public:
-  /**
-   * Default constructor/destructor - does nothing.
-   */
-  Debugger();
-  ~Debugger();
 
+  /**
+   * Get the instance of the Debugger
+   */
+  inline static Debugger &instance()
+  {
+    return m_Instance;
+  }
+  
   /**
    * Causes the debugger to take control.
    * \param type One of MONITOR or SERIAL. It defines the type of interface that will be started for
@@ -45,6 +46,18 @@ public:
    */
   void breakpoint(int type);
 
+private:
+  /**
+   * Default constructor - does nothing.
+   */
+  Debugger();
+
+  ~Debugger();
+  
+  /**
+   * The Debugger instance (singleton class)
+   */
+  static Debugger m_Instance;
 };
 
 #endif
