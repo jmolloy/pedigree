@@ -81,7 +81,7 @@ public:
   /**
    * Destructor. Shouldn't do anything.
    */
-  ~BootstrapInfo() {}
+  ~BootstrapInfo();
 
   /**
    * Retrieves the number of kernel ELF section headers.

@@ -30,14 +30,15 @@ BootstrapInfo::~BootstrapInfo()
 
 int BootstrapInfo::getSectionHeaderCount()
 {
+  return m_BootstrapInfo.num;
 }
 
 uint8_t *BootstrapInfo::getSectionHeader(int n)
 {
-  return (uint8_t *) (m_BootstrapStruct.addr + n*m_BootstrapStruct.size);
+  return (uint8_t *) (m_BootstrapInfo.addr + n*m_BootstrapInfo.size);
 }
 
 int BootstrapInfo::getStringTable()
 {
-  return m_BootstrapInfo.num;
+  return m_BootstrapInfo.shndx;
 }
