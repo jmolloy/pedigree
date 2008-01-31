@@ -19,14 +19,9 @@
 # Note that if you're using the top level makefile (as you should be) you only have to deal with
 # the second (BUILD_NAME), fifth (SRCFILES) and sixth (DIRECTORIES) items. :-)
 
--include $(DEPFILES)
-
 # Take the .cc, .c, .s, .S files and make .o files out of them.
 OBJS_BARE := $(SRCFILES:.cc=.o)
 OBJS_BARE := $(OBJS_BARE:.c=.o)
-
-# Only generate DEPFILES for the c and cc files!
-DEPFILES := $(patsubst %.o,%.d,$(OBJS_BARE))
 
 OBJS_BARE := $(OBJS_BARE:.s=.o)
 OBJS_BARE := $(OBJS_BARE:.S=.o)
@@ -52,30 +47,30 @@ endif
 	@perl -e "print \"\\e[32m*** $(BUILD_NAME) built successfully.\\e[0m\n\";"
 
 $(OBJ_DIR):
-	@mkdir $(OBJ_DIR)
+	@mkdir -p $(OBJ_DIR)
 	@for NAME in ${DIRECTORIES}; \
 	do mkdir -p $(OBJ_DIR)/$$NAME; \
 	done
 
 # To compile a .c file to a .o, we need the object file directory to be made and the .c file to exist.
-$(OBJ_DIR)%.o: $(CUR_DIR)%.c $(OBJ_DIR)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.c
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CC) $(CFLAGS) -MMD -MP -MT "$(OBJ_DIR)$*.d $(OBJ_DIR)$*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CC) $(CFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
-$(OBJ_DIR)%.o: $(CUR_DIR)%.cc $(OBJ_DIR)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.cc
 ifndef LOUD
 	@echo "[$(@F)]"
 else
-	@echo $(CXX) $(CXXFLAGS) -MMD -MP -MT "$(OBJ_DIR)$*.d $(OBJ_DIR)$*.t" $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
+	@echo $(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 endif
 	@$(CXX) $(CXXFLAGS) $(CMD_FLAGS) $(INCLUDES) -o $@ -c $<
 
 # .S files get run through the C preprocessor.
-$(OBJ_DIR)%.o: $(CUR_DIR)%.S $(OBJECTS)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.S 
 ifndef LOUD
 	@echo "[$(@F)]"
 else
@@ -86,7 +81,7 @@ endif
 	@rm tmp.o
 
 # .s files don't get run through the preprocessor.
-$(OBJ_DIR)%.o: $(CUR_DIR)%.s $(OBJECTS)
+$(OBJ_DIR)%.o: $(CUR_DIR)%.s
 ifndef LOUD
 	@echo "[$(@F)]"
 else

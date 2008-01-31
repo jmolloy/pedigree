@@ -53,23 +53,27 @@ class Elf32
 public:
   /**
    * Default constructor - loads no data.
+   * \param name An identifier for this ELF file. This is copied into the class.
    */
-  Elf32();
-  /**
-   * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
-   * of memory containing an ELF object.
-   */
-  Elf32(uint8_t *pBuffer);
+  Elf32(char *name);
+
   /**
    * Destructor. Doesn't do much.
    */
   ~Elf32();
 
   /**
-   * Loads a section header.
-   * \param pPtr pointer to the section header, in memory.
+   * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
+   * of memory containing an ELF object.
    */
-  bool loadSectionHeader(void *pPtr);
+  bool load(uint8_t *pBuffer);
+  
+  /**
+   * Loads the symbol and string tables individually.
+   * \param pStr Pointer to the string table section header, in memory.
+   * \param pSym Pointer to the symbol table section header, in memory.
+   */
+  bool loadSectionHeader(uint8_t *pStr, uint8_t *pSym);
 
   /**
    * Writes all writeable sections to their virtual addresses.
@@ -117,74 +121,82 @@ public:
 private:
   typedef struct
   {
-    u8int  ident[16];
-    u16int type;
-    u16int machine;
-    u32int version;
-    u32int entry;
-    u32int phoff;
-    u32int shoff;
-    u32int flags;
-    u16int ehsize;
-    u16int phentsize;
-    u16int phnum;
-    u16int shentsize;
-    u16int shnum;
-    u16int shstrndx;
+    uint8_t  ident[16];
+    uint16_t type;
+    uint16_t machine;
+    uint32_t version;
+    uint32_t entry;
+    uint32_t phoff;
+    uint32_t shoff;
+    uint32_t flags;
+    uint16_t ehsize;
+    uint16_t phentsize;
+    uint16_t phnum;
+    uint16_t shentsize;
+    uint16_t shnum;
+    uint16_t shstrndx;
   } Elf32Header_t;
   
   typedef struct
   {
-    u32int type;
-    u32int offset;
-    u32int vaddr;
-    u32int paddr;
-    u32int filesz;
-    u32int memsz;
-    u32int flags;
-    u32int align;
+    uint32_t type;
+    uint32_t offset;
+    uint32_t vaddr;
+    uint32_t paddr;
+    uint32_t filesz;
+    uint32_t memsz;
+    uint32_t flags;
+    uint32_t align;
   } Elf32ProcessHeader_t;
   
   typedef struct
   {
-    u32int name;
-    u32int type;
-    u32int flags;
-    u32int addr;
-    u32int offset;
-    u32int size;
-    u32int link;
-    u32int info;
-    u32int addralign;
-    u32int entsize;
+    uint32_t name;
+    uint32_t type;
+    uint32_t flags;
+    uint32_t addr;
+    uint32_t offset;
+    uint32_t size;
+    uint32_t link;
+    uint32_t info;
+    uint32_t addralign;
+    uint32_t entsize;
   } Elf32SectionHeader_t;
   
   typedef struct
   {
-    u32int name;
-    u32int value;
-    u32int size;
-    u8int  info;
-    u8int  other;
-    u16int shndx;
+    uint32_t name;
+    uint32_t value;
+    uint32_t size;
+    uint8_t  info;
+    uint8_t  other;
+    uint16_t shndx;
   } Elf32Symbol_t;
   
   typedef struct
   {
-    s32int tag;
+    int32_t tag;
     union
     {
-      s32int val;
-      u32int ptr;
+      int32_t val;
+      uint32_t ptr;
     } un;
   } Elf32Dyn_t;
   
   typedef struct
   {
-    u32int offset;
-    u32int info;
+    uint32_t offset;
+    uint32_t info;
   } Elf32Rel_t;
 
+  Elf32Header_t        *m_pHeader;
+  Elf32SectionHeader_t *m_pSymbolTable;
+  Elf32SectionHeader_t *m_pStringTable;
+  Elf32SectionHeader_t *m_pGotTable; // Global offset table.
+  Elf32SectionHeader_t *m_pRelTable;
+  Elf32SectionHeader_t *m_pSectionHeaders;
+  char                 id [128];
+  uint8_t              *m_pBuffer; ///< Offset of the file in memory.
 };
 
 
