@@ -41,6 +41,8 @@
 #define ELF32_R_SYM(val)  ((val) >> 8)
 #define ELF32_R_TYPE(val) ((val) & 0xff)
 
+class BootstrapInfo;
+
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
  * The ELF data can be loaded either by supplying an entire ELF file in a buffer, or
@@ -69,11 +71,9 @@ public:
   bool load(uint8_t *pBuffer);
   
   /**
-   * Loads the symbol and string tables individually.
-   * \param pStr Pointer to the string table section header, in memory.
-   * \param pSym Pointer to the symbol table section header, in memory.
+   * Extracts the symbol and string tables from the given BootstrapInfo class.
    */
-  bool loadSectionHeader(uint8_t *pStr, uint8_t *pSym);
+  bool load(BootstrapInfo *pBootstrap);
 
   /**
    * Writes all writeable sections to their virtual addresses.
@@ -94,7 +94,7 @@ public:
    * \param[out] startAddr The starting address of the found symbol (optional).
    * \return The symbol name, as a C string.
    */
-  char *lookupSymbol(uint32_t addr, uint32_t startAddr=0);
+  char *lookupSymbol(uint32_t addr, uint32_t *startAddr=0);
 
   /**
    * Returns the address of the symbol with offset 'off' in the dynamic relocation table.

@@ -51,7 +51,7 @@ ifdef X86_64
 SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
 endif
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c
-SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc
+SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Elf32.cc
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.

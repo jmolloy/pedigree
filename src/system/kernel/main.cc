@@ -21,6 +21,9 @@
 #include <Debugger.h>
 #endif
 
+#include <Log.h>
+#include <Elf32.h>
+
 // initialiseConstructors()
 #include <cppsupport.h>
 // initialiseArchitecture1(), initialiseArchitecture2()
@@ -47,6 +50,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // First stage of the machine-dependant initialisation.
   // After that every machine dependant class & function can be used.
   initialiseMachine2();
+  
+  Elf32 elf("Kernel");
+  elf.load(&bootstrapInfo);
+  char *addr = elf.lookupSymbol(0x100024);
+  NOTICE("Addr: " << addr);
   
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
