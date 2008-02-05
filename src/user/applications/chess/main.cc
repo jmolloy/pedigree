@@ -9,6 +9,17 @@ unsigned char rankComparison(unsigned char allPieces,
   // Look right.
   unsigned char toRet = 0;
   
+//   unsigned char tmp = allPieces & (0xFF >> (file+1));
+//   if (tmp == 0)
+//   {
+//   }
+//   else
+//   {
+//     unsigned int off;
+//     asm volatile("bsr %1, %0" : "=r" (off) : "r" (tmp));
+//     tmp |= 0xFF & 
+//   }
+  
   // Find the first one bit.
   for (int i = file+1; i < 8; i++)
   {
