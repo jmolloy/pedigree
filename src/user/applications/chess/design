@@ -1,0 +1,68 @@
+Bitboard
+========
+
+A1: MSB of byte 0
+A8: LSB of byte 0
+
+Rook
+====
+
+* Rank comparison (rank, file) OR File comparison (file, rank).
+
+- Rank comparison (rank, file)
+* Take rank's byte from "all pieces" bitboard and "opponent's pieces" bitboard
+-- Look right
+* Shift rank byte from "all pieces" left by file+1 bits.
+* Find first zero bit, and mask off it and those after it.
+* Shift back again right by file+1 bits.
+-- Look left
+* Shift rank byte from "all pieces" right by (8-file) bits.
+* Find last zero bit, and mask off it and those before it.
+* Shift back again left by (8-file) bits.
+-- Reconstruct
+* Final byte = Byte from "look right" OR byte from "look left".
+* Put final byte back in bitboard.
+
+- File comparison (rank, file)
+* Flip bitboard (col,row = row,col)
+* Call rank comparison (file, rank).
+
+Bishop
+======
+
+- Main diagonal
+* Rotate board 45 degrees.
+* Get 45 degree translation for current position
+* if byte > bit then
+    row &= ~(0xFF >> byte) // WRONG NEEDS CHECKING
+  else
+    row &= ~(0xFF << (8-byte)) // WRONG NEEDS CHECKING
+  endif
+* Rank comparison (translated_rank, translated_file).
+
+- Other diagonal
+* Rotate board 335 degrees.
+* Get 335 degree translation for current position.
+* if byte < bit then
+     ... BLEH, NEEDS CHECKING
+* Rank comparison(translated_rank, translated_file).
+
+Queen
+=====
+
+* Rook OR Bishop
+
+Knight
+======
+
+* Look up jump table position.
+* obvious stuff.
+
+Pawn
+====
+
+* foreach pawn in pawns bitboard
+  * if pawn AND original_pawn_locations
+    * Pawn can do double move. Add to bitboard.
+  ( if pawn_row + 1 & all_pieces) ...
+  NEEDS COMPLETION
