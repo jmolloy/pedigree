@@ -61,15 +61,20 @@ public:
   **/
   void flip180();
 
+  unsigned char getDiagonalRank45(int rank, int file, int *newFile);
+  unsigned char getDiagonalRank315(int rank, int file, int *newFile);
+  void setDiagonalRank45(int rank, int file, unsigned char newRank);
+  void setDiagonalRank315(int rank, int file, unsigned char newRank);
+  
   /**
-     Rotates the bitboard by 45 degrees
+    Debugging function - prints out a bitboard.
   **/
-  void rotate45();
+  void print();
 
   /**
-     Rotates the bitboard by 315 degrees
+    Overloaded bitwise functions.
   **/
-  void rotate315();
+  Bitboard operator|(Bitboard &b2);
 
 private:
   union
