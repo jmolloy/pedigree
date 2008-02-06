@@ -33,7 +33,7 @@ void Bitboard::print()
   printf("ABCDEFGH\n");
 }
 
-void Bitboard::flip180()
+void Bitboard::flip()
 {
   // Rows become columns, columns become rows.
   char c[8];
@@ -51,6 +51,27 @@ void Bitboard::flip180()
     c[7] |= (i-7 < 0) ? (member.c[i] & 0x01) << 7-i : (member.c[i] & 0x01) >> i-7;
   }
 
+  memcpy(member.c, c, 8);
+}
+
+void Bitboard::rotate180()
+{
+  char c[8];
+  memset(c, 0, 8);
+  
+  // Flip all rows and flip all bits in them.
+  for (int i = 0; i < 8; i++)
+  {
+    if (member.c[7-i] & 0x80) c[i] |= 0x01;
+    if (member.c[7-i] & 0x40) c[i] |= 0x02;
+    if (member.c[7-i] & 0x20) c[i] |= 0x04;
+    if (member.c[7-i] & 0x10) c[i] |= 0x08;
+    if (member.c[7-i] & 0x08) c[i] |= 0x10;
+    if (member.c[7-i] & 0x04) c[i] |= 0x20;
+    if (member.c[7-i] & 0x02) c[i] |= 0x40;
+    if (member.c[7-i] & 0x01) c[i] |= 0x80;
+  }
+  
   memcpy(member.c, c, 8);
 }
 

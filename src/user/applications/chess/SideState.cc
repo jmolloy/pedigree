@@ -48,15 +48,19 @@ unsigned char initialKing[] =    {0,0,0,0,1,0,0,0,
                                   0,0,0,0,0,0,0,0,
                                   0,0,0,0,0,0,0,0,
                                   0,0,0,0,0,0,0,0};
+
 SideState::SideState() :
   pawns(initialPawns),
   rooks(initialRooks),
   knights(initialKnights),
   bishops(initialBishops),
   queen(initialQueen),
-  king(initialKing)
+  king(initialKing),
+  kingMoved(false),
+  nextBoard()
 {
-  
+  rooksMoved[0] = false;
+  rooksMoved[1] = false;
 }
 
 Square SideState::firstPawn()
@@ -83,13 +87,13 @@ Square SideState::firstBishop()
   return next();
 }
 
-Square SideState::queen()
+Square SideState::firstQueen()
 {
   nextBoard = queen;
   return next();
 }
 
-Square SideState::king()
+Square SideState::firstKing()
 {
   nextBoard = king;
   return next();
@@ -98,4 +102,25 @@ Square SideState::king()
 Square SideState::next()
 {
   return nextBoard.getAndClearFirstSetBit();
+}
+
+bool SideState::inCheck()
+{
+  return underAttack(firstKing());
+}
+
+bool SideState::underAttack(Square sq)
+{
+}
+
+bool SideState::isCastle(Move m)
+{
+  Square king = firstKing();
+  return (king.col == m.col1 && king.row == m.row2 &&
+          (king.col2-king.col1 > 1 || king.col2-king.col1 < -1))
+}
+
+void SideState::move(Move m)
+{
+
 }

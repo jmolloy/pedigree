@@ -101,14 +101,14 @@ Bitboard rookMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos)
   Bitboard toRet;
   toRet.setRank(pos.row, retRank);
   
-  allPieces.flip180();
-  enemyPieces.flip180();
+  allPieces.flip();
+  enemyPieces.flip();
   rankAll = allPieces.getRank(pos.col);
   rankEnemy = enemyPieces.getRank(pos.col);
   retRank = rankComparison(rankAll, rankEnemy, pos.row);
   Bitboard toRet2;
   toRet2.setRank(pos.col, retRank);
-  toRet2.flip180();
+  toRet2.flip();
   
   return toRet | toRet2;
 }
@@ -167,8 +167,41 @@ unsigned char KJumpTable[] = {1,1,1,0,0,0,0,0,
                               0,0,0,0,0,0,0,0,
                               0,0,0,0,0,0,0,0,
                               0,0,0,0,0,0,0,0};
+unsigned char leftCastleSquares[] =  {0,1,1,1,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0};
+unsigned char rightCastleSquares[] = {0,0,0,0,0,1,1,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0};
+unsigned char leftCastleMove   [] =  {1,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0};
+unsigned char rightCastleMove   [] = {0,0,0,0,0,0,0,1,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0,
+                                      0,0,0,0,0,0,0,0};
 
-Bitboard kingMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos)
+Bitboard kingMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos, bool leftRookMoved,
+                   bool rightRookMoved, bool kingMoved)
 {
   Bitboard kTable(KJumpTable);
   kTable.shift(pos.col-1, pos.row-1); // That jump table is centred on (1,1).
@@ -177,5 +210,28 @@ Bitboard kingMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos)
   // places that white pieces AREN'T.
   Bitboard noPieces = ~allPieces; // No pieces at all in these squares.
   Bitboard noFriendlyPieces = noPieces | enemyPieces;
-  return kTable & noFriendlyPieces;
+  Bitboard toRet = kTable & noFriendlyPieces;
+  
+  // Now, can we castle?
+  if (!kingMoved && (!rightRookMoved || !leftRookMoved))
+  {
+    if (!rightRookMoved)
+    {
+      // So, we can castle to the right if and only if the right castle squares are empty.
+      if ( (allPieces & rightCastleSquares).empty() )
+        toRet = toRet | rightCastleMove;
+    }
+    if (!leftRookMoved)
+    {
+      // So, we can castle to the left if and only if the left castle squares are empty.
+      if ( (allPieces & leftCastleSquares).empty() )
+        toRet = toRet | leftCastleMove;
+    }
+  }
+  return toRet;
+}
+
+Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawns, Square pos)
+{
+  
 }

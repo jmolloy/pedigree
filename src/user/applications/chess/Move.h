@@ -1,4 +1,5 @@
-
+#ifndef MOVE_H
+#define MOVE_H
 /**
    Represents a piece moving across the board.
 **/
@@ -12,4 +13,6 @@ public:
   ~Move() {}
 
   unsigned char sCol, sRow, eCol, eRow;
-}
+};
+
+#endif

@@ -61,9 +61,22 @@ public:
   }
 
   /**
-     Flips the board 180 degrees.
+     Is this bitboard completely empty?
   **/
-  void flip180();
+  bool empty()
+  {
+    return member.i == 0;
+  }
+
+  /**
+     Flips the board so rows become columns and vice versa.
+  **/
+  void flip();
+  
+  /**
+    Rotates the board 180 degrees. Used for swapping sides (black -> white etc)
+  **/
+  void rotate180();
 
   unsigned char getDiagonalRank45(int rank, int file, int *newFile);
   unsigned char getDiagonalRank315(int rank, int file, int *newFile);

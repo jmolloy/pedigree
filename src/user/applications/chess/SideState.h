@@ -1,9 +1,9 @@
 #ifndef SIDESTATE_H
 #define SIDESTATE_H
 
-#include <Bitboard.h>
-#include <Move.h>
-#include <Square.h>
+#include "Bitboard.h"
+#include "Move.h"
+#include "Square.h"
 
 /**
    A representation of a side (white or black). The representation
@@ -25,8 +25,6 @@ public:
      Lets a move be made, regardless of legality.
   **/
   void move(Move m);
-  void castleLeft();
-  void castleRight();
 
   /**
    * Evaluates to true if the given Move is legal.
@@ -34,10 +32,13 @@ public:
   bool isLegal(Move m);
   
   /**
+     Evaluates to true if the given Move is a castle.
+  **/
+  bool isCastle(Move m);
+  
+  /**
      Queries.
   **/
-  bool canCastleLeft();
-  bool canCastleRight();
   bool inCheck();
   bool underAttack(Square sq); // Is (col,row) under attack by side?
   // TODO add en passant.
@@ -49,14 +50,10 @@ public:
   Square firstRook();
   Square firstKnight();
   Square firstBishop();
-  Square queen();
-  Square king();
+  Square firstQueen();
+  Square firstKing();
   
   Square next();
-  
-private:
-  bool rightCastleSquaresFree();
-  bool leftCastleSquaresFree();
   
   /**
      General state.
@@ -79,6 +76,6 @@ private:
    */
   Bitboard nextBoard;
   
-}
+};
 
 #endif
