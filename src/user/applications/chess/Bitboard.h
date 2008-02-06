@@ -1,4 +1,8 @@
+#ifndef BITBOARD_H
+#define BITBOARD_H
+
 #include <stdint.h>
+#include "Square.h"
 
 class Bitboard
 {
@@ -66,6 +70,10 @@ public:
   void setDiagonalRank45(int rank, int file, unsigned char newRank);
   void setDiagonalRank315(int rank, int file, unsigned char newRank);
   
+  void shift(int colOffset, int rowOffset);
+  
+  Square getAndClearFirstSetBit();
+  
   /**
     Debugging function - prints out a bitboard.
   **/
@@ -74,7 +82,10 @@ public:
   /**
     Overloaded bitwise functions.
   **/
-  Bitboard operator|(Bitboard &b2);
+  Bitboard operator|(Bitboard b2);
+  Bitboard operator&(Bitboard b2);
+  Bitboard operator xor(Bitboard b2);
+  Bitboard operator~();
 
 private:
   union
@@ -83,3 +94,5 @@ private:
     unsigned char c[8];
   } member;
 };
+
+#endif

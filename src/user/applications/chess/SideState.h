@@ -1,3 +1,5 @@
+#ifndef SIDESTATE_H
+#define SIDESTATE_H
 
 #include <Bitboard.h>
 #include <Move.h>
@@ -20,38 +22,42 @@ public:
   ~SideState() {}
 
   /**
-     Lets a move be made.
+     Lets a move be made, regardless of legality.
   **/
-  move(Move m);
+  void move(Move m);
+  void castleLeft();
+  void castleRight();
 
+  /**
+   * Evaluates to true if the given Move is legal.
+   */
+  bool isLegal(Move m);
+  
   /**
      Queries.
   **/
-  bool canCastle();
+  bool canCastleLeft();
+  bool canCastleRight();
   bool inCheck();
   bool underAttack(Square sq); // Is (col,row) under attack by side?
-  bool rightCastleSquaresFree();
-  bool leftCastleSquaresFree();
-
+  // TODO add en passant.
+  
   /**
      Accessors for pieces.
   **/
   Square firstPawn();
-  Square nextPawn();
-
   Square firstRook();
-  Square nextRook();
-
   Square firstKnight();
-  Square nextKnight();
-
   Square firstBishop();
-  Square nextBishop();
-
   Square queen();
   Square king();
-
+  
+  Square next();
+  
 private:
+  bool rightCastleSquaresFree();
+  bool leftCastleSquaresFree();
+  
   /**
      General state.
   **/
@@ -68,4 +74,11 @@ private:
   Bitboard queen;
   Bitboard king;
 
+  /**
+   * Bitboard for the next() function.
+   */
+  Bitboard nextBoard;
+  
 }
+
+#endif

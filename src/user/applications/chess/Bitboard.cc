@@ -148,9 +148,98 @@ void Bitboard::setDiagonalRank315(int rank, int file, unsigned char newRank)
   }
 }
 
-Bitboard Bitboard::operator|(Bitboard &b2)
+void Bitboard::shift(int colOffset, int rowOffset)
+{
+  char c[8];
+  memset(c, 0, 8);
+  
+  // Shift rows first.
+  for (int i = 0; i < 8; i++)
+  {
+    if ((i+rowOffset) >= 0 && (i+rowOffset) < 8)
+    {
+      // While we're here, shift columns.
+      c[i+rowOffset] = (colOffset < 0) ? member.c[i] << -colOffset : member.c[i] >> colOffset;
+    }
+  }
+  memcpy(member.c, c, 8);
+}
+
+Bitboard Bitboard::operator|(Bitboard b2)
 {
   Bitboard b3;
   b3.member.i = member.i | b2.member.i;
   return b3;
+}
+
+Bitboard Bitboard::operator&(Bitboard b2)
+{
+  Bitboard b3;
+  b3.member.i = member.i & b2.member.i;
+  return b3;
+}
+
+Bitboard Bitboard::operator xor(Bitboard b2)
+{
+  Bitboard b3;
+  b3.member.i = member.i xor b2.member.i;
+  return b3;
+}
+
+Bitboard Bitboard::operator~()
+{
+  Bitboard b3;
+  b3.member.i = ~member.i;
+  return b3;
+}
+
+Square Bitboard::getAndClearFirstSetBit()
+{
+  for(int i = 0; i < 8; i++)
+  {
+    if (member.c[i] == 0)
+      continue;
+    
+    if (member.c[i] & 0x80)
+    {
+      member.c[i] &= ~0x80;
+      return Square(0, i);
+    }
+    if (member.c[i] & 0x40)
+    {
+      member.c[i] &= ~0x40;
+      return Square(1, i);
+    }
+    if (member.c[i] & 0x20)
+    {
+      member.c[i] &= ~0x20;
+      return Square(2, i);
+    }
+    if (member.c[i] & 0x10)
+    {
+      member.c[i] &= ~0x10;
+      return Square(3, i);
+    }
+    if (member.c[i] & 0x8)
+    {
+      member.c[i] &= ~0x8;
+      return Square(4, i);
+    }
+    if (member.c[i] & 0x4)
+    {
+      member.c[i] &= ~0x4;
+      return Square(5, i);
+    }
+    if (member.c[i] & 0x2)
+    {
+      member.c[i] &= ~0x2;
+      return Square(6, i);
+    }
+    if (member.c[i] & 0x1)
+    {
+      member.c[i] &= ~0x1;
+      return Square(7, i);
+    }
+  }
+  return Square(-1, -1);
 }

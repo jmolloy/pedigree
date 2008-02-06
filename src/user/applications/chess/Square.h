@@ -1,3 +1,5 @@
+#ifndef SQUARE_H
+#define SQUARE_H
 
 class Square
 {
@@ -10,3 +12,5 @@ public:
 
   unsigned char col, row;
 };
+
+#endif

@@ -1,6 +1,6 @@
 
 
-OBJECTS := main.o Bitboard.o
+OBJECTS := main.o Bitboard.o moves.o
 
 all: $(OBJECTS)
-	$(CXX) $(LDFLAGS) -o chess $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o chess $(OBJECTS)
