@@ -5,6 +5,16 @@
 #include "Move.h"
 #include "Square.h"
 
+enum Piece
+{
+  Pawn,
+  Knight,
+  Rook,
+  Bishop,
+  Queen,
+  King
+};
+
 /**
    A representation of a side (white or black). The representation
    of each side is the same - each thinks he/she is White (bottom of the
@@ -24,7 +34,8 @@ public:
   /**
      Lets a move be made, regardless of legality.
   **/
-  void move(Move m);
+  void friendlyMove(Move m, Piece promotion=Pawn);
+  void enemyMove(Move m, Bitboard enemyPawns);
 
   /**
    * Evaluates to true if the given Move is legal.
@@ -39,8 +50,7 @@ public:
   /**
      Queries.
   **/
-  bool inCheck();
-  bool underAttack(Square sq); // Is (col,row) under attack by side?
+  bool underAttack(Square sq, Bitboard enemyPieces); // Is (col,row) under attack by us?
   // TODO add en passant.
   
   /**
@@ -70,6 +80,13 @@ public:
   Bitboard knights;
   Bitboard queen;
   Bitboard king;
+  Bitboard enPassant; // a bitboard giving squares which, if attacked, would result in a pawn being
+                      // taken.
+
+  /**
+    All squares attacked by all pieces.
+  **/
+  Bitboard attack;
 
   /**
    * Bitboard for the next() function.

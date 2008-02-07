@@ -99,6 +99,7 @@ public:
   Bitboard operator&(Bitboard b2);
   Bitboard operator xor(Bitboard b2);
   Bitboard operator~();
+  operator bool();
 
 private:
   union

@@ -214,6 +214,11 @@ Bitboard Bitboard::operator~()
   return b3;
 }
 
+Bitboard::operator bool()
+{
+  return member.i != 0;
+}
+
 Square Bitboard::getAndClearFirstSetBit()
 {
   for(int i = 0; i < 8; i++)
