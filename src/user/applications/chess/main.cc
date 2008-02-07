@@ -5,8 +5,8 @@
 
 int main (char argc, char **argv)
 {
-
-  unsigned char all[] = {1,0,0,0,0,0,1,0,
+  initLookupTable();
+  unsigned char all[] = {1,0,0,0,0,0,0,0,
 			 0,1,0,0,0,0,0,0,
 			 0,0,1,0,0,0,0,0,
 		         0,0,0,0,0,0,0,0,
@@ -27,8 +27,8 @@ int main (char argc, char **argv)
 			  0,0,0,0,0,0,0,0};
   Bitboard enemyPieces(enemy);
   
-//   Bitboard moves = kingMoves(allPieces, enemyPieces, Square(1,1), false, false, false);
-//   moves.print();
-allPieces.rotate180();
-allPieces.print();
+  Bitboard moves = rookMoves(allPieces, enemyPieces, Square(1,1));
+  moves.print();
+// allPieces.rotate180();
+// allPieces.print();
 }

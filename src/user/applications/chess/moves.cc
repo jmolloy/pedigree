@@ -1,8 +1,40 @@
 #include "moves.h"
+#include <stdio.h>
 
+// Rank lookup table.
+unsigned char rankLookupTable[256][256][8];
+
+unsigned char doRankComparison(unsigned char allPieces,
+                               unsigned char enemyPieces,
+                               int file);
+
+// Creates the lookup table.
+void initLookupTable()
+{
+  for(int i = 0; i < 256; i++)
+  {
+    for (int j = 0; j < 256; j++)
+    {
+      for (int k = 0; k < 8; k++)
+      {
+        rankLookupTable[i][j][k] = doRankComparison(i, j, k);
+      }
+    }
+  }
+}
+
+// Normal rank comparison.
 unsigned char rankComparison(unsigned char allPieces,
                              unsigned char enemyPieces,
                              int file)
+{
+  return rankLookupTable[allPieces][enemyPieces][file];
+}
+
+// Only used to generate the lookup table.
+inline unsigned char doRankComparison(unsigned char allPieces,
+                                      unsigned char enemyPieces,
+                                      int file)
 {
   // Look right.
   unsigned char toRet = 0;
@@ -218,20 +250,71 @@ Bitboard kingMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos, bool le
     if (!rightRookMoved)
     {
       // So, we can castle to the right if and only if the right castle squares are empty.
-      if ( (allPieces & rightCastleSquares).empty() )
-        toRet = toRet | rightCastleMove;
+      if ( (allPieces & Bitboard(rightCastleSquares)).empty() )
+      {
+        toRet = toRet | Bitboard(rightCastleMove);
+      }
     }
     if (!leftRookMoved)
     {
       // So, we can castle to the left if and only if the left castle squares are empty.
-      if ( (allPieces & leftCastleSquares).empty() )
-        toRet = toRet | leftCastleMove;
+      if ( (allPieces & Bitboard(leftCastleSquares)).empty() )
+      {
+        toRet = toRet | Bitboard(leftCastleMove);
+      }
     }
   }
   return toRet;
 }
 
-Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawns, Square pos)
+unsigned char pawnMove[] = {0,0,0,0,0,0,0,0,
+                            1,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0};
+unsigned char pawnInitial[] ={0,0,0,0,0,0,0,0,
+                              1,0,0,0,0,0,0,0,
+                              1,0,0,0,0,0,0,0,
+                              0,0,0,0,0,0,0,0,
+                              0,0,0,0,0,0,0,0,
+                              0,0,0,0,0,0,0,0,
+                              0,0,0,0,0,0,0,0,
+                              0,0,0,0,0,0,0,0};
+unsigned char pawnAttack[]={0,0,0,0,0,0,0,0,
+                            1,0,1,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0,
+                            0,0,0,0,0,0,0,0};
+
+Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawnsEnPassant, Square pos)
 {
+  // Has this pawn moved yet?
+  Bitboard normalMove(pawnMove);
+  Bitboard initialMove(pawnInitial);
+  Bitboard *move = &normalMove;
   
+  if (pos.row == 1)
+    move = &initialMove;
+  
+  move->shift(pos.col, pos.row); // That jump table is centred on (0,0).
+  
+  Bitboard attack(pawnAttack);
+  attack.shift(pos.col-1, pos.row); // That jump table is centred on (1,0).
+  
+  // So where can we move?
+  Bitboard finalMove = *move & (~allPieces); // We can move wherever there aren't any pieces!
+  
+  // Where can we attack?
+  Bitboard finalAttack = attack & enemyPieces; // We can attack wherever there are enemy pieces!
+  
+  // But, we can also attack pawns En Passant...
+  finalAttack = finalAttack | (attack & enemyPawnsEnPassant);
+  
+  return finalMove | finalAttack;
 }
