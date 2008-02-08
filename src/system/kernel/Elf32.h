@@ -57,7 +57,7 @@ public:
    * Default constructor - loads no data.
    * \param name An identifier for this ELF file. This is copied into the class.
    */
-  Elf32(char *name);
+  Elf32(const char *name);
 
   /**
    * Destructor. Doesn't do much.
@@ -192,10 +192,11 @@ private:
   Elf32Header_t        *m_pHeader;
   Elf32SectionHeader_t *m_pSymbolTable;
   Elf32SectionHeader_t *m_pStringTable;
+  Elf32SectionHeader_t *m_pShstrtab;
   Elf32SectionHeader_t *m_pGotTable; // Global offset table.
   Elf32SectionHeader_t *m_pRelTable;
   Elf32SectionHeader_t *m_pSectionHeaders;
-  char                 id [128];
+  char                 m_pId [128];
   uint8_t              *m_pBuffer; ///< Offset of the file in memory.
 };
 

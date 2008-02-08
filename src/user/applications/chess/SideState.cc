@@ -68,36 +68,42 @@ SideState::SideState() :
 Square SideState::firstPawn()
 {
   nextBoard = pawns;
+  nextPiece = Pawn;
   return next();
 }
 
 Square SideState::firstRook()
 {
   nextBoard = rooks;
+  nextPiece = Rook;
   return next();
 }
 
 Square SideState::firstKnight()
 {
   nextBoard = knights;
+  nextPiece = Knight;
   return next();
 }
 
 Square SideState::firstBishop()
 {
   nextBoard = bishops;
+  nextPiece = Bishop;
   return next();
 }
 
 Square SideState::firstQueen()
 {
   nextBoard = queen;
+  nextPiece = Queen;
   return next();
 }
 
 Square SideState::firstKing()
 {
   nextBoard = king;
+  nextPiece = King;
   return next();
 }
 
@@ -106,7 +112,7 @@ Square SideState::next()
   return nextBoard.getAndClearFirstSetBit();
 }
 
-bool SideState::underAttack(Square sq, Bitboard enemyPieces)
+bool SideState::isAttacking(Square sq, Bitboard enemyPieces)
 {
   // Make a bitboard for the square under attack.
   Bitboard sqBoard;

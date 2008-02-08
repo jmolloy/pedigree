@@ -12,6 +12,14 @@ public:
 
   ~Move() {}
 
+  void rotate180()
+  {
+    sCol = 7-sCol;
+    sRow = 7-sRow;
+    eCol = 7-eCol;
+    eRow = 7-eRow;
+  }
+  
   unsigned char sCol, sRow, eCol, eRow;
 };
 

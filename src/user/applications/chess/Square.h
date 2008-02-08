@@ -9,6 +9,12 @@ public:
   {}
 
   ~Square() {}
+  
+  void rotate180()
+  {
+    col = 7-col;
+    row = 7-row;
+  }
 
   unsigned char col, row;
 };

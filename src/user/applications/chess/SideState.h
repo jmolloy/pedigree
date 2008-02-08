@@ -50,7 +50,7 @@ public:
   /**
      Queries.
   **/
-  bool underAttack(Square sq, Bitboard enemyPieces); // Is (col,row) under attack by us?
+  bool isAttacking(Square sq, Bitboard enemyPieces); // Is (col,row) under attack by us?
   // TODO add en passant.
   
   /**
@@ -92,6 +92,7 @@ public:
    * Bitboard for the next() function.
    */
   Bitboard nextBoard;
+  int nextPiece;
   
 };
 

@@ -29,6 +29,8 @@
 // initialiseArchitecture1(), initialiseArchitecture2()
 #include <machine/initialiseMachine.h>
 
+Elf32 elf("kernel");
+
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -51,7 +53,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // After that every machine dependant class & function can be used.
   initialiseMachine2();
   
-  Elf32 elf("Kernel");
   elf.load(&bootstrapInfo);
   char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);

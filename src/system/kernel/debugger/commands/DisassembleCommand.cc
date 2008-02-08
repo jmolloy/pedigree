@@ -18,6 +18,10 @@
 #include <DebuggerIO.h>
 #include <utility.h>
 #include <udis86.h>
+#include <Elf32.h>
+
+// TEMP!
+extern Elf32 elf;
 
 DisassembleCommand::DisassembleCommand()
 {
@@ -68,12 +72,35 @@ bool DisassembleCommand::execute(char *input, char *output, int len, DebuggerIO 
   {
     ud_disassemble(&ud_obj);
     
-    char addr[32];
+    unsigned int location = ud_insn_off(&ud_obj);
+    
+    // What symbol are we in?
+    // TODO grep the memory map for the right ELF to look at.
+    unsigned int symStart = 0;
+    char *pSym = elf.lookupSymbol(location, &symStart);
+    // Are we actually at the start location of this symbol?
+    if (symStart == location)
+    {
+      // Print it.
+      char addr[32];
 #ifdef X86
-    sprintf(addr, "%08x", ud_insn_off(&ud_obj)); 
+      sprintf(addr, "%08x", location); 
 #endif
 #ifdef X86_64
-    sprintf(addr, "%016x", ud_insn_off(&ud_obj));
+      sprintf(addr, "%016x", location);
+#endif
+      strcat(output, addr);
+      strcat(output, " <");
+      strcat(output, pSym);
+      strcat(output, ">:\n");
+    }
+    
+    char addr[32];
+#ifdef X86
+    sprintf(addr, "%8x", location); 
+#endif
+#ifdef X86_64
+    sprintf(addr, "%16x", location);
 #endif
     strcat(output, addr);
     strcat(output, ": ");

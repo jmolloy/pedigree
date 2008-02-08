@@ -19,14 +19,14 @@
 #include <utility.h>
 #include <BootstrapInfo.h>
 
-Elf32::Elf32(char *name) :
+Elf32::Elf32(const char *name) :
   m_pHeader(0),
   m_pSectionHeaders(0),
   m_pStringTable(0),
   m_pSymbolTable(0),
   m_pBuffer(0)
 {
-  strncpy(id, name, 127);
+  strncpy(m_pId, name, 127);
 }
 
 Elf32::~Elf32()
@@ -45,7 +45,7 @@ bool Elf32::load(uint8_t *pBuffer)
        (m_pHeader->ident[3] != 127) )
   {
     m_pHeader = 0;
-    ERROR("ELF file with id '" << id << "'; ident check failed!");
+    ERROR("ELF file with id '" << m_pId << "'; ident check failed!");
     return false;
   }
   
@@ -70,7 +70,7 @@ bool Elf32::load(uint8_t *pBuffer)
   }
   
   if (m_pSymbolTable == 0)
-    WARNING("ELF file with id '" << id << "'; symbol table not found!");
+    WARNING("ELF file with id '" << m_pId << "'; symbol table not found!");
   
   m_pBuffer = pBuffer;
   
@@ -81,7 +81,7 @@ bool Elf32::load(uint8_t *pBuffer)
 bool Elf32::load(BootstrapInfo *pBootstrap)
 {
   // Firstly get the section header string table.
-  Elf32SectionHeader_t *shstrtab = (Elf32SectionHeader_t *) pBootstrap->getSectionHeader(
+  m_pShstrtab = (Elf32SectionHeader_t *) pBootstrap->getSectionHeader(
                                                           pBootstrap->getStringTable() );
   
   // Normally we will try to use the sectionHeader->offset member to access data, so an
@@ -90,7 +90,7 @@ bool Elf32::load(BootstrapInfo *pBootstrap)
   // we fix offset = addr, then we work w.r.t 0x00.
   
   // Temporarily load the string table.
-  const char *pStrtab = (const char *) shstrtab->addr;
+  const char *pStrtab = (const char *) m_pShstrtab->addr;
 
   // Now search for the symbol table.
   for (int i = 0; i < pBootstrap->getSectionHeaderCount(); i++)
