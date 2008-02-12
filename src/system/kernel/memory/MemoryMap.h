@@ -64,7 +64,6 @@ public:
    * Returns the FileLoader for a given ID.
    */
   class FileLoader *getFileLoader(unsigned int nId);
-  
 };
 
 #endif
