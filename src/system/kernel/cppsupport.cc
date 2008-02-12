@@ -43,3 +43,8 @@ void initialiseConstructors()
 extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)
 {
 }
+
+/// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
+extern "C" void __cxa_pure_virtual()
+{
+}

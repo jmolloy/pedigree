@@ -22,8 +22,8 @@ public:
   /**
    * Constructor. Doesn't do much.
    */
-  virtual FileLoader() {}
-  virtual ~FileLoader() {}
+  /*FileLoader() {}
+  virtual ~FileLoader() {}*/
 
   /**
    * This explicit load function allows the use of global concrete objects.
@@ -32,19 +32,14 @@ public:
    *              function completes.
    * \param nBufferLength Length of the buffer pointed to by pFile.
    */
-  virtual bool load(void *pFile, unsigned int nBufferLength) =0;
-  
-  /**
-   * Forces an unmap and cleanup of all mapped regions.
-   */
-  virtual void unload();
+  virtual bool load(uint8_t *pFile, unsigned int nBufferLength) =0;
   
   /**
    * Looks up the symbol at location 'nAddress'. Returns NULL if none found.
    * \param[in] nAddress The address to look up.
    * \param[out] pSymbolStart The start location of the retrieved symbol (Optional).
    */
-  virtual const char *lookupSymbol(unsigned int nAddress, unsigned int *pSymbolStart);
+  virtual char *lookupSymbol(unsigned int nAddress, unsigned int *pSymbolStart) =0;
 };
 
 #endif

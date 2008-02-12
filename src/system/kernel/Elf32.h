@@ -43,6 +43,8 @@
 
 class BootstrapInfo;
 
+#include <FileLoader.h>
+
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
  * The ELF data can be loaded either by supplying an entire ELF file in a buffer, or
@@ -50,7 +52,7 @@ class BootstrapInfo;
  * \note This class does not copy any section data. The supplied buffer pointers must
  *       remain valid throughout the lifespan of this class.
  */
-class Elf32
+class Elf32 : virtual public FileLoader
 {
 public:
   /**
@@ -68,7 +70,7 @@ public:
    * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
    * of memory containing an ELF object.
    */
-  bool load(uint8_t *pBuffer);
+  bool load(uint8_t *pBuffer, unsigned int nBufferLength);
   
   /**
    * Extracts the symbol and string tables from the given BootstrapInfo class.
@@ -94,7 +96,7 @@ public:
    * \param[out] startAddr The starting address of the found symbol (optional).
    * \return The symbol name, as a C string.
    */
-  char *lookupSymbol(uint32_t addr, uint32_t *startAddr=0);
+  char *lookupSymbol(unsigned int addr, unsigned int *startAddr=0);
 
   /**
    * Returns the address of the symbol with offset 'off' in the dynamic relocation table.

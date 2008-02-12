@@ -33,7 +33,7 @@ Elf32::~Elf32()
 {
 }
 
-bool Elf32::load(uint8_t *pBuffer)
+bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 {
   // The main header will be at pBuffer[0].
   m_pHeader = (Elf32Header_t *) pBuffer;
@@ -119,7 +119,7 @@ unsigned int Elf32::getLastAddress()
 {
 }
 
-char *Elf32::lookupSymbol(uint32_t addr, uint32_t *startAddr)
+char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return (char *) 0; // Just return null if we haven't got a symbol table.

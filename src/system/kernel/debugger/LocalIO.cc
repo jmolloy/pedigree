@@ -222,10 +222,10 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
       if (len < COMMAND_MAX-1)
       {
         // Add it to the command string, and null terminate.
-	m_pCommand[len] = ch;
-	m_pCommand[len+1] = '\0';
-	// And echo it back to the screen, too.
-	writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
+        m_pCommand[len] = ch;
+        m_pCommand[len+1] = '\0';
+        // And echo it back to the screen, too.
+        writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
       }
     }
   }
