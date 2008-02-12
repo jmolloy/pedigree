@@ -145,7 +145,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel</activedir>
+      <activedir>src/system/kernel/process</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
