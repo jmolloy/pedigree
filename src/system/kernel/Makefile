@@ -16,12 +16,13 @@
 
 ###################################################################
 # Extra includes.
-INCLUDES += -I . \
+INCLUDES += -I./ \
             -I./debugger/ \
             -I./debugger/commands \
             -I./debugger/libudis86 \
             -I./utility/ \
-            -I./machine \
+            -I./machine/ \
+            -I./process/
 
 ###################################################################
 # Subdirectory list.
@@ -29,7 +30,11 @@ DIRECTORIES = debugger/ \
               debugger/commands \
               debugger/libudis86 \
               utility/ \
-              machine/ machine/x86 machine/x86_64 machine/x86_common
+              machine/ \
+              machine/x86 \
+              machine/x86_64 \
+              machine/x86_common \
+              process/
 
 ###################################################################
 # Source file list.
@@ -37,12 +42,20 @@ ifdef KERNEL_STANDALONE
 SRCFILES = boot-standalone.s
 endif
 ifdef DEBUGGER
-SRCFILES += debugger/libudis86/mnemonics.c debugger/libudis86/opcmap.c debugger/libudis86/input.c debugger/libudis86/decode.c \
-            debugger/libudis86/syn.c debugger/libudis86/syn-intel.c debugger/libudis86/syn-att.c debugger/libudis86/udis86.c \
-            debugger/Log.cc \
-            debugger/LocalIO.cc debugger/Debugger.cc debugger/commands/DisassembleCommand.cc \
-            debugger/commands/LogViewer.cc
+SRCFILES += debugger/libudis86/mnemonics.c \
+            debugger/libudis86/opcmap.c \
+            debugger/libudis86/input.c \
+            debugger/libudis86/decode.c \
+            debugger/libudis86/syn.c \
+            debugger/libudis86/syn-intel.c \
+            debugger/libudis86/syn-att.c \
+            debugger/libudis86/udis86.c \
+            debugger/commands/DisassembleCommand.cc \
+            debugger/commands/LogViewer.cc \
+            debugger/LocalIO.cc \
+            debugger/Debugger.cc
 endif
+
 SRCFILES += machine/io.cc
 ifdef X86
 SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
@@ -50,8 +63,12 @@ endif
 ifdef X86_64
 SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
 endif
+
+SRCFILES += process/Elf32.cc
+
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c
-SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Elf32.cc
+
+SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Log.cc
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.
