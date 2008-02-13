@@ -17,6 +17,8 @@
 #ifndef BACKTRACE_H
 #define BACKTRACE_H
 
+#define MAX_STACK_FRAMES 20
+
 class Backtrace
 {
 public:
@@ -26,7 +28,42 @@ public:
   Backtrace();
   ~Backtrace();
   
+  /**
+   * Performs a backtrace from the given base pointer address, or if none was specified,
+   * the current EBP location.
+   */
+  void performBacktrace(unsigned int address=0);
   
-}
+  /**
+   * Returns the number of stack frames retrieved.
+   */
+  unsigned int numStackFrames();
+  
+  /**
+   * Returns the return address of the n'th stack frame.
+   */
+  unsigned int getReturnAddress(unsigned int n);
+  
+  /**
+   * Returns the base pointer of the n'th stack frame.
+   */
+  unsigned int getBasePointer(unsigned int n);
+  
+  void prettyPrint(char *pBuffer, unsigned int nBufferLength);
+  
+private:
+  /**
+   * The return addresses.
+   */
+  unsigned int m_pReturnAddresses[MAX_STACK_FRAMES];
+  /**
+   * The base pointers.
+   */
+  unsigned int m_pBasePointers[MAX_STACK_FRAMES];
+  /**
+   * The number of stack frames retrieved by a performBacktrace call.
+   */
+  unsigned int m_nStackFrames;
+};
 
 #endif

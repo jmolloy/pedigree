@@ -52,8 +52,10 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/libudis86/udis86.c \
             debugger/commands/DisassembleCommand.cc \
             debugger/commands/LogViewer.cc \
+            debugger/commands/Backtracer.cc \
             debugger/LocalIO.cc \
-            debugger/Debugger.cc
+            debugger/Debugger.cc \
+            debugger/Backtrace.cc
 endif
 
 SRCFILES += machine/io.cc

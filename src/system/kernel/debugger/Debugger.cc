@@ -19,6 +19,7 @@
 #include <LocalIO.h>
 #include <DisassembleCommand.h>
 #include <LogViewer.h>
+#include <Backtracer.h>
 #include <utility.h>
 
 Debugger Debugger::m_Instance;
@@ -72,10 +73,12 @@ void Debugger::breakpoint(int type)
   // Commands.
   DisassembleCommand disassembler;
   LogViewer logViewer;
+  Backtracer backtracer;
   
-  int nCommands = 2;
+  int nCommands = 3;
   DebuggerCommand *pCommands[] = {&disassembler,
-                                  &logViewer};
+                                  &logViewer,
+                                  &backtracer};
   
   if (type == MONITOR)
   {
