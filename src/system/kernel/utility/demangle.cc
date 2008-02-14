@@ -1,13 +1,22 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+/*
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
-typedef struct
-{
-  char name[128]; // Function name.
-  char params[32][64]; // Parameters.
-  int nParams;
-} symbol_t;
+// TODO: This code is string-unsafe. It needs tidying up to be crash-safe.
+
+#include <utility.h>
 
 const char *parseNamespace(const char *src, char *dest);
 const char *parseFunction(const char *src, char *dest);
@@ -23,7 +32,7 @@ const char *getNumber(const char *src, int &n)
   }
   pStr[len] = '\0';
   
-  n = atoi(pStr);
+  n = strtoul(pStr, 0, 10);
   return src;
 }
 
@@ -177,7 +186,17 @@ void parseParameters(const char *src, symbol_t *sym)
     else if (*src == 't') {src++; strcat(dest, "unsigned short");}
     else if (*src == 'b') {src++; strcat(dest, "bool");}
     else if (*src == 'K') {src++; strcat(dest, "const "); bIsThisPointer = true;}
+    else if (*src == 'V') {src++; strcat(dest, "volatile "); bIsThisPointer = true;}
     else if (*src == 'P') {src++; bIsPointer = bIsThisPointer = true;}
+    else if (*src == 'S')
+    {
+      src++;
+      int n;
+      src = getNumber(src, n);
+      src++; // Step over '_'.
+      // Substitute with parameter 'n'.
+      strcat(dest, sym->params[n]);
+    }
     else if (*src == 'T')
     {
       char pStr[32];
@@ -199,7 +218,7 @@ void parseParameters(const char *src, symbol_t *sym)
       if (*src == 'I')
         bIsThisPointer = true;
     }
-    else {break;}
+    else {*src++;continue;}
 
     if (bIsPointer && !bIsThisPointer)
     {
@@ -229,18 +248,4 @@ void demangle(const char *src, symbol_t *sym)
     src = parseFunction(src, sym->name);
   
   parseParameters(src, sym);
-}
-
-int main(char argc, char **argv)
-{
-  symbol_t sym;
-  demangle(argv[1], &sym);
-  printf("%s(", sym.name);
-  for (int i = 0; i < sym.nParams; i++)
-  {
-    if (i != 0)
-      printf (", ");
-    printf("%s", sym.params[i]);
-  }
-  printf(")\n");
 }

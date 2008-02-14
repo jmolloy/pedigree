@@ -13,19 +13,40 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef STACKFRAME_H
+#define STACKFRAME_H
 
-int memset(unsigned char *buf, unsigned char c, unsigned int len)
+#include <utility.h>
+
+class StackFrame
 {
-  while(len--)
-  {
-    *buf++ = c;
-  }
-}
+public:
+  /**
+   * Creates a stack frame based on the given Base Pointer value, and also the given
+   * symbol name (mangled).
+   */
+  StackFrame(unsigned int nBasePointer, const char *pMangledSymbol);
+  ~StackFrame();
 
-void memcpy(unsigned char *dest, unsigned char *src, unsigned int len)
-{
-  const unsigned char *sp = (const unsigned char *)src;
-  unsigned char *dp = (unsigned char *)dest;
-  for (; len != 0; len--) *dp++ = *sp++;
-}
+  /**
+   * Returns a pretty printed string containing the function name and each parameter with
+   * its value (hopefully).
+   */
+  void prettyPrint(char *pBuf, unsigned int nBufLen);
+  
+private:
+  /**
+   * Returns the n'th 32/64-bit parameter in the stack frame.
+   */
+  unsigned int getParameter(unsigned int n);
+  
+  /**
+   * Formats a number, given the 'type' of that number.
+   */
+  void format(unsigned int n, const char *pType, char *pDest);
+  
+  unsigned int m_nBasePointer;
+  symbol_t m_Symbol;
+};
 
+#endif

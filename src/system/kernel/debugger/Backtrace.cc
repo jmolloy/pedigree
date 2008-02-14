@@ -17,6 +17,7 @@
 #include <Backtrace.h>
 #include <utility.h>
 #include <Elf32.h>
+#include <StackFrame.h>
 
 // TEMP!
 extern Elf32 elf;
@@ -66,7 +67,9 @@ void Backtrace::prettyPrint(char *pBuffer, unsigned int nBufferLength)
     char pStr[128];
     unsigned int symStart = 0;
     char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
-    sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);
+    StackFrame sf(m_pBasePointers[i], pSym);
+    sf.prettyPrint(pStr, 128);
+//     sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);
     strcat(pBuffer, pStr);
   }
 }

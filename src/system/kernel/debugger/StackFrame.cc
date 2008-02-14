@@ -13,19 +13,40 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include "StackFrame.h"
+#include <Log.h>
 
-int memset(unsigned char *buf, unsigned char c, unsigned int len)
+StackFrame::StackFrame(unsigned int nBasePointer, const char *pMangledSymbol) :
+  m_nBasePointer(nBasePointer)
 {
-  while(len--)
-  {
-    *buf++ = c;
-  }
+  NOTICE(pMangledSymbol);
+  demangle(pMangledSymbol, &m_Symbol);
 }
 
-void memcpy(unsigned char *dest, unsigned char *src, unsigned int len)
+
+StackFrame::~StackFrame()
 {
-  const unsigned char *sp = (const unsigned char *)src;
-  unsigned char *dp = (unsigned char *)dest;
-  for (; len != 0; len--) *dp++ = *sp++;
+}
+
+void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
+{
+  sprintf(pBuf, "%s(", m_Symbol.name);
+  for (int i = 0; i < m_Symbol.nParams; i++)
+  {
+    if (i != 0)
+      strcat(pBuf, ", ");
+    strcat(pBuf, m_Symbol.params[i]);
+  }
+  strcat(pBuf, ")\n");
+}
+
+unsigned int StackFrame::getParameter(unsigned int n)
+{
+  unsigned int *pPtr = (unsigned int *) (m_nBasePointer-n*sizeof(unsigned int));
+  return *pPtr;
+}
+  
+void StackFrame::format(unsigned int n, const char *pType, char *pDest)
+{
 }
 

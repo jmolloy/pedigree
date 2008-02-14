@@ -55,7 +55,8 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/Backtracer.cc \
             debugger/LocalIO.cc \
             debugger/Debugger.cc \
-            debugger/Backtrace.cc
+            debugger/Backtrace.cc \
+            debugger/StackFrame.cc
 endif
 
 SRCFILES += machine/io.cc
@@ -66,7 +67,7 @@ ifdef X86_64
 SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
 endif
 
-SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c
+SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c utility/demangle.cc
 
 SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Log.cc Elf32.cc
 
