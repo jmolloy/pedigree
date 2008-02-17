@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 Jörg Pfähler
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,22 +16,31 @@
 #ifndef KERNEL_MACHINE_INITIALISEMACHINE_H
 #define KERNEL_MACHINE_INITIALISEMACHINE_H
 
+/** @addtogroup kernel kernel
+ * The kernel
+ * @{ */
+
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
 /** This is the first stage in the machine-dependent initialisation procedure.
  * This function should be called before any other machine-dependant class
  * methods or global functions. After this function only the memory-management
  * related functions and class methods may be called.
- * \note This is called from main()
- */
+ * \note This is called from main() */
 void initialiseMachine1();
-
 /** This is the second stage in the machine-dependent initialisation procedure.
  * This function must be called after the memory-management has been initialised and
  * before any other machine-dependant class methods or global functions (except
  * those mentioned to be legal in initMachine1) is used.
  * After this function returns, any machine-dependant class methods and global
  * functions may be called.
- * \note This is called from main()
- */
+ *\note This is called from main() */
 void initialiseMachine2();
+
+/** @} */
+/** @} */
 
 #endif

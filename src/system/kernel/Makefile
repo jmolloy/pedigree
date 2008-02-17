@@ -17,6 +17,7 @@
 ###################################################################
 # Extra includes.
 INCLUDES += -I./ \
+            -I./include/ \
             -I./debugger/ \
             -I./debugger/commands \
             -I./debugger/libudis86 \
@@ -61,10 +62,10 @@ endif
 
 SRCFILES += machine/io.cc
 ifdef X86
-SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
+SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc machine/x86_common/interrupt.cc
 endif
 ifdef X86_64
-SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc
+SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc machine/x86_common/interrupt.cc
 endif
 
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c utility/demangle.cc

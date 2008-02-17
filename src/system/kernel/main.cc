@@ -25,7 +25,7 @@
 #include <Elf32.h>
 
 // initialiseConstructors()
-#include <cppsupport.h>
+#include "cppsupport.h"
 // initialiseArchitecture1(), initialiseArchitecture2()
 #include <machine/initialiseMachine.h>
 

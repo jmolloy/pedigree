@@ -13,8 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-#include <cppsupport.h>
+#include "cppsupport.h"
 
 // Required for G++ to link static init/destructors.
 void *__dso_handle;
@@ -47,4 +46,39 @@ extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
 extern "C" void __cxa_pure_virtual()
 {
+}
+
+void *operator new (unsigned long size) throw()
+{
+  // TODO
+  return 0;
+}
+void *operator new[] (unsigned long size) throw()
+{
+  // TODO
+  return 0;
+}
+void *operator new (unsigned long size, void* memory) throw()
+{
+  return memory;
+}
+void *operator new[] (unsigned long size, void* memory) throw()
+{
+  return memory;
+}
+void operator delete (void * p)
+{
+  // TODO
+}
+void operator delete[] (void * p)
+{
+  // TODO
+}
+void operator delete (void *p, void *q)
+{
+  // TODO
+}
+void operator delete[] (void *p, void *q)
+{
+  // TODO
 }

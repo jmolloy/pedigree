@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,21 +13,35 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_COMMON_TYPES_H
-#define KERNEL_MACHINE_X86_COMMON_TYPES_H
+#ifndef KERNEL_MACHINE_SYSCALL_H
+#define KERNEL_MACHINE_SYSCALL_H
 
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-typedef signed long long int64_t;
-typedef unsigned long long uint64_t;
-typedef signed long ssize_t;
-typedef unsigned long size_t;
+#include <machine/state.h>
 
-/** Define an I/O port type */
-typedef uint16_t IoPort_t;
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+class SyscallHandler
+{
+  public:
+    void syscall(SyscallState &State);
+};
+
+class SyscallManager
+{
+  public:
+    enum Service_t
+    {
+      kernelCore = 0,
+      // TODO
+    };
+  
+    static SyscallManager &instance();
+    bool registerHandler(Service_t Service, SyscallHandler *Handler);
+};
+
+/** @} */
 
 #endif

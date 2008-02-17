@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 Jörg Pfähler
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,25 +13,24 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_IRQ_H
-#define KERNEL_MACHINE_IRQ_H
+#ifndef KERNEL_MACHINE_X86_86_STATE_H
+#define KERNEL_MACHINE_X86_86_STATE_H
 
-class IrqHandler
+/** @addtogroup kernelmachinex8664 x86-64
+ * x86-64 machine-specific kernel
+ *  @ingroup kernelmachine
+ * @{ */
+
+#include <machine/types.h>
+
+struct InterruptState
 {
-  public:
-	virtual void irq(IrqId_t number) = 0;
 };
 
-class IrqManager
+struct SyscallState
 {
-  public:
-	static IrqManager &instance();
-	virtual bool initialize() = 0;
-	virtual void uninitialize() = 0;
-	virtual IrqId_t registerIsaIrqHandler(IrqNumber_t, IrqHandler *handler) = 0;
-	virtual IrqId_t registerPciIrqHandler(irqHandler *handler) = 0;
-	virtual void acknoledgeIrq(IrqId_t Id) = 0;
-	virtual void unregisterHandler(IrqId_t Id) = 0;
 };
+
+/** @} */
 
 #endif

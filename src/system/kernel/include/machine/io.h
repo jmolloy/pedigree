@@ -18,8 +18,13 @@
 
 #include <machine/types.h>
 
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
 /** Interface to the hardware's I/O ports.
- * \note Not synchronised */
+ *\note Not synchronised */
 class IoPort
 {
   public:
@@ -118,6 +123,8 @@ class IoPortManager
     /** The I/O port manager instance */
     static IoPortManager m_Instance;
 };
+
+/** @} */
 
 //
 // Part of the Implementation

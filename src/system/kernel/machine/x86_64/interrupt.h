@@ -13,28 +13,38 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_SYSCALL_H
-#define KERNEL_MACHINE_SYSCALL_H
+#ifndef KERNEL_MACHINE_X86_64_INTERRUPT_H
+#define KERNEL_MACHINE_X86_64_INTERRUPT_H
 
-#include <machine/state.h>
+#include <machine/types.h>
 
-class SyscallHandler
+/** @addtogroup kernelmachinex8664 x86-64
+ * x86-64 machine-specific kernel
+ *  @ingroup kernelmachine
+ * @{ */
+
+namespace x86_64
 {
-  public:
-    void syscall(SyscallState &State);
-};
+  /** Structure of a x86-64 long-mode gate descriptor */
+  struct gate_descriptor
+  {
+    /** Bits 0-15 of the offset */
+    uint16_t offset0;
+    /** The segment selector */
+    uint16_t selector;
+    /** Entry number in the interrupt-service-table */
+    uint8_t ist;
+    /** Flags */
+    uint8_t flags;
+    /** Bits 16-31 of the offset */
+    uint16_t offset1;
+    /** Bits 32-63 of the offset */
+    uint32_t offset2;
+    /** Reserved, must be 0 */
+    uint32_t res;
+  } __attribute__((packed));
+}
 
-class SyscallManager
-{
-  public:
-    enum Service_t
-    {
-      kernelCore = 0,
-      // TODO
-    };
-  
-    static SyscallManager &instance();
-    bool registerHandler(Service_t Service, SyscallHandler *Handler);
-};
+/** @} */
 
 #endif

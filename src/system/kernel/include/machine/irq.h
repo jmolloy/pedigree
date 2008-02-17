@@ -13,40 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_INTERRUPT_H
-#define KERNEL_MACHINE_INTERRUPT_H
+#ifndef KERNEL_MACHINE_IRQ_H
+#define KERNEL_MACHINE_IRQ_H
 
-#include <machine/state.h>
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
 
-class InterruptHandler
+class IrqHandler
 {
   public:
-    virtual void interrupt(size_t interruptNumber, InterruptState &state) = 0;
+	virtual void irq(IrqId_t number) = 0;
 };
 
-class InterruptManager
+class IrqManager
 {
   public:
-    static InterruptManager &instance();
-    virtual registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler) = 0;
-  
-  protected:
-    inline InterruptManager();
-    inline virtual ~InterruptManager();
-  
-  private:
-    InterruptManager(const InterruptManager &);
-    InterruptManager &operator = (const InterruptManager &);
+	static IrqManager &instance();
+	virtual bool initialize() = 0;
+	virtual void uninitialize() = 0;
+	virtual IrqId_t registerIsaIrqHandler(IrqNumber_t, IrqHandler *handler) = 0;
+	virtual IrqId_t registerPciIrqHandler(irqHandler *handler) = 0;
+	virtual void acknoledgeIrq(IrqId_t Id) = 0;
+	virtual void unregisterHandler(IrqId_t Id) = 0;
 };
 
-//
-// Part of the Implementation
-//
-InterruptManager::InterruptManager()
-{
-}
-InterruptManager::~InterruptManager()
-{
-}
+/** @} */
 
 #endif

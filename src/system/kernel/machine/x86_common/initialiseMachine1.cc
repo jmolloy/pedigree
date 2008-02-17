@@ -13,9 +13,14 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <machine/interrupt.h>
 #include <machine/initialiseMachine.h>
 
 void initialiseMachine1()
 {
+  /// Initialise the interrupt manager
+  InterruptManager &interruptManager = InterruptManager::instance();
+  interruptManager.initialise();
+  
   // TODO
 }

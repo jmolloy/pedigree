@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,15 +13,34 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_86_STATE_H
-#define KERNEL_MACHINE_X86_86_STATE_H
+#ifndef KERNEL_MACHINE_X86_INTERRUPT_H
+#define KERNEL_MACHINE_X86_INTERRUPT_H
 
-struct InterruptState
-{
-};
+#include <machine/types.h>
 
-struct SyscallState
+/** @addtogroup kernelmachinex86 x86
+ * x86 machine-specific kernel
+ *  @ingroup kernelmachine
+ * @{ */
+
+namespace x86
 {
-};
+  /** Structure of a x86 protected-mode gate descriptor */
+  struct gate_descriptor
+  {
+    /** Bits 0-15 of the offset */
+    uint16_t offset0;
+    /** The segment selector */
+    uint16_t selector;
+    /** Reserved, must be 0 */
+    uint8_t res;
+    /** Flags */
+    uint8_t flags;
+    /** Bits 16-31 of the offset */
+    uint16_t offset1;
+  } __attribute__((packed));
+}
+
+/** @} */
 
 #endif
