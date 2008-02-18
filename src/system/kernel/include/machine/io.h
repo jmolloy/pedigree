@@ -133,7 +133,7 @@ class IoPortManager
 //
 
 IoPort::IoPort()
-  : m_Size(0), m_IoPort()
+  : m_IoPort(), m_Size(0)
 {
 }
 IoPort::~IoPort()

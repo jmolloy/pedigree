@@ -41,7 +41,7 @@ bool DisassembleCommand::execute(char *input, char *output, int len, DebuggerIO 
 {
   // This command can take either an address or a symbol name.
   // Is it an address?
-  unsigned long address = strtoul(input, 0, 0);
+  uintptr_t address = strtoul(input, 0, 0);
 
   if (address == 0)
   {
@@ -64,8 +64,8 @@ bool DisassembleCommand::execute(char *input, char *output, int len, DebuggerIO 
   ud_set_mode(&ud_obj, 64);
 #endif
   ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, (unsigned long long)address);
-  ud_set_input_buffer(&ud_obj, (unsigned char *)address, 256);
+  ud_set_pc(&ud_obj, address);
+  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(address), 256);
   
   output[0] = '\0';
   for(int i = 0; i < nInstructions; i++)
@@ -77,7 +77,7 @@ bool DisassembleCommand::execute(char *input, char *output, int len, DebuggerIO 
     // What symbol are we in?
     // TODO grep the memory map for the right ELF to look at.
     unsigned int symStart = 0;
-    char *pSym = elf.lookupSymbol(location, &symStart);
+    const char *pSym = elf.lookupSymbol(location, &symStart);
     // Are we actually at the start location of this symbol?
     if (symStart == location)
     {

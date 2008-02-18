@@ -57,72 +57,72 @@ public:
     LightRed    =12,
     LightMagenta=13,
     Yellow      =14,
-    White       =15,
+    White       =15
   };
 
   /**
    * Default constructor and destructor.
    */
   DebuggerIO() {}
-  ~DebuggerIO() {};
+  virtual ~DebuggerIO(){}
 
   /**
    * Forces the command line interface not to use the specified number of lines
    * from either the top or bottom of the screen, respectively. Can be used to
    * create status lines that aren't destroyed by screen scrolling.
    */
-  virtual void setCliUpperLimit(int nlines) {};
-  virtual void setCliLowerLimit(int nlines) {};
+  virtual void setCliUpperLimit(int nlines) = 0;
+  virtual void setCliLowerLimit(int nlines) = 0;
 
   /**
    * Enables or disables the command line interface, allowing full access to the display.
    */
-  virtual void enableCli() {};
-  virtual void disableCli() {};
+  virtual void enableCli() = 0;
+  virtual void disableCli() = 0;
 
   /**
    * Writes the given text out to the CLI, in the given colour and background colour.
    */
-  virtual void writeCli(const char *str, Colour foreColour, Colour backColour) {};
+  virtual void writeCli(const char *str, Colour foreColour, Colour backColour) = 0;
 
   /**
    * Reads a command from the interface. Blocks until a character is pressed, and then
    * the current buffer is returned in *str, and the return value is true if the command
    * is complete (if enter has been pressed). *str will never exceed maxLen.
    */
-  virtual bool readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete) {};
+  virtual bool readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete) = 0;
 
   /**
    * Draw a line of characters in the given fore and back colours, in the 
    * horizontal or vertical direction. Note that if the CLI is enabled,
    * anything drawn across the CLI area can be wiped without warning.
    */
-  virtual void drawHorizontalLine(char c, int row, int colStart, int colEnd, Colour foreColour, Colour backColour) {};
-  virtual void drawVerticalLine(char c, int col, int rowStart, int rowEnd, Colour foreColour, Colour backColour) {};
+  virtual void drawHorizontalLine(char c, int row, int colStart, int colEnd, Colour foreColour, Colour backColour) = 0;
+  virtual void drawVerticalLine(char c, int col, int rowStart, int rowEnd, Colour foreColour, Colour backColour) = 0;
 
   /**
    * Draws a string of text at the given location in the given colour.
    * note that wrapping is not performed, the string will be clipped.
    */
-  virtual void drawString(const char *str, int row, int col, Colour foreColour, Colour backColour) {};
+  virtual void drawString(const char *str, int row, int col, Colour foreColour, Colour backColour) = 0;
 
   /**
    * Returns the width and height respectively of the console.
    */
-  virtual int getWidth() {};
-  virtual int getHeight() {};
+  virtual int getWidth() = 0;
+  virtual int getHeight() = 0;
 
   /**
    * Allows disabling of refreshes, for example when deleting something then writing it back.
    */
-  virtual void enableRefreshes() {};
-  virtual void disableRefreshes() {};
-  virtual void forceRefresh() {};
+  virtual void enableRefreshes() = 0;
+  virtual void disableRefreshes() = 0;
+  virtual void forceRefresh() = 0;
   
   /**
    * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
    */
-  virtual char getChar() {};
+  virtual char getChar() = 0;
 
 };
 

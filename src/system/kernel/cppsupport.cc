@@ -13,14 +13,15 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <processor/types.h>
 #include "cppsupport.h"
 
 // Required for G++ to link static init/destructors.
 void *__dso_handle;
 
 // Defined in the linker.
-unsigned int start_ctors;
-unsigned int end_ctors;
+uintptr_t start_ctors;
+uintptr_t end_ctors;
 
 /// Calls the constructors for all global objects.
 /// Call this before using any global objects.
@@ -29,10 +30,10 @@ void initialiseConstructors()
   // Constructor list is defined in the linker script.
   // The .ctors section is just an array of function pointers.
   // iterate through, calling each in turn.
-  unsigned int *iterator = (unsigned int *)&start_ctors;
-  while (iterator < (unsigned int*)&end_ctors)
+  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
+  while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
   {
-    void (*fp)(void) = (void (*)(void))*iterator;
+    void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
     fp();
     iterator++;
   }
@@ -48,21 +49,21 @@ extern "C" void __cxa_pure_virtual()
 {
 }
 
-void *operator new (unsigned long size) throw()
+void *operator new (size_t size) throw()
 {
   // TODO
   return 0;
 }
-void *operator new[] (unsigned long size) throw()
+void *operator new[] (size_t size) throw()
 {
   // TODO
   return 0;
 }
-void *operator new (unsigned long size, void* memory) throw()
+void *operator new (size_t size, void* memory) throw()
 {
   return memory;
 }
-void *operator new[] (unsigned long size, void* memory) throw()
+void *operator new[] (size_t size, void* memory) throw()
 {
   return memory;
 }

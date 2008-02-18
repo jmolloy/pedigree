@@ -28,13 +28,13 @@ class DebuggerCommand
 {
 public:
   DebuggerCommand() {};
-  ~DebuggerCommand() {};
+  virtual ~DebuggerCommand() {};
   
   /**
    * Return an autocomplete string, given an input string. The string put into *output must not
    * exceed len in length.
    */
-  virtual void autocomplete(char *input, char *output, int len) {};
+  virtual void autocomplete(char *input, char *output, int len) = 0;
 
   /**
    * Execute the command with the given screen. The command can take over the screen while
@@ -42,12 +42,12 @@ public:
    * \return True if the debugger should continue accepting commands, false if it should return
    *         control to the kernel.
    */
-  virtual bool execute(char *input, char *output, int len, DebuggerIO *screen) {};
+  virtual bool execute(char *input, char *output, int len, DebuggerIO *screen) = 0;
   
   /**
    * Returns the string representation of this command.
    */
-  virtual const char *getString() {};
+  virtual const char *getString() = 0;
 };
 
 #endif

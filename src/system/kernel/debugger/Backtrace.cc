@@ -46,8 +46,8 @@ void Backtrace::performBacktrace(unsigned int address)
   
   while (address && eip >= 0x100000 && i < MAX_STACK_FRAMES)
   {
-    unsigned int nextAddress    = * ( (unsigned int *) address);
-    m_pReturnAddresses[i] = eip = * ((unsigned int *) (address+sizeof(unsigned int)));
+    uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(address);
+    m_pReturnAddresses[i] = eip = *reinterpret_cast<uintptr_t *>(address+sizeof(uintptr_t));
     m_pBasePointers[i]          = address;
     address = nextAddress;
     i++;
@@ -62,11 +62,11 @@ void Backtrace::prettyPrint(char *pBuffer, unsigned int nBufferLength)
   // TODO grep the memory map for the right ELF to look at.
   
   pBuffer[0] = '\0';
-  for (int i = 0; i < m_nStackFrames; i++)
+  for (size_t i = 0; i < m_nStackFrames; i++)
   {
     char pStr[128];
     unsigned int symStart = 0;
-    char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
+    const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
     StackFrame sf(m_pBasePointers[i], pSym);
     sf.prettyPrint(pStr, 128);
 //     sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);

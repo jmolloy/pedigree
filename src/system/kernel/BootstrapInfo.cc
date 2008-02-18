@@ -19,8 +19,8 @@
 BootstrapInfo::BootstrapInfo(BootstrapStruct_t *info)
 {
   // Make a copy of the info struct straight away.
-  memcpy( (unsigned char*) &m_BootstrapInfo,
-          (unsigned char *)info,
+  memcpy( &m_BootstrapInfo,
+          info,
           sizeof(BootstrapStruct_t));
 }
 
@@ -35,7 +35,7 @@ int BootstrapInfo::getSectionHeaderCount()
 
 uint8_t *BootstrapInfo::getSectionHeader(int n)
 {
-  return (uint8_t *) (m_BootstrapInfo.addr + n*m_BootstrapInfo.size);
+  return reinterpret_cast<uint8_t *>(m_BootstrapInfo.addr + n*m_BootstrapInfo.size);
 }
 
 int BootstrapInfo::getStringTable()

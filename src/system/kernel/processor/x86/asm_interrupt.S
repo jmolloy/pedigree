@@ -14,8 +14,8 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;
 
-; x86_common::InterruptManager::interrupt(size_t interruptNumber, InterruptState &interruptState)
-extern _ZN10x86_common16InterruptManager9interruptERN3x8614InterruptStateE
+; X86InterruptManager::interrupt(InterruptState &interruptState)
+extern _ZN19X86InterruptManager9interruptERN3x8614InterruptStateE
 
 ; Export the array of interrupt handler addresses
 global interrupt_handler_array
@@ -45,7 +45,7 @@ interrupt_handler:
   push eax
 
   ; Call the C++ Code
-  call _ZN10x86_common16InterruptManager9interruptERN3x8614InterruptStateE
+  call _ZN19X86InterruptManager9interruptERN3x8614InterruptStateE
 
   ; Cleanup the stack
   add esp, 0x04

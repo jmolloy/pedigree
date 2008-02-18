@@ -13,16 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <utility.h>
 
-int memset(unsigned char *buf, unsigned char c, unsigned int len)
+int memset(void *buf, int c, size_t len)
 {
+  unsigned char *tmp = (unsigned char *)buf;
   while(len--)
   {
-    *buf++ = c;
+    *tmp++ = c;
   }
 }
 
-void memcpy(unsigned char *dest, unsigned char *src, unsigned int len)
+void memcpy(void *dest, const void *src, size_t len)
 {
   const unsigned char *sp = (const unsigned char *)src;
   unsigned char *dp = (unsigned char *)dest;

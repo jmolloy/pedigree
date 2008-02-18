@@ -21,9 +21,9 @@
 
 Elf32::Elf32(const char *name) :
   m_pHeader(0),
-  m_pSectionHeaders(0),
-  m_pStringTable(0),
   m_pSymbolTable(0),
+  m_pStringTable(0),
+  m_pSectionHeaders(0),
   m_pBuffer(0)
 {
   strncpy(m_pId, name, 127);
@@ -36,7 +36,7 @@ Elf32::~Elf32()
 bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 {
   // The main header will be at pBuffer[0].
-  m_pHeader = (Elf32Header_t *) pBuffer;
+  m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
   
   // Check the ident.
   if ( (m_pHeader->ident[0] != 'E') ||
@@ -50,13 +50,13 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   }
   
   // Load in the section headers.
-  m_pSectionHeaders = (Elf32SectionHeader_t *) &pBuffer[m_pHeader->shoff];
+  m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(&pBuffer[m_pHeader->shoff]);
   
   // Find the string tab&pBuffer[m_pStringTable->offset];le.
   m_pStringTable = &m_pSectionHeaders[m_pHeader->shstrndx];
   
   // Temporarily load the string table.
-  const char *pStrtab = (const char *) &pBuffer[m_pStringTable->offset];
+  const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pStringTable->offset]);
   
   // Go through each section header, trying to find .symtab.
   for (int i = 0; i < m_pHeader->shnum; i++)
@@ -81,8 +81,8 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 bool Elf32::load(BootstrapInfo *pBootstrap)
 {
   // Firstly get the section header string table.
-  m_pShstrtab = (Elf32SectionHeader_t *) pBootstrap->getSectionHeader(
-                                                          pBootstrap->getStringTable() );
+  m_pShstrtab = reinterpret_cast<Elf32SectionHeader_t *>( pBootstrap->getSectionHeader(
+                                                          pBootstrap->getStringTable() ));
   
   // Normally we will try to use the sectionHeader->offset member to access data, so an
   // Elf section's data can be accessed without being mapped into virtual memory. However,
@@ -90,12 +90,12 @@ bool Elf32::load(BootstrapInfo *pBootstrap)
   // we fix offset = addr, then we work w.r.t 0x00.
   
   // Temporarily load the string table.
-  const char *pStrtab = (const char *) m_pShstrtab->addr;
+  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
 
   // Now search for the symbol table.
   for (int i = 0; i < pBootstrap->getSectionHeaderCount(); i++)
   {
-    Elf32SectionHeader_t *pSh = (Elf32SectionHeader_t *) pBootstrap->getSectionHeader(i);
+    Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t *>(pBootstrap->getSectionHeader(i));
     const char *pStr = pStrtab + pSh->name;
 
     if (pSh->type == SHT_SYMTAB)
@@ -119,16 +119,16 @@ unsigned int Elf32::getLastAddress()
 {
 }
 
-char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
+const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
-    return (char *) 0; // Just return null if we haven't got a symbol table.
+    return 0; // Just return null if we haven't got a symbol table.
   
-  Elf32Symbol_t *pSymbol = (Elf32Symbol_t *)m_pSymbolTable->addr;
+  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
   
-  const char *pStrtab = (const char *) &m_pBuffer[m_pStringTable->offset];
+  const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
   
-  for (int i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
+  for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
   {
     // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
     // count it!
@@ -141,7 +141,7 @@ char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
       const char *pStr = pStrtab + pSymbol->name;
       if (startAddr)
         *startAddr = pSymbol->value;
-      return (char *) pStr;
+      return pStr;
     }
     pSymbol ++;
   }

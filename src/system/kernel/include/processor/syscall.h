@@ -23,25 +23,66 @@
  *  @ingroup kernel
  * @{ */
 
+/** Abstract base class for all syscall-handlers. All syscall-handlers mustbe
+ * derived from this class */
 class SyscallHandler
 {
   public:
-    void syscall(SyscallState &State);
+    /** Called when the handler is registered with the syscall manager and a syscall occurred
+     *\param[in] State reference to the state before the syscall */
+    virtual void syscall(SyscallState &State) = 0;
+
+  protected:
+    /** Virtual destructor */
+    inline virtual ~SyscallHandler(){}
 };
 
+/** The syscall manager allows syscall handler registrations and handles syscalls */
 class SyscallManager
 {
   public:
+    /** Standard syscall service numbers */
     enum Service_t
     {
-      kernelCore = 0,
-      // TODO
+      /** Syscall service number of the kernel core */
+      kernelCore = 0
+      // TODO: Add more syscall service numbers
     };
-  
+
+    /** Get the syscall handler instance
+     *\return instance of the syscall handler */
     static SyscallManager &instance();
-    bool registerHandler(Service_t Service, SyscallHandler *Handler);
+    /** Register a syscall handler
+     *\param[in] Service the service number you want to register
+     *\param[in] handler the interrupt handler
+     *\return true, if successfully registered, false otherwise */
+    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler) = 0;
+
+  protected:
+    /** The constructor */
+    inline SyscallManager();
+    /** The destructor */
+    inline virtual ~SyscallManager();
+
+  private:
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    SyscallManager(const SyscallManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    SyscallManager &operator = (const SyscallManager &);
 };
 
 /** @} */
+
+//
+// Part of the Implementation
+//
+SyscallManager::SyscallManager()
+{
+}
+SyscallManager::~SyscallManager()
+{
+}
 
 #endif

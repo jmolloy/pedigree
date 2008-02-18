@@ -17,34 +17,82 @@
 #define KERNEL_PROCESSOR_X64_INTERRUPT_H
 
 #include <processor/types.h>
+#include <processor/syscall.h>
+#include <processor/interrupt.h>
 
-namespace x64
+/** @addtogroup kernelprocessorx64 x64
+ * x64 processor-specific kernel
+ *  @ingroup kernelprocessor
+ * @{ */
+
+/** The interrupt handler on x64 processors */
+class X64InterruptManager : public ::InterruptManager
 {
-  /** @addtogroup kernelprocessorx64 x64
-   * x64 processor-specific kernel
-   *  @ingroup kernelprocessor
-   * @{ */
+  friend ::InterruptManager &::InterruptManager::instance();
+  public:
+    virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
+    virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
+    virtual size_t getBreakpointInterruptNumber();
+    virtual size_t getDebugInterruptNumber();
 
-  /** Structure of a x64 long-mode gate descriptor */
-  struct gate_descriptor
-  {
-    /** Bits 0-15 of the offset */
-    uint16_t offset0;
-    /** The segment selector */
-    uint16_t selector;
-    /** Entry number in the interrupt-service-table */
-    uint8_t ist;
-    /** Flags */
-    uint8_t flags;
-    /** Bits 16-31 of the offset */
-    uint16_t offset1;
-    /** Bits 32-63 of the offset */
-    uint32_t offset2;
-    /** Reserved, must be 0 */
-    uint32_t res;
-  } __attribute__((packed));
+    /** Initialises the InterruptManager
+     *\note This should only be called from initialiseProcessor() */
+    static void initialise();
+    /** Initialises this processors IDTR
+     *\note This should only be called from initialiseProcessor()
+     *\todo and some smp/acpi function */
+    static void initialiseProcessor();
 
-  /** @} */
-}
+  private:
+    /** Sets up an interrupt gate
+     *\param[in] interruptNumber the interrupt number
+     *\param[in] interruptHandler address of the assembler interrupt handler stub
+     *\param[in] userspace is the userspace allowed to call this callgate?
+     *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
+    void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler);
+    /** Called when an interrupt was triggered
+     *\param[in] interruptNumber the interrupt's number
+     *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
+    static void interrupt(InterruptState &interruptState);
+    /** The constructor */
+    X64InterruptManager();
+    /** Copy constructor
+     *\note NOT implemented */
+    X64InterruptManager(const X64InterruptManager &);
+    /** Assignment operator
+     *\note NOT implemented */
+    X64InterruptManager &operator = (const X64InterruptManager &);
+    /** The destructor */
+    virtual ~X64InterruptManager();
+
+    /** Structure of a x64 long-mode gate descriptor */
+    struct gate_descriptor
+    {
+      /** Bits 0-15 of the offset */
+      uint16_t offset0;
+      /** The segment selector */
+      uint16_t selector;
+      /** Entry number in the interrupt-service-table */
+      uint8_t ist;
+      /** Flags */
+      uint8_t flags;
+      /** Bits 16-31 of the offset */
+      uint16_t offset1;
+      /** Bits 32-63 of the offset */
+      uint32_t offset2;
+      /** Reserved, must be 0 */
+      uint32_t res;
+    } __attribute__((packed));
+
+    /** The interrupt descriptor table (IDT) */
+    gate_descriptor m_IDT[256];
+    /** The interrupt handlers (normal at index 0, kernel debugger at index 1) */
+    InterruptHandler *m_Handler[256][2];
+
+    /** The instance of the interrupt manager  */
+    static X64InterruptManager m_Instance;
+};
+
+/** @} */
 
 #endif

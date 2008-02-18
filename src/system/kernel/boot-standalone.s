@@ -31,6 +31,7 @@ mboot:
 start:
   cli
   push ebx
+  ; clear the stackframe
+  xor ebp, ebp
   call _main
   jmp $
-

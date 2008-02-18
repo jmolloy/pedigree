@@ -42,7 +42,7 @@ void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
 
 unsigned int StackFrame::getParameter(unsigned int n)
 {
-  unsigned int *pPtr = (unsigned int *) (m_nBasePointer-n*sizeof(unsigned int));
+  unsigned int *pPtr = reinterpret_cast<unsigned int *>(m_nBasePointer-n*sizeof(unsigned int));
   return *pPtr;
 }
   

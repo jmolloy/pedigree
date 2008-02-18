@@ -72,8 +72,7 @@ SRCFILES += machine/io.cc
 # x86_commmon source file list.
 ifdef X86_COMMON
 SRCFILES += machine/x86_common/initialiseMachine1.cc \
-            machine/x86_common/initialiseMachine2.cc \
-            processor/x86_common/interrupt.cc
+            machine/x86_common/initialiseMachine2.cc
 endif
 
 ###################################################################
@@ -90,7 +89,7 @@ endif
 ifdef X86_64
 SRCFILES += processor/x64/initialiseProcessor.cc \
             processor/x64/interrupt.cc \
-            processor/x64/syscall.cc
+            processor/x64/syscall.cc \
             processor/x64/asm_interrupt.S
 endif
 

@@ -43,7 +43,7 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
   {
     int n = strlen(pCommand->getString());
-    memcpy((unsigned char*)pStr, (unsigned char*)pStr+n+1, strlen(pStr)-n);
+    memcpy(pStr, pStr+n+1, strlen(pStr)-n);
     return true;
   }
   else

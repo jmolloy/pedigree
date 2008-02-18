@@ -14,17 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
-#include "../x86_common/interrupt.h"
-
-// TODO: I might want to merge this with the x64 initialiseProcessor()
+#include "interrupt.h"
 
 void initialiseProcessor()
 {
   // Initialise the interrupt manager
-  x86_common::InterruptManager::initialise();
+  X86InterruptManager::initialise();
 
   // Initialise this processors interrupt handling
-  x86_common::InterruptManager::initialiseProcessor();
+  X86InterruptManager::initialiseProcessor();
 
   // TODO
 }

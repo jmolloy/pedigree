@@ -22,8 +22,8 @@ public:
   /**
    * Constructor. Doesn't do much.
    */
-  /*FileLoader() {}
-  virtual ~FileLoader() {}*/
+  FileLoader() {}
+  virtual ~FileLoader() {}
 
   /**
    * This explicit load function allows the use of global concrete objects.
@@ -39,7 +39,7 @@ public:
    * \param[in] nAddress The address to look up.
    * \param[out] pSymbolStart The start location of the retrieved symbol (Optional).
    */
-  virtual char *lookupSymbol(unsigned int nAddress, unsigned int *pSymbolStart) =0;
+  virtual const char *lookupSymbol(unsigned int nAddress, unsigned int *pSymbolStart) =0;
 };
 
 #endif

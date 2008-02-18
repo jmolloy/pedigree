@@ -2,7 +2,6 @@
 build
 build/Makefile
 build/buildCommon.mk
-build/buildFlags.mk
 build/buildFlags.pl
 build/checkBuildSystem.pl
 build/colorgcc.pl
@@ -115,9 +114,6 @@ src/system/kernel/processor/x86/initialiseProcessor.cc
 src/system/kernel/processor/x86/interrupt.cc
 src/system/kernel/processor/x86/interrupt.h
 src/system/kernel/processor/x86/syscall.cc
-src/system/kernel/processor/x86_common
-src/system/kernel/processor/x86_common/interrupt.cc
-src/system/kernel/processor/x86_common/interrupt.h
 src/system/kernel/utility
 src/system/kernel/utility/demangle.cc
 src/system/kernel/utility/memory.c

@@ -35,8 +35,8 @@ LocalIO::LocalIO() :
   m_bRefreshesEnabled(true),
   m_bReady(true),
   m_bShift(false),
-  m_bCapslock(false),
-  m_bCtrl(false)
+  m_bCtrl(false),
+  m_bCapslock(false)
 {
   // Clear the framebuffer.
   for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
@@ -196,7 +196,7 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
       if (pAutoComplete)
       {
         // Get the full autocomplete string.
-        char *pACString = (char *)pAutoComplete->getString();
+        const char *pACString = pAutoComplete->getString();
         // Here we hack like complete bitches. Just find the last space in the string,
         // and memcpy the full autocomplete string in.
         int i;
@@ -207,12 +207,12 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
         // We also haxxor the cursor, by writing loads of backspaces, then rewriting the whole string.
         int nBackspaces = strlen(m_pCommand)-i;
         for (int j = 0; j < nBackspaces-1; j++)
-          putChar((char)0x08 /* backspace */, DebuggerIO::White, DebuggerIO::Black);
+          putChar('\x08' /* backspace */, DebuggerIO::White, DebuggerIO::Black);
         
         writeCli(pACString, DebuggerIO::White, DebuggerIO::Black);
         
         // Memcpy the full autocomplete string in.
-        memcpy((unsigned char *)&m_pCommand[i+1], (unsigned char*)pACString, strlen(pACString)+1);
+        memcpy(&m_pCommand[i+1], pACString, strlen(pACString)+1);
       }
     }
     else
@@ -435,9 +435,9 @@ void LocalIO::disableRefreshes()
 
 void LocalIO::forceRefresh()
 {
-  unsigned short *vidmem = (unsigned short *)0xB8000;
+  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
 
-  memcpy((unsigned char *)vidmem, (unsigned char *)m_pFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
+  memcpy(vidmem, m_pFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
   moveCursor();
 }
 

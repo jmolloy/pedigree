@@ -49,9 +49,9 @@ namespace x86
   typedef uint32_t uintptr_t;
 
   /** Define ssize_t */
-  typedef int32_t ssize_t;
+  typedef signed long ssize_t;
   /** Define size_t */
-  typedef uint32_t size_t;
+  typedef unsigned long size_t;
 
   /** Define a type that can hold the value of a processor register */
   typedef uint32_t processor_register_t;

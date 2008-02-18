@@ -29,8 +29,14 @@
 class InterruptHandler
 {
   public:
-    /** Called when the handler is registered with the interrupt manager and the interrupt occurred */
+    /** Called when the handler is registered with the interrupt manager and the interrupt occurred
+     *\param[in] interruptNumber the interrupt number
+     *\param[in] state reference to the state before the interrupt */
     virtual void interrupt(size_t interruptNumber, InterruptState &state) = 0;
+
+  protected:
+    /** Virtual destructor */
+    inline virtual ~InterruptHandler(){}
 };
 
 /** The interrupt manager allows interrupt handler registrations and handles interrupts */

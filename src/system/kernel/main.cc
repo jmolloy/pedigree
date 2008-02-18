@@ -58,7 +58,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   initialiseMachine2();
 
   elf.load(&bootstrapInfo);
-  char *addr = elf.lookupSymbol(0x100024);
+  const char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)

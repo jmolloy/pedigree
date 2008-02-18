@@ -41,9 +41,9 @@ Log &Log::operator<< (const char *str)
 Log &Log::operator<< (int n)
 {
   if (m_NumberType == Dec)
-    writeDec( (unsigned int) n);
+    writeDec( static_cast<unsigned int>(n));
   else
-    writeHex( (unsigned int) n);
+    writeHex( static_cast<unsigned int>(n));
   return *this;
 }
 

@@ -44,12 +44,20 @@ else
 CC=$(BUILD)/gcc
 CXX=$(BUILD)/g++
 endif
+
 CPP=$(COMPILER)-cpp
 AS=nasm
 CFLAGS=-fno-builtin -fno-stack-protector -m32 -nostdlib
-CXXFLAGS=-fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -m32 -nostdlib -O0
+CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -O0
+ifdef X86_64
+  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+endif
+ifdef X86
+  CXXFLAGS += -m32
+endif
 LDFLAGS=-nostdlib -nostdinc
 ASFLAGS=-felf
+
 ifdef OPTIMIZE_1
 CFLAGS+=-O1
 CXXFLAGS+=-O1
