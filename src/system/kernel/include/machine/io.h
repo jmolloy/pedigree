@@ -16,7 +16,9 @@
 #ifndef KERNEL_MACHINE_IO_H
 #define KERNEL_MACHINE_IO_H
 
-#include <machine/types.h>
+#include <processor/types.h>
+
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
 
 /** @addtogroup kernelmachine machine-specifc kernel
  * machine-specific kernel interface
@@ -31,16 +33,16 @@ class IoPort
     inline IoPort();
     /** The destructor automatically frees the I/O ports */
     inline ~IoPort();
-    
+
     /** Allocate a range of I/O ports from the IoPortManager
      *\param[in] ioPort the base I/O port for this instance
      *\param[in] size the number of successive I/O ports to allocate - 1
      *\todo We might want to add the module name, or some equivalent here
      *\return true, if the allocation was successfull, false otherwise */
-    bool allocate(IoPort_t ioPort, size_t size);
+    bool allocate(io_port_t ioPort, size_t size);
     /** Free the I/O ports */
     void free();
-    
+
     /** Read a byte from an I/O port
      *\param[in] offset added to the base I/O port of this instance to
      *                  to get the final I/O port number
@@ -71,15 +73,15 @@ class IoPort
      *\param[in] offset added to the base I/O port of this instance to
      *                  to get the final I/O port number */
     inline void out32(uint32_t value, size_t offset = 0);
-    
+
   private:
     /** \note Not implemented */
     IoPort(const IoPort &);
     /** \note Not implemented */
     IoPort &operator = (const IoPort &);
-    
+
     /*! The base I/O port */
-    IoPort_t m_IoPort;
+    io_port_t m_IoPort;
     /** The number of successive I/O ports - 1 */
     size_t m_Size;
 };
@@ -100,14 +102,14 @@ class IoPortManager
      *\todo We might want to add the module name, or some equivalent here
      *\return true, if the I/O port has been allocated successfull, false
      *        otherwise */
-     bool allocate(IoPort_t ioPort, size_t size);
+     bool allocate(io_port_t ioPort, size_t size);
      /** Free a number of successive I/O ports
       *\note This is normally called from an IoPort object
       *\param[in] ioPort the I/O port number
       *\param[in] size the number of successive I/O ports - 1 to free
       *\todo do we really need the second parameter? */
-     void free(IoPort_t ioPort, size_t size);
-    
+     void free(io_port_t ioPort, size_t size);
+
   private:
     /** The default constructor */
     inline IoPortManager(){}
@@ -119,7 +121,7 @@ class IoPortManager
     IoPortManager &operator = (const IoPortManager &);
     /** The destructor */
     inline ~IoPortManager(){}
-    
+
     /** The I/O port manager instance */
     static IoPortManager m_Instance;
 };
@@ -146,6 +148,8 @@ IoPortManager &IoPortManager::instance()
 
 #ifdef X86_COMMON
   #include <machine/x86_common/io.h>
+#endif
+
 #endif
 
 #endif

@@ -29,9 +29,11 @@ endif
 
 ifdef X86
 CMD_FLAGS+= -DX86_COMMON
+export X86_COMMON=1
 endif
 ifdef X86_64
 CMD_FLAGS+= -DX86_COMMON
+export X86_COMMON=1
 endif
 
 BUILD=$(shell pwd)

@@ -17,7 +17,7 @@
 #ifndef ELF32_H
 #define ELF32_H
 
-#include <machine/types.h>
+#include <processor/types.h>
 
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
 #define SHT_SYMTAB        0x2     // Symbol table

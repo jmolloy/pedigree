@@ -32,9 +32,11 @@ DIRECTORIES = debugger/ \
               debugger/libudis86 \
               utility/ \
               machine/ \
-              machine/x86 \
-              machine/x86_64 \
               machine/x86_common \
+              processor/ \
+              processor/x86 \
+              processor/x64 \
+              processor/x86_common \
               process/
 
 ###################################################################
@@ -60,17 +62,37 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/StackFrame.cc
 endif
 
-SRCFILES += machine/io.cc
-ifdef X86
-SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc machine/x86_common/interrupt.cc
-endif
-ifdef X86_64
-SRCFILES += machine/x86_common/initialiseMachine1.cc machine/x86_common/initialiseMachine2.cc machine/x86_common/interrupt.cc
-endif
-
 SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c utility/demangle.cc
 
 SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Log.cc Elf32.cc
+
+SRCFILES += machine/io.cc
+
+###################################################################
+# x86_commmon source file list.
+ifdef X86_COMMON
+SRCFILES += machine/x86_common/initialiseMachine1.cc \
+            machine/x86_common/initialiseMachine2.cc \
+            processor/x86_common/interrupt.cc
+endif
+
+###################################################################
+# x86 source file list.
+ifdef X86
+SRCFILES += processor/x86/initialiseProcessor.cc \
+            processor/x86/interrupt.cc \
+            processor/x86/syscall.cc \
+            processor/x86/asm_interrupt.S
+endif
+
+###################################################################
+# x64 source file list.
+ifdef X86_64
+SRCFILES += processor/x64/initialiseProcessor.cc \
+            processor/x64/interrupt.cc \
+            processor/x64/syscall.cc
+            processor/x64/asm_interrupt.S
+endif
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.

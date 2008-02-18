@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,11 +13,22 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_TYPES_H
-#define KERNEL_MACHINE_TYPES_H
+#ifndef KERNEL_PROCESSOR_INITIALISE_H
+#define KERNEL_PROCESSOR_INITIALISE_H
 
-#ifdef X86_COMMON
-  #include <machine/x86_common/types.h>
-#endif
+/** @addtogroup kernel kernel
+ * The kernel
+ * @{ */
+
+/** @addtogroup kernelprocessor processor-specifc kernel
+ * processor-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+/** Initialises the processor specific interface */
+void initialiseProcessor();
+
+/** @} */
+/** @} */
 
 #endif

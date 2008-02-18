@@ -17,7 +17,7 @@
 #ifndef BOOTSTRAPINFO_H
 #define BOOTSTRAPINFO_H
 
-#include <machine/types.h>
+#include <processor/types.h>
 
 typedef struct BootstrapStruct
 {

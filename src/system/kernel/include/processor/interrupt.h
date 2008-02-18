@@ -13,18 +13,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_INTERRUPT_H
-#define KERNEL_MACHINE_INTERRUPT_H
+#ifndef KERNEL_PROCESSOR_INTERRUPT_H
+#define KERNEL_PROCESSOR_INTERRUPT_H
 
-#include <machine/types.h>
-#include <machine/state.h>
+#include <processor/types.h>
+#include <processor/state.h>
 
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
+/** @addtogroup kernelprocessor processor-specifc kernel
+ * processor-specific kernel interface
  *  @ingroup kernel
  * @{ */
 
-/** interrupt handler */
+/** Abstract base class for all interrupt-handlers. All interrupt-handlers must
+ * be derived from this class */
 class InterruptHandler
 {
   public:
@@ -32,16 +33,13 @@ class InterruptHandler
     virtual void interrupt(size_t interruptNumber, InterruptState &state) = 0;
 };
 
-/** The interrupt manager allows interrupt handler registrations */
+/** The interrupt manager allows interrupt handler registrations and handles interrupts */
 class InterruptManager
 {
   public:
     /** Get the interrupt handler instance
      *\return instance of the interrupt handler */
     static InterruptManager &instance();
-    /** Initialize the interrupt manager
-     *\note Should only be called by main */
-    virtual void initialise() = 0;
     /** Register an interrupt handler
      *\param[in] interruptNumber the interrupt's number
      *\param[in] handler the interrupt handler
@@ -58,13 +56,13 @@ class InterruptManager
     /** Get the interrupt number of the debug exception
      *\return the interrupt number of the debug exception */
     virtual size_t getDebugInterruptNumber() = 0;
-  
+
   protected:
     /** The constructor */
     inline InterruptManager();
     /** The destructor */
     inline virtual ~InterruptManager();
-  
+
   private:
     /** The copy-constructor
      *\note Not implemented (singleton) */

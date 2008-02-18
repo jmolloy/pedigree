@@ -26,7 +26,7 @@
 // include <inttypes.h>
 #endif
 
-#include <machine/types.h>
+#include <processor/types.h>
 #define NULL 0
 
 #include "mnemonics.h"

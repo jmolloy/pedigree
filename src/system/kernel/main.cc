@@ -26,21 +26,25 @@
 
 // initialiseConstructors()
 #include "cppsupport.h"
-// initialiseArchitecture1(), initialiseArchitecture2()
-#include <machine/initialiseMachine.h>
+// initialiseProcessor()
+#include <processor/initialise.h>
+// initialiseMachine1(), initialiseMachine2()
+#include <machine/initialise.h>
 
 Elf32 elf("kernel");
 
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
-  
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
   // Create a BootstrapInfo object to parse bsInf.
   BootstrapInfo bootstrapInfo(bsInf);
-  
+
+  // Initialise the processor-specific interface
+  initialiseProcessor();
+
   // First stage of the machine-dependant initialisation.
   // After that only the memory-management related classes and
   // functions can be used.
@@ -52,11 +56,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // First stage of the machine-dependant initialisation.
   // After that every machine dependant class & function can be used.
   initialiseMachine2();
-  
+
   elf.load(&bootstrapInfo);
   char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);
-  
+
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
 #endif
@@ -65,6 +69,4 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // C++ classes.
 //  g_pKernelMemoryMap = bsInf->getMemoryMap();  // Get the bios' memory map.
 //  g_pProcessors      = bsInf->getProcessors(); // Parse the SMP table.
-  
-  
 }

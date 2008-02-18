@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,37 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_STATE_H
-#define KERNEL_MACHINE_X86_STATE_H
+#include <processor/initialise.h>
+#include "../x86_common/interrupt.h"
 
-/** @addtogroup kernelmachinex86 x86
- * x86 machine-specific kernel
- *  @ingroup kernelmachine
- * @{ */
+// TODO: I might want to merge this with the x86 initialiseProcessor()
 
-#include <machine/types.h>
-
-struct InterruptState
+void initialiseProcessor()
 {
-  uint32_t edi;
-  uint32_t esi;
-  uint32_t ebp;
-  uint32_t res;
-  uint32_t ebx;
-  uint32_t edx;
-  uint32_t ecx;
-  uint32_t eax;
-  uint32_t int_number;
-  uint32_t errorcode;
-  uint32_t eip;
-  uint32_t cs;
-  uint32_t eflags;
-  uint32_t esp;
-  uint32_t ss;
-};
+  // Initialise the interrupt manager
+  x86_common::InterruptManager::initialise();
 
-typedef InterruptState SyscallState;
+  // Initialise this processors interrupt handling
+  x86_common::InterruptManager::initialiseProcessor();
 
-/** @} */
-
-#endif
+  // TODO
+}

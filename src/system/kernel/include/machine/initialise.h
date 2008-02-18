@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_INITIALISEMACHINE_H
-#define KERNEL_MACHINE_INITIALISEMACHINE_H
+#ifndef KERNEL_MACHINE_INITIALISE_H
+#define KERNEL_MACHINE_INITIALISE_H
 
 /** @addtogroup kernel kernel
  * The kernel

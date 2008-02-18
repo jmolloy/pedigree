@@ -15,12 +15,12 @@
  */
 #include <machine/io.h>
 
-bool IoPort::allocate(IoPort_t ioPort, size_t size)
+bool IoPort::allocate(io_port_t ioPort, size_t size)
 {
   // Free any allocated I/O ports
   if (m_Size != 0)
     free();
-  
+
   if (IoPortManager::instance().allocate(ioPort, size) == true)
   {
     m_IoPort = ioPort;
@@ -35,7 +35,7 @@ void IoPort::free()
   if (m_Size != 0)
   {
     IoPortManager::instance().free(m_IoPort, m_Size);
-    
+
     m_Size = 0;
     m_IoPort = 0;
   }
@@ -43,12 +43,12 @@ void IoPort::free()
 
 IoPortManager IoPortManager::m_Instance;
 
-bool IoPortManager::allocate(IoPort_t ioPort, size_t size)
+bool IoPortManager::allocate(io_port_t ioPort, size_t size)
 {
   // TODO
   return true;
 }
-void IoPortManager::free(IoPort_t ioPort, size_t size)
+void IoPortManager::free(io_port_t ioPort, size_t size)
 {
   // TODO
 }

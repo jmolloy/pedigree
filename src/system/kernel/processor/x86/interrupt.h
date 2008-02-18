@@ -13,35 +13,34 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_SYSCALL_H
-#define KERNEL_MACHINE_SYSCALL_H
+#ifndef KERNEL_PROCESSOR_X86_INTERRUPT_H
+#define KERNEL_PROCESSOR_X86_INTERRUPT_H
 
-#include <machine/state.h>
+#include <processor/types.h>
 
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
- *  @ingroup kernel
- * @{ */
-
-class SyscallHandler
+namespace x86
 {
-  public:
-    void syscall(SyscallState &State);
-};
+  /** @addtogroup kernelprocessorx86 x86
+   * x86 processor-specific kernel
+   *  @ingroup kernelprocessor
+   * @{ */
 
-class SyscallManager
-{
-  public:
-    enum Service_t
-    {
-      kernelCore = 0,
-      // TODO
-    };
-  
-    static SyscallManager &instance();
-    bool registerHandler(Service_t Service, SyscallHandler *Handler);
-};
+  /** Structure of a x86 protected-mode gate descriptor */
+  struct gate_descriptor
+  {
+    /** Bits 0-15 of the offset */
+    uint16_t offset0;
+    /** The segment selector */
+    uint16_t selector;
+    /** Reserved, must be 0 */
+    uint8_t res;
+    /** Flags */
+    uint8_t flags;
+    /** Bits 16-31 of the offset */
+    uint16_t offset1;
+  } __attribute__((packed));
 
-/** @} */
+  /** @} */
+}
 
 #endif

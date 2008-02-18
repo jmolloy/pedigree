@@ -13,38 +13,26 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_64_INTERRUPT_H
-#define KERNEL_MACHINE_X86_64_INTERRUPT_H
+#include "../x86_common/interrupt.h"
 
-#include <machine/types.h>
-
-/** @addtogroup kernelmachinex8664 x86-64
- * x86-64 machine-specific kernel
- *  @ingroup kernelmachine
- * @{ */
-
-namespace x86_64
+void x86_common::InterruptManager::loadIDT()
 {
-  /** Structure of a x86-64 long-mode gate descriptor */
-  struct gate_descriptor
+  struct
   {
-    /** Bits 0-15 of the offset */
-    uint16_t offset0;
-    /** The segment selector */
-    uint16_t selector;
-    /** Entry number in the interrupt-service-table */
-    uint8_t ist;
-    /** Flags */
-    uint8_t flags;
-    /** Bits 16-31 of the offset */
-    uint16_t offset1;
-    /** Bits 32-63 of the offset */
-    uint32_t offset2;
-    /** Reserved, must be 0 */
-    uint32_t res;
-  } __attribute__((packed));
+    uint16_t size;
+    uint64_t idt;
+  } __attribute__((packed)) idtr = {4095, reinterpret_cast<uintptr_t>(&m_IDT)};
+
+  // Load the IDT
+  asm volatile("lidt %0" : "=m"(idtr));
 }
 
-/** @} */
-
-#endif
+void x86_common::InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace)
+{
+  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
+  m_IDT[interruptNumber].selector = 0x08;
+  m_IDT[interruptNumber].flags = userspace ? 0xEE : 0x8E;
+  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
+  m_IDT[interruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;
+  m_IDT[interruptNumber].res = 0;
+}

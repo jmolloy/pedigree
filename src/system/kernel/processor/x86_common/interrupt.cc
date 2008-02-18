@@ -22,18 +22,13 @@ InterruptManager &InterruptManager::instance()
   return x86_common::InterruptManager::m_Instance;
 }
 
-void x86_common::InterruptManager::initialise()
-{
-  // TODO: Create an IDT
-  // TODO: Load the IDT
-}
 bool x86_common::InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   // TODO: Needs locking
   if (interruptNumber >= 256 ||
       m_Handler[interruptNumber][0] != 0)
     return false;
-  
+
   m_Handler[interruptNumber][0] = handler;
   return true;
 }
@@ -43,7 +38,7 @@ bool x86_common::InterruptManager::registerInterruptHandlerDebugger(size_t inter
   if (interruptNumber >= 256 ||
       m_Handler[interruptNumber][1] != 0)
     return false;
-  
+
   m_Handler[interruptNumber][1] = handler;
   return true;
 }
@@ -56,16 +51,29 @@ size_t x86_common::InterruptManager::getDebugInterruptNumber()
   return 1;
 }
 
-void x86_common::InterruptManager::interrupt(size_t interruptNumber, InterruptState &interruptState)
+void x86_common::InterruptManager::initialise()
+{
+  // TODO: the syscall interrupt on x86 should be callable from userspace
+  extern uintptr_t interrupt_handler_array[];
+  for (size_t i = 0;i < 256;i++)
+    m_Instance.setInterruptGate(i, interrupt_handler_array[i], false);
+}
+void x86_common::InterruptManager::initialiseProcessor()
+{
+  // Load the IDT
+  m_Instance.loadIDT();
+}
+
+void x86_common::InterruptManager::interrupt(InterruptState &interruptState)
 {
   // TODO: Needs locking
-  /// Call the kernel debugger's handler, if any
-  if (m_Instance.m_Handler[interruptNumber][1] != 0)
-    m_Instance.m_Handler[interruptNumber][1]->interrupt(interruptNumber, interruptState);
-  
-  /// Call the normal interrupt handler, if any
-  if (m_Instance.m_Handler[interruptNumber][0] != 0)
-    m_Instance.m_Handler[interruptNumber][0]->interrupt(interruptNumber, interruptState);
+  // Call the kernel debugger's handler, if any
+  if (m_Instance.m_Handler[interruptState.getInterruptNumber()][1] != 0)
+    m_Instance.m_Handler[interruptState.getInterruptNumber()][1]->interrupt(interruptState.getInterruptNumber(), interruptState);
+
+  // Call the normal interrupt handler, if any
+  if (m_Instance.m_Handler[interruptState.getInterruptNumber()][0] != 0)
+    m_Instance.m_Handler[interruptState.getInterruptNumber()][0]->interrupt(interruptState.getInterruptNumber(), interruptState);
 }
 
 x86_common::InterruptManager::InterruptManager()

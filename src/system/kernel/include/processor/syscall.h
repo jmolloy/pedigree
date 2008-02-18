@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,22 +13,33 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_86_STATE_H
-#define KERNEL_MACHINE_X86_86_STATE_H
+#ifndef KERNEL_PROCESSOR_SYSCALL_H
+#define KERNEL_PROCESSOR_SYSCALL_H
 
-/** @addtogroup kernelmachinex8664 x86-64
- * x86-64 machine-specific kernel
- *  @ingroup kernelmachine
+#include <processor/state.h>
+
+/** @addtogroup kernelprocessor processor-specifc kernel
+ * processor-specific kernel interface
+ *  @ingroup kernel
  * @{ */
 
-#include <machine/types.h>
-
-struct InterruptState
+class SyscallHandler
 {
+  public:
+    void syscall(SyscallState &State);
 };
 
-struct SyscallState
+class SyscallManager
 {
+  public:
+    enum Service_t
+    {
+      kernelCore = 0,
+      // TODO
+    };
+  
+    static SyscallManager &instance();
+    bool registerHandler(Service_t Service, SyscallHandler *Handler);
 };
 
 /** @} */

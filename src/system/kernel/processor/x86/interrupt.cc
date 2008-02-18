@@ -13,9 +13,25 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
+#include "../x86_common/interrupt.h"
 
-void initialiseMachine1()
+void x86_common::InterruptManager::loadIDT()
 {
-  // TODO
+  struct
+  {
+    uint16_t size;
+    uint32_t idt;
+  } __attribute__((packed)) idtr = {2047, reinterpret_cast<uintptr_t>(&m_IDT)};
+
+  // Load the IDT
+  asm volatile("lidt %0" : "=m"(idtr));
+}
+
+void x86_common::InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace)
+{
+  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
+  m_IDT[interruptNumber].selector = 0x08;
+  m_IDT[interruptNumber].res = 0;
+  m_IDT[interruptNumber].flags = userspace ? 0xEE : 0x8E;
+  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
 }
