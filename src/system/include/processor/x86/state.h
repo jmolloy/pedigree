@@ -30,10 +30,12 @@ namespace x86
   {
     public:
       // General Interface (both InterruptState and SyscallState)
-      inline processor_register_t &stackPointer();
-      inline processor_register_t stackPointer() const;
-      inline processor_register_t &instructionPointer();
-      inline processor_register_t instructionPointer() const;
+      inline uintptr_t &stackPointer();
+      inline uintptr_t stackPointer() const;
+      inline uintptr_t &instructionPointer();
+      inline uintptr_t instructionPointer() const;
+      inline uintptr_t &basePointer();
+      inline uintptr_t basePointer() const;
 
       // InterruptState Interface
       inline size_t getInterruptNumber() const;
@@ -42,6 +44,7 @@ namespace x86
       inline size_t getSyscallNumber() const;
 
     private:
+      uint32_t m_Ds;
       uint32_t m_Edi;
       uint32_t m_Esi;
       uint32_t m_Ebp;
@@ -68,21 +71,29 @@ namespace x86
 //
 // Part of the Implementation
 //
-processor_register_t &x86::InterruptState::stackPointer()
+uintptr_t &x86::InterruptState::stackPointer()
 {
   return m_Esp;
 }
-processor_register_t x86::InterruptState::stackPointer() const
+uintptr_t x86::InterruptState::stackPointer() const
 {
   return m_Esp;
 }
-processor_register_t &x86::InterruptState::instructionPointer()
+uintptr_t &x86::InterruptState::instructionPointer()
 {
   return m_Eip;
 }
-processor_register_t x86::InterruptState::instructionPointer() const
+uintptr_t x86::InterruptState::instructionPointer() const
 {
   return m_Eip;
+}
+uintptr_t &x86::InterruptState::basePointer()
+{
+  return m_Ebp;
+}
+uintptr_t x86::InterruptState::basePointer() const
+{
+  return m_Ebp;
 }
 
 size_t x86::InterruptState::getInterruptNumber() const

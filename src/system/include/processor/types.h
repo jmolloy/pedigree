@@ -75,9 +75,6 @@
   /** Define size_t */
   typedef PROCESSOR_NAMESPACE::size_t size_t;
 
-  /** Define a type that can hold the value of a processor register */
-  typedef PROCESSOR_NAMESPACE::processor_register_t processor_register_t;
-
   // NOTE: This should be defined in the file included at the top of this file
   //       if this processor architecture does not support I/O ports
   #ifndef KERNEL_PROCESSOR_NO_PORT_IO

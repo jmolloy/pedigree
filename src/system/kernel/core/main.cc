@@ -33,6 +33,20 @@
 
 Elf32 elf("kernel");
 
+/// NOTE bluecode is doing some testing here
+#include <processor/interrupt.h>
+
+class MyInterruptHandler : public InterruptHandler
+{
+  public:
+    virtual void interrupt(size_t interruptNumber, InterruptState &state);
+};
+
+void MyInterruptHandler::interrupt(size_t interruptNumner, InterruptState &state)
+{
+  NOTICE("myInterruptHandler::interrupt()");
+}
+
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -44,6 +58,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Initialise the processor-specific interface
   initialiseProcessor();
+
+  /// NOTE there we go
+  MyInterruptHandler myHandler;
+  InterruptManager &IntManager = InterruptManager::instance();
+  if (IntManager.registerInterruptHandler(255, &myHandler) == false)
+  {
+    NOTICE("Failed to register interrupt handler");
+  }
 
   // First stage of the machine-dependant initialisation.
   // After that only the memory-management related classes and
@@ -60,6 +82,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   elf.load(&bootstrapInfo);
   const char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);
+
+  asm volatile("int $0xFF");
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);

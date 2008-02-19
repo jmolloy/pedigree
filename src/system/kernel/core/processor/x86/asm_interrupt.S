@@ -32,6 +32,8 @@ global interrupt_handler_array
 interrupt_handler:
   ; Save the registers
   pusha
+  push ds
+  push word 0
 
   ; Switch to the kernel data segment
   mov ax, 0x10
@@ -48,13 +50,10 @@ interrupt_handler:
   call _ZN19X86InterruptManager9interruptERN3x8614InterruptStateE
 
   ; Cleanup the stack
-  add esp, 0x04
-
-  ; Switch to the usermode data segment
-  mov ax, 0x23
-  mov ds, ax
+  add esp, 0x06
 
   ; Restore the registers
+  pop ds
   popa
 
   ; Remove the errorcode and the interrupt number from the stack

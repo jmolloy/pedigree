@@ -29,10 +29,12 @@ namespace x64
   class InterruptState
   {
     public:
-      inline processor_register_t &stackPointer();
-      inline processor_register_t stackPointer() const;
-      inline processor_register_t &instructionPointer();
-      inline processor_register_t instructionPointer() const;
+      inline uintptr_t &stackPointer();
+      inline uintptr_t stackPointer() const;
+      inline uintptr_t &instructionPointer();
+      inline uintptr_t instructionPointer() const;
+      inline uintptr_t &basePointer();
+      inline uintptr_t basePointer() const;
 
       inline size_t getInterruptNumber() const;
 
@@ -65,10 +67,12 @@ namespace x64
   {
     public:
       /// TODO
-      inline processor_register_t &stackPointer();
-      inline processor_register_t &instructionPointer();
-      inline processor_register_t &instructionPointer();
-      inline processor_register_t instructionPointer() const;
+      inline uintptr_t &stackPointer();
+      inline uintptr_t stackPointer() const;
+      inline uintptr_t &instructionPointer();
+      inline uintptr_t instructionPointer() const;
+      inline uintptr_t &basePointer();
+      inline uintptr_t basePointer() const;
 
       inline size_t getSyscallNumber() const;
 
@@ -82,22 +86,31 @@ namespace x64
 //
 // Part of the Implementation
 //
-processor_register_t &x64::InterruptState::stackPointer()
+uintptr_t &x64::InterruptState::stackPointer()
 {
   return m_Rsp;
 }
-processor_register_t x64::InterruptState::stackPointer() const
+uintptr_t x64::InterruptState::stackPointer() const
 {
   return m_Rsp;
 }
-processor_register_t &x64::InterruptState::instructionPointer()
+uintptr_t &x64::InterruptState::instructionPointer()
 {
   return m_Rip;
 }
-processor_register_t x64::InterruptState::instructionPointer() const
+uintptr_t x64::InterruptState::instructionPointer() const
 {
   return m_Rip;
 }
+uintptr_t &x64::InterruptState::basePointer()
+{
+  return m_Rbp;
+}
+uintptr_t x64::InterruptState::basePointer() const
+{
+  return m_Rbp;
+}
+
 size_t x64::InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;

@@ -17,6 +17,8 @@
 #ifndef BACKTRACE_H
 #define BACKTRACE_H
 
+#include <processor/processor.h>
+
 #define MAX_STACK_FRAMES 20
 
 class Backtrace
@@ -32,7 +34,7 @@ public:
    * Performs a backtrace from the given base pointer address, or if none was specified,
    * the current EBP location.
    */
-  void performBacktrace(unsigned int address=0);
+  void performBacktrace(uintptr_t address=0);
   
   /**
    * Returns the number of stack frames retrieved.

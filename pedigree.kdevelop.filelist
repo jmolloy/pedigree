@@ -69,6 +69,7 @@ src/system/kernel/debugger/libudis86/types.h
 src/system/kernel/debugger/libudis86/udis86.c
 src/system/kernel/debugger/libudis86/udis86.h
 src/system/kernel/include
+src/system/kernel/include/compiler.h
 src/system/kernel/include/machine
 src/system/kernel/include/machine/initialise.h
 src/system/kernel/include/machine/io.h
@@ -78,6 +79,7 @@ src/system/kernel/include/machine/x86_common/io.h
 src/system/kernel/include/processor
 src/system/kernel/include/processor/initialise.h
 src/system/kernel/include/processor/interrupt.h
+src/system/kernel/include/processor/processor.h
 src/system/kernel/include/processor/state.h
 src/system/kernel/include/processor/syscall.h
 src/system/kernel/include/processor/types.h
@@ -104,15 +106,19 @@ src/system/kernel/memory/MemoryMap.h
 src/system/kernel/processor
 src/system/kernel/processor/x64
 src/system/kernel/processor/x64/asm_interrupt.S
+src/system/kernel/processor/x64/asm_processor.S
 src/system/kernel/processor/x64/initialiseProcessor.cc
 src/system/kernel/processor/x64/interrupt.cc
 src/system/kernel/processor/x64/interrupt.h
+src/system/kernel/processor/x64/processor.cc
 src/system/kernel/processor/x64/syscall.cc
 src/system/kernel/processor/x86
 src/system/kernel/processor/x86/asm_interrupt.S
+src/system/kernel/processor/x86/asm_processor.S
 src/system/kernel/processor/x86/initialiseProcessor.cc
 src/system/kernel/processor/x86/interrupt.cc
 src/system/kernel/processor/x86/interrupt.h
+src/system/kernel/processor/x86/processor.cc
 src/system/kernel/processor/x86/syscall.cc
 src/system/kernel/utility
 src/system/kernel/utility/demangle.cc

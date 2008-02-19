@@ -25,31 +25,34 @@ InterruptManager &InterruptManager::instance()
 bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   // TODO: Needs locking
-  if (interruptNumber >= 256 ||
-      m_Handler[interruptNumber][0] != 0)
+  if (UNLIKELY(interruptNumber >= 256 || m_Handler[interruptNumber] != 0))
     return false;
 
-  m_Handler[interruptNumber][0] = handler;
+  m_Handler[interruptNumber] = handler;
   return true;
 }
-bool X64InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
-{
-  // TODO: Needs locking
-  if (interruptNumber >= 256 ||
-      m_Handler[interruptNumber][1] != 0)
-    return false;
 
-  m_Handler[interruptNumber][1] = handler;
-  return true;
-}
-size_t X64InterruptManager::getBreakpointInterruptNumber()
-{
-  return 3;
-}
-size_t X64InterruptManager::getDebugInterruptNumber()
-{
-  return 1;
-}
+#ifdef DEBUGGER
+
+  bool X64InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  {
+    // TODO: Needs locking
+    if (UNLIKELY(interruptNumber >= 256 || m_DbgHandler[interruptNumber] != 0))
+      return false;
+
+    m_DbgHandler[interruptNumber] = handler;
+    return true;
+  }
+  size_t X64InterruptManager::getBreakpointInterruptNumber()
+  {
+    return 3;
+  }
+  size_t X64InterruptManager::getDebugInterruptNumber()
+  {
+    return 1;
+  }
+
+#endif
 
 void X64InterruptManager::initialise()
 {
@@ -81,13 +84,16 @@ void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t int
 void X64InterruptManager::interrupt(InterruptState &interruptState)
 {
   // TODO: Needs locking
-  // Call the kernel debugger's handler, if any
-  if (m_Instance.m_Handler[interruptState.getInterruptNumber()][1] != 0)
-    m_Instance.m_Handler[interruptState.getInterruptNumber()][1]->interrupt(interruptState.getInterruptNumber(), interruptState);
+
+  #ifdef DEBUGGER
+    // Call the kernel debugger's handler, if any
+    if (m_Instance.m_DbgHandler[interruptState.getInterruptNumber()] != 0)
+      m_Instance.m_DbgHandler[interruptState.getInterruptNumber()]->interrupt(interruptState.getInterruptNumber(), interruptState);
+  #endif
 
   // Call the normal interrupt handler, if any
-  if (m_Instance.m_Handler[interruptState.getInterruptNumber()][0] != 0)
-    m_Instance.m_Handler[interruptState.getInterruptNumber()][0]->interrupt(interruptState.getInterruptNumber(), interruptState);
+  if (LIKELY(m_Instance.m_Handler[interruptState.getInterruptNumber()] != 0))
+    m_Instance.m_Handler[interruptState.getInterruptNumber()]->interrupt(interruptState.getInterruptNumber(), interruptState);
 }
 
 X64InterruptManager::X64InterruptManager()

@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X86_INTERRUPT_H
 #define KERNEL_PROCESSOR_X86_INTERRUPT_H
 
+#include <compiler.h>
 #include <processor/types.h>
 #include <processor/syscall.h>
 #include <processor/interrupt.h>
@@ -34,9 +35,12 @@ class X86InterruptManager : public ::InterruptManager,
   public:
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
-    virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
-    virtual size_t getBreakpointInterruptNumber();
-    virtual size_t getDebugInterruptNumber();
+
+    #ifdef DEBUGGER
+      virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
+      virtual size_t getBreakpointInterruptNumber() PURE;
+      virtual size_t getDebugInterruptNumber() PURE;
+    #endif
 
     // SyscallManager Interface
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
@@ -84,12 +88,16 @@ class X86InterruptManager : public ::InterruptManager,
       uint8_t flags;
       /** Bits 16-31 of the offset */
       uint16_t offset1;
-    } __attribute__((packed));
+    } PACKED;
 
     /** The interrupt descriptor table (IDT) */
     gate_descriptor m_IDT[256];
-    /** The interrupt handlers (normal at index 0, kernel debugger at index 1) */
-    InterruptHandler *m_Handler[256][2];
+    /** The normal interrupt handlers */
+    InterruptHandler *m_Handler[256];
+    #ifdef DEBUGGER
+      /** The debugger interrupt handlers */
+      InterruptHandler *m_DbgHandler[256];
+    #endif
 
     /** The instance of the interrupt manager  */
     static X86InterruptManager m_Instance;

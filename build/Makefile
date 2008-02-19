@@ -47,16 +47,27 @@ endif
 
 CPP=$(COMPILER)-cpp
 AS=nasm
-CFLAGS=-fno-builtin -fno-stack-protector -m32 -nostdlib
-CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
-ifdef X86_64
-  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
+ifdef X86
+  CFLAGS += -m32
 endif
+ifdef X86_64
+  CFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+endif
+CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
 ifdef X86
   CXXFLAGS += -m32
 endif
+ifdef X86_64
+  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+endif
 LDFLAGS=-nostdlib -nostdinc
-ASFLAGS=-felf
+ifdef X86
+  ASFLAGS=-felf
+endif
+ifdef X86_64
+  ASFLAGS=-felf64
+endif
 
 ifdef OPTIMIZE_1
 CFLAGS+=-O1
@@ -134,7 +145,7 @@ subsys: compiler kernel modules drivers
 clean:
 	-@rm buildFlags.mk
 	-@rm -Rf objects-*
-	-@rm built/*
+	-@rm -f built/*
 
 image: kernel
 	@perl -e "print \"\e[32m*** Writing disk images...\e[0m\n\";" # echo doesn't have support for colours.

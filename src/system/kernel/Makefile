@@ -81,7 +81,8 @@ ifdef X86
 SRCFILES += processor/x86/initialiseProcessor.cc \
             processor/x86/interrupt.cc \
             processor/x86/syscall.cc \
-            processor/x86/asm_interrupt.S
+            processor/x86/asm_interrupt.S \
+            processor/x86/asm_processor.S
 endif
 
 ###################################################################
@@ -90,7 +91,8 @@ ifdef X86_64
 SRCFILES += processor/x64/initialiseProcessor.cc \
             processor/x64/interrupt.cc \
             processor/x64/syscall.cc \
-            processor/x64/asm_interrupt.S
+            processor/x64/asm_interrupt.S \
+            processor/x64/asm_processor.S
 endif
 
 ###################################################################

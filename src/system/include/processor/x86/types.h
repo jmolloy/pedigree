@@ -53,9 +53,6 @@ namespace x86
   /** Define size_t */
   typedef unsigned long size_t;
 
-  /** Define a type that can hold the value of a processor register */
-  typedef uint32_t processor_register_t;
-
   /** Define an I/O port type */
   typedef uint16_t io_port_t;
 

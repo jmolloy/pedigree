@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_INTERRUPT_H
 #define KERNEL_PROCESSOR_INTERRUPT_H
 
+#include <compiler.h>
 #include <processor/types.h>
 #include <processor/state.h>
 
@@ -51,17 +52,20 @@ class InterruptManager
      *\param[in] handler the interrupt handler
      *\return true, if successfully registered, false otherwise */
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler) = 0;
-    /** Register an interrupt handler (for the kernel debugger)
-     *\param[in] interruptNumber the interrupt's number
-     *\param[in] handler the interrupt handler
-     *\return true, if successfully registered, false otherwise */
-    virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler) = 0;
-    /** Get the interrupt number of the breakpoint exception
-     *\return the interrupt number of the breakpoint exception */
-    virtual size_t getBreakpointInterruptNumber() = 0;
-    /** Get the interrupt number of the debug exception
-     *\return the interrupt number of the debug exception */
-    virtual size_t getDebugInterruptNumber() = 0;
+
+    #ifdef DEBUGGER
+      /** Register an interrupt handler (for the kernel debugger)
+       *\param[in] interruptNumber the interrupt's number
+       *\param[in] handler the interrupt handler
+       *\return true, if successfully registered, false otherwise */
+      virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler) = 0;
+      /** Get the interrupt number of the breakpoint exception
+       *\return the interrupt number of the breakpoint exception */
+      virtual size_t getBreakpointInterruptNumber() PURE = 0;
+      /** Get the interrupt number of the debug exception
+       *\return the interrupt number of the debug exception */
+      virtual size_t getDebugInterruptNumber() PURE = 0;
+    #endif
 
   protected:
     /** The constructor */

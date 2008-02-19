@@ -300,7 +300,7 @@
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
       <hidenonprojectfiles>false</hidenonprojectfiles>
-      <showvcsfields>true</showvcsfields>
+      <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>
 </kdevelop>

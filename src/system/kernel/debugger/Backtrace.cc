@@ -22,9 +22,6 @@
 // TEMP!
 extern Elf32 elf;
 
-asm volatile("readEip: pop %eax; jmp *%eax;");
-extern "C" unsigned int readEip();
-
 Backtrace::Backtrace()
 {
 }
@@ -33,22 +30,18 @@ Backtrace::~Backtrace()
 {
 }
 
-void Backtrace::performBacktrace(unsigned int address)
+void Backtrace::performBacktrace(uintptr_t address)
 {
   if (address == 0)
-  {
-    // TODO read EIP using proper machine interface.
-    asm volatile("mov %%ebp, %0" : "=r" (address));
-  }
+    address = processor::getBasePointer();
   
-  unsigned int eip = 0x100000;
   int i = 0;
   
-  while (address && eip >= 0x100000 && i < MAX_STACK_FRAMES)
+  while (address && i < MAX_STACK_FRAMES)
   {
     uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(address);
-    m_pReturnAddresses[i] = eip = *reinterpret_cast<uintptr_t *>(address+sizeof(uintptr_t));
-    m_pBasePointers[i]          = address;
+    m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(address+sizeof(uintptr_t));
+    m_pBasePointers[i] = address;
     address = nextAddress;
     i++;
   }
