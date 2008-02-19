@@ -14,8 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// TODO: This code is string-unsafe. It needs tidying up to be crash-safe.
-
 #include <utility.h>
 
 const char *parseNamespace(const char *src, char *dest);
@@ -26,7 +24,7 @@ const char *getNumber(const char *src, int &n)
 {
   char pStr[32];
   int len = 0;
-  while (*src >= '0' && *src <= '9')
+  while (*src >= '0' && *src <= '9' && *src)
   {
     pStr[len++] = *src++;
   }
@@ -55,7 +53,9 @@ const char *parseNamespace(const char *src, char *dest)
       if (dest[0] != '\0')
         strcat(dest, "::");
       strcat(dest, "`ctor'");
-      src += 2; // Get rid of "C1".
+      src ++;
+      if (*src == 0) return src;
+      src ++; // Get rid of "C1".
     }
     else if (*src == 'D')
     {
@@ -63,7 +63,9 @@ const char *parseNamespace(const char *src, char *dest)
       if (dest[0] != '\0')
         strcat(dest, "::");
       strcat(dest, "`dtor'");
-      src += 2; // Get rid of "D1".
+      src ++; 
+      if (*src == 0) return src;
+      src ++; // Get rid of "D1".
     }
     else if (*src == 'I')
     {
@@ -81,12 +83,12 @@ const char *parseNamespace(const char *src, char *dest)
         strcat(dest, "::");
       
       strncat(dest, src, n);
+      if (strlen(src) < n)
+        return src;
       src += n;
     }
-    else 
-    {
+    else
       break;
-    }
   }
   return src;
 }
@@ -104,6 +106,7 @@ const char *parseFunction(const char *src, char *dest)
   {
     char pStr[128];
     src = parseTemplate(src, pStr);
+    if (*src == 0) return src;
     src++; // Skip over 'E'.
     strcat(dest, pStr);
   }
@@ -118,10 +121,10 @@ const char *parseTemplate(const char *src, char *dest)
   dest[0] = '\0';
   
   bool bIsPointer = false;
+  bool bIsReference = false;
   bool bIsThisPointer = false;
   while (*src)
   {
-    bIsThisPointer = false;
     if (*src == 'E')
     {
       src++;
@@ -131,8 +134,9 @@ const char *parseTemplate(const char *src, char *dest)
     {
       if (dest[0] == '\0')
         strcat(dest, "<");
-      else if (!bIsPointer)
+      else if (!bIsThisPointer)
         strcat(dest, ", ");
+      bIsThisPointer = false;
       if (*src == 'N')
       {
         char pStr[128];
@@ -146,13 +150,20 @@ const char *parseTemplate(const char *src, char *dest)
       else if (*src == 's') {src++; strcat(dest, "short");}
       else if (*src == 't') {src++; strcat(dest, "unsigned short");}
       else if (*src == 'b') {src++; strcat(dest, "bool");}
+      else if (*src == 'K') {src++; strcat(dest, "const "); bIsThisPointer = true;}
       else if (*src == 'P') {src++; bIsPointer = bIsThisPointer = true;}
+      else if (*src == 'R') {src++; bIsReference = bIsThisPointer = true;}
       else {break;}
       
       if (bIsPointer && !bIsThisPointer)
       {
-        strcat(dest, " *");
+        strcat(dest, "*");
         bIsPointer = false;
+      }
+      else if (bIsReference && !bIsThisPointer)
+      {
+        strcat(dest, "&");
+        bIsReference = false;
       }
     }
   }
@@ -167,6 +178,7 @@ void parseParameters(const char *src, symbol_t *sym)
   int param = -1;
   char *dest;
   bool bIsPointer = false;
+  bool bIsReference = false;
   bool bIsThisPointer = false;
   while (*src)
   {
@@ -188,6 +200,13 @@ void parseParameters(const char *src, symbol_t *sym)
     else if (*src == 'K') {src++; strcat(dest, "const "); bIsThisPointer = true;}
     else if (*src == 'V') {src++; strcat(dest, "volatile "); bIsThisPointer = true;}
     else if (*src == 'P') {src++; bIsPointer = bIsThisPointer = true;}
+    else if (*src == 'R') {src++; bIsReference = bIsThisPointer = true;}
+    else if (*src == 'N')
+    {
+        char pStr[128];
+        src = parseNamespace(src, pStr);
+        strcat(dest, pStr);
+    }
     else if (*src == 'S')
     {
       src++;
@@ -213,6 +232,8 @@ void parseParameters(const char *src, symbol_t *sym)
       int n;
       src = getNumber(src, n);
       strncat(dest, src, n);
+      if (strlen(src) < n)
+          return;
       src += n;
       // If the next character is an 'I', this is templated so don't increment 'param'.
       if (*src == 'I')
@@ -222,8 +243,13 @@ void parseParameters(const char *src, symbol_t *sym)
 
     if (bIsPointer && !bIsThisPointer)
     {
-      strcat(dest, " *");
+      strcat(dest, "*");
       bIsPointer = false;
+    }
+    else if (bIsReference && !bIsThisPointer)
+    {
+      strcat(dest, "&");
+      bIsReference = false;
     }
     
   }
@@ -232,6 +258,7 @@ void parseParameters(const char *src, symbol_t *sym)
 
 void demangle(const char *src, symbol_t *sym)
 {
+    sym->nParams = 0;
   // All C++ symbols start with '_Z'.
   if (src[0] != '_' || src[1] != 'Z')
   {
