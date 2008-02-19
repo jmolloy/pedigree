@@ -28,11 +28,11 @@ COMPILER=amd64-elf
 endif
 
 ifdef X86
-CMD_FLAGS+= -DX86_COMMON
+CMD_FLAGS += -DX86_COMMON
 export X86_COMMON=1
 endif
 ifdef X86_64
-CMD_FLAGS+= -DX86_COMMON
+CMD_FLAGS += -DX86_COMMON
 export X86_COMMON=1
 endif
 
@@ -48,7 +48,7 @@ endif
 CPP=$(COMPILER)-cpp
 AS=nasm
 CFLAGS=-fno-builtin -fno-stack-protector -m32 -nostdlib
-CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -O0
+CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
 ifdef X86_64
   CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
