@@ -19,7 +19,7 @@
 StackFrame::StackFrame(unsigned int nBasePointer, const char *pMangledSymbol) :
   m_nBasePointer(nBasePointer)
 {
-  NOTICE(pMangledSymbol);
+  // Demangle the given symbol, storing in m_Symbol for future use.
   demangle(pMangledSymbol, &m_Symbol);
 }
 
@@ -30,19 +30,31 @@ StackFrame::~StackFrame()
 
 void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
 {
+  bool bIsMember = isClassMember();
   sprintf(pBuf, "%s(", m_Symbol.name);
+  if (bIsMember)
+  {
+    char pStr[32];
+    sprintf(pStr, "this=0x%x, ");
+    strcat(pBuf, pStr);
+  }
+  
   for (int i = 0; i < m_Symbol.nParams; i++)
   {
     if (i != 0)
       strcat(pBuf, ", ");
-    strcat(pBuf, m_Symbol.params[i]);
+    
+    char pStr[64];
+    sprintf(pStr, "%s=0x%x", m_Symbol.params[i], getParameter((bIsMember)?i+1:i));
+    strcat(pBuf, pStr);
+    
   }
   strcat(pBuf, ")\n");
 }
 
 unsigned int StackFrame::getParameter(unsigned int n)
 {
-  unsigned int *pPtr = reinterpret_cast<unsigned int *>(m_nBasePointer-n*sizeof(unsigned int));
+  unsigned int *pPtr = reinterpret_cast<unsigned int *>(m_nBasePointer+(n+2)*sizeof(unsigned int));
   return *pPtr;
 }
   
@@ -50,3 +62,21 @@ void StackFrame::format(unsigned int n, const char *pType, char *pDest)
 {
 }
 
+bool StackFrame::isClassMember()
+{
+  char *nScopeIdx = strrchr(m_Symbol.name, ':');
+  if (nScopeIdx == 0)
+    return false;
+  
+  char *i;
+  for (i = nScopeIdx-2;
+       *i != 0 && *i != ':';
+       i--)
+    ;
+  i++;
+  
+  if (*i >= 'A' && *i <= 'Z')
+    return true;
+  else
+    return false;
+}

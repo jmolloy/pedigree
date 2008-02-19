@@ -30,19 +30,23 @@ Backtrace::~Backtrace()
 {
 }
 
-void Backtrace::performBacktrace(uintptr_t address)
+void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
 {
-  if (address == 0)
-    address = processor::getBasePointer();
+  if (base == 0)
+    base = processor::getBasePointer();
+  if (instruction == 0)
+    instruction = processor::getInstructionPointer();
   
-  int i = 0;
+  int i = 1;
+  m_pBasePointers[0] = base;
+  m_pReturnAddresses[0] = instruction;
   
-  while (address && i < MAX_STACK_FRAMES)
+  while (base && i < MAX_STACK_FRAMES)
   {
-    uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(address);
-    m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(address+sizeof(uintptr_t));
-    m_pBasePointers[i] = address;
-    address = nextAddress;
+    uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
+    m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
+    m_pBasePointers[i] = nextAddress;
+    base = nextAddress;
     i++;
   }
   

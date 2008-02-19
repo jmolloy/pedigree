@@ -34,7 +34,7 @@ public:
    * Performs a backtrace from the given base pointer address, or if none was specified,
    * the current EBP location.
    */
-  void performBacktrace(uintptr_t address=0);
+  void performBacktrace(uintptr_t base=0, uintptr_t instruction=0);
   
   /**
    * Returns the number of stack frames retrieved.

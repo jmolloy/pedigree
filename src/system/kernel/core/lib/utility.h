@@ -37,6 +37,8 @@ int strncmp(const char *p1, const char *p2, int n);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, int n);
 
+char *strrchr(const char *str, char target);
+
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 
 #ifdef __cplusplus

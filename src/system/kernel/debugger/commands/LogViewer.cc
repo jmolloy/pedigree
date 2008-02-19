@@ -84,6 +84,8 @@ bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
     }
     case ' ':
     {
+      if (Log::instance().getEntryCount() <= nLines)
+        break;
       if (line+nLines <= Log::instance().getEntryCount()-nLines)
         line += nLines;
       else
@@ -92,6 +94,8 @@ bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
     }
     case 0x08:
     {
+      if (Log::instance().getEntryCount() <= nLines)
+        break;
       if (line-nLines >= 0)
         line -= nLines;
       else

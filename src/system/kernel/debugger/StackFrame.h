@@ -41,6 +41,14 @@ private:
   unsigned int getParameter(unsigned int n);
   
   /**
+   * Returns whether the symbol is a class member function.
+   * This is calculated by a simple algorithm:
+   *  * If the symbol name contains no '::'s, return false.
+   *  * If the letter directly after the last '::' is a capital, return true, else return false.
+   */
+  bool isClassMember();
+  
+  /**
    * Formats a number, given the 'type' of that number.
    */
   void format(unsigned int n, const char *pType, char *pDest);

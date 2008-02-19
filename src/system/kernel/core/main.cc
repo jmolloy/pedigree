@@ -47,6 +47,12 @@ void MyInterruptHandler::interrupt(size_t interruptNumner, InterruptState &state
   NOTICE("myInterruptHandler::interrupt()");
 }
 
+/// NOTE JamesM is doing some testing here.
+void mytestfunc(unsigned int a, unsigned int b)
+{
+  Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
+}
+
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -86,6 +92,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   asm volatile("int $0xFF");
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
+  mytestfunc(0xdeadbaba, 0x12345678);
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
