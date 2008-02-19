@@ -17,32 +17,34 @@
 ###################################################################
 # Extra includes.
 INCLUDES += -I./ \
-            -I./include/ \
+            -I./../common/ \
+            -I./../include/ \
             -I./debugger/ \
             -I./debugger/commands \
             -I./debugger/libudis86 \
-            -I./utility/ \
-            -I./machine/ \
-            -I./process/
+            -I./core/lib \
+            -I./linker
 
 ###################################################################
 # Subdirectory list.
-DIRECTORIES = debugger/ \
+DIRECTORIES = core/lib \
+              core/memory \
+              core/process \
+              core/processor/ \
+              core/processor/x86 \
+              core/processor/x64 \
+              core/processor/x86_common \
+              debugger/ \
               debugger/commands \
               debugger/libudis86 \
-              utility/ \
+              linker/ \
               machine/ \
-              machine/x86_common \
-              processor/ \
-              processor/x86 \
-              processor/x64 \
-              processor/x86_common \
-              process/
+              machine/x86_common
 
 ###################################################################
 # Source file list.
 ifdef KERNEL_STANDALONE
-SRCFILES = boot-standalone.s
+SRCFILES = boot-standalone.s BootstrapInfo.cc Log.cc
 endif
 ifdef DEBUGGER
 SRCFILES += debugger/libudis86/mnemonics.c \
@@ -62,9 +64,14 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/StackFrame.cc
 endif
 
-SRCFILES += utility/string.c utility/memory.c utility/vsprintf.c utility/demangle.cc
+SRCFILES += core/lib/cppsupport.cc \
+            core/lib/demangle.cc \
+            core/lib/memory.c \
+            core/lib/string.c \
+            core/lib/vsprintf.c \
+            core/main.cc
 
-SRCFILES += cppsupport.cc main.cc BootstrapInfo.cc Log.cc Elf32.cc
+SRCFILES += linker/Elf32.cc
 
 SRCFILES += machine/io.cc
 
@@ -78,21 +85,21 @@ endif
 ###################################################################
 # x86 source file list.
 ifdef X86
-SRCFILES += processor/x86/initialiseProcessor.cc \
-            processor/x86/interrupt.cc \
-            processor/x86/syscall.cc \
-            processor/x86/asm_interrupt.S \
-            processor/x86/asm_processor.S
+SRCFILES += core/processor/x86/initialiseProcessor.cc \
+            core/processor/x86/interrupt.cc \
+            core/processor/x86/syscall.cc \
+            core/processor/x86/asm_interrupt.S \
+            core/processor/x86/asm_processor.S
 endif
 
 ###################################################################
 # x64 source file list.
 ifdef X86_64
-SRCFILES += processor/x64/initialiseProcessor.cc \
-            processor/x64/interrupt.cc \
-            processor/x64/syscall.cc \
-            processor/x64/asm_interrupt.S \
-            processor/x64/asm_processor.S
+SRCFILES += core/processor/x64/initialiseProcessor.cc \
+            core/processor/x64/interrupt.cc \
+            core/processor/x64/syscall.cc \
+            core/processor/x64/asm_interrupt.S \
+            core/processor/x64/asm_processor.S
 endif
 
 ###################################################################

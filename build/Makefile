@@ -119,13 +119,13 @@ compiler:
 bootstrap: compiler
 	@cd $(SRC)/system/boot; $(MAKE) $(SILENTFLAG)
 
-utilities: compiler
-	@cd $(SRC)/system/utilities; $(MAKE) $(SILENTFLAG)
+common: compiler
+	@cd $(SRC)/system/common; $(MAKE) $(SILENTFLAG)
 
-kernel: compiler utilities
+kernel: compiler common
 	@cd $(SRC)/system/kernel; $(MAKE) $(SILENTFLAG)
 
-modules: compiler utilities # For every module in $MODULES, export the module name and call the module makefile.
+modules: compiler common # For every module in $MODULES, export the module name and call the module makefile.
 	@STARTDIR=`pwd`; \
 	for NAME in ${MODULES}; \
 	do export MODULE=$$NAME; \
