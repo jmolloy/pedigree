@@ -35,7 +35,7 @@ void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
   if (bIsMember)
   {
     char pStr[32];
-    sprintf(pStr, "this=0x%x, ");
+    sprintf(pStr, "this=0x%x, ", getParameter(0));
     strcat(pBuf, pStr);
   }
   

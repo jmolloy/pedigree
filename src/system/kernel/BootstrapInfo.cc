@@ -16,12 +16,9 @@
 #include "BootstrapInfo.h"
 #include <utility.h>
 
-BootstrapInfo::BootstrapInfo(BootstrapStruct_t *info)
+BootstrapInfo::BootstrapInfo(BootstrapStruct_t *info) :
+    m_BootstrapInfo(*info)
 {
-  // Make a copy of the info struct straight away.
-  memcpy( &m_BootstrapInfo,
-          info,
-          sizeof(BootstrapStruct_t));
 }
 
 BootstrapInfo::~BootstrapInfo()
