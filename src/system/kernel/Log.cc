@@ -21,6 +21,7 @@ Log Log::m_Instance;
 
 Log::Log () :
   m_nEntries(0),
+  m_Buffer(),
   m_NumberType(Dec)
 {
 }
@@ -47,6 +48,15 @@ Log &Log::operator<< (int n)
   return *this;
 }
 
+Log &Log::operator<< (Modifier type)
+{
+  // Flush the buffer.
+  if (type == Flush)
+    m_pLog[m_nEntries++] = m_Buffer;
+
+  return *this;
+}
+
 Log &Log::operator<< (NumberType type)
 {
   m_NumberType = type;
@@ -66,10 +76,6 @@ Log &Log::operator<< (SeverityLevel level)
     m_Buffer.type = level;
     m_Buffer.timestamp = 0; // TODO: add timestamps.
     break;
-
-  case End:
-    // Flush the buffer.
-    m_pLog[m_nEntries++] = m_Buffer;
   }
   return *this;
 }

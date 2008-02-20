@@ -17,6 +17,7 @@
 #ifndef ELF32_H
 #define ELF32_H
 
+#include <compiler.h>
 #include <processor/types.h>
 
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
@@ -121,7 +122,14 @@ public:
   uint32_t getEntryPoint();
 
 private:
-  typedef struct
+  /** The copy-constructor
+   *\note currently not implemented */
+  Elf32(const Elf32 &);
+  /** The assignment operator
+   *\note currently not implemented */
+  Elf32 &operator = (const Elf32 &);
+
+  struct Elf32Header_t
   {
     uint8_t  ident[16];
     uint16_t type;
@@ -137,9 +145,9 @@ private:
     uint16_t shentsize;
     uint16_t shnum;
     uint16_t shstrndx;
-  } Elf32Header_t;
+  } PACKED;
   
-  typedef struct
+  struct Elf32ProcessHeader_t
   {
     uint32_t type;
     uint32_t offset;
@@ -149,9 +157,9 @@ private:
     uint32_t memsz;
     uint32_t flags;
     uint32_t align;
-  } Elf32ProcessHeader_t;
+  } PACKED;
   
-  typedef struct
+  struct Elf32SectionHeader_t
   {
     uint32_t name;
     uint32_t type;
@@ -163,9 +171,9 @@ private:
     uint32_t info;
     uint32_t addralign;
     uint32_t entsize;
-  } Elf32SectionHeader_t;
+  } PACKED;
   
-  typedef struct
+  struct Elf32Symbol_t
   {
     uint32_t name;
     uint32_t value;
@@ -173,9 +181,9 @@ private:
     uint8_t  info;
     uint8_t  other;
     uint16_t shndx;
-  } Elf32Symbol_t;
+  } PACKED;
   
-  typedef struct
+  struct Elf32Dyn_t
   {
     int32_t tag;
     union
@@ -183,13 +191,13 @@ private:
       int32_t val;
       uint32_t ptr;
     } un;
-  } Elf32Dyn_t;
+  } PACKED;
   
-  typedef struct
+  struct Elf32Rel_t
   {
     uint32_t offset;
     uint32_t info;
-  } Elf32Rel_t;
+  } PACKED;
 
   Elf32Header_t        *m_pHeader;
   Elf32SectionHeader_t *m_pSymbolTable;

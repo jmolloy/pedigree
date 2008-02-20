@@ -323,9 +323,8 @@ char LocalIO::getChar()
   }
   else if (scancode <= 0x39 /* space */)
     return keymap_lower[scancode];
-  else
-    return 0;
 
+  return 0;
 }
 
 void LocalIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)

@@ -23,6 +23,9 @@ Elf32::Elf32(const char *name) :
   m_pHeader(0),
   m_pSymbolTable(0),
   m_pStringTable(0),
+  m_pShstrtab(0),
+  m_pGotTable(0),
+  m_pRelTable(0),
   m_pSectionHeaders(0),
   m_pBuffer(0)
 {
@@ -109,6 +112,8 @@ bool Elf32::load(BootstrapInfo *pBootstrap)
       m_pStringTable->offset = m_pStringTable->addr;
     }
   }
+
+  return true;
 }
 
 bool Elf32::writeSections()

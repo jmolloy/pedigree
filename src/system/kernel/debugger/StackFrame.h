@@ -17,6 +17,7 @@
 #define STACKFRAME_H
 
 #include <utility.h>
+#include <processor/types.h>
 
 class StackFrame
 {
@@ -53,7 +54,7 @@ private:
    */
   void format(unsigned int n, const char *pType, char *pDest);
   
-  unsigned int m_nBasePointer;
+  uintptr_t m_nBasePointer;
   symbol_t m_Symbol;
 };
 

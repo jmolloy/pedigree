@@ -108,6 +108,8 @@ bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
   }
   
   pScreen->enableCli();
+
+  return true;
 }
 
 void LogViewer::refresh(int topLine, DebuggerIO *pScreen)

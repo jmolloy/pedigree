@@ -23,6 +23,7 @@
 extern Elf32 elf;
 
 Backtrace::Backtrace()
+  : m_nStackFrames(0)
 {
 }
 

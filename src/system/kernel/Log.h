@@ -18,28 +18,24 @@
 #define DEBUGGER_LOG_H
 
 #define NOTICE(text) \
-  do \
   { \
-    Log::instance() << Log::Notice << text << Log::End; \
-  } while(0);
+    Log::instance() << Log::Notice << text << Flush; \
+  }
 
 #define WARNING(text) \
-  do \
   { \
-    Log::instance() << Log::Warning << text << Log::End; \
-  } while(0);
+    Log::instance() << Log::Warning << text << Flush; \
+  }
 
 #define ERROR(text) \
-  do \
   { \
-    Log::instance() << Log::Error << text << Log::End; \
-  } while(0);
+    Log::instance() << Log::Error << text << Flush; \
+  }
 
 #define FATAL(text) \
-  do \
   { \
-    Log::instance() << Log::Fatal << text << Log::End; \
-  } while(0);
+    Log::instance() << Log::Fatal << text << Flush; \
+  }
 
 /// The maximum length of an individual log entry.
 /// \todo Change to using dynamic memory.
@@ -50,7 +46,13 @@
 
 enum NumberType
 {
-  Hex, Dec
+  Hex,
+  Dec
+};
+
+enum Modifier
+{
+  Flush
 };
 
 /**
@@ -64,8 +66,7 @@ public:
     Notice,
     Warning,
     Error,
-    Fatal,
-    End
+    Fatal
   };
   
   /**
@@ -103,6 +104,8 @@ public:
    * Changes the number type between hex and decimal.
    */
   Log &operator<< (NumberType type);
+
+  Log &operator<< (Modifier type);
 
   /**
    * Returns the n'th log entry, counting from the start.

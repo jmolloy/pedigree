@@ -17,7 +17,7 @@
 #include <Log.h>
 
 StackFrame::StackFrame(unsigned int nBasePointer, const char *pMangledSymbol) :
-  m_nBasePointer(nBasePointer)
+  m_nBasePointer(nBasePointer), m_Symbol()
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
   demangle(pMangledSymbol, &m_Symbol);

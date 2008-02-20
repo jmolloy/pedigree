@@ -228,7 +228,6 @@ void parseParameters(const char *src, symbol_t *sym)
     }
     else if (*src >= '0' && *src <= '9')
     {
-      char *pStr[128];
       int n;
       src = getNumber(src, n);
       strncat(dest, src, n);

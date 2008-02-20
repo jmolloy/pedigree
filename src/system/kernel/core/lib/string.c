@@ -203,6 +203,6 @@ char *strrchr(const char *str, char target)
   int i;
   for (i = strlen(str); i >= 0; i--)
     if (str[i] == target)
-      return &str[i];
+      return (char*)&str[i];
   return (char*)0;
 }

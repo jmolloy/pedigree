@@ -17,9 +17,10 @@
 #ifndef BOOTSTRAPINFO_H
 #define BOOTSTRAPINFO_H
 
+#include <compiler.h>
 #include <processor/types.h>
 
-typedef struct BootstrapStruct
+struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
   // via the bootstrapper.
@@ -63,7 +64,7 @@ typedef struct BootstrapStruct
 #else // KERNEL_STANDALONE
 
 #endif // !KERNEL_STANDALONE
-} __attribute__((packed)) BootstrapStruct_t;
+} PACKED;
 
 /**
  * Parser for a boot-time structure detailing the whereabouts of e.g.
