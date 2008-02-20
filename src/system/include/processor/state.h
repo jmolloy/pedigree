@@ -18,16 +18,16 @@
 
 #ifdef X86
   #include <processor/x86/state.h>
-  #define PROCESSOR_NAMESPACE x86
+  #define PROCESSOR_SPECIFIC_NAME(x) X86##x
 #endif
 #ifdef X86_64
   #include <processor/x64/state.h>
-  #define PROCESSOR_NAMESPACE x64
+  #define PROCESSOR_SPECIFIC_NAME(x) X64##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
 //       the selected processor architecture
-#ifndef PROCESSOR_NAMESPACE
+#ifndef PROCESSOR_SPECIFIC_NAME
   #error Unknown processor architecture
 #endif
 
@@ -40,12 +40,12 @@
 //       needed types, you will get an error here
 
 /** Lift the processor-specifc InterruptState class into the global namespace */
-typedef PROCESSOR_NAMESPACE::InterruptState InterruptState;
+typedef PROCESSOR_SPECIFIC_NAME(InterruptState) InterruptState;
 /** Lift the processor-specifc SyscallState class into the global namespace */
-typedef PROCESSOR_NAMESPACE::SyscallState SyscallState;
+typedef PROCESSOR_SPECIFIC_NAME(SyscallState) SyscallState;
 
 /** @} */
 
-#undef PROCESSOR_NAMESPACE
+#undef PROCESSOR_SPECIFIC_NAME
 
 #endif

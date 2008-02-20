@@ -42,9 +42,9 @@ class MyInterruptHandler : public InterruptHandler
     virtual void interrupt(size_t interruptNumber, InterruptState &state);
 };
 
-void MyInterruptHandler::interrupt(size_t interruptNumner, InterruptState &state)
+void MyInterruptHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  NOTICE("myInterruptHandler::interrupt()");
+  NOTICE("myInterruptHandler::interrupt(" << interruptNumber << ")");
 }
 
 /// NOTE JamesM is doing some testing here.
@@ -68,7 +68,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   /// NOTE there we go
   MyInterruptHandler myHandler;
   InterruptManager &IntManager = InterruptManager::instance();
-  if (IntManager.registerInterruptHandler(255, &myHandler) == false)
+  if (IntManager.registerInterruptHandler(254, &myHandler) == false)
   {
     NOTICE("Failed to register interrupt handler");
   }
@@ -89,7 +89,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   const char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);
 
-  asm volatile("int $0xFF");
+  asm volatile("int $0xFE");
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   mytestfunc(0xdeadbaba, 0x12345678);

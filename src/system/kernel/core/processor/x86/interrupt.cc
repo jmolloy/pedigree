@@ -15,6 +15,8 @@
  */
 #include "interrupt.h"
 
+#define SYSCALL_INTERRUPT_NUMBER 255
+
 X86InterruptManager X86InterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
@@ -29,7 +31,7 @@ InterruptManager &InterruptManager::instance()
 bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   // TODO: Needs locking
-  if (UNLIKELY(interruptNumber >= 256 || m_Handler[interruptNumber] != 0))
+  if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER || m_Handler[interruptNumber] != 0))
     return false;
 
   m_Handler[interruptNumber] = handler;
@@ -66,10 +68,9 @@ bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandl
 
 void X86InterruptManager::initialise()
 {
-  // TODO: the syscall interrupt on x86 should be callable from userspace
   extern uintptr_t interrupt_handler_array[];
   for (size_t i = 0;i < 256;i++)
-    m_Instance.setInterruptGate(i, interrupt_handler_array[i], false);
+    m_Instance.setInterruptGate(i, interrupt_handler_array[i], (i == SYSCALL_INTERRUPT_NUMBER) ? true : false);
 }
 void X86InterruptManager::initialiseProcessor()
 {
@@ -91,22 +92,26 @@ void X86InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t int
   m_IDT[interruptNumber].flags = userspace ? 0xEE : 0x8E;
   m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
 }
-#include <Log.h>
-#include <processor/processor.h>
 void X86InterruptManager::interrupt(InterruptState &interruptState)
 {
-  NOTICE("interrupt: " << interruptState.getInterruptNumber());
   // TODO: Needs locking
+
+  size_t intNumber = interruptState.getInterruptNumber();
 
   #ifdef DEBUGGER
     // Call the kernel debugger's handler, if any
-    if (m_Instance.m_DbgHandler[interruptState.getInterruptNumber()] != 0)
-      m_Instance.m_DbgHandler[interruptState.getInterruptNumber()]->interrupt(interruptState.getInterruptNumber(), interruptState);
+    if (m_Instance.m_DbgHandler[intNumber] != 0)
+      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
   #endif
 
-  // Call the normal interrupt handler, if any
-  if (LIKELY(m_Instance.m_Handler[interruptState.getInterruptNumber()] != 0))
-    m_Instance.m_Handler[interruptState.getInterruptNumber()]->interrupt(interruptState.getInterruptNumber(), interruptState);
+  // Call the syscall handler, if it is the syscall interrupt
+  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
+  {
+    // TODO
+  }
+  // Call the normal interrupt handler, if any, otherwise
+  else if (m_Instance.m_Handler[intNumber] != 0)
+    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
 }
 
 X86InterruptManager::X86InterruptManager()

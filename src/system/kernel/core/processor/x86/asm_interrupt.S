@@ -15,7 +15,7 @@
 ;
 
 ; X86InterruptManager::interrupt(InterruptState &interruptState)
-extern _ZN19X86InterruptManager9interruptERN3x8614InterruptStateE
+extern _ZN19X86InterruptManager9interruptER17X86InterruptState
 
 ; Export the array of interrupt handler addresses
 global interrupt_handler_array
@@ -33,7 +33,6 @@ interrupt_handler:
   ; Save the registers
   pusha
   push ds
-  push word 0
 
   ; Switch to the kernel data segment
   mov ax, 0x10
@@ -47,10 +46,10 @@ interrupt_handler:
   push eax
 
   ; Call the C++ Code
-  call _ZN19X86InterruptManager9interruptERN3x8614InterruptStateE
+  call _ZN19X86InterruptManager9interruptER17X86InterruptState
 
   ; Cleanup the stack
-  add esp, 0x06
+  add esp, 0x04
 
   ; Restore the registers
   pop ds

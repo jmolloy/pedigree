@@ -16,50 +16,41 @@
 #ifndef KERNEL_PROCESSOR_X64_TYPES_H
 #define KERNEL_PROCESSOR_X64_TYPES_H
 
-#ifdef __cplusplus
-namespace x64
-{
-#endif
+/** @addtogroup kernelprocessorx64 x64
+ * x64 processor-specific kernel
+ *  @ingroup kernelprocessor
+ * @{ */
 
-  /** @addtogroup kernelprocessorx64 x64
-   * x64 processor-specific kernel
-   *  @ingroup kernelprocessor
-   * @{ */
+/** Define an 8bit signed integer type */
+typedef signed char X64int8_t;
+/** Define an 8bit unsigned integer type */
+typedef unsigned char X64uint8_t;
+/** Define an 16bit signed integer type */
+typedef signed short X64int16_t;
+/** Define an 16bit unsigned integer type */
+typedef unsigned short X64uint16_t;
+/** Define a 32bit signed integer type */
+typedef signed int X64int32_t;
+/** Define a 32bit unsigned integer type */
+typedef unsigned int X64uint32_t;
+/** Define a 64bit signed integer type */
+typedef signed long X64int64_t;
+/** Define a 64bit unsigned integer type */
+typedef unsigned long X64uint64_t;
 
-  /** Define an 8bit signed integer type */
-  typedef signed char int8_t;
-  /** Define an 8bit unsigned integer type */
-  typedef unsigned char uint8_t;
-  /** Define an 16bit signed integer type */
-  typedef signed short int16_t;
-  /** Define an 16bit unsigned integer type */
-  typedef unsigned short uint16_t;
-  /** Define a 32bit signed integer type */
-  typedef signed int int32_t;
-  /** Define a 32bit unsigned integer type */
-  typedef unsigned int uint32_t;
-  /** Define a 64bit signed integer type */
-  typedef signed long int64_t;
-  /** Define a 64bit unsigned integer type */
-  typedef unsigned long uint64_t;
+/** Define a signed integer type for pointer arithmetic */
+typedef X64int64_t X64intptr_t;
+/** Define an unsigned integer type for pointer arithmetic */
+typedef X64uint64_t X64uintptr_t;
 
-  /** Define a signed integer type for pointer arithmetic */
-  typedef int64_t intptr_t;
-  /** Define an unsigned integer type for pointer arithmetic */
-  typedef uint64_t uintptr_t;
+/** Define ssize_t */
+typedef X64int64_t X64ssize_t;
+/** Define size_t */
+typedef X64uint64_t X64size_t;
 
-  /** Define ssize_t */
-  typedef int64_t ssize_t;
-  /** Define size_t */
-  typedef uint64_t size_t;
+/** Define an I/O port type */
+typedef X64uint16_t X64io_port_t;
 
-  /** Define an I/O port type */
-  typedef uint16_t io_port_t;
-
-  /** @} */
-
-#ifdef __cplusplus
-}
-#endif
+/** @} */
 
 #endif

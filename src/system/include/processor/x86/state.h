@@ -18,90 +18,87 @@
 
 #include <processor/types.h>
 
-namespace x86
+/** @addtogroup kernelprocessorx86 x86
+ * x86 processor-specific kernel
+ *  @ingroup kernelprocessor
+ * @{ */
+
+/** x86 Interrupt State */
+class X86InterruptState
 {
-  /** @addtogroup kernelprocessorx86 x86
-   * x86 processor-specific kernel
-   *  @ingroup kernelprocessor
-   * @{ */
+  public:
+    // General Interface (both InterruptState and SyscallState)
+    inline uintptr_t &stackPointer();
+    inline uintptr_t stackPointer() const;
+    inline uintptr_t &instructionPointer();
+    inline uintptr_t instructionPointer() const;
+    inline uintptr_t &basePointer();
+    inline uintptr_t basePointer() const;
 
-  /** x86 Interrupt State */
-  class InterruptState
-  {
-    public:
-      // General Interface (both InterruptState and SyscallState)
-      inline uintptr_t &stackPointer();
-      inline uintptr_t stackPointer() const;
-      inline uintptr_t &instructionPointer();
-      inline uintptr_t instructionPointer() const;
-      inline uintptr_t &basePointer();
-      inline uintptr_t basePointer() const;
+    // InterruptState Interface
+    inline size_t getInterruptNumber() const;
 
-      // InterruptState Interface
-      inline size_t getInterruptNumber() const;
+    // SyscallState Interface
+    inline size_t getSyscallNumber() const;
 
-      // SyscallState Interface
-      inline size_t getSyscallNumber() const;
+  private:
+    uint32_t m_Ds;
+    uint32_t m_Edi;
+    uint32_t m_Esi;
+    uint32_t m_Ebp;
+    uint32_t m_Res;
+    uint32_t m_Ebx;
+    uint32_t m_Edx;
+    uint32_t m_Ecx;
+    uint32_t m_Eax;
+    uint32_t m_IntNumber;
+    uint32_t m_Errorcode;
+    uint32_t m_Eip;
+    uint32_t m_Cs;
+    uint32_t m_Eflags;
+    uint32_t m_Esp;
+    uint32_t m_Ss;
+};
 
-    private:
-      uint32_t m_Ds;
-      uint32_t m_Edi;
-      uint32_t m_Esi;
-      uint32_t m_Ebp;
-      uint32_t m_Res;
-      uint32_t m_Ebx;
-      uint32_t m_Edx;
-      uint32_t m_Ecx;
-      uint32_t m_Eax;
-      uint32_t m_IntNumber;
-      uint32_t m_Errorcode;
-      uint32_t m_Eip;
-      uint32_t m_Cs;
-      uint32_t m_Eflags;
-      uint32_t m_Esp;
-      uint32_t m_Ss;
-  };
+/** x86 SyscallState */
+typedef X86InterruptState X86SyscallState;
 
-  /** x86 SyscallState */
-  typedef InterruptState SyscallState;
-
-  /** @} */
-}
+/** @} */
 
 //
 // Part of the Implementation
 //
-uintptr_t &x86::InterruptState::stackPointer()
+uintptr_t &X86InterruptState::stackPointer()
 {
   return m_Esp;
 }
-uintptr_t x86::InterruptState::stackPointer() const
+uintptr_t X86InterruptState::stackPointer() const
 {
   return m_Esp;
 }
-uintptr_t &x86::InterruptState::instructionPointer()
+uintptr_t &X86InterruptState::instructionPointer()
 {
   return m_Eip;
 }
-uintptr_t x86::InterruptState::instructionPointer() const
+uintptr_t X86InterruptState::instructionPointer() const
 {
   return m_Eip;
 }
-uintptr_t &x86::InterruptState::basePointer()
+uintptr_t &X86InterruptState::basePointer()
 {
   return m_Ebp;
 }
-uintptr_t x86::InterruptState::basePointer() const
+uintptr_t X86InterruptState::basePointer() const
 {
   return m_Ebp;
 }
 
-size_t x86::InterruptState::getInterruptNumber() const
+size_t X86InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;
 }
 
-size_t x86::InterruptState::getSyscallNumber() const
+size_t X86InterruptState::getSyscallNumber() const
 {
   // TODO
   return 0;
