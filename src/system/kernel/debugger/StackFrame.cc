@@ -44,8 +44,10 @@ void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
     if (i != 0)
       strcat(pBuf, ", ");
     
-    char pStr[64];
-    sprintf(pStr, "%s=0x%x", m_Symbol.params[i], getParameter((bIsMember)?i+1:i));
+    char pStr[96];
+    char pStr2[64];
+    format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], pStr2);
+    sprintf(pStr, "%s=%s", m_Symbol.params[i], pStr2);
     strcat(pBuf, pStr);
     
   }
@@ -60,6 +62,33 @@ unsigned int StackFrame::getParameter(unsigned int n)
   
 void StackFrame::format(unsigned int n, const char *pType, char *pDest)
 {
+  // Is the type a char * or const char *?
+  if (!strcmp(pType, "char*") || !strcmp(pType, "const char*"))
+  {
+    char pStr[32];
+    char *pOrigStr = reinterpret_cast<char*>(n);
+    strncpy(pStr, pOrigStr, 31);
+    sprintf(pDest, "\"%s\"", pStr);
+  }
+  // char? or const char?
+  else if (!strcmp(pType, "char") || !(strcmp(pType, "const char")))
+  {
+    sprintf(pDest, "'%c'", static_cast<char>(n));
+  }
+  // bool?
+  else if (!strcmp(pType, "bool") || !(strcmp(pType, "const bool")))
+  {
+    bool b = static_cast<bool>(n);
+    if (b)
+      strcpy(pDest, "true");
+    else
+      strcpy(pDest, "false");
+  }
+  // Else just use a hex integer.
+  else
+  {
+    sprintf(pDest, "0x%x", n);
+  }
 }
 
 bool StackFrame::isClassMember()

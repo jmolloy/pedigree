@@ -53,7 +53,7 @@ class Foo
 public:
     Foo(){}
     ~Foo(){}
-void mytestfunc(unsigned int a, unsigned int b)
+void mytestfunc(bool a, char b)
 {
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
 }
@@ -99,7 +99,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
   NOTICE("Foo: " << Hex << (int)&foo);
-  foo.mytestfunc(0xdeadbaba, 0x12345678);
+  foo.mytestfunc(false, 'g');
   Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
 #endif
 
