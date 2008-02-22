@@ -87,9 +87,8 @@ CXXFLAGS+=-Os
 endif
 
 # Check for cygwin-ness.
-SUDO := sudo
 ifeq ($(TERM),cygwin)
-SUDO := 
+CYGWIN := 1
 endif
 
 # Add compilers/bin to our path so we can pick up our custom compilers.
@@ -155,13 +154,18 @@ clean:
 
 image: kernel
 	@perl -e "print \"\e[32m*** Writing disk images...\e[0m\n\";" # echo doesn't have support for colours.
+ifdef CYGWIN
+	@cp images/floppy_fat.img built/floppy.img
+	@mcopy -Do -i  built/floppy.img built/kernel ::/
+else
 	-@mkdir -p /tmp/pedigree-image
-	@cp images/floppy.img built/
-	@$(SUDO) /sbin/losetup /dev/loop0 built/floppy.img
-	@$(SUDO) mount -o loop /dev/loop0 /tmp/pedigree-image
-	-@$(SUDO) rm /tmp/pedigree-image/kernel
-	@$(SUDO) cp built/kernel /tmp/pedigree-image/kernel
-	@$(SUDO) umount /dev/loop0
-	@$(SUDO) /sbin/losetup -d /dev/loop0
-	@$(SUDO) -e "print \"\e[32m*** Build finished.\e[0m\n\";" # echo doesn't have support for colours.
+	@cp images/floppy_ext2.img built/floppy.img
+	@sudo /sbin/losetup /dev/loop0 built/floppy.img
+	@sudo mount -o loop /dev/loop0 /tmp/pedigree-image
+	-@sudo rm /tmp/pedigree-image/kernel
+	@sudo cp built/kernel /tmp/pedigree-image/kernel
+	@sudo umount /dev/loop0
+	@sudo /sbin/losetup -d /dev/loop0
+endif
+	@perl -e "print \"\e[32m*** Build finished.\e[0m\n\";" # echo doesn't have support for colours.
 
