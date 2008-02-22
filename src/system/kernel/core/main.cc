@@ -55,7 +55,9 @@ public:
     ~Foo(){}
 void mytestfunc(bool a, char b)
 {
-  Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
+  //InterruptState state;
+  //Debugger::instance().breakpoint(state);
+  asm volatile("int $0x3");
 }
 };
 /// Kernel entry point.
@@ -96,11 +98,15 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   asm volatile("int $0xFE");
 
+#if defined(DEBUGGER)
+  Debugger::instance().initialise();
+#endif
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
   NOTICE("Foo: " << Hex << (int)&foo);
   foo.mytestfunc(false, 'g');
-  Debugger::instance().breakpoint(DEBUGGER_RUN_AT_START);
+//  InterruptState state;
+//  Debugger::instance().breakpoint(state);
 #endif
 
   // Then get the BootstrapInfo object to convert its contents into

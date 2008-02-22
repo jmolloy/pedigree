@@ -33,13 +33,13 @@ void Backtracer::autocomplete(char *input, char *output, int len)
   strcpy(output, "<address> (optional)");
 }
 
-bool Backtracer::execute(char *input, char *output, int len, DebuggerIO *screen)
+bool Backtracer::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen)
 {
   Backtrace bt;
-  bt.performBacktrace(0);
-  
+  bt.performBacktrace(state.basePointer(), state.instructionPointer());
+
   bt.prettyPrint(output, len);
-  
+
   return true;
 }
 

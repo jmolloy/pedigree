@@ -17,6 +17,8 @@
 #ifndef DEBUGGER_COMMAND_H
 #define DEBUGGER_COMMAND_H
 
+#include <processor/state.h>
+
 class DebuggerIO;
 
 /**
@@ -42,7 +44,7 @@ public:
    * \return True if the debugger should continue accepting commands, false if it should return
    *         control to the kernel.
    */
-  virtual bool execute(char *input, char *output, int len, DebuggerIO *screen) = 0;
+  virtual bool execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen) = 0;
   
   /**
    * Returns the string representation of this command.

@@ -42,7 +42,7 @@ public:
   /**
    * Execute the command with the given screen.
    */
-  bool execute(char *input, char *output, int len, DebuggerIO *screen);
+  bool execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen);
   
   /**
    * Returns the string representation of this command.

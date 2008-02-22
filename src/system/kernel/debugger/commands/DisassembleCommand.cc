@@ -37,21 +37,30 @@ void DisassembleCommand::autocomplete(char *input, char *output, int len)
   strcpy(output, "<address>");
 }
 
-bool DisassembleCommand::execute(char *input, char *output, int len, DebuggerIO *screen)
+bool DisassembleCommand::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen)
 {
-  // This command can take either an address or a symbol name.
-  // Is it an address?
-  uintptr_t address = strtoul(input, 0, 0);
-
-  if (address == 0)
+  // This command can take either an address or a symbol name (or nothing).
+  uintptr_t address;
+  
+  // If we see just "disassemble", no parameters were matched.
+  if (!strcmp(input, "disassemble"))
   {
-    // No, try a symbol name.
-    // TODO.
-    sprintf(output, "Not a valid address or symbol name: `%s'.\n", input);
-    return true;
+    address = state.instructionPointer();
+  }
+  else
+  {
+    // Is it an address?
+    address = strtoul(input, 0, 0);
+
+    if (address == 0)
+    {
+      // No, try a symbol name.
+      // TODO.
+      sprintf(output, "Not a valid address or symbol name: `%s'.\n", input);
+      return true;
+    }
   }
 
-  
   // Dissassemble around address.
   int nInstructions = 10;
   

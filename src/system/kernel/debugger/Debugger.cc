@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <Log.h>
 #include <Debugger.h>
 #include <DebuggerIO.h>
 #include <LocalIO.h>
@@ -52,15 +53,25 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   }
 }
 
-Debugger::Debugger()
+Debugger::Debugger() :
+  m_nIoType(DEBUGGER)
 {
+
 }
 
 Debugger::~Debugger()
 {
 }
 
-void Debugger::breakpoint(int type)
+void Debugger::initialise()
+{
+  if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getBreakpointInterruptNumber(), this))
+    ERROR("Debugger: breakpoint interrupt registration failed!");
+  if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getDebugInterruptNumber(), this))
+    ERROR("Debugger: debug interrupt registration failed!");
+}
+
+void Debugger::breakpoint(InterruptState &state)
 {
   
   // IO interface.
@@ -80,10 +91,7 @@ void Debugger::breakpoint(int type)
                                   &logViewer,
                                   &backtracer};
   
-  if (type == MONITOR)
-  {
-    pIo = &localIO;
-  }
+  if (m_nIoType == MONITOR) pIo = &localIO;
   else
   {
     // serial
@@ -121,7 +129,7 @@ void Debugger::breakpoint(int type)
       {
         if (matchesCommand(pCommand, pCommands[i]))
         {
-          strcpy(pStr2, pCommands[i]->getString());
+         strcpy(pStr2, pCommands[i]->getString());
           strcat(pStr2, " ");
           pStr[0] = '\0';
           pCommands[i]->autocomplete(pCommand, pStr, 256);
@@ -158,7 +166,7 @@ void Debugger::breakpoint(int type)
       if (matchesCommand(pCommand, pCommands[i]))
       {
         pStr[0] = '\0';
-        bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, pIo);
+        bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, state, pIo);
         pIo->writeCli(pStr, DebuggerIO::LightGrey, DebuggerIO::Black);
         bValidCommand = true;
       }
@@ -175,3 +183,15 @@ void Debugger::breakpoint(int type)
 
 }
 
+void Debugger::interrupt(size_t interruptNumber, InterruptState &state)
+{
+  // We switch here on the interrupt number, and dispatch accordingly.
+  if (interruptNumber == InterruptManager::instance().getBreakpointInterruptNumber())
+  {
+    breakpoint(state);
+  }
+  else if (interruptNumber == InterruptManager::instance().getDebugInterruptNumber())
+  {
+    // debug(state);
+  }
+}

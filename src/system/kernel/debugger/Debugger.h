@@ -17,6 +17,10 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
+#include <processor/processor.h>
+#include <processor/state.h>
+#include <processor/interrupt.h>
+
 #define MONITOR 1
 #define SERIAL  2
 
@@ -27,7 +31,7 @@
  * of the abstract class DebuggerIO.
  * The kernel can also write entries to the (debug) system log by calling operator<< directly.
  */
-class Debugger
+class Debugger : public InterruptHandler
 {
 public:
 
@@ -40,11 +44,22 @@ public:
   }
   
   /**
+   * Initialise the debugger - register interrupt handlers etc.
+   */
+  void initialise();
+  
+  /**
    * Causes the debugger to take control.
    * \param type One of MONITOR or SERIAL. It defines the type of interface that will be started for
    *             user communication.
    */
-  void breakpoint(int type);
+  void breakpoint(InterruptState &state);
+   
+  /** Called when the handler is registered with the interrupt manager and the interrupt occurred
+   * \param interruptNumber the interrupt number
+   * \param state reference to the state before the interrupt
+   */
+  virtual void interrupt(size_t interruptNumber, InterruptState &state);
 
 private:
   /**
@@ -53,7 +68,12 @@ private:
   Debugger();
 
   ~Debugger();
-  
+
+  /**
+   * The current DebuggerIO type.
+   */
+  int m_nIoType;
+
   /**
    * The Debugger instance (singleton class)
    */

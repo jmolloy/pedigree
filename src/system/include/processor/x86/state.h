@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X86_STATE_H
 #define KERNEL_PROCESSOR_X86_STATE_H
 
+#include <processor/processor.h>
 #include <processor/types.h>
 
 /** @addtogroup kernelprocessorx86 x86
@@ -27,6 +28,19 @@
 class X86InterruptState
 {
   public:
+    // Default constructor creates its contents from the current state.
+	X86InterruptState() :
+      m_Ds(0), m_Edi(0), m_Esi(0),
+      m_Ebp(processor::getBasePointer()),
+      m_Res(0), m_Ebx(0), m_Edx(0), m_Ecx(0), m_Eax(0),
+      m_IntNumber(0), m_Errorcode(0),
+      m_Eip(processor::getInstructionPointer()),
+      m_Cs(0), m_Eflags(0),
+      m_Esp(processor::getStackPointer()),
+      m_Ss(0)
+    {
+    }
+	
     // General Interface (both InterruptState and SyscallState)
     inline uintptr_t &stackPointer();
     inline uintptr_t stackPointer() const;

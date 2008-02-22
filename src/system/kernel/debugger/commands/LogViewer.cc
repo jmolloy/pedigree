@@ -31,7 +31,7 @@ void LogViewer::autocomplete(char *input, char *output, int len)
 {
 }
 
-bool LogViewer::execute(char *input, char *output, int len, DebuggerIO *pScreen)
+bool LogViewer::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *pScreen)
 {
   // Let's enter 'raw' screen mode.
   pScreen->disableCli();

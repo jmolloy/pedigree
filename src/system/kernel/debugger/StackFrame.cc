@@ -31,27 +31,30 @@ StackFrame::~StackFrame()
 void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
 {
   bool bIsMember = isClassMember();
-  sprintf(pBuf, "%s(", m_Symbol.name);
+  char pStr[128];
+  sprintf(pStr, "%s(", m_Symbol.name);
+  strncpy(pBuf, pStr, nBufLen-1);
+  pBuf[nBufLen-1] = '\0';
   if (bIsMember)
   {
     char pStr[32];
     sprintf(pStr, "this=0x%x, ", getParameter(0));
-    strcat(pBuf, pStr);
+    strncat(pBuf, pStr, nBufLen-strlen(pBuf));
   }
   
   for (int i = 0; i < m_Symbol.nParams; i++)
   {
     if (i != 0)
-      strcat(pBuf, ", ");
+      strncat(pBuf, ", ", nBufLen-strlen(pBuf));
     
     char pStr[96];
     char pStr2[64];
     format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], pStr2);
     sprintf(pStr, "%s=%s", m_Symbol.params[i], pStr2);
-    strcat(pBuf, pStr);
+    strncat(pBuf, pStr, nBufLen-strlen(pBuf));
     
   }
-  strcat(pBuf, ")\n");
+  strncat(pBuf, ")\n", nBufLen-strlen(pBuf));
 }
 
 unsigned int StackFrame::getParameter(unsigned int n)
