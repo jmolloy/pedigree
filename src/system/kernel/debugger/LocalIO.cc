@@ -38,6 +38,10 @@ LocalIO::LocalIO() :
   m_bCtrl(false),
   m_bCapslock(false)
 {
+  // Copy the current screen contents to our old frame buffer.
+  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
+  memcpy(m_pOldFramebuffer, vidmem, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
+
   // Clear the framebuffer.
   for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
   {
@@ -53,6 +57,9 @@ LocalIO::LocalIO() :
 
 LocalIO::~LocalIO()
 {
+  // Copy our old frame buffer to the screen.
+  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
+  memcpy(vidmem, m_pOldFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
 }
 
 void LocalIO::setCliUpperLimit(int nlines)

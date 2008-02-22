@@ -56,6 +56,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/libudis86/syn-att.c \
             debugger/libudis86/udis86.c \
             debugger/commands/DisassembleCommand.cc \
+            debugger/commands/QuitCommand.cc \
             debugger/commands/LogViewer.cc \
             debugger/commands/Backtracer.cc \
             debugger/LocalIO.cc \

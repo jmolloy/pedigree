@@ -122,6 +122,11 @@ private:
   unsigned short m_pFramebuffer[CONSOLE_WIDTH*CONSOLE_HEIGHT];
 
   /**
+   * Framebuffer for the screen before we took control.
+   */
+  unsigned short m_pOldFramebuffer[CONSOLE_WIDTH*CONSOLE_HEIGHT];
+
+  /**
    * Current upper and lower CLI limits.
    */
   int m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
