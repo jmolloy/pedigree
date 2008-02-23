@@ -45,7 +45,7 @@ bool DisassembleCommand::execute(char *input, char *output, int len, InterruptSt
   // If we see just "disassemble", no parameters were matched.
   if (!strcmp(input, "disassemble"))
   {
-    address = state.instructionPointer();
+    address = state.getInstructionPointer();
   }
   else
   {

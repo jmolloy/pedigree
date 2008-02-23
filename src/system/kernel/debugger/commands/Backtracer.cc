@@ -36,7 +36,7 @@ void Backtracer::autocomplete(char *input, char *output, int len)
 bool Backtracer::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen)
 {
   Backtrace bt;
-  bt.performBacktrace(state.basePointer(), state.instructionPointer());
+  bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());
 
   bt.prettyPrint(output, len);
 

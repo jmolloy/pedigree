@@ -13,13 +13,23 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include "interrupt.h"
+#include "gdt.h"
 
-void initialiseProcessor()
+X86GdtManager X86GdtManager::m_Instance;
+
+X86GdtManager &X86GdtManager::instance()
 {
-  // Initialise this processor's interrupt handling
-  X86InterruptManager::initialiseProcessor();
+  return m_Instance;
+}
 
+void X86GdtManager::initialiseProcessor()
+{
   // TODO
+}
+
+X86GdtManager::X86GdtManager()
+{
+}
+X86GdtManager::~X86GdtManager()
+{
 }

@@ -45,12 +45,15 @@ class SyscallManager
     enum Service_t
     {
       /** Syscall service number of the kernel core */
-      kernelCore = 0
+      kernelCore = 0,
       // TODO: Add more syscall service numbers
+
+      /** The number of syscall service numbers */
+      serviceEnd
     };
 
-    /** Get the syscall handler instance
-     *\return instance of the syscall handler */
+    /** Get the syscall manager instance
+     *\return instance of the syscall manager */
     static SyscallManager &instance();
     /** Register a syscall handler
      *\param[in] Service the service number you want to register

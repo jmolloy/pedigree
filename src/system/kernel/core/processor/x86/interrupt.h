@@ -45,9 +45,6 @@ class X86InterruptManager : public ::InterruptManager,
     // SyscallManager Interface
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
 
-    /** Initialises the InterruptManager
-     *\note This should only be called from initialiseProcessor() */
-    static void initialise();
     /** Initialises this processors IDTR
      *\note This should only be called from initialiseProcessor()
      *\todo and some smp/acpi function */
@@ -98,6 +95,8 @@ class X86InterruptManager : public ::InterruptManager,
       /** The debugger interrupt handlers */
       InterruptHandler *m_DbgHandler[256];
     #endif
+    /** The syscall handlers */
+    SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
 
     /** The instance of the interrupt manager  */
     static X86InterruptManager m_Instance;

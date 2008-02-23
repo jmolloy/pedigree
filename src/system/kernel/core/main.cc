@@ -35,16 +35,26 @@ Elf32 elf("kernel");
 
 /// NOTE bluecode is doing some testing here
 #include <processor/interrupt.h>
+#include <processor/syscall.h>
 
 class MyInterruptHandler : public InterruptHandler
 {
   public:
     virtual void interrupt(size_t interruptNumber, InterruptState &state);
 };
+class MySyscallHandler : public SyscallHandler
+{
+  public:
+    virtual void syscall(SyscallState &state);
+};
 
 void MyInterruptHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
   NOTICE("myInterruptHandler::interrupt(" << interruptNumber << ")");
+}
+void MySyscallHandler::syscall(SyscallState &state)
+{
+  NOTICE("mySyscallHandler::syscall(" << state.getSyscallNumber() << ")");
 }
 
 /// NOTE JamesM is doing some testing here.
@@ -74,11 +84,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   /// NOTE there we go
   MyInterruptHandler myHandler;
+  MySyscallHandler mySysHandler;
   InterruptManager &IntManager = InterruptManager::instance();
+  SyscallManager &SysManager = SyscallManager::instance();
   if (IntManager.registerInterruptHandler(254, &myHandler) == false)
-  {
     NOTICE("Failed to register interrupt handler");
-  }
+  if (SysManager.registerSyscallHandler(SyscallManager::kernelCore, &mySysHandler) == false)
+    NOTICE("Failed to register syscall handler");
 
   // First stage of the machine-dependant initialisation.
   // After that only the memory-management related classes and
@@ -96,14 +108,16 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   const char *addr = elf.lookupSymbol(0x100024);
   NOTICE("Addr: " << addr);
 
-  asm volatile("int $0xFE");
+  /// NOTE: bluecode again
+  asm volatile("int $0xFE"); // some interrupt
+  asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
 
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
-  NOTICE("Foo: " << Hex << (int)&foo);
+  //NOTICE("Foo: " << Hex << (int)&foo);
   foo.mytestfunc(false, 'g');
 //  InterruptState state;
 //  Debugger::instance().breakpoint(state);

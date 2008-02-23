@@ -18,24 +18,32 @@
 #define DEBUGGER_LOG_H
 
 #define NOTICE(text) \
+  do \
   { \
     Log::instance() << Log::Notice << text << Flush; \
-  }
+  } \
+  while (0)
 
 #define WARNING(text) \
+  do \
   { \
     Log::instance() << Log::Warning << text << Flush; \
-  }
+  } \
+  while (0)
 
 #define ERROR(text) \
+  do \
   { \
     Log::instance() << Log::Error << text << Flush; \
-  }
+  } \
+  while (0)
 
 #define FATAL(text) \
+  do \
   { \
     Log::instance() << Log::Fatal << text << Flush; \
-  }
+  } \
+  while (0)
 
 /// The maximum length of an individual log entry.
 /// \todo Change to using dynamic memory.

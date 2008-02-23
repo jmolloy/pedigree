@@ -16,7 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X86_STATE_H
 #define KERNEL_PROCESSOR_X86_STATE_H
 
-#include <processor/processor.h>
+#include <compiler.h>
 #include <processor/types.h>
 
 /** @addtogroup kernelprocessorx86 x86
@@ -28,51 +28,93 @@
 class X86InterruptState
 {
   public:
-    // Default constructor creates its contents from the current state.
-	X86InterruptState() :
-      m_Ds(0), m_Edi(0), m_Esi(0),
-      m_Ebp(processor::getBasePointer()),
-      m_Res(0), m_Ebx(0), m_Edx(0), m_Ecx(0), m_Eax(0),
-      m_IntNumber(0), m_Errorcode(0),
-      m_Eip(processor::getInstructionPointer()),
-      m_Cs(0), m_Eflags(0),
-      m_Esp(processor::getStackPointer()),
-      m_Ss(0)
-    {
-    }
-	
+    //
     // General Interface (both InterruptState and SyscallState)
-    inline uintptr_t &stackPointer();
-    inline uintptr_t stackPointer() const;
-    inline uintptr_t &instructionPointer();
-    inline uintptr_t instructionPointer() const;
-    inline uintptr_t &basePointer();
-    inline uintptr_t basePointer() const;
+    //
+    /** Get the stack-pointer before the interrupt occured
+     *\return the stack-pointer before the interrupt */
+    inline uintptr_t getStackPointer() const;
+    /** Set the userspace stack-pointer
+     *\param[in] stackPointer the new stack-pointer */
+    inline void setStackPointer(uintptr_t stackPointer);
+    /** Get the instruction-pointer of the next instruction that is executed
+     * after the interrupt is processed
+     *\return the instruction-pointer */
+    inline uintptr_t getInstructionPointer() const;
+    /** Set the instruction-pointer
+     *\param[in] instructionPointer the new instruction-pointer */
+    inline void setInstructionPointer(uintptr_t instructionPointer);
+    /** Get the base-pointer
+     *\return the base-pointer */
+    inline uintptr_t getBasePointer() const;
+    /** Set the base-pointer
+     *\param[in] basePointer the new base-pointer */
+    inline void setBasePointer(uintptr_t basePointer);
 
+    //
     // InterruptState Interface
+    //
+    /** Get the interrupt number
+     *\return the interrupt number */
     inline size_t getInterruptNumber() const;
 
+    //
     // SyscallState Interface
+    //
+    /** Get the syscall service number
+     *\return the syscall service number */
+    inline size_t getSyscallService() const;
+    /** Get the syscall function number
+     *\return the syscall function number */
     inline size_t getSyscallNumber() const;
 
   private:
+    /** The default constructor
+     *\note NOT implemented */
+    X86InterruptState();
+    /** The copy-constructor
+     *\note NOT implemented */
+    X86InterruptState(const X86InterruptState &);
+    /** The assignement operator
+     *\note NOT implemented */
+    X86InterruptState &operator = (const X86InterruptState &);
+    /** The destructor
+     *\note NOT implemented */
+    ~X86InterruptState();
+
+    /** The DS segment register (zero-extended to 32bit) */
     uint32_t m_Ds;
+    /** The EDI general purpose register */
     uint32_t m_Edi;
+    /** The ESI general purpose register */
     uint32_t m_Esi;
+    /** The base-pointer register */
     uint32_t m_Ebp;
+    /** Reserved/Unused (ESP) */
     uint32_t m_Res;
+    /** The EBX general purpose register */
     uint32_t m_Ebx;
+    /** The EDX general purpose register */
     uint32_t m_Edx;
+    /** The ECX general purpose register */
     uint32_t m_Ecx;
+    /** The EAX general purpose register */
     uint32_t m_Eax;
+    /** The interrupt number */
     uint32_t m_IntNumber;
+    /** The error-code (if any) */
     uint32_t m_Errorcode;
+    /** The instruction pointer */
     uint32_t m_Eip;
+    /** The CS segment register (zero-extended to 32bit) */
     uint32_t m_Cs;
+    /** The extended flags (EFLAGS) */
     uint32_t m_Eflags;
+    /** The stack-pointer */
     uint32_t m_Esp;
+    /** The SS segment register */
     uint32_t m_Ss;
-};
+} PACKED;
 
 /** x86 SyscallState */
 typedef X86InterruptState X86SyscallState;
@@ -82,29 +124,29 @@ typedef X86InterruptState X86SyscallState;
 //
 // Part of the Implementation
 //
-uintptr_t &X86InterruptState::stackPointer()
+uintptr_t X86InterruptState::getStackPointer() const
 {
   return m_Esp;
 }
-uintptr_t X86InterruptState::stackPointer() const
+void X86InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  return m_Esp;
+  m_Esp = stackPointer;
 }
-uintptr_t &X86InterruptState::instructionPointer()
+uintptr_t X86InterruptState::getInstructionPointer() const
 {
   return m_Eip;
 }
-uintptr_t X86InterruptState::instructionPointer() const
+void X86InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  return m_Eip;
+  m_Eip = instructionPointer;
 }
-uintptr_t &X86InterruptState::basePointer()
+uintptr_t X86InterruptState::getBasePointer() const
 {
   return m_Ebp;
 }
-uintptr_t X86InterruptState::basePointer() const
+void X86InterruptState::setBasePointer(uintptr_t basePointer)
 {
-  return m_Ebp;
+  m_Ebp = basePointer;
 }
 
 size_t X86InterruptState::getInterruptNumber() const
@@ -112,10 +154,13 @@ size_t X86InterruptState::getInterruptNumber() const
   return m_IntNumber;
 }
 
+size_t X86InterruptState::getSyscallService() const
+{
+  return ((m_Eax >> 16) & 0xFFFF);
+}
 size_t X86InterruptState::getSyscallNumber() const
 {
-  // TODO
-  return 0;
+  return (m_Eax & 0xFFFF);
 }
 
 #endif

@@ -15,14 +15,15 @@
  */
 #include <processor/initialise.h>
 #include "interrupt.h"
+#include "syscall.h"
 
 void initialiseProcessor()
 {
-  // Initialise the interrupt manager
-  X64InterruptManager::initialise();
-
-  // Initialise this processors interrupt handling
+  // Initialise this processor's interrupt handling
   X64InterruptManager::initialiseProcessor();
+
+  // Initialise this processor's syscall handling
+  X64SyscallManager::initialiseProcessor();
 
   // TODO
 }

@@ -17,18 +17,38 @@
 #define KERNEL_PROCESSOR_PROCESSOR_H
 
 #include <processor/types.h>
+#include <processor/state.h>
 
 /** @addtogroup kernelprocessor processor-specifc kernel
  * processor-specific kernel interface
  *  @ingroup kernel
  * @{ */
 
-class processor
+/** Interface to the processor */
+class Processor
 {
+  friend class ProcessorState;
   public:
+    /** Get the base-pointer of the calling function
+     *\return base-pointer of the calling function */
     static uintptr_t getBasePointer();
+    /** Get the stack-pointer of the calling function
+     *\return stack-pointer of the calling function */
     static uintptr_t getStackPointer();
+    /** Get the instruction-pointer of the calling function
+     *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
+
+    #ifdef X86_COMMON
+      /** Read a Machine/Model-specific register
+       *\param[in] index the register index
+       *\return the value of the register */
+      static uint64_t readMachineSpecificRegister(uint32_t index);
+      /** Write a Machine/Model-specific register
+       *\param[in] index the register index
+       *\param[in] value the new value of the register */
+      static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
+    #endif
 };
 
 /** @} */

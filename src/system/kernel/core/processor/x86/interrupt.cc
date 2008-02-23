@@ -31,7 +31,11 @@ InterruptManager &InterruptManager::instance()
 bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   // TODO: Needs locking
-  if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER || m_Handler[interruptNumber] != 0))
+  if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+    return false;
+  if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
+    return false;
+  if (UNLIKELY(handler == 0 && m_Handler[interruptNumber] == 0))
     return false;
 
   m_Handler[interruptNumber] = handler;
@@ -43,7 +47,11 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
   bool X86InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
     // TODO: Needs locking
-    if (UNLIKELY(interruptNumber >= 256 || m_DbgHandler[interruptNumber] != 0))
+    if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+      return false;
+    if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
+      return false;
+    if (UNLIKELY(handler == 0 && m_DbgHandler[interruptNumber] == 0))
       return false;
 
     m_DbgHandler[interruptNumber] = handler;
@@ -62,16 +70,19 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
 {
-  // TODO
+  //TODO: Needs locking
+
+  if (UNLIKELY(Service >= serviceEnd))
+    return false;
+  if (UNLIKELY(handler != 0 && m_SyscallHandler[Service] != 0))
+    return false;
+  if (UNLIKELY(handler == 0 && m_SyscallHandler[Service] == 0))
+    return false;
+
+  m_SyscallHandler[Service] = handler;
   return true;
 }
 
-void X86InterruptManager::initialise()
-{
-  extern uintptr_t interrupt_handler_array[];
-  for (size_t i = 0;i < 256;i++)
-    m_Instance.setInterruptGate(i, interrupt_handler_array[i], (i == SYSCALL_INTERRUPT_NUMBER) ? true : false);
-}
 void X86InterruptManager::initialiseProcessor()
 {
   // Load the IDT
@@ -107,7 +118,9 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   // Call the syscall handler, if it is the syscall interrupt
   if (intNumber == SYSCALL_INTERRUPT_NUMBER)
   {
-    // TODO
+    size_t serviceNumber = interruptState.getSyscallService();
+    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
+      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
   }
   // Call the normal interrupt handler, if any, otherwise
   else if (m_Instance.m_Handler[intNumber] != 0)
@@ -116,6 +129,25 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
 
 X86InterruptManager::X86InterruptManager()
 {
+  // Initialise the pointers to the interrupt handler
+  for (size_t i = 0;i < 256;i++)
+  {
+    m_Handler[i] = 0;
+    #ifdef DEBUGGER
+      m_DbgHandler[i] = 0;
+    #endif
+  }
+
+  // Initialise the pointers to the syscall handler
+  for (size_t i = 0;i < serviceEnd;i++)
+    m_SyscallHandler[i] = 0;
+
+  // Initialise the IDT
+  extern uintptr_t interrupt_handler_array[];
+  for (size_t i = 0;i < 256;i++)
+    setInterruptGate(i,
+                     interrupt_handler_array[i],
+                     (i == SYSCALL_INTERRUPT_NUMBER) ? true : false);
 }
 X86InterruptManager::~X86InterruptManager()
 {

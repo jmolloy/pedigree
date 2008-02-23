@@ -14,12 +14,12 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;
 
-; uintptr_t processor::getBasePointer()
-global _ZN9processor14getBasePointerEv
-; uintptr_t processor::getStackPointer()
-global _ZN9processor15getStackPointerEv
-; uintptr_t processor::getInstructionPointer()
-global _ZN9processor21getInstructionPointerEv
+; uintptr_t Processor::getBasePointer()
+global _ZN9Processor14getBasePointerEv
+; uintptr_t Processor::getStackPointer()
+global _ZN9Processor15getStackPointerEv
+; uintptr_t Processor::getInstructionPointer()
+global _ZN9Processor21getInstructionPointerEv
 
 ;##############################################################################
 ;### Code section #############################################################
@@ -27,14 +27,14 @@ global _ZN9processor21getInstructionPointerEv
 [bits 64]
 [section .code]
 
-_ZN9processor14getBasePointerEv:
+_ZN9Processor14getBasePointerEv:
   mov rax, rbp
   ret
 
-_ZN9processor15getStackPointerEv:
+_ZN9Processor15getStackPointerEv:
   mov rax, rsp
   ret
 
-_ZN9processor21getInstructionPointerEv:
+_ZN9Processor21getInstructionPointerEv:
   pop rax
   jmp rax

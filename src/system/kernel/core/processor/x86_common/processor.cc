@@ -13,13 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include "interrupt.h"
+#include <processor/processor.h>
 
-void initialiseProcessor()
+uint64_t Processor::readMachineSpecificRegister(uint32_t index)
 {
-  // Initialise this processor's interrupt handling
-  X86InterruptManager::initialiseProcessor();
-
-  // TODO
+  uint32_t eax, edx;
+  asm volatile("rdmsr" : "=a" (eax), "=d" (edx) : "c" (index));
+  return static_cast<uint64_t>(eax) | (static_cast<uint64_t>(edx) << 32);
+}
+void Processor::writeMachineSpecificRegister(uint32_t index, uint64_t value)
+{
+  uint32_t eax = value, edx = value >> 32;
+  asm volatile("wrmsr" :: "a" (eax), "d" (edx), "c" (index));
 }

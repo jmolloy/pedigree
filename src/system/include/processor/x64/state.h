@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X64_STATE_H
 #define KERNEL_PROCESSOR_X64_STATE_H
 
+#include <compiler.h>
 #include <processor/types.h>
 
 /** @addtogroup kernelprocessorx64 x64
@@ -27,90 +28,236 @@
 class X64InterruptState
 {
   public:
-    inline uintptr_t &stackPointer();
-    inline uintptr_t stackPointer() const;
-    inline uintptr_t &instructionPointer();
-    inline uintptr_t instructionPointer() const;
-    inline uintptr_t &basePointer();
-    inline uintptr_t basePointer() const;
+    //
+    // General Interface (both InterruptState and SyscallState)
+    //
+    /** Get the stack-pointer before the interrupt occured
+     *\return the stack-pointer before the interrupt */
+    inline uintptr_t getStackPointer() const;
+    /** Set the userspace stack-pointer
+     *\param[in] stackPointer the new stack-pointer */
+    inline void setStackPointer(uintptr_t stackPointer);
+    /** Get the instruction-pointer of the next instruction that is executed
+     * after the interrupt is processed
+     *\return the instruction-pointer */
+    inline uintptr_t getInstructionPointer() const;
+    /** Set the instruction-pointer
+     *\param[in] instructionPointer the new instruction-pointer */
+    inline void setInstructionPointer(uintptr_t instructionPointer);
+    /** Get the base-pointer
+     *\return the base-pointer */
+    inline uintptr_t getBasePointer() const;
+    /** Set the base-pointer
+     *\param[in] basePointer the new base-pointer */
+    inline void setBasePointer(uintptr_t basePointer);
 
+    //
+    // InterruptState Interface
+    //
+    /** Get the interrupt number
+     *\return the interrupt number */
     inline size_t getInterruptNumber() const;
 
   private:
+    /** The default constructor
+     *\note NOT implemented */
+    X64InterruptState();
+    /** The copy-constructor
+     *\note NOT implemented */
+    X64InterruptState(const X64InterruptState &);
+    /** The assignement operator
+     *\note NOT implemented */
+    X64InterruptState &operator = (const X64InterruptState &);
+    /** The destructor
+     *\note NOT implemented */
+    ~X64InterruptState();
+
+    /** The R15 general purpose register */
     uint64_t m_R15;
+    /** The R14 general purpose register */
     uint64_t m_R14;
+    /** The R13 general purpose register */
     uint64_t m_R13;
+    /** The R12 general purpose register */
     uint64_t m_R12;
+    /** The R11 general purpose register */
     uint64_t m_R11;
+    /** The R10 general purpose register */
     uint64_t m_R10;
+    /** The R9 general purpose register */
     uint64_t m_R9;
+    /** The R8 general purpose register */
     uint64_t m_R8;
+    /** The base-pointer */
     uint64_t m_Rbp;
+    /** The RSI general purpose register */
     uint64_t m_Rsi;
+    /** The RDI general purpose register */
     uint64_t m_Rdi;
+    /** The RDX general purpose register */
     uint64_t m_Rdx;
+    /** The RCX general purpose register */
     uint64_t m_Rcx;
+    /** The RBX general purpose register */
     uint64_t m_Rbx;
+    /** The RAX general purpose register */
     uint64_t m_Rax;
+    /** The interrupt number */
     uint64_t m_IntNumber;
+    /** The error-code (if any) */
     uint64_t m_Errorcode;
+    /** The instruction-pointer */
     uint64_t m_Rip;
+    /** The CS segment register */
     uint64_t m_Cs;
+    /** The RFlags register */
     uint64_t m_Rflags;
+    /** The stack-pointer */
     uint64_t m_Rsp;
+    /** The SS segment register */
     uint64_t m_Ss;
-};
+} PACKED;
 
 class X64SyscallState
 {
   public:
-    /// TODO
-    inline uintptr_t &stackPointer();
-    inline uintptr_t stackPointer() const;
-    inline uintptr_t &instructionPointer();
-    inline uintptr_t instructionPointer() const;
-    inline uintptr_t &basePointer();
-    inline uintptr_t basePointer() const;
+    //
+    // General Interface (both InterruptState and SyscallState)
+    //
+    /** Get the stack-pointer before the syscall occured
+     *\return the stack-pointer before the syscall */
+    inline uintptr_t getStackPointer() const;
+    /** Set the userspace stack-pointer
+     *\param[in] stackPointer the new stack-pointer */
+    inline void setStackPointer(uintptr_t stackPointer);
+    /** Get the instruction-pointer of the next instruction that is executed
+     * after the syscall is processed
+     *\return the instruction-pointer */
+    inline uintptr_t getInstructionPointer() const;
+    /** Set the instruction-pointer
+     *\param[in] instructionPointer the new instruction-pointer */
+    inline void setInstructionPointer(uintptr_t instructionPointer);
+    /** Get the base-pointer
+     *\return the base-pointer */
+    inline uintptr_t getBasePointer() const;
+    /** Set the base-pointer
+     *\param[in] basePointer the new base-pointer */
+    inline void setBasePointer(uintptr_t basePointer);
 
+    //
+    // SyscallState Interface
+    //
+    /** Get the syscall service number
+     *\return the syscall service number */
+    inline size_t getSyscallService() const;
+    /** Get the syscall function number
+     *\return the syscall function number */
     inline size_t getSyscallNumber() const;
 
   private:
-    /// TODO
-};
+    /** The R15 general purpose register */
+    uint64_t m_R15;
+    /** The R14 general purpose register */
+    uint64_t m_R14;
+    /** The R14 general purpose register */
+    uint64_t m_R13;
+    /** The R12 general purpose register */
+    uint64_t m_R12;
+    /** The R10 general purpose register */
+    uint64_t m_R10;
+    /** The R9 general purpose register */
+    uint64_t m_R9;
+    /** The R8 general purpose register */
+    uint64_t m_R8;
+    /** The base-pointer */
+    uint64_t m_Rbp;
+    /** The RSI general purpose register */
+    uint64_t m_Rsi;
+    /** The RDI general purpose register */
+    uint64_t m_Rdi;
+    /** The RDX general purpose register */
+    uint64_t m_Rdx;
+    /** The RBX general purpose register */
+    uint64_t m_Rbx;
+    /** The RAX general purpose register */
+    uint64_t m_Rax;
+    /** The R11/RFlags register */
+    uint64_t m_RFlagsR11;
+    /** The RIP/RCX register */
+    uint64_t m_RipRcx;
+    /** The stack-pointer */
+    uint64_t m_Rsp;
+} PACKED;
 
 /** @} */
 
 //
 // Part of the Implementation
 //
-uintptr_t &X64InterruptState::stackPointer()
+uintptr_t X64InterruptState::getStackPointer() const
 {
   return m_Rsp;
 }
-uintptr_t X64InterruptState::stackPointer() const
+void X64InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  return m_Rsp;
+  m_Rsp = stackPointer;
 }
-uintptr_t &X64InterruptState::instructionPointer()
+uintptr_t X64InterruptState::getInstructionPointer() const
 {
   return m_Rip;
 }
-uintptr_t X64InterruptState::instructionPointer() const
+void X64InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  return m_Rip;
+  m_Rip = instructionPointer;
 }
-uintptr_t &X64InterruptState::basePointer()
+uintptr_t X64InterruptState::getBasePointer() const
 {
   return m_Rbp;
 }
-uintptr_t X64InterruptState::basePointer() const
+void X64InterruptState::setBasePointer(uintptr_t basePointer)
 {
-  return m_Rbp;
+  m_Rbp = basePointer;
 }
 
 size_t X64InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;
+}
+
+uintptr_t X64SyscallState::getStackPointer() const
+{
+  return m_Rsp;
+}
+void X64SyscallState::setStackPointer(uintptr_t stackPointer)
+{
+  m_Rsp = stackPointer;
+}
+uintptr_t X64SyscallState::getInstructionPointer() const
+{
+  return m_RipRcx;
+}
+void X64SyscallState::setInstructionPointer(uintptr_t instructionPointer)
+{
+  m_RipRcx = instructionPointer;
+}
+uintptr_t X64SyscallState::getBasePointer() const
+{
+  return m_Rbp;
+}
+void X64SyscallState::setBasePointer(uintptr_t basePointer)
+{
+  m_Rbp = basePointer;
+}
+
+size_t X64SyscallState::getSyscallService() const
+{
+  // TODO: Is this a wise decision?
+  return ((m_Rax >> 32) & 0xFFFFFFFF);
+}
+size_t X64SyscallState::getSyscallNumber() const
+{
+  // TODO: Is this a wise decision?
+  return (m_Rax & 0xFFFFFFFF);
 }
 
 #endif

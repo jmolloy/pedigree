@@ -39,9 +39,6 @@ class X64InterruptManager : public ::InterruptManager
       virtual size_t getDebugInterruptNumber() PURE;
     #endif
 
-    /** Initialises the InterruptManager
-     *\note This should only be called from initialiseProcessor() */
-    static void initialise();
     /** Initialises this processors IDTR
      *\note This should only be called from initialiseProcessor()
      *\todo and some smp/acpi function */

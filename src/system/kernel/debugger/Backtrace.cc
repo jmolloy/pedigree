@@ -34,9 +34,9 @@ Backtrace::~Backtrace()
 void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
 {
   if (base == 0)
-    base = processor::getBasePointer();
+    base = Processor::getBasePointer();
   if (instruction == 0)
-    instruction = processor::getInstructionPointer();
+    instruction = Processor::getInstructionPointer();
   
   int i = 1;
   m_pBasePointers[0] = base;
