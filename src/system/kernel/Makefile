@@ -91,6 +91,7 @@ SRCFILES += core/processor/x86/initialiseProcessor.cc \
             core/processor/x86/interrupt.cc \
             core/processor/x86/asm_interrupt.S \
             core/processor/x86/asm_processor.S \
+            core/processor/x86/processor.cc
             core/processor/x86/gdt.cc
 endif
 

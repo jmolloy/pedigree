@@ -14,3 +14,77 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/processor.h>
+
+uintptr_t Processor::getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultType &nFaultType, DebugFlags::Length &nLength, bool &bEnabled)
+{
+  uintptr_t nLinearAddress;
+  switch(nBpNumber)
+  {
+  case 0:
+    asm volatile("mov %%db0, %0" : "=r" (nLinearAddress));
+    break;
+  case 1:
+    asm volatile("mov %%db1, %0" : "=r" (nLinearAddress));
+    break;
+  case 2:
+    asm volatile("mov %%db2, %0" : "=r" (nLinearAddress));
+    break;
+  case 3:
+    asm volatile("mov %%db3, %0" : "=r" (nLinearAddress));
+    break;
+  }
+  
+  uintptr_t nStatus;
+  asm volatile("mov %%db7, %0" : "=r" (nStatus));
+  
+  bEnabled = static_cast<bool> (nStatus & (1 << (nBpNumber*2+1))); // See intel manual 3b.
+  nFaultType = (nStatus & (0xFFFFFFFF >> (nBpNumber*4+16))) & 0x3;
+  nLength = (nStatus & (0xFFFFFFFF >> (nBpNumber*4+18))) & 0x3;
+  
+  return nLinearAddress;
+}
+
+void Processor::enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddress, DebugFlags::FaultType nFaultType, DebugFlags::Length nLength)
+{
+  switch(nBpNumber)
+  {
+  case 0:
+    asm volatile("mov %0, %%db0" :: "r" (nLinearAddress));
+    break;
+  case 1:
+    asm volatile("mov %0, %%db1" :: "r" (nLinearAddress));
+    break;
+  case 2:
+    asm volatile("mov %0, %%db2" :: "r" (nLinearAddress));
+    break;
+  case 3:
+    asm volatile("mov %0, %%db3" :: "r" (nLinearAddress));
+    break;
+  }
+  
+  uintptr_t nStatus;
+  asm volatile("mov %%db7, %0" : "=r" (nStatus));
+  
+  nStatus |= 1 << (nBpNumber*2+1);
+  nStatus |= nFaultType << (nBpNumber*4+16);
+  nStatus |= nLength << (nBpNumber*4+18);
+  asm volatile("mov %0, %%db7" :: "r" (nStatus));
+}
+
+void Processor::disableDebugBreakpoint(uint32_t BpNumber)
+{
+  uintptr_t nStatus;
+  asm volatile("mov %%db7, %0" : "=r" (nStatus));
+  
+  nStatus &= ~(1 << (nBpNumber*2+1));
+  asm volatile("mov %0, %%db7" :: "r" (nStatus));
+}
+
+void Processor::setInterrupts(bool bEnable)
+{
+  asm volatile("sti");
+}
+
+void Processor::setSingleStep(bool bEnable)
+{
+}

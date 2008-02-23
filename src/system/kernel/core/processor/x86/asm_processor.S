@@ -20,6 +20,8 @@ global _ZN9Processor14getBasePointerEv
 global _ZN9Processor15getStackPointerEv
 ; uintptr_t Processor::getInstructionPointer()
 global _ZN9Processor21getInstructionPointerEv
+; uintptr_t Processor::getDebugStatus()
+global _ZN9Processor14getDebugStatusEv
 
 ;##############################################################################
 ;### Code section #############################################################
@@ -38,3 +40,7 @@ _ZN9Processor15getStackPointerEv:
 _ZN9Processor21getInstructionPointerEv:
   pop eax
   jmp eax
+
+_ZN9Processor14getDebugStatusEv:
+  mov eax, dr6
+  ret

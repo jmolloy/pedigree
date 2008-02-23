@@ -19,15 +19,44 @@
 #include <processor/types.h>
 #include <processor/state.h>
 
-/** @addtogroup kernelprocessor processor-specifc kernel
+/** @addtogroup kernelprocessor processor-specific kernel
  * processor-specific kernel interface
  *  @ingroup kernel
  * @{ */
 
-/** Interface to the processor */
+namespace DebugFlags
+{
+  enum FaultType
+  {
+    InstructionFetch = 0;
+    DataWrite        = 1;
+    IOReadWrite      = 2;
+    DataReadWrite    = 3;
+  };
+  
+  enum Length
+  {
+    OneByte    = 0;
+    TwoBytes   = 1;
+    FourBytes  = 3;
+    EightBytes = 2;
+  };
+};
+
+/// Defines for debug status flags.
+#define DEBUG_BREAKPOINT_0 0x01   /// Breakpoint 0 was triggered.
+#define DEBUG_BREAKPOINT_1 0x02   /// Breakpoint 1 was triggered.
+#define DEBUG_BREAKPOINT_2 0x04   /// Breakpoint 2 was triggered.
+#define DEBUG_BREAKPOINT_3 0x08   /// Breakpoint 3 was triggered.
+#define DEBUG_REG_ACCESS   0x2000 /// The next instruction in the stream accesses a debug register, and GD is turned on.
+#define DEBUG_SINGLE_STEP  0x4000 /// The exception was caused by single-step execution mode (TF enabled in EFLAGS).
+#define DEBUG_TASK_SWITCH  0x8000 /// The exception was caused by a hardware task switch.
+
 class Processor
 {
+=======
   friend class ProcessorState;
+
   public:
     /** Get the base-pointer of the calling function
      *\return base-pointer of the calling function */
@@ -38,6 +67,13 @@ class Processor
     /** Get the instruction-pointer of the calling function
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
+    static uintptr_t getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultType &nFaultType, DebugFlags::Length &nLength, bool &bEnabled);
+    static void enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddress, DebugFlags::FaultType nFaultType, DebugFlags::Length nLength);
+    static void disableDebugBreakpoint(uint32_t BpNumber);
+    static uintptr_t getDebugStatus();
+    
+    static void setInterrupts(bool bEnable); /// Start maskable interrupts.
+    static void setSingleStep(bool bEnable); /// Enable single step mode.
 
     #ifdef X86_COMMON
       /** Read a Machine/Model-specific register
