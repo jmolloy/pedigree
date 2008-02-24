@@ -20,6 +20,7 @@
 #include <LocalIO.h>
 #include <DisassembleCommand.h>
 #include <QuitCommand.h>
+#include <BreakpointCommand.h>
 #include <LogViewer.h>
 #include <Backtracer.h>
 #include <utility.h>
@@ -87,12 +88,14 @@ void Debugger::breakpoint(InterruptState &state)
   LogViewer logViewer;
   Backtracer backtracer;
   QuitCommand quit;
+  BreakpointCommand breakpoint;
   
-  int nCommands = 4;
+  int nCommands = 5;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
-                                  &quit};
+                                  &quit,
+                                  &breakpoint};
   
   if (m_nIoType == MONITOR) pIo = &localIO;
   else

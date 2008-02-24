@@ -149,7 +149,22 @@ const char *parseTemplate(const char *src, char *dest)
       else if (*src == 'h') {src++; strcat(dest, "unsigned char");}
       else if (*src == 's') {src++; strcat(dest, "short");}
       else if (*src == 't') {src++; strcat(dest, "unsigned short");}
+      else if (*src == 'l') {src++; strcat(dest, "long");}
+      else if (*src == 'm') {src++; strcat(dest, "unsigned long");}
       else if (*src == 'b') {src++; strcat(dest, "bool");}
+      else if (*src == 'L')
+      {
+        *src++;
+        *src++;
+        char ch[2];
+        ch[1] = '\0';
+        while (*src != 'E')
+        {
+          ch[0] = *src++;
+          strcat(dest, ch);
+        }
+        *src++;
+      }
       else if (*src == 'K') {src++; strcat(dest, "const "); bIsThisPointer = true;}
       else if (*src == 'P') {src++; bIsPointer = bIsThisPointer = true;}
       else if (*src == 'R') {src++; bIsReference = bIsThisPointer = true;}
@@ -196,6 +211,8 @@ void parseParameters(const char *src, symbol_t *sym)
     else if (*src == 'h') {src++; strcat(dest, "unsigned char");}
     else if (*src == 's') {src++; strcat(dest, "short");}
     else if (*src == 't') {src++; strcat(dest, "unsigned short");}
+    else if (*src == 'l') {src++; strcat(dest, "long");}
+    else if (*src == 'm') {src++; strcat(dest, "unsigned long");}
     else if (*src == 'b') {src++; strcat(dest, "bool");}
     else if (*src == 'K') {src++; strcat(dest, "const "); bIsThisPointer = true;}
     else if (*src == 'V') {src++; strcat(dest, "volatile "); bIsThisPointer = true;}

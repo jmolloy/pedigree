@@ -206,3 +206,12 @@ char *strrchr(const char *str, char target)
       return (char*)&str[i];
   return (char*)0;
 }
+
+char *strchr(const char *str, char target)
+{
+  int i;
+  for (i = 0; i < strlen(str); i++)
+    if (str[i] == target)
+      return (char*)&str[i];
+  return (char*)0;
+}

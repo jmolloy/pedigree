@@ -59,6 +59,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/QuitCommand.cc \
             debugger/commands/LogViewer.cc \
             debugger/commands/Backtracer.cc \
+            debugger/commands/BreakpointCommand.cc \
             debugger/LocalIO.cc \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
@@ -70,6 +71,7 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/memory.c \
             core/lib/string.c \
             core/lib/vsprintf.c \
+            core/lib/StringBase.cc \
             core/main.cc
 
 SRCFILES += linker/Elf32.cc
@@ -91,7 +93,7 @@ SRCFILES += core/processor/x86/initialiseProcessor.cc \
             core/processor/x86/interrupt.cc \
             core/processor/x86/asm_interrupt.S \
             core/processor/x86/asm_processor.S \
-            core/processor/x86/processor.cc
+            core/processor/x86/processor.cc \
             core/processor/x86/gdt.cc
 endif
 

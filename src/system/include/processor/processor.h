@@ -28,20 +28,20 @@ namespace DebugFlags
 {
   enum FaultType
   {
-    InstructionFetch = 0;
-    DataWrite        = 1;
-    IOReadWrite      = 2;
-    DataReadWrite    = 3;
+    InstructionFetch = 0,
+    DataWrite        = 1,
+    IOReadWrite      = 2,
+    DataReadWrite    = 3
   };
   
   enum Length
   {
-    OneByte    = 0;
-    TwoBytes   = 1;
-    FourBytes  = 3;
-    EightBytes = 2;
+    OneByte    = 0,
+    TwoBytes   = 1,
+    FourBytes  = 3,
+    EightBytes = 2
   };
-};
+}
 
 /// Defines for debug status flags.
 #define DEBUG_BREAKPOINT_0 0x01   /// Breakpoint 0 was triggered.
@@ -54,7 +54,6 @@ namespace DebugFlags
 
 class Processor
 {
-=======
   friend class ProcessorState;
 
   public:

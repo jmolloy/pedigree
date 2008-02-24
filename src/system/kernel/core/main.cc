@@ -24,6 +24,8 @@
 #include <Log.h>
 #include <Elf32.h>
 
+#include <StaticString.h>
+
 // initialiseConstructors()
 #include "cppsupport.h"
 // initialiseProcessor()
@@ -117,10 +119,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #endif
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
+  StaticString<32> str("RAR!");
+  NOTICE(str);
   //NOTICE("Foo: " << Hex << (int)&foo);
   foo.mytestfunc(false, 'g');
-//  InterruptState state;
-//  Debugger::instance().breakpoint(state);
 #endif
 
   // Then get the BootstrapInfo object to convert its contents into
