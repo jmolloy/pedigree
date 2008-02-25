@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,14 +16,14 @@
 #ifndef STATICSTRING_H
 #define STATICSTRING_H
 
-#include <StringBase.h>
+#include <utility.h>
 #include <Log.h>
 
 /**
  * Derivative of StringBase that uses a statically allocated chunk of memory.
  */
 template<unsigned int N>
-class StaticString : public StringBase
+class StaticString
 {
 public:
   /**
@@ -31,8 +31,6 @@ public:
    */
   StaticString()
   {
-    m_pData = static_cast<char*> (m_pStaticData);
-    m_nBufLen = N;
     m_pData[0] = '\0';
   }
   
@@ -43,9 +41,7 @@ public:
    */
   StaticString(const char *pSrc)
   {
-    m_pData = static_cast<char*> (m_pStaticData);
-    m_nBufLen = N;
-    strcpy(m_pData, pSrc);
+    strncpy(m_pData, pSrc, N);
     m_pData[strlen(pSrc)] = '\0';
   }
   
@@ -53,11 +49,9 @@ public:
    * Copy constructor - creates a StaticString from another StaticString.
    * Copies the memory associated with src.
    */
-  StaticString(StaticString &src)
+  StaticString(const StaticString &src)
   {
-    m_pData = static_cast<char*> (m_pStaticData);
-    m_nBufLen = N;
-    strcpy(m_pData, src.m_pData);
+    strncpy(m_pData, src.m_pData, N);
     m_pData[src.length()] = '\0';
   }
   
@@ -68,38 +62,79 @@ public:
   {
   }
   
-  virtual StringBase left(int n)
+  operator const char*()
+  {
+    return (const char*)m_pData;
+  }
+  
+  StaticString &operator+=(const StaticString &str)
+  {
+    append(str);
+//      NOTICE("My string: " << *this);
+    return *this;
+  }
+  
+  StaticString left(int n)
   {
     StaticString<N> str;
-    if (str.resize(n+1) != static_cast<unsigned int>(n+1))
-      return str;
     strncpy(str.m_pData, m_pData, n);
     str.m_pData[n] = '\0';
     return str;
   }
 
-  virtual StringBase right(int n)
+  StaticString right(int n)
   {
     StaticString<N> str;
-    if (str.resize(n+1) != static_cast<unsigned int>(n+1))
-      return str;
     strncpy(str.m_pData, &m_pData[strlen(m_pData)-n], n);
     str.m_pData[n] = '\0';
     return str;
   }
 
-protected:
-  /**
-   * Called when the StringBase wants to resize its buffer.
-   * \param[in] nSz The requested total buffer size.
-   * \return The new buffer size.
-   */
-  virtual size_t resize(size_t nSz)
+  void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ')
   {
-    NOTICE("StaticString resize called.");
-    if (nSz > N)
-      ERROR("StaticString size exceeded - " << Dec << nSz << " > " << N);
-    m_pData = reinterpret_cast<char*>(&m_pStaticData);
+    char pStr[64];
+    char pFormat[8];
+    const char *pRadix;
+    switch (nRadix)
+    {
+      case 8:
+        pRadix = "o";
+        break;
+      case 10:
+        pRadix = "d";
+        break;
+      case 16:
+        pRadix = "x";
+        break;
+    }
+  
+    sprintf(pFormat, "%%%s", pRadix);
+  
+    sprintf(pStr, pFormat, nInt);
+    append(pStr, nLen, c);
+  }
+  
+  void append(StaticString pStr, size_t nLen=0, char c=' ')
+  {
+    if (nLen < pStr.length())
+    {
+      strcat(m_pData, pStr.m_pData);
+      NOTICE("append: here." << m_pData);
+    }
+    else
+    {
+      unsigned int i;
+      for(i = length(); i < nLen - pStr.length() + length(); i++)
+      {
+        m_pData[i] = c;
+      }
+      m_pData[i] = '\0';
+      strcat(m_pData, pStr.m_pData);
+    }
+  }
+  
+  size_t length() const
+  {
     return N;
   }
   
@@ -107,7 +142,7 @@ private:
   /**
    * Our actual static data.
    */
-  char m_pStaticData[N];
+  char m_pData[N];
 };
 
 #endif

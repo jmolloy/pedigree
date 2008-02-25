@@ -71,7 +71,6 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/memory.c \
             core/lib/string.c \
             core/lib/vsprintf.c \
-            core/lib/StringBase.cc \
             core/main.cc
 
 SRCFILES += linker/Elf32.cc

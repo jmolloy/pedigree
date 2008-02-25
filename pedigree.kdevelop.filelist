@@ -40,6 +40,8 @@ src/system/include/processor/x64/types.h
 src/system/include/processor/x86
 src/system/include/processor/x86/state.h
 src/system/include/processor/x86/types.h
+src/system/include/utilities
+src/system/include/utilities/string.h
 src/system/kernel
 src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
@@ -49,6 +51,10 @@ src/system/kernel/Makefile
 src/system/kernel/boot-standalone.s
 src/system/kernel/core
 src/system/kernel/core/lib
+src/system/kernel/core/lib/DynamicString.h
+src/system/kernel/core/lib/StaticString.h
+src/system/kernel/core/lib/StringBase.cc
+src/system/kernel/core/lib/StringBase.h
 src/system/kernel/core/lib/cppsupport.cc
 src/system/kernel/core/lib/cppsupport.h
 src/system/kernel/core/lib/demangle.cc
@@ -101,10 +107,14 @@ src/system/kernel/debugger/StackFrame.h
 src/system/kernel/debugger/commands
 src/system/kernel/debugger/commands/Backtracer.cc
 src/system/kernel/debugger/commands/Backtracer.h
+src/system/kernel/debugger/commands/BreakpointCommand.cc
+src/system/kernel/debugger/commands/BreakpointCommand.h
 src/system/kernel/debugger/commands/DisassembleCommand.cc
 src/system/kernel/debugger/commands/DisassembleCommand.h
 src/system/kernel/debugger/commands/LogViewer.cc
 src/system/kernel/debugger/commands/LogViewer.h
+src/system/kernel/debugger/commands/QuitCommand.cc
+src/system/kernel/debugger/commands/QuitCommand.h
 src/system/kernel/debugger/keymap_qwerty.h
 src/system/kernel/debugger/keymap_qwertz.h
 src/system/kernel/debugger/libudis86

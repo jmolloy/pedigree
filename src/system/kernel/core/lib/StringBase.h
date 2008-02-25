@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,19 +33,6 @@ public:
   StringBase();
   
   /**
-   * Creates a StringBase from a const char *.
-   * This creates a new copy of pSrc - pSrc can be safely
-   * deallocated afterwards.
-   */
-  StringBase(const char *pSrc);
-  
-  /**
-   * Copy constructor - creates a StringBase from another StringBase.
-   * Copies the memory associated with src.
-   */
-  StringBase(StringBase &src);
-  
-  /**
    * Virtual destructor.
    */
   virtual ~StringBase() {}
@@ -53,7 +40,7 @@ public:
   /**
    * Operator overloads for string concetenation.
    */
-  StringBase &operator+=(StringBase &rhs);
+  StringBase &operator+=(StringBase rhs);
   StringBase &operator+=(uintptr_t rhs);
   
   StringBase &operator=(const StringBase &rhs);
@@ -77,10 +64,10 @@ public:
   virtual StringBase right(int n);
   
   /** Appends a string to this string, padding to nLen with c, if required. */
-  void append(StringBase pStr, size_t nLen=0, char c=' ');
+  virtual void append(StringBase pStr, size_t nLen=0, char c=' ');
   /** Appends an integer to this string, in the given radix, padding to nLen with c, if required.
    * \note Currently, radix only supports values of 10, 16 and 8. */
-  void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ');
+  virtual void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ');
   
 protected:
   /**

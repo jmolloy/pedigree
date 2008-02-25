@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,19 +22,7 @@ StringBase::StringBase() :
 {
 }
 
-StringBase::StringBase(const char *pSrc) :
-  m_pData(0),
-  m_nBufLen(0)
-{
-}
-
-StringBase::StringBase(StringBase &src) :
-  m_pData(0),
-  m_nBufLen(0)
-{
-}
-
-StringBase &StringBase::operator+=(StringBase &rhs)
+StringBase &StringBase::operator+=(StringBase rhs)
 {
   append(rhs);
   return *this;
@@ -82,49 +70,10 @@ size_t StringBase::length() const
 
 void StringBase::append(StringBase pStr, size_t nLen, char c)
 {
-  if (nLen < pStr.length())
-  {
-    if (resize(length()+pStr.length()+1) != length()+pStr.length()+1)
-      return;
-    strcat(m_pData, pStr.m_pData);
-  }
-  else
-  {
-    if (resize(length()+nLen+1) != length()+nLen+1)
-      return;
-    unsigned int i;
-    for(i = length(); i < nLen - pStr.length() + length(); i++)
-    {
-      m_pData[i] = c;
-    }
-    m_pData[i] = '\0';
-    strcat(m_pData, pStr.m_pData);
-  }
 }
 
 void StringBase::append(uintptr_t nInt, int nRadix, size_t nLen, char c)
 {
-  char pStr[64];
-  char pFormat[8];
-  const char *pRadix;
-  switch (nRadix)
-  {
-  case 8:
-    pRadix = "o";
-    break;
-  case 10:
-    pRadix = "d";
-    break;
-  case 16:
-    pRadix = "x";
-    break;
-  }
-  
-  sprintf(pFormat, "%%%s", pRadix);
-  
-  sprintf(pStr, pFormat, nInt);
-  StringBase s(pStr);
-  append(s, nLen, c);
 }
 
 size_t StringBase::resize(size_t nSz)

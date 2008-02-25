@@ -120,7 +120,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
   StaticString<32> str("RAR!");
-  NOTICE(str);
+  StaticString<32> str2("wee.");
+  str += str2;
+  NOTICE((const char *)str);
   //NOTICE("Foo: " << Hex << (int)&foo);
   foo.mytestfunc(false, 'g');
 #endif
