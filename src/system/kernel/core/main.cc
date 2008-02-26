@@ -107,8 +107,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   initialiseMachine2();
 
   elf.load(&bootstrapInfo);
-  const char *addr = elf.lookupSymbol(0x100024);
-  NOTICE("Addr: " << addr);
 
   /// NOTE: bluecode again
   asm volatile("int $0xFE"); // some interrupt
@@ -121,9 +119,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Foo foo;
   StaticString<32> str("RAR!");
   StaticString<32> str2("wee.");
+  NOTICE("Str: " << Hex << (int)&str);
+  NOTICE("Str2: " << Hex << (int)&str2);
   str += str2;
+  str += 8;
   NOTICE((const char *)str);
-  //NOTICE("Foo: " << Hex << (int)&foo);
   foo.mytestfunc(false, 'g');
 #endif
 

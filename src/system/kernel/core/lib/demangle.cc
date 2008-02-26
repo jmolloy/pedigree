@@ -20,6 +20,10 @@ const char *parseNamespace(const char *src, char *dest);
 const char *parseFunction(const char *src, char *dest);
 const char *parseTemplate(const char *src, char *dest);
 
+/// \TODO Make this reentrant. The entire file needs refactoring, tbh.
+/// \TODO 32 substitute entries of 64 bytes each... - make this safer!
+char g_Substitutes[32][64];
+
 const char *getNumber(const char *src, int &n)
 {
   char pStr[32];
@@ -66,6 +70,17 @@ const char *parseNamespace(const char *src, char *dest)
       src ++; 
       if (*src == 0) return src;
       src ++; // Get rid of "D1".
+    }
+#define OPERATOR(ch1,ch2,op) else if (*src == 'ch1' && *(src+1) == 'ch2') \
+    { \
+      src += 2; \
+      strcat(dest, op); \
+    }
+
+    else if (*src == 'p' && src[1] == 'L') 
+    { 
+        src += 2;
+        strcat(dest, "::operator+="); 
     }
     else if (*src == 'I')
     {
@@ -195,6 +210,7 @@ void parseParameters(const char *src, symbol_t *sym)
   bool bIsPointer = false;
   bool bIsReference = false;
   bool bIsThisPointer = false;
+
   while (*src)
   {
     if (!bIsThisPointer)
@@ -226,12 +242,15 @@ void parseParameters(const char *src, symbol_t *sym)
     }
     else if (*src == 'S')
     {
+//       src++;
+//       int n;
+//       src = getNumber(src, n);
+//       src++; // Step over '_'.
+//       // Substitute with parameter 'n'.
+//       strcat(dest, sym->params[n]);
       src++;
-      int n;
-      src = getNumber(src, n);
-      src++; // Step over '_'.
-      // Substitute with parameter 'n'.
-      strcat(dest, sym->params[n]);
+      src++;
+      src++;
     }
     else if (*src == 'T')
     {
@@ -255,7 +274,7 @@ void parseParameters(const char *src, symbol_t *sym)
       if (*src == 'I')
         bIsThisPointer = true;
     }
-    else {*src++;continue;}
+    else {src++;}
 
     if (bIsPointer && !bIsThisPointer)
     {

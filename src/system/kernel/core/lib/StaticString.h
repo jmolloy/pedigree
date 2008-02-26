@@ -70,7 +70,12 @@ public:
   StaticString &operator+=(const StaticString &str)
   {
     append(str);
-//      NOTICE("My string: " << *this);
+    return *this;
+  }
+  
+  StaticString &operator+=(const int &i)
+  {
+    append(i);
     return *this;
   }
   
@@ -114,22 +119,22 @@ public:
     append(pStr, nLen, c);
   }
   
-  void append(StaticString pStr, size_t nLen=0, char c=' ')
+  void append(const StaticString &str, size_t nLen=0, char c=' ')
   {
-    if (nLen < pStr.length())
+    if (nLen < str.length())
     {
-      strcat(m_pData, pStr.m_pData);
+      strcat(m_pData, str.m_pData);
       NOTICE("append: here." << m_pData);
     }
     else
     {
       unsigned int i;
-      for(i = length(); i < nLen - pStr.length() + length(); i++)
+      for(i = length(); i < nLen - str.length() + length(); i++)
       {
         m_pData[i] = c;
       }
       m_pData[i] = '\0';
-      strcat(m_pData, pStr.m_pData);
+      strcat(m_pData, str.m_pData);
     }
   }
   
