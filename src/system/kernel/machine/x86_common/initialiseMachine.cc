@@ -13,25 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_INITIALISE_H
-#define KERNEL_MACHINE_INITIALISE_H
+#include <machine/initialise.h>
 
-/** @addtogroup kernel kernel
- * The kernel
- * @{ */
-
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
- *  @ingroup kernel
- * @{ */
-
-/** This is the first stage in the machine-dependent initialisation procedure.
- * This function should be called after the processor-specific interface has
- * been fully initialised
- *\note only called by main() */
-void initialiseMachine();
-
-/** @} */
-/** @} */
-
-#endif
+void initialiseMachine()
+{
+  // TODO
+}

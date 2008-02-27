@@ -31,8 +31,13 @@ class X86GdtManager
     /** Get the gdt manager instance
      *\return instance of the gdt manager */
     static X86GdtManager &instance();
+
+    /** Initialise the GDT
+     *\param[in] processorCount the number of processors
+     *\note This should only be called from initialiseProcessor2() */
+    void initialise(size_t processorCount);
     /** Initialises this processors GDTR
-     *\note This should only be called from initialiseProcessor()
+     *\note This should only be called from initialiseProcessor2()
      *\todo and some smp/acpi function */
     static void initialiseProcessor();
 
@@ -47,6 +52,40 @@ class X86GdtManager
     X86GdtManager &operator = (const X86GdtManager &);
     /** The destructor */
     ~X86GdtManager();
+
+    /** Set up a segment descriptor
+     *\param[in] index the descriptor index
+     *\param[in] base the base address
+     *\param[in] limit the size of the segment (either in bytes or in 4kb units)
+     *\param[in] flags the flags
+     *\param[in] flags2 additional flags */
+    void setSegmentDescriptor(size_t index, uint32_t base, uint32_t limit, uint8_t flags, uint8_t flags2);
+    /** Set up a task-state-segment descriptor
+     *\param[in] index the descriptor index
+     *\param[in] base the base address */
+    void setTssDescriptor(size_t index, uint32_t base);
+
+    /** Protected-mode segment descriptor structure */
+    struct segment_descriptor
+    {
+      /** Bits 0-15 from the limit */
+      uint16_t limit0;
+      /** Bits 0-15 from the base address */
+      uint16_t base0;
+      /** Bits 16-23 from the base address */
+      uint8_t base1;
+      /** The flags */
+      uint8_t flags;
+      /** Additional flags and bits 16-19 from the limit */
+      uint8_t flags_limit1;
+      /** Bits 24-32 from the base address */
+      uint8_t base2;
+    }PACKED;
+
+    /** The Gdt */
+    segment_descriptor *m_Gdt;
+    /** The number of descriptors in the Gdt */
+    size_t m_DescriptorCount;
 
     /** The instance of the gdt manager  */
     static X86GdtManager m_Instance;

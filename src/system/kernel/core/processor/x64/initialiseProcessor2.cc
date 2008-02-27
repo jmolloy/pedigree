@@ -13,9 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
+#include <processor/initialise.h>
+#include "gdt.h"
 
-void initialiseMachine2()
+void initialiseProcessor2()
 {
+  // Initialise the GDT
+  // TODO: X64GdtManager::instance().initialise(1)
+  // TODO: X64GdtManager::initialiseProcessor()
+
+  // TODO: Process SMP/ACPI tables
+
   // TODO
 }

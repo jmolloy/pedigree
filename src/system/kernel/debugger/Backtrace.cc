@@ -42,9 +42,10 @@ void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
   m_pBasePointers[0] = base;
   m_pReturnAddresses[0] = instruction;
   
-  while (base && i < MAX_STACK_FRAMES)
+  while (i < MAX_STACK_FRAMES)
   {
     uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
+    if (nextAddress == 0)break;
     m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
     m_pBasePointers[i] = nextAddress;
     base = nextAddress;

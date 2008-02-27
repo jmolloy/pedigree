@@ -15,11 +15,18 @@
  */
 #include <processor/initialise.h>
 #include "interrupt.h"
+#include "syscall.h"
 
-void initialiseProcessor()
+void initialiseProcessor1()
 {
   // Initialise this processor's interrupt handling
-  X86InterruptManager::initialiseProcessor();
+  X64InterruptManager::initialiseProcessor();
+
+  // Initialise this processor's syscall handling
+  X64SyscallManager::initialiseProcessor();
+
+  // TODO: Initialise the physical memory-management
+  // TODO: Initialise the I/O Manager
 
   // TODO
 }

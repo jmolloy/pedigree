@@ -145,7 +145,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel/debugger</activedir>
+      <activedir>src/system/kernel/debugger/commands</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
@@ -299,7 +299,7 @@
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>true</hidenonprojectfiles>
+      <hidenonprojectfiles>false</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>

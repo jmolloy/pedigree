@@ -90,7 +90,7 @@ void X86InterruptManager::initialiseProcessor()
   {
     uint16_t size;
     uint32_t idt;
-  } __attribute__((packed)) idtr = {2047, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
+  } PACKED idtr = {2047, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
 
   asm volatile("lidt %0" : "=m"(idtr));
 }

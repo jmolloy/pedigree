@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Jörg Pfähler
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,42 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/io.h>
+#include <processor/initialise.h>
+#include "interrupt.h"
 
-bool IoPort::allocate(io_port_t ioPort, size_t size)
+void initialiseProcessor1()
 {
-  // Free any allocated I/O ports
-  if (m_Size != 0)
-    free();
+  // Initialise this processor's interrupt handling
+  X86InterruptManager::initialiseProcessor();
 
-  if (IoPortManager::instance().allocate(ioPort, size) == true)
-  {
-    m_IoPort = ioPort;
-    m_Size = size;
-    return true;
-  }
-  return false;
-}
+  // TODO: Initialise the physical memory-management
+  // TODO: Initialise the I/O Manager
 
-void IoPort::free()
-{
-  if (m_Size != 0)
-  {
-    IoPortManager::instance().free(m_IoPort, m_Size);
-
-    m_Size = 0;
-    m_IoPort = 0;
-  }
-}
-
-IoPortManager IoPortManager::m_Instance;
-
-bool IoPortManager::allocate(io_port_t ioPort, size_t size)
-{
-  // TODO
-  return true;
-}
-void IoPortManager::free(io_port_t ioPort, size_t size)
-{
   // TODO
 }

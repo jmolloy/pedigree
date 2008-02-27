@@ -13,9 +13,31 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
+#ifndef KERNEL_PROCESSOR_X64_TSS_H
+#define KERNEL_PROCESSOR_X64_TSS_H
 
-void initialiseMachine1()
+#include <compiler.h>
+#include <processor/types.h>
+
+/** @addtogroup kernelprocessorx64 x64
+ * x64 processor-specific kernel
+ *  @ingroup kernelprocessor
+ * @{ */
+
+/** The long-mode task-state segment */
+struct X64TaskStateSegment
 {
-  // TODO
-}
+  uint32_t res0;
+  uint64_t rsp0;
+  uint64_t rsp1;
+  uint64_t rsp2;
+  uint64_t res1;
+  uint64_t ist[7];
+  uint64_t res2;
+  uint16_t res3;
+  uint16_t ioPermBitmap;
+} PACKED;
+
+/** @} */
+
+#endif

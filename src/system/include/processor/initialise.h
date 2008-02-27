@@ -26,7 +26,8 @@
  * @{ */
 
 /** Initialises the processor specific interface */
-void initialiseProcessor();
+void initialiseProcessor1();
+void initialiseProcessor2();
 
 /** @} */
 /** @} */

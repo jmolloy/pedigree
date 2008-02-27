@@ -14,16 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
-#include "interrupt.h"
-#include "syscall.h"
+#include "gdt.h"
 
-void initialiseProcessor()
+void initialiseProcessor2()
 {
-  // Initialise this processor's interrupt handling
-  X64InterruptManager::initialiseProcessor();
+  // Initialise the GDT
+  // TODO: X86GdtManager::instance().initialise(1)
+  // TODO: X86GdtManager::initialiseProcessor()
 
-  // Initialise this processor's syscall handling
-  X64SyscallManager::initialiseProcessor();
+  // TODO: Process SMP/ACPI tables
 
   // TODO
 }

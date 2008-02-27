@@ -17,7 +17,7 @@
 #include <LocalIO.h>
 #include <DebuggerCommand.h>
 #include <utility.h>
-#include <machine/io.h>
+#include <processor/io.h>
 
 #ifdef DEBUGGER_QWERTY
 #include <keymap_qwerty.h>
@@ -253,12 +253,12 @@ char LocalIO::getChar()
   do
   {
     // Get the keyboard's status byte.
-    status = port.in8(4);
+    status = port.read8(4);
   }
   while ( !(status & 0x01) ); // Spin until there's a key ready.
 
   // Get the scancode for the pending keystroke.
-  scancode = port.in8(0);
+  scancode = port.read8(0);
   
   // We don't care about 'special' scancodes which start with 0xe0.
   if (scancode == 0xe0)
@@ -472,10 +472,10 @@ void LocalIO::moveCursor()
   IoPort cursorPort;
   cursorPort.allocate(0x3D4, 2);
   
-  cursorPort.out8(14, 0);
-  cursorPort.out8(tmp>>8, 1);
-  cursorPort.out8(15, 0);
-  cursorPort.out8(tmp, 1);
+  cursorPort.write8(14, 0);
+  cursorPort.write8(tmp>>8, 1);
+  cursorPort.write8(15, 0);
+  cursorPort.write8(tmp, 1);
 }
 
 void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)

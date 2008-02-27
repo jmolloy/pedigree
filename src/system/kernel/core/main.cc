@@ -28,9 +28,9 @@
 
 // initialiseConstructors()
 #include "cppsupport.h"
-// initialiseProcessor()
+// initialiseProcessor1(), initialiseProcessor2()
 #include <processor/initialise.h>
-// initialiseMachine1(), initialiseMachine2()
+// initialiseMachine()
 #include <machine/initialise.h>
 
 Elf32 elf("kernel");
@@ -68,7 +68,7 @@ public:
 void mytestfunc(bool a, char b)
 {
   //InterruptState state;
-  //Debugger::instance().breakpoint(state);
+  //Debugger::instance().breakpoint();
   asm volatile("int $0x3");
 }
 };
@@ -82,7 +82,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   BootstrapInfo bootstrapInfo(bsInf);
 
   // Initialise the processor-specific interface
-  initialiseProcessor();
+  initialiseProcessor1();
 
   /// NOTE there we go
   MyInterruptHandler myHandler;
@@ -94,17 +94,15 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   if (SysManager.registerSyscallHandler(SyscallManager::kernelCore, &mySysHandler) == false)
     NOTICE("Failed to register syscall handler");
 
-  // First stage of the machine-dependant initialisation.
-  // After that only the memory-management related classes and
-  // functions can be used.
-  initialiseMachine1();
+  // Initialise the machine-specific interface
+  initialiseMachine();
+
+  // Initialise the processor-specific interface
+  // Bootup of the other Application Processors and related tasks
+  initialiseProcessor2();
 
   // We need a heap for dynamic memory allocation.
 //  initialiseMemory();
-
-  // First stage of the machine-dependant initialisation.
-  // After that every machine dependant class & function can be used.
-  initialiseMachine2();
 
   elf.load(&bootstrapInfo);
 
@@ -119,8 +117,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Foo foo;
   StaticString<32> str("RAR!");
   StaticString<32> str2("wee.");
-  NOTICE("Str: " << Hex << (int)&str);
-  NOTICE("Str2: " << Hex << (int)&str2);
+  NOTICE("Str: " << Hex << reinterpret_cast<uintptr_t>(&str));
+  NOTICE("Str2: " << Hex << reinterpret_cast<uintptr_t>(&str2));
   str += str2;
   str += 8;
   NOTICE((const char *)str);
