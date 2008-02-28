@@ -78,6 +78,15 @@ public:
     return *this;
   }
   
+  StaticString &operator+=(const char &i)
+  {
+    char ch[2];
+    ch[0] = i;
+    ch[1] = '\0';
+    append(ch);
+    return *this;
+  }
+  
   StaticString left(int n)
   {
     StaticString<N> str;
@@ -92,6 +101,14 @@ public:
     strncpy(str.m_pData, &m_pData[strlen(m_pData)-n], n);
     str.m_pData[n] = '\0';
     return str;
+  }
+  
+  StaticString &stripFirst(int n=1)
+  {
+    int i;
+    for (i = n; m_pData[i] != '\0'; i++)
+      m_pData[i-n] = m_pData[i];
+    m_pData[i-n] = '\0';
   }
 
   void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ')
@@ -138,7 +155,7 @@ public:
   
   size_t length() const
   {
-    return N;
+    return strlen(m_pData);
   }
   
 private:
