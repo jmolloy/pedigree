@@ -68,7 +68,7 @@ void Backtrace::prettyPrint(char *pBuffer, unsigned int nBufferLength)
     const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
     StackFrame sf(m_pBasePointers[i], pSym);
     sf.prettyPrint(pStr, 128);
-     //sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);
+//      sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);
     int nLeft = nBufferLength - strlen(pStr);
     strncat(pBuffer, pStr, nLeft);
   }

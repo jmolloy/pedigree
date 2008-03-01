@@ -31,30 +31,32 @@ StackFrame::~StackFrame()
 void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
 {
   bool bIsMember = isClassMember();
-  char pStr[128];
-  sprintf(pStr, "%s(", m_Symbol.name);
-  strncpy(pBuf, pStr, nBufLen-1);
-  pBuf[nBufLen-1] = '\0';
+  
+  LargeStaticString buf = m_Symbol.name;
+  buf += '(';
+  
   if (bIsMember)
   {
-    char pStr[32];
-    sprintf(pStr, "this=0x%x, ", getParameter(0));
-    strncat(pBuf, pStr, nBufLen-strlen(pBuf));
+    buf += "this=0x";
+    buf.append(getParameter(0), 16);
+    buf += ", ";
   }
   
   for (int i = 0; i < m_Symbol.nParams; i++)
   {
     if (i != 0)
-      strncat(pBuf, ", ", nBufLen-strlen(pBuf));
+      buf += ", ";
     
-    char pStr[96];
-    char pStr2[64];
-    format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], pStr2);
-    sprintf(pStr, "%s=%s", m_Symbol.params[i], pStr2);
-    strncat(pBuf, pStr, nBufLen-strlen(pBuf));
+    char pStr[64];
+    format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], pStr);
     
+    buf += m_Symbol.params[i];
+    buf += "=";
+    buf += pStr;
   }
-  strncat(pBuf, ")\n", nBufLen-strlen(pBuf));
+  
+  buf += ")\n";
+  strcpy(pBuf, (const char*)buf);
 }
 
 unsigned int StackFrame::getParameter(unsigned int n)

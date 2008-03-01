@@ -17,6 +17,7 @@
 #define STACKFRAME_H
 
 #include <utility.h>
+#include <demangle.h>
 #include <processor/types.h>
 
 class StackFrame

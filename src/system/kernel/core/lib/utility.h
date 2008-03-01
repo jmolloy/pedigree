@@ -50,14 +50,5 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #define MAX_PARAMS 32
 #define MAX_PARAM_LENGTH 64
 
-typedef struct
-{
-  char name[128]; // Function name.
-  char params[32][64]; // Parameters.
-  int nParams;
-} symbol_t;
-
-void demangle(const char *src, symbol_t *sym);
-
 #endif
 

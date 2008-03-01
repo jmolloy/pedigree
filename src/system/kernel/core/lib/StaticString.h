@@ -17,7 +17,6 @@
 #define STATICSTRING_H
 
 #include <utility.h>
-#include <Log.h>
 
 /**
  * Derivative of StringBase that uses a statically allocated chunk of memory.
@@ -25,129 +24,166 @@
 template<unsigned int N>
 class StaticString
 {
-public:
+  public:
   /**
    * Default constructor.
    */
-  StaticString()
-  {
-    m_pData[0] = '\0';
-  }
-  
-  /**
-   * Creates a StaticString from a const char *.
-   * This creates a new copy of pSrc - pSrc can be safely
-   * deallocated afterwards.
-   */
-  StaticString(const char *pSrc)
-  {
-    strncpy(m_pData, pSrc, N);
-    m_pData[strlen(pSrc)] = '\0';
-  }
-  
-  /**
-   * Copy constructor - creates a StaticString from another StaticString.
-   * Copies the memory associated with src.
-   */
-  StaticString(const StaticString &src)
-  {
-    strncpy(m_pData, src.m_pData, N);
-    m_pData[src.length()] = '\0';
-  }
-  
-  /**
-   * Virtual destructor.
-   */
-  virtual ~StaticString()
-  {
-  }
-  
-  operator const char*()
-  {
-    return (const char*)m_pData;
-  }
-  
-  StaticString &operator+=(const StaticString &str)
-  {
-    append(str);
-    return *this;
-  }
-  
-  StaticString &operator+=(const int &i)
-  {
-    append(i);
-    return *this;
-  }
-  
-  StaticString left(int n)
-  {
-    StaticString<N> str;
-    strncpy(str.m_pData, m_pData, n);
-    str.m_pData[n] = '\0';
-    return str;
-  }
-
-  StaticString right(int n)
-  {
-    StaticString<N> str;
-    strncpy(str.m_pData, &m_pData[strlen(m_pData)-n], n);
-    str.m_pData[n] = '\0';
-    return str;
-  }
-
-  void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ')
-  {
-    char pStr[64];
-    char pFormat[8];
-    const char *pRadix;
-    switch (nRadix)
+    StaticString()
     {
-      case 8:
-        pRadix = "o";
-        break;
-      case 10:
-        pRadix = "d";
-        break;
-      case 16:
-        pRadix = "x";
-        break;
+      m_pData[0] = '\0';
     }
   
-    sprintf(pFormat, "%%%s", pRadix);
-  
-    sprintf(pStr, pFormat, nInt);
-    append(pStr, nLen, c);
-  }
-  
-  void append(const StaticString &str, size_t nLen=0, char c=' ')
-  {
-    if (nLen < str.length())
+  /**
+     * Creates a StaticString from a const char *.
+     * This creates a new copy of pSrc - pSrc can be safely
+     * deallocated afterwards.
+   */
+    StaticString(const char *pSrc)
     {
-      strcat(m_pData, str.m_pData);
-      NOTICE("append: here." << m_pData);
+      strncpy(m_pData, pSrc, N);
+      if (strlen(pSrc) >= N)
+        m_pData[N-1] = '\0';
+      else
+        m_pData[strlen(pSrc)] = '\0';
     }
-    else
+  
+  /**
+     * Copy constructor - creates a StaticString from another StaticString.
+     * Copies the memory associated with src.
+   */
+    StaticString(const StaticString &src)
     {
-      unsigned int i;
-      for(i = length(); i < nLen - str.length() + length(); i++)
+      strncpy(m_pData, src.m_pData, N);
+      if (src.length() >= N)
+        m_pData[N-1] = '\0';
+      else
+        m_pData[src.length()] = '\0';
+    }
+  
+  /**
+     * Virtual destructor.
+   */
+    virtual ~StaticString()
+    {
+    }
+  
+    operator const char*()
+    {
+      return static_cast<const char*>(m_pData);
+    }
+  
+    StaticString &operator+=(const StaticString &str)
+    {
+      append(str);
+      return *this;
+    }
+  
+    StaticString &operator+=(const int &i)
+    {
+      append(i);
+      return *this;
+    }
+  
+    StaticString &operator+=(const char &i)
+    {
+      char ch[2];
+      ch[0] = i;
+      ch[1] = '\0';
+      append(ch);
+      return *this;
+    }
+  
+    bool operator==(const char* pStr)
+    {
+      return (strcmp(m_pData, pStr) == 0);
+    }
+  
+    bool operator==(StaticString &other)
+    {
+      return (strcmp(m_pData, other.m_pData) == 0);
+    }
+  
+    StaticString left(int n)
+    {
+      StaticString<N> str;
+      strncpy(str.m_pData, m_pData, n);
+      str.m_pData[n] = '\0';
+      return str;
+    }
+
+    StaticString right(int n)
+    {
+      StaticString<N> str;
+      strncpy(str.m_pData, &m_pData[strlen(m_pData)-n], n);
+      str.m_pData[n] = '\0';
+      return str;
+    }
+  
+    StaticString &stripFirst(int n=1)
+    {
+      if (n > strlen(m_pData))
+        return *this;
+      int i;
+      for (i = n; m_pData[i] != '\0'; i++)
+        m_pData[i-n] = m_pData[i];
+      m_pData[i-n] = '\0';
+      return *this;
+    }
+
+    void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ')
+    {
+      char pStr[64];
+      char pFormat[8];
+      const char *pRadix;
+      switch (nRadix)
       {
-        m_pData[i] = c;
+        case 8:
+          pRadix = "o";
+          break;
+        case 10:
+          pRadix = "d";
+          break;
+        case 16:
+          pRadix = "x";
+          break;
       }
-      m_pData[i] = '\0';
-      strcat(m_pData, str.m_pData);
+  
+      sprintf(pFormat, "%%%s", pRadix);
+  
+      sprintf(pStr, pFormat, nInt);
+      append(pStr, nLen, c);
     }
-  }
   
-  size_t length() const
-  {
-    return N;
-  }
+    void append(const StaticString &str, size_t nLen=0, char c=' ')
+    {
+      if (nLen < str.length())
+      {
+        strncat(m_pData, str.m_pData, N-strlen(m_pData));
+      // Ensure our last character is '\0', so strlen's can't fuck up.
+        m_pData[N-1] = '\0';
+      }
+      else
+      {
+        unsigned int i;
+        for(i = length(); i < nLen - str.length() + length(); i++)
+        {
+          m_pData[i] = c;
+        }
+        m_pData[i] = '\0';
+        strcat(m_pData, str.m_pData);
+      }
+    }
   
-private:
+    size_t length() const
+    {
+      return strlen(m_pData);
+    }
+  
+  private:
   /**
    * Our actual static data.
    */
-  char m_pData[N];
+    char m_pData[N];
 };
 
 #endif
