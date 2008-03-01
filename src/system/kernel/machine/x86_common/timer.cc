@@ -13,17 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
+#include <machine/timer.h>
 #include "rtc.h"
 
-void initialiseMachine()
+Timer &Timer::instance()
 {
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-  }
-
-  // TODO
+  return Rtc::instance();
 }

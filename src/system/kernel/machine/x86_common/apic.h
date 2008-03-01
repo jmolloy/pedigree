@@ -18,27 +18,36 @@
 
 #include <machine/irq.h>
 
-namespace x86_common
+/** @addtogroup kernelmachinex86common x86-common
+ * x86-common
+ *  @ingroup kernelmachine
+ * @{ */
+
+/** The x86/x64 advanced programmable interrupt controller architecture as IrqManager */
+class Apic : public IrqManager
 {
-  /** @addtogroup kernelmachinex86common x86-common
-   * x86-common
-   *  @ingroup kernelmachine
-   * @{ */
+  public:
+    virtual irq_id_t registerIsaIrqHandler(uint8_t, IrqHandler *handler);
+    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
+    virtual void acknoledgeIrq(irq_id_t Id);
+    virtual void unregisterHandler(irq_id_t Id);
 
-  class Apic : public IrqManager
-  {
-    public:
-      virtual bool initialize();
-      virtual void uninitialize();
-      virtual IrqId_t registerIsaIrqHandler(IrqNumber_t, IrqHandler *handler);
-      virtual IrqId_t registerPciIrqHandler(irqHandler *handler);
-      virtual void acknoledgeIrq(IrqId_t Id);
-      virtual void unregisterHandler(IrqId_t Id);
+  private:
+    /** The default constructor */
+    inline Apic(){}
+    /** The destructor */
+    inline virtual ~Apic(){}
+    /** The copy-constructor
+     *\note NOT implemented */
+    Apic(const Apic &);
+    /** The assignment operator
+     *\note NOT implemented */
+    Apic &operator = (const Apic &);
 
-    private:
-  };
+    /** The Apic instance */
+    static Apic m_Instance;
+};
 
-  /** @} */
-}
+/** @} */
 
 #endif

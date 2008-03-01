@@ -60,6 +60,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/LogViewer.cc \
             debugger/commands/Backtracer.cc \
             debugger/commands/BreakpointCommand.cc \
+            debugger/commands/DumpCommand.cc \
             debugger/LocalIO.cc \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
@@ -81,6 +82,11 @@ SRCFILES += core/processor/io.c
 # x86_commmon source file list.
 ifdef X86_COMMON
 SRCFILES += machine/x86_common/initialiseMachine.cc \
+            machine/x86_common/apic.cc \
+            machine/x86_common/pic.cc \
+            machine/x86_common/pit.cc \
+            machine/x86_common/rtc.cc \
+            machine/x86_common/timer.cc \
             core/processor/x86_common/processor.cc
 endif
 
@@ -93,7 +99,8 @@ SRCFILES += core/processor/x86/initialiseProcessor1.cc \
             core/processor/x86/asm_interrupt.S \
             core/processor/x86/asm_processor.S \
             core/processor/x86/processor.cc \
-            core/processor/x86/gdt.cc
+            core/processor/x86/gdt.cc \
+            core/processor/x86/state.cc
 endif
 
 ###################################################################
@@ -106,7 +113,8 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/asm_syscall.S \
             core/processor/x64/asm_interrupt.S \
             core/processor/x64/asm_processor.S \
-            core/processor/x64/gdt.cc
+            core/processor/x64/gdt.cc \
+            core/processor/x64/state.cc
 endif
 
 ###################################################################

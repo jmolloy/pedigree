@@ -50,6 +50,17 @@ class X64InterruptState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+    /** Get the number of registers
+     *\return the number of registers */
+    size_t getRegisterCount() const;
+    /** Get a specific register
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the value of the register */
+    processor_register_t getRegister(size_t index) const;
+    /** Get the name of a specific register
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the name of the register */
+    const char *getRegisterName(size_t index) const;
 
     //
     // InterruptState Interface
@@ -143,6 +154,17 @@ class X64SyscallState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+    /** Get the number of registers
+     *\return the number of registers */
+    size_t getRegisterCount() const;
+    /** Get a specific register
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the value of the register */
+    processor_register_t getRegister(size_t index) const;
+    /** Get the name of a specific register
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the name of the register */
+    const char *getRegisterName(size_t index) const;
 
     //
     // SyscallState Interface

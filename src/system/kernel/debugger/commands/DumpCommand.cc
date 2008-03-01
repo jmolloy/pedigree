@@ -13,17 +13,24 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
-#include "rtc.h"
+#include "DumpCommand.h"
+#include <utility.h>
 
-void initialiseMachine()
+DumpCommand::DumpCommand()
+ : DebuggerCommand()
 {
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-  }
+}
 
-  // TODO
+DumpCommand::~DumpCommand()
+{
+}
+
+void DumpCommand::autocomplete(char *input, char *output, int len)
+{
+}
+
+bool DumpCommand::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *pScreen)
+{
+  strcpy(output, "hello\n");
+  return true;
 }

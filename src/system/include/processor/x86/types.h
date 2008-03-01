@@ -43,6 +43,9 @@ typedef X86int32_t X86intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
 typedef X86uint32_t X86uintptr_t;
 
+/** Define an unsigned integer type for the processor registers */
+typedef X86uint32_t X86processor_register_t;
+
 /** Define ssize_t */
 typedef signed long X86ssize_t;
 /** Define size_t */

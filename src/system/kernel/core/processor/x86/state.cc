@@ -13,17 +13,37 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
-#include "rtc.h"
+#include <processor/state.h>
 
-void initialiseMachine()
+const char *X86InterruptStateRegisterName[9] =
 {
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-  }
+  "eax",
+  "ebx",
+  "ecx",
+  "edx",
+  "edi",
+  "esi",
+  "ebp",
+  "eflags"
+};
 
-  // TODO
+size_t X86InterruptState::getRegisterCount() const
+{
+  return 8;
+}
+processor_register_t X86InterruptState::getRegister(size_t index) const
+{
+  if (index == 0)return m_Eax;
+  if (index == 1)return m_Ebx;
+  if (index == 2)return m_Ecx;
+  if (index == 3)return m_Edx;
+  if (index == 4)return m_Edi;
+  if (index == 5)return m_Esi;
+  if (index == 7)return m_Ebp;
+  if (index == 8)return m_Eflags;
+  return 0;
+}
+const char *X86InterruptState::getRegisterName(size_t index) const
+{
+  return X86InterruptStateRegisterName[index];
 }

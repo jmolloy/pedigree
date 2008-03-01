@@ -67,6 +67,9 @@ typedef PROCESSOR_SPECIFIC_NAME(intptr_t) intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
 typedef PROCESSOR_SPECIFIC_NAME(uintptr_t) uintptr_t;
 
+/** Define an unsigned integer type for processor registers */
+typedef PROCESSOR_SPECIFIC_NAME(processor_register_t) processor_register_t;
+
 /** Define ssize_t */
 typedef PROCESSOR_SPECIFIC_NAME(ssize_t) ssize_t;
 /** Define size_t */

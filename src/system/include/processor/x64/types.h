@@ -43,6 +43,9 @@ typedef X64int64_t X64intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
 typedef X64uint64_t X64uintptr_t;
 
+/** Define an unsigned integer type for the processor registers */
+typedef X64uint64_t X64processor_register_t;
+
 /** Define ssize_t */
 typedef X64int64_t X64ssize_t;
 /** Define size_t */

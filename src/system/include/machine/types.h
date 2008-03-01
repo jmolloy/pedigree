@@ -13,17 +13,34 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
-#include "rtc.h"
+#ifndef KERNEL_MACHINE_TYPES_H
+#define KERNEL_MACHINE_TYPES_H
 
-void initialiseMachine()
-{
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-  }
+#ifdef X86_COMMON
+  #include <machine/x86_common/types.h>
+  #define MACHINE_SPECIFIC_NAME(x) X86Common##x
+#endif
 
-  // TODO
-}
+
+// NOTE: This throws a compile-time error if this header is not adapted for
+//       the selected machine architecture
+#ifndef MACHINE_SPECIFIC_NAME
+  #error Unknown machine architecture
+#endif
+
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+// NOTE: If a newly added machine architecture does not supply all the
+//       needed types, you will get an error here
+
+/** Define a type for IRQ identifications */
+typedef MACHINE_SPECIFIC_NAME(irq_id_t) irq_id_t;
+
+/** @} */
+
+#undef MACHINE_SPECIFIC_NAME
+
+#endif

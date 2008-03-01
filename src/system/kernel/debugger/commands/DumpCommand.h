@@ -13,17 +13,46 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
-#include "rtc.h"
+#ifndef DumpCommand_H
+#define DumpCommand_H
 
-void initialiseMachine()
+#include <DebuggerCommand.h>
+
+/**
+ * Debugger command that allows viewing of the Cpu dump.
+ */
+class DumpCommand : public DebuggerCommand
 {
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-  }
+public:
+  /**
+   * Default constructor - does nothing.
+   */
+  DumpCommand();
 
-  // TODO
-}
+  /**
+   * Default destructor - does nothing.
+   */
+  ~DumpCommand();
+
+  /**
+   * Return an autocomplete string, given an input string.
+   */
+  void autocomplete(char *input, char *output, int len);
+
+  /**
+   * Execute the command with the given screen.
+   */
+  bool execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen);
+  
+  /**
+   * Returns the string representation of this command.
+   */
+  const char *getString()
+  {
+    return "dump";
+  }
+  
+};
+
+#endif
+
