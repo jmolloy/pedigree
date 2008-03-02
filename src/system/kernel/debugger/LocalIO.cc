@@ -158,7 +158,7 @@ void LocalIO::writeCli(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour
 
 }
 
-bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
+bool LocalIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
 {
   // Are we ready to recieve another command?
   if (m_bReady)
@@ -204,7 +204,7 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
       {
         // Get the full autocomplete string.
         const char *pACString = pAutoComplete->getString();
-        // Here we hack like complete bitches. Just find the last space in the string,
+        // HACK:: Here we hack like complete bitches. Just find the last space in the string,
         // and memcpy the full autocomplete string in.
         int i;
         for (i = strlen(m_pCommand); i >= 0; i--)
@@ -238,7 +238,7 @@ bool LocalIO::readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete)
   }
 
   // Now do a strncpy to the target string.
-  strncpy(str, m_pCommand, maxLen);
+  str = static_cast<const char *>(m_pCommand);
   
   return m_bReady;
 }

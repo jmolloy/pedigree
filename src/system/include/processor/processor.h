@@ -72,7 +72,7 @@ class Processor
     static uintptr_t getDebugStatus();
     
     static void setInterrupts(bool bEnable); /// Start maskable interrupts.
-    static void setSingleStep(bool bEnable); /// Enable single step mode.
+    static void setSingleStep(bool bEnable, InterruptState &state); /// Enable single step mode.
 
     #ifdef X86_COMMON
       /** Read a Machine/Model-specific register

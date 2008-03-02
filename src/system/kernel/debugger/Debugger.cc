@@ -25,6 +25,7 @@
 #include <LogViewer.h>
 #include <Backtracer.h>
 #include <utility.h>
+#include <StepCommand.h>
 
 Debugger Debugger::m_Instance;
 
@@ -91,14 +92,16 @@ void Debugger::breakpoint(InterruptState &state)
   QuitCommand quit;
   BreakpointCommand breakpoint;
   DumpCommand dump;
+  StepCommand step;
   
-  int nCommands = 6;
+  int nCommands = 7;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
                                   &quit,
                                   &breakpoint,
-                                  &dump};
+                                  &dump,
+                                  &step};
   
   if (m_nIoType == MONITOR) pIo = &localIO;
   else
@@ -115,8 +118,8 @@ void Debugger::breakpoint(InterruptState &state)
   do
   {
     // Clear the top and bottom status lines.
-    pIo->drawHorizontalLine(' ', 0, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-    pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
     // Write the correct text in the upper status line.
     pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
   
@@ -127,31 +130,28 @@ void Debugger::breakpoint(InterruptState &state)
     {
       // Try and get a character from the CLI, passing in a buffer to populate and an
       // autocomplete command for if the user presses TAB (if one is defined).
-      if (pIo->readCli(const_cast<char*>((const char*)command), 256, pAutoComplete))
+      if (pIo->readCli(command, pAutoComplete))
         break; // Command complete, try and parse it.
   
       // The command wasn't complete - let's parse it and try and get an autocomplete string.
-      HugeStaticString autoStr;
-      char pStr2[64];
+      HugeStaticString str;
+      NormalStaticString str2;
       matchedCommand = false;
       for (int i = 0; i < nCommands; i++)
       {
         if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
         {
-          strcpy(pStr2, pCommands[i]->getString());
-          strcat(pStr2, " ");
-          pCommands[i]->autocomplete(command, autoStr);
+          str2 = static_cast<const char *>(pCommands[i]->getString());
+          str2 += ' ';
+          pCommands[i]->autocomplete(command, str);
           matchedCommand = true;
           break;
         }
       }
-  
-      HugeStaticString str;
+
       pAutoComplete = 0;
       if (!matchedCommand)
       {
-        pStr2[0] = '\0';
-        str = "";
         int i = -1;
         while ( (i = getCommandMatchingPrefix(const_cast<char*>((const char*)command), pCommands, nCommands, i+1)) != -1)
         {
@@ -162,9 +162,9 @@ void Debugger::breakpoint(InterruptState &state)
         }
       }
       
-      pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
-      pIo->drawString(pStr2, 24, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-      pIo->drawString(str, 24, strlen(pStr2), DebuggerIO::White, DebuggerIO::DarkGrey);
+      pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
+      pIo->drawString(str2, pIo->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
+      pIo->drawString(str, pIo->getHeight()-1, str2.length(), DebuggerIO::White, DebuggerIO::DarkGrey);
     }
   
     // A command was entered.

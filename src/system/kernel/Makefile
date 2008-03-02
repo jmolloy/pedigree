@@ -61,6 +61,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/Backtracer.cc \
             debugger/commands/BreakpointCommand.cc \
             debugger/commands/DumpCommand.cc \
+            debugger/commands/StepCommand.cc \
             debugger/LocalIO.cc \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \

@@ -17,6 +17,8 @@
 #ifndef DEBUGGER_IO_H
 #define DEBUGGER_IO_H
 
+#include <StaticString.h>
+
 class DebuggerCommand;
 
 /**
@@ -90,7 +92,7 @@ public:
    * the current buffer is returned in *str, and the return value is true if the command
    * is complete (if enter has been pressed). *str will never exceed maxLen.
    */
-  virtual bool readCli(char *str, int maxLen, DebuggerCommand *pAutoComplete) = 0;
+  virtual bool readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete) = 0;
 
   /**
    * Draw a line of characters in the given fore and back colours, in the 

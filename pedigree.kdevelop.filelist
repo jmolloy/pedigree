@@ -113,6 +113,8 @@ src/system/kernel/debugger/commands/LogViewer.cc
 src/system/kernel/debugger/commands/LogViewer.h
 src/system/kernel/debugger/commands/QuitCommand.cc
 src/system/kernel/debugger/commands/QuitCommand.h
+src/system/kernel/debugger/commands/StepCommand.cc
+src/system/kernel/debugger/commands/StepCommand.h
 src/system/kernel/debugger/keymap_qwerty.h
 src/system/kernel/debugger/keymap_qwertz.h
 src/system/kernel/debugger/libudis86

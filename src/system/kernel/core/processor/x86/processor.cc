@@ -83,9 +83,18 @@ void Processor::disableDebugBreakpoint(uint32_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
-  asm volatile("sti");
+  if (bEnable)
+    asm volatile("sti");
+  else
+    asm volatile("cli");
 }
 
-void Processor::setSingleStep(bool bEnable)
+void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
+  uintptr_t eflags = state.getFlags();
+  if (bEnable)
+    eflags |= 0x100;
+  else
+    eflags &= ~0x100;
+  state.setFlags(eflags);
 }

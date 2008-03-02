@@ -50,6 +50,12 @@ class X86InterruptState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+    /** Get the flags register
+     *\return the flags register */
+    inline uintptr_t getFlags() const;
+    /** Set the flags register
+     *\param[in] flags the new flags */
+    inline void setFlags(uintptr_t flags);
     /** Get the number of registers
      *\return the number of registers */
     size_t getRegisterCount() const;
@@ -158,6 +164,14 @@ uintptr_t X86InterruptState::getBasePointer() const
 void X86InterruptState::setBasePointer(uintptr_t basePointer)
 {
   m_Ebp = basePointer;
+}
+uintptr_t X86InterruptState::getFlags() const
+{
+  return m_Eflags;
+}
+void X86InterruptState::setFlags(uintptr_t flags)
+{
+  m_Eflags = flags;
 }
 
 size_t X86InterruptState::getInterruptNumber() const

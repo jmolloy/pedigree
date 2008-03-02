@@ -32,7 +32,7 @@
   #error Unknown processor architecture
 #endif
 
-/** @addtogroup kernelprocessor processor-specifc kernel
+/** @addtogroup kernelprocessor processor-specific kernel
  * processor-specific kernel interface
  *  @ingroup kernel
  * @{ */
