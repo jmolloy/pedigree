@@ -18,6 +18,7 @@
 #define BACKTRACE_H
 
 #include <processor/processor.h>
+#include <StaticString.h>
 
 #define MAX_STACK_FRAMES 20
 
@@ -51,7 +52,7 @@ public:
    */
   unsigned int getBasePointer(unsigned int n);
   
-  void prettyPrint(char *pBuffer, unsigned int nBufferLength);
+  void prettyPrint(HugeStaticString &buf);
   
 private:
   /**

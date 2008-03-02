@@ -19,6 +19,7 @@
 #include <utility.h>
 #include <demangle.h>
 #include <processor/types.h>
+#include <StaticString.h>
 
 class StackFrame
 {
@@ -27,14 +28,14 @@ public:
    * Creates a stack frame based on the given Base Pointer value, and also the given
    * symbol name (mangled).
    */
-  StackFrame(unsigned int nBasePointer, const char *pMangledSymbol);
+  StackFrame(unsigned int nBasePointer, NormalStaticString &mangledSymbol);
   ~StackFrame();
 
   /**
    * Returns a pretty printed string containing the function name and each parameter with
    * its value (hopefully).
    */
-  void prettyPrint(char *pBuf, unsigned int nBufLen);
+  void prettyPrint(HugeStaticString &buf);
   
 private:
   /**
@@ -53,7 +54,7 @@ private:
   /**
    * Formats a number, given the 'type' of that number.
    */
-  void format(unsigned int n, const char *pType, char *pDest);
+  void format(unsigned int n, const LargeStaticString &type, HugeStaticString &dest);
   
   uintptr_t m_nBasePointer;
   symbol_t m_Symbol;

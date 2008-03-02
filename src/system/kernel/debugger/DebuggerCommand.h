@@ -18,6 +18,7 @@
 #define DEBUGGER_COMMAND_H
 
 #include <processor/state.h>
+#include <StaticString.h>
 
 class DebuggerIO;
 
@@ -36,7 +37,7 @@ public:
    * Return an autocomplete string, given an input string. The string put into *output must not
    * exceed len in length.
    */
-  virtual void autocomplete(char *input, char *output, int len) = 0;
+  virtual void autocomplete(const HugeStaticString &input, HugeStaticString &output) = 0;
 
   /**
    * Execute the command with the given screen. The command can take over the screen while
@@ -44,12 +45,12 @@ public:
    * \return True if the debugger should continue accepting commands, false if it should return
    *         control to the kernel.
    */
-  virtual bool execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen) = 0;
+  virtual bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen) = 0;
   
   /**
    * Returns the string representation of this command.
    */
-  virtual const char *getString() = 0;
+  virtual const NormalStaticString getString() = 0;
 };
 
 #endif

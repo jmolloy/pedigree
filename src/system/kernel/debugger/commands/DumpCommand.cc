@@ -25,12 +25,12 @@ DumpCommand::~DumpCommand()
 {
 }
 
-void DumpCommand::autocomplete(char *input, char *output, int len)
+void DumpCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
 }
 
-bool DumpCommand::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *pScreen)
+bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  strcpy(output, "hello\n");
+  output = "hello\n";
   return true;
 }

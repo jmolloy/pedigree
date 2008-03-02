@@ -18,6 +18,7 @@
 #include <utility.h>
 #include <Elf32.h>
 #include <StackFrame.h>
+#include <StaticString.h>
 
 // TEMP!
 extern Elf32 elf;
@@ -55,22 +56,19 @@ void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
   m_nStackFrames = i;
 }
 
-void Backtrace::prettyPrint(char *pBuffer, unsigned int nBufferLength)
+void Backtrace::prettyPrint(HugeStaticString &buf)
 {
   // What symbol are we in?
   // TODO grep the memory map for the right ELF to look at.
-  
-  pBuffer[0] = '\0';
   for (size_t i = 0; i < m_nStackFrames; i++)
   {
-    char pStr[128];
     unsigned int symStart = 0;
+
     const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
-    StackFrame sf(m_pBasePointers[i], pSym);
-    sf.prettyPrint(pStr, 128);
-//      sprintf(pStr, "[%d] 0x%x <%s>\n", i, m_pReturnAddresses[i], pSym);
-    int nLeft = nBufferLength - strlen(pStr);
-    strncat(pBuffer, pStr, nLeft);
+    NormalStaticString sym(pSym);
+
+    StackFrame sf(m_pBasePointers[i], sym);
+    sf.prettyPrint(buf);
   }
 }
 

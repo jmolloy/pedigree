@@ -42,6 +42,11 @@
 #define ELF32_R_SYM(val)  ((val) >> 8)
 #define ELF32_R_TYPE(val) ((val) & 0xff)
 
+#define ELF32_ST_BIND(i)	((i)>>4)
+#define ELF32_ST_TYPE(i)	((i)&0xf)
+#define ELF32_ST_INFO(b, t)	(((b)<<4)+((t)&0xf))
+
+
 class BootstrapInfo;
 
 #include <FileLoader.h>

@@ -28,20 +28,19 @@ BreakpointCommand::~BreakpointCommand()
 {
 }
 
-void BreakpointCommand::autocomplete(char *input, char *output, int len)
+void BreakpointCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
 }
 
-bool BreakpointCommand::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *pScreen)
+bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
   // Did we get any input?
-  if (!strcmp(input, "breakpoint"))
+  if (input == "breakpoint")
   {
     // Print out the current breakpoint status.
-    sprintf(output, "Current breakpoint status:\n");
+    output = "Current breakpoint status:\n";
     for(int i = 0; i < 4; i++)
     {
-      char pStr[128];
       DebugFlags::FaultType nFt;
       DebugFlags::Length nLen;
       bool bEnabled;
@@ -84,9 +83,12 @@ bool BreakpointCommand::execute(char *input, char *output, int len, InterruptSta
       const char *pEnabled = "disabled";
       if (bEnabled) pEnabled = "enabled";
       
-      
-      sprintf(pStr, "%d: 0x%x \t%s \t%s \t%s\n", i, nAddress, pFaultType, pLength, pEnabled);
-      strcat(output, pStr);
+      output += i;
+      output += ": 0x"; output.append(nAddress, 16);
+      output += " \t";  output.append(pFaultType);
+      output += " \t";  output.append(pLength);
+      output += " \t";  output.append(pEnabled);
+      output += "\n";
     }
   }
 

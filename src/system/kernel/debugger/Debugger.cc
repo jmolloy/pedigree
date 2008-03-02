@@ -121,62 +121,61 @@ void Debugger::breakpoint(InterruptState &state)
     pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
   
     bool matchedCommand = false;
-    char pCommand[256];
+    HugeStaticString command;
     DebuggerCommand *pAutoComplete = 0;
     while(1)
     {
       // Try and get a character from the CLI, passing in a buffer to populate and an
       // autocomplete command for if the user presses TAB (if one is defined).
-      if (pIo->readCli(pCommand, 256, pAutoComplete))
+      if (pIo->readCli(const_cast<char*>((const char*)command), 256, pAutoComplete))
         break; // Command complete, try and parse it.
   
       // The command wasn't complete - let's parse it and try and get an autocomplete string.
-      char pStr[256];
+      HugeStaticString autoStr;
       char pStr2[64];
       matchedCommand = false;
       for (int i = 0; i < nCommands; i++)
       {
-        if (matchesCommand(pCommand, pCommands[i]))
+        if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
         {
-         strcpy(pStr2, pCommands[i]->getString());
+          strcpy(pStr2, pCommands[i]->getString());
           strcat(pStr2, " ");
-          pStr[0] = '\0';
-          pCommands[i]->autocomplete(pCommand, pStr, 256);
+          pCommands[i]->autocomplete(command, autoStr);
           matchedCommand = true;
           break;
         }
       }
   
+      HugeStaticString str;
       pAutoComplete = 0;
       if (!matchedCommand)
       {
         pStr2[0] = '\0';
-        pStr[0] = '\0';
+        str = "";
         int i = -1;
-        while ( (i = getCommandMatchingPrefix(pCommand, pCommands, nCommands, i+1)) != -1)
+        while ( (i = getCommandMatchingPrefix(const_cast<char*>((const char*)command), pCommands, nCommands, i+1)) != -1)
         {
           if (!pAutoComplete)
             pAutoComplete = pCommands[i];
-          strcat (pStr, pCommands[i]->getString());
-          strcat (pStr, " ");
+          str += static_cast<const char*> (pCommands[i]->getString());
+          str += " ";
         }
       }
       
       pIo->drawHorizontalLine(' ', 24, 0, 79, DebuggerIO::White, DebuggerIO::DarkGrey);
       pIo->drawString(pStr2, 24, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-      pIo->drawString(pStr, 24, strlen(pStr2), DebuggerIO::White, DebuggerIO::DarkGrey);
+      pIo->drawString(str, 24, strlen(pStr2), DebuggerIO::White, DebuggerIO::DarkGrey);
     }
   
     // A command was entered.
     bool bValidCommand = false;
-    char pStr[256];
+    HugeStaticString output;
     for (int i = 0; i < nCommands; i++)
     {
-      if (matchesCommand(pCommand, pCommands[i]))
+      if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
       {
-        pStr[0] = '\0';
-        bKeepGoing = pCommands[i]->execute(pCommand, pStr, 256, state, pIo);
-        pIo->writeCli(pStr, DebuggerIO::LightGrey, DebuggerIO::Black);
+        bKeepGoing = pCommands[i]->execute(command, output, state, pIo);
+        pIo->writeCli(output, DebuggerIO::LightGrey, DebuggerIO::Black);
         bValidCommand = true;
       }
     }

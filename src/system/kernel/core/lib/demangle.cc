@@ -9,8 +9,15 @@
 //include "StaticString.h"
 
 // typedef StaticString<128> LargeStaticString;
-typedef struct
+typedef struct demangle
 {
+  demangle() :
+    nSubstitutions(0),
+    nTemplateParams(0),
+    nParams(0),
+    nLevel(0),
+    nNameParseLevel(0)
+  {}
   LargeStaticString substitutions[16];
   int nSubstitutions;
   LargeStaticString templateParams[8];
@@ -312,10 +319,10 @@ static int parsePrefix(LargeStaticString &src, LargeStaticString &dest, demangle
   ::= <template_param>
   ::= <substitution>
 */
-static int parseTemplatePrefix(LargeStaticString &src, LargeStaticString &dest, demangle_t &data)
-{
-   // Unused.
-}
+// static int parseTemplatePrefix(LargeStaticString &src, LargeStaticString &dest, demangle_t &data)
+// {
+    // Unused.
+// }
 
 /*
 <unqualified_name> ::= <operator_name>
@@ -803,10 +810,10 @@ static int parseFunctionType(LargeStaticString &src, LargeStaticString &dest, de
 /*
 <bare_function_type> ::= <type>+
 */
-static int parseBareFunctionType(LargeStaticString &src, LargeStaticString &dest, demangle_t &data)
-{
+// static int parseBareFunctionType(LargeStaticString &src, LargeStaticString &dest, demangle_t &data)
+// {
   // Unused.
-}
+// }
 
 /*
 <array_type> ::= A <number> _ <type>

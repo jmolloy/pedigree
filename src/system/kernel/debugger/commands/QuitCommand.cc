@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,11 +27,11 @@ QuitCommand::~QuitCommand()
 {
 }
 
-void QuitCommand::autocomplete(char *input, char *output, int len)
+void QuitCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
 }
 
-bool QuitCommand::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *pScreen)
+bool QuitCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
   return false; // Return control to the kernel.
 }

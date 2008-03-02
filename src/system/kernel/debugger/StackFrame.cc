@@ -16,11 +16,12 @@
 #include "StackFrame.h"
 #include <Log.h>
 
-StackFrame::StackFrame(unsigned int nBasePointer, const char *pMangledSymbol) :
+StackFrame::StackFrame(unsigned int nBasePointer, NormalStaticString &mangledSymbol) :
   m_nBasePointer(nBasePointer), m_Symbol()
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
-  demangle(pMangledSymbol, &m_Symbol);
+  LargeStaticString tmpStr(mangledSymbol);
+  demangle(tmpStr, &m_Symbol);
 }
 
 
@@ -28,11 +29,11 @@ StackFrame::~StackFrame()
 {
 }
 
-void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
+void StackFrame::prettyPrint(HugeStaticString &buf)
 {
   bool bIsMember = isClassMember();
   
-  LargeStaticString buf = m_Symbol.name;
+  buf += static_cast<const char*>(m_Symbol.name);
   buf += '(';
   
   if (bIsMember)
@@ -47,16 +48,10 @@ void StackFrame::prettyPrint(char *pBuf, unsigned int nBufLen)
     if (i != 0)
       buf += ", ";
     
-    char pStr[64];
-    format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], pStr);
-    
-    buf += m_Symbol.params[i];
-    buf += "=";
-    buf += pStr;
+    format(getParameter((bIsMember)?i+1:i), m_Symbol.params[i], buf);
   }
   
   buf += ")\n";
-  strcpy(pBuf, (const char*)buf);
 }
 
 unsigned int StackFrame::getParameter(unsigned int n)
@@ -65,51 +60,55 @@ unsigned int StackFrame::getParameter(unsigned int n)
   return *pPtr;
 }
   
-void StackFrame::format(unsigned int n, const char *pType, char *pDest)
+void StackFrame::format(unsigned int n, const LargeStaticString &type, HugeStaticString &dest)
 {
   // Is the type a char * or const char *?
-  if (!strcmp(pType, "char*") || !strcmp(pType, "const char*"))
+  if (type == "char*" || type == "const char*")
   {
-    char pStr[32];
-    char *pOrigStr = reinterpret_cast<char*>(n);
-    strncpy(pStr, pOrigStr, 31);
-    sprintf(pDest, "\"%s\"", pStr);
+    dest += '"';
+    dest += static_cast<const char *>(type.left(32)); // Only 22 characters max.
+    dest += '"';
   }
   // char? or const char?
-  else if (!strcmp(pType, "char") || !(strcmp(pType, "const char")))
+  else if (type == "char" || type == "const char")
   {
-    sprintf(pDest, "'%c'", static_cast<char>(n));
+    dest += '\'';
+    dest += static_cast<char>(n);
+    dest += '\'';
   }
   // bool?
-  else if (!strcmp(pType, "bool") || !(strcmp(pType, "const bool")))
+  else if (type == "bool" || type == "const bool")
   {
     bool b = static_cast<bool>(n);
     if (b)
-      strcpy(pDest, "true");
+      dest += "true";
     else
-      strcpy(pDest, "false");
+      dest += "false";
   }
-  // Else just use a hex integer.
+  // Else just use a hex integer, represented as a cast.
   else
   {
-    sprintf(pDest, "0x%x", n);
+    dest += "(";
+    dest += static_cast<const char*> (type);
+    dest += ")0x";
+    dest.append(n, 16);
   }
 }
 
 bool StackFrame::isClassMember()
 {
-  char *nScopeIdx = strrchr(m_Symbol.name, ':');
-  if (nScopeIdx == 0)
+  int nScopeIdx = m_Symbol.name.last(':');
+  if (nScopeIdx == -1)
     return false;
   
-  char *i;
+  int i;
   for (i = nScopeIdx-2;
-       *i != 0 && *i != ':';
+       m_Symbol.name[i] != 0 && m_Symbol.name[i] != ':';
        i--)
     ;
   i++;
   
-  if (*i >= 'A' && *i <= 'Z')
+  if (m_Symbol.name[i] >= 'A' && m_Symbol.name[i] <= 'Z')
     return true;
   else
     return false;

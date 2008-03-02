@@ -18,10 +18,12 @@
 
 #include <StaticString.h>
 
-typedef StaticString<128> LargeStaticString;
-
-typedef struct
+typedef struct symbol
 {
+  symbol() :
+    name(),
+    nParams(0)
+  {}
   LargeStaticString name; // Function name.
   LargeStaticString params[32]; // Parameters.
   int nParams;

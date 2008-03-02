@@ -18,6 +18,7 @@
 #include <Backtrace.h>
 #include <DebuggerIO.h>
 #include <utility.h>
+#include <StaticString.h>
 
 Backtracer::Backtracer()
 {
@@ -27,23 +28,23 @@ Backtracer::~Backtracer()
 {
 }
 
-void Backtracer::autocomplete(char *input, char *output, int len)
+void Backtracer::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
   // TODO: add symbols.
-  strcpy(output, "<address> (optional)");
+  output = "<address> (optional)";
 }
 
-bool Backtracer::execute(char *input, char *output, int len, InterruptState &state, DebuggerIO *screen)
+bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
 {
   Backtrace bt;
   bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());
 
-  bt.prettyPrint(output, len);
+  bt.prettyPrint(output);
 
   return true;
 }
 
-const char *Backtracer::getString()
+const NormalStaticString Backtracer::getString()
 {
   return "backtrace";
 }

@@ -135,6 +135,14 @@ const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
   
   for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
   {
+    // Make sure we're looking at an object or function.
+    if (ELF32_ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
+        ELF32_ST_TYPE(pSymbol->info) != 0x0 /* notype (asm functions) */)
+    {
+      pSymbol++;
+      continue;
+    }
+    
     // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
     // count it!
     uint32_t size = pSymbol->size;
