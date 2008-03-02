@@ -106,7 +106,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
       symbol_t sym;
       demangle(tmpStr, &sym);
       
-      output += (const char *)sym.name;
+      output += sym.name;
       if (sym.nParams > 0)
       {
         output += "(";
@@ -114,7 +114,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
         {
           if (i != 0)
             output += ", ";
-          output += (const char *)sym.params[i];
+          output += sym.params[i];
         }
         output += ")";
       }
@@ -137,5 +137,5 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 
 const NormalStaticString DisassembleCommand::getString()
 {
-  return "disassemble";
+  return NormalStaticString("disassemble");
 }

@@ -39,6 +39,8 @@ src/system/include/processor/x86/state.h
 src/system/include/processor/x86/types.h
 src/system/include/utilities
 src/system/include/utilities/string.h
+src/system/include/utilities
+src/system/include/utilities/string.h
 src/system/kernel
 src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
@@ -138,6 +140,7 @@ src/system/kernel/machine
 src/system/kernel/machine/x86_common
 src/system/kernel/machine/x86_common/apic.cc
 src/system/kernel/machine/x86_common/apic.h
+src/system/kernel/machine/x86_common/irq.cc
 src/system/kernel/machine/x86_common/pic.cc
 src/system/kernel/machine/x86_common/pic.h
 src/system/modules

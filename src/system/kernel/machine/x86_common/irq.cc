@@ -13,38 +13,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
 #include "pic.h"
-#include "rtc.h"
-#include "pit.h"
+#include "apic.h"
 
-#include <Log.h>
-
-void initialiseMachine()
+IrqManager &IrqManager::instance()
 {
-  // Initialise PIC
-  Pic &pic = Pic::instance();
-  if (pic.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 1");
-  }
-
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 2");
-  }
-
-  // Initialise the PIT
-  Pit &pit = Pit::instance();
-  if (pit.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 3");
-  }
-
-  // TODO
+  // TODO: Select either Apic or Pic
+  return Pic::instance();
 }

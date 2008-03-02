@@ -15,8 +15,15 @@
  */
 #include <machine/timer.h>
 #include "rtc.h"
+#include "pit.h"
 
 Timer &Timer::instance()
 {
   return Rtc::instance();
+}
+
+SchedulerTimer &SchedulerTimer::instance()
+{
+  // TODO: Switch between Local APIC Timer and PIT
+  return Pit::instance();
 }

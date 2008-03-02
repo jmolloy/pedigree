@@ -84,6 +84,7 @@ ifdef X86_COMMON
 SRCFILES += machine/x86_common/initialiseMachine.cc \
             machine/x86_common/apic.cc \
             machine/x86_common/pic.cc \
+            machine/x86_common/irq.cc \
             machine/x86_common/pit.cc \
             machine/x86_common/rtc.cc \
             machine/x86_common/timer.cc \

@@ -49,7 +49,7 @@ public:
    */
   const NormalStaticString getString()
   {
-    return "log";
+    return NormalStaticString("log");
   }
 
 private:

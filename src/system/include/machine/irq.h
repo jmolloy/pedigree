@@ -37,6 +37,7 @@ class IrqHandler
     inline virtual ~IrqHandler(){}
 };
 
+/** This class handles IRQ (un)registration */
 class IrqManager
 {
   public:
@@ -56,7 +57,7 @@ class IrqManager
     virtual void acknoledgeIrq(irq_id_t Id) = 0;
     /** Unregister a previously registered IrqHandler
      *\param[in] Id the irq's identifier */
-    virtual void unregisterHandler(irq_id_t Id) = 0;
+    virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler) = 0;
 
   protected:
     /** The default constructor */

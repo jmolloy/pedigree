@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, J�rg Pf�hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,7 @@ public:
    * Default constructor.
    */
   StaticString()
+    : m_Length(0)
   {
     m_pData[0] = '\0';
   }
@@ -38,41 +39,55 @@ public:
    * This creates a new copy of pSrc - pSrc can be safely
    * deallocated afterwards.
    */
-  StaticString(const char *pSrc)
+  explicit StaticString(const char *pSrc)
+    : m_Length(strlen(pSrc))
   {
     strncpy(m_pData, pSrc, N);
-    if (static_cast<unsigned int>(strlen(pSrc)) >= N)
+
+    if (m_Length >= N)
+    {
+      m_Length = N - 1;
       m_pData[N-1] = '\0';
-    else
-      m_pData[strlen(pSrc)] = '\0';
+    }
   }
   
   /**
    * Copy constructor - creates a StaticString from another StaticString.
    * Copies the memory associated with src.
    */
-  StaticString(const StaticString &src)
+  template<unsigned int N2>
+  explicit StaticString(const StaticString<N2> &src)
+    : m_Length(src.length())
   {
-    strncpy(m_pData, src.m_pData, N);
-    if (src.length() >= N)
+    strncpy(m_pData, src, N);
+
+    if (m_Length >= N)
+    {
+      m_Length = N - 1;
       m_pData[N-1] = '\0';
-    else
-      m_pData[src.length()] = '\0';
+    }
   }
   
   /**
    * Virtual destructor.
    */
-  virtual ~StaticString()
+  ~StaticString()
   {
   }
   
   operator const char*() const 
   {
-    return static_cast<const char*>(m_pData);
+    return m_pData;
   }
   
-  StaticString &operator+=(const StaticString &str)
+  template<unsigned int N2>
+  StaticString &operator+=(const StaticString<N2> &str)
+  {
+    append(str);
+    return *this;
+  }
+
+  StaticString &operator+=(const char *str)
   {
     append(str);
     return *this;
@@ -93,17 +108,30 @@ public:
     return *this;
   }
 
+  StaticString &operator = (const char *str)
+  {
+    m_Length = strlen(str);
+    strncpy(m_pData, str, N);
+    if (m_Length >= N)
+    {
+      m_pData[N - 1] = '\0';
+      m_Length = N - 1;
+    }
+    return *this;
+  }
+
   bool operator==(const char* pStr) const
   {
     return (strcmp(m_pData, pStr) == 0);
   }
 
-  bool operator==(StaticString &other) const
+  template<unsigned int N2>
+  bool operator==(const StaticString<N2> &other) const
   {
-    return (strcmp(m_pData, other.m_pData) == 0);
+    return (strcmp(m_pData, other) == 0);
   }
 
-  int last(const char search)
+  int last(const char search) const
   {
     for (int i = length(); i >= 0; i--)
       if (m_pData[i] == search)
@@ -116,22 +144,23 @@ public:
     if (strlen(other) >= length())
       return (strcmp(m_pData, other) == 0);
     
-    int mylen = length();
-    int itslen = strlen(other);
-    for (int i = 0; i < mylen-itslen+1; i++)
+    size_t mylen = length();
+    size_t itslen = strlen(other);
+    for (size_t i = 0; i < mylen-itslen+1; i++)
       if (strcmp(&m_pData[i], other) == 0)
         return true;
     return false;
   }
     
-  bool contains(StaticString &other) const
+  template<unsigned int N2>
+  bool contains(const StaticString<N2> &other) const
   {
     if (other.length() >= length())
-      return (strcmp(m_pData, other.m_pData) == 0);
+      return (strcmp(m_pData, other) == 0);
     
-    int mylen = length();
-    int itslen = other.length();
-    for (int i = 0; i < mylen-itslen+1; i++)
+    size_t mylen = length();
+    size_t itslen = other.length();
+    for (size_t i = 0; i < mylen-itslen+1; i++)
       if (strcmp(&m_pData[i], other.m_pData) == 0)
         return true;
     return false;
@@ -153,19 +182,24 @@ public:
   StaticString right(int n) const
   {
     StaticString<N> str;
-    strncpy(str.m_pData, &m_pData[strlen(m_pData)-n], n);
+    strncpy(str.m_pData, &m_pData[length()-n], n);
     str.m_pData[n] = '\0';
     return str;
   }
 
-  StaticString &stripFirst(int n=1)
+  StaticString &stripFirst(size_t n=1)
   {
-    if (n > strlen(m_pData))
+    if (n > length())
+    {
+      m_pData[0] = '\0';
+      m_Length = 0;
       return *this;
+    }
     int i;
     for (i = n; m_pData[i] != '\0'; i++)
       m_pData[i-n] = m_pData[i];
     m_pData[i-n] = '\0';
+    m_Length -= n;
     return *this;
   }
 
@@ -193,30 +227,62 @@ public:
     append(pStr, nLen, c);
   }
 
-  void append(const StaticString &str, size_t nLen=0, char c=' ')
+  void append(const char *str, size_t nLen=0, char c=' ')
   {
-    if (nLen < str.length())
+    size_t length2 = strlen(str);
+
+    // Pad, if needed
+    if (nLen > length2)
     {
-      strncat(m_pData, str.m_pData, N-strlen(m_pData));
-      // Ensure our last character is '\0', so strlen's can't fuck up.
-      m_pData[N-1] = '\0';
-    }
-    else
-    {
-      unsigned int i;
-      size_t len = length();
-      for(i = len; i < nLen - str.length() + len; i++)
+      size_t i;
+      for(i = 0; i < nLen - length2; i++)
       {
-        m_pData[i] = c;
+        m_pData[i + length()] = c;
       }
       m_pData[i] = '\0';
-      strcat(m_pData, str.m_pData);
+      m_Length += nLen - length2;
+    }
+
+    // Add the string
+    strncat(m_pData, str, N-length());
+    m_Length += length2;
+
+    if (m_Length >= N)
+    {
+      m_pData[N-1] = '\0';
+      m_Length = N - 1;
+    }
+  }
+
+  template<unsigned int N2>
+  void append(const StaticString<N2> &str, size_t nLen=0, char c=' ')
+  {
+    // Pad, if needed
+    if (nLen > str.length())
+    {
+      size_t i;
+      for(i = 0; i < nLen - str.length(); i++)
+      {
+        m_pData[i + length()] = c;
+      }
+      m_pData[i] = '\0';
+      m_Length += nLen - str.length();
+    }
+
+    // Add the string
+    strncat(m_pData, str, N-length());
+    m_Length += str.length();
+
+    if (m_Length >= N)
+    {
+      m_pData[N-1] = '\0';
+      m_Length = N - 1;
     }
   }
 
   size_t length() const
   {
-    return strlen(m_pData);
+    return m_Length;
   }
   
   private:
@@ -224,6 +290,8 @@ public:
    * Our actual static data.
    */
   char m_pData[N];
+
+  size_t m_Length;
 };
 
 typedef StaticString<32>   TinyStaticString;

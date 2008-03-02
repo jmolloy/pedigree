@@ -26,7 +26,7 @@ extern "C" {
 
 int vsprintf(char *buf, const char *fmt, va_list arg);
 int sprintf(char *buf, const char *fmt, ...);
-int strlen(const char *buf);
+size_t strlen(const char *buf);
 int strcpy(char *dest, const char *src);
 int strncpy(char *dest, const char *src, int len);
 int memset(void *buf, int c, size_t len);

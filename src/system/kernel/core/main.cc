@@ -125,6 +125,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   foo.mytestfunc(false, 'g');
 #endif
 
+  asm volatile("sti");
+  for (;;);
+
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.
 //  g_pKernelMemoryMap = bsInf->getMemoryMap();  // Get the bios' memory map.

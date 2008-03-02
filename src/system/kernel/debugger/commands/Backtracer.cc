@@ -46,5 +46,5 @@ bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output
 
 const NormalStaticString Backtracer::getString()
 {
-  return "backtrace";
+  return NormalStaticString("backtrace");
 }

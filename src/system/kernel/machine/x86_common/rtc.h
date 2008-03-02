@@ -25,9 +25,9 @@
  *  @ingroup kernelmachine
  * @{ */
 
-/** Class for the Real-time clock implementing the Timer interface */
+/** Class for the Real-time clock / CMOS implementing the Timer interface */
 class Rtc : public Timer,
-            public IrqHandler
+            private IrqHandler
 {
   public:
     inline static Rtc &instance(){return m_Instance;}
@@ -43,11 +43,6 @@ class Rtc : public Timer,
     virtual uint8_t getHour();
     virtual uint8_t getMinute();
     virtual uint8_t getSecond();
-
-    //
-    // IrqHandler interface
-    //
-    virtual void irq(irq_id_t number);
 
     /** Initialises the class
      *\return true, if successfull, false otherwise */
@@ -72,6 +67,11 @@ class Rtc : public Timer,
      *\note NOT implemented */
     Rtc &operator = (const Rtc &);
 
+    //
+    // IrqHandler interface
+    //
+    virtual void irq(irq_id_t number);
+
     /** Set the index register
      *\param[in] index the new index */
     void setIndex(uint8_t index);
@@ -95,6 +95,9 @@ class Rtc : public Timer,
     /** The CMOS/Real-time Clock I/O port range */
     IoPort m_IoPort;
 
+    /** The IRQ Identifier */
+    irq_id_t m_IrqId;
+
     /** BCD mode? (otherwise in binary mode) */
     bool m_bBCD;
 
@@ -104,8 +107,6 @@ class Rtc : public Timer,
     uint8_t m_Month;
     /** The current day of month */
     uint8_t m_DayOfMonth;
-    /** The current day of week */
-    uint8_t m_DayOfWeek;
     /** The current hour */
     uint8_t m_Hour;
     /** The current minute */

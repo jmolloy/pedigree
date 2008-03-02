@@ -16,12 +16,61 @@
 #ifndef KERNEL_MACHINE_X86_COMMON_PIT_H
 #define KERNEL_MACHINE_X86_COMMON_PIT_H
 
+#include <processor/io.h>
+#include <machine/irq.h>
+#include <machine/timer.h>
+
 /** @addtogroup kernelmachinex86common x86-common
  * x86-common
  *  @ingroup kernelmachine
  * @{ */
 
+/** The programmable intervall timer implements the SchedulerTimer interface */
+class Pit : public SchedulerTimer,
+            private IrqHandler
+{
+  public:
+    /** Get the Pit class instance */
+    inline static Pit &instance(){return m_Instance;}
 
+    //
+    // SchedulerTimer interface
+    //
+    virtual bool registerHandler(TimerHandler *handler);
+
+    /** Initialises the class
+     *\return true, if successfull, false otherwise */
+    bool initialise();
+     /** Uninitialises the class */
+    void uninitialise();
+
+  protected:
+    /** The default constructor */
+    Pit();
+    /** The destructor */
+    inline virtual ~Pit(){}
+
+  private:
+    /** The copy-constructor
+     *\note NOT implemented */
+    Pit(const Pit &);
+    /** The assignment operator
+     *\note NOT implemented */
+    Pit &operator = (const Pit &);
+
+    //
+    // IrqHandler interface
+    //
+    virtual void irq(irq_id_t number);
+
+    /** The PIT I/O port range */
+    IoPort m_IoPort;
+    /** The PIT IRQ Id */
+    irq_id_t m_IrqId;
+
+    /** The Pit class instance */
+    static Pit m_Instance;
+};
 
 /** @} */
 

@@ -15,10 +15,11 @@
  */
 
 #include <stdarg.h>
+#include <processor/types.h>
 
-int strlen(const char *src)
+size_t strlen(const char *src)
 {
-  int i = 0;
+  size_t i = 0;
   while (*src++) i++;
   return i;
 }

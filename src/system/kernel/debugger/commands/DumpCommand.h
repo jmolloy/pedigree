@@ -49,7 +49,7 @@ public:
    */
   const NormalStaticString getString()
   {
-    return "dump";
+    return NormalStaticString("dump");
   }
   
 };
