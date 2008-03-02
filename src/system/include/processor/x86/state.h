@@ -71,6 +71,9 @@ class X86InterruptState
     //
     // InterruptState Interface
     //
+    /** Did the interrupt happen in kernel-mode?
+     *\return true, if the interrupt happened in kernel-mode, false otherwise */
+    inline bool kernelMode() const;
     /** Get the interrupt number
      *\return the interrupt number */
     inline size_t getInterruptNumber() const;
@@ -147,7 +150,8 @@ uintptr_t X86InterruptState::getStackPointer() const
 }
 void X86InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  m_Esp = stackPointer;
+  if (m_Cs != 0x00)
+    m_Esp = stackPointer;
 }
 uintptr_t X86InterruptState::getInstructionPointer() const
 {
@@ -174,6 +178,10 @@ void X86InterruptState::setFlags(uintptr_t flags)
   m_Eflags = flags;
 }
 
+bool X86InterruptState::kernelMode() const
+{
+  return (m_Cs == 0x08);
+}
 size_t X86InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;

@@ -15,6 +15,7 @@
  */
 #include "DumpCommand.h"
 #include <utility.h>
+#include <processor/processor.h>
 
 DumpCommand::DumpCommand()
  : DebuggerCommand()
@@ -31,6 +32,45 @@ void DumpCommand::autocomplete(const HugeStaticString &input, HugeStaticString &
 
 bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  output = "hello\n";
+  // TODO: How long should the padding be?
+
+  if (state.kernelMode() == true)
+    output += "kernel-mode\n";
+
+  // Output the stack-pointer
+  output += "stack @ 0x";
+  if (state.kernelMode() == true)
+    output.append(Processor::getStackPointer(), 16, 8, '0');
+  else
+    output.append(state.getStackPointer(), 16, 8, '0');
+  output += ", ";
+
+  // Output the instruction-pointer
+  output += "instruction @ 0x";
+  output.append(state.getInstructionPointer(), 16, 8, '0');
+  output += '\n';
+
+  // Output all the other registers
+  size_t curLength = output.length();
+  for (size_t i = 0;i < state.getRegisterCount();i++)
+  {
+    output += state.getRegisterName(i);
+    output += ": 0x";
+    output.append(state.getRegister(i), 16, 8, '0');
+
+    if (i == (state.getRegisterCount() - 1))
+      output += '\n';
+    else
+    {
+      size_t addLength = strlen(state.getRegisterName(i + 1)) + 4 + 8;
+      if ((addLength + curLength) > 80)
+      {
+        output += '\n';
+        curLength = output.length();
+      }
+      else
+        output += ' ';
+    }
+  }
   return true;
 }

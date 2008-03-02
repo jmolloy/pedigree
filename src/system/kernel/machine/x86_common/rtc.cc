@@ -16,6 +16,7 @@
 #include "rtc.h"
 
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
+#define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
 #define PERIODIC_IRQ_8192HZ 0x03
 #define PERIODIC_IRQ_4096HZ 0x04
 #define PERIODIC_IRQ_2048HZ 0x05
@@ -116,7 +117,31 @@ bool Rtc::initialise()
 }
 void Rtc::synchronise()
 {
-  // TODO: Write date/time to the CMOS
+  enableRtcUpdates(false);
+
+  // Write the time and date back
+  if (m_bBCD == true)
+  {
+    write(0x00, BIN_TO_BCD8(m_Second));
+    write(0x02, BIN_TO_BCD8(m_Minute));
+    write(0x04, BIN_TO_BCD8(m_Hour));
+    write(0x07, BIN_TO_BCD8(m_DayOfMonth));
+    write(0x08, BIN_TO_BCD8(m_Month));
+    write(0x09, BIN_TO_BCD8(m_Year % 100));
+    write(0x32, BIN_TO_BCD8(m_Year / 100));
+  }
+  else
+  {
+    write(0x00, m_Second);
+    write(0x02, m_Minute);
+    write(0x04, m_Hour);
+    write(0x07, m_DayOfMonth);
+    write(0x08, m_Month);
+    write(0x09, m_Year % 100);
+    write(0x32, m_Year / 100);
+  }
+
+  enableRtcUpdates(true);
 }
 void Rtc::uninitialise()
 {

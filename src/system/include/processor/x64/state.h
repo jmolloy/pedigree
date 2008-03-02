@@ -65,6 +65,9 @@ class X64InterruptState
     //
     // InterruptState Interface
     //
+    /** Did the interrupt happen in kernel-mode?
+     *\return true, if the interrupt happened in kernel-mode, false otherwise */
+    inline bool kernelMode() const;
     /** Get the interrupt number
      *\return the interrupt number */
     inline size_t getInterruptNumber() const;
@@ -241,6 +244,10 @@ void X64InterruptState::setBasePointer(uintptr_t basePointer)
   m_Rbp = basePointer;
 }
 
+bool X64InterruptState::kernelMode() const
+{
+  return (m_Cs == 0x08);
+}
 size_t X64InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;

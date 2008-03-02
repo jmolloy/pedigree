@@ -203,27 +203,28 @@ public:
     return *this;
   }
 
-  void append(uintptr_t nInt, int nRadix=10, size_t nLen=0, char c=' ')
+  void append(uint32_t nInt, size_t nRadix=10, size_t nLen=0, char c=' ')
   {
-    char pStr[64];
-    char pFormat[8];
-    const char *pRadix;
-    switch (nRadix)
+    char pStr[32];
+    size_t index = 0;
+    do
     {
-      case 8:
-        pRadix = "o";
-        break;
-      case 10:
-        pRadix = "d";
-        break;
-      case 16:
-        pRadix = "x";
-        break;
+      size_t tmp = nInt % nRadix;
+      nInt /= nRadix;
+      if (tmp < 10)pStr[index++] = '0' + tmp;
+      else pStr[index++] = 'A' + (tmp - 10);
+    }
+    while (nInt != 0);
+
+    for (size_t i = 0;i < (index / 2);i++)
+    {
+      char tmp = pStr[i];
+      pStr[i] = pStr[index - i - 1];
+      pStr[index - i] = tmp;
     }
 
-    sprintf(pFormat, "%%%s", pRadix);
+    pStr[index] = '\0';
 
-    sprintf(pStr, pFormat, nInt);
     append(pStr, nLen, c);
   }
 
@@ -239,7 +240,7 @@ public:
       {
         m_pData[i + length()] = c;
       }
-      m_pData[i] = '\0';
+      m_pData[i + length()] = '\0';
       m_Length += nLen - length2;
     }
 
@@ -265,7 +266,7 @@ public:
       {
         m_pData[i + length()] = c;
       }
-      m_pData[i] = '\0';
+      m_pData[i + length()] = '\0';
       m_Length += nLen - str.length();
     }
 
