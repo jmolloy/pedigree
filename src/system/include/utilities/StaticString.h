@@ -212,7 +212,7 @@ public:
       size_t tmp = nInt % nRadix;
       nInt /= nRadix;
       if (tmp < 10)pStr[index++] = '0' + tmp;
-      else pStr[index++] = 'A' + (tmp - 10);
+      else pStr[index++] = 'a' + (tmp - 10);
     }
     while (nInt != 0);
 
@@ -225,8 +225,9 @@ public:
 
     pStr[index] = '\0';
 
-    if (nRadix == 16)
-      append("0x");
+    /// \note [JamesM] It's up to the user whether he wants 0x prefixed, it shouldn't be forced.
+    //if (nRadix == 16)
+    //  append("0x");
 
     append(pStr, nLen, c);
   }

@@ -17,6 +17,7 @@
 #include <Log.h>
 #include <utilities/utility.h>
 #include <DebuggerIO.h>
+#include <processor/processor.h>
 
 StepCommand::StepCommand()
   : DebuggerCommand()
@@ -33,9 +34,9 @@ void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &
 
 bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  
-  
-  return true;
+  // Single step.
+  Processor::setSingleStep(true, state);
+  return false; // Return control to the kernel.
 }
 
 

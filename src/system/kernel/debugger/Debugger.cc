@@ -26,8 +26,11 @@
 #include <Backtracer.h>
 #include <utilities/utility.h>
 #include <StepCommand.h>
+#include <TraceCommand.h>
 
 Debugger Debugger::m_Instance;
+
+TraceCommand g_Trace;
 
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
 /// through pCommands at index start. Returns -1 if none found.
@@ -73,6 +76,10 @@ void Debugger::initialise()
     ERROR("Debugger: breakpoint interrupt registration failed!");
   if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getDebugInterruptNumber(), this))
     ERROR("Debugger: debug interrupt registration failed!");
+  
+  m_LocalIO.setCliUpperLimit(1); // Give us room for a status bar on top.
+  m_LocalIO.setCliLowerLimit(1); // And a status bar on the bottom.
+  m_LocalIO.enableCli(); // Start CLI mode.
 }
 
 void Debugger::breakpoint(InterruptState &state)
@@ -80,10 +87,6 @@ void Debugger::breakpoint(InterruptState &state)
   
   // IO interface.
   DebuggerIO *pIo;
-  
-  // IO implementations.
-  LocalIO localIO;
-  //SerialIO serialIO;
   
   // Commands.
   DisassembleCommand disassembler;
@@ -94,29 +97,34 @@ void Debugger::breakpoint(InterruptState &state)
   DumpCommand dump;
   StepCommand step;
   
-  int nCommands = 7;
+  int nCommands = 8;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
                                   &quit,
                                   &breakpoint,
                                   &dump,
-                                  &step};
+                                  &step,
+                                  &g_Trace};
   
-  if (m_nIoType == MONITOR) pIo = &localIO;
+  if (m_nIoType == MONITOR) pIo = &m_LocalIO;
   else
   {
     // serial
   }
   
-  pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
-  pIo->setCliLowerLimit(1); // And a status bar on the bottom.
-  pIo->enableCli(); // Start CLI mode.
-
   // Main CLI loop.
   bool bKeepGoing = false;
   do
   {
+    HugeStaticString command;
+    HugeStaticString output;
+    // Should we jump directly in to the tracer?
+    if (g_Trace.execTrace())
+    {
+      bKeepGoing = g_Trace.execute(command, output, state, pIo);
+      continue;
+    }
     // Clear the top and bottom status lines.
     pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
     pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
@@ -124,7 +132,6 @@ void Debugger::breakpoint(InterruptState &state)
     pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
   
     bool matchedCommand = false;
-    HugeStaticString command;
     DebuggerCommand *pAutoComplete = 0;
     while(1)
     {
@@ -169,7 +176,6 @@ void Debugger::breakpoint(InterruptState &state)
   
     // A command was entered.
     bool bValidCommand = false;
-    HugeStaticString output;
     for (int i = 0; i < nCommands; i++)
     {
       if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
@@ -200,6 +206,7 @@ void Debugger::interrupt(size_t interruptNumber, InterruptState &state)
   }
   else if (interruptNumber == InterruptManager::instance().getDebugInterruptNumber())
   {
-    // debug(state);
+    Processor::setSingleStep(false, state);
+    breakpoint(state);
   }
 }

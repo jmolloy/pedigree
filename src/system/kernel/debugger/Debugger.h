@@ -20,6 +20,7 @@
 #include <processor/processor.h>
 #include <processor/state.h>
 #include <processor/interrupt.h>
+#include <LocalIO.h>
 
 #define MONITOR 1
 #define SERIAL  2
@@ -34,7 +35,6 @@
 class Debugger : public InterruptHandler
 {
 public:
-
   /**
    * Get the instance of the Debugger
    */
@@ -78,6 +78,12 @@ private:
    * The Debugger instance (singleton class)
    */
   static Debugger m_Instance;
+  
+  /**
+   * I/O implementations.
+   */
+  LocalIO m_LocalIO;
+  //SerialIO m_SerialIO;
 };
 
 #endif

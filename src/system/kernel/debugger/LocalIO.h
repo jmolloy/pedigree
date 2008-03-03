@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef LOCALIO_H
+#define LOCALIO_H
 
 #include <DebuggerIO.h>
 
@@ -160,3 +162,4 @@ private:
   bool m_bCapslock;
 };
 
+#endif

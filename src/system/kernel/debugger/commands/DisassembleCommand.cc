@@ -121,10 +121,10 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     }
     
 #ifdef X86
-    output.append(location, 16, 8, '0');
+    output.append(location, 16, 8, ' ');
 #endif
 #ifdef X86_64
-    output.append(location, 16, 16, '0');
+    output.append(location, 16, 16, ' ');
 #endif
     output += ": ";
     output += ud_insn_asm(&ud_obj);

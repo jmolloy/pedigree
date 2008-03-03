@@ -42,7 +42,7 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-1, 0, pScreen->getWidth()-1,
                           DebuggerIO::White, DebuggerIO::DarkGrey);
   // Write the correct text in the upper status line.
-  pScreen->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+  pScreen->drawString("Pedigree debugger - Log Viewer", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
   // Write some helper text in the lower status line.
   pScreen->drawString("j: Up one line. k: Down one line. backspace: Page up. space: Page down. q: Quit", 
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::DarkGrey);

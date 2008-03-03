@@ -97,6 +97,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the machine-specific interface
   initialiseMachine();
 
+#if defined(DEBUGGER)
+  Debugger::instance().initialise();
+#endif
+
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   initialiseProcessor2();
@@ -110,9 +114,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   asm volatile("int $0xFE"); // some interrupt
   asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
 
-#if defined(DEBUGGER)
-  Debugger::instance().initialise();
-#endif
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
   StaticString<32> str("RAR!");
