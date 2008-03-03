@@ -16,7 +16,7 @@
 
 #include <Log.h>
 #include <Elf32.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <BootstrapInfo.h>
 
 Elf32::Elf32(const char *name) :

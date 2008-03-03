@@ -29,8 +29,11 @@ class IrqHandler
 {
   public:
     /** Called when the handler is registered with the irq manager and the irq occurred
-     *\param[in] number the irq number */
-    virtual void irq(irq_id_t number) = 0;
+     *\note If this function returns false you have to call IrqManager::acknoledgeIrq() when
+     *      you removed the interrupt reason.
+     *\param[in] number the irq number
+     *\return should return true, if the interrupt reason was removed, or false otherwise */
+    virtual bool irq(irq_id_t number) = 0;
 
   protected:
     /** Virtual destructor */
@@ -52,7 +55,8 @@ class IrqManager
     /** Register a PCI irq
      *\todo what parameters do we need here? Perhaps a PCIDevice class or something? */
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler) = 0;
-    /** Acknoledge the IRQ reception. If this is not called there will be no following irqs.
+    /** Acknoledge the IRQ reception, in case you returned false in the IrqHandler::irq() function. If
+     *  this is not called there won't be any following irqs.
      *\param[in] Id the irq's identifier */
     virtual void acknoledgeIrq(irq_id_t Id) = 0;
     /** Unregister a previously registered IrqHandler

@@ -34,6 +34,8 @@ irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler)
 
   // Enable/Unmask the IRQ
   enable(irq, true);
+
+  return irq + BASE_INTERRUPT_VECTOR;
 }
 irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler)
 {
@@ -42,11 +44,20 @@ irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler)
 }
 void Pic::acknoledgeIrq(irq_id_t Id)
 {
-  // TODO
+  uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
+
+  // Enable the irq again (the interrupt reason got removed)
+  enable(irq, true);
 }
 void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
-  // TODO
+  uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
+
+  // Disable the IRQ
+  enable(irq, false);
+
+  // Remove the handler
+  m_Handler[irq] = 0;
 }
 
 bool Pic::initialise()
@@ -113,10 +124,15 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq] != 0))
-    m_Handler[irq]->irq(irq);
+    if (m_Handler[irq]->irq(irq) == false)
+    {
+      // Disable/Mask the IRQ line (the handler did not remove
+      // the interrupt reason, yet)
+      enable(irq, false);
+    }
   else
   {
-    NOTICE("PIC: irq #" << irq << " occurred");
+    NOTICE("PIC: unhandled irq #" << irq << " occurred");
     Debugger::instance().breakpoint(state);
   }
 

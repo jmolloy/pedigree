@@ -15,6 +15,7 @@
  */
 
 #include <stdarg.h>
+#include <utilities/utility.h>
 #include <processor/types.h>
 
 size_t strlen(const char *src)

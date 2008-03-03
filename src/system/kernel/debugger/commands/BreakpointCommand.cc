@@ -15,7 +15,7 @@
  */
 #include "BreakpointCommand.h"
 #include <Log.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <DebuggerIO.h>
 #include <processor/processor.h>
 

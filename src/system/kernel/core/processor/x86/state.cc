@@ -15,7 +15,7 @@
  */
 #include <processor/state.h>
 
-const char *X86InterruptStateRegisterName[9] =
+const char *X86InterruptStateRegisterName[11] =
 {
   "eax",
   "ebx",
@@ -24,12 +24,14 @@ const char *X86InterruptStateRegisterName[9] =
   "edi",
   "esi",
   "ebp",
+  "esp",
+  "eip",
   "eflags"
 };
 
 size_t X86InterruptState::getRegisterCount() const
 {
-  return 8;
+  return 10;
 }
 processor_register_t X86InterruptState::getRegister(size_t index) const
 {
@@ -39,8 +41,10 @@ processor_register_t X86InterruptState::getRegister(size_t index) const
   if (index == 3)return m_Edx;
   if (index == 4)return m_Edi;
   if (index == 5)return m_Esi;
-  if (index == 7)return m_Ebp;
-  if (index == 8)return m_Eflags;
+  if (index == 6)return m_Ebp;
+  if (index == 7)return m_Esp;
+  if (index == 8)return m_Eip;
+  if (index == 9)return m_Eflags;
   return 0;
 }
 const char *X86InterruptState::getRegisterName(size_t index) const

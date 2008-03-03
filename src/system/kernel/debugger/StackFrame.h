@@ -16,10 +16,10 @@
 #ifndef STACKFRAME_H
 #define STACKFRAME_H
 
-#include <utility.h>
+#include <utilities/utility.h>
 #include <demangle.h>
 #include <processor/types.h>
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 class StackFrame
 {

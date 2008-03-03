@@ -39,7 +39,8 @@ DIRECTORIES = core/lib \
               debugger/libudis86 \
               linker/ \
               machine/ \
-              machine/x86_common
+              machine/x86_common \
+              utilities
 
 ###################################################################
 # Source file list.
@@ -76,6 +77,8 @@ SRCFILES += core/lib/cppsupport.cc \
             core/main.cc
 
 SRCFILES += linker/Elf32.cc
+
+SRCFILES += utilities/String.cc
 
 SRCFILES += core/processor/io.c
 

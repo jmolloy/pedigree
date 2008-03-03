@@ -61,6 +61,10 @@ class X64InterruptState
      *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
      *\return the name of the register */
     const char *getRegisterName(size_t index) const;
+    /** Get the register's size in bytes
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the register size in bytes */
+    inline size_t getRegisterSize(size_t index) const;
 
     //
     // InterruptState Interface
@@ -168,6 +172,10 @@ class X64SyscallState
      *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
      *\return the name of the register */
     const char *getRegisterName(size_t index) const;
+    /** Get the register's size in bytes
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the register size in bytes */
+    inline size_t getRegisterSize(size_t index) const;
 
     //
     // SyscallState Interface
@@ -243,6 +251,10 @@ void X64InterruptState::setBasePointer(uintptr_t basePointer)
 {
   m_Rbp = basePointer;
 }
+size_t X64InterruptState::getRegisterSize(size_t index) const
+{
+  return 8;
+}
 
 bool X64InterruptState::kernelMode() const
 {
@@ -276,6 +288,10 @@ uintptr_t X64SyscallState::getBasePointer() const
 void X64SyscallState::setBasePointer(uintptr_t basePointer)
 {
   m_Rbp = basePointer;
+}
+size_t X64SyscallState::getRegisterSize(size_t index) const
+{
+  return 8;
 }
 
 size_t X64SyscallState::getSyscallService() const

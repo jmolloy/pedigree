@@ -45,7 +45,9 @@ src/system/include/processor/x86/types.h
 src/system/include/processor/x86_common
 src/system/include/processor/x86_common/io.h
 src/system/include/utilities
+src/system/include/utilities/StaticString.h
 src/system/include/utilities/string.h
+src/system/include/utilities/utility.h
 src/system/kernel
 src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
@@ -55,15 +57,12 @@ src/system/kernel/Makefile
 src/system/kernel/boot-standalone.s
 src/system/kernel/core
 src/system/kernel/core/lib
-src/system/kernel/core/lib/DynamicString.h
-src/system/kernel/core/lib/StaticString.h
 src/system/kernel/core/lib/cppsupport.cc
 src/system/kernel/core/lib/cppsupport.h
 src/system/kernel/core/lib/demangle.cc
 src/system/kernel/core/lib/demangle.h
 src/system/kernel/core/lib/memory.c
 src/system/kernel/core/lib/string.c
-src/system/kernel/core/lib/utility.h
 src/system/kernel/core/lib/vsprintf.c
 src/system/kernel/core/main.cc
 src/system/kernel/core/main.h
@@ -165,6 +164,8 @@ src/system/kernel/machine/x86_common/pit.h
 src/system/kernel/machine/x86_common/rtc.cc
 src/system/kernel/machine/x86_common/rtc.h
 src/system/kernel/machine/x86_common/timer.cc
+src/system/kernel/utilities
+src/system/kernel/utilities/String.cc
 src/system/modules
 src/system/modules/test
 src/system/modules/test/Makefile

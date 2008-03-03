@@ -16,7 +16,7 @@
 #ifndef STATICSTRING_H
 #define STATICSTRING_H
 
-#include <utility.h>
+#include <utilities/utility.h>
 
 /**
  * Derivative of StringBase that uses a statically allocated chunk of memory.
@@ -203,7 +203,7 @@ public:
     return *this;
   }
 
-  void append(uint32_t nInt, size_t nRadix=10, size_t nLen=0, char c=' ')
+  void append(uint32_t nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
     char pStr[32];
     size_t index = 0;
@@ -220,10 +220,13 @@ public:
     {
       char tmp = pStr[i];
       pStr[i] = pStr[index - i - 1];
-      pStr[index - i] = tmp;
+      pStr[index - i - 1] = tmp;
     }
 
     pStr[index] = '\0';
+
+    if (nRadix == 16)
+      append("0x");
 
     append(pStr, nLen, c);
   }

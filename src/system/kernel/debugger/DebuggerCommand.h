@@ -18,7 +18,7 @@
 #define DEBUGGER_COMMAND_H
 
 #include <processor/state.h>
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 class DebuggerIO;
 

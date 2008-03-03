@@ -16,7 +16,7 @@
 #ifndef DEMANGLE_H
 #define DEMANGLE_H
 
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 typedef struct symbol
 {

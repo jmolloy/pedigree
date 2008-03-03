@@ -165,9 +165,11 @@ Rtc::Rtc()
 {
 }
 
-void Rtc::irq(irq_id_t number)
+bool Rtc::irq(irq_id_t number)
 {
   // TODO: Calculate the new time/date
+  // TODO: Call handlers?
+  return true;
 }
 
 void Rtc::setIndex(uint8_t index)

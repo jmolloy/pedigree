@@ -17,7 +17,7 @@
 #ifndef DEBUGGER_IO_H
 #define DEBUGGER_IO_H
 
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 class DebuggerCommand;
 

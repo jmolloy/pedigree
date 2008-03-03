@@ -16,7 +16,6 @@
 
 #include <DisassembleCommand.h>
 #include <DebuggerIO.h>
-#include <utility.h>
 #include <udis86.h>
 #include <Elf32.h>
 #include <Log.h>
@@ -122,10 +121,10 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     }
     
 #ifdef X86
-    output.append(location, 16, 8, ' ');
+    output.append(location, 16, 8, '0');
 #endif
 #ifdef X86_64
-    output.append(location, 16, 16, ' ');
+    output.append(location, 16, 16, '0');
 #endif
     output += ": ";
     output += ud_insn_asm(&ud_obj);

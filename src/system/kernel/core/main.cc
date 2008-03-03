@@ -24,7 +24,7 @@
 #include <Log.h>
 #include <Elf32.h>
 
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 // initialiseConstructors()
 #include "cppsupport.h"

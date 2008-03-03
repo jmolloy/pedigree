@@ -15,10 +15,10 @@
  */
 
 #include <Backtrace.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <Elf32.h>
 #include <StackFrame.h>
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 // TEMP!
 extern Elf32 elf;

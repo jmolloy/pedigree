@@ -67,6 +67,10 @@ class X86InterruptState
      *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
      *\return the name of the register */
     const char *getRegisterName(size_t index) const;
+    /** Get the register's size in bytes
+     *\param[in] index the index of the register (from 0 to getRegisterCount() - 1)
+     *\return the register size in bytes */
+    inline size_t getRegisterSize(size_t index) const;
 
     //
     // InterruptState Interface
@@ -176,6 +180,10 @@ uintptr_t X86InterruptState::getFlags() const
 void X86InterruptState::setFlags(uintptr_t flags)
 {
   m_Eflags = flags;
+}
+size_t X86InterruptState::getRegisterSize(size_t index) const
+{
+  return 4;
 }
 
 bool X86InterruptState::kernelMode() const

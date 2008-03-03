@@ -61,12 +61,14 @@ class Pit : public SchedulerTimer,
     //
     // IrqHandler interface
     //
-    virtual void irq(irq_id_t number);
+    virtual bool irq(irq_id_t number);
 
     /** The PIT I/O port range */
     IoPort m_IoPort;
     /** The PIT IRQ Id */
     irq_id_t m_IrqId;
+    /** The scheduler */
+    TimerHandler *m_Handler;
 
     /** The Pit class instance */
     static Pit m_Instance;

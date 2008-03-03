@@ -15,7 +15,7 @@
  */
 
 #include <Log.h>
-#include <utility.h>
+#include <utilities/utility.h>
 
 Log Log::m_Instance;
 

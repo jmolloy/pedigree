@@ -15,7 +15,7 @@
  */
 #include <processor/state.h>
 
-const char *X86InterruptStateRegisterName[16] =
+const char *X64InterruptStateRegisterName[18] =
 {
   "rax",
   "rbx",
@@ -32,10 +32,12 @@ const char *X86InterruptStateRegisterName[16] =
   "r13",
   "r14",
   "r15",
+  "rsp",
+  "rip",
   "rflags"
 };
 
-const char *X64SyscallStateRegisterName[14] =
+const char *X64SyscallStateRegisterName[16] =
 {
   "rax",
   "rbx",
@@ -50,12 +52,14 @@ const char *X64SyscallStateRegisterName[14] =
   "r13",
   "r14",
   "r15",
+  "rsp",
+  "rip",
   "rflags"
 };
 
 size_t X64InterruptState::getRegisterCount() const
 {
-  return 16;
+  return 18;
 }
 processor_register_t X64InterruptState::getRegister(size_t index) const
 {
@@ -74,7 +78,9 @@ processor_register_t X64InterruptState::getRegister(size_t index) const
   if (index == 12)return m_R13;
   if (index == 13)return m_R14;
   if (index == 14)return m_R15;
-  if (index == 15)return m_Rflags;
+  if (index == 15)return m_Rsp;
+  if (index == 16)return m_Rip;
+  if (index == 17)return m_Rflags;
   return 0;
 }
 const char *X64InterruptState::getRegisterName(size_t index) const
@@ -84,7 +90,7 @@ const char *X64InterruptState::getRegisterName(size_t index) const
 
 size_t X64SyscallState::getRegisterCount() const
 {
-  return 14;
+  return 16;
 }
 processor_register_t X64SyscallState::getRegister(size_t index) const
 {
@@ -101,7 +107,9 @@ processor_register_t X64SyscallState::getRegister(size_t index) const
   if (index == 10)return m_R13;
   if (index == 11)return m_R14;
   if (index == 12)return m_R15;
-  if (index == 13)return m_RFlagsR11;
+  if (index == 13)return m_Rsp;
+  if (index == 14)return m_RipRcx;
+  if (index == 15)return m_RFlagsR11;
   return 0;
 }
 const char *X64SyscallState::getRegisterName(size_t index) const

@@ -13,13 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <compiler.h>
 #include "pit.h"
 
 Pit Pit::m_Instance;
 
 bool Pit::registerHandler(TimerHandler *handler)
 {
-  // TODO
+  if (UNLIKELY(handler == 0 && m_Handler != 0))
+    return false;
+  if (UNLIKELY(handler != 0 && m_Handler == 0))
+    return false;
+
+  m_Handler = handler;
+  return true;
 }
 
 bool Pit::initialise()
@@ -34,20 +41,35 @@ bool Pit::initialise()
   if (m_IrqId == 0)
     return false;
 
+  // TODO: Set the PIT frequency
+
   return true;
 }
 void Pit::uninitialise()
 {
-  // TODO
+  // TODO: Reset the PIT frequency
+
+  // Free the IRQ
+  if (m_IrqId != 0)
+  {
+    IrqManager &irqManager = IrqManager::instance();
+    irqManager.unregisterHandler(m_IrqId, this);
+  }
+
+  // Free the PIT I/O range
+  m_IoPort.free();
 }
 
 Pit::Pit()
-  : m_IoPort(), m_IrqId(0)
+  : m_IoPort(), m_IrqId(0), m_Handler(0)
 {
-  // TODO
 }
 
-void Pit::irq(irq_id_t number)
+bool Pit::irq(irq_id_t number)
 {
-  // TODO
+  // TODO: Delta is wrong
+  if (LIKELY(m_Handler != 0))
+    m_Handler->timer(0);
+
+  return true;
 }

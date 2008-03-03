@@ -24,7 +24,7 @@
 #include <DumpCommand.h>
 #include <LogViewer.h>
 #include <Backtracer.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <StepCommand.h>
 
 Debugger Debugger::m_Instance;

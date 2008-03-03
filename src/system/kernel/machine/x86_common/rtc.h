@@ -70,7 +70,7 @@ class Rtc : public Timer,
     //
     // IrqHandler interface
     //
-    virtual void irq(irq_id_t number);
+    virtual bool irq(irq_id_t number);
 
     /** Set the index register
      *\param[in] index the new index */

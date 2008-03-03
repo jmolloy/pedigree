@@ -17,8 +17,8 @@
 #include <Backtracer.h>
 #include <Backtrace.h>
 #include <DebuggerIO.h>
-#include <utility.h>
-#include <StaticString.h>
+#include <utilities/utility.h>
+#include <utilities/StaticString.h>
 
 Backtracer::Backtracer()
 {

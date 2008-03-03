@@ -15,7 +15,7 @@
  */
 #include "LogViewer.h"
 #include <Log.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <DebuggerIO.h>
 
 LogViewer::LogViewer()

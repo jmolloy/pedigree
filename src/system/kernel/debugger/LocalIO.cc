@@ -16,7 +16,7 @@
 
 #include <LocalIO.h>
 #include <DebuggerCommand.h>
-#include <utility.h>
+#include <utilities/utility.h>
 #include <processor/io.h>
 
 #ifdef DEBUGGER_QWERTY

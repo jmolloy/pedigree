@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "BootstrapInfo.h"
-#include <utility.h>
+#include <utilities/utility.h>
 
 BootstrapInfo::BootstrapInfo(BootstrapStruct_t *info) :
     m_BootstrapInfo(*info)

@@ -13,9 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <utility.h>
+#include <utilities/utility.h>
 #include <demangle.h>
-#include <StaticString.h>
+#include <utilities/StaticString.h>
 
 // Uncomment these if running standalone.
 //include <stdio.h>
