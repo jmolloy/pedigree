@@ -130,8 +130,9 @@ CMD_FLAGS += -D__UD_STANDALONE__
 endif
 
 ifdef KERNEL_STANDALONE
-LDFLAGS += -T $(shell pwd)/link-standalone.ld -lgcc
+LDFLAGS += -T $(shell pwd)/link-standalone.ld
 endif
+LDADD += -lgcc
 BUILD_NAME=kernel
 
 include $(BUILD)/buildCommon.mk
