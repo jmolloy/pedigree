@@ -28,7 +28,7 @@ public:
    * Creates a stack frame based on the given Base Pointer value, and also the given
    * symbol name (mangled).
    */
-  StackFrame(unsigned int nBasePointer, NormalStaticString &mangledSymbol);
+  StackFrame(unsigned int nBasePointer, LargeStaticString mangledSymbol);
   ~StackFrame();
 
   /**

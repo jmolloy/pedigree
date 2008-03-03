@@ -702,12 +702,6 @@ static int parseType(LargeStaticString &src, LargeStaticString &dest, demangle_t
     
     END_SUCCESS("Type");
   }
-  else if (src[0] == 'S')
-  {
-    if (parseSubstitution(src, dest, data) == FAIL)
-      END_FAIL("Type");
-    END_SUCCESS("Type");
-  }
   else
   {
     // OK then, try a builtin-type.
@@ -724,6 +718,15 @@ static int parseType(LargeStaticString &src, LargeStaticString &dest, demangle_t
     {
       dest += tmp;
       addSubstitution(tmp, data);
+      END_SUCCESS("Type");
+    }
+    
+    if (src[0] == 'S')
+    {
+      src = origsrc;
+      dest = origdest;
+      if (parseSubstitution(src, dest, data) == FAIL)
+        END_FAIL("Type");
       END_SUCCESS("Type");
     }
     
@@ -1140,19 +1143,38 @@ static int parseExprPrimary(LargeStaticString &src, LargeStaticString &dest, dem
     END_FAIL("ExprPrimary");
   
   src.stripFirst(1);
-  if (parseType(src, dest, data) == SUCCESS)
+  
+  // HACK:: We don't want the full "unsigned int" nonsense, if it's a builtin type we use our
+  // own handlers. Else we fall back on parseType.
+  const char *cookie = reinterpret_cast<const char*>(0);
+  switch(src[0])
   {
-    dest += "=";
-    int n;
-    if (parseNumber(src, dest, data, n) == FAIL)
-      END_FAIL("ExprPrimary");
-    dest += n;
-    if (src[0] != 'E')
-      END_FAIL("ExprPrimary");
-    src.stripFirst(1);
+    case 'i': src.stripFirst(1);
+              break;
+    case 'j': cookie = "u"; src.stripFirst(1);
+              break;
+    case 'l': cookie = "l"; src.stripFirst(1);
+              break;
+    case 'm': cookie = "ul"; src.stripFirst(1);
+              break;
+    default:
+    {
+      dest += '(';
+      if (parseType(src, dest, data) == FAIL)
+        END_FAIL("ExprPrimary");
+      dest += ')';
+    }
   }
-  else
-    END_FAIL("ExprPrimary"); /// \todo implement external mangled names.
+    
+  int n;
+  if (parseNumber(src, dest, data, n) == FAIL)
+    END_FAIL("ExprPrimary");
+  dest += n;
+  dest += cookie;
+  if (src[0] != 'E')
+    END_FAIL("ExprPrimary");
+  src.stripFirst(1);
+  /// \todo implement external mangled names.
   
   END_SUCCESS("ExprPrimary");
 }
@@ -1218,7 +1240,7 @@ static int parseSeqId(LargeStaticString &src, LargeStaticString &dest, demangle_
 // If you want to run this standalone, uncomment this function.
 // int main(char argc, char **argv)
 // {
-//   LargeStaticString src = argv[1];
+//   LargeStaticString src = LargeStaticString(argv[1]);
 //   LargeStaticString dest;
 //   demangle_t data;
 //   data.nLevel = 0;

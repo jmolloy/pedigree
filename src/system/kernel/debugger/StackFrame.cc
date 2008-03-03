@@ -16,12 +16,11 @@
 #include "StackFrame.h"
 #include <Log.h>
 
-StackFrame::StackFrame(unsigned int nBasePointer, NormalStaticString &mangledSymbol) :
+StackFrame::StackFrame(unsigned int nBasePointer, LargeStaticString mangledSymbol) :
   m_nBasePointer(nBasePointer), m_Symbol()
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
-  LargeStaticString tmpStr(mangledSymbol);
-  demangle(tmpStr, &m_Symbol);
+  demangle(mangledSymbol, &m_Symbol);
 }
 
 

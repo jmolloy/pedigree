@@ -65,7 +65,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf)
     unsigned int symStart = 0;
 
     const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
-    NormalStaticString sym(pSym);
+    LargeStaticString sym(pSym);
 
     StackFrame sf(m_pBasePointers[i], sym);
     sf.prettyPrint(buf);
