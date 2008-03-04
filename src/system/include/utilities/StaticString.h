@@ -168,7 +168,12 @@ public:
   
   int intValue(int nBase=0) const
   {
-    return strtoul(m_pData, 0, nBase);
+    const char *pEnd;
+    int ret = strtoul(m_pData, const_cast<char **> (&pEnd), nBase);
+    if (pEnd == m_pData)
+      return -1; // Failed to find anything.
+    else
+      return ret;
   }
   
   StaticString left(int n) const

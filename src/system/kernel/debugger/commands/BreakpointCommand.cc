@@ -30,6 +30,7 @@ BreakpointCommand::~BreakpointCommand()
 
 void BreakpointCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
+  output = "[ {0,1,2,3} {address,trigger,size,enable} [{parameter}] ]";
 }
 
 bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
@@ -98,13 +99,67 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
   }
   else
   {
+    LargeStaticString inputCopy(input);
     // We expect a number.
-    NOTICE((const char*)input);
     int nBp = input.intValue();
     if (nBp < 0 || nBp > 3)
-      output = "Invalid breakpoint number.";
-    output = "rar";
-    output += nBp;
+    {
+      output = "Invalid breakpoint number.\n";
+      return true;
+    }
+    // We expect a word - find the next space.
+    bool bSpaceFound = false;
+    for (int i = 0; i < inputCopy.length(); i++)
+      if (inputCopy[i] == ' ')
+      {
+        inputCopy.stripFirst(i+1);
+        bSpaceFound = true;
+        break;
+      }
+
+    if (!bSpaceFound)
+    {
+      output = "Command not recognised\n";
+      return true;
+    }
+
+    NormalStaticString command;
+    // Find another space - end of command.
+    bSpaceFound = false;
+    for (int i = 0; i < inputCopy.length(); i++)
+      if (inputCopy[i] == ' ')
+      {
+        command = inputCopy.left(i);
+        inputCopy.stripFirst(i+1);
+        bSpaceFound = true;
+        break;
+      }
+
+    if (!bSpaceFound)
+    {
+      output = "Command not recognised\n";
+      return true;
+    }
+
+    NormalStaticString argument;
+    // Find another space - end of argument.
+    bSpaceFound = false;
+    for (int i = 0; i < inputCopy.length(); i++)
+      if (inputCopy[i] == ' ')
+      {
+        argument = inputCopy.left(i);
+        bSpaceFound = true;
+        break;
+      }
+    if (!bSpaceFound)
+      argument = inputCopy;
+    
+    if (argument.length() == 0)
+    {
+      output = "Parameter had zero length!\n";
+      return true;
+    }
+    
   }
 
   return true;
