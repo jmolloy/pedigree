@@ -78,12 +78,6 @@ private:
    * The Debugger instance (singleton class)
    */
   static Debugger m_Instance;
-  
-  /**
-   * I/O implementations.
-   */
-  LocalIO m_LocalIO;
-  //SerialIO m_SerialIO;
 };
 
 #endif

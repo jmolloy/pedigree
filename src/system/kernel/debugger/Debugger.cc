@@ -76,14 +76,20 @@ void Debugger::initialise()
     ERROR("Debugger: breakpoint interrupt registration failed!");
   if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getDebugInterruptNumber(), this))
     ERROR("Debugger: debug interrupt registration failed!");
-  
-  m_LocalIO.setCliUpperLimit(1); // Give us room for a status bar on top.
-  m_LocalIO.setCliLowerLimit(1); // And a status bar on the bottom.
-  m_LocalIO.enableCli(); // Start CLI mode.
 }
 
 void Debugger::breakpoint(InterruptState &state)
 {
+  
+  /*
+   * I/O implementations.
+   */
+  LocalIO localIO;
+  //SerialIO serialIO;
+  
+  localIO.setCliUpperLimit(1); // Give us room for a status bar on top.
+  localIO.setCliLowerLimit(1); // And a status bar on the bottom.
+  localIO.enableCli(); // Start CLI mode.
   
   // IO interface.
   DebuggerIO *pIo;
@@ -107,7 +113,7 @@ void Debugger::breakpoint(InterruptState &state)
                                   &step,
                                   &g_Trace};
   
-  if (m_nIoType == MONITOR) pIo = &m_LocalIO;
+  if (m_nIoType == MONITOR) pIo = &localIO;
   else
   {
     // serial
@@ -194,7 +200,6 @@ void Debugger::breakpoint(InterruptState &state)
   
   }
   while (bKeepGoing);
-
 }
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)
