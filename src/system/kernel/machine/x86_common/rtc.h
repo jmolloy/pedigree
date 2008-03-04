@@ -43,6 +43,7 @@ class Rtc : public Timer,
     virtual uint8_t getHour();
     virtual uint8_t getMinute();
     virtual uint8_t getSecond();
+    virtual uint64_t getTickCount();
 
     /** Initialises the class
      *\return true, if successfull, false otherwise */
@@ -113,6 +114,9 @@ class Rtc : public Timer,
     uint8_t m_Minute;
     /** The current second */
     uint8_t m_Second;
+
+    /** The current tick count in nanoseconds */
+    uint64_t m_TickCount;
 
     /** The Rtc class instance */
     static Rtc m_Instance;

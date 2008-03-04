@@ -225,10 +225,6 @@ public:
 
     pStr[index] = '\0';
 
-    /// \note [JamesM] It's up to the user whether he wants 0x prefixed, it shouldn't be forced.
-    //if (nRadix == 16)
-    //  append("0x");
-
     append(pStr, nLen, c);
   }
 

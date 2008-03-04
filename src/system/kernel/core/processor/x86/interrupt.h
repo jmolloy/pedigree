@@ -30,9 +30,11 @@
 class X86InterruptManager : public ::InterruptManager,
                             public ::SyscallManager
 {
-  friend ::SyscallManager &::SyscallManager::instance();
-  friend ::InterruptManager &::InterruptManager::instance();
   public:
+    /** Get the X86InterruptManager class instance
+     *\return instance of the X86InterruptManager class */
+    inline static X86InterruptManager &instance(){return m_Instance;}
+
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
 
@@ -58,7 +60,6 @@ class X86InterruptManager : public ::InterruptManager,
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
     void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace);
     /** Called when an interrupt was triggered
-     *\param[in] interruptNumber the interrupt's number
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
     /** The constructor */

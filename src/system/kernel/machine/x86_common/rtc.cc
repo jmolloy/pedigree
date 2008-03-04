@@ -15,14 +15,26 @@
  */
 #include "rtc.h"
 
+#define INITIAL_RTC_HZ 1024
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
-#define PERIODIC_IRQ_8192HZ 0x03
-#define PERIODIC_IRQ_4096HZ 0x04
-#define PERIODIC_IRQ_2048HZ 0x05
-#define PERIODIC_IRQ_1024HZ 0x06
-#define PERIODIC_IRQ_512HZ 0x07
-#define PERIODIC_IRQ_256HZ 0x08
+
+struct periodicIrqInfo_t
+{
+  size_t Hz;
+  uint8_t rateBits;
+  uint64_t ns[2];
+};
+
+periodicIrqInfo_t periodicIrqInfo[] = 
+{
+  { 256, 0x08, {3906250ULL, 3906250ULL}},
+  { 512, 0x07, {1953125ULL, 1953125ULL}},
+  {1024, 0x06, { 976562ULL,  976563ULL}},
+  {2048, 0x05, { 488281ULL,  488281ULL}},
+  {4096, 0x04, { 244140ULL,  244141ULL}},
+  {8192, 0x03, { 122070ULL,  122070ULL}},
+};
 
 Rtc Rtc::m_Instance;
 
@@ -69,6 +81,10 @@ uint8_t Rtc::getSecond()
 {
   return m_Second;
 }
+uint64_t Rtc::getTickCount()
+{
+  return m_TickCount / 1000000ULL;
+}
 
 bool Rtc::initialise()
 {
@@ -105,9 +121,18 @@ bool Rtc::initialise()
     m_Year = read(0x32) * 100 + read(0x09);
   }
 
+  // Find the initial rtc rate
+  uint8_t rateBits = 0x06;
+  for (size_t i = 0;i < 6;i++)
+    if (periodicIrqInfo[i].Hz == INITIAL_RTC_HZ)
+    {
+      rateBits = periodicIrqInfo[i].rateBits;
+      break;
+    }
+
   // Set the Rate for the periodic IRQ
   uint8_t tmp = read(0x0A);
-  write(0x0A, (tmp & 0xF0) | PERIODIC_IRQ_1024HZ);
+  write(0x0A, (tmp & 0xF0) | rateBits);
 
   // Activate the IRQ
   uint8_t statusb = read(0x0B);
@@ -161,7 +186,7 @@ void Rtc::uninitialise()
 
 Rtc::Rtc()
   : m_IoPort(), m_IrqId(0), m_bBCD(true), m_Year(0), m_Month(0), m_DayOfMonth(0),
-    m_Hour(0), m_Minute(0), m_Second(0)
+    m_Hour(0), m_Minute(0), m_Second(0), m_TickCount(0)
 {
 }
 

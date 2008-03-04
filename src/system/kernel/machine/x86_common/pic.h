@@ -39,7 +39,7 @@ class Pic : public IrqManager,
     //
     virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler);
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
-    virtual void acknoledgeIrq(irq_id_t Id);
+    virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
 
     bool initialise();

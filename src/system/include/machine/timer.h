@@ -39,7 +39,9 @@ class TimerHandler
     inline virtual ~TimerHandler(){}
 };
 
-/** Timer for the time-keeping */
+/** Timer for the time-keeping
+ *\todo I don't know yet how to register handlers and how they should
+ *      be called back */
 class Timer
 {
   public:
@@ -67,6 +69,10 @@ class Timer
     /** Get the current second
      *\return the current second */
     virtual uint8_t getSecond() = 0;
+
+    /** Get the Tick count (time elapsed since system bootup)
+     *\return the tick count in milliseconds */
+    virtual uint64_t getTickCount() = 0;
 
     virtual bool registerHandler(TimerHandler *handler) = 0;
 

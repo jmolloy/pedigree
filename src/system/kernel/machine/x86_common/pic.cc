@@ -42,7 +42,7 @@ irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler)
   // TODO
   return 0;
 }
-void Pic::acknoledgeIrq(irq_id_t Id)
+void Pic::acknowledgeIrq(irq_id_t Id)
 {
   uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
 

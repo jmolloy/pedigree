@@ -21,11 +21,11 @@ X86InterruptManager X86InterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
 {
-  return X86InterruptManager::m_Instance;
+  return X86InterruptManager::instance();
 }
 InterruptManager &InterruptManager::instance()
 {
-  return X86InterruptManager::m_Instance;
+  return X86InterruptManager::instance();
 }
 
 bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)

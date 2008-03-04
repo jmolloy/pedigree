@@ -40,7 +40,7 @@ bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
   for (size_t i = 0;i < state.getRegisterCount();i++)
   {
     output += state.getRegisterName(i);
-    output += ": ";
+    output += ": 0x";
     output.append(state.getRegister(i), 16, state.getRegisterSize(i) * 2, '0');
 
     if (i == (state.getRegisterCount() - 1))

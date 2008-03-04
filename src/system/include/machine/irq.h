@@ -29,7 +29,7 @@ class IrqHandler
 {
   public:
     /** Called when the handler is registered with the irq manager and the irq occurred
-     *\note If this function returns false you have to call IrqManager::acknoledgeIrq() when
+     *\note If this function returns false you have to call IrqManager::acknowledgeIrq() when
      *      you removed the interrupt reason.
      *\param[in] number the irq number
      *\return should return true, if the interrupt reason was removed, or false otherwise */
@@ -58,7 +58,7 @@ class IrqManager
     /** Acknoledge the IRQ reception, in case you returned false in the IrqHandler::irq() function. If
      *  this is not called there won't be any following irqs.
      *\param[in] Id the irq's identifier */
-    virtual void acknoledgeIrq(irq_id_t Id) = 0;
+    virtual void acknowledgeIrq(irq_id_t Id) = 0;
     /** Unregister a previously registered IrqHandler
      *\param[in] Id the irq's identifier */
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler) = 0;
