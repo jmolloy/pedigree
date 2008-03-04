@@ -30,5 +30,6 @@ typedef struct symbol
 } symbol_t;
 
 void demangle(LargeStaticString src, symbol_t *sym);
+void demangle_full(LargeStaticString src, LargeStaticString &dest);
 
 #endif

@@ -82,14 +82,27 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
       
       const char *pEnabled = "disabled";
       if (bEnabled) pEnabled = "enabled";
-      
+#ifdef X86
+      const char k_nSize = 8;
+#endif
+#ifdef X86_64
+      const char k_nSize = 16;
+#endif
       output += i;
-      output += ": 0x"; output.append(nAddress, 16);
+      output += ": 0x"; output.append(nAddress, 16, k_nSize,'0');
       output += " \t";  output.append(pFaultType);
       output += " \t";  output.append(pLength);
       output += " \t";  output.append(pEnabled);
       output += "\n";
     }
+  }
+  else
+  {
+    // We expect a number.
+    NOTICE((const char*)input);
+    int nBp = input.intValue();
+    if (nBp < 0 || nBp > 3)
+      output = "Invalid breakpoint number.";
   }
 
   return true;

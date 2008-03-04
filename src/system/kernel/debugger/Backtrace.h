@@ -52,7 +52,7 @@ public:
    */
   unsigned int getBasePointer(unsigned int n);
   
-  void prettyPrint(HugeStaticString &buf);
+  void prettyPrint(HugeStaticString &buf, unsigned int nFrames=0);
   
 private:
   /**

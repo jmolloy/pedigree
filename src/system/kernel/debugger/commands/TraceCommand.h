@@ -63,9 +63,9 @@ public:
   
 private:
   void drawBackground(int nCols, int nLines, DebuggerIO *pScreen);
-  void drawDisassembly(int nLines, DebuggerIO *pScreen);
-  void drawRegisters(int nCols, int nLines, DebuggerIO *pScreen);
-  void drawStacktrace(int nLines, DebuggerIO *pScreen);
+  void drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state);
+  void drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state);
+  void drawStacktrace(int nLines, DebuggerIO *pScreen, InterruptState &state);
   
   /**
    * Should the debugger immediately call our execute function?

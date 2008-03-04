@@ -1312,3 +1312,31 @@ void demangle(LargeStaticString src, symbol_t *sym)
     sym->params[i] = data.params[i];
   
 }
+
+void demangle_full(LargeStaticString src, LargeStaticString &dest)
+{
+  demangle_t data;
+  data.nLevel = 0;
+  data.nSubstitutions = 0;
+  data.nNameParseLevel = 0;
+  int code = parseMangledName(src, dest, data);
+  // HACK:: Bit of a hack here - we prepend "::" to every identifier. It looks a bit ugly.
+  if (dest[0] == ':' && dest[1] == ':')
+    dest.stripFirst(2);
+
+  if (code == FAIL)
+  {
+    dest = src;
+    return;
+  }
+  
+  dest += "(";
+  for (int i = 0; i < data.nParams; i++)
+  {
+    if (i > 0)
+      dest += ", ";
+  
+    dest += data.params[i];
+  };
+  dest += ")";
+}

@@ -56,11 +56,13 @@ void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
   m_nStackFrames = i;
 }
 
-void Backtrace::prettyPrint(HugeStaticString &buf)
+void Backtrace::prettyPrint(HugeStaticString &buf, unsigned int nFrames)
 {
+  if (nFrames == 0 || nFrames > m_nStackFrames)
+    nFrames = m_nStackFrames;
   // What symbol are we in?
   // TODO grep the memory map for the right ELF to look at.
-  for (size_t i = 0; i < m_nStackFrames; i++)
+  for (size_t i = 0; i < nFrames; i++)
   {
     unsigned int symStart = 0;
 
