@@ -244,6 +244,9 @@ bool Rtc::irq(irq_id_t number)
     }
   }
 
+  // Acknowledging the IRQ (within the CMOS)
+  read(0x0C);
+
   // TODO: Call handlers?
   return true;
 }

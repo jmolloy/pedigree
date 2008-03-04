@@ -20,6 +20,8 @@
 
 #include <Log.h>
 
+bool machineIsInitialised = false;
+
 void initialiseMachine()
 {
   // Initialise PIC
@@ -47,4 +49,11 @@ void initialiseMachine()
   }
 
   // TODO
+
+  machineIsInitialised = true;
+}
+
+bool isMachineInitialised()
+{
+  return machineIsInitialised;
 }

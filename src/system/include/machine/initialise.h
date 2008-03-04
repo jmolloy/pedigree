@@ -31,6 +31,10 @@
  *\note only called by main() */
 void initialiseMachine();
 
+/** Has the machine-specific interface already been initialised?
+ *\return true, if initialiseMachine() was already called and completed successfully, false otherwise */
+bool isMachineInitialised();
+
 /** @} */
 /** @} */
 

@@ -15,6 +15,8 @@
  */
 
 #include <Log.h>
+#include <machine/timer.h>
+#include <machine/initialise.h>
 #include <utilities/utility.h>
 
 Log Log::m_Instance;
@@ -74,7 +76,13 @@ Log &Log::operator<< (SeverityLevel level)
     // Zero the buffer.
     m_Buffer.str[0] = '\0';
     m_Buffer.type = level;
-    m_Buffer.timestamp = 0; // TODO: add timestamps.
+    if (isMachineInitialised() == true)
+    {
+      Timer &timer = Timer::instance();
+      m_Buffer.timestamp = timer.getTickCount();
+    }
+    else
+      m_Buffer.timestamp = 0;
     break;
   }
   return *this;

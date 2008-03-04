@@ -127,6 +127,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #endif
 
   asm volatile("sti");
+  for (size_t i = 0;i < 100000000;i++);
+
+  NOTICE("there we are");
+  asm volatile ("int $3");
+
   for (;;);
 
   // Then get the BootstrapInfo object to convert its contents into
