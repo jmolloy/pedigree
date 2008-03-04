@@ -103,6 +103,8 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     int nBp = input.intValue();
     if (nBp < 0 || nBp > 3)
       output = "Invalid breakpoint number.";
+    output = "rar";
+    output += nBp;
   }
 
   return true;

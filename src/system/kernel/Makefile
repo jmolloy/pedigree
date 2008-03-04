@@ -34,12 +34,15 @@ DIRECTORIES = core/lib \
               core/processor/x86 \
               core/processor/x64 \
               core/processor/x86_common \
+              core/processor/mips64 \
+              core/processor/mips_common \
               debugger/ \
               debugger/commands \
               debugger/libudis86 \
               linker/ \
               machine/ \
               machine/x86_common \
+              machine/mips_common \
               utilities
 
 ###################################################################
@@ -122,6 +125,12 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/gdt.cc \
             core/processor/x64/state.cc
 endif
+
+###################################################################
+# MIPS common source file list.
+
+###################################################################
+# MIPS 64-bit source file list.
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.
