@@ -69,7 +69,7 @@ public:
   }
   
   /**
-   * Virtual destructor.
+   * Destructor.
    */
   ~StaticString()
   {

@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <compiler.h>
 #include "rtc.h"
 
 #define INITIAL_RTC_HZ 1024
@@ -35,6 +36,8 @@ periodicIrqInfo_t periodicIrqInfo[] =
   {4096, 0x04, { 244140ULL,  244141ULL}},
   {8192, 0x03, { 122070ULL,  122070ULL}},
 };
+
+uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
 
@@ -126,6 +129,7 @@ bool Rtc::initialise()
   for (size_t i = 0;i < 6;i++)
     if (periodicIrqInfo[i].Hz == INITIAL_RTC_HZ)
     {
+      m_PeriodicIrqInfoIndex = i;
       rateBits = periodicIrqInfo[i].rateBits;
       break;
     }
@@ -185,14 +189,61 @@ void Rtc::uninitialise()
 }
 
 Rtc::Rtc()
-  : m_IoPort(), m_IrqId(0), m_bBCD(true), m_Year(0), m_Month(0), m_DayOfMonth(0),
-    m_Hour(0), m_Minute(0), m_Second(0), m_TickCount(0)
+  : m_IoPort(), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(0), m_Month(0),
+    m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0)
 {
 }
 
 bool Rtc::irq(irq_id_t number)
 {
-  // TODO: Calculate the new time/date
+  static size_t index = 0;
+  // Update the Tick Count
+  uint64_t delta = periodicIrqInfo[m_PeriodicIrqInfoIndex].ns[index];
+  index = (index == 0) ? 1 : 0;
+  m_TickCount += delta;
+
+  // Calculate the new time/date
+  m_Nanosecond += delta;
+  if (UNLIKELY(m_Nanosecond >= 1000000ULL))
+  {
+    ++m_Second;
+    m_Nanosecond -= 1000000ULL;
+
+    if (UNLIKELY(m_Second == 60))
+    {
+      ++m_Minute;
+      m_Second = 0;
+
+      if (UNLIKELY(m_Minute == 60))
+      {
+        ++m_Hour;
+        m_Minute = 0;
+
+        if (UNLIKELY(m_Hour == 24))
+        {
+          ++m_DayOfMonth;
+          m_Hour = 0;
+
+          // Are we in a leap year
+          bool isLeap = ((m_Year % 4) == 0) & ((m_Year % 100) != 0) | ((m_Year % 400) == 0);
+
+          if (UNLIKELY(((m_DayOfMonth > daysPerMonth[m_Month - 1]) && ((m_Month != 2) || isLeap == false)) ||
+                       (m_DayOfMonth > (daysPerMonth[m_Month - 1] + 1))))
+          {
+            ++m_Month;
+            m_DayOfMonth = 1;
+
+            if (UNLIKELY(m_Month > 12))
+            {
+              ++m_Year;
+              m_Month = 1;
+            }
+          }
+        }
+      }
+    }
+  }
+
   // TODO: Call handlers?
   return true;
 }

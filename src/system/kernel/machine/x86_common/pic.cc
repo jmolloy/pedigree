@@ -124,12 +124,14 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq] != 0))
+  {
     if (m_Handler[irq]->irq(irq) == false)
     {
       // Disable/Mask the IRQ line (the handler did not remove
       // the interrupt reason, yet)
       enable(irq, false);
     }
+  }
   else
   {
     NOTICE("PIC: unhandled irq #" << irq << " occurred");

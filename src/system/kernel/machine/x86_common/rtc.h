@@ -99,6 +99,9 @@ class Rtc : public Timer,
     /** The IRQ Identifier */
     irq_id_t m_IrqId;
 
+    /** Index into the periodicIrqInfo table */
+    size_t m_PeriodicIrqInfoIndex;
+
     /** BCD mode? (otherwise in binary mode) */
     bool m_bBCD;
 
@@ -114,6 +117,8 @@ class Rtc : public Timer,
     uint8_t m_Minute;
     /** The current second */
     uint8_t m_Second;
+    /** The current nanosecond */
+    uint64_t m_Nanosecond;
 
     /** The current tick count in nanoseconds */
     uint64_t m_TickCount;
