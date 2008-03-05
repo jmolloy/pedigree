@@ -29,8 +29,11 @@
 /** The interrupt handler on x64 processors */
 class X64InterruptManager : public ::InterruptManager
 {
-  friend ::InterruptManager &::InterruptManager::instance();
   public:
+    /** Get the X64InterruptManager class instance
+     *\return instance of the X64InterruptManager class */
+    inline static X64InterruptManager &instance(){return m_Instance;}
+
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
 
     #ifdef DEBUGGER
@@ -48,11 +51,9 @@ class X64InterruptManager : public ::InterruptManager
     /** Sets up an interrupt gate
      *\param[in] interruptNumber the interrupt number
      *\param[in] interruptHandler address of the assembler interrupt handler stub
-     *\param[in] userspace is the userspace allowed to call this callgate?
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
     void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler);
     /** Called when an interrupt was triggered
-     *\param[in] interruptNumber the interrupt's number
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
     /** The constructor */

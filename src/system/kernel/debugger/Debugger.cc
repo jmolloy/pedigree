@@ -152,6 +152,9 @@ void Debugger::breakpoint(InterruptState &state)
       matchedCommand = false;
       for (int i = 0; i < nCommands; i++)
       {
+        // TODO: This cast is completly wrong. As I said, don't touch (as in 'write') StaticString's
+        //       internal string. The const is not there because I don't like you :-), it is there
+        //       because directly writing is not garantueed to work (and it actually will break our code).
         if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
         {
           str2 = static_cast<const char *>(pCommands[i]->getString());

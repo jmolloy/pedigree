@@ -19,7 +19,7 @@ X64InterruptManager X64InterruptManager::m_Instance;
 
 InterruptManager &InterruptManager::instance()
 {
-  return X64InterruptManager::m_Instance;
+  return X64InterruptManager::instance();
 }
 
 bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)

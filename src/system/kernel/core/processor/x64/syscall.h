@@ -27,8 +27,11 @@
 /** The syscall handler on x64 processors */
 class X64SyscallManager : public ::SyscallManager
 {
-  friend ::SyscallManager &::SyscallManager::instance();
   public:
+    /** Get the X64SyscallManager class instance
+     *\return instance of the X64SyscallManager class */
+    inline static X64SyscallManager &instance(){return m_Instance;}
+
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
 
     /** Initialises this processors syscall handling

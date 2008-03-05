@@ -38,6 +38,7 @@ Elf32 elf("kernel");
 /// NOTE bluecode is doing some testing here
 #include <processor/interrupt.h>
 #include <processor/syscall.h>
+#include <utilities/List.h>
 
 class MyInterruptHandler : public InterruptHandler
 {
@@ -126,13 +127,17 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   foo.mytestfunc(false, 'g');
 #endif
 
-  asm volatile("sti");
-  for (size_t i = 0;i < 100000000;i++);
-
-  NOTICE("there we are");
   asm volatile ("int $3");
 
-  for (;;);
+  List<int*> myList;
+  List<int*>::ConstIterator cur = myList.begin();
+  List<int*>::ConstIterator end = myList.end();
+  for (;cur != end;++cur)
+  {
+    NOTICE("Hello, World");
+  }
+
+  for (;;){asm volatile("sti");}
 
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.

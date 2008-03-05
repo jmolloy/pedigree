@@ -21,7 +21,7 @@ X64SyscallManager X64SyscallManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
 {
-  return X64SyscallManager::m_Instance;
+  return X64SyscallManager::instance();
 }
 
 bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)

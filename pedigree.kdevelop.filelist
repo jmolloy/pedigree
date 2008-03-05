@@ -24,6 +24,8 @@ src/system/include/compiler.h
 src/system/include/machine
 src/system/include/machine/initialise.h
 src/system/include/machine/irq.h
+src/system/include/machine/mips_common
+src/system/include/machine/mips_common/types.h
 src/system/include/machine/timer.h
 src/system/include/machine/types.h
 src/system/include/machine/x86_common
@@ -32,6 +34,12 @@ src/system/include/processor
 src/system/include/processor/initialise.h
 src/system/include/processor/interrupt.h
 src/system/include/processor/io.h
+src/system/include/processor/memory.h
+src/system/include/processor/mips64
+src/system/include/processor/mips64/state.h
+src/system/include/processor/mips64/types.h
+src/system/include/processor/mips_common
+src/system/include/processor/mips_common/io.h
 src/system/include/processor/processor.h
 src/system/include/processor/state.h
 src/system/include/processor/syscall.h
@@ -45,7 +53,10 @@ src/system/include/processor/x86/types.h
 src/system/include/processor/x86_common
 src/system/include/processor/x86_common/io.h
 src/system/include/utilities
+src/system/include/utilities/IteratorAdapter.h
+src/system/include/utilities/List.h
 src/system/include/utilities/StaticString.h
+src/system/include/utilities/Vector.h
 src/system/include/utilities/string.h
 src/system/include/utilities/utility.h
 src/system/kernel
@@ -71,6 +82,14 @@ src/system/kernel/core/memory/MemoryMap.cc
 src/system/kernel/core/memory/MemoryMap.h
 src/system/kernel/core/processor
 src/system/kernel/core/processor/io.cc
+src/system/kernel/core/processor/mips_common
+src/system/kernel/core/processor/mips_common/asm_interrupt.S
+src/system/kernel/core/processor/mips_common/asm_processor.S
+src/system/kernel/core/processor/mips_common/initialiseProcessor1.cc
+src/system/kernel/core/processor/mips_common/initialiseProcessor2.cc
+src/system/kernel/core/processor/mips_common/interrupt.cc
+src/system/kernel/core/processor/mips_common/processor.cc
+src/system/kernel/core/processor/mips_common/state.cc
 src/system/kernel/core/processor/x64
 src/system/kernel/core/processor/x64/asm_interrupt.S
 src/system/kernel/core/processor/x64/asm_processor.S
@@ -154,6 +173,8 @@ src/system/kernel/linker/Elf32.cc
 src/system/kernel/linker/Elf32.h
 src/system/kernel/linker/FileLoader.h
 src/system/kernel/machine
+src/system/kernel/machine/mips_common
+src/system/kernel/machine/mips_common/initialiseMachine.cc
 src/system/kernel/machine/x86_common
 src/system/kernel/machine/x86_common/apic.cc
 src/system/kernel/machine/x86_common/apic.h
@@ -167,7 +188,9 @@ src/system/kernel/machine/x86_common/rtc.cc
 src/system/kernel/machine/x86_common/rtc.h
 src/system/kernel/machine/x86_common/timer.cc
 src/system/kernel/utilities
+src/system/kernel/utilities/List.cc
 src/system/kernel/utilities/String.cc
+src/system/kernel/utilities/Vector.cc
 src/system/modules
 src/system/modules/test
 src/system/modules/test/Makefile

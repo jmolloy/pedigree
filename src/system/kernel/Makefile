@@ -82,7 +82,7 @@ SRCFILES += core/lib/cppsupport.cc \
 
 SRCFILES += linker/Elf32.cc
 
-SRCFILES += utilities/String.cc
+SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 
 SRCFILES += core/processor/io.c
 
