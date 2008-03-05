@@ -24,6 +24,9 @@ SECTIONS
         *(.data)
         *(.rodata)
         . = ALIGN(4096);
+	__strtab = .;
+	*(.strtab)
+	__strtab_end = .;
     }
 
     .bss :

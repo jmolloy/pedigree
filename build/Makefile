@@ -26,7 +26,10 @@ endif
 ifdef X86_64
 COMPILER=amd64-elf
 endif
-ifdef MIPS64_LE
+ifdef MIPS64
+COMPILER=mips64el-elf
+endif
+ifdef MIPS32
 COMPILER=mips64el-elf
 endif
 
@@ -69,9 +72,13 @@ endif
 ifdef X86_64
   CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
-ifdef MIPS64
+ifdef MIPS32
   CXXFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
   CFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
+endif
+ifdef MIPS64
+  CXXFLAGS += -G0 -mips64 -mabi=64 -mxgot -static
+  CFLAGS += -G0 -mips64 -mabi=64 -mxgot -static
 endif
 LDFLAGS=-nostdlib -nostdinc
 ifdef X86
@@ -166,6 +173,7 @@ clean:
 
 image: kernel
 	@perl -e "print \"\e[32m*** Writing disk images...\e[0m\n\";" # echo doesn't have support for colours.
+ifdef X86_COMMON
 ifdef CYGWIN
 	@cp images/floppy_fat.img built/floppy.img
 	@mcopy -Do -i  built/floppy.img built/kernel ::/
@@ -178,6 +186,11 @@ else
 	@sudo cp built/kernel /tmp/pedigree-image/kernel
 	@sudo umount /dev/loop0
 	@sudo /sbin/losetup -d /dev/loop0
+endif
+endif
+ifdef MIPS_COMMON
+	@$(BUILD)/compilers/$(COMPILER)/bin/objcopy built/kernel -O binary built/kernel.bin
+	@$(BUILD)/compilers/$(COMPILER)/bin/objcopy built/kernel -O srec built/kernel.srec
 endif
 	@perl -e "print \"\e[32m*** Build finished.\e[0m\n\";" # echo doesn't have support for colours.
 

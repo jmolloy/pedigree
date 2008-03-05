@@ -34,6 +34,7 @@ DIRECTORIES = core/lib \
               core/processor/x86 \
               core/processor/x64 \
               core/processor/x86_common \
+              core/processor/mips32 \
               core/processor/mips64 \
               core/processor/mips_common \
               debugger/ \
@@ -131,6 +132,13 @@ endif
 ifdef MIPS_COMMON
 SRCFILES += machine/mips_common/initialiseMachine.cc \
             boot-mips.cc
+endif
+
+###################################################################
+# mips32 source file list.
+ifdef MIPS32
+SRCFILES += core/processor/mips32/initialiseProcessor1.cc \
+            core/processor/mips32/initialiseProcessor2.cc
 endif
 
 ###################################################################

@@ -13,19 +13,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_PROCESSOR_MIPS64_STATE_H
-#define KERNEL_PROCESSOR_MIPS64_STATE_H
+#ifndef KERNEL_PROCESSOR_MIPS32_STATE_H
+#define KERNEL_PROCESSOR_MIPS32_STATE_H
 
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorMIPS64 MIPS64
- * MIPS64 processor-specific kernel
+/** @addtogroup kernelprocessorMIPS32 MIPS32
+ * MIPS32 processor-specific kernel
  *  @ingroup kernelprocessor
  * @{ */
 
-/** MIPS64 Interrupt State */
-class MIPS64InterruptState
+/** MIPS32 Interrupt State */
+class MIPS32InterruptState
 {
   public:
     //
@@ -79,19 +79,19 @@ class MIPS64InterruptState
   private:
     /** The default constructor
      *\note NOT implemented */
-    MIPS64InterruptState();
+    MIPS32InterruptState();
     /** The copy-constructor
      *\note NOT implemented */
-    MIPS64InterruptState(const MIPS64InterruptState &);
+    MIPS32InterruptState(const MIPS32InterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    MIPS64InterruptState &operator = (const MIPS64InterruptState &);
+    MIPS32InterruptState &operator = (const MIPS32InterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~MIPS64InterruptState();
+    ~MIPS32InterruptState();
 } PACKED;
 
-class MIPS64SyscallState
+class MIPS32SyscallState
 {
   public:
     //
@@ -150,72 +150,72 @@ class MIPS64SyscallState
 //
 // Part of the Implementation
 //
-uintptr_t MIPS64InterruptState::getStackPointer() const
+uintptr_t MIPS32InterruptState::getStackPointer() const
 {
   return 0;
 }
-void MIPS64InterruptState::setStackPointer(uintptr_t stackPointer)
+void MIPS32InterruptState::setStackPointer(uintptr_t stackPointer)
 {
 }
-uintptr_t MIPS64InterruptState::getInstructionPointer() const
-{
-  return 0;
-}
-void MIPS64InterruptState::setInstructionPointer(uintptr_t instructionPointer)
-{
-}
-uintptr_t MIPS64InterruptState::getBasePointer() const
+uintptr_t MIPS32InterruptState::getInstructionPointer() const
 {
   return 0;
 }
-void MIPS64InterruptState::setBasePointer(uintptr_t basePointer)
+void MIPS32InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
-size_t MIPS64InterruptState::getRegisterSize(size_t index) const
+uintptr_t MIPS32InterruptState::getBasePointer() const
+{
+  return 0;
+}
+void MIPS32InterruptState::setBasePointer(uintptr_t basePointer)
+{
+}
+size_t MIPS32InterruptState::getRegisterSize(size_t index) const
 {
   return 4;
 }
 
-bool MIPS64InterruptState::kernelMode() const
+bool MIPS32InterruptState::kernelMode() const
 {
   return false;
 }
-size_t MIPS64InterruptState::getInterruptNumber() const
+size_t MIPS32InterruptState::getInterruptNumber() const
 {
   return 0;
 }
 
-uintptr_t MIPS64SyscallState::getStackPointer() const
+uintptr_t MIPS32SyscallState::getStackPointer() const
 {
   return 0;
 }
-void MIPS64SyscallState::setStackPointer(uintptr_t stackPointer)
+void MIPS32SyscallState::setStackPointer(uintptr_t stackPointer)
 {
 }
-uintptr_t MIPS64SyscallState::getInstructionPointer() const
-{
-  return 0;
-}
-void MIPS64SyscallState::setInstructionPointer(uintptr_t instructionPointer)
-{
-}
-uintptr_t MIPS64SyscallState::getBasePointer() const
+uintptr_t MIPS32SyscallState::getInstructionPointer() const
 {
   return 0;
 }
-void MIPS64SyscallState::setBasePointer(uintptr_t basePointer)
+void MIPS32SyscallState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
-size_t MIPS64SyscallState::getRegisterSize(size_t index) const
+uintptr_t MIPS32SyscallState::getBasePointer() const
+{
+  return 0;
+}
+void MIPS32SyscallState::setBasePointer(uintptr_t basePointer)
+{
+}
+size_t MIPS32SyscallState::getRegisterSize(size_t index) const
 {
   return 4;
 }
 
-size_t MIPS64SyscallState::getSyscallService() const
+size_t MIPS32SyscallState::getSyscallService() const
 {
   return 0;
 }
-size_t MIPS64SyscallState::getSyscallNumber() const
+size_t MIPS32SyscallState::getSyscallNumber() const
 {
   return 0;
 }
