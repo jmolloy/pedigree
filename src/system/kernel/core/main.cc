@@ -129,18 +129,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   foo.mytestfunc(false, 'g');
 #endif
 
-<<<<<<< .mine
-//   asm volatile("sti");
-  for (size_t i = 0;i < 100000000;i++);
-
-  NOTICE("there we are");
-=======
->>>>>>> .r189
-//   asm volatile ("int $3");
+  #ifdef X86_COMMON
+    asm volatile ("int $3");
+  #endif
 
   List<int*> myList;
-  List<int*>::ConstIterator cur = myList.begin();
-  List<int*>::ConstIterator end = myList.end();
+  List<int*>::ConstIterator cur(myList.begin());
+  List<int*>::ConstIterator end(myList.end());
   for (;cur != end;++cur)
   {
     NOTICE("Hello, World");

@@ -17,6 +17,7 @@
 #define KERNEL_UTILITIES_LIST_H
 
 #include <processor/types.h>
+#include <utilities/IteratorAdapter.h>
 
 /** @addtogroup kernelutilities utilities
  * utilities
@@ -299,6 +300,11 @@ template<class T>
 class List<T*>
 {
   public:
+    /** Iterator */
+    typedef IteratorAdapter<T*, List<void*>::Iterator>             Iterator;
+    /** ConstIterator */
+    typedef IteratorAdapter<T* const, List<void*>::ConstIterator>  ConstIterator;
+
     /** Default constructor, does nothing */
     inline List()
       : m_VoidList(){}
@@ -309,151 +315,6 @@ class List<T*>
     /** Destructor, deallocates memory */
     inline ~List()
       {}
-
-    class ConstIterator;
-
-    /** Forward iterator */
-    class Iterator
-    {
-      friend class ConstIterator;
-      public:
-        /** Default constructor */
-        inline Iterator()
-          : m_VoidIterator(0){}
-        /** Construct form a List<void*>::Iterator
-         *\param[in] x the List<void*>::Iterator reference object */
-        inline Iterator(const List<void*>::Iterator &x)
-          : m_VoidIterator(x){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline Iterator(const Iterator &x)
-          : m_VoidIterator(x.m_VoidIterator){}
-        /** The destructor */
-        inline ~Iterator()
-          {}
-
-        inline Iterator &operator = (const Iterator &x)
-        {
-          m_VoidIterator = x.m_VoidIterator;
-          return *this;
-        }
-        inline bool operator == (const ConstIterator &x) const
-        {
-          if (m_VoidIterator != x.m_VoidIterator)return false;
-          return true;
-        }
-        inline bool operator != (const ConstIterator &x) const
-        {
-          if (m_VoidIterator == x.m_VoidIterator)return false;
-          return true;
-        }
-        inline bool operator == (const Iterator &x) const
-        {
-          if (m_VoidIterator != x.m_VoidIterator)return false;
-          return true;
-        }
-        inline bool operator != (const Iterator &x) const
-        {
-          if (m_VoidIterator == x.m_VoidIterator)return false;
-          return true;
-        }
-        /** Go to the next element in the List
-         *\return reference to this iterator */
-        inline Iterator &operator ++ ()
-        {
-          ++m_VoidIterator;
-          return *this;
-        }
-        /** Go to the next element and return a copy of the old iterator
-         *\return the iterator previous to the increment */
-        inline Iterator operator ++ (int)
-        {
-          Iterator tmp(*this);
-          ++m_VoidIterator;
-          return tmp;
-        }
-        /** Dereference the iterator, aka get the element
-         *\return the element the iterator points to */
-        inline T *operator *()
-        {
-          return reinterpret_cast<T*>(*m_VoidIterator);
-        }
-
-      private:
-        /** The actual iterator */
-        List<void*>::Iterator m_VoidIterator;
-    };
-
-    /** Constant forward iterator */
-    class ConstIterator
-    {
-      friend class Iterator;
-      public:
-        /** Default constructor */
-        inline ConstIterator()
-          : m_VoidIterator(){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline ConstIterator(const ConstIterator &x)
-          : m_VoidIterator(x.m_VoidIterator){}
-        /** Construct form a List<void*>::ConstIterator
-         *\param[in] x the List<void*>::ConstIterator reference object */
-        inline ConstIterator(const List<void*>::ConstIterator &x)
-          : m_VoidIterator(x){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline ConstIterator(const Iterator &x)
-          : m_VoidIterator(x.m_VoidIterator){}
-        /** The destructor */
-        inline ~ConstIterator()
-          {}
-
-        inline ConstIterator &operator = (const ConstIterator &x)
-        {
-          m_VoidIterator = x.m_VoidIterator;
-          return *this;
-        }
-        inline ConstIterator &operator = (const Iterator &x)
-        {
-          m_VoidIterator = x.m_VoidIterator;
-          return *this;
-        }
-        inline bool operator == (const ConstIterator &x) const
-        {
-          if (m_VoidIterator != x.m_VoidIterator)return false;
-          return true;
-        }
-        inline bool operator != (const ConstIterator &x) const
-        {
-          if (m_VoidIterator == x.m_VoidIterator)return false;
-          return true;
-        }
-        /** Go to the next element in the List
-         *\return reference to this iterator */
-        inline ConstIterator &operator ++ ()
-        {
-          ++m_VoidIterator;
-          return *this;
-        }
-        /** Go to the next element and return a copy of the old iterator
-         *\return the iterator previous to the increment */
-        inline ConstIterator operator ++ (int)
-        {
-          ConstIterator tmp(*this);
-          ++m_VoidIterator;
-          return tmp;
-        }
-        /** Dereference the iterator, aka get the element
-         *\return the element the iterator points to */
-        inline T *operator *()
-        {
-          return reinterpret_cast<T*>(*m_VoidIterator);
-        }
-
-      private:
-        /** The actual constant iterator */
-        List<void*>::ConstIterator m_VoidIterator;
-    };
 
     /** Assignment operator
      *\param[in] x the object that should be copied */
