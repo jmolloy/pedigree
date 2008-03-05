@@ -210,10 +210,12 @@ class IoManager
   #include <processor/x86_common/io.h>
 #endif
 
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
 size_t IoPort::size()
 {
   return m_Size;
 }
+#endif
 
 size_t MemoryMappedIo::size()
 {

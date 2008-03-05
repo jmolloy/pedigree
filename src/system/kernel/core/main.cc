@@ -85,6 +85,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the processor-specific interface
   initialiseProcessor1();
 
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
   /// NOTE there we go
   MyInterruptHandler myHandler;
   MySyscallHandler mySysHandler;
@@ -94,7 +95,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     NOTICE("Failed to register interrupt handler");
   if (SysManager.registerSyscallHandler(SyscallManager::kernelCore, &mySysHandler) == false)
     NOTICE("Failed to register syscall handler");
-
+#endif
+  
   // Initialise the machine-specific interface
   initialiseMachine();
 
@@ -112,8 +114,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   elf.load(&bootstrapInfo);
 
   /// NOTE: bluecode again
-  asm volatile("int $0xFE"); // some interrupt
-  asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
+//   asm volatile("int $0xFE"); // some interrupt
+//   asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
@@ -127,7 +129,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   foo.mytestfunc(false, 'g');
 #endif
 
-  asm volatile ("int $3");
+<<<<<<< .mine
+//   asm volatile("sti");
+  for (size_t i = 0;i < 100000000;i++);
+
+  NOTICE("there we are");
+=======
+>>>>>>> .r189
+//   asm volatile ("int $3");
 
   List<int*> myList;
   List<int*>::ConstIterator cur = myList.begin();

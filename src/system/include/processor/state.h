@@ -24,6 +24,10 @@
   #include <processor/x64/state.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X64##x
 #endif
+#ifdef MIPS64
+  #include <processor/mips64/state.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
+#endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
 //       the selected processor architecture

@@ -26,6 +26,9 @@ endif
 ifdef X86_64
 COMPILER=amd64-elf
 endif
+ifdef MIPS64_LE
+COMPILER=mips64el-elf
+endif
 
 ifdef X86
 CMD_FLAGS += -DX86_COMMON
@@ -46,7 +49,12 @@ CXX=$(BUILD)/g++
 endif
 
 CPP=$(COMPILER)-cpp
+ifdef X86_COMMON
 AS=nasm
+endif
+ifdef MIPS_COMMON
+AS=$(BUILD)/compilers/$(COMPILER)/bin/as
+endif
 CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
 ifdef X86
   CFLAGS += -m32
@@ -60,6 +68,10 @@ ifdef X86
 endif
 ifdef X86_64
   CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+endif
+ifdef MIPS64
+  CXXFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
+  CFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
 endif
 LDFLAGS=-nostdlib -nostdinc
 ifdef X86

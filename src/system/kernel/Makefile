@@ -48,7 +48,7 @@ DIRECTORIES = core/lib \
 ###################################################################
 # Source file list.
 ifdef KERNEL_STANDALONE
-SRCFILES = boot-standalone.s BootstrapInfo.cc Log.cc
+SRCFILES = boot-standalone.s
 endif
 ifdef DEBUGGER
 SRCFILES += debugger/libudis86/mnemonics.c \
@@ -83,7 +83,7 @@ SRCFILES += core/lib/cppsupport.cc \
 SRCFILES += linker/Elf32.cc
 
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
-
+SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/io.c
 
 ###################################################################
@@ -127,10 +127,18 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
 endif
 
 ###################################################################
-# MIPS common source file list.
+# mips common source list.
+ifdef MIPS_COMMON
+SRCFILES += machine/mips_common/initialiseMachine.cc \
+            boot-mips.cc
+endif
 
 ###################################################################
-# MIPS 64-bit source file list.
+# mips64 source file list.
+ifdef MIPS64
+SRCFILES += core/processor/mips64/initialiseProcessor1.cc \
+            core/processor/mips64/initialiseProcessor2.cc
+endif
 
 ###################################################################
 # Set up environment for buildCommon.mk and call.
@@ -141,6 +149,9 @@ endif
 
 ifdef KERNEL_STANDALONE
 LDFLAGS += -T $(shell pwd)/link-standalone.ld
+endif
+ifdef MIPS_COMMON
+LDFLAGS += -mxgot -T $(shell pwd)/link-mips.ld
 endif
 LDADD += -lgcc
 BUILD_NAME=kernel

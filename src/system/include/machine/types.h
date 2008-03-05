@@ -20,6 +20,10 @@
   #include <machine/x86_common/types.h>
   #define MACHINE_SPECIFIC_NAME(x) X86Common##x
 #endif
+#ifdef MIPS_COMMON
+  #include <machine/mips_common/types.h>
+  #define MACHINE_SPECIFIC_NAME(x) MIPSCommon##x
+#endif
 
 
 // NOTE: This throws a compile-time error if this header is not adapted for

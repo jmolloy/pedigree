@@ -76,12 +76,12 @@ Log &Log::operator<< (SeverityLevel level)
     // Zero the buffer.
     m_Buffer.str[0] = '\0';
     m_Buffer.type = level;
-    if (isMachineInitialised() == true)
-    {
-      Timer &timer = Timer::instance();
-      m_Buffer.timestamp = timer.getTickCount();
-    }
-    else
+//     if (isMachineInitialised() == true)
+//     {
+//       Timer &timer = Timer::instance();
+//       m_Buffer.timestamp = timer.getTickCount();
+//     }
+//     else
       m_Buffer.timestamp = 0;
     break;
   }

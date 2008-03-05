@@ -24,7 +24,7 @@ struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
   // via the bootstrapper.
-#ifdef KERNEL_STANDALONE
+#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON)
   uint32_t flags;
   
   uint32_t mem_lower;
