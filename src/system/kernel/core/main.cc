@@ -70,7 +70,9 @@ void mytestfunc(bool a, char b)
 {
   //InterruptState state;
   //Debugger::instance().breakpoint();
-  asm volatile("int $0x3");
+  #ifdef X86_COMMON
+    asm volatile("int $0x3");
+  #endif
 }
 };
 /// Kernel entry point.
@@ -85,7 +87,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the processor-specific interface
   initialiseProcessor1();
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#ifdef X86_COMMON
   /// NOTE there we go
   MyInterruptHandler myHandler;
   MySyscallHandler mySysHandler;
@@ -141,7 +143,12 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     NOTICE("Hello, World");
   }
 
-  for (;;){asm volatile("sti");}
+  for (;;)
+  {
+    #ifdef X86_COMMON
+      asm volatile("sti");
+    #endif
+  }
 
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.
