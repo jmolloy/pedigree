@@ -66,6 +66,9 @@ class Processor
     /** Get the instruction-pointer of the calling function
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
+    /** Trigger a breakpoint */
+    inline static void breakpoint();
+
     static uintptr_t getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultType &nFaultType, DebugFlags::Length &nLength, bool &bEnabled);
     static void enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddress, DebugFlags::FaultType nFaultType, DebugFlags::Length nLength);
     static void disableDebugBreakpoint(uint32_t BpNumber);
@@ -87,5 +90,9 @@ class Processor
 };
 
 /** @} */
+
+#ifdef X86_COMMON
+  #include <processor/x86_common/processor.h>
+#endif
 
 #endif

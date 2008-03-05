@@ -93,7 +93,9 @@ class Vector<void*>
     {
       return m_Data + m_Count;
     }
-
+    /** Copy the content of a Vector into this Vector
+     *\param[in] x the reference Vector */
+    void assign(const Vector &x);
     /** Reserve space for size elements
      *\param[in] size the number of elements to reserve space for
      *\param[in] copy Should we copy the old contents over? */

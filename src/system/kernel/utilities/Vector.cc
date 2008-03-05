@@ -32,7 +32,7 @@ Vector<void*>::Vector(size_t size)
 Vector<void*>::Vector(const Vector &x)
  : m_Size(0), m_Count(0), m_Data(0)
 {
-  reserve(x.count(), false);
+  assign(x);
 }
 Vector<void*>::~Vector()
 {
@@ -42,11 +42,7 @@ Vector<void*>::~Vector()
 
 Vector<void*> &Vector<void*>::operator = (const Vector<void*> &x)
 {
-  reserve(x.count(), false);
-
-  memcpy(m_Data, x.m_Data, x.count() * sizeof(void*));
-  m_Count = x.count();
-
+  assign(x);
   return *this;
 }
 void *Vector<void*>::operator [](size_t index) const
@@ -72,6 +68,13 @@ void *Vector<void*>::popBack()
 {
   m_Count--;
   return m_Data[m_Count];
+}
+void Vector<void*>::assign(const Vector &x)
+{
+  reserve(x.count(), false);
+
+  memcpy(m_Data, x.m_Data, x.count() * sizeof(void*));
+  m_Count = x.count();
 }
 void Vector<void*>::reserve(size_t size, bool copy)
 {

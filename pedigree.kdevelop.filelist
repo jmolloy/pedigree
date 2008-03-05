@@ -35,11 +35,12 @@ src/system/include/processor/initialise.h
 src/system/include/processor/interrupt.h
 src/system/include/processor/io.h
 src/system/include/processor/memory.h
+src/system/include/processor/mips32
+src/system/include/processor/mips32/state.h
+src/system/include/processor/mips32/types.h
 src/system/include/processor/mips64
 src/system/include/processor/mips64/state.h
 src/system/include/processor/mips64/types.h
-src/system/include/processor/mips_common
-src/system/include/processor/mips_common/io.h
 src/system/include/processor/processor.h
 src/system/include/processor/state.h
 src/system/include/processor/syscall.h
@@ -52,6 +53,7 @@ src/system/include/processor/x86/state.h
 src/system/include/processor/x86/types.h
 src/system/include/processor/x86_common
 src/system/include/processor/x86_common/io.h
+src/system/include/processor/x86_common/processor.h
 src/system/include/utilities
 src/system/include/utilities/IteratorAdapter.h
 src/system/include/utilities/List.h
@@ -82,6 +84,9 @@ src/system/kernel/core/memory/MemoryMap.cc
 src/system/kernel/core/memory/MemoryMap.h
 src/system/kernel/core/processor
 src/system/kernel/core/processor/io.cc
+src/system/kernel/core/processor/mips64
+src/system/kernel/core/processor/mips64/initialiseProcessor1.cc
+src/system/kernel/core/processor/mips64/initialiseProcessor2.cc
 src/system/kernel/core/processor/mips_common
 src/system/kernel/core/processor/mips_common/asm_interrupt.S
 src/system/kernel/core/processor/mips_common/asm_processor.S

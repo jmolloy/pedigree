@@ -51,8 +51,8 @@ typedef MIPS64int32_t MIPS64ssize_t;
 /** Define size_t */
 typedef MIPS64uint32_t MIPS64size_t;
 
-/** Define an I/O port type */
-typedef MIPS64uint16_t MIPS64io_port_t;
+// No I/O port type
+#define KERNEL_PROCESSOR_NO_PORT_IO
 
 /** @} */
 
