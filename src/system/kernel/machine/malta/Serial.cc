@@ -13,20 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_MIPS_COMMON_TYPES_H
-#define KERNEL_MACHINE_MIPS_COMMON_TYPES_H
+#include <machine/malta/Serial.h>
+#include <machine/types.h>
 
-#include <processor/types.h>
+Serial::Serial() :
+  m_pBuffer(0),
+  m_pRegs(reinterpret_cast<serial*> (KSEG1(0x1fd003f8)))
+{
+}
 
-/** @addtogroup kernelmachinemipscommon
- * @{ */
+Serial::~Serial()
+{
+}
 
-/** Define a type for IRQ identifications */
-typedef uint8_t MIPSCommonirq_id_t;
+void Serial::write(char c)
+{
+//   while (!(m_pRegs->lstat & 32)) ;
+  m_pRegs->rxtx = static_cast<uint8_t> (c);
+}
 
-#define KSEG0(addr) (addr|0x80000000)
-#define KSEG1(addr) (addr|0xa0000000)
+char Serial::read()
+{
+  /// \todo Wait for device to become ready.
+  return static_cast<char> (m_pRegs->rxtx);
+}
 
-/** @} */
-
-#endif

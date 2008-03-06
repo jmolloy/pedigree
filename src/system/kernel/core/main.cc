@@ -26,6 +26,8 @@
 
 #include <utilities/StaticString.h>
 
+#include <machine/malta/Serial.h>
+
 // initialiseConstructors()
 #include "cppsupport.h"
 // initialiseProcessor1(), initialiseProcessor2()
@@ -175,6 +177,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   }
 
 #ifdef MIPS_COMMON
+  Serial s;
+  s.write('p');
+  s.write('o');
+  s.write('o');
   return; // Go back to the YAMON prompt.
 #endif
 

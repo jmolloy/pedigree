@@ -46,6 +46,7 @@ DIRECTORIES = core/lib \
               machine/ \
               machine/x86_common \
               machine/mips_common \
+              machine/malta \
               utilities
 
 ###################################################################
@@ -135,6 +136,7 @@ endif
 # mips common source list.
 ifdef MIPS_COMMON
 SRCFILES += machine/mips_common/initialiseMachine.cc \
+            machine/malta/Serial.cc \
             boot-mips.cc
 endif
 

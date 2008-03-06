@@ -17,6 +17,12 @@ src/subsys/Makefile
 src/system
 src/system/boot
 src/system/boot/Makefile
+src/system/boot/mips
+src/system/boot/mips/Elf32.cc
+src/system/boot/mips/Elf32.h
+src/system/boot/mips/Makefile
+src/system/boot/mips/main.cc
+src/system/boot/mips/mkheader.pl
 src/system/common
 src/system/common/Makefile
 src/system/include
@@ -28,7 +34,11 @@ src/system/include/machine/IrqManager.h
 src/system/include/machine/SchedulerTimer.h
 src/system/include/machine/Timer.h
 src/system/include/machine/TimerHandler.h
+src/system/include/machine/au1500
 src/system/include/machine/initialise.h
+src/system/include/machine/malta
+src/system/include/machine/malta/Serial.cc
+src/system/include/machine/malta/Serial.h
 src/system/include/machine/mips_common
 src/system/include/machine/mips_common/types.h
 src/system/include/machine/types.h
@@ -195,6 +205,9 @@ src/system/kernel/linker/Elf32.cc
 src/system/kernel/linker/Elf32.h
 src/system/kernel/linker/FileLoader.h
 src/system/kernel/machine
+src/system/kernel/machine/au1500
+src/system/kernel/machine/malta
+src/system/kernel/machine/malta/Serial.cc
 src/system/kernel/machine/mips_common
 src/system/kernel/machine/mips_common/initialiseMachine.cc
 src/system/kernel/machine/x86_common
