@@ -20,7 +20,7 @@
 #include <processor/types.h>
 #include <processor/InterruptManager.h>
 
-/** @ingroup kernelprocessorx64
+/** @addtogroup kernelprocessorx64
  * @{ */
 
 /** The interrupt handler on x64 processors */

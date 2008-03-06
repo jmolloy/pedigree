@@ -18,7 +18,7 @@
 
 #include <processor/types.h>
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 /** Abstract base class for all timer handlers. All those handlers must

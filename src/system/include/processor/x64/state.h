@@ -19,7 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @ingroup kernelprocessorx64
+/** @addtogroup kernelprocessorx64
  * @{ */
 
 /** x64 Interrupt State */

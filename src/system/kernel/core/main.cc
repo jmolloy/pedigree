@@ -75,6 +75,34 @@ void mytestfunc(bool a, char b)
   #endif
 }
 };
+
+struct foo
+{
+  foo *next()
+  {
+    return 0;
+  }
+  foo *prev()
+  {
+    return 0;
+  }
+};
+
+template<typename T, typename F, F Function>
+class bar
+{
+  public:
+    void _switch()
+    {
+      mData = (mData->*Function)();
+    }
+
+  private:
+    T *mData;
+};
+
+template class bar<foo, foo *(foo::*)(), &foo::next>;
+
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -137,11 +165,12 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     Processor::breakpoint();
   #endif
 
-  List<int*> myList;
-  List<int*>::ConstIterator cur(myList.begin());
-  List<int*>::ConstIterator end(myList.end());
+  List<void*> myList;
+  List<void*>::Iterator cur(myList.begin());
+  List<void*>::ConstIterator end(myList.end());
   for (;cur != end;++cur)
   {
+    *cur = 0;
     NOTICE("Hello, World");
   }
 

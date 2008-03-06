@@ -32,7 +32,7 @@
   #error Unknown machine architecture
 #endif
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 // NOTE: If a newly added machine architecture does not supply all the

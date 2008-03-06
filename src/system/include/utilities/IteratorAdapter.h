@@ -18,7 +18,7 @@
 
 #include <processor/types.h>
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
 
 /** Adapter for an iterator with a different element type */

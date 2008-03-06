@@ -18,7 +18,7 @@
 
 #include <processor/types.h>
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
 
 /** General Vector template class, aka dynamic array */

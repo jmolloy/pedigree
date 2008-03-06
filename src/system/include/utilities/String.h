@@ -16,7 +16,7 @@
 #ifndef KERNEL_UTILITIES_STRING_H
 #define KERNEL_UTILITIES_STRING_H
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
 
 #include <compiler.h>

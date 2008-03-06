@@ -19,7 +19,7 @@
 #include <processor/types.h>
 #include <processor/state.h>
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 namespace DebugFlags

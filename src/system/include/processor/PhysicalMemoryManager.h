@@ -18,7 +18,7 @@
 
 #include <processor/types.h>
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 class PhysicalMemoryManager

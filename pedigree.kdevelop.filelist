@@ -63,6 +63,7 @@ src/system/include/processor/x86_common
 src/system/include/processor/x86_common/Processor.h
 src/system/include/processor/x86_common/io.h
 src/system/include/utilities
+src/system/include/utilities/Iterator.h
 src/system/include/utilities/IteratorAdapter.h
 src/system/include/utilities/List.h
 src/system/include/utilities/StaticString.h

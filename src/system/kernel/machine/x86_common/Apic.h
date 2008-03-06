@@ -18,7 +18,7 @@
 
 #include <machine/IrqManager.h>
 
-/** @ingroup kernelmachinex86common
+/** @addtogroup kernelmachinex86common
  * @{ */
 
 /** The x86/x64 advanced programmable interrupt controller architecture as IrqManager */

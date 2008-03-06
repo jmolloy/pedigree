@@ -18,9 +18,27 @@
 
 #include <processor/types.h>
 #include <utilities/IteratorAdapter.h>
+#include <utilities/Iterator.h>
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
+
+/** One node in the list */
+template<typename T>
+struct _ListNode_t
+{
+  _ListNode_t *next()
+    {return m_Next;}
+  _ListNode_t *previous()
+    {return m_Previous;}
+
+  /** Pointer to the next node */
+  _ListNode_t *m_Next;
+  /** Pointer to the previous node */
+  _ListNode_t *m_Previous;
+  /** The value of the node */
+  T value;
+};
 
 template<class T>
 class List;
@@ -29,27 +47,13 @@ class List;
 template<>
 class List<void*>
 {
+  typedef _ListNode_t<void*> node_t;
   public:
-    class Iterator;
-    class ConstIterator;
-    /** Iterator needs access to List<void*>::node_t */
-    friend class Iterator;
-    /** ConstIterator needs access to List<void*>::node_t */
-    friend class ConstIterator;
+    typedef ::Iterator<void*, node_t>     Iterator;
+    typedef Iterator::Const               ConstIterator;
+    typedef Iterator::Reverse             ReverseIterator;
+    typedef Iterator::ConstReverse        ConstReverseIterator;
 
-  private:
-    /** One node in the list */
-    struct node_t
-    {
-      /** Pointer to the next node */
-      node_t *next;
-      /** Pointer to the previous node */
-      node_t *previous;
-      /** The value of the node */
-      void *value;
-    };
-
-  public:
     /** Default constructor, does nothing */
     List();
     /** Copy-constructor
@@ -118,178 +122,6 @@ class List<void*>
     node_t *m_First;
     /** Pointer to the last Node in the List */
     node_t *m_Last;
-
-  public:
-    /** Forward iterator */
-    class Iterator
-    {
-      /** Needed for the copy-constructor */
-      friend class ConstIterator;
-      public:
-        /** Default constructor */
-        inline Iterator()
-          : m_Node(0){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline Iterator(const Iterator &x)
-          : m_Node(x.m_Node){}
-        /** Construct Iterator from a pointer to a List<void*>::node_t
-         *\param[in] node pointer to the List<void*> node */
-        inline Iterator(node_t *node)
-          : m_Node(node){}
-        /** The destructor */
-        inline ~Iterator()
-          {}
-
-        /** Assignment operator
-         *\param[in] x reference object */
-        inline Iterator &operator = (const Iterator &x)
-        {
-          m_Node = x.m_Node;
-          return *this;
-        }
-        /** Compare Iterator with ConstIterator
-         *\param[in] x reference object
-         *\return true, if they refer to the same element, false otherwise */
-        inline bool operator == (const ConstIterator &x) const
-        {
-          if (m_Node != x.m_Node)return false;
-          return true;
-        }
-        /** Compare Iterator with ConstIterator
-         *\param[in] x reference object
-         *\return false, if they refer to the same element, true otherwise */
-        inline bool operator != (const ConstIterator &x) const
-        {
-          if (m_Node == x.m_Node)return false;
-          return true;
-        }
-        /** Compare two Iterators
-         *\param[in] x reference object
-         *\return true, if they refer to the same element, false otherwise */
-        inline bool operator == (const Iterator &x) const
-        {
-          if (m_Node != x.m_Node)return false;
-          return true;
-        }
-        /** Compare two Iterators
-         *\param[in] x reference object
-         *\return false, if they refer to the same element, true otherwise */
-        inline bool operator != (const Iterator &x) const
-        {
-          if (m_Node == x.m_Node)return false;
-          return true;
-        }
-        /** Go to the next element in the List
-         *\return reference to this iterator */
-        inline Iterator &operator ++ ()
-        {
-          m_Node = m_Node->next;
-          return *this;
-        }
-        /** Go to the next element and return a copy of the old iterator
-         *\return the iterator previous to the increment */
-        inline Iterator operator ++ (int)
-        {
-          Iterator tmp(m_Node);
-          m_Node = m_Node->next;
-          return tmp;
-        }
-        /** Dereference the iterator, aka get the element
-         *\return the element the iterator points to */
-        inline void *&operator *()
-        {
-          return m_Node->value;
-        }
-
-      private:
-        /** Pointer to the List<void*> node of the element the iterator is
-         *  pointing to */
-        node_t *m_Node;
-    };
-
-    /** Constant forward iterator */
-    class ConstIterator
-    {
-      /** Needed for the comparison operator */
-      friend class Iterator;
-      public:
-        /** Default constructor */
-        inline ConstIterator()
-          : m_Node(0){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline ConstIterator(const ConstIterator &x)
-          : m_Node(x.m_Node){}
-        /** Copy-constructor
-         *\param[in] x reference object */
-        inline ConstIterator(const Iterator &x)
-          : m_Node(x.m_Node){}
-        /** Construct Iterator from a pointer to a List<void*>::node_t
-         *\param[in] node pointer to the List<void*> node */
-        inline ConstIterator(node_t *node)
-          : m_Node(node){}
-        /** The destructor */
-        inline ~ConstIterator()
-          {}
-
-        /** Assignment operator
-         *\param[in] x reference object */
-        inline ConstIterator &operator = (const ConstIterator &x)
-        {
-          m_Node = x.m_Node;
-          return *this;
-        }
-        /** Assignment operator
-         *\param[in] x reference object */
-        inline ConstIterator &operator = (const Iterator &x)
-        {
-          m_Node = x.m_Node;
-          return *this;
-        }
-        /** Compare two ConstIterators
-         *\param[in] x reference object
-         *\return true, if they refer to the same element, false otherwise */
-        inline bool operator == (const ConstIterator &x) const
-        {
-          if (m_Node != x.m_Node)return false;
-          return true;
-        }
-        /** Compare two ConstIterators
-         *\param[in] x reference object
-         *\return true, if they refer to the same element, false otherwise */
-        inline bool operator != (const ConstIterator &x) const
-        {
-          if (m_Node == x.m_Node)return false;
-          return true;
-        }
-        /** Go to the next element in the List
-         *\return reference to this iterator */
-        inline ConstIterator &operator ++ ()
-        {
-          m_Node = m_Node->next;
-          return *this;
-        }
-        /** Go to the next element and return a copy of the old iterator
-         *\return the iterator previous to the increment */
-        inline ConstIterator operator ++ (int)
-        {
-          ConstIterator tmp(m_Node);
-          m_Node = m_Node->next;
-          return tmp;
-        }
-        /** Dereference the iterator, aka get the element
-         *\return the element the iterator points to */
-        inline void *operator *()
-        {
-          return m_Node->value;
-        }
-
-      private:
-        /** Pointer to the List<void*> node of the element the iterator is
-         *  pointing to */
-        node_t *m_Node;
-    };
 };
 
 /** List template specialisation for pointers. Just forwards to the

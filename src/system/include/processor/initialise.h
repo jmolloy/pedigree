@@ -16,7 +16,7 @@
 #ifndef KERNEL_PROCESSOR_INITIALISE_H
 #define KERNEL_PROCESSOR_INITIALISE_H
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 /** Initialises the processor specific interface */

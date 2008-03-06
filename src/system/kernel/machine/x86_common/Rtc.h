@@ -20,7 +20,7 @@
 #include <machine/IrqManager.h>
 #include <machine/Timer.h>
 
-/** @ingroup kernelmachinex86common
+/** @addtogroup kernelmachinex86common
  * @{ */
 
 /** Class for the Real-time clock / CMOS implementing the Timer interface */

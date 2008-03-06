@@ -16,7 +16,7 @@
 #ifndef KERNEL_PROCESSOR_MIPS64_TYPES_H
 #define KERNEL_PROCESSOR_MIPS64_TYPES_H
 
-/** @ingroup kernelprocessorMIPS32
+/** @addtogroup kernelprocessorMIPS32
  * @{ */
 
 /** Define an 8bit signed integer type */

@@ -19,7 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @ingroup kernelprocessorx86
+/** @addtogroup kernelprocessorx86
  * @{ */
 
 /** The protected-mode task-state segment */

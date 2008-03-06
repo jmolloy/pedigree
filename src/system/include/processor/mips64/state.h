@@ -19,7 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @ingroup kernelprocessorMIPS64
+/** @addtogroup kernelprocessorMIPS64
  * @{ */
 
 /** MIPS64 Interrupt State */

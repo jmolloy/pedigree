@@ -19,7 +19,7 @@
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 
-/** @ingroup kernelprocessorx64
+/** @addtogroup kernelprocessorx64
  * @{ */
 
 /** The syscall handler on x64 processors */

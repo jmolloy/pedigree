@@ -50,14 +50,14 @@ size_t List<void*>::count() const
 void List<void*>::pushBack(void *value)
 {
   node_t *newNode = new node_t;
-  newNode->next = 0;
-  newNode->previous = m_Last;
+  newNode->m_Next = 0;
+  newNode->m_Previous = m_Last;
   newNode->value = value;
 
   if (m_Last == 0)
     m_First = newNode;
   else
-    m_Last->next = newNode;
+    m_Last->m_Next = newNode;
 
   m_Last = newNode;
   ++m_Count;
@@ -65,8 +65,8 @@ void List<void*>::pushBack(void *value)
 void *List<void*>::popBack()
 {
   node_t *node = m_Last;
-  m_Last = m_Last->previous;
-  m_Last->next = 0;
+  m_Last = m_Last->m_Previous;
+  m_Last->m_Next = 0;
   --m_Count;
 
   void *value = node->value;
@@ -76,14 +76,14 @@ void *List<void*>::popBack()
 void List<void*>::pushFront(void *value)
 {
   node_t *newNode = new node_t;
-  newNode->next = m_First;
-  newNode->previous = 0;
+  newNode->m_Next = m_First;
+  newNode->m_Previous = 0;
   newNode->value = value;
 
   if (m_First == 0)
     m_Last = newNode;
   else
-    m_First->previous = newNode;
+    m_First->m_Previous = newNode;
 
   m_First = newNode;
   ++m_Count;
@@ -91,8 +91,8 @@ void List<void*>::pushFront(void *value)
 void *List<void*>::popFront()
 {
   node_t *node = m_First;
-  m_First = m_First->next;
-  m_First->previous = 0;
+  m_First = m_First->m_Next;
+  m_First->m_Previous = 0;
   --m_Count;
 
   void *value = node->value;
@@ -106,7 +106,7 @@ void List<void*>::clear()
   for (size_t i = 0;i < m_Count;i++)
   {
     node_t *tmp = cur;
-    cur = cur->next;
+    cur = cur->m_Next;
     delete tmp;
   }
 

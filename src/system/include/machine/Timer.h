@@ -19,7 +19,7 @@
 #include <processor/types.h>
 #include <machine/TimerHandler.h>
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 /** Timer for the time-keeping

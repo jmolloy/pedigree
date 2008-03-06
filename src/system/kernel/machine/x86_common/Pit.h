@@ -20,7 +20,7 @@
 #include <machine/IrqManager.h>
 #include <machine/SchedulerTimer.h>
 
-/** @ingroup kernelmachinex86common
+/** @addtogroup kernelmachinex86common
  * @{ */
 
 /** The programmable intervall timer implements the SchedulerTimer interface */

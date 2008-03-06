@@ -18,7 +18,7 @@
 
 #include <processor/state.h>
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 /** Abstract base class for all syscall-handlers. All syscall-handlers mustbe

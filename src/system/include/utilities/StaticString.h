@@ -18,7 +18,7 @@
 
 #include <utilities/utility.h>
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
 
 /**

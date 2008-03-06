@@ -18,7 +18,7 @@
 
 #include <processor/types.h>
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 /** Interface to the hardware's I/O capabilities */

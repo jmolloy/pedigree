@@ -19,7 +19,7 @@
 #include <machine/types.h>
 #include <machine/IrqHandler.h>
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 /** This class handles IRQ (un)registration */

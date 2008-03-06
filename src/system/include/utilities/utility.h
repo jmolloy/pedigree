@@ -20,7 +20,7 @@
 #include <stdarg.h>
 #include <processor/types.h>
 
-/** @ingroup kernelutilities
+/** @addtogroup kernelutilities
  * @{ */
 
 #ifdef __cplusplus

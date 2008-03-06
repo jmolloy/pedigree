@@ -19,7 +19,7 @@
 #include <processor/types.h>
 #include <processor/IoBase.h>
 
-/** @ingroup kernelprocessor
+/** @addtogroup kernelprocessor
  * @{ */
 
 // NOTE TODO FIXME Needs to be reworked

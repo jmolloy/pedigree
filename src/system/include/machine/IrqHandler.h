@@ -18,7 +18,7 @@
 
 #include <machine/types.h>
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 /** Abstract base class for all irq-handlers. All irq-handlers must

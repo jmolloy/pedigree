@@ -16,7 +16,7 @@
 #ifndef KERNEL_MACHINE_INITIALISE_H
 #define KERNEL_MACHINE_INITIALISE_H
 
-/** @ingroup kernelmachine
+/** @addtogroup kernelmachine
  * @{ */
 
 /** This is the first stage in the machine-dependent initialisation procedure.
