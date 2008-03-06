@@ -20,9 +20,7 @@
 #include <machine/IrqManager.h>
 #include <machine/Timer.h>
 
-/** @addtogroup kernelmachinex86common x86-common
- * x86-common
- *  @ingroup kernelmachine
+/** @ingroup kernelmachinex86common
  * @{ */
 
 /** Class for the Real-time clock / CMOS implementing the Timer interface */
@@ -122,6 +120,20 @@ class Rtc : public Timer,
 
     /** The current tick count in nanoseconds */
     uint64_t m_TickCount;
+
+    /** Holds information about the RTC periodic irq */
+    struct periodicIrqInfo_t
+    {
+      /** The frequency */
+      size_t Hz;
+      /** Value that needs to be written to the CMOS register */
+      uint8_t rateBits;
+      /** Nanoseconds between two ticks */
+      uint64_t ns[2];
+    };
+
+    /** Information about the RTC's periodic irq */
+    static periodicIrqInfo_t periodicIrqInfo[6];
 
     /** The Rtc class instance */
     static Rtc m_Instance;

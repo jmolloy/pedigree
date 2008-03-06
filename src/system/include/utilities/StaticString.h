@@ -18,6 +18,9 @@
 
 #include <utilities/utility.h>
 
+/** @ingroup kernelutilities
+ * @{ */
+
 /**
  * Derivative of StringBase that uses a statically allocated chunk of memory.
  */
@@ -304,5 +307,7 @@ typedef StaticString<32>   TinyStaticString;
 typedef StaticString<64>   NormalStaticString;
 typedef StaticString<128>  LargeStaticString;
 typedef StaticString<1024> HugeStaticString;
+
+/** @} */
 
 #endif

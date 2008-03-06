@@ -19,9 +19,7 @@
 #include <processor/types.h>
 #include <processor/state.h>
 
-/** @addtogroup kernelprocessor processor-specific kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 namespace DebugFlags
@@ -32,14 +30,6 @@ namespace DebugFlags
     DataWrite        = 1,
     IOReadWrite      = 2,
     DataReadWrite    = 3
-  };
-  
-  enum Length
-  {
-    OneByte    = 0,
-    TwoBytes   = 1,
-    FourBytes  = 3,
-    EightBytes = 2
   };
 }
 
@@ -52,6 +42,9 @@ namespace DebugFlags
 #define DEBUG_SINGLE_STEP  0x4000 /// The exception was caused by single-step execution mode (TF enabled in EFLAGS).
 #define DEBUG_TASK_SWITCH  0x8000 /// The exception was caused by a hardware task switch.
 
+/** Interface to the processor's capabilities
+ *\note static in member function declarations denotes that these functions return/process
+ *      data on the processor that is executing this code. */
 class Processor
 {
   friend class ProcessorState;
@@ -66,16 +59,46 @@ class Processor
     /** Get the instruction-pointer of the calling function
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
+
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
 
-    static uintptr_t getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultType &nFaultType, DebugFlags::Length &nLength, bool &bEnabled);
-    static void enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddress, DebugFlags::FaultType nFaultType, DebugFlags::Length nLength);
-    static void disableDebugBreakpoint(uint32_t BpNumber);
+    /** Return the (total) number of breakpoints
+     *\return (total) number of breakpoints */
+    static size_t getDebugBreakpointCount();
+    /** Get information for a specific breakpoint
+     *\param[in] nBpNumber the breakpoint number [0 - (getDebugBreakpointCount() - 1)]
+     *\param[in,out] nFaultType the breakpoint type
+     *\param[in,out] nLength the breakpoint size/length
+     *\param[in,out] bEnabled is the breakpoint enabled? */
+    static uintptr_t getDebugBreakpoint(size_t nBpNumber,
+                                        DebugFlags::FaultType &nFaultType,
+                                        size_t &nLength,
+                                        bool &bEnabled);
+    /** Enable a specific breakpoint
+     *\param[in] nBpNumber the breakpoint number [0 - (getDebugBreakpointCount() - 1)]
+     *\param[in] nLinearAddress the linear Adress that should trigger a breakpoint exception
+     *\param[in] nFaultType the type of access that should trigger a breakpoint exception
+     *\param[in] nLength the size/length of the breakpoint */
+    static void enableDebugBreakpoint(size_t nBpNumber,
+                                      uintptr_t nLinearAddress,
+                                      DebugFlags::FaultType nFaultType,
+                                      size_t nLength);
+    /** Disable a specific breakpoint
+     *\param[in] nBpNumber the breakpoint number [0 - (getDebugBreakpointCount() - 1)] */
+    static void disableDebugBreakpoint(size_t nBpNumber);
+    /** Get the debug status
+     *\todo is the debug status somehow abtractable?
+     *\return the debug status */
     static uintptr_t getDebugStatus();
-    
-    static void setInterrupts(bool bEnable); /// Start maskable interrupts.
-    static void setSingleStep(bool bEnable, InterruptState &state); /// Enable single step mode.
+
+    /** Enable/Disable IRQs
+     *\param[in] bEnable true to enable IRSs, false otherwise */
+    static void setInterrupts(bool bEnable);
+    /** Enable/Disable single-stepping
+     *\param[in] bEnable true to enable single-stepping, false otherwise
+     *\param[in] state the interrupt-state */
+    static void setSingleStep(bool bEnable, InterruptState &state);
 
     #ifdef X86_COMMON
       /** Read a Machine/Model-specific register

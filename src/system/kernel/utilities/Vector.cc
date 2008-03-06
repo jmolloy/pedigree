@@ -40,7 +40,7 @@ Vector<void*>::~Vector()
     delete []m_Data;
 }
 
-Vector<void*> &Vector<void*>::operator = (const Vector<void*> &x)
+Vector<void*> &Vector<void*>::operator = (const Vector &x)
 {
   assign(x);
   return *this;

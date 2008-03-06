@@ -16,13 +16,7 @@
 #ifndef KERNEL_MACHINE_INITIALISE_H
 #define KERNEL_MACHINE_INITIALISE_H
 
-/** @addtogroup kernel kernel
- * The kernel
- * @{ */
-
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelmachine
  * @{ */
 
 /** This is the first stage in the machine-dependent initialisation procedure.
@@ -35,7 +29,6 @@ void initialiseMachine();
  *\return true, if initialiseMachine() was already called and completed successfully, false otherwise */
 bool isMachineInitialised();
 
-/** @} */
 /** @} */
 
 #endif

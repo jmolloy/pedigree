@@ -19,9 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorx64 x64
- * x64 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx64
  * @{ */
 
 /** x64 Interrupt State */
@@ -143,6 +141,7 @@ class X64InterruptState
     uint64_t m_Ss;
 } PACKED;
 
+/** x64 Syscall State */
 class X64SyscallState
 {
   public:

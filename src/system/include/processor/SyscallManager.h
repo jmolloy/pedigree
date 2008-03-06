@@ -19,9 +19,7 @@
 #include <processor/state.h>
 #include <processor/SyscallHandler.h>
 
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 /** The syscall manager allows syscall handler registrations and handles syscalls */

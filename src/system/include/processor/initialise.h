@@ -16,20 +16,13 @@
 #ifndef KERNEL_PROCESSOR_INITIALISE_H
 #define KERNEL_PROCESSOR_INITIALISE_H
 
-/** @addtogroup kernel kernel
- * The kernel
- * @{ */
-
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 /** Initialises the processor specific interface */
 void initialiseProcessor1();
 void initialiseProcessor2();
 
-/** @} */
 /** @} */
 
 #endif

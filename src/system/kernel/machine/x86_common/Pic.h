@@ -20,9 +20,7 @@
 #include <processor/InterruptManager.h>
 #include <machine/IrqManager.h>
 
-/** @addtogroup kernelmachinex86common x86-common
- * x86-common
- *  @ingroup kernelmachine
+/** @ingroup kernelmachinex86common
  * @{ */
 
 /** The x86/x64 programmable interrupt controller as IrqManager */
@@ -42,6 +40,9 @@ class Pic : public IrqManager,
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
 
+    /** Initialises the PIC hardware and registers the interrupts with the
+     *  InterruptManager.
+     *\return true, if successfull, false otherwise */
     bool initialise();
 
   private:

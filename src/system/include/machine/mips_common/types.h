@@ -18,9 +18,7 @@
 
 #include <processor/types.h>
 
-/** @addtogroup kernelmachinemipscommon mips-common
- * mips-common machine-specific kernel
- *  @ingroup kernelmachine
+/** @ingroup kernelmachinemipscommon
  * @{ */
 
 /** Define a type for IRQ identifications */

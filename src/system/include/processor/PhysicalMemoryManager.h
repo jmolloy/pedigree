@@ -18,9 +18,7 @@
 
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessor processor-specific kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 class PhysicalMemoryManager

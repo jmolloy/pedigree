@@ -43,7 +43,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     for(int i = 0; i < 4; i++)
     {
       DebugFlags::FaultType nFt;
-      DebugFlags::Length nLen;
+      size_t nLen;
       bool bEnabled;
       uintptr_t nAddress = Processor::getDebugBreakpoint(i, nFt, nLen, bEnabled);
       
@@ -64,23 +64,6 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
         break;
       }
       
-      const char *pLength;
-      switch (nLen)
-      {
-      case DebugFlags::OneByte:
-        pLength = "OneByte";
-        break;
-      case DebugFlags::TwoBytes:
-        pLength = "TwoBytes";
-        break;
-      case DebugFlags::FourBytes:
-        pLength = "FourBytes";
-        break;
-      case DebugFlags::EightBytes:
-        pLength = "EightBytes";
-        break;
-      }
-      
       const char *pEnabled = "disabled";
       if (bEnabled) pEnabled = "enabled";
 #ifdef X86
@@ -92,7 +75,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
       output += i;
       output += ": 0x"; output.append(nAddress, 16, k_nSize,'0');
       output += " \t";  output.append(pFaultType);
-      output += " \t";  output.append(pLength);
+      output += " \t";  output.append(nLen);
       output += " \t";  output.append(pEnabled);
       output += "\n";
     }
@@ -102,7 +85,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     LargeStaticString inputCopy(input);
     // We expect a number.
     int nBp = input.intValue();
-    if (nBp < 0 || nBp > 3)
+    if (nBp < 0 || nBp > Processor::getDebugBreakpointCount())
     {
       output = "Invalid breakpoint number.\n";
       return true;

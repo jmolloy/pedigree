@@ -16,9 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X64_TYPES_H
 #define KERNEL_PROCESSOR_X64_TYPES_H
 
-/** @addtogroup kernelprocessorx64 x64
- * x64 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx64
  * @{ */
 
 /** Define an 8bit signed integer type */

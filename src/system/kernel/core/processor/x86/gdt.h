@@ -19,9 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorx86 x86
- * x86 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx86
  * @{ */
 
 /** The GDT manager on x86 processors */

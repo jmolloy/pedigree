@@ -16,9 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X86_TYPES_H
 #define KERNEL_PROCESSOR_X86_TYPES_H
 
-/** @addtogroup kernelprocessorx86 x86
- * x86 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx86
  * @{ */
 
 /** Define an 8bit signed integer type */

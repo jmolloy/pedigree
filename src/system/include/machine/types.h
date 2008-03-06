@@ -32,9 +32,7 @@
   #error Unknown machine architecture
 #endif
 
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelmachine
  * @{ */
 
 // NOTE: If a newly added machine architecture does not supply all the

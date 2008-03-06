@@ -19,9 +19,7 @@
 #include <processor/types.h>
 #include <utilities/IteratorAdapter.h>
 
-/** @addtogroup kernelutilities utilities
- * utilities
- *  @ingroup kernel
+/** @ingroup kernelutilities
  * @{ */
 
 template<class T>

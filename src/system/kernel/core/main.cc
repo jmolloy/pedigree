@@ -144,6 +144,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   {
     NOTICE("Hello, World");
   }
+
   for (;;)
   {
     #ifdef X86_COMMON

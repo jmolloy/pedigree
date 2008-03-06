@@ -16,8 +16,7 @@
 #ifndef KERNEL_COMPILER_H
 #define KERNEL_COMPILER_H
 
-/** @addtogroup kernel kernel
- * The kernel
+/** @addtogroup kernel
  * @{ */
 
 // NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html

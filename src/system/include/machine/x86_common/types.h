@@ -18,9 +18,7 @@
 
 #include <processor/types.h>
 
-/** @addtogroup kernelmachinex86common x86-common
- * x86-common machine-specific kernel
- *  @ingroup kernelmachine
+/** @ingroup kernelmachinex86common
  * @{ */
 
 /** Define a type for IRQ identifications */

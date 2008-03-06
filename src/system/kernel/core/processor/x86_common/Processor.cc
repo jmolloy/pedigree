@@ -15,7 +15,15 @@
  */
 #include <processor/Processor.h>
 
-uintptr_t Processor::getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultType &nFaultType, DebugFlags::Length &nLength, bool &bEnabled)
+size_t Processor::getDebugBreakpointCount()
+{
+  return 4;
+}
+
+uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
+                                        DebugFlags::FaultType &nFaultType,
+                                        size_t &nLength,
+                                        bool &bEnabled)
 {
   uintptr_t nLinearAddress;
   switch(nBpNumber)
@@ -39,12 +47,29 @@ uintptr_t Processor::getDebugBreakpoint(uint32_t nBpNumber, DebugFlags::FaultTyp
 
   bEnabled = static_cast<bool> (nStatus & (1 << (nBpNumber*2+1))); // See intel manual 3b.
   nFaultType = static_cast<DebugFlags::FaultType> ( (nStatus >> (nBpNumber*4+16)) & 0x3 );
-  nLength = static_cast<DebugFlags::Length> ( (nStatus >> (nBpNumber*4+18)) & 0x3 );
+  switch ((nStatus >> (nBpNumber*4+18)) & 0x3)
+  {
+  case 0:
+    nLength = 1;
+    break;
+  case 1:
+    nLength = 2;
+    break;
+  case 2:
+    nLength = 8;
+    break;
+  case 3:
+    nLength = 4;
+    break;
+  }
 
   return nLinearAddress;
 }
 
-void Processor::enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddress, DebugFlags::FaultType nFaultType, DebugFlags::Length nLength)
+void Processor::enableDebugBreakpoint(size_t nBpNumber,
+                                      uintptr_t nLinearAddress,
+                                      DebugFlags::FaultType nFaultType,
+                                      size_t nLength)
 {
   switch(nBpNumber)
   {
@@ -65,13 +90,30 @@ void Processor::enableDebugBreakpoint(uint32_t nBpNumber, uintptr_t nLinearAddre
   uintptr_t nStatus;
   asm volatile("mov %%db7, %0" : "=r" (nStatus));
 
+  size_t lengthField = 0;
+  switch (nLength)
+  {
+  case 1:
+    nLength = 0;
+    break;
+  case 2:
+    nLength = 1;
+    break;
+  case 8:
+    nLength = 2;
+    break;
+  case 4:
+    nLength = 3;
+    break;
+  }
+
   nStatus |= 1 << (nBpNumber*2+1);
   nStatus |= (nFaultType&0x3) << (nBpNumber*4+16);
-  nStatus |= (nLength&0x3) << (nBpNumber*4+18);
+  nStatus |= (lengthField&0x3) << (nBpNumber*4+18);
   asm volatile("mov %0, %%db7" :: "r" (nStatus));
 }
 
-void Processor::disableDebugBreakpoint(uint32_t nBpNumber)
+void Processor::disableDebugBreakpoint(size_t nBpNumber)
 {
   uintptr_t nStatus;
   asm volatile("mov %%db7, %0" : "=r" (nStatus));

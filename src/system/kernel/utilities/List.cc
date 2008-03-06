@@ -23,7 +23,7 @@ List<void*>::List()
   : m_Count(0), m_First(0), m_Last(0)
 {
 }
-List<void*>::List(const List<void*> &x)
+List<void*>::List(const List &x)
   : m_Count(0), m_First(0), m_Last(0)
 {
   assign(x);
@@ -33,7 +33,7 @@ List<void*>::~List()
   clear();
 }
 
-List<void*> &List<void*>::operator = (const List<void*> &x)
+List<void*> &List<void*>::operator = (const List &x)
 {
   assign(x);
   return *this;
@@ -114,7 +114,7 @@ void List<void*>::clear()
   m_First = 0;
   m_Last = 0;
 }
-void List<void*>::assign(const List<void*> &x)
+void List<void*>::assign(const List &x)
 {
   if (m_Count != 0)clear();
 

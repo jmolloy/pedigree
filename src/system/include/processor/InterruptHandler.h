@@ -16,9 +16,7 @@
 #ifndef KERNEL_PROCESSOR_INTERRUPTHANDLER_H
 #define KERNEL_PROCESSOR_INTERRUPTHANDLER_H
 
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 /** Abstract base class for all interrupt-handlers. All interrupt-handlers must

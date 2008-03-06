@@ -19,9 +19,7 @@
 #include <processor/types.h>
 #include <processor/IoBase.h>
 
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 // NOTE TODO FIXME Needs to be reworked

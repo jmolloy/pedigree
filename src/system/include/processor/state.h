@@ -39,9 +39,7 @@
   #error Unknown processor architecture
 #endif
 
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 // NOTE: If a newly added processor architecture does not supply all the

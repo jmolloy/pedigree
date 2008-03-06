@@ -18,9 +18,7 @@
 
 #include <processor/types.h>
 
-/** @addtogroup kernelutilities utilities
- * utilities
- *  @ingroup kernel
+/** @ingroup kernelutilities
  * @{ */
 
 /** Adapter for an iterator with a different element type */
@@ -53,6 +51,14 @@ class IteratorAdapter
     inline IteratorAdapter &operator = (const IteratorAdapter &x)
     {
       m_Iterator = x.m_Iterator;
+      return *this;
+    }
+    /** Assign from another iterator compatible with Iterator
+     *\param[in] x the reference object */
+    template<typename T2, class Iterator2>
+    inline IteratorAdapter &operator = (const IteratorAdapter<T2, Iterator2> &x)
+    {
+      m_Iterator = x.__getIterator();
       return *this;
     }
     /** Comparison operator

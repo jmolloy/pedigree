@@ -19,9 +19,7 @@
 #include <processor/types.h>
 #include <machine/TimerHandler.h>
 
-/** @addtogroup kernelmachine machine-specifc kernel
- * machine-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelmachine
  * @{ */
 
 /** Timer for scheduling */

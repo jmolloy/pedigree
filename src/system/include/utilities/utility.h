@@ -20,6 +20,9 @@
 #include <stdarg.h>
 #include <processor/types.h>
 
+/** @ingroup kernelutilities
+ * @{ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,5 +53,6 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #define MAX_PARAMS 32
 #define MAX_PARAM_LENGTH 64
 
-#endif
+/** @} */
 
+#endif

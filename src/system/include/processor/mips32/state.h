@@ -19,9 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorMIPS32 MIPS32
- * MIPS32 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorMIPS32
  * @{ */
 
 /** MIPS32 Interrupt State */

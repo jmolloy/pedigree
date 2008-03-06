@@ -19,9 +19,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorx64 x64
- * x64 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx64
  * @{ */
 
 /** The GDT manager on x64 processors */

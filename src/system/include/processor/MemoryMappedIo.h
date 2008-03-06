@@ -19,9 +19,7 @@
 #include <processor/types.h>
 #include <processor/IoBase.h>
 
-/** @addtogroup kernelprocessor processor-specific kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 /** Memory-mapped I/O */

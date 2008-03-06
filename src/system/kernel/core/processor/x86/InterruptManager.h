@@ -21,9 +21,7 @@
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
 
-/** @addtogroup kernelprocessorx86 x86
- * x86 processor-specific kernel
- *  @ingroup kernelprocessor
+/** @ingroup kernelprocessorx86
  * @{ */
 
 /** The interrupt handler on x86 processors */

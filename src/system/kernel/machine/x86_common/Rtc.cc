@@ -20,14 +20,7 @@
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
 
-struct periodicIrqInfo_t
-{
-  size_t Hz;
-  uint8_t rateBits;
-  uint64_t ns[2];
-};
-
-periodicIrqInfo_t periodicIrqInfo[] = 
+Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] = 
 {
   { 256, 0x08, {3906250ULL, 3906250ULL}},
   { 512, 0x07, {1953125ULL, 1953125ULL}},

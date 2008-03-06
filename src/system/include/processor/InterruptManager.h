@@ -21,9 +21,7 @@
 #include <processor/state.h>
 #include <processor/InterruptHandler.h>
 
-/** @addtogroup kernelprocessor processor-specifc kernel
- * processor-specific kernel interface
- *  @ingroup kernel
+/** @ingroup kernelprocessor
  * @{ */
 
 /** The interrupt manager allows interrupt handler registrations and handles interrupts */
