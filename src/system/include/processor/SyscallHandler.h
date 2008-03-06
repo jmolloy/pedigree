@@ -13,31 +13,30 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#ifndef KERNEL_PROCESSOR_SYSCALLHANDLER_H
+#define KERNEL_PROCESSOR_SYSCALLHANDLER_H
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+#include <processor/state.h>
+
+/** @addtogroup kernelprocessor processor-specifc kernel
+ * processor-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+/** Abstract base class for all syscall-handlers. All syscall-handlers mustbe
+ * derived from this class */
+class SyscallHandler
 {
-}
+  public:
+    /** Called when the handler is registered with the syscall manager and a syscall occurred
+     *\param[in] State reference to the state before the syscall */
+    virtual void syscall(SyscallState &State) = 0;
 
-StepCommand::~StepCommand()
-{
-}
+  protected:
+    /** Virtual destructor */
+    inline virtual ~SyscallHandler(){}
+};
 
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
+/** @} */
 
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-
+#endif

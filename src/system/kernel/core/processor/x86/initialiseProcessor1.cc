@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
-#include "interrupt.h"
+#include "InterruptManager.h"
 
 void initialiseProcessor1()
 {

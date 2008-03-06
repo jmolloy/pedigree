@@ -13,31 +13,12 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#ifndef KERNEL_PROCESSOR_X86_COMMON_PROCESSOR_H
+#define KERNEL_PROCESSOR_X86_COMMON_PROCESSOR_H
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+void Processor::breakpoint()
 {
+  asm volatile ("int $3");
 }
 
-StepCommand::~StepCommand()
-{
-}
-
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
-
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-
+#endif

@@ -17,7 +17,7 @@
 #ifndef BACKTRACE_H
 #define BACKTRACE_H
 
-#include <processor/processor.h>
+#include <processor/Processor.h>
 #include <utilities/StaticString.h>
 
 #define MAX_STACK_FRAMES 20

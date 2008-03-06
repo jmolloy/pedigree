@@ -15,7 +15,7 @@
  */
 
 #include <Log.h>
-#include <machine/timer.h>
+#include <machine/Timer.h>
 #include <machine/initialise.h>
 #include <utilities/utility.h>
 

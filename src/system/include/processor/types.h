@@ -25,8 +25,8 @@
   #define PROCESSOR_SPECIFIC_NAME(x) X64##x
 #endif
 #ifdef MIPS32
-#include <processor/mips32/types.h>
-#define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
+  #include <processor/mips32/types.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
 #endif
 #ifdef MIPS64
   #include <processor/mips64/types.h>
@@ -73,6 +73,9 @@ typedef PROCESSOR_SPECIFIC_NAME(uint32_t) uint32_t;
 typedef PROCESSOR_SPECIFIC_NAME(intptr_t) intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
 typedef PROCESSOR_SPECIFIC_NAME(uintptr_t) uintptr_t;
+
+/** Define a unsigned integer type for physical pointer arithmetic */
+typedef PROCESSOR_SPECIFIC_NAME(physical_uintptr_t) physical_uintptr_t;
 
 /** Define an unsigned integer type for processor registers */
 typedef PROCESSOR_SPECIFIC_NAME(processor_register_t) processor_register_t;

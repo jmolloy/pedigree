@@ -13,31 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#include <machine/Timer.h>
+#include "Rtc.h"
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+Timer &Timer::instance()
 {
+  return Rtc::instance();
 }
-
-StepCommand::~StepCommand()
-{
-}
-
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
-
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-

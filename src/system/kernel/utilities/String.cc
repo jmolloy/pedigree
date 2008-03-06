@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <utilities/utility.h>
-#include <utilities/string.h>
+#include <utilities/String.h>
 
 String::String(const char *s)
   : m_Data(0), m_Length(strlen(s)), m_Size(0)

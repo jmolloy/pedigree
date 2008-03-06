@@ -17,7 +17,7 @@
 #include <Log.h>
 #include <utilities/utility.h>
 #include <DebuggerIO.h>
-#include <processor/processor.h>
+#include <processor/Processor.h>
 
 BreakpointCommand::BreakpointCommand()
  : DebuggerCommand()
@@ -109,7 +109,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     }
     // We expect a word - find the next space.
     bool bSpaceFound = false;
-    for (int i = 0; i < inputCopy.length(); i++)
+    for (size_t i = 0; i < inputCopy.length(); i++)
       if (inputCopy[i] == ' ')
       {
         inputCopy.stripFirst(i+1);
@@ -126,7 +126,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     NormalStaticString command;
     // Find another space - end of command.
     bSpaceFound = false;
-    for (int i = 0; i < inputCopy.length(); i++)
+    for (size_t i = 0; i < inputCopy.length(); i++)
       if (inputCopy[i] == ' ')
       {
         command = inputCopy.left(i);
@@ -144,7 +144,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     NormalStaticString argument;
     // Find another space - end of argument.
     bSpaceFound = false;
-    for (int i = 0; i < inputCopy.length(); i++)
+    for (size_t i = 0; i < inputCopy.length(); i++)
       if (inputCopy[i] == ' ')
       {
         argument = inputCopy.left(i);

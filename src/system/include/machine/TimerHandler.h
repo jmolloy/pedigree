@@ -13,31 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#ifndef KERNEL_MACHINE_TIMERHANDLER_H
+#define KERNEL_MACHINE_TIMERHANDLER_H
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+#include <processor/types.h>
+
+/** @addtogroup kernelmachine machine-specifc kernel
+ * machine-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+/** Abstract base class for all timer handlers. All those handlers must
+ * be derived from this class */
+class TimerHandler
 {
-}
+  public:
+    /** Called when the handler is registered with the Timer/SchedulerTimer class
+     * and a timer event occured
+     *\param[in] delta time elapsed since the last event
+     *\todo which unit for delta? ns? ms? */
+    virtual void timer(uint64_t delta) = 0;
 
-StepCommand::~StepCommand()
-{
-}
+  protected:
+    /** Virtual destructor */
+    inline virtual ~TimerHandler(){}
+};
 
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
+/** @} */
 
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-
+#endif

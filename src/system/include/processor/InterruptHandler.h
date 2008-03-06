@@ -13,31 +13,29 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#ifndef KERNEL_PROCESSOR_INTERRUPTHANDLER_H
+#define KERNEL_PROCESSOR_INTERRUPTHANDLER_H
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+/** @addtogroup kernelprocessor processor-specifc kernel
+ * processor-specific kernel interface
+ *  @ingroup kernel
+ * @{ */
+
+/** Abstract base class for all interrupt-handlers. All interrupt-handlers must
+ * be derived from this class */
+class InterruptHandler
 {
-}
+  public:
+    /** Called when the handler is registered with the interrupt manager and the interrupt occurred
+     *\param[in] interruptNumber the interrupt number
+     *\param[in] state reference to the state before the interrupt */
+    virtual void interrupt(size_t interruptNumber, InterruptState &state) = 0;
 
-StepCommand::~StepCommand()
-{
-}
+  protected:
+    /** Virtual destructor */
+    inline virtual ~InterruptHandler(){}
+};
 
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
+/** @} */
 
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-
+#endif

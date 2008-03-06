@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <machine/initialise.h>
-#include "pic.h"
-#include "rtc.h"
-#include "pit.h"
+#include "Pic.h"
+#include "Rtc.h"
+#include "Pit.h"
 
 #include <Log.h>
 

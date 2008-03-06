@@ -32,7 +32,9 @@ DIRECTORIES = core/lib \
               core/process \
               core/processor/ \
               core/processor/x86 \
+              core/processor/x86/asm \
               core/processor/x64 \
+              core/processor/x64/asm \
               core/processor/x86_common \
               core/processor/mips32 \
               core/processor/mips64 \
@@ -91,13 +93,14 @@ SRCFILES += core/processor/io.c
 # x86_commmon source file list.
 ifdef X86_COMMON
 SRCFILES += machine/x86_common/initialiseMachine.cc \
-            machine/x86_common/apic.cc \
-            machine/x86_common/pic.cc \
-            machine/x86_common/irq.cc \
-            machine/x86_common/pit.cc \
-            machine/x86_common/rtc.cc \
-            machine/x86_common/timer.cc \
-            core/processor/x86_common/processor.cc
+            machine/x86_common/Apic.cc \
+            machine/x86_common/Pic.cc \
+            machine/x86_common/IrqManager.cc \
+            machine/x86_common/Pit.cc \
+            machine/x86_common/Rtc.cc \
+            machine/x86_common/Timer.cc \
+            machine/x86_common/SchedulerTimer.cc \
+            core/processor/x86_common/Processor.cc
 endif
 
 ###################################################################
@@ -105,10 +108,10 @@ endif
 ifdef X86
 SRCFILES += core/processor/x86/initialiseProcessor1.cc \
             core/processor/x64/initialiseProcessor2.cc \
-            core/processor/x86/interrupt.cc \
-            core/processor/x86/asm_interrupt.S \
-            core/processor/x86/asm_processor.S \
-            core/processor/x86/processor.cc \
+            core/processor/x86/InterruptManager.cc \
+            core/processor/x86/asm/InterruptManager.s \
+            core/processor/x86/asm/Processor.s \
+            core/processor/x86/Processor.cc \
             core/processor/x86/gdt.cc \
             core/processor/x86/state.cc
 endif
@@ -118,11 +121,12 @@ endif
 ifdef X86_64
 SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/initialiseProcessor2.cc \
-            core/processor/x64/interrupt.cc \
-            core/processor/x64/syscall.cc \
-            core/processor/x64/asm_syscall.S \
-            core/processor/x64/asm_interrupt.S \
-            core/processor/x64/asm_processor.S \
+            core/processor/x64/InterruptManager.cc \
+            core/processor/x64/SyscallManager.cc \
+            core/processor/x64/asm/SyscallManager.s \
+            core/processor/x64/asm/InterruptManager.s \
+            core/processor/x64/asm/Processor.s \
+            core/processor/x64/Processor.cc \
             core/processor/x64/gdt.cc \
             core/processor/x64/state.cc
 endif

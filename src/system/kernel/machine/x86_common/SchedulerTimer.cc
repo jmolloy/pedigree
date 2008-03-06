@@ -13,31 +13,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StepCommand.h"
-#include <Log.h>
-#include <utilities/utility.h>
-#include <DebuggerIO.h>
-#include <processor/Processor.h>
+#include <machine/SchedulerTimer.h>
+#include "Pit.h"
 
-StepCommand::StepCommand()
-  : DebuggerCommand()
+SchedulerTimer &SchedulerTimer::instance()
 {
+  // TODO: Switch between Local APIC Timer and PIT
+  return Pit::instance();
 }
-
-StepCommand::~StepCommand()
-{
-}
-
-void StepCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
-
-bool StepCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
-{
-  // Single step.
-  Processor::setSingleStep(true, state);
-  return false; // Return control to the kernel.
-}
-
-
-

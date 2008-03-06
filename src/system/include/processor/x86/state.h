@@ -50,12 +50,6 @@ class X86InterruptState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
-    /** Get the flags register
-     *\return the flags register */
-    inline uintptr_t getFlags() const;
-    /** Set the flags register
-     *\param[in] flags the new flags */
-    inline void setFlags(uintptr_t flags);
     /** Get the number of registers
      *\return the number of registers */
     size_t getRegisterCount() const;
@@ -91,6 +85,14 @@ class X86InterruptState
     /** Get the syscall function number
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
+
+
+    /** Get the flags register
+     *\return the flags register */
+    inline uint32_t getFlags() const;
+    /** Set the flags register
+     *\param[in] flags the new flags */
+    inline void setFlags(uint32_t flags);
 
   private:
     /** The default constructor
@@ -173,14 +175,6 @@ void X86InterruptState::setBasePointer(uintptr_t basePointer)
 {
   m_Ebp = basePointer;
 }
-uintptr_t X86InterruptState::getFlags() const
-{
-  return m_Eflags;
-}
-void X86InterruptState::setFlags(uintptr_t flags)
-{
-  m_Eflags = flags;
-}
 size_t X86InterruptState::getRegisterSize(size_t index) const
 {
   return 4;
@@ -202,6 +196,15 @@ size_t X86InterruptState::getSyscallService() const
 size_t X86InterruptState::getSyscallNumber() const
 {
   return (m_Eax & 0xFFFF);
+}
+
+uint32_t X86InterruptState::getFlags() const
+{
+  return m_Eflags;
+}
+void X86InterruptState::setFlags(uint32_t flags)
+{
+  m_Eflags = flags;
 }
 
 #endif

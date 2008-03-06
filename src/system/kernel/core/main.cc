@@ -36,8 +36,8 @@
 Elf32 elf("kernel");
 
 /// NOTE bluecode is doing some testing here
-#include <processor/interrupt.h>
-#include <processor/syscall.h>
+#include <processor/InterruptManager.h>
+#include <processor/SyscallManager.h>
 #include <utilities/List.h>
 
 class MyInterruptHandler : public InterruptHandler
@@ -71,7 +71,7 @@ void mytestfunc(bool a, char b)
   //InterruptState state;
   //Debugger::instance().breakpoint();
   #ifdef X86_COMMON
-    asm volatile("int $0x3");
+    Processor::breakpoint();
   #endif
 }
 };
@@ -116,8 +116,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   elf.load(&bootstrapInfo);
 
   /// NOTE: bluecode again
-//   asm volatile("int $0xFE"); // some interrupt
-//   asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
+  #ifdef X86_COMMON
+    asm volatile("int $0xFE"); // some interrupt
+    asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
+  #endif
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
@@ -132,7 +134,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #endif
 
   #ifdef X86_COMMON
-    asm volatile ("int $3");
+    Processor::breakpoint();
   #endif
 
   List<int*> myList;

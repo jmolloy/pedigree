@@ -17,9 +17,9 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
-#include <processor/processor.h>
+#include <processor/Processor.h>
 #include <processor/state.h>
-#include <processor/interrupt.h>
+#include <processor/InterruptManager.h>
 #include <LocalIO.h>
 
 #define MONITOR 1

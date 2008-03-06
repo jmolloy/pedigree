@@ -20,9 +20,9 @@
  * The kernel
  * @{ */
 
-// NOTE: See http://gcc.gnu.org/onlinedocs/gcc-4.0.0/gcc/Function-Attributes.html
-//           http://gcc.gnu.org/onlinedocs/gcc-4.0.0/gcc/Variable-Attributes.html
-//           http://gcc.gnu.org/onlinedocs/gcc-4.0.0/gcc/Type-Attributes.html
+// NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
+//           http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html
+//           http://gcc.gnu.org/onlinedocs/gcc/Type-Attributes.html
 //           http://www.imodulo.com/gnu/gcc/Other-Builtins.html
 //       for more information.
 
@@ -32,6 +32,10 @@
 #define NORETURN __attribute__((noreturn))
 /** Function does not have a side-effect (except for the return value) */
 #define PURE __attribute__((pure))
+/** Function does not have a side-effect and does only depend on its arguments */
+#define CONST __attribute__((const))
+/** Functions that should always be inlined */
+#define ALWAYS_INLINE __attribute__((always_inline))
 /** Specific alignment for a type/variable */
 #define ALIGN(x) __attribute__((align(x)))
 /** No padding for a type/variable */

@@ -16,7 +16,7 @@
 #include "TraceCommand.h"
 #include <utilities/utility.h>
 #include <DebuggerIO.h>
-#include <processor/processor.h>
+#include <processor/Processor.h>
 #include <udis86.h>
 #include <Elf32.h>
 #include <Log.h>

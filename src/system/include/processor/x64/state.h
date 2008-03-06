@@ -76,6 +76,13 @@ class X64InterruptState
      *\return the interrupt number */
     inline size_t getInterruptNumber() const;
 
+    /** Get the flags register
+     *\return the flags register */
+    inline uint64_t getFlags() const;
+    /** Set the flags register
+     *\param[in] flags the new flags */
+    inline void setFlags(uint64_t flags);
+
   private:
     /** The default constructor
      *\note NOT implemented */
@@ -263,6 +270,15 @@ bool X64InterruptState::kernelMode() const
 size_t X64InterruptState::getInterruptNumber() const
 {
   return m_IntNumber;
+}
+
+uint64_t X64InterruptState::getFlags() const
+{
+  return m_Rflags;
+}
+void X64InterruptState::setFlags(uint64_t flags)
+{
+  m_Rflags = flags;
 }
 
 uintptr_t X64SyscallState::getStackPointer() const

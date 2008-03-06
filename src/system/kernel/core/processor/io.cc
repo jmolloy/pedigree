@@ -43,7 +43,7 @@
   }
 #endif
 
-bool MemoryMappedIo::allocate(uintptr_t ioBase, size_t size)
+/*bool MemoryMappedIo::allocate(uintptr_t ioBase, size_t size)
 {
   // Free any allocated I/O ports
   if (m_Size != 0)
@@ -59,7 +59,7 @@ void MemoryMappedIo::free()
   {
     // TODO
   }
-}
+}*/
 
 IoManager IoManager::m_Instance;
 
@@ -74,12 +74,3 @@ IoManager IoManager::m_Instance;
     // TODO
   }
 #endif
-
-void *IoManager::allocate_io_memory(void *physicalAddress, size_t size)
-{
-  // TODO
-}
-void free_io_memory(void *physicalAddress, size_t size)
-{
-  // TODO
-}
