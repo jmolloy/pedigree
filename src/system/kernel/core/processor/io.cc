@@ -61,9 +61,9 @@ void MemoryMappedIo::free()
   }
 }*/
 
-IoManager IoManager::m_Instance;
-
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
+  IoManager IoManager::m_Instance;
+
   bool IoManager::allocate_io_port(io_port_t ioPort, size_t size)
   {
     // TODO

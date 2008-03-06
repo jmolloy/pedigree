@@ -16,7 +16,7 @@
 
 #include "Elf32.h"
 //include <utilities/utility.h>
-
+extern void writeStr(const char *str);
 int strncpy(char *dest, const char *src, int len)
 {
   while (*src && len)
@@ -25,6 +25,21 @@ int strncpy(char *dest, const char *src, int len)
     len--;
   }
   *dest = '\0';
+}
+int memset(void *buf, int c, size_t len)
+{
+  unsigned char *tmp = (unsigned char *)buf;
+  while(len--)
+  {
+    *tmp++ = c;
+  }
+}
+
+void memcpy(void *dest, const void *src, size_t len)
+{
+  const unsigned char *sp = (const unsigned char *)src;
+  unsigned char *dp = (unsigned char *)dest;
+  for (; len != 0; len--) *dp++ = *sp++;
 }
 
 int strcmp(const char *p1, const char *p2)
@@ -70,12 +85,12 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
   
   // Check the ident.
-  if ( (m_pHeader->ident[0] != 'E') ||
-       (m_pHeader->ident[1] != 'L') ||
-       (m_pHeader->ident[2] != 'F') ||
-       (m_pHeader->ident[3] != 127) )
+  if ( (m_pHeader->ident[1] != 'E') ||
+       (m_pHeader->ident[2] != 'L') ||
+       (m_pHeader->ident[3] != 'F') ||
+       (m_pHeader->ident[0] != 127) )
   {
-    m_pHeader = (Elf32Header_t*)47;
+    m_pHeader = (Elf32Header_t*)0;
     return false;
   }
   
@@ -95,8 +110,9 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
     if (!strcmp(pStr, ".symtab"))
     {
       m_pSymbolTable = &m_pSectionHeaders[i];
-      break;
     }
+    if (!strcmp(pStr, ".strtab"))
+      m_pStringTable = &m_pSectionHeaders[i];
   }
   
   
@@ -143,6 +159,25 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 
 bool Elf32::writeSections()
 {
+  for (int i = 0; i < m_pHeader->shnum; i++)
+  {
+    if (m_pSectionHeaders[i].flags & SHF_ALLOC)
+    {
+      if (m_pSectionHeaders[i].type != SHT_NOBITS)
+      {
+        // Copy section data from the file.
+        memcpy((uint8_t*)m_pSectionHeaders[i].addr,
+                        &m_pBuffer[m_pSectionHeaders[i].offset],
+                        m_pSectionHeaders[i].size);
+      }
+      else
+      {
+        memset((uint8_t*)m_pSectionHeaders[i].addr,
+                        0,
+                        m_pSectionHeaders[i].size);
+      }
+    }
+  } 
 }
 
 unsigned int Elf32::getLastAddress()
@@ -152,12 +187,11 @@ unsigned int Elf32::getLastAddress()
 const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
-    return 0; // Just return null if we haven't got a symbol table.
+    return (const char*)2; // Just return null if we haven't got a symbol table.
   
-  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
-  
+  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(&m_pBuffer[m_pSymbolTable->offset]);
   const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
-  
+
   for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
   {
     // Make sure we're looking at an object or function.
@@ -183,7 +217,7 @@ const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
     }
     pSymbol ++;
   }
-  return 0;
+  return (const char*)3;
   
 }
 
@@ -201,4 +235,5 @@ uint32_t Elf32::getGlobalOffsetTable()
 
 uint32_t Elf32::getEntryPoint()
 {
+  return m_pHeader->entry;
 }

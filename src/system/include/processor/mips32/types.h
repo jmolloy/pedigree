@@ -41,8 +41,11 @@ typedef MIPS32int64_t MIPS32intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
 typedef MIPS32uint64_t MIPS32uintptr_t;
 
+/** Define a unsigned integer type for physical pointer arithmetic */
+typedef MIPS32uint32_t MIPS32physical_uintptr_t;
+
 /** Define an unsigned integer type for the processor registers */
-typedef MIPS32uint64_t MIPS32processor_register_t;
+typedef MIPS32uint32_t MIPS32processor_register_t;
 
 /** Define ssize_t */
 typedef MIPS32int32_t MIPS32ssize_t;

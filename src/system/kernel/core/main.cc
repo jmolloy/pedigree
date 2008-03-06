@@ -145,6 +145,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     NOTICE("Hello, World");
   }
 
+#ifdef MIPS_COMMON
+  return; // Go back to the YAMON prompt.
+#endif
+
   for (;;)
   {
     #ifdef X86_COMMON
