@@ -79,33 +79,6 @@ void mytestfunc(bool a, char b)
 }
 };
 
-struct foo
-{
-  foo *next()
-  {
-    return 0;
-  }
-  foo *prev()
-  {
-    return 0;
-  }
-};
-
-template<typename T, typename F, F Function>
-class bar
-{
-  public:
-    void _switch()
-    {
-      mData = (mData->*Function)();
-    }
-
-  private:
-    T *mData;
-};
-
-template class bar<foo, foo *(foo::*)(), &foo::next>;
-
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -179,16 +152,18 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   }
 
 #ifdef MIPS_COMMON
-  Serial s;
-  s.write('p');
-  s.write('o');
-  s.write('o');
+  Serial *s = machine.getSerial(0);
+  s->write('p');
+  s->write('o');
+  s->write('o');
   return; // Go back to the YAMON prompt.
 #endif
 
   for (;;)
   {
-    Processor::setInterrupts(true);
+    #ifdef X86_COMMON
+      Processor::setInterrupts(true);
+    #endif
   }
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.

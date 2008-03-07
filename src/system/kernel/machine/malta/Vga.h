@@ -16,10 +16,12 @@
 #ifndef MACHINE_MALTA_VGA_H
 #define MACHINE_MALTA_VGA_H
 
+#include <machine/Vga.h>
+
 /**
  * Vga device abstraction.
  */
-class MaltaVga
+class MaltaVga : public Vga
 {
   public:
     MaltaVga() {}

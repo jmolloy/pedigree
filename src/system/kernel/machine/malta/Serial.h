@@ -18,6 +18,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <machine/Serial.h>
 
 /**
  * Implements a driver for the Serial connection of the malta's UART.
@@ -33,23 +34,23 @@
  * MSTAT:   0x30  Modem status register.
  * SCRATCH: 0x38  Scratch register.
  */
-class Serial
+class MaltaSerial : public Serial
 {
 public:
   /**
    * Default constructor, does nothing.
    */
-  Serial();
+  MaltaSerial();
   /**
    * Destructor.
    */
-  ~Serial();
+  ~MaltaSerial();
 
   /**
    * Writes a character out to the serial port.
    * \note Blocking I/O.
    */
-  void write(char c);
+  virtual void write(char c);
   
   /**
    * Reads a character in from the serial port.
@@ -57,7 +58,7 @@ public:
    * \return Zero on a non-printable character without a hardcoded VT100 string,
    *         the next character in the buffer otherwise.
    */
-  char read();
+  virtual char read();
 private:
   struct serial
   {

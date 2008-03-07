@@ -26,7 +26,7 @@
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
  */
-class Pc : public virtual Machine
+class Pc : public Machine
 {
   public:
     inline static Pc &instance(){return m_Instance;}

@@ -16,25 +16,24 @@
 #include <machine/malta/Serial.h>
 #include <machine/types.h>
 
-Serial::Serial() :
+MaltaSerial::MaltaSerial() :
   m_pBuffer(0),
   m_pRegs(reinterpret_cast<serial*> (KSEG1(0x1fd003f8)))
 {
 }
 
-Serial::~Serial()
+MaltaSerial::~MaltaSerial()
 {
 }
 
-void Serial::write(char c)
+void MaltaSerial::write(char c)
 {
 //   while (!(m_pRegs->lstat & 32)) ;
   m_pRegs->rxtx = static_cast<uint8_t> (c);
 }
 
-char Serial::read()
+char MaltaSerial::read()
 {
   /// \todo Wait for device to become ready.
   return static_cast<char> (m_pRegs->rxtx);
 }
-

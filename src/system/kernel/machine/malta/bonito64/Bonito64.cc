@@ -13,20 +13,56 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_AU1500_VGA_H
-#define MACHINE_AU1500_VGA_H
+#include "Bonito64.h"
 
-/**
- * Vga device abstraction.
- */
-class Au1500Vga
+Bonito64 Bonito64::m_Instance;
+
+Machine &Machine::instance()
 {
-  public:
-    Au1500Vga() {}
-    virtual ~Au1500Vga() {}
-  
-    virtual char read();
-    virtual void write(char c);
-};
+  return Bonito64::instance();
+}
 
-#endif
+void Bonito64::initialise()
+{
+  // NOTE: Needs to set bInitialised to true
+}
+bool Bonito64::isInitialised()
+{
+  return bInitialised;
+}
+Serial *Bonito64::getSerial(size_t n)
+{
+  return &m_Serial[n];
+}
+size_t Bonito64::getNumSerial()
+{
+  return 2;
+}
+Vga *Bonito64::getVga(size_t n)
+{
+  return &m_Vga;
+}
+size_t Bonito64::getNumVga()
+{
+  return 1;
+}
+IrqManager &Bonito64::getIrqManager()
+{
+  // TODO
+}
+SchedulerTimer &Bonito64::getSchedulerTimer()
+{
+  // TODO return m_SchedulerTimer;
+}
+Timer &Bonito64::getTimer()
+{
+  // TODO return m_Timer;
+}
+
+Bonito64::Bonito64()
+  : bInitialised(false)
+{
+}
+Bonito64::~Bonito64()
+{
+}

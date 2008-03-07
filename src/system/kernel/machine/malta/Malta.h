@@ -21,7 +21,7 @@
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
  */
-class Malta : public virtual Machine
+class Malta : public Machine
 {
 public:
   /**

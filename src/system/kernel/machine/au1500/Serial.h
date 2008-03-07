@@ -13,17 +13,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_MALTA_SERIAL_H
-#define MACHINE_MALTA_SERIAL_H
+#ifndef MACHINE_AU1500_SERIAL_H
+#define MACHINE_AU1500_SERIAL_H
+
+#include <machine/Serial.h>
 
 /**
  * Serial device abstraction.
  */
-class MaltaSerial
+class Au1500Serial : public Serial
 {
   public:
-    MaltaSerial() {}
-    virtual ~MaltaSerial() {}
+    Au1500Serial() {}
+    virtual ~Au1500Serial() {}
   
     virtual char read();
     virtual void write(char c);

@@ -204,9 +204,6 @@ src/system/kernel/linker/Elf32.h
 src/system/kernel/linker/FileLoader.h
 src/system/kernel/machine
 src/system/kernel/machine/Machine.cc
-src/system/kernel/machine/au1500
-src/system/kernel/machine/malta
-src/system/kernel/machine/malta/Serial.cc
 src/system/kernel/machine/x86_common
 src/system/kernel/machine/x86_common/Apic.cc
 src/system/kernel/machine/x86_common/Apic.h

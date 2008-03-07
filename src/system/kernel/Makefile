@@ -47,6 +47,9 @@ DIRECTORIES = core/lib \
               machine/x86_common \
               machine/mips_common \
               machine/malta \
+              machine/malta/bonito64 \
+              machine/au1500 \
+              machine/au1500/db1500 \
               utilities
 
 ###################################################################
@@ -136,8 +139,23 @@ endif
 ###################################################################
 # mips common source list.
 ifdef MIPS_COMMON
-SRCFILES += machine/malta/Serial.cc \
-            boot-mips.cc
+SRCFILES += boot-mips.cc
+endif
+
+ifdef MIPS_MALTA
+SRCFILES += machine/malta/Serial.cc
+endif
+
+ifdef MIPS_MALTA_BONITO64
+SRCFILES += machine/malta/bonito64/Bonito64.cc
+endif
+
+ifdef MIPS_AU1500
+# SRCFILES += ...
+endif
+
+ifdef MIPS_AU1500_DB1500
+SRCFILES += machine/au1500/db1500/Db1500.cc
 endif
 
 ###################################################################

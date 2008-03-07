@@ -13,17 +13,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_AU1500_ETHERNET_H
-#define MACHINE_AU1500_ETHERNET_H
+#ifndef MACHINE_AU1500_VGA_H
+#define MACHINE_AU1500_VGA_H
+
+#include <machine/Vga.h>
 
 /**
- * Ethernet device abstraction.
+ * Vga device abstraction.
  */
-class Au1500Ethernet
+class Au1500Vga : public Vga
 {
   public:
-    Au1500Ethernet() {}
-    virtual ~Au1500Ethernet() {}
+    Au1500Vga() {}
+    virtual ~Au1500Vga() {}
   
     virtual char read();
     virtual void write(char c);
