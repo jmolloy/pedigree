@@ -26,10 +26,6 @@
 
 #include <utilities/StaticString.h>
 
-#ifdef MIPS_COMMON
-#include <machine/malta/Serial.h>
-#endif
-
 // initialiseConstructors()
 #include "cppsupport.h"
 // initialiseProcessor1(), initialiseProcessor2()
@@ -135,7 +131,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   str += str2;
   str += 8;
   NOTICE((const char *)str);
-  foo.mytestfunc(false, 'g');
+//   foo.mytestfunc(false, 'g');
 #endif
 
   #ifdef X86_COMMON
@@ -151,11 +147,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     NOTICE("Hello, World");
   }
 
-#ifdef MIPS_COMMON
   Serial *s = machine.getSerial(0);
   s->write('p');
   s->write('o');
   s->write('o');
+#ifdef MIPS_COMMON
   return; // Go back to the YAMON prompt.
 #endif
 

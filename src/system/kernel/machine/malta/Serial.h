@@ -46,6 +46,8 @@ public:
    */
   ~MaltaSerial();
 
+  virtual void setBase(uintptr_t nBaseAddr);
+  
   /**
    * Writes a character out to the serial port.
    * \note Blocking I/O.

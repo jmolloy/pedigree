@@ -26,7 +26,7 @@
 class Bonito64 : public Machine
 {
 public:
-  inline static Bonito64 &instande(){return m_Instance;}
+  inline static Bonito64 &instance() {return m_Instance;}
 
   virtual void initialise();
   virtual Serial *getSerial(size_t n);

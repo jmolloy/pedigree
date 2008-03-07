@@ -24,7 +24,9 @@ Machine &Machine::instance()
 
 void Bonito64::initialise()
 {
-  // NOTE: Needs to set m_bInitialised to true
+  m_Serial[0].setBase(0x1fd003f8);
+  m_Serial[1].setBase(0x1fd002f8);
+  m_bInitialised = true;
 }
 Serial *Bonito64::getSerial(size_t n)
 {

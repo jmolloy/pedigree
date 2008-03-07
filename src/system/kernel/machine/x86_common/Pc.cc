@@ -20,6 +20,10 @@ Pc Pc::m_Instance;
 
 void Pc::initialise()
 {
+  // Initialise serial ports.
+  m_pSerial[0].setBase(0x3F8);
+  m_pSerial[1].setBase(0x2F8);
+  
   // Initialise PIC
   Pic &pic = Pic::instance();
   if (pic.initialise() == false)
@@ -49,12 +53,12 @@ void Pc::initialise()
 
 Serial *Pc::getSerial(size_t n)
 {
-  return 0;
+  return &m_pSerial[n];
 }
     
 size_t Pc::getNumSerial()
 {
-  return 0;
+  return 2;
 }
 
 Vga *Pc::getVga(size_t n)

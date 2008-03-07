@@ -16,17 +16,36 @@
 #ifndef MACHINE_X86_SERIAL_H
 #define MACHINE_X86_SERIAL_H
 
+#include <compiler.h>
+#include <processor/types.h>
+#include <machine/Serial.h>
+
+namespace serial
+{
+  const int rxtx    =0;
+  const int inten   =1;
+  const int iififo  =2;
+  const int lctrl   =3;
+  const int mctrl   =4;
+  const int lstat   =5;
+  const int mstat   =6;
+  const int scratch =7;
+}
+
 /**
  * Serial device abstraction.
  */
-class X86Serial
+class X86Serial : public Serial
 {
   public:
     X86Serial();
+    virtual void setBase(uintptr_t nBaseAddr);
     virtual ~X86Serial();
   
     virtual char read();
     virtual void write(char c);
+  private:
+    uint16_t m_nBaseAddr;
 };
 
 #endif

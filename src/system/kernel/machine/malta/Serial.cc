@@ -18,7 +18,7 @@
 
 MaltaSerial::MaltaSerial() :
   m_pBuffer(0),
-  m_pRegs(reinterpret_cast<serial*> (KSEG1(0x1fd003f8)))
+  m_pRegs(0)
 {
 }
 
@@ -26,14 +26,20 @@ MaltaSerial::~MaltaSerial()
 {
 }
 
+void MaltaSerial::setBase(uintptr_t nBaseAddr)
+{
+  // We use KSEG1 (uncached physical) for our IO accesses.
+  m_pRegs = reinterpret_cast<serial*> (KSEG1(nBaseAddr));
+}
+
 void MaltaSerial::write(char c)
 {
-//   while (!(m_pRegs->lstat & 32)) ;
+  while (!(m_pRegs->lstat & 0x20)) ;
   m_pRegs->rxtx = static_cast<uint8_t> (c);
 }
 
 char MaltaSerial::read()
 {
-  /// \todo Wait for device to become ready.
+  while (!(m_pRegs->lstat & 0x1)) ;
   return static_cast<char> (m_pRegs->rxtx);
 }
