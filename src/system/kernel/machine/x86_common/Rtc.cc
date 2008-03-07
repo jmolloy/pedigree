@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <compiler.h>
-#include "Rtc.h"
+#include <machine/pc/Rtc.h>
 
 #define INITIAL_RTC_HZ 1024
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))

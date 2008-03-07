@@ -89,18 +89,22 @@ SRCFILES += linker/Elf32.cc
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/io.c
+SRCFILES += machine/Machine.cc \
+            machine/Timer.cc \
+            machine/SchedulerTimer.cc \
+            machine/initialiseMachine.cc
 
 ###################################################################
 # x86_commmon source file list.
 ifdef X86_COMMON
-SRCFILES += machine/x86_common/initialiseMachine.cc \
-            machine/x86_common/Apic.cc \
+SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Pic.cc \
             machine/x86_common/IrqManager.cc \
             machine/x86_common/Pit.cc \
             machine/x86_common/Rtc.cc \
-            machine/x86_common/Timer.cc \
-            machine/x86_common/SchedulerTimer.cc \
+            machine/x86_common/X86Serial.cc \
+            machine/x86_common/X86Ethernet.cc \
+            machine/x86_common/X86Vga.cc \
             core/processor/x86_common/Processor.cc
 endif
 

@@ -13,11 +13,12 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/SchedulerTimer.h>
-#include "Pit.h"
+#include <machine/Timer.h>
 
-SchedulerTimer &SchedulerTimer::instance()
+#ifdef X86_COMMON
+#include <machine/pc/Rtc.h>
+Timer &Timer::instance()
 {
-  // TODO: Switch between Local APIC Timer and PIT
-  return Pit::instance();
+  return Rtc::instance();
 }
+#endif

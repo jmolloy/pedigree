@@ -13,26 +13,21 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_INITIALISE_H
-#define KERNEL_MACHINE_INITIALISE_H
 
-#include <compiler.h>
-#include <processor/types.h>
-#include <machine/Machine.h>
+#include <machine/pc/X86Serial.h>
 
-/** @addtogroup kernelmachine
- * @{ */
+X86Serial::X86Serial()
+{
+}
 
-/** This is the first stage in the machine-dependent initialisation procedure.
- * This function should be called after the processor-specific interface has
- * been fully initialised
- *\note only called by main() */
-void initialiseMachine();
+X86Serial::~X86Serial()
+{
+}
 
-/** Has the machine-specific interface already been initialised?
- *\return true, if initialiseMachine() was already called and completed successfully, false otherwise */
-bool isMachineInitialised();
+char X86Serial::read()
+{
+}
 
-/** @} */
-
-#endif
+void X86Serial::write(char c)
+{
+}

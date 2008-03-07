@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <compiler.h>
-#include "Pit.h"
+#include <machine/pc/Pit.h>
 
 Pit Pit::m_Instance;
 

@@ -13,47 +13,21 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/initialise.h>
-#include "Pic.h"
-#include "Rtc.h"
-#include "Pit.h"
 
-#include <Log.h>
+#include <machine/pc/X86Ethernet.h>
 
-bool machineIsInitialised = false;
-
-void initialiseMachine()
+X86Ethernet::X86Ethernet()
 {
-  // Initialise PIC
-  Pic &pic = Pic::instance();
-  if (pic.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 1");
-  }
-
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 2");
-  }
-
-  // Initialise the PIT
-  Pit &pit = Pit::instance();
-  if (pit.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 3");
-  }
-
-  // TODO
-
-  machineIsInitialised = true;
 }
 
-bool isMachineInitialised()
+X86Ethernet::~X86Ethernet()
 {
-  return machineIsInitialised;
+}
+
+char X86Ethernet::read()
+{
+}
+
+void X86Ethernet::write(char c)
+{
 }

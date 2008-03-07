@@ -26,7 +26,9 @@
 
 #include <utilities/StaticString.h>
 
+#ifdef MIPS_COMMON
 #include <machine/malta/Serial.h>
+#endif
 
 // initialiseConstructors()
 #include "cppsupport.h"
@@ -128,7 +130,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   if (SysManager.registerSyscallHandler(SyscallManager::kernelCore, &mySysHandler) == false)
     NOTICE("Failed to register syscall handler");
 #endif
-  
+
   // Initialise the machine-specific interface
   initialiseMachine();
 
