@@ -34,8 +34,7 @@
 #include "cppsupport.h"
 // initialiseProcessor1(), initialiseProcessor2()
 #include <processor/initialise.h>
-// initialiseMachine()
-#include <machine/initialise.h>
+#include <machine/Machine.h>
 
 Elf32 elf("kernel");
 
@@ -132,7 +131,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #endif
 
   // Initialise the machine-specific interface
-  initialiseMachine();
+  Machine &machine = Machine::instance();
+  machine.initialise();
 
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
@@ -188,9 +188,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   for (;;)
   {
-    #ifdef X86_COMMON
-      asm volatile("sti");
-    #endif
+    Processor::setInterrupts(true);
   }
   // Then get the BootstrapInfo object to convert its contents into
   // C++ classes.

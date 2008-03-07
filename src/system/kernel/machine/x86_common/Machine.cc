@@ -13,21 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include "Pc.h"
 
-#include <machine/pc/X86Ethernet.h>
-
-X86Ethernet::X86Ethernet()
+Machine &Machine::instance()
 {
-}
-
-X86Ethernet::~X86Ethernet()
-{
-}
-
-char X86Ethernet::read()
-{
-}
-
-void X86Ethernet::write(char c)
-{
+  return Pc::instance();
 }

@@ -16,7 +16,7 @@
 #include <compiler.h>
 #include <Log.h>
 #include <Debugger.h>
-#include <machine/pc/Pic.h>
+#include "Pic.h"
 
 // TODO: Needs locking
 

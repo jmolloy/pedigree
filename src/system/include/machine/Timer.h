@@ -28,9 +28,6 @@
 class Timer
 {
   public:
-    /** Get the Timer class instance */
-    static Timer &instance();
-
     /** Get the current year
      *\return the current year */
     virtual size_t getYear() = 0;

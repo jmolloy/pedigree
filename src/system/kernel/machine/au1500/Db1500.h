@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,43 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_PC_PC_H
-#define MACHINE_PC_PC_H
+#ifndef MACHINE_AU1500_DB1500_H
+#define MACHINE_AU1500_DB1500_H
 
 #include <machine/Machine.h>
-#include <machine/pc/Pic.h>
-#include <machine/pc/Rtc.h>
-#include <machine/pc/Pit.h>
-#include <machine/pc/X86Serial.h>
-#include <machine/pc/X86Vga.h>
-#include <machine/pc/X86Ethernet.h>
-#include <Log.h>
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
  */
-class Pc : public virtual Machine
+class Db1500 : public virtual Machine
 {
 public:
   /**
    * Default constructor, does nothing.
    */
-  Pc()
+  Db1500()
   {
   }
   /**
    * Virtual destructor, does nothing.
    */
-  virtual ~Pc()
+  virtual ~Db1500()
   {
-  }
-  
-  /**
-   * Returns true if the machine believes that it is present.
-   */
-  virtual bool probe()
-  {
-    return true;
   }
   
   /**
@@ -57,37 +42,14 @@ public:
    */
   virtual void initialise()
   {
-      // Initialise PIC
-    Pic &pic = Pic::instance();
-    if (pic.initialise() == false)
-    {
-    // TODO: Do something
-      NOTICE("initialiseMachine(): failed 1");
-    }
-
-  // Initialse the Real-time Clock / CMOS
-    Rtc &rtc = Rtc::instance();
-    if (rtc.initialise() == false)
-    {
-    // TODO: Do something
-      NOTICE("initialiseMachine(): failed 2");
-    }
-
-  // Initialise the PIT
-    Pit &pit = Pit::instance();
-    if (pit.initialise() == false)
-    {
-    // TODO: Do something
-      NOTICE("initialiseMachine(): failed 3");
-    }
   }
   
   /**
    * Returns the n'th Serial device.
    */
-  virtual Serial *getSerial(size_t n)
+  virtual Serial &getSerial(size_t n)
   {
-    return 0;
+    return m_pSerial[0];
   }
   
   /**
@@ -101,9 +63,9 @@ public:
   /**
    * Returns the n'th VGA device.
    */
-  virtual Vga *getVga(size_t n)
+  virtual Vga &getVga(size_t n)
   {
-    return 0;
+    return m_Vga;
   }
   
   /**
@@ -115,27 +77,11 @@ public:
   }
   
   /**
-   * Returns the n'th Ethernet device.
-   */
-  virtual Ethernet *getEthernet(size_t n)
-  {
-    return 0;
-  }
-  
-  /**
-   * Returns the number of Ethernet devices.
-   */
-  virtual size_t getNumEthernet()
-  {
-    return 0;
-  }
-  
-  /**
    * Returns the n'th SchedulerTimer device.
    */
-  virtual SchedulerTimer *getSchedulerTimer(size_t n)
+  virtual SchedulerTimer &getSchedulerTimer(size_t n)
   {
-    return &Pit::instance();
+    return m_SchedulerTimer;
   }
   
   /**
@@ -143,15 +89,15 @@ public:
    */
   virtual size_t getNumSchedulerTimer()
   {
-    return 1;
+    return 0;
   }
   
   /**
    * Returns the n'th Timer device.
    */
-  virtual Timer *getTimer(size_t n)
+  virtual Timer &getTimer(size_t n)
   {
-    return &Rtc::instance();
+    return m_Timer;
   }
   
   /**
@@ -159,13 +105,15 @@ public:
    */
   virtual size_t getNumTimer()
   {
-    return 1;
+    return 0;
   }
 
 private:
-  X86Serial m_pSerial[2];
-  X86Ethernet m_Ethernet;
-  X86Vga m_Vga;
+  Serial m_pSerial[2];
+  Ethernet m_Ethernet;
+  SchedulerTimer m_SchedulerTimer;
+  Timer m_Timers;
+  Vga m_Vga;
 };
 
 #endif

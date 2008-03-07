@@ -16,11 +16,10 @@
 #ifndef MACHINE_MACHINE_H
 #define MACHINE_MACHINE_H
 
-#include <compiler.h>
 #include <processor/types.h>
 #include <machine/Serial.h>
 #include <machine/Vga.h>
-#include <machine/Ethernet.h>
+#include <machine/IrqManager.h>
 #include <machine/SchedulerTimer.h>
 #include <machine/Timer.h>
 
@@ -34,72 +33,53 @@
  */
 class Machine
 {
-public:
-  Machine();
-  /**
-   * Virtual destructor, does nothing.
-   */
-  virtual ~Machine();
-  
-  /**
-   * Returns true if the machine believes that it is present.
-   */
-  virtual bool probe() =0;
-  
-  /**
-   * Initialises the machine.
-   */
-  virtual void initialise() =0;
-  
-  /**
-   * Returns the n'th Serial device.
-   */
-  virtual Serial *getSerial(size_t n) =0;
-  
-  /**
-   * Returns the number of Serial device.
-   */
-  virtual size_t getNumSerial() =0;
-  
-  /**
-   * Returns the n'th VGA device.
-   */
-  virtual Vga *getVga(size_t n) =0;
-  
-  /**
-   * Returns the number of VGA devices.
-   */
-  virtual size_t getNumVga() =0;
-  
-  /**
-   * Returns the n'th Ethernet device.
-   */
-  virtual Ethernet *getEthernet(size_t n) =0;
-  
-  /**
-   * Returns the number of Ethernet devices.
-   */
-  virtual size_t getNumEthernet() =0;
-  
-  /**
-   * Returns the n'th SchedulerTimer device.
-   */
-  virtual SchedulerTimer *getSchedulerTimer(size_t n) =0;
-  
-  /**
-   * Returns the number of SchedulerTimer devices.
-   */
-  virtual size_t getNumSchedulerTimer() =0;
-  
-  /**
-   * Returns the n'th Timer device.
+  public:
+    static Machine &instance();
+ 
+    /**
+    * Initialises the machine.
     */
-  virtual Timer *getTimer(size_t n) =0;
-  
-  /**
-   * Returns the number of Timer devices.
-   */
-  virtual size_t getNumTimer() =0;
+    virtual void initialise() =0;
+    virtual bool isInitialised() =0;
+    
+    /**
+    * Returns the n'th Serial device.
+    */
+    virtual Serial *getSerial(size_t n) =0;
+    
+    /**
+    * Returns the number of Serial device.
+    */
+    virtual size_t getNumSerial() =0;
+    
+    /**
+    * Returns the n'th VGA device.
+    */
+    virtual Vga *getVga(size_t n) =0;
+    
+    /**
+    * Returns the number of VGA devices.
+    */
+    virtual size_t getNumVga() =0;
+    
+    virtual IrqManager &getIrqManager() = 0;
+    /**
+    * Returns the n'th SchedulerTimer device.
+    */
+    virtual SchedulerTimer &getSchedulerTimer() =0;
+    
+    /**
+    * Returns the n'th Timer device.
+      */
+    virtual Timer &getTimer() =0;
+    
+  protected:
+    Machine();
+    virtual ~Machine();
+
+  private:
+    Machine(const Machine &);
+    Machine &operator = (const Machine &);
 };
 
 #endif

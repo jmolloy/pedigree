@@ -26,9 +26,6 @@
 class SchedulerTimer
 {
   public:
-    /** Get the SchedulerTimer class instance */
-    static SchedulerTimer &instance();
-
     virtual bool registerHandler(TimerHandler *handler) = 0;
 
   protected:

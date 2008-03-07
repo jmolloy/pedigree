@@ -26,9 +26,6 @@
 class IrqManager
 {
   public:
-    /** Get the IrqManager instance */
-    static IrqManager &instance();
-
     /** Register an ISA irq
      *\param[in] irq the ISA irq number (from 0 to 15)
      *\param[in] handler pointer to the IrqHandler class

@@ -13,21 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include "Serial.h"
 
-#include <machine/pc/X86Vga.h>
-
-X86Vga::X86Vga()
+X86Serial::X86Serial()
 {
 }
 
-X86Vga::~X86Vga()
+X86Serial::~X86Serial()
 {
 }
 
-char X86Vga::read()
+char X86Serial::read()
 {
 }
 
-void X86Vga::write(char c)
+void X86Serial::write(char c)
 {
 }

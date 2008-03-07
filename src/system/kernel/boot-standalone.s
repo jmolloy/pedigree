@@ -30,8 +30,35 @@ mboot:
 [SECTION .text]
 start:
   cli
+
+  ; Enable PSE (Page Size Extension)
+  mov eax, cr4
+  or eax, 0x10
+  mov cr4, eax
+
+  mov eax, 0x83
+  mov [pagedirectory], eax
+  add eax, pagedirectory
+  mov [pagedirectory + 0xFFC], eax
+
+  mov eax, pagedirectory
+  mov cr3, eax
+
+  mov eax, cr0
+  or eax, 0x80000000
+  mov cr0, eax
+
+  mov eax, 0x83
+  mov [pagedirectory + 4], eax
+  mov eax, cr3
+  mov cr3, eax
+
   push ebx
   ; clear the stackframe
   xor ebp, ebp
   call _main
   jmp $
+
+[SECTION .bss]
+pagedirectory:
+  resb 4096

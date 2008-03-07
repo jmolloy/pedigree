@@ -17,10 +17,10 @@
 
 
 #include <Log.h>
-
+/*
 /**
  * Possible machine list for MIPS.
- */
+ 
 #ifdef X86_COMMON
   #include <machine/pc/Pc.h>
   Pc g_Pc;
@@ -30,7 +30,7 @@
 
 /**
    * Possible machine list for MIPS.
- */
+ 
 #ifdef MIPS_COMMON
   #include <machine/malta/Malta.h>
   #include <machine/malta/Bonito64.h>
@@ -68,4 +68,4 @@ void initialiseMachine()
 bool isMachineInitialised()
 {
   return machineIsInitialised;
-}
+}*/

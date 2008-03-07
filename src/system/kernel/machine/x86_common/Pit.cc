@@ -14,7 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <compiler.h>
-#include <machine/pc/Pit.h>
+#include <machine/Machine.h>
+#include "Pit.h"
 
 Pit Pit::m_Instance;
 
@@ -36,7 +37,7 @@ bool Pit::initialise()
     return false;
 
   // Allocate the IRQ
-  IrqManager &irqManager = IrqManager::instance();
+  IrqManager &irqManager = Machine::instance().getIrqManager();
   m_IrqId = irqManager.registerIsaIrqHandler(0, this);
   if (m_IrqId == 0)
     return false;
@@ -52,7 +53,7 @@ void Pit::uninitialise()
   // Free the IRQ
   if (m_IrqId != 0)
   {
-    IrqManager &irqManager = IrqManager::instance();
+    IrqManager &irqManager = Machine::instance().getIrqManager();
     irqManager.unregisterHandler(m_IrqId, this);
   }
 

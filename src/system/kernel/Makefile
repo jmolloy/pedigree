@@ -89,22 +89,19 @@ SRCFILES += linker/Elf32.cc
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/io.c
-SRCFILES += machine/Machine.cc \
-            machine/Timer.cc \
-            machine/SchedulerTimer.cc \
-            machine/initialiseMachine.cc
+SRCFILES += machine/Machine.cc
 
 ###################################################################
 # x86_commmon source file list.
 ifdef X86_COMMON
 SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Pic.cc \
-            machine/x86_common/IrqManager.cc \
             machine/x86_common/Pit.cc \
             machine/x86_common/Rtc.cc \
-            machine/x86_common/X86Serial.cc \
-            machine/x86_common/X86Ethernet.cc \
-            machine/x86_common/X86Vga.cc \
+            machine/x86_common/Serial.cc \
+            machine/x86_common/Vga.cc \
+            machine/x86_common/Pc.cc \
+            machine/x86_common/Machine.cc \
             core/processor/x86_common/Processor.cc
 endif
 
@@ -139,8 +136,7 @@ endif
 ###################################################################
 # mips common source list.
 ifdef MIPS_COMMON
-SRCFILES += machine/mips_common/initialiseMachine.cc \
-            machine/malta/Serial.cc \
+SRCFILES += machine/malta/Serial.cc \
             boot-mips.cc
 endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,36 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_AU1500_DB1500_H
-#define MACHINE_AU1500_DB1500_H
+#ifndef MACHINE_MALTA_MALTA_H
+#define MACHINE_MALTA_MALTA_H
 
 #include <machine/Machine.h>
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
  */
-class Db1500 : public virtual Machine
+class Malta : public virtual Machine
 {
 public:
   /**
    * Default constructor, does nothing.
    */
-  Db1500()
+  Malta()
   {
   }
   /**
    * Virtual destructor, does nothing.
    */
-  virtual ~Db1500()
+  virtual ~Malta()
   {
-  }
-  
-  /**
-   * Returns true if the machine believes that it is present.
-   */
-  virtual bool probe()
-  {
-    return false;
   }
   
   /**
@@ -85,22 +77,6 @@ public:
   }
   
   /**
-   * Returns the n'th Ethernet device.
-   */
-  virtual Ethernet &getEthernet(size_t n)
-  {
-    return m_Ethernet;
-  }
-  
-  /**
-   * Returns the number of Ethernet devices.
-   */
-  virtual size_t getNumEthernet()
-  {
-    return 0;
-  }
-  
-  /**
    * Returns the n'th SchedulerTimer device.
    */
   virtual SchedulerTimer &getSchedulerTimer(size_t n)
@@ -133,11 +109,10 @@ public:
   }
 
 private:
-  Serial m_pSerial[2];
-  Ethernet m_Ethernet;
+  MaltaSerial m_pSerial[2];
   SchedulerTimer m_SchedulerTimer;
   Timer m_Timers;
-  Vga m_Vga;
+  MaltaVga m_Vga;
 };
 
 #endif

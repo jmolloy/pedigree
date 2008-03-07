@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,14 +35,6 @@ public:
    */
   virtual ~Bonito64()
   {
-  }
-  
-  /**
-   * Returns true if the machine believes that it is present.
-   */
-  virtual bool probe()
-  {
-    return false;
   }
   
   /**
@@ -85,22 +77,6 @@ public:
   }
   
   /**
-   * Returns the n'th Ethernet device.
-   */
-  virtual Ethernet &getEthernet(size_t n)
-  {
-    return m_Ethernet;
-  }
-  
-  /**
-   * Returns the number of Ethernet devices.
-   */
-  virtual size_t getNumEthernet()
-  {
-    return 0;
-  }
-  
-  /**
    * Returns the n'th SchedulerTimer device.
    */
   virtual SchedulerTimer &getSchedulerTimer(size_t n)
@@ -134,7 +110,6 @@ public:
 
 private:
   Serial m_pSerial[2];
-  Ethernet m_Ethernet;
   SchedulerTimer m_SchedulerTimer;
   Timer m_Timers;
   Vga m_Vga;
