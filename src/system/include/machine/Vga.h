@@ -22,7 +22,7 @@
 class Vga
 {
 public:
-  virtual ~Vga() =0;
+  virtual ~Vga(){}
   
   virtual char read() =0;
   virtual void write(char c) =0;

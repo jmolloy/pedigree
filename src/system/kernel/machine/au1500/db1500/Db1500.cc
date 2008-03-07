@@ -26,10 +26,6 @@ void Db1500::initialise()
 {
   // NOTE: Needs to set bInitialised to true
 }
-bool Db1500::isInitialised()
-{
-  return bInitialised;
-}
 Serial *Db1500::getSerial(size_t n)
 {
   return &m_Serial[n];
@@ -60,7 +56,6 @@ Timer &Db1500::getTimer()
 }
 
 Db1500::Db1500()
-  : bInitialised(false)
 {
 }
 Db1500::~Db1500()

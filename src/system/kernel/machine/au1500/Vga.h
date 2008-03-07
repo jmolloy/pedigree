@@ -24,8 +24,8 @@
 class Au1500Vga : public Vga
 {
   public:
-    Au1500Vga() {}
-    virtual ~Au1500Vga() {}
+    Au1500Vga();
+    virtual ~Au1500Vga();
   
     virtual char read();
     virtual void write(char c);

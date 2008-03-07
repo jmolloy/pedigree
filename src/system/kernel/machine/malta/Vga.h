@@ -24,8 +24,8 @@
 class MaltaVga : public Vga
 {
   public:
-    MaltaVga() {}
-    virtual ~MaltaVga() {}
+    MaltaVga();
+    virtual ~MaltaVga();
   
     virtual char read();
     virtual void write(char c);

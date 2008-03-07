@@ -29,7 +29,6 @@ public:
   inline static Bonito64 &instande(){return m_Instance;}
 
   virtual void initialise();
-  virtual bool isInitialised();
   virtual Serial *getSerial(size_t n);
   virtual size_t getNumSerial();
   virtual Vga *getVga(size_t n);
@@ -49,8 +48,6 @@ private:
    * Virtual destructor, does nothing.
    */
   virtual ~Bonito64();
-
-  bool bInitialised;
 
   MaltaSerial m_Serial[2];
   //SchedulerTimer m_SchedulerTimer;

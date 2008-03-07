@@ -32,7 +32,6 @@ class Pc : public Machine
     inline static Pc &instance(){return m_Instance;}
 
     virtual void initialise();
-    virtual bool isInitialised();
 
     virtual Serial *getSerial(size_t n);
     virtual size_t getNumSerial();
@@ -54,7 +53,6 @@ class Pc : public Machine
     */
     virtual ~Pc();
 
-    bool bInitialised;
     X86Serial m_pSerial[2];
     X86Vga m_Vga;
 

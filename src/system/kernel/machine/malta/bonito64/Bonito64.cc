@@ -24,11 +24,7 @@ Machine &Machine::instance()
 
 void Bonito64::initialise()
 {
-  // NOTE: Needs to set bInitialised to true
-}
-bool Bonito64::isInitialised()
-{
-  return bInitialised;
+  // NOTE: Needs to set m_bInitialised to true
 }
 Serial *Bonito64::getSerial(size_t n)
 {
@@ -60,7 +56,6 @@ Timer &Bonito64::getTimer()
 }
 
 Bonito64::Bonito64()
-  : bInitialised(false)
 {
 }
 Bonito64::~Bonito64()

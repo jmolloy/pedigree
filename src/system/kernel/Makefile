@@ -92,7 +92,6 @@ SRCFILES += linker/Elf32.cc
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/io.c
-SRCFILES += machine/Machine.cc
 
 ###################################################################
 # x86_commmon source file list.
@@ -143,19 +142,24 @@ SRCFILES += boot-mips.cc
 endif
 
 ifdef MIPS_MALTA
-SRCFILES += machine/malta/Serial.cc
-endif
+SRCFILES += machine/malta/Serial.cc \
+            machine/malta/Vga.cc
 
-ifdef MIPS_MALTA_BONITO64
-SRCFILES += machine/malta/bonito64/Bonito64.cc
+  ifndef MIPS_MALTA_BONITO64
+  SRCFILES += machine/malta/Malta.cc
+  endif
+  ifdef MIPS_MALTA_BONITO64
+  SRCFILES += machine/malta/bonito64/Bonito64.cc
+  endif
 endif
 
 ifdef MIPS_AU1500
-# SRCFILES += ...
-endif
+SRCFILES += machine/au1500/Serial.cc \
+            machine/au1500/Vga.cc
 
-ifdef MIPS_AU1500_DB1500
-SRCFILES += machine/au1500/db1500/Db1500.cc
+	ifdef MIPS_AU1500_DB1500
+	SRCFILES += machine/au1500/db1500/Db1500.cc
+	endif
 endif
 
 ###################################################################

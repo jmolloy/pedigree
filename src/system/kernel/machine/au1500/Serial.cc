@@ -13,22 +13,17 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_AU1500_SERIAL_H
-#define MACHINE_AU1500_SERIAL_H
+#include "Serial.h"
 
-#include <machine/Serial.h>
-
-/**
- * Serial device abstraction.
- */
-class Au1500Serial : public Serial
+Au1500Serial::Au1500Serial()
 {
-  public:
-    Au1500Serial();
-    virtual ~Au1500Serial();
-  
-    virtual char read();
-    virtual void write(char c);
-};
-
-#endif
+}
+Au1500Serial::~Au1500Serial()
+{
+}
+char Au1500Serial::read()
+{
+}
+void Au1500Serial::write(char c)
+{
+}

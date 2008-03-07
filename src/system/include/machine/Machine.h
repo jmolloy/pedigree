@@ -40,7 +40,7 @@ class Machine
     * Initialises the machine.
     */
     virtual void initialise() =0;
-    virtual bool isInitialised() =0;
+    inline bool isInitialised(){return m_bInitialised;}
     
     /**
     * Returns the n'th Serial device.
@@ -74,8 +74,11 @@ class Machine
     virtual Timer &getTimer() =0;
     
   protected:
-    Machine();
-    virtual ~Machine();
+    inline Machine()
+      : m_bInitialised(false){}
+    inline virtual ~Machine(){}
+
+    bool m_bInitialised;
 
   private:
     Machine(const Machine &);

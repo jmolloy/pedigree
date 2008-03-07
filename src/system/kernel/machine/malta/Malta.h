@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, J�rg Pf�hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,8 @@
 #define MACHINE_MALTA_MALTA_H
 
 #include <machine/Machine.h>
+#include "Serial.h"
+#include "Vga.h"
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
@@ -24,95 +26,35 @@
 class Malta : public Machine
 {
 public:
+  inline static Machine &instance(){return m_Instance;}
+
+  virtual void initialise();
+  virtual Serial *getSerial(size_t n);
+  virtual size_t getNumSerial();
+  virtual Vga *getVga(size_t n);
+  virtual size_t getNumVga();
+  virtual IrqManager &getIrqManager();
+  virtual SchedulerTimer &getSchedulerTimer();
+  virtual Timer &getTimer();
+
+private:
   /**
    * Default constructor, does nothing.
    */
-  Malta()
-  {
-  }
+  Malta();
+  Malta(const Malta &);
+  Malta &operator = (const Malta &);
   /**
    * Virtual destructor, does nothing.
    */
-  virtual ~Malta()
-  {
-  }
-  
-  /**
-   * Initialises the machine.
-   */
-  virtual void initialise()
-  {
-  }
-  
-  /**
-   * Returns the n'th Serial device.
-   */
-  virtual Serial &getSerial(size_t n)
-  {
-    return m_pSerial[0];
-  }
-  
-  /**
-   * Returns the number of Serial device.
-   */
-  virtual size_t getNumSerial()
-  {
-    return 0;
-  }
-  
-  /**
-   * Returns the n'th VGA device.
-   */
-  virtual Vga &getVga(size_t n)
-  {
-    return m_Vga;
-  }
-  
-  /**
-   * Returns the number of VGA devices.
-   */
-  virtual size_t getNumVga()
-  {
-    return 0;
-  }
-  
-  /**
-   * Returns the n'th SchedulerTimer device.
-   */
-  virtual SchedulerTimer &getSchedulerTimer(size_t n)
-  {
-    return m_SchedulerTimer;
-  }
-  
-  /**
-   * Returns the number of SchedulerTimer devices.
-   */
-  virtual size_t getNumSchedulerTimer()
-  {
-    return 0;
-  }
-  
-  /**
-   * Returns the n'th Timer device.
-   */
-  virtual Timer &getTimer(size_t n)
-  {
-    return m_Timer;
-  }
-  
-  /**
-   * Returns the number of Timer devices.
-   */
-  virtual size_t getNumTimer()
-  {
-    return 0;
-  }
+  virtual ~Malta();
 
-private:
-  MaltaSerial m_pSerial[2];
-  SchedulerTimer m_SchedulerTimer;
-  Timer m_Timers;
+  MaltaSerial m_Serial[2];
+  //SchedulerTimer m_SchedulerTimer;
+  //Timer m_Timers;
   MaltaVga m_Vga;
+
+  static Malta m_Instance;
 };
 
 #endif

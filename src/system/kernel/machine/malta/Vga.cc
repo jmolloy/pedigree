@@ -13,12 +13,17 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <machine/Machine.h>
+#include "Vga.h"
 
-Machine::Machine()
+MaltaVga::MaltaVga()
 {
 }
-
-Machine::~Machine()
+MaltaVga::~MaltaVga()
+{
+}
+char MaltaVga::read()
+{
+}
+void MaltaVga::write(char c)
 {
 }

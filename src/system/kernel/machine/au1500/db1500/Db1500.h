@@ -26,7 +26,6 @@ public:
   inline static Db1500 &instande(){return m_Instance;}
 
   virtual void initialise();
-  virtual bool isInitialised();
   virtual Serial *getSerial(size_t n);
   virtual size_t getNumSerial();
   virtual Vga *getVga(size_t n);
@@ -46,8 +45,6 @@ private:
    * Virtual destructor, does nothing.
    */
   virtual ~Db1500();
-
-  bool bInitialised;
 
   Au1500Serial m_Serial[2];
   // SchedulerTimer m_SchedulerTimer;

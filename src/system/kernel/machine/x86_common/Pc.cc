@@ -43,11 +43,8 @@ void Pc::initialise()
     // TODO: Do something
     NOTICE("initialiseMachine(): failed 3");
   }
-}
 
-bool Pc::isInitialised()
-{
-  return bInitialised;
+  m_bInitialised = true;
 }
 
 Serial *Pc::getSerial(size_t n)
@@ -86,7 +83,6 @@ Timer &Pc::getTimer()
 }
 
 Pc::Pc()
-  : bInitialised(false)
 {
 }
 Pc::~Pc()

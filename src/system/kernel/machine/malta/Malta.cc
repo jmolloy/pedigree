@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, J�rg Pf�hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,22 +13,51 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_AU1500_SERIAL_H
-#define MACHINE_AU1500_SERIAL_H
+#include "Malta.h"
 
-#include <machine/Serial.h>
+Malta Malta::m_Instance;
 
-/**
- * Serial device abstraction.
- */
-class Au1500Serial : public Serial
+Machine &Machine::instance()
 {
-  public:
-    Au1500Serial();
-    virtual ~Au1500Serial();
-  
-    virtual char read();
-    virtual void write(char c);
-};
+  return Malta::instance();
+}
 
-#endif
+void Malta::initialise()
+{
+  // NOTE: Needs to set m_bInitialised to true
+}
+Serial *Malta::getSerial(size_t n)
+{
+  return &m_Serial[n];
+}
+size_t Malta::getNumSerial()
+{
+  return 2;
+}
+Vga *Malta::getVga(size_t n)
+{
+  return &m_Vga;
+}
+size_t Malta::getNumVga()
+{
+  return 1;
+}
+IrqManager &Malta::getIrqManager()
+{
+  // TODO
+}
+SchedulerTimer &Malta::getSchedulerTimer()
+{
+  // TODO
+}
+Timer &Malta::getTimer()
+{
+  // TODO
+}
+
+Malta::Malta()
+{
+}
+Malta::~Malta()
+{
+}
