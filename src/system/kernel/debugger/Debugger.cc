@@ -89,8 +89,12 @@ void Debugger::breakpoint(InterruptState &state)
   LocalIO localIO;
   SerialIO serialIO(Machine::instance().getSerial(0));
   
+  DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
+  int nInterfaces = 2;
+  
   // IO interface.
-  DebuggerIO *pIo;
+  DebuggerIO *pIo = 0;
+  int nChosenInterface = -1;
   
   // Commands.
   DisassembleCommand disassembler;
@@ -111,12 +115,38 @@ void Debugger::breakpoint(InterruptState &state)
                                   &step,
                                   &g_Trace};
   
-  if (m_nIoType == MONITOR) pIo = &localIO;
+                                  
+  // Are we going to jump directly into the tracer? In which case bypass device detection.
+  int n = g_Trace.execTrace();
+  if (n == -1)
+  {
+    // Write a "Press any key..." message to each device, then poll each device.
+    // The first one with data waiting becomes the active device, all others are locked out.
+    for (int i = 0; i < nInterfaces; i++)
+    {
+      pInterfaces[i]->disableCli();
+      pInterfaces[i]->drawString("Press any key to enter the debugger...", 0, 0, DebuggerIO::LightBlue, DebuggerIO::Black);
+    }
+    // Poll each device.
+    while (pIo == 0)
+      for (int i = 0; i < nInterfaces; i++)
+        if (pInterfaces[i]->getCharNonBlock())
+        {
+          pIo = pInterfaces[i];
+          nChosenInterface = i;
+          break;
+        }
+  }
   else
   {
-    // serial
+    pIo = pInterfaces[n];
+    nChosenInterface = n;
   }
-  pIo = &serialIO;
+
+  // Say sorry to the losers...
+  for (int i = 0; i < nInterfaces; i++)
+    if (pIo != pInterfaces[i])
+      pInterfaces[i]->drawString("Locked by another device.", 1, 0, DebuggerIO::LightRed, DebuggerIO::Black);
   
   pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
   pIo->setCliLowerLimit(1); // And a status bar on the bottom.
@@ -129,11 +159,13 @@ void Debugger::breakpoint(InterruptState &state)
     HugeStaticString command;
     HugeStaticString output;
     // Should we jump directly in to the tracer?
-    if (g_Trace.execTrace())
+    if (g_Trace.execTrace() != -1)
     {
       bKeepGoing = g_Trace.execute(command, output, state, pIo);
       continue;
     }
+    else
+      g_Trace.setInterface(nChosenInterface);
     // Clear the top and bottom status lines.
     pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
     pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);

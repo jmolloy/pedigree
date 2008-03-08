@@ -51,6 +51,16 @@ char X86Serial::read()
   return port.read8(serial::rxtx);
 }
 
+char X86Serial::readNonBlock()
+{
+  IoPort port;
+  port.allocate(m_nBaseAddr, 8);
+  if ( port.read8(serial::lstat) & 0x1)
+    return port.read8(serial::rxtx);
+  else
+    return '\0';
+}
+
 void X86Serial::write(char c)
 {
   IoPort port;

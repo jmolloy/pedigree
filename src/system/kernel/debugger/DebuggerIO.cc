@@ -40,7 +40,7 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
   {
     // Command finished, we're ready for the next.
     m_bReady = true;
-    writeCli("\n\r", DebuggerIO::White, DebuggerIO::Black);
+    writeCli("\n", DebuggerIO::White, DebuggerIO::Black);
   }
   else
   {

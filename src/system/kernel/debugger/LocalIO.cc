@@ -118,6 +118,19 @@ void LocalIO::disableCli()
   forceRefresh();
 }
 
+char LocalIO::getCharNonBlock()
+{
+#ifdef X86
+  IoPort port;
+  port.allocate(0x60, 4);
+  unsigned char status = port.read8(4);
+  if (status & 0x01)
+      return port.read8(0);
+  else
+    return '\0';
+#endif
+}
+
 char LocalIO::getChar()
 {
 #ifdef X86
@@ -407,3 +420,16 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
     m_CursorY ++;
   }
 }
+
+void LocalIO::cls()
+{
+  // Clear the framebuffer.
+  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  {
+    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    unsigned short blank = ' ' | (attributeByte << 8);
+    m_pFramebuffer[i] = blank;
+  }
+}
+
+

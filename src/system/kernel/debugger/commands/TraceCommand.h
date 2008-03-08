@@ -40,6 +40,8 @@ public:
    */
   void autocomplete(const HugeStaticString &input, HugeStaticString &output);
 
+  void setInterface(int nInterface);
+  
   /**
    * Execute the command with the given screen.
    */
@@ -54,11 +56,11 @@ public:
   }
   
   /**
-   * Returns true if the debugger should immediately call our execute function.
+   * Returns >=0 if the debugger should immediately call us. Returns the interface index to use.
    */
-  bool execTrace()
+  int execTrace()
   {
-    return m_bExec;
+    return m_nExec;
   }
   
 private:
@@ -68,9 +70,10 @@ private:
   void drawStacktrace(int nLines, DebuggerIO *pScreen, InterruptState &state);
   
   /**
-   * Should the debugger immediately call our execute function?
+   * Should the debugger immediately call our execute function? and what interface should it use?
    */
-  bool m_bExec;
+  int m_nExec;
+  int m_nInterface;
 };
 
 #endif

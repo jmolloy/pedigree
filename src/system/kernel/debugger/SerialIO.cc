@@ -131,7 +131,8 @@ char SerialIO::getChar()
 
 void SerialIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  readCursor();
+  if (m_bCli)
+    readCursor();
   // colEnd must be bigger than colStart.
   if (colStart > colEnd)
   {
@@ -165,7 +166,8 @@ void SerialIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, Deb
   }
   
   endColour();
-  setCursor();
+  if (m_bCli)
+    setCursor();
 }
 
 void SerialIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
@@ -192,7 +194,8 @@ void SerialIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, Debug
 
 void SerialIO::drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  readCursor();
+  if (m_bCli)
+    readCursor();
   startColour(foreColour, backColour);
   
   // Position the cursor at the specified column, row.
@@ -205,7 +208,8 @@ void SerialIO::drawString(const char *str, int row, int col, DebuggerIO::Colour 
   
   m_pSerial->write(str);
   endColour();
-  setCursor();
+  if (m_bCli)
+    setCursor();
 }
 
 void SerialIO::enableRefreshes()
@@ -224,6 +228,12 @@ void SerialIO::scroll()
 
 void SerialIO::moveCursor()
 {
+}
+
+void SerialIO::cls()
+{
+  // Clear the screen.
+  m_pSerial->write("\033[2J");
 }
 
 void SerialIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
@@ -250,12 +260,15 @@ void SerialIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour
   }
   else
   {
-    if (m_bCli) // If we're not in CLI mode we dont bother with the costly wrap-check.
-    {
-      readCursor();
-      if (m_nCursorX == m_nWidth)
-        m_pSerial->write("\n\r");
-    }
+    /// \todo This code below is costly and slow, but without it we can't line-wrap. Sort this out.
+//     if (m_bCli) // If we're not in CLI mode we dont bother with the costly wrap-check.
+//     {
+//       readCursor();
+//       if (m_nCursorX == m_nWidth)
+//         m_pSerial->write("\n\r");
+//     }
+    if (c == '\n') // Newline - output a '\r' as well.
+      m_pSerial->write('\r');
     m_pSerial->write(c);
   }
   endColour();
@@ -306,6 +319,11 @@ void SerialIO::startColour(DebuggerIO::Colour foreColour, DebuggerIO::Colour bac
     default:                       m_pSerial->write('1');
   }
   m_pSerial->write('m');
+}
+
+char SerialIO::getCharNonBlock()
+{
+  return m_pSerial->readNonBlock();
 }
 
 void SerialIO::endColour()

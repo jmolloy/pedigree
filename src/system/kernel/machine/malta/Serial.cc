@@ -43,3 +43,11 @@ char MaltaSerial::read()
   while (!(m_pRegs->lstat & 0x1)) ;
   return static_cast<char> (m_pRegs->rxtx);
 }
+
+char MaltaSerial::read()
+{
+  if ( m_pRegs->lstat & 0x1)
+    return m_pRegs->rxtx;
+  else
+    return '\0';
+}

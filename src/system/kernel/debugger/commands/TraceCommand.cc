@@ -40,7 +40,7 @@ static void addToBuffer(unsigned int n, unsigned int *pBuffer, unsigned int &nIn
 
 TraceCommand::TraceCommand()
   : DebuggerCommand(),
-    m_bExec(false)
+    m_nExec(-1)
 {
 }
 
@@ -52,9 +52,14 @@ void TraceCommand::autocomplete(const HugeStaticString &input, HugeStaticString 
 {
 }
 
+void TraceCommand::setInterface(int nInterface)
+{
+  m_nInterface = nInterface;
+}
+
 bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  m_bExec = false;
+  m_nExec = -1;
   // Let's enter 'raw' screen mode.
   pScreen->disableCli();
   
@@ -82,7 +87,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
       break;
     if (c == 's')
     {
-      m_bExec = true;
+      m_nExec = m_nInterface;
       Processor::setSingleStep(true, state);
       return false;
     }
@@ -97,8 +102,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
 void TraceCommand::drawBackground(int nCols, int nLines, DebuggerIO *pScreen)
 {
   // Destroy all text.
-  for (int i = 0; i < pScreen->getHeight(); i++)
-    pScreen->drawHorizontalLine(' ', i, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
+  pScreen->cls();
 
   // Clear the top and bottom status lines.
   pScreen->drawHorizontalLine(' ', 0, 0, pScreen->getWidth()-1,

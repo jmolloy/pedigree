@@ -1,4 +1,4 @@
 #!/bin/bash
 
-qemu -fda built/floppy.img
+qemu -fda built/floppy.img -serial /dev/tty
 

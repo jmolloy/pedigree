@@ -51,6 +51,10 @@ public:
   void enableCli();
   void disableCli();
 
+  void cls();
+  
+  virtual char getCharNonBlock();
+  
   /**
    * Draw a line of characters in the given fore and back colours, in the 
    * horizontal or vertical direction. Note that if the CLI is enabled,

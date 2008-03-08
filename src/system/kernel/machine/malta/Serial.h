@@ -61,6 +61,7 @@ public:
    *         the next character in the buffer otherwise.
    */
   virtual char read();
+  virtual char readNonBlock();
 private:
   struct serial
   {

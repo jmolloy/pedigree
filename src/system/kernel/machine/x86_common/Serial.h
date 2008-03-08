@@ -43,6 +43,7 @@ class X86Serial : public Serial
     virtual ~X86Serial();
   
     virtual char read();
+    virtual char readNonBlock();
     virtual void write(char c);
   private:
     uint16_t m_nBaseAddr;

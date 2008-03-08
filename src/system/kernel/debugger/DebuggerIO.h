@@ -80,6 +80,10 @@ public:
   virtual void setCliUpperLimit(int nlines) = 0;
   virtual void setCliLowerLimit(int nlines) = 0;
 
+  virtual void cls() =0;
+  
+  virtual char getCharNonBlock() =0;
+  
   /**
    * Enables or disables the command line interface, allowing full access to the display.
    */
