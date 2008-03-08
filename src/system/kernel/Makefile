@@ -75,9 +75,11 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/StepCommand.cc \
             debugger/commands/TraceCommand.cc \
             debugger/LocalIO.cc \
+            debugger/SerialIO.cc \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
-            debugger/StackFrame.cc
+            debugger/StackFrame.cc \
+            debugger/DebuggerIO.cc
 endif
 
 SRCFILES += core/lib/cppsupport.cc \

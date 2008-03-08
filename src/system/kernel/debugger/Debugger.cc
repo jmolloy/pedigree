@@ -18,6 +18,7 @@
 #include <Debugger.h>
 #include <DebuggerIO.h>
 #include <LocalIO.h>
+#include <SerialIO.h>
 #include <DisassembleCommand.h>
 #include <QuitCommand.h>
 #include <BreakpointCommand.h>
@@ -27,6 +28,7 @@
 #include <utilities/utility.h>
 #include <StepCommand.h>
 #include <TraceCommand.h>
+#include <machine/Machine.h>
 
 Debugger Debugger::m_Instance;
 
@@ -85,11 +87,7 @@ void Debugger::breakpoint(InterruptState &state)
    * I/O implementations.
    */
   LocalIO localIO;
-  //SerialIO serialIO;
-  
-  localIO.setCliUpperLimit(1); // Give us room for a status bar on top.
-  localIO.setCliLowerLimit(1); // And a status bar on the bottom.
-  localIO.enableCli(); // Start CLI mode.
+  SerialIO serialIO(Machine::instance().getSerial(0));
   
   // IO interface.
   DebuggerIO *pIo;
@@ -118,6 +116,11 @@ void Debugger::breakpoint(InterruptState &state)
   {
     // serial
   }
+  pIo = &serialIO;
+  
+  pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
+  pIo->setCliLowerLimit(1); // And a status bar on the bottom.
+  pIo->enableCli(); // Start CLI mode.
   
   // Main CLI loop.
   bool bKeepGoing = false;
@@ -132,10 +135,10 @@ void Debugger::breakpoint(InterruptState &state)
       continue;
     }
     // Clear the top and bottom status lines.
-    pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
-    pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
+    pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
     // Write the correct text in the upper status line.
-    pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+    pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::Green);
   
     bool matchedCommand = false;
     DebuggerCommand *pAutoComplete = 0;
@@ -178,9 +181,9 @@ void Debugger::breakpoint(InterruptState &state)
         }
       }
       
-      pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::DarkGrey);
-      pIo->drawString(str2, pIo->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-      pIo->drawString(str, pIo->getHeight()-1, str2.length(), DebuggerIO::White, DebuggerIO::DarkGrey);
+      pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
+      pIo->drawString(str2, pIo->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
+      pIo->drawString(str, pIo->getHeight()-1, str2.length(), DebuggerIO::White, DebuggerIO::Green);
     }
   
     // A command was entered.

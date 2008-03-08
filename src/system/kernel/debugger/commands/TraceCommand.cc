@@ -102,19 +102,19 @@ void TraceCommand::drawBackground(int nCols, int nLines, DebuggerIO *pScreen)
 
   // Clear the top and bottom status lines.
   pScreen->drawHorizontalLine(' ', 0, 0, pScreen->getWidth()-1,
-                              DebuggerIO::White, DebuggerIO::DarkGrey);
+                              DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-1, 0, pScreen->getWidth()-1,
-                              DebuggerIO::White, DebuggerIO::DarkGrey);
+                              DebuggerIO::White, DebuggerIO::Green);
   // Write the correct text in the upper status line.
-  pScreen->drawString("Pedigree debugger - Execution Tracer", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+  pScreen->drawString("Pedigree debugger - Execution Tracer", 0, 0, DebuggerIO::White, DebuggerIO::Green);
   // Write some helper text in the lower status line.
   pScreen->drawString("s: Step. c: Continue. q: Quit. ?: Current instruction. ?: Breakpoint.", 
-                      pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
-  pScreen->drawString("s", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("c", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("q", pScreen->getHeight()-1, 22, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
+                      pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
+  pScreen->drawString("s", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("c", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("q", pScreen->getHeight()-1, 22, DebuggerIO::Yellow, DebuggerIO::Green);
   pScreen->drawString(" ", pScreen->getHeight()-1, 31, DebuggerIO::Yellow, DebuggerIO::Blue);
-  pScreen->drawString(" ", pScreen->getHeight()-1, 55, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString(" ", pScreen->getHeight()-1, 55, DebuggerIO::Yellow, DebuggerIO::Red);
 
   pScreen->drawHorizontalLine('-', nLines+1, 0, pScreen->getWidth(), DebuggerIO::DarkGrey, DebuggerIO::Black);
   pScreen->drawVerticalLine('|', nCols, 1, nLines, DebuggerIO::DarkGrey, DebuggerIO::Black);
@@ -177,10 +177,10 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
     location = ud_insn_off(&ud_obj);
     unsigned int nSym;
     const char *pSym = elf.lookupSymbol(location, &nSym);
-#ifdef X86
+#ifdef BITS_32
     const int k_nAddrLen = 8;
 #endif
-#ifdef X86_64
+#ifdef BITS_64
     const int k_nAddrLen = 16;
 #endif
     NormalStaticString str;
@@ -240,10 +240,10 @@ void TraceCommand::drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, Int
     LargeStaticString str;
     str = state.getRegisterName(i);
     pScreen->drawString(str, nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
-#ifdef X86
+#ifdef BITS_32
     const unsigned int k_nRightOffset = 10;
 #endif
-#ifdef X86_64
+#ifdef BITS_64
     const unsigned int k_nRightOffset = 18;
 #endif
     str = "0x";

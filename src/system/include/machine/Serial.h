@@ -28,6 +28,11 @@ public:
   virtual void setBase(uintptr_t nBaseAddr) =0;
   virtual char read() =0;
   virtual void write(char c) =0;
+  void write(const char *c)
+  {
+    while (*c)
+      write(*c++);
+  }
 };
 
 #endif

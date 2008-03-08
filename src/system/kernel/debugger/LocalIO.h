@@ -23,8 +23,6 @@ class DebuggerCommand;
 #define CONSOLE_WIDTH  80
 #define CONSOLE_HEIGHT 25
 
-#define COMMAND_MAX    256
-
 /**
  * Provides an implementation of DebuggerIO, using the monitor and
  * keyboard.
@@ -52,19 +50,6 @@ public:
    */
   void enableCli();
   void disableCli();
-
-  /**
-   * Writes the given text out to the CLI, in the given colour and background colour.
-   */
-  void writeCli(const char *str, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
-  void writeCli(char ch, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
-
-  /**
-   * Reads a command from the interface. Blocks until a character is pressed, and then
-   * the current buffer is returned in *str, and the return value is true if the command
-   * is complete (if enter has been pressed). *str will never exceed maxLen.
-   */
-  bool readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete);
 
   /**
    * Draw a line of characters in the given fore and back colours, in the 
@@ -104,7 +89,7 @@ public:
    */
   char getChar();
   
-private:
+protected:
  
   /**
    * Scrolls the CLI screen down a line, if needed.
@@ -138,21 +123,6 @@ private:
    * Current cursor position.
    */
   int m_CursorX, m_CursorY;
-
-  /**
-   * Should we auto-refresh the screen?
-   */
-  bool m_bRefreshesEnabled;
-
-  /**
-   * Are we ready to recieve a new command? (or are we recieving one already)
-   */
-  bool m_bReady;
-
-  /**
-   * Command buffer.
-   */
-  char m_pCommand[COMMAND_MAX];
 
   /**
    * Keyboard state.

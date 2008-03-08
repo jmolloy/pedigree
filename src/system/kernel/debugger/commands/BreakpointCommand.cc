@@ -66,10 +66,10 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
       
       const char *pEnabled = "disabled";
       if (bEnabled) pEnabled = "enabled";
-#ifdef X86
+#ifdef BITS_32
       const char k_nSize = 8;
 #endif
-#ifdef X86_64
+#ifdef BITS_64
       const char k_nSize = 16;
 #endif
       output += i;

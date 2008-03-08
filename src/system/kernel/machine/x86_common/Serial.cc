@@ -28,6 +28,18 @@ X86Serial::~X86Serial()
 void X86Serial::setBase(uintptr_t nBaseAddr)
 {
   m_nBaseAddr = static_cast<uint16_t> (nBaseAddr);
+  IoPort port;
+  port.allocate(m_nBaseAddr, 8);
+
+  port.write8(0x00, serial::inten); // Disable all interrupts
+  port.write8(0x80, serial::lctrl); // Enable DLAB (set baud rate divisor)
+  port.write8(0x03, serial::rxtx);  // Set divisor to 3 (lo byte) 38400 baud
+  port.write8(0x00, serial::inten); //                  (hi byte)
+  port.write8(0x03, serial::lctrl); // 8 bits, no parity, one stop bit
+  port.write8(0xC7, serial::iififo);// Enable FIFO, clear them, with 14-byte threshold
+  port.write8(0x0B, serial::mctrl); // IRQs enabled, RTS/DSR set
+  port.write8(0x0C, serial::inten); // enable all interrupts.
+  
 }
 
 char X86Serial::read()

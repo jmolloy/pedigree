@@ -38,19 +38,19 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   
   // Clear the top and bottom status lines.
   pScreen->drawHorizontalLine(' ', 0, 0, pScreen->getWidth()-1,
-                          DebuggerIO::White, DebuggerIO::DarkGrey);
+                          DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-1, 0, pScreen->getWidth()-1,
-                          DebuggerIO::White, DebuggerIO::DarkGrey);
+                              DebuggerIO::White, DebuggerIO::Green);
   // Write the correct text in the upper status line.
-  pScreen->drawString("Pedigree debugger - Log Viewer", 0, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
+  pScreen->drawString("Pedigree debugger - Log Viewer", 0, 0, DebuggerIO::White, DebuggerIO::Green);
   // Write some helper text in the lower status line.
   pScreen->drawString("j: Up one line. k: Down one line. backspace: Page up. space: Page down. q: Quit", 
-                      pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::DarkGrey);
-  pScreen->drawString("j", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("k", pScreen->getHeight()-1, 16, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("backspace", pScreen->getHeight()-1, 34, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("space", pScreen->getHeight()-1, 54, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
-  pScreen->drawString("q", pScreen->getHeight()-1, 72, DebuggerIO::Yellow, DebuggerIO::DarkGrey);
+                      pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
+  pScreen->drawString("j", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("k", pScreen->getHeight()-1, 16, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("backspace", pScreen->getHeight()-1, 34, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("space", pScreen->getHeight()-1, 54, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("q", pScreen->getHeight()-1, 72, DebuggerIO::Yellow, DebuggerIO::Green);
   
   // How many usable lines do we have?
   int nLines = pScreen->getHeight()-2; // -2 for top and bottom status bars.

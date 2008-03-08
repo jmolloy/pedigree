@@ -154,10 +154,12 @@ src/system/kernel/debugger/Backtrace.h
 src/system/kernel/debugger/Debugger.cc
 src/system/kernel/debugger/Debugger.h
 src/system/kernel/debugger/DebuggerCommand.h
+src/system/kernel/debugger/DebuggerIO.cc
 src/system/kernel/debugger/DebuggerIO.h
 src/system/kernel/debugger/Disassembler.h
 src/system/kernel/debugger/LocalIO.cc
 src/system/kernel/debugger/LocalIO.h
+src/system/kernel/debugger/SerialIO.cc
 src/system/kernel/debugger/SerialIO.h
 src/system/kernel/debugger/StackFrame.cc
 src/system/kernel/debugger/StackFrame.h
