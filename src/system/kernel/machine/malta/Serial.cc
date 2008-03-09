@@ -44,7 +44,7 @@ char MaltaSerial::read()
   return static_cast<char> (m_pRegs->rxtx);
 }
 
-char MaltaSerial::read()
+char MaltaSerial::readNonBlock()
 {
   if ( m_pRegs->lstat & 0x1)
     return m_pRegs->rxtx;

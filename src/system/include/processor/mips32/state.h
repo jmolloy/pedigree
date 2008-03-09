@@ -77,7 +77,9 @@ class MIPS32InterruptState
   private:
     /** The default constructor
      *\note NOT implemented */
-    MIPS32InterruptState();
+  public:
+    MIPS32InterruptState() {}
+
     /** The copy-constructor
      *\note NOT implemented */
     MIPS32InterruptState(const MIPS32InterruptState &);
@@ -86,7 +88,7 @@ class MIPS32InterruptState
     MIPS32InterruptState &operator = (const MIPS32InterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~MIPS32InterruptState();
+    ~MIPS32InterruptState() {}
 } PACKED;
 
 class MIPS32SyscallState

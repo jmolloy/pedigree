@@ -37,6 +37,7 @@ DIRECTORIES = core/lib \
               core/processor/x64/asm \
               core/processor/x86_common \
               core/processor/mips32 \
+              core/processor/mips32/asm \
               core/processor/mips64 \
               core/processor/mips_common \
               debugger/ \
@@ -140,7 +141,8 @@ endif
 ###################################################################
 # mips common source list.
 ifdef MIPS_COMMON
-SRCFILES += boot-mips.cc
+SRCFILES += boot-mips.cc \
+            core/processor/mips_common/Processor.cc
 endif
 
 ifdef MIPS_MALTA
@@ -168,7 +170,10 @@ endif
 # mips32 source file list.
 ifdef MIPS32
 SRCFILES += core/processor/mips32/initialiseProcessor1.cc \
-            core/processor/mips32/initialiseProcessor2.cc
+            core/processor/mips32/initialiseProcessor2.cc \
+            core/processor/mips32/InterruptManager.cc \
+            core/processor/mips32/asm/Processor.s \
+            core/processor/mips32/state.cc
 endif
 
 ###################################################################

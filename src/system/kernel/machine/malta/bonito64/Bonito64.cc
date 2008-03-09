@@ -44,17 +44,20 @@ size_t Bonito64::getNumVga()
 {
   return 1;
 }
-IrqManager &Bonito64::getIrqManager()
+IrqManager *Bonito64::getIrqManager()
 {
   // TODO
+  return 0;
 }
-SchedulerTimer &Bonito64::getSchedulerTimer()
+SchedulerTimer *Bonito64::getSchedulerTimer()
 {
   // TODO return m_SchedulerTimer;
+  return 0;
 }
-Timer &Bonito64::getTimer()
+Timer *Bonito64::getTimer()
 {
   // TODO return m_Timer;
+  return 0;
 }
 
 Bonito64::Bonito64()

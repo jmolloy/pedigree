@@ -62,16 +62,16 @@ class Machine
     */
     virtual size_t getNumVga() =0;
     
-    virtual IrqManager &getIrqManager() = 0;
+    virtual IrqManager *getIrqManager() = 0;
     /**
     * Returns the n'th SchedulerTimer device.
     */
-    virtual SchedulerTimer &getSchedulerTimer() =0;
+    virtual SchedulerTimer *getSchedulerTimer() =0;
     
     /**
     * Returns the n'th Timer device.
       */
-    virtual Timer &getTimer() =0;
+    virtual Timer *getTimer() =0;
     
   protected:
     inline Machine()

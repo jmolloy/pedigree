@@ -71,19 +71,19 @@ size_t Pc::getNumVga()
   return 0;
 }
 
-IrqManager &Pc::getIrqManager()
+IrqManager *Pc::getIrqManager()
 {
-  return Pic::instance();
+  return &Pic::instance();
 }
 
-SchedulerTimer &Pc::getSchedulerTimer()
+SchedulerTimer *Pc::getSchedulerTimer()
 {
-  return Pit::instance();
+  return &Pit::instance();
 }
 
-Timer &Pc::getTimer()
+Timer *Pc::getTimer()
 {
-  return Rtc::instance();
+  return &Rtc::instance();
 }
 
 Pc::Pc()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,11 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
+#include "InterruptManager.h"
 
 void initialiseProcessor1()
 {
   // Initialise this processor's interrupt handling
-//   X86InterruptManager::initialiseProcessor();
+  MIPS32InterruptManager::initialiseProcessor();
 
   // TODO: Initialise the physical memory-management
   // TODO: Initialise the I/O Manager

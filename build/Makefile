@@ -75,6 +75,7 @@ endif
 ifdef MIPS32
   CXXFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
   CFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
+  ASFLAGS += -G0 -mips32 -mabi=32
 endif
 ifdef MIPS64
   CXXFLAGS += -G0 -mips64 -mabi=64 -mxgot -static

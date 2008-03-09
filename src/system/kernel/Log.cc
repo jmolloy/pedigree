@@ -78,9 +78,9 @@ Log &Log::operator<< (SeverityLevel level)
     m_Buffer.type = level;
 
     Machine &machine = Machine::instance();
-    if (machine.isInitialised() == true)
+    if (machine.isInitialised() == true && machine.getTimer() != 0)
     {
-      Timer &timer = machine.getTimer();
+      Timer &timer = *machine.getTimer();
       m_Buffer.timestamp = timer.getTickCount();
     }
     else

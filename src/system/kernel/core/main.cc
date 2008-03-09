@@ -86,7 +86,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Initialise the processor-specific interface
   initialiseProcessor1();
-
+  
 #ifdef X86_COMMON
   /// NOTE there we go
   MyInterruptHandler myHandler;
@@ -110,7 +110,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   initialiseProcessor2();
-
+  
   // We need a heap for dynamic memory allocation.
 //  initialiseMemory();
 
@@ -121,7 +121,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     asm volatile("int $0xFE"); // some interrupt
     asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
   #endif
-
+    
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   Foo foo;
   StaticString<32> str("RAR!");
@@ -152,6 +152,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   s->write('o');
   s->write('o');
 #ifdef MIPS_COMMON
+  InterruptState st;
+  Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
 

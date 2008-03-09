@@ -42,17 +42,20 @@ size_t Malta::getNumVga()
 {
   return 1;
 }
-IrqManager &Malta::getIrqManager()
+IrqManager *Malta::getIrqManager()
 {
   // TODO
+  return 0;
 }
-SchedulerTimer &Malta::getSchedulerTimer()
+SchedulerTimer *Malta::getSchedulerTimer()
 {
   // TODO
+  return 0;
 }
-Timer &Malta::getTimer()
+Timer *Malta::getTimer()
 {
   // TODO
+  return 0;
 }
 
 Malta::Malta()

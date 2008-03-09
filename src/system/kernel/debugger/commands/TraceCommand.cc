@@ -40,7 +40,8 @@ static void addToBuffer(unsigned int n, unsigned int *pBuffer, unsigned int &nIn
 
 TraceCommand::TraceCommand()
   : DebuggerCommand(),
-    m_nExec(-1)
+    m_nExec(-1),
+    m_nInterface(-1)
 {
 }
 
@@ -65,7 +66,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   
   // Work out where the split will be between the disassembler, reg dump and stacktrace.
   // Give the reg dump 25 columns, hardcoded.
-  int nCols = 55;
+  int nCols = pScreen->getWidth()-25;
   // Give the disassembler 3/4 of the available lines.
   int nLines = ((pScreen->getHeight()-2) * 3) / 4;
   
