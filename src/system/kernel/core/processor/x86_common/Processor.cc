@@ -25,7 +25,7 @@ uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
                                         size_t &nLength,
                                         bool &bEnabled)
 {
-  uintptr_t nLinearAddress;
+  uintptr_t nLinearAddress = 0;
   switch(nBpNumber)
   {
   case 0:

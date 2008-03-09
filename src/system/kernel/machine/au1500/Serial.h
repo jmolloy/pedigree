@@ -27,7 +27,9 @@ class Au1500Serial : public Serial
     Au1500Serial();
     virtual ~Au1500Serial();
   
+    virtual void setBase(uintptr_t nBaseAddr);
     virtual char read();
+    virtual char readNonBlock();
     virtual void write(char c);
 };
 

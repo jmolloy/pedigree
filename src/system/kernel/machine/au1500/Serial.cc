@@ -21,8 +21,16 @@ Au1500Serial::Au1500Serial()
 Au1500Serial::~Au1500Serial()
 {
 }
+void Au1500Serial::setBase(uintptr_t nBaseAddr)
+{
+}
 char Au1500Serial::read()
 {
+  return 0;
+}
+char Au1500Serial::readNonBlock()
+{
+  return 0;
 }
 void Au1500Serial::write(char c)
 {

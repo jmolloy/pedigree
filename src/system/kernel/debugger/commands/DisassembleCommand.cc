@@ -63,29 +63,29 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
   }
 
   // Dissassemble around address.
-  int nInstructions = 10;
+  size_t nInstructions = 10;
   
   ud_t ud_obj;
   ud_init(&ud_obj);
 #ifdef X86
   ud_set_mode(&ud_obj, 32);
 #endif
-#ifdef X86_64
+#ifdef X64
   ud_set_mode(&ud_obj, 64);
 #endif
   ud_set_syntax(&ud_obj, UD_SYN_INTEL);
   ud_set_pc(&ud_obj, address);
   ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(address), 256);
 
-  for(int i = 0; i < nInstructions; i++)
+  for(size_t i = 0; i < nInstructions; i++)
   {
     ud_disassemble(&ud_obj);
     
-    unsigned int location = ud_insn_off(&ud_obj);
+    size_t location = ud_insn_off(&ud_obj);
     
     // What symbol are we in?
     // TODO grep the memory map for the right ELF to look at.
-    unsigned int symStart = 0;
+    uintptr_t symStart = 0;
     const char *pSym = elf.lookupSymbol(location, &symStart);
 
     // Are we actually at the start location of this symbol?
@@ -95,7 +95,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 #ifdef X86
       output.append(location, 16, 8, '0');
 #endif
-#ifdef X86_64
+#ifdef X64
       output.append(location, 16, 16, '0');
 #endif
       output += " <";
@@ -109,7 +109,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
       if (sym.nParams > 0)
       {
         output += "(";
-        for (int i = 0; i < sym.nParams; i++)
+        for (size_t i = 0; i < sym.nParams; i++)
         {
           if (i != 0)
             output += ", ";
@@ -123,7 +123,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 #ifdef X86
     output.append(location, 16, 8, ' ');
 #endif
-#ifdef X86_64
+#ifdef X64
     output.append(location, 16, 16, ' ');
 #endif
     output += ": ";

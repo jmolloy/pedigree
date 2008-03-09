@@ -37,14 +37,14 @@ LocalIO::LocalIO() :
   m_bCapslock(false)
 {
   // Copy the current screen contents to our old frame buffer.
-  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
+  uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
   memcpy(m_pOldFramebuffer, vidmem, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
 
   // Clear the framebuffer.
-  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (size_t i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
   {
-    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
-    unsigned short blank = ' ' | (attributeByte << 8);
+    uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    uint16_t blank = ' ' | (attributeByte << 8);
     m_pFramebuffer[i] = blank;
   }
   m_pCommand[0] = '\0';
@@ -56,11 +56,11 @@ LocalIO::LocalIO() :
 LocalIO::~LocalIO()
 {
   // Copy our old frame buffer to the screen.
-  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
+  uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
   memcpy(vidmem, m_pOldFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
 }
 
-void LocalIO::setCliUpperLimit(int nlines)
+void LocalIO::setCliUpperLimit(size_t nlines)
 {
   // Do a quick sanity check.
   if (nlines < CONSOLE_HEIGHT)
@@ -71,7 +71,7 @@ void LocalIO::setCliUpperLimit(int nlines)
     m_CursorY = m_UpperCliLimit;
 }
 
-void LocalIO::setCliLowerLimit(int nlines)
+void LocalIO::setCliLowerLimit(size_t nlines)
 {
   // Do a quick sanity check.
   if (nlines < CONSOLE_HEIGHT)
@@ -85,10 +85,10 @@ void LocalIO::setCliLowerLimit(int nlines)
 void LocalIO::enableCli()
 {
   // Clear the framebuffer.
-  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (size_t i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
   {
-    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
-    unsigned short blank = ' ' | (attributeByte << 8);
+    uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    uint16_t blank = ' ' | (attributeByte << 8);
     m_pFramebuffer[i] = blank;
   }
   m_pCommand[0] = '\0';
@@ -106,8 +106,8 @@ void LocalIO::disableCli()
   // Clear the framebuffer.
   for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
   {
-    unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
-    unsigned short blank = ' ' | (attributeByte << 8);
+    uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+    uint16_t blank = ' ' | (attributeByte << 8);
     m_pFramebuffer[i] = blank;
   }
   
@@ -129,6 +129,9 @@ char LocalIO::getCharNonBlock()
   else
     return '\0';
 #endif
+#ifndef X86
+  return '\0';
+#endif
 }
 
 char LocalIO::getChar()
@@ -137,7 +140,7 @@ char LocalIO::getChar()
   // Let's get a character from the keyboard.
   IoPort port;
   port.allocate(0x60, 4);
-  unsigned char scancode, status;
+  uint8_t scancode, status;
   do
   {
     // Get the keyboard's status byte.
@@ -222,12 +225,12 @@ char LocalIO::getChar()
   return 0;
 }
 
-void LocalIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void LocalIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   // colEnd must be bigger than colStart.
   if (colStart > colEnd)
   {
-    int tmp = colStart;
+    size_t tmp = colStart;
     colStart = colEnd;
     colEnd = tmp;
   }
@@ -241,8 +244,8 @@ void LocalIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, Debu
   if (row < 0)
     row = 0;
 
-  unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
-  for(int i = colStart; i <= colEnd; i++)
+  uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
+  for(size_t i = colStart; i <= colEnd; i++)
   {
     m_pFramebuffer[row*CONSOLE_WIDTH+i] = c | (attributeByte << 8);
   }
@@ -251,12 +254,12 @@ void LocalIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, Debu
     forceRefresh();
 }
 
-void LocalIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void LocalIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   // rowEnd must be bigger than rowStart.
   if (rowStart > rowEnd)
   {
-    int tmp = rowStart;
+    size_t tmp = rowStart;
     rowStart = rowEnd;
     rowEnd = tmp;
   }
@@ -270,8 +273,8 @@ void LocalIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, Debugg
   if (col < 0)
     col = 0;
   
-  unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
-  for(int i = rowStart; i <= rowEnd; i++)
+  uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
+  for(size_t i = rowStart; i <= rowEnd; i++)
   {
     m_pFramebuffer[i*CONSOLE_WIDTH+col] = c | (attributeByte << 8);
   }
@@ -280,12 +283,12 @@ void LocalIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, Debugg
     forceRefresh();
 }
 
-void LocalIO::drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void LocalIO::drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   // Now then, this is a lesson in cheating. Listen up.
   // Firstly we save the current cursorX and cursorY positions.
-  int savedX = m_CursorX;
-  int savedY = m_CursorY;
+  size_t savedX = m_CursorX;
+  size_t savedY = m_CursorY;
   
   // Then, we change cursorX and Y to be row, col.
   m_CursorX = col;
@@ -329,7 +332,7 @@ void LocalIO::disableRefreshes()
 
 void LocalIO::forceRefresh()
 {
-  unsigned short *vidmem = reinterpret_cast<unsigned short*>(0xB8000);
+  uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
 
   memcpy(vidmem, m_pFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
   moveCursor();
@@ -338,14 +341,14 @@ void LocalIO::forceRefresh()
 void LocalIO::scroll()
 {
   // Get a space character with the default colour attributes.
-  unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
-  unsigned short blank = ' ' | (attributeByte << 8);
+  uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
+  uint16_t blank = ' ' | (attributeByte << 8);
   if (m_CursorY >= CONSOLE_HEIGHT-m_LowerCliLimit)
   {
-    for (int i = m_UpperCliLimit*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i++)
+    for (size_t i = m_UpperCliLimit*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i++)
       m_pFramebuffer[i] = m_pFramebuffer[i+80];
 
-    for (int i = (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit)*80; i++)
+    for (size_t i = (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit)*80; i++)
       m_pFramebuffer[i] = blank;
 
     m_CursorY = CONSOLE_HEIGHT-m_LowerCliLimit-1;
@@ -356,7 +359,7 @@ void LocalIO::scroll()
 void LocalIO::moveCursor()
 {
 #ifdef X86
-  unsigned short tmp = m_CursorY*80 + m_CursorX;
+  uint16_t tmp = m_CursorY*80 + m_CursorX;
   
   IoPort cursorPort;
   cursorPort.allocate(0x3D4, 2);
@@ -383,7 +386,7 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
     }
     
     // Erase the contents of the cell currently.
-    unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
+    uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
     m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = ' ' | (attributeByte << 8);
     
   }
@@ -406,7 +409,7 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
   // Normal character?
   else if (c >= ' ')
   {
-    unsigned char attributeByte = (backColour << 4) | (foreColour & 0x0F);
+    uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
     m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = c | (attributeByte << 8);
 
     // Increment the cursor.

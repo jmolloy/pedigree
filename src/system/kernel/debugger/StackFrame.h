@@ -28,7 +28,7 @@ public:
    * Creates a stack frame based on the given Base Pointer value, and also the given
    * symbol name (mangled).
    */
-  StackFrame(unsigned int nBasePointer, LargeStaticString mangledSymbol);
+  StackFrame(uintptr_t nBasePointer, LargeStaticString mangledSymbol);
   ~StackFrame();
 
   /**
@@ -41,7 +41,7 @@ private:
   /**
    * Returns the n'th 32/64-bit parameter in the stack frame.
    */
-  unsigned int getParameter(unsigned int n);
+  uintptr_t getParameter(size_t n);
   
   /**
    * Returns whether the symbol is a class member function.
@@ -54,7 +54,7 @@ private:
   /**
    * Formats a number, given the 'type' of that number.
    */
-  void format(unsigned int n, const LargeStaticString &type, HugeStaticString &dest);
+  void format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest);
   
   uintptr_t m_nBasePointer;
   symbol_t m_Symbol;

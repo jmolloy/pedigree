@@ -16,7 +16,7 @@
 #include "StackFrame.h"
 #include <Log.h>
 
-StackFrame::StackFrame(unsigned int nBasePointer, LargeStaticString mangledSymbol) :
+StackFrame::StackFrame(uintptr_t nBasePointer, LargeStaticString mangledSymbol) :
   m_nBasePointer(nBasePointer), m_Symbol()
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
@@ -42,7 +42,7 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
     buf += ", ";
   }
   
-  for (int i = 0; i < m_Symbol.nParams; i++)
+  for (size_t i = 0; i < m_Symbol.nParams; i++)
   {
     if (i != 0)
       buf += ", ";
@@ -53,13 +53,15 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
   buf += ")\n";
 }
 
-unsigned int StackFrame::getParameter(unsigned int n)
+uintptr_t StackFrame::getParameter(size_t n)
 {
-  unsigned int *pPtr = reinterpret_cast<unsigned int *>(m_nBasePointer+(n+2)*sizeof(unsigned int));
-  return *pPtr;
+  // TODO
+  //uintptr_t *pPtr = reinterpret_cast<uintptr_t *>(m_nBasePointer+(n+2)*sizeof(uintptr_t));
+  //return *pPtr;
+  return 0;
 }
   
-void StackFrame::format(unsigned int n, const LargeStaticString &type, HugeStaticString &dest)
+void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
 {
   // Is the type a char * or const char *?
   if (type == "char*" || type == "const char*")

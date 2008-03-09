@@ -5,14 +5,15 @@ ENTRY(start)
 SECTIONS
 {
 
-    .text 0x100000 :
+    . = 0xC0100000;
+    .text : AT(ADDR(.text) - 0xC0000000)
     {
         code = .; _code = .; __code = .;
         *(.text)
         . = ALIGN(4096);
     }
 
-    .data :
+    .data : AT(ADDR(.data) - 0xC0000000)
     {
         start_ctors = .;
         *(.ctors)
@@ -25,7 +26,7 @@ SECTIONS
         . = ALIGN(4096);
     }
 
-    .bss :
+    .bss : AT(ADDR(.bss) - 0xC0000000)
     {
         bss = .; _bss = .; __bss = .;
         *(.bss)

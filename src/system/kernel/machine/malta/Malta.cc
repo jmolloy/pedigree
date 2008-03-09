@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, J�rg Pf�hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -59,6 +59,7 @@ Timer *Malta::getTimer()
 }
 
 Malta::Malta()
+  : m_Vga()
 {
 }
 Malta::~Malta()

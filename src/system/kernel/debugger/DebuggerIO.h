@@ -77,8 +77,8 @@ public:
    * from either the top or bottom of the screen, respectively. Can be used to
    * create status lines that aren't destroyed by screen scrolling.
    */
-  virtual void setCliUpperLimit(int nlines) = 0;
-  virtual void setCliLowerLimit(int nlines) = 0;
+  virtual void setCliUpperLimit(size_t nlines) = 0;
+  virtual void setCliLowerLimit(size_t nlines) = 0;
 
   virtual void cls() =0;
   
@@ -107,20 +107,20 @@ public:
    * horizontal or vertical direction. Note that if the CLI is enabled,
    * anything drawn across the CLI area can be wiped without warning.
    */
-  virtual void drawHorizontalLine(char c, int row, int colStart, int colEnd, Colour foreColour, Colour backColour) = 0;
-  virtual void drawVerticalLine(char c, int col, int rowStart, int rowEnd, Colour foreColour, Colour backColour) = 0;
+  virtual void drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, Colour foreColour, Colour backColour) = 0;
+  virtual void drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, Colour foreColour, Colour backColour) = 0;
 
   /**
    * Draws a string of text at the given location in the given colour.
    * note that wrapping is not performed, the string will be clipped.
    */
-  virtual void drawString(const char *str, int row, int col, Colour foreColour, Colour backColour) = 0;
+  virtual void drawString(const char *str, size_t row, size_t col, Colour foreColour, Colour backColour) = 0;
 
   /**
    * Returns the width and height respectively of the console.
    */
-  virtual int getWidth() = 0;
-  virtual int getHeight() = 0;
+  virtual size_t getWidth() = 0;
+  virtual size_t getHeight() = 0;
 
   /**
    * Allows disabling of refreshes, for example when deleting something then writing it back.

@@ -61,6 +61,7 @@ Timer *Bonito64::getTimer()
 }
 
 Bonito64::Bonito64()
+  : m_Vga()
 {
 }
 Bonito64::~Bonito64()

@@ -850,7 +850,7 @@ static int parseArrayType(LargeStaticString &src, LargeStaticString &dest, deman
   // Number?
   if (src[0] >= '0' && src[0] <= '9')
   {
-    size_t nLength;
+    size_t nLength = 0;
     while (src[nLength] >= '0' && src[nLength] <= '9')
       bound += src[nLength++];
     src.stripFirst(nLength);

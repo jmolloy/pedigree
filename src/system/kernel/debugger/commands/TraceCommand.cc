@@ -100,7 +100,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   return true; // Return control to the debugger.
 }
 
-void TraceCommand::drawBackground(int nCols, int nLines, DebuggerIO *pScreen)
+void TraceCommand::drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScreen)
 {
   // Destroy all text.
   pScreen->cls();
@@ -125,7 +125,7 @@ void TraceCommand::drawBackground(int nCols, int nLines, DebuggerIO *pScreen)
   pScreen->drawVerticalLine('|', nCols, 1, nLines, DebuggerIO::DarkGrey, DebuggerIO::Black);
 }
 
-void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state)
+void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state)
 {
   // We want the current instruction to be in the middle of the screen (ish).
   // The important thing is that to get the correct disassembly we must start disassembling
@@ -134,8 +134,8 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
   
   // Current symbol location.
   // TODO grep the memory map for the right ELF to look at.
-  unsigned int ip = state.getInstructionPointer();
-  unsigned int symStart = 0;
+  uintptr_t ip = state.getInstructionPointer();
+  uintptr_t symStart = 0;
   const char *pSym = elf.lookupSymbol(ip, &symStart);
 
   ud_t ud_obj;
@@ -156,12 +156,12 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
   unsigned int nLinesToCache = nLines/2;
 
   unsigned int location = 0;
-  int i = 0;
+  //int i = 0;
   while(location < ip)
   {
     ud_disassemble(&ud_obj);
     location = ud_insn_off(&ud_obj);
-    unsigned int nSym;
+    uintptr_t nSym;
     elf.lookupSymbol(location, &nSym);
     if (nSym == location) // New symbol. Add two lines.
     {
@@ -175,12 +175,12 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
   // OK, awesome, we have an instruction buffer. Let's disassemble it.
   ud_set_pc(&ud_obj, instrBuffer[0]);
   ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(instrBuffer[0]), 4096);
-  unsigned int nLine;
-  for (nLine = 0; nLine < static_cast<unsigned int>(nLines); nLine++)
+  size_t nLine;
+  for (nLine = 0; nLine < nLines; nLine++)
   {
     ud_disassemble(&ud_obj);
     location = ud_insn_off(&ud_obj);
-    unsigned int nSym;
+    uintptr_t nSym;
     const char *pSym = elf.lookupSymbol(location, &nSym);
     NormalStaticString str;
     if (nSym <= location && nSym != symStart) // New symbol. Add two lines.
@@ -221,9 +221,9 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
   
 }
 
-void TraceCommand::drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state)
+void TraceCommand::drawRegisters(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state)
 {
-  int nLine = 0;
+  size_t nLine = 0;
   if (state.kernelMode() == true)
   {
     pScreen->drawString("Kernel mode", nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
@@ -247,7 +247,7 @@ void TraceCommand::drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, Int
   }
 }
 
-void TraceCommand::drawStacktrace(int nLines, DebuggerIO *pScreen, InterruptState &state)
+void TraceCommand::drawStacktrace(size_t nLines, DebuggerIO *pScreen, InterruptState &state)
 {
   Backtrace bt;
   bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());

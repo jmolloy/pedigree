@@ -39,7 +39,7 @@ void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
   if (instruction == 0)
     instruction = Processor::getInstructionPointer();
   
-  int i = 1;
+  size_t i = 1;
   m_pBasePointers[0] = base;
   m_pReturnAddresses[0] = instruction;
   
@@ -56,7 +56,7 @@ void Backtrace::performBacktrace(uintptr_t base, uintptr_t instruction)
   m_nStackFrames = i;
 }
 
-void Backtrace::prettyPrint(HugeStaticString &buf, unsigned int nFrames)
+void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames)
 {
   if (nFrames == 0 || nFrames > m_nStackFrames)
     nFrames = m_nStackFrames;
@@ -64,7 +64,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, unsigned int nFrames)
   // TODO grep the memory map for the right ELF to look at.
   for (size_t i = 0; i < nFrames; i++)
   {
-    unsigned int symStart = 0;
+    uintptr_t symStart = 0;
 
     const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
@@ -74,18 +74,18 @@ void Backtrace::prettyPrint(HugeStaticString &buf, unsigned int nFrames)
   }
 }
 
-unsigned int Backtrace::numStackFrames()
+size_t Backtrace::numStackFrames()
 {
   return m_nStackFrames;
 }
   
-unsigned int Backtrace::getReturnAddress(unsigned int n)
+uintptr_t Backtrace::getReturnAddress(size_t n)
 {
 //   ASSERT(n < m_nStackFrames);
   return m_pReturnAddresses[n];
 }
 
-unsigned int Backtrace::getBasePointer(unsigned int n)
+uintptr_t Backtrace::getBasePointer(size_t n)
 {
 //   ASSERT(n < m_nStackFrames);
   return m_pBasePointers[n];

@@ -36,9 +36,9 @@ TraceCommand g_Trace;
 
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
 /// through pCommands at index start. Returns -1 if none found.
-static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, int nCmds, int start)
+static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, size_t nCmds, size_t start)
 {
-  for (int i = start; i < nCmds; i++)
+  for (size_t i = start; i < nCmds; i++)
   {
     if (!strncmp(pCommands[i]->getString(), prefix, strlen(prefix)))
       return i;
@@ -52,7 +52,7 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 {
   if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
   {
-    int n = strlen(pCommand->getString());
+    size_t n = strlen(pCommand->getString());
     memcpy(pStr, pStr+n+1, strlen(pStr)-n);
     return true;
   }
@@ -106,7 +106,7 @@ void Debugger::breakpoint(InterruptState &state)
   DumpCommand dump;
   StepCommand step;
   
-  int nCommands = 8;
+  size_t nCommands = 8;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -186,12 +186,12 @@ void Debugger::breakpoint(InterruptState &state)
       HugeStaticString str;
       NormalStaticString str2;
       matchedCommand = false;
-      for (int i = 0; i < nCommands; i++)
+      for (size_t i = 0; i < nCommands; i++)
       {
         // TODO: This cast is completly wrong. As I said, don't touch (as in 'write') StaticString's
         //       internal string. The const is not there because I don't like you :-), it is there
         //       because directly writing is not garantueed to work (and it actually will break our code).
-        if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
+        if (matchesCommand(const_cast<char*>(static_cast<const char*>(command)), pCommands[i]))
         {
           str2 = static_cast<const char *>(pCommands[i]->getString());
           str2 += ' ';
@@ -205,7 +205,7 @@ void Debugger::breakpoint(InterruptState &state)
       if (!matchedCommand)
       {
         int i = -1;
-        while ( (i = getCommandMatchingPrefix(const_cast<char*>((const char*)command), pCommands, nCommands, i+1)) != -1)
+        while ( (i = getCommandMatchingPrefix(const_cast<char*>(static_cast<const char*>(command)), pCommands, nCommands, i+1)) != -1)
         {
           if (!pAutoComplete)
             pAutoComplete = pCommands[i];
@@ -221,9 +221,9 @@ void Debugger::breakpoint(InterruptState &state)
   
     // A command was entered.
     bool bValidCommand = false;
-    for (int i = 0; i < nCommands; i++)
+    for (size_t i = 0; i < nCommands; i++)
     {
-      if (matchesCommand(const_cast<char*>((const char*)command), pCommands[i]))
+      if (matchesCommand(const_cast<char*>(static_cast<const char*>(command)), pCommands[i]))
       {
         bKeepGoing = pCommands[i]->execute(command, output, state, pIo);
         pIo->writeCli(output, DebuggerIO::LightGrey, DebuggerIO::Black);

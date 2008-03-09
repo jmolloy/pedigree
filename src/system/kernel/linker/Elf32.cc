@@ -124,7 +124,7 @@ unsigned int Elf32::getLastAddress()
 {
 }
 
-const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
+const char *Elf32::lookupSymbol(unsigned int addr, uintptr_t *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.

@@ -23,6 +23,7 @@ MaltaVga::~MaltaVga()
 }
 char MaltaVga::read()
 {
+  return 0;
 }
 void MaltaVga::write(char c)
 {

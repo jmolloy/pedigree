@@ -53,10 +53,10 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   pScreen->drawString("q", pScreen->getHeight()-1, 72, DebuggerIO::Yellow, DebuggerIO::Green);
   
   // How many usable lines do we have?
-  int nLines = pScreen->getHeight()-2; // -2 for top and bottom status bars.
+  size_t nLines = pScreen->getHeight()-2; // -2 for top and bottom status bars.
   
   // Starting line.
-  int line = Log::instance().getEntryCount() - nLines;
+  size_t line = Log::instance().getEntryCount() - nLines;
 
   // Main loop.
   bool bStop = false;
@@ -112,13 +112,13 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   return true;
 }
 
-void LogViewer::refresh(int topLine, DebuggerIO *pScreen)
+void LogViewer::refresh(size_t topLine, DebuggerIO *pScreen)
 {
-  int line = topLine;
+  size_t line = topLine;
   pScreen->disableRefreshes();
   
   // For every available line.
-  for (int i = 1 /* Top status line */; i < pScreen->getHeight()-1; i++)
+  for (size_t i = 1 /* Top status line */; i < pScreen->getHeight()-1; i++)
   {
     pScreen->drawHorizontalLine(' ', i, 0, pScreen->getWidth()-1,
                                DebuggerIO::White, DebuggerIO::Black);
@@ -129,7 +129,7 @@ void LogViewer::refresh(int topLine, DebuggerIO *pScreen)
       char timestamp[16];
       sprintf(timestamp, "[%08d]", entry.timestamp);
       
-      DebuggerIO::Colour colour;
+      DebuggerIO::Colour colour = DebuggerIO::White;
       switch (entry.type)
       {
       case Log::Notice:

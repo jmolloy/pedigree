@@ -64,10 +64,10 @@ public:
   }
   
 private:
-  void drawBackground(int nCols, int nLines, DebuggerIO *pScreen);
-  void drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state);
-  void drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, InterruptState &state);
-  void drawStacktrace(int nLines, DebuggerIO *pScreen, InterruptState &state);
+  void drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScreen);
+  void drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state);
+  void drawRegisters(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state);
+  void drawStacktrace(size_t nLines, DebuggerIO *pScreen, InterruptState &state);
   
   /**
    * Should the debugger immediately call our execute function? and what interface should it use?

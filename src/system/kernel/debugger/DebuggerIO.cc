@@ -65,14 +65,14 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
         const char *pACString = pAutoComplete->getString();
         // HACK:: Here we hack like complete bitches. Just find the last space in the string,
         // and memcpy the full autocomplete string in.
-        int i;
+        size_t i;
         for (i = strlen(m_pCommand); i >= 0; i--)
           if (m_pCommand[i] == ' ')
             break;
         
         // We also haxxor the cursor, by writing loads of backspaces, then rewriting the whole string.
-        int nBackspaces = strlen(m_pCommand)-i;
-        for (int j = 0; j < nBackspaces-1; j++)
+        size_t nBackspaces = strlen(m_pCommand)-i;
+        for (size_t j = 0; j < nBackspaces-1; j++)
           putChar('\x08' /* backspace */, DebuggerIO::White, DebuggerIO::Black);
         
         writeCli(pACString, DebuggerIO::White, DebuggerIO::Black);
@@ -84,7 +84,7 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
     else
     {
       // Normal, printing character.
-      int len = strlen(m_pCommand);
+      size_t len = strlen(m_pCommand);
       if (len < COMMAND_MAX-1)
       {
         // Add it to the command string, and null terminate.

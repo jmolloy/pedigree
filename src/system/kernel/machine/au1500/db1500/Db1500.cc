@@ -42,20 +42,22 @@ size_t Db1500::getNumVga()
 {
   return 1;
 }
-IrqManager &Db1500::getIrqManager()
+IrqManager *Db1500::getIrqManager()
 {
   // TODO
+  return 0;
 }
-SchedulerTimer &Db1500::getSchedulerTimer()
+SchedulerTimer *Db1500::getSchedulerTimer()
 {
   // TODO return m_SchedulerTimer;
 }
-Timer &Db1500::getTimer()
+Timer *Db1500::getTimer()
 {
   // TODO return m_Timer;
 }
 
 Db1500::Db1500()
+  : m_Vga()
 {
 }
 Db1500::~Db1500()

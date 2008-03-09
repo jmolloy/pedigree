@@ -30,9 +30,9 @@ public:
   virtual size_t getNumSerial();
   virtual Vga *getVga(size_t n);
   virtual size_t getNumVga();
-  virtual IrqManager &getIrqManager();
-  virtual SchedulerTimer &getSchedulerTimer();
-  virtual Timer &getTimer();
+  virtual IrqManager *getIrqManager();
+  virtual SchedulerTimer *getSchedulerTimer();
+  virtual Timer *getTimer();
 
 private:
   /**

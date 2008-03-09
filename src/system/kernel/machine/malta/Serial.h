@@ -63,6 +63,9 @@ public:
   virtual char read();
   virtual char readNonBlock();
 private:
+  MaltaSerial(const MaltaSerial &);
+  MaltaSerial &operator = (const MaltaSerial &);
+
   struct serial
   {
     uint8_t rxtx;

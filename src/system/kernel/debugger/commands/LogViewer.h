@@ -56,7 +56,7 @@ private:
   /**
    * Causes a redraw of the screen.
    */
-  void refresh(int topLine, DebuggerIO *pScreen);
+  void refresh(size_t topLine, DebuggerIO *pScreen);
   
 };
 

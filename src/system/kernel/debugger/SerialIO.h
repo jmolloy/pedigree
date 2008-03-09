@@ -38,8 +38,8 @@ public:
    * from either the top or bottom of the screen, respectively. Can be used to 
    * create status lines that aren't destroyed by screen scrolling.
    */
-  void setCliUpperLimit(int nlines);
-  void setCliLowerLimit(int nlines);
+  void setCliUpperLimit(size_t nlines);
+  void setCliLowerLimit(size_t nlines);
 
   /**
    * Enables or disables the command line interface, allowing full access to the display.
@@ -56,20 +56,20 @@ public:
    * horizontal or vertical direction. Note that if the CLI is enabled,
    * anything drawn across the CLI area can be wiped without warning.
    */
-  void drawHorizontalLine(char c, int row, int colStart, int colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
-  void drawVerticalLine(char c, int col, int rowStart, int rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
    * Draws a string of text at the given location in the given colour.
    * note that wrapping is not performed, the string will be clipped.
    */
-  void drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+  void drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
   /**
    * Returns the width and height respectively of the console.
    */
-  int getWidth() {return m_nWidth;}
-  int getHeight() {return m_nHeight;}
+  size_t getWidth() {return m_nWidth;}
+  size_t getHeight() {return m_nHeight;}
 
   /**
    * Allows disabling of refreshes, for example when deleting something then writing it back.
@@ -106,20 +106,20 @@ protected:
   /**
    * Current upper and lower CLI limits.
    */
-  int m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
-  int m_LowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
+  size_t m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
+  size_t m_LowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
   
   /**
    * Width and height.
    */
-  int m_nWidth;
-  int m_nHeight;
+  size_t m_nWidth;
+  size_t m_nHeight;
   
   /**
    * Cursor position, temporary.
    */
-  int m_nCursorX;
-  int m_nCursorY;
+  size_t m_nCursorX;
+  size_t m_nCursorY;
   
   DebuggerIO::Colour m_ForeColour;
   DebuggerIO::Colour m_BackColour;
@@ -130,6 +130,10 @@ protected:
   Serial *m_pSerial;
   
   bool m_bCli;
+
+private:
+  SerialIO(const SerialIO &);
+  SerialIO &operator = (const SerialIO &);
 };
 
 #endif

@@ -26,6 +26,8 @@ SerialIO::SerialIO(Serial *pSerial) :
   m_LowerCliLimit(0),
   m_nWidth(80),
   m_nHeight(25),
+  m_nCursorX(0),
+  m_nCursorY(0),
   m_ForeColour(DebuggerIO::Red),
   m_BackColour(DebuggerIO::Red),
   m_pSerial(pSerial),
@@ -62,14 +64,14 @@ SerialIO::~SerialIO()
   m_pSerial->write("\0338");
 }
 
-void SerialIO::setCliUpperLimit(int nlines)
+void SerialIO::setCliUpperLimit(size_t nlines)
 {
   // Do a quick sanity check.
   if (nlines < m_nHeight)
     m_UpperCliLimit = nlines;
 }
 
-void SerialIO::setCliLowerLimit(int nlines)
+void SerialIO::setCliLowerLimit(size_t nlines)
 {
   // Do a quick sanity check.
   if (nlines < m_nHeight)
@@ -129,14 +131,14 @@ char SerialIO::getChar()
   return c;
 }
 
-void SerialIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void SerialIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   if (m_bCli)
     readCursor();
   // colEnd must be bigger than colStart.
   if (colStart > colEnd)
   {
-    int tmp = colStart;
+    size_t tmp = colStart;
     colStart = colEnd;
     colEnd = tmp;
   }
@@ -160,7 +162,7 @@ void SerialIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, Deb
   cmd += 'H';
   m_pSerial->write(cmd);
   
-  for (int i = colStart; i <= colEnd; i++)
+  for (size_t i = colStart; i <= colEnd; i++)
   {
     m_pSerial->write(c);
   }
@@ -170,12 +172,12 @@ void SerialIO::drawHorizontalLine(char c, int row, int colStart, int colEnd, Deb
     setCursor();
 }
 
-void SerialIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void SerialIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   // rowEnd must be bigger than rowStart.
   if (rowStart > rowEnd)
   {
-    int tmp = rowStart;
+    size_t tmp = rowStart;
     rowStart = rowEnd;
     rowEnd = tmp;
   }
@@ -192,7 +194,7 @@ void SerialIO::drawVerticalLine(char c, int col, int rowStart, int rowEnd, Debug
   // TODO position cursor, draw line.
 }
 
-void SerialIO::drawString(const char *str, int row, int col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
+void SerialIO::drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
   if (m_bCli)
     readCursor();

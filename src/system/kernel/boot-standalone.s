@@ -30,35 +30,75 @@ mboot:
 [SECTION .text]
 start:
   cli
+  push ebx
 
   ; Enable PSE (Page Size Extension)
   mov eax, cr4
   or eax, 0x10
   mov cr4, eax
 
+  ; Identity map the first 4MB 
   mov eax, 0x83
-  mov [pagedirectory], eax
-  add eax, pagedirectory
-  mov [pagedirectory + 0xFFC], eax
+  mov [pagedirectory - 0xC0000000], eax
+  mov [pagedirectory - 0xC0000000 + 0xC00], eax
 
-  mov eax, pagedirectory
+  ;Map the page-tables to 4GB - 4MB (the last 4MB)
+  mov eax, 0x03 + pagedirectory - 0xC0000000
+  mov [pagedirectory - 0xC0000000 + 0xFFC], eax
+
+  ;Map the pagetable0 for stack and the page-directory to 4GB - 8MB
+  mov eax, 0x03 + pagetable0 - 0xC0000000
+  mov [pagedirectory - 0xC0000000 + 0xFF8], eax
+
+  ;Map the stack and the page-directory into pagetable0
+  mov eax, 0x03 + stack - 0xC0000000
+  mov [pagetable0 - 0xC0000000 + 0xFF4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFF0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFEC], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFE8], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFE4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFE0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFDC], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFD8], eax
+  mov eax, 0x03 + pagedirectory - 0xC0000000
+  mov [pagetable0 - 0xC0000000 + 0xFFC], eax
+
+  mov eax, pagedirectory - 0xC0000000
   mov cr3, eax
 
   mov eax, cr0
   or eax, 0x80000000
   mov cr0, eax
 
-  mov eax, 0x83
-  mov [pagedirectory + 4], eax
-  mov eax, cr3
-  mov cr3, eax
+  ; Set stack
+  pop ebx
+  mov esp, 0xFFBFE000
 
   push ebx
   ; clear the stackframe
   xor ebp, ebp
+  mov eax, callmain
+  jmp eax
+
+callmain:
   call _main
   jmp $
 
 [SECTION .bss]
+align 4096
 pagedirectory:
   resb 4096
+pagetable0:
+  resb 4096
+stack:
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192

@@ -40,33 +40,33 @@ public:
   /**
    * Returns the number of stack frames retrieved.
    */
-  unsigned int numStackFrames();
+  size_t numStackFrames();
   
   /**
    * Returns the return address of the n'th stack frame.
    */
-  unsigned int getReturnAddress(unsigned int n);
+  uintptr_t getReturnAddress(size_t n);
   
   /**
    * Returns the base pointer of the n'th stack frame.
    */
-  unsigned int getBasePointer(unsigned int n);
+  uintptr_t getBasePointer(size_t n);
   
-  void prettyPrint(HugeStaticString &buf, unsigned int nFrames=0);
+  void prettyPrint(HugeStaticString &buf, size_t nFrames=0);
   
 private:
   /**
    * The return addresses.
    */
-  unsigned int m_pReturnAddresses[MAX_STACK_FRAMES];
+  uintptr_t m_pReturnAddresses[MAX_STACK_FRAMES];
   /**
    * The base pointers.
    */
-  unsigned int m_pBasePointers[MAX_STACK_FRAMES];
+  uintptr_t m_pBasePointers[MAX_STACK_FRAMES];
   /**
    * The number of stack frames retrieved by a performBacktrace call.
    */
-  unsigned int m_nStackFrames;
+  size_t m_nStackFrames;
 };
 
 #endif

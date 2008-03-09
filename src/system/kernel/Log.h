@@ -17,6 +17,8 @@
 #ifndef DEBUGGER_LOG_H
 #define DEBUGGER_LOG_H
 
+#include <processor/types.h>
+
 #define NOTICE(text) \
   do \
   { \
@@ -118,7 +120,7 @@ public:
   /**
    * Returns the n'th log entry, counting from the start.
    */
-  LogEntry_t getEntry(int n)
+  LogEntry_t getEntry(size_t n)
   {
     return m_pLog[n];
   }
@@ -126,7 +128,7 @@ public:
   /**
    * Returns the number of entries in the log.
    */
-  int getEntryCount()
+  size_t getEntryCount()
   {
     return m_nEntries;
   }
@@ -153,7 +155,7 @@ private:
    * \todo Make this a dynamic vector.
    */
   LogEntry_t m_pLog[LOG_ENTRIES];
-  int m_nEntries;
+  size_t m_nEntries;
   
   /**
    * Temporary buffer which gets filled by calls to operator<<, and flushed by << End.
