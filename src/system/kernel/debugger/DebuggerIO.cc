@@ -65,7 +65,7 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
         const char *pACString = pAutoComplete->getString();
         // HACK:: Here we hack like complete bitches. Just find the last space in the string,
         // and memcpy the full autocomplete string in.
-        size_t i;
+        ssize_t i;
         for (i = strlen(m_pCommand); i >= 0; i--)
           if (m_pCommand[i] == ' ')
             break;
