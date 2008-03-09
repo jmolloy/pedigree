@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "InterruptManager.h"
+#include <machine/Machine.h>
+#include <machine/types.h>
+#include <utilities/utility.h>
 
 MIPS32InterruptManager MIPS32InterruptManager::m_Instance;
 
@@ -80,14 +83,28 @@ bool MIPS32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHa
   m_SyscallHandler[Service] = handler;
   return true;
 }
-
+extern "C" uintptr_t mips32_exception;
 void MIPS32InterruptManager::initialiseProcessor()
 {
-
+  // OK, here we go. Exception handler goes at 0x8000 0180
+  memcpy((void*)KSEG1(0x0), (void*)&mips32_exception, 32*4);
+  memcpy((void*)KSEG1(0x80), (void*)&mips32_exception, 32*4);
+  memcpy((void*)KSEG1(0x100), (void*)&mips32_exception, 32*4);
+  memcpy((void*)KSEG1(0x180), (void*)&mips32_exception, 32*4);
+  memcpy((void*)KSEG1(0x200), (void*)&mips32_exception, 32*4);
+  
+  for (int i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
+    asm volatile("cache 0x10, 0(%0)" : : "r"(i));
+  
+  // Let's try an exception.
+  uintptr_t woops = 3/0;
 }
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 {
+  Serial *s = Machine::instance().getSerial(0);
+  
+  for(;;);
   // TODO: Needs locking
 
 //   size_t intNumber = interruptState.getInterruptNumber();

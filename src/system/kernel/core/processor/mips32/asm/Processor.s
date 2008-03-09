@@ -24,13 +24,13 @@
 .global _ZN9Processor14getDebugStatusEv
 
 _ZN9Processor14getBasePointerEv:
-  addu $v0, $fp, 0 # $v0 = $fp+0. It's the only way to do a register swap.
+  move $v0, $fp
   jr $ra
 
 _ZN9Processor15getStackPointerEv:
-  addu $v0, $sp, 0 # $v0 = $sp+0. It's the only way to do a register swap.
+  move $v0, $sp
   jr $ra
 
 _ZN9Processor21getInstructionPointerEv:
-  addu $v0, $ra, 0 # $v0 = $ra+0. We return the return address.
+  move $v0, $ra
   jr $ra

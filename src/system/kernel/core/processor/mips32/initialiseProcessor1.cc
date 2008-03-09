@@ -19,7 +19,7 @@
 void initialiseProcessor1()
 {
   // Initialise this processor's interrupt handling
-  MIPS32InterruptManager::initialiseProcessor();
+//   MIPS32InterruptManager::initialiseProcessor();
 
   // TODO: Initialise the physical memory-management
   // TODO: Initialise the I/O Manager

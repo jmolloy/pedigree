@@ -14,9 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
+#include "InterruptManager.h"
 
 void initialiseProcessor2()
 {
+  MIPS32InterruptManager::initialiseProcessor();
   // Initialise the GDT
   // TODO: X86GdtManager::instance().initialise(1)
   // TODO: X86GdtManager::initialiseProcessor()

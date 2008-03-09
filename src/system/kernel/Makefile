@@ -173,6 +173,7 @@ SRCFILES += core/processor/mips32/initialiseProcessor1.cc \
             core/processor/mips32/initialiseProcessor2.cc \
             core/processor/mips32/InterruptManager.cc \
             core/processor/mips32/asm/Processor.s \
+            core/processor/mips32/asm/InterruptManager.s \
             core/processor/mips32/state.cc
 endif
 

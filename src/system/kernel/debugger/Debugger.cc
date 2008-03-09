@@ -86,13 +86,13 @@ void Debugger::breakpoint(InterruptState &state)
   /*
    * I/O implementations.
    */
-  LocalIO localIO;
+//   LocalIO localIO;
   SerialIO serialIO(Machine::instance().getSerial(0));
   
-  DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
-  int nInterfaces = 2;
-//   DebuggerIO *pInterfaces[] = {&serialIO};
-//   int nInterfaces=1;
+//   DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
+//   int nInterfaces = 2;
+  DebuggerIO *pInterfaces[] = {&serialIO};
+  int nInterfaces=1;
   // IO interface.
   DebuggerIO *pIo = 0;
   int nChosenInterface = -1;
