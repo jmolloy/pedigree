@@ -38,6 +38,7 @@ Elf32 elf("kernel");
 #include <processor/InterruptManager.h>
 #include <processor/SyscallManager.h>
 #include <utilities/List.h>
+#include <processor/Processor.h>
 
 class MyInterruptHandler : public InterruptHandler
 {
@@ -74,6 +75,8 @@ void mytestfunc(bool a, char b)
   #endif
 }
 };
+
+//char array[(sizeof(unsigned long long) == 8) ? 0 : 1];
 
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)

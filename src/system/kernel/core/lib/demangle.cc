@@ -34,13 +34,13 @@ typedef struct demangle
     nNameParseLevel(0)
   {}
   LargeStaticString substitutions[16];
-  int nSubstitutions;
+  size_t nSubstitutions;
   LargeStaticString templateParams[8];
-  int nTemplateParams;
+  size_t nTemplateParams;
   LargeStaticString params[16];
-  int nParams;
-  int nLevel;
-  int nNameParseLevel;
+  size_t nParams;
+  size_t nLevel;
+  size_t nNameParseLevel;
 } demangle_t;
 
 #define FAIL 1
@@ -92,7 +92,7 @@ DECLARE_LVAL(Identifier);
 // Adds a string to the substitution index.
 static void addSubstitution(LargeStaticString str, demangle_t &data)
 {
-  for (int i = 0; i < data.nSubstitutions; i++)
+  for (size_t i = 0; i < data.nSubstitutions; i++)
     if (!strcmp(data.substitutions[i], str))
       return;
   
@@ -156,7 +156,7 @@ static int parseName(LargeStaticString &src, LargeStaticString &dest, demangle_t
   // Nested names are the easiest, they start with a 'N'.
   if (src[0] == 'N')
   {
-    int ret = parseNestedName(src, dest, data);
+    size_t ret = parseNestedName(src, dest, data);
     data.nNameParseLevel--;
     return ret;
   }
@@ -547,7 +547,7 @@ static int parseNumber(LargeStaticString &src, LargeStaticString &dest, demangle
   if (src[0] < '0' || src[0] > '9')
     END_FAIL("Number");
 
-  int nLength = 0;
+  size_t nLength = 0;
   char str[32];
   while (src[nLength] >= '0' && src[nLength] <= '9')
   {
@@ -556,7 +556,7 @@ static int parseNumber(LargeStaticString &src, LargeStaticString &dest, demangle
   }
   str[nLength] = '\0';
   lval = strtoul(str, 0, 10);
-  if (bNegative) lval *= -1;
+  if (bNegative) lval = -lval;
   
   src.stripFirst(nLength);
   
@@ -569,9 +569,9 @@ static int parseNumber(LargeStaticString &src, LargeStaticString &dest, demangle
 static int parseIdentifier(LargeStaticString &src, LargeStaticString &dest, demangle_t &data, int &lval)
 {
   START("Identifier");
-  if (src.length() < static_cast<unsigned int>(lval))
+  if (static_cast<int>(src.length()) < lval)
     END_FAIL("Identifier");
-  for (unsigned int i = 0; i < static_cast<unsigned int>(lval); i++)
+  for (int i = 0; i < lval; i++)
     dest += src[i];
   src.stripFirst(lval);
   END_SUCCESS("Identifier");
@@ -850,7 +850,7 @@ static int parseArrayType(LargeStaticString &src, LargeStaticString &dest, deman
   // Number?
   if (src[0] >= '0' && src[0] <= '9')
   {
-    int nLength;
+    size_t nLength;
     while (src[nLength] >= '0' && src[nLength] <= '9')
       bound += src[nLength++];
     src.stripFirst(nLength);
@@ -903,7 +903,7 @@ static int parsePointerToMemberType(LargeStaticString &src, LargeStaticString &d
     if (parseFunctionType(src, function, data) == FAIL)
       END_FAIL("PointerToMemberType");
     // find the bit before the parameter list "()".
-    int nLength=0;
+    size_t nLength=0;
     while (function[nLength] != '(' || function[nLength+1] != ')')
       nLength++; // NOTE unsafe!
     
@@ -951,7 +951,7 @@ static int parseTemplateParam(LargeStaticString &src, LargeStaticString &dest, d
   src.stripFirst(1);
   
   // Now, look up the substitution.
-  if (nId >= data.nTemplateParams)
+  if (nId >= static_cast<int>(data.nTemplateParams))
     END_FAIL("TemplateParam");
   
   // Else, stick it in!
@@ -1146,7 +1146,7 @@ static int parseExprPrimary(LargeStaticString &src, LargeStaticString &dest, dem
   
   // HACK:: We don't want the full "unsigned int" nonsense, if it's a builtin type we use our
   // own handlers. Else we fall back on parseType.
-  const char *cookie = reinterpret_cast<const char*>(0);
+  const char *cookie = 0;
   switch(src[0])
   {
     case 'i': src.stripFirst(1);
@@ -1169,7 +1169,7 @@ static int parseExprPrimary(LargeStaticString &src, LargeStaticString &dest, dem
   int n;
   if (parseNumber(src, dest, data, n) == FAIL)
     END_FAIL("ExprPrimary");
-  dest += n;
+  dest += static_cast<ssize_t>(n);
   dest += cookie;
   if (src[0] != 'E')
     END_FAIL("ExprPrimary");
@@ -1207,7 +1207,7 @@ static int parseSubstitution(LargeStaticString &src, LargeStaticString &dest, de
   src.stripFirst(1);
   
   // Now, look up the substitution.
-  if (nId >= data.nSubstitutions)
+  if (nId >= static_cast<int>(data.nSubstitutions))
     END_FAIL("Substitution");
   
   // Else, stick it in!
@@ -1222,7 +1222,7 @@ static int parseSubstitution(LargeStaticString &src, LargeStaticString &dest, de
 static int parseSeqId(LargeStaticString &src, LargeStaticString &dest, demangle_t &data, int &lval)
 {
   START("SeqId");
-  int nLength = 0;
+  size_t nLength = 0;
   char str[32];
   while ((src[nLength] >= '0' && src[nLength] <= '9') ||
           ((src[nLength] >= 'A') && src[nLength] <= 'Z'))
@@ -1308,7 +1308,7 @@ void demangle(LargeStaticString src, symbol_t *sym)
   }
   
   sym->nParams = data.nParams;
-  for (int i = 0; i < data.nParams; i++)
+  for (size_t i = 0; i < data.nParams; i++)
     sym->params[i] = data.params[i];
   
 }
@@ -1331,7 +1331,7 @@ void demangle_full(LargeStaticString src, LargeStaticString &dest)
   }
   
   dest += "(";
-  for (int i = 0; i < data.nParams; i++)
+  for (size_t i = 0; i < data.nParams; i++)
   {
     if (i > 0)
       dest += ", ";

@@ -37,7 +37,7 @@ bool Pit::initialise()
     return false;
 
   // Allocate the IRQ
-  IrqManager &irqManager = Machine::instance().getIrqManager();
+  IrqManager &irqManager = *Machine::instance().getIrqManager();
   m_IrqId = irqManager.registerIsaIrqHandler(0, this);
   if (m_IrqId == 0)
     return false;
@@ -53,7 +53,7 @@ void Pit::uninitialise()
   // Free the IRQ
   if (m_IrqId != 0)
   {
-    IrqManager &irqManager = Machine::instance().getIrqManager();
+    IrqManager &irqManager = *Machine::instance().getIrqManager();
     irqManager.unregisterHandler(m_IrqId, this);
   }
 

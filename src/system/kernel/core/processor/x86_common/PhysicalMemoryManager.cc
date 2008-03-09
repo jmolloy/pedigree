@@ -13,22 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_X86_VGA_H
-#define MACHINE_X86_VGA_H
+#include "PhysicalMemoryManager.h"
 
-#include <machine/Vga.h>
+X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
-/**
- * Vga device abstraction.
- */
-class X86Vga : public Vga
+void X86CommonPhysicalMemoryManager::initialise(BootstrapInfo_t &Info)
 {
-  public:
-    X86Vga();
-    virtual ~X86Vga();
-  
-    virtual char read();
-    virtual void write(char c);
-};
-
-#endif
+}

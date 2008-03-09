@@ -25,6 +25,7 @@ X86Vga::~X86Vga()
 
 char X86Vga::read()
 {
+  return 0;
 }
 
 void X86Vga::write(char c)

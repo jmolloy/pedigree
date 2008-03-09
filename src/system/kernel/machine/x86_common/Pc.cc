@@ -63,12 +63,12 @@ size_t Pc::getNumSerial()
 
 Vga *Pc::getVga(size_t n)
 {
-  return 0;
+  return &m_Vga;
 }
 
 size_t Pc::getNumVga()
 {
-  return 0;
+  return 1;
 }
 
 IrqManager *Pc::getIrqManager()
@@ -87,6 +87,7 @@ Timer *Pc::getTimer()
 }
 
 Pc::Pc()
+  : m_Vga()
 {
 }
 Pc::~Pc()

@@ -28,9 +28,9 @@ typedef signed short X86int16_t;
 /** Define an 16bit unsigned integer type */
 typedef unsigned short X86uint16_t;
 /** Define a 32bit signed integer type */
-typedef signed int X86int32_t;
+typedef signed long X86int32_t;
 /** Define a 32bit unsigned integer type */
-typedef unsigned int X86uint32_t;
+typedef unsigned long X86uint32_t;
 /** Define a 64bit signed integer type */
 typedef signed long long X86int64_t;
 /** Define a 64bit unsigned integer type */
@@ -48,12 +48,17 @@ typedef X86uint32_t X86physical_uintptr_t;
 typedef X86uint32_t X86processor_register_t;
 
 /** Define ssize_t */
-typedef signed long X86ssize_t;
+typedef X86int32_t X86ssize_t;
 /** Define size_t */
-typedef unsigned long X86size_t;
+typedef X86uint32_t X86size_t;
 
 /** Define an I/O port type */
 typedef X86uint16_t X86io_port_t;
+
+#define SHORT_SIZE 2
+#define INT_SIZE   4
+#define LONG_SIZE  4
+#define LLONG_SIZE 8
 
 /** @} */
 

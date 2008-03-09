@@ -40,7 +40,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
   {
     // Print out the current breakpoint status.
     output = "Current breakpoint status:\n";
-    for(int i = 0; i < 4; i++)
+    for(size_t i = 0; i < 4; i++)
     {
       DebugFlags::FaultType nFt;
       size_t nLen;
@@ -66,14 +66,8 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
       
       const char *pEnabled = "disabled";
       if (bEnabled) pEnabled = "enabled";
-#ifdef BITS_32
-      const char k_nSize = 8;
-#endif
-#ifdef BITS_64
-      const char k_nSize = 16;
-#endif
       output += i;
-      output += ": 0x"; output.append(nAddress, 16, k_nSize,'0');
+      output += ": 0x"; output.append(nAddress, 16, sizeof(uintptr_t) * 2,'0');
       output += " \t";  output.append(pFaultType);
       output += " \t";  output.append(nLen);
       output += " \t";  output.append(pEnabled);
@@ -84,7 +78,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
   {
     LargeStaticString inputCopy(input);
     // We expect a number.
-    int nBp = input.intValue();
+    size_t nBp = input.intValue();
     if (nBp < 0 || nBp > Processor::getDebugBreakpointCount())
     {
       output = "Invalid breakpoint number.\n";

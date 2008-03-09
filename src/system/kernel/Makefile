@@ -125,7 +125,7 @@ endif
 
 ###################################################################
 # x64 source file list.
-ifdef X86_64
+ifdef X64
 SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/initialiseProcessor2.cc \
             core/processor/x64/InterruptManager.cc \

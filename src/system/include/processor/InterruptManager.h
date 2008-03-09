@@ -28,8 +28,8 @@
 class InterruptManager
 {
   public:
-    /** Get the interrupt handler instance
-     *\return instance of the interrupt handler */
+    /** Get the interrupt manager instance
+     *\return instance of the interrupt manager */
     static InterruptManager &instance();
     /** Register an interrupt handler
      *\param[in] interruptNumber the interrupt's number

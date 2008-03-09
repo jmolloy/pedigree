@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -51,6 +51,11 @@ typedef MIPS64uint32_t MIPS64size_t;
 
 // No I/O port type
 #define KERNEL_PROCESSOR_NO_PORT_IO
+
+#define SHORT_SIZE 2
+#define INT_SIZE   4
+#define LONG_SIZE  8
+#define LLONG_SIZE 8
 
 /** @} */
 

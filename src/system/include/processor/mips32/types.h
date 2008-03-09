@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,14 +32,14 @@ typedef signed int MIPS32int32_t;
 /** Define a 32bit unsigned integer type */
 typedef unsigned int MIPS32uint32_t;
 /** Define a 64bit signed integer type */
-typedef signed long MIPS32int64_t;
+typedef signed long long MIPS32int64_t;
 /** Define a 64bit unsigned integer type */
-typedef unsigned long MIPS32uint64_t;
+typedef unsigned long long MIPS32uint64_t;
 
 /** Define a signed integer type for pointer arithmetic */
-typedef MIPS32int64_t MIPS32intptr_t;
+typedef MIPS32int32_t MIPS32intptr_t;
 /** Define an unsigned integer type for pointer arithmetic */
-typedef MIPS32uint64_t MIPS32uintptr_t;
+typedef MIPS32uint32_t MIPS32uintptr_t;
 
 /** Define a unsigned integer type for physical pointer arithmetic */
 typedef MIPS32uint32_t MIPS32physical_uintptr_t;
@@ -54,6 +54,11 @@ typedef MIPS32uint32_t MIPS32size_t;
 
 // No I/O port type
 #define KERNEL_PROCESSOR_NO_PORT_IO
+
+#define SHORT_SIZE 2
+#define INT_SIZE   4
+#define LONG_SIZE  4
+#define LLONG_SIZE 8
 
 /** @} */
 

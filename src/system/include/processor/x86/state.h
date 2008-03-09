@@ -150,12 +150,12 @@ typedef X86InterruptState X86SyscallState;
 //
 uintptr_t X86InterruptState::getStackPointer() const
 {
+  if (m_Cs == 0x08)return 0xDEADBEEF;
   return m_Esp;
 }
 void X86InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  if (m_Cs != 0x00)
-    m_Esp = stackPointer;
+  m_Esp = stackPointer;
 }
 uintptr_t X86InterruptState::getInstructionPointer() const
 {

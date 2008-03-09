@@ -55,6 +55,11 @@ typedef X64uint64_t X64size_t;
 /** Define an I/O port type */
 typedef X64uint16_t X64io_port_t;
 
+#define SHORT_SIZE 2
+#define INT_SIZE   4
+#define LONG_SIZE  8
+#define LLONG_SIZE 8
+
 /** @} */
 
 #endif

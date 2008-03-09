@@ -48,14 +48,14 @@ struct BootstrapStruct_t
 
 void writeChar(char c)
 {
-  unsigned int *p = (unsigned int*)0x91100004;
-  *p = (unsigned int)c;
+  unsigned int *p = reinterpret_cast<unsigned int*>(0x91100004);
+  *p = static_cast<unsigned int>(c);
 }
 
 void writeStr(const char *str)
 {
   char c;
-  while (c = *str++)
+  while ((c = *str++))
     writeChar(c);
 }
 

@@ -20,7 +20,7 @@
   #include <processor/x86/state.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X86##x
 #endif
-#ifdef X86_64
+#ifdef X64
   #include <processor/x64/state.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X64##x
 #endif

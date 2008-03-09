@@ -235,6 +235,7 @@ class X64SyscallState
 //
 uintptr_t X64InterruptState::getStackPointer() const
 {
+  if (m_Cs == 0x08)return 0xDEADBEEFDEADBEEF;
   return m_Rsp;
 }
 void X64InterruptState::setStackPointer(uintptr_t stackPointer)

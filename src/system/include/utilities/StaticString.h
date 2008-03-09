@@ -90,24 +90,10 @@ public:
     return *this;
   }
 
-  StaticString &operator+=(const char *str)
-  {
-    append(str);
-    return *this;
-  }
-  
-  StaticString &operator+=(const int &i)
+  template<typename T>
+  StaticString &operator+=(T i)
   {
     append(i);
-    return *this;
-  }
-  
-  StaticString &operator+=(const char &i)
-  {
-    char ch[2];
-    ch[0] = i;
-    ch[1] = '\0';
-    append(ch);
     return *this;
   }
 
@@ -169,6 +155,7 @@ public:
     return false;
   }
   
+  // TODO
   int intValue(int nBase=0) const
   {
     const char *pEnd;
@@ -211,9 +198,130 @@ public:
     return *this;
   }
 
-  void append(uint32_t nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  void append(char Char, size_t nLen=0, char c = '0')
   {
-    char pStr[32];
+    char Characters[] = {Char, '\0'};
+    append(Characters, nLen, c);
+  }
+
+  void append(short nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    if (nInt < 0)
+    {
+      append("-");
+      nInt = -nInt;
+    }
+    append(static_cast<unsigned short>(nInt));
+  }
+
+  void append(int nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    if (nInt < 0)
+    {
+      append("-");
+      nInt = -nInt;
+    }
+    append(static_cast<unsigned int>(nInt));
+  }
+
+  void append(long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    if (nInt < 0)
+    {
+      append("-");
+      nInt = -nInt;
+    }
+    append(static_cast<unsigned long>(nInt));
+  }
+
+  void append(long long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    if (nInt < 0)
+    {
+      append("-");
+      nInt = -nInt;
+    }
+    append(static_cast<unsigned long long>(nInt));
+  }
+
+  void append(unsigned short nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    char pStr[SHORT_SIZE * 8];
+    size_t index = 0;
+    do
+    {
+      size_t tmp = nInt % nRadix;
+      nInt /= nRadix;
+      if (tmp < 10)pStr[index++] = '0' + tmp;
+      else pStr[index++] = 'a' + (tmp - 10);
+    }
+    while (nInt != 0);
+
+    for (size_t i = 0;i < (index / 2);i++)
+    {
+      char tmp = pStr[i];
+      pStr[i] = pStr[index - i - 1];
+      pStr[index - i - 1] = tmp;
+    }
+
+    pStr[index] = '\0';
+
+    append(pStr, nLen, c);
+  }
+
+  void append(unsigned int nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    char pStr[INT_SIZE * 8];
+    size_t index = 0;
+    do
+    {
+      size_t tmp = nInt % nRadix;
+      nInt /= nRadix;
+      if (tmp < 10)pStr[index++] = '0' + tmp;
+      else pStr[index++] = 'a' + (tmp - 10);
+    }
+    while (nInt != 0);
+
+    for (size_t i = 0;i < (index / 2);i++)
+    {
+      char tmp = pStr[i];
+      pStr[i] = pStr[index - i - 1];
+      pStr[index - i - 1] = tmp;
+    }
+
+    pStr[index] = '\0';
+
+    append(pStr, nLen, c);
+  }
+
+  void append(unsigned long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    char pStr[LONG_SIZE * 8];
+    size_t index = 0;
+    do
+    {
+      size_t tmp = nInt % nRadix;
+      nInt /= nRadix;
+      if (tmp < 10)pStr[index++] = '0' + tmp;
+      else pStr[index++] = 'a' + (tmp - 10);
+    }
+    while (nInt != 0);
+
+    for (size_t i = 0;i < (index / 2);i++)
+    {
+      char tmp = pStr[i];
+      pStr[i] = pStr[index - i - 1];
+      pStr[index - i - 1] = tmp;
+    }
+
+    pStr[index] = '\0';
+
+    append(pStr, nLen, c);
+  }
+
+  void append(unsigned long long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    char pStr[LLONG_SIZE * 8];
     size_t index = 0;
     do
     {

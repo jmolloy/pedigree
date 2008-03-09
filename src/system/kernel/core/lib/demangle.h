@@ -26,7 +26,7 @@ typedef struct symbol
   {}
   LargeStaticString name; // Function name.
   LargeStaticString params[32]; // Parameters.
-  int nParams;
+  size_t nParams;
 } symbol_t;
 
 void demangle(LargeStaticString src, symbol_t *sym);

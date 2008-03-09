@@ -23,7 +23,7 @@ COMPILER=
 ifdef X86
 COMPILER=i686-elf
 endif
-ifdef X86_64
+ifdef X64
 COMPILER=amd64-elf
 endif
 ifdef MIPS64
@@ -37,7 +37,7 @@ ifdef X86
 CMD_FLAGS += -DX86_COMMON
 export X86_COMMON=1
 endif
-ifdef X86_64
+ifdef X64
 CMD_FLAGS += -DX86_COMMON
 export X86_COMMON=1
 endif
@@ -62,14 +62,14 @@ CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
 ifdef X86
   CFLAGS += -m32
 endif
-ifdef X86_64
+ifdef X64
   CFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
 CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
 ifdef X86
   CXXFLAGS += -m32
 endif
-ifdef X86_64
+ifdef X64
   CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
 ifdef MIPS32
@@ -85,7 +85,7 @@ LDFLAGS=-nostdlib -nostdinc
 ifdef X86
   ASFLAGS=-felf
 endif
-ifdef X86_64
+ifdef X64
   ASFLAGS=-felf64
 endif
 
@@ -128,7 +128,7 @@ export LDFLAGS
 export ASFLAGS
 export BUILD
 export X86                  # Was X86 specified on the cmdline?
-export X86_64               # Was X86_64 specified on the cmdline?
+export X64                  # Was X64 specified on the cmdline?
 export KERNEL_STANDALONE    # Was KERNEL_STANDALONE specified on the cmdline?
 export COMPILER
 export PATH

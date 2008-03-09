@@ -143,7 +143,7 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
 #ifdef X86
   ud_set_mode(&ud_obj, 32);
 #endif
-#ifdef X86_64
+#ifdef X64
   ud_set_mode(&ud_obj, 64);
 #endif
   ud_set_syntax(&ud_obj, UD_SYN_INTEL);
@@ -182,12 +182,6 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
     location = ud_insn_off(&ud_obj);
     unsigned int nSym;
     const char *pSym = elf.lookupSymbol(location, &nSym);
-#ifdef BITS_32
-    const int k_nAddrLen = 8;
-#endif
-#ifdef BITS_64
-    const int k_nAddrLen = 16;
-#endif
     NormalStaticString str;
     if (nSym <= location && nSym != symStart) // New symbol. Add two lines.
     {
@@ -219,10 +213,10 @@ void TraceCommand::drawDisassembly(int nCols, int nLines, DebuggerIO *pScreen, I
     }
     
     str = "";
-    str.append(location, 16, k_nAddrLen, ' ');
+    str.append(location, 16, sizeof(uintptr_t) * 2, ' ');
     pScreen->drawString(str, nLine+1, 0, DebuggerIO::DarkGrey, bg);
     str = ud_insn_asm(&ud_obj);
-    pScreen->drawString(str, nLine+1, k_nAddrLen+1, DebuggerIO::White, bg);
+    pScreen->drawString(str, nLine+1, sizeof(uintptr_t) * 2 + 1, DebuggerIO::White, bg);
   }
   
 }
@@ -245,15 +239,9 @@ void TraceCommand::drawRegisters(int nCols, int nLines, DebuggerIO *pScreen, Int
     LargeStaticString str;
     str = state.getRegisterName(i);
     pScreen->drawString(str, nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
-#ifdef BITS_32
-    const unsigned int k_nRightOffset = 10;
-#endif
-#ifdef BITS_64
-    const unsigned int k_nRightOffset = 18;
-#endif
     str = "0x";
     str.append(state.getRegister(i), 16, state.getRegisterSize(i) * 2, '0');
-    pScreen->drawString(str, nLine+1, pScreen->getWidth()-k_nRightOffset, DebuggerIO::White, DebuggerIO::Black);
+    pScreen->drawString(str, nLine+1, pScreen->getWidth()- 2*sizeof(uintptr_t) - 2, DebuggerIO::White, DebuggerIO::Black);
     nLine++;
     if (nLine == nLines) break;
   }

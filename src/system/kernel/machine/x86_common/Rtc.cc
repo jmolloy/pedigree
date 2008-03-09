@@ -90,7 +90,7 @@ bool Rtc::initialise()
     return false;
 
   // Register the irq
-  IrqManager &irqManager = Machine::instance().getIrqManager();
+  IrqManager &irqManager = *Machine::instance().getIrqManager();
   m_IrqId = irqManager.registerIsaIrqHandler(8, this);
   if (m_IrqId == 0)
     return false;
@@ -175,7 +175,7 @@ void Rtc::uninitialise()
   synchronise();
 
   // Unregister the irq
-  IrqManager &irqManager = Machine::instance().getIrqManager();
+  IrqManager &irqManager = *Machine::instance().getIrqManager();
   irqManager.unregisterHandler(m_IrqId, this);
 
   // Free the I/O port range
