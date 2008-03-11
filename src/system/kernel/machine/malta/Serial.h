@@ -65,7 +65,7 @@ public:
 private:
   MaltaSerial(const MaltaSerial &);
   MaltaSerial &operator = (const MaltaSerial &);
-
+  /// \todo this is wrong, we need padding bytes, ffs!
   struct serial
   {
     uint8_t rxtx;

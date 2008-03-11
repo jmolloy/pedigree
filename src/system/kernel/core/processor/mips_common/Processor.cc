@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
+#include <Log.h>
 
 size_t Processor::getDebugBreakpointCount()
 {
@@ -54,5 +55,15 @@ void Processor::setInterrupts(bool bEnable)
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
   /// \todo Implement - MIPS doesn't have a single step mechanism per se...
+  ERROR("Single step unavailable on MIPS.");
 }
 
+void Processor::invalidateICache(uintptr_t nAddr)
+{
+  asm volatile("cache 0x10, 0(%0)" : : "r"(nAddr));
+}
+
+void Processor::invalidateDCache(uintptr_t nAddr)
+{
+  asm volatile("cache 0x11, 0(%0)" : : "r"(nAddr));
+}

@@ -19,7 +19,22 @@
 #include <machine/Serial.h>
 
 /**
- * Serial device abstraction.
+ * Implements a driver for the Serial connection of the malta's UART.
+ * 
+ * Base for UART registers: 0x11100000
+ * Register offsets:
+ * RXDATA:   0x00  Receive char fifo.
+ * TXDATA:   0x04  Transmit char fifo.
+ * INTEN:    0x08  Interrupt enable.
+ * INTCAUSE: 0x0C  Pending interrupt cause register.
+ * FIFOCTRL: 0x10  FIFO control register.
+ * LINECTRL: 0x14  Line control register.
+ * MDMCTRL:  0x18  Modem line control register (UART3 only).
+ * LINESTAT: 0x1C  Line status register.
+ * MDMSTAT:  0x20  Modem status register (UART3 only).
+ * AUTOFLOW: 0x24  Automatic Hardware flow control (UART3 only).
+ * CLKDIV:   0x28  Baud rate clock divider.
+ * ENABLE:   0x100 Module Enable register.
  */
 class Au1500Serial : public Serial
 {

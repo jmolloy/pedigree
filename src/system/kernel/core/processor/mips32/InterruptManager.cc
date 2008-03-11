@@ -94,7 +94,7 @@ void MIPS32InterruptManager::initialiseProcessor()
   memcpy((void*)KSEG1(0x200), (void*)&mips32_exception, 32*4);
   
   for (int i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
-    asm volatile("cache 0x10, 0(%0)" : : "r"(i));
+    Processor::invalidateICache(i);
   
   // Let's try an exception.
   uintptr_t woops = 3/0;
