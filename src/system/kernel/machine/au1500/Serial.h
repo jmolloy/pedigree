@@ -46,6 +46,25 @@ class Au1500Serial : public Serial
     virtual char read();
     virtual char readNonBlock();
     virtual void write(char c);
+    
+    struct serial
+    {
+      uint32_t rxdata;
+      uint32_t txdata;
+      uint32_t inten;
+      uint32_t intcause;
+      uint32_t fifoctrl;
+      uint32_t linectrl;
+      uint32_t mdmstat;
+      uint32_t autoflow;
+      uint32_t clkdiv;
+      uint32_t enable;
+    } PACKED;
+    
+    /**
+     * The serial device's registers.
+     */
+    volatile serial *m_pRegs;
 };
 
 #endif
