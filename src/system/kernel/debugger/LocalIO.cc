@@ -17,7 +17,7 @@
 #include <LocalIO.h>
 #include <DebuggerCommand.h>
 #include <utilities/utility.h>
-#include <processor/io.h>
+#include <processor/IoPort.h>
 
 #ifdef DEBUGGER_QWERTY
 #include <keymap_qwerty.h>

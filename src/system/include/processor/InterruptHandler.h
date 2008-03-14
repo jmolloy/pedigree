@@ -20,7 +20,8 @@
  * @{ */
 
 /** Abstract base class for all interrupt-handlers. All interrupt-handlers must
- * be derived from this class */
+ *  be derived from this class
+ *\brief Abstract base class for interrupt-handlers */
 class InterruptHandler
 {
   public:

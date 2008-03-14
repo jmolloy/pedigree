@@ -66,6 +66,14 @@ struct BootstrapStruct_t
 #endif // !KERNEL_STANDALONE
 } PACKED;
 
+struct MemoryMapEntry_t
+{
+  uint32_t size;
+  uint64_t address;
+  uint64_t length;
+  uint32_t type;
+} PACKED;
+
 /**
  * Parser for a boot-time structure detailing the whereabouts of e.g.
  * the kernel symbol table, and a memory map.

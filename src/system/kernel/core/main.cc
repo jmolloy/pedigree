@@ -30,6 +30,7 @@
 #include "cppsupport.h"
 // initialiseProcessor1(), initialiseProcessor2()
 #include <processor/initialise.h>
+// Machine::initialise()
 #include <machine/Machine.h>
 
 Elf32 elf("kernel");
@@ -37,7 +38,6 @@ Elf32 elf("kernel");
 /// NOTE bluecode is doing some testing here
 #include <processor/InterruptManager.h>
 #include <processor/SyscallManager.h>
-#include <utilities/List.h>
 #include <processor/Processor.h>
 
 class MyInterruptHandler : public InterruptHandler
@@ -88,7 +88,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   BootstrapInfo bootstrapInfo(bsInf);
 
   // Initialise the processor-specific interface
-  initialiseProcessor1();
+  initialiseProcessor1(*bsInf);
   
 #ifdef X86_COMMON
   /// NOTE there we go
@@ -140,15 +140,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   #ifdef X86_COMMON
     Processor::breakpoint();
   #endif
-
-  List<void*> myList;
-  List<void*>::Iterator cur(myList.begin());
-  List<void*>::ConstIterator end(myList.end());
-  for (;cur != end;++cur)
-  {
-    *cur = 0;
-    NOTICE("Hello, World");
-  }
 
   Serial *s = machine.getSerial(0);
   s->write('p');

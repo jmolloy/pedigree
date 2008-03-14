@@ -49,13 +49,11 @@ typedef MIPS64int32_t MIPS64ssize_t;
 /** Define size_t */
 typedef MIPS64uint32_t MIPS64size_t;
 
-// No I/O port type
+/** No I/O port type */
 #define KERNEL_PROCESSOR_NO_PORT_IO
 
-#define SHORT_SIZE 2
-#define INT_SIZE   4
-#define LONG_SIZE  8
-#define LLONG_SIZE 8
+/** Define the size of one physical page */
+#error Define PAGE_SIZE
 
 /** @} */
 

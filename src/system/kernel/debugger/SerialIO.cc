@@ -17,7 +17,7 @@
 #include <SerialIO.h>
 #include <DebuggerCommand.h>
 #include <utilities/utility.h>
-#include <processor/io.h>
+#include <processor/IoPort.h>
 #include <Log.h>
 #include <utilities/StaticString.h>
 

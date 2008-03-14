@@ -15,40 +15,55 @@
  */
 
 /** @defgroup kernel kernel
- * The kernel */
+ * Classes, functions, defines belonging to the kernel
+ *\brief The kernel */
 
 /** @defgroup kernelutilities utilities
- * utilities
+ * Classes, functions, defines that are utilised in the whole kernel
+ *\brief Utilities
  *  @ingroup kernel */
 
 /** @defgroup kernelprocessor processor-specifc kernel
  * processor-specific kernel interface
+ *\brief processor-specific kernel interface
  *  @ingroup kernel */
 
 /** @defgroup kernelprocessorx86 x86
  * x86 processor-specific kernel
+ *\brief x86 processor-specific kernel
  *  @ingroup kernelprocessor */
 
 /** @defgroup kernelprocessorx64 x64
  * x64 processor-specific kernel
+ *\brief x64 processor-specific kernel
  *  @ingroup kernelprocessor */
+
+/** @defgroup kernelprocessorx86common x86-common
+ * x86-common processor-specific kernel
+ *\brief x86-common processor-specific kernel
+ * @ingroup kernelprocessor */
 
 /** @defgroup kernelprocessorMIPS64 MIPS64
  * MIPS64 processor-specific kernel
+ *\brief MIPS64 processor-specific kernel
  *  @ingroup kernelprocessor */
 
 /** @defgroup kernelprocessorMIPS32 MIPS32
  * MIPS32 processor-specific kernel
+ *\brief MIPS32 processor-specific kernel
  *  @ingroup kernelprocessor */
 
 /** @defgroup kernelmachine machine-specifc kernel
  * machine-specific kernel interface
+ *\brief machine-specific kernel interface
  *  @ingroup kernel */
 
 /** @defgroup kernelmachinex86common x86-common
  * x86-common machine-specific kernel
+ *\brief x86-common machine-specific kernel
  *  @ingroup kernelmachine */
 
 /** @defgroup kernelmachinemipscommon mips-common
  * mips-common machine-specific kernel
+ *\brief mips-common machine-specific kernel
  *  @ingroup kernelmachine */

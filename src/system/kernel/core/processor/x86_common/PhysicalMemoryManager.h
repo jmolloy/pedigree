@@ -22,6 +22,8 @@
 /** @addtogroup kernelprocessorx86common
  * @{ */
 
+/** The common x86 implementation of the PhysicalMemoryManager
+ *\brief Implementation of the PhysicalMemoryManager for common x86 */
 class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
   public:
@@ -29,7 +31,19 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\return instance of the X86CommonPhysicalMemoryManager */
     inline static X86CommonPhysicalMemoryManager &instance(){return m_Instance;}
 
-    void initialise(BootstrapInfo_t &Info);
+    //
+    // PhysicalMemoryManager Interface
+    //
+    virtual physical_uintptr_t allocatePage();
+    virtual void freePage(physical_uintptr_t page);
+    virtual bool allocateRegion(MemoryRegion &Region,
+                                size_t count,
+                                size_t pageConstraints,
+                                physical_uintptr_t start = -1);
+
+    /** Initialise the page stack
+     *\param[in] Info reference to the multiboot information structure */
+    void initialise(const BootstrapStruct_t &Info);
 
   protected:
     /** The constructor */
@@ -45,6 +59,52 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\note Not implemented (singleton) */
     X86CommonPhysicalMemoryManager &operator = (const X86CommonPhysicalMemoryManager &);
 
+    /** The actual page stack contains is a Stack of the pages with the constraints
+     *  below4GB and below64GB and those pages without address size constraints.
+     *\brief The Stack of pages (below4GB, below64GB, no constraint). */
+    class PageStack
+    {
+      public:
+        /** Default constructor does nothing */
+        PageStack();
+        /** Allocate a page with certain constraints
+         *\param[in] constaints either below4GB or below64GB or 0
+         *\return The physical address of the allocated page or 0 */
+        physical_uintptr_t allocate(size_t constraints);
+        /** Free a physical page
+         *\param[in] physicalAddress physical address of the page */
+        void free(uint64_t physicalAddress);
+        /** The destructor does nothing */
+        inline ~PageStack(){}
+
+      private:
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack(const PageStack &);
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack &operator = (const PageStack &);
+
+        /** The number of Stacks */
+        #ifdef X86
+          static const size_t StackCount = 1;
+        #endif
+        #ifdef X64
+          static const size_t StackCount = 3;
+        #endif
+
+        /** Pointer to the base address of the stack. The stack grows upwards. */
+        void *m_Stack[StackCount];
+        /** Size of the currently mapped stack */
+        size_t m_StackMax[StackCount];
+        /** Currently used size of the stack */
+        size_t m_StackSize[StackCount];
+    };
+
+    /** The page stack */
+    PageStack m_PageStack;
+
+    /** The X86CommonPhysicalMemoryManager class instance */
     static X86CommonPhysicalMemoryManager m_Instance;
 };
 

@@ -99,6 +99,23 @@ void *List<void*>::popFront()
   delete node;
   return value;
 }
+List<void*>::Iterator List<void*>::erase(Iterator &Iter)
+{
+  node_t *Node = Iter.__getNode();
+  if (Node->m_Previous == 0)
+    m_First = Node->m_Next;
+  else
+    Node->m_Previous->m_Next = Node->m_Next;
+  if (Node->m_Next == 0)
+    m_Last = Node->m_Previous;
+  else
+    Node->m_Next->m_Previous = Node->m_Previous;
+  --m_Count;
+
+  Iterator tmp(Node->m_Next);
+  delete Node;
+  return tmp;
+}
 
 void List<void*>::clear()
 {

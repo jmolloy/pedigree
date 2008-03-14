@@ -53,6 +53,17 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #define MAX_PARAMS 32
 #define MAX_PARAM_LENGTH 64
 
+#ifdef __cplusplus
+  /** Add a offset (in bytes) to the pointer and return the result
+   *\brief Adjust a pointer
+   *\return new pointer pointing to 'pointer + offset' (NOT pointer arithmetic!) */
+  template<typename T>
+  inline T *adjust_pointer(T *pointer, size_t offset)
+  {
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
+  }
+#endif
+
 /** @} */
 
 #endif

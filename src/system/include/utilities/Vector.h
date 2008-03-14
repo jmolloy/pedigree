@@ -21,11 +21,13 @@
 /** @addtogroup kernelutilities
  * @{ */
 
-/** General Vector template class, aka dynamic array */
+/** General Vector template class, aka dynamic array
+ *\brief A vector / dynamic array */
 template<class T>
 class Vector;
 
-/** Vector template specialisation for void* */
+/** Vector template specialisation for void*
+ *\brief A vector / dynamic array for void* */
 template<>
 class Vector<void*>
 {
@@ -109,7 +111,8 @@ class Vector<void*>
 };
 
 /** Vector template specialisation for pointers. Just forwards to the
- * void* template specialisation of Vector. */
+ * void* template specialisation of Vector.
+ *\brief A vector / dynamic array for pointer types */
 template<class T>
 class Vector<T*>
 {

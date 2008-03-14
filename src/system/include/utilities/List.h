@@ -16,6 +16,7 @@
 #ifndef KERNEL_UTILITIES_LIST_H
 #define KERNEL_UTILITIES_LIST_H
 
+#include <utilities/template.h>
 #include <processor/types.h>
 #include <utilities/IteratorAdapter.h>
 #include <utilities/Iterator.h>
@@ -23,12 +24,18 @@
 /** @addtogroup kernelutilities
  * @{ */
 
-/** One node in the list */
+/** One node in the list
+ *\brief One node in the list
+ *\param[in] T the element type */
 template<typename T>
 struct _ListNode_t
 {
+  /** Get the next data structure in the list
+   *\return pointer to the next data structure in the list */
   _ListNode_t *next()
     {return m_Next;}
+  /** Get the previous data structure in the list
+   *\return pointer to the previous data structure in the list */
   _ListNode_t *previous()
     {return m_Previous;}
 
@@ -43,15 +50,21 @@ struct _ListNode_t
 template<class T>
 class List;
 
-/** List template specialisation for void* */
+/** List template specialisation for void*
+ *\brief List template specialisation for void* */
 template<>
 class List<void*>
 {
+  /** The data structure of the list's nodes */
   typedef _ListNode_t<void*> node_t;
   public:
+    /** Type of the bidirectional iterator */
     typedef ::Iterator<void*, node_t>     Iterator;
+    /** Type of the constant bidirectional iterator */
     typedef Iterator::Const               ConstIterator;
+    /** Type of the reverse iterator */
     typedef Iterator::Reverse             ReverseIterator;
+    /** Type of the constant reverse iterator */
     typedef Iterator::ConstReverse        ConstReverseIterator;
 
     /** Default constructor, does nothing */
@@ -83,6 +96,9 @@ class List<void*>
     /** Remove the first element in the List
      *\return the previously first element */
     void *popFront();
+    /** Erase an element
+     *\param[in] iterator the iterator that points to the element */
+    Iterator erase(Iterator &Iter);
 
     /** Get an iterator pointing to the beginning of the List
      *\return iterator pointing to the beginning of the List */
@@ -108,6 +124,30 @@ class List<void*>
     {
       return ConstIterator();
     }
+    /** Get an iterator pointing to the reverse beginning of the List
+     *\return iterator pointing to the reverse beginning of the List */
+    inline ReverseIterator rbegin()
+    {
+      return ReverseIterator(m_Last);
+    }
+    /** Get a constant iterator pointing to the reverse beginning of the List
+     *\return constant iterator pointing to the reverse beginning of the List */
+    inline ConstReverseIterator rbegin() const
+    {
+      return ConstReverseIterator(m_Last);
+    }
+    /** Get an iterator pointing to the reverse end of the List + 1
+     *\return iterator pointing to the reverse end of the List + 1 */
+    inline ReverseIterator rend()
+    {
+      return ReverseIterator();
+    }
+    /** Get a constant iterator pointing to the reverse end of the List + 1
+     *\return constant iterator pointing to the reverse end of the List + 1 */
+    inline ConstReverseIterator rend() const
+    {
+      return ConstReverseIterator();
+    }
 
     /** Remove all elements from the List */
     void clear();
@@ -125,15 +165,20 @@ class List<void*>
 };
 
 /** List template specialisation for pointers. Just forwards to the
- * void* template specialisation of List. */
+ * void* template specialisation of List.
+ *\brief List template specialisation for pointers */
 template<class T>
 class List<T*>
 {
   public:
     /** Iterator */
-    typedef IteratorAdapter<T*, List<void*>::Iterator>             Iterator;
+    typedef IteratorAdapter<T*, List<void*>::Iterator>                    Iterator;
     /** ConstIterator */
-    typedef IteratorAdapter<T* const, List<void*>::ConstIterator>  ConstIterator;
+    typedef IteratorAdapter<T* const, List<void*>::ConstIterator>         ConstIterator;
+    /** ReverseIterator */
+    typedef IteratorAdapter<T*, List<void*>::ReverseIterator>             ReverseIterator;
+    /** ConstReverseIterator */
+    typedef IteratorAdapter<T* const, List<void*>::ConstReverseIterator>  ConstReverseIterator;
 
     /** Default constructor, does nothing */
     inline List()
@@ -169,7 +214,7 @@ class List<T*>
      *\param[in] value the value that should be added */
     inline void pushBack(T *value)
     {
-      m_VoidList.pushBack(reinterpret_cast<void*>(value));
+      m_VoidList.pushBack(reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
     }
     /** Remove the last element from the List
      *\return the previously last element */
@@ -188,6 +233,12 @@ class List<T*>
     inline T *popFront()
     {
       return reinterpret_cast<T*>(m_VoidList.popFront());
+    }
+    /** Erase an element
+     *\param[in] iterator the iterator that points to the element */
+    inline Iterator erase(Iterator &Iter)
+    {
+      return Iterator(m_VoidList.erase(Iter.__getIterator()));
     }
 
     /** Get an iterator pointing to the beginning of the List
@@ -213,6 +264,30 @@ class List<T*>
     inline ConstIterator end() const
     {
       return ConstIterator(m_VoidList.end());
+    }
+    /** Get an iterator pointing to the reverse beginning of the List
+     *\return iterator pointing to the reverse beginning of the List */
+    inline ReverseIterator rbegin()
+    {
+      return ReverseIterator(m_VoidList.rbegin());
+    }
+    /** Get a constant iterator pointing to the reverse beginning of the List
+     *\return constant iterator pointing to the reverse beginning of the List */
+    inline ConstReverseIterator rbegin() const
+    {
+      return ConstReverseIterator(m_VoidList.rbegin());
+    }
+    /** Get an iterator pointing to the reverse end of the List + 1
+     *\return iterator pointing to the reverse end of the List + 1 */
+    inline ReverseIterator rend()
+    {
+      return ReverseIterator(m_VoidList.rend());
+    }
+    /** Get a constant iterator pointing to the reverse end of the List + 1
+     *\return constant iterator pointing to the reverse end of the List + 1 */
+    inline ConstReverseIterator rend() const
+    {
+      return ConstReverseIterator(m_VoidList.rend());
     }
 
     /** Remove all elements from the List */

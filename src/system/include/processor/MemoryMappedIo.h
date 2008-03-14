@@ -18,21 +18,25 @@
 
 #include <processor/types.h>
 #include <processor/IoBase.h>
+#include <processor/MemoryRegion.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
 
-/** Memory-mapped I/O */
-class MemoryMappedIo : public IoBase
+/** The MemoryMappedIo handles special MemoryRegions for I/O to hardware devices
+ *\brief Memory mapped I/O range */
+class MemoryMappedIo : public IoBase,
+                       public MemoryRegion
 {
   public:
     /** The default constructor */
-    inline MemoryMappedIo()
-      : m_IoMemory(0), m_Size(0){}
+    inline MemoryMappedIo(){}
     /** The destructor frees the allocated ressources */
-    inline virtual ~MemoryMappedIo(){free();}
+    inline virtual ~MemoryMappedIo(){}
 
-    virtual void free();
+    //
+    // IoBase Interface
+    //
     inline virtual size_t size();
     inline virtual uint8_t read8(size_t offset = 0);
     inline virtual uint16_t read16(size_t offset = 0);
@@ -41,11 +45,9 @@ class MemoryMappedIo : public IoBase
     inline virtual void write16(uint16_t value, size_t offset = 0);
     inline virtual void write32(uint32_t value, size_t offset = 0);
 
-    /** Allocate a memory-mapped I/O range
-     *\param[in] ioBase the physical base address
-     *\param[in] size the size of the region in bytes
-     *\return true, if successfull, false otherwise */
-    bool allocate(uintptr_t ioBase, size_t size);
+    //
+    // MemoryRegion Interface
+    //
 
   private:
     /** The copy-constructor
@@ -54,11 +56,6 @@ class MemoryMappedIo : public IoBase
     /** The assignment operator
      *\note NOT implemented */
     MemoryMappedIo &operator = (const MemoryMappedIo &);
-
-    /** The base I/O memory address (virtual address) */
-    volatile uint8_t *m_IoMemory;
-    /** The size of the I/O memory in bytes */
-    size_t m_Size;
 };
 
 /** @} */
@@ -70,29 +67,29 @@ class MemoryMappedIo : public IoBase
 //
 size_t MemoryMappedIo::size()
 {
-  return m_Size;
+  return MemoryRegion::size();
 }
 uint8_t MemoryMappedIo::read8(size_t offset)
 {
-  return *(m_IoMemory + offset);
+  return *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset));
 }
 uint16_t MemoryMappedIo::read16(size_t offset)
 {
-  return *reinterpret_cast<volatile uint16_t*>(m_IoMemory + offset);
+  return *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset));
 }
 uint32_t MemoryMappedIo::read32(size_t offset)
 {
-  return *reinterpret_cast<volatile uint32_t*>(m_IoMemory + offset);
+  return *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset));
 }
 void MemoryMappedIo::write8(uint8_t value, size_t offset)
 {
-  *(m_IoMemory + offset) = value;
+  *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
 void MemoryMappedIo::write16(uint16_t value, size_t offset)
 {
-  *reinterpret_cast<volatile uint16_t*>(m_IoMemory + offset) = value;
+  *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
 void MemoryMappedIo::write32(uint32_t value, size_t offset)
 {
-  *reinterpret_cast<volatile uint32_t*>(m_IoMemory + offset) = value;
+  *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }

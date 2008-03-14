@@ -15,14 +15,23 @@
  */
 #include <processor/initialise.h>
 #include "InterruptManager.h"
+#include "../x86_common/PhysicalMemoryManager.h"
+#include "../x86_common/IoPortManager.h"
 
-void initialiseProcessor1()
+void initialiseProcessor1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
   X86InterruptManager::initialiseProcessor();
 
-  // TODO: Initialise the physical memory-management
-  // TODO: Initialise the I/O Manager
+  // Initialise the physical memory-management
+  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
+  physicalMemoryManager.initialise(Info);
+
+  // TODO: Initialise the Virtual memory-management (if necessary)
+
+  // Initialise the I/O Manager
+  X86CommonIoPortManager &ioPortManager = X86CommonIoPortManager::instance();
+  ioPortManager.initialise();
 
   // TODO
 }

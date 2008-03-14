@@ -16,11 +16,24 @@
 #ifndef KERNEL_PROCESSOR_INITIALISE_H
 #define KERNEL_PROCESSOR_INITIALISE_H
 
+#include <BootstrapInfo.h>
+
 /** @addtogroup kernelprocessor
  * @{ */
 
-/** Initialises the processor specific interface */
-void initialiseProcessor1();
+/** Initialises the processor specific interface. After this function call the whole
+ *  processor-specific interface is initialised. Note though, that only the
+ *  bootstrap processor is started. Multiprocessor/-core facilities are available after
+ *  initialiseProcessor2().
+ *\brief first stage in the initialisation of the processor-specific interface
+ *\note This function should only be called once and by main()
+ *\param[in] Info reference to the multiboot information structure */
+void initialiseProcessor1(const BootstrapStruct_t &Info);
+/** Initialises the Multiprocessor/-core functionality of the processor-specific
+ *  interface. This function may only be called after initialiseProcessor1 and
+ *  after the whole machine specific interface has been initialised.
+ *\brief second/last stage in the initialisation of the processor-specific interface
+ *\note This function should only be called once and by main() */
 void initialiseProcessor2();
 
 /** @} */

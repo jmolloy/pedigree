@@ -13,7 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/io.h>
+#include <processor/IoPort.h>
+#include <processor/IoPortManager.h>
 
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
   bool IoPort::allocate(io_port_t ioPort, size_t size)
@@ -22,7 +23,7 @@
     if (m_Size != 0)
       free();
 
-    if (IoManager::instance().allocate_io_port(ioPort, size) == true)
+    if (IoPortManager::instance().allocate(ioPort, size) == true)
     {
       m_IoPort = ioPort;
       m_Size = size;
@@ -35,42 +36,10 @@
   {
     if (m_Size != 0)
     {
-      IoManager::instance().free_io_port(m_IoPort, m_Size);
+      IoPortManager::instance().free(m_IoPort, m_Size);
 
       m_Size = 0;
       m_IoPort = 0;
     }
-  }
-#endif
-
-/*bool MemoryMappedIo::allocate(uintptr_t ioBase, size_t size)
-{
-  // Free any allocated I/O ports
-  if (m_Size != 0)
-    free();
-
-  // TODO
-  return false;
-}
-
-void MemoryMappedIo::free()
-{
-  if (m_Size != 0)
-  {
-    // TODO
-  }
-}*/
-
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
-  IoManager IoManager::m_Instance;
-
-  bool IoManager::allocate_io_port(io_port_t ioPort, size_t size)
-  {
-    // TODO
-    return true;
-  }
-  void IoManager::free_io_port(io_port_t ioPort, size_t size)
-  {
-    // TODO
   }
 #endif

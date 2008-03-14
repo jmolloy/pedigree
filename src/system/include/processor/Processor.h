@@ -18,6 +18,7 @@
 
 #include <processor/types.h>
 #include <processor/state.h>
+#include <processor/VirtualAddressSpace.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -59,6 +60,10 @@ class Processor
     /** Get the instruction-pointer of the calling function
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
+
+    /** Switch to a different virtual address space
+     *\param[in] AddressSpace the new address space */
+    void switchAddressSpace(const VirtualAddressSpace &AddressSpace);
 
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;

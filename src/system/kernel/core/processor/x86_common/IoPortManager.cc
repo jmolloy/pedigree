@@ -13,21 +13,26 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/Processor.h>
-#include "VirtualAddressSpace.h"
+#include "IoPortManager.h"
 
-void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
+X86CommonIoPortManager X86CommonIoPortManager::m_Instance;
+
+IoPortManager &IoPortManager::instance()
 {
-  const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
+  return X86CommonIoPortManager::instance();
+}
 
-  // Get the current page directory
-  uint64_t cr3;
-  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+bool X86CommonIoPortManager::allocate(io_port_t ioPort, size_t size)
+{
+  // TODO m_List.allocateSpecific(ioPort, size);
+  return true;
+}
+void X86CommonIoPortManager::free(io_port_t ioPort, size_t size)
+{
+  // TODO m_List.free(ioPort, size);
+}
 
-  // Do we need to set a new page directory?
-  if (cr3 != x64AddressSpace.m_PhysicalPML4)
-  {
-    // Set the new page directory
-    asm volatile ("mov %0, %%cr3" :: "r" (x64AddressSpace.m_PhysicalPML4));
-  }
+void X86CommonIoPortManager::initialise()
+{
+  m_List.free(0, 0x10000);
 }

@@ -21,15 +21,15 @@
 /** @addtogroup kernelprocessor
  * @{ */
 
-/** Interface to the hardware's I/O capabilities */
+/** Interface to the hardware's I/O capabilities
+ *\brief Abstrace base class for hardware I/O capabilities
+ *\todo 64bit read/writes? Problem: which read/write order should be used on 32bit machines? */
 class IoBase
 {
   public:
     /** The destructor does nothing */
     inline virtual ~IoBase(){}
 
-    /** Free previously allocated ressources */
-    virtual void free() = 0;
     /** Get the size of the I/O region in bytes */
     virtual size_t size() = 0;
     /** Read a byte (8bit) from the I/O Port or the memory-mapped I/O region

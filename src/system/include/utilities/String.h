@@ -22,7 +22,8 @@
 #include <compiler.h>
 #include <processor/types.h>
 
-/** String class for ASCII strings */
+/** String class for ASCII strings
+ *\todo provide documentation */
 class String
 {
   public:

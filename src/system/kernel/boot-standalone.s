@@ -67,6 +67,8 @@ start:
   mov [pagetable0 - 0xC0000000 + 0xFDC], eax
   add eax, 4096
   mov [pagetable0 - 0xC0000000 + 0xFD8], eax
+
+  ; Map the page-directory to 0xFFBFF000
   mov eax, 0x03 + pagedirectory - 0xC0000000
   mov [pagetable0 - 0xC0000000 + 0xFFC], eax
 
@@ -93,6 +95,7 @@ callmain:
 
 [SECTION .bss]
 align 4096
+global pagedirectory
 pagedirectory:
   resb 4096
 pagetable0:

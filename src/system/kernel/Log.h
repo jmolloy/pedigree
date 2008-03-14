@@ -67,6 +67,8 @@ enum Modifier
 
 /**
  * Implements a kernel log that can be used to debug problems.
+ *\todo implementation might want to use static string
+ *\todo << operator for all integer data types
  */
 class Log
 {
@@ -86,7 +88,7 @@ public:
   {
     unsigned int timestamp; ///< The time (since boot) that this log entry was added, in ticks.
     SeverityLevel type;     ///< The severity level of this entry.
-    char str[LOG_LENGTH];   ///< The actual entry text. \todo Change this to using dynamic memory.
+    char str[LOG_LENGTH];   ///< The actual entry text. \todo Change this to using dynamic memory. Might be problematic, because we might want to use the log (and display it) before memory-managment is initialised.
   } LogEntry_t;
 
   /**

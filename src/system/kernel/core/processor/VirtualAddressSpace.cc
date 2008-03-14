@@ -13,21 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/Processor.h>
-#include "VirtualAddressSpace.h"
+#include <utilities/utility.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/PhysicalMemoryManager.h>
 
-void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
+#include <Log.h>
+void *VirtualAddressSpace::expandHeap(size_t pageCount, size_t flags)
 {
-  const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
-
-  // Get the current page directory
-  uint64_t cr3;
-  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
-
-  // Do we need to set a new page directory?
-  if (cr3 != x64AddressSpace.m_PhysicalPML4)
+  void *Heap = m_HeapEnd;
+  PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
+  for (size_t i = 0;i < pageCount;i++)
   {
-    // Set the new page directory
-    asm volatile ("mov %0, %%cr3" :: "r" (x64AddressSpace.m_PhysicalPML4));
+    physical_uintptr_t page = PMemoryManager.allocatePage();
+    if (page == 0)
+    {
+      // TODO: error handling
+      return 0;
+    }
+    if (map(page, m_HeapEnd, flags) == false)
+    {
+      // TODO: error handling
+      return 0;
+    }
+
+    NOTICE("mapping: " << Hex << reinterpret_cast<uintptr_t>(m_HeapEnd) << " -> " << page);
+
+    m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
   }
+  return Heap;
 }

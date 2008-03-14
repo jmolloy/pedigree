@@ -18,38 +18,56 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <processor/MemoryRegion.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
 
-const size_t continuous   = 1 << 0;
-const size_t nonRamMemory = 1 << 1;
-#ifdef X86_COMMON
-  const size_t below1MB   = 1 << 2;
-  const size_t below16MB  = 2 << 2;
-  const size_t below4GB   = 3 << 2;
-  const size_t below64GB  = 4 << 2;
-#endif
-
-class MemoryRegionBase
-{
-};
-class MemoryRegion : public MemoryRegionBase
-{
-};
-
+/** The PhysicalMemoryManager manages the physical address space. That means it provides
+ *  functions to allocate and free pages. */
 class PhysicalMemoryManager
 {
   public:
+    /** If this flag is set the pages are physically continuous */
+    static const size_t continuous   = 1 << 0;
+    /** If this flag is set we allocate pages that are not in RAM */
+    static const size_t nonRamMemory = 1 << 1;
+
+    // x86/x64 specific flags
+    #ifdef X86_COMMON
+      /** The allocated pages should be below the 1MB mark */
+      static const size_t below1MB   = 1 << 2;
+      /** The allocated pages should be below the 16MB mark */
+      static const size_t below16MB  = 2 << 2;
+      /** The allocated pages should be below the 4GB mark */
+      static const size_t below4GB   = 3 << 2;
+      /** The allocated pages should be below the 64GB mark */
+      static const size_t below64GB  = 4 << 2;
+    #endif
+
     /** Get the PhysicalMemoryManager instance
      *\return instance of the PhysicalMemoryManager */
     static PhysicalMemoryManager &instance();
 
-    inline static size_t getPageSize(){return 4096;}
+    /** Get the size of one page
+     *\return size of one page in bytes */
+    inline static size_t getPageSize(){return PAGE_SIZE;}
+    /** Allocate a 'normal' page. Normal means that the page does not need to fullfill any
+     *  constraints. These kinds of pages can be used to map normal memory into a virtual
+     *  address space.
+     *\return physical address of the page or 0 if no page available */
     virtual physical_uintptr_t allocatePage() = 0;
+    /** Free a page allocated with the allocatePage() function
+     *\param[in] page physical address of the page */
     virtual void freePage(physical_uintptr_t page) = 0;
 
-    virtual bool allocateRegion(MemoryBase &Region,
+    /** Allocate a memory-region with specific constraints the pages need to fullfill.
+     *\param[in] Region reference to the MemoryRegion object
+     *\param[in] count the number of pages to allocate for the MemoryRegion object
+     *\param[in] pageConstraints the constraints the pages have to fullfill
+     *\param[in] start the physical address of the beginning of the region (optional)
+     *\return true, if a valid MemoryRegion object is created, false otherwise */
+    virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t count,
                                 size_t pageConstraints,
                                 physical_uintptr_t start = -1) = 0;

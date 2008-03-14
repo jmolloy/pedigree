@@ -16,7 +16,7 @@
 #ifndef KERNEL_MACHINE_X86_COMMON_PIC_H
 #define KERNEL_MACHINE_X86_COMMON_PIC_H
 
-#include <processor/io.h>
+#include <processor/IoPort.h>
 #include <processor/InterruptManager.h>
 #include <machine/IrqManager.h>
 

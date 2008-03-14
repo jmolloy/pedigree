@@ -24,7 +24,8 @@
 /** @addtogroup kernelprocessor
  * @{ */
 
-/** The interrupt manager allows interrupt handler registrations and handles interrupts */
+/** The interrupt manager allows interrupt handler registrations and handles interrupts.
+ *\brief Handles interrupts and interrupt registrations from kernel components */
 class InterruptManager
 {
   public:

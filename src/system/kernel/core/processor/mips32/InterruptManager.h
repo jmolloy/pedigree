@@ -21,7 +21,7 @@
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
 
-/** @addtogroup kernelprocessormips32
+/** @addtogroup kernelprocessorMIPS32
  * @{ */
 
 /** The interrupt handler on mips32 processors */

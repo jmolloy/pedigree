@@ -21,7 +21,11 @@
 /** @addtogroup kernelutilities
  * @{ */
 
-/** Adapter for an iterator with a different element type */
+/** Adapter for an iterator with a different element type. The element type is
+ *  reinterpret_cast'ed from the original iterator
+ *\brief IteratorAdapter reinterpret_casts an Iterators element to another type
+ *\param[in] T the new element type
+ *\param[in] Iterator the type of the original iterator */
 template<typename T, class Iterator>
 class IteratorAdapter
 {
@@ -69,14 +73,6 @@ class IteratorAdapter
       if (m_Iterator != x.m_Iterator)return false;
       return true;
     }
-    /** Comparison operator
-     *\param[in] x reference object
-     *\return true, if the iterators don't point to the same object, false otherwise */
-    inline bool operator != (const IteratorAdapter &x) const
-    {
-      if (m_Iterator == x.m_Iterator)return false;
-      return true;
-    }
     /** Go to the next element in the List
      *\return reference to this iterator */
     inline IteratorAdapter &operator ++ ()
@@ -84,24 +80,34 @@ class IteratorAdapter
       ++m_Iterator;
       return *this;
     }
-    /** Go to the next element and return a copy of the old iterator
-     *\return the iterator previous to the increment */
-    inline IteratorAdapter operator ++ (int)
+    /** Go to the previous element in the List
+     *\return reference to this iterator */
+    inline IteratorAdapter &operator -- ()
     {
-      IteratorAdapter tmp(*this);
-      ++m_Iterator;
-      return tmp;
+      --m_Iterator;
+      return *this;
     }
     /** Dereference the iterator, aka get the element
      *\return the element the iterator points to */
     inline T &operator *()
     {
-      return reinterpret_cast<T>(*m_Iterator);
+      return reinterpret_cast<T&>(*m_Iterator);
+    }
+    /** Dereference operator yields the element value */
+    T &operator ->()
+    {
+      return reinterpret_cast<T&>(*m_Iterator);
     }
 
     /** Get a reference to the iterator
      *\note not supposed to be used from the outside world! */
     inline const Iterator &__getIterator() const
+    {
+      return m_Iterator;
+    }
+    /** Get a reference to the iterator
+     *\note not supposed to be used from the outside world! */
+    inline Iterator &__getIterator()
     {
       return m_Iterator;
     }

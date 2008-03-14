@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Serial.h"
-#include <processor/io.h>
+#include <processor/IoPort.h>
 
 X86Serial::X86Serial() :
   m_nBaseAddr(0)

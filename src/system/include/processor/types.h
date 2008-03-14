@@ -90,6 +90,10 @@ typedef PROCESSOR_SPECIFIC_NAME(size_t) size_t;
   typedef PROCESSOR_SPECIFIC_NAME(io_port_t) io_port_t;
 #endif
 
+#ifndef PAGE_SIZE
+  #error PAGE_SIZE not defined
+#endif
+
 /** @} */
 
 #undef PROCESSOR_SPECIFIC_NAME

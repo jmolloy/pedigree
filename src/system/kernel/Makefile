@@ -94,7 +94,7 @@ SRCFILES += linker/Elf32.cc
 
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
-SRCFILES += core/processor/io.c
+SRCFILES += core/processor/IoPort.c core/processor/VirtualAddressSpace.cc
 
 ###################################################################
 # x86_commmon source file list.
@@ -107,7 +107,9 @@ SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Vga.cc \
             machine/x86_common/Pc.cc \
             machine/x86_common/Machine.cc \
-            core/processor/x86_common/Processor.cc
+            core/processor/x86_common/Processor.cc \
+            core/processor/x86_common/PhysicalMemoryManager.cc \
+            core/processor/x86_common/IoPortManager.cc
 endif
 
 ###################################################################
@@ -120,7 +122,8 @@ SRCFILES += core/processor/x86/initialiseProcessor1.cc \
             core/processor/x86/asm/Processor.s \
             core/processor/x86/Processor.cc \
             core/processor/x86/gdt.cc \
-            core/processor/x86/state.cc
+            core/processor/x86/state.cc \
+            core/processor/x86/VirtualAddressSpace.cc
 endif
 
 ###################################################################
@@ -135,7 +138,8 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/asm/Processor.s \
             core/processor/x64/Processor.cc \
             core/processor/x64/gdt.cc \
-            core/processor/x64/state.cc
+            core/processor/x64/state.cc \
+            core/processor/x64/VirtualAddressSpace.cc
 endif
 
 ###################################################################

@@ -14,4 +14,20 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
-#include <Log.h>
+#include "VirtualAddressSpace.h"
+
+void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
+{
+  const X86VirtualAddressSpace &x86AddressSpace = static_cast<const X86VirtualAddressSpace&>(AddressSpace);
+
+  // Get the current page directory
+  uint32_t cr3;
+  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+
+  // Do we need to set a new page directory?
+  if (cr3 != x86AddressSpace.m_PhysicalPageDirectory)
+  {
+    // Set the new page directory
+    asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
+  }
+}

@@ -246,82 +246,28 @@ public:
 
   void append(unsigned short nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
-    char pStr[SHORT_SIZE * 8];
-    size_t index = 0;
-    do
-    {
-      size_t tmp = nInt % nRadix;
-      nInt /= nRadix;
-      if (tmp < 10)pStr[index++] = '0' + tmp;
-      else pStr[index++] = 'a' + (tmp - 10);
-    }
-    while (nInt != 0);
-
-    for (size_t i = 0;i < (index / 2);i++)
-    {
-      char tmp = pStr[i];
-      pStr[i] = pStr[index - i - 1];
-      pStr[index - i - 1] = tmp;
-    }
-
-    pStr[index] = '\0';
-
-    append(pStr, nLen, c);
+    appendInteger<sizeof(short)>(nInt, nRadix, nLen, c);
   }
 
   void append(unsigned int nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
-    char pStr[INT_SIZE * 8];
-    size_t index = 0;
-    do
-    {
-      size_t tmp = nInt % nRadix;
-      nInt /= nRadix;
-      if (tmp < 10)pStr[index++] = '0' + tmp;
-      else pStr[index++] = 'a' + (tmp - 10);
-    }
-    while (nInt != 0);
-
-    for (size_t i = 0;i < (index / 2);i++)
-    {
-      char tmp = pStr[i];
-      pStr[i] = pStr[index - i - 1];
-      pStr[index - i - 1] = tmp;
-    }
-
-    pStr[index] = '\0';
-
-    append(pStr, nLen, c);
+    appendInteger<sizeof(int)>(nInt, nRadix, nLen, c);
   }
 
   void append(unsigned long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
-    char pStr[LONG_SIZE * 8];
-    size_t index = 0;
-    do
-    {
-      size_t tmp = nInt % nRadix;
-      nInt /= nRadix;
-      if (tmp < 10)pStr[index++] = '0' + tmp;
-      else pStr[index++] = 'a' + (tmp - 10);
-    }
-    while (nInt != 0);
-
-    for (size_t i = 0;i < (index / 2);i++)
-    {
-      char tmp = pStr[i];
-      pStr[i] = pStr[index - i - 1];
-      pStr[index - i - 1] = tmp;
-    }
-
-    pStr[index] = '\0';
-
-    append(pStr, nLen, c);
+    appendInteger<sizeof(long)>(nInt, nRadix, nLen, c);
   }
 
   void append(unsigned long long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
-    char pStr[LLONG_SIZE * 8];
+    appendInteger<sizeof(long long)>(nInt, nRadix, nLen, c);
+  }
+
+  template<unsigned int size, typename T>
+  void appendInteger(T nInt, size_t nRadix, size_t nLen, char c)
+  {
+    char pStr[size * 8 + 1];
     size_t index = 0;
     do
     {

@@ -16,7 +16,7 @@
 #ifndef KERNEL_MACHINE_X86_COMMON_RTC_H
 #define KERNEL_MACHINE_X86_COMMON_RTC_H
 
-#include <processor/io.h>
+#include <processor/IoPort.h>
 #include <machine/IrqManager.h>
 #include <machine/Timer.h>
 
