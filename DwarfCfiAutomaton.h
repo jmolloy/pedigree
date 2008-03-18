@@ -16,6 +16,8 @@
 #ifndef DWARFCFIAUTOMATON_H
 #define DWARFCFIAUTOMATON_H
 
+#include <DwarfState.h>
+
 // These three are different - they have a delta/register number stored in the lower 6 bits.
 #define DW_CFA_advance_loc        0x40
 #define DW_CFA_offset             0x80
@@ -75,7 +77,7 @@ class DwarfCfiAutomaton
      * \param nCodeLocation Location of the CFA instruction stream used to initialise the machine.
      * \param nCodeLen The length (in bytes) of code to execute.
      */
-    void initialise (uintptr_t nCodeLocation, size_t nCodeLen);
+    void initialise (DwarfState startingState, uintptr_t nCodeLocation, size_t nCodeLen);
     
     /**
      * Executes code at the location given until the instruction pointer passes nCodeLocation+nCodeLen
@@ -83,18 +85,25 @@ class DwarfCfiAutomaton
      * \param nCodeLocation Location of the CFA instruction stream to execute.
      * \param nCodeLen Maximum length (in bytes) of code to execute.
      * \param nBreakAt Execution should stop when the table row for this instruction has been constructed.
-     * \return True on success, False if execution was forcibly stopped by nCodeLen.
+     * \return The ending state on success, zero on failure.
      */
-    bool execute (uintptr_t nCodeLocation, size_t nCodeLen, uintptr_t nBreakAt);
+    DwarfState *execute (uintptr_t nCodeLocation, size_t nCodeLen, uintptr_t nBreakAt);
+    
+  private:
+    /**
+     * Execute one instruction from the location given by nLocation, incrementing it to the next.
+     */
+    void executeInstruction (uintptr_t &nLocation, uintptr_t &nPc);
     
     /**
-     * Given a State, the automaton attempts to apply the inverse of the rules in its current table
-     * row, to obtain the State the machine was in when the current function was called.
-     * \param[in] endingState The state in which the machine ended execution of the current function.
-     * \param[out] startingState The newly computed state in which the machine must have entered
-     *             the current function.
+     * The starting state for this machine.
      */
-    void unwindState (const DwarfState &endingState, DwarfState &startingState);
+    DwarfState m_InitialState;
+    
+    /**
+     * The current state of this machine.
+     */
+    DwarfState m_CurrentState;
 };
 
 #endif

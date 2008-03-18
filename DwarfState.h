@@ -16,15 +16,20 @@
 #ifndef DWARFSTATE_H
 #define DWARFSTATE_H
 
-typedef struct
-{
-  uint32_t reg;   ///< Register number. -1 = no register, -2 = undefined.
-  union
-  {
-    ssize_t s; ///< Signed offset from register.
-    size_t u; ///< Unsigned offset from register.
-  } off;
-} DwarfCfiExpr_t;
+#define DWARF_MAX_REGISTERS 48
+
+#ifdef X86
+#define DWARF_REG_EAX 0
+#define DWARF_REG_ECX 1
+#define DWARF_REG_EDX 2
+#define DWARF_REG_EBX 3
+#define DWARF_REG_ESP 4
+#define DWARF_REG_EBP 5
+#define DWARF_REG_ESI 6
+#define DWARF_REG_EDI 7
+#endif
+// Watch out! Register numbering is seemingly random - x86 and x86_64 ones are here:
+// http://wikis.sun.com/display/SunStudio/Dwarf+Register+Numbering
 
 /**
  * Holds one row of a Dwarf CFI table. We technically generate a table, but we only
@@ -34,24 +39,27 @@ class DwarfState
 {
   public:
     DwarfState() :
-      m_ReturnAddress(0)
-    {}
+      m_ReturnAddress(0),
+      m_Cfa(0)
+    {
+      memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+    }
     ~DwarfState() {}
     
     /**
      * Registers (columns in the table).
      */
-    DwarfCfiExpr_t m_R[DWARF_MAX_REGISTERS];
+    uintptr_t m_R[DWARF_MAX_REGISTERS];
       
     /**
-     * Current CFA (current frame address) - first and more important column in the table.
+     * Current CFA (current frame address) - first and most important column in the table.
      */
-    DwarfCfiExpr_t m_Cfa;
+    uintptr_t m_Cfa;
     
     /**
      * The column which contains the function return address.
      */
     uintptr_t m_ReturnAddress;
-}
+};
 
 #endif

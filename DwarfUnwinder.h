@@ -13,3 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef DWARFUNWINDER_H
+#define DWARFUNWINDER_H
+
+class DwarfUnwinder
+{
+  public:
+    /**
+     * Creates a DwarfUnwinder object defined by frame definitions at nData,
+     * which has a maximum size of nLength.
+     */
+    DwarfUnwinder(uintptr_t nData, size_t nLength);
+    ~DwarfUnwinder();
+    
+    
+};
+
+#endif
