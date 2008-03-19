@@ -13,26 +13,47 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "IoPortManager.h"
+#ifndef DLMALLOC_H
+#define DLMALLOC_H
 
-X86CommonIoPortManager X86CommonIoPortManager::m_Instance;
+#include <processor/types.h>
+#define ABORT dlmallocAbort
+#define HAVE_MORECORE 1
+#define MORECORE dlmallocSbrk
+#define MORECORE_CANNOT_TRIM 1
+#define MORECORE_CONTIGUOUS 1
+#define HAVE_MMAP 0
+#define MALLOC_FAILURE_ACTION
 
-IoPortManager &IoPortManager::instance()
-{
-  return X86CommonIoPortManager::instance();
-}
+#define LACKS_UNISTD_H 1
+#define LACKS_FCNTL_H 1
+#define LACKS_SYS_PARAM_H 1
+#define LACKS_SYS_MMAN_H 1
+#define LACKS_STRINGS_H 1
+#define LACKS_STRING_H 1
+#define LACKS_SYS_TYPES_H
+#define LACKS_ERRNO_H
+#define LACKS_STDLIB_H
 
-bool X86CommonIoPortManager::allocate(io_port_t ioPort, size_t size)
-{
-  m_List.allocateSpecific(ioPort, size);
-  return true;
-}
-void X86CommonIoPortManager::free(io_port_t ioPort, size_t size)
-{
-  m_List.free(ioPort, size);
-}
+#ifdef __cplusplus
+  extern "C"
+  {
+#endif
 
-void X86CommonIoPortManager::initialise()
-{
-  m_List.free(0, 0x10000);
-}
+    //
+    // Functions exported from dlmalloc
+    //
+    void *malloc(size_t);
+    void free(void *);
+
+    //
+    // Functions needed for dlmalloc
+    //
+    void dlmallocAbort(void);
+    void *dlmallocSbrk(ssize_t incr);
+
+#ifdef __cplusplus
+  }
+#endif
+
+#endif

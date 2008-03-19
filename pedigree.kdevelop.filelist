@@ -98,6 +98,10 @@ src/system/kernel/core/lib/cppsupport.cc
 src/system/kernel/core/lib/cppsupport.h
 src/system/kernel/core/lib/demangle.cc
 src/system/kernel/core/lib/demangle.h
+src/system/kernel/core/lib/dlmalloc.c
+src/system/kernel/core/lib/dlmalloc.h
+src/system/kernel/core/lib/dlmallocAbort.cc
+src/system/kernel/core/lib/dlmallocSbrk.cc
 src/system/kernel/core/lib/memory.c
 src/system/kernel/core/lib/string.c
 src/system/kernel/core/lib/vsprintf.c

@@ -13,26 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "IoPortManager.h"
+#include "dlmalloc.h"
+#include <processor/VirtualAddressSpace.h>
+#include <processor/PhysicalMemoryManager.h>
 
-X86CommonIoPortManager X86CommonIoPortManager::m_Instance;
+#include <processor/Processor.h>
 
-IoPortManager &IoPortManager::instance()
+void *dlmallocSbrk(ssize_t incr)
 {
-  return X86CommonIoPortManager::instance();
-}
-
-bool X86CommonIoPortManager::allocate(io_port_t ioPort, size_t size)
-{
-  m_List.allocateSpecific(ioPort, size);
-  return true;
-}
-void X86CommonIoPortManager::free(io_port_t ioPort, size_t size)
-{
-  m_List.free(ioPort, size);
-}
-
-void X86CommonIoPortManager::initialise()
-{
-  m_List.free(0, 0x10000);
+  // NOTE: incr is already page aligned
+  VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+  void *babypoo = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+  return babypoo;
 }

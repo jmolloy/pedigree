@@ -15,19 +15,21 @@
  */
 #include <utilities/utility.h>
 
-int memset(void *buf, int c, size_t len)
+void *memset(void *buf, int c, size_t len)
 {
   unsigned char *tmp = (unsigned char *)buf;
   while(len--)
   {
     *tmp++ = c;
   }
+  return buf;
 }
 
-void memcpy(void *dest, const void *src, size_t len)
+void *memcpy(void *dest, const void *src, size_t len)
 {
   const unsigned char *sp = (const unsigned char *)src;
   unsigned char *dp = (unsigned char *)dest;
   for (; len != 0; len--) *dp++ = *sp++;
+  return dest;
 }
 

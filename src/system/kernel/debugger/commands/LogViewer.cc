@@ -56,7 +56,7 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   size_t nLines = pScreen->getHeight()-2; // -2 for top and bottom status bars.
   
   // Starting line.
-  size_t line = Log::instance().getEntryCount() - nLines;
+  ssize_t line = Log::instance().getEntryCount() - nLines;
 
   // Main loop.
   bool bStop = false;
@@ -78,7 +78,7 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
     }
     case 'k':
     {
-      if (line < Log::instance().getEntryCount() - nLines)
+      if (line < static_cast<ssize_t>(Log::instance().getEntryCount() - nLines))
         line++;
       break;
     }
@@ -112,9 +112,9 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   return true;
 }
 
-void LogViewer::refresh(size_t topLine, DebuggerIO *pScreen)
+void LogViewer::refresh(ssize_t topLine, DebuggerIO *pScreen)
 {
-  size_t line = topLine;
+  ssize_t line = topLine;
   pScreen->disableRefreshes();
   
   // For every available line.

@@ -49,36 +49,14 @@ extern "C" void __cxa_pure_virtual()
 {
 }
 
-// HACK FIXME TODO: Very, very simple memory management
-#include <utilities/utility.h>
-#include <processor/VirtualAddressSpace.h>
-#include <processor/PhysicalMemoryManager.h>
-static void *allocate(size_t size)
-{
-  static void *HeapEnd = 0;
-  static size_t UnusedSize = 0;
-
-  if (UnusedSize < size)
-  {
-    VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
-    size_t pageCount = (size - UnusedSize + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize();
-    HeapEnd = VAddressSpace.expandHeap(pageCount, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-    HeapEnd = adjust_pointer(HeapEnd, pageCount * PhysicalMemoryManager::getPageSize());
-    UnusedSize += pageCount * PhysicalMemoryManager::getPageSize();
-  }
-
-  void *tmp = adjust_pointer(HeapEnd, -UnusedSize);
-  UnusedSize -= size;
-  return tmp;
-}
-
+#include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {
-  return allocate(size);
+  return malloc(size);
 }
 void *operator new[] (size_t size) throw()
 {
-  return allocate(size);
+  return malloc(size);
 }
 void *operator new (size_t size, void* memory) throw()
 {
@@ -90,11 +68,11 @@ void *operator new[] (size_t size, void* memory) throw()
 }
 void operator delete (void * p)
 {
-  // TODO
+  free(p);
 }
 void operator delete[] (void * p)
 {
-  // TODO
+  free(p);
 }
 void operator delete (void *p, void *q)
 {

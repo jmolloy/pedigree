@@ -17,6 +17,9 @@
 #include <processor/PhysicalMemoryManager.h>
 #include "VirtualAddressSpace.h"
 
+//
+// Page Table/Directory entry flags
+//
 #define PAGE_PRESENT                0x01
 #define PAGE_WRITE                  0x02
 #define PAGE_USER                   0x04
@@ -24,6 +27,9 @@
 #define PAGE_CACHE_DISABLE          0x10
 #define PAGE_GLOBAL                 0x100
 
+//
+// Macros
+//
 #define PAGE_DIRECTORY_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 22) & 0x3FF)
 #define PAGE_TABLE_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 12) & 0x3FF)
 #define PAGE_DIRECTORY_ENTRY(pageDir, index) (&reinterpret_cast<uint32_t*>(pageDir)[pageDirectoryIndex]);

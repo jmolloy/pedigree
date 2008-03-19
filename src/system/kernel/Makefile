@@ -88,6 +88,9 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/memory.c \
             core/lib/string.c \
             core/lib/vsprintf.c \
+            core/lib/dlmalloc.c \
+            core/lib/dlmallocAbort.cc \
+            core/lib/dlmallocSbrk.cc \
             core/main.cc
 
 SRCFILES += linker/Elf32.cc
