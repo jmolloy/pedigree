@@ -13,3 +13,25 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <DwarfUnwinder.h>
+#include <DwarfState.h>
+
+DwarfUnwinder::DwarfUnwinder(uintptr_t nData, size_t nLength) :
+  m_nData(nData),
+  m_nLength(nLength)
+{
+}
+
+DwarfUnwinder::~DwarfUnwinder()
+{
+}
+
+bool DwarfUnwinder::unwind(const InterruptState &inState, InterruptState &outState)
+{
+  // Construct a DwarfState object and populate it.
+  DwarfState startState;
+  // Unfortunately the next few lines are highly architecture dependent.
+#ifdef X86
+  startState.m_R[DWARF_REG_EAX] = inState.m_Eax;
+#endif
+}

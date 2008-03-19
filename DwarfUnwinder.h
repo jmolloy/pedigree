@@ -26,7 +26,24 @@ class DwarfUnwinder
     DwarfUnwinder(uintptr_t nData, size_t nLength);
     ~DwarfUnwinder();
     
+    /**
+     * Populates outState with the result of unwinding one stack frame from inState.
+     * \param[in] inState The starting state.
+     * \param[out] outState The state after one stack frame has been unwound.
+     * \return False if the frame could not be unwound, true otherwise.
+     */
+    bool unwind(const InterruptState &inState, InterruptState &outState);
     
+  private:
+    /**
+     * Address of our frame data.
+     */
+    uintptr_t m_nData;
+    
+    /**
+     * Length of our frame data..
+     */
+    size_t m_nLength;
 };
 
 #endif

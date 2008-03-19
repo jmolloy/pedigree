@@ -25,6 +25,11 @@
 /** x86 Interrupt State */
 class X86InterruptState
 {
+  /**
+   * DwarfState needs full access to our private members.
+   */
+  friend class DwarfState;
+  
   public:
     //
     // General Interface (both InterruptState and SyscallState)

@@ -40,7 +40,9 @@ class DwarfState
   public:
     DwarfState() :
       m_ReturnAddress(0),
-      m_Cfa(0)
+      m_Cfa(0),
+      m_CfaRegister(0),
+      m_CfaOffset(0)
     {
       memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }
@@ -55,6 +57,11 @@ class DwarfState
      * Current CFA (current frame address) - first and most important column in the table.
      */
     uintptr_t m_Cfa;
+    /**
+     * Current CFA register, and offset.
+     */
+    uint32_t m_CfaRegister;
+    uintptr_t m_CfaOffset;
     
     /**
      * The column which contains the function return address.
