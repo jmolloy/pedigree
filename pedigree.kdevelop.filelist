@@ -176,6 +176,11 @@ src/system/kernel/debugger/DebuggerCommand.h
 src/system/kernel/debugger/DebuggerIO.cc
 src/system/kernel/debugger/DebuggerIO.h
 src/system/kernel/debugger/Disassembler.h
+src/system/kernel/debugger/DwarfCfiAutomaton.cc
+src/system/kernel/debugger/DwarfCfiAutomaton.h
+src/system/kernel/debugger/DwarfState.h
+src/system/kernel/debugger/DwarfUnwinder.cc
+src/system/kernel/debugger/DwarfUnwinder.h
 src/system/kernel/debugger/LocalIO.cc
 src/system/kernel/debugger/LocalIO.h
 src/system/kernel/debugger/SerialIO.cc

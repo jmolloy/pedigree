@@ -16,6 +16,8 @@
 #ifndef DWARFSTATE_H
 #define DWARFSTATE_H
 
+#include <processor/types.h>
+
 #define DWARF_MAX_REGISTERS 48
 
 #ifdef X86
@@ -30,7 +32,6 @@
 #endif
 // Watch out! Register numbering is seemingly random - x86 and x86_64 ones are here:
 // http://wikis.sun.com/display/SunStudio/Dwarf+Register+Numbering
-
 /**
  * Holds one row of a Dwarf CFI table. We technically generate a table, but we only
  * keep track of the current row.
@@ -51,17 +52,17 @@ class DwarfState
     /**
      * Registers (columns in the table).
      */
-    uintptr_t m_R[DWARF_MAX_REGISTERS];
+    processor_register_t m_R[DWARF_MAX_REGISTERS];
       
     /**
      * Current CFA (current frame address) - first and most important column in the table.
      */
-    uintptr_t m_Cfa;
+    processor_register_t m_Cfa;
     /**
      * Current CFA register, and offset.
      */
     uint32_t m_CfaRegister;
-    uintptr_t m_CfaOffset;
+    processor_register_t m_CfaOffset;
     
     /**
      * The column which contains the function return address.

@@ -35,14 +35,56 @@ nop
 .stack_good:
   # Here, $k0 holds the value of our kernel stack. $sp is still it's pre-exception value.
   # $k1 holds junk.
+  addiu $k0, $k0, -132     # Reserve some space on the stack.
+  sw $at, 0($k0)
+  sw $v0, 4($k0)
+  sw $v1, 8($k0)
+  sw $a0, 12($k0)
+  sw $a1, 16($k0)
+  sw $a2, 20($k0)
+  sw $a3, 24($k0)
+  sw $t0, 28($k0)
+  sw $t1, 32($k0)
+  sw $t2, 36($k0)
+  sw $t3, 40($k0)
+  sw $t4, 44($k0)
+  sw $t5, 48($k0)
+  sw $t6, 52($k0)
+  sw $t7, 56($k0)
+  sw $s0, 60($k0)
+  sw $s1, 64($k0)
+  sw $s2, 68($k0)
+  sw $s3, 72($k0)
+  sw $s4, 76($k0)
+  sw $s5, 80($k0)
+  sw $s6, 84($k0)
+  sw $s7, 88($k0)
+  sw $t8, 92($k0)
+  sw $t9, 96($k0)
+  sw $gp, 100($k0)
+  sw $sp, 104($k0)
+  sw $fp, 108($k0)
+  sw $ra, 112($k0)
+  mfc0 $k1, $12     # SR
+  nop
+  sw $k1, 116($k0)
+  mfc0 $k1, $13     # Cause
+  nop
+  sw $k1, 120($k0)
+  mfc0 $k1, $14     # EPC
+  nop
+  sw $k1, 124($k0)
+  mfc0 $k1, $8      # BadVaddr
+  sw $k1, 128($k0)
 
-  # TODO:: push all regs to $sp here.
+  move $sp, $k0        # Set stack pointer to be the bottom limit of our stack frame.
+  addiu $fp, $sp, 132  # Set the frame pointer to be the stack pointer + 116.
 
-  # TODO:: Set $fp.
-  move $sp, $k0
+  addiu $sp, -20       # Caller needs to reserve at least 16 bytes on the stack, and must be
+                       # 8-byte aligned, so we reserve 20.
 
   # First parameter to function is a pointer to InterruptState (top of stack).
-  addu $a0, $sp, $zero   # $a0 (first parameter) = $sp+0.
+  move $a0, $k0   # $a0 (first parameter) = $k0.
 
   # Jump to our C++ code.
   jal _ZN22MIPS32InterruptManager9interruptER20MIPS32InterruptState

@@ -17,6 +17,8 @@
 #include <machine/Machine.h>
 #include <machine/types.h>
 #include <utilities/utility.h>
+#include <processor/Processor.h>
+#include <Debugger.h>
 
 MIPS32InterruptManager MIPS32InterruptManager::m_Instance;
 
@@ -83,27 +85,43 @@ bool MIPS32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHa
   m_SyscallHandler[Service] = handler;
   return true;
 }
-extern "C" uintptr_t mips32_exception;
+extern "C" void mips32_exception(void);
 void MIPS32InterruptManager::initialiseProcessor()
 {
-  // OK, here we go. Exception handler goes at 0x8000 0180
-  memcpy((void*)KSEG1(0x0), (void*)&mips32_exception, 32*4);
-  memcpy((void*)KSEG1(0x80), (void*)&mips32_exception, 32*4);
-  memcpy((void*)KSEG1(0x100), (void*)&mips32_exception, 32*4);
-  memcpy((void*)KSEG1(0x180), (void*)&mips32_exception, 32*4);
-  memcpy((void*)KSEG1(0x200), (void*)&mips32_exception, 32*4);
+  // Exception handler goes at 0x8000 0180
+  // Here we generate some exception handling code.
+  uint32_t pCode[4];
   
+  // lui $k0, <upper 16 bits of exception handler>
+  pCode[0] = 0x3c1a0000 | (reinterpret_cast<uint32_t> (&mips32_exception) >> 16);
+  // ori $k0, $k0, <lower 16 bits of exception handler>
+  pCode[1] = 0x375a0000 | (reinterpret_cast<uint32_t> (&mips32_exception) & 0x0000FFFF);
+  // jr $k0
+  pCode[2] = 0x03400008;
+  // nop (delay slot)
+  pCode[3] = 0x00000000;
+  
+  // Now poke that exception handling stub into memory.
+  memcpy((void*)KSEG1(0x0), (void*)pCode, 32*4);
+  memcpy((void*)KSEG1(0x80), (void*)pCode, 32*4);
+//   memcpy((void*)KSEG1(0x100), (void*)pCode, 32*4);
+   memcpy((void*)KSEG1(0x180), (void*)pCode, 32*4);
+//   memcpy((void*)KSEG1(0x200), (void*)pCode, 32*4);
+  
+  // Invalidate the instruction cache - force a reload of the exception handlers.
   for (int i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
     Processor::invalidateICache(i);
   
+  
+  Serial *s = Machine::instance().getSerial(0);
+  s->write("Poo.\n");
   // Let's try an exception.
   uintptr_t woops = 3/0;
 }
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  Serial *s = Machine::instance().getSerial(0);
-  
+  Debugger::instance().breakpoint(interruptState);
   for(;;);
   // TODO: Needs locking
 

@@ -16,6 +16,9 @@
 #ifndef DWARFUNWINDER_H
 #define DWARFUNWINDER_H
 
+#include <processor/state.h>
+#include <processor/types.h>
+
 class DwarfUnwinder
 {
   public:

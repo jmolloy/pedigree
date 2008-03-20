@@ -60,26 +60,26 @@ AS=$(BUILD)/compilers/$(COMPILER)/bin/as
 endif
 CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
 ifdef X86
-  CFLAGS += -m32
+  CFLAGS += -m32 -gstabs1 -g1
 endif
 ifdef X64
-  CFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+  CFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel -gstabs1 -g1
 endif
-CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
+CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -gstabs1 -g1
 ifdef X86
-  CXXFLAGS += -m32
+  CXXFLAGS += -m32 -gstabs1 -g1
 endif
 ifdef X64
-  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel
+  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel -gstabs1 -g1
 endif
 ifdef MIPS32
-  CXXFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
-  CFLAGS += -G0 -mips32 -mabi=32 -mxgot -static
-  ASFLAGS += -G0 -mips32 -mabi=32
+  CXXFLAGS += -gstabs1 -G0 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -g1
+  CFLAGS += -gstabs1 -G0 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -g1
+  ASFLAGS += -gstabs1 -G0 -mips32 -mabi=32 -g1
 endif
 ifdef MIPS64
-  CXXFLAGS += -G0 -mips64 -mabi=64 -mxgot -static
-  CFLAGS += -G0 -mips64 -mabi=64 -mxgot -static
+  CXXFLAGS += -g -G0 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
+  CFLAGS += -g -G0 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
 endif
 LDFLAGS=-nostdlib -nostdinc
 ifdef X86

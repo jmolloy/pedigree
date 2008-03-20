@@ -30,8 +30,20 @@ bool DwarfUnwinder::unwind(const InterruptState &inState, InterruptState &outSta
 {
   // Construct a DwarfState object and populate it.
   DwarfState startState;
+  
   // Unfortunately the next few lines are highly architecture dependent.
 #ifdef X86
   startState.m_R[DWARF_REG_EAX] = inState.m_Eax;
+  startState.m_R[DWARF_REG_EBX] = inState.m_Ebx;
+  startState.m_R[DWARF_REG_ECX] = inState.m_Ecx;
+  startState.m_R[DWARF_REG_EDX] = inState.m_Edx;
+  startState.m_R[DWARF_REG_ESI] = inState.m_Esi;
+  startState.m_R[DWARF_REG_EDI] = inState.m_Edi;
+  startState.m_R[DWARF_REG_ESP] = inState.m_Esp;
+  startState.m_R[DWARF_REG_EBP] = inState.m_Ebp;
 #endif
+  
+  
+  
+  
 }
