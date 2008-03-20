@@ -78,13 +78,7 @@ processor_register_t X64InterruptState::getRegister(size_t index) const
   if (index == 12)return m_R13;
   if (index == 13)return m_R14;
   if (index == 14)return m_R15;
-  if (index == 15)
-  {
-    if (m_Cs == 0x08)
-      return 0xDEADBEEFDEADBEEF;
-    else
-      return m_Rsp;
-  }
+  if (index == 15)return getStackPointer();
   if (index == 16)return m_Rip;
   if (index == 17)return m_Rflags;
   return 0;

@@ -18,6 +18,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <processor/IoPort.h>
 #include <machine/Serial.h>
 
 namespace serial
@@ -46,7 +47,7 @@ class X86Serial : public Serial
     virtual char readNonBlock();
     virtual void write(char c);
   private:
-    uint16_t m_nBaseAddr;
+    IoPort m_Port;
 };
 
 #endif

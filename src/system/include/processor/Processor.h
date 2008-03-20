@@ -48,8 +48,6 @@ namespace DebugFlags
  *      data on the processor that is executing this code. */
 class Processor
 {
-  friend class ProcessorState;
-
   public:
     /** Get the base-pointer of the calling function
      *\return base-pointer of the calling function */

@@ -14,10 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Serial.h"
-#include <processor/IoPort.h>
 
-X86Serial::X86Serial() :
-  m_nBaseAddr(0)
+X86Serial::X86Serial()
+  : m_Port()
 {
 }
 
@@ -27,45 +26,36 @@ X86Serial::~X86Serial()
 
 void X86Serial::setBase(uintptr_t nBaseAddr)
 {
-  m_nBaseAddr = static_cast<uint16_t> (nBaseAddr);
-  IoPort port;
-  port.allocate(m_nBaseAddr, 8);
+  m_Port.allocate(nBaseAddr, 8, "COM");
 
-  port.write8(0x00, serial::inten); // Disable all interrupts
-  port.write8(0x80, serial::lctrl); // Enable DLAB (set baud rate divisor)
-  port.write8(0x03, serial::rxtx);  // Set divisor to 3 (lo byte) 38400 baud
-  port.write8(0x00, serial::inten); //                  (hi byte)
-  port.write8(0x03, serial::lctrl); // 8 bits, no parity, one stop bit
-  port.write8(0xC7, serial::iififo);// Enable FIFO, clear them, with 14-byte threshold
-  port.write8(0x0B, serial::mctrl); // IRQs enabled, RTS/DSR set
-  port.write8(0x0C, serial::inten); // enable all interrupts.
-  
+  m_Port.write8(0x00, serial::inten); // Disable all interrupts
+  m_Port.write8(0x80, serial::lctrl); // Enable DLAB (set baud rate divisor)
+  m_Port.write8(0x03, serial::rxtx);  // Set divisor to 3 (lo byte) 38400 baud
+  m_Port.write8(0x00, serial::inten); //                  (hi byte)
+  m_Port.write8(0x03, serial::lctrl); // 8 bits, no parity, one stop bit
+  m_Port.write8(0xC7, serial::iififo);// Enable FIFO, clear them, with 14-byte threshold
+  m_Port.write8(0x0B, serial::mctrl); // IRQs enabled, RTS/DSR set
+  m_Port.write8(0x0C, serial::inten); // enable all interrupts.
 }
 
 char X86Serial::read()
 {
-  IoPort port;
-  port.allocate(m_nBaseAddr, 8);
-  while ( !(port.read8(serial::lstat) & 0x1) ) ;
+  while ( !(m_Port.read8(serial::lstat) & 0x1) ) ;
   
-  return port.read8(serial::rxtx);
+  return m_Port.read8(serial::rxtx);
 }
 
 char X86Serial::readNonBlock()
 {
-  IoPort port;
-  port.allocate(m_nBaseAddr, 8);
-  if ( port.read8(serial::lstat) & 0x1)
-    return port.read8(serial::rxtx);
+  if ( m_Port.read8(serial::lstat) & 0x1)
+    return m_Port.read8(serial::rxtx);
   else
     return '\0';
 }
 
 void X86Serial::write(char c)
 {
-  IoPort port;
-  port.allocate(m_nBaseAddr, 8);
-  while ( !(port.read8(serial::lstat) & 0x20) ) ;
+  while ( !(m_Port.read8(serial::lstat) & 0x20) ) ;
   
-  port.write8(static_cast<unsigned char> (c), serial::rxtx);
+  m_Port.write8(static_cast<unsigned char> (c), serial::rxtx);
 }

@@ -42,13 +42,7 @@ processor_register_t X86InterruptState::getRegister(size_t index) const
   if (index == 4)return m_Edi;
   if (index == 5)return m_Esi;
   if (index == 6)return m_Ebp;
-  if (index == 7)
-  {
-    if (m_Cs == 0x08)
-      return 0xDEADBEEF;
-    else
-      return m_Esp;
-  }
+  if (index == 7)return getStackPointer();
   if (index == 8)return m_Eip;
   if (index == 9)return m_Eflags;
   return 0;

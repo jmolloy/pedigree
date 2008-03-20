@@ -14,10 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/initialise.h>
+#include <processor/IoPortManager.h>
 #include "InterruptManager.h"
 #include "SyscallManager.h"
 #include "../x86_common/PhysicalMemoryManager.h"
-#include "../x86_common/IoPortManager.h"
 
 void initialiseProcessor1(const BootstrapStruct_t &Info)
 {
@@ -34,8 +34,8 @@ void initialiseProcessor1(const BootstrapStruct_t &Info)
   // TODO: Initialise the Virtual memory-management (if necessary)
 
   // Initialise the I/O Manager
-  X86CommonIoPortManager &ioPortManager = X86CommonIoPortManager::instance();
-  ioPortManager.initialise();
+  IoPortManager &ioPortManager = IoPortManager::instance();
+  ioPortManager.initialise(0, 0x10000);
 
   // TODO
 }

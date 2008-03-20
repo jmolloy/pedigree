@@ -35,13 +35,13 @@ class MemoryRegion
     /** Get the address of the beginning of the MemoryRegion in the virtual
      *  address space
      *\return pointer to the beginning of the MemoryRegion */
-    inline void *virtualAddress()
+    inline void *virtualAddress() const
     {
       return m_VirtualAddress;
     }
     /** Get the size of the MemoryRegion
      *\return size of the MemoryRegion in bytes */
-    inline size_t size()
+    inline size_t size() const
     {
       return m_Size;
     }

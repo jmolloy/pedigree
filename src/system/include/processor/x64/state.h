@@ -25,6 +25,7 @@
 /** x64 Interrupt State */
 class X64InterruptState
 {
+  friend class X64ProcessorState;
   public:
     //
     // General Interface (both InterruptState and SyscallState)
@@ -144,6 +145,7 @@ class X64InterruptState
 /** x64 Syscall State */
 class X64SyscallState
 {
+  friend class X64ProcessorState;
   public:
     //
     // General Interface (both InterruptState and SyscallState)
@@ -228,6 +230,69 @@ class X64SyscallState
     uint64_t m_Rsp;
 } PACKED;
 
+/** x64 ProcessorState */
+class X64ProcessorState
+{
+  public:
+    /** Default constructor initializes everything with 0 */
+    inline X64ProcessorState();
+    /** Copy-constructor */
+    inline X64ProcessorState(const X64ProcessorState &);
+    /** Construct a ProcessorState object from an InterruptState object
+     *\param[in] x reference to the InterruptState object */
+    inline X64ProcessorState(const X64InterruptState &);
+    /** Construct a ProcessorState object from an SyscallState object
+     *\param[in] x reference to the SyscallState object */
+    inline X64ProcessorState(const X64SyscallState &);
+    /** Assignment operator */
+    inline X64ProcessorState &operator = (const X64ProcessorState &);
+    /** Assignment from InterruptState
+     *\param[in] reference to the InterruptState */
+    inline X64ProcessorState &operator = (const X64InterruptState &);
+    /** Assignment from SyscallState
+     *\param[in] reference to the SyscallState */
+    inline X64ProcessorState &operator = (const X64SyscallState &);
+    /** Destructor does nothing */
+    inline ~X64ProcessorState();
+
+    /** The R15 general purpose register */
+    uint64_t r15;
+    /** The R14 general purpose register */
+    uint64_t r14;
+    /** The R13 general purpose register */
+    uint64_t r13;
+    /** The R12 general purpose register */
+    uint64_t r12;
+    /** The R11 general purpose register */
+    uint64_t r11;
+    /** The R10 general purpose register */
+    uint64_t r10;
+    /** The R9 general purpose register */
+    uint64_t r9;
+    /** The R8 general purpose register */
+    uint64_t r8;
+    /** The base-pointer */
+    uint64_t rbp;
+    /** The RSI general purpose register */
+    uint64_t rsi;
+    /** The RDI general purpose register */
+    uint64_t rdi;
+    /** The RDX general purpose register */
+    uint64_t rdx;
+    /** The RCX general purpose register */
+    uint64_t rcx;
+    /** The RBX general purpose register */
+    uint64_t rbx;
+    /** The RAX general purpose register */
+    uint64_t rax;
+    /** The instruction-pointer */
+    uint64_t rip;
+    /** The RFlags register */
+    uint64_t rflags;
+    /** The stack-pointer */
+    uint64_t rsp;
+};
+
 /** @} */
 
 //
@@ -235,7 +300,6 @@ class X64SyscallState
 //
 uintptr_t X64InterruptState::getStackPointer() const
 {
-  if (m_Cs == 0x08)return 0xDEADBEEFDEADBEEF;
   return m_Rsp;
 }
 void X64InterruptState::setStackPointer(uintptr_t stackPointer)
@@ -319,6 +383,99 @@ size_t X64SyscallState::getSyscallNumber() const
 {
   // TODO: Is this a wise decision?
   return (m_Rax & 0xFFFFFFFF);
+}
+
+X64ProcessorState::X64ProcessorState()
+  : r15(), r14(), r13(), r12(), r11(), r10(), r9(), r8(), rbp(), rsi(), rdi(),
+    rdx(), rcx(), rbx(), rax(), rip(), rflags(), rsp()
+{
+}
+X64ProcessorState::X64ProcessorState(const X64ProcessorState &x)
+  : r15(x.r15), r14(x.r14), r13(x.r13), r12(x.r12), r11(x.r11), r10(x.r10), r9(x.r9), r8(x.r8),
+    rbp(x.rbp), rsi(x.rsi), rdi(x.rdi), rdx(x.rdx), rcx(x.rcx), rbx(x.rbx), rax(x.rax), rip(x.rip),
+    rflags(x.rflags), rsp(x.rsp)
+{
+}
+X64ProcessorState::X64ProcessorState(const X64InterruptState &x)
+  : r15(x.m_R15), r14(x.m_R14), r13(x.m_R13), r12(x.m_R12), r11(x.m_R11), r10(x.m_R10), r9(x.m_R9),
+    r8(x.m_R8), rbp(x.m_Rbp), rsi(x.m_Rsi), rdi(x.m_Rdi), rdx(x.m_Rdx), rcx(x.m_Rcx), rbx(x.m_Rbx),
+    rax(x.m_Rax), rip(x.m_Rip), rflags(x.m_Rflags), rsp(x.m_Rsp)
+{
+}
+X64ProcessorState::X64ProcessorState(const X64SyscallState &x)
+  : r15(x.m_R15), r14(x.m_R14), r13(x.m_R13), r12(x.m_R12), r11(x.m_RFlagsR11), r10(x.m_R10), r9(x.m_R9),
+    r8(x.m_R8), rbp(x.m_Rbp), rsi(x.m_Rsi), rdi(x.m_Rdi), rdx(x.m_Rdx), rcx(x.m_RipRcx), rbx(x.m_Rbx),
+    rax(x.m_Rax), rip(x.m_RipRcx), rflags(x.m_RFlagsR11), rsp(x.m_Rsp)
+{
+}
+X64ProcessorState &X64ProcessorState::operator = (const X64ProcessorState &x)
+{
+  r15 = x.r15;
+  r14 = x.r14;
+  r13 = x.r13;
+  r12 = x.r12;
+  r11 = x.r11;
+  r10 = x.r10;
+  r9 = x.r9;
+  r8 = x.r8;
+  rbp = x.rbp;
+  rsi = x.rsi;
+  rdi = x.rdi;
+  rdx = x.rdx;
+  rcx = x.rcx;
+  rbx = x.rbx;
+  rax = x.rax;
+  rip = x.rip;
+  rflags = x.rflags;
+  rsp = x.rsp;
+  return *this;
+}
+X64ProcessorState &X64ProcessorState::operator = (const X64InterruptState &x)
+{
+  r15 = x.m_R15;
+  r14 = x.m_R14;
+  r13 = x.m_R13;
+  r12 = x.m_R12;
+  r11 = x.m_R11;
+  r10 = x.m_R10;
+  r9 = x.m_R9;
+  r8 = x.m_R8;
+  rbp = x.m_Rbp;
+  rsi = x.m_Rsi;
+  rdi = x.m_Rdi;
+  rdx = x.m_Rdx;
+  rcx = x.m_Rcx;
+  rbx = x.m_Rbx;
+  rax = x.m_Rax;
+  rip = x.m_Rip;
+  rflags = x.m_Rflags;
+  rsp = x.m_Rsp;
+  return *this;
+}
+X64ProcessorState &X64ProcessorState::operator = (const X64SyscallState &x)
+{
+  r15 = x.m_R15;
+  r14 = x.m_R14;
+  r13 = x.m_R13;
+  r12 = x.m_R12;
+  r11 = x.m_RFlagsR11;
+  r10 = x.m_R10;
+  r9 = x.m_R9;
+  r8 = x.m_R8;
+  rbp = x.m_Rbp;
+  rsi = x.m_Rsi;
+  rdi = x.m_Rdi;
+  rdx = x.m_Rdx;
+  rcx = x.m_RipRcx;
+  rbx = x.m_Rbx;
+  rax = x.m_Rax;
+  rip = x.m_RipRcx;
+  rflags = x.m_RFlagsR11;
+  rsp = x.m_Rsp;
+  return *this;
+}
+X64ProcessorState::~X64ProcessorState()
+{
 }
 
 #endif

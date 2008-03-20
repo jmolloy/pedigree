@@ -28,21 +28,21 @@ DwarfUnwinder::~DwarfUnwinder()
 {
 }
 
-bool DwarfUnwinder::unwind(const InterruptState &inState, InterruptState &outState)
+bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outState)
 {
   // Construct a DwarfState object and populate it.
   DwarfState startState;
   
   // Unfortunately the next few lines are highly architecture dependent.
 #ifdef X86
-  startState.m_R[DWARF_REG_EAX] = inState.m_Eax;
-  startState.m_R[DWARF_REG_EBX] = inState.m_Ebx;
-  startState.m_R[DWARF_REG_ECX] = inState.m_Ecx;
-  startState.m_R[DWARF_REG_EDX] = inState.m_Edx;
-  startState.m_R[DWARF_REG_ESI] = inState.m_Esi;
-  startState.m_R[DWARF_REG_EDI] = inState.m_Edi;
-  startState.m_R[DWARF_REG_ESP] = inState.m_Esp;
-  startState.m_R[DWARF_REG_EBP] = inState.m_Ebp;
+  startState.m_R[DWARF_REG_EAX] = inState.eax;
+  startState.m_R[DWARF_REG_EBX] = inState.ebx;
+  startState.m_R[DWARF_REG_ECX] = inState.ecx;
+  startState.m_R[DWARF_REG_EDX] = inState.edx;
+  startState.m_R[DWARF_REG_ESI] = inState.esi;
+  startState.m_R[DWARF_REG_EDI] = inState.edi;
+  startState.m_R[DWARF_REG_ESP] = inState.esp;
+  startState.m_R[DWARF_REG_EBP] = inState.ebp;
 #endif
   
   // For each CIE or FDE...
@@ -85,8 +85,8 @@ bool DwarfUnwinder::unwind(const InterruptState &inState, InterruptState &outSta
         sizeof(size_t);
     
     // Are we in this range?
-    if ((inState.m_Eip < nInitialLocation) ||
-        (inState.m_Eip >= nInitialLocation+nAddressRange))
+    if ((inState.eip < nInitialLocation) ||
+        (inState.eip >= nInitialLocation+nAddressRange))
     {
       nIndex += nInstructionLength;
       continue;
@@ -124,18 +124,18 @@ bool DwarfUnwinder::unwind(const InterruptState &inState, InterruptState &outSta
     
     DwarfCfiAutomaton automaton;
     automaton.initialise (startState, m_nData+nCie, nCieEnd-nCie);
-    DwarfState *endState = automaton.execute (nInstructionStart, nInstructionLength, inState.m_Eip);
+    DwarfState *endState = automaton.execute (nInstructionStart, nInstructionLength, inState.eip);
     
 #ifdef X86
-    outState.m_Eax = endState->m_R[DWARF_REG_EAX];
-    outState.m_Ebx = endState->m_R[DWARF_REG_EBX];
-    outState.m_Ecx = endState->m_R[DWARF_REG_ECX];
-    outState.m_Edx = endState->m_R[DWARF_REG_EDX];
-    outState.m_Esi = endState->m_R[DWARF_REG_ESI];
-    outState.m_Edi = endState->m_R[DWARF_REG_EDI];
-    outState.m_Esp = endState->m_R[DWARF_REG_ESP];
-    outState.m_Ebp = endState->m_R[DWARF_REG_EBP];
-    outState.m_Eip = endState->m_Cfa;
+    outState.eax = endState->m_R[DWARF_REG_EAX];
+    outState.ebx = endState->m_R[DWARF_REG_EBX];
+    outState.ecx = endState->m_R[DWARF_REG_ECX];
+    outState.edx = endState->m_R[DWARF_REG_EDX];
+    outState.esi = endState->m_R[DWARF_REG_ESI];
+    outState.edi = endState->m_R[DWARF_REG_EDI];
+    outState.esp = endState->m_R[DWARF_REG_ESP];
+    outState.ebp = endState->m_R[DWARF_REG_EBP];
+    outState.eip = endState->m_Cfa;
 #endif
     return true;
   }

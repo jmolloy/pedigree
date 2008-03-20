@@ -37,7 +37,7 @@ class MemoryMappedIo : public IoBase,
     //
     // IoBase Interface
     //
-    inline virtual size_t size();
+    inline virtual size_t size() const;
     inline virtual uint8_t read8(size_t offset = 0);
     inline virtual uint16_t read16(size_t offset = 0);
     inline virtual uint32_t read32(size_t offset = 0);

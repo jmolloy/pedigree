@@ -99,7 +99,9 @@ SRCFILES += linker/Elf32.cc
 
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
-SRCFILES += core/processor/IoPort.c core/processor/VirtualAddressSpace.cc
+SRCFILES += core/processor/IoPort.c \
+            core/processor/IoPortManager.cc \
+            core/processor/VirtualAddressSpace.cc
 
 ###################################################################
 # x86_commmon source file list.
@@ -113,8 +115,7 @@ SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Pc.cc \
             machine/x86_common/Machine.cc \
             core/processor/x86_common/Processor.cc \
-            core/processor/x86_common/PhysicalMemoryManager.cc \
-            core/processor/x86_common/IoPortManager.cc
+            core/processor/x86_common/PhysicalMemoryManager.cc
 endif
 
 ###################################################################

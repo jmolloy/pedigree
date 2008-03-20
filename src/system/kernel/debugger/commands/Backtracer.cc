@@ -51,8 +51,9 @@ bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output
   bt.prettyPrint(output);
 #else
   DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
-  InterruptState outState;
-  du.unwind(state, outState);
+  ProcessorState initial(state);
+  ProcessorState next;
+  du.unwind(initial, next);
 #endif
   return true;
 }

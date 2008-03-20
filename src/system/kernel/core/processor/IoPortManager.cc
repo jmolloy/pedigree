@@ -13,26 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "IoPortManager.h"
+#include <processor/IoPortManager.h>
 
-X86CommonIoPortManager X86CommonIoPortManager::m_Instance;
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
 
-IoPortManager &IoPortManager::instance()
-{
-  return X86CommonIoPortManager::instance();
-}
+  IoPortManager IoPortManager::m_Instance;
+  
+  bool IoPortManager::allocate(const IoPort *Port,
+                               io_port_t ioPort,
+                               size_t size)
+  {
+    if (m_List.allocateSpecific(ioPort, size) == true)
+    {
+      // Add the I/O port to another list
+      return true;
+    }
+    return false;
+  }
+  void IoPortManager::free(const IoPort *Port)
+  {
+    m_List.free(Port->base(), Port->size());
+    // Remove the I/O Port from another list
+  }
+  
+  void IoPortManager::initialise(io_port_t ioPortBase, size_t size)
+  {
+    m_List.free(ioPortBase, size);
+  }
 
-bool X86CommonIoPortManager::allocate(io_port_t ioPort, size_t size)
-{
-  m_List.allocateSpecific(ioPort, size);
-  return true;
-}
-void X86CommonIoPortManager::free(io_port_t ioPort, size_t size)
-{
-  m_List.free(ioPort, size);
-}
-
-void X86CommonIoPortManager::initialise()
-{
-  m_List.free(0, 0x10000);
-}
+#endif

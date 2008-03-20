@@ -86,7 +86,7 @@ uint64_t Rtc::getTickCount()
 bool Rtc::initialise()
 {
   // Allocate the I/O port range
-  if (m_IoPort.allocate(0x70, 2) == false)
+  if (m_IoPort.allocate(0x70, 2, "CMOS") == false)
     return false;
 
   // Register the irq

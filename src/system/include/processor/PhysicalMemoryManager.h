@@ -72,10 +72,6 @@ class PhysicalMemoryManager
                                 size_t pageConstraints,
                                 physical_uintptr_t start = -1) = 0;
 
-    // TODO
-    // TODO: provide a template to cast void* to T*
-    // virtual void *heapMap(physical_uintptr_t address) = 0;
-
   protected:
     /** The constructor */
     inline PhysicalMemoryManager(){}

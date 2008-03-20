@@ -17,6 +17,8 @@
 #define KERNEL_PROCESSOR_IOPORTMANAGER_H
 
 #include <processor/types.h>
+#include <processor/IoPort.h>
+#include <utilities/RangeList.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -30,36 +32,47 @@
   {
     public:
       /** Get the instance of the I/O manager */
-      static IoPortManager &instance();
+      inline static IoPortManager &instance(){return m_Instance;}
 
       /** Allocate a number of successive I/O ports
        *\note This is normally called from an IoPort object
+       *\param[in] Port pointer to the I/O port range object
        *\param[in] ioPort the I/O port number
        *\param[in] size the number of successive I/O ports - 1 to allocate
-       *\todo We might want to add the module name, or some equivalent here
+       *\todo We might want to add a module identifier
        *\return true, if the I/O port has been allocated successfull, false
        *        otherwise */
-      virtual bool allocate(io_port_t ioPort, size_t size) = 0;
+      bool allocate(const IoPort *Port,
+                    io_port_t ioPort,
+                    size_t size);
       /** Free a number of successive I/O ports
        *\note This is normally called from an IoPort object
-       *\param[in] ioPort the I/O port number
-       *\param[in] size the number of successive I/O ports - 1 to free
-       *\todo do we really need the second parameter? */
-      virtual void free(io_port_t ioPort, size_t size) = 0;
+       *\param[in] Port pointer to the I/O port range object */
+      void free(const IoPort *Port);
 
-    protected:
-      /** The default constructor */
-      inline IoPortManager(){}
-      /** The destructor */
-      inline virtual ~IoPortManager(){}
+      /** Initialise the IoPortManager with an initial I/O range
+       *\param[in] ioPortBase base I/O port for the range
+       *\param[in] size number of successive I/O ports - 1 */
+      void initialise(io_port_t ioPortBase, size_t size);
 
     private:
+      /** The default constructor */
+      inline IoPortManager()
+        : m_List(){}
+      /** The destructor */
+      inline virtual ~IoPortManager(){}
       /** The copy-constructor
        *\note No implementation provided (IoPortManager is a singleton) */
       IoPortManager(const IoPortManager &);
       /** The assignment operator
        *\note No implementation provided (IoPortManager is a singleton) */
       IoPortManager &operator = (const IoPortManager &);
+
+      /** The list of free I/O ports */
+      RangeList<uint32_t> m_List;
+
+      /** The IoPortManager instance */
+      static IoPortManager m_Instance;
   };
 
 #endif

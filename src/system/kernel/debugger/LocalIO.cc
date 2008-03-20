@@ -122,7 +122,7 @@ char LocalIO::getCharNonBlock()
 {
 #ifdef X86
   IoPort port;
-  port.allocate(0x60, 4);
+  port.allocate(0x60, 4, "PS/2 keyboard controller");
   unsigned char status = port.read8(4);
   if (status & 0x01)
       return port.read8(0);
@@ -139,7 +139,7 @@ char LocalIO::getChar()
 #ifdef X86
   // Let's get a character from the keyboard.
   IoPort port;
-  port.allocate(0x60, 4);
+  port.allocate(0x60, 4, "PS/2 keyboard controller");
   uint8_t scancode, status;
   do
   {
@@ -362,7 +362,7 @@ void LocalIO::moveCursor()
   uint16_t tmp = m_CursorY*80 + m_CursorX;
   
   IoPort cursorPort;
-  cursorPort.allocate(0x3D4, 2);
+  cursorPort.allocate(0x3D4, 2, "VGA controller");
   
   cursorPort.write8(14, 0);
   cursorPort.write8(tmp>>8, 1);

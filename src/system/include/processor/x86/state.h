@@ -25,11 +25,7 @@
 /** x86 Interrupt State */
 class X86InterruptState
 {
-  /**
-   * DwarfState needs full access to our private members.
-   */
-  friend class DwarfUnwinder;
-  
+  friend class X86ProcessorState;
   public:
     //
     // General Interface (both InterruptState and SyscallState)
@@ -97,19 +93,20 @@ class X86InterruptState
      *\param[in] flags the new flags */
     inline void setFlags(uint32_t flags);
 
+  private:
     /** The default constructor
      *\note NOT implemented */
-    X86InterruptState() {}
+    X86InterruptState();
     /** The copy-constructor
      *\note NOT implemented */
-    X86InterruptState(const X86InterruptState &) {}
+    X86InterruptState(const X86InterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    X86InterruptState &operator = (const X86InterruptState &) {}
+    X86InterruptState &operator = (const X86InterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~X86InterruptState() {}
-private:
+    ~X86InterruptState();
+
     /** The DS segment register (zero-extended to 32bit) */
     uint32_t m_Ds;
     /** The EDI general purpose register */
@@ -147,6 +144,47 @@ private:
 /** x86 SyscallState */
 typedef X86InterruptState X86SyscallState;
 
+/** x86 ProcessorState */
+class X86ProcessorState
+{
+  public:
+    /** Default constructor initializes everything with 0 */
+    inline X86ProcessorState();
+    /** Copy-constructor */
+    inline X86ProcessorState(const X86ProcessorState &x);
+    /** Construct a ProcessorState object from an InterruptState object
+     *\param[in] x reference to the InterruptState object */
+    inline X86ProcessorState(const X86InterruptState &x);
+    /** Assignment operator */
+    inline X86ProcessorState &operator = (const X86ProcessorState &x);
+    /** Assignment from InterruptState
+     *\param[in] reference to the InterruptState */
+    inline X86ProcessorState &operator = (const X86InterruptState &x);
+    /** Destructor does nothing */
+    inline ~X86ProcessorState();
+
+    /** The EDI general purpose register */
+    uint32_t edi;
+    /** The ESI general purpose register */
+    uint32_t esi;
+    /** The base-pointer register */
+    uint32_t ebp;
+    /** The EBX general purpose register */
+    uint32_t ebx;
+    /** The EDX general purpose register */
+    uint32_t edx;
+    /** The ECX general purpose register */
+    uint32_t ecx;
+    /** The EAX general purpose register */
+    uint32_t eax;
+    /** The instruction pointer */
+    uint32_t eip;
+    /** The extended flags (EFLAGS) */
+    uint32_t eflags;
+    /** The stack-pointer */
+    uint32_t esp;
+};
+
 /** @} */
 
 //
@@ -154,12 +192,14 @@ typedef X86InterruptState X86SyscallState;
 //
 uintptr_t X86InterruptState::getStackPointer() const
 {
-  if (m_Cs == 0x08)return 0xDEADBEEF;
+  if (kernelMode())
+    return (m_Res + 20);
   return m_Esp;
 }
 void X86InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  m_Esp = stackPointer;
+  if (!kernelMode())
+    m_Esp = stackPointer;
 }
 uintptr_t X86InterruptState::getInstructionPointer() const
 {
@@ -207,6 +247,52 @@ uint32_t X86InterruptState::getFlags() const
 void X86InterruptState::setFlags(uint32_t flags)
 {
   m_Eflags = flags;
+}
+
+X86ProcessorState::X86ProcessorState()
+  : edi(), esi(), ebp(), ebx(), edx(), ecx(), eax(), eip(), eflags(), esp()
+{
+}
+X86ProcessorState::X86ProcessorState(const X86ProcessorState &x)
+  : edi(x.edi), esi(x.esi), ebp(x.ebp), ebx(x.ebx), edx(x.edx), ecx(x.ecx), eax(x.eax),
+    eip(x.eip), eflags(x.eflags), esp(x.esp)
+{
+}
+X86ProcessorState::X86ProcessorState(const X86InterruptState &x)
+  : edi(x.m_Edi), esi(x.m_Esi), ebp(x.m_Ebp), ebx(x.m_Ebx), edx(x.m_Edx), ecx(x.m_Ecx), eax(x.m_Eax),
+    eip(x.m_Eip), eflags(x.m_Eflags), esp(x.getStackPointer())
+{
+}
+X86ProcessorState &X86ProcessorState::operator = (const X86ProcessorState &x)
+{
+  edi = x.edi;
+  esi = x.esi;
+  ebp = x.ebp;
+  ebx = x.ebx;
+  edx = x.edx;
+  ecx = x.ecx;
+  eax = x.eax;
+  eip = x.eip;
+  eflags = x.eflags;
+  esp = x.esp;
+  return *this;
+}
+X86ProcessorState &X86ProcessorState::operator = (const X86InterruptState &x)
+{
+  edi = x.m_Edi;
+  esi = x.m_Esi;
+  ebp = x.m_Ebp;
+  ebx = x.m_Ebx;
+  edx = x.m_Edx;
+  ecx = x.m_Ecx;
+  eax = x.m_Eax;
+  eip = x.m_Eip;
+  eflags = x.m_Eflags;
+  esp = x.getStackPointer();
+  return *this;
+}
+X86ProcessorState::~X86ProcessorState()
+{
 }
 
 #endif

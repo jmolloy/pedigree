@@ -22,8 +22,7 @@
  * @{ */
 
 /** Interface to the hardware's I/O capabilities
- *\brief Abstrace base class for hardware I/O capabilities
- *\todo 64bit read/writes? Problem: which read/write order should be used on 32bit machines? */
+ *\brief Abstrace base class for hardware I/O capabilities */
 class IoBase
 {
   public:
@@ -31,7 +30,7 @@ class IoBase
     inline virtual ~IoBase(){}
 
     /** Get the size of the I/O region in bytes */
-    virtual size_t size() = 0;
+    virtual size_t size() const = 0;
     /** Read a byte (8bit) from the I/O Port or the memory-mapped I/O region
      *\param[in] offset offset from the I/O base port or the I/O base memory address
      *\return the byte (8bit) that have been read */
@@ -44,6 +43,35 @@ class IoBase
      *\param[in] offset offset from the I/O base port or the I/O base memory address
      *\return the four byte (32bit) that have been read */
     virtual uint32_t read32(size_t offset = 0) = 0;
+    #ifndef KERNEL_PROCESSOR_NO_64BIT_TYPE
+      #ifdef BITS_64
+        /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region.
+         *\param[in] offset offset from the I/O base port or the I/O base memory address
+         *\return the eight byte (64bit) that have been read */
+        virtual uint64_t read64(size_t offset = 0) = 0;
+      #endif
+      /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region. The
+       *  32bit at the lower address are read first, then the 32bit at the higher address.
+       *\param[in] offset offset from the I/O base port or the I/O base memory address
+       *\return the eight byte (64bit) that have been read */
+      inline uint64_t read64LowFirst(size_t offset = 0)
+      {
+        uint64_t low = read32(offset);
+        uint64_t high = read32(offset + 4);
+        return low | (high << 32);
+      }
+      /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region. The
+       *  32bit at the higher address are read first, then the 32bit at the lower address.
+       *\param[in] offset offset from the I/O base port or the I/O base memory address
+       *\return the eight byte (64bit) that have been read */
+      inline uint64_t read64HighFirst(size_t offset = 0)
+      {
+        uint64_t high = read32(offset + 4);
+        uint64_t low = read32(offset);
+        return low | (high << 32);
+      }
+    #endif
+
     /** Write a byte (8bit) to the I/O port or the memory-mapped I/O region
      *\param[in] value the value that should be written
      *\param[in] offset offset from the I/O base port or the I/O base memory address */
@@ -56,6 +84,32 @@ class IoBase
      *\param[in] value the value that should be written
      *\param[in] offset offset from the I/O base port or the I/O base memory address */
     virtual void write32(uint32_t value, size_t offset = 0) = 0;
+    #ifndef KERNEL_PROCESSOR_NO_64BIT_TYPE
+      #ifdef BITS_64
+        /** Write eight byte (64bit) to the I/O Port or the memory-mapped I/O region.
+         *\param[in] value the value that should be written
+         *\param[in] offset offset from the I/O base port or the I/O base memory address */
+        virtual void read64(uint64_t value, size_t offset = 0) = 0;
+      #endif
+      /** Write eight byte (64bit) to the I/O Port or the memory-mapped I/O region. The
+       *  32bit at the lower address are written first, then the 32bit at the higher address.
+       *\param[in] value the value that should be written
+       *\param[in] offset offset from the I/O base port or the I/O base memory address */
+      inline void read64LowFirst(uint64_t value, size_t offset = 0)
+      {
+        write32(value & 0xFFFFFFFF, offset);
+        write32(value >> 32, offset + 4);
+      }
+      /** Write eight byte (64bit) to the I/O Port or the memory-mapped I/O region. The
+       *  32bit at the higher address are written first, then the 32bit at the lower address.
+       *\param[in] value the value that should be written
+       *\param[in] offset offset from the I/O base port or the I/O base memory address */
+      inline void read64HighFirst(uint64_t value, size_t offset = 0)
+      {
+        write32(value >> 32, offset + 4);
+        write32(value & 0xFFFFFFFF, offset);
+      }
+    #endif
 
   protected:
     /** The default constructor does nothing */

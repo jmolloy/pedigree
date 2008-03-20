@@ -55,7 +55,7 @@ Serial *Pc::getSerial(size_t n)
 {
   return &m_pSerial[n];
 }
-    
+
 size_t Pc::getNumSerial()
 {
   return 2;

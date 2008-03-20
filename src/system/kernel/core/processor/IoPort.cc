@@ -17,16 +17,17 @@
 #include <processor/IoPortManager.h>
 
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
-  bool IoPort::allocate(io_port_t ioPort, size_t size)
+  bool IoPort::allocate(io_port_t ioPort, size_t size, const char *name)
   {
     // Free any allocated I/O ports
     if (m_Size != 0)
       free();
 
-    if (IoPortManager::instance().allocate(ioPort, size) == true)
+    if (IoPortManager::instance().allocate(this, ioPort, size) == true)
     {
       m_IoPort = ioPort;
       m_Size = size;
+      m_Name = name;
       return true;
     }
     return false;
@@ -36,10 +37,11 @@
   {
     if (m_Size != 0)
     {
-      IoPortManager::instance().free(m_IoPort, m_Size);
+      IoPortManager::instance().free(this);
 
-      m_Size = 0;
       m_IoPort = 0;
+      m_Size = 0;
+      m_Name.free();
     }
   }
 #endif

@@ -113,6 +113,7 @@ src/system/kernel/core/memory/MemoryMap.h
 src/system/kernel/core/process
 src/system/kernel/core/processor
 src/system/kernel/core/processor/IoPort.cc
+src/system/kernel/core/processor/IoPortManager.cc
 src/system/kernel/core/processor/VirtualAddressSpace.cc
 src/system/kernel/core/processor/mips32
 src/system/kernel/core/processor/mips32/InterruptManager.cc
@@ -162,8 +163,6 @@ src/system/kernel/core/processor/x86/initialiseProcessor2.cc
 src/system/kernel/core/processor/x86/state.cc
 src/system/kernel/core/processor/x86/tss.h
 src/system/kernel/core/processor/x86_common
-src/system/kernel/core/processor/x86_common/IoPortManager.cc
-src/system/kernel/core/processor/x86_common/IoPortManager.h
 src/system/kernel/core/processor/x86_common/PhysicalMemoryManager.cc
 src/system/kernel/core/processor/x86_common/PhysicalMemoryManager.h
 src/system/kernel/core/processor/x86_common/Processor.cc

@@ -33,7 +33,7 @@ bool Pit::registerHandler(TimerHandler *handler)
 bool Pit::initialise()
 {
   // Allocate the PIT I/O range
-  if (m_IoPort.allocate(0x40, 4) == false)
+  if (m_IoPort.allocate(0x40, 4, "PIT") == false)
     return false;
 
   // Allocate the IRQ

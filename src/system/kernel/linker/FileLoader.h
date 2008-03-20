@@ -41,8 +41,8 @@ public:
    */
   virtual const char *lookupSymbol(unsigned int nAddress, uintptr_t *pSymbolStart) =0;
   
-  virtual uint32_t debugFrameTable();
-  virtual uint32_t debugFrameTableLength();
+  virtual uint32_t debugFrameTable() = 0;
+  virtual uint32_t debugFrameTableLength() = 0;
 };
 
 #endif

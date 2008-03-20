@@ -16,32 +16,6 @@
 #include <utilities/utility.h>
 #include <utilities/String.h>
 
-String::String(const char *s)
-  : m_Data(0), m_Length(strlen(s)), m_Size(0)
-{
-  assign(s);
-}
-String::String(const String &x)
-  : m_Data(0), m_Length(x.length()), m_Size(0)
-{
-  assign(x);
-}
-String::~String()
-{
-  delete []m_Data;
-}
-
-String &String::operator = (const String &x)
-{
-  assign(x);
-  return *this;
-}
-String &String::operator = (const char *s)
-{
-  assign(s);
-  return *this;
-}
-
 void String::assign(const String &x)
 {
   reserve(x.length() + 1);
@@ -65,4 +39,11 @@ void String::reserve(size_t size)
     delete []tmp;
     m_Size = size;
   }
+}
+void String::free()
+{
+  delete []m_Data;
+  m_Data = 0;
+  m_Length = 0;
+  m_Size = 0;
 }

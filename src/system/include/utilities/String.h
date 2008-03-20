@@ -27,13 +27,14 @@
 class String
 {
   public:
+    /** The default constructor does nothing */
     inline String();
-    explicit String(const char *s);
-    String(const String &x);
-    ~String();
+    inline explicit String(const char *s);
+    inline String(const String &x);
+    inline ~String();
 
-    String &operator = (const String &x);
-    String &operator = (const char *s);
+    inline String &operator = (const String &x);
+    inline String &operator = (const char *s);
 
     inline size_t length() const PURE;
     inline size_t size() const PURE;
@@ -41,6 +42,7 @@ class String
     void assign(const String &x);
     void assign(const char *s);
     void reserve(size_t size);
+    void free();
 
   private:
     /** Pointer to the zero-terminated ASCII string */
@@ -60,6 +62,32 @@ String::String()
   : m_Data(0), m_Length(0), m_Size(0)
 {
 }
+String::String(const char *s)
+  : m_Data(0), m_Length(0), m_Size(0)
+{
+  assign(s);
+}
+String::String(const String &x)
+  : m_Data(0), m_Length(0), m_Size(0)
+{
+  assign(x);
+}
+String::~String()
+{
+  free();
+}
+
+String &String::operator = (const String &x)
+{
+  assign(x);
+  return *this;
+}
+String &String::operator = (const char *s)
+{
+  assign(s);
+  return *this;
+}
+
 size_t String::length() const
 {
   return m_Length;

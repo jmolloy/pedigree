@@ -36,7 +36,7 @@ class DwarfUnwinder
      * \param[out] outState The state after one stack frame has been unwound.
      * \return False if the frame could not be unwound, true otherwise.
      */
-    bool unwind(const InterruptState &inState, InterruptState &outState);
+    bool unwind(const ProcessorState &inState, ProcessorState &outState);
     
     /**
      * Decodes a ULEB128 encoded number.

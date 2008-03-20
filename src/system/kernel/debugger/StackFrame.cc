@@ -55,10 +55,8 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
 
 uintptr_t StackFrame::getParameter(size_t n)
 {
-  // TODO
-  //uintptr_t *pPtr = reinterpret_cast<uintptr_t *>(m_nBasePointer+(n+2)*sizeof(uintptr_t));
-  //return *pPtr;
-  return 0;
+  uintptr_t *pPtr = reinterpret_cast<uintptr_t *>(m_nBasePointer+(n+2)*sizeof(uintptr_t));
+  return *pPtr;
 }
   
 void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
