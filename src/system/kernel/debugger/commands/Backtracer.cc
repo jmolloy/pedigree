@@ -20,6 +20,14 @@
 #include <utilities/utility.h>
 #include <utilities/StaticString.h>
 
+#if 1
+#include <DwarfUnwinder.h>
+#include <Elf32.h>
+#endif
+
+// TEMP!
+extern Elf32 elf;
+
 Backtracer::Backtracer()
 {
 }
@@ -36,11 +44,16 @@ void Backtracer::autocomplete(const HugeStaticString &input, HugeStaticString &o
 
 bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
 {
+#if 0
   Backtrace bt;
   bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());
 
   bt.prettyPrint(output);
-
+#else
+  DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
+  InterruptState outState;
+  du.unwind(state, outState);
+#endif
   return true;
 }
 

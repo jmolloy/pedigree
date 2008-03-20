@@ -17,6 +17,7 @@
 #define DWARFCFIAUTOMATON_H
 
 #include <DwarfState.h>
+#include <processor/types.h>
 
 // These three are different - they have a delta/register number stored in the lower 6 bits.
 #define DW_CFA_advance_loc        0x40

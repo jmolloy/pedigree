@@ -124,6 +124,9 @@ public:
    * Returns the entry point of the file.
    */
   uint32_t getEntryPoint();
+  
+  virtual uint32_t debugFrameTable();
+  virtual uint32_t debugFrameTableLength();
 
 private:
   /** The copy-constructor
@@ -210,6 +213,7 @@ private:
   Elf32SectionHeader_t *m_pGotTable; // Global offset table.
   Elf32SectionHeader_t *m_pRelTable;
   Elf32SectionHeader_t *m_pSectionHeaders;
+  uint32_t             m_nSectionHeaders;
   char                 m_pId [128];
   uint8_t              *m_pBuffer; ///< Offset of the file in memory.
 };

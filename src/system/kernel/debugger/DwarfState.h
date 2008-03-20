@@ -17,6 +17,7 @@
 #define DWARFSTATE_H
 
 #include <processor/types.h>
+#include <utilities/utility.h>
 
 #define DWARF_MAX_REGISTERS 48
 
@@ -40,10 +41,10 @@ class DwarfState
 {
   public:
     DwarfState() :
-      m_ReturnAddress(0),
       m_Cfa(0),
       m_CfaRegister(0),
-      m_CfaOffset(0)
+      m_CfaOffset(0),
+      m_ReturnAddress(0)
     {
       memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }

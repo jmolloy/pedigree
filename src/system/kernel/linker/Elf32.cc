@@ -27,6 +27,7 @@ Elf32::Elf32(const char *name) :
   m_pGotTable(0),
   m_pRelTable(0),
   m_pSectionHeaders(0),
+  m_nSectionHeaders(0),
   m_pBuffer(0)
 {
   strncpy(m_pId, name, 127);
@@ -57,7 +58,8 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   
   // Find the string tab&pBuffer[m_pStringTable->offset];le.
   m_pStringTable = &m_pSectionHeaders[m_pHeader->shstrndx];
-  
+  pBootstrap->getSectionHeader(
+      pBootstrap->getStringTable() )
   // Temporarily load the string table.
   const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pStringTable->offset]);
   
@@ -86,6 +88,9 @@ bool Elf32::load(BootstrapInfo *pBootstrap)
   // Firstly get the section header string table.
   m_pShstrtab = reinterpret_cast<Elf32SectionHeader_t *>( pBootstrap->getSectionHeader(
                                                           pBootstrap->getStringTable() ));
+  
+  m_nSectionHeaders = pBootstrap->getSectionHeaderCount();
+  m_pSectionHeaders = pBootstrap->getSectionHeader(0);
   
   // Normally we will try to use the sectionHeader->offset member to access data, so an
   // Elf section's data can be accessed without being mapped into virtual memory. However,
@@ -176,4 +181,42 @@ uint32_t Elf32::getGlobalOffsetTable()
 
 uint32_t Elf32::getEntryPoint()
 {
+}
+
+uint32_t Elf32::debugFrameTable()
+{
+  // Temporarily load the string table.
+  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
+  
+  // Now search for the debug_frame table.
+  for (int i = 0; i < m_nSectionHeaders; i++)
+  {
+    Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t *>(m_pSectionHeaders[i]);
+    const char *pStr = pStrtab + pSh->name;
+
+    if (!strcmp(pStr, ".debug_frame"))
+    {
+      return pSh->addr;
+    }
+  }
+  return 0;
+}
+
+uint32_t Elf32::debugFrameTableLength()
+{
+  // Temporarily load the string table.
+  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
+  
+  // Now search for the debug_frame table.
+  for (int i = 0; i < m_nSectionHeaders; i++)
+  {
+    Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t *>(m_pSectionHeaders[i]);
+    const char *pStr = pStrtab + pSh->name;
+
+    if (!strcmp(pStr, ".debug_frame"))
+    {
+      return pSh->size;
+    }
+  }
+  return 0;
 }

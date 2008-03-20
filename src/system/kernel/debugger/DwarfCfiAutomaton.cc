@@ -15,6 +15,7 @@
  */
 
 #include <DwarfCfiAutomaton.h>
+#include <Log.h>
 
 DwarfCfiAutomaton::DwarfCfiAutomaton() :
   m_InitialState(),
@@ -22,7 +23,7 @@ DwarfCfiAutomaton::DwarfCfiAutomaton() :
 {
 }
 
-DwarfCfiAutomaton::DwarfCfiAutomaton()
+DwarfCfiAutomaton::~DwarfCfiAutomaton()
 {
 }
 
@@ -33,7 +34,7 @@ void DwarfCfiAutomaton::initialise (DwarfState startingState, uintptr_t nCodeLoc
   m_CurrentState = startingState;
   
   // Execute the preamble instructions.
-  execute (nCodeLocation, nCodeLen, reinterpret_cast<uintptr_t> (~0));
+  execute (nCodeLocation, nCodeLen, static_cast<uintptr_t> (~0));
   
   // Save the state.
   m_InitialState = m_CurrentState;
@@ -48,11 +49,12 @@ DwarfState *DwarfCfiAutomaton::execute (uintptr_t nCodeLocation, size_t nCodeLen
   {
     executeInstruction (nCurrentCodeLocation, nProgramCounter);
   }
+  return &m_CurrentState;
 }
 
 void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc)
 {
-  uint8_t *pLocation = static_cast<uint8_t*> (nLocation);
+  uint8_t *pLocation = reinterpret_cast<uint8_t*> (nLocation);
   
   if (pLocation[0] & 0xc0 == DW_CFA_advance_loc)
   {
@@ -141,7 +143,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
     {
     }
     default:
-      //ERROR("Unrecognised DWARF CFA instruction: " << Hex << pLocation[0]);
-      printf ("Unrecognised DWARF CFA instruction: 0x%x\n", pLocation[0]);
+      ERROR("Unrecognised DWARF CFA instruction: " << Hex << pLocation[0]);
+      nPc ++;
   }
 }

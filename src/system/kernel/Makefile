@@ -80,7 +80,9 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
             debugger/StackFrame.cc \
-            debugger/DebuggerIO.cc
+            debugger/DebuggerIO.cc \
+            debugger/DwarfUnwinder.cc \
+            debugger/DwarfCfiAutomaton.cc
 endif
 
 SRCFILES += core/lib/cppsupport.cc \

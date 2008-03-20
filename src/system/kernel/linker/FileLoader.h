@@ -40,6 +40,9 @@ public:
    * \param[out] pSymbolStart The start location of the retrieved symbol (Optional).
    */
   virtual const char *lookupSymbol(unsigned int nAddress, uintptr_t *pSymbolStart) =0;
+  
+  virtual uint32_t debugFrameTable();
+  virtual uint32_t debugFrameTableLength();
 };
 
 #endif

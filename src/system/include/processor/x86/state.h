@@ -28,7 +28,7 @@ class X86InterruptState
   /**
    * DwarfState needs full access to our private members.
    */
-  friend class DwarfState;
+  friend class DwarfUnwinder;
   
   public:
     //
@@ -97,20 +97,19 @@ class X86InterruptState
      *\param[in] flags the new flags */
     inline void setFlags(uint32_t flags);
 
-  private:
     /** The default constructor
      *\note NOT implemented */
-    X86InterruptState();
+    X86InterruptState() {}
     /** The copy-constructor
      *\note NOT implemented */
-    X86InterruptState(const X86InterruptState &);
+    X86InterruptState(const X86InterruptState &) {}
     /** The assignement operator
      *\note NOT implemented */
-    X86InterruptState &operator = (const X86InterruptState &);
+    X86InterruptState &operator = (const X86InterruptState &) {}
     /** The destructor
      *\note NOT implemented */
-    ~X86InterruptState();
-
+    ~X86InterruptState() {}
+private:
     /** The DS segment register (zero-extended to 32bit) */
     uint32_t m_Ds;
     /** The EDI general purpose register */
