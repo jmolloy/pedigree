@@ -97,6 +97,9 @@ class VirtualAddressSpace
      *\note Not implemented */
     VirtualAddressSpace &operator = (const VirtualAddressSpace &);
 
+    /** \todo documentation */
+    void rollbackHeapExpansion(void *virtualAddress, size_t pageCount);
+
     /** Pointer to the beginning of the heap */
     void *m_Heap;
     /** Pointer to the current heap end */

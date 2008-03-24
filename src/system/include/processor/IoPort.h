@@ -23,7 +23,7 @@
 /** @addtogroup kernelprocessor
  * @{ */
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
   /** IoPort provides access to a range of hardware I/O port
    *\brief I/O port range */
@@ -43,9 +43,15 @@
       inline virtual uint8_t read8(size_t offset = 0);
       inline virtual uint16_t read16(size_t offset = 0);
       inline virtual uint32_t read32(size_t offset = 0);
+      #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
+        inline virtual uint64_t read64(size_t offset = 0);
+      #endif
       inline virtual void write8(uint8_t value, size_t offset = 0);
       inline virtual void write16(uint16_t value, size_t offset = 0);
       inline virtual void write32(uint32_t value, size_t offset = 0);
+      #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
+        inline virtual void write64(uint64_t value, size_t offset = 0);
+      #endif
 
       /** Get the base I/O port */
       inline io_port_t base() const;
@@ -82,11 +88,11 @@
 //
 // Part of the implementation
 //
-#ifdef X86_COMMON
+#if defined(X86_COMMON)
   #include <processor/x86_common/IoPort.h>
 #endif
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
   size_t IoPort::size() const
   {
     return m_Size;

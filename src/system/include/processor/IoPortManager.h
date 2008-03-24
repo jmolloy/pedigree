@@ -23,7 +23,7 @@
 /** @addtogroup kernelprocessor
  * @{ */
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
   /** Singleton class which manages hardware I/O port (de)allocate
    *\brief Manages hardware I/O port (de)allocations

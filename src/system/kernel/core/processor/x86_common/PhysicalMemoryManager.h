@@ -86,10 +86,9 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
         PageStack &operator = (const PageStack &);
 
         /** The number of Stacks */
-        #ifdef X86
+        #if defined(X86)
           static const size_t StackCount = 1;
-        #endif
-        #ifdef X64
+        #elif defined(X64)
           static const size_t StackCount = 3;
         #endif
 

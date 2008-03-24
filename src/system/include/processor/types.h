@@ -16,26 +16,23 @@
 #ifndef KERNEL_PROCESSOR_TYPES_H
 #define KERNEL_PROCESSOR_TYPES_H
 
-#ifdef X86
+#if defined(X86)
   #include <processor/x86/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X86##x
-#endif
-#ifdef X64
+#elif defined(X64)
   #include <processor/x64/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X64##x
-#endif
-#ifdef MIPS32
+#elif defined(MIPS32)
   #include <processor/mips32/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
-#endif
-#ifdef MIPS64
+#elif defined(MIPS64)
   #include <processor/mips64/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
 //       the selected processor architecture
-#ifndef PROCESSOR_SPECIFIC_NAME
+#if !defined(PROCESSOR_SPECIFIC_NAME)
   #error Unknown processor architecture
 #endif
 
@@ -60,7 +57,7 @@ typedef PROCESSOR_SPECIFIC_NAME(uint32_t) uint32_t;
 
 // NOTE: This should be defined in the file included at the top of this file
 //       if this processor architecture does not support a 64bit data type
-#ifndef KERNEL_PROCESSOR_NO_64BIT_TYPE
+#if !defined(KERNEL_PROCESSOR_NO_64BIT_TYPE)
   /** Define a 64bit signed integer type */
   typedef PROCESSOR_SPECIFIC_NAME(int64_t) int64_t;
   /** Define a 64bit unsigned integer type */
@@ -85,12 +82,12 @@ typedef PROCESSOR_SPECIFIC_NAME(size_t) size_t;
 
 // NOTE: This should be defined in the file included at the top of this file
 //       if this processor architecture does not support I/O ports
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
   /** Define an I/O port type */
   typedef PROCESSOR_SPECIFIC_NAME(io_port_t) io_port_t;
 #endif
 
-#ifndef PAGE_SIZE
+#if !defined(PAGE_SIZE)
   #error PAGE_SIZE not defined
 #endif
 

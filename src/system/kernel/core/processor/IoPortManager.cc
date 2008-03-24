@@ -15,7 +15,7 @@
  */
 #include <processor/IoPortManager.h>
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
   IoPortManager IoPortManager::m_Instance;
   

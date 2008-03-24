@@ -17,10 +17,9 @@
 #include <utilities/utility.h>
 #include "PhysicalMemoryManager.h"
 
-#ifdef X86
+#if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
-#endif
-#ifdef X64
+#elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
 #endif
 
@@ -80,7 +79,7 @@ X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()
 physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t constraints)
 {
   size_t index = 0;
-  #ifdef X64
+  #if defined(X64)
     if (constraints == X86CommonPhysicalMemoryManager::below4GB)
       index = 0;
     else if (constraints == X86CommonPhysicalMemoryManager::below64GB)
@@ -116,10 +115,9 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
   size_t index = 0;
   if (physicalAddress >= 0x100000000ULL)
   {
-    #ifdef X86
+    #if defined(X86)
       return;
-    #endif
-    #ifdef X64
+    #elif defined(X64)
       index = 1;
       if (physicalAddress >= 0x1000000000ULL)
         index = 2;
@@ -130,10 +128,9 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
   if (m_StackMax[index] == m_StackSize[index])
   {
     // Get the kernel virtual address-space
-    #ifdef X86
+    #if defined(X86)
       X86VirtualAddressSpace &AddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-    #endif
-    #ifdef X64
+    #elif defined(X64)
       X64VirtualAddressSpace &AddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
     #endif
 
@@ -165,10 +162,9 @@ X86CommonPhysicalMemoryManager::PageStack::PageStack()
     m_StackSize[i] = 0;
   }
 
-  #ifdef X86
+  #if defined(X86)
     m_Stack[0] = reinterpret_cast<void*>(0xF0000000);
-  #endif
-  #ifdef X64
+  #elif defined(X64)
     #error TODO
     m_Stack[0] = 0;
     m_Stack[1] = 0;

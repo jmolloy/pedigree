@@ -34,7 +34,7 @@ class PhysicalMemoryManager
     static const size_t nonRamMemory = 1 << 1;
 
     // x86/x64 specific flags
-    #ifdef X86_COMMON
+    #if defined(X86_COMMON)
       /** The allocated pages should be below the 1MB mark */
       static const size_t below1MB   = 1 << 2;
       /** The allocated pages should be below the 16MB mark */

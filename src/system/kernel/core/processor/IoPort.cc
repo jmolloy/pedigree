@@ -16,7 +16,7 @@
 #include <processor/IoPort.h>
 #include <processor/IoPortManager.h>
 
-#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+#if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
   bool IoPort::allocate(io_port_t ioPort, size_t size, const char *name)
   {
     // Free any allocated I/O ports

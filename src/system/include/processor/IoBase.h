@@ -43,8 +43,8 @@ class IoBase
      *\param[in] offset offset from the I/O base port or the I/O base memory address
      *\return the four byte (32bit) that have been read */
     virtual uint32_t read32(size_t offset = 0) = 0;
-    #ifndef KERNEL_PROCESSOR_NO_64BIT_TYPE
-      #ifdef BITS_64
+    #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE)
+      #if defined(BITS_64)
         /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region.
          *\param[in] offset offset from the I/O base port or the I/O base memory address
          *\return the eight byte (64bit) that have been read */
@@ -84,18 +84,18 @@ class IoBase
      *\param[in] value the value that should be written
      *\param[in] offset offset from the I/O base port or the I/O base memory address */
     virtual void write32(uint32_t value, size_t offset = 0) = 0;
-    #ifndef KERNEL_PROCESSOR_NO_64BIT_TYPE
-      #ifdef BITS_64
+    #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE)
+      #if defined(BITS_64)
         /** Write eight byte (64bit) to the I/O Port or the memory-mapped I/O region.
          *\param[in] value the value that should be written
          *\param[in] offset offset from the I/O base port or the I/O base memory address */
-        virtual void read64(uint64_t value, size_t offset = 0) = 0;
+        virtual void write64(uint64_t value, size_t offset = 0) = 0;
       #endif
       /** Write eight byte (64bit) to the I/O Port or the memory-mapped I/O region. The
        *  32bit at the lower address are written first, then the 32bit at the higher address.
        *\param[in] value the value that should be written
        *\param[in] offset offset from the I/O base port or the I/O base memory address */
-      inline void read64LowFirst(uint64_t value, size_t offset = 0)
+      inline void write64LowFirst(uint64_t value, size_t offset = 0)
       {
         write32(value & 0xFFFFFFFF, offset);
         write32(value >> 32, offset + 4);
@@ -104,7 +104,7 @@ class IoBase
        *  32bit at the higher address are written first, then the 32bit at the lower address.
        *\param[in] value the value that should be written
        *\param[in] offset offset from the I/O base port or the I/O base memory address */
-      inline void read64HighFirst(uint64_t value, size_t offset = 0)
+      inline void write64HighFirst(uint64_t value, size_t offset = 0)
       {
         write32(value >> 32, offset + 4);
         write32(value & 0xFFFFFFFF, offset);

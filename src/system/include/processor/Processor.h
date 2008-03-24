@@ -103,7 +103,7 @@ class Processor
      *\param[in] state the interrupt-state */
     static void setSingleStep(bool bEnable, InterruptState &state);
 
-    #ifdef X86_COMMON
+    #if defined(X86_COMMON)
       /** Read a Machine/Model-specific register
        *\param[in] index the register index
        *\return the value of the register */
@@ -113,7 +113,7 @@ class Processor
        *\param[in] value the new value of the register */
       static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
     #endif
-    #ifdef MIPS_COMMON
+    #if defined(MIPS_COMMON)
       /** Invalidate a line in the instruction cache.
        *\param[in] nAddr The address in KSEG0 or KSEG1 of a memory location to invalidate from the Icache. */
       static void invalidateICache(uintptr_t nAddr);
@@ -125,7 +125,7 @@ class Processor
 
 /** @} */
 
-#ifdef X86_COMMON
+#if defined(X86_COMMON)
   #include <processor/x86_common/Processor.h>
 #endif
 

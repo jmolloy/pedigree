@@ -17,28 +17,64 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 
-#include <Log.h>
 void *VirtualAddressSpace::expandHeap(size_t pageCount, size_t flags)
 {
   void *Heap = m_HeapEnd;
   PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
   for (size_t i = 0;i < pageCount;i++)
   {
+    // Allocate a page
     physical_uintptr_t page = PMemoryManager.allocatePage();
+
     if (page == 0)
     {
-      // TODO: error handling
+      // Reset the heap pointer
+      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
+
+      // Free the pages that were already allocated
+      rollbackHeapExpansion(m_HeapEnd, i);
       return 0;
     }
+
+    // Map the page
     if (map(page, m_HeapEnd, flags) == false)
     {
-      // TODO: error handling
+      // Free the page
+      PMemoryManager.freePage(page);
+
+      // Reset the heap pointer
+      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
+
+      //  Free the pages that were already allocated
+      rollbackHeapExpansion(m_HeapEnd, i);
       return 0;
     }
 
-    NOTICE("mapping: " << Hex << reinterpret_cast<uintptr_t>(m_HeapEnd) << " -> " << page);
-
+    // Go to the next address
     m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
   }
   return Heap;
+}
+
+void VirtualAddressSpace::rollbackHeapExpansion(void *virtualAddress, size_t pageCount)
+{
+  for (size_t i = 0;i < pageCount;i++)
+  {
+    // Get the mapping for the current page
+    size_t flags;
+    physical_uintptr_t physicalAddress;
+    if (getMaping(virtualAddress,
+                  physicalAddress,
+                  flags) == true)
+    {
+      // Free the physical page
+      PhysicalMemoryManager::instance().freePage(physicalAddress);
+
+      // Unmap the page from the virtual address space
+      unmap(virtualAddress);
+    }
+
+    // Go to the next virtual page
+    virtualAddress = adjust_pointer(virtualAddress, PhysicalMemoryManager::getPageSize());
+  }
 }
