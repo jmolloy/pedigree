@@ -125,8 +125,13 @@ sub install {
   `mkdir -p ./compilers/tmp_build/build_binutils`;
   `mkdir -p ./compilers/tmp_build/build_gcc`;
 
-  print "\e[32mBinutils: \e[0m\e[32;1mConfiguring...\e[0m ";
+  print "\e[32mBinutils: \e[0m\e[32;1mPatching...\e[0m ";
   my ($pwd) = `pwd` =~ m/^[ \n]*(.*?)[ \n]*$/;
+  `cd ./compilers/tmp_build/binutils-$BINUTILS_VERSION; wget http://www.jamesmolloy.co.uk/binutils-2.18-makeinfo.patch`;
+  `cd ./compilers/tmp_build/binutils-$BINUTILS_VERSION; patch <binutils-2.18-makeinfo.patch`;
+
+  print "\e[32;1mConfiguring...\e[0m ";
+  
   `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_binutils/; ../binutils-$BINUTILS_VERSION/configure --target=\$TARGET --prefix=\$PREFIX --disable-nls >/tmp/binutils-configure.out 2>/tmp/binutils-configure.err`;
   if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/binutils-configure.{out|err})\e[0m"; return 1;}
   print "\n\e[32;1mCompiling...\e[0m ";

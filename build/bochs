@@ -1,9 +1,4 @@
 #!/bin/bash
 
-sudo /sbin/losetup /dev/loop0 built/floppy.img
-sudo mkdir -p /tmp/bochsmnt
-sudo mount -o loop /dev/loop0 /tmp/bochsmnt
 sudo bochs -q -f bochsrc.txt
-sudo umount /dev/loop0
-sudo /sbin/losetup -d /dev/loop0
 
