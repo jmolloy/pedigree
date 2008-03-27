@@ -110,13 +110,19 @@ public:
    */
   int getStringTable();
   
+  /**
+   * Discovers whether VBE information is present.
+   * \return True if the VBE info is present.
+   */
+  bool hasVbeInfo();
+  
 private:
   BootstrapStruct_t m_BootstrapInfo;
   
 };
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
-#ifdef KERNEL_STANDALONE
+#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON)
 #define MULTIBOOT_FLAG_MEM     0x001
 #define MULTIBOOT_FLAG_DEVICE  0x002
 #define MULTIBOOT_FLAG_CMDLINE 0x004

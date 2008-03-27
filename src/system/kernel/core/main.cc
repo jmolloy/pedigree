@@ -126,14 +126,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   #endif
     
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
-  Foo foo;
-  StaticString<32> str("RAR!");
-  StaticString<32> str2("wee.");
-  NOTICE("Str: " << Hex << reinterpret_cast<uintptr_t>(&str));
-  NOTICE("Str2: " << Hex << reinterpret_cast<uintptr_t>(&str2));
-  str += str2;
-  str += 8;
-  NOTICE((const char *)str);
+  NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
 //   foo.mytestfunc(false, 'g');
 #endif
 

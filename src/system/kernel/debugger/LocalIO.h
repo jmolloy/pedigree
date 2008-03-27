@@ -22,6 +22,32 @@ class DebuggerCommand;
 
 #define CONSOLE_WIDTH  80
 #define CONSOLE_HEIGHT 25
+#define CONSOLE_DEFAULT_MODE   g_80x25_text
+
+#define VGA_BASE                0x3C0
+#define VGA_AC_INDEX            0x0
+#define VGA_AC_WRITE            0x0
+#define VGA_AC_READ             0x1
+#define VGA_MISC_WRITE          0x2
+#define VGA_SEQ_INDEX           0x4
+#define VGA_SEQ_DATA            0x5
+#define VGA_DAC_READ_INDEX      0x7
+#define VGA_DAC_WRITE_INDEX     0x8
+#define VGA_DAC_DATA            0x9
+#define VGA_MISC_READ           0xC
+#define VGA_GC_INDEX            0xE
+#define VGA_GC_DATA             0xF
+/*                              COLOR emulation  MONO emulation */
+#define VGA_CRTC_INDEX          0x14             /* 0x3B4 */
+#define VGA_CRTC_DATA           0x15             /* 0x3B5 */
+#define VGA_INSTAT_READ         0x1A
+
+#define VGA_NUM_SEQ_REGS        5
+#define VGA_NUM_CRTC_REGS       25
+#define VGA_NUM_GC_REGS         9
+#define VGA_NUM_AC_REGS         21
+#define VGA_NUM_REGS            (1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS + \
+                                VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
 
 /**
  * Provides an implementation of DebuggerIO, using the monitor and
@@ -107,6 +133,9 @@ protected:
 
   void putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
+  void setMode(int nMode);
+  int getMode();
+  
   /**
    * Framebuffer.
    */

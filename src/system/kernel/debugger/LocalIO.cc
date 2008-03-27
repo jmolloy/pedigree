@@ -15,6 +15,7 @@
  */
 
 #include <LocalIO.h>
+#include <Log.h>
 #include <DebuggerCommand.h>
 #include <utilities/utility.h>
 #include <processor/IoPort.h>
@@ -26,6 +27,99 @@
 #include <keymap_qwertz.h>
 #endif
 
+unsigned char g_80x25_text[] =
+{
+  /* MISC */
+  0x67,
+  /* SEQ */
+  0x03, 0x00, 0x03, 0x00, 0x02,
+  /* CRTC */
+  0x5F, 0x4F, 0x50, 0x82, 0x55, 0x81, 0xBF, 0x1F,
+  0x00, 0x4F, 0x0D, 0x0E, 0x00, 0x00, 0x00, 0x50,
+  0x9C, 0x0E, 0x8F, 0x28, 0x1F, 0x96, 0xB9, 0xA3,
+  0xFF,
+  /* GC */
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00,
+  0xFF,
+  /* AC */
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07,
+  0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+  0x0C, 0x00, 0x0F, 0x08, 0x00
+};
+
+unsigned char g_80x50_text[] =
+{
+  /* MISC */
+  0x67,
+  /* SEQ */
+  0x03, 0x00, 0x03, 0x00, 0x02,
+  /* CRTC */
+  0x5F, 0x4F, 0x50, 0x82, 0x55, 0x81, 0xBF, 0x1F,
+  0x00, 0x47, 0x06, 0x07, 0x00, 0x00, 0x01, 0x40,
+  0x9C, 0x8E, 0x8F, 0x28, 0x1F, 0x96, 0xB9, 0xA3,
+  0xFF, 
+  /* GC */
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00,
+  0xFF, 
+  /* AC */
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07,
+  0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+  0x0C, 0x00, 0x0F, 0x08, 0x00,
+};
+
+unsigned char g_90x30_text[] =
+{
+  /* MISC */
+  0xE7,
+  /* SEQ */
+  0x03, 0x01, 0x03, 0x00, 0x02,
+  /* CRTC */
+  0x6B, 0x59, 0x5A, 0x82, 0x60, 0x8D, 0x0B, 0x3E,
+  0x00, 0x4F, 0x0D, 0x0E, 0x00, 0x00, 0x00, 0x00,
+  0xEA, 0x0C, 0xDF, 0x2D, 0x10, 0xE8, 0x05, 0xA3,
+  0xFF,
+  /* GC */
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00,
+  0xFF,
+  /* AC */
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07,
+  0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+  0x0C, 0x00, 0x0F, 0x08, 0x00,
+};
+
+unsigned char g_90x60_text[] =
+{
+  /* MISC */
+  0xE7,
+  /* SEQ */
+  0x03, 0x01, 0x03, 0x00, 0x02,
+  /* CRTC */
+  0x6B, 0x59, 0x5A, 0x82, 0x60, 0x8D, 0x0B, 0x3E,
+  0x00, 0x47, 0x06, 0x07, 0x00, 0x00, 0x00, 0x00,
+  0xEA, 0x0C, 0xDF, 0x2D, 0x08, 0xE8, 0x05, 0xA3,
+  0xFF,
+  /* GC */
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00,
+  0xFF,
+  /* AC */
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07,
+  0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+  0x0C, 0x00, 0x0F, 0x08, 0x00,
+};
+
+unsigned char *g_pModeDescriptions[] = {g_80x25_text,
+                                        g_80x50_text,
+                                        g_90x30_text,
+                                        g_90x60_text };
+unsigned int g_pModeWidths[]  = {80,80,90,90};
+unsigned int g_pModeHeights[] = {25,50,30,60};
+#define LOCALIO_NUM_MODES 4
+uint8_t inb(uint16_t port)
+{
+  uint8_t ret;
+  asm volatile ("inb %1, %0" : "=a" (ret) : "dN" (port));
+  return ret;
+}
 
 LocalIO::LocalIO() :
   m_UpperCliLimit(0),
@@ -51,6 +145,14 @@ LocalIO::LocalIO() :
 
   // Initialise the keyboard map.
   initKeymap();
+  
+  // What is the current mode?
+//   int mode = getMode();
+  IoPort port;
+  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
+  NOTICE("READ: " << Hex << port.read8(VGA_MISC_READ) << ", " << inb(VGA_BASE+VGA_MISC_READ));
+//   NOTICE("Mode " << Dec << mode << " found, " << g_pModeWidths[mode] << " x " << g_pModeHeights[mode]);
+  setMode(2);
 }
 
 LocalIO::~LocalIO()
@@ -435,4 +537,122 @@ void LocalIO::cls()
   }
 }
 
+void LocalIO::setMode(int nMode)
+{
+  IoPort port;
+  unsigned int i;
+  
+  unsigned char *pMode = g_pModeDescriptions[nMode];
+  
+  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
 
+  /* write MISCELLANEOUS reg */
+  port.write8(*pMode, VGA_MISC_WRITE);
+  pMode++;
+  /* write SEQUENCER regs */
+  for(i = 0; i < VGA_NUM_SEQ_REGS; i++)
+  {
+    port.write8(i, VGA_SEQ_INDEX);
+    port.write8(*pMode, VGA_SEQ_DATA);
+    pMode++;
+  }
+  /* unlock CRTC registers */
+  port.write8(0x03, VGA_CRTC_INDEX);
+  port.write8( port.read8(VGA_CRTC_DATA) | 0x80, VGA_CRTC_DATA);
+  port.write8(0x11, VGA_CRTC_INDEX);
+  port.write8( port.read8(VGA_CRTC_DATA) & ~0x80, VGA_CRTC_DATA);
+  /* make sure they remain unlocked */
+  pMode[0x03] |= 0x80;
+  pMode[0x11] &= ~0x80;
+  /* write CRTC pMode */
+  for(i = 0; i < VGA_NUM_CRTC_REGS; i++)
+  {
+    port.write8(i, VGA_CRTC_INDEX);
+    port.write8(*pMode, VGA_CRTC_DATA);
+    pMode++;
+  }
+  /* write GRAPHICS CONTROLLER regs */
+  for(i = 0; i < VGA_NUM_GC_REGS; i++)
+  {
+    port.write8(i, VGA_GC_INDEX);
+    port.write8(*pMode, VGA_GC_DATA);
+    pMode++;
+  }
+  /* write ATTRIBUTE CONTROLLER regs */
+  for(i = 0; i < VGA_NUM_AC_REGS; i++)
+  {
+    (void)port.read8(VGA_INSTAT_READ);
+    port.write8(i, VGA_AC_INDEX);
+    port.write8(*pMode, VGA_AC_WRITE);
+    pMode++;
+  }
+  /* lock 16-color palette and unblank display */
+  (void)port.read8(VGA_INSTAT_READ);
+  port.write8(0x20, VGA_AC_INDEX);
+}
+
+int LocalIO::getMode()
+{
+  unsigned char aMode[61];
+  unsigned char *pMode = &aMode[0];
+  IoPort port;
+  unsigned int i;
+  
+  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
+
+  /* read MISCELLANEOUS reg */
+  *pMode = port.read8(VGA_MISC_READ);
+  WARNING("pMode: " << Hex << port.read8(VGA_MISC_READ));
+  pMode++;
+  /* read SEQUENCER regs */
+  for(i = 0; i < VGA_NUM_SEQ_REGS; i++)
+  {
+    port.write8(i, VGA_SEQ_INDEX);
+    *pMode = port.read8(VGA_SEQ_DATA);
+    pMode++;
+  }
+  /* read CRTC regs */
+  for(i = 0; i < VGA_NUM_CRTC_REGS; i++)
+  {
+    port.write8(i, VGA_CRTC_INDEX);
+    *pMode = port.read8(VGA_CRTC_DATA);
+    pMode++;
+  }
+  /* read GRAPHICS CONTROLLER regs */
+  for(i = 0; i < VGA_NUM_GC_REGS; i++)
+  {
+    port.write8(i, VGA_GC_INDEX);
+    *pMode = port.read8(VGA_GC_DATA);
+    pMode++;
+  }
+  /* read ATTRIBUTE CONTROLLER regs */
+  for(i = 0; i < VGA_NUM_AC_REGS; i++)
+  {
+    (void)port.read8(VGA_INSTAT_READ);
+    port.write8(i, VGA_AC_INDEX);
+    *pMode = port.read8(VGA_AC_READ);
+    pMode++;
+  }
+  /* lock 16-color palette and unblank display */
+  (void)port.read8(VGA_INSTAT_READ);
+  port.write8(0x20, VGA_AC_INDEX);
+  
+  // Check our array of known modes.
+  bool bFound;
+  for (int i = 0; i < LOCALIO_NUM_MODES; i++)
+  {
+    bFound = true;
+    for (int j = 0; j < VGA_NUM_REGS; j++)
+    {
+      if (aMode[j] != g_pModeDescriptions[i][j])
+      {
+        NOTICE("Break at index " << Dec << j << ", " << Hex << g_pModeDescriptions[i][j] << ", " << aMode[j]);
+        bFound = false;
+        break;
+      }
+    }
+    if (bFound)
+      return i;
+  }
+  return -1;
+}

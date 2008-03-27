@@ -39,3 +39,8 @@ int BootstrapInfo::getStringTable()
 {
   return m_BootstrapInfo.shndx;
 }
+
+bool BootstrapInfo::hasVbeInfo()
+{
+  return m_BootstrapInfo.flags & MULTIBOOT_FLAG_VBE;
+}
