@@ -20,9 +20,9 @@
 
 class DebuggerCommand;
 
-#define CONSOLE_WIDTH  80
-#define CONSOLE_HEIGHT 25
-#define CONSOLE_DEFAULT_MODE   g_80x25_text
+#define MAX_CONSOLE_WIDTH  90
+#define MAX_CONSOLE_HEIGHT 30
+#define CONSOLE_DEFAULT_MODE   2
 
 #define VGA_BASE                0x3C0
 #define VGA_AC_INDEX            0x0
@@ -100,11 +100,11 @@ public:
    */
   size_t getWidth()
   {
-    return CONSOLE_WIDTH;
+    return m_nWidth;
   }
   size_t getHeight()
   {
-    return CONSOLE_HEIGHT;
+    return m_nHeight;
   }
 
   /**
@@ -139,13 +139,16 @@ protected:
   /**
    * Framebuffer.
    */
-  uint16_t m_pFramebuffer[CONSOLE_WIDTH*CONSOLE_HEIGHT];
+  uint16_t m_pFramebuffer[MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT];
 
   /**
    * Framebuffer for the screen before we took control.
    */
-  uint16_t m_pOldFramebuffer[CONSOLE_WIDTH*CONSOLE_HEIGHT];
+  uint16_t m_pOldFramebuffer[MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT];
 
+  size_t m_nWidth;
+  size_t m_nHeight;
+  
   /**
    * Current upper and lower CLI limits.
    */
@@ -163,6 +166,8 @@ protected:
   bool m_bShift;
   bool m_bCtrl;
   bool m_bCapslock;
+  
+  int m_nOldMode;
 };
 
 #endif

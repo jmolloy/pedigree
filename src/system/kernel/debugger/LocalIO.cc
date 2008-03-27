@@ -27,6 +27,7 @@
 #include <keymap_qwertz.h>
 #endif
 
+/// \warning 80x50 and 90x60 modes don't work, because we don't have an 8x8 font to install.
 unsigned char g_80x25_text[] =
 {
   /* MISC */
@@ -122,20 +123,23 @@ uint8_t inb(uint16_t port)
 }
 
 LocalIO::LocalIO() :
+  m_nWidth(80),
+  m_nHeight(25),
   m_UpperCliLimit(0),
   m_LowerCliLimit(0),
   m_CursorX(0),
   m_CursorY(0),
   m_bShift(false),
   m_bCtrl(false),
-  m_bCapslock(false)
+  m_bCapslock(false),
+  m_nOldMode(0)
 {
   // Copy the current screen contents to our old frame buffer.
   uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
-  memcpy(m_pOldFramebuffer, vidmem, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
+  memcpy(m_pOldFramebuffer, vidmem, MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT*2);
 
   // Clear the framebuffer.
-  for (size_t i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (size_t i = 0; i < MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT; i++)
   {
     uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     uint16_t blank = ' ' | (attributeByte << 8);
@@ -147,25 +151,25 @@ LocalIO::LocalIO() :
   initKeymap();
   
   // What is the current mode?
-//   int mode = getMode();
-  IoPort port;
-  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
-  NOTICE("READ: " << Hex << port.read8(VGA_MISC_READ) << ", " << inb(VGA_BASE+VGA_MISC_READ));
+  m_nOldMode = getMode();
+  if (m_nOldMode == -1) m_nOldMode = 0;
+  
 //   NOTICE("Mode " << Dec << mode << " found, " << g_pModeWidths[mode] << " x " << g_pModeHeights[mode]);
-  setMode(2);
+  setMode(CONSOLE_DEFAULT_MODE);
 }
 
 LocalIO::~LocalIO()
 {
   // Copy our old frame buffer to the screen.
   uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
-  memcpy(vidmem, m_pOldFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
+  setMode(m_nOldMode);
+  memcpy(vidmem, m_pOldFramebuffer, MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT*2);
 }
 
 void LocalIO::setCliUpperLimit(size_t nlines)
 {
   // Do a quick sanity check.
-  if (nlines < CONSOLE_HEIGHT)
+  if (nlines < m_nHeight)
     m_UpperCliLimit = nlines;
 
   // If the cursor is now in an invalid area, move it back.
@@ -176,18 +180,18 @@ void LocalIO::setCliUpperLimit(size_t nlines)
 void LocalIO::setCliLowerLimit(size_t nlines)
 {
   // Do a quick sanity check.
-  if (nlines < CONSOLE_HEIGHT)
+  if (nlines < m_nHeight)
     m_LowerCliLimit = nlines;
   
   // If the cursor is now in an invalid area, move it back.
-  if (m_CursorY >= CONSOLE_HEIGHT-m_LowerCliLimit)
+  if (m_CursorY >= m_nHeight-m_LowerCliLimit)
     m_CursorY = m_LowerCliLimit;
 }
 
 void LocalIO::enableCli()
 {
   // Clear the framebuffer.
-  for (size_t i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (size_t i = 0; i < m_nWidth*m_nHeight; i++)
   {
     uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     uint16_t blank = ' ' | (attributeByte << 8);
@@ -206,7 +210,7 @@ void LocalIO::enableCli()
 void LocalIO::disableCli()
 {
   // Clear the framebuffer.
-  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (int i = 0; i < m_nWidth*m_nHeight; i++)
   {
     uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     uint16_t blank = ' ' | (attributeByte << 8);
@@ -337,19 +341,19 @@ void LocalIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t col
     colEnd = tmp;
   }
 
-  if (colEnd >= CONSOLE_WIDTH)
-    colEnd = CONSOLE_WIDTH-1;
+  if (colEnd >= m_nWidth)
+    colEnd = m_nWidth-1;
   if (colStart < 0)
     colStart = 0;
-  if (row >= CONSOLE_HEIGHT)
-    row = CONSOLE_HEIGHT-1;
+  if (row >= m_nHeight)
+    row = m_nHeight-1;
   if (row < 0)
     row = 0;
 
   uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
   for(size_t i = colStart; i <= colEnd; i++)
   {
-    m_pFramebuffer[row*CONSOLE_WIDTH+i] = c | (attributeByte << 8);
+    m_pFramebuffer[row*m_nWidth+i] = c | (attributeByte << 8);
   }
   
   if (m_bRefreshesEnabled)
@@ -366,19 +370,19 @@ void LocalIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEn
     rowEnd = tmp;
   }
 
-  if (rowEnd >= CONSOLE_HEIGHT)
-    rowEnd = CONSOLE_HEIGHT-1;
+  if (rowEnd >= m_nHeight)
+    rowEnd = m_nHeight-1;
   if (rowStart < 0)
     rowStart = 0;
-  if (col >= CONSOLE_WIDTH)
-    col = CONSOLE_WIDTH-1;
+  if (col >= m_nWidth)
+    col = m_nWidth-1;
   if (col < 0)
     col = 0;
   
   uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
   for(size_t i = rowStart; i <= rowEnd; i++)
   {
-    m_pFramebuffer[i*CONSOLE_WIDTH+col] = c | (attributeByte << 8);
+    m_pFramebuffer[i*m_nWidth+col] = c | (attributeByte << 8);
   }
   
   if (m_bRefreshesEnabled)
@@ -436,7 +440,7 @@ void LocalIO::forceRefresh()
 {
   uint16_t *vidmem = reinterpret_cast<uint16_t*>(0xB8000);
 
-  memcpy(vidmem, m_pFramebuffer, CONSOLE_WIDTH*CONSOLE_HEIGHT*2);
+  memcpy(vidmem, m_pFramebuffer, m_nWidth*m_nHeight*2);
   moveCursor();
 }
 
@@ -445,15 +449,15 @@ void LocalIO::scroll()
   // Get a space character with the default colour attributes.
   uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
   uint16_t blank = ' ' | (attributeByte << 8);
-  if (m_CursorY >= CONSOLE_HEIGHT-m_LowerCliLimit)
+  if (m_CursorY >= m_nHeight-m_LowerCliLimit)
   {
-    for (size_t i = m_UpperCliLimit*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i++)
+    for (size_t i = m_UpperCliLimit*80; i < (m_nHeight-m_LowerCliLimit-1)*80; i++)
       m_pFramebuffer[i] = m_pFramebuffer[i+80];
 
-    for (size_t i = (CONSOLE_HEIGHT-m_LowerCliLimit-1)*80; i < (CONSOLE_HEIGHT-m_LowerCliLimit)*80; i++)
+    for (size_t i = (m_nHeight-m_LowerCliLimit-1)*80; i < (m_nHeight-m_LowerCliLimit)*80; i++)
       m_pFramebuffer[i] = blank;
 
-    m_CursorY = CONSOLE_HEIGHT-m_LowerCliLimit-1;
+    m_CursorY = m_nHeight-m_LowerCliLimit-1;
   }
 
 }
@@ -461,7 +465,7 @@ void LocalIO::scroll()
 void LocalIO::moveCursor()
 {
 #ifdef X86
-  uint16_t tmp = m_CursorY*80 + m_CursorX;
+  uint16_t tmp = m_CursorY*m_nWidth + m_CursorX;
   
   IoPort cursorPort;
   cursorPort.allocate(0x3D4, 2, "VGA controller");
@@ -483,18 +487,18 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
       m_CursorX--;
     else
     {
-      m_CursorX = CONSOLE_WIDTH-1;
+      m_CursorX = m_nWidth-1;
       m_CursorY--;
     }
     
     // Erase the contents of the cell currently.
     uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
-    m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = ' ' | (attributeByte << 8);
+    m_pFramebuffer[m_CursorY*m_nWidth + m_CursorX] = ' ' | (attributeByte << 8);
     
   }
 
   // Tab?
-  else if (c == 0x09 && ( ((m_CursorX+8)&~(8-1)) < CONSOLE_WIDTH) )
+  else if (c == 0x09 && ( ((m_CursorX+8)&~(8-1)) < m_nWidth) )
     m_CursorX = (m_CursorX+8) & ~(8-1);
 
   // Carriage return?
@@ -512,14 +516,14 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
   else if (c >= ' ')
   {
     uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
-    m_pFramebuffer[m_CursorY*CONSOLE_WIDTH + m_CursorX] = c | (attributeByte << 8);
+    m_pFramebuffer[m_CursorY*m_nWidth + m_CursorX] = c | (attributeByte << 8);
 
     // Increment the cursor.
     m_CursorX++;
   }
 
   // Do we need to wrap?
-  if (m_CursorX >= 80)
+  if (m_CursorX >= m_nWidth)
   {
     m_CursorX = 0;
     m_CursorY ++;
@@ -529,7 +533,7 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
 void LocalIO::cls()
 {
   // Clear the framebuffer.
-  for (int i = 0; i < CONSOLE_WIDTH*CONSOLE_HEIGHT; i++)
+  for (int i = 0; i < m_nWidth*m_nHeight; i++)
   {
     unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     unsigned short blank = ' ' | (attributeByte << 8);
@@ -544,7 +548,7 @@ void LocalIO::setMode(int nMode)
   
   unsigned char *pMode = g_pModeDescriptions[nMode];
   
-  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
+  port.allocate(VGA_BASE, 0x1B, "VGA controller");
 
   /* write MISCELLANEOUS reg */
   port.write8(*pMode, VGA_MISC_WRITE);
@@ -589,6 +593,9 @@ void LocalIO::setMode(int nMode)
   /* lock 16-color palette and unblank display */
   (void)port.read8(VGA_INSTAT_READ);
   port.write8(0x20, VGA_AC_INDEX);
+  
+  m_nWidth = g_pModeWidths[nMode];
+  m_nHeight = g_pModeHeights[nMode];
 }
 
 int LocalIO::getMode()
@@ -598,7 +605,7 @@ int LocalIO::getMode()
   IoPort port;
   unsigned int i;
   
-  port.allocate(VGA_BASE, VGA_NUM_REGS, "VGA controller");
+  port.allocate(VGA_BASE, 0x1B, "VGA controller");
 
   /* read MISCELLANEOUS reg */
   *pMode = port.read8(VGA_MISC_READ);

@@ -135,6 +135,7 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
   // Current symbol location.
   // TODO grep the memory map for the right ELF to look at.
   uintptr_t ip = state.getInstructionPointer();
+  
   uintptr_t symStart = 0;
   const char *pSym = elf.lookupSymbol(ip, &symStart);
 
@@ -165,8 +166,8 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
     elf.lookupSymbol(location, &nSym);
     if (nSym == location) // New symbol. Add two lines.
     {
-      addToBuffer(0, instrBuffer, nInstr, nLinesToCache);
-      addToBuffer(0, instrBuffer, nInstr, nLinesToCache);
+      addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
+      addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
     }
 
     addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
@@ -214,7 +215,7 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
     
     str = "";
     str.append(location, 16, sizeof(uintptr_t) * 2, ' ');
-    pScreen->drawString(str, nLine+1, 0, DebuggerIO::DarkGrey, bg);
+    pScreen ->drawString(str, nLine+1, 0, DebuggerIO::DarkGrey, bg);
     str = ud_insn_asm(&ud_obj);
     pScreen->drawString(str, nLine+1, sizeof(uintptr_t) * 2 + 1, DebuggerIO::White, bg);
   }
