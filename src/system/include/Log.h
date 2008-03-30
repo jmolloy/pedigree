@@ -14,10 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef DEBUGGER_LOG_H
-#define DEBUGGER_LOG_H
+#ifndef KERNEL_LOG_H
+#define KERNEL_LOG_H
 
 #include <processor/types.h>
+
+/** @addtogroup kernel
+ * @{ */
 
 #define NOTICE(text) \
   do \
@@ -174,5 +177,7 @@ private:
    */
   static Log m_Instance;
 };
+
+/** @} */
 
 #endif

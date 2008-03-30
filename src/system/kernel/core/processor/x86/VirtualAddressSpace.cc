@@ -32,13 +32,17 @@
 //
 #define PAGE_DIRECTORY_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 22) & 0x3FF)
 #define PAGE_TABLE_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 12) & 0x3FF)
-#define PAGE_DIRECTORY_ENTRY(pageDir, index) (&reinterpret_cast<uint32_t*>(pageDir)[pageDirectoryIndex]);
-#define PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, index) (&reinterpret_cast<uint32_t*>(adjust_pointer(m_VirtualPageTables, pageDirectoryIndex * 4096))[index])
+
+#define PAGE_DIRECTORY_ENTRY(pageDir, index) (&reinterpret_cast<uint32_t*>(pageDir)[index]);
+#define PAGE_TABLE_ENTRY(VirtualPageTables, pageDirectoryIndex, index) (&reinterpret_cast<uint32_t*>(adjust_pointer(VirtualPageTables, pageDirectoryIndex * 4096))[index])
+
 #define PAGE_GET_FLAGS(x) (*x & 0xFFF)
 #define PAGE_SET_FLAGS(x, f) *x = (*x & ~0xFFF) | f
 #define PAGE_GET_PHYSICAL_ADDRESS(x) (*x & ~0xFFF)
 
+// Defined in boot-standalone.s
 extern void *pagedirectory;
+
 X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xD0000000),
                                                              reinterpret_cast<uintptr_t>(&pagedirectory) - 0xC0000000,
                                                              reinterpret_cast<void*>(0xFFBFF000),
@@ -69,13 +73,8 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     // Map the page
     *pageDirectoryEntry = page | Flags;
 
-    // TODO: Invalidate address on this CPU
-
     // Zero the page directory
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0), 0, PhysicalMemoryManager::getPageSize());
-
-    // TODO: Synchronise on SMP/NUMA system (if we change the kernel space and/or if threads of the same
-    //       process are running on a different CPU)
   }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
@@ -87,10 +86,6 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
 
   // Map the page
   *pageTableEntry = physicalAddress | Flags;
-
-  // TODO: Invalidate address on this CPU
-  // TODO: Synchronise on SMP/NUMA system (if we change the kernel space and/or if threads of the same
-  //       process are running on a different CPU)
 
   return true;
 }
@@ -201,13 +196,9 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
   return false;
 }
 
-X86VirtualAddressSpace::X86VirtualAddressSpace()
-  : VirtualAddressSpace(reinterpret_cast<void*>(0x10000000)), m_PhysicalPageDirectory(0),
-    m_VirtualPageDirectory(0), m_VirtualPageTables(0)
-{
-}
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
+  // TODO
 }
 
 X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,

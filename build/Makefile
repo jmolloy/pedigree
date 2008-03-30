@@ -183,7 +183,6 @@ else
 	@cp images/floppy_ext2.img built/floppy.img
 	@sudo /sbin/losetup /dev/loop0 built/floppy.img
 	@sudo mount -o loop /dev/loop0 /tmp/pedigree-image
-	-@sudo rm /tmp/pedigree-image/kernel
 	@sudo cp built/kernel /tmp/pedigree-image/kernel
 	@sudo umount /dev/loop0
 	@sudo /sbin/losetup -d /dev/loop0

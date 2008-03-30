@@ -60,24 +60,6 @@ void MySyscallHandler::syscall(SyscallState &state)
   NOTICE("mySyscallHandler::syscall(" << state.getSyscallNumber() << ")");
 }
 
-/// NOTE JamesM is doing some testing here.
-class Foo
-{
-public:
-    Foo(){}
-    ~Foo(){}
-void mytestfunc(bool a, char b)
-{
-  //InterruptState state;
-  //Debugger::instance().breakpoint();
-  #ifdef X86_COMMON
-    Processor::breakpoint();
-  #endif
-}
-};
-
-//char array[(sizeof(unsigned long long) == 8) ? 0 : 1];
-
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -89,8 +71,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Initialise the processor-specific interface
   initialiseProcessor1(*bsInf);
-  
-#ifdef X86_COMMON
+
+#ifdef X86
   /// NOTE there we go
   MyInterruptHandler myHandler;
   MySyscallHandler mySysHandler;
@@ -113,24 +95,20 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   initialiseProcessor2();
-  
-  // We need a heap for dynamic memory allocation.
-//  initialiseMemory();
 
   elf.load(&bootstrapInfo);
 
   /// NOTE: bluecode again
-  #ifdef X86_COMMON
+  #ifdef X86
     asm volatile("int $0xFE"); // some interrupt
     asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
   #endif
-    
+
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
-//   foo.mytestfunc(false, 'g');
 #endif
 
-  #ifdef X86_COMMON
+  #ifdef X86
     Processor::breakpoint();
   #endif
 
@@ -143,6 +121,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
+
+  #if defined(X64)
+    // TODO FIXME HACK
+    asm volatile("hlt");
+  #endif
 
   for (;;)
   {

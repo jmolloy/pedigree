@@ -49,6 +49,16 @@ extern "C" void __cxa_pure_virtual()
 {
 }
 
+/// Called by G++ if function local statics are initialised for the first time
+extern "C" void __cxa_guard_acquire()
+{
+  // TODO
+}
+extern "C" void __cxa_guard_release()
+{
+  // TODO
+}
+
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {

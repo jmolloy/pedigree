@@ -27,8 +27,6 @@ void initialiseProcessor1(const BootstrapStruct_t &Info)
   X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
   physicalMemoryManager.initialise(Info);
 
-  // TODO: Initialise the Virtual memory-management (if necessary)
-
   // Initialise the I/O Manager
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);

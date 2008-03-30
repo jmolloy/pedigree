@@ -13,27 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include <processor/IoPortManager.h>
-#include "InterruptManager.h"
-#include "SyscallManager.h"
-#include "../x86_common/PhysicalMemoryManager.h"
+#ifndef KERNEL_PROCESSOR_X64_UTILS_H
+#define KERNEL_PROCESSOR_X64_UTILS_H
 
-void initialiseProcessor1(const BootstrapStruct_t &Info)
+#include <processor/types.h>
+
+/** @addtogroup kernelprocessorx64
+ * @{ */
+
+template<typename T>
+inline T *physicalAddress(T *address)
 {
-  // Initialise this processor's interrupt handling
-  X64InterruptManager::initialiseProcessor();
-
-  // Initialise this processor's syscall handling
-  X64SyscallManager::initialiseProcessor();
-
-  // Initialise the physical memory-management
-  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
-  physicalMemoryManager.initialise(Info);
-
-  // Initialise the I/O Manager
-  IoPortManager &ioPortManager = IoPortManager::instance();
-  ioPortManager.initialise(0, 0x10000);
-
-  // TODO
+  return reinterpret_cast<T*>(reinterpret_cast<uint64_t>(address) + 0xFFFF800000000000);
 }
+
+/** @} */
+
+#endif

@@ -82,20 +82,16 @@ sub extract {
   `cp ./compilers/dl_cache/* ./compilers/tmp_build`;
   return 1 if $? != 0;
 
-  print "\e[32mUn-bzip2-ing downloaded files...\e[0m\n";
-  `bunzip2 ./compilers/tmp_build/*`;
-  return 1 if $? != 0;
-
   print "\e[32mExtracting downloaded files [1/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf gcc-core-$COMPILER_VERSION.tar`;
+  `cd ./compilers/tmp_build/; tar -xf gcc-core-$COMPILER_VERSION.tar.bz2`;
   return 1 if $? != 0;
 
   print "\e[32mExtracting downloaded files [2/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf gcc-g++-$COMPILER_VERSION.tar`;
+  `cd ./compilers/tmp_build/; tar -xf gcc-g++-$COMPILER_VERSION.tar.bz2`;
   return 1 if $? != 0;
 
   print "\e[32mExtracting downloaded files [3/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf binutils-$BINUTILS_VERSION.tar`;
+  `cd ./compilers/tmp_build/; tar -xf binutils-$BINUTILS_VERSION.tar.bz2`;
   return 1 if $? != 0;
 
   `rm ./compilers/tmp_build/*.tar*`;

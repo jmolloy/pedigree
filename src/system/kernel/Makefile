@@ -56,7 +56,12 @@ DIRECTORIES = core/lib \
 ###################################################################
 # Source file list.
 ifdef KERNEL_STANDALONE
-SRCFILES = boot-standalone.s
+  ifdef X86
+    SRCFILES = core/processor/x86/asm/boot-standalone.s
+  endif
+  ifdef X64
+    SRCFILES = core/processor/x64/asm/boot-standalone.s
+  endif
 endif
 ifdef DEBUGGER
 SRCFILES += debugger/libudis86/mnemonics.c \
@@ -82,11 +87,11 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/StackFrame.cc \
             debugger/DebuggerIO.cc \
             debugger/DwarfUnwinder.cc \
-            debugger/DwarfCfiAutomaton.cc
+            debugger/DwarfCfiAutomaton.cc \
+            debugger/Scrollable.cc
 endif
 
 SRCFILES += core/lib/cppsupport.cc \
-            core/lib/demangle.cc \
             core/lib/memory.c \
             core/lib/string.c \
             core/lib/vsprintf.c \
@@ -94,6 +99,10 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/dlmallocAbort.cc \
             core/lib/dlmallocSbrk.cc \
             core/main.cc
+
+ifdef DEBUGGER
+SRCFILES += core/lib/demangle.cc
+endif
 
 SRCFILES += linker/Elf32.cc
 
@@ -202,7 +211,12 @@ CMD_FLAGS += -D__UD_STANDALONE__
 endif
 
 ifdef KERNEL_STANDALONE
-LDFLAGS += -T $(shell pwd)/link-standalone.ld
+  ifdef X86
+    LDFLAGS += -T $(shell pwd)/core/processor/x86/kernel.ld
+  endif
+  ifdef X64
+    LDFLAGS += -T $(shell pwd)/core/processor/x64/kernel.ld
+  endif
 endif
 ifdef MIPS_COMMON
 LDFLAGS += -mxgot -T $(shell pwd)/link-mips.ld

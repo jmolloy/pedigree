@@ -97,6 +97,12 @@ public:
     return *this;
   }
 
+  void clear()
+  {
+    m_Length = 0;
+    m_pData[0] = '\0';
+  }
+
   StaticString &operator = (const char *str)
   {
     m_Length = strlen(str);

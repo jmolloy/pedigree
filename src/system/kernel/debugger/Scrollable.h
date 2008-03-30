@@ -13,27 +13,38 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include <processor/IoPortManager.h>
-#include "InterruptManager.h"
-#include "SyscallManager.h"
-#include "../x86_common/PhysicalMemoryManager.h"
+#ifndef SCROLLABLE_H
+#define SCROLLABLE_H
 
-void initialiseProcessor1(const BootstrapStruct_t &Info)
+#include <processor/types.h>
+#include "DebuggerIO.h"
+
+class Scrollable
 {
-  // Initialise this processor's interrupt handling
-  X64InterruptManager::initialiseProcessor();
+  public:
+    inline Scrollable()
+      : m_x(0), m_y(0), m_width(0), m_height(0), m_line(0){};
 
-  // Initialise this processor's syscall handling
-  X64SyscallManager::initialiseProcessor();
+    void move(size_t x, size_t y);
+    void resize(size_t width, size_t height);
+    void scroll(ssize_t lines);
+    void draw(DebuggerIO *pScreen);
+    void refresh(DebuggerIO *pScreen);
 
-  // Initialise the physical memory-management
-  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
-  physicalMemoryManager.initialise(Info);
+    inline size_t height() const{return m_height;}
+    inline size_t width() const{return m_width;}
 
-  // Initialise the I/O Manager
-  IoPortManager &ioPortManager = IoPortManager::instance();
-  ioPortManager.initialise(0, 0x10000);
+    virtual const char *getName() = 0;
+    virtual const char *getLine(size_t index, DebuggerIO::Colour &colour) = 0;
+    virtual size_t getLineCount() = 0;
+    inline virtual ~Scrollable(){}
 
-  // TODO
-}
+  private:
+    size_t m_x;
+    size_t m_y;
+    size_t m_width;
+    size_t m_height;
+    ssize_t m_line;
+};
+
+#endif

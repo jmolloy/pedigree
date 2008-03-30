@@ -50,13 +50,12 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                            size_t flags);
 
   protected:
-    /** The default constructor does nothing */
-    X86VirtualAddressSpace();
     /** The destructor does nothing */
     virtual ~X86VirtualAddressSpace();
 
   private:
     /** The constructor for already present paging structures
+     *\param[in] Heap virtual address of the beginning of the heap
      *\param[in] PhysicalPageDirectory physical address of the page directory
      *\param[in] VirtualPageDirectory virtual address of the page directory
      *\param[in] VirtualPageTables virtual address of the page tables */
@@ -64,6 +63,10 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                            physical_uintptr_t PhysicalPageDirectory,
                            void *VirtualPageDirectory,
                            void *VirtualPageTables);
+
+    /** The default constructor
+     *\note NOT implemented */
+    X86VirtualAddressSpace();
     /** The copy-constructor
      *\note NOT implemented */
     X86VirtualAddressSpace(const X86VirtualAddressSpace &);

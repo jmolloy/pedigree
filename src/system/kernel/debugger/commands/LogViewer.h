@@ -16,12 +16,14 @@
 #ifndef LOGVIEWER_H
 #define LOGVIEWER_H
 
+#include <Scrollable.h>
 #include <DebuggerCommand.h>
 
 /**
  * Debugger command that allows viewing of the kernel log.
  */
-class LogViewer : public DebuggerCommand
+class LogViewer : public DebuggerCommand,
+                  public Scrollable
 {
 public:
   /**
@@ -52,12 +54,12 @@ public:
     return NormalStaticString("log");
   }
 
-private:
-  /**
-   * Causes a redraw of the screen.
-   */
-  void refresh(ssize_t topLine, DebuggerIO *pScreen);
-  
+  //
+  // Scrollable interface
+  //
+  virtual const char *getName();
+  virtual const char *getLine(size_t index, DebuggerIO::Colour &colour);
+  virtual size_t getLineCount();  
 };
 
 #endif

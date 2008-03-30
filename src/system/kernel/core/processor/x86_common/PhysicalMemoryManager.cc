@@ -165,8 +165,7 @@ X86CommonPhysicalMemoryManager::PageStack::PageStack()
   #if defined(X86)
     m_Stack[0] = reinterpret_cast<void*>(0xF0000000);
   #elif defined(X64)
-    #error TODO
-    m_Stack[0] = 0;
+    m_Stack[0] = reinterpret_cast<void*>(0xFFFFFFFF7FC00000);
     m_Stack[1] = 0;
     m_Stack[2] = 0;
   #endif

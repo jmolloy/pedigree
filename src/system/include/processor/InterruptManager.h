@@ -38,7 +38,7 @@ class InterruptManager
      *\return true, if successfully registered, false otherwise */
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler) = 0;
 
-    #ifdef DEBUGGER
+    #if defined(DEBUGGER)
       /** Register an interrupt handler (for the kernel debugger)
        *\param[in] interruptNumber the interrupt's number
        *\param[in] handler the interrupt handler

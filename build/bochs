@@ -1,4 +1,3 @@
 #!/bin/bash
 
-sudo bochs -q -f bochsrc.txt
-
+bochs -q -f bochsrc.txt

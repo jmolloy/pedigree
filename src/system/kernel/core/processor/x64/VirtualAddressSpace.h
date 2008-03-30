@@ -29,11 +29,11 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   public:
-    virtual bool map(physical_uintptr_t physicalAddress,
+    virtual bool map(physical_uintptr_t physAddress,
                      void *virtualAddress,
                      size_t flags);
     virtual bool getMaping(void *virtualAddress,
-                           physical_uintptr_t &physicalAddress,
+                           physical_uintptr_t &physAddress,
                            size_t &flags);
     virtual bool setFlags(void *virtualAddress, size_t newFlags);
     virtual bool unmap(void *virtualAddress);
@@ -41,17 +41,26 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     //
     // Needed for the PhysicalMemoryManager
     //
-    bool mapPageStructures(physical_uintptr_t physicalAddress,
+    bool mapPageStructures(physical_uintptr_t physAddress,
                            void *virtualAddress,
                            size_t flags);
 
+    uint64_t toFlags(size_t flags);
+    size_t fromFlags(uint64_t Flags);
+
   protected:
-    /** The default constructor does nothing */
-    X64VirtualAddressSpace();
     /** The destructor does nothing */
     virtual ~X64VirtualAddressSpace();
 
   private:
+    /** The constructor for already present paging structures
+     *\param[in] Heap virtual address of the beginning of the heap
+     *\param[in] PhysicalPageDirectory physical address of the page directory */
+    X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4);
+
+    /** The default constructor 
+     *\note NOT implemented */
+    X64VirtualAddressSpace();
     /** The copy-constructor
      *\note NOT implemented */
     X64VirtualAddressSpace(const X64VirtualAddressSpace &);

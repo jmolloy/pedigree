@@ -3,31 +3,17 @@
 
 MBOOT_PAGE_ALIGN   equ 1<<0
 MBOOT_MEM_INFO     equ 1<<1
-MBOOT_VIDEO_MODE   equ 1<<2
 MBOOT_HEADER_MAGIC equ 0x1BADB002
-MBOOT_HEADER_FLAGS equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO | MBOOT_VIDEO_MODE
+MBOOT_HEADER_FLAGS equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
 MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 32]
 
-[EXTERN code]
-[EXTERN bss]
-[EXTERN end]
-
+align 4
 mboot:
-  dd 0
   dd MBOOT_HEADER_MAGIC
   dd MBOOT_HEADER_FLAGS
   dd MBOOT_CHECKSUM
-  dd mboot
-  dd code
-  dd bss
-  dd end
-  dd start
-  dd 1                          ; Text mode graphics, please!
-  dd 80                         ; 80 Columns.
-  dd 25                         ; 25 Rows.
-  dd 0                          ; Bits per pixel doesn't apply to text mode.
 
 [GLOBAL start]
 [EXTERN _main]
