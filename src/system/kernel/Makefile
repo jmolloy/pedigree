@@ -123,6 +123,7 @@ SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Vga.cc \
             machine/x86_common/Pc.cc \
             machine/x86_common/Machine.cc \
+            machine/x86_common/Keyboard.cc \
             core/processor/x86_common/Processor.cc \
             core/processor/x86_common/PhysicalMemoryManager.cc
 endif

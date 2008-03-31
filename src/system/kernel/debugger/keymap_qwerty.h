@@ -4,6 +4,7 @@
 #define CAPSLOCK  0x3a
 #define LSHIFT    0x2a
 #define RSHIFT    0x36
+#define ALT       0x38
 #define CTRL      0x1d
 #define F1        0x3b
 #define F2        0x3c

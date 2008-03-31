@@ -18,26 +18,16 @@
 #include <Log.h>
 #include <DebuggerCommand.h>
 #include <utilities/utility.h>
-#include <processor/IoPort.h>
 
-#ifdef DEBUGGER_QWERTY
-#include <keymap_qwerty.h>
-#endif
-#ifdef DEBUGGER_QWERTZ
-#include <keymap_qwertz.h>
-#endif
-
-LocalIO::LocalIO(Vga *pVga) :
+LocalIO::LocalIO(Vga *pVga, Keyboard *pKeyboard) :
   m_nWidth(80),
   m_nHeight(25),
   m_UpperCliLimit(0),
   m_LowerCliLimit(0),
   m_CursorX(0),
   m_CursorY(0),
-  m_bShift(false),
-  m_bCtrl(false),
-  m_bCapslock(false),
-  m_pVga(pVga)
+  m_pVga(pVga),
+  m_pKeyboard(pKeyboard)
 {
   // Clear the framebuffer.
   for (size_t i = 0; i < MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT; i++)
@@ -47,9 +37,6 @@ LocalIO::LocalIO(Vga *pVga) :
     m_pFramebuffer[i] = blank;
   }
   m_pCommand[0] = '\0';
-
-  // Initialise the keyboard map.
-  initKeymap();
   
   // Save the current mode.
   m_pVga->rememberMode();
@@ -130,109 +117,12 @@ void LocalIO::disableCli()
 
 char LocalIO::getCharNonBlock()
 {
-#ifdef X86
-  IoPort port;
-  port.allocate(0x60, 4, "PS/2 keyboard controller");
-  unsigned char status = port.read8(4);
-  if (status & 0x01)
-      return port.read8(0);
-  else
-    return '\0';
-#endif
-#ifndef X86
-  return '\0';
-#endif
+  return m_pKeyboard->getCharNonBlock();
 }
 
 char LocalIO::getChar()
 {
-#ifdef X86
-  // Let's get a character from the keyboard.
-  IoPort port;
-  port.allocate(0x60, 4, "PS/2 keyboard controller");
-  uint8_t scancode, status;
-  do
-  {
-    // Get the keyboard's status byte.
-    status = port.read8(4);
-  }
-  while ( !(status & 0x01) ); // Spin until there's a key ready.
-
-  // Get the scancode for the pending keystroke.
-  scancode = port.read8(0);
-  
-  // We don't care about 'special' scancodes which start with 0xe0.
-  if (scancode == 0xe0)
-    return 0;
-
-  // Was this a keypress?
-  bool bKeypress = true;
-  if (scancode & 0x80)
-  {
-    bKeypress = false;
-    scancode &= 0x7f;
-  }
-   
-  bool bUseUpper = false;  // Use the upper case keymap.
-  bool bUseNums = false;   // Use the upper case keymap for numbers.
-  // Certain scancodes have special meanings.
-  switch (scancode)
-  {
-  case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
-    if (bKeypress)
-      m_bCapslock = !m_bCapslock;
-    return 0;
-  case LSHIFT:
-  case RSHIFT:
-    if (bKeypress)
-      m_bShift = true;
-    else
-      m_bShift = false;
-    return 0;
-  case CTRL:
-    if (bKeypress)
-      m_bCtrl = true;
-    else
-      m_bCtrl = false;
-    return 0;
-  }
-
-
-  if ( (m_bCapslock && !m_bShift) || (!m_bCapslock && m_bShift) )
-    bUseUpper = true;
-
-  if (m_bShift)
-    bUseNums = true;
-  
-  if (!bKeypress)
-    return 0;
-
-  if (scancode < 0x02)
-    return keymap_lower[scancode];
-  else if ( (scancode <  0x0e /* backspace */) ||
-            (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||
-            (scancode >= 0x27 /*;*/ && scancode <= 0x29 /*`*/) ||
-            (scancode == 0x2b) ||
-            (scancode >= 0x33 /*,*/ && scancode <= 0x35 /*/*/) )
-  {
-    if (bUseNums)
-      return keymap_upper[scancode];
-    else
-      return keymap_lower[scancode];
-  }
-  else if ( (scancode >= 0x10 /*Q*/ && scancode <= 0x19 /*P*/) ||
-            (scancode >= 0x1e /*A*/ && scancode <= 0x26 /*L*/) ||
-            (scancode >= 0x2c /*Z*/ && scancode <= 0x32 /*M*/) )
-  {
-    if (bUseUpper)
-      return keymap_upper[scancode];
-    else
-      return keymap_lower[scancode];
-  }
-  else if (scancode <= 0x39 /* space */)
-    return keymap_lower[scancode];
-#endif
-  return 0;
+  return m_pKeyboard->getChar();
 }
 
 void LocalIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)

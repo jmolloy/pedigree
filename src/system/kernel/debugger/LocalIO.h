@@ -18,6 +18,7 @@
 
 #include <DebuggerIO.h>
 #include <machine/Vga.h>
+#include <machine/Keyboard.h>
 
 class DebuggerCommand;
 
@@ -35,7 +36,7 @@ public:
   /**
    * Default constructor and destructor.
    */
-  LocalIO(Vga *pVga);
+  LocalIO(Vga *pVga, Keyboard *pKeyboard);
   ~LocalIO();
 
   /**
@@ -135,18 +136,16 @@ protected:
    * Current cursor position.
    */
   size_t m_CursorX, m_CursorY;
-
-  /**
-   * Keyboard state.
-   */
-  bool m_bShift;
-  bool m_bCtrl;
-  bool m_bCapslock;
   
   /**
    * Vga driver.
    */
   Vga *m_pVga;
+  
+  /**
+   * Keyboard driver.
+   */
+  Keyboard *m_pKeyboard;
 };
 
 #endif

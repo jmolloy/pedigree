@@ -22,6 +22,7 @@
 #include <machine/IrqManager.h>
 #include <machine/SchedulerTimer.h>
 #include <machine/Timer.h>
+#include <machine/Keyboard.h>
 
 /**
  * This is an abstraction on a machine, or board.
@@ -37,41 +38,46 @@ class Machine
     static Machine &instance();
  
     /**
-    * Initialises the machine.
-    */
+     * Initialises the machine.
+     */
     virtual void initialise() =0;
     inline bool isInitialised(){return m_bInitialised;}
     
     /**
-    * Returns the n'th Serial device.
-    */
+     * Returns the n'th Serial device.
+     */
     virtual Serial *getSerial(size_t n) =0;
     
     /**
-    * Returns the number of Serial device.
-    */
+     * Returns the number of Serial device.
+     */
     virtual size_t getNumSerial() =0;
     
     /**
-    * Returns the n'th VGA device.
-    */
+     * Returns the n'th VGA device.
+     */
     virtual Vga *getVga(size_t n) =0;
     
     /**
-    * Returns the number of VGA devices.
-    */
+     * Returns the number of VGA devices.
+     */
     virtual size_t getNumVga() =0;
     
     virtual IrqManager *getIrqManager() = 0;
     /**
-    * Returns the n'th SchedulerTimer device.
-    */
+     * Returns the n'th SchedulerTimer device.
+     */
     virtual SchedulerTimer *getSchedulerTimer() =0;
     
     /**
-    * Returns the n'th Timer device.
-      */
+     * Returns the n'th Timer device.
+     */
     virtual Timer *getTimer() =0;
+    
+    /**
+     * Returns the keyboard device.
+     */
+    virtual Keyboard *getKeyboard() =0;
     
   protected:
     inline Machine()

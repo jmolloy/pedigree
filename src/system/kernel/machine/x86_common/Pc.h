@@ -22,6 +22,7 @@
 #include "Pit.h"
 #include "Serial.h"
 #include "Vga.h"
+#include "Keyboard.h"
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
@@ -40,6 +41,7 @@ class Pc : public Machine
     virtual IrqManager *getIrqManager();
     virtual SchedulerTimer *getSchedulerTimer();
     virtual Timer *getTimer();
+    virtual Keyboard *getKeyboard();
 
   private:
     /**
@@ -55,6 +57,7 @@ class Pc : public Machine
 
     X86Serial m_pSerial[2];
     X86Vga m_Vga;
+    X86Keyboard m_Keyboard;
 
     static Pc m_Instance;
 };

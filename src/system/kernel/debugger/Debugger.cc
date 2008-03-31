@@ -86,7 +86,7 @@ void Debugger::breakpoint(InterruptState &state)
   /*
    * I/O implementations.
    */
-   LocalIO localIO(Machine::instance().getVga(0));
+   LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   //SerialIO serialIO(Machine::instance().getSerial(0));
   
 //   DebuggerIO *pInterfaces[] = {&localIO, &serialIO};

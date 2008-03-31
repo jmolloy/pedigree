@@ -47,6 +47,8 @@ void Pc::initialise()
     // TODO: Do something
     NOTICE("initialiseMachine(): failed 3");
   }
+  
+  m_Keyboard.initialise();
 
   m_bInitialised = true;
 }
@@ -86,8 +88,14 @@ Timer *Pc::getTimer()
   return &Rtc::instance();
 }
 
+Keyboard *Pc::getKeyboard()
+{
+  return &m_Keyboard;
+}
+
 Pc::Pc()
-  : m_Vga(0x3C0, 0xB8000)
+  : m_Vga(0x3C0, 0xB8000),
+    m_Keyboard(0x60)
 {
 }
 Pc::~Pc()
