@@ -87,7 +87,7 @@ Timer *Pc::getTimer()
 }
 
 Pc::Pc()
-  : m_Vga()
+  : m_Vga(0x3C0, 0xB8000)
 {
 }
 Pc::~Pc()
