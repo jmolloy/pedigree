@@ -51,6 +51,7 @@ void Backtrace::performBacktrace(InterruptState &state)
 #endif
           )
   {
+    WARNING("Dwarf backtracing not available.");
     performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
   }
   else

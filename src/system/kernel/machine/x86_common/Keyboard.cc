@@ -135,11 +135,90 @@ char X86Keyboard::getChar()
   
 char X86Keyboard::getCharNonBlock()
 {
-  unsigned char status = m_Port.read8(4);
-  if (status & 0x01)
-      return m_Port.read8(0);
-  else
+  uint8_t scancode, status;
+  // Get the keyboard's status byte.
+  status = m_Port.read8(4);
+  if (!(status & 0x01))
     return 0;
+
+  // Get the scancode for the pending keystroke.
+  scancode = m_Port.read8(0);
+  
+  // We don't care about 'special' scancodes which start with 0xe0.
+  if (scancode == 0xe0)
+    return 0;
+
+  // Was this a keypress?
+  bool bKeypress = true;
+  if (scancode & 0x80)
+  {
+    bKeypress = false;
+    scancode &= 0x7f;
+  }
+   
+  bool bUseUpper = false;  // Use the upper case keymap.
+  bool bUseNums = false;   // Use the upper case keymap for numbers.
+  // Certain scancodes have special meanings.
+  switch (scancode)
+  {
+  case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
+    if (bKeypress)
+      m_bCapsLock = !m_bCapsLock;
+    return 0;
+  case LSHIFT:
+  case RSHIFT:
+    if (bKeypress)
+      m_bShift = true;
+    else
+      m_bShift = false;
+    return 0;
+  case CTRL:
+    if (bKeypress)
+      m_bCtrl = true;
+    else
+      m_bCtrl = false;
+    return 0;
+  case ALT:
+    if (bKeypress)
+      m_bAlt = true;
+    else
+      m_bAlt = false;
+    return 0;
+  }
+
+  if ( (m_bCapsLock && !m_bShift) || (!m_bCapsLock && m_bShift) )
+    bUseUpper = true;
+
+  if (m_bShift)
+    bUseNums = true;
+  
+  if (!bKeypress)
+    return 0;
+
+  if (scancode < 0x02)
+    return keymap_lower[scancode];
+  else if ( (scancode <  0x0e /* backspace */) ||
+            (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||
+            (scancode >= 0x27 /*;*/ && scancode <= 0x29 /*`*/) ||
+            (scancode == 0x2b) ||
+            (scancode >= 0x33 /*,*/ && scancode <= 0x35 /*/*/) )
+  {
+    if (bUseNums)
+      return keymap_upper[scancode];
+    else
+      return keymap_lower[scancode];
+  }
+  else if ( (scancode >= 0x10 /*Q*/ && scancode <= 0x19 /*P*/) ||
+            (scancode >= 0x1e /*A*/ && scancode <= 0x26 /*L*/) ||
+            (scancode >= 0x2c /*Z*/ && scancode <= 0x32 /*M*/) )
+  {
+    if (bUseUpper)
+      return keymap_upper[scancode];
+    else
+      return keymap_lower[scancode];
+  }
+  else if (scancode <= 0x39 /* space */)
+    return keymap_lower[scancode];
 }
   
 bool X86Keyboard::shift()

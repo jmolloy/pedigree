@@ -22,6 +22,7 @@
 #include <Log.h>
 #include <demangle.h>
 #include <Backtrace.h>
+#include <machine/Machine.h>
 
 // TEMP!
 extern Elf32 elf;
@@ -89,6 +90,9 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
     if (c == 's')
     {
       m_nExec = m_nInterface;
+      // HACK on real boxen the screen mode change takes quite a while. If we're single stepping
+      // don't bother changing mode back.
+      Machine::instance().getVga(0)->rememberMode();
       Processor::setSingleStep(true, state);
       return false;
     }

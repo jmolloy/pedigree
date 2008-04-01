@@ -88,10 +88,11 @@ void Debugger::breakpoint(InterruptState &state)
    */
   LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   SerialIO serialIO(Machine::instance().getSerial(0));
+  SerialIO serialIO2(Machine::instance().getSerial(1));
   
- DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
- int nInterfaces = 2;
-//   DebuggerIO *pInterfaces[] = {&serialIO};
+ DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
+ int nInterfaces = 3;
+//   DebuggerIO *pInterfaces[] = {&localIO};
 //   int nInterfaces=1;
   // IO interface.
   DebuggerIO *pIo = 0;

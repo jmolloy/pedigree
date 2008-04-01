@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Serial.h"
+#include <Log.h>
 
 X86Serial::X86Serial()
   : m_Port()
@@ -36,10 +37,15 @@ void X86Serial::setBase(uintptr_t nBaseAddr)
   m_Port.write8(0xC7, serial::iififo);// Enable FIFO, clear them, with 14-byte threshold
   m_Port.write8(0x0B, serial::mctrl); // IRQs enabled, RTS/DSR set
   m_Port.write8(0x0C, serial::inten); // enable all interrupts.
+  
+  NOTICE("Modem status: " << Hex << m_Port.read8(serial::mstat));
+  NOTICE("Line status: " << Hex << m_Port.read8(serial::lstat));
 }
 
 char X86Serial::read()
 {
+  if (!isConnected())
+    return 0;
   while ( !(m_Port.read8(serial::lstat) & 0x1) ) ;
   
   return m_Port.read8(serial::rxtx);
@@ -47,6 +53,8 @@ char X86Serial::read()
 
 char X86Serial::readNonBlock()
 {
+  if (!isConnected())
+    return 0;
   if ( m_Port.read8(serial::lstat) & 0x1)
     return m_Port.read8(serial::rxtx);
   else
@@ -55,7 +63,20 @@ char X86Serial::readNonBlock()
 
 void X86Serial::write(char c)
 {
+  if (!isConnected())
+    return;
   while ( !(m_Port.read8(serial::lstat) & 0x20) ) ;
   
   m_Port.write8(static_cast<unsigned char> (c), serial::rxtx);
+}
+
+bool X86Serial::isConnected()
+{
+  uint8_t nStatus = m_Port.read8(serial::mstat);
+  // Bits 0x30 = Clear to send & Data set ready.
+  // Mstat seems to be 0xFF when the device isn't present.
+  if ((nStatus & 0x30) && nStatus != 0xFF)
+    return true;
+  else
+    return false;
 }

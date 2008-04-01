@@ -88,6 +88,8 @@ private:
    * The serial device's registers.
    */
   volatile serial *m_pRegs;
+  
+  bool isConnected();
 };
 
 #endif

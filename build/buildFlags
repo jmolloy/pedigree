@@ -17,7 +17,7 @@
 #
 # Build targets. Change this to change which architecture you build for. Change requires a `make clean'.
 #
-[james]    MIPS_MALTA
+[james]    MIPS_MALTA_BONITO64
 [bluecode] X86
 
 #

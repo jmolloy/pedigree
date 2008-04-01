@@ -15,6 +15,8 @@
  */
 #include <machine/malta/Serial.h>
 #include <machine/types.h>
+#include <Log.h>
+#include <machine/Machine.h>
 
 MaltaSerial::MaltaSerial() :
   m_pBuffer(0),
@@ -40,14 +42,29 @@ void MaltaSerial::write(char c)
 
 char MaltaSerial::read()
 {
+  if (!isConnected())
+    return 0;
   while (!(m_pRegs->lstat & 0x1)) ;
   return static_cast<char> (m_pRegs->rxtx);
 }
 
 char MaltaSerial::readNonBlock()
 {
+  if (!isConnected())
+    return 0;
   if ( m_pRegs->lstat & 0x1)
     return m_pRegs->rxtx;
   else
     return '\0';
+}
+
+bool MaltaSerial::isConnected()
+{
+  uint8_t nStatus = m_pRegs->mstat;
+  // Bits 0x30 = Clear to send & Data set ready.
+  // Mstat seems to be 0xFF when the device isn't present.
+  if ((nStatus & 0x30) && nStatus != 0xFF)
+    return true;
+  else
+    return false;
 }

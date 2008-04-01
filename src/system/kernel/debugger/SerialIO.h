@@ -120,6 +120,8 @@ protected:
    */
   size_t m_nCursorX;
   size_t m_nCursorY;
+  size_t m_nOldCursorX;
+  size_t m_nOldCursorY;
   
   DebuggerIO::Colour m_ForeColour;
   DebuggerIO::Colour m_BackColour;

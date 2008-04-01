@@ -47,6 +47,7 @@ class X86Serial : public Serial
     virtual char readNonBlock();
     virtual void write(char c);
   private:
+    bool isConnected();
     IoPort m_Port;
 };
 

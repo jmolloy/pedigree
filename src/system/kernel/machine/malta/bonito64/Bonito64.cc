@@ -59,6 +59,10 @@ Timer *Bonito64::getTimer()
   // TODO return m_Timer;
   return 0;
 }
+Keyboard *Bonito64::getKeyboard()
+{
+  return &m_Keyboard;
+}
 
 Bonito64::Bonito64()
   : m_Vga()

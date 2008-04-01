@@ -35,6 +35,9 @@ SerialIO::SerialIO(Serial *pSerial) :
 {
   // Save cursor and attributes.
   m_pSerial->write("\0337");
+  readCursor();
+  m_nOldCursorX = m_nCursorX;
+  m_nOldCursorY = m_nCursorY;
   
   // Push screen contents.
   m_pSerial->write("\033[?1049h");
@@ -62,6 +65,18 @@ SerialIO::~SerialIO()
   
   // Load cursor and attributes.
   m_pSerial->write("\0338");
+  
+  // Set the cursor
+  TinyStaticString str;
+  str += "\033[";
+  str += m_nOldCursorX;
+  str += ";";
+  str += m_nOldCursorY;
+  str += "H";
+  m_pSerial->write(str);
+  
+  // Disable scrolling.
+  m_pSerial->write("\033[0;0r");
 }
 
 void SerialIO::setCliUpperLimit(size_t nlines)

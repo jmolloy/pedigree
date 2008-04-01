@@ -90,7 +90,6 @@ src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
 src/system/kernel/Makefile
 src/system/kernel/boot-mips.cc
-src/system/kernel/boot-standalone.s
 src/system/kernel/core
 src/system/kernel/core/lib
 src/system/kernel/core/lib/cppsupport.cc
