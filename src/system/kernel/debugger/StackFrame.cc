@@ -35,13 +35,15 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
   buf += static_cast<const char*>(m_Symbol.name);
   buf += '(';
   
+#ifndef MIPS_COMMON
   if (bIsMember)
   {
     buf += "this=0x";
     buf.append(getParameter(0), 16);
     buf += ", ";
   }
-  
+#endif
+
   for (size_t i = 0; i < m_Symbol.nParams; i++)
   {
     if (i != 0)
@@ -55,12 +57,19 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
 
 uintptr_t StackFrame::getParameter(size_t n)
 {
+#ifndef MIPS_COMMON
   uintptr_t *pPtr = reinterpret_cast<uintptr_t *>(m_nBasePointer+(n+2)*sizeof(uintptr_t));
   return *pPtr;
+#else
+  return 0;
+#endif
 }
   
 void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
 {
+#ifdef MIPS_COMMON
+  dest += type;
+#else
   // Is the type a char * or const char *?
   if (type == "char*" || type == "const char*")
   {
@@ -92,6 +101,7 @@ void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticSt
     dest += ")0x";
     dest.append(n, 16);
   }
+#endif
 }
 
 bool StackFrame::isClassMember()

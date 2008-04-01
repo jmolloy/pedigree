@@ -56,7 +56,7 @@ typedef MIPS32uint32_t MIPS32size_t;
 #define KERNEL_PROCESSOR_NO_PORT_IO 1
 
 /** Define the size of one physical page */
-#error Define PAGE_SIZE
+#define PAGE_SIZE 4096
 
 /** @} */
 

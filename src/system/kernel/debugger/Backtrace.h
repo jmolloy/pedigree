@@ -35,7 +35,7 @@ public:
    * Performs a backtrace from the given base pointer address, or if none was specified,
    * the current EBP location.
    */
-  void performBacktrace(uintptr_t base=0, uintptr_t instruction=0);
+  void performBacktrace(InterruptState &state);
   
   /**
    * Returns the number of stack frames retrieved.
@@ -55,6 +55,16 @@ public:
   void prettyPrint(HugeStaticString &buf, size_t nFrames=0);
   
 private:
+  /**
+   * Performs a DWARF backtrace.
+   */
+  void performDwarfBacktrace(InterruptState &state);
+  
+  /**
+   * Performs a "normal" backtrace, based on following a linked list of frame pointers.
+   */
+  void performBpBacktrace(uintptr_t base, uintptr_t instruction);
+  
   /**
    * The return addresses.
    */

@@ -60,9 +60,47 @@ void MySyscallHandler::syscall(SyscallState &state)
   NOTICE("mySyscallHandler::syscall(" << state.getSyscallNumber() << ")");
 }
 
+/// NOTE JamesM is doing some testing here.
+class Foo
+{
+public:
+    Foo(){}
+    ~Foo(){}
+void mytestfunc(bool a, char b)
+{
+  //InterruptState state;
+  //Debugger::instance().breakpoint();
+  #ifdef X86_COMMON
+    Processor::breakpoint();
+  #else
+    int c = 3/0;
+#endif
+}
+};
+
+extern "C" void woot()
+{
+  Foo foo;
+  foo.mytestfunc(false, 'g');
+#ifdef X86_COMMON
+  Processor::breakpoint();
+#endif
+}
+
+extern "C" void bar()
+{
+  woot();
+#ifdef X86_COMMON
+  Processor::breakpoint();
+#endif
+}
+
+//char array[(sizeof(unsigned long long) == 8) ? 0 : 1];
+
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
+
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
@@ -106,6 +144,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
+  bar();
 #endif
 
   #ifdef X86
@@ -116,9 +155,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   s->write('p');
   s->write('o');
   s->write('o');
-#ifdef MIPS_COMMON
-  InterruptState st;
-  Debugger::instance().breakpoint(st);
+//   int a = 3/0;
+#if defined(MIPS_COMMON) && defined(MIPS_MALTA_BONITO64)
+//   InterruptState st;
+//   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
 

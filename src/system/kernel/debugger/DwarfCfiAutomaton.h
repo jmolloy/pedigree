@@ -78,7 +78,9 @@ class DwarfCfiAutomaton
      * \param nCodeLocation Location of the CFA instruction stream used to initialise the machine.
      * \param nCodeLen The length (in bytes) of code to execute.
      */
-    void initialise (DwarfState startingState, uintptr_t nCodeLocation, size_t nCodeLen);
+    void initialise (DwarfState startingState, uintptr_t nCodeLocation, size_t nCodeLen,
+                     ssize_t nCodeAlignmentFactor, ssize_t nDataAlignmentFactor,
+                     uintptr_t nStartingPc);
     
     /**
      * Executes code at the location given until the instruction pointer passes nCodeLocation+nCodeLen
@@ -105,6 +107,21 @@ class DwarfCfiAutomaton
      * The current state of this machine.
      */
     DwarfState m_CurrentState;
+    
+    /**
+     * The code alignment factor.
+     */
+    ssize_t m_nCodeAlignmentFactor;
+    
+    /**
+     * The data alignment factor.
+     */
+    ssize_t m_nDataAlignmentFactor;
+    
+    /**
+     * The initial PC.
+     */
+    uintptr_t m_nStartingPc;
 };
 
 #endif

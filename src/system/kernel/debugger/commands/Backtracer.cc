@@ -44,17 +44,15 @@ void Backtracer::autocomplete(const HugeStaticString &input, HugeStaticString &o
 
 bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
 {
-#if 0
   Backtrace bt;
-  bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());
+  bt.performBacktrace(state);
 
   bt.prettyPrint(output);
-#else
-  DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
-  ProcessorState initial(state);
-  ProcessorState next;
-  du.unwind(initial, next);
-#endif
+  
+//   DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
+//   ProcessorState initial(state);
+//   ProcessorState next;
+//   du.unwind(initial, next);
   return true;
 }
 

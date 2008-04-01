@@ -73,15 +73,16 @@ ifdef X64
   CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
 endif
 ifdef MIPS32
-  CXXFLAGS +=  -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
-  CFLAGS +=  -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
-  ASFLAGS +=  -gdwarf-2 -g1 -mips32 -mabi=32 -gdwarf-2 -g1
+  CXXFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
+  CFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
+  ASFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -gdwarf-2 -g1
+  LDFLAGS += -G0
 endif
 ifdef MIPS64
   CXXFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
   CFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
 endif
-LDFLAGS=-nostdlib -nostdinc
+LDFLAGS +=-nostdlib -nostdinc
 ifdef X86
   ASFLAGS=-felf
 endif
@@ -191,6 +192,7 @@ endif
 ifdef MIPS_COMMON
 	@$(BUILD)/compilers/$(COMPILER)/bin/objcopy built/kernel -O binary built/kernel.bin
 	@$(BUILD)/compilers/$(COMPILER)/bin/objcopy built/kernel -O srec built/kernel.srec
+	@$(BUILD)/compilers/$(COMPILER)/bin/objcopy built/bootloader -O srec built/bootloader.srec
 endif
 	@perl -e "print \"\e[32m*** Build finished.\e[0m\n\";" # echo doesn't have support for colours.
 

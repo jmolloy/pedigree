@@ -111,12 +111,6 @@ void MIPS32InterruptManager::initialiseProcessor()
   // Invalidate the instruction cache - force a reload of the exception handlers.
   for (int i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
     Processor::invalidateICache(i);
-  
-  
-  Serial *s = Machine::instance().getSerial(0);
-  s->write("Poo.\n");
-  // Let's try an exception.
-  uintptr_t woops = 3/0;
 }
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)

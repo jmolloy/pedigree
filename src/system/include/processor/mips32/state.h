@@ -169,29 +169,31 @@ class MIPS32InterruptState
 } PACKED;
 
 typedef MIPS32InterruptState MIPS32SyscallState;
+typedef MIPS32InterruptState MIPS32ProcessorState;
 
 /** @} */
 
 //
 // Part of the Implementation
 //
+
 uintptr_t MIPS32InterruptState::getStackPointer() const
 {
-  return 0;
+  return m_Sp;
 }
 void MIPS32InterruptState::setStackPointer(uintptr_t stackPointer)
 {
 }
 uintptr_t MIPS32InterruptState::getInstructionPointer() const
 {
-  return 0;
+  return m_Epc;
 }
 void MIPS32InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
 uintptr_t MIPS32InterruptState::getBasePointer() const
 {
-  return 0;
+  return 0xdeadbaba;
 }
 void MIPS32InterruptState::setBasePointer(uintptr_t basePointer)
 {

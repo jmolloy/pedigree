@@ -13,60 +13,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "Malta.h"
+#include "Keyboard.h"
 
-Malta Malta::m_Instance;
-
-Machine &Machine::instance()
+MaltaKeyboard::MaltaKeyboard()
 {
-  return Malta::instance();
 }
 
-void Malta::initialise()
+MaltaKeyboard::~MaltaKeyboard()
 {
-  m_Serial[0].setBase(0x180003f8);
-  m_Serial[1].setBase(0x180002f8);
-  m_bInitialised = true;
-}
-Serial *Malta::getSerial(size_t n)
-{
-  return &m_Serial[n];
-}
-size_t Malta::getNumSerial()
-{
-  return 2;
-}
-Vga *Malta::getVga(size_t n)
-{
-  return &m_Vga;
-}
-size_t Malta::getNumVga()
-{
-  return 1;
-}
-IrqManager *Malta::getIrqManager()
-{
-  // TODO
-  return 0;
-}
-SchedulerTimer *Malta::getSchedulerTimer()
-{
-  // TODO
-  return 0;
-}
-Timer *Malta::getTimer()
-{
-  // TODO
-  return 0;
-}
-Keyboard *Malta::getKeyboard()
-{
-  return &m_Keyboard;
 }
 
-Malta::Malta()
-{
-}
-Malta::~Malta()
-{
-}

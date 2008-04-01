@@ -62,11 +62,19 @@ extern "C" void __cxa_guard_release()
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {
+#ifdef X86_COMMON
   return malloc(size);
+#else
+  return 0;
+#endif
 }
 void *operator new[] (size_t size) throw()
 {
+#ifdef X86_COMMON
   return malloc(size);
+#else
+  return 0;
+#endif
 }
 void *operator new (size_t size, void* memory) throw()
 {
@@ -78,11 +86,15 @@ void *operator new[] (size_t size, void* memory) throw()
 }
 void operator delete (void * p)
 {
+#ifdef X86_COMMON
   free(p);
+#endif
 }
 void operator delete[] (void * p)
 {
+#ifdef X86_COMMON
   free(p);
+#endif
 }
 void operator delete (void *p, void *q)
 {

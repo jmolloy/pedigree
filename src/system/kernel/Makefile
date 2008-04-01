@@ -95,10 +95,12 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/memory.c \
             core/lib/string.c \
             core/lib/vsprintf.c \
-            core/lib/dlmalloc.c \
-            core/lib/dlmallocAbort.cc \
-            core/lib/dlmallocSbrk.cc \
             core/main.cc
+ifdef X86
+SRCFILES += core/lib/dlmalloc.c \
+            core/lib/dlmallocAbort.cc \
+            core/lib/dlmallocSbrk.cc
+endif
 
 ifdef DEBUGGER
 SRCFILES += core/lib/demangle.cc
@@ -109,8 +111,10 @@ SRCFILES += linker/Elf32.cc
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/IoPort.c \
-            core/processor/IoPortManager.cc \
-            core/processor/VirtualAddressSpace.cc
+            core/processor/IoPortManager.cc
+ifdef X86
+SRCFILES += core/processor/VirtualAddressSpace.cc
+endif
 
 ###################################################################
 # x86_commmon source file list.
@@ -167,7 +171,8 @@ endif
 
 ifdef MIPS_MALTA
 SRCFILES += machine/malta/Serial.cc \
-            machine/malta/Vga.cc
+            machine/malta/Vga.cc \
+            machine/malta/Keyboard.cc
 
   ifndef MIPS_MALTA_BONITO64
   SRCFILES += machine/malta/Malta.cc

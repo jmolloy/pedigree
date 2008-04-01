@@ -18,6 +18,7 @@
 
 #include <processor/types.h>
 #include <utilities/utility.h>
+#include <Log.h>
 
 #define DWARF_MAX_REGISTERS 48
 
@@ -31,6 +32,40 @@
 #define DWARF_REG_ESI 6
 #define DWARF_REG_EDI 7
 #endif
+#ifdef MIPS_COMMON
+#define DWARF_REG_ZERO 0
+#define DWARF_REG_AT  1
+#define DWARF_REG_V0  2
+#define DWARF_REG_V1  3
+#define DWARF_REG_A0  4
+#define DWARF_REG_A1  5
+#define DWARF_REG_A2  6
+#define DWARF_REG_A3  7
+#define DWARF_REG_T0  8
+#define DWARF_REG_T1  9
+#define DWARF_REG_T2  10
+#define DWARF_REG_T3  11
+#define DWARF_REG_T4  12
+#define DWARF_REG_T5  13
+#define DWARF_REG_T6  14
+#define DWARF_REG_T7  15
+#define DWARF_REG_S0  16
+#define DWARF_REG_S1  17
+#define DWARF_REG_S2  18
+#define DWARF_REG_S3  19
+#define DWARF_REG_S4  20
+#define DWARF_REG_S5  21
+#define DWARF_REG_S6  22
+#define DWARF_REG_S7  23
+#define DWARF_REG_T8  24
+#define DWARF_REG_T9  25
+#define DWARF_REG_K0  26
+#define DWARF_REG_K1  27
+#define DWARF_REG_GP  28
+#define DWARF_REG_SP  29
+#define DWARF_REG_FP  30
+#define DWARF_REG_RA  31
+#endif
 // Watch out! Register numbering is seemingly random - x86 and x86_64 ones are here:
 // http://wikis.sun.com/display/SunStudio/Dwarf+Register+Numbering
 /**
@@ -40,15 +75,101 @@
 class DwarfState
 {
   public:
+    enum RegisterState
+    {
+      SameValue=0,
+      Undefined,
+      Offset,
+      ValOffset,
+      Register,
+      Expression,
+      ValExpression,
+      Architectural
+    };
+    
     DwarfState() :
-      m_Cfa(0),
+      m_CfaState(ValOffset),
       m_CfaRegister(0),
       m_CfaOffset(0),
       m_ReturnAddress(0)
     {
+      memset (static_cast<void *> (m_RegisterStates), 0,
+              sizeof(RegisterState) * DWARF_MAX_REGISTERS);
       memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }
     ~DwarfState() {}
+    
+    processor_register_t getCfa(const DwarfState &initialState)
+    {
+      switch (m_CfaState)
+      {
+        case ValOffset:
+        {
+//           WARNING("m_CfaRegister: " << Dec << m_CfaRegister << ", off: " << m_CfaOffset);
+          return initialState.m_R[m_CfaRegister] + static_cast<ssize_t> (m_CfaOffset);
+        }
+        case ValExpression:
+        {
+          WARNING ("DwarfState::getCfa: Expression type not implemented.");
+        }
+        default:
+          ERROR ("CfaState invalid!");
+          return 0;
+      }
+    }
+    
+    processor_register_t getRegister(unsigned int nRegister, const DwarfState &initialState)
+    {
+//       NOTICE("GetRegister: r" << Dec << nRegister);
+      switch (m_RegisterStates[nRegister])
+      {
+        case Undefined:
+          WARNING ("Request for undefined register: r" << Dec << nRegister);
+          return 0;
+        case SameValue:
+          return initialState.m_R[nRegister];
+        case Offset:
+        {
+          // "The previous value of this register is saved at the address CFA+N where CFA is the
+          //  current CFA value and N is a signed offset."
+          return * reinterpret_cast<processor_register_t*>
+                     (getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]));
+        }
+        case ValOffset:
+        {
+          // "The previous value of this register is the value CFA+N where CFA is the current
+          //  CFA value and N is a signed offset."
+          return static_cast<processor_register_t>
+                   (getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]));
+        }
+        case Register:
+        {
+          // "The previous value of this register is stored in another register numbered R."
+          return initialState.m_R[nRegister];
+        }
+        case Expression:
+        {
+          WARNING ("Expression not implemented, r" << Dec << nRegister);
+          return 0;
+        }
+        case ValExpression:
+        {
+          WARNING ("ValExpression not implemented, r" << Dec << nRegister);
+          return 0;
+        }
+        case Architectural:
+          WARNING ("Request for 'architectural' register: r" << Dec << nRegister);
+          return 0;
+        default:
+          ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
+          return 0;
+      }
+    }
+    
+    /**
+     * Register states - these define how to interpret the m_R members.
+     */
+    RegisterState m_RegisterStates[DWARF_MAX_REGISTERS];
     
     /**
      * Registers (columns in the table).
@@ -58,12 +179,16 @@ class DwarfState
     /**
      * Current CFA (current frame address) - first and most important column in the table.
      */
-    processor_register_t m_Cfa;
+    RegisterState m_CfaState;
     /**
      * Current CFA register, and offset.
      */
     uint32_t m_CfaRegister;
     processor_register_t m_CfaOffset;
+    /**
+     * Current CFA expression, if applicable.
+     */
+    uint8_t *m_CfaExpression;
     
     /**
      * The column which contains the function return address.

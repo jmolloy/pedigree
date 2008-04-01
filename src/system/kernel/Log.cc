@@ -53,7 +53,7 @@ Log &Log::operator<< (int n)
 Log &Log::operator<< (Modifier type)
 {
   // Flush the buffer.
-  if (type == Flush)
+  if (type == Flush && m_nEntries < LOG_ENTRIES)
     m_pLog[m_nEntries++] = m_Buffer;
 
   return *this;

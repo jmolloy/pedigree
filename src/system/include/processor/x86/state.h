@@ -162,6 +162,18 @@ class X86ProcessorState
     inline X86ProcessorState &operator = (const X86InterruptState &x);
     /** Destructor does nothing */
     inline ~X86ProcessorState();
+    
+    /** Get the instruction-pointer.
+     *\return the instruction-pointer */
+    inline uintptr_t getInstructionPointer() const;
+    /** Get the frame base pointer.
+     *\return the base pointer */
+    inline uintptr_t getBasePointer() const;
+    /** Get the stack pointer.
+     *\return the stack-pointer */
+    inline uintptr_t getStackPointer() const;
+    /** Set the base pointer. */
+    inline void setBasePointer(uintptr_t ebp);
 
     /** The EDI general purpose register */
     uint32_t edi;
@@ -293,6 +305,22 @@ X86ProcessorState &X86ProcessorState::operator = (const X86InterruptState &x)
 }
 X86ProcessorState::~X86ProcessorState()
 {
+}
+uintptr_t X86ProcessorState::getInstructionPointer() const
+{
+  return eip;
+}
+uintptr_t X86ProcessorState::getBasePointer() const
+{
+  return ebp;
+}
+uintptr_t X86ProcessorState::getStackPointer() const
+{
+  return esp;
+}
+void X86ProcessorState::setBasePointer(uintptr_t basePointer)
+{
+  ebp = basePointer;
 }
 
 #endif

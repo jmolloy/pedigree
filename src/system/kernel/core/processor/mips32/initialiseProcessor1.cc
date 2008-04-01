@@ -16,7 +16,7 @@
 #include <processor/initialise.h>
 #include "InterruptManager.h"
 
-void initialiseProcessor1()
+void initialiseProcessor1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
 //   MIPS32InterruptManager::initialiseProcessor();

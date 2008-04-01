@@ -251,7 +251,7 @@ void TraceCommand::drawRegisters(size_t nCols, size_t nLines, DebuggerIO *pScree
 void TraceCommand::drawStacktrace(size_t nLines, DebuggerIO *pScreen, InterruptState &state)
 {
   Backtrace bt;
-  bt.performBacktrace(state.getBasePointer(), state.getInstructionPointer());
+  bt.performBacktrace(state);
 
   HugeStaticString output;
   bt.prettyPrint(output, nLines-1);
