@@ -88,7 +88,6 @@ src/system/kernel
 src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
-src/system/kernel/Log.h
 src/system/kernel/Makefile
 src/system/kernel/boot-mips.cc
 src/system/kernel/boot-standalone.s
@@ -141,6 +140,7 @@ src/system/kernel/core/processor/x64/asm
 src/system/kernel/core/processor/x64/asm/InterruptManager.s
 src/system/kernel/core/processor/x64/asm/Processor.s
 src/system/kernel/core/processor/x64/asm/SyscallManager.s
+src/system/kernel/core/processor/x64/asm/gdt.s
 src/system/kernel/core/processor/x64/gdt.cc
 src/system/kernel/core/processor/x64/gdt.h
 src/system/kernel/core/processor/x64/initialiseProcessor1.cc

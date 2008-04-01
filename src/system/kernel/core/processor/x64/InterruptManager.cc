@@ -78,6 +78,7 @@ void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t int
 {
   m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
   m_IDT[interruptNumber].selector = 0x08;
+  m_IDT[interruptNumber].ist = 0;
   m_IDT[interruptNumber].flags = 0x8E;
   m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
   m_IDT[interruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;

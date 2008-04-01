@@ -146,6 +146,10 @@ protected:
    * Keyboard driver.
    */
   Keyboard *m_pKeyboard;
+
+  private:
+    LocalIO(const LocalIO &);
+    LocalIO &operator = (const LocalIO &);
 };
 
 #endif

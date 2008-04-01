@@ -63,6 +63,10 @@ class X64GdtManager
      *\param[in] base the base address */
     void setTssDescriptor(size_t index, uint64_t base);
 
+    /** Load the new segment registers
+     *\note This function is implemented in asm/gdt.s */
+    static void loadSegmentRegisters();
+
     /** Long-mode segment descriptor structure */
     struct segment_descriptor
     {

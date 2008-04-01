@@ -137,6 +137,9 @@ class X86Vga : public Vga
   virtual void moveCursor (size_t nX, size_t nY);
   
 private:
+  X86Vga(const X86Vga &);
+  X86Vga &operator = (const X86Vga &);
+
   /**
    * The IoPort to access control registers.
    */

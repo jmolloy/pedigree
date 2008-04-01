@@ -96,7 +96,9 @@ SRCFILES += core/lib/cppsupport.cc \
             core/lib/string.c \
             core/lib/vsprintf.c \
             core/main.cc
-ifdef X86
+
+# TODO
+ifdef X86_COMMON
 SRCFILES += core/lib/dlmalloc.c \
             core/lib/dlmallocAbort.cc \
             core/lib/dlmallocSbrk.cc
@@ -112,7 +114,9 @@ SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/IoPort.c \
             core/processor/IoPortManager.cc
-ifdef X86
+
+# TODO
+ifdef X86_COMMON
 SRCFILES += core/processor/VirtualAddressSpace.cc
 endif
 
@@ -136,7 +140,7 @@ endif
 # x86 source file list.
 ifdef X86
 SRCFILES += core/processor/x86/initialiseProcessor1.cc \
-            core/processor/x64/initialiseProcessor2.cc \
+            core/processor/x86/initialiseProcessor2.cc \
             core/processor/x86/InterruptManager.cc \
             core/processor/x86/asm/InterruptManager.s \
             core/processor/x86/asm/Processor.s \
@@ -153,6 +157,7 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/initialiseProcessor2.cc \
             core/processor/x64/InterruptManager.cc \
             core/processor/x64/SyscallManager.cc \
+            core/processor/x64/asm/gdt.s \
             core/processor/x64/asm/SyscallManager.s \
             core/processor/x64/asm/InterruptManager.s \
             core/processor/x64/asm/Processor.s \

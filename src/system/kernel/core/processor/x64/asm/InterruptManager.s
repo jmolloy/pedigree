@@ -65,7 +65,6 @@ interrupt_handler:
   pop r10
   pop r9
   pop r8
-  pop r8
   pop rbp
   pop rsi
   pop rdi
@@ -89,7 +88,7 @@ interrupt_handler:
     ; Set the interrupt number
     mov qword [rsp], %1
 
-    ;jmp interrupt_handler
+    jmp interrupt_handler
 %endmacro
 
 ;##############################################################################
@@ -97,10 +96,8 @@ interrupt_handler:
 ;##############################################################################
 %macro INTERRUPT_HANDLER_ERRORCODE 1
   interrupt%1:
-    ; "Push" and interrupt number
+    ; "Push" the interrupt number
     sub rsp, 0x08
-
-    ; Set the interrupt number
     mov qword [rsp], %1
 
     jmp interrupt_handler

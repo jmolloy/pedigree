@@ -28,7 +28,7 @@ class X64InterruptState
   friend class X64ProcessorState;
   public:
     //
-    // General Interface (both InterruptState and SyscallState)
+    // General Interface (InterruptState, SyscallState & ProcessorState)
     //
     /** Get the stack-pointer before the interrupt occured
      *\return the stack-pointer before the interrupt */
@@ -49,6 +49,10 @@ class X64InterruptState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+
+    //
+    // General Interface (InterruptState & SyscallState)
+    //
     /** Get the number of registers
      *\return the number of registers */
     size_t getRegisterCount() const;
@@ -148,7 +152,7 @@ class X64SyscallState
   friend class X64ProcessorState;
   public:
     //
-    // General Interface (both InterruptState and SyscallState)
+    // General Interface (InterruptState, SyscallState & ProcessorState)
     //
     /** Get the stack-pointer before the syscall occured
      *\return the stack-pointer before the syscall */
@@ -169,6 +173,10 @@ class X64SyscallState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+
+    //
+    // General Interface (InterruptState & SyscallState)
+    //
     /** Get the number of registers
      *\return the number of registers */
     size_t getRegisterCount() const;
@@ -254,6 +262,29 @@ class X64ProcessorState
     inline X64ProcessorState &operator = (const X64SyscallState &);
     /** Destructor does nothing */
     inline ~X64ProcessorState();
+
+    //
+    // General Interface (InterruptState, SyscallState & ProcessorState)
+    //
+    /** Get the stack-pointer before the interrupt occured
+     *\return the stack-pointer before the interrupt */
+    inline uintptr_t getStackPointer() const;
+    /** Set the userspace stack-pointer
+     *\param[in] stackPointer the new stack-pointer */
+    inline void setStackPointer(uintptr_t stackPointer);
+    /** Get the instruction-pointer of the next instruction that is executed
+     * after the interrupt is processed
+     *\return the instruction-pointer */
+    inline uintptr_t getInstructionPointer() const;
+    /** Set the instruction-pointer
+     *\param[in] instructionPointer the new instruction-pointer */
+    inline void setInstructionPointer(uintptr_t instructionPointer);
+    /** Get the base-pointer
+     *\return the base-pointer */
+    inline uintptr_t getBasePointer() const;
+    /** Set the base-pointer
+     *\param[in] basePointer the new base-pointer */
+    inline void setBasePointer(uintptr_t basePointer);
 
     /** The R15 general purpose register */
     uint64_t r15;
@@ -476,6 +507,31 @@ X64ProcessorState &X64ProcessorState::operator = (const X64SyscallState &x)
 }
 X64ProcessorState::~X64ProcessorState()
 {
+}
+
+uintptr_t X64ProcessorState::getStackPointer() const
+{
+  return rsp;
+}
+void X64ProcessorState::setStackPointer(uintptr_t stackPointer)
+{
+  rsp = stackPointer;
+}
+uintptr_t X64ProcessorState::getInstructionPointer() const
+{
+  return rip;
+}
+void X64ProcessorState::setInstructionPointer(uintptr_t instructionPointer)
+{
+  rip = instructionPointer;
+}
+uintptr_t X64ProcessorState::getBasePointer() const
+{
+  return rbp;
+}
+void X64ProcessorState::setBasePointer(uintptr_t basePointer)
+{
+  rbp = basePointer;
 }
 
 #endif

@@ -26,7 +26,7 @@ X64GdtManager &X64GdtManager::instance()
 void X64GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries
-  m_DescriptorCount = 3 + 2 * processorCount;
+  m_DescriptorCount = 5 + 2 * processorCount;
 
   // Allocate the GDT
   m_Gdt = new segment_descriptor[m_DescriptorCount];
@@ -34,11 +34,13 @@ void X64GdtManager::initialise(size_t processorCount)
   // Fill the GDT
   setSegmentDescriptor(0, 0, 0, 0, 0);
   setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
-  setSegmentDescriptor(2, 0, 0, 0xF8, 0x2); // User code
+  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
+  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code
+  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data
   for (size_t i = 0;i < processorCount;i++)
   {
     X64TaskStateSegment *Tss = new X64TaskStateSegment;
-    setTssDescriptor(2 * i + 3, reinterpret_cast<uint64_t>(Tss));
+    setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
     // TODO: The processor object should know about its task-state-segment
   }
 }
@@ -51,6 +53,8 @@ void X64GdtManager::initialiseProcessor()
   } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
 
   asm volatile("lgdt %0" : "=m"(gdtr));
+
+  loadSegmentRegisters();
 }
 
 X64GdtManager::X64GdtManager()

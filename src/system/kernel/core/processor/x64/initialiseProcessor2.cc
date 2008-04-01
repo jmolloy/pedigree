@@ -19,8 +19,8 @@
 void initialiseProcessor2()
 {
   // Initialise the GDT
-  // TODO: X64GdtManager::instance().initialise(1)
-  // TODO: X64GdtManager::initialiseProcessor()
+  X64GdtManager::instance().initialise(1);
+  X64GdtManager::initialiseProcessor();
 
   // TODO: Process SMP/ACPI tables
 

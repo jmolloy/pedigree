@@ -35,32 +35,8 @@
 
 Elf32 elf("kernel");
 
-/// NOTE bluecode is doing some testing here
-#include <processor/InterruptManager.h>
-#include <processor/SyscallManager.h>
-#include <processor/Processor.h>
-
-class MyInterruptHandler : public InterruptHandler
-{
-  public:
-    virtual void interrupt(size_t interruptNumber, InterruptState &state);
-};
-class MySyscallHandler : public SyscallHandler
-{
-  public:
-    virtual void syscall(SyscallState &state);
-};
-
-void MyInterruptHandler::interrupt(size_t interruptNumber, InterruptState &state)
-{
-  NOTICE("myInterruptHandler::interrupt(" << interruptNumber << ")");
-}
-void MySyscallHandler::syscall(SyscallState &state)
-{
-  NOTICE("mySyscallHandler::syscall(" << state.getSyscallNumber() << ")");
-}
-
 /// NOTE JamesM is doing some testing here.
+#include <processor/Processor.h>
 class Foo
 {
 public:
@@ -95,8 +71,6 @@ extern "C" void bar()
 #endif
 }
 
-//char array[(sizeof(unsigned long long) == 8) ? 0 : 1];
-
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
@@ -109,18 +83,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Initialise the processor-specific interface
   initialiseProcessor1(*bsInf);
-
-#ifdef X86
-  /// NOTE there we go
-  MyInterruptHandler myHandler;
-  MySyscallHandler mySysHandler;
-  InterruptManager &IntManager = InterruptManager::instance();
-  SyscallManager &SysManager = SyscallManager::instance();
-  if (IntManager.registerInterruptHandler(254, &myHandler) == false)
-    NOTICE("Failed to register interrupt handler");
-  if (SysManager.registerSyscallHandler(SyscallManager::kernelCore, &mySysHandler) == false)
-    NOTICE("Failed to register syscall handler");
-#endif
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
@@ -135,12 +97,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   initialiseProcessor2();
 
   elf.load(&bootstrapInfo);
-
-  /// NOTE: bluecode again
-  #ifdef X86
-    asm volatile("int $0xFE"); // some interrupt
-    asm volatile("int $0xFF" :: "a" ((SyscallManager::kernelCore << 16) | 0xFFFF)); // the syscall interrupt on x86
-  #endif
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
@@ -161,11 +117,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
-
-  #if defined(X64)
-    // TODO FIXME HACK
-    asm volatile("hlt");
-  #endif
 
   for (;;)
   {

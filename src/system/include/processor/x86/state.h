@@ -28,7 +28,7 @@ class X86InterruptState
   friend class X86ProcessorState;
   public:
     //
-    // General Interface (both InterruptState and SyscallState)
+    // General Interface (InterruptState, SyscallState & ProcessorState)
     //
     /** Get the stack-pointer before the interrupt occured
      *\return the stack-pointer before the interrupt */
@@ -49,6 +49,10 @@ class X86InterruptState
     /** Set the base-pointer
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
+
+    //
+    // General Interface (InterruptState & SyscallState)
+    //
     /** Get the number of registers
      *\return the number of registers */
     size_t getRegisterCount() const;
@@ -162,18 +166,29 @@ class X86ProcessorState
     inline X86ProcessorState &operator = (const X86InterruptState &x);
     /** Destructor does nothing */
     inline ~X86ProcessorState();
-    
-    /** Get the instruction-pointer.
+
+    //
+    // General Interface (InterruptState, SyscallState & ProcessorState)
+    //
+    /** Get the stack-pointer before the interrupt occured
+     *\return the stack-pointer before the interrupt */
+    inline uintptr_t getStackPointer() const;
+    /** Set the userspace stack-pointer
+     *\param[in] stackPointer the new stack-pointer */
+    inline void setStackPointer(uintptr_t stackPointer);
+    /** Get the instruction-pointer of the next instruction that is executed
+     * after the interrupt is processed
      *\return the instruction-pointer */
     inline uintptr_t getInstructionPointer() const;
-    /** Get the frame base pointer.
-     *\return the base pointer */
+    /** Set the instruction-pointer
+     *\param[in] instructionPointer the new instruction-pointer */
+    inline void setInstructionPointer(uintptr_t instructionPointer);
+    /** Get the base-pointer
+     *\return the base-pointer */
     inline uintptr_t getBasePointer() const;
-    /** Get the stack pointer.
-     *\return the stack-pointer */
-    inline uintptr_t getStackPointer() const;
-    /** Set the base pointer. */
-    inline void setBasePointer(uintptr_t ebp);
+    /** Set the base-pointer
+     *\param[in] basePointer the new base-pointer */
+    inline void setBasePointer(uintptr_t basePointer);
 
     /** The EDI general purpose register */
     uint32_t edi;
@@ -306,17 +321,26 @@ X86ProcessorState &X86ProcessorState::operator = (const X86InterruptState &x)
 X86ProcessorState::~X86ProcessorState()
 {
 }
+
+uintptr_t X86ProcessorState::getStackPointer() const
+{
+  return esp;
+}
+void X86ProcessorState::setStackPointer(uintptr_t stackPointer)
+{
+  esp = stackPointer;
+}
 uintptr_t X86ProcessorState::getInstructionPointer() const
 {
   return eip;
 }
+void X86ProcessorState::setInstructionPointer(uintptr_t instructionPointer)
+{
+  eip = instructionPointer;
+}
 uintptr_t X86ProcessorState::getBasePointer() const
 {
   return ebp;
-}
-uintptr_t X86ProcessorState::getStackPointer() const
-{
-  return esp;
 }
 void X86ProcessorState::setBasePointer(uintptr_t basePointer)
 {
