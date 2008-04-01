@@ -37,7 +37,6 @@
       <filetype>Makefile</filetype>
       <filetype>*.mk</filetype>
       <filetype>*.pl</filetype>
-      <filetype>*</filetype>
     </filetypes>
     <blacklist>
       <path>build/compilers</path>
@@ -146,7 +145,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel</activedir>
+      <activedir>src/system/kernel/machine/malta</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
