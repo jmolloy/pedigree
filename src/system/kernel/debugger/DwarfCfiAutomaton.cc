@@ -27,14 +27,11 @@ DwarfCfiAutomaton::DwarfCfiAutomaton() :
 DwarfCfiAutomaton::~DwarfCfiAutomaton()
 {
 }
-extern bool enable;
+
 void DwarfCfiAutomaton::initialise (DwarfState startingState, uintptr_t nCodeLocation,
                                     size_t nCodeLen, ssize_t nCodeAlignmentFactor,
                                     ssize_t nDataAlignmentFactor, uintptr_t nStartingPc)
 {
-
-  NOTICE("Initialise.");
-  if (!enable)return;
   m_nCodeAlignmentFactor = nCodeAlignmentFactor;
   m_nDataAlignmentFactor = nDataAlignmentFactor;
   m_nStartingPc = nStartingPc;
@@ -48,7 +45,6 @@ void DwarfCfiAutomaton::initialise (DwarfState startingState, uintptr_t nCodeLoc
   
   // Save the state.
   m_InitialState = m_CurrentState;
-  NOTICE("End initialise.");
 }
 
 DwarfState *DwarfCfiAutomaton::execute (uintptr_t nCodeLocation, size_t nCodeLen, uintptr_t nBreakAt)
