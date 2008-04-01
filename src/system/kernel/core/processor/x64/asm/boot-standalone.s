@@ -86,6 +86,20 @@ start:
   mov rax, pagetable1 - KERNEL_BASE
   mov rbx, stack - KERNEL_BASE + 0x03
   mov [rax + 0xFF8], rbx
+  add rbx, 4096
+  mov [rax + 0xFF0], rbx
+  add rbx, 4096
+  mov [rax + 0xFE8], rbx
+  add rbx, 4096
+  mov [rax + 0xFE0], rbx
+  add rbx, 4096
+  mov [rax + 0xFD8], rbx
+  add rbx, 4096
+  mov [rax + 0xFD0], rbx
+  add rbx, 4096
+  mov [rax + 0xFC8], rbx
+  add rbx, 4096
+  mov [rax + 0xFC0], rbx
 
   ; Map the lower 1GB of physical memory to 0xFFFF800000000000
   mov rax, pagedirectory3 - KERNEL_BASE
@@ -162,4 +176,7 @@ pagetable1:
 
 ; The kernel stack
 stack:
-  resb 4096
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192

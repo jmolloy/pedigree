@@ -18,6 +18,7 @@
 #define KERNEL_LOG_H
 
 #include <processor/types.h>
+#include <utilities/StaticString.h>
 
 /** @addtogroup kernel
  * @{ */
@@ -89,9 +90,12 @@ public:
    */
   typedef struct LogEntry
   {
+    inline LogEntry()
+     : timestamp(), type(), str(){}
+
     unsigned int timestamp; ///< The time (since boot) that this log entry was added, in ticks.
     SeverityLevel type;     ///< The severity level of this entry.
-    char str[LOG_LENGTH];   ///< The actual entry text. \todo Change this to using dynamic memory. Might be problematic, because we might want to use the log (and display it) before memory-managment is initialised.
+    StaticString<LOG_LENGTH> str;   ///< The actual entry text. \todo Change this to using dynamic memory. Might be problematic, because we might want to use the log (and display it) before memory-managment is initialised.
   } LogEntry_t;
 
   /**
@@ -109,7 +113,18 @@ public:
   /**
    * Adds an entry to the log.
    */
-  Log &operator<< (int n);
+  template<class T>
+  Log &operator << (T n)
+  {
+    size_t radix = 10;
+    if (m_NumberType == Hex)
+    {
+      radix = 16;
+      m_Buffer.str.append("0x");
+    }
+    m_Buffer.str.append(n, radix);
+    return *this;
+  }
   /**
    * Starts an entry in the log (or stops, if level == SeverityLevel::End).
    * \todo This function should gain and release spinlocks, depending on level.
@@ -144,16 +159,6 @@ private:
    */
   Log ();
   ~Log ();
-  
-  /**
-   * Prints a hex number to the log.
-   */
-  void writeHex(unsigned int n);
-  
-  /**
-   * Prints a decimal number to the log.
-   */
-  void writeDec(unsigned int n);
   
   /**
    * Buffer of log messages.

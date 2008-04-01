@@ -34,19 +34,7 @@ Log::~Log ()
 
 Log &Log::operator<< (const char *str)
 {
-  // Ensure that we don't overrun the buffer.
-  int nExtraCharsAllowed = LOG_LENGTH - strlen(m_Buffer.str);
-  
-  strncat(m_Buffer.str, str, nExtraCharsAllowed);
-  return *this;
-}
-
-Log &Log::operator<< (int n)
-{
-  if (m_NumberType == Dec)
-    writeDec( static_cast<unsigned int>(n));
-  else
-    writeHex( static_cast<unsigned int>(n));
+  m_Buffer.str.append(str);
   return *this;
 }
 
@@ -74,7 +62,7 @@ Log &Log::operator<< (SeverityLevel level)
   case Warning:
   case Notice:
     // Zero the buffer.
-    m_Buffer.str[0] = '\0';
+    m_Buffer.str.clear();
     m_Buffer.type = level;
 
     Machine &machine = Machine::instance();
@@ -88,78 +76,4 @@ Log &Log::operator<< (SeverityLevel level)
     break;
   }
   return *this;
-}
-
-void Log::writeHex(unsigned int n)
-{
-  unsigned int tmp;
-
-  strcat(m_Buffer.str, "0x");
-
-  char tmpStr[2];
-  tmpStr[1] = '\0';
-  
-  bool noZeroes = true;
-
-  int i;
-  for (i = sizeof(unsigned int)*8-4; i > 0; i -= 4)
-  {
-    tmp = (n >> i) & 0xF;
-    if (tmp == 0 && noZeroes)
-      continue;
-    
-    if (tmp >= 0xA)
-    {
-      noZeroes = false;
-      tmpStr[0] = tmp-0xA+'a';
-      strcat(m_Buffer.str, tmpStr);
-    }
-    else
-    {
-      noZeroes = false;
-      tmpStr[0] = tmp+'0';
-      strcat(m_Buffer.str, tmpStr);
-    }
-  }
-  
-  tmp = n & 0xF;
-  if (tmp >= 0xA)
-  {
-    tmpStr[0] = tmp-0xA+'a';
-    strcat(m_Buffer.str, tmpStr);
-  }
-  else
-  {
-    tmpStr[0] = tmp+'0';
-    strcat(m_Buffer.str, tmpStr);
-  }
-}
-
-void Log::writeDec(unsigned int n)
-{
-  if (n == 0)
-  {
-    strcat(m_Buffer.str, "0");
-    return;
-  }
-  
-  unsigned int acc = n;
-  char c[32];
-  int i = 0;
-  while (acc > 0)
-  {
-    c[i] = '0' + acc%10;
-    acc /= 10;
-    i++;
-  }
-  c[i] = 0;
-
-  char c2[32];
-  c2[i--] = 0;
-  int j = 0;
-  while(i >= 0)
-  {
-    c2[i--] = c[j++];
-  }
-  strcat(m_Buffer.str, c2);
 }

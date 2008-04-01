@@ -101,7 +101,7 @@ public:
    * \param[out] startAddr The starting address of the found symbol (optional).
    * \return The symbol name, as a C string.
    */
-  const char *lookupSymbol(unsigned int addr, uintptr_t *startAddr=0);
+  const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
 
   /**
    * Returns the address of the symbol with offset 'off' in the dynamic relocation table.

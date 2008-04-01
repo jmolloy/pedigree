@@ -46,6 +46,11 @@ class MemoryRegion
       return m_Size;
     }
 
+    inline operator bool() const
+    {
+      return (m_Size != 0);
+    }
+
   protected:
     /** The default constructor does nothing  */
     inline MemoryRegion()

@@ -111,6 +111,10 @@ class IoBase
       }
     #endif
 
+    /** Check whether this class is usable
+     *\return true, if the class holds a ressource that is correctly allocated and usable */
+    virtual operator bool() const = 0;
+
   protected:
     /** The default constructor does nothing */
     inline IoBase(){}

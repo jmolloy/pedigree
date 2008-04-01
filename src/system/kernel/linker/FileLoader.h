@@ -39,7 +39,7 @@ public:
    * \param[in] nAddress The address to look up.
    * \param[out] pSymbolStart The start location of the retrieved symbol (Optional).
    */
-  virtual const char *lookupSymbol(unsigned int nAddress, uintptr_t *pSymbolStart) =0;
+  virtual const char *lookupSymbol(uintptr_t nAddress, uintptr_t *pSymbolStart) =0;
   
   virtual uint32_t debugFrameTable() = 0;
   virtual uint32_t debugFrameTableLength() = 0;

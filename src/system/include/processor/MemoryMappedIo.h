@@ -50,6 +50,7 @@ class MemoryMappedIo : public IoBase,
     #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
       inline virtual void write64(uint64_t value, size_t offset = 0);
     #endif
+    inline virtual operator bool() const;
 
     //
     // MemoryRegion Interface
@@ -109,5 +110,9 @@ void MemoryMappedIo::write32(uint32_t value, size_t offset)
     *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset)) = value;
   }
 #endif
+MemoryMappedIo::operator bool() const
+{
+  return static_cast<MemoryRegion&>(*this);
+}
 
 #endif

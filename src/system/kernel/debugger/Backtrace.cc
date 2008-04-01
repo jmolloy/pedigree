@@ -37,27 +37,24 @@ Backtrace::~Backtrace()
 
 void Backtrace::performBacktrace(InterruptState &state)
 {
+#if !defined(X64)
   // Firstly, can we perform a DWARF backtrace?
   if (elf.debugFrameTable() > 0 /*&& elf.debugFrameTableLength() > 0*/)
   {
     performDwarfBacktrace(state);
   }
-  // Can we perform a "normal", base-pointer-linked-list backtrace?
-  else if (
-#ifdef X86_COMMON
-           true
-#else
-           false
 #endif
-          )
-  {
-    WARNING("Dwarf backtracing not available.");
-    performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
-  }
-  else
-    ERROR ("Backtrace: No backtracing method available!");
+
+  // Can we perform a "normal", base-pointer-linked-list backtrace?
+#if defined(X86_COMMON)
+  WARNING("Dwarf backtracing not available.");
+  performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
+#else
+  ERROR ("Backtrace: No backtracing method available!");
+#endif
 }
 
+#if !defined(X64)
 void Backtrace::performDwarfBacktrace(InterruptState &state)
 {
   ProcessorState initial(state);
@@ -86,6 +83,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   
   m_nStackFrames = i;
 }
+#endif
 
 void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
 {

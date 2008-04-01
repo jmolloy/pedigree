@@ -52,6 +52,7 @@
       #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
         inline virtual void write64(uint64_t value, size_t offset = 0);
       #endif
+      inline virtual operator bool() const;
 
       /** Get the base I/O port */
       inline io_port_t base() const;
@@ -104,6 +105,10 @@
   const String &IoPort::name() const
   {
     return m_Name;
+  }
+  IoPort::operator bool() const
+  {
+    return (m_Size != 0);
   }
 #endif
 
