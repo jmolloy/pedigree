@@ -80,6 +80,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/DumpCommand.cc \
             debugger/commands/StepCommand.cc \
             debugger/commands/TraceCommand.cc \
+            debugger/commands/MemoryInspector.cc \
             debugger/LocalIO.cc \
             debugger/SerialIO.cc \
             debugger/Debugger.cc \
@@ -110,7 +111,10 @@ ifdef DEBUGGER
 SRCFILES += core/lib/demangle.cc
 endif
 
-SRCFILES += linker/Elf32.cc linker/Elf64.cc
+SRCFILES += linker/Elf32.cc
+ifdef BITS_64
+SRCFILES += linker/Elf64.cc
+endif
 
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc

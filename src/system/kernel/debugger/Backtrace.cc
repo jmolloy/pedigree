@@ -74,7 +74,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
     if (next.getBasePointer() == 0) break;
 #else
     uintptr_t symStart;
-    elf.lookupSymbol(next.getInstructionPointer(), &symStart);
+    g_pKernel->lookupSymbol(next.getInstructionPointer(), &symStart);
     if (symStart == reinterpret_cast<uintptr_t> (&start)) break;
 #endif
     m_pReturnAddresses[i] = next.getInstructionPointer();

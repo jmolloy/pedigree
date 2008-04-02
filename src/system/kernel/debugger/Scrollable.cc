@@ -36,6 +36,16 @@ void Scrollable::scroll(ssize_t lines)
   if (m_line < 0)
     m_line = 0;
 }
+void Scrollable::scrollTo(size_t absolute)
+{
+  m_line = absolute;
+
+  if (m_line > (static_cast<ssize_t>(getLineCount()) - static_cast<ssize_t>(m_height)))
+    m_line = static_cast<ssize_t>(getLineCount()) - static_cast<ssize_t>(m_height);
+
+  if (m_line < 0)
+    m_line = 0;
+}
 
 void Scrollable::refresh(DebuggerIO *pScreen)
 {

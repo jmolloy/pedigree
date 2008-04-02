@@ -28,6 +28,7 @@
 #include <utilities/utility.h>
 #include <StepCommand.h>
 #include <TraceCommand.h>
+#include <MemoryInspector.h>
 #include <machine/Machine.h>
 
 Debugger Debugger::m_Instance;
@@ -106,8 +107,9 @@ void Debugger::breakpoint(InterruptState &state)
   BreakpointCommand breakpoint;
   DumpCommand dump;
   StepCommand step;
+  MemoryInspector memory;
   
-  size_t nCommands = 8;
+  size_t nCommands = 9;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -115,6 +117,7 @@ void Debugger::breakpoint(InterruptState &state)
                                   &breakpoint,
                                   &dump,
                                   &step,
+                                  &memory,
                                   &g_Trace};
   
 

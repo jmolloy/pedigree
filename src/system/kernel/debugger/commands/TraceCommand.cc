@@ -73,32 +73,35 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   Disassembly disassembly(state);
   disassembly.move(0, 1);
   disassembly.resize(nCols, nLines);
+  disassembly.setScrollKeys('o', 'p');
   
   Registers registers(state);
   registers.move(nCols+1, 1);
   registers.resize(24, nLines);
+  registers.setScrollKeys('j', 'k');
   
   Stacktrace stacktrace(state);
   stacktrace.move(0, nLines+2);
   stacktrace.resize(pScreen->getWidth(), pScreen->getHeight()-nLines-3);
+  stacktrace.setScrollKeys('n', 'm');
+  
+  pScreen->disableRefreshes();
+  drawBackground(nCols, nLines, pScreen);
+  registers.refresh(pScreen);
+  disassembly.refresh(pScreen);
+  stacktrace.refresh(pScreen);
+  pScreen->enableRefreshes();
   
   // Here we enter our main runloop.
   bool bContinue = true;
   while (bContinue)
   {
-    pScreen->disableRefreshes();
-    drawBackground(nCols, nLines, pScreen);
-    registers.refresh(pScreen);
-    disassembly.refresh(pScreen);
-    stacktrace.refresh(pScreen);
-    pScreen->enableRefreshes();
-    
     char c;
     while( (c=pScreen->getChar()) == 0)
       ;
     if (c == 'q')
       break;
-    if (c == 's')
+    else if (c == 's')
     {
       m_nExec = m_nInterface;
       // HACK on real boxen the screen mode change takes quite a while. If we're single stepping
@@ -107,7 +110,36 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
       Processor::setSingleStep(true, state);
       return false;
     }
-    
+    else if (c == 'o')
+    {
+      disassembly.scroll(-1);
+      disassembly.refresh(pScreen);
+    }
+    else if (c == 'p')
+    {
+      disassembly.scroll(1);
+      disassembly.refresh(pScreen);
+    }
+    else if (c == 'j')
+    {
+      registers.scroll(-1);
+      registers.refresh(pScreen);
+    }
+    else if (c == 'k')
+    {
+      registers.scroll(1);
+      registers.refresh(pScreen);
+    }
+    else if (c == 'n')
+    {
+      stacktrace.scroll(-1);
+      stacktrace.refresh(pScreen);
+    }
+    else if (c == 'm')
+    {
+      stacktrace.scroll(1);
+      stacktrace.refresh(pScreen);
+    }
   }
   
   // Let's enter CLI screen mode again.

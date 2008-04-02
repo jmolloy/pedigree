@@ -29,6 +29,7 @@ class Scrollable
     void move(size_t x, size_t y);
     void resize(size_t width, size_t height);
     void scroll(ssize_t lines);
+    void scrollTo(size_t absolute);
     void refresh(DebuggerIO *pScreen);
     void setScrollKeys(char up, char down);
 

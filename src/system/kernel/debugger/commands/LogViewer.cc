@@ -50,7 +50,7 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
                               DebuggerIO::Green);
   
   // Write the correct text in the upper status line.
-  pScreen->drawString("Pedigree debugger - Log Viewer",
+  pScreen->drawString("Pedigree debugger - Log viewer",
                       0,
                       0,
                       DebuggerIO::White,
@@ -100,6 +100,10 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
       bStop = true;
   }
 
+  // HACK:: Serial connections will fill the screen with the last background colour used.
+  //        Here we write a space with black background so the CLI screen doesn't get filled
+  //        by some random colour!
+  pScreen->drawString(" ", 1, 0, DebuggerIO::White, DebuggerIO::Black);
   pScreen->enableCli();
   return true;
 }

@@ -250,6 +250,11 @@ public:
     append(static_cast<unsigned long long>(nInt));
   }
 
+  void append(unsigned char nInt, size_t nRadix=10, size_t nLen=0, char c='0')
+  {
+    appendInteger<sizeof(char)>(nInt, nRadix, nLen, c);
+  }
+  
   void append(unsigned short nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
     appendInteger<sizeof(short)>(nInt, nRadix, nLen, c);
