@@ -110,13 +110,13 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
   m_nStackFrames = i;
 }
 
-void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames)
+void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromFrame)
 {
   if (nFrames == 0 || nFrames > m_nStackFrames)
     nFrames = m_nStackFrames;
   // What symbol are we in?
   // TODO grep the memory map for the right ELF to look at.
-  for (size_t i = 0; i < nFrames; i++)
+  for (size_t i = nFromFrame; i < nFrames+nFromFrame; i++)
   {
     uintptr_t symStart = 0;
 
@@ -125,9 +125,6 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames)
 
     StackFrame sf(m_pBasePointers[i], sym);
     sf.prettyPrint(buf);
-//     buf.append( m_pReturnAddresses[i], 16);
-//     buf += sym;
-//     buf += "\n";
   }
 }
 

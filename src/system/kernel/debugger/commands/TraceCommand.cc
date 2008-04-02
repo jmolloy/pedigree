@@ -21,7 +21,6 @@
 #include <FileLoader.h>
 #include <Log.h>
 #include <demangle.h>
-#include <Backtrace.h>
 #include <machine/Machine.h>
 
 // TEMP!
@@ -71,15 +70,27 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   // Give the disassembler 3/4 of the available lines.
   int nLines = ((pScreen->getHeight()-2) * 3) / 4;
   
+  Disassembly disassembly(state);
+  disassembly.move(0, 1);
+  disassembly.resize(nCols, nLines);
+  
+  Registers registers(state);
+  registers.move(nCols+1, 1);
+  registers.resize(24, nLines);
+  
+  Stacktrace stacktrace(state);
+  stacktrace.move(0, nLines+2);
+  stacktrace.resize(pScreen->getWidth(), pScreen->getHeight()-nLines-3);
+  
   // Here we enter our main runloop.
   bool bContinue = true;
   while (bContinue)
   {
     pScreen->disableRefreshes();
     drawBackground(nCols, nLines, pScreen);
-    drawRegisters(nCols, nLines, pScreen, state);
-    drawDisassembly(nCols, nLines, pScreen, state);
-    drawStacktrace((pScreen->getHeight()-2)-nLines, pScreen, state);
+    registers.refresh(pScreen);
+    disassembly.refresh(pScreen);
+    stacktrace.refresh(pScreen);
     pScreen->enableRefreshes();
     
     char c;
@@ -129,21 +140,15 @@ void TraceCommand::drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScre
   pScreen->drawVerticalLine('|', nCols, 1, nLines, DebuggerIO::DarkGrey, DebuggerIO::Black);
 }
 
-void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state)
+TraceCommand::Disassembly::Disassembly(InterruptState &state)
+  : m_nInstructions(0), m_nFirstInstruction(0), m_nIp(0)
 {
-
-  // We want the current instruction to be in the middle of the screen (ish).
-  // The important thing is that to get the correct disassembly we must start disassembling
-  // on a correct instruction boundary (and we can't go backwards), so we start at the start
-  // of the current symbol.
+  // Try and count how many lines of instructions we have.
+  m_nIp = state.getInstructionPointer();
+  uintptr_t nSymStart = 0;
+  g_pKernel->lookupSymbol(m_nIp, &nSymStart);
   
-  // Current symbol location.
-  // TODO grep the memory map for the right ELF to look at.
-  uintptr_t ip = state.getInstructionPointer();
-  
-  uintptr_t symStart = 0;
-  const char *pSym = g_pKernel->lookupSymbol(ip, &symStart);
-
+  // TODO use disassembler abstraction.
   ud_t ud_obj;
   ud_init(&ud_obj);
 #ifdef X86
@@ -153,113 +158,206 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
   ud_set_mode(&ud_obj, 64);
 #endif
   ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, symStart);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(symStart), 4096);
+  ud_set_pc(&ud_obj, nSymStart);
+  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(nSymStart), 4096);
   
-  // Let's just assume we'll never have more than 1024 lines total.
-  uintptr_t instrBuffer[512];
-  unsigned int nInstr = 0;
-  unsigned int nLinesToCache = nLines/2;
-
-  uintptr_t location = 0;
-
-  while(location < ip)
+  m_nFirstInstruction = nSymStart;
+  uintptr_t nLocation = 0;
+  while (true)
   {
     ud_disassemble(&ud_obj);
-    location = ud_insn_off(&ud_obj);
+    nLocation = ud_insn_off(&ud_obj);
     uintptr_t nSym;
-    g_pKernel->lookupSymbol(location, &nSym);
-
-    if (nSym == location) // New symbol. Add two lines.
-    {
-      addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
-      addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
-    }
-
-    addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
+    g_pKernel->lookupSymbol(nLocation, &nSym);
+    if (nSym == nLocation && nSym != nSymStart) // New symbol. Quit.
+      break;
+    m_nInstructions++;
   }
-  
-  // OK, awesome, we have an instruction buffer. Let's disassemble it.
-  ud_set_pc(&ud_obj, instrBuffer[0]);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(instrBuffer[0]), 4096);
-  size_t nLine;
-  for (nLine = 0; nLine < nLines; nLine++)
-  {
-    ud_disassemble(&ud_obj);
-    location = ud_insn_off(&ud_obj);
-    uintptr_t nSym;
-    const char *pSym = g_pKernel->lookupSymbol(location, &nSym);
-    NormalStaticString str;
-    if (nSym <= location && nSym != symStart) // New symbol. Add two lines.
-    {
-      ud_set_pc(&ud_obj, nSym);
-      ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(nSym), 4096);
-      ud_disassemble(&ud_obj);
-      location = ud_insn_off(&ud_obj);
-      symStart = nSym;
-      
-      LargeStaticString sym;
-      demangle_full(LargeStaticString(pSym), sym);
-      
-      nLine++; // Blank line.
-      if (nLine >= static_cast<unsigned int>(nLines)) break;
-      str = "<";
-      str += sym.left(nCols-2);
-      str += ">";
-      pScreen->drawString(str, nLine+1, 0, DebuggerIO::Yellow, DebuggerIO::Black);
-      nLine++;
-      if (nLine >= static_cast<unsigned int>(nLines)) break;
-    }
-    
-    // If this is our actual instruction location, put a blue background over it.
-    DebuggerIO::Colour bg = DebuggerIO::Black;
-    if (location == ip)
-    {
-      pScreen->drawHorizontalLine(' ', nLine+1, 0, nCols-1, DebuggerIO::White, DebuggerIO::Blue);
-      bg = DebuggerIO::Blue;
-    }
-    
-    str = "";
-    str.append(location, 16, sizeof(uintptr_t) * 2, ' ');
-    pScreen ->drawString(str, nLine+1, 0, DebuggerIO::DarkGrey, bg);
-    str = ud_insn_asm(&ud_obj);
-    pScreen->drawString(str, nLine+1, sizeof(uintptr_t) * 2 + 1, DebuggerIO::White, bg);
-  }
-  
 }
 
-void TraceCommand::drawRegisters(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state)
+const char *TraceCommand::Disassembly::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  size_t nLine = 0;
-  if (state.kernelMode() == true)
+  static LargeStaticString sym;
+  if (index == 0)
   {
-    pScreen->drawString("Kernel mode", nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
+    // We treat index == 0 slightly differently - it's the symbol name.
+    colour = DebuggerIO::Yellow;
+    uintptr_t nSym;
+    const char *pSym = g_pKernel->lookupSymbol(m_nFirstInstruction, &nSym);
+    sym.clear();
+    demangle_full(LargeStaticString(pSym), sym);
+    sym += ":";
+    return sym;
+  }
+  index --; // Get rid of index 0.
+
+  size_t nInstruction = 0;
+   // TODO use disassembler abstraction.
+  ud_t ud_obj;
+  ud_init(&ud_obj);
+#ifdef X86
+  ud_set_mode(&ud_obj, 32);
+#endif
+#ifdef X64
+  ud_set_mode(&ud_obj, 64);
+#endif
+  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
+  ud_set_pc(&ud_obj, m_nFirstInstruction);
+  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(m_nFirstInstruction), 4096);
+  
+  uintptr_t nLocation;
+  while (nInstruction <= index)
+  {
+    ud_disassemble(&ud_obj);
+    nInstruction++;
+  }
+  nLocation = ud_insn_off(&ud_obj);
+
+  // If this is our actual instruction location, put a blue background over it.
+  if (nLocation == m_nIp)
+    bgColour = DebuggerIO::Blue;
+  
+  // We want grey text.
+  colour = DebuggerIO::DarkGrey;
+  
+  // The text being...
+  sym.clear();
+  sym.append(nLocation, 16, sizeof(uintptr_t)*2, '0');
+  sym += ' ';
+  return sym;
+}
+
+const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+  static LargeStaticString sym;
+  if (index == 0)
+  {
+    // We treat index == 0 slightly differently - it's the symbol name.
+    return 0;
+  }
+  index --; // Get rid of index 0.
+
+  size_t nInstruction = 0;
+   // TODO use disassembler abstraction.
+  ud_t ud_obj;
+  ud_init(&ud_obj);
+#ifdef X86
+  ud_set_mode(&ud_obj, 32);
+#endif
+#ifdef X64
+  ud_set_mode(&ud_obj, 64);
+#endif
+  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
+  ud_set_pc(&ud_obj, m_nFirstInstruction);
+  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(m_nFirstInstruction), 4096);
+  
+  uintptr_t nLocation;
+  while (nInstruction <= index)
+  {
+    ud_disassemble(&ud_obj);
+    nInstruction++;
+  }
+  nLocation = ud_insn_off(&ud_obj);
+  
+  // If this is our actual instruction location, put a blue background over it.
+  if (nLocation == m_nIp)
+    bgColour = DebuggerIO::Blue;
+  
+  // We want white text.
+  colour = DebuggerIO::White;
+  
+  // At offset...
+  colOffset = sizeof(uintptr_t)*2+1;
+  
+  // The text being...
+  sym.clear();
+  sym += ud_insn_asm(&ud_obj);
+  uint32_t nLen = sym.length() + colOffset;
+  while(nLen++ < width())
+    sym += ' ';
+  return sym;
+}
+
+size_t TraceCommand::Disassembly::getLineCount()
+{
+  return m_nInstructions+1;
+}
+
+
+TraceCommand::Registers::Registers(InterruptState &state)
+  : m_State(state)
+{
+}
+
+const char *TraceCommand::Registers::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+  static LargeStaticString str;
+  colour = DebuggerIO::Yellow;
+  // We treat index 0 slightly differently.
+  if (index == 0)
+  {
+    str.clear();
+    if (m_State.kernelMode())
+      str = "Kernel mode";
+    else
+      str = "User mode";
+    return str;
   }
   else
   {
-    pScreen->drawString("Kernel mode", nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
-  }
-  nLine++;
-  
-  for (size_t i = 0; i < state.getRegisterCount(); i++)
-  {
-    LargeStaticString str;
-    str = state.getRegisterName(i);
-    pScreen->drawString(str, nLine+1, nCols+1, DebuggerIO::Yellow, DebuggerIO::Black);
-    str = "0x";
-    str.append(state.getRegister(i), 16, state.getRegisterSize(i) * 2, '0');
-    pScreen->drawString(str, nLine+1, pScreen->getWidth()- 2*sizeof(uintptr_t) - 2, DebuggerIO::White, DebuggerIO::Black);
-    nLine++;
-    if (nLine == nLines) break;
+    int nRegister = index-1;
+    str.clear();
+    str = m_State.getRegisterName(nRegister);
+    return str;
   }
 }
 
-void TraceCommand::drawStacktrace(size_t nLines, DebuggerIO *pScreen, InterruptState &state)
+const char *TraceCommand::Registers::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  Backtrace bt;
-  bt.performBacktrace(state);
+  static LargeStaticString str;
+  // We treat index 0 slightly differently.
+  if (index == 0)
+  {
+    return 0;
+  }
+  else
+  {
+    int nRegister = index-1;
+    str.clear();
+    uintptr_t nValue = m_State.getRegister(nRegister);
+    str = "0x";
+    str.append(nValue, 16, sizeof(uintptr_t)*2, '0');
+    colOffset = width()- 2*sizeof(uintptr_t) - 2;
+    return str;
+  }
+}
 
-  HugeStaticString output;
-  bt.prettyPrint(output, nLines-1);
-  pScreen->drawString(output, pScreen->getHeight()-nLines, 0, DebuggerIO::White, DebuggerIO::Black);
+size_t TraceCommand::Registers::getLineCount()
+{
+  return m_State.getRegisterCount()+1;
+}
+
+TraceCommand::Stacktrace::Stacktrace(InterruptState &state)
+  : m_Bt()
+{
+  m_Bt.performBacktrace(state);
+}
+
+const char *TraceCommand::Stacktrace::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+  static HugeStaticString str;
+  str.clear();
+  m_Bt.prettyPrint(str, 1, index);
+  str = str.left(str.length()-1);
+  return str;
+}
+
+const char *TraceCommand::Stacktrace::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+  return 0;
+}
+
+size_t TraceCommand::Stacktrace::getLineCount()
+{
+  return m_Bt.numStackFrames();
 }

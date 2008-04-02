@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Scrollable.h"
+#include <Log.h>
 
 void Scrollable::move(size_t x, size_t y)
 {
@@ -35,51 +36,61 @@ void Scrollable::scroll(ssize_t lines)
   if (m_line < 0)
     m_line = 0;
 }
-void Scrollable::draw(DebuggerIO *pScreen)
-{
-  // NOTE: We assume pScreen is in raw mode (say member function disableCli already called)
 
-  // Clear the top status lines.
-  pScreen->drawHorizontalLine(' ',
-                              m_y,
-                              m_x,
-                              m_width - 1,
-                              DebuggerIO::White,
-                              DebuggerIO::Green);
-
-  // Write the correct text in the upper status line.
-  pScreen->drawString(getName(),
-                      m_y,
-                      m_x,
-                      DebuggerIO::White,
-                      DebuggerIO::Green);
-}
 void Scrollable::refresh(DebuggerIO *pScreen)
 {
   pScreen->disableRefreshes();
 
   // TODO: Add a scroll bar on the right side of the window
 
+  // Can we scroll up?
+  DebuggerIO::Colour tmpColour;
+  bool bCanScrollUp = (m_line > 0);
+  bool bCanScrollDown = ( (m_line+m_height) < getLineCount());
+  
   // For every available line.
   ssize_t line = m_line;
-  for (size_t i = 0; i < m_height - 1; i++)
+  for (size_t i = 0; i < m_height; i++)
   {
     pScreen->drawHorizontalLine(' ',
-                                m_y + i + 1,
+                                m_y + i,
                                 m_x,
-                                m_width - 1,
+                                m_x + m_width - 1,
                                 DebuggerIO::White,
                                 DebuggerIO::Black);
 
     if (line >= 0 && line < static_cast<ssize_t>(getLineCount()))
     {
       DebuggerIO::Colour colour = DebuggerIO::White;
-      const char *Line = getLine(line, colour);
-
-      pScreen->drawString(Line, m_y + i + 1, m_x, colour, DebuggerIO::Black);
+      DebuggerIO::Colour bgColour = DebuggerIO::Black;
+      size_t colOffset;
+      const char *Line = getLine1(line, colour, bgColour);
+      if (Line)
+        pScreen->drawString(Line, m_y + i, m_x, colour, bgColour);
+      
+      colour = DebuggerIO::White;
+      bgColour = DebuggerIO::Black;
+      Line = getLine2(line, colOffset, colour, bgColour);
+      if (Line)
+        pScreen->drawString(Line, m_y + i, m_x + colOffset, colour, bgColour);
     }
     line++;
   }
+  
+  // Draw scroll marks.
+  char str[4] = {'^', ' ', m_ScrollUp, '\0'};
+  if (bCanScrollUp)
+    pScreen->drawString(str, m_y, m_x + m_width - 3, DebuggerIO::White, DebuggerIO::Blue);
+  str[0] = 'v';
+  str[2] = m_ScrollDown;
+  if (bCanScrollDown)
+    pScreen->drawString(str, m_y + m_height - 1, m_x + m_width - 3, DebuggerIO::White, DebuggerIO::Blue);
 
   pScreen->enableRefreshes();
+}
+
+void Scrollable::setScrollKeys(char up, char down)
+{
+  m_ScrollUp = up;
+  m_ScrollDown = down;
 }

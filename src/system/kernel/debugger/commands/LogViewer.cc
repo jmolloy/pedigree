@@ -37,9 +37,25 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   pScreen->disableCli();
 
   // Initialise the Scrollable class
-  resize(pScreen->getWidth(), pScreen->getHeight() - 1);
-  draw(pScreen);
+  move(0, 1);
+  resize(pScreen->getWidth(), pScreen->getHeight() - 2);
+  setScrollKeys('j', 'k');
 
+  // Clear the top status lines.
+  pScreen->drawHorizontalLine(' ',
+                              0,
+                              0,
+                              pScreen->getWidth() - 1,
+                              DebuggerIO::White,
+                              DebuggerIO::Green);
+  
+  // Write the correct text in the upper status line.
+  pScreen->drawString("Pedigree debugger - Log Viewer",
+                      0,
+                      0,
+                      DebuggerIO::White,
+                      DebuggerIO::Green);
+  
   // Clear the bottom status lines.
   // TODO: If we use arrow keys and page up/down keys we actually can remove the status line
   //       because the interface is then intuitive enough imho.
@@ -77,9 +93,9 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
     else if (c == 'k')
       scroll(1);
     else if (c == ' ')
-      scroll(static_cast<ssize_t>(height()) - 1);
+      scroll(static_cast<ssize_t>(height()));
     else if (c == 0x08)
-      scroll(1 - static_cast<ssize_t>(height()));
+      scroll(-static_cast<ssize_t>(height()));
     else if (c == 'q')
       bStop = true;
   }
@@ -88,20 +104,15 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
   return true;
 }
 
-const char *LogViewer::getName()
-{
-  return "Pedigree debugger - Log Viewer";
-}
-const char *LogViewer::getLine(size_t index, DebuggerIO::Colour &colour)
+const char *LogViewer::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
   Log::LogEntry_t entry = Log::instance().getEntry(index);
 
-  static LargeStaticString Line;
+  static NormalStaticString Line;
   Line.clear();
   Line.append("[");
   Line.append(entry.timestamp, 10, 8, '0');
   Line.append("] ");
-  Line.append(entry.str);
 
   colour = DebuggerIO::White;
   switch (entry.type)
@@ -120,6 +131,19 @@ const char *LogViewer::getLine(size_t index, DebuggerIO::Colour &colour)
       break;
   }
 
+  return Line;
+}
+const char *LogViewer::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+  Log::LogEntry_t entry = Log::instance().getEntry(index);
+
+  static LargeStaticString Line;
+  Line.clear();
+  Line.append(entry.str);
+
+  colour = DebuggerIO::White;
+  colOffset = 11;
+  
   return Line;
 }
 size_t LogViewer::getLineCount()

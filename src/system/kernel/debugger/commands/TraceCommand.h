@@ -17,6 +17,8 @@
 #define TRACECOMMAND_H
 
 #include <DebuggerCommand.h>
+#include <Scrollable.h>
+#include <Backtrace.h>
 
 /**
  * Allows the tracing of an execution path, single stepping and continuing to breakpoints,
@@ -64,10 +66,45 @@ public:
   }
   
 private:
+  class Disassembly : public Scrollable
+  {
+  public:
+    Disassembly(InterruptState &state);
+    ~Disassembly() {}
+    const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    size_t getLineCount();
+  private:
+    size_t m_nInstructions;
+    uintptr_t m_nFirstInstruction;
+    uintptr_t m_nIp;
+  };
+  
+  class Registers : public Scrollable
+  {
+    public:
+      Registers(InterruptState &state);
+      ~Registers() {}
+      const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+      const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+      size_t getLineCount();
+    private:
+      InterruptState &m_State;
+  };
+  
+  class Stacktrace : public Scrollable
+  {
+    public:
+      Stacktrace(InterruptState &state);
+      ~Stacktrace() {}
+      const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+      const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+      size_t getLineCount();
+    private:
+      Backtrace m_Bt;
+  };
+  
   void drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScreen);
-  void drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state);
-  void drawRegisters(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state);
-  void drawStacktrace(size_t nLines, DebuggerIO *pScreen, InterruptState &state);
   
   /**
    * Should the debugger immediately call our execute function? and what interface should it use?

@@ -57,8 +57,8 @@ public:
   //
   // Scrollable interface
   //
-  virtual const char *getName();
-  virtual const char *getLine(size_t index, DebuggerIO::Colour &colour);
+  virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+  virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
   virtual size_t getLineCount();  
 };
 
