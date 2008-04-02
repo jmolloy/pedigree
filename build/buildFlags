@@ -16,14 +16,17 @@
 
 #
 # Build targets. Change this to change which architecture you build for. Change requires a `make clean'.
+# NB: jamesmol is JamesM's work machine.
 #
-[james]    MIPS_MALTA_BONITO64
+[james]    X64
+[jamesmol] X64
 [bluecode] X64
 
 #
 # Personalisation options.
 #
 [james]    DEBUGGER_QWERTY
+[jamesmol] DEBUGGER_QWERTY
 [bluecode] DEBUGGER_QWERTZ
 
 #

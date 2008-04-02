@@ -20,13 +20,11 @@
 #include <utilities/utility.h>
 #include <utilities/StaticString.h>
 
-#if 1
 #include <DwarfUnwinder.h>
-#include <Elf32.h>
-#endif
+#include <FileLoader.h>
 
 // TEMP!
-extern Elf32 elf;
+extern FileLoader *g_pKernel;
 
 Backtracer::Backtracer()
 {

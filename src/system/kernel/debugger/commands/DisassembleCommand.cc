@@ -17,12 +17,12 @@
 #include <DisassembleCommand.h>
 #include <DebuggerIO.h>
 #include <udis86.h>
-#include <Elf32.h>
+#include <FileLoader.h>
 #include <Log.h>
 #include <demangle.h>
 
 // TEMP!
-extern Elf32 elf;
+extern FileLoader *g_pKernel;
 
 DisassembleCommand::DisassembleCommand()
 {
@@ -86,7 +86,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     // What symbol are we in?
     // TODO grep the memory map for the right ELF to look at.
     uintptr_t symStart = 0;
-    const char *pSym = elf.lookupSymbol(location, &symStart);
+    const char *pSym = g_pKernel->lookupSymbol(location, &symStart);
 
     // Are we actually at the start location of this symbol?
     if (symStart == location)

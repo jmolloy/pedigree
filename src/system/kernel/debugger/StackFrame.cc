@@ -109,14 +109,14 @@ bool StackFrame::isClassMember()
   int nScopeIdx = m_Symbol.name.last(':');
   if (nScopeIdx == -1)
     return false;
-  
+
   int i;
   for (i = nScopeIdx-2;
-       m_Symbol.name[i] != 0 && m_Symbol.name[i] != ':';
+       i >= 0 && m_Symbol.name[i] != ':';
        i--)
     ;
   i++;
-  
+  NOTICE("i = " << Hex << i);
   if (m_Symbol.name[i] >= 'A' && m_Symbol.name[i] <= 'Z')
     return true;
   else

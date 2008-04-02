@@ -110,7 +110,7 @@ ifdef DEBUGGER
 SRCFILES += core/lib/demangle.cc
 endif
 
-SRCFILES += linker/Elf32.cc
+SRCFILES += linker/Elf32.cc linker/Elf64.cc
 
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc

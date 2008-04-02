@@ -20,6 +20,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 
+#ifndef SHT_PROGBITS // This could have been set in Elf64.h
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
 #define SHT_SYMTAB        0x2     // Symbol table
 #define SHT_STRTAB        0x3     // String table
@@ -38,6 +39,7 @@
 #define SHF_ALLOC         0x2
 #define SHF_EXECINSTR     0x4
 #define SHF_MASKPROC      0xf0000000
+#endif // SHT_PROGBITS
 
 #define ELF32_R_SYM(val)  ((val) >> 8)
 #define ELF32_R_TYPE(val) ((val) & 0xff)

@@ -33,7 +33,13 @@
 // Machine::initialise()
 #include <machine/Machine.h>
 
+#ifdef X64
+#include <Elf64.h>
+Elf64 elf("kernel");
+#else
 Elf32 elf("kernel");
+#endif
+FileLoader *g_pKernel = &elf;
 
 /// NOTE JamesM is doing some testing here.
 #include <processor/Processor.h>

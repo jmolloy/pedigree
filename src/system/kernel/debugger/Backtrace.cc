@@ -16,14 +16,14 @@
 
 #include <Backtrace.h>
 #include <utilities/utility.h>
-#include <Elf32.h>
+#include <FileLoader.h>
 #include <StackFrame.h>
 #include <utilities/StaticString.h>
 #include <Log.h>
 #include <DwarfUnwinder.h>
 
 // TEMP!
-extern Elf32 elf;
+extern FileLoader *g_pKernel;
 extern uintptr_t start;
 
 Backtrace::Backtrace()
@@ -39,9 +39,10 @@ void Backtrace::performBacktrace(InterruptState &state)
 {
 #if !defined(X64)
   // Firstly, can we perform a DWARF backtrace?
-  if (elf.debugFrameTable() > 0 /*&& elf.debugFrameTableLength() > 0*/)
+  if (g_pKernel->debugFrameTable() > 0 /*&& g_pKernel->debugFrameTableLength() > 0*/)
   {
     performDwarfBacktrace(state);
+    return;
   }
 #endif
 
@@ -64,7 +65,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   m_pReturnAddresses[0] = state.getInstructionPointer();
   
   size_t i = 1;
-  DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
+  DwarfUnwinder du(g_pKernel->debugFrameTable(), g_pKernel->debugFrameTableLength());
   while (i < MAX_STACK_FRAMES)
   {
     du.unwind(initial, next);
@@ -119,11 +120,14 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames)
   {
     uintptr_t symStart = 0;
 
-    const char *pSym = elf.lookupSymbol(m_pReturnAddresses[i], &symStart);
+    const char *pSym = g_pKernel->lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
 
     StackFrame sf(m_pBasePointers[i], sym);
     sf.prettyPrint(buf);
+//     buf.append( m_pReturnAddresses[i], 16);
+//     buf += sym;
+//     buf += "\n";
   }
 }
 

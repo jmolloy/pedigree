@@ -18,16 +18,16 @@
 #include <DebuggerIO.h>
 #include <processor/Processor.h>
 #include <udis86.h>
-#include <Elf32.h>
+#include <FileLoader.h>
 #include <Log.h>
 #include <demangle.h>
 #include <Backtrace.h>
 #include <machine/Machine.h>
 
 // TEMP!
-extern Elf32 elf;
+extern FileLoader *g_pKernel;
 
-static void addToBuffer(unsigned int n, unsigned int *pBuffer, unsigned int &nInstr, unsigned int nLinesToCache)
+static void addToBuffer(uintptr_t n, uintptr_t *pBuffer, unsigned int &nInstr, unsigned int nLinesToCache)
 {
   if (nInstr == nLinesToCache)
   {
@@ -131,6 +131,7 @@ void TraceCommand::drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScre
 
 void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScreen, InterruptState &state)
 {
+
   // We want the current instruction to be in the middle of the screen (ish).
   // The important thing is that to get the correct disassembly we must start disassembling
   // on a correct instruction boundary (and we can't go backwards), so we start at the start
@@ -141,7 +142,7 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
   uintptr_t ip = state.getInstructionPointer();
   
   uintptr_t symStart = 0;
-  const char *pSym = elf.lookupSymbol(ip, &symStart);
+  const char *pSym = g_pKernel->lookupSymbol(ip, &symStart);
 
   ud_t ud_obj;
   ud_init(&ud_obj);
@@ -156,18 +157,19 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
   ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(symStart), 4096);
   
   // Let's just assume we'll never have more than 1024 lines total.
-  unsigned int instrBuffer[512];
+  uintptr_t instrBuffer[512];
   unsigned int nInstr = 0;
   unsigned int nLinesToCache = nLines/2;
 
-  unsigned int location = 0;
-  //int i = 0;
+  uintptr_t location = 0;
+
   while(location < ip)
   {
     ud_disassemble(&ud_obj);
     location = ud_insn_off(&ud_obj);
     uintptr_t nSym;
-    elf.lookupSymbol(location, &nSym);
+    g_pKernel->lookupSymbol(location, &nSym);
+
     if (nSym == location) // New symbol. Add two lines.
     {
       addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
@@ -176,7 +178,7 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
 
     addToBuffer(location, instrBuffer, nInstr, nLinesToCache);
   }
-
+  
   // OK, awesome, we have an instruction buffer. Let's disassemble it.
   ud_set_pc(&ud_obj, instrBuffer[0]);
   ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(instrBuffer[0]), 4096);
@@ -186,7 +188,7 @@ void TraceCommand::drawDisassembly(size_t nCols, size_t nLines, DebuggerIO *pScr
     ud_disassemble(&ud_obj);
     location = ud_insn_off(&ud_obj);
     uintptr_t nSym;
-    const char *pSym = elf.lookupSymbol(location, &nSym);
+    const char *pSym = g_pKernel->lookupSymbol(location, &nSym);
     NormalStaticString str;
     if (nSym <= location && nSym != symStart) // New symbol. Add two lines.
     {
