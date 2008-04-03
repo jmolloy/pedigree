@@ -34,7 +34,7 @@ sudo umount fd
 
 # Install grub
 sh grub.sh images/floppy_ext2.img
-#sh grub.sh images/floppy_fat.img
+sh grub.sh images/floppy_fat.img
 
 # Delete directory fd
 rmdir fd
