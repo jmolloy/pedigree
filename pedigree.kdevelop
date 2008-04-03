@@ -117,6 +117,11 @@
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/unwind.h</path>
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/varargs.h</path>
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/xmmintrin.h</path>
+      <path>pedigree.kdevelop.pcs</path>
+      <path>pedigree.kdevses</path>
+      <path>templates</path>
+      <path>templates/cc</path>
+      <path>templates/h</path>
     </blacklist>
     <build>
       <buildtool>make</buildtool>
@@ -215,10 +220,10 @@
   </kdevdoctreeview>
   <kdevfilecreate>
     <filetypes>
-      <type icon="source_cpp" ext="cc" name="C++ Source" create="template" >
+      <type icon="source_cpp" ext="cc" create="template" name="C++ Source" >
         <descr>A new empty C++ file.</descr>
       </type>
-      <type icon="source_h" ext="h" name="C/C++ Header" create="template" >
+      <type icon="source_h" ext="h" create="template" name="C/C++ Header" >
         <descr>A new empty header file for C or C++.</descr>
       </type>
     </filetypes>

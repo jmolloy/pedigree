@@ -1,4 +1,5 @@
 # KDevelop Custom Project File List
+Doxyfile
 build
 build/Makefile
 build/bochs
@@ -23,6 +24,8 @@ docs
 docs/code
 docs/code/example.cc
 docs/code/example.h
+pedigree.kdevelop
+pedigree.kdevelop.filelist
 src
 src/drivers
 src/drivers/Makefile
@@ -74,7 +77,6 @@ src/system/include/processor/StackFrameBase.h
 src/system/include/processor/SyscallHandler.h
 src/system/include/processor/SyscallManager.h
 src/system/include/processor/VirtualAddressSpace.h
-src/system/include/processor/initialise.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
 src/system/include/processor/mips32/state.h
@@ -105,6 +107,7 @@ src/system/include/utilities/RangeList.h
 src/system/include/utilities/StaticString.h
 src/system/include/utilities/String.h
 src/system/include/utilities/Vector.h
+src/system/include/utilities/demangle.h
 src/system/include/utilities/template.h
 src/system/include/utilities/utility.h
 src/system/kernel

@@ -18,11 +18,13 @@
 #include <machine/Timer.h>
 #include <machine/Machine.h>
 #include <utilities/utility.h>
+#include <processor/Processor.h>
 
 Log Log::m_Instance;
 
 Log::Log () :
-  m_nEntries(0),
+  m_DynamicLog(),
+  m_StaticEntries(0),
   m_Buffer(),
   m_NumberType(Dec)
 {
@@ -41,8 +43,26 @@ Log &Log::operator<< (const char *str)
 Log &Log::operator<< (Modifier type)
 {
   // Flush the buffer.
-  if (type == Flush && m_nEntries < LOG_ENTRIES)
-    m_pLog[m_nEntries++] = m_Buffer;
+  if (type == Flush)
+  {
+    if (Processor::isInitialised() == 0)
+    {
+      if (m_StaticEntries >= LOG_ENTRIES)
+      {
+        // TODO: time to panic
+      }
+  
+      m_StaticLog[m_StaticEntries++] = m_Buffer;
+    }
+    else
+    {
+      DynamicLogEntry *entry = new DynamicLogEntry;
+      entry->type = m_Buffer.type;
+      entry->timestamp = m_Buffer.timestamp;
+      entry->str = m_Buffer.str;
+      m_DynamicLog.pushBack(entry);
+    }
+  }
 
   return *this;
 }
@@ -55,25 +75,19 @@ Log &Log::operator<< (NumberType type)
 
 Log &Log::operator<< (SeverityLevel level)
 {
-  switch (level)
-  {
-  case Fatal:
-  case Error:
-  case Warning:
-  case Notice:
-    // Zero the buffer.
-    m_Buffer.str.clear();
-    m_Buffer.type = level;
+  // Zero the buffer.
+  m_Buffer.str.clear();
+  m_Buffer.type = level;
 
-    Machine &machine = Machine::instance();
-    if (machine.isInitialised() == true && machine.getTimer() != 0)
-    {
-      Timer &timer = *machine.getTimer();
-      m_Buffer.timestamp = timer.getTickCount();
-    }
-    else
-      m_Buffer.timestamp = 0;
-    break;
+  Machine &machine = Machine::instance();
+  if (machine.isInitialised() == true &&
+      machine.getTimer() != 0)
+  {
+    Timer &timer = *machine.getTimer();
+    m_Buffer.timestamp = timer.getTickCount();
   }
+  else
+    m_Buffer.timestamp = 0;
+
   return *this;
 }

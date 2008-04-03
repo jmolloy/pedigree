@@ -110,16 +110,29 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
 
 const char *LogViewer::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  Log::LogEntry_t entry = Log::instance().getEntry(index);
-
+  Log::SeverityLevel level;
   static NormalStaticString Line;
   Line.clear();
   Line.append("[");
-  Line.append(entry.timestamp, 10, 8, '0');
+
+  Log &log = Log::instance();
+  if (index < log.getStaticEntryCount())
+  {
+    const Log::StaticLogEntry &entry = log.getStaticEntry(index);
+    Line.append(entry.timestamp, 10, 8, '0');
+    level = entry.type;
+  }
+  else
+  {
+    const Log::DynamicLogEntry &entry = log.getDynamicEntry(index);
+    Line.append(entry.timestamp, 10, 8, '0');
+    level = entry.type;
+  }
+
   Line.append("] ");
 
   colour = DebuggerIO::White;
-  switch (entry.type)
+  switch (level)
   {
     case Log::Notice:
       colour = DebuggerIO::Green;
@@ -139,18 +152,27 @@ const char *LogViewer::getLine1(size_t index, DebuggerIO::Colour &colour, Debugg
 }
 const char *LogViewer::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  Log::LogEntry_t entry = Log::instance().getEntry(index);
-
+  Log &log = Log::instance();
   static LargeStaticString Line;
   Line.clear();
-  Line.append(entry.str);
+
+  if (index < log.getStaticEntryCount())
+  {
+    const Log::StaticLogEntry &entry = log.getStaticEntry(index);
+    Line.append(entry.str);
+  }
+  else
+  {
+    const Log::DynamicLogEntry &entry = log.getDynamicEntry(index);
+    Line.append(entry.str);
+  }
 
   colour = DebuggerIO::White;
   colOffset = 11;
-  
   return Line;
 }
 size_t LogViewer::getLineCount()
 {
-  return Log::instance().getEntryCount();
+  Log &log = Log::instance();
+  return log.getStaticEntryCount() + log.getDynamicEntryCount();
 }

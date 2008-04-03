@@ -18,6 +18,8 @@
 #define KERNEL_LOG_H
 
 #include <processor/types.h>
+#include <utilities/String.h>
+#include <utilities/Vector.h>
 #include <utilities/StaticString.h>
 
 /** @addtogroup kernel
@@ -51,32 +53,32 @@
   } \
   while (0)
 
-/// The maximum length of an individual log entry.
-/// \todo Change to using dynamic memory.
+/** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
-/// The maximum number of entries in the log.
-/// \todo Change to using dynamic memory.
-#define LOG_ENTRIES 64
+/** The maximum number of static entries in the log. */
+#define LOG_ENTRIES 32
 
+/** Radix for Log's integer output */
 enum NumberType
 {
+  /** Hexadecimal */
   Hex,
+  /** Decimal */
   Dec
 };
 
+/** Modifiers for Log */
 enum Modifier
 {
+  /** Flush this log entry */
   Flush
 };
 
-/**
- * Implements a kernel log that can be used to debug problems.
- *\todo implementation might want to use static string
- *\todo << operator for all integer data types
- */
+/** Implements a kernel log that can be used to debug problems. */
 class Log
 {
 public:
+  /** Severity level of the log entry */
   enum SeverityLevel
   {
     Notice,
@@ -84,35 +86,38 @@ public:
     Error,
     Fatal
   };
-  
-  /**
-   * Stores an entry in the log.
-   */
-  typedef struct LogEntry
+
+  /** Stores an entry in the log.
+   *\param[in] T type of the log's text */
+  template<class T>
+  struct LogEntry
   {
+    /** Constructor does nothing */
     inline LogEntry()
      : timestamp(), type(), str(){}
 
-    unsigned int timestamp; ///< The time (since boot) that this log entry was added, in ticks.
-    SeverityLevel type;     ///< The severity level of this entry.
-    StaticString<LOG_LENGTH> str;   ///< The actual entry text. \todo Change this to using dynamic memory. Might be problematic, because we might want to use the log (and display it) before memory-managment is initialised.
-  } LogEntry_t;
+    /** The time (since boot) that this log entry was added, in ticks. */
+    unsigned int timestamp;
+    /** The severity level of this entry. */
+    SeverityLevel type;
+    /** The actual entry text. */
+    T str;   
+  };
 
-  /**
-   * Retrieves the static Log instance.
-   */
-  static Log &instance()
+  /** Type of a static log entry (no memory-management involved) */
+  typedef LogEntry<StaticString<LOG_LENGTH> > StaticLogEntry;
+  /** Type of a dynamic log entry (memory-management involved) */
+  typedef LogEntry<String> DynamicLogEntry;
+
+  /** Retrieves the static Log instance. */
+  inline static Log &instance()
   {
     return m_Instance;
   }
-  
-  /**
-   * Adds an entry to the log.
-   */
+
+  /** Adds an entry to the log. */
   Log &operator<< (const char *str);
-  /**
-   * Adds an entry to the log.
-   */
+  /** Adds an entry to the log. */
   template<class T>
   Log &operator << (T n)
   {
@@ -125,61 +130,56 @@ public:
     m_Buffer.str.append(n, radix);
     return *this;
   }
-  /**
-   * Starts an entry in the log (or stops, if level == SeverityLevel::End).
-   * \todo This function should gain and release spinlocks, depending on level.
-   */
+  /** Starts an entry in the log.
+   *\todo This function should gain and release spinlocks, depending on level. */
   Log &operator<< (SeverityLevel level);
-  /**
-   * Changes the number type between hex and decimal.
-   */
+  /** Changes the number type between hex and decimal. */
   Log &operator<< (NumberType type);
-
+  /** Modifier */
   Log &operator<< (Modifier type);
 
-  /**
-   * Returns the n'th log entry, counting from the start.
-   */
-  LogEntry_t getEntry(size_t n)
+  /** Returns the n'th static log entry, counting from the start. */
+  const StaticLogEntry &getStaticEntry(size_t n) const
   {
-    return m_pLog[n];
+    return m_StaticLog[n];
   }
-  
-  /**
-   * Returns the number of entries in the log.
-   */
-  size_t getEntryCount()
+  /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
+  const DynamicLogEntry &getDynamicEntry(size_t n) const
   {
-    return m_nEntries;
+    return *m_DynamicLog[n - getStaticEntryCount()];
+  }
+
+  /** Returns the number of static entries in the log. */
+  size_t getStaticEntryCount() const
+  {
+    return m_StaticEntries;
+  }
+  /** Return the number of dynamic entries in the log */
+  size_t getDynamicEntryCount() const
+  {
+    return m_DynamicLog.count();
   }
 
 private:
-  /**
-   * Default constructor - does nothing.
-   */
-  Log ();
-  ~Log ();
-  
-  /**
-   * Buffer of log messages.
-   * \todo Make this a dynamic vector.
-   */
-  LogEntry_t m_pLog[LOG_ENTRIES];
-  size_t m_nEntries;
-  
-  /**
-   * Temporary buffer which gets filled by calls to operator<<, and flushed by << End.
-   */
-  LogEntry m_Buffer;
-  
-  /**
-   * The number type mode that we are in.
-   */
+  /** Default constructor - does nothing. */
+  Log();
+  /** Default destructor - does nothing */
+  ~Log();
+
+  /** Static buffer of log messages. */
+  StaticLogEntry m_StaticLog[LOG_ENTRIES];
+  /** Dynamic buffer of log messages */
+  Vector<DynamicLogEntry*> m_DynamicLog;
+  /** Number of entries in the static log */
+  size_t m_StaticEntries;
+
+  /** Temporary buffer which gets filled by calls to operator<<, and flushed by << Flush. */
+  StaticLogEntry m_Buffer;
+
+  /** The number type mode that we are in. */
   NumberType m_NumberType;
-  
-  /**
-   * The Log instance (singleton class)
-   */
+
+  /** The Log instance (singleton class) */
   static Log m_Instance;
 };
 

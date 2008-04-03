@@ -35,6 +35,7 @@ class String
 
     inline String &operator = (const String &x);
     inline String &operator = (const char *s);
+    inline operator const char *() const;
 
     inline size_t length() const PURE;
     inline size_t size() const PURE;
@@ -86,6 +87,10 @@ String &String::operator = (const char *s)
 {
   assign(s);
   return *this;
+}
+String::operator const char *() const
+{
+  return m_Data;
 }
 
 size_t String::length() const
