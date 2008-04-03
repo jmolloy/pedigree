@@ -14,7 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
+#include <processor/IoPortManager.h>
+#include "gdt.h"
+#include "InterruptManager.h"
 #include "VirtualAddressSpace.h"
+#include "../x86_common/PhysicalMemoryManager.h"
 
 void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
 {
@@ -30,4 +34,35 @@ void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
     // Set the new page directory
     asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
   }
+}
+
+void Processor::initialise1(const BootstrapStruct_t &Info)
+{
+  // Initialise this processor's interrupt handling
+  X86InterruptManager::initialiseProcessor();
+
+  // Initialise the physical memory-management
+  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
+  physicalMemoryManager.initialise(Info);
+
+  // Initialise the I/O Manager
+  IoPortManager &ioPortManager = IoPortManager::instance();
+  ioPortManager.initialise(0, 0x10000);
+
+  // TODO
+
+  m_Initialised = 1;
+}
+
+void Processor::initialise2()
+{
+  // Initialise the GDT
+  X86GdtManager::instance().initialise(1);
+  X86GdtManager::initialiseProcessor();
+
+  // TODO: Process SMP/ACPI tables
+
+  // TODO
+
+  m_Initialised = 2;
 }

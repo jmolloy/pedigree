@@ -118,6 +118,7 @@ endif
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/IoPort.c \
+            core/processor/Processor.cc \
             core/processor/IoPortManager.cc \
             core/processor/StackFrameBase.cc
 
@@ -145,9 +146,7 @@ endif
 ###################################################################
 # x86 source file list.
 ifdef X86
-SRCFILES += core/processor/x86/initialiseProcessor1.cc \
-            core/processor/x86/initialiseProcessor2.cc \
-            core/processor/x86/InterruptManager.cc \
+SRCFILES += core/processor/x86/InterruptManager.cc \
             core/processor/x86/asm/InterruptManager.s \
             core/processor/x86/asm/Processor.s \
             core/processor/x86/Processor.cc \
@@ -160,9 +159,7 @@ endif
 ###################################################################
 # x64 source file list.
 ifdef X64
-SRCFILES += core/processor/x64/initialiseProcessor1.cc \
-            core/processor/x64/initialiseProcessor2.cc \
-            core/processor/x64/InterruptManager.cc \
+SRCFILES += core/processor/x64/InterruptManager.cc \
             core/processor/x64/SyscallManager.cc \
             core/processor/x64/asm/gdt.s \
             core/processor/x64/asm/SyscallManager.s \
@@ -208,21 +205,19 @@ endif
 ###################################################################
 # mips32 source file list.
 ifdef MIPS32
-SRCFILES += core/processor/mips32/initialiseProcessor1.cc \
-            core/processor/mips32/initialiseProcessor2.cc \
-            core/processor/mips32/InterruptManager.cc \
+SRCFILES += core/processor/mips32/InterruptManager.cc \
             core/processor/mips32/asm/Processor.s \
             core/processor/mips32/asm/InterruptManager.s \
             core/processor/mips32/state.cc \
-            core/processor/mips32/StackFrame.cc
+            core/processor/mips32/StackFrame.cc \
+            core/processor/mips32/Processor.cc
 endif
 
 ###################################################################
 # mips64 source file list.
 ifdef MIPS64
-SRCFILES += core/processor/mips64/initialiseProcessor1.cc \
-            core/processor/mips64/initialiseProcessor2.cc \
-            core/processor/mips64/StackFrame.cc
+SRCFILES += core/processor/mips64/StackFrame.cc \
+            core/processor/mips64/Processor.cc
 endif
 
 ###################################################################

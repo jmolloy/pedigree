@@ -13,16 +13,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include "InterruptManager.h"
+#include <processor/Processor.h>
 
-void initialiseProcessor1(const BootstrapStruct_t &Info)
-{
-  // Initialise this processor's interrupt handling
-//   MIPS32InterruptManager::initialiseProcessor();
-
-  // TODO: Initialise the physical memory-management
-  // TODO: Initialise the I/O Manager
-
-  // TODO
-}
+size_t Processor::m_Initialised = 0;

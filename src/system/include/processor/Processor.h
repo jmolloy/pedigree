@@ -19,6 +19,7 @@
 #include <processor/types.h>
 #include <processor/state.h>
 #include <processor/VirtualAddressSpace.h>
+#include <BootstrapInfo.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -49,6 +50,25 @@ namespace DebugFlags
 class Processor
 {
   public:
+    /** Initialises the processor specific interface. After this function call the whole
+     *  processor-specific interface is initialised. Note though, that only the
+     *  bootstrap processor is started. Multiprocessor/-core facilities are available after
+     *  initialiseProcessor2().
+     *\brief first stage in the initialisation of the processor-specific interface
+     *\note This function should only be called once and by main()
+     *\param[in] Info reference to the multiboot information structure */
+    static void initialise1(const BootstrapStruct_t &Info);
+    /** Initialises the Multiprocessor/-core functionality of the processor-specific
+     *  interface. This function may only be called after initialiseProcessor1 and
+     *  after the whole machine specific interface has been initialised.
+     *\brief second/last stage in the initialisation of the processor-specific interface
+     *\note This function should only be called once and by main() */
+    static void initialise2();
+    /** Is the processor-specific interface initialised?
+     *\return 0, if nothing has been initialised, 1, if initialise1() has been executed
+     *        successfully, 2, if initialise2() has been executed successfully */
+    inline static size_t isInitialised(){return m_Initialised;}
+
     /** Get the base-pointer of the calling function
      *\return base-pointer of the calling function */
     static uintptr_t getBasePointer();
@@ -121,6 +141,10 @@ class Processor
        *\param[in] nAddr The address in KSEG0 or KSEG1 of a memory location to invalidate from the Dcache. */
       static void invalidateDCache(uintptr_t nAddr);
     #endif
+
+  private:
+    /** How far has the processor-specific interface been initialised */
+    static size_t m_Initialised;
 };
 
 /** @} */

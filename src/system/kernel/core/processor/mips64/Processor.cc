@@ -13,17 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/initialise.h>
-#include "InterruptManager.h"
+#include <processor/Processor.h>
 
-void initialiseProcessor2()
+void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  MIPS32InterruptManager::initialiseProcessor();
-  // Initialise the GDT
-  // TODO: X86GdtManager::instance().initialise(1)
-  // TODO: X86GdtManager::initialiseProcessor()
+  // TODO
 
+  m_Initialised = 1;
+}
+
+void Processor::initialise2()
+{
   // TODO: Process SMP/ACPI tables
 
   // TODO
+
+  m_Initialised = 2;
 }

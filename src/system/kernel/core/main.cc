@@ -28,8 +28,8 @@
 
 // initialiseConstructors()
 #include "cppsupport.h"
-// initialiseProcessor1(), initialiseProcessor2()
-#include <processor/initialise.h>
+// Processor::initialise1(), Processor::initialise2()
+#include <processor/Processor.h>
 // Machine::initialise()
 #include <machine/Machine.h>
 
@@ -42,7 +42,6 @@ Elf32 elf("kernel");
 FileLoader *g_pKernel = &elf;
 
 /// NOTE JamesM is doing some testing here.
-#include <processor/Processor.h>
 class Foo
 {
 public:
@@ -88,7 +87,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   BootstrapInfo bootstrapInfo(bsInf);
 
   // Initialise the processor-specific interface
-  initialiseProcessor1(*bsInf);
+  Processor::initialise1(*bsInf);
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
@@ -100,7 +99,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
-  initialiseProcessor2();
+  Processor::initialise2();
 
   elf.load(&bootstrapInfo);
 
