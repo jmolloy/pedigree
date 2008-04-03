@@ -145,7 +145,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel/machine/malta</activedir>
+      <activedir>src/system/kernel</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
@@ -232,8 +232,8 @@
       <includestyle>3</includestyle>
       <root>/usr/share/qt3</root>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
-      <qmake>/usr/bin/qmake-qt3</qmake>
-      <designer>/usr/bin/designer</designer>
+      <qmake></qmake>
+      <designer></designer>
       <designerpluginpaths/>
     </qt>
     <codecompletion>
@@ -299,7 +299,7 @@
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonprojectfiles>true</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>

@@ -88,7 +88,7 @@ class MIPS32InterruptState
     /** The default constructor
      *\note NOT implemented */
   public:
-    MIPS32InterruptState() {}
+    MIPS32InterruptState();
 
     /** The copy-constructor
      *\note NOT implemented */

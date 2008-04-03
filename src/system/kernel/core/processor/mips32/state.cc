@@ -52,6 +52,18 @@ const char *MIPS32InterruptStateRegisterName[33] =
   "BadVaddr"
 };
 
+MIPS32InterruptState::MIPS32InterruptState() :
+    m_At(), m_V0(), m_V1(), m_A0(),
+    m_A1(), m_A2(), m_A3(), m_T0(),
+    m_T1(), m_T2(), m_T3(), m_T4(),
+    m_T5(), m_T6(), m_T7(), m_S0(),
+    m_S1(), m_S2(), m_S3(), m_S4(),
+    m_S5(), m_S6(), m_S7(), m_T8(),
+    m_T9(), m_Gp(), m_Sp(), m_Fp(),
+    m_Ra(), m_Sr(), m_Epc(), m_BadVAddr()
+{
+}
+
 MIPS32InterruptState::MIPS32InterruptState(const MIPS32InterruptState &is) :
     m_At(is.m_At), m_V0(is.m_V0), m_V1(is.m_V1), m_A0(is.m_A0),
     m_A1(is.m_A1), m_A2(is.m_A2), m_A3(is.m_A3), m_T0(is.m_T0),
