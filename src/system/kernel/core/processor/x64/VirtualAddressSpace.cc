@@ -28,6 +28,8 @@
 #define PAGE_CACHE_DISABLE          0x10
 #define PAGE_2MB                    0x80
 #define PAGE_GLOBAL                 0x100
+#define PAGE_SWAPPED                0x200
+#define PAGE_COPY_ON_WRITE          0x400
 #define PAGE_NX                     0x8000000000000000
 
 //
@@ -57,8 +59,8 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 
 bool X64VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  if ((uint64_t)virtualAddress < 0x0008000000000000 ||
-      (uint64_t)virtualAddress >= 0xFFF8000000000000)
+  if (reinterpret_cast<uint64_t>(virtualAddress) < 0x0008000000000000 ||
+      reinterpret_cast<uint64_t>(virtualAddress) >= 0xFFF8000000000000)
     return true;
   return false;
 }
@@ -134,22 +136,50 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   return true;
 }
-bool X64VirtualAddressSpace::getMapping(void *virtualAddress,
+void X64VirtualAddressSpace::getMapping(void *virtualAddress,
                                         physical_uintptr_t &physAddress,
                                         size_t &flags)
 {
-  // TODO
-  return false;
+  // Get a pointer to the page-table entry (Also checks whether the page is actually present
+  // or marked swapped out)
+  uint64_t *pageTableEntry = 0;
+  if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
+  {
+    // TODO: This is a fatal error, we should panic
+    return;
+  }
+
+  // Extract the physical address and the flags
+  physAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
+  flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry));
 }
-bool X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
+void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
-  // TODO
-  return false;
+  // Get a pointer to the page-table entry (Also checks whether the page is actually present
+  // or marked swapped out)
+  uint64_t *pageTableEntry = 0;
+  if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
+  {
+    // TODO: This is a fatal error, we should panic
+    return;
+  }
+
+  // Set the flags
+  PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
 }
-bool X64VirtualAddressSpace::unmap(void *virtualAddress)
+void X64VirtualAddressSpace::unmap(void *virtualAddress)
 {
-  // TODO
-  return false;
+  // Get a pointer to the page-table entry (Also checks whether the page is actually present
+  // or marked swapped out)
+  uint64_t *pageTableEntry = 0;
+  if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
+  {
+    // TODO: This is a fatal error, we should panic
+    return;
+  }
+
+  // Unmap the page
+  *pageTableEntry = 0;
 }
 
 bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
@@ -201,6 +231,42 @@ X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t Ph
 {
 }
 
+bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
+                                               uint64_t *&pageTableEntry)
+{
+  size_t pml4Index = PML4_INDEX(virtualAddress);
+  uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
+
+  // Is a page directory pointer table present?
+  if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  // Is a page directory present?
+  if ((*pageDirectoryPointerEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+  // Is a page table or 2MB page present?
+  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT);
+    return false;
+  if ((*pageDirectoryEntry & PAGE_2MB) == PAGE_2MB)
+    return false;
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
+
+  // Is a page present?
+  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT ||
+      (*pageTableEntry & PAGE_SWAPPED) != PAGE_SWAPPED)
+    return false;
+
+  return true;
+}
 uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
 {
   uint64_t Flags = PAGE_PRESENT;
@@ -216,6 +282,12 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_CACHE_DISABLE;
   if ((flags & Execute) != Execute)
     Flags |= PAGE_NX;
+  if ((flags & Swapped) == Swapped)
+    Flags |= PAGE_SWAPPED;
+  else
+    Flags |= PAGE_PRESENT;
+  if ((flags & CopyOnWrite) == CopyOnWrite)
+    Flags |= PAGE_COPY_ON_WRITE;
   return Flags;
 }
 size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
@@ -231,6 +303,10 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
     flags |= CacheDisable;
   if ((Flags & PAGE_NX) != PAGE_NX)
     flags |= Execute;
+  if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
+    flags |= Swapped;
+  if ((Flags & PAGE_COPY_ON_WRITE) == PAGE_COPY_ON_WRITE)
+    flags |= CopyOnWrite;
   return flags;
 }
 
@@ -245,7 +321,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
       return false;
 
     // Map the page
-    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX));
+    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
 
     // Zero the page directory pointer table
     memset(physicalAddress(reinterpret_cast<void*>(page)),
@@ -256,15 +332,19 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
   return true;
 }
 
-bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry, uint64_t physAddress, uint64_t flags)
+bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
+                                                          uint64_t physAddress,
+                                                          uint64_t flags)
 {
   if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
     // Map the page
-    *tableEntry = physAddress | (flags & ~(PAGE_GLOBAL | PAGE_NX));
+    *tableEntry = physAddress | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
 
     // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(physAddress)), 0, PhysicalMemoryManager::getPageSize());
+    memset(physicalAddress(reinterpret_cast<void*>(physAddress)),
+           0,
+           PhysicalMemoryManager::getPageSize());
     return true;
   }
 

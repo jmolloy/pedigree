@@ -24,7 +24,10 @@
 /** The VirtualAddressSpace encapsulates all the functionality of a virtual memory-
  *  management. This includes management of the mapping between physical and virtual
  *  memory, management of allocated physical memory pages and management of free/allocated
- *  virtual memory. */
+ *  virtual memory.
+ *\todo Figure out if we have to be in that particular address space to call expandHeap,
+ *      isMapped, map, getMapping, setFlags & unmap or if the implementation must switch
+ *      to that particular address space by itself. */
 class VirtualAddressSpace
 {
   public:
@@ -39,6 +42,10 @@ class VirtualAddressSpace
     static const size_t WriteThrough  = 0x08;
     /** If this flag is set, the cache is disabled. */
     static const size_t CacheDisable  = 0x10;
+    /** If this flag is set, the page is copy-on-write */
+    static const size_t CopyOnWrite   = 0x20;
+    /** If this flag is set, the page is swapped out */
+    static const size_t Swapped       = 0x40;
 
     /** Get the kernel virtual address space
      *\return reference to the kernel virtual address space */
@@ -54,41 +61,47 @@ class VirtualAddressSpace
      *\param[in] virtualAddress the virtual address to check
      *\return true, if the address is valid, false otherwise */
     virtual bool isAddressValid(void *virtualAddress) = 0;
-    /** Checks whether a mapping the the specific virtual address exists
+    /** Checks whether a mapping the the specific virtual address exists. Pages marked as swapped out
+     *  are not considered mapped.
+     *\note This function must be valid on all the valid addresses within the virtual
+     *      address space.
      *\param[in] virtualAddress the virtual address
      *\return true, if a mapping exists, false otherwise */
     virtual bool isMapped(void *virtualAddress) = 0;
-    /** Map a specific physical page at a specific location into the virtual address
-     *  space.
+
+    /** Map a specific physical page (of size PhysicalMemoryManager::getPageSize()) at a specific
+     * location into the virtual address space.
+     *\note This function must also work on pages marked as swapped out.
      *\param[in] physicalAddress the address of the physical page that should be mapped into
      *                           the virtual address space.
      *\param[in] virtualAddress the virtual address at which the page apears within the virtual
      *                          address space.
      *\param[in] flags flags that describe which accesses should be allowed on the page.
-     *\todo I think this function is not supposed to be used from outside (except from the
-     *      PhysicalMemoryManager perhaps)
      *\return true, if successfull, false otherwise */
     virtual bool map(physical_uintptr_t physicalAddress,
                      void *virtualAddress,
                      size_t flags) = 0;
-
-    // FIXME: Rework these functions
-    /** Get the physical address and the flags associated with the specific virtual address
+    /** Get the physical address and the flags associated with the specific virtual address.
+     *\note This function is only valid on memory that was mapped with VirtualAddressSpace::map()
+     *      and that is still mapped or marked as swapped out.
      *\param[in] virtualAddress the address in the virtual address space
      *\param[out] flags the flags
-     *\param[out] physicalAddress the physical address
-     *\return true, if a mapping exists, false otherwise */
-    virtual bool getMapping(void *virtualAddress,
+     *\param[out] physicalAddress the physical address */
+    virtual void getMapping(void *virtualAddress,
                             physical_uintptr_t &physicalAddress,
                             size_t &flags) = 0;
-    /** Set the flags of the page at a specific virtual address
+    /** Set the flags of the page at a specific virtual address.
+     *\note The page must have been mapped with VirtualAddressSpace::map() and the page must
+     *      still be mapped or marked as swapped out.
      *\param[in] virtualAddress the virtual address
      *\param[in] newFlags the flags */
-    virtual bool setFlags(void *virtualAddress, size_t newFlags) = 0;
-    /** Remove the page at the specific virtual address from the mapping
-     *\param[in] virtualAddress the virtual address
-     *\return true, if successfull, false otherwise */
-    virtual bool unmap(void *virtualAddress) = 0;
+    virtual void setFlags(void *virtualAddress,
+                          size_t newFlags) = 0;
+    /** Remove the page at the specific virtual address from the virtual address space.
+     *\note This function is only valid on memory that was mapped with VirtualAddressSpace::map()
+     *      and that is still mapped or marked as swapped out.
+     *\param[in] virtualAddress the virtual address */
+    virtual void unmap(void *virtualAddress) = 0;
 
   protected:
     /** The constructor does nothing */
@@ -107,7 +120,9 @@ class VirtualAddressSpace
      *\note Not implemented */
     VirtualAddressSpace &operator = (const VirtualAddressSpace &);
 
-    /** \todo documentation */
+    /** Reverts the heap expansion, that was begun with expandHeap
+     *\param[in] virtualAddress current heap address
+     *\param[in] pageCount number of mapped pages to unmap and free */
     void rollbackHeapExpansion(void *virtualAddress, size_t pageCount);
 
     /** Pointer to the beginning of the heap */
