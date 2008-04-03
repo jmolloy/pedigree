@@ -177,7 +177,8 @@ endif
 # mips common source list.
 ifdef MIPS_COMMON
 SRCFILES += boot-mips.cc \
-            core/processor/mips_common/Processor.cc
+            core/processor/mips_common/Processor.cc \
+            core/processor/mips_common/Disassembler.cc
 endif
 
 ifdef MIPS_MALTA

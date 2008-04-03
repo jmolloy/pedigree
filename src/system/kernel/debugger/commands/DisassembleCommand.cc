@@ -21,6 +21,8 @@
 #include <Log.h>
 #include <demangle.h>
 
+#include <processor/Disassembler.h>
+
 // TEMP!
 extern FileLoader *g_pKernel;
 
@@ -64,7 +66,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 
   // Dissassemble around address.
   size_t nInstructions = 10;
-  
+#ifdef X86_COMMON
   ud_t ud_obj;
   ud_init(&ud_obj);
 #ifdef X86
@@ -130,7 +132,23 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     output += ud_insn_asm(&ud_obj);
     output += '\n';
   }
+#endif // X86_COMMON
+#ifdef MIPS_COMMON
+  LargeStaticString text;
+  Disassembler disassembler;
   
+  disassembler.setLocation(address);
+
+  for (int i = 0; i < nInstructions; i++)
+  {
+    output.append(disassembler.getLocation(), 16, 8, ' ');
+    output += ": ";
+    text.clear();
+    disassembler.disassemble(text);
+    output += text;
+    output += '\n';
+  }
+#endif // MIPS_COMMON
   return true;
 }
 
