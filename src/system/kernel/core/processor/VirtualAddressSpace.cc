@@ -63,9 +63,9 @@ void VirtualAddressSpace::rollbackHeapExpansion(void *virtualAddress, size_t pag
     // Get the mapping for the current page
     size_t flags;
     physical_uintptr_t physicalAddress;
-    if (getMaping(virtualAddress,
-                  physicalAddress,
-                  flags) == true)
+    if (getMapping(virtualAddress,
+                   physicalAddress,
+                   flags) == true)
     {
       // Free the physical page
       PhysicalMemoryManager::instance().freePage(physicalAddress);

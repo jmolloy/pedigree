@@ -26,21 +26,24 @@
  *  architecture, that means it wraps around the processor's paging functionality. */
 class X86VirtualAddressSpace : public VirtualAddressSpace
 {
+  /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   public:
+    //
+    // VirtualAddressSpace Interface
+    //
+    virtual bool isAddressValid(void *virtualAddress);
+    virtual bool isMapped(void *virtualAddress);
     virtual bool map(physical_uintptr_t physicalAddress,
                      void *virtualAddress,
                      size_t flags);
-    virtual bool getMaping(void *virtualAddress,
-                           physical_uintptr_t &physicalAddress,
-                           size_t &flags);
+
+    virtual bool getMapping(void *virtualAddress,
+                            physical_uintptr_t &physicalAddress,
+                            size_t &flags);
     virtual bool setFlags(void *virtualAddress, size_t newFlags);
     virtual bool unmap(void *virtualAddress);
-
-    bool getPageTableEntry(void *virtualAddress, uint32_t *&pageTableEntry);
-    uint32_t toFlags(size_t flags);
-    size_t fromFlags(uint32_t Flags);
 
     //
     // Needed for the PhysicalMemoryManager
@@ -74,10 +77,20 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
      *\note Not implemented */
     X86VirtualAddressSpace &operator = (const X86VirtualAddressSpace &);
 
+    bool getPageTableEntry(void *virtualAddress,
+                           uint32_t *&pageTableEntry,
+                           bool checkPresence);
+    uint32_t toFlags(size_t flags);
+    size_t fromFlags(uint32_t Flags);
+
+    /** Physical address of the page directory */
     physical_uintptr_t m_PhysicalPageDirectory;
+    /** Virtual address of the page directory */
     void *m_VirtualPageDirectory;
+    /** Virtual address of the page tables */
     void *m_VirtualPageTables;
 
+    /** The kernel virtual address space */
     static X86VirtualAddressSpace m_KernelSpace;
 };
 

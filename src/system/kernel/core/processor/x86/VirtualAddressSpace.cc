@@ -25,6 +25,7 @@
 #define PAGE_USER                   0x04
 #define PAGE_WRITE_THROUGH          0x08
 #define PAGE_CACHE_DISABLE          0x10
+#define PAGE_4MB                    0x80
 #define PAGE_GLOBAL                 0x100
 
 //
@@ -53,6 +54,29 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
   return X86VirtualAddressSpace::m_KernelSpace;
 }
 
+bool X86VirtualAddressSpace::isAddressValid(void *virtualAddress)
+{
+  return true;
+}
+bool X86VirtualAddressSpace::isMapped(void *virtualAddress)
+{
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
+
+  // Is a page table or 4MB page present?
+  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  // Is it a 4MB page?
+  if ((*pageDirectoryEntry & PAGE_4MB) == PAGE_4MB)
+    return true;
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, pageTableIndex);
+
+  // Is a page present?
+  return ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT);
+}
 bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
                                  void *virtualAddress,
                                  size_t flags)
@@ -73,8 +97,10 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     // Map the page
     *pageDirectoryEntry = page | Flags;
 
-    // Zero the page directory
-    memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0), 0, PhysicalMemoryManager::getPageSize());
+    // Zero the page table
+    memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
+           0,
+           PhysicalMemoryManager::getPageSize());
   }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
@@ -89,15 +115,13 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
 
   return true;
 }
-bool X86VirtualAddressSpace::getMaping(void *virtualAddress,
-                                       physical_uintptr_t &physicalAddress,
-                                       size_t &flags)
+bool X86VirtualAddressSpace::getMapping(void *virtualAddress,
+                                        physical_uintptr_t &physicalAddress,
+                                        size_t &flags)
 {
-  // TODO: How do page-directory entry access rights affect the page's access rights?
-
-  // Get a pointer to the page-table entry
+  // Get a pointer to the page-table entry (Also checks whether the page is actually present)
   uint32_t *pageTableEntry = 0;
-  if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
+  if (getPageTableEntry(virtualAddress, pageTableEntry, true) == false)
     return false;
 
   // Extract the physical address and the flags
@@ -107,11 +131,11 @@ bool X86VirtualAddressSpace::getMaping(void *virtualAddress,
 }
 bool X86VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
-  // TODO: How do page-directory entry access rights affect the page's access rights?
+  // FIXME: Not aware of 4MB pages
 
-  // Get a pointer to the page-table entry
+  // Get a pointer to the page-table entry (Does not check whether the page is actually present)
   uint32_t *pageTableEntry = 0;
-  if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
+  if (getPageTableEntry(virtualAddress, pageTableEntry, false) == false)
     return false;
 
   // Set the flags
@@ -120,56 +144,16 @@ bool X86VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 }
 bool X86VirtualAddressSpace::unmap(void *virtualAddress)
 {
-  // TODO
-  return false;
-}
+  // FIXME: Not aware of 4MB pages
 
-bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress, uint32_t *&pageTableEntry)
-{
-  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
-  uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
-
-  // Is a page table present?
-  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+  // Get a pointer to the page-table entry (Also checks whether the page is actually present)
+  uint32_t *pageTableEntry = 0;
+  if (getPageTableEntry(virtualAddress, pageTableEntry, true) == false)
     return false;
 
-  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
-  pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, pageTableIndex);
-
-  // Is a page present?
-  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
-    return false;
-
+  // Extract the physical address and the flags
+  *pageTableEntry = 0;
   return true;
-}
-
-uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
-{
-  uint32_t Flags = PAGE_PRESENT;
-  if ((flags & KernelMode) == KernelMode)
-    Flags |= PAGE_GLOBAL;
-  else
-    Flags |= PAGE_USER;
-  if ((flags & Write) == Write)
-    Flags |= PAGE_WRITE;
-  if ((flags & WriteThrough) == WriteThrough)
-    Flags |= PAGE_WRITE_THROUGH;
-  if ((flags & CacheDisable) == CacheDisable)
-    Flags |= PAGE_CACHE_DISABLE;
-  return Flags;
-}
-size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
-{
-  size_t flags = Execute;
-  if ((Flags & PAGE_USER) != PAGE_USER)
-    flags |= KernelMode;
-  if ((Flags & PAGE_WRITE) == PAGE_WRITE)
-    flags |= Write;
-  if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
-    flags |= WriteThrough;
-  if ((Flags & PAGE_CACHE_DISABLE) == PAGE_CACHE_DISABLE)
-    flags |= CacheDisable;
-  return flags;
 }
 
 bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddress,
@@ -208,4 +192,55 @@ X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
   : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
     m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables)
 {
+}
+
+bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
+                                               uint32_t *&pageTableEntry,
+                                               bool checkPresence)
+{
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
+
+  // Is a page table present?
+  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, pageTableIndex);
+
+  // Is a page present?
+  if (checkPresence == true)
+    if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+      return false;
+
+  return true;
+}
+
+uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
+{
+  uint32_t Flags = PAGE_PRESENT;
+  if ((flags & KernelMode) == KernelMode)
+    Flags |= PAGE_GLOBAL;
+  else
+    Flags |= PAGE_USER;
+  if ((flags & Write) == Write)
+    Flags |= PAGE_WRITE;
+  if ((flags & WriteThrough) == WriteThrough)
+    Flags |= PAGE_WRITE_THROUGH;
+  if ((flags & CacheDisable) == CacheDisable)
+    Flags |= PAGE_CACHE_DISABLE;
+  return Flags;
+}
+size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
+{
+  size_t flags = Execute;
+  if ((Flags & PAGE_USER) != PAGE_USER)
+    flags |= KernelMode;
+  if ((Flags & PAGE_WRITE) == PAGE_WRITE)
+    flags |= Write;
+  if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
+    flags |= WriteThrough;
+  if ((Flags & PAGE_CACHE_DISABLE) == PAGE_CACHE_DISABLE)
+    flags |= CacheDisable;
+  return flags;
 }

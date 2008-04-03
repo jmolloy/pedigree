@@ -26,6 +26,7 @@
 #define PAGE_USER                   0x04
 #define PAGE_WRITE_THROUGH          0x08
 #define PAGE_CACHE_DISABLE          0x10
+#define PAGE_2MB                    0x80
 #define PAGE_GLOBAL                 0x100
 #define PAGE_NX                     0x8000000000000000
 
@@ -54,38 +55,45 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
   return X64VirtualAddressSpace::m_KernelSpace;
 }
 
-static bool conditionalTableEntryAllocation(uint64_t *tableEntry, uint64_t flags)
+bool X64VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
-  {
-    // Allocate a page
-    PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
-    uint64_t page = PMemoryManager.allocatePage();
-    if (page == 0)
-      return false;
-
-    // Map the page
-    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX));
-
-    // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(page)), 0, PhysicalMemoryManager::getPageSize());
-  }
-
-  return true;
-}
-static bool conditionalTableEntryMapping(uint64_t *tableEntry, uint64_t physAddress, uint64_t flags)
-{
-  if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
-  {
-    // Map the page
-    *tableEntry = physAddress | (flags & ~(PAGE_GLOBAL | PAGE_NX));
-
-    // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(physAddress)), 0, PhysicalMemoryManager::getPageSize());
+  if ((uint64_t)virtualAddress < 0x0008000000000000 ||
+      (uint64_t)virtualAddress >= 0xFFF8000000000000)
     return true;
-  }
-
   return false;
+}
+bool X64VirtualAddressSpace::isMapped(void *virtualAddress)
+{
+  size_t pml4Index = PML4_INDEX(virtualAddress);
+  uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
+
+  // Is a page directory pointer table present?
+  if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  // Is a page directory present?
+  if ((*pageDirectoryPointerEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+  // Is a page table or 2MB page present?
+  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    return false;
+
+  // Is it a 2MB page?
+  if ((*pageDirectoryEntry & PAGE_2MB) == PAGE_2MB)
+    return true;
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
+
+  // Is a page present?
+  return ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT);
 }
 
 bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
@@ -126,9 +134,9 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   return true;
 }
-bool X64VirtualAddressSpace::getMaping(void *virtualAddress,
-                                       physical_uintptr_t &physAddress,
-                                       size_t &flags)
+bool X64VirtualAddressSpace::getMapping(void *virtualAddress,
+                                        physical_uintptr_t &physAddress,
+                                        size_t &flags)
 {
   // TODO
   return false;
@@ -183,6 +191,16 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
   return false;
 }
 
+X64VirtualAddressSpace::~X64VirtualAddressSpace()
+{
+  // TODO
+}
+
+X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4)
+  : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4)
+{
+}
+
 uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
 {
   uint64_t Flags = PAGE_PRESENT;
@@ -216,12 +234,39 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
   return flags;
 }
 
-X64VirtualAddressSpace::~X64VirtualAddressSpace()
+bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntry, uint64_t flags)
 {
-  // TODO
+  if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+  {
+    // Allocate a page
+    PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
+    uint64_t page = PMemoryManager.allocatePage();
+    if (page == 0)
+      return false;
+
+    // Map the page
+    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX));
+
+    // Zero the page directory pointer table
+    memset(physicalAddress(reinterpret_cast<void*>(page)),
+           0,
+           PhysicalMemoryManager::getPageSize());
+  }
+
+  return true;
 }
 
-X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4)
-  : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4)
+bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry, uint64_t physAddress, uint64_t flags)
 {
+  if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+  {
+    // Map the page
+    *tableEntry = physAddress | (flags & ~(PAGE_GLOBAL | PAGE_NX));
+
+    // Zero the page directory pointer table
+    memset(physicalAddress(reinterpret_cast<void*>(physAddress)), 0, PhysicalMemoryManager::getPageSize());
+    return true;
+  }
+
+  return false;
 }

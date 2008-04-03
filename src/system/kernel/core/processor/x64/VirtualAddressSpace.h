@@ -26,15 +26,22 @@
  *  architecture, that means it wraps around the processor's paging functionality. */
 class X64VirtualAddressSpace : public VirtualAddressSpace
 {
+  /** Processor::switchAddressSpace() needs access to m_PhysicalPML4 */
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   public:
+    //
+    // VirtualAddressSpace Interface
+    //
+    virtual bool isAddressValid(void *virtualAddress);
+    virtual bool isMapped(void *virtualAddress);
     virtual bool map(physical_uintptr_t physAddress,
                      void *virtualAddress,
                      size_t flags);
-    virtual bool getMaping(void *virtualAddress,
-                           physical_uintptr_t &physAddress,
-                           size_t &flags);
+
+    virtual bool getMapping(void *virtualAddress,
+                            physical_uintptr_t &physAddress,
+                            size_t &flags);
     virtual bool setFlags(void *virtualAddress, size_t newFlags);
     virtual bool unmap(void *virtualAddress);
 
@@ -44,9 +51,6 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     bool mapPageStructures(physical_uintptr_t physAddress,
                            void *virtualAddress,
                            size_t flags);
-
-    uint64_t toFlags(size_t flags);
-    size_t fromFlags(uint64_t Flags);
 
   protected:
     /** The destructor does nothing */
@@ -68,8 +72,17 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\note Not implemented */
     X64VirtualAddressSpace &operator = (const X64VirtualAddressSpace &);
 
+    uint64_t toFlags(size_t flags);
+    size_t fromFlags(uint64_t Flags);
+    bool conditionalTableEntryAllocation(uint64_t *tableEntry, uint64_t flags);
+    bool conditionalTableEntryMapping(uint64_t *tableEntry,
+                                      uint64_t physAddress,
+                                      uint64_t flags);
+
+    /** Physical address of the Page Map Level 4 */
     physical_uintptr_t m_PhysicalPML4;
 
+    /** The kernel virtual address space */
     static X64VirtualAddressSpace m_KernelSpace;
 };
 

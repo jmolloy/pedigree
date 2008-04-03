@@ -115,12 +115,8 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
   colOffset = sizeof(uintptr_t)*2+1;
   // Get the line we want.
   uintptr_t nLine = index*m_nCharsPerLine;
-  // Junk variable.
-  physical_uintptr_t nPhysicalAddress;
-  size_t nFlags;
   // Is it paged in?
-  if (!VirtualAddressSpace::getKernelAddressSpace().getMaping( reinterpret_cast<void*> (nLine),
-                                                               nPhysicalAddress, nFlags ))
+  if (!VirtualAddressSpace::getKernelAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
   {
     colour = DebuggerIO::Red;
     return "Memory not mapped.";

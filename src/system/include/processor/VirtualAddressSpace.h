@@ -50,6 +50,14 @@ class VirtualAddressSpace
      *\return pointer to the beginning of the newly allocated/mapped heap, 0 otherwise */
     virtual void *expandHeap(size_t pageCount, size_t flags);
 
+    /** Is a particular virtual address valid?
+     *\param[in] virtualAddress the virtual address to check
+     *\return true, if the address is valid, false otherwise */
+    virtual bool isAddressValid(void *virtualAddress) = 0;
+    /** Checks whether a mapping the the specific virtual address exists
+     *\param[in] virtualAddress the virtual address
+     *\return true, if a mapping exists, false otherwise */
+    virtual bool isMapped(void *virtualAddress) = 0;
     /** Map a specific physical page at a specific location into the virtual address
      *  space.
      *\param[in] physicalAddress the address of the physical page that should be mapped into
@@ -63,14 +71,16 @@ class VirtualAddressSpace
     virtual bool map(physical_uintptr_t physicalAddress,
                      void *virtualAddress,
                      size_t flags) = 0;
+
+    // FIXME: Rework these functions
     /** Get the physical address and the flags associated with the specific virtual address
      *\param[in] virtualAddress the address in the virtual address space
      *\param[out] flags the flags
      *\param[out] physicalAddress the physical address
      *\return true, if a mapping exists, false otherwise */
-    virtual bool getMaping(void *virtualAddress,
-                           physical_uintptr_t &physicalAddress,
-                           size_t &flags) = 0;
+    virtual bool getMapping(void *virtualAddress,
+                            physical_uintptr_t &physicalAddress,
+                            size_t &flags) = 0;
     /** Set the flags of the page at a specific virtual address
      *\param[in] virtualAddress the virtual address
      *\param[in] newFlags the flags */
