@@ -13,22 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "StackFrame.h"
 #include <Log.h>
+#include <utilities/utility.h>
+#include <processor/StackFrameBase.h>
 
-StackFrame::StackFrame(uintptr_t nBasePointer, LargeStaticString mangledSymbol) :
-  m_nBasePointer(nBasePointer), m_Symbol()
+StackFrameBase::StackFrameBase(const ProcessorState &State, LargeStaticString mangledSymbol)
+  : m_Symbol(), m_State(State)
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
   demangle(mangledSymbol, &m_Symbol);
 }
 
-
-StackFrame::~StackFrame()
-{
-}
-
-void StackFrame::prettyPrint(HugeStaticString &buf)
+void StackFrameBase::prettyPrint(HugeStaticString &buf)
 {
   bool bIsMember = isClassMember();
   
@@ -55,17 +51,7 @@ void StackFrame::prettyPrint(HugeStaticString &buf)
   buf += ")\n";
 }
 
-uintptr_t StackFrame::getParameter(size_t n)
-{
-#ifndef MIPS_COMMON
-  uintptr_t *pPtr = reinterpret_cast<uintptr_t *>(m_nBasePointer+(n+2)*sizeof(uintptr_t));
-  return *pPtr;
-#else
-  return 0;
-#endif
-}
-  
-void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
+void StackFrameBase::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
 {
 #ifdef MIPS_COMMON
   dest += type;
@@ -104,7 +90,7 @@ void StackFrame::format(uintptr_t n, const LargeStaticString &type, HugeStaticSt
 #endif
 }
 
-bool StackFrame::isClassMember()
+bool StackFrameBase::isClassMember()
 {
   int nScopeIdx = m_Symbol.name.last(':');
   if (nScopeIdx == -1)

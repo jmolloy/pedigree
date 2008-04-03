@@ -17,10 +17,10 @@
   <kdevcustomproject>
     <run>
       <directoryradio>executable</directoryradio>
-      <mainprogram>/home/james/pedigree/build/qemu</mainprogram>
+      <mainprogram/>
       <programargs/>
       <globaldebugarguments/>
-      <globalcwd>/home/james/pedigree/build</globalcwd>
+      <globalcwd/>
       <useglobalprogram>false</useglobalprogram>
       <terminal>true</terminal>
       <autocompile>false</autocompile>
@@ -37,6 +37,7 @@
       <filetype>Makefile</filetype>
       <filetype>*.mk</filetype>
       <filetype>*.pl</filetype>
+      <filetype>*</filetype>
     </filetypes>
     <blacklist>
       <path>build/compilers</path>
@@ -119,7 +120,7 @@
     </blacklist>
     <build>
       <buildtool>make</buildtool>
-      <builddir>build/</builddir>
+      <builddir/>
     </build>
     <other>
       <prio>0</prio>
@@ -214,10 +215,10 @@
   </kdevdoctreeview>
   <kdevfilecreate>
     <filetypes>
-      <type icon="source_cpp" ext="cc" name="C++ Source" create="template" >
+      <type icon="source_cpp" ext="cc" create="template" name="C++ Source" >
         <descr>A new empty C++ file.</descr>
       </type>
-      <type icon="source_h" ext="h" name="C/C++ Header" create="template" >
+      <type icon="source_h" ext="h" create="template" name="C/C++ Header" >
         <descr>A new empty header file for C or C++.</descr>
       </type>
     </filetypes>
@@ -232,8 +233,8 @@
       <includestyle>3</includestyle>
       <root>/usr/share/qt3</root>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
-      <qmake></qmake>
-      <designer></designer>
+      <qmake>/usr/bin/qmake-qt3</qmake>
+      <designer>/usr/bin/designer</designer>
       <designerpluginpaths/>
     </qt>
     <codecompletion>
@@ -299,7 +300,7 @@
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>true</hidenonprojectfiles>
+      <hidenonprojectfiles>false</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>

@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <utilities/utility.h>
-#include <demangle.h>
+#include <utilities/demangle.h>
 #include <utilities/StaticString.h>
 
 // Uncomment these if running standalone.

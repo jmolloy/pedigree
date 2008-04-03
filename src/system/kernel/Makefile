@@ -85,7 +85,6 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/SerialIO.cc \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
-            debugger/StackFrame.cc \
             debugger/DebuggerIO.cc \
             debugger/Scrollable.cc
   ifndef X64
@@ -119,7 +118,8 @@ endif
 SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/IoPort.c \
-            core/processor/IoPortManager.cc
+            core/processor/IoPortManager.cc \
+            core/processor/StackFrameBase.cc
 
 # TODO
 ifdef X86_COMMON
@@ -153,6 +153,7 @@ SRCFILES += core/processor/x86/initialiseProcessor1.cc \
             core/processor/x86/Processor.cc \
             core/processor/x86/gdt.cc \
             core/processor/x86/state.cc \
+            core/processor/x86/StackFrame.cc \
             core/processor/x86/VirtualAddressSpace.cc
 endif
 
@@ -170,6 +171,7 @@ SRCFILES += core/processor/x64/initialiseProcessor1.cc \
             core/processor/x64/Processor.cc \
             core/processor/x64/gdt.cc \
             core/processor/x64/state.cc \
+            core/processor/x64/StackFrame.cc \
             core/processor/x64/VirtualAddressSpace.cc
 endif
 
@@ -211,14 +213,16 @@ SRCFILES += core/processor/mips32/initialiseProcessor1.cc \
             core/processor/mips32/InterruptManager.cc \
             core/processor/mips32/asm/Processor.s \
             core/processor/mips32/asm/InterruptManager.s \
-            core/processor/mips32/state.cc
+            core/processor/mips32/state.cc \
+            core/processor/mips32/StackFrame.cc
 endif
 
 ###################################################################
 # mips64 source file list.
 ifdef MIPS64
 SRCFILES += core/processor/mips64/initialiseProcessor1.cc \
-            core/processor/mips64/initialiseProcessor2.cc
+            core/processor/mips64/initialiseProcessor2.cc \
+            core/processor/mips64/StackFrame.cc
 endif
 
 ###################################################################

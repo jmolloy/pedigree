@@ -63,25 +63,34 @@ ifdef X86
   CFLAGS += -m32  -gdwarf-2 -g1
 endif
 ifdef X64
-  CFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
+  CFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
 endif
 CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib  -gdwarf-2 -g1
 ifdef X86
   CXXFLAGS += -m32  -gdwarf-2 -g1
 endif
 ifdef X64
-  CXXFLAGS += -fno-omit-frame-pointer -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
+  CXXFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
 endif
 ifdef MIPS32
-  CXXFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
-  CFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -gdwarf-2 -g1
+  CXXFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -gdwarf-2 -g1
+  CFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -gdwarf-2 -g1
   ASFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -gdwarf-2 -g1
   LDFLAGS += -G0
 endif
 ifdef MIPS64
-  CXXFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
-  CFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fomit-frame-pointer -fasynchronous-unwind-tables
+  CXXFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
+  CFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
 endif
+
+ifdef OMIT_FRAMEPOINTER
+  CFLAGS += -fomit-frame-pointer
+  CXXFLAGS += -fomit-frame-pointer
+else
+  CFLAGS += -fno-omit-frame-pointer
+  CXXFLAGS += -fno-omit-frame-pointer
+endif
+
 LDFLAGS +=-nostdlib -nostdinc
 ifdef X86
   ASFLAGS=-felf

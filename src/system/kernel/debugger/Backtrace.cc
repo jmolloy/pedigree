@@ -17,7 +17,7 @@
 #include <Backtrace.h>
 #include <utilities/utility.h>
 #include <FileLoader.h>
-#include <StackFrame.h>
+#include <processor/StackFrame.h>
 #include <utilities/StaticString.h>
 #include <Log.h>
 #include <DwarfUnwinder.h>
@@ -123,7 +123,13 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
     const char *pSym = g_pKernel->lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
 
-    StackFrame sf(m_pBasePointers[i], sym);
+    // TODO: This is not portable
+    ProcessorState State;
+    #ifndef X86
+      #error This is serious BS for non-x86
+    #endif
+    State.ebp = m_pBasePointers[i];
+    StackFrame sf(State, sym);
     sf.prettyPrint(buf);
   }
 }
