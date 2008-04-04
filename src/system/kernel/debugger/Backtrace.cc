@@ -17,8 +17,6 @@
 #include <Backtrace.h>
 #include <utilities/utility.h>
 #include <FileLoader.h>
-#include <processor/StackFrame.h>
-#include <utilities/StaticString.h>
 #include <Log.h>
 #include <DwarfUnwinder.h>
 
@@ -79,6 +77,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
 #endif
     m_pReturnAddresses[i] = next.getInstructionPointer();
     m_pBasePointers[i] = next.getBasePointer();
+    m_pStates[i] = next;
     i++;
   }
   
@@ -104,6 +103,8 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
     m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
     m_pBasePointers[i] = nextAddress;
     base = nextAddress;
+    m_pStates[i].setBasePointer(m_pBasePointers[i]);
+    m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
     i++;
   }
   
@@ -123,13 +124,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
     const char *pSym = g_pKernel->lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
 
-    // TODO: This is not portable
-    ProcessorState State;
-    #ifndef X86
-      #error This is serious BS for non-x86
-    #endif
-    State.ebp = m_pBasePointers[i];
-    StackFrame sf(State, sym);
+    StackFrame sf(m_pStates[i], sym);
     sf.prettyPrint(buf);
   }
 }

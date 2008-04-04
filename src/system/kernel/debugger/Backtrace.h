@@ -18,6 +18,7 @@
 #define BACKTRACE_H
 
 #include <processor/Processor.h>
+#include <processor/StackFrame.h>
 #include <utilities/StaticString.h>
 
 #define MAX_STACK_FRAMES 20
@@ -73,6 +74,12 @@ private:
    * The base pointers.
    */
   uintptr_t m_pBasePointers[MAX_STACK_FRAMES];
+  
+  /**
+   * Processor register states.
+   */
+  ProcessorState m_pStates[MAX_STACK_FRAMES];
+  
   /**
    * The number of stack frames retrieved by a performBacktrace call.
    */

@@ -41,7 +41,7 @@ class Scrollable
     virtual size_t getLineCount() = 0;
     inline virtual ~Scrollable(){}
 
-  private:
+  protected:
     size_t m_x;
     size_t m_y;
     size_t m_width;

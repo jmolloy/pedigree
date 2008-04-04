@@ -134,6 +134,12 @@ public:
     return -1;
   }
   
+  void stripLast()
+  {
+    if (m_Length)
+      m_pData[--m_Length] = '\0';
+  }
+  
   bool contains(const char *other) const
   {
     if (strlen(other) >= length())

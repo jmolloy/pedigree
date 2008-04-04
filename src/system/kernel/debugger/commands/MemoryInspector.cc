@@ -87,9 +87,11 @@ bool MemoryInspector::execute (const HugeStaticString& input, HugeStaticString& 
     else if (c == 'q')
       bStop = true;
     else if (c == 'g')
-    {
       doGoto(pScreen, state);
-    }
+    else if (c == '/')
+      doSearch(true, pScreen, state);
+    else if (c == '?')
+      doSearch(false, pScreen, state);
   }
 
   // HACK:: Serial connections will fill the screen with the last background colour used.
@@ -199,6 +201,8 @@ void MemoryInspector::doGoto(DebuggerIO *pScreen, InterruptState &state)
       ;
     if (c == '\n' || c == '\r')
       break;
+    else if (c == 0x08)
+      str.stripLast();
     else
       str += c;
   }
@@ -216,6 +220,145 @@ void MemoryInspector::doGoto(DebuggerIO *pScreen, InterruptState &state)
   }
 }
 
+void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptState &state)
+{
+  static LargeStaticString str;
+  static LargeStaticString str2;
+  str.clear();
+  while (1)
+  {
+    // Erase the bottom line.
+    pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
+    // Print helper text.
+    if (bForward)
+      pScreen->drawString("[Search] ", pScreen->getHeight()-2, 0, DebuggerIO::White, DebuggerIO::Black);
+    else
+      pScreen->drawString("[Reverse]", pScreen->getHeight()-2, 0, DebuggerIO::White, DebuggerIO::Black);
+    // Print current string contents.
+    pScreen->drawString(str, pScreen->getHeight()-2, 10, DebuggerIO::White, DebuggerIO::Black);
+    // Get a character.
+    char c;
+    while( (c=pScreen->getChar()) == 0)
+      ;
+    if (c == '\n' || c == '\r')
+      break;
+    else if (c == 0x08)
+      str.stripLast();
+    else
+      str += c;
+  }
+  
+  pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
+  
+  unsigned int nChars = 0;
+  uint8_t pChars[8];
+  
+  // Valid search?
+  if (str[0] == '"')
+  {
+    // Ascii search.
+    str.stripFirst();
+    str.stripLast();
+
+    if (str.length() > 8)
+    {
+      pScreen->drawString("Search string too long (> 8 characters)", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
+      return;
+    }
+    
+    nChars = str.length();
+    for (int i = 0; i < str.length(); i++)
+      pChars[i] = str[i];
+  }
+  else
+  {
+#ifdef BIG_ENDIAN
+#error Big endian people will have problems here.
+#endif
+    // Assume hex integer.
+    if (str.left(2) == "0x")
+      str.stripFirst(2);
+    nChars = str.length()/2;
+    if (nChars >= 8)
+    {
+      pScreen->drawString("Hex string too long, 8 bytes max.", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
+      return;
+    }
+    for (int i = 0; i < nChars; i++)
+    {
+      // Get our nibbles.
+      TinyStaticString mystr;
+      mystr += str[i*2];
+      mystr += str[i*2+1];
+      // Convert.
+      int nConverted = mystr.intValue(16);
+      // Failed?
+      if (nConverted == -1)
+      {
+        pScreen->drawString("Malformed hexadecimal number.", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
+        return;
+      }
+      pChars[nChars-i-1] = static_cast<uint8_t> (nConverted);
+    }
+  }
+  
+  if (bForward)
+    str = "[Search for ";
+  else 
+    str = "[Reverse for ";
+  for (int i = 0; i < nChars; i++)
+  {
+    str.append(pChars[i], 16, 2, '0');
+    str += ' ';
+  }
+  str += ": over ?(K|M) of memory]";
+  pScreen->drawString(str, pScreen->getHeight()-2, 0, DebuggerIO::White, DebuggerIO::Black);
+  
+  str2.clear();
+  while (1)
+  {
+    // Erase the bottom line.
+    pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
+    // Print helper text.
+    pScreen->drawString(str, pScreen->getHeight()-2, 0, DebuggerIO::White, DebuggerIO::Black);
+    // Print current string contents.
+    pScreen->drawString(str2, pScreen->getHeight()-2, str.length()+1, DebuggerIO::White, DebuggerIO::Black);
+    // Get a character.
+    char c;
+    while( (c=pScreen->getChar()) == 0)
+      ;
+    if (c == '\n' || c == '\r')
+      break;
+    else if (c == 0x08)
+      str2.stripLast();
+    else
+      str2 += c;
+  }
+  
+  // Erase the bottom line.
+  pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
+  str = str2.right(1);
+  char suffix = str[0];
+  if (suffix == 'M' || suffix == 'K')
+    str2.stripLast();
+  int num = str2.intValue();
+  if (num == -1)
+  {
+    pScreen->drawString("Malformed number.", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
+    return;
+  }
+  size_t nRange = static_cast<size_t> (num);
+  if (suffix == 'K')
+    nRange *= 1024;
+  else if (suffix == 'M')
+    nRange *= 1048576;
+  
+  pScreen->drawString("Searching...", pScreen->getHeight()-2, 0, DebuggerIO::Green, DebuggerIO::Black);
+  
+  // Do the search.
+  
+}
+
 bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state)
 {
   for (size_t i = 0;i < state.getRegisterCount();i++)
@@ -227,7 +370,7 @@ bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, Interru
       return true;
     }
   }
-  int n = str.intValue(16);
+  int n = str.intValue();
   if (n == -1)
     return false;
   else

@@ -64,6 +64,7 @@ public:
 private:
   void resetStatusLine(DebuggerIO *pScreen);
   void doGoto(DebuggerIO *pScreen, InterruptState &state);
+  void doSearch(bool bForward, DebuggerIO *pScreen, InterruptState &state);
   bool tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state);
   size_t m_nCharsPerLine;
 };
