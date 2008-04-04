@@ -19,7 +19,7 @@
 # NB: jamesmol is JamesM's work machine.
 #
 [james]    MIPS_MALTA
-[jamesmol] X64
+[jamesmol] MIPS_MALTA
 [bluecode] X86
 
 #

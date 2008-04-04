@@ -185,13 +185,13 @@ const char *g_pRegimm[32] = {
 };
 
 const char *g_pCopzRs[32] = {
-  "mf",
+  "mfc",
   0,
-  "cf",
+  "cfc",
   0,
-  "mt",
+  "mtc",
   0,
-  "ct",
+  "ctc",
   0,
   "bc",          // 8
   0,
@@ -220,10 +220,10 @@ const char *g_pCopzRs[32] = {
 };
 
 const char *g_pCopzRt[32] = {
-  "bcf",
-  "bct",
-  "bcfl",
-  "bctl",
+  "f",
+  "t",
+  "fl",
+  "tl",
   0,
   0,
   0,
@@ -384,9 +384,16 @@ void MipsDisassembler::disassemble(LargeStaticString &text)
   uint32_t nInstruction = * reinterpret_cast<uint32_t*> (m_nLocation);
   m_nLocation += 4;
 
+  // SLL $zero, $zero, 0 == nop.
+  if (nInstruction == 0)
+  {
+    text += "nop";
+    return;
+  }
+  
   // Grab the instruction opcode.
   int nOpcode = (nInstruction >> 26) & 0x3F;
-
+  
   // Handle special opcodes.
   if (nOpcode == 0)
   {
@@ -411,18 +418,101 @@ void MipsDisassembler::disassembleSpecial(uint32_t nInstruction, LargeStaticStri
   uint32_t nShamt = (nInstruction >> 6) & 0x1F;
   uint32_t nFunct = nInstruction & 0x3F;
 
+  if (g_pSpecial[nFunct] == 0)
+    return;
+  
   switch (nFunct)
   {
-
+    case 00: // SLL
+    case 02: // SRL
+    case 03: // SRA
+      text += g_pSpecial[nFunct];
+      text += " ";
+      text += g_pRegisters[nRd];
+      text += ", ";
+      text += g_pRegisters[nRt];
+      text += ", ";
+      text += nShamt;
+      break;
+    case 04: // SLLV
+    case 06: // SRLV
+    case 07: // SRAV
+      text += g_pSpecial[nFunct];
+      text += " ";
+      text += g_pRegisters[nRd];
+      text += ", ";
+      text += g_pRegisters[nRt];
+      text += ", ";
+      text += g_pRegisters[nRs];
+      break;
+    case 010: // JR
+      text += "jr ";
+      text += g_pRegisters[nRs];
+      break;
+    case 011: // JALR
+    {
+      text += "jalr ";
+      if (nRd != 31)
+      {
+        text += g_pRegisters[nRd];
+        text += ", ";
+      }
+      text += g_pRegisters[nRs];
+      break;
+    }
+    case 014: // SYSCALL
+    case 015: // BREAK
+    case 017: // SYNC
+      text += g_pSpecial[nFunct];
+      break;
+    case 020: // MFHI
+    case 022: // MFLO
+      text += g_pSpecial[nFunct];
+      text += " ";
+      text += g_pRegisters[nRd];
+      break;
+    case 021: // MTHI
+    case 023: // MTLO
+      text += g_pSpecial[nFunct];
+      text += " ";
+      text += g_pRegisters[nRs];
+      break;
+    case 030: // MULT
+    case 031: // MULTU
+    case 032: // DIV
+    case 033: // DIVU
+    case 060: // TGE
+    case 061: // TGEU
+    case 062: // TLT
+    case 063: // TLTU
+    case 064: // TEQ
+    case 065: // TNE
+      text += g_pSpecial[nFunct];
+      text += " ";
+      text += g_pRegisters[nRs];
+      text += " ";
+      text += g_pRegisters[nRt];
+      break;
+    case 041: // ADDU
+      if (nRt == 0)
+      {
+        // If this is an add of zero, it is actually a "move".
+        text += "move ";
+        text += g_pRegisters[nRd];
+        text += ", ";
+        text += g_pRegisters[nRs];
+        break;
+      }
+      // Fall through.
     default:
     {
       text += g_pSpecial[nFunct];
-      text += " $";
-      text += g_pRegisters[nRt];
-      text += ", $";
-      text += g_pRegisters[nRs];
-      text += ", $";
+      text += " ";
       text += g_pRegisters[nRd];
+      text += ", ";
+      text += g_pRegisters[nRs];
+      text += ", ";
+      text += g_pRegisters[nRt];
     }
   };
 }
@@ -433,4 +523,80 @@ void MipsDisassembler::disassembleRegImm(uint32_t nInstruction, LargeStaticStrin
 
 void MipsDisassembler::disassembleOpcode(uint32_t nInstruction, LargeStaticString & text)
 {
+  // Opcode instructions are J-Types, or I-Types.
+  // Jump target is the lower 26 bits shifted left 2 bits, OR'd with the high 4 bits of the delay slot.
+  uint32_t nTarget = ((nInstruction & 0x03FFFFFF)<<2) | (m_nLocation & 0xF0000000);
+  uint32_t nImmediate = nInstruction & 0x0000FFFF;
+  uint32_t nRt = (nInstruction >> 16) & 0x1F;
+  uint32_t nRs = (nInstruction >> 21) & 0x1F;
+  int nOpcode = (nInstruction >> 26) & 0x3F;
+  
+  switch (nOpcode)
+  {
+    case 02: // J
+    case 03: // JAL
+      text += g_pOpcodes[nOpcode];
+      text += " 0x";
+      text.append(nTarget, 16);
+      break;
+    case 010: // ADDI
+    case 011: // ADDIU
+    case 012: // SLTI
+    case 013: // SLTIU
+    case 014: // ANDI
+    case 015: // ORI
+    case 016: // XORI
+      text += g_pOpcodes[nOpcode];
+      text += " ";
+      text += g_pRegisters[nRt];
+      text += ", ";
+      text += g_pRegisters[nRs];
+      text += ", ";
+      text.append(static_cast<short>(nImmediate), 10);
+      break;
+    case 017: // LUI
+      text += "lui ";
+      text += g_pRegisters[nRt];
+      text += " 0x";
+      text.append(nImmediate, 16);
+      break;
+    case 020: // COP0
+    case 021: // COP1
+    case 022: // COP2
+    case 023: // COP3
+    {
+      if (nRs == 8) // BC
+      {
+        text += g_pCopzRs[nRs];
+        text.append( static_cast<unsigned char>(nOpcode&0x3));
+        text += g_pCopzRt[nRt];
+        text += ", 0x";
+        text.append( (nImmediate<<2)+m_nLocation, 16);
+      }
+      else if (nOpcode == 020 /* CP0 */ && nRs >= 16 /* CO */)
+      {
+        text += g_pCp0Function[nInstruction&0x1F];
+      }
+      else
+      {
+        text += g_pCopzRs[nRs];
+        text.append( static_cast<unsigned char>(nOpcode&0x3));
+        text += " ";
+        text += g_pRegisters[nRt];
+        text += ", ";
+        text.append( ((nInstruction>>11)&0x1F), 10);
+      }
+      break;
+    }
+    default:
+      text += g_pOpcodes[nOpcode];
+      text += " ";
+      text += g_pRegisters[nRt];
+      text += ", ";
+      text.append(static_cast<short>(nImmediate), 10);
+      text += "(";
+      text += g_pRegisters[nRs];
+      text += ")";
+      break;
+  }
 }
