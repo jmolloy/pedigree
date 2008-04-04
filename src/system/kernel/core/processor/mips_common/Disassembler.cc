@@ -519,6 +519,33 @@ void MipsDisassembler::disassembleSpecial(uint32_t nInstruction, LargeStaticStri
 
 void MipsDisassembler::disassembleRegImm(uint32_t nInstruction, LargeStaticString & text)
 {
+  uint32_t nRs = (nInstruction >> 21)&0x1F;
+  uint32_t nOp = (nInstruction >> 16)&0x1F;
+  uint16_t nImmediate = nInstruction & 0xFFFF;
+  uint32_t nTarget = (nImmediate << 2) + m_nLocation;
+  
+  switch (nOp)
+  {
+    case 010: // TGEI
+    case 011: // TGEIU
+    case 012: // TLTI
+    case 013: // TLTIU
+    case 014: // TEQI
+    case 016: // TNEI
+      text += g_pRegimm[nOp];
+      text += " ";
+      text += g_pRegisters[nRs];
+      text += ", ";
+      text.append(static_cast<int16_t>(nImmediate), 10);
+      break;
+    default:
+      text += g_pRegimm[nOp];
+      text += " ";
+      text += g_pRegisters[nRs];
+      text += ", 0x";
+      text.append(nTarget, 16);
+  };
+  
 }
 
 void MipsDisassembler::disassembleOpcode(uint32_t nInstruction, LargeStaticString & text)
@@ -526,7 +553,7 @@ void MipsDisassembler::disassembleOpcode(uint32_t nInstruction, LargeStaticStrin
   // Opcode instructions are J-Types, or I-Types.
   // Jump target is the lower 26 bits shifted left 2 bits, OR'd with the high 4 bits of the delay slot.
   uint32_t nTarget = ((nInstruction & 0x03FFFFFF)<<2) | (m_nLocation & 0xF0000000);
-  uint32_t nImmediate = nInstruction & 0x0000FFFF;
+  uint16_t nImmediate = nInstruction & 0x0000FFFF;
   uint32_t nRt = (nInstruction >> 16) & 0x1F;
   uint32_t nRs = (nInstruction >> 21) & 0x1F;
   int nOpcode = (nInstruction >> 26) & 0x3F;
@@ -538,6 +565,28 @@ void MipsDisassembler::disassembleOpcode(uint32_t nInstruction, LargeStaticStrin
       text += g_pOpcodes[nOpcode];
       text += " 0x";
       text.append(nTarget, 16);
+      break;
+    case 006: // BLEZ
+    case 007: // BGTZ
+    case 026: // BLEZL
+    case 027: // BGTZL
+      text += g_pOpcodes[nOpcode];
+      text += " ";
+      text += g_pRegisters[nRs];
+      text += ", 0x";
+      text.append( (static_cast<uint32_t>(nImmediate) << 2)+m_nLocation, 16);
+      break;
+    case 004: // BEQ
+    case 005: // BNE
+    case 024: // BEQL
+    case 025: // BNEL
+      text += g_pOpcodes[nOpcode];
+      text += " ";
+      text += g_pRegisters[nRs];
+      text += ", ";
+      text += g_pRegisters[nRt];
+      text += ", 0x";
+      text.append( (static_cast<uint32_t>(nImmediate) << 2)+m_nLocation, 16);
       break;
     case 010: // ADDI
     case 011: // ADDIU
@@ -557,7 +606,7 @@ void MipsDisassembler::disassembleOpcode(uint32_t nInstruction, LargeStaticStrin
     case 017: // LUI
       text += "lui ";
       text += g_pRegisters[nRt];
-      text += " 0x";
+      text += ", 0x";
       text.append(nImmediate, 16);
       break;
     case 020: // COP0
