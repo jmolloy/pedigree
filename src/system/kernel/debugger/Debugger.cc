@@ -83,7 +83,6 @@ void Debugger::initialise()
 
 void Debugger::breakpoint(InterruptState &state)
 {
-  
   /*
    * I/O implementations.
    */
@@ -135,18 +134,22 @@ void Debugger::breakpoint(InterruptState &state)
     // Poll each device.
     while (pIo == 0)
       for (int i = 0; i < nInterfaces; i++)
-        if (pInterfaces[i]->getCharNonBlock())
+      {
+        char c = pInterfaces[i]->getCharNonBlock();
+        if ((c >= 32 && c <= 127) || c == '\n' || c == 0x08 || c == '\r' || c == 0x09)
         {
           pIo = pInterfaces[i];
           nChosenInterface = i;
           break;
         }
+      }
   }
   else
   {
     pIo = pInterfaces[n];
     nChosenInterface = n;
   }
+  pIo->readDimensions();
 
   // Say sorry to the losers...
   for (int i = 0; i < nInterfaces; i++)

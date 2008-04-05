@@ -50,6 +50,8 @@ public:
 
   void cls();
   char getCharNonBlock();
+
+  void readDimensions();
   
   /**
    * Draw a line of characters in the given fore and back colours, in the 
@@ -102,6 +104,8 @@ protected:
   
   void readCursor();
   void setCursor();
+  void saveCursor();
+  void unsaveCursor();
   
   /**
    * Current upper and lower CLI limits.

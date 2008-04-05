@@ -128,6 +128,8 @@ public:
   virtual void enableRefreshes() = 0;
   virtual void disableRefreshes() = 0;
   virtual void forceRefresh() = 0;
+
+  virtual void readDimensions() = 0;
   
   /**
    * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.

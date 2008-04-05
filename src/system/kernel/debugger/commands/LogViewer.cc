@@ -83,8 +83,8 @@ bool LogViewer::execute(const HugeStaticString &input, HugeStaticString &output,
     refresh(pScreen);
 
     // Wait for input.
-    char c;
-    while( (c=pScreen->getChar()) == 0)
+    char c = 0;
+    while( !(c=pScreen->getChar()) )
       ;
 
     // TODO: Use arrow keys and page up/down someday

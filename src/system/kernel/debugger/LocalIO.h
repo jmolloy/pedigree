@@ -95,6 +95,8 @@ public:
    * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
    */
   char getChar();
+
+  void readDimensions() {}
   
 protected:
  

@@ -17,7 +17,7 @@
 #include <machine/types.h>
 #include <Log.h>
 #include <machine/Machine.h>
-
+#include <utilities/StaticString.h>
 MaltaSerial::MaltaSerial() :
   m_pBuffer(0),
   m_pRegs(0)
@@ -32,6 +32,14 @@ void MaltaSerial::setBase(uintptr_t nBaseAddr)
 {
   // We use KSEG1 (uncached physical) for our IO accesses.
   m_pRegs = reinterpret_cast<serial*> (KSEG1(nBaseAddr));
+  LargeStaticString str;
+  str += "rxtx: ";
+  str.append((uint32_t)&m_pRegs->rxtx, 16);
+  str += ", lstat : ";
+  str.append((uint32_t)&m_pRegs->lstat, 16);
+  const char *c = (const char*)str;
+  while (*c)
+      write(*c++);
 }
 
 void MaltaSerial::write(char c)
@@ -60,6 +68,7 @@ char MaltaSerial::readNonBlock()
 
 bool MaltaSerial::isConnected()
 {
+  return true;
   uint8_t nStatus = m_pRegs->mstat;
   // Bits 0x30 = Clear to send & Data set ready.
   // Mstat seems to be 0xFF when the device isn't present.

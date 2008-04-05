@@ -72,6 +72,7 @@ void X86Serial::write(char c)
 
 bool X86Serial::isConnected()
 {
+  return true;
   uint8_t nStatus = m_Port.read8(serial::mstat);
   // Bits 0x30 = Clear to send & Data set ready.
   // Mstat seems to be 0xFF when the device isn't present.

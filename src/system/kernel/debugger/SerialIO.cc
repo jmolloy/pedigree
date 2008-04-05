@@ -28,31 +28,21 @@ SerialIO::SerialIO(Serial *pSerial) :
   m_nHeight(25),
   m_nCursorX(0),
   m_nCursorY(0),
+  m_nOldCursorX(0),
+  m_nOldCursorY(0),
   m_ForeColour(DebuggerIO::Red),
   m_BackColour(DebuggerIO::Red),
   m_pSerial(pSerial),
   m_bCli(false)
 {
   // Save cursor and attributes.
-  m_pSerial->write("\0337");
-  readCursor();
-  m_nOldCursorX = m_nCursorX;
-  m_nOldCursorY = m_nCursorY;
+//   m_pSerial->write("\033[s");
   
   // Push screen contents.
   m_pSerial->write("\033[?1049h");
   
-  // Move the cursor off the bottom right somewhere. The device will clamp to its available
-  // area.
-  m_nCursorY = 10000;
-  m_nCursorX = 10000;
-  setCursor();
-  readCursor();
-  m_nWidth = m_nCursorX;
-  m_nHeight = m_nCursorY;
-  
   // Move the cursor back to the top left.
-  m_pSerial->write("\033[0;0H");
+//   m_pSerial->write("\033[0;0H");
   
   // Enable line wrapping.
   m_pSerial->write("\033[7h");
@@ -63,9 +53,15 @@ SerialIO::~SerialIO()
   // Pop screen contents.
   m_pSerial->write("\033[?1049l");
   
+  // Disable scrolling.
+  m_pSerial->write("\033[0;0r");
+
   // Load cursor and attributes.
-  m_pSerial->write("\0338");
+//   m_pSerial->write("\033[u");
   
+  // Just reset the terminal.
+//   m_pSerial->write("\033c");
+
   // Set the cursor
   TinyStaticString str;
   str += "\033[";
@@ -74,9 +70,6 @@ SerialIO::~SerialIO()
   str += m_nOldCursorY;
   str += "H";
   m_pSerial->write(str);
-  
-  // Disable scrolling.
-  m_pSerial->write("\033[0;0r");
 }
 
 void SerialIO::setCliUpperLimit(size_t nlines)
@@ -125,7 +118,7 @@ void SerialIO::disableCli()
   m_pSerial->write("\033[0;0r");
   
   // Reposition the cursor.
-  m_pSerial->write("\033[0;0H");
+//   m_pSerial->write("\033[0;0H");
   
   m_bCli = false;
 }
@@ -138,9 +131,9 @@ char SerialIO::getChar()
   if (c == '\033')
   {
     // Agh! VT100 code!
-    c = m_pSerial->read();
-    while ( c != 'R' )
-      c = m_pSerial->read();
+    ERROR("VT100 code!!");
+//     while ( c != 'R' )
+//       c = m_pSerial->read();
     return 0;
   }
   return c;
@@ -148,8 +141,8 @@ char SerialIO::getChar()
 
 void SerialIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  if (m_bCli)
-    readCursor();
+  saveCursor();
+
   // colEnd must be bigger than colStart.
   if (colStart > colEnd)
   {
@@ -168,23 +161,56 @@ void SerialIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t co
     row = 0;
 
   startColour(foreColour, backColour);
-  
-  // Position the cursor at the specified column, row.
-  TinyStaticString cmd("\033[");
-  cmd += (row+1);
-  cmd += ';';
-  cmd += (colStart+1);
-  cmd += 'H';
-  m_pSerial->write(cmd);
-  
-  for (size_t i = colStart; i <= colEnd; i++)
+
+  // Here we can do clever stuff. If we're erasing to the start or the end of the line,
+  // and we're trying to clear it (c == ' ') vt100 has some nice codes that make our
+  // life easier and faster.
+  if (colEnd == m_nWidth-1 && c == ' ')
   {
-    m_pSerial->write(c);
+    // Position the cursor at the specified column, row.
+    TinyStaticString cmd("\033[");
+    cmd += (row+1);
+    cmd += ';';
+    cmd += (colStart+1);
+    cmd += 'H';
+    m_pSerial->write(cmd);
+
+    // Erase to the end of line.
+    m_pSerial->write("\033[K");
+  }
+  else if (colStart == 0 && c == ' ')
+  {
+    // Position the cursor where the line is supposed to *end*.
+    TinyStaticString cmd("\033[");
+    cmd += (row+1);
+    cmd += ';';
+    cmd += (colEnd+1);
+    cmd += 'H';
+    m_pSerial->write(cmd);
+
+    // Erase backwards to the start of line.
+    m_pSerial->write("\033[1K");
+  }
+  else
+  {
+    // Position the cursor at the specified column, row.
+    TinyStaticString cmd("\033[");
+    cmd += (row+1);
+    cmd += ';';
+    cmd += (colStart+1);
+    cmd += 'H';
+    m_pSerial->write(cmd);
+
+    // Write each character seperately.
+    for (size_t i = colStart; i <= colEnd; i++)
+    {
+      m_pSerial->write(c);
+    }
   }
   
   endColour();
-  if (m_bCli)
-    setCursor();
+
+  unsaveCursor();
 }
 
 void SerialIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
@@ -211,9 +237,7 @@ void SerialIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowE
 
 void SerialIO::drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  if (m_bCli)
-    readCursor();
-  startColour(foreColour, backColour);
+  saveCursor();
   
   // Position the cursor at the specified column, row.
   TinyStaticString cmd("\033[");
@@ -222,11 +246,12 @@ void SerialIO::drawString(const char *str, size_t row, size_t col, DebuggerIO::C
   cmd += (col+1);
   cmd += 'H';
   m_pSerial->write(cmd);
+
+  startColour(foreColour, backColour);
   
   m_pSerial->write(str);
   endColour();
-  if (m_bCli)
-    setCursor();
+  unsaveCursor();
 }
 
 void SerialIO::enableRefreshes()
@@ -297,8 +322,8 @@ void SerialIO::forceRefresh()
 
 void SerialIO::startColour(DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour)
 {
-  if (foreColour == m_ForeColour && backColour == m_BackColour)
-    return;
+//   if (foreColour == m_ForeColour && backColour == m_BackColour)
+//     return;
   
   m_ForeColour = foreColour;
   m_BackColour = backColour;
@@ -406,4 +431,36 @@ void SerialIO::setCursor()
   str += m_nCursorX;
   str += "H";
   m_pSerial->write(str);
+}
+
+void SerialIO::saveCursor()
+{
+//   readCursor();
+  m_pSerial->write("\033[s");
+}
+
+void SerialIO::unsaveCursor()
+{
+//   setCursor();
+  m_pSerial->write("\033[u");
+}
+
+void SerialIO::readDimensions()
+{
+  // Read old cursor position
+  readCursor();
+  m_nOldCursorX = m_nCursorX;
+  m_nOldCursorY = m_nCursorY;
+  NOTICE("m_nOldCursorY: " << Hex << m_nOldCursorY << ", m_nOldCursorX: " << m_nOldCursorX);
+  // Move the cursor off the bottom right somewhere. The device will clamp to its available
+  // area.
+  m_nCursorY = 10000;
+  m_nCursorX = 10000;
+  setCursor();
+  readCursor();
+  m_nWidth = m_nCursorX;
+  m_nHeight = m_nCursorY;
+  
+  // Move the cursor back to the top left.
+  m_pSerial->write("\033[0;0H");
 }

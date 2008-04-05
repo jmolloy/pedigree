@@ -31,7 +31,7 @@ nop
   move $k0, $sp          # $k0 is the current stack pointer.
   beq $k1, $zero, .stack_good # If sp in kuseg, skip the stack change.
   nop
-  li $k0, 0x80020000     # This will be our kernel stack pointer.
+#li $k0, 0x80020000     # This will be our kernel stack pointer.
 .stack_good:
   # Here, $k0 holds the value of our kernel stack. $sp is still it's pre-exception value.
   # $k1 holds junk.

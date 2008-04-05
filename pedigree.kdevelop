@@ -17,10 +17,10 @@
   <kdevcustomproject>
     <run>
       <directoryradio>executable</directoryradio>
-      <mainprogram/>
+      <mainprogram>/home/james/pedigree/build/qemu</mainprogram>
       <programargs/>
       <globaldebugarguments/>
-      <globalcwd/>
+      <globalcwd>/home/james/pedigree/build</globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <terminal>true</terminal>
       <autocompile>false</autocompile>
@@ -37,7 +37,6 @@
       <filetype>Makefile</filetype>
       <filetype>*.mk</filetype>
       <filetype>*.pl</filetype>
-      <filetype>*</filetype>
     </filetypes>
     <blacklist>
       <path>build/compilers</path>
@@ -117,15 +116,10 @@
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/unwind.h</path>
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/varargs.h</path>
       <path>build/compilers/lib/gcc/i686-elf/4.2.2/install-tools/include/xmmintrin.h</path>
-      <path>pedigree.kdevelop.pcs</path>
-      <path>pedigree.kdevses</path>
-      <path>templates</path>
-      <path>templates/cc</path>
-      <path>templates/h</path>
     </blacklist>
     <build>
       <buildtool>make</buildtool>
-      <builddir/>
+      <builddir>build/</builddir>
     </build>
     <other>
       <prio>0</prio>
@@ -151,7 +145,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel</activedir>
+      <activedir>src/system/include/processor</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
@@ -238,8 +232,8 @@
       <includestyle>3</includestyle>
       <root>/usr/share/qt3</root>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
-      <qmake>/usr/bin/qmake-qt3</qmake>
-      <designer>/usr/bin/designer</designer>
+      <qmake></qmake>
+      <designer></designer>
       <designerpluginpaths/>
     </qt>
     <codecompletion>
@@ -305,7 +299,7 @@
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonprojectfiles>true</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>

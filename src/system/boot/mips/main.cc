@@ -58,10 +58,20 @@ void writeStr(const char *str)
   while ((c = *str++))
     writeChar(c);
 }
-
+extern "C" int __start();
 extern "C" int start()
 {
+  asm volatile("li $sp, 0x800F0000");
+  // Disable interrupts.
+  asm volatile("mfc0 $t0, $12"); // get SR
+  asm volatile("addi $t1, $zero, 0x1"); // Set $t1 = 1
+  asm volatile("and $t0, $t0, $t1"); // $t0 = $t0 & 0x1
+  asm volatile("mtc0 $t0, $12"); // set SR.
+  asm volatile("j __start");
+}
 
+extern "C" int __start()
+{
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
   elf.writeSections();

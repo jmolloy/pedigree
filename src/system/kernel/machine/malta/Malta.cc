@@ -24,6 +24,7 @@ Machine &Machine::instance()
 
 void Malta::initialise()
 {
+  
   m_Serial[0].setBase(0x180003f8);
   m_Serial[1].setBase(0x180002f8);
   m_bInitialised = true;
