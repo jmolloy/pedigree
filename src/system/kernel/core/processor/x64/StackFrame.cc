@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(DEBUGGER)
+
 #include <processor/StackFrame.h>
 
 uintptr_t X64StackFrame::getParameter(size_t n)
@@ -31,3 +33,5 @@ uintptr_t X64StackFrame::getParameter(size_t n)
   #endif
   return *pPtr;
 }
+
+#endif

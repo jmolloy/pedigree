@@ -16,8 +16,9 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_PHYSICALMEMORYMANAGER_H
 #define KERNEL_PROCESSOR_X86_COMMON_PHYSICALMEMORYMANAGER_H
 
-#include <processor/PhysicalMemoryManager.h>
 #include <BootstrapInfo.h>
+#include <utilities/RangeList.h>
+#include <processor/PhysicalMemoryManager.h>
 
 /** @addtogroup kernelprocessorx86common
  * @{ */
@@ -102,6 +103,14 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** The page stack */
     PageStack m_PageStack;
+
+    /** RangeList for the usable memory below 1MB */
+    RangeList<uint32_t> m_RangeBelow1MB;
+    /** RangeList for the usable memory below 16MB */
+    RangeList<uint32_t> m_RangeBelow16MB;
+
+    /** RangeList of free physical memory */
+    RangeList<uint64_t> m_PhysicalRanges;
 
     /** The X86CommonPhysicalMemoryManager class instance */
     static X86CommonPhysicalMemoryManager m_Instance;

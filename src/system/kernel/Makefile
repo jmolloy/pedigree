@@ -141,6 +141,18 @@ SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Keyboard.cc \
             core/processor/x86_common/Processor.cc \
             core/processor/x86_common/PhysicalMemoryManager.cc
+
+  ifdef ACPI
+    SRCFILES += machine/x86_common/Acpi.cc
+  endif
+
+  ifdef MULTIPROCESSOR
+    SRCFILES += core/processor/x86_common/Multiprocessor.cc
+
+    ifdef SMP
+      SRCFILES += core/processor/x86_common/Smp.cc
+    endif
+  endif
 endif
 
 ###################################################################

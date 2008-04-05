@@ -21,6 +21,11 @@
 #include "VirtualAddressSpace.h"
 #include "../x86_common/PhysicalMemoryManager.h"
 
+// Multiprocessor headers
+#if defined(MULTIPROCESSOR)
+  #include "../x86_common/Multiprocessor.h"
+#endif
+
 void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
 {
   const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
@@ -53,20 +58,22 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);
 
-  // TODO
-
   m_Initialised = 1;
 }
 
 void Processor::initialise2()
 {
+  size_t nProcessors = 1;
+
+  #if defined(MULTIPROCESSOR)
+    nProcessors = initialiseMultiprocessor();
+  #endif
+
   // Initialise the GDT
-  X64GdtManager::instance().initialise(1);
+  X64GdtManager::instance().initialise(nProcessors);
   X64GdtManager::initialiseProcessor();
 
-  // TODO: Process SMP/ACPI tables
-
-  // TODO
+  // TODO: Unmap the identity mapping of the first MBs
 
   m_Initialised = 2;
 }

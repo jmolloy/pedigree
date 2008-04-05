@@ -19,70 +19,79 @@ include buildFlags.mk
 # /modules/modules.list contains a definition for $MODULES, with the name of all modules to make.
 include $(SRC)/system/modules/modules.list
 
+# Compiler paths prefix
 COMPILER=
 ifdef X86
-COMPILER=i686-elf
+  COMPILER=i686-elf
 endif
 ifdef X64
-COMPILER=amd64-elf
+	COMPILER=amd64-elf
 endif
 ifdef MIPS64
-COMPILER=mips64el-elf
+	COMPILER=mips64el-elf
 endif
 ifdef MIPS32
-COMPILER=mips64el-elf
+	COMPILER=mips64el-elf
 endif
 
-ifdef X86
-CMD_FLAGS += -DX86_COMMON
-export X86_COMMON=1
-endif
-ifdef X64
-CMD_FLAGS += -DX86_COMMON
-export X86_COMMON=1
-endif
-
+# Compiler
 BUILD=$(shell pwd)
 ifdef TERMINAL_DUMB
-CC=$(COMPILER)-gcc
-CXX=$(COMPILER)-g++
+  CC=$(COMPILER)-gcc
+  CXX=$(COMPILER)-g++
 else
-CC=$(BUILD)/gcc
-CXX=$(BUILD)/g++
+  CC=$(BUILD)/gcc
+  CXX=$(BUILD)/g++
 endif
-
 CPP=$(COMPILER)-cpp
+
+# Assembler
 ifdef X86_COMMON
-AS=nasm
+  AS=nasm
 endif
 ifdef MIPS_COMMON
-AS=$(BUILD)/compilers/$(COMPILER)/bin/as
+  AS=$(BUILD)/compilers/$(COMPILER)/bin/as
 endif
+
+# CFLAGS
 CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
 ifdef X86
-  CFLAGS += -m32  -gdwarf-2 -g1
+  CFLAGS += -m32
 endif
 ifdef X64
-  CFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
+  CFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
-CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib  -gdwarf-2 -g1
+
+# CXXFLAGS
+CXXFLAGS= -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin \
+          -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib
 ifdef X86
-  CXXFLAGS += -m32  -gdwarf-2 -g1
+  CXXFLAGS += -m32
 endif
 ifdef X64
-  CXXFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel  -gdwarf-2 -g1
+  CXXFLAGS += -m64 -mno-red-zone -mno-sse -mcmodel=kernel
 endif
 ifdef MIPS32
-  CXXFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -gdwarf-2 -g1
-  CFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -mxgot -static -gdwarf-2 -g1
-  ASFLAGS +=  -G0 -gdwarf-2 -g1 -mips32 -mabi=32 -gdwarf-2 -g1
+  CXXFLAGS +=  -G0  -mips32 -mabi=32 -mxgot -static
+  CFLAGS +=  -G0 -mips32 -mabi=32 -mxgot -static
+  ASFLAGS +=  -G0 -mips32 -mabi=32
   LDFLAGS += -G0
 endif
 ifdef MIPS64
-  CXXFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
-  CFLAGS += -g -gdwarf-2 -g1 -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
+  CXXFLAGS += -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
+  CFLAGS += -mips64 -mabi=64 -mxgot -static -fasynchronous-unwind-tables
 endif
 
+# Dwarf debugging information
+ifdef DWARF
+  CFLAGS += -gdwarf-2 -g1
+  CXXFLAGS += -gdwarf-2 -g1
+  ifdef MIPS32
+    ASFLAGS += -g1
+  endif
+endif
+
+# Omit framepointer?
 ifdef OMIT_FRAMEPOINTER
   CFLAGS += -fomit-frame-pointer
   CXXFLAGS += -fomit-frame-pointer
@@ -91,6 +100,25 @@ else
   CXXFLAGS += -fno-omit-frame-pointer
 endif
 
+# Optimize?
+ifdef OPTIMIZE_1
+  CFLAGS+=-O1
+  CXXFLAGS+=-O1
+endif
+ifdef OPTIMIZE_2
+  CFLAGS+=-O2
+  CXXFLAGS+=-O2
+endif
+ifdef OPTIMIZE_3
+  CFLAGS+=-O3
+  CXXFLAGS+=-O3
+endif
+ifdef OPTIMIZE_S
+  CFLAGS+=-Os
+  CXXFLAGS+=-Os
+endif
+
+# LD flags
 LDFLAGS +=-nostdlib -nostdinc
 ifdef X86
   ASFLAGS=-felf
@@ -98,22 +126,8 @@ endif
 ifdef X64
   ASFLAGS=-felf64
 endif
-
-ifdef OPTIMIZE_1
-CFLAGS+=-O1
-CXXFLAGS+=-O1
-endif
-ifdef OPTIMIZE_2
-CFLAGS+=-O2
-CXXFLAGS+=-O2
-endif
-ifdef OPTIMIZE_3
-CFLAGS+=-O3
-CXXFLAGS+=-O3
-endif
-ifdef OPTIMIZE_S
-CFLAGS+=-Os
-CXXFLAGS+=-Os
+ifdef STRIP_EXECUTABLE
+  LDFLAGS += -s
 endif
 
 # Check for cygwin-ness.

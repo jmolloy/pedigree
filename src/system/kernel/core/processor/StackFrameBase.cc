@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(DEBUGGER)
+
 #include <Log.h>
 #include <utilities/utility.h>
 #include <processor/StackFrameBase.h>
@@ -108,3 +110,5 @@ bool StackFrameBase::isClassMember()
   else
     return false;
 }
+
+#endif

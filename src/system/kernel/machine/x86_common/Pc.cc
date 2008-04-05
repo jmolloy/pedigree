@@ -15,6 +15,9 @@
  */
 #include "Pc.h"
 #include <Log.h>
+#if defined(ACPI)
+  #include "Acpi.h"
+#endif
 
 Pc Pc::m_Instance;
 
@@ -49,6 +52,12 @@ void Pc::initialise()
   }
   
   m_Keyboard.initialise();
+
+  // Initialise ACPI
+  #if defined(ACPI)
+    Acpi &acpi = Acpi::instance();
+    acpi.initialise();
+  #endif
 
   m_bInitialised = true;
 }

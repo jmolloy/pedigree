@@ -16,6 +16,8 @@
 #ifndef KERNEL_PROCESSOR_STACKFRAMEBASE_H
 #define KERNEL_PROCESSOR_STACKFRAMEBASE_H
 
+#if defined(DEBUGGER)
+
 #include <processor/types.h>
 #include <processor/state.h>
 #include <utilities/demangle.h>
@@ -60,5 +62,7 @@ class StackFrameBase
 };
 
 /** @} */
+
+#endif
 
 #endif

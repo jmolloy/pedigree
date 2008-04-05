@@ -16,6 +16,11 @@
 #include <processor/Processor.h>
 #include <Log.h>
 
+void Processor::halt()
+{
+  for (;;);
+}
+
 size_t Processor::getDebugBreakpointCount()
 {
   return 0;

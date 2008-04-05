@@ -85,6 +85,8 @@ class Processor
 
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
+    /** Halt this processor */
+    static void halt();
 
     /** Return the (total) number of breakpoints
      *\return (total) number of breakpoints */

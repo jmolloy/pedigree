@@ -62,6 +62,14 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
   {
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
   }
+
+  inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
+  {
+    uint8_t sum = 0;
+    for (size_t i = 0;i < sMemory;i++)
+      sum += reinterpret_cast<const uint8_t*>(pMemory)[i];
+    return (sum == 0);
+  }
 #endif
 
 /** @} */

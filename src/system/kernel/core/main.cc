@@ -108,11 +108,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   bar();
 #endif
 
-  #ifdef X86
-    Processor::breakpoint();
-  #endif
   Serial *s = machine.getSerial(0);
-s->write('b');
+  s->write('b');
   s->write('a');
   s->write('r');
 //   int a = 3/0;
@@ -128,8 +125,4 @@ s->write('b');
       Processor::setInterrupts(true);
     #endif
   }
-  // Then get the BootstrapInfo object to convert its contents into
-  // C++ classes.
-//  g_pKernelMemoryMap = bsInf->getMemoryMap();  // Get the bios' memory map.
-//  g_pProcessors      = bsInf->getProcessors(); // Parse the SMP table.
 }

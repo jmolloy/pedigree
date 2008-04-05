@@ -13,14 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#if defined(DEBUGGER)
+#ifndef KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
+#define KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
 
-#include <processor/StackFrame.h>
+#include <processor/types.h>
 
-uintptr_t MIPS32StackFrame::getParameter(size_t n)
+/** @addtogroup kernelprocessorx86common
+ * @{ */
+
+/** Information about one processor. This information is provided by the
+ *  SMP or the ACPI tables. */
+struct ProcessorInformation
 {
-  // TODO: Implement
-  return 0;
-}
+  /** Is it the bootstrap processor (BSP)? */
+  bool bBsp;
+  /** The id of the processor's local APIC */
+  uint8_t apicId;
+};
+
+/** Startup and initialise all processors
+ *\return the number of initialised processors */
+size_t initialiseMultiprocessor();
+
+/** @} */
 
 #endif

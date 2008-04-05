@@ -15,6 +15,11 @@
  */
 #include <processor/Processor.h>
 
+void Processor::halt()
+{
+  asm volatile("hlt");
+}
+
 size_t Processor::getDebugBreakpointCount()
 {
   return 4;

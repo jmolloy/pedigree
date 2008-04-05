@@ -19,8 +19,10 @@
 
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
+  #define KERNEL_VADDRESS 0xC0000000
 #elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
+  #define KERNEL_VADDRESS 0xFFFFFFFF7FF00000
 #endif
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
@@ -36,7 +38,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 }
 void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
-  // TODO
+  m_PageStack.free(page);
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t count,
@@ -51,7 +53,9 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 {
   NOTICE("memory-map:");
 
-  // Fill the page-stack
+  // Fill the page-stack (usable memory above 16MB)
+  // NOTE: We must do the page-stack first, because the range-lists already need the
+  //       memory-management
   MemoryMapEntry_t *MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
   while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
   {
@@ -64,10 +68,82 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
+
+  // Fill the range-lists (usable memory below 1/16MB)
+  MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
+  while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+  {
+    if (MemoryMap->type == 1)
+    {
+      if (MemoryMap->address < 0x100000)
+      {
+        // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
+        //       1MB barrier
+        if ((MemoryMap->address + MemoryMap->length) >= 0x100000)
+        {
+          // TODO: We should panic here
+        }
+
+        m_RangeBelow1MB.free(MemoryMap->address, MemoryMap->length);
+      }
+      else if (MemoryMap->address < 0x1000000)
+      {
+        uint64_t upperBound = MemoryMap->address + MemoryMap->length;
+        if (upperBound >= 0x1000000)upperBound = 0x1000000;
+
+        m_RangeBelow16MB.free(MemoryMap->address, upperBound - MemoryMap->address);
+      }
+    }
+
+    MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+  }
+
+  // Remove the pages used by the kernel from the range-list (below 16MB)
+  extern void *code;
+  extern void *end;
+  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(&code) - KERNEL_VADDRESS,
+                                        reinterpret_cast<uintptr_t>(&end) - reinterpret_cast<uintptr_t>(&code))
+      == false)
+  {
+    // TODO: We should panic here
+  }
+
+  // Print the ranges
+  NOTICE("free memory ranges (below 1MB):");
+  for (size_t i = 0;i < m_RangeBelow1MB.size();i++)
+  {
+    NOTICE(" " << Hex << m_RangeBelow1MB.getRange(i).address << " - " << (m_RangeBelow1MB.getRange(i).address + m_RangeBelow1MB.getRange(i).length));
+  }
+  NOTICE("free memory ranges (below 16MB):");
+  for (size_t i = 0;i < m_RangeBelow16MB.size();i++)
+  {
+    NOTICE(" " << Hex << m_RangeBelow16MB.getRange(i).address << " - " << (m_RangeBelow16MB.getRange(i).address + m_RangeBelow16MB.getRange(i).length));
+  }
+
+  // Initialise the free physical ranges 
+  // TODO: Ranges above 4GB
+  m_PhysicalRanges.free(0, 0x100000000ULL);
+  MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
+  while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+  {
+    if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
+    {
+      // TODO: We should panic here
+    }
+
+    MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+  }
+
+  // Print the ranges
+  NOTICE("physical memory ranges:");
+  for (size_t i = 0;i < m_PhysicalRanges.size();i++)
+  {
+    NOTICE(" " << Hex << m_PhysicalRanges.getRange(i).address << " - " << (m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length));
+  }
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
-  : m_PageStack()
+  : m_PageStack(), m_RangeBelow1MB(), m_RangeBelow16MB(), m_PhysicalRanges()
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()
