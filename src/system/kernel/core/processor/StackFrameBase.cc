@@ -102,7 +102,7 @@ bool StackFrameBase::isClassMember()
        i--)
     ;
   i++;
-  NOTICE("i = " << Hex << i);
+  
   if (m_Symbol.name[i] >= 'A' && m_Symbol.name[i] <= 'Z')
     return true;
   else

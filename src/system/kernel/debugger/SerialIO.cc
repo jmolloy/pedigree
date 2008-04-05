@@ -451,7 +451,6 @@ void SerialIO::readDimensions()
   readCursor();
   m_nOldCursorX = m_nCursorX;
   m_nOldCursorY = m_nCursorY;
-  NOTICE("m_nOldCursorY: " << Hex << m_nOldCursorY << ", m_nOldCursorX: " << m_nOldCursorX);
   // Move the cursor off the bottom right somewhere. The device will clamp to its available
   // area.
   m_nCursorY = 10000;
