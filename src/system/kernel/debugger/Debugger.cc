@@ -21,6 +21,7 @@
 #include <SerialIO.h>
 #include <DisassembleCommand.h>
 #include <QuitCommand.h>
+#include <PanicCommand.h>
 #include <BreakpointCommand.h>
 #include <DumpCommand.h>
 #include <LogViewer.h>
@@ -107,8 +108,9 @@ void Debugger::breakpoint(InterruptState &state)
   DumpCommand dump;
   StepCommand step;
   MemoryInspector memory;
+  PanicCommand panic;
   
-  size_t nCommands = 9;
+  size_t nCommands = 10;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -117,7 +119,8 @@ void Debugger::breakpoint(InterruptState &state)
                                   &dump,
                                   &step,
                                   &memory,
-                                  &g_Trace};
+                                  &g_Trace,
+                                  &panic};
   
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.

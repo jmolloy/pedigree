@@ -21,6 +21,7 @@
 [james]    X86
 [jamesmol] MIPS_MALTA
 [bluecode] X86
+[pcmattman] X64
 
 #
 # Personalisation options.
@@ -28,6 +29,7 @@
 [james]    DEBUGGER_QWERTY
 [jamesmol] DEBUGGER_QWERTY
 [bluecode] DEBUGGER_QWERTZ
+[pcmattman] DEBUGGER_QWERTY
 
 #
 # Targets.

@@ -104,3 +104,17 @@ void Scrollable::setScrollKeys(char up, char down)
   m_ScrollUp = up;
   m_ScrollDown = down;
 }
+	
+void Scrollable::centreOn(size_t line)
+{
+  if( line > static_cast<size_t>(getLineCount()) )
+	line = static_cast<size_t>(getLineCount());
+  
+  if( line < m_height )
+  {
+	scrollTo( 0 );
+	return;
+  }
+	
+  scrollTo( line - (m_height / 2) );
+}

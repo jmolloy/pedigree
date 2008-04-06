@@ -75,6 +75,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/DisassembleCommand.cc \
             debugger/commands/QuitCommand.cc \
             debugger/commands/LogViewer.cc \
+            debugger/commands/PanicCommand.cc \
             debugger/commands/Backtracer.cc \
             debugger/commands/BreakpointCommand.cc \
             debugger/commands/DumpCommand.cc \
@@ -86,7 +87,8 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/Debugger.cc \
             debugger/Backtrace.cc \
             debugger/DebuggerIO.cc \
-            debugger/Scrollable.cc
+            debugger/Scrollable.cc \
+            debugger/panic.cc
   ifndef X64
     SRCFILES += debugger/DwarfUnwinder.cc \
                 debugger/DwarfCfiAutomaton.cc
