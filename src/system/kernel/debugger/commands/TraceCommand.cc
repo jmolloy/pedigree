@@ -92,9 +92,6 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   stacktrace.refresh(pScreen);
   pScreen->enableRefreshes();
   
-  // the current line that we should center on
-  uint32_t nCurrLine = 0;
-  
   // Here we enter our main runloop.
   bool bContinue = true;
   while (bContinue)
@@ -146,9 +143,12 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
     else if (c == ' ')
     {
       size_t nInstruction = 0;
-      uintptr_t nSymStart = 0;
 
       #if 1 // change to 0 when this HACK is fixed
+        // find the first instruction for the function that we're in right now
+        uintptr_t nIp = state.getInstructionPointer();
+        uintptr_t nSymStart = 0;
+        g_pKernel->lookupSymbol(nIp, &nSymStart);
   
         // TODO use disassembler abstraction.
         ud_t ud_obj;
