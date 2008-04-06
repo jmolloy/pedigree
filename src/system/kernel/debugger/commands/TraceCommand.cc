@@ -143,40 +143,41 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
       stacktrace.scroll(1);
       stacktrace.refresh(pScreen);
     }
-	else if (c == ' ')
-	{
-	  size_t nInstruction = 0;
+    else if (c == ' ')
+    {
+      size_t nInstruction = 0;
+      uintptr_t nSymStart = 0;
 
-#if 1	// change to 0 when this HACK is fixed
+      #if 1 // change to 0 when this HACK is fixed
   
-  // TODO use disassembler abstraction.
-  ud_t ud_obj;
-  ud_init(&ud_obj);
+        // TODO use disassembler abstraction.
+        ud_t ud_obj;
+        ud_init(&ud_obj);
 #ifdef X86
-  ud_set_mode(&ud_obj, 32);
+        ud_set_mode(&ud_obj, 32);
 #endif
 #ifdef X64
-	  ud_set_mode(&ud_obj, 64);
+        ud_set_mode(&ud_obj, 64);
 #endif
-	  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-	  ud_set_pc(&ud_obj, disassembly.getFirstInstruction());
-	  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(disassembly.getFirstInstruction()), 4096);
+        ud_set_syntax(&ud_obj, UD_SYN_INTEL);
+        ud_set_pc(&ud_obj, nSymStart);
+        ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(nSymStart), 4096);
 
-	  uintptr_t nLocation;
-	  while (nInstruction < static_cast<size_t>(disassembly.getLineCount()))
-	  {
-		ud_disassemble(&ud_obj);
-		nInstruction++;
-		nLocation = ud_insn_off(&ud_obj);
-		if (nLocation == state.getInstructionPointer())
-		  break;
-	  }
+        uintptr_t nLocation;
+        while (nInstruction < static_cast<size_t>(disassembly.getLineCount()))
+        {
+          ud_disassemble(&ud_obj);
+          nInstruction++;
+          nLocation = ud_insn_off(&ud_obj);
+          if (nLocation == state.getInstructionPointer())
+            break;
+        }
 
 #endif
 
-	  disassembly.centreOn(nInstruction);
-	  disassembly.refresh(pScreen);
-	}
+      disassembly.centreOn(nInstruction);
+      disassembly.refresh(pScreen);
+    }
   }
   
   // Let's enter CLI screen mode again.

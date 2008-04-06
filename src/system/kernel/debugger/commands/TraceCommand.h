@@ -74,7 +74,6 @@ private:
     const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
     const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
     size_t getLineCount();
-	inline uintptr_t getFirstInstruction() {return m_nFirstInstruction;};
   private:
     size_t m_nInstructions;
     uintptr_t m_nFirstInstruction;
