@@ -18,6 +18,8 @@
 
 void Processor::halt()
 {
+  // TODO: gcc will most certainly optimize this away in -O1/2/3 so please
+  //       replace it with some unoptimizable mighty magic
   for (;;);
 }
 

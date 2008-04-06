@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -102,12 +102,6 @@ void panic( const char* msg )
   for( int nIFace = 0; nIFace < nInterfaces; nIFace++ )
     _panic( msg, pInterfaces[nIFace] );
 
-  // TODO: processor-specific, so maybe have a Halt() call in Processor?
-  // Proposal accepted, place the call here.
-  // Processor::Halt();
-#ifdef X86_COMMON
-  asm volatile( "hlt" );
-#else
-  while( 1 );
-#endif
+  // Halt the processor
+  Processor::halt();
 }

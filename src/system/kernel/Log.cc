@@ -15,6 +15,7 @@
  */
 
 #include <Log.h>
+#include <panic.h>
 #include <machine/Timer.h>
 #include <machine/Machine.h>
 #include <utilities/utility.h>
@@ -45,23 +46,23 @@ Log &Log::operator<< (Modifier type)
   // Flush the buffer.
   if (type == Flush)
   {
-    if (Processor::isInitialised() == 0)
+    if (m_StaticEntries >= LOG_ENTRIES)
     {
-      if (m_StaticEntries >= LOG_ENTRIES)
+      if (Processor::isInitialised() != 0)
       {
-        // TODO: time to panic
+        DynamicLogEntry *entry = new DynamicLogEntry;
+        entry->type = m_Buffer.type;
+        entry->timestamp = m_Buffer.timestamp;
+        entry->str = m_Buffer.str;
+        m_DynamicLog.pushBack(entry);
       }
-  
-      m_StaticLog[m_StaticEntries++] = m_Buffer;
+      else
+      {
+        panic("Log: Not enough static log entries");
+      }
     }
     else
-    {
-      DynamicLogEntry *entry = new DynamicLogEntry;
-      entry->type = m_Buffer.type;
-      entry->timestamp = m_Buffer.timestamp;
-      entry->str = m_Buffer.str;
-      m_DynamicLog.pushBack(entry);
-    }
+      m_StaticLog[m_StaticEntries++] = m_Buffer;
   }
 
   return *this;

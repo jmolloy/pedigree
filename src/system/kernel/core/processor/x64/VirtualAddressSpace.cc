@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <panic.h>
 #include <utilities/utility.h>
 #include "utils.h"
 #include "VirtualAddressSpace.h"
@@ -134,6 +135,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Map the page
   *pageTableEntry = physAddress | Flags;
 
+  // TODO: Might need a TLB flush (if we are mapping a swapped-out page again)
+
   return true;
 }
 void X64VirtualAddressSpace::getMapping(void *virtualAddress,
@@ -145,7 +148,7 @@ void X64VirtualAddressSpace::getMapping(void *virtualAddress,
   uint64_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
-    // TODO: This is a fatal error, we should panic
+    panic("VirtualAddressSpace::getMapping(): function misused");
     return;
   }
 
@@ -160,12 +163,14 @@ void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
   uint64_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
-    // TODO: This is a fatal error, we should panic
+    panic("VirtualAddressSpace::setFlags(): function misused");
     return;
   }
 
   // Set the flags
   PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
+
+  // TODO: Might need a TLB flush
 }
 void X64VirtualAddressSpace::unmap(void *virtualAddress)
 {
@@ -174,12 +179,14 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
   uint64_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
-    // TODO: This is a fatal error, we should panic
+    panic("VirtualAddressSpace::unmap(): function misused");
     return;
   }
 
   // Unmap the page
   *pageTableEntry = 0;
+
+  // TODO: definitly needs a TLB flush
 }
 
 bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,

@@ -15,6 +15,7 @@
  */
 #include "Pc.h"
 #include <Log.h>
+#include <panic.h>
 #if defined(ACPI)
   #include "Acpi.h"
 #endif
@@ -26,31 +27,22 @@ void Pc::initialise()
   // Initialise serial ports.
   m_pSerial[0].setBase(0x3F8);
   m_pSerial[1].setBase(0x2F8);
-  
+
   // Initialise PIC
   Pic &pic = Pic::instance();
   if (pic.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 1");
-  }
-  
+    panic("Pc: Pic initialisation failed");
+
   // Initialse the Real-time Clock / CMOS
   Rtc &rtc = Rtc::instance();
   if (rtc.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 2");
-  }
-  
+    panic("Pc: Rtc initialisation failed");
+
   // Initialise the PIT
   Pit &pit = Pit::instance();
   if (pit.initialise() == false)
-  {
-    // TODO: Do something
-    NOTICE("initialiseMachine(): failed 3");
-  }
-  
+    panic("Pc: Pit initialisation failed");
+
   m_Keyboard.initialise();
 
   // Initialise ACPI

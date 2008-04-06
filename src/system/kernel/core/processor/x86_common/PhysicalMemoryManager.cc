@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <Log.h>
+#include <panic.h>
 #include <utilities/utility.h>
 #include "PhysicalMemoryManager.h"
 
@@ -80,9 +81,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
         //       1MB barrier
         if ((MemoryMap->address + MemoryMap->length) >= 0x100000)
-        {
-          // TODO: We should panic here
-        }
+          panic("PhysicalMemoryManager: strange memory-map");
 
         m_RangeBelow1MB.free(MemoryMap->address, MemoryMap->length);
       }
@@ -105,7 +104,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
                                         reinterpret_cast<uintptr_t>(&end) - reinterpret_cast<uintptr_t>(&code))
       == false)
   {
-    // TODO: We should panic here
+    panic("PhysicalMemoryManager: could not remove the kernel image from the range-list");
   }
 
   // Print the ranges
@@ -127,9 +126,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
   {
     if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
-    {
-      // TODO: We should panic here
-    }
+      panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
