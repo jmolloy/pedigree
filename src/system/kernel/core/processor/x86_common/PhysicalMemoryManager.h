@@ -40,6 +40,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t count,
                                 size_t pageConstraints,
+                                size_t Flags,
                                 physical_uintptr_t start = -1);
 
     /** Initialise the page stack
@@ -121,6 +122,9 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
       /** RangeList of ACPI memory */
       RangeList<uint64_t> m_AcpiRanges;
     #endif
+
+    /** Virtual-memory available for MemoryRegions */
+    RangeList<uintptr_t> m_MemoryRegions;
 
     /** The X86CommonPhysicalMemoryManager class instance */
     static X86CommonPhysicalMemoryManager m_Instance;

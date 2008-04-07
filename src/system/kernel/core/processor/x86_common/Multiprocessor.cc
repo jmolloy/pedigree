@@ -40,7 +40,7 @@ size_t initialiseMultiprocessor()
 
   bool bPicMode;
   bool bHasPics;
-  physical_uintptr_t localApicsAddress;
+  uint64_t localApicsAddress;
   Vector<ProcessorInformation*> Processors;
   Vector<IoApicInformation*> IoApics;
 

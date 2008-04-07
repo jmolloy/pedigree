@@ -52,6 +52,12 @@ start:
   mov rax, pagedirectorypointer2 - KERNEL_BASE
   mov rbx, pagedirectory3 - KERNEL_BASE + 0x03
   mov [rax], rbx
+  add rbx, 0x1000
+  mov [rax + 8], rbx
+  add rbx, 0x1000
+  mov [rax + 16], rbx
+  add rbx, 0x1000
+  mov [rax + 24], rbx
 
   ; Identity map 0-2MB
   mov rax, pagedirectory0 - KERNEL_BASE
@@ -101,10 +107,10 @@ start:
   add rbx, 4096
   mov [rax + 0xFC0], rbx
 
-  ; Map the lower 1GB of physical memory to 0xFFFF800000000000
+  ; Map the lower 4GB of physical memory to 0xFFFF800000000000
   mov rax, pagedirectory3 - KERNEL_BASE
   mov rbx, 0x83
-  mov rcx, 512
+  mov rcx, 4 * 512
   .mapphysical:
     mov [rax], rbx
     add rbx, 0x200000
@@ -199,8 +205,11 @@ pagedirectory1:
 pagedirectory2:
   resb 4096
 
-; Page directory for the physical memory mapping
+; Page directories for the physical memory mapping
 pagedirectory3:
+  resb 4096
+  resb 4096
+  resb 4096
   resb 4096
 
 ; Page table for the kernel code/data

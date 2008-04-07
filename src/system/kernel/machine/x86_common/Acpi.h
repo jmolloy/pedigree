@@ -32,9 +32,10 @@ class Acpi
       {return m_Instance;}
 
     void initialise();
+    void parseFixedACPIDescriptionTable();
 
     #if defined(MULTIPROCESSOR)
-      bool getProcessorList(physical_uintptr_t &localApicsAddress,
+      bool getProcessorList(uint64_t &localApicsAddress,
                             Vector<ProcessorInformation*> &Processors,
                             Vector<IoApicInformation*> &IoApics,
                             bool &bHasPics,
@@ -42,8 +43,7 @@ class Acpi
     #endif
 
   private:
-    inline Acpi()
-      : m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0), m_pApic(0){}
+    Acpi();
     Acpi(const Acpi &);
     Acpi &operator = (const Acpi &);
     inline ~Acpi(){}
@@ -77,6 +77,49 @@ class Acpi
       uint32_t creatorRevision;
     } PACKED;
 
+    struct FixedACPIDescriptionTable
+    {
+      SystemDescriptionTableHeader header;
+
+      uint32_t firmwareControl;
+      uint32_t dsdt;
+      uint8_t interruptModel;
+      uint8_t reserved0;
+      uint16_t sciInterrupt;
+      uint32_t smiCommandPort;
+      uint8_t acpiEnableCommand;
+      uint8_t acpiDisableCommand;
+      uint8_t s4BiosCommand;
+      uint8_t reserved1;
+      uint32_t pm1aEventBlock;
+      uint32_t pm1bEventBlock;
+      uint32_t pm1aControlBlock;
+      uint32_t pm1bControlBlock;
+      uint32_t pm2ControlBlock;
+      uint32_t pmTimerBlock;
+      uint32_t gpe0Block;
+      uint32_t gpe1Block;
+      uint8_t pm1EventLength;
+      uint8_t pm1ControlLength;
+      uint8_t pm2ControlLength;
+      uint8_t pmTimerLength;
+      uint8_t gpe0BlockLength;
+      uint8_t gpe1BlockLength;
+      uint8_t gpe1Base;
+      uint8_t reserved2;
+      uint16_t pmLevel2Latency;
+      uint16_t pmLevel3Latency;
+      uint16_t flushSize;
+      uint16_t flushStride;
+      uint8_t dutyOffset;
+      uint8_t dutyWidth;
+      uint8_t cmosDayAlarmIndex;
+      uint8_t cmosMonthAlarmIndex;
+      uint8_t cmosCenturyIndex;
+      uint8_t reserved3[3];
+      uint32_t flags;
+    } PACKED;
+
     struct ProcessorLocalApic
     {
       uint8_t processorId;
@@ -108,8 +151,11 @@ class Acpi
     RsdtPointer *m_pRsdtPointer;
     MemoryRegion m_AcpiMemoryRegion;
     SystemDescriptionTableHeader *m_pRsdt;
-    SystemDescriptionTableHeader *m_pFacp;
-    SystemDescriptionTableHeader *m_pApic;
+    FixedACPIDescriptionTable *m_pFacp;
+
+    #if defined(MULTIPROCESSOR)
+      SystemDescriptionTableHeader *m_pApic;
+    #endif
 
     static Acpi m_Instance;
 };

@@ -26,6 +26,7 @@
 class X64InterruptState
 {
   friend class X64ProcessorState;
+  friend class X64InterruptManager;
   public:
     //
     // General Interface (InterruptState, SyscallState & ProcessorState)

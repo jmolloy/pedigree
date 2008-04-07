@@ -18,13 +18,18 @@
 #include <utilities/utility.h>
 #include "PhysicalMemoryManager.h"
 
+// TODO: We might find better places in the virtual address-space for the MemoryRegions
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
   #define KERNEL_VADDRESS 0xC0000000
+  #define KERNEL_MEMORYREGION_SIZE 0x10000000
+  #define KERNEL_MEMORYREGION_VADDRESS 0xE0000000
 #elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
   #include "../x64/utils.h"
   #define KERNEL_VADDRESS 0xFFFFFFFF7FF00000
+  #define KERNEL_MEMORYREGION_SIZE 0x10000000
+  #define KERNEL_MEMORYREGION_VADDRESS 0xFFFFFFFFA0000000
 #endif
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
@@ -45,6 +50,7 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t count,
                                                     size_t pageConstraints,
+                                                    size_t Flags,
                                                     physical_uintptr_t start)
 {
   // Allocate a specific physical memory region (always physically continuous)
@@ -53,31 +59,36 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     if ((pageConstraints & continuous) != continuous)
       panic("PhysicalMemoryManager::allocateRegion(): function misused");
 
-    #if defined(X64)
-      // TODO: on x64 we should tell the virtualAddressSpace that we want that fucking
-      //       physical space mapped (through 2MB pages)
-      Region.m_VirtualAddress = reinterpret_cast<void*>(physicalAddress(start));
-    #elif defined(X86)
-      // TODO
-      // panic("X86CommonPhysicalMemoryManager::allocateRegion(): TODO");
-      // HACK
-      VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
-      Region.m_VirtualAddress = reinterpret_cast<void*>(0xE0000000);
-      for (size_t i = 0;i < count;i++)
-        virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
-                                adjust_pointer(Region.m_VirtualAddress, i * PhysicalMemoryManager::getPageSize()),
-                                VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-    #endif
+    // Allocate the virtual address space
+    uintptr_t vAddress;
+    if (m_MemoryRegions.allocate(count * PhysicalMemoryManager::getPageSize(),
+                                 vAddress)
+         == false)
+      return false;
 
+    // Map the physical memory into the allocated space
+    VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+    for (size_t i = 0;i < count;i++)
+      if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
+                                  reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                  Flags)
+          == false)
+      {
+        m_MemoryRegions.free(vAddress, count * PhysicalMemoryManager::getPageSize());
+        return false;
+      }
+
+    Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
     Region.m_PhysicalAddress = start;
     Region.m_Size = count * PhysicalMemoryManager::getPageSize();
 
-    // TODO: Remove the memory from the m_PhysicalRanges range-list
+    // TODO: Remove the memory from the m_PhysicalRanges range-list (if desired/possible)
     return true;
   }
   else
   {
     // TODO
+    // TODO: Allocate the virtual address space
   }
   return false;
 }
@@ -146,16 +157,18 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   }
 
   // Print the ranges
-  NOTICE("free memory ranges (below 1MB):");
-  for (size_t i = 0;i < m_RangeBelow1MB.size();i++)
-    NOTICE(" " << Hex << m_RangeBelow1MB.getRange(i).address << " - " << (m_RangeBelow1MB.getRange(i).address + m_RangeBelow1MB.getRange(i).length));
-  NOTICE("free memory ranges (below 16MB):");
-  for (size_t i = 0;i < m_RangeBelow16MB.size();i++)
-    NOTICE(" " << Hex << m_RangeBelow16MB.getRange(i).address << " - " << (m_RangeBelow16MB.getRange(i).address + m_RangeBelow16MB.getRange(i).length));
-  #if defined(ACPI)
-    NOTICE("ACPI ranges:");
-    for (size_t i = 0;i < m_AcpiRanges.size();i++)
-      NOTICE(" " << Hex << m_AcpiRanges.getRange(i).address << " - " << (m_AcpiRanges.getRange(i).address + m_AcpiRanges.getRange(i).length));
+  #if defined(VERBOSE_MEMORY_MANAGER)
+    NOTICE("free memory ranges (below 1MB):");
+    for (size_t i = 0;i < m_RangeBelow1MB.size();i++)
+      NOTICE(" " << Hex << m_RangeBelow1MB.getRange(i).address << " - " << (m_RangeBelow1MB.getRange(i).address + m_RangeBelow1MB.getRange(i).length));
+    NOTICE("free memory ranges (below 16MB):");
+    for (size_t i = 0;i < m_RangeBelow16MB.size();i++)
+      NOTICE(" " << Hex << m_RangeBelow16MB.getRange(i).address << " - " << (m_RangeBelow16MB.getRange(i).address + m_RangeBelow16MB.getRange(i).length));
+    #if defined(ACPI)
+      NOTICE("ACPI ranges:");
+      for (size_t i = 0;i < m_AcpiRanges.size();i++)
+        NOTICE(" " << Hex << m_AcpiRanges.getRange(i).address << " - " << (m_AcpiRanges.getRange(i).address + m_AcpiRanges.getRange(i).length));
+    #endif
   #endif
 
   // Initialise the free physical ranges 
@@ -171,18 +184,25 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   }
 
   // Print the ranges
-  NOTICE("physical memory ranges:");
-  for (size_t i = 0;i < m_PhysicalRanges.size();i++)
-  {
-    NOTICE(" " << Hex << m_PhysicalRanges.getRange(i).address << " - " << (m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length));
-  }
+  #if defined(VERBOSE_MEMORY_MANAGER)
+    NOTICE("physical memory ranges:");
+    for (size_t i = 0;i < m_PhysicalRanges.size();i++)
+    {
+      NOTICE(" " << Hex << m_PhysicalRanges.getRange(i).address << " - " << (m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length));
+    }
+  #endif
+
+  // Initialise the range of virtual space for MemoryRegions
+  m_MemoryRegions.free(KERNEL_MEMORYREGION_VADDRESS,
+                       KERNEL_MEMORYREGION_SIZE);
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
-  : m_PageStack(), m_RangeBelow1MB(), m_RangeBelow16MB(), m_PhysicalRanges()
+  : m_PageStack(), m_RangeBelow1MB(), m_RangeBelow16MB(), m_PhysicalRanges(),
   #if defined(ACPI)
-    , m_AcpiRanges()
+    m_AcpiRanges(),
   #endif
+    m_MemoryRegions()
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()

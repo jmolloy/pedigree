@@ -17,7 +17,16 @@
 #include <Log.h>
 #include <utilities/utility.h>
 
-bool Smp::getProcessorList(physical_uintptr_t &localApicsAddress,
+#if !defined(SMP_NOTICE)
+  #undef NOTICE
+  #define NOTICE(x)
+#endif
+#if !defined(SMP_ERROR)
+  #undef ERROR
+  #define ERROR(x)
+#endif
+
+bool Smp::getProcessorList(uint64_t &localApicsAddress,
                            Vector<ProcessorInformation*> &Processors,
                            Vector<IoApicInformation*> &IoApics,
                            bool &bHasPics,
@@ -26,7 +35,7 @@ bool Smp::getProcessorList(physical_uintptr_t &localApicsAddress,
   // Search for the multiprocessor floating pointer structure
   if (find() == false)
   {
-    WARNING("smp: not compliant to the Intel Multiprocessor Specification");
+    ERROR("smp: not compliant to the Intel Multiprocessor Specification");
     return false;
   }
 

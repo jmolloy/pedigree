@@ -148,11 +148,21 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
       // TODO: register dump, maybe a breakpoint so the deubbger can take over?
       // for now just print out the exception name and number
       static LargeStaticString e;
+      e.clear();
       e.append ("Exception #0x");
       e.append (intNumber, 16);
       e.append (": \"");
       e.append (g_ExceptionNames[intNumber]);
       e.append ("\"");
+      if (intNumber == 14)
+      {
+        uint64_t cr2;
+        asm volatile("mov %%cr2, %%rax" :: "a" (cr2));
+        e.append(" at ");
+        e.append(cr2, 16, 16, '0');
+        e.append(", errorcode ");
+        e.append(interruptState.m_Errorcode, 2, 8, '0');
+      }
       Debugger::instance().start(interruptState, e);
     }
   }

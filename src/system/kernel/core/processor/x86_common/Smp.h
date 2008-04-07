@@ -31,7 +31,7 @@ class Smp
       : m_pFloatingPointer(0), m_pConfigTable(0){}
     inline ~Smp(){}
 
-    bool getProcessorList(physical_uintptr_t &localApicsAddress,
+    bool getProcessorList(uint64_t &localApicsAddress,
                           Vector<ProcessorInformation*> &Processors,
                           Vector<IoApicInformation*> &IoApics,
                           bool &bHasPics,

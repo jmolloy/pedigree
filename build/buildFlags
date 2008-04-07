@@ -31,6 +31,11 @@
 [bluecode] DEBUGGER_QWERTZ
 [pcmattman] DEBUGGER_QWERTY
 
+[bluecode] MULTIPROCESSOR
+[bluecode] SMP
+[bluecode] ACPI
+#[bluecode] VERBOSE_MEMORY_MANAGER
+
 #
 # Targets.
 #
@@ -50,10 +55,13 @@ MIPS_COMMON: OMIT_FRAMEPOINTER
 DEBUGGER: DEBUGGER_RUN_AT_START DWARF
 
 #
+# Debug Information?
+#
+SMP: SMP_NOTICE SMP_ERROR
+ACPI: ACPI_NOTICE ACPI_ERROR
+
+#
 # Additional Flags:
 #  OPTIMIZE_X (X = 1, 2, 3, S)
 #  STRIP_EXECUTABLE
 #
-[bluecode] MULTIPROCESSOR
-[bluecode] SMP
-[bluecode] ACPI

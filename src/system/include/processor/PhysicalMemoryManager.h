@@ -70,6 +70,7 @@ class PhysicalMemoryManager
     virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t count,
                                 size_t pageConstraints,
+                                size_t Flags,
                                 physical_uintptr_t start = -1) = 0;
 
   protected:

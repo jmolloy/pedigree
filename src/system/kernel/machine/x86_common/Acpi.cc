@@ -15,8 +15,18 @@
  */
 #include <Log.h>
 #include <utilities/utility.h>
+#include <processor/VirtualAddressSpace.h>
 #include "Acpi.h"
 #include "../../core/processor/x86_common/PhysicalMemoryManager.h"
+
+#if !defined(ACPI_NOTICE)
+  #undef NOTICE
+  #define NOTICE(x)
+#endif
+#if !defined(ACPI_ERROR)
+  #undef ERROR
+  #define ERROR(x)
+#endif
 
 Acpi Acpi::m_Instance;
 
@@ -54,6 +64,7 @@ void Acpi::initialise()
   size_t nPages = (sAddress + (PhysicalMemoryManager::getPageSize() - 1)) / PhysicalMemoryManager::getPageSize();
   if (physicalMemoryManager.allocateRegion(m_AcpiMemoryRegion,
                                            nPages,
+                                           VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write,
                                            PhysicalMemoryManager::continuous,
                                            address)
       == false)
@@ -64,10 +75,6 @@ void Acpi::initialise()
 
   // Check the RSDT (Root System Description Table)
   m_pRsdt = m_AcpiMemoryRegion.convertPhysicalPointer<SystemDescriptionTableHeader>(m_pRsdtPointer->rsdtAddress);
-  // HACK FIXME TODO
-  NOTICE("m_pRsdt " << Hex << reinterpret_cast<uintptr_t>(m_pRsdt));
-  NOTICE("Acpi range length " << Hex << m_AcpiMemoryRegion.size());
-  NOTICE("m_pRsdt->length " << Hex << m_pRsdt->length);
   if (m_pRsdt->signature != 0x54445352 ||
       checksum(m_pRsdt) != true)
   {
@@ -93,23 +100,66 @@ void Acpi::initialise()
     // Is the table valid?
     if (checksum(pSystemDescTable) != true)
     {
-      ERROR("  invalid");
+      ERROR("   invalid");
       continue;
     }
 
     // Is Fixed ACPI Description Table?
     if (pSystemDescTable->signature == 0x50434146)
-      m_pFacp = pSystemDescTable;
+      m_pFacp = reinterpret_cast<FixedACPIDescriptionTable*>(pSystemDescTable);
     // Is Multiple APIC Description Table?
+    #if defined(MULTIPROCESSOR)
     else if (pSystemDescTable->signature == 0x43495041)
       m_pApic = pSystemDescTable;
+    #endif
     else
-      NOTICE("  unknown table");
+      NOTICE("   unknown table");
   }
+
+  if (m_pFacp == 0)
+  {
+    ERROR("Acpi: no Fixed ACPI Description Table (FACP)");
+    return;
+  }
+
+  parseFixedACPIDescriptionTable();
+}
+
+void Acpi::parseFixedACPIDescriptionTable()
+{
+  NOTICE("ACPI: Fixed Description Table (FACP)");
+
+  NOTICE(" Firmware ACPI Control Structure at " << Hex << m_pFacp->firmwareControl);
+  NOTICE(" Differentiated System Description Table at " << Hex << m_pFacp->dsdt);
+  NOTICE(" Interrupt Model: " << Dec << ((m_pFacp->interruptModel == 0) ? "dual 8259 PICs" : "multiple local APICs"));
+  NOTICE(" SCI Interrupt #" << Dec << m_pFacp->sciInterrupt);
+  NOTICE(" SMI Command Port at " << Hex << m_pFacp->smiCommandPort);
+  NOTICE("  enable " << Hex << m_pFacp->acpiEnableCommand);
+  NOTICE("  disable " << Hex << m_pFacp->acpiDisableCommand);
+  if (m_pFacp->s4BiosCommand != 0)
+    NOTICE("  S4 BIOS " << Hex << m_pFacp->s4BiosCommand);
+  NOTICE(" Power-Management");
+  NOTICE("  Event 1A at " << Hex << m_pFacp->pm1aEventBlock << " - " << (m_pFacp->pm1aEventBlock + m_pFacp->pm1EventLength));
+  if (m_pFacp->pm1bEventBlock != 0)
+    NOTICE("  Event 1B at " << Hex << m_pFacp->pm1bEventBlock << " - " << (m_pFacp->pm1bEventBlock + m_pFacp->pm1EventLength));
+  NOTICE("  Control 1A at " << Hex << m_pFacp->pm1aControlBlock << " - " << (m_pFacp->pm1aControlBlock + m_pFacp->pm1ControlLength));
+  if (m_pFacp->pm1bControlBlock != 0)
+    NOTICE("  Control 1B at " << Hex << m_pFacp->pm1bControlBlock << " - " << (m_pFacp->pm1bControlBlock + m_pFacp->pm1ControlLength));
+  if (m_pFacp->pm2ControlBlock != 0)
+    NOTICE("  Control 2 at " << Hex << m_pFacp->pm2ControlBlock << " - " << (m_pFacp->pm2ControlBlock + m_pFacp->pm2ControlLength));
+  NOTICE("  Timer at " << Hex << m_pFacp->pmTimerBlock << " - " << (m_pFacp->pmTimerBlock + m_pFacp->pmTimerLength));
+  if (m_pFacp->gpe0Block != 0)
+    NOTICE("  General Purpose Event 0 at " << Hex << m_pFacp->gpe0Block << " - " << (m_pFacp->gpe0Block + m_pFacp->gpe0BlockLength));
+  if (m_pFacp->gpe1Block != 0)
+    NOTICE("  General Purpose Event 1 at " << Hex << m_pFacp->gpe1Block << " - " << (m_pFacp->gpe1Block + m_pFacp->gpe1BlockLength));
+  if (m_pFacp->gpe1Base != 0)
+    NOTICE("  General Purpose Event Base: " << Hex << m_pFacp->gpe1Base);
+  // TODO: Unimportant imho
+  NOTICE(" Flags " << Hex << m_pFacp->flags);
 }
 
 #if defined(MULTIPROCESSOR)
-  bool Acpi::getProcessorList(physical_uintptr_t &localApicsAddress,
+  bool Acpi::getProcessorList(uint64_t &localApicsAddress,
                               Vector<ProcessorInformation*> &Processors,
                               Vector<IoApicInformation*> &IoApics,
                               bool &bHasPics,
@@ -118,7 +168,7 @@ void Acpi::initialise()
     // Was the Multiple APIC Description Table found?
     if (m_pApic == 0)return false;
 
-    NOTICE("ACPI: Multiple APIC Description Table");
+    NOTICE("ACPI: Multiple APIC Description Table (APIC)");
 
     // Parse the Multiple APIC Description Table
     uint32_t *pLocalApicAddress = reinterpret_cast<uint32_t*>(adjust_pointer(m_pApic, sizeof(SystemDescriptionTableHeader)));
@@ -171,7 +221,7 @@ void Acpi::initialise()
       {
         InterruptSourceOverride *pInterruptSourceOverride = reinterpret_cast<InterruptSourceOverride*>(adjust_pointer(pType, 2));
 
-        ERROR("  interrupt source override on " << ((pInterruptSourceOverride->bus == 0) ? "ISA" : "unknown") << " bus: source #" << Dec << pInterruptSourceOverride->source << ", global system interrupt #" << pInterruptSourceOverride->globalSystemInterrupt << ", flags " << Hex << pInterruptSourceOverride->flags);
+        ERROR("  interrupt override: " << ((pInterruptSourceOverride->bus == 0) ? "ISA" : "unknown") << " bus, #" << Dec << pInterruptSourceOverride->source << " -> #" << pInterruptSourceOverride->globalSystemInterrupt << ", flags " << Hex << pInterruptSourceOverride->flags);
 
         // TODO
       }
@@ -219,6 +269,14 @@ void Acpi::initialise()
     return false;
   }
 #endif
+
+Acpi::Acpi()
+  : m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0)
+#if defined(MULTIPROCESSOR)
+    , m_pApic(0)
+#endif
+{
+}
 
 bool Acpi::find()
 {
