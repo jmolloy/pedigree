@@ -82,7 +82,7 @@ void Debugger::initialise()
     ERROR("Debugger: debug interrupt registration failed!");
 }
 
-void Debugger::breakpoint(InterruptState &state)
+void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
   /*
    * I/O implementations.
@@ -90,7 +90,7 @@ void Debugger::breakpoint(InterruptState &state)
   LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   SerialIO serialIO(Machine::instance().getSerial(0));
   SerialIO serialIO2(Machine::instance().getSerial(1));
-  
+
  DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
  int nInterfaces = 3;
 //   DebuggerIO *pInterfaces[] = {&localIO};
@@ -162,6 +162,9 @@ void Debugger::breakpoint(InterruptState &state)
   pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
   pIo->setCliLowerLimit(1); // And a status bar on the bottom.
   pIo->enableCli(); // Start CLI mode.
+
+  description += "\n";
+  pIo->writeCli(description, DebuggerIO::Yellow, DebuggerIO::Black);
   
   // Main CLI loop.
   bool bKeepGoing = false;
@@ -253,14 +256,27 @@ void Debugger::breakpoint(InterruptState &state)
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)
 {
+  LargeStaticString description;
   // We switch here on the interrupt number, and dispatch accordingly.
   if (interruptNumber == InterruptManager::instance().getBreakpointInterruptNumber())
   {
-    breakpoint(state);
+    // Here we check to see if the breakpoint was caused by an assertion, or a fatal error.
+    if (state.getRegister(0) == ASSERT_FAILED_SENTINEL)
+    {
+      // As it's an assert or fatal, we assume state.getRegister(1) is a pointer to a descriptive string.
+      const char *pDescription = reinterpret_cast<const char*> (state.getRegister(1));
+      description += pDescription;
+    }
+    else
+    {
+      description += "Breakpoint exception.";
+    }
+    start(state, description);
   }
   else if (interruptNumber == InterruptManager::instance().getDebugInterruptNumber())
   {
     Processor::setSingleStep(false, state);
-    breakpoint(state);
+    description = "Debug/trap exception";
+    start(state, description);
   }
 }

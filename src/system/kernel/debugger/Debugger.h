@@ -22,8 +22,7 @@
 #include <processor/InterruptManager.h>
 #include <LocalIO.h>
 
-#define MONITOR 1
-#define SERIAL  2
+#define ASSERT_FAILED_SENTINEL 0xa55e4710 // A cack-handed way of writing "assertio(n)".
 
 /**
  * Implements the main kernel debugger. This class interfaces with the machine
@@ -50,10 +49,8 @@ public:
   
   /**
    * Causes the debugger to take control.
-   * \param type One of MONITOR or SERIAL. It defines the type of interface that will be started for
-   *             user communication.
    */
-  void breakpoint(InterruptState &state);
+  void start(InterruptState &state, LargeStaticString &description);
    
   /** Called when the handler is registered with the interrupt manager and the interrupt occurred
    * \param interruptNumber the interrupt number

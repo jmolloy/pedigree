@@ -15,12 +15,13 @@
  */
 #include <Log.h>
 #include <panic.h>
+#include <Debugger.h>
 #include <utilities/StaticString.h>
 #include "InterruptManager.h"
 
 #define SYSCALL_INTERRUPT_NUMBER 255
 
-const char* g_sExceptionNames[] = {
+const char* g_ExceptionNames[] = {
   "Divide Error [div by 0 OR dest operand too small]",
   "Debug",
   "NMI Interrupt",
@@ -180,15 +181,16 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
         FATAL("eip: " << Hex << interruptState.getInstructionPointer());
       }
 
+      // TODO:: Check for debugger initialisation.
       // TODO: register dump, maybe a breakpoint so the deubbger can take over?
       // for now just print out the exception name and number
       LargeStaticString e;
-      e.clear();
-      e.append( "EXCEPTION[" );
-      e.append( intNumber, 10, 2, '0' );
-      e.append( "]: " );
-      e.append( g_sExceptionNames[intNumber] );
-      panic( e );
+      e.append ("Exception #0x");
+      e.append (intNumber, 16);
+      e.append (": \"");
+      e.append (g_ExceptionNames[intNumber]);
+      e.append ("\"");
+      Debugger::instance().start(interruptState, e);
     }
   }
 }

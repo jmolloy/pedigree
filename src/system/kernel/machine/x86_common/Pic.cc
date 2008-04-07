@@ -135,9 +135,13 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   else
   {
     NOTICE("PIC: unhandled irq #" << irq << " occurred");
-
+ 
     #ifdef DEBUGGER
-      Debugger::instance().breakpoint(state);
+      LargeStaticString str;
+      str += "Unhandled IRQ: #";
+      str += irq;
+      str += " occurred.";
+      Debugger::instance().start(state, str);
     #endif
   }
 

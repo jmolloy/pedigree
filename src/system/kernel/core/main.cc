@@ -70,7 +70,7 @@ extern "C" void woot()
 
 extern "C" void bar()
 {
-  woot();
+//  woot();
 #ifdef X86_COMMON
   Processor::breakpoint();
 #endif
@@ -105,6 +105,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
+  int a = 3/0;
   bar();
 #endif
 

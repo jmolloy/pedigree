@@ -193,6 +193,10 @@ void X86Vga::rememberMode()
   {
     memcpy (m_pStoredMode, g_pModeDescriptions[mode], 61);
   }
+  else
+  {
+    memcpy (m_pStoredMode, g_pModeDescriptions[0], 61);
+  }
 }
   
 void X86Vga::restoreMode()
