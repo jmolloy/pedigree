@@ -23,17 +23,39 @@
   #include "Smp.h"
 #endif
 
+static void clearContainer(Vector<ProcessorInformation*> &Processors,
+                           Vector<IoApicInformation*> &IoApics)
+{
+  for (size_t i = 0;i < Processors.count();i++)
+    delete Processors[i];
+  for (size_t i = 0;i < Processors.count();i++)
+    delete IoApics[i];
+  Processors.clear();
+  IoApics.clear();
+}
+
 size_t initialiseMultiprocessor()
 {
   bool bMPInfoFound = false;
 
   bool bPicMode;
+  bool bHasPics;
+  physical_uintptr_t localApicsAddress;
   Vector<ProcessorInformation*> Processors;
+  Vector<IoApicInformation*> IoApics;
 
   // Search through the ACPI tables
   #if defined(ACPI)
     Acpi &acpi = Acpi::instance();
-    bMPInfoFound = acpi.getProcessorList(Processors, bPicMode);
+    bMPInfoFound = acpi.getProcessorList(localApicsAddress,
+                                         Processors,
+                                         IoApics,
+                                         bHasPics,
+                                         bPicMode);
+
+    // Cleanup if the call failed
+    if (bMPInfoFound == false)
+      clearContainer(Processors, IoApics);
   #endif
 
   // Search through the SMP tables
@@ -41,7 +63,15 @@ size_t initialiseMultiprocessor()
   {
     #if defined(SMP)
       Smp smp;
-      bMPInfoFound = smp.getProcessorList(Processors, bPicMode);
+      bMPInfoFound = smp.getProcessorList(localApicsAddress,
+                                          Processors,
+                                          IoApics,
+                                          bHasPics,
+                                          bPicMode);
+
+      // Cleanup if the call failed
+      if (bMPInfoFound == false)
+        clearContainer(Processors, IoApics);
     #endif
   }
 
@@ -50,5 +80,7 @@ size_t initialiseMultiprocessor()
 
   // TODO: Evaluate the table and start the application processors
   //       Set mProcessors
+
+  clearContainer(Processors, IoApics);
   return 1;
 }

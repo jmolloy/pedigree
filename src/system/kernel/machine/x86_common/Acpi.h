@@ -18,6 +18,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <processor/MemoryRegion.h>
 #include <utilities/Vector.h>
 #include "../../core/processor/x86_common/Multiprocessor.h"
 
@@ -33,13 +34,16 @@ class Acpi
     void initialise();
 
     #if defined(MULTIPROCESSOR)
-      bool getProcessorList(Vector<ProcessorInformation*> &Processors,
+      bool getProcessorList(physical_uintptr_t &localApicsAddress,
+                            Vector<ProcessorInformation*> &Processors,
+                            Vector<IoApicInformation*> &IoApics,
+                            bool &bHasPics,
                             bool &bPicMode);
     #endif
 
   private:
     inline Acpi()
-      : m_pRsdtPointer(0){}
+      : m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0), m_pApic(0){}
     Acpi(const Acpi &);
     Acpi &operator = (const Acpi &);
     inline ~Acpi(){}
@@ -60,11 +64,52 @@ class Acpi
       uint8_t reserved[3];
     } PACKED;
 
+    struct SystemDescriptionTableHeader
+    {
+      uint32_t signature;
+      uint32_t length;
+      uint8_t revision;
+      uint8_t checksum;
+      char oemId[6];
+      char oemTableId[8];
+      uint32_t oemRevision;
+      uint32_t creatorId;
+      uint32_t creatorRevision;
+    } PACKED;
+
+    struct ProcessorLocalApic
+    {
+      uint8_t processorId;
+      uint8_t apicId;
+      uint32_t flags;
+    } PACKED;
+
+    struct IoApic
+    {
+      uint8_t apicId;
+      uint8_t reserved;
+      uint32_t address;
+      uint32_t globalSystemInterruptBase;
+    } PACKED;
+
+    struct InterruptSourceOverride
+    {
+      uint8_t bus;
+      uint8_t source;
+      uint8_t globalSystemInterrupt;
+      uint16_t flags;
+    } PACKED;
+
     bool find();
     RsdtPointer *find(void *pMemory, size_t sMemory);
     bool checksum(const RsdtPointer *pRdstPointer);
+    bool checksum(const SystemDescriptionTableHeader *pHeader);
 
     RsdtPointer *m_pRsdtPointer;
+    MemoryRegion m_AcpiMemoryRegion;
+    SystemDescriptionTableHeader *m_pRsdt;
+    SystemDescriptionTableHeader *m_pFacp;
+    SystemDescriptionTableHeader *m_pApic;
 
     static Acpi m_Instance;
 };

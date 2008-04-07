@@ -17,18 +17,21 @@
 #include <Log.h>
 #include <utilities/utility.h>
 
-bool Smp::getProcessorList(Vector<ProcessorInformation*> &Processors,
+bool Smp::getProcessorList(physical_uintptr_t &localApicsAddress,
+                           Vector<ProcessorInformation*> &Processors,
+                           Vector<IoApicInformation*> &IoApics,
+                           bool &bHasPics,
                            bool &bPicMode)
 {
   // Search for the multiprocessor floating pointer structure
   if (find() == false)
   {
-    WARNING("smp: not compliant to the intel multiprocessor specification");
+    WARNING("smp: not compliant to the Intel Multiprocessor Specification");
     return false;
   }
 
-  NOTICE("smp: Intel multiprocessor specification 1." << Dec << m_pFloatingPointer->revision);
-  NOTICE("     floating pointer at 0x" << Hex << reinterpret_cast<uintptr_t>(m_pFloatingPointer));
+  NOTICE("Intel Multiprocessor Specification 1." << Dec << m_pFloatingPointer->revision);
+  NOTICE(" floating pointer at " << Hex << reinterpret_cast<uintptr_t>(m_pFloatingPointer));
 
   // PIC-Mode implemented?
   bPicMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
@@ -47,8 +50,13 @@ bool Smp::getProcessorList(Vector<ProcessorInformation*> &Processors,
     ERROR("smp: configuration table not present");
     return false;
   }
+  if (reinterpret_cast<uintptr_t>(m_pConfigTable) >= 0x100000)
+  {
+    ERROR("smp: configuration table above 1MB");
+    return false;
+  }
 
-  NOTICE("     configuration table at 0x" << Hex << reinterpret_cast<uintptr_t>(m_pConfigTable));
+  NOTICE(" configuration table at " << Hex << reinterpret_cast<uintptr_t>(m_pConfigTable));
 
   if (m_pConfigTable->signature != 0x504D4350 ||
       checksum(m_pConfigTable) != true ||
@@ -57,6 +65,87 @@ bool Smp::getProcessorList(Vector<ProcessorInformation*> &Processors,
     ERROR("smp: configuration table invalid");
     return false;
   }
+
+  NOTICE("  local APICs at " << Hex << m_pConfigTable->localApicAddress);
+
+  // Loop through the configuration table base entries
+  uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(m_pConfigTable, sizeof(ConfigTableHeader)));
+  for (size_t i = 0;i < m_pConfigTable->entryCount;i++)
+  {
+    // Size of this table entry
+    size_t sEntry = 8;
+
+    // Processor entry?
+    if (*pType == 0)
+    {
+      Processor *pProcessor = reinterpret_cast<Processor*>(pType);
+
+      bool bBsp = ((pProcessor->flags & 0x02) == 0x02);
+      bool bUsable = ((pProcessor->flags & 0x01) == 0x01);
+
+      NOTICE("  processor #" << Dec << pProcessor->localApicId << (bUsable ? " usable" : " unusable") << (bBsp ? " BSP" : ""));
+
+      // Is the processor usable?
+      if (bUsable)
+      {
+        // Add the processor to the list
+        ProcessorInformation *pProcessorInfo = new ProcessorInformation(bBsp,
+                                                                        pProcessor->localApicId,
+                                                                        pProcessor->localApicId);
+        Processors.pushBack(pProcessorInfo);
+      }
+
+      sEntry = sizeof(Processor);
+    }
+    // Bus entry?
+    else if (*pType == 1)
+    {
+      Bus *pBus = reinterpret_cast<Bus*>(pType);
+
+      char name[7];
+      strncpy(name, pBus->name, 6);
+      name[6] = '\0';
+
+      NOTICE("  Bus #" << Dec << pBus->busId << " \"" << name << "\"");
+
+      // TODO: Figure out how to pass these entries to the calling function
+    }
+    // I/O APIC entry?
+    else if (*pType == 2)
+    {
+      IoApic *pIoApic = reinterpret_cast<IoApic*>(pType);
+
+      bool bUsable = ((pIoApic->flags & 0x01) == 0x01);
+
+      NOTICE("  I/O APIC #" << Dec << pIoApic->id << (bUsable ? " usable" : "") << " at " << Hex << pIoApic->address);
+
+      // Is the I/O APIC usable?
+      if (bUsable)
+      {
+        // Add the I/O APIC to the list
+        IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->id, pIoApic->address);
+        IoApics.pushBack(pIoApicInfo);
+      }
+    }
+    // I/O interrupt assignment?
+    else if (*pType == 3)
+    {
+      IoInterruptAssignment *pIoInterruptAssignment = reinterpret_cast<IoInterruptAssignment*>(pType);
+
+      // TODO: Figure out how to pass these entries to the calling function
+    }
+    // Local interrupt assignment?
+    else if (*pType == 4)
+    {
+      LocalInterruptAssignment *pLocalInterruptAssignment = reinterpret_cast<LocalInterruptAssignment*>(pType);
+
+      // TODO: Figure out how to pass these entries to the calling function
+    }
+
+    pType = adjust_pointer(pType, sEntry);
+  }
+
+  // TODO: Set the local APIC address & bHasPics
 
   return true;
 }

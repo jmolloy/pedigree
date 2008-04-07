@@ -69,6 +69,10 @@ void *Vector<void*>::popBack()
   m_Count--;
   return m_Data[m_Count];
 }
+void Vector<void*>::clear()
+{
+  m_Count = 0;
+}
 void Vector<void*>::assign(const Vector &x)
 {
   reserve(x.count(), false);
@@ -78,7 +82,7 @@ void Vector<void*>::assign(const Vector &x)
 }
 void Vector<void*>::reserve(size_t size, bool copy)
 {
-  if (size > m_Size)
+  if (size <= m_Size)
     return;
 
   void **tmp = m_Data;

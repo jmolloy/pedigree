@@ -41,6 +41,40 @@ Log &Log::operator<< (const char *str)
   return *this;
 }
 
+Log &Log::operator<< (bool b)
+{
+  if (b)
+    return *this << "true";
+
+  return *this << "false";
+}
+
+template<class T>
+Log &Log::operator << (T n)
+{
+  size_t radix = 10;
+  if (m_NumberType == Hex)
+  {
+    radix = 16;
+    m_Buffer.str.append("0x");
+  }
+  m_Buffer.str.append(n, radix);
+  return *this;
+}
+
+// NOTE: Make sure that the templated << operator gets only instanciated for
+//       integer types.
+template Log &Log::operator << (char);
+template Log &Log::operator << (unsigned char);
+template Log &Log::operator << (short);
+template Log &Log::operator << (unsigned short);
+template Log &Log::operator << (int);
+template Log &Log::operator << (unsigned int);
+template Log &Log::operator << (long);
+template Log &Log::operator << (unsigned long);
+template Log &Log::operator << (long long);
+template Log &Log::operator << (unsigned long long);
+
 Log &Log::operator<< (Modifier type)
 {
   // Flush the buffer.
@@ -48,18 +82,14 @@ Log &Log::operator<< (Modifier type)
   {
     if (m_StaticEntries >= LOG_ENTRIES)
     {
-      if (Processor::isInitialised() != 0)
-      {
-        DynamicLogEntry *entry = new DynamicLogEntry;
-        entry->type = m_Buffer.type;
-        entry->timestamp = m_Buffer.timestamp;
-        entry->str = m_Buffer.str;
-        m_DynamicLog.pushBack(entry);
-      }
-      else
-      {
+      if (Processor::isInitialised() == 0)
         panic("Log: Not enough static log entries");
-      }
+
+      DynamicLogEntry *entry = new DynamicLogEntry;
+      entry->type = m_Buffer.type;
+      entry->timestamp = m_Buffer.timestamp;
+      entry->str = m_Buffer.str;
+      m_DynamicLog.pushBack(entry);
     }
     else
       m_StaticLog[m_StaticEntries++] = m_Buffer;

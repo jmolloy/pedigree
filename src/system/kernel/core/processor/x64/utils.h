@@ -21,10 +21,15 @@
 /** @addtogroup kernelprocessorx64
  * @{ */
 
-template<typename T>
-inline T *physicalAddress(T *address)
+inline physical_uintptr_t physicalAddress(physical_uintptr_t address)
 {
-  return reinterpret_cast<T*>(reinterpret_cast<uint64_t>(address) + 0xFFFF800000000000);
+  return address + 0xFFFF800000000000;
+}
+
+template<typename T>
+inline T *physicalAddress(T *pAddress)
+{
+  return reinterpret_cast<T*>(reinterpret_cast<uint64_t>(pAddress) + 0xFFFF800000000000);
 }
 
 /** @} */

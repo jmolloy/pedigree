@@ -25,10 +25,28 @@
  *  SMP or the ACPI tables. */
 struct ProcessorInformation
 {
+  inline ProcessorInformation(bool bsp, uint8_t processorid, uint8_t apicid)
+    : bBsp(bsp), processorId(processorid), apicId(apicid){}
+
   /** Is it the bootstrap processor (BSP)? */
   bool bBsp;
+  /** The id of the processor */
+  uint8_t processorId;
   /** The id of the processor's local APIC */
   uint8_t apicId;
+};
+
+/** Information about one I/O APIC. This information is provided by the
+ *  SMP or the ACPI tables. */
+struct IoApicInformation
+{
+  inline IoApicInformation(uint8_t apicid, physical_uintptr_t Address)
+    : apicId(apicid), address(Address){}
+
+  /** The id of the I/O APIC */
+  uint8_t apicId;
+  /** The physical address of the I/O APIC register set */
+  physical_uintptr_t address;
 };
 
 /** Startup and initialise all processors

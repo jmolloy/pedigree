@@ -69,6 +69,9 @@ class Vector<void*>
      *\return the removed element */
     void *popBack();
 
+    /** Clear the Vector */
+    void clear();
+
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
@@ -163,6 +166,10 @@ class Vector<T*>
      *\return the removed element */
     inline T *popBack()
       {return reinterpret_cast<T*>(m_VoidVector.popBack());}
+
+    /** Clear the Vector */
+    inline void clear()
+      {m_VoidVector.clear();}
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */

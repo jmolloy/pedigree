@@ -13,9 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "InterruptManager.h"
-#include <utilities/StaticString.h>
+#include <Log.h>
 #include <panic.h>
+#include <utilities/StaticString.h>
+#include "InterruptManager.h"
 
 #define SYSCALL_INTERRUPT_NUMBER 255
 
@@ -165,8 +166,20 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   {
     // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
     // reserved, not for use by system programmers)
-    if(LIKELY(intNumber < 32))
+    if(LIKELY(intNumber < 32 &&
+              intNumber != 1 &&
+              intNumber != 3))
     {
+      if (intNumber == 14)
+      {
+        // HACK
+        uint32_t cr2;
+        asm volatile("mov %%cr3, %%eax" :: "a" (cr2));
+        FATAL("cr2: " << Hex << cr2);
+
+        FATAL("eip: " << Hex << interruptState.getInstructionPointer());
+      }
+
       // TODO: register dump, maybe a breakpoint so the deubbger can take over?
       // for now just print out the exception name and number
       LargeStaticString e;

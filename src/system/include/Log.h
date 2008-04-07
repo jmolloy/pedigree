@@ -117,19 +117,12 @@ public:
 
   /** Adds an entry to the log. */
   Log &operator<< (const char *str);
-  /** Adds an entry to the log. */
+  inline Log &operator<< (char *str)
+    {return (*this) << (reinterpret_cast<const char*>(str));}
+  Log &operator<< (bool b);
   template<class T>
-  Log &operator << (T n)
-  {
-    size_t radix = 10;
-    if (m_NumberType == Hex)
-    {
-      radix = 16;
-      m_Buffer.str.append("0x");
-    }
-    m_Buffer.str.append(n, radix);
-    return *this;
-  }
+  Log &operator << (T n);
+
   /** Starts an entry in the log.
    *\todo This function should gain and release spinlocks, depending on level. */
   Log &operator<< (SeverityLevel level);
@@ -146,7 +139,7 @@ public:
   /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
   const DynamicLogEntry &getDynamicEntry(size_t n) const
   {
-    return *m_DynamicLog[n - getStaticEntryCount()];
+    return *m_DynamicLog[n - m_StaticEntries];
   }
 
   /** Returns the number of static entries in the log. */

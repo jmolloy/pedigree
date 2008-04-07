@@ -19,7 +19,7 @@
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 
-/** @addtogroup kernelprocessormips32
+/** @addtogroup kernelprocessorMIPS32
  * @{ */
 
 /** The X86VirtualAddressSpace implements the VirtualAddressSpace class for the mip32

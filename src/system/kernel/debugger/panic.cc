@@ -28,6 +28,16 @@
 #include <Log.h>
 #include <utilities/utility.h>
 
+static size_t newlineCount(const char *pString)
+{
+  size_t nNewlines = 0;
+  while (*pString != '\0')
+    if (*pString++ == '\n')
+      ++nNewlines;
+
+  return nNewlines;
+}
+
 void _panic( const char* msg, DebuggerIO* pScreen )
 {  
   HugeStaticString panic_output;
@@ -35,24 +45,32 @@ void _panic( const char* msg, DebuggerIO* pScreen )
   
   panic_output.append( "PANIC: " );
   panic_output.append( msg );
+
   //pScreen->drawString( "PANIC: ", 0, 0, DebuggerIO::Black, DebuggerIO::White );
   //pScreen->drawString( msg, 0, 7, DebuggerIO::Black, DebuggerIO::White );
+
+  // write the final string to the screen
+  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Black, DebuggerIO::LightGrey );
+
+  size_t nLines = newlineCount(panic_output) + 1;
 
   Log &log = Log::instance();
   Log::SeverityLevel level;
   static NormalStaticString Line;
 
-  size_t iEntry, iUsedEntries = 0;
+  size_t iEntry = 0, iUsedEntries = 0;
+  if ((pScreen->getHeight() - nLines) < (log.getStaticEntryCount() + log.getDynamicEntryCount()))
+    iEntry = log.getStaticEntryCount() + log.getDynamicEntryCount() - (pScreen->getHeight() - nLines);
   bool bPrintThisLine = false;
-  for( iEntry = 0; iUsedEntries < 4 && iEntry < (log.getStaticEntryCount() + log.getDynamicEntryCount()); iEntry++ )
+  for( ; iEntry < (log.getStaticEntryCount() + log.getDynamicEntryCount()); iEntry++ )
   {
     if( iEntry < log.getStaticEntryCount() )
     {
       const Log::StaticLogEntry &entry = log.getStaticEntry(iEntry);
       level = entry.type;
       
-      if( level == Log::Fatal || level == Log::Error )
-      {
+//      if( level == Log::Fatal || level == Log::Error )
+//      {
         Line.clear();
         Line.append("[");
         Line.append(entry.timestamp, 10, 8, '0');
@@ -60,18 +78,16 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append(entry.str);
         Line.append( "\n" );
         
-        iUsedEntries++;
-        
         bPrintThisLine = true;
-      }
+//      }
     }
     else
     {
       const Log::DynamicLogEntry &entry = log.getDynamicEntry(iEntry);
       level = entry.type;
       
-      if( level == Log::Fatal || level == Log::Error )
-      {
+//      if( level == Log::Fatal || level == Log::Error )
+//      {
         Line.clear();
         Line.append("[");
         Line.append(entry.timestamp, 10, 8, '0');
@@ -79,23 +95,18 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append(entry.str);
         Line.append( "\n" );
         
-        iUsedEntries++;
-        
         bPrintThisLine = true;
-      }
+//      }
     }
 
     // print the line
     if( bPrintThisLine = true )
     {
-      panic_output.append( Line );
-      //pScreen->drawString( Line, iUsedEntries, 0, DebuggerIO::Black, DebuggerIO::White );
+      ++iUsedEntries;
+      pScreen->drawString( Line, iUsedEntries, 0, DebuggerIO::Black, DebuggerIO::LightGrey );
       bPrintThisLine = false;
     }
   }
-  
-  // write the final string to the screen
-  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Black, DebuggerIO::White );
 }
 
 void panic( const char* msg )

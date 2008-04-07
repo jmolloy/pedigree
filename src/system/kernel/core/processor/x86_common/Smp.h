@@ -31,7 +31,10 @@ class Smp
       : m_pFloatingPointer(0), m_pConfigTable(0){}
     inline ~Smp(){}
 
-    bool getProcessorList(Vector<ProcessorInformation*> &Processors,
+    bool getProcessorList(physical_uintptr_t &localApicsAddress,
+                          Vector<ProcessorInformation*> &Processors,
+                          Vector<IoApicInformation*> &IoApics,
+                          bool &bHasPics,
                           bool &bPicMode);
 
   private:
@@ -63,6 +66,56 @@ class Smp
       uint16_t extendedTableLength;
       uint8_t extendedChecksum;
       uint8_t reserved;
+    } PACKED;
+
+    struct Processor
+    {
+      uint8_t entryType;
+      uint8_t localApicId;
+      uint8_t localApicVersion;
+      uint8_t flags;
+      uint32_t signature;
+      uint32_t featureFlags;
+      uint32_t res0;
+      uint32_t res1;
+    } PACKED;
+
+    struct Bus
+    {
+      uint8_t entryType;
+      uint8_t busId;
+      char name[6];
+    } PACKED;
+
+    struct IoApic
+    {
+      uint8_t entryType;
+      uint8_t id;
+      uint8_t version;
+      uint8_t flags;
+      uint32_t address;
+    } PACKED;
+
+    struct IoInterruptAssignment
+    {
+      uint8_t entryType;
+      uint8_t type;
+      uint16_t flags;
+      uint8_t busId;
+      uint8_t busIrq;
+      uint8_t ioApicId;
+      uint8_t ioApicIntn;
+    } PACKED;
+
+    struct LocalInterruptAssignment
+    {
+      uint8_t entryType;
+      uint8_t type;
+      uint16_t flags;
+      uint8_t busId;
+      uint8_t busIrq;
+      uint8_t localApicId;
+      uint8_t localApicIntn;
     } PACKED;
 
     bool find();

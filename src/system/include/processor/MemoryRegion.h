@@ -29,15 +29,27 @@
  *\brief Special memory entity in the kernel's virtual address space */
 class MemoryRegion
 {
-  /** PhysicalMemoryManager needs access to MemoryRegion's members */
-  friend class PhysicalMemoryManager;
+  /** X86CommonPhysicalMemoryManager needs access to MemoryRegion's members */
+  friend class X86CommonPhysicalMemoryManager;
   public:
+    /** The default constructor does nothing  */
+    inline MemoryRegion()
+      : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0){}
+    /** The destructor does nothing */
+    inline virtual ~MemoryRegion(){}
+
     /** Get the address of the beginning of the MemoryRegion in the virtual
      *  address space
-     *\return pointer to the beginning of the MemoryRegion */
+     *\return pointer to the beginning of the MemoryRegion (in the virtual address space) */
     inline void *virtualAddress() const
     {
       return m_VirtualAddress;
+    }
+    /** Get the physical address of the beginning of the MemoryRegion
+     *\return pointer to the beginning of the MemoryRegion (in the physical address space) */
+    inline physical_uintptr_t physicalAddress() const
+    {
+      return m_PhysicalAddress;
     }
     /** Get the size of the MemoryRegion
      *\return size of the MemoryRegion in bytes */
@@ -51,12 +63,18 @@ class MemoryRegion
       return (m_Size != 0);
     }
 
-  protected:
-    /** The default constructor does nothing  */
-    inline MemoryRegion()
-      : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0){}
-    /** The destructor does nothing */
-    inline virtual ~MemoryRegion(){}
+    inline bool physicalBoundsCheck(physical_uintptr_t address)
+    {
+      if (address >= m_PhysicalAddress &&
+          address < (m_PhysicalAddress + m_Size))
+        return true;
+      return false;
+    }
+    template<typename T>
+    inline T *convertPhysicalPointer(physical_uintptr_t address)
+    {
+      return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(m_VirtualAddress) + (address - m_PhysicalAddress));
+    }
 
   private:
     /** The copy-constructor

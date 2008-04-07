@@ -16,6 +16,7 @@
 #include <Log.h>
 #include <utilities/utility.h>
 #include "Acpi.h"
+#include "../../core/processor/x86_common/PhysicalMemoryManager.h"
 
 Acpi Acpi::m_Instance;
 
@@ -24,20 +25,197 @@ void Acpi::initialise()
   // Search for the ACPI root system description pointer
   if (find() == false)
   {
-    WARNING("smp: not compliant to the ACPI specification");
+    WARNING("Acpi: not compliant to the ACPI Specification");
     return;
   }
 
-  NOTICE("ACPI specification RSDT pointer found at 0x" << Hex << reinterpret_cast<uintptr_t>(m_pRsdtPointer));
+  NOTICE("ACPI Specification");
+  NOTICE(" RSDT pointer at " << Hex << reinterpret_cast<uintptr_t>(m_pRsdtPointer));
+  NOTICE(" RSDT at " << Hex << m_pRsdtPointer->rsdtAddress);
+
+  // Get the ACPI memory ranges
+  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
+  const RangeList<uint64_t> &AcpiRanges = physicalMemoryManager.getAcpiRanges();
+  if (AcpiRanges.size() == 0)
+  {
+    ERROR("Acpi: No ACPI memory range");
+    return;
+  }
+  if (AcpiRanges.size() > 1)
+  {
+    ERROR("Acpi: More than one ACPI memory range");
+    return;
+  }
+
+  // Allocate the ACPI memory as a MemoryRegion
+  RangeList<uint64_t>::Range AcpiRange = AcpiRanges.getRange(0);
+  physical_uintptr_t address = AcpiRange.address & (~(PhysicalMemoryManager::getPageSize() - 1));
+  size_t sAddress = AcpiRange.length + (AcpiRange.address - address);
+  size_t nPages = (sAddress + (PhysicalMemoryManager::getPageSize() - 1)) / PhysicalMemoryManager::getPageSize();
+  if (physicalMemoryManager.allocateRegion(m_AcpiMemoryRegion,
+                                           nPages,
+                                           PhysicalMemoryManager::continuous,
+                                           address)
+      == false)
+  {
+    ERROR("Acpi: Could not allocate the MemoryRegion");
+    return;
+  }
+
+  // Check the RSDT (Root System Description Table)
+  m_pRsdt = m_AcpiMemoryRegion.convertPhysicalPointer<SystemDescriptionTableHeader>(m_pRsdtPointer->rsdtAddress);
+  // HACK FIXME TODO
+  // NOTICE("m_pRsdt " << Hex << reinterpret_cast<uintptr_t>(m_pRsdt));
+  // NOTICE("Acpi range length " << Hex << m_AcpiMemoryRegion.size());
+  // NOTICE("m_pRsdt->length " << Hex << m_pRsdt->length);
+  if (m_pRsdt->signature != 0x54445352 ||
+      checksum(m_pRsdt) != true)
+  {
+    ERROR("Acpi: RSDT invalid");
+    m_pRsdt = 0;
+    return;
+  }
+
+  // Go through the table's entries
+  size_t sEntries = (m_pRsdt->length - sizeof(SystemDescriptionTableHeader)) / 4;
+  for (size_t i = 0;i < sEntries;i++)
+  {
+    uint32_t *pTable = adjust_pointer(reinterpret_cast<uint32_t*>(m_pRsdt), sizeof(SystemDescriptionTableHeader) + 4 * i);
+
+    SystemDescriptionTableHeader *pSystemDescTable = m_AcpiMemoryRegion.convertPhysicalPointer<SystemDescriptionTableHeader>(*pTable);
+
+    char Signature[5];
+    strncpy(Signature, reinterpret_cast<char*>(&pSystemDescTable->signature), 4);
+    Signature[4] = '\0';
+
+    NOTICE("  " << Signature << " at " << Hex << *pTable);
+
+    // Is the table valid?
+    if (checksum(pSystemDescTable) != true)
+    {
+      ERROR("  invalid");
+      continue;
+    }
+
+    // Is Fixed ACPI Description Table?
+    if (pSystemDescTable->signature == 0x50434146)
+      m_pFacp = pSystemDescTable;
+    // Is Multiple APIC Description Table?
+    else if (pSystemDescTable->signature == 0x43495041)
+      m_pApic = pSystemDescTable;
+    else
+      NOTICE("  unknown table");
+  }
 }
 
 #if defined(MULTIPROCESSOR)
-  bool Acpi::getProcessorList(Vector<ProcessorInformation*> &Processors,
+  bool Acpi::getProcessorList(physical_uintptr_t &localApicsAddress,
+                              Vector<ProcessorInformation*> &Processors,
+                              Vector<IoApicInformation*> &IoApics,
+                              bool &bHasPics,
                               bool &bPicMode)
   {
-    if (m_pRsdtPointer == 0)return false;
+    // Was the Multiple APIC Description Table found?
+    if (m_pApic == 0)return false;
 
-    // TODO
+    NOTICE("ACPI: Multiple APIC Description Table");
+
+    // Parse the Multiple APIC Description Table
+    uint32_t *pLocalApicAddress = reinterpret_cast<uint32_t*>(adjust_pointer(m_pApic, sizeof(SystemDescriptionTableHeader)));
+    uint32_t *pFlags = adjust_pointer(pLocalApicAddress, 4);
+
+    localApicsAddress = *pLocalApicAddress;
+    bHasPics = (((*pFlags) & 0x01) == 0x01);
+
+    NOTICE(" local APICs at " << Hex << localApicsAddress);
+    NOTICE(" dual 8259 PICs: " << bHasPics);
+
+    uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(pFlags, 4));
+    for (;pType < reinterpret_cast<uint8_t*>(adjust_pointer(m_pApic, m_pApic->length));)
+    {
+      // Processor Local APIC
+      if (*pType == 0)
+      {
+        ProcessorLocalApic *pLocalApic = reinterpret_cast<ProcessorLocalApic*>(adjust_pointer(pType, 2));
+
+        // TODO: BSP?
+        bool bUsable = ((pLocalApic->flags & 0x01) == 0x01);
+
+        NOTICE("  processor #" << Dec << pLocalApic->processorId << (bUsable ? " usable" : " unusable"));
+
+        // Is the processor usable?
+        if (bUsable)
+        {
+          // Add the processor to the list
+          ProcessorInformation *pProcessorInfo = new ProcessorInformation(false,// TODO BSP
+                                                                          pLocalApic->processorId,
+                                                                          pLocalApic->apicId);
+          Processors.pushBack(pProcessorInfo);
+        }
+      }
+      // I/O APIC
+      else if (*pType == 1)
+      {
+        IoApic *pIoApic = reinterpret_cast<IoApic*>(adjust_pointer(pType, 2));
+
+        NOTICE("  I/O APIC #" << Dec << pIoApic->apicId << " at " << Hex << pIoApic->address << ", global system interrupt base " << pIoApic->globalSystemInterruptBase);
+
+        // TODO: What should we do with the global system interrupt base?
+
+        // Add to the I/O APIC list
+        IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->apicId, pIoApic->address);
+        IoApics.pushBack(pIoApicInfo);
+      }
+      // Interrupt Source override
+      else if (*pType == 2)
+      {
+        InterruptSourceOverride *pInterruptSourceOverride = reinterpret_cast<InterruptSourceOverride*>(adjust_pointer(pType, 2));
+
+        ERROR("  interrupt source override on " << ((pInterruptSourceOverride->bus == 0) ? "ISA" : "unknown") << " bus: source #" << Dec << pInterruptSourceOverride->source << ", global system interrupt #" << pInterruptSourceOverride->globalSystemInterrupt << ", flags " << Hex << pInterruptSourceOverride->flags);
+
+        // TODO
+      }
+      // Non-maskable Interrupt Source (NMI)
+      else if (*pType == 3)
+      {
+        ERROR("  NMI source");
+      }
+      // Local APIC NMI
+      else if (*pType == 4)
+      {
+        ERROR("  Local APIC NMI");
+      }
+      // Local APIC Address Override
+      else if (*pType == 5)
+      {
+        ERROR("  Local APIC address override");
+      }
+      // I/O SAPIC
+      else if (*pType == 6)
+      {
+        ERROR("  I/O SAPIC");
+      }
+      // Local SAPIC
+      else if (*pType == 7)
+      {
+        ERROR("  Local SAPIC");
+      }
+      // Platform Interrupt Source
+      else if (*pType == 8)
+      {
+        ERROR("  Platform Interrupt Source");
+      }
+      else
+      {
+        NOTICE("  unknown entry #" << Dec << *pType);
+      }
+
+      // Go to the next entry;
+      uint8_t *sTable = reinterpret_cast<uint8_t*>(adjust_pointer(pType, 1));
+      pType = adjust_pointer(pType, *sTable);
+    }
+
+    // TODO: Set bPicMode!
     return false;
   }
 #endif
@@ -85,4 +263,9 @@ bool Acpi::checksum(const RsdtPointer *pRdstPointer)
   }
 
   return true;
+}
+
+bool Acpi::checksum(const SystemDescriptionTableHeader *pHeader)
+{
+  return ::checksum(reinterpret_cast<const uint8_t*>(pHeader), pHeader->length);
 }

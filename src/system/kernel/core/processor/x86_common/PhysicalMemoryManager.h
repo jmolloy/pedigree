@@ -46,6 +46,11 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\param[in] Info reference to the multiboot information structure */
     void initialise(const BootstrapStruct_t &Info);
 
+    #if defined(ACPI)
+      inline const RangeList<uint64_t> &getAcpiRanges() const
+          {return m_AcpiRanges;}
+    #endif
+
   protected:
     /** The constructor */
     X86CommonPhysicalMemoryManager();
@@ -111,6 +116,11 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** RangeList of free physical memory */
     RangeList<uint64_t> m_PhysicalRanges;
+
+    #if defined(ACPI)
+      /** RangeList of ACPI memory */
+      RangeList<uint64_t> m_AcpiRanges;
+    #endif
 
     /** The X86CommonPhysicalMemoryManager class instance */
     static X86CommonPhysicalMemoryManager m_Instance;

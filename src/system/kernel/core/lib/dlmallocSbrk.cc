@@ -17,8 +17,6 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 
-#include <processor/Processor.h>
-
 void *dlmallocSbrk(ssize_t incr)
 {
   // NOTE: incr is already page aligned

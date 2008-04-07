@@ -23,6 +23,7 @@
   #define KERNEL_VADDRESS 0xC0000000
 #elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
+  #include "../x64/utils.h"
   #define KERNEL_VADDRESS 0xFFFFFFFF7FF00000
 #endif
 
@@ -46,7 +47,38 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t pageConstraints,
                                                     physical_uintptr_t start)
 {
-  // TODO
+  // Allocate a specific physical memory region (always physically continuous)
+  if (start != static_cast<physical_uintptr_t>(-1))
+  {
+    if ((pageConstraints & continuous) != continuous)
+      panic("PhysicalMemoryManager::allocateRegion(): function misused");
+
+    #if defined(X64)
+      // TODO: on x64 we should tell the virtualAddressSpace that we want that fucking
+      //       physical space mapped (through 2MB pages)
+      Region.m_VirtualAddress = reinterpret_cast<void*>(physicalAddress(start));
+    #elif defined(X86)
+      // TODO
+      // panic("X86CommonPhysicalMemoryManager::allocateRegion(): TODO");
+      // HACK
+      VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+      Region.m_VirtualAddress = reinterpret_cast<void*>(0xE0000000);
+      for (size_t i = 0;i < count;i++)
+        virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
+                                adjust_pointer(Region.m_VirtualAddress, i * PhysicalMemoryManager::getPageSize()),
+                                VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    #endif
+
+    Region.m_PhysicalAddress = start;
+    Region.m_Size = count * PhysicalMemoryManager::getPageSize();
+
+    // TODO: Remove the memory from the m_PhysicalRanges range-list
+    return true;
+  }
+  else
+  {
+    // TODO
+  }
   return false;
 }
 
@@ -70,7 +102,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
 
-  // Fill the range-lists (usable memory below 1/16MB)
+  // Fill the range-lists (usable memory below 1/16MB & ACPI)
   MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
   while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
   {
@@ -93,6 +125,12 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         m_RangeBelow16MB.free(MemoryMap->address, upperBound - MemoryMap->address);
       }
     }
+  #if defined(ACPI)
+    else if (MemoryMap->type == 3 || MemoryMap->type == 4)
+    {
+      m_AcpiRanges.free(MemoryMap->address, MemoryMap->length);
+    }
+  #endif
 
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
@@ -110,14 +148,15 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   // Print the ranges
   NOTICE("free memory ranges (below 1MB):");
   for (size_t i = 0;i < m_RangeBelow1MB.size();i++)
-  {
     NOTICE(" " << Hex << m_RangeBelow1MB.getRange(i).address << " - " << (m_RangeBelow1MB.getRange(i).address + m_RangeBelow1MB.getRange(i).length));
-  }
   NOTICE("free memory ranges (below 16MB):");
   for (size_t i = 0;i < m_RangeBelow16MB.size();i++)
-  {
     NOTICE(" " << Hex << m_RangeBelow16MB.getRange(i).address << " - " << (m_RangeBelow16MB.getRange(i).address + m_RangeBelow16MB.getRange(i).length));
-  }
+  #if defined(ACPI)
+    NOTICE("ACPI ranges:");
+    for (size_t i = 0;i < m_AcpiRanges.size();i++)
+      NOTICE(" " << Hex << m_AcpiRanges.getRange(i).address << " - " << (m_AcpiRanges.getRange(i).address + m_AcpiRanges.getRange(i).length));
+  #endif
 
   // Initialise the free physical ranges 
   // TODO: Ranges above 4GB
@@ -141,6 +180,9 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
   : m_PageStack(), m_RangeBelow1MB(), m_RangeBelow16MB(), m_PhysicalRanges()
+  #if defined(ACPI)
+    , m_AcpiRanges()
+  #endif
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()

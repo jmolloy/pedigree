@@ -210,6 +210,13 @@ public:
     return *this;
   }
 
+  template<typename T>
+  StaticString &operator << (T t)
+  {
+    append(t);
+    return *this;
+  }
+
   void append(char Char, size_t nLen=0, char c = '0')
   {
     char Characters[] = {Char, '\0'};
