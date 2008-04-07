@@ -105,14 +105,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
-  bar();
+  //bar();
 #endif
 
   Serial *s = machine.getSerial(0);
   s->write('b');
   s->write('a');
   s->write('r');
-//   int a = 3/0;
+  int a = 3/0;
 #if defined(MIPS_COMMON) && defined(MIPS_MALTA_BONITO64)
 //   InterruptState st;
 //   Debugger::instance().breakpoint(st);

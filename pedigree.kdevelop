@@ -12,7 +12,7 @@
     <absoluteprojectpath>false</absoluteprojectpath>
     <description/>
     <defaultencoding/>
-    <versioncontrol>kdevsubversion</versioncontrol>
+    <versioncontrol>kdesubversion</versioncontrol>
   </general>
   <kdevcustomproject>
     <run>

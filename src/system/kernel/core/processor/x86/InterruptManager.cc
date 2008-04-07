@@ -14,8 +14,43 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "InterruptManager.h"
+#include <panic.h>
 
 #define SYSCALL_INTERRUPT_NUMBER 255
+
+const char* g_sExceptionNames[] = {
+  "Divide Error [div by 0 OR can't be represented by bits in dest operand]",
+  "Debug",
+  "NMI Interrupt",
+  "Breakpoint",
+  "Overflow",
+  "BOUND Range Exceeded",
+  "Invalid Opcode",
+  "Device Not Available",
+  "Double Fault",
+  "Coprocessor Segment Overrun", /* recent IA-32 processors don't generate this */
+  "Invalid TSS",
+  "Segment Not Present",
+  "Stack Fault",
+  "General Protection Fault",
+  "Page Fault",
+  "FPU Floating-Point Error",
+  "Alignment Check",
+  "Machine-Check",
+  "SIMD Floating-Point Exception",
+  "Int20_rsvd",
+  "Int21_rsvd",
+  "Int22_rsvd",
+  "Int23_rsvd",
+  "Int24_rsvd",
+  "Int25_rsvd",
+  "Int26_rsvd",
+  "Int27_rsvd",
+  "Int28_rsvd",
+  "Int29_rsvd",
+  "Int30_rsvd",
+  "Int31_rsvd"
+};
 
 X86InterruptManager X86InterruptManager::m_Instance;
 
@@ -125,6 +160,17 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   // Call the normal interrupt handler, if any, otherwise
   else if (m_Instance.m_Handler[intNumber] != 0)
     m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
+  else
+  {
+    // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
+    // reserved, not for use by system programmers)
+    if(LIKELY(intNumber < 32))
+    {
+      // TODO: register dump, maybe a breakpoint so the deubbger can take over?
+      // for now just print out the exception name
+      panic( g_sExceptionNames[intNumber] );
+    }
+  }
 }
 
 X86InterruptManager::X86InterruptManager()
