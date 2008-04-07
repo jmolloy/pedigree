@@ -142,7 +142,8 @@ SRCFILES += machine/x86_common/Apic.cc \
             machine/x86_common/Machine.cc \
             machine/x86_common/Keyboard.cc \
             core/processor/x86_common/Processor.cc \
-            core/processor/x86_common/PhysicalMemoryManager.cc
+            core/processor/x86_common/PhysicalMemoryManager.cc \
+            core/processor/x86_common/Disassembler.cc
 
   ifdef ACPI
     SRCFILES += machine/x86_common/Acpi.cc

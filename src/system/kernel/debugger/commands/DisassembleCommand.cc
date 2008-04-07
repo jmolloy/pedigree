@@ -66,89 +66,50 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 
   // Dissassemble around address.
   size_t nInstructions = 10;
-#ifdef X86_COMMON
-  ud_t ud_obj;
-  ud_init(&ud_obj);
-#ifdef X86
-  ud_set_mode(&ud_obj, 32);
-#endif
-#ifdef X64
-  ud_set_mode(&ud_obj, 64);
-#endif
-  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, address);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(address), 256);
 
-  for(size_t i = 0; i < nInstructions; i++)
-  {
-    ud_disassemble(&ud_obj);
-    
-    size_t location = ud_insn_off(&ud_obj);
-    
-    // What symbol are we in?
-    // TODO grep the memory map for the right ELF to look at.
-    uintptr_t symStart = 0;
-    const char *pSym = g_pKernel->lookupSymbol(location, &symStart);
-
-    // Are we actually at the start location of this symbol?
-    if (symStart == location)
-    {
-      // Print it.
-#ifdef X86
-      output.append(location, 16, 8, '0');
-#endif
-#ifdef X64
-      output.append(location, 16, 16, '0');
-#endif
-      output += " <";
-      
-      // Demangle the symbol.
-      LargeStaticString tmpStr(pSym);
-      symbol_t sym;
-      demangle(tmpStr, &sym);
-      
-      output += sym.name;
-      if (sym.nParams > 0)
-      {
-        output += "(";
-        for (size_t i = 0; i < sym.nParams; i++)
-        {
-          if (i != 0)
-            output += ", ";
-          output += sym.params[i];
-        }
-        output += ")";
-      }
-      output += ">:\n";
-    }
-    
-#ifdef X86
-    output.append(location, 16, 8, ' ');
-#endif
-#ifdef X64
-    output.append(location, 16, 16, ' ');
-#endif
-    output += ": ";
-    output += ud_insn_asm(&ud_obj);
-    output += '\n';
-  }
-#endif // X86_COMMON
-#ifdef MIPS_COMMON
   LargeStaticString text;
   Disassembler disassembler;
-  
+#ifdef BITS_64
+  disassembler.setMode(64);
+#endif
   disassembler.setLocation(address);
 
   for (int i = 0; i < nInstructions; i++)
   {
-    output.append(disassembler.getLocation(), 16, 8, ' ');
-    output += ": ";
     text.clear();
+    uintptr_t location = disassembler.getLocation();
     disassembler.disassemble(text);
+
+    // What symbol are we in?
+    // TODO grep the memory map for the right ELF to look at.
+    uintptr_t symStart = 0;
+    const char *pSym = g_pKernel->lookupSymbol(location, &symStart);
+    if (location == symStart)
+    {
+#ifdef BITS_32
+      output.append(location, 16, 8, '0');
+#endif
+#ifdef BITS_64
+      output.append(location, 16, 16, '0');
+#endif
+      output += ": <";
+      LargeStaticString sym;
+      demangle_full(LargeStaticString(pSym), sym);
+      output += sym;
+      output += ">:\n";
+    }
+    
+#ifdef BITS_32
+    output.append(location, 16, 8, ' ');
+#endif
+#ifdef BITS_64
+    output.append(location, 16, 16, ' ');
+#endif
+    output += ": ";
     output += text;
     output += '\n';
   }
-#endif // MIPS_COMMON
+
   return true;
 }
 

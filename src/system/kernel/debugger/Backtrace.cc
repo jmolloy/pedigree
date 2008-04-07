@@ -61,6 +61,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
 
   m_pBasePointers[0] = state.getBasePointer();
   m_pReturnAddresses[0] = state.getInstructionPointer();
+  m_pStates[0] = initial;
   
   size_t i = 1;
   DwarfUnwinder du(g_pKernel->debugFrameTable(), g_pKernel->debugFrameTableLength());
@@ -123,7 +124,6 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
 
     const char *pSym = g_pKernel->lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
-
     StackFrame sf(m_pStates[i], sym);
     sf.prettyPrint(buf);
   }

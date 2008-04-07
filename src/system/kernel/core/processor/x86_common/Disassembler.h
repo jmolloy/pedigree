@@ -13,56 +13,63 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef PROCESSOR_DISASSEMBLER_H
-#define PROCESSOR_DISASSEMBLER_H
+#ifndef MIPS_DISASSEMBLER_H
+#define MIPS_DISASSEMBLER_H
 
-#include <processor/types.h>
-#include <utilities/StaticString.h>
+#include <processor/Disassembler.h>
+#include <udis86.h>
 
 /**
- * Abstraction of a code disassembler.
+ * A disassembler for R3000-R6000 MIPS32/64 processors.
+ * \note Doesn't have 64bit instructions yet.
  */
-class DisassemblerBase
+class X86Disassembler : public DisassemblerBase
 {
 public:
-  /**
-   * Destructor does nothing.
-   */
-  virtual ~DisassemblerBase() {};
-  
+  X86Disassembler();
+  ~X86Disassembler();
+
   /**
    * Sets the location of the next instruction to be disassembled.
    */
-  virtual void setLocation(uintptr_t nLocation) =0;
+  void setLocation(uintptr_t location);
 
   /**
    * Gets the location of the next instruction to be disassembled.
    */
-  virtual uintptr_t getLocation() =0;
+  uintptr_t getLocation();
 
   /**
    * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
    * If a disassembler doesn't support a requested mode, it should
    * return without changing anything.
-   * \param nMode Mode - 16, 32 or 64.
+   * \param mode Mode - 16, 32 or 64.
    */
-  virtual void setMode(size_t nMode) =0;
+  void setMode(size_t mode);
   
   /**
    * Disassembles one instruction and populates the given StaticString
    * with a textual representation.
    */
-  virtual void disassemble(LargeStaticString &text) =0;
-  
-protected:
-  DisassemblerBase() {};
+  void disassemble(LargeStaticString &text);
+
+private:
+  /**
+   * Current disassembling location in memory.
+   */
+  uintptr_t m_Location;
+
+  /**
+   * Current mode.
+   */
+  int m_Mode;
+
+  /**
+   * Disassembler object.
+   */
+  ud_t m_Obj;
 };
 
-#ifdef X86_COMMON
-#include <core/processor/x86_common/Disassembler.h>
-#endif
-#ifdef MIPS_COMMON
-#include <core/processor/mips_common/Disassembler.h>
-#endif
+typedef X86Disassembler Disassembler;
 
 #endif

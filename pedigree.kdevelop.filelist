@@ -179,6 +179,8 @@ src/system/kernel/core/processor/x86/gdt.h
 src/system/kernel/core/processor/x86/state.cc
 src/system/kernel/core/processor/x86/tss.h
 src/system/kernel/core/processor/x86_common
+src/system/kernel/core/processor/x86_common/Disassembler.cc
+src/system/kernel/core/processor/x86_common/Disassembler.h
 src/system/kernel/core/processor/x86_common/Multiprocessor.cc
 src/system/kernel/core/processor/x86_common/Multiprocessor.h
 src/system/kernel/core/processor/x86_common/PhysicalMemoryManager.cc
@@ -194,7 +196,6 @@ src/system/kernel/debugger/Debugger.h
 src/system/kernel/debugger/DebuggerCommand.h
 src/system/kernel/debugger/DebuggerIO.cc
 src/system/kernel/debugger/DebuggerIO.h
-src/system/kernel/debugger/Disassembler.h
 src/system/kernel/debugger/DwarfCfiAutomaton.cc
 src/system/kernel/debugger/DwarfCfiAutomaton.h
 src/system/kernel/debugger/DwarfState.h

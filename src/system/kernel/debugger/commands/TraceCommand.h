@@ -78,6 +78,14 @@ private:
     size_t m_nInstructions;
     uintptr_t m_nFirstInstruction;
     uintptr_t m_nIp;
+    /**
+     * These provide a useful speedup for the disassembly tracer. Because we have to essentially
+     * trawl a singly linked list from a known position (symbol start point) to get to any specific
+     * instruction, we keep this counter as the last line that was executed, and what the
+     * instruction location was for that line.
+     */
+    size_t m_LastLine;
+    uintptr_t m_LastInstructionLocation;
   };
   
   class Registers : public Scrollable

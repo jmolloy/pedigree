@@ -22,6 +22,7 @@
 #include <Log.h>
 #include <utilities/demangle.h>
 #include <machine/Machine.h>
+#include <processor/Disassembler.h>
 
 // TEMP!
 extern FileLoader *g_pKernel;
@@ -84,6 +85,33 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   stacktrace.move(0, nLines+2);
   stacktrace.resize(pScreen->getWidth(), pScreen->getHeight()-nLines-3);
   stacktrace.setScrollKeys('n', 'm');
+
+  size_t nInstruction = 0;
+
+  // find the first instruction for the function that we're in right now
+  uintptr_t nIp = state.getInstructionPointer();
+  uintptr_t nSymStart = 0;
+  g_pKernel->lookupSymbol(nIp, &nSymStart);
+
+  Disassembler disassembler;
+#ifdef BITS_64
+  disassembler.setMode(64);
+#endif
+  disassembler.setLocation(nSymStart);
+
+  uintptr_t nLocation;
+  LargeStaticString text;
+  while (nInstruction < static_cast<size_t>(disassembly.getLineCount()))
+  {
+    nLocation = disassembler.getLocation();
+    text.clear();
+    disassembler.disassemble(text);
+    nInstruction++;
+    if (nLocation == state.getInstructionPointer())
+      break;
+  }
+
+  disassembly.centreOn(nInstruction);
   
   pScreen->disableRefreshes();
   drawBackground(nCols, nLines, pScreen);
@@ -91,6 +119,8 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   disassembly.refresh(pScreen);
   stacktrace.refresh(pScreen);
   pScreen->enableRefreshes();
+  
+
   
   // Here we enter our main runloop.
   bool bContinue = true;
@@ -140,44 +170,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
       stacktrace.scroll(1);
       stacktrace.refresh(pScreen);
     }
-    else if (c == ' ')
-    {
-      size_t nInstruction = 0;
 
-      #if 1 // change to 0 when this HACK is fixed
-        // find the first instruction for the function that we're in right now
-        uintptr_t nIp = state.getInstructionPointer();
-        uintptr_t nSymStart = 0;
-        g_pKernel->lookupSymbol(nIp, &nSymStart);
-  
-        // TODO use disassembler abstraction.
-        ud_t ud_obj;
-        ud_init(&ud_obj);
-#ifdef X86
-        ud_set_mode(&ud_obj, 32);
-#endif
-#ifdef X64
-        ud_set_mode(&ud_obj, 64);
-#endif
-        ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-        ud_set_pc(&ud_obj, nSymStart);
-        ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(nSymStart), 4096);
-
-        uintptr_t nLocation;
-        while (nInstruction < static_cast<size_t>(disassembly.getLineCount()))
-        {
-          ud_disassemble(&ud_obj);
-          nInstruction++;
-          nLocation = ud_insn_off(&ud_obj);
-          if (nLocation == state.getInstructionPointer())
-            break;
-        }
-
-#endif
-
-      disassembly.centreOn(nInstruction);
-      disassembly.refresh(pScreen);
-    }
   }
   
   // Let's enter CLI screen mode again.
@@ -211,32 +204,28 @@ void TraceCommand::drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScre
 }
 
 TraceCommand::Disassembly::Disassembly(InterruptState &state)
-  : m_nInstructions(0), m_nFirstInstruction(0), m_nIp(0)
+  : m_nInstructions(0), m_nFirstInstruction(0), m_nIp(0), m_LastLine(0xFFFFFFFF),
+    m_LastInstructionLocation(0)
 {
   // Try and count how many lines of instructions we have.
   m_nIp = state.getInstructionPointer();
   uintptr_t nSymStart = 0;
   g_pKernel->lookupSymbol(m_nIp, &nSymStart);
   
-  // TODO use disassembler abstraction.
-  ud_t ud_obj;
-  ud_init(&ud_obj);
-#ifdef X86
-  ud_set_mode(&ud_obj, 32);
+  Disassembler disassembler;
+#ifdef BITS_64
+  disassembler.setMode(64);
 #endif
-#ifdef X64
-  ud_set_mode(&ud_obj, 64);
-#endif
-  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, nSymStart);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(nSymStart), 4096);
+  disassembler.setLocation(nSymStart);
   
   m_nFirstInstruction = nSymStart;
   uintptr_t nLocation = 0;
+  LargeStaticString text;
   while (true)
   {
-    ud_disassemble(&ud_obj);
-    nLocation = ud_insn_off(&ud_obj);
+    nLocation = disassembler.getLocation();
+    text.clear();
+    disassembler.disassemble(text);
     uintptr_t nSym;
     g_pKernel->lookupSymbol(nLocation, &nSym);
     if (nSym == nLocation && nSym != nSymStart) // New symbol. Quit.
@@ -262,27 +251,39 @@ const char *TraceCommand::Disassembly::getLine1(size_t index, DebuggerIO::Colour
   index --; // Get rid of index 0.
 
   size_t nInstruction = 0;
-   // TODO use disassembler abstraction.
-  ud_t ud_obj;
-  ud_init(&ud_obj);
-#ifdef X86
-  ud_set_mode(&ud_obj, 32);
-#endif
-#ifdef X64
-  ud_set_mode(&ud_obj, 64);
-#endif
-  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, m_nFirstInstruction);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(m_nFirstInstruction), 4096);
-  
-  uintptr_t nLocation;
-  while (nInstruction <= index)
-  {
-    ud_disassemble(&ud_obj);
-    nInstruction++;
-  }
-  nLocation = ud_insn_off(&ud_obj);
 
+  Disassembler disassembler;
+#ifdef BITS_64
+  disassembler.setMode(64);
+#endif
+  LargeStaticString text;
+  uintptr_t nLocation;
+  // If the stored line counter is the one before ours, we can just take that and advance by one.
+  if (index > 0 && m_LastLine == index-1)
+  {
+    disassembler.setLocation(m_LastInstructionLocation);
+    // Disassemble the (last) instruction.
+    disassembler.disassemble(text);
+    // Disassemble this instruction.
+    nLocation = disassembler.getLocation();
+    disassembler.disassemble(text);
+  }
+  else
+  {
+    // Disassemble this instruction.
+    disassembler.setLocation(m_nFirstInstruction);
+
+    while (nInstruction <= index)
+    {
+      nLocation = disassembler.getLocation();
+      disassembler.disassemble(text);
+      nInstruction++;
+    }
+  }
+  // Set the stored line counter.
+  m_LastLine = index;
+  m_LastInstructionLocation = nLocation;
+  
   // If this is our actual instruction location, put a blue background over it.
   if (nLocation == m_nIp)
     bgColour = DebuggerIO::Blue;
@@ -308,26 +309,28 @@ const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset,
   index --; // Get rid of index 0.
 
   size_t nInstruction = 0;
-   // TODO use disassembler abstraction.
-  ud_t ud_obj;
-  ud_init(&ud_obj);
-#ifdef X86
-  ud_set_mode(&ud_obj, 32);
-#endif
-#ifdef X64
-  ud_set_mode(&ud_obj, 64);
-#endif
-  ud_set_syntax(&ud_obj, UD_SYN_INTEL);
-  ud_set_pc(&ud_obj, m_nFirstInstruction);
-  ud_set_input_buffer(&ud_obj, reinterpret_cast<uint8_t*>(m_nFirstInstruction), 4096);
+
+  Disassembler disassembler;
   
   uintptr_t nLocation;
-  while (nInstruction <= index)
+  LargeStaticString text;
+  if (index == m_LastLine)
   {
-    ud_disassemble(&ud_obj);
-    nInstruction++;
+    disassembler.setLocation(m_LastInstructionLocation);
+    nLocation = m_LastInstructionLocation;
+    disassembler.disassemble(text);
   }
-  nLocation = ud_insn_off(&ud_obj);
+  else
+  {
+    disassembler.setLocation(m_nFirstInstruction);
+    while (nInstruction <= index)
+    {
+      text.clear();
+      nLocation = disassembler.getLocation();
+      disassembler.disassemble(text);
+      nInstruction++;
+    }
+  }
   
   // If this is our actual instruction location, put a blue background over it.
   if (nLocation == m_nIp)
@@ -341,7 +344,7 @@ const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset,
   
   // The text being...
   sym.clear();
-  sym += ud_insn_asm(&ud_obj);
+  sym += text;
   uint32_t nLen = sym.length() + colOffset;
   while(nLen++ < width())
     sym += ' ';
@@ -352,7 +355,6 @@ size_t TraceCommand::Disassembly::getLineCount()
 {
   return m_nInstructions+1;
 }
-
 
 TraceCommand::Registers::Registers(InterruptState &state)
   : m_State(state)

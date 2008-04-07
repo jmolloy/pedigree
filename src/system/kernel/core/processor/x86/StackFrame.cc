@@ -16,6 +16,7 @@
 #if defined(DEBUGGER)
 
 #include <processor/StackFrame.h>
+#include <Log.h>
 
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
