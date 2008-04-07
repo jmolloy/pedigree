@@ -29,9 +29,14 @@
 #include <utilities/utility.h>
 
 void _panic( const char* msg, DebuggerIO* pScreen )
-{
-  pScreen->drawString( "PANIC: ", 0, 0, DebuggerIO::Black, DebuggerIO::White );
-  pScreen->drawString( msg, 0, 7, DebuggerIO::Black, DebuggerIO::White );
+{  
+  HugeStaticString panic_output;
+  panic_output.clear();
+  
+  panic_output.append( "PANIC: " );
+  panic_output.append( msg );
+  //pScreen->drawString( "PANIC: ", 0, 0, DebuggerIO::Black, DebuggerIO::White );
+  //pScreen->drawString( msg, 0, 7, DebuggerIO::Black, DebuggerIO::White );
 
   Log &log = Log::instance();
   Log::SeverityLevel level;
@@ -53,6 +58,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append(entry.timestamp, 10, 8, '0');
         Line.append("] ");
         Line.append(entry.str);
+        Line.append( "\n" );
         
         iUsedEntries++;
         
@@ -71,6 +77,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append(entry.timestamp, 10, 8, '0');
         Line.append("] ");
         Line.append(entry.str);
+        Line.append( "\n" );
         
         iUsedEntries++;
         
@@ -81,10 +88,14 @@ void _panic( const char* msg, DebuggerIO* pScreen )
     // print the line
     if( bPrintThisLine = true )
     {
-      pScreen->drawString( Line, iUsedEntries, 0, DebuggerIO::Black, DebuggerIO::White );
+      panic_output.append( Line );
+      //pScreen->drawString( Line, iUsedEntries, 0, DebuggerIO::Black, DebuggerIO::White );
       bPrintThisLine = false;
     }
   }
+  
+  // write the final string to the screen
+  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Black, DebuggerIO::White );
 }
 
 void panic( const char* msg )

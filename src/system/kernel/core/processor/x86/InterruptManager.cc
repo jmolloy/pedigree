@@ -14,12 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "InterruptManager.h"
+#include <utilities/StaticString.h>
 #include <panic.h>
 
 #define SYSCALL_INTERRUPT_NUMBER 255
 
 const char* g_sExceptionNames[] = {
-  "Divide Error [div by 0 OR can't be represented by bits in dest operand]",
+  "Divide Error [div by 0 OR dest operand too small]",
   "Debug",
   "NMI Interrupt",
   "Breakpoint",
@@ -167,8 +168,14 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     if(LIKELY(intNumber < 32))
     {
       // TODO: register dump, maybe a breakpoint so the deubbger can take over?
-      // for now just print out the exception name
-      panic( g_sExceptionNames[intNumber] );
+      // for now just print out the exception name and number
+      LargeStaticString e;
+      e.clear();
+      e.append( "EXCEPTION[" );
+      e.append( intNumber, 10, 2, '0' );
+      e.append( "]: " );
+      e.append( g_sExceptionNames[intNumber] );
+      panic( e );
     }
   }
 }
