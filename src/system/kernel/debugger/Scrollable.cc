@@ -54,7 +54,6 @@ void Scrollable::refresh(DebuggerIO *pScreen)
   // TODO: Add a scroll bar on the right side of the window
 
   // Can we scroll up?
-  DebuggerIO::Colour tmpColour;
   bool bCanScrollUp = (m_line > 0);
   bool bCanScrollDown = ( (m_line+m_height) < getLineCount());
   

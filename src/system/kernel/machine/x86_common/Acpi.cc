@@ -65,9 +65,9 @@ void Acpi::initialise()
   // Check the RSDT (Root System Description Table)
   m_pRsdt = m_AcpiMemoryRegion.convertPhysicalPointer<SystemDescriptionTableHeader>(m_pRsdtPointer->rsdtAddress);
   // HACK FIXME TODO
-  // NOTICE("m_pRsdt " << Hex << reinterpret_cast<uintptr_t>(m_pRsdt));
-  // NOTICE("Acpi range length " << Hex << m_AcpiMemoryRegion.size());
-  // NOTICE("m_pRsdt->length " << Hex << m_pRsdt->length);
+  NOTICE("m_pRsdt " << Hex << reinterpret_cast<uintptr_t>(m_pRsdt));
+  NOTICE("Acpi range length " << Hex << m_AcpiMemoryRegion.size());
+  NOTICE("m_pRsdt->length " << Hex << m_pRsdt->length);
   if (m_pRsdt->signature != 0x54445352 ||
       checksum(m_pRsdt) != true)
   {

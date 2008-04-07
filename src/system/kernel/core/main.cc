@@ -77,6 +77,7 @@ extern "C" void bar()
 }
 
 /// Kernel entry point.
+#include <panic.h>
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
 
@@ -85,6 +86,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   // Create a BootstrapInfo object to parse bsInf.
   BootstrapInfo bootstrapInfo(bsInf);
+
+  elf.load(&bootstrapInfo);
 
   // Initialise the processor-specific interface
   Processor::initialise1(*bsInf);
@@ -101,11 +104,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-  elf.load(&bootstrapInfo);
-
 #if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
-  int a = 3/0;
+  //int a = 3/0;
   bar();
 #endif
 

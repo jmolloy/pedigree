@@ -24,6 +24,10 @@ Pc Pc::m_Instance;
 
 void Pc::initialise()
 {
+  // Initialise Vga
+  if (m_Vga.initialise() == false)
+    panic("Pc: Vga initialisation failed");
+
   // Initialise serial ports.
   m_pSerial[0].setBase(0x3F8);
   m_pSerial[1].setBase(0x2F8);

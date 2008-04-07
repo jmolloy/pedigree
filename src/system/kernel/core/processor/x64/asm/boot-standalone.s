@@ -126,12 +126,49 @@ start:
 
   ; clear the stackframe
   xor rbp, rbp
+
+  mov rax, GDTR
+  lgdt [rax]
+
+  mov rax, rsp
+  sub rsp, 15
+  mov r11, 0xFFFFFFFFFFFFFFF0
+  and rsp, r11
+  mov r11, 0x10
+  push r11
+  push rax
+  pushf
+  mov rax, 0x08
+  push rax
   mov rax, callmain
-  jmp rax
+  push rax
+  iretq
 
 callmain:
+  mov ax, 0x10
+  mov ds, ax
+  mov es, ax
+  mov fs, ax
+  mov gs, ax
+
   call _main
   jmp $
+
+[SECTION .data]
+  GDTR:
+    dw 23
+    dq GDT
+  GDT:
+    dq 0
+    dd 0
+    db 0
+    db 0x98
+    db 0x20
+    db 0
+    dd 0
+    db 0
+    db 0x92
+    dw 0
 
 [SECTION .bss]
 align 4096

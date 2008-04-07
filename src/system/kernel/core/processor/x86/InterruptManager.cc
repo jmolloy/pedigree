@@ -13,7 +13,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <Log.h>
 #include <panic.h>
 #include <Debugger.h>
 #include <utilities/StaticString.h>
@@ -171,20 +170,10 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
               intNumber != 1 &&
               intNumber != 3))
     {
-      if (intNumber == 14)
-      {
-        // HACK
-        uint32_t cr2;
-        asm volatile("mov %%cr3, %%eax" :: "a" (cr2));
-        FATAL("cr2: " << Hex << cr2);
-
-        FATAL("eip: " << Hex << interruptState.getInstructionPointer());
-      }
-
       // TODO:: Check for debugger initialisation.
       // TODO: register dump, maybe a breakpoint so the deubbger can take over?
       // for now just print out the exception name and number
-      LargeStaticString e;
+      static LargeStaticString e;
       e.append ("Exception #0x");
       e.append (intNumber, 16);
       e.append (": \"");

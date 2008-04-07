@@ -130,14 +130,14 @@ bool Smp::getProcessorList(physical_uintptr_t &localApicsAddress,
     // I/O interrupt assignment?
     else if (*pType == 3)
     {
-      IoInterruptAssignment *pIoInterruptAssignment = reinterpret_cast<IoInterruptAssignment*>(pType);
+      // IoInterruptAssignment *pIoInterruptAssignment = reinterpret_cast<IoInterruptAssignment*>(pType);
 
       // TODO: Figure out how to pass these entries to the calling function
     }
     // Local interrupt assignment?
     else if (*pType == 4)
     {
-      LocalInterruptAssignment *pLocalInterruptAssignment = reinterpret_cast<LocalInterruptAssignment*>(pType);
+      // LocalInterruptAssignment *pLocalInterruptAssignment = reinterpret_cast<LocalInterruptAssignment*>(pType);
 
       // TODO: Figure out how to pass these entries to the calling function
     }

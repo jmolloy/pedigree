@@ -38,21 +38,19 @@ static size_t newlineCount(const char *pString)
   return nNewlines;
 }
 
+// TODO: We might want a separate parameter for a stacktrace/register dump
 void _panic( const char* msg, DebuggerIO* pScreen )
 {  
-  HugeStaticString panic_output;
+  static HugeStaticString panic_output;
   panic_output.clear();
   
   panic_output.append( "PANIC: " );
   panic_output.append( msg );
 
-  //pScreen->drawString( "PANIC: ", 0, 0, DebuggerIO::Black, DebuggerIO::White );
-  //pScreen->drawString( msg, 0, 7, DebuggerIO::Black, DebuggerIO::White );
-
   // write the final string to the screen
-  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Black, DebuggerIO::LightGrey );
+  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Red, DebuggerIO::Black );
 
-  size_t nLines = newlineCount(panic_output) + 1;
+  size_t nLines = newlineCount(panic_output) + 2;
 
   Log &log = Log::instance();
   Log::SeverityLevel level;
@@ -103,7 +101,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
     if( bPrintThisLine = true )
     {
       ++iUsedEntries;
-      pScreen->drawString( Line, iUsedEntries, 0, DebuggerIO::Black, DebuggerIO::LightGrey );
+      pScreen->drawString( Line, nLines + iUsedEntries, 0, DebuggerIO::White, DebuggerIO::Black );
       bPrintThisLine = false;
     }
   }

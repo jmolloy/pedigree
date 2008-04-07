@@ -13,7 +13,44 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <panic.h>
+#include <Debugger.h>
+#include <utilities/StaticString.h>
 #include "InterruptManager.h"
+
+const char* g_ExceptionNames[] = {
+  "Divide Error [div by 0 OR dest operand too small]",
+  "Debug",
+  "NMI Interrupt",
+  "Breakpoint",
+  "Overflow",
+  "BOUND Range Exceeded",
+  "Invalid Opcode",
+  "Device Not Available",
+  "Double Fault",
+  "Coprocessor Segment Overrun", /* recent IA-32 processors don't generate this */
+  "Invalid TSS",
+  "Segment Not Present",
+  "Stack Fault",
+  "General Protection Fault",
+  "Page Fault",
+  "FPU Floating-Point Error",
+  "Alignment Check",
+  "Machine-Check",
+  "SIMD Floating-Point Exception",
+  "Int20_rsvd",
+  "Int21_rsvd",
+  "Int22_rsvd",
+  "Int23_rsvd",
+  "Int24_rsvd",
+  "Int25_rsvd",
+  "Int26_rsvd",
+  "Int27_rsvd",
+  "Int28_rsvd",
+  "Int29_rsvd",
+  "Int30_rsvd",
+  "Int31_rsvd"
+};
 
 X64InterruptManager X64InterruptManager::m_Instance;
 
@@ -99,6 +136,26 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
   // Call the normal interrupt handler, if any
   if (LIKELY(m_Instance.m_Handler[intNumber] != 0))
     m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
+  else
+  {
+    // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
+    // reserved, not for use by system programmers)
+    if(LIKELY(intNumber < 32 &&
+              intNumber != 1 &&
+              intNumber != 3))
+    {
+      // TODO:: Check for debugger initialisation.
+      // TODO: register dump, maybe a breakpoint so the deubbger can take over?
+      // for now just print out the exception name and number
+      static LargeStaticString e;
+      e.append ("Exception #0x");
+      e.append (intNumber, 16);
+      e.append (": \"");
+      e.append (g_ExceptionNames[intNumber]);
+      e.append ("\"");
+      Debugger::instance().start(interruptState, e);
+    }
+  }
 }
 
 X64InterruptManager::X64InterruptManager()

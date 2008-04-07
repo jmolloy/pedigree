@@ -113,7 +113,6 @@ X86Vga::X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase) :
   m_nHeight(25),
   m_nMode(0)
 {
-  m_RegisterPort.allocate(nRegisterBase, 0x1B, "X86Vga");
 }
 
 X86Vga::~X86Vga()
@@ -139,14 +138,14 @@ bool X86Vga::setMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp)
            nRows == 60 &&
            bIsText == true)
     nMode = 3;
-  if (nMode > -1)
-  {
-    setMode (nMode);
-    m_nMode = nMode;
-    return true;
-  }
-  else
+
+  if (nMode < 0)
     return false;
+
+  bool bSuccess = setMode (nMode);
+  if (bSuccess)
+    m_nMode = nMode;
+  return bSuccess;
 }
 
 bool X86Vga::setLargestTextMode ()
@@ -218,20 +217,30 @@ void X86Vga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 
 void X86Vga::moveCursor (size_t nX, size_t nY)
 {
+  if (!m_RegisterPort)
+    return;
+
   uint16_t tmp = nY*m_nWidth + nX;
-  
+
   m_RegisterPort.write8(14, VGA_CRTC_INDEX);
   m_RegisterPort.write8(tmp>>8, VGA_CRTC_DATA);
   m_RegisterPort.write8(15, VGA_CRTC_INDEX);
   m_RegisterPort.write8(tmp, VGA_CRTC_DATA);
 }
 
-void X86Vga::setMode(int nMode)
+bool X86Vga::initialise()
 {
+  // TODO: We should allocate the value passed to the constructor
+  return m_RegisterPort.allocate(VGA_BASE, 0x1B, "VGA controller");
+}
+
+bool X86Vga::setMode(int nMode)
+{
+  if (!m_RegisterPort)
+    return false;
+
   unsigned int i;
   unsigned char *pMode = g_pModeDescriptions[nMode];
-  
-  m_RegisterPort.allocate(VGA_BASE, 0x1B, "VGA controller");
 
   /* write MISCELLANEOUS reg */
   m_RegisterPort.write8(*pMode, VGA_MISC_WRITE);
@@ -279,10 +288,16 @@ void X86Vga::setMode(int nMode)
   
   m_nWidth = g_pModeWidths[nMode];
   m_nHeight = g_pModeHeights[nMode];
+
+  return true;
 }
 
 int X86Vga::getMode()
 {
+  if (!m_RegisterPort)
+    // TODO: What should we return here?
+    return 0;
+
   unsigned char aMode[61];
   unsigned char *pMode = &aMode[0];
   unsigned int i;

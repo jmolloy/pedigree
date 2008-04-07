@@ -101,7 +101,7 @@ void LocalIO::enableCli()
 void LocalIO::disableCli()
 {
   // Clear the framebuffer.
-  for (int i = 0; i < m_nWidth*m_nHeight; i++)
+  for (size_t i = 0; i < m_nWidth*m_nHeight; i++)
   {
     uint8_t attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     uint16_t blank = ' ' | (attributeByte << 8);
@@ -315,7 +315,7 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
 void LocalIO::cls()
 {
   // Clear the framebuffer.
-  for (int i = 0; i < m_nWidth*m_nHeight; i++)
+  for (size_t i = 0; i < m_nWidth*m_nHeight; i++)
   {
     unsigned char attributeByte = (DebuggerIO::Black << 4) | (DebuggerIO::White & 0x0F);
     unsigned short blank = ' ' | (attributeByte << 8);

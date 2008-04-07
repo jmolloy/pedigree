@@ -135,7 +135,9 @@ class X86Vga : public Vga
    * \param nY The row to move to.
    */
   virtual void moveCursor (size_t nX, size_t nY);
-  
+
+  bool initialise();
+
 private:
   X86Vga(const X86Vga &);
   X86Vga &operator = (const X86Vga &);
@@ -163,7 +165,7 @@ private:
   /**
    * Sets a specific vga mode.
    */
-  void setMode(int nMode);
+  bool setMode(int nMode);
   
   /**
    * Tries to identify the current vga mode.

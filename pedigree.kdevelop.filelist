@@ -219,6 +219,8 @@ src/system/kernel/debugger/commands/LogViewer.cc
 src/system/kernel/debugger/commands/LogViewer.h
 src/system/kernel/debugger/commands/MemoryInspector.cc
 src/system/kernel/debugger/commands/MemoryInspector.h
+src/system/kernel/debugger/commands/PanicCommand.cc
+src/system/kernel/debugger/commands/PanicCommand.h
 src/system/kernel/debugger/commands/QuitCommand.cc
 src/system/kernel/debugger/commands/QuitCommand.h
 src/system/kernel/debugger/commands/StepCommand.cc
@@ -244,6 +246,7 @@ src/system/kernel/debugger/libudis86/syn.h
 src/system/kernel/debugger/libudis86/types.h
 src/system/kernel/debugger/libudis86/udis86.c
 src/system/kernel/debugger/libudis86/udis86.h
+src/system/kernel/debugger/panic.cc
 src/system/kernel/linker
 src/system/kernel/linker/Elf32.cc
 src/system/kernel/linker/Elf32.h

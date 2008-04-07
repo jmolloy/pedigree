@@ -13,6 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(DEBUGGER)
+  #include <panic.h>
+  #include <processor/Processor.h>
+#endif
 #include <processor/IoPortManager.h>
 
 #if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
@@ -23,17 +27,27 @@
                                io_port_t ioPort,
                                size_t size)
   {
+    #if defined(DEBUGGER)
+      if (Processor::isInitialised() == 0)
+        panic("IoPortManager::allocate(): function misused");
+    #endif
+
     if (m_List.allocateSpecific(ioPort, size) == true)
     {
-      // Add the I/O port to another list
+      // TODO Add the I/O port to another list
       return true;
     }
     return false;
   }
   void IoPortManager::free(const IoPort *Port)
   {
+    #if defined(DEBUGGER)
+      if (Processor::isInitialised() == 0)
+        panic("IoPortManager::free(): function misused");
+    #endif
+
     m_List.free(Port->base(), Port->size());
-    // Remove the I/O Port from another list
+    // TODO Remove the I/O Port from another list
   }
   
   void IoPortManager::initialise(io_port_t ioPortBase, size_t size)

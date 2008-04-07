@@ -58,6 +58,38 @@ start:
   mov [pagetable0 - 0xC0000000 + 0xFDC], eax
   add eax, 4096
   mov [pagetable0 - 0xC0000000 + 0xFD8], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFD4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFD0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFCC], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFC8], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFC4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFC0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFBC], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFB8], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFB4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFB0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFAC], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFA8], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFA4], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xFA0], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xF9C], eax
+  add eax, 4096
+  mov [pagetable0 - 0xC0000000 + 0xF98], eax
 
   ; Map the page-directory to 0xFFBFF000
   mov eax, 0x03 + pagedirectory - 0xC0000000
@@ -92,6 +124,14 @@ pagedirectory:
 pagetable0:
   resb 4096
 stack:
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192
+  resb 8192
   resb 8192
   resb 8192
   resb 8192
