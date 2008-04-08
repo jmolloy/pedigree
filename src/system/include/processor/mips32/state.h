@@ -84,6 +84,12 @@ class MIPS32InterruptState
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
 
+    //
+    // MIPS-specific interface.
+    //
+    /** Was the exception in a branch delay slot?
+     *\return True if the exception occurred in a branch delay slot. */
+    inline bool branchDelay() const;
   private:
     /** The default constructor
      *\note NOT implemented */
@@ -205,11 +211,11 @@ size_t MIPS32InterruptState::getRegisterSize(size_t index) const
 
 bool MIPS32InterruptState::kernelMode() const
 {
-  return false;
+  return true;
 }
 size_t MIPS32InterruptState::getInterruptNumber() const
 {
-  return 0;
+  return (m_Cause>>2)&0x1F; // Return the ExcCode field of the Cause register.
 }
 
 size_t MIPS32InterruptState::getSyscallService() const
@@ -219,6 +225,11 @@ size_t MIPS32InterruptState::getSyscallService() const
 size_t MIPS32InterruptState::getSyscallNumber() const
 {
   return 0;
+}
+
+bool MIPS32InterruptState::branchDelay() const
+{
+  return (m_Cause&0x80000000); // Test bit 31 of Cause.
 }
 
 #endif

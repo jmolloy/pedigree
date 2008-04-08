@@ -20,6 +20,9 @@
 #include <processor/Processor.h>
 #include <Debugger.h>
 
+#define SYSCALL_INTERRUPT_NUMBER 8
+#define BREAKPOINT_INTERRUPT_NUMBER 9
+
 const char *g_ExceptionNames[32] = {
   "Interrupt",
   "TLB modification exception",
@@ -140,7 +143,7 @@ void MIPS32InterruptManager::initialiseProcessor()
   memcpy((void*)KSEG1(0x0), (void*)pCode, 32*4);
   memcpy((void*)KSEG1(0x80), (void*)pCode, 32*4);
   memcpy((void*)KSEG1(0x100), (void*)pCode, 32*4);
-   memcpy((void*)KSEG1(0x180), (void*)pCode, 32*4);
+  memcpy((void*)KSEG1(0x180), (void*)pCode, 32*4);
   memcpy((void*)KSEG1(0x200), (void*)pCode, 32*4);
   
   // Invalidate the instruction cache - force a reload of the exception handlers.
@@ -150,39 +153,47 @@ void MIPS32InterruptManager::initialiseProcessor()
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  // Find the exception code (bits 2..6 in the Cause register).
-  uint32_t excCode = (interruptState.m_Cause >> 2) & 0x1F;
-  
-  // TODO:: Check for debugger initialisation.
-  static LargeStaticString e;
-  e.clear();
-  e.append ("Exception #");
-  e.append (excCode, 10);
-  e.append (": \"");
-  e.append (g_ExceptionNames[excCode]);
-  e.append ("\"");
-
-  Debugger::instance().start(interruptState, e);
   // TODO: Needs locking
+  size_t intNumber = interruptState.getInterruptNumber();
 
-//   size_t intNumber = interruptState.getInterruptNumber();
-// 
-//   #ifdef DEBUGGER
-//     // Call the kernel debugger's handler, if any
-//     if (m_Instance.m_DbgHandler[intNumber] != 0)
-//       m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
-//   #endif
-// 
-//   // Call the syscall handler, if it is the syscall interrupt
-//   if (intNumber == SYSCALL_INTERRUPT_NUMBER)
+  #ifdef DEBUGGER
+    // Call the kernel debugger's handler, if any
+    if (m_Instance.m_DbgHandler[intNumber] != 0)
+      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
+  #endif
+
+  // Call the syscall handler, if it is the syscall interrupt
+  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
+  {
+    size_t serviceNumber = interruptState.getSyscallService();
+    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
+      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
+  }
+  // Call the normal interrupt handler, if any, otherwise
+  else if (m_Instance.m_Handler[intNumber] != 0)
+    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
+  else
+  {
+    // TODO:: Check for debugger initialisation.
+    static LargeStaticString e;
+    e.clear();
+    e.append ("Exception #");
+    e.append (intNumber, 10);
+    e.append (": \"");
+    e.append (g_ExceptionNames[intNumber]);
+    e.append ("\"");
+    Debugger::instance().start(interruptState, e);
+  }
+
+  // If this was a trap or breakpoint instruction, we need to increase the program counter a bit.
+//   if (intNumber == 9 || intNumber == 13)
 //   {
-//     size_t serviceNumber = interruptState.getSyscallService();
-//     if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
-//       m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
+    // ...Unless we were in a branch delay slot!
+    if (!interruptState.branchDelay())
+    {
+      interruptState.m_Epc += 4;
+    }
 //   }
-//   // Call the normal interrupt handler, if any, otherwise
-//   else if (m_Instance.m_Handler[intNumber] != 0)
-//     m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
 }
 
 MIPS32InterruptManager::MIPS32InterruptManager()

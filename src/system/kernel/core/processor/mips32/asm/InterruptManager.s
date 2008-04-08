@@ -92,6 +92,11 @@ li $k0, 0x80020000     # This will be our kernel stack pointer.
   nop                  # Delay slot.
   
   move $k0, $s0        # $k0 is now restored to what it was before.
+  
+  lw $k1, 124($k0)     # EPC
+  mtc0 $k1, $14
+  nop
+  
   lw $at, 0($k0)
   lw $v0, 4($k0)
   lw $v1, 8($k0)
