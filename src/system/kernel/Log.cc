@@ -72,8 +72,12 @@ template Log &Log::operator << (int);
 template Log &Log::operator << (unsigned int);
 template Log &Log::operator << (long);
 template Log &Log::operator << (unsigned long);
+// NOTE: Instantiating these for MIPS32 requires __udiv3di, but we only have
+//       __udiv3ti (??) in libgcc.a for mips.
+#ifndef MIPS32
 template Log &Log::operator << (long long);
 template Log &Log::operator << (unsigned long long);
+#endif
 
 Log &Log::operator<< (Modifier type)
 {

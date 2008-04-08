@@ -13,36 +13,36 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#include <CpuInfoCommand.h>
+#include <DebuggerIO.h>
+#include <udis86.h>
+#include <FileLoader.h>
+#include <Log.h>
+#include <utilities/demangle.h>
 #include <processor/Processor.h>
-#include "InterruptManager.h"
 
-void Processor::initialise1(const BootstrapStruct_t &Info)
+
+CpuInfoCommand::CpuInfoCommand()
 {
-  // Initialise this processor's interrupt handling
-//   MIPS32InterruptManager::initialiseProcessor();
-
-  // TODO: Initialise the physical memory-management
-
-  // TODO
-
-//   m_Initialised = 1;
 }
 
-void Processor::initialise2()
+CpuInfoCommand::~CpuInfoCommand()
 {
-  MIPS32InterruptManager::initialiseProcessor();
-
-  // TODO: Process SMP/ACPI tables
-
-  // TODO
-
-//   m_Initialised = 2;
 }
 
-void Processor::identify(HugeStaticString &str)
+void CpuInfoCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
-  // Get the processor ID register.
-  uint32_t prId = 0;
-  asm volatile("mfc0 %0, $15; nop" : "=r" (prId));
-  str += prId;
+}
+
+bool CpuInfoCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
+{
+  Processor::identify (output);
+  output += '\n';
+  return true;
+}
+
+const NormalStaticString CpuInfoCommand::getString()
+{
+  return NormalStaticString("cpuinfo");
 }

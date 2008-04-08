@@ -82,6 +82,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/StepCommand.cc \
             debugger/commands/TraceCommand.cc \
             debugger/commands/MemoryInspector.cc \
+            debugger/commands/CpuInfoCommand.cc \
             debugger/LocalIO.cc \
             debugger/SerialIO.cc \
             debugger/Debugger.cc \

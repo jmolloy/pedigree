@@ -77,3 +77,9 @@ void Processor::initialise2()
 
   m_Initialised = 2;
 }
+
+void Processor::identify(HugeStaticString &str)
+{
+  str = "Rarcaken!!";
+}
+

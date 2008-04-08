@@ -20,6 +20,41 @@
 #include <processor/Processor.h>
 #include <Debugger.h>
 
+const char *g_ExceptionNames[32] = {
+  "Interrupt",
+  "TLB modification exception",
+  "TLB exception (load or instruction fetch)",
+  "TLB exception (store)",
+  "Address error exception (load or instruction fetch)",
+  "Address error exception (store)",
+  "Bus error exception (instruction fetch)",
+  "Bus error exception (data: load or store)",
+  "Syscall exception",
+  "Breakpoint exception",
+  "Reserved instruction exception",
+  "Coprocessor unusable exception",
+  "Arithmetic overflow exception",
+  "Trap exception",
+  "LDCz/SDCz to uncached address",
+  "Virtual coherency exception",
+  "Machine check exception",
+  "Floating point exception",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Watchpoint exception",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+  "Reserved",
+};
+
 MIPS32InterruptManager MIPS32InterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
@@ -115,8 +150,19 @@ void MIPS32InterruptManager::initialiseProcessor()
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  Debugger::instance().breakpoint(interruptState);
-  for(;;);
+  // Find the exception code (bits 2..6 in the Cause register).
+  uint32_t excCode = (interruptState.m_Cause >> 2) & 0x1F;
+  
+  // TODO:: Check for debugger initialisation.
+  static LargeStaticString e;
+  e.clear();
+  e.append ("Exception #");
+  e.append (excCode, 10);
+  e.append (": \"");
+  e.append (g_ExceptionNames[excCode]);
+  e.append ("\"");
+
+  Debugger::instance().start(interruptState, e);
   // TODO: Needs locking
 
 //   size_t intNumber = interruptState.getInterruptNumber();

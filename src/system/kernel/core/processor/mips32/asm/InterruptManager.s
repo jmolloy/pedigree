@@ -29,11 +29,11 @@ nop
   li $k0, 0x80000000     # $k0 is the start of kseg0
   sltu $k1, $sp, $k0     # if $sp < kseg0, $k1 == 1. Else $k1 == 0.
   move $k0, $sp          # $k0 is the current stack pointer.
-  beq $k1, $zero, .stack_good # If sp in kuseg, skip the stack change.
+  beq $k1, $zero, .stack_good # If sp in kseg0, skip the stack change.
   nop
-#li $k0, 0x80020000     # This will be our kernel stack pointer.
+li $k0, 0x80020000     # This will be our kernel stack pointer.
 .stack_good:
-  # Here, $k0 holds the value of our kernel stack. $sp is still it's pre-exception value.
+  # Here, $k0 holds the value of our kernel stack. $sp is still its pre-exception value.
   # $k1 holds junk.
   addiu $k0, $k0, -132     # Reserve some space on the stack.
   sw $at, 0($k0)
@@ -65,16 +65,16 @@ nop
   sw $sp, 104($k0)
   sw $fp, 108($k0)
   sw $ra, 112($k0)
-  mfc0 $k1, $12     # SR
+  mfc0 $k1, $12        # SR
   nop
   sw $k1, 116($k0)
-  mfc0 $k1, $13     # Cause
+  mfc0 $k1, $13        # Cause
   nop
   sw $k1, 120($k0)
-  mfc0 $k1, $14     # EPC
+  mfc0 $k1, $14        # EPC
   nop
   sw $k1, 124($k0)
-  mfc0 $k1, $8      # BadVaddr
+  mfc0 $k1, $8         # BadVaddr
   sw $k1, 128($k0)
 
   move $sp, $k0        # Set stack pointer to be the bottom limit of our stack frame.
@@ -84,16 +84,45 @@ nop
                        # 8-byte aligned, so we reserve 20.
 
   # First parameter to function is a pointer to InterruptState (top of stack).
-  move $a0, $k0   # $a0 (first parameter) = $k0.
+  move $a0, $k0        # $a0 (first parameter) = $k0.
+  move $s0, $k0        # Save $k0 in a temporary.
 
   # Jump to our C++ code.
   jal _ZN22MIPS32InterruptManager9interruptER20MIPS32InterruptState
-  nop # Delay slot.
-  # TODO:: Pop all regs.
+  nop                  # Delay slot.
   
-  # Make it so that EPC is in $k1 when we get here.
-  jr $k1 # Jump back to the program address.
-  rfe    # Return from exception in delay slot.
+  move $k0, $s0        # $k0 is now restored to what it was before.
+  lw $at, 0($k0)
+  lw $v0, 4($k0)
+  lw $v1, 8($k0)
+  lw $a0, 12($k0)
+  lw $a1, 16($k0)
+  lw $a2, 20($k0)
+  lw $a3, 24($k0)
+  lw $t0, 28($k0)
+  lw $t1, 32($k0)
+  lw $t2, 36($k0)
+  lw $t3, 40($k0)
+  lw $t4, 44($k0)
+  lw $t5, 48($k0)
+  lw $t6, 52($k0)
+  lw $t7, 56($k0)
+  lw $s0, 60($k0)
+  lw $s1, 64($k0)
+  lw $s2, 68($k0)
+  lw $s3, 72($k0)
+  lw $s4, 76($k0)
+  lw $s5, 80($k0)
+  lw $s6, 84($k0)
+  lw $s7, 88($k0)
+  lw $t8, 92($k0)
+  lw $t9, 96($k0)
+  lw $gp, 100($k0)
+  lw $sp, 104($k0)
+  lw $fp, 108($k0)
+  lw $ra, 112($k0)
+
+  eret  # R4000 only!
 
 .set at
 .set reorder

@@ -23,6 +23,7 @@
 #include <QuitCommand.h>
 #include <PanicCommand.h>
 #include <BreakpointCommand.h>
+#include <CpuInfoCommand.h>
 #include <DumpCommand.h>
 #include <LogViewer.h>
 #include <Backtracer.h>
@@ -109,8 +110,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   StepCommand step;
   MemoryInspector memory;
   PanicCommand panic;
+  CpuInfoCommand cpuInfo;
   
-  size_t nCommands = 10;
+  size_t nCommands = 11;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -120,7 +122,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &step,
                                   &memory,
                                   &g_Trace,
-                                  &panic};
+                                  &panic,
+                                  &cpuInfo};
   
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.

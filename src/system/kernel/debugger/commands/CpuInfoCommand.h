@@ -13,36 +13,33 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <processor/Processor.h>
-#include "InterruptManager.h"
+#ifndef CPUINFO_COMMAND_H
+#define CPUINFO_COMMAND_H
 
-void Processor::initialise1(const BootstrapStruct_t &Info)
+#include <DebuggerCommand.h>
+
+class DebuggerIO;
+
+class CpuInfoCommand : public DebuggerCommand
 {
-  // Initialise this processor's interrupt handling
-//   MIPS32InterruptManager::initialiseProcessor();
+public:
+  CpuInfoCommand();
+  ~CpuInfoCommand();
+  
+  /**
+   * Return an autocomplete string, given an input string.
+   */
+  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
 
-  // TODO: Initialise the physical memory-management
+  /**
+   * Execute the command with the given screen.
+   */
+  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
+  
+  /**
+   * Returns the string representation of this command.
+   */
+  const NormalStaticString getString();
+};
 
-  // TODO
-
-//   m_Initialised = 1;
-}
-
-void Processor::initialise2()
-{
-  MIPS32InterruptManager::initialiseProcessor();
-
-  // TODO: Process SMP/ACPI tables
-
-  // TODO
-
-//   m_Initialised = 2;
-}
-
-void Processor::identify(HugeStaticString &str)
-{
-  // Get the processor ID register.
-  uint32_t prId = 0;
-  asm volatile("mfc0 %0, $15; nop" : "=r" (prId));
-  str += prId;
-}
+#endif

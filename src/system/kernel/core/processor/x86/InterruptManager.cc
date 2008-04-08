@@ -175,8 +175,8 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
       // for now just print out the exception name and number
       static LargeStaticString e;
       e.clear();
-      e.append ("Exception #0x");
-      e.append (intNumber, 16);
+      e.append ("Exception #");
+      e.append (intNumber, 10);
       e.append (": \"");
       e.append (g_ExceptionNames[intNumber]);
       e.append ("\"");

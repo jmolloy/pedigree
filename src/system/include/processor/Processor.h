@@ -20,6 +20,7 @@
 #include <processor/state.h>
 #include <processor/VirtualAddressSpace.h>
 #include <BootstrapInfo.h>
+#include <utilities/StaticString.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -144,6 +145,8 @@ class Processor
       static void invalidateDCache(uintptr_t nAddr);
     #endif
 
+    /** Populate 'str' with a string describing the characteristics of this processor. */
+    static void identify(HugeStaticString &str);
   private:
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
