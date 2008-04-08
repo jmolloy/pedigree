@@ -32,6 +32,25 @@
 #define DWARF_REG_ESI 6
 #define DWARF_REG_EDI 7
 #endif
+#ifdef X64
+#define DWARF_REG_RAX 0
+#define DWARF_REG_RDX 1
+#define DWARF_REG_RCX 2
+#define DWARF_REG_RBX 3
+#define DWARF_REG_RSI 4
+#define DWARF_REG_RDI 5
+#define DWARF_REG_RBP 6
+#define DWARF_REG_RSP 7
+#define DWARF_REG_R8 8
+#define DWARF_REG_R9 9
+#define DWARF_REG_R10 10
+#define DWARF_REG_R11 11
+#define DWARF_REG_R12 12
+#define DWARF_REG_R13 13
+#define DWARF_REG_R14 14
+#define DWARF_REG_R15 15
+#define DWARF_REG_RFLAGS 49
+#endif
 #ifdef MIPS_COMMON
 #define DWARF_REG_ZERO 0
 #define DWARF_REG_AT  1

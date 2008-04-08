@@ -44,6 +44,25 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_ESP] = inState.esp;
   startState.m_R[DWARF_REG_EBP] = inState.ebp;
 #endif
+#ifdef X64
+  startState.m_R[DWARF_REG_RAX] = inState.rax;
+  startState.m_R[DWARF_REG_RDX] = inState.rdx;
+  startState.m_R[DWARF_REG_RCX] = inState.rcx;
+  startState.m_R[DWARF_REG_RBX] = inState.rbx;
+  startState.m_R[DWARF_REG_RSI] = inState.rsi;
+  startState.m_R[DWARF_REG_RDI] = inState.rdi;
+  startState.m_R[DWARF_REG_RBP] = inState.rbp;
+  startState.m_R[DWARF_REG_RSP] = inState.rsp;
+  startState.m_R[DWARF_REG_R8] = inState.r8;
+  startState.m_R[DWARF_REG_R9] = inState.r9;
+  startState.m_R[DWARF_REG_R10] = inState.r10;
+  startState.m_R[DWARF_REG_R11] = inState.r11;
+  startState.m_R[DWARF_REG_R12] = inState.r12;
+  startState.m_R[DWARF_REG_R13] = inState.r13;
+  startState.m_R[DWARF_REG_R14] = inState.r14;
+  startState.m_R[DWARF_REG_R15] = inState.r15;
+  startState.m_R[DWARF_REG_RFLAGS] = inState.rflags;
+#endif
 #ifdef MIPS_COMMON
   startState.m_R[DWARF_REG_AT] = inState.m_At;
   startState.m_R[DWARF_REG_V0] = inState.m_V0;
@@ -173,6 +192,25 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     outState.esp = endState->getRegister(DWARF_REG_ESP, startState);
     outState.ebp = endState->getRegister(DWARF_REG_EBP, startState);
     outState.eip = endState->getRegister(nReturnAddressRegister, startState);
+#endif
+#ifdef X64
+    outState.rax = endState->getRegister(DWARF_REG_RAX, startState);
+    outState.rdx = endState->getRegister(DWARF_REG_RDX, startState);
+    outState.rcx = endState->getRegister(DWARF_REG_RCX, startState);
+    outState.rbx = endState->getRegister(DWARF_REG_RBX, startState);
+    outState.rsi = endState->getRegister(DWARF_REG_RSI, startState);
+    outState.rdi = endState->getRegister(DWARF_REG_RDI, startState);
+    outState.rbp = endState->getRegister(DWARF_REG_RBP, startState);
+    outState.rsp = endState->getRegister(DWARF_REG_RSP, startState);
+    outState.r8 = endState->getRegister(DWARF_REG_R8, startState);
+    outState.r9 = endState->getRegister(DWARF_REG_R9, startState);
+    outState.r10 = endState->getRegister(DWARF_REG_R10, startState);
+    outState.r11 = endState->getRegister(DWARF_REG_R11, startState);
+    outState.r12 = endState->getRegister(DWARF_REG_R12, startState);
+    outState.r13 = endState->getRegister(DWARF_REG_R13, startState);
+    outState.r14 = endState->getRegister(DWARF_REG_R14, startState);
+    outState.r15 = endState->getRegister(DWARF_REG_R15, startState);
+    outState.rflags = endState->getRegister(DWARF_REG_RFLAGS, startState);
 #endif
 #ifdef MIPS_COMMON
     outState.m_At = endState->getRegister(DWARF_REG_AT, startState);
