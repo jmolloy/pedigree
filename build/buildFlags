@@ -21,7 +21,7 @@
 [james]    X86
 [jamesmol] X86
 [bluecode] X86
-[pcmattman] ARM926E
+[pcmattman] ARM_VERSATILE
 
 #
 # Personalisation options.
