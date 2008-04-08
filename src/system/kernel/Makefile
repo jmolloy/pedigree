@@ -236,6 +236,18 @@ SRCFILES += core/processor/mips64/StackFrame.cc \
 endif
 
 ###################################################################
+# common arm source file list.
+ifdef ARM_COMMON
+
+endif
+
+###################################################################
+# arm926E source file list.
+ifdef ARM926E
+
+endif
+
+###################################################################
 # Set up environment for buildCommon.mk and call.
 
 ifdef DEBUGGER
@@ -255,6 +267,11 @@ LDFLAGS += -mxgot -T $(shell pwd)/link-mips.ld
 endif
 LDADD += -lgcc
 BUILD_NAME=kernel
+
+# Don't compile kernel if only requiring a boot
+ifdef BOOT_ONLY
+  SRCFILES:=
+endif
 
 include $(BUILD)/buildCommon.mk
 

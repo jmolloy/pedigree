@@ -21,7 +21,7 @@
 [james]    X86
 [jamesmol] X86
 [bluecode] X86
-[pcmattman] X86
+[pcmattman] ARM926E
 
 #
 # Personalisation options.
@@ -48,6 +48,15 @@ MIPS_MALTA_BONITO64: MIPS_MALTA
 MIPS_AU1500: MIPS32
 MIPS_AU1500_DB1500: MIPS_AU1500
 MIPS_COMMON: OMIT_FRAMEPOINTER
+
+# NB: ARM926E port not completed yet - DON'T USE THESE TARGETS
+# 926E is the ARM CPU type used on the board, in future others
+# will be supported
+# TODO: remove the previous note when done
+ARM926E: ARM_COMMON BITS_32 LITTLE_ENDIAN
+ARM_VERSATILE: ARM926E
+ARM_INTEGRATOR: ARM926E
+ARM_COMMON: BOOT_ONLY
 
 #
 # Extra rules.

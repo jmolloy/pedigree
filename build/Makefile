@@ -33,6 +33,9 @@ endif
 ifdef MIPS32
 	COMPILER=mips64el-elf
 endif
+ifdef ARM_COMMON
+	COMPILER=arm-elf
+endif
 
 # Compiler
 BUILD=$(shell pwd)
