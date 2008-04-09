@@ -66,7 +66,10 @@ void *List<void*>::popBack()
 {
   node_t *node = m_Last;
   m_Last = m_Last->m_Previous;
-  m_Last->m_Next = 0;
+  if (m_Last != 0)
+    m_Last->m_Next = 0;
+  else
+    m_First = 0;
   --m_Count;
 
   void *value = node->value;
@@ -92,7 +95,10 @@ void *List<void*>::popFront()
 {
   node_t *node = m_First;
   m_First = m_First->m_Next;
-  m_First->m_Previous = 0;
+  if (m_First != 0)
+    m_First->m_Previous = 0;
+  else
+    m_Last = 0;
   --m_Count;
 
   void *value = node->value;

@@ -19,7 +19,7 @@
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
-//   MIPS32InterruptManager::initialiseProcessor();
+   MIPS32InterruptManager::initialiseProcessor();
 
   // TODO: Initialise the physical memory-management
 
@@ -30,10 +30,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2()
 {
-  MIPS32InterruptManager::initialiseProcessor();
-
-  // TODO: Process SMP/ACPI tables
-
   // TODO
 
 //   m_Initialised = 2;

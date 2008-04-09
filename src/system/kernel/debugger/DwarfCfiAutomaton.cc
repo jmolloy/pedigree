@@ -20,7 +20,10 @@
 
 DwarfCfiAutomaton::DwarfCfiAutomaton() :
   m_InitialState(),
-  m_CurrentState()
+  m_CurrentState(),
+  m_nCodeAlignmentFactor(),
+  m_nDataAlignmentFactor(),
+  m_nStartingPc()
 {
 }
 

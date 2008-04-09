@@ -20,7 +20,14 @@
   #include "../../../machine/x86_common/Acpi.h"
 #endif
 #if defined(SMP)
-  #include "Smp.h"
+  #include "../../../machine/x86_common/Smp.h"
+#endif
+
+#if !defined(APIC)
+  #error APIC not defined
+#endif
+#if !defined(ACPI) && !defined(SMP)
+  #error Neither ACPI nor SMP defined
 #endif
 
 static void clearContainer(Vector<ProcessorInformation*> &Processors,
@@ -38,14 +45,19 @@ size_t initialiseMultiprocessor()
 {
   bool bMPInfoFound = false;
 
+  // Are we in PIC mode (otherwise Virtual-Wire mode)
   bool bPicMode;
+  // Do we have PICs at all
   bool bHasPics;
+  // Address of the local APICs of every processor
   uint64_t localApicsAddress;
+  // List of information about each usable processor
   Vector<ProcessorInformation*> Processors;
+  // List of information about each usable I/O APIC
   Vector<IoApicInformation*> IoApics;
 
-  // Search through the ACPI tables
   #if defined(ACPI)
+    // Search through the ACPI tables
     Acpi &acpi = Acpi::instance();
     bMPInfoFound = acpi.getProcessorList(localApicsAddress,
                                          Processors,
@@ -62,7 +74,7 @@ size_t initialiseMultiprocessor()
   if (bMPInfoFound == false)
   {
     #if defined(SMP)
-      Smp smp;
+      Smp &smp = Smp::instance();
       bMPInfoFound = smp.getProcessorList(localApicsAddress,
                                           Processors,
                                           IoApics,

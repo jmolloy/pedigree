@@ -131,29 +131,32 @@ endif
 ###################################################################
 # x86_commmon source file list.
 ifdef X86_COMMON
-SRCFILES += machine/x86_common/Apic.cc \
-            machine/x86_common/Pic.cc \
-            machine/x86_common/Pit.cc \
-            machine/x86_common/Rtc.cc \
-            machine/x86_common/Serial.cc \
-            machine/x86_common/Vga.cc \
-            machine/x86_common/Pc.cc \
-            machine/x86_common/Machine.cc \
-            machine/x86_common/Keyboard.cc \
-            core/processor/x86_common/Processor.cc \
-            core/processor/x86_common/PhysicalMemoryManager.cc \
-            core/processor/x86_common/Disassembler.cc
+	SRCFILES += machine/x86_common/Pic.cc \
+							machine/x86_common/Pit.cc \
+							machine/x86_common/Rtc.cc \
+							machine/x86_common/Serial.cc \
+							machine/x86_common/Vga.cc \
+							machine/x86_common/Pc.cc \
+							machine/x86_common/Machine.cc \
+							machine/x86_common/Keyboard.cc \
+							core/processor/x86_common/Processor.cc \
+							core/processor/x86_common/PhysicalMemoryManager.cc \
+							core/processor/x86_common/Disassembler.cc
+
+	ifdef APIC
+		SRCFILES += machine/x86_common/Apic.cc
+	endif
 
   ifdef ACPI
     SRCFILES += machine/x86_common/Acpi.cc
   endif
 
+  ifdef SMP
+    SRCFILES += machine/x86_common/Smp.cc
+  endif
+
   ifdef MULTIPROCESSOR
     SRCFILES += core/processor/x86_common/Multiprocessor.cc
-
-    ifdef SMP
-      SRCFILES += core/processor/x86_common/Smp.cc
-    endif
   endif
 endif
 

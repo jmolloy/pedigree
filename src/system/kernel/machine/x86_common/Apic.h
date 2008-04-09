@@ -16,6 +16,8 @@
 #ifndef KERNEL_MACHINE_X86_COMMON_APIC_H
 #define KERNEL_MACHINE_X86_COMMON_APIC_H
 
+#if defined(APIC)
+
 #include <machine/IrqManager.h>
 
 /** @addtogroup kernelmachinex86common
@@ -47,5 +49,7 @@ class Apic : public IrqManager
 };
 
 /** @} */
+
+#endif
 
 #endif

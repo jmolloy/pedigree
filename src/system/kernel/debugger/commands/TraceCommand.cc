@@ -27,6 +27,7 @@
 // TEMP!
 extern FileLoader *g_pKernel;
 
+/* TODO: Unused local function
 static void addToBuffer(uintptr_t n, uintptr_t *pBuffer, unsigned int &nInstr, unsigned int nLinesToCache)
 {
   if (nInstr == nLinesToCache)
@@ -38,6 +39,7 @@ static void addToBuffer(uintptr_t n, uintptr_t *pBuffer, unsigned int &nInstr, u
   else
     pBuffer[nInstr++] = n;
 }
+*/
 
 TraceCommand::TraceCommand()
   : DebuggerCommand(),

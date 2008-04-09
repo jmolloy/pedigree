@@ -19,11 +19,29 @@
 #if defined(ACPI)
   #include "Acpi.h"
 #endif
+#if defined(SMP)
+  #include "Smp.h"
+#endif
+#if defined(APIC)
+  #include "Apic.h"
+#endif
 
 Pc Pc::m_Instance;
 
 void Pc::initialise()
 {
+  // Initialise ACPI
+  #if defined(ACPI)
+    Acpi &acpi = Acpi::instance();
+    acpi.initialise();
+  #endif
+
+  // Initialise SMP
+  #if defined(SMP)
+    Smp &smp = Smp::instance();
+    smp.initialise();
+  #endif
+
   // Initialise Vga
   if (m_Vga.initialise() == false)
     panic("Pc: Vga initialisation failed");
@@ -48,12 +66,6 @@ void Pc::initialise()
     panic("Pc: Pit initialisation failed");
 
   m_Keyboard.initialise();
-
-  // Initialise ACPI
-  #if defined(ACPI)
-    Acpi &acpi = Acpi::instance();
-    acpi.initialise();
-  #endif
 
   m_bInitialised = true;
 }

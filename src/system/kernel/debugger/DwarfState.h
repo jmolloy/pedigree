@@ -110,6 +110,7 @@ class DwarfState
       m_CfaState(ValOffset),
       m_CfaRegister(0),
       m_CfaOffset(0),
+      m_CfaExpression(0),
       m_ReturnAddress(0)
     {
       memset (static_cast<void *> (m_RegisterStates), 0,

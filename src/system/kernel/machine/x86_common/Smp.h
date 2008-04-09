@@ -13,23 +13,26 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_PROCESSOR_X86_COMMON_SMP_H
-#define KERNEL_PROCESSOR_X86_COMMON_SMP_H
+#ifndef KERNEL_MACHINE_X86_COMMON_SMP_H
+#define KERNEL_MACHINE_X86_COMMON_SMP_H
+
+#if defined(SMP)
 
 #include <compiler.h>
 #include <processor/types.h>
 #include <utilities/Vector.h>
-#include "Multiprocessor.h"
+#include "../../core/processor/x86_common/Multiprocessor.h"
 
-/** @addtogroup kernelprocessorx86common
+/** @addtogroup kernelmachinex86common
  * @{ */
 
 class Smp
 {
   public:
-    inline Smp()
-      : m_pFloatingPointer(0), m_pConfigTable(0){}
-    inline ~Smp(){}
+    inline static Smp &instance()
+      {return m_Instance;}
+
+    void initialise();
 
     bool getProcessorList(uint64_t &localApicsAddress,
                           Vector<ProcessorInformation*> &Processors,
@@ -38,8 +41,10 @@ class Smp
                           bool &bPicMode);
 
   private:
+    Smp();
     Smp(const Smp &);
     Smp &operator = (const Smp &);
+    inline ~Smp(){}
 
     struct FloatingPointer
     {
@@ -123,10 +128,15 @@ class Smp
     bool checksum(const FloatingPointer *pFloatingPointer);
     bool checksum(const ConfigTableHeader *pConfigTable);
 
+    bool m_bValid;
     FloatingPointer *m_pFloatingPointer;
     ConfigTableHeader *m_pConfigTable;
+
+    static Smp m_Instance;
 };
 
 /** @} */
+
+#endif
 
 #endif

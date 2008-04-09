@@ -157,7 +157,7 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
       if (intNumber == 14)
       {
         uint64_t cr2;
-        asm volatile("mov %%cr2, %%rax" :: "a" (cr2));
+        asm volatile("mov %%cr2, %%rax" : "=a" (cr2));
         e.append(" at ");
         e.append(cr2, 16, 16, '0');
         e.append(", errorcode ");

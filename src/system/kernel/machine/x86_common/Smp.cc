@@ -26,30 +26,25 @@
   #define ERROR(x)
 #endif
 
-bool Smp::getProcessorList(uint64_t &localApicsAddress,
-                           Vector<ProcessorInformation*> &Processors,
-                           Vector<IoApicInformation*> &IoApics,
-                           bool &bHasPics,
-                           bool &bPicMode)
+Smp Smp::m_Instance;
+
+void Smp::initialise()
 {
   // Search for the multiprocessor floating pointer structure
   if (find() == false)
   {
     ERROR("smp: not compliant to the Intel Multiprocessor Specification");
-    return false;
+    return;
   }
 
   NOTICE("Intel Multiprocessor Specification 1." << Dec << m_pFloatingPointer->revision);
   NOTICE(" floating pointer at " << Hex << reinterpret_cast<uintptr_t>(m_pFloatingPointer));
 
-  // PIC-Mode implemented?
-  bPicMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
-
   // One of the default configurations?
   if (m_pFloatingPointer->features[0] != 0)
   {
     ERROR("smp: default configurations (#" << Dec << m_pFloatingPointer->features[0] << ") not supported");
-    return false;
+    return;
   }
 
   // Check the configuration table
@@ -57,12 +52,12 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
   if (m_pConfigTable == 0)
   {
     ERROR("smp: configuration table not present");
-    return false;
+    return;
   }
   if (reinterpret_cast<uintptr_t>(m_pConfigTable) >= 0x100000)
   {
     ERROR("smp: configuration table above 1MB");
-    return false;
+    return;
   }
 
   NOTICE(" configuration table at " << Hex << reinterpret_cast<uintptr_t>(m_pConfigTable));
@@ -72,10 +67,28 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
       m_pConfigTable->revision != m_pConfigTable->revision)
   {
     ERROR("smp: configuration table invalid");
-    return false;
+    return;
   }
 
-  NOTICE("  local APICs at " << Hex << m_pConfigTable->localApicAddress);
+  m_bValid = true;
+}
+
+bool Smp::getProcessorList(uint64_t &localApicsAddress,
+                           Vector<ProcessorInformation*> &Processors,
+                           Vector<IoApicInformation*> &IoApics,
+                           bool &bHasPics,
+                           bool &bPicMode)
+{
+  // NOTE: We sure as hell have PICs
+  bHasPics = true;
+
+  // PIC-Mode implemented?
+  bPicMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
+
+  // Local APIC address
+  localApicsAddress = m_pConfigTable->localApicAddress;
+
+  NOTICE("Intel Multiprocessor Specification");
 
   // Loop through the configuration table base entries
   uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(m_pConfigTable, sizeof(ConfigTableHeader)));
@@ -157,6 +170,11 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
   // TODO: Set the local APIC address & bHasPics
 
   return true;
+}
+
+Smp::Smp()
+  : m_bValid(false), m_pFloatingPointer(0), m_pConfigTable(0)
+{
 }
 
 bool Smp::find()

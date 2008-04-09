@@ -18,9 +18,9 @@
 
 void String::assign(const String &x)
 {
-  reserve(x.length() + 1);
-  memcpy(m_Data, x.m_Data, x.length() + 1);
-  m_Length = x.length() + 1;
+  m_Length = x.length();
+  reserve(m_Length + 1);
+  memcpy(m_Data, x.m_Data, m_Length + 1);
 }
 void String::assign(const char *s)
 {
@@ -28,6 +28,7 @@ void String::assign(const char *s)
   reserve(m_Length + 1);
   memcpy(m_Data, s, m_Length + 1);
 }
+#include <panic.h>
 void String::reserve(size_t size)
 {
   if (size > m_Size)

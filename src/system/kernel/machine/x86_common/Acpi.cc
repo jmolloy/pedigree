@@ -41,6 +41,12 @@ void Acpi::initialise()
 
   NOTICE("ACPI Specification");
   NOTICE(" RSDT pointer at " << Hex << reinterpret_cast<uintptr_t>(m_pRsdtPointer));
+
+  // XSDT present?
+  if (m_pRsdtPointer->revision >= 2)
+    if (m_pRsdtPointer->xsdtAddress != 0)
+      NOTICE(" XSDT at " << Hex << m_pRsdtPointer->xsdtAddress);
+
   NOTICE(" RSDT at " << Hex << m_pRsdtPointer->rsdtAddress);
 
   // Get the ACPI memory ranges
@@ -177,8 +183,8 @@ void Acpi::parseFixedACPIDescriptionTable()
     localApicsAddress = *pLocalApicAddress;
     bHasPics = (((*pFlags) & 0x01) == 0x01);
 
-    NOTICE(" local APICs at " << Hex << localApicsAddress);
-    NOTICE(" dual 8259 PICs: " << bHasPics);
+    // NOTE: We sure as hell don't have PIC Mode
+    bPicMode = false;
 
     uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(pFlags, 4));
     for (;pType < reinterpret_cast<uint8_t*>(adjust_pointer(m_pApic, m_pApic->length));)

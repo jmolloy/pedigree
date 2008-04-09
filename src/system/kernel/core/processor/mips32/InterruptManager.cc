@@ -140,14 +140,24 @@ void MIPS32InterruptManager::initialiseProcessor()
   pCode[3] = 0x00000000;
   
   // Now poke that exception handling stub into memory.
-  memcpy((void*)KSEG1(0x0), (void*)pCode, 32*4);
-  memcpy((void*)KSEG1(0x80), (void*)pCode, 32*4);
-  memcpy((void*)KSEG1(0x100), (void*)pCode, 32*4);
-  memcpy((void*)KSEG1(0x180), (void*)pCode, 32*4);
-  memcpy((void*)KSEG1(0x200), (void*)pCode, 32*4);
+  memcpy(reinterpret_cast<void*>(KSEG1(0x0)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
+  memcpy(reinterpret_cast<void*>(KSEG1(0x80)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
+  memcpy(reinterpret_cast<void*>(KSEG1(0x100)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
+  memcpy(reinterpret_cast<void*>(KSEG1(0x180)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
+  memcpy(reinterpret_cast<void*>(KSEG1(0x200)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
   
   // Invalidate the instruction cache - force a reload of the exception handlers.
-  for (int i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
+  for (uintptr_t i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
     Processor::invalidateICache(i);
 }
 

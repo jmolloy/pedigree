@@ -13,8 +13,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_ACPI_H
-#define KERNEL_MACHINE_ACPI_H
+#ifndef KERNEL_MACHINE_X86_COMMON_ACPI_H
+#define KERNEL_MACHINE_X86_COMMON_ACPI_H
+
+#if defined(ACPI)
 
 #include <compiler.h>
 #include <processor/types.h>
@@ -161,5 +163,7 @@ class Acpi
 };
 
 /** @} */
+
+#endif
 
 #endif

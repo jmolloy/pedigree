@@ -157,7 +157,12 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
 size_t MemoryInspector::getLineCount()
 {
   // We have as many lines as the entirety of the address space / 8.
-  return ((size_t)~0)/8;
+  // TODO: Please verify that this is correct, JamesM :-)
+  #if defined(BITS_32)
+    return 0x20000000;
+  #elif defined(BITS_64)
+    return 0x2000000000000000;
+  #endif
 }
 
 void MemoryInspector::resetStatusLine(DebuggerIO *pScreen)
@@ -267,7 +272,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
     }
     
     nChars = str.length();
-    for (int i = 0; i < str.length(); i++)
+    for (size_t i = 0; i < str.length(); i++)
       pChars[i] = str[i];
   }
   else
@@ -284,7 +289,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
       pScreen->drawString("Hex string too long, 8 bytes max.", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
       return;
     }
-    for (int i = 0; i < nChars; i++)
+    for (size_t i = 0; i < nChars; i++)
     {
       // Get our nibbles.
       TinyStaticString mystr;
@@ -306,7 +311,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
     str = "[Search for ";
   else 
     str = "[Reverse for ";
-  for (int i = 0; i < nChars; i++)
+  for (size_t i = 0; i < nChars; i++)
   {
     str.append(pChars[i], 16, 2, '0');
     str += ' ';

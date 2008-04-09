@@ -14,3 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Apic.h"
+
+#if !defined(ACPI) && !defined(SMP)
+  #error Neither ACPI nor SMP defined
+#endif

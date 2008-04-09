@@ -74,7 +74,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
 #endif
   disassembler.setLocation(address);
 
-  for (int i = 0; i < nInstructions; i++)
+  for (size_t i = 0; i < nInstructions; i++)
   {
     text.clear();
     uintptr_t location = disassembler.getLocation();

@@ -183,11 +183,11 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
       if (intNumber == 14)
       {
         uint32_t cr2;
-        asm volatile("mov %%cr2, %%eax" :: "a" (cr2));
+        asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
         e.append(" at ");
         e.append(cr2, 16, 8, '0');
         e.append(", errorcode ");
-        e.append(interruptState.m_Errorcode, 2, 8, '0');
+        e.append(interruptState.m_Errorcode, 16, 8, '0');
       }
       Debugger::instance().start(interruptState, e);
     }

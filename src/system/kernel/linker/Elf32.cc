@@ -126,10 +126,14 @@ bool Elf32::load(BootstrapInfo *pBootstrap)
 
 bool Elf32::writeSections()
 {
+  // TODO
+  return false;
 }
 
 unsigned int Elf32::getLastAddress()
 {
+  // TODO
+  return 0;
 }
 
 const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
@@ -172,18 +176,26 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 uint32_t Elf32::lookupDynamicSymbolAddress(uint32_t off)
 {
+  // TODO
+  return 0;
 }
 
 char *Elf32::lookupDynamicSymbolName(uint32_t off)
 {
+  // TODO
+  return 0;
 }
 
 uint32_t Elf32::getGlobalOffsetTable()
 {
+  // TODO
+  return 0;
 }
 
 uint32_t Elf32::getEntryPoint()
 {
+  // TODO
+  return 0;
 }
 
 uint32_t Elf32::debugFrameTable()
@@ -192,7 +204,7 @@ uint32_t Elf32::debugFrameTable()
   const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
   
   // Now search for the debug_frame table.
-  for (int i = 0; i < m_nSectionHeaders; i++)
+  for (size_t i = 0; i < m_nSectionHeaders; i++)
   {
     Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
     const char *pStr = pStrtab + pSh->name;
@@ -211,7 +223,7 @@ uint32_t Elf32::debugFrameTableLength()
   const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
   
   // Now search for the debug_frame table.
-  for (int i = 0; i < m_nSectionHeaders; i++)
+  for (size_t i = 0; i < m_nSectionHeaders; i++)
   {
     Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
     const char *pStr = pStrtab + pSh->name;
