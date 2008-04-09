@@ -35,15 +35,12 @@ Backtrace::~Backtrace()
 
 void Backtrace::performBacktrace(InterruptState &state)
 {
-#if !defined(X64)
   // Firstly, can we perform a DWARF backtrace?
   if (g_pKernel->debugFrameTable() > 0 /*&& g_pKernel->debugFrameTableLength() > 0*/)
   {
     performDwarfBacktrace(state);
     return;
   }
-#endif
-
   // Can we perform a "normal", base-pointer-linked-list backtrace?
 #if defined(X86_COMMON)
   WARNING("Dwarf backtracing not available.");
@@ -53,7 +50,6 @@ void Backtrace::performBacktrace(InterruptState &state)
 #endif
 }
 
-#if !defined(X64)
 void Backtrace::performDwarfBacktrace(InterruptState &state)
 {
   ProcessorState initial(state);
@@ -67,8 +63,14 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   DwarfUnwinder du(g_pKernel->debugFrameTable(), g_pKernel->debugFrameTableLength());
   while (i < MAX_STACK_FRAMES)
   {
-    du.unwind(initial, next);
+    if (!du.unwind(initial, next))
+    {
+      ERROR("Dwarf unwind failed!");
+      return;
+    }
     initial = next; // For next round.
+    FATAL("Inptr: " << Hex << next.getInstructionPointer());
+    FATAL("BasePtr: " << Hex << next.getBasePointer());
 #ifndef MIPS_COMMON
     if (next.getBasePointer() == 0) break;
 #else
@@ -84,7 +86,6 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   
   m_nStackFrames = i;
 }
-#endif
 
 void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
 {

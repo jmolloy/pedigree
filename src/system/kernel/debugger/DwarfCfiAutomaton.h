@@ -79,7 +79,7 @@ class DwarfCfiAutomaton
      * \param nCodeLen The length (in bytes) of code to execute.
      */
     void initialise (DwarfState startingState, uintptr_t nCodeLocation, size_t nCodeLen,
-                     ssize_t nCodeAlignmentFactor, ssize_t nDataAlignmentFactor,
+                     int32_t nCodeAlignmentFactor, int32_t nDataAlignmentFactor,
                      uintptr_t nStartingPc);
     
     /**
@@ -111,12 +111,12 @@ class DwarfCfiAutomaton
     /**
      * The code alignment factor.
      */
-    ssize_t m_nCodeAlignmentFactor;
+    int32_t m_nCodeAlignmentFactor;
     
     /**
      * The data alignment factor.
      */
-    ssize_t m_nDataAlignmentFactor;
+    int32_t m_nDataAlignmentFactor;
     
     /**
      * The initial PC.

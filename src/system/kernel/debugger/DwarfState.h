@@ -20,7 +20,7 @@
 #include <utilities/utility.h>
 #include <Log.h>
 
-#define DWARF_MAX_REGISTERS 48
+#define DWARF_MAX_REGISTERS 50
 
 #ifdef X86
 #define DWARF_REG_EAX 0
@@ -140,13 +140,13 @@ class DwarfState
     
     processor_register_t getRegister(unsigned int nRegister, const DwarfState &initialState)
     {
-//       NOTICE("GetRegister: r" << Dec << nRegister);
+      NOTICE("GetRegister: r" << Dec << nRegister);
       switch (m_RegisterStates[nRegister])
       {
         case Undefined:
           WARNING ("Request for undefined register: r" << Dec << nRegister);
-          return 0;
         case SameValue:
+          WARNING ("SameValue.");
           return initialState.m_R[nRegister];
         case Offset:
         {
@@ -157,6 +157,7 @@ class DwarfState
         }
         case ValOffset:
         {
+          WARNING ("ValOffset.");
           // "The previous value of this register is the value CFA+N where CFA is the current
           //  CFA value and N is a signed offset."
           return static_cast<processor_register_t>
@@ -164,6 +165,7 @@ class DwarfState
         }
         case Register:
         {
+          WARNING ("Register.");
           // "The previous value of this register is stored in another register numbered R."
           return initialState.m_R[nRegister];
         }

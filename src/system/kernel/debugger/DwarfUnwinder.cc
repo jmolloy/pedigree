@@ -73,7 +73,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_A3] = inState.m_A3;
   startState.m_R[DWARF_REG_T0] = inState.m_T0;
   startState.m_R[DWARF_REG_T1] = inState.m_T1;
-  startState.m_R[DWARF_REG_T2] = inState.m_T2;
+  startState.m_R[DWARF_REG_T2] = inState.m_T2;1
   startState.m_R[DWARF_REG_T3] = inState.m_T3;
   startState.m_R[DWARF_REG_T4] = inState.m_T4;
   startState.m_R[DWARF_REG_T5] = inState.m_T5;
@@ -96,25 +96,25 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_FP] = inState.m_Fp;
   startState.m_R[DWARF_REG_RA] = inState.m_Ra;
 #endif
-  
+
   // For each CIE or FDE...
   size_t nIndex = 0;
   while (nIndex < m_nLength)
   {
     // Get the length of this entry.
-#ifdef BITS_32
     uint32_t nLength = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
     nIndex += sizeof(uint32_t);
     const uint32_t k_nCieId = 0xFFFFFFFF;
-#endif
-#ifdef BITS_64
-    // Initial length field is 96 bytes long.
-#error DWARF64 not supported.
-#endif
     
+    if (nLength == 0xFFFFFFFF)
+    {
+      ERROR("64-bit DWARF file detected, but not supported!");
+      return false;
+    }
+
     // Get the type of this entry (or CIE pointer if this is a FDE).
-    processor_register_t nCie = * reinterpret_cast<processor_register_t*> (m_nData+nIndex);
-    nIndex += sizeof(processor_register_t);
+    uint32_t nCie = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
+    nIndex += sizeof(uint32_t);
     
     // Is this a CIE?
     if (nCie == k_nCieId)
@@ -133,9 +133,9 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     nIndex += sizeof(size_t);
     
     uintptr_t nInstructionStart = static_cast<uintptr_t> (nIndex);
-    size_t nInstructionLength = nLength - sizeof(processor_register_t) - sizeof(uintptr_t) -
+    size_t nInstructionLength = nLength - sizeof(uint32_t) - sizeof(uintptr_t) -
         sizeof(size_t);
-    
+
     // Are we in this range?
     if ((inState.getInstructionPointer() < nInitialLocation) ||
         (inState.getInstructionPointer() >= nInitialLocation+nAddressRange))
@@ -143,43 +143,37 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
       nIndex += nInstructionLength;
       continue;
     }
-    
+
     // This is a FDE. Get the CIE it corresponds to.
-#ifdef BITS_32
     uint32_t nCieEnd = * reinterpret_cast<uint32_t*> (m_nData+nCie) + nCie;
     nCie += sizeof(uint32_t);
     nCieEnd += sizeof(uint32_t);
-#endif
-#ifdef BITS_64
-    // Initial length field is 96 bytes long.
-#error DWARF64 not supported.
-#endif
     
     // Ensure our CIE ID is correct.
-    processor_register_t nCieId = * reinterpret_cast<processor_register_t*> (m_nData+nCie);
+    uint32_t nCieId = * reinterpret_cast<uint32_t*> (m_nData+nCie);
     if (nCieId != k_nCieId)
     {
       WARNING ("DwarfUnwinder::unwind - CIE ID incorrect!");
       return false;
     }
-    nCie += sizeof(processor_register_t);
+    nCie += sizeof(uint32_t);
     nCie += 1; // Increment over version byte.
-    
+
     const char *pAugmentationString = reinterpret_cast<const char*> (m_nData+nCie);
     while (*pAugmentationString++) // Pass over the augmentation string, waiting for a NULL char.
       nCie ++;
     nCie++; // Step over null byte.
-    
+
     uint8_t *pData = reinterpret_cast<uint8_t*> (m_nData);
     uint32_t nCodeAlignmentFactor   = decodeUleb128(pData, nCie);
     uint32_t nDataAlignmentFactor   = decodeSleb128(pData, nCie);
     uint32_t nReturnAddressRegister = decodeUleb128(pData, nCie);
-
-    DwarfCfiAutomaton automaton;
     
+    DwarfCfiAutomaton automaton;
+
     automaton.initialise (startState, m_nData+nCie, nCieEnd-nCie, nCodeAlignmentFactor,
                           nDataAlignmentFactor, nInitialLocation);
-    
+
     DwarfState *endState = automaton.execute (m_nData+nInstructionStart, nInstructionLength, inState.getInstructionPointer());
 
 #ifdef X86
@@ -211,6 +205,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     outState.r14 = endState->getRegister(DWARF_REG_R14, startState);
     outState.r15 = endState->getRegister(DWARF_REG_R15, startState);
     outState.rflags = endState->getRegister(DWARF_REG_RFLAGS, startState);
+    outState.rip = endState->getRegister(nReturnAddressRegister, startState);
 #endif
 #ifdef MIPS_COMMON
     outState.m_At = endState->getRegister(DWARF_REG_AT, startState);

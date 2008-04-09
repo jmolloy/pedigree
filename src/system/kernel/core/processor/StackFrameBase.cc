@@ -55,7 +55,7 @@ void StackFrameBase::prettyPrint(HugeStaticString &buf)
 
 void StackFrameBase::format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest)
 {
-#ifdef MIPS_COMMON
+#if defined(MIPS_COMMON)
   dest += type;
 #else
   // Is the type a char * or const char *?

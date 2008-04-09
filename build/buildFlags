@@ -19,7 +19,7 @@
 # NB: jamesmol is JamesM's work machine.
 #
 [james]    MIPS_MALTA
-[jamesmol] MIPS_MALTA
+[jamesmol] X64
 [bluecode] X86
 [pcmattman] ARM_VERSATILE
 
