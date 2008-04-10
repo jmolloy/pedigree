@@ -61,10 +61,19 @@ void StackFrameBase::format(uintptr_t n, const LargeStaticString &type, HugeStat
   // Is the type a char * or const char *?
   if (type == "char*" || type == "const char*")
   {
-    LargeStaticString tmp(static_cast<const char*>(n));
-    dest += '"';
-    dest += tmp.left(22); // Only 22 characters max.
-    dest += '"';
+    //LargeStaticString tmp(reinterpret_cast<const char*>(n));
+    //dest += '"';
+    //dest += tmp.left(22); // Only 22 characters max.
+    //dest += '"';
+    dest.append("(");
+    dest.append(type);
+    dest.append(") 0x");
+    #ifdef BITS_32
+      dest.append(n, 16, 8, '0');
+    #endif
+    #ifdef BITS_64
+      dest.append(n, 16, 16, '0');
+    #endif
   }
   // char? or const char?
   else if (type == "char" || type == "const char")

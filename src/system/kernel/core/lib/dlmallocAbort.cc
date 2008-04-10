@@ -14,9 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "dlmalloc.h"
+#include <panic.h>
 #include <processor/Processor.h>
 
 void dlmallocAbort()
 {
-  // TODO
+  panic("dlmallocAbort");
 }

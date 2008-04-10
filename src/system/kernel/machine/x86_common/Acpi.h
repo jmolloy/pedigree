@@ -27,27 +27,37 @@
 /** @addtogroup kernelmachinex86common
  * @{ */
 
+/** Implementation of the ACPI 1.0+ Specification */
 class Acpi
 {
   public:
+    /** Get the instance of the Acpi class */
     inline static Acpi &instance()
       {return m_Instance;}
 
+    /** Search for the tables and initialise internal data structures
+     *\note the first MB of RAM must be identity mapped */
     void initialise();
-    void parseFixedACPIDescriptionTable();
 
-    #if defined(MULTIPROCESSOR)
-      bool getProcessorList(uint64_t &localApicsAddress,
-                            Vector<ProcessorInformation*> &Processors,
-                            Vector<IoApicInformation*> &IoApics,
-                            bool &bHasPics,
-                            bool &bPicMode);
+    #if defined(APIC)
+      inline bool validApicInfo()
+        {return m_bValidApicInfo;}
+      inline uint64_t getLocalApicAddress()
+        {return m_LocalApicAddress;}
+      inline Vector<IoApicInformation*> &getIoApicList()
+        {return m_IoApics;}
     #endif
 
   private:
+    /** The constructor does nothing */
     Acpi();
+    /** Copy-constructor
+     *\note NOT implemented (singleton class) */
     Acpi(const Acpi &);
+    /** Assignment opterator
+     *\note NOT implemented (singleton class) */
     Acpi &operator = (const Acpi &);
+    /** The destructor does nothing */
     inline ~Acpi(){}
 
     struct RsdtPointer
@@ -145,18 +155,32 @@ class Acpi
       uint16_t flags;
     } PACKED;
 
+    void parseFixedACPIDescriptionTable();
+    #if defined(APIC)
+      void parseMultipleApicDescriptionTable();
+    #endif
     bool find();
     RsdtPointer *find(void *pMemory, size_t sMemory);
     bool checksum(const RsdtPointer *pRdstPointer);
     bool checksum(const SystemDescriptionTableHeader *pHeader);
 
+    bool m_bValid;
     RsdtPointer *m_pRsdtPointer;
     MemoryRegion m_AcpiMemoryRegion;
     SystemDescriptionTableHeader *m_pRsdt;
     FixedACPIDescriptionTable *m_pFacp;
 
-    #if defined(MULTIPROCESSOR)
+    #if defined(APIC)
       SystemDescriptionTableHeader *m_pApic;
+
+      bool m_bValidApicInfo;
+      bool m_bHasPICs;
+      uint64_t m_LocalApicAddress;
+      Vector<IoApicInformation*> m_IoApics;
+
+      #if defined(MULTIPROCESSOR)
+        Vector<ProcessorInformation*> m_Processors;
+      #endif
     #endif
 
     static Acpi m_Instance;

@@ -19,7 +19,6 @@
 /** @addtogroup kernelutilities
  * @{ */
 
-#include <compiler.h>
 #include <processor/types.h>
 
 /** String class for ASCII strings
@@ -37,8 +36,8 @@ class String
     inline String &operator = (const char *s);
     inline operator const char *() const;
 
-    inline size_t length() const PURE;
-    inline size_t size() const PURE;
+    inline size_t length() const;
+    inline size_t size() const;
 
     void assign(const String &x);
     void assign(const char *s);

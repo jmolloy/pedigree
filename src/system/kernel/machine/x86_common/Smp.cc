@@ -70,25 +70,11 @@ void Smp::initialise()
     return;
   }
 
-  m_bValid = true;
-}
-
-bool Smp::getProcessorList(uint64_t &localApicsAddress,
-                           Vector<ProcessorInformation*> &Processors,
-                           Vector<IoApicInformation*> &IoApics,
-                           bool &bHasPics,
-                           bool &bPicMode)
-{
-  // NOTE: We sure as hell have PICs
-  bHasPics = true;
-
   // PIC-Mode implemented?
-  bPicMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
+  m_bPICMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
 
   // Local APIC address
-  localApicsAddress = m_pConfigTable->localApicAddress;
-
-  NOTICE("Intel Multiprocessor Specification");
+  m_LocalApicAddress = m_pConfigTable->localApicAddress;
 
   // Loop through the configuration table base entries
   uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(m_pConfigTable, sizeof(ConfigTableHeader)));
@@ -102,20 +88,20 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
     {
       Processor *pProcessor = reinterpret_cast<Processor*>(pType);
 
-      bool bBsp = ((pProcessor->flags & 0x02) == 0x02);
       bool bUsable = ((pProcessor->flags & 0x01) == 0x01);
 
-      NOTICE("  processor #" << Dec << pProcessor->localApicId << (bUsable ? " usable" : " unusable") << (bBsp ? " BSP" : ""));
+      NOTICE("  Processor #" << Dec << pProcessor->localApicId << (bUsable ? " usable" : " unusable"));
 
-      // Is the processor usable?
-      if (bUsable)
-      {
-        // Add the processor to the list
-        ProcessorInformation *pProcessorInfo = new ProcessorInformation(bBsp,
-                                                                        pProcessor->localApicId,
-                                                                        pProcessor->localApicId);
-        Processors.pushBack(pProcessorInfo);
-      }
+      #if defined(MULTIPROCESSOR)
+        // Is the processor usable?
+        if (bUsable)
+        {
+          // Add the processor to the list
+          ProcessorInformation *pProcessorInfo = new ProcessorInformation(pProcessor->localApicId,
+                                                                          pProcessor->localApicId);
+          m_Processors.pushBack(pProcessorInfo);
+        }
+      #endif
 
       sEntry = sizeof(Processor);
     }
@@ -141,13 +127,15 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
 
       NOTICE("  I/O APIC #" << Dec << pIoApic->id << (bUsable ? " usable" : "") << " at " << Hex << pIoApic->address);
 
-      // Is the I/O APIC usable?
-      if (bUsable)
-      {
-        // Add the I/O APIC to the list
-        IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->id, pIoApic->address);
-        IoApics.pushBack(pIoApicInfo);
-      }
+      #if defined(APIC)
+        // Is the I/O APIC usable?
+        if (bUsable)
+        {
+          // Add the I/O APIC to the list
+          IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->id, pIoApic->address);
+          m_IoApics.pushBack(pIoApicInfo);
+        }
+      #endif
     }
     // I/O interrupt assignment?
     else if (*pType == 3)
@@ -167,13 +155,19 @@ bool Smp::getProcessorList(uint64_t &localApicsAddress,
     pType = adjust_pointer(pType, sEntry);
   }
 
-  // TODO: Set the local APIC address & bHasPics
+  // TODO: Parse the extended table entries
 
-  return true;
+  m_bValid = true;
 }
 
 Smp::Smp()
   : m_bValid(false), m_pFloatingPointer(0), m_pConfigTable(0)
+  #if defined(APIC)
+    ,m_bPICMode(false), m_LocalApicAddress(0), m_IoApics()
+    #if defined(MULTIPROCESSOR)
+      ,m_Processors()
+    #endif
+  #endif
 {
 }
 

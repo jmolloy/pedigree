@@ -71,6 +71,8 @@ class Vector<void*>
 
     /** Clear the Vector */
     void clear();
+    /** Erase one Element */
+    Iterator erase(Iterator iter);
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
@@ -170,6 +172,9 @@ class Vector<T*>
     /** Clear the Vector */
     inline void clear()
       {m_VoidVector.clear();}
+    /** Erase one Element */
+    Iterator erase(Iterator iter)
+      {return reinterpret_cast<Iterator>(m_VoidVector.erase(reinterpret_cast<typename Vector<void*>::Iterator>(iter)));}
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */

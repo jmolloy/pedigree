@@ -31,10 +31,10 @@
 [bluecode] DEBUGGER_QWERTZ
 [pcmattman] DEBUGGER_QWERTY
 
-[bluecode] SMP
-[bluecode] ACPI
-[bluecode] APIC
-[bluecode] MULTIPROCESSOR
+#[bluecode] SMP
+#[bluecode] ACPI
+#[bluecode] APIC
+#[bluecode] MULTIPROCESSOR
 #[bluecode] VERBOSE_MEMORY_MANAGER
 
 #

@@ -25,11 +25,9 @@
  *  SMP or the ACPI tables. */
 struct ProcessorInformation
 {
-  inline ProcessorInformation(bool bsp, uint8_t processorid, uint8_t apicid)
-    : bBsp(bsp), processorId(processorid), apicId(apicid){}
+  inline ProcessorInformation(uint8_t processorid, uint8_t apicid)
+    : processorId(processorid), apicId(apicid){}
 
-  /** Is it the bootstrap processor (BSP)? */
-  bool bBsp;
   /** The id of the processor */
   uint8_t processorId;
   /** The id of the processor's local APIC */

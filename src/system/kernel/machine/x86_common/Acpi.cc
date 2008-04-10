@@ -114,7 +114,7 @@ void Acpi::initialise()
     if (pSystemDescTable->signature == 0x50434146)
       m_pFacp = reinterpret_cast<FixedACPIDescriptionTable*>(pSystemDescTable);
     // Is Multiple APIC Description Table?
-    #if defined(MULTIPROCESSOR)
+    #if defined(APIC)
     else if (pSystemDescTable->signature == 0x43495041)
       m_pApic = pSystemDescTable;
     #endif
@@ -122,13 +122,34 @@ void Acpi::initialise()
       NOTICE("   unknown table");
   }
 
+  // Do we have a Fixed ACPI Description Table?
   if (m_pFacp == 0)
   {
     ERROR("Acpi: no Fixed ACPI Description Table (FACP)");
     return;
   }
 
+  // Parse the FACP
   parseFixedACPIDescriptionTable();
+
+  #if defined(APIC)
+    // If we have an Multiple APIC Description Table parse it
+    if (m_pApic != 0)
+      parseMultipleApicDescriptionTable();
+  #endif
+
+  m_bValid = true;
+}
+
+Acpi::Acpi()
+  : m_bValid(0), m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0)
+  #if defined(APIC)
+    , m_pApic(0), m_bValidApicInfo(false), m_bHasPICs(false), m_LocalApicAddress(0), m_IoApics()
+    #if defined(MULTIPROCESSOR)
+      , m_Processors()
+    #endif
+  #endif
+{
 }
 
 void Acpi::parseFixedACPIDescriptionTable()
@@ -164,27 +185,17 @@ void Acpi::parseFixedACPIDescriptionTable()
   NOTICE(" Flags " << Hex << m_pFacp->flags);
 }
 
-#if defined(MULTIPROCESSOR)
-  bool Acpi::getProcessorList(uint64_t &localApicsAddress,
-                              Vector<ProcessorInformation*> &Processors,
-                              Vector<IoApicInformation*> &IoApics,
-                              bool &bHasPics,
-                              bool &bPicMode)
+#if defined(APIC)
+  void Acpi::parseMultipleApicDescriptionTable()
   {
-    // Was the Multiple APIC Description Table found?
-    if (m_pApic == 0)return false;
-
     NOTICE("ACPI: Multiple APIC Description Table (APIC)");
-
+  
     // Parse the Multiple APIC Description Table
     uint32_t *pLocalApicAddress = reinterpret_cast<uint32_t*>(adjust_pointer(m_pApic, sizeof(SystemDescriptionTableHeader)));
     uint32_t *pFlags = adjust_pointer(pLocalApicAddress, 4);
 
-    localApicsAddress = *pLocalApicAddress;
-    bHasPics = (((*pFlags) & 0x01) == 0x01);
-
-    // NOTE: We sure as hell don't have PIC Mode
-    bPicMode = false;
+    m_LocalApicAddress = *pLocalApicAddress;
+    m_bHasPICs = (((*pFlags) & 0x01) == 0x01);
 
     uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(pFlags, 4));
     for (;pType < reinterpret_cast<uint8_t*>(adjust_pointer(m_pApic, m_pApic->length));)
@@ -193,96 +204,86 @@ void Acpi::parseFixedACPIDescriptionTable()
       if (*pType == 0)
       {
         ProcessorLocalApic *pLocalApic = reinterpret_cast<ProcessorLocalApic*>(adjust_pointer(pType, 2));
-
         // TODO: BSP?
         bool bUsable = ((pLocalApic->flags & 0x01) == 0x01);
+        NOTICE(" Processor #" << Dec << pLocalApic->processorId << (bUsable ? " usable" : " unusable"));
 
-        NOTICE("  processor #" << Dec << pLocalApic->processorId << (bUsable ? " usable" : " unusable"));
-
-        // Is the processor usable?
-        if (bUsable)
-        {
-          // Add the processor to the list
-          ProcessorInformation *pProcessorInfo = new ProcessorInformation(false,// TODO BSP
-                                                                          pLocalApic->processorId,
-                                                                          pLocalApic->apicId);
-          Processors.pushBack(pProcessorInfo);
-        }
+        #if defined(MULTIPROCESSOR)
+          // Is the processor usable?
+          if (bUsable)
+          {
+            // Add the processor to the list
+            ProcessorInformation *pProcessorInfo = new ProcessorInformation(pLocalApic->processorId,
+                                                                            pLocalApic->apicId);
+            m_Processors.pushBack(pProcessorInfo);
+          }
+        #endif
       }
       // I/O APIC
       else if (*pType == 1)
       {
         IoApic *pIoApic = reinterpret_cast<IoApic*>(adjust_pointer(pType, 2));
-
-        NOTICE("  I/O APIC #" << Dec << pIoApic->apicId << " at " << Hex << pIoApic->address << ", global system interrupt base " << pIoApic->globalSystemInterruptBase);
-
+  
+        NOTICE(" I/O APIC #" << Dec << pIoApic->apicId << " at " << Hex << pIoApic->address << ", global system interrupt base " << pIoApic->globalSystemInterruptBase);
+  
         // TODO: What should we do with the global system interrupt base?
-
+  
         // Add to the I/O APIC list
         IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->apicId, pIoApic->address);
-        IoApics.pushBack(pIoApicInfo);
+        m_IoApics.pushBack(pIoApicInfo);
       }
       // Interrupt Source override
       else if (*pType == 2)
       {
         InterruptSourceOverride *pInterruptSourceOverride = reinterpret_cast<InterruptSourceOverride*>(adjust_pointer(pType, 2));
-
-        ERROR("  interrupt override: " << ((pInterruptSourceOverride->bus == 0) ? "ISA" : "unknown") << " bus, #" << Dec << pInterruptSourceOverride->source << " -> #" << pInterruptSourceOverride->globalSystemInterrupt << ", flags " << Hex << pInterruptSourceOverride->flags);
-
+  
+        ERROR(" Interrupt override: " << ((pInterruptSourceOverride->bus == 0) ? "ISA" : "unknown") << " bus, #" << Dec << pInterruptSourceOverride->source << " -> #" << pInterruptSourceOverride->globalSystemInterrupt << ", flags " << Hex << pInterruptSourceOverride->flags);
+  
         // TODO
       }
       // Non-maskable Interrupt Source (NMI)
       else if (*pType == 3)
       {
-        ERROR("  NMI source");
+        ERROR(" NMI source");
       }
       // Local APIC NMI
       else if (*pType == 4)
       {
-        ERROR("  Local APIC NMI");
+        ERROR(" Local APIC NMI");
       }
       // Local APIC Address Override
       else if (*pType == 5)
       {
-        ERROR("  Local APIC address override");
+        ERROR(" Local APIC address override");
       }
       // I/O SAPIC
       else if (*pType == 6)
       {
-        ERROR("  I/O SAPIC");
+        ERROR(" I/O SAPIC");
       }
       // Local SAPIC
       else if (*pType == 7)
       {
-        ERROR("  Local SAPIC");
+        ERROR(" Local SAPIC");
       }
       // Platform Interrupt Source
       else if (*pType == 8)
       {
-        ERROR("  Platform Interrupt Source");
+        ERROR(" Platform Interrupt Source");
       }
       else
       {
-        NOTICE("  unknown entry #" << Dec << *pType);
+        NOTICE(" unknown entry #" << Dec << *pType);
       }
-
+  
       // Go to the next entry;
       uint8_t *sTable = reinterpret_cast<uint8_t*>(adjust_pointer(pType, 1));
       pType = adjust_pointer(pType, *sTable);
     }
 
-    // TODO: Set bPicMode!
-    return false;
+    m_bValidApicInfo = true;
   }
 #endif
-
-Acpi::Acpi()
-  : m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0)
-#if defined(MULTIPROCESSOR)
-    , m_pApic(0)
-#endif
-{
-}
 
 bool Acpi::find()
 {

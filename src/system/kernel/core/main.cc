@@ -77,7 +77,6 @@ extern "C" void bar()
 }
 
 /// Kernel entry point.
-#include <panic.h>
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
 

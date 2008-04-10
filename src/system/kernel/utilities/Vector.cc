@@ -73,6 +73,15 @@ void Vector<void*>::clear()
 {
   m_Count = 0;
 }
+Vector<void*>::Iterator Vector<void*>::erase(Iterator iter)
+{
+  size_t entriesBefore = (iter - m_Data) / sizeof(void*);
+  memmove(m_Data,
+          iter,
+          (m_Count - entriesBefore) * sizeof(void*));
+  m_Count--;
+  return iter;
+}
 void Vector<void*>::assign(const Vector &x)
 {
   reserve(x.count(), false);

@@ -26,26 +26,48 @@
 /** @addtogroup kernelmachinex86common
  * @{ */
 
+/** Implementation of the Intel Multiprocessor Specification, see
+ *  http://www.intel.com/design/pentium/datashts/242016.HTM for the
+ *  Specification */
 class Smp
 {
   public:
+    /** Get the instance of the Smp class */
     inline static Smp &instance()
       {return m_Instance;}
 
+    /** Search for the tables and initialise internal data structures
+     *\note the first MB of RAM must be identity mapped */
     void initialise();
+    /** Were valid tables found? */
+    inline bool valid()
+      {return m_bValid;}
 
-    bool getProcessorList(uint64_t &localApicsAddress,
-                          Vector<ProcessorInformation*> &Processors,
-                          Vector<IoApicInformation*> &IoApics,
-                          bool &bHasPics,
-                          bool &bPicMode);
+    #if defined(APIC)
+      /** Get the physical address of all local APICs
+       *\return physical address of all local APICs */
+      inline uint64_t getLocalApicAddress()
+        {return m_LocalApicAddress;}
+      /** Get a list of I/O APICs
+       *\return list of I/O APICs */ 
+      inline Vector<IoApicInformation*> &getIoApicList()
+        {return m_IoApics;}
+    #endif
 
   private:
+    /** The constructor does nothing */
     Smp();
+    /** Copy-constructor
+     *\note NOT implemented (singleton class) */
     Smp(const Smp &);
+    /** Assignment operator
+     *\note NOT implemented (singleton class) */
     Smp &operator = (const Smp &);
+    /** The destructor does nothing */
     inline ~Smp(){}
 
+    /** The floating pointer structure according to the Intel Multiprocessor
+     *  Specification */
     struct FloatingPointer
     {
       uint32_t signature;
@@ -56,6 +78,8 @@ class Smp
       uint8_t features[5];
     } PACKED;
 
+    /** The configuration table header according to the Intel Multiprocessor
+     *  Specification */
     struct ConfigTableHeader
     {
       uint32_t signature;
@@ -73,6 +97,7 @@ class Smp
       uint8_t reserved;
     } PACKED;
 
+    /** Entry for a processor within the configuration table */
     struct Processor
     {
       uint8_t entryType;
@@ -85,6 +110,7 @@ class Smp
       uint32_t res1;
     } PACKED;
 
+    /** Entry for a bus within the configuration table */
     struct Bus
     {
       uint8_t entryType;
@@ -92,6 +118,7 @@ class Smp
       char name[6];
     } PACKED;
 
+    /** Entry for an I/O APIC within the configuration table */
     struct IoApic
     {
       uint8_t entryType;
@@ -123,15 +150,45 @@ class Smp
       uint8_t localApicIntn;
     } PACKED;
 
+    /** Find the floating pointer structure
+     *\return true, if we successfully found one, false otherwise */
     bool find();
+    /** Find the floating pointer structure within a specific memory area
+     *\param[in] pMemory pointer to the beginning of the area
+     *\param[in] sMemory size in bytes of the area
+     *\return pointer to the floating pointer structure, 0 otherwise */
     FloatingPointer *find(void *pMemory, size_t sMemory);
+    /** Check if the checksum of the floating pointer structure is valid
+     *\param[in] pFloatingPointer pointer to the floating pointer structure
+     *\return true, if the checksum is valid, false otherwise */
     bool checksum(const FloatingPointer *pFloatingPointer);
+    /** Check if the checksum of the configuration table is valid
+     *\param[in] pConfigTable pointer to the configuration table
+     *\return true, if the checksum is valid, false otherwise */
     bool checksum(const ConfigTableHeader *pConfigTable);
 
+    /** Were tables found and are they valid? */
     bool m_bValid;
+    /** Pointer to the floating pointer structure */
     FloatingPointer *m_pFloatingPointer;
+    /** Pointer to the configuration table */
     ConfigTableHeader *m_pConfigTable;
 
+    #if defined(APIC)
+      /** Is PIC Mode implemented? Otherwise Virtual-Wire Mode is implemented */
+      bool m_bPICMode;
+      /** Physical address of all local APICs */
+      uint64_t m_LocalApicAddress;
+      /** List of I/O APICs */
+      Vector<IoApicInformation*> m_IoApics;
+
+      #if defined(MULTIPROCESSOR)
+        /** List of processors */
+        Vector<ProcessorInformation*> m_Processors;
+      #endif
+    #endif
+
+    /** Instance of the class */
     static Smp m_Instance;
 };
 

@@ -42,6 +42,61 @@ void Pc::initialise()
     smp.initialise();
   #endif
 
+  #if defined(APIC)
+
+    uint64_t localApicAddress;
+    Vector<IoApicInformation*> *ioApics;
+
+    // Get the Local APIC address & I/O APIC list from either the ACPI or the SMP tables
+    bool bApicValid = false;
+    #if defined(ACPI)
+      if (acpi.validApicInfo() == true)
+      {
+        localApicAddress = acpi.getLocalApicAddress();
+        ioApics = &acpi.getIoApicList();
+        bApicValid = true;
+      }
+      else
+    #endif
+    #if defined(SMP)
+      if (smp.valid() == true)
+      {
+        localApicAddress = smp.getLocalApicAddress();
+        ioApics = &smp.getIoApicList();
+        bApicValid = true;
+      }
+    #endif
+
+    // Initialise the local APIC, if we have gotten valid data from
+    // the ACPI/SMP structures
+    if (bApicValid == true && 
+        Apic::initialise(localApicAddress) == true)
+    {
+      // TODO: initialise local APIC
+
+      // TODO: Check for I/O Apic
+      // TODO: Initialise the I/O Apic
+      // TODO: IMCR?
+      // TODO: Mask the PICs?
+
+      bUseIoApic = true;
+    }
+    // Fall back to dual 8259 PICs
+    else
+    {
+  #endif
+
+      NOTICE("Falling back to dual 8259 PIC Mode");
+
+      // Initialise PIC
+      Pic &pic = Pic::instance();
+      if (pic.initialise() == false)
+        panic("Pc: Pic initialisation failed");
+
+  #if defined(ACPI)
+    }
+  #endif
+
   // Initialise Vga
   if (m_Vga.initialise() == false)
     panic("Pc: Vga initialisation failed");
@@ -49,11 +104,6 @@ void Pc::initialise()
   // Initialise serial ports.
   m_pSerial[0].setBase(0x3F8);
   m_pSerial[1].setBase(0x2F8);
-
-  // Initialise PIC
-  Pic &pic = Pic::instance();
-  if (pic.initialise() == false)
-    panic("Pc: Pic initialisation failed");
 
   // Initialse the Real-time Clock / CMOS
   Rtc &rtc = Rtc::instance();
