@@ -113,7 +113,12 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   s->write('b');
   s->write('a');
   s->write('r');
-//   a = 3/0;
+/*
+// this has to be here if the debugger isn't used otherwise 'a' is undeclared
+#if !(defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START))
+  int
+#endif
+  a = 3/0;*/
 #if defined(MIPS_COMMON) && defined(MIPS_MALTA_BONITO64)
 //   InterruptState st;
 //   Debugger::instance().breakpoint(st);

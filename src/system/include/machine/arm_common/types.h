@@ -13,40 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_TYPES_H
-#define KERNEL_MACHINE_TYPES_H
+#ifndef KERNEL_MACHINE_ARM_COMMON_TYPES_H
+#define KERNEL_MACHINE_ARM_COMMON_TYPES_H
 
-#ifdef X86_COMMON
-  #include <machine/x86_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) X86Common##x
-#endif
-#ifdef MIPS_COMMON
-  #include <machine/mips_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) MIPSCommon##x
-#endif
-#ifdef ARM_COMMON
-  #include <machine/arm_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) ARMCommon##x
-#endif
+#include <processor/types.h>
 
-
-// NOTE: This throws a compile-time error if this header is not adapted for
-//       the selected machine architecture
-#ifndef MACHINE_SPECIFIC_NAME
-  #error Unknown machine architecture
-#endif
-
-/** @addtogroup kernelmachine
+/** @addtogroup kernelmachinearmcommon
  * @{ */
 
-// NOTE: If a newly added machine architecture does not supply all the
-//       needed types, you will get an error here
-
 /** Define a type for IRQ identifications */
-typedef MACHINE_SPECIFIC_NAME(irq_id_t) irq_id_t;
+typedef uint8_t ARMCommonirq_id_t;
+
+#define KSEG0(addr) (addr|0x80000000)
+#define KSEG1(addr) (addr|0xa0000000)
 
 /** @} */
-
-#undef MACHINE_SPECIFIC_NAME
 
 #endif

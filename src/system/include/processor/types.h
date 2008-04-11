@@ -28,6 +28,9 @@
 #elif defined(MIPS64)
   #include <processor/mips64/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
+#elif defined(ARM_COMMON)
+  #include <processor/arm_common/types.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

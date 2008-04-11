@@ -240,12 +240,18 @@ endif
 ###################################################################
 # common arm source file list.
 ifdef ARM_COMMON
-
+SRCFILES += boot-arm.cc
 endif
 
 ###################################################################
 # arm926E source file list.
 ifdef ARM926E
+
+endif
+
+###################################################################
+# arm versatile baseboard source file list.
+ifdef ARM_VERSATILE
 
 endif
 
@@ -266,6 +272,9 @@ ifdef KERNEL_STANDALONE
 endif
 ifdef MIPS_COMMON
 LDFLAGS += -mxgot -T $(shell pwd)/link-mips.ld
+endif
+ifdef ARM_COMMON
+LDFLAGS += -T $(shell pwd)/link-arm.ld
 endif
 LDADD += -lgcc
 BUILD_NAME=kernel

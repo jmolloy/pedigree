@@ -323,3 +323,4 @@ src/user/applications/chess/Square.h
 src/user/applications/chess/main.cc
 src/user/applications/chess/moves.cc
 src/user/applications/chess/moves.h
+src/system/include/processor/arm_common/types.h

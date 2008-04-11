@@ -24,7 +24,7 @@ struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
   // via the bootstrapper.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON)
+#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
   uint32_t flags;
   
   uint32_t mem_lower;
@@ -122,7 +122,7 @@ private:
 };
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON)
+#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
 #define MULTIBOOT_FLAG_MEM     0x001
 #define MULTIBOOT_FLAG_DEVICE  0x002
 #define MULTIBOOT_FLAG_CMDLINE 0x004

@@ -80,24 +80,24 @@ extern "C" int __start()
   elf.load((uint8_t*)file, 0);
   elf.writeSections();
   int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
-  
+
   struct BootstrapStruct_t bs;
-  
+
   memset(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
-  
+
   // For every section header, set .addr = .offset + m_pBuffer.
   for (int i = 0; i < elf.m_pHeader->shnum; i++)
   {
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
-  
+
   writeStr( "That's boot-tastic! I'm gonna start main() now...\r\n" );
   while( 1 ); // main() isn't going to work, the kernel doesn't build for ARM yet
-  
+
   int a = main(&bs);
   return a;
 }
