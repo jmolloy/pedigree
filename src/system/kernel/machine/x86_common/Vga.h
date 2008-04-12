@@ -113,8 +113,8 @@ class X86Vga : public Vga
    * The buffer is assumed to be in the correct format for directly copying into video memory.
    * This will obviously depend on the current mode (text/graphical) as well as resolution and
    * bits per pixel (graphics mode only).
-   * \param A pointer to the buffer to swap into video memory.
-   * \param The length of pBuffer.
+   * \param pBuffer A pointer to the buffer to swap into video memory.
+   * \param nBufLen The length of pBuffer.
    */
   virtual void pokeBuffer (uint8_t *pBuffer, size_t nBufLen);
 
@@ -124,8 +124,8 @@ class X86Vga : public Vga
    * The buffer is assumed to be in the correct format for directly copying from video memory.
    * This will obviously depend on the current mode (text/graphical) as well as resolution and
    * bits per pixel (graphics mode only).
-   * \param A pointer to the buffer.
-   * \param The length of pBuffer.
+   * \param pBuffer A pointer to the buffer.
+   * \param nBufLen The length of pBuffer.
    */
   virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen);
   

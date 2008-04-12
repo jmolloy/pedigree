@@ -23,7 +23,7 @@
 
 /** General iterator for structures that provide functions for the next and previous structure
  *  in the datastructure and a "value" member. This template provides a bidirectional, a constant
- *  bidirectional, a reserve bidirectional and a constant reverse bidirectional iterator.
+ *  bidirectional, a reverse bidirectional and a constant reverse bidirectional iterator.
  *\brief An iterator applicable for many data structures
  *\param[in] originalT the original element type of the iterator
  *\param[in] Struct the datastructure that provides functions for the next/previous datastructure
