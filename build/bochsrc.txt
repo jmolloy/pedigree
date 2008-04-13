@@ -2,8 +2,8 @@
 config_interface: textconfig
 display_library: x
 megs: 32
-romimage: file="/usr/local/share/bochs/BIOS-bochs-latest"
-vgaromimage: file="/usr/local/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="/usr/share/bochs/BIOS-bochs-latest"
+vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
 boot: floppy
 floppy_bootsig_check: disabled=0
 floppya: 1_44="built/floppy.img", status=inserted
@@ -22,7 +22,7 @@ usb1: enabled=0
 i440fxsupport: enabled=1
 vga_update_interval: 40000
 vga: extension=vbe
-cpu: count=8:1:1, ips=2000000, quantum=5, reset_on_triple_fault=1
+#cpu: count=8:1:1, ips=2000000, quantum=5, reset_on_triple_fault=1
 text_snapshot_check: enabled=0
 private_colormap: enabled=0
 clock: sync=none, time0=local

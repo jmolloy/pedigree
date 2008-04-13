@@ -102,7 +102,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-#if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START) && !defined(ARM_COMMON)
+#if defined(DEBUGGER) && !defined(ARM_COMMON)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
 //   int a = 3/0;
   bar();

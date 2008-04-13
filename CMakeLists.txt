@@ -72,7 +72,7 @@ if(X86_COMMON)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m32")
     set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
     set(PEDIGREE_ASFLAGS "-felf")
-    set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld")
+    set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc")
   endif(X64)
   
   option(MULTIPROCESSOR "Enable multiprocessor support." OFF)

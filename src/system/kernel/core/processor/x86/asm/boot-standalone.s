@@ -9,7 +9,7 @@ MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 32]
 align 4
-[SECTION .mboot]
+[SECTION .bootstrap]
 mboot:
   dd MBOOT_HEADER_MAGIC
   dd MBOOT_HEADER_FLAGS
@@ -18,7 +18,7 @@ mboot:
 [GLOBAL start]
 [EXTERN _main]
 
-[SECTION .text]
+; [SECTION .text]
 start:
   cli
   push ebx
@@ -116,7 +116,7 @@ callmain:
   call _main
   jmp $
 
-[SECTION .bss]
+; [SECTION .bss]
 align 4096
 global pagedirectory
 pagedirectory:

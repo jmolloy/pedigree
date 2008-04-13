@@ -8,7 +8,7 @@ SECTIONS
   .text : AT(ADDR(.text) - 0xC0000000)
   {
     code = .; _code = .; __code = .;
-    *(.mboot)
+    *(.bootstrap)
     *(.text)
     . = ALIGN(4096);
   }
