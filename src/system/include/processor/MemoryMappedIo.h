@@ -19,6 +19,7 @@
 #include <processor/types.h>
 #include <processor/IoBase.h>
 #include <processor/MemoryRegion.h>
+#include <utilities/utility.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -70,7 +71,7 @@ class MemoryMappedIo : public IoBase,
 //
 // Part of the implementation
 //
-size_t MemoryMappedIo::size()
+size_t MemoryMappedIo::size() const
 {
   return MemoryRegion::size();
 }
@@ -112,7 +113,7 @@ void MemoryMappedIo::write32(uint32_t value, size_t offset)
 #endif
 MemoryMappedIo::operator bool() const
 {
-  return static_cast<MemoryRegion&>(*this);
+  return MemoryRegion::operator bool();
 }
 
 #endif

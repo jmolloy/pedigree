@@ -13,46 +13,42 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_X86_COMMON_APIC_H
-#define KERNEL_MACHINE_X86_COMMON_APIC_H
+#ifndef KERNEL_MACHINE_X86_COMMON_LOCAL_APIC_H
+#define KERNEL_MACHINE_X86_COMMON_LOCAL_APIC_H
 
 #if defined(APIC)
 
-#include "LocalApic.h"
-#include <machine/IrqManager.h>
+#include <processor/types.h>
+#include <processor/MemoryMappedIo.h>
 
 /** @addtogroup kernelmachinex86common
  * @{ */
 
-/** The x86/x64 advanced programmable interrupt controller architecture as IrqManager */
-class Apic : public IrqManager
+/** The x86/x64 local APIC */
+class LocalApic
 {
   public:
     /** The default constructor */
-    inline Apic(){}
+    inline LocalApic()
+      : m_IoSpace(){}
     /** The destructor */
-    inline virtual ~Apic(){}
+    inline virtual ~LocalApic(){}
 
-    //
-    // IrqManager interface
-    //
-    virtual irq_id_t registerIsaIrqHandler(uint8_t, IrqHandler *handler);
-    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
-    virtual void acknowledgeIrq(irq_id_t Id);
-    virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
-
-    bool initialise();
+    /** Initialise the local APIC class. This includes allocating the I/O space. */
+    bool initialise(uint64_t physicalAddress);
+    /** Initialise the local APIC on the current processor */
+    bool initialiseProcessor();
 
   private:
     /** The copy-constructor
      *\note NOT implemented */
-    Apic(const Apic &);
+    LocalApic(const LocalApic &);
     /** The assignment operator
      *\note NOT implemented */
-    Apic &operator = (const Apic &);
+    LocalApic &operator = (const LocalApic &);
 
-    /** The Apic instance */
-    static Apic m_Instance;
+    /** The local APIC memory-mapped I/O space */
+    MemoryMappedIo m_IoSpace;
 };
 
 /** @} */

@@ -69,8 +69,9 @@ void Pc::initialise()
 
     // Initialise the local APIC, if we have gotten valid data from
     // the ACPI/SMP structures
+    Apic apic;
     if (bApicValid == true && 
-        Apic::initialise(localApicAddress) == true)
+        apic.initialise(localApicAddress) == true)
     {
       // TODO: initialise local APIC
 
@@ -78,8 +79,6 @@ void Pc::initialise()
       // TODO: Initialise the I/O Apic
       // TODO: IMCR?
       // TODO: Mask the PICs?
-
-      bUseIoApic = true;
     }
     // Fall back to dual 8259 PICs
     else
@@ -161,8 +160,10 @@ Keyboard *Pc::getKeyboard()
 }
 
 Pc::Pc()
-  : m_Vga(0x3C0, 0xB8000),
-    m_Keyboard(0x60)
+  : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)
+  #if defined(APIC)
+    , m_LocalApic()
+  #endif
 {
 }
 Pc::~Pc()

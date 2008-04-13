@@ -40,6 +40,8 @@ src/system/include/machine/Serial.h
 src/system/include/machine/Timer.h
 src/system/include/machine/TimerHandler.h
 src/system/include/machine/Vga.h
+src/system/include/machine/arm_common
+src/system/include/machine/arm_common/types.h
 src/system/include/machine/mips_common
 src/system/include/machine/mips_common/types.h
 src/system/include/machine/types.h
@@ -68,6 +70,10 @@ src/system/include/processor/StackFrameBase.h
 src/system/include/processor/SyscallHandler.h
 src/system/include/processor/SyscallManager.h
 src/system/include/processor/VirtualAddressSpace.h
+src/system/include/processor/arm_926e
+src/system/include/processor/arm_926e/StackFrame.h
+src/system/include/processor/arm_926e/state.h
+src/system/include/processor/arm_common/types.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
 src/system/include/processor/mips32/state.h
@@ -289,8 +295,12 @@ src/system/kernel/machine/x86_common/Acpi.cc
 src/system/kernel/machine/x86_common/Acpi.h
 src/system/kernel/machine/x86_common/Apic.cc
 src/system/kernel/machine/x86_common/Apic.h
+src/system/kernel/machine/x86_common/IoApic.cc
+src/system/kernel/machine/x86_common/IoApic.h
 src/system/kernel/machine/x86_common/Keyboard.cc
 src/system/kernel/machine/x86_common/Keyboard.h
+src/system/kernel/machine/x86_common/LocalApic.cc
+src/system/kernel/machine/x86_common/LocalApic.h
 src/system/kernel/machine/x86_common/Machine.cc
 src/system/kernel/machine/x86_common/Pc.cc
 src/system/kernel/machine/x86_common/Pc.h
@@ -332,4 +342,3 @@ src/user/applications/chess/Square.h
 src/user/applications/chess/main.cc
 src/user/applications/chess/moves.cc
 src/user/applications/chess/moves.h
-src/system/include/processor/arm_common/types.h

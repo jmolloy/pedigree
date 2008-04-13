@@ -13,41 +13,4 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <Log.h>
-#include "Apic.h"
-
-#if !defined(ACPI) && !defined(SMP)
-  #error Neither ACPI nor SMP defined
-#endif
-
-irq_id_t Apic::registerIsaIrqHandler(uint8_t, IrqHandler *handler)
-{
-  // TODO
-  return 0;
-}
-irq_id_t Apic::registerPciIrqHandler(IrqHandler *handler)
-{
-  // TODO
-  return 0;
-}
-void Apic::acknowledgeIrq(irq_id_t Id)
-{
-  // TODO
-}
-void Apic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
-{
-  // TODO
-}
-bool Apic::initialise()
-{
-  // TODO
-  return true;
-/*
-  if (m_LocalApic.initialise(localApic) == false)
-  {
-    ERROR("LocalApic::initialise(): failed");
-    return false;
-  }
-
-  return true;*/
-}
+#include "IoApic.h"

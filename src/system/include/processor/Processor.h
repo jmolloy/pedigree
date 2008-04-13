@@ -135,6 +135,19 @@ class Processor
        *\param[in] index the register index
        *\param[in] value the new value of the register */
       static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
+      /** Executes the CPUID machine instruction
+       *\param[in] inEax eax before the CPUID instruction
+       *\param[in] inEcx ecx before the CPUID instruction
+       *\param[out] eax eax afterwards
+       *\param[out] ebx ebx afterwards
+       *\param[out] ecx ecx afterwards
+       *\param[out] edx edx afterwards */
+      static void cpuid(uint32_t inEax,
+                        uint32_t inEcx,
+                        uint32_t &eax,
+                        uint32_t &ebx,
+                        uint32_t &ecx,
+                        uint32_t &edx);
     #endif
     #if defined(MIPS_COMMON)
       /** Invalidate a line in the instruction cache.

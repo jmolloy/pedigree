@@ -6,7 +6,12 @@
     <version>1</version>
     <projectmanagement>KDevCustomProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
-    <ignoreparts/>
+    <ignoreparts>
+      <part>kdevsnippet</part>
+      <part>kdevctags2</part>
+      <part>kdevdebugger</part>
+      <part>kdevfilegroups</part>
+    </ignoreparts>
     <projectname>pedigree</projectname>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
@@ -17,10 +22,10 @@
   <kdevcustomproject>
     <run>
       <directoryradio>executable</directoryradio>
-      <mainprogram>/home/bluecode/programming/pedigree</mainprogram>
+      <mainprogram/>
       <programargs/>
       <globaldebugarguments/>
-      <globalcwd>/home/bluecode/programming/pedigree</globalcwd>
+      <globalcwd/>
       <useglobalprogram>false</useglobalprogram>
       <terminal>true</terminal>
       <autocompile>false</autocompile>
@@ -37,6 +42,7 @@
       <filetype>Makefile</filetype>
       <filetype>*.mk</filetype>
       <filetype>*.pl</filetype>
+      <filetype>*</filetype>
     </filetypes>
     <blacklist>
       <path>build/compilers</path>
@@ -145,7 +151,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel/core/process</activedir>
+      <activedir/>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
@@ -300,9 +306,9 @@
       <hidenonlocation>false</hidenonlocation>
     </groups>
     <tree>
-      <hidepatterns>*</hidepatterns>
+      <hidepatterns>.o</hidepatterns>
       <hidenonprojectfiles>true</hidenonprojectfiles>
-      <showvcsfields>false</showvcsfields>
+      <showvcsfields>true</showvcsfields>
     </tree>
   </kdevfileview>
 </kdevelop>

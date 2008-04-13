@@ -17,7 +17,7 @@
 #########################################################################################
 # The project name and CMake version.
 project(PEDIGREE)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.4)
 
 #########################################################################################
 # Macros used to compose the options list.

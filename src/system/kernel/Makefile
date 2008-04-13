@@ -154,7 +154,9 @@ ifdef X86_COMMON
 							core/processor/x86_common/Disassembler.cc
 
 	ifdef APIC
-		SRCFILES += machine/x86_common/Apic.cc
+		SRCFILES += machine/x86_common/Apic.cc \
+                machine/x86_common/LocalApic.cc \
+                machine/x86_common/IoApic.cc
 	endif
 
   ifdef ACPI

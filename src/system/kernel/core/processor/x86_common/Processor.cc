@@ -157,3 +157,15 @@ void Processor::writeMachineSpecificRegister(uint32_t index, uint64_t value)
   uint32_t eax = value, edx = value >> 32;
   asm volatile("wrmsr" :: "a" (eax), "d" (edx), "c" (index));
 }
+
+void Processor::cpuid(uint32_t inEax,
+                      uint32_t inEcx,
+                      uint32_t &eax,
+                      uint32_t &ebx,
+                      uint32_t &ecx,
+                      uint32_t &edx)
+{
+    asm volatile("cpuid":
+                 "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx):
+                 "a" (inEax), "c" (inEcx));
+}

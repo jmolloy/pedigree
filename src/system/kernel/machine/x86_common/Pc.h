@@ -23,6 +23,7 @@
 #include "Serial.h"
 #include "Vga.h"
 #include "Keyboard.h"
+#include "LocalApic.h"
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
@@ -58,6 +59,10 @@ class Pc : public Machine
     X86Serial m_pSerial[2];
     X86Vga m_Vga;
     X86Keyboard m_Keyboard;
+
+    #if defined(APIC)
+      LocalApic m_LocalApic;
+    #endif
 
     static Pc m_Instance;
 };
