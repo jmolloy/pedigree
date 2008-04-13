@@ -2,7 +2,7 @@
 
 #include "autogen.h"
 
-#define LOAD_ADDR 0x00020000
+#define LOAD_ADDR 0x00100000
 extern int memset(void *buf, int c, size_t len);
 struct BootstrapStruct_t
 {
@@ -76,18 +76,26 @@ extern "C" int start()
 
 extern "C" int __start()
 {
+  writeStr( "loadage...\r\n" );
   Elf32 elf("kernel");
-  elf.load((uint8_t*)file, 0);
-  elf.writeSections();
+  bool l = elf.load((uint8_t*)file, 0);
+  bool w = elf.writeSections();
+  if( !l )
+    writeStr( "elf.load failure\r\n" );
+  if( !w )
+    writeStr( "elf.writeSections failure\r\n" );
+  writeStr( "Getting entry point...\r\n" );
   int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
 
   struct BootstrapStruct_t bs;
+  writeStr( "BS...\r\n" );
 
   memset(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
+  writeStr( "shdrs...\r\n" );
 
   // For every section header, set .addr = .offset + m_pBuffer.
   for (int i = 0; i < elf.m_pHeader->shnum; i++)
@@ -96,8 +104,9 @@ extern "C" int __start()
   }
 
   writeStr( "That's boot-tastic! I'm gonna start main() now...\r\n" );
-  while( 1 ); // main() isn't going to work, the kernel doesn't build for ARM yet
 
-  int a = main(&bs);
-  return a;
+  main(&bs);
+  writeStr( "Main returns much?" );
+  while (1);
+  return 0;
 }

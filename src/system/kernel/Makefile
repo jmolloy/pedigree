@@ -40,6 +40,8 @@ DIRECTORIES = core/lib \
               core/processor/mips32/asm \
               core/processor/mips64 \
               core/processor/mips_common \
+              core/processor/arm_common \
+              core/processor/arm_926e \
               debugger/ \
               debugger/commands \
               debugger/libudis86 \
@@ -51,6 +53,8 @@ DIRECTORIES = core/lib \
               machine/malta/bonito64 \
               machine/au1500 \
               machine/au1500/db1500 \
+              machine/arm_common \
+              machine/arm_versatile \
               utilities
 
 ###################################################################
@@ -92,6 +96,12 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/panic.cc \
             debugger/DwarfUnwinder.cc \
             debugger/DwarfCfiAutomaton.cc
+endif
+ifndef DEBUGGER
+SRCFILES += debugger/LocalIO.cc \
+            debugger/SerialIO.cc \
+            debugger/DebuggerIO.cc \
+            debugger/panic.cc
 endif
 
 SRCFILES += core/lib/cppsupport.cc \
@@ -246,13 +256,16 @@ endif
 ###################################################################
 # arm926E source file list.
 ifdef ARM926E
-
+SRCFILES += core/processor/arm_926e/Processor.cc
 endif
 
 ###################################################################
 # arm versatile baseboard source file list.
 ifdef ARM_VERSATILE
-
+SRCFILES += machine/arm_versatile/Serial.cc \
+            machine/arm_versatile/Vga.cc \
+            machine/arm_versatile/Keyboard.cc \
+            machine/arm_versatile/Versatile.cc
 endif
 
 ###################################################################
