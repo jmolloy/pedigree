@@ -30,6 +30,9 @@
 #elif defined(MIPS64)
   #include <processor/mips64/StackFrame.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
+#elif defined(ARM926E)
+  #include <processor/arm_926e/StackFrame.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM926E##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

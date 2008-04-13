@@ -13,32 +13,29 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef PROCESSOR_DISASSEMBLER_H
-#define PROCESSOR_DISASSEMBLER_H
+#ifndef ARM926E_DISASSEMBLER_H
+#define ARM926E_DISASSEMBLER_H
 
-#include <processor/types.h>
-#include <utilities/StaticString.h>
+#include <processor/Disassembler.h>
 
 /**
- * Abstraction of a code disassembler.
+ * A disassembler for ARM926E processors.
  */
-class DisassemblerBase
+class Arm926EDisassembler : public DisassemblerBase
 {
 public:
-  /**
-   * Destructor does nothing.
-   */
-  virtual ~DisassemblerBase() {};
-  
+  Arm926EDisassembler();
+  ~Arm926EDisassembler();
+
   /**
    * Sets the location of the next instruction to be disassembled.
    */
-  virtual void setLocation(uintptr_t nLocation) =0;
+  void setLocation(uintptr_t nLocation);
 
   /**
    * Gets the location of the next instruction to be disassembled.
    */
-  virtual uintptr_t getLocation() =0;
+  uintptr_t getLocation();
 
   /**
    * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
@@ -46,26 +43,25 @@ public:
    * return without changing anything.
    * \param nMode Mode - 16, 32 or 64.
    */
-  virtual void setMode(size_t nMode) =0;
+  void setMode(size_t nMode);
   
   /**
    * Disassembles one instruction and populates the given StaticString
    * with a textual representation.
    */
-  virtual void disassemble(LargeStaticString &text) =0;
-  
-protected:
-  DisassemblerBase() {};
+  void disassemble(LargeStaticString &text);
+
+private:
+  /**
+   * Current disassembling location in memory.
+   */
+  uintptr_t m_nLocation;
+
+  void disassembleSpecial(uint32_t nInstruction, LargeStaticString &text);
+  void disassembleRegImm(uint32_t nInstruction, LargeStaticString &text);
+  void disassembleOpcode(uint32_t nInstruction, LargeStaticString &text);
 };
 
-#ifdef X86_COMMON
-#include <core/processor/x86_common/Disassembler.h>
-#endif
-#ifdef MIPS_COMMON
-#include <core/processor/mips_common/Disassembler.h>
-#endif
-#ifdef ARM926E
-#include <core/processor/arm_926e/Disassembler.h>
-#endif
+typedef Arm926EDisassembler Disassembler;
 
 #endif

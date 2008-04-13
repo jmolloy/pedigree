@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
+#include <Log.h>
 #include "InterruptManager.h"
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
@@ -45,4 +46,61 @@ void Processor::halt()
 {
   asm volatile( "_halting:\r\nb _halting" );
   for( ;; );
+}
+
+
+size_t Processor::getDebugBreakpointCount()
+{
+  return 0;
+}
+
+uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
+                                        DebugFlags::FaultType &nFaultType,
+                                        size_t &nLength,
+                                        bool &bEnabled)
+{
+  /// \todo Implement.
+  return 0;
+}
+
+void Processor::enableDebugBreakpoint(size_t nBpNumber,
+                                      uintptr_t nLinearAddress,
+                                      DebugFlags::FaultType nFaultType,
+                                      size_t nLength)
+{
+  /// \todo Implement.
+}
+
+void Processor::disableDebugBreakpoint(size_t nBpNumber)
+{
+  /// \todo Implement.
+}
+
+void Processor::setInterrupts(bool bEnable)
+{
+  /// \todo Implement.
+}
+
+void Processor::setSingleStep(bool bEnable, InterruptState &state)
+{
+  /// \todo Implement - should be as simple
+  ERROR("Single step unavailable on ARM.");
+}
+
+uintptr_t Processor::getBasePointer()
+{
+  // TODO: implement
+  return 0;
+}
+
+uintptr_t Processor::getStackPointer()
+{
+  // TODO: implement
+  return 0;
+}
+
+uintptr_t Processor::getInstructionPointer()
+{
+  // TODO: implement
+  return 0;
 }

@@ -13,25 +13,25 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_PROCESSOR_MIPS32_INTERRUPTMANAGER_H
-#define KERNEL_PROCESSOR_MIPS32_INTERRUPTMANAGER_H
+#ifndef KERNEL_PROCESSOR_ARM926E_INTERRUPTMANAGER_H
+#define KERNEL_PROCESSOR_ARM926E_INTERRUPTMANAGER_H
 
 #include <compiler.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
 
-/** @addtogroup kernelprocessorMIPS32
+/** @addtogroup kernelprocessorARM926E
  * @{ */
 
 /** The interrupt handler on mips32 processors */
-class MIPS32InterruptManager : public ::InterruptManager,
+class ARM926EInterruptManager : public ::InterruptManager,
                                public ::SyscallManager
 {
   public:
-    /** Get the MIPS32InterruptManager class instance
-     *\return instance of the MIPS32InterruptManager class */
-    inline static MIPS32InterruptManager &instance(){return m_Instance;}
+    /** Get the ARM926EInterruptManager class instance
+     *\return instance of the ARM926EInterruptManager class */
+    inline static ARM926EInterruptManager &instance(){return m_Instance;}
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
@@ -55,15 +55,15 @@ class MIPS32InterruptManager : public ::InterruptManager,
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
     /** The constructor */
-    MIPS32InterruptManager();
+    ARM926EInterruptManager();
     /** Copy constructor
      *\note NOT implemented */
-    MIPS32InterruptManager(const MIPS32InterruptManager &);
+    ARM926EInterruptManager(const ARM926EInterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    MIPS32InterruptManager &operator = (const MIPS32InterruptManager &);
+    ARM926EInterruptManager &operator = (const ARM926EInterruptManager &);
     /** The destructor */
-    virtual ~MIPS32InterruptManager();
+    virtual ~ARM926EInterruptManager();
 
     InterruptHandler *m_Handler[256];
 #ifdef DEBUGGER
@@ -74,7 +74,7 @@ class MIPS32InterruptManager : public ::InterruptManager,
     SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
 
     /** The instance of the interrupt manager  */
-    static MIPS32InterruptManager m_Instance;
+    static ARM926EInterruptManager m_Instance;
 };
 
 /** @} */

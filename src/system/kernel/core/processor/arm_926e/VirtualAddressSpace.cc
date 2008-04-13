@@ -13,14 +13,3 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#if defined(DEBUGGER)
-
-#include <processor/StackFrame.h>
-
-uintptr_t ARM926EStackFrame::getParameter(size_t n)
-{
-  // TODO: Implement
-  return 0;
-}
-
-#endif

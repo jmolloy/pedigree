@@ -18,7 +18,10 @@
 #include <machine/types.h>
 #include <utilities/utility.h>
 #include <processor/Processor.h>
-#include <Debugger.h>
+#include <panic.h>
+#ifdef DEBUGGER
+  #include <Debugger.h>
+#endif
 
 #define SYSCALL_INTERRUPT_NUMBER 8
 #define BREAKPOINT_INTERRUPT_NUMBER 9
@@ -58,18 +61,18 @@ const char *g_ExceptionNames[32] = {
   "Reserved",
 };
 
-MIPS32InterruptManager MIPS32InterruptManager::m_Instance;
+ARM926EInterruptManager ARM926EInterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
 {
-  return MIPS32InterruptManager::instance();
+  return ARM926EInterruptManager::instance();
 }
 InterruptManager &InterruptManager::instance()
 {
-  return MIPS32InterruptManager::instance();
+  return ARM926EInterruptManager::instance();
 }
 
-bool MIPS32InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+bool ARM926EInterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   // TODO: Needs locking
   if (UNLIKELY(interruptNumber >= 256))
@@ -85,7 +88,7 @@ bool MIPS32InterruptManager::registerInterruptHandler(size_t interruptNumber, In
 
 #ifdef DEBUGGER
 
-  bool MIPS32InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  bool ARM926EInterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
     // TODO: Needs locking
     if (UNLIKELY(interruptNumber >= 256))
@@ -98,18 +101,18 @@ bool MIPS32InterruptManager::registerInterruptHandler(size_t interruptNumber, In
     m_DbgHandler[interruptNumber] = handler;
     return true;
   }
-  size_t MIPS32InterruptManager::getBreakpointInterruptNumber()
+  size_t ARM926EInterruptManager::getBreakpointInterruptNumber()
   {
     return 3;
   }
-  size_t MIPS32InterruptManager::getDebugInterruptNumber()
+  size_t ARM926EInterruptManager::getDebugInterruptNumber()
   {
     return 1;
   }
 
 #endif
 
-bool MIPS32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
+bool ARM926EInterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
 {
   //TODO: Needs locking
 
@@ -123,45 +126,13 @@ bool MIPS32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHa
   m_SyscallHandler[Service] = handler;
   return true;
 }
-extern "C" void mips32_exception(void);
-void MIPS32InterruptManager::initialiseProcessor()
+//extern "C" void mips32_exception(void);
+void ARM926EInterruptManager::initialiseProcessor()
 {
-  // Exception handler goes at 0x8000 0180
-  // Here we generate some exception handling code.
-  uint32_t pCode[4];
-  
-  // lui $k0, <upper 16 bits of exception handler>
-  pCode[0] = 0x3c1a0000 | (reinterpret_cast<uint32_t> (&mips32_exception) >> 16);
-  // ori $k0, $k0, <lower 16 bits of exception handler>
-  pCode[1] = 0x375a0000 | (reinterpret_cast<uint32_t> (&mips32_exception) & 0x0000FFFF);
-  // jr $k0
-  pCode[2] = 0x03400008;
-  // nop (delay slot)
-  pCode[3] = 0x00000000;
-  
-  // Now poke that exception handling stub into memory.
-  memcpy(reinterpret_cast<void*>(KSEG1(0x0)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x80)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x100)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x180)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x200)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
-  
-  // Invalidate the instruction cache - force a reload of the exception handlers.
-  for (uintptr_t i = KSEG0(0); i < KSEG0(0x200); i += 0x80)
-    Processor::invalidateICache(i);
+  // TODO: implement
 }
 
-void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
+void ARM926EInterruptManager::interrupt(InterruptState &interruptState)
 {
   // TODO: Needs locking
   size_t intNumber = interruptState.getInterruptNumber();
@@ -192,21 +163,25 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
     e.append (": \"");
     e.append (g_ExceptionNames[intNumber]);
     e.append ("\"");
+#ifdef DEBUGGER
     Debugger::instance().start(interruptState, e);
+#else
+    panic(e);
+#endif
   }
 
   // If this was a trap or breakpoint instruction, we need to increase the program counter a bit.
 //   if (intNumber == 9 || intNumber == 13)
 //   {
     // ...Unless we were in a branch delay slot!
-    if (!interruptState.branchDelay())
+    /*if (!interruptState.branchDelay())
     {
-      interruptState.m_Epc += 4;
-    }
+      interruptState.m_Pc += 4;
+    }*/
 //   }
 }
 
-MIPS32InterruptManager::MIPS32InterruptManager()
+ARM926EInterruptManager::ARM926EInterruptManager()
 {
   // Initialise the pointers to the interrupt handler
   for (size_t i = 0;i < 256;i++)
@@ -221,6 +196,6 @@ MIPS32InterruptManager::MIPS32InterruptManager()
   for (size_t i = 0;i < serviceEnd;i++)
     m_SyscallHandler[i] = 0;
 }
-MIPS32InterruptManager::~MIPS32InterruptManager()
+ARM926EInterruptManager::~ARM926EInterruptManager()
 {
 }

@@ -79,7 +79,6 @@ extern "C" void bar()
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
-
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
@@ -103,7 +102,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-#if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START)
+#if defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START) && !defined(ARM_COMMON)
   NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
 //   int a = 3/0;
   bar();
@@ -113,6 +112,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   s->write('b');
   s->write('a');
   s->write('r');
+  while( 1 )
+  {
+    char c = s->read();
+    s->write(c);
+  }
 /*
 // this has to be here if the debugger isn't used otherwise 'a' is undeclared
 #if !(defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START))
@@ -123,6 +127,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   InterruptState st;
 //   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
+#endif
+
+#if defined(ARM_COMMON) && defined(DEBUGGER)
+  InterruptState myState;
+  LargeStaticString str;
+  str.append( "fubar" );
+  Debugger::instance().start(myState,str);
 #endif
 
   for (;;)

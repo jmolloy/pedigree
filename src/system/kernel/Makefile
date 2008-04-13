@@ -256,7 +256,11 @@ endif
 ###################################################################
 # arm926E source file list.
 ifdef ARM926E
-SRCFILES += core/processor/arm_926e/Processor.cc
+SRCFILES += core/processor/arm_926e/Processor.cc \
+            core/processor/arm_926e/state.cc \
+            core/processor/arm_926e/Disassembler.cc \
+            core/processor/arm_926e/InterruptManager.cc \
+            core/processor/arm_926e/StackFrame.cc
 endif
 
 ###################################################################

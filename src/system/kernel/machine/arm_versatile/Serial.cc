@@ -28,9 +28,9 @@ void ArmVersatileSerial::setBase(uintptr_t nBaseAddr)
 }
 char ArmVersatileSerial::read()
 {
-  char c = 0;
-  while ( c == 0 ) c = static_cast<char>(m_pRegs->dr);
-  return c;
+  uint32_t c = 0;
+  while ( c == 0 ) c = m_pRegs->dr;
+  return static_cast<char>(c);
 }
 char ArmVersatileSerial::readNonBlock()
 {

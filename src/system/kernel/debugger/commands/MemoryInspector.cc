@@ -118,7 +118,7 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
   // Get the line we want.
   uintptr_t nLine = index*m_nCharsPerLine;
   // Is it paged in?
-#ifndef MIPS_COMMON
+#if !defined(MIPS_COMMON) && !defined(ARM_COMMON)
   if (!VirtualAddressSpace::getKernelAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
   {
     colour = DebuggerIO::Red;
@@ -148,7 +148,7 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
     }
 
     return str;
-#ifndef MIPS_COMMON
+#if !defined(MIPS_COMMON) && !defined(ARM_COMMON)
   }
 #endif
   return 0;
