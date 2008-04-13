@@ -34,20 +34,45 @@ macro(pedigree_set option_name)
   set(${option_name} ON)
 endmacro(pedigree_set)
 
+option(COLORGCC "Use the colorgcc script to colourise the compiler output." ON)
+
+#########################################################################################
+# General target options.
+option(DEBUGGER "Enable built in debugger?" ON)
+if(DEBUGGER)
+  pedigree_set(DEBUGGER)
+  option(DEBUGGER_QWERTZ "Enable QWERTZ keymap for debugger? OFF = QWERTY" OFF)
+  if(DEBUGGER_QWERTZ)
+    pedigree_set(DEBUGGER_QWERTZ)
+  else(DEBUGGER_QWERTZ)
+    pedigree_set(DEBUGGER_QWERTY)
+  endif(DEBUGGER_QWERTZ)
+endif(DEBUGGER)
+
 #########################################################################################
 # X86 and X64 target options.
 option(X86_COMMON "Build for the IA32/AMD64 architecture." ON)
 if(X86_COMMON)
 
   pedigree_set(X86_COMMON)
+  pedigree_set(KERNEL_STANDALONE)
   pedigree_set(LITTLE_ENDIAN)
+  
   option(X64 "64-bit mode? (OFF for 32-bit)" OFF)
   if(X64)
     pedigree_set(X64)
     pedigree_set(BITS_64)
+    set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
+    set(PEDIGREE_ASFLAGS "-felf64")
+    set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x64/kernel.ld")
   else(X64)
     pedigree_set(X86)
     pedigree_set(BITS_32)
+    set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m32")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
+    set(PEDIGREE_ASFLAGS "-felf")
+    set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld")
   endif(X64)
   
   option(MULTIPROCESSOR "Enable multiprocessor support." OFF)
@@ -72,10 +97,24 @@ if(MIPS_COMMON)
   if(MIPS64)
     pedigree_set(BITS_64)
     pedigree_set(MIPS64)
+    set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static")
+    set(PEDIGREE_ASFLAGS "-G0 -mips64 -mabi=64")
   else(MIPS64)
     pedigree_set(BITS_32)
     pedigree_set(MIPS32)
+    set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static")
+    # NOTE: errors occur if you add more than one thing to ASFLAGS!
+    set(PEDIGREE_ASFLAGS "-mips32")
+    set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-mips.ld -mxgot")
   endif(MIPS64)
+  
+  option(MIPS_MALTA "Compile for the Malta dev board (qemu)." ON)
+  if(MIPS_MALTA)
+    pedigree_set(MIPS_MALTA)
+    pedigree_option(MIPS_MALTA_BONITO64 "Compile for the bonito64 core." OFF)
+  endif(MIPS_MALTA)
 
 endif(MIPS_COMMON)
 
@@ -109,6 +148,37 @@ if(MIPS_COMMON)
   set(COMPILER mips64el-elf)
 endif(MIPS_COMMON)
 
+foreach(definition ${DEFINES})
+  add_definitions(-D${definition}=1)
+endforeach(definition)
+
+# Uncomment this if you want to see the exact commands CMake runs.
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# Remove the default -rdynamic option from the linker flags.
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
+# Remove the default -fPIC option from the linker flags.
+set(CMAKE_SHARED_LIBRARY_CXX_FLAGS)
+
+# Set the C and C++ compiler lines.
+if(COLORGCC)
+  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/build/${COMPILER}-g++)
+  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/build/${COMPILER}-gcc)
+else(COLORGCC)
+  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-c++)
+  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-gcc)
+endif(COLORGCC)
+
+set(CMAKE_CXX_FLAGS ${PEDIGREE_CXXFLAGS})
+set(CMAKE_C_FLAGS ${PEDIGREE_CFLAGS})
+
+# Set the assembler.
+if(X86_COMMON)
+  set(PEDIGREE_AS nasm)
+else(X86_COMMON)
+  set(PEDIGREE_AS ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-as)
+endif(X86_COMMON)
+
 # Create a target used for checking if a compiler is present.
 add_custom_target(check_compiler ALL perl ./checkBuildSystem.pl ${COMPILER}
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/build)
@@ -116,4 +186,7 @@ add_custom_target(check_compiler ALL perl ./checkBuildSystem.pl ${COMPILER}
 # Recurse into the Kernel directory first.
 add_subdirectory(src/system/kernel)
 
-message("blah ${DEFINES}")
+# Create a target used for creating the image files.
+add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
+                  DEPENDS kernel
+                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})

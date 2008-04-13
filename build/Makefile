@@ -39,7 +39,7 @@ endif
 
 # Compiler
 BUILD=$(shell pwd)
-ifdef TERMINAL_DUMB
+ifndef TERMINAL_DUMB
   CC=$(COMPILER)-gcc
   CXX=$(COMPILER)-g++
 else

@@ -73,7 +73,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_A3] = inState.m_A3;
   startState.m_R[DWARF_REG_T0] = inState.m_T0;
   startState.m_R[DWARF_REG_T1] = inState.m_T1;
-  startState.m_R[DWARF_REG_T2] = inState.m_T2;1
+  startState.m_R[DWARF_REG_T2] = inState.m_T2;
   startState.m_R[DWARF_REG_T3] = inState.m_T3;
   startState.m_R[DWARF_REG_T4] = inState.m_T4;
   startState.m_R[DWARF_REG_T5] = inState.m_T5;

@@ -18,6 +18,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <processor/StackFrameBase.h>
 
 /** @addtogroup kernelprocessorx86
  * @{ */

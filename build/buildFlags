@@ -18,7 +18,7 @@
 # Build targets. Change this to change which architecture you build for. Change requires a `make clean'.
 # NB: jamesmol is JamesM's work machine.
 #
-[james]    MIPS_MALTA
+[james]    X86
 [jamesmol] X64
 [bluecode] X86
 [pcmattman] ARM_VERSATILE

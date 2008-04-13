@@ -98,22 +98,22 @@ use IPC::Open3;
 
 sub initDefaults
 {
-   $compilerPaths{"gcc"} = "$ENV{COMPILER}-gcc";
-   $compilerPaths{"g++"} = "$ENV{COMPILER}-g++";
-   $compilerPaths{"cc"}  = "$ENV{COMPILER}-cc";
-   $compilerPaths{"c++"} = "$ENV{COMPILER}-c++";
+   $compilerPaths{"gcc"} = "gcc";
+   $compilerPaths{"g++"} = "g++";
+   $compilerPaths{"cc"}  = "cc";
+   $compilerPaths{"c++"} = "c++";
 
    $nocolor{"dumb"} = "true";
 
-   $colors{"srcColor"} = color("cyan");
-   $colors{"introColor"} = color("blue");
+   $colors{"srcColor"} = color("bold blue");
+   $colors{"introColor"} = color("reset");
 
-   $colors{"warningFileNameColor"} = color("yellow");
-   $colors{"warningNumberColor"}   = color("yellow");
+   $colors{"warningFileNameColor"} = color("reset");
+   $colors{"warningNumberColor"}   = color("white");
    $colors{"warningMessageColor"}  = color("yellow");
 
-   $colors{"errorFileNameColor"} = color("bold red");
-   $colors{"errorNumberColor"}   = color("bold red");
+   $colors{"errorFileNameColor"} = color("reset");
+   $colors{"errorNumberColor"}   = color("white");
    $colors{"errorMessageColor"}  = color("bold red");
 }
 
@@ -185,17 +185,18 @@ sub srcscan
 initDefaults();
 
 # Read the configuration file, if there is one.
-$configFile = $ENV{"BUILD"} . "/colorgccrc";
+$configFile = "";
 if (-f $configFile)
 {
    loadPreferences($configFile);
 }
 
 # Figure out which compiler to invoke based on our program name.
-$0 =~ m%.*/(.*)$%;
-$progName = $1 || $0;
+$0 =~ m%(.*)/(.*)$%;
+$progName = $2 || $0;
+$dir = $1 || die;
 
-$compiler = $compilerPaths{$progName} || $compilerPaths{"gcc"};
+$compiler = "$dir/compilers/bin/$progName" || die;
 
 # Get the terminal type. 
 $terminal = $ENV{"TERM"} || "dumb";
