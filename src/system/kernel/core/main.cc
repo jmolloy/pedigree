@@ -112,11 +112,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   s->write('b');
   s->write('a');
   s->write('r');
-  while( 1 )
-  {
-    char c = s->read();
-    s->write(c);
-  }
+  
 /*
 // this has to be here if the debugger isn't used otherwise 'a' is undeclared
 #if !(defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START))
@@ -128,11 +124,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
+  
 
 #if defined(ARM_COMMON) && defined(DEBUGGER)
   InterruptState myState;
   LargeStaticString str;
   str.append( "fubar" );
+  s->write("About to start debugger!\r\n" );
   Debugger::instance().start(myState,str);
 #endif
 

@@ -42,6 +42,7 @@ DIRECTORIES = core/lib \
               core/processor/mips_common \
               core/processor/arm_common \
               core/processor/arm_926e \
+              core/processor/arm_926e/asm \
               debugger/ \
               debugger/commands \
               debugger/libudis86 \
@@ -258,7 +259,8 @@ endif
 ###################################################################
 # arm926E source file list.
 ifdef ARM926E
-SRCFILES += core/processor/arm_926e/Processor.cc \
+SRCFILES += core/processor/arm_926e/asm/Processor.S \
+            core/processor/arm_926e/Processor.cc \
             core/processor/arm_926e/state.cc \
             core/processor/arm_926e/Disassembler.cc \
             core/processor/arm_926e/InterruptManager.cc \

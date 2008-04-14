@@ -74,28 +74,54 @@ extern "C" int start()
   for( ;; );
 }
 
+extern "C" void arm_swint_handler()
+{
+  // what was the interrupt number?
+  uint32_t intnum = 1; //*((uint32_t*) (linkreg-4));
+  
+  writeStr( "softint\r\n" );
+  
+  // do something
+  switch( intnum )
+  {
+    case 0x1:
+      writeStr( "SWI01\r\n" );
+      break;
+  }
+  
+  //asm volatile( "mov pc,r14_svc" );
+  //while( 1 );
+}
+
+extern "C" void __arm_swint();
+
 extern "C" int __start()
 {
-  writeStr( "loadage...\r\n" );
+  // TODO: this is seriously messy... FIXME!!!!!
+  uint32_t* lol = (uint32_t*) ((uint32_t) __arm_swint);
+  uint32_t* swivector = (uint32_t*) 0x8;
+  uint32_t* swivector2 = (uint32_t*) (0x8+4);
+  *swivector = *lol;
+  *swivector2 = *(++lol);
+  uint8_t op = static_cast<uint8_t>(*lol);
+  
+  // TODO: remove this when happy with relevant code
+  writeStr( "about to do software interrupt\r\n" );
+  asm volatile( "swi #1" );
+  writeStr( "swi done and returned\r\n" );
+
   Elf32 elf("kernel");
-  bool l = elf.load((uint8_t*)file, 0);
-  bool w = elf.writeSections();
-  if( !l )
-    writeStr( "elf.load failure\r\n" );
-  if( !w )
-    writeStr( "elf.writeSections failure\r\n" );
-  writeStr( "Getting entry point...\r\n" );
+  elf.load((uint8_t*)file, 0);
+  elf.writeSections();
   int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
 
   struct BootstrapStruct_t bs;
-  writeStr( "BS...\r\n" );
 
   memset(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
-  writeStr( "shdrs...\r\n" );
 
   // For every section header, set .addr = .offset + m_pBuffer.
   for (int i = 0; i < elf.m_pHeader->shnum; i++)
@@ -103,10 +129,12 @@ extern "C" int __start()
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
 
-  writeStr( "That's boot-tastic! I'm gonna start main() now...\r\n" );
+  writeStr( "[ARMBOOT] That's boot-tastic! I'm gonna start main() now...\r\n" );
 
   main(&bs);
-  writeStr( "Main returns much?" );
+  
+  writeStr( "[ARMBOOT] main() returned!\r\n" );
+  
   while (1);
   return 0;
 }

@@ -86,21 +86,3 @@ void Processor::setSingleStep(bool bEnable, InterruptState &state)
   /// \todo Implement - should be as simple
   ERROR("Single step unavailable on ARM.");
 }
-
-uintptr_t Processor::getBasePointer()
-{
-  // TODO: implement
-  return 0;
-}
-
-uintptr_t Processor::getStackPointer()
-{
-  // TODO: implement
-  return 0;
-}
-
-uintptr_t Processor::getInstructionPointer()
-{
-  // TODO: implement
-  return 0;
-}

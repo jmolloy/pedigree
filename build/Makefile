@@ -139,7 +139,8 @@ CYGWIN := 1
 endif
 
 # Add compilers/bin to our path so we can pick up our custom compilers.
-PATH := $(PATH):$(BUILD)/compilers/bin
+PATH := $(BUILD)/compilers/bin:$(PATH)
+PATH := $(BUILD)/compilers/$(COMPILER)/bin:$(PATH)
 
 export CMD_FLAGS
 export SILENTFLAG
