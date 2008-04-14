@@ -23,4 +23,4 @@
 add_subdirectory(asm)
 add_kernel_src(core/processor/mips32
                InterruptManager.cc Processor.cc StackFrame.cc state.cc)
-add_kernel_src_asm(core/processor/mips32)
+

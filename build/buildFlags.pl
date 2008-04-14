@@ -41,7 +41,7 @@ while (<$r>) {
     next unless ($1 eq $username);
   }
   
-  if ($line =~ m/^(.+): (.*)$/) {
+  if ($line =~ m/^(.+): ?(.*)$/) {
     # rule line.
     $rules{$1} = $2;
   } else {

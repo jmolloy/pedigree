@@ -20,4 +20,4 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src_asm(core/processor/x64/asm InterruptManager.s Processor.s SyscallManager.s)
+add_kernel_src(core/processor/x64/asm InterruptManager.s Processor.s SyscallManager.s)

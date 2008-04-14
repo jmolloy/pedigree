@@ -24,4 +24,3 @@ add_subdirectory(asm)
 add_kernel_src(core/processor/x86
                InterruptManager.cc Processor.cc StackFrame.cc state.cc VirtualAddressSpace.cc
                gdt.cc)
-add_kernel_src_asm(core/processor/x64)

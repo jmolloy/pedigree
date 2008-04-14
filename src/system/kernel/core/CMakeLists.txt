@@ -27,4 +27,3 @@ add_subdirectory(processor)
 
 add_kernel_src(core
                main.cc)
-add_kernel_src_asm(core)

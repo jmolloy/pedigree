@@ -16,7 +16,7 @@
 
 #########################################################################################
 # The project name and CMake version.
-project(PEDIGREE)
+project(PEDIGREE C CXX ASM-ATT)
 cmake_minimum_required(VERSION 2.4)
 
 #########################################################################################
@@ -153,7 +153,7 @@ foreach(definition ${DEFINES})
 endforeach(definition)
 
 # Uncomment this if you want to see the exact commands CMake runs.
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Remove the default -rdynamic option from the linker flags.
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
@@ -171,12 +171,13 @@ endif(COLORGCC)
 
 set(CMAKE_CXX_FLAGS ${PEDIGREE_CXXFLAGS})
 set(CMAKE_C_FLAGS ${PEDIGREE_CFLAGS})
+set(CMAKE_ASM-ATT_FLAGS ${PEDIGREE_ASFLAGS})
 
 # Set the assembler.
 if(X86_COMMON)
-  set(PEDIGREE_AS nasm)
+  set(CMAKE_ASM-ATT_COMPILER nasm)
 else(X86_COMMON)
-  set(PEDIGREE_AS ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-as)
+  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-as)
 endif(X86_COMMON)
 
 # Create a target used for checking if a compiler is present.

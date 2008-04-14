@@ -20,5 +20,5 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src_asm(core/processor/mips32/asm
-                   InterruptManager.s Processor.s)
+add_kernel_src(core/processor/mips32/asm
+               InterruptManager.s Processor.s)

@@ -46,4 +46,3 @@ endif(X86_COMMON)
 
 add_kernel_src(core/processor
                IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
-add_kernel_src_asm(core/processor)
