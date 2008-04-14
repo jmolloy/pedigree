@@ -14,17 +14,20 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#
-# NOTE: To ensure proper scoping, the add_subdirectory calls must come BEFORE
-#       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
-#       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
-#
+#########################################################################################
+# Sources list.
+set(BOOT_SRC main.cc Elf32.cc autogen.h)
 
-if(MIPS_MALTA_BONITO64)
-  add_subdirectory(bonito64)
-  add_kernel_src(machine/malta
-                 Serial.cc Vga.cc Keyboard.cc)
-else(MIPS_MALTA_BONITO64)
-  add_kernel_src(machine/malta
-                 Malta.cc Serial.cc Vga.cc Keyboard.cc)
-endif(MIPS_MALTA_BONITO64)
+#########################################################################################
+# Script begin.
+
+include_directories(.)
+
+# Add an extra target to create the bootloader.
+add_custom_command(OUTPUT autogen.h
+                   COMMAND perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/mkheader.pl)
+
+add_executable(bootloader ${BOOT_SRC})
+add_dependencies(bootloader kernel)
+set_target_properties(bootloader PROPERTIES LINK_FLAGS
+                      "-T ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/link-mips.ld")

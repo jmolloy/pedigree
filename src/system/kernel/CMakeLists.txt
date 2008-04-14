@@ -25,25 +25,6 @@ macro(add_kernel_src directory)
   endforeach(var ${ARGV})
   set(KERNEL_SRC ${KERNEL_SRC} ${src} PARENT_SCOPE)
 endmacro(add_kernel_src)
-macro(add_kernel_src_asm directory)
-  set(src)
-  foreach(var ${ARGV})
-    if(NOT ${var} STREQUAL ${directory})
-      set(src ${src} "${directory}/${var}")
-    endif(NOT ${var} STREQUAL ${directory})
-  endforeach(var ${ARGV})
-  set(KERNEL_SRC ${KERNEL_SRC} ${src} PARENT_SCOPE)
-endmacro(add_kernel_src_asm)
-
-#macro(add_kernel_src_asm directory)
-#  set(src)
-#  foreach(var ${ARGV})
-#    if(NOT ${var} STREQUAL ${directory})
-#      set(src ${src} "${directory}/${var}")
-#    endif(NOT ${var} STREQUAL ${directory})
-#  endforeach(var ${ARGV})
-#  set(KERNEL_SRC_ASM ${KERNEL_SRC_ASM} ${src} PARENT_SCOPE)
-#endmacro(add_kernel_src_asm)
 
 #########################################################################################
 # Sources list.
@@ -51,13 +32,15 @@ set(KERNEL_SRC BootstrapInfo.cc Log.cc)
 if(MIPS_COMMON)
   set(KERNEL_SRC ${KERNEL_SRC} boot-mips.cc)
 endif(MIPS_COMMON)
-set(KERNEL_SRC_ASM)
 
 add_subdirectory(core)
 add_subdirectory(debugger)
 add_subdirectory(linker)
 add_subdirectory(machine)
 add_subdirectory(utilities)
+
+#########################################################################################
+# Script begin.
 
 include_directories(../include
                     .
@@ -69,19 +52,7 @@ include_directories(../include
 
 add_definitions(-D__UD_STANDALONE__)
 
-#set(KERNEL_ASM_OBJS)
-#foreach(src ${KERNEL_SRC_ASM})
-#   set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/${src})
-#   set(OBJ ${CMAKE_CURRENT_BINARY_DIR}/${src}.o)
-#   add_custom_command(OUTPUT ${OBJ}
-#                      MAIN_DEPENDENCY ${SRC}
-#                      COMMAND ${PEDIGREE_AS}
-#                      ARGS ${PEDIGREE_ASFLAGS} ${SRC} -o ${OBJ})
-#   set(KERNEL_ASM_OBJS ${KERNEL_ASM_OBJS} ${OBJ})
-#endforeach(src)
 
-message(${KERNEL_SRC})
-#add_executable(kernel ${KERNEL_ASM_OBJS} ${KERNEL_SRC})
 add_executable(kernel ${KERNEL_SRC})
 target_link_libraries(kernel gcc)
 set_target_properties(kernel PROPERTIES LINK_FLAGS

@@ -43,5 +43,6 @@ if ($compiler =~ m/mips64el-elf/) {
   `../build/compilers/mips64el-elf/bin/objcopy src/system/kernel/kernel -O binary ./kernel.bin`;
   `../build/compilers/mips64el-elf/bin/objcopy src/system/kernel/kernel -O srec ./kernel.srec`;
   `../build/compilers/mips64el-elf/bin/objcopy src/system/boot/mips/bootloader -O srec ./bootloader.srec`;
+  `cp src/system/boot/mips/bootloader ./bootloader`;
 }
 exit 0;

@@ -17,93 +17,46 @@
 #########################################################################################
 # The project name and CMake version.
 project(PEDIGREE C CXX ASM-ATT)
-cmake_minimum_required(VERSION 2.4)
+cmake_minimum_required(VERSION 2.7)
 
-#########################################################################################
-# Macros used to compose the options list.
+set(DEFINES DUMMY_ITEM DUMMY_ITEM)
 
-macro(pedigree_option option_name description default)
-  option(${option_name} ${description} ${default})
-  if(${option_name})
-    set(DEFINES ${DEFINES} ${option_name})
-  endif(${option_name})
-endmacro(pedigree_option)
+include(buildFlags.cmake)
 
-macro(pedigree_set option_name)
-  set(DEFINES ${DEFINES} ${option_name})
-  set(${option_name} ON)
-endmacro(pedigree_set)
+list(REMOVE_ITEM DEFINES DUMMY_ITEM)
 
 option(COLORGCC "Use the colorgcc script to colourise the compiler output." ON)
-
-#########################################################################################
-# General target options.
-option(DEBUGGER "Enable built in debugger?" ON)
-if(DEBUGGER)
-  pedigree_set(DEBUGGER)
-  option(DEBUGGER_QWERTZ "Enable QWERTZ keymap for debugger? OFF = QWERTY" OFF)
-  if(DEBUGGER_QWERTZ)
-    pedigree_set(DEBUGGER_QWERTZ)
-  else(DEBUGGER_QWERTZ)
-    pedigree_set(DEBUGGER_QWERTY)
-  endif(DEBUGGER_QWERTZ)
-endif(DEBUGGER)
+set(BOOTLOADER_BUILT)
 
 #########################################################################################
 # X86 and X64 target options.
-option(X86_COMMON "Build for the IA32/AMD64 architecture." ON)
 if(X86_COMMON)
 
-  pedigree_set(X86_COMMON)
-  pedigree_set(KERNEL_STANDALONE)
-  pedigree_set(LITTLE_ENDIAN)
-  
-  option(X64 "64-bit mode? (OFF for 32-bit)" OFF)
   if(X64)
-    pedigree_set(X64)
-    pedigree_set(BITS_64)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
     set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
     set(PEDIGREE_ASFLAGS "-felf64")
     set(LINKER_SCRIPT
   "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x64/kernel.ld -nostdlib -nostdinc")
   else(X64)
-    pedigree_set(X86)
-    pedigree_set(BITS_32)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m32")
     set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
     set(PEDIGREE_ASFLAGS "-felf")
     set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc")
   endif(X64)
   
-  option(MULTIPROCESSOR "Enable multiprocessor support." OFF)
-  if(MULTIPROCESSOR)
-    pedigree_set(MULTIPROCESSOR)
-    pedigree_option(SMP "Enable support for symmetric multiprocessing." OFF)
-    pedigree_option(APIC "Enable support for APIC interrupt controllers." OFF)
-  endif(MULTIPROCESSOR)
-
-  pedigree_option(ACPI "Enable support for the advanced control and power interface." OFF)
-  
 endif(X86_COMMON)
 
 #########################################################################################
 # MIPS target options.
-option(MIPS_COMMON  "Build for the MIPSel (R4000+) architecture." OFF)
 if(MIPS_COMMON)
 
-  pedigree_set(MIPS_COMMON)
-  pedigree_set(LITTLE_ENDIAN)
-  option(MIPS64 "64-bit mode? (OFF for 32-bit)" OFF)
+  set(BOOTLOADER_BUILT bootloader)
   if(MIPS64)
-    pedigree_set(BITS_64)
-    pedigree_set(MIPS64)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static")
     set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static")
     set(PEDIGREE_ASFLAGS "-G0 -mips64 -mabi=64")
   else(MIPS64)
-    pedigree_set(BITS_32)
-    pedigree_set(MIPS32)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static")
     set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static")
     # NOTE: errors occur if you add more than one thing to ASFLAGS!
@@ -111,13 +64,18 @@ if(MIPS_COMMON)
     set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-mips.ld -mxgot")
   endif(MIPS64)
   
-  option(MIPS_MALTA "Compile for the Malta dev board (qemu)." ON)
-  if(MIPS_MALTA)
-    pedigree_set(MIPS_MALTA)
-    pedigree_option(MIPS_MALTA_BONITO64 "Compile for the bonito64 core." OFF)
-  endif(MIPS_MALTA)
-
 endif(MIPS_COMMON)
+
+#########################################################################################
+# ARM target options.
+if(ARM_COMMON)
+
+  set(BOOTLOADER_BUILT bootloader)
+  set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m32")
+  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
+  set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-arm.ld -mxgot")
+  
+endif(ARM_COMMON)
 
 #########################################################################################
 # Script start.
@@ -130,6 +88,10 @@ endif(X86_COMMON)
 if(MIPS_COMMON)
   set(TMP_TARGETS ${TMP_TARGETS} blah)
 endif(MIPS_COMMON)
+if(ARM_COMMON)
+  set(TMP_TARGETS ${TMP_TARGETS} blah)
+endif(ARM_COMMON)
+
 list(LENGTH TMP_TARGETS TMP_NUM_TARGETS)
 if(TMP_NUM_TARGETS GREATER 2)
   message(FATAL_ERROR "Multiple targets selected!")
@@ -148,7 +110,11 @@ endif(X64)
 if(MIPS_COMMON)
   set(COMPILER mips64el-elf)
 endif(MIPS_COMMON)
+if(ARM_COMMON)
+  set(COMPILER arm-elf)
+endif(ARM_COMMON)
 
+# Add compiler #defines.
 foreach(definition ${DEFINES})
   add_definitions(-D${definition}=1)
 endforeach(definition)
@@ -188,7 +154,10 @@ add_custom_target(check_compiler ALL perl ./checkBuildSystem.pl ${COMPILER}
 # Recurse into the Kernel directory first.
 add_subdirectory(src/system/kernel)
 
+# Then the bootloader.
+add_subdirectory(src/system/boot)
+
 # Create a target used for creating the image files.
 add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
-                  DEPENDS kernel
+                  DEPENDS kernel ${BOOTLOADER_BUILT}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
