@@ -19,5 +19,6 @@
 #       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
+add_kernel_src(machine/malta/bonito64
+               Bonito64.cc)
 
-add_kernel_src(core/processor/x64/asm InterruptManager.s Processor.s SyscallManager.s gdt.s boot-standalone.s)

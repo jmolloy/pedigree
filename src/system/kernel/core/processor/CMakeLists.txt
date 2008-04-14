@@ -44,5 +44,10 @@ if(X86_COMMON)
   add_subdirectory(x86_common)
 endif(X86_COMMON)
 
-add_kernel_src(core/processor
-               IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
+if(NOT MIPS_COMMON)
+  add_kernel_src(core/processor
+                 IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
+else(NOT MIPS_COMMON)
+  add_kernel_src(core/processor
+                 IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
+endif(NOT MIPS_COMMON)

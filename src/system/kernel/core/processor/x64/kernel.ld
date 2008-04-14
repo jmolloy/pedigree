@@ -10,6 +10,7 @@ SECTIONS
     {
         . = ALIGN(4096);
         code = .; _code = .; __code = .;
+        *(.bootstrap)
         *(.text)
     }
 

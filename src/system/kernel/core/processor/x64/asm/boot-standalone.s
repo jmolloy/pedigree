@@ -9,6 +9,7 @@ MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 64]
 
+[SECTION .bootstrap]
 align 4
 mboot:
   dd MBOOT_HEADER_MAGIC
@@ -21,7 +22,7 @@ mboot:
 [EXTERN code]
 [EXTERN end]
 
-[SECTION .text]
+;[SECTION .text]
 KERNEL_BASE        equ 0xFFFFFFFF7FF00000
 start:
   cli
@@ -192,7 +193,7 @@ callmain:
   call _main
   jmp $
 
-[SECTION .data]
+; [SECTION .data]
   GDTR:
     dw 23
     dq GDT
@@ -208,7 +209,7 @@ callmain:
     db 0x92
     dw 0
 
-[SECTION .bss]
+; [SECTION .bss]
 align 4096
 pml4:
   resb 4096

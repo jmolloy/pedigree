@@ -20,4 +20,11 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(core/processor/x64/asm InterruptManager.s Processor.s SyscallManager.s gdt.s boot-standalone.s)
+if(MIPS_MALTA_BONITO64)
+  add_directory(bonito64)
+  add_kernel_src(machine/malta
+                 Serial.cc Vga.cc Keyboard.cc)
+else(MIPS_MALTA_BONITO64)
+  add_kernel_src(machine/malta
+                 Malta.cc Serial.cc Vga.cc Keyboard.cc)
+endif(MIPS_MALTA_BONITO64)
