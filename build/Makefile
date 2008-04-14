@@ -55,6 +55,9 @@ endif
 ifdef MIPS_COMMON
   AS=$(BUILD)/compilers/$(COMPILER)/bin/as
 endif
+ifdef ARM_COMMON
+  AS=$(BUILD)/compilers/$(COMPILER)/bin/as
+endif
 
 # CFLAGS
 CFLAGS=-fno-builtin -fno-stack-protector -nostdlib
@@ -139,8 +142,7 @@ CYGWIN := 1
 endif
 
 # Add compilers/bin to our path so we can pick up our custom compilers.
-PATH := $(BUILD)/compilers/bin:$(PATH)
-PATH := $(BUILD)/compilers/$(COMPILER)/bin:$(PATH)
+PATH := $(PATH):$(BUILD)/compilers/bin
 
 export CMD_FLAGS
 export SILENTFLAG
