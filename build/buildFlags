@@ -54,7 +54,7 @@ MIPS_COMMON: OMIT_FRAMEPOINTER
 # 926E is the ARM CPU type used on the board, in future others
 # will be supported
 # TODO: remove the previous note when done
-ARM926E: DEBUGGER ARM_COMMON BITS_32 LITTLE_ENDIAN
+ARM926E: ARM_COMMON BITS_32 LITTLE_ENDIAN
 ARM_VERSATILE: ARM926E
 ARM_INTEGRATOR: ARM926E
 

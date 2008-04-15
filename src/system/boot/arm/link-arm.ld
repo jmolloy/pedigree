@@ -4,7 +4,12 @@ OUTPUT_ARCH(arm)
 ENTRY(start)
 SECTIONS
 {
-
+    . = 0x0;
+    .intvecs :
+    {
+      vectors = .;
+      . = ALIGN(0);
+    }
     . = 0x00010000;
     .text :
     {

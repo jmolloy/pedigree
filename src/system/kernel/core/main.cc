@@ -124,7 +124,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
-  
 
 #if defined(ARM_COMMON) && defined(DEBUGGER)
   InterruptState myState;

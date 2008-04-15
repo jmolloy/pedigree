@@ -93,22 +93,58 @@ extern "C" void arm_swint_handler()
   //while( 1 );
 }
 
-extern "C" void __arm_swint();
+extern "C" void arm_instundef_handler()
+{
+  writeStr( "undefined instruction!\n" );
+  while( 1 );
+}
+
+extern "C" void arm_fiq_handler()
+{
+  writeStr( "fiq\r\n" );
+  while( 1 );
+}
+
+extern "C" void arm_irq_handler()
+{
+  writeStr( "irq\r\n" );
+  while( 1 );
+}
+
+extern "C" void arm_reset_handler()
+{
+  writeStr( "reset\r\n" );
+  while( 1 );
+}
+
+extern "C" void __arm_vector_table();
+
+uint32_t arm_get_cpsr()
+{
+  uint32_t ret = 0;
+  asm volatile( "msr cpsr,r0" : "=r" (ret) );
+  return ret;
+}
+
+void memcpy(void *dest, const void *src, size_t len);
 
 extern "C" int __start()
 {
-  // TODO: this is seriously messy... FIXME!!!!!
-  uint32_t* lol = (uint32_t*) ((uint32_t) __arm_swint);
-  uint32_t* swivector = (uint32_t*) 0x8;
-  uint32_t* swivector2 = (uint32_t*) (0x8+4);
-  *swivector = *lol;
-  *swivector2 = *(++lol);
-  uint8_t op = static_cast<uint8_t>(*lol);
+  // 8 entries in the table, plus the literal table holding offsets of C handlers
+  memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
   
   // TODO: remove this when happy with relevant code
   writeStr( "about to do software interrupt\r\n" );
   asm volatile( "swi #1" );
   writeStr( "swi done and returned\r\n" );
+  
+  *((uint32_t*) 0x100) = 0; //0xdeadbeef;
+  void (*fn)();
+  fn = (void(*)()) 0x100;
+  fn();
+  
+  writeStr( "complete\n" );
+  while( 1 );
 
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
