@@ -7,6 +7,8 @@ my $COMPILER_VERSION = "4.2.2";
 my $BINUTILS_VERSION = "2.18";
 my $FTP_DIR = "ftp://ftp.gnu.org/gnu/gcc/gcc-$COMPILER_VERSION";
 my $BINUTILS_FTP_DIR = "ftp://ftp.gnu.org/gnu/binutils";
+my $NASM_VERSION = "2.02";
+my $NASM_DOWNLOAD = "http://downloads.sourceforge.net/nasm/nasm-$NASM_VERSION.tar.gz";
 my $delete_cache = 0;
 
 # Is the compiler with the given version string (e.g. i686-elf) installed?
@@ -14,7 +16,17 @@ sub is_installed {
   my ($arch) = @_;
 
   return -d "./compilers/$arch";
- }
+}
+
+sub is_nasm_installed {
+  my ($arch) = @_;
+  
+  if ($arch =~ m/(i686|amd64)-elf/i) {
+    return -f "./compilers/bin/nasm";
+  } else {
+    return 1;
+  }
+}
 
 # Do we have a compiler download cache?
 sub is_cached {
@@ -27,6 +39,8 @@ sub is_cached {
 
 # Download the compiler.
 sub download {
+  my ($arch) = @_;
+  
   `mkdir ./compilers/dl_cache` unless (-d "./compilers/dl_cache");
 
   my $already_cached = 0;
@@ -62,7 +76,7 @@ sub download {
     print "\e[32mDownloading binutils, version $BINUTILS_VERSION...\e[0m\n";
     `cd ./compilers/dl_cache; wget $BINUTILS_FTP_DIR/binutils-$BINUTILS_VERSION.tar.bz2`;
     if ($? != 0) {
-  	print "\e[31mError: binutils files failed to download!\e[0m\n";
+      print "\e[31mError: binutils files failed to download!\e[0m\n";
       return 1;
     }
   }
@@ -71,6 +85,22 @@ sub download {
     # Ask the user if he wants to keep the cached files.
     print "\e[32mThe main compiler tarballs can be kept on disk, in case a new compiler build is needed. This will mean that new compiler builds will be faster, but will consume roughly 50MB of disk space.\nCache compiler files? [yes]\e[0m: ";
     $delete_cache = 1 if (<STDIN> =~ m/n/i);
+  }
+  return 0;
+}
+
+sub download_nasm {
+  `mkdir ./compilers/dl_cache` unless (-d "./compilers/dl_cache");
+
+  if (-f "./compilers/dl_cache/nasm-$NASM_VERSION.tar.gz") {
+    print "\e[32mNASM files already downloaded, using cached version.\e[0m\n";
+  } else {
+    print "\e[32mDownloading NASM, version $NASM_VERSION...\e[0m\n";
+    `cd ./compilers/dl_cache; wget $NASM_DOWNLOAD`;
+    if ($? != 0) {
+      print "\e[31mError: NASM files failed to download!\e[0m\n";
+      return 1;
+    }
   }
   return 0;
 }
@@ -101,6 +131,26 @@ sub extract {
 
   return 0;
 }
+
+# Extract the assembler - assumed download_nasm() called and succeeded.
+sub extract_nasm {
+  `mkdir ./compilers/tmp_build` unless (-d "./compilers/tmp_build");
+
+  `cp ./compilers/dl_cache/nasm-$NASM_VERSION.tar.gz ./compilers/tmp_build`;
+  return 1 if $? != 0;
+
+  print "\e[32mExtracting downloaded files...\e[0m\n";
+  `cd ./compilers/tmp_build/; tar -xf nasm-$NASM_VERSION.tar.gz`;
+  return 1 if $? != 0;
+
+  `rm ./compilers/tmp_build/*.tar*`;
+  return 1 if $? != 0;
+
+  `rm -r ./compilers/dl_cache` if $delete_cache == 1;
+
+  return 0;
+}
+
 
 # Patch the compiler for amd64
 sub patch_amd64
@@ -155,19 +205,62 @@ sub install {
   return 0;
 } 
 
+sub install_nasm {
+
+  my ($pwd) = `pwd` =~ m/^[ \n]*(.*?)[ \n]*$/;
+  
+  print "\e[32mNASM: \e[0m\e[32;1mConfiguring...\e[0m ";
+  `export PREFIX=$pwd/compilers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; ./configure --prefix=\$PREFIX >/tmp/nasm-configure.out 2>/tmp/nasm-configure.err`;
+  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-configure.{out|err})\e[0m"; return 1;}
+  
+  print "\n\e[32;1mCompiling...\e[0m ";
+  `export PREFIX=$pwd/computers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; make >/tmp/nasm-make.out 2>/tmp/nasm-make.err`;
+  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-make.{out|err})\e[0m"; return 1;}
+  print "\n\e[32;1mInstalling...\e[0m ";
+  `export PREFIX=$pwd/compilers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; make install >/tmp/nasm-make-install.out 2>/tmp/nasm-make-install.err`;
+  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-make-install.{out|err})\e[0m\n"; return 1;}
+  print "\n";
+
+  print "\e[32mCleaning up...\e[0m\n";
+  `rm -rf ./compilers/tmp_build`;
+  
+  return 0;
+}
+
 #####################################################################################################
 # Script start.
 
 die("No target given!") unless scalar @ARGV > 0;
 
 my $target = $ARGV[0];
+my $compiler_already_installed = 0;
+my $assembler_already_installed = 0;
+my $install_compiler = 0;
+my $install_assembler = 0;
+
 if (is_installed($target)) {
   print "\e[32mTarget $target has a suitable compiler already installed.\e[0m\n";
-  exit 0;
+  $compiler_already_installed = 1;
 }
 
-print "\e[32mTarget $target does not have a suitable compiler installed. One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
-exit 1 if <STDIN> =~ m/n/i;
+unless ($compiler_already_installed) {
+  print "\e[32mTarget $target does not have a suitable compiler. One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
+  $install_compiler = 1;
+  $install_compiler = 0 if <STDIN> =~ m/n/i;
+}
+
+if (is_nasm_installed($target)) {
+  print "\e[32mTarget $target has a suitable assembler already installed, or does not need one.\e[0m\n";
+  $assembler_already_installed = 1;
+}
+
+if (($assembler_already_installed == 0) and ($install_compiler == 0)) {
+  print "\e[32mTarget $target does not have a suitable assembler (NASM). One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
+  $install_assembler = 1;
+  $install_assembler = 0 if <STDIN> =~ m/n/i;
+} elsif ($assembler_already_installed == 0) {
+  $install_assembler = 1;
+}
 
 $ENV{CC} = "";
 $ENV{CXX} = "";
@@ -178,28 +271,47 @@ $ENV{CXXFLAGS} = "";
 $ENV{LDFLAGS} = "";
 $ENV{ASFLAGS} = "";
 
-if (download() != 0) {
-  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-  exit 1;
+if ($install_compiler) {
+  if (download($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
+  
+  if (extract($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
+  
+  if ($target eq "amd64-elf")
+  {
+    if (patch_amd64() != 0)
+    {
+      print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+      exit 1;
+    }
+  }
+  
+  if (install($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
 }
 
-if (extract() != 0) {
-  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-  exit 1;
-}
-
-if ($target eq "amd64-elf")
-{
-	if (patch_amd64() != 0)
-	{
-		print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-		exit 1;
-	}
-}
-
-if (install($target) != 0) {
-  print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-  exit 1;
+if ($install_assembler) {
+  if (download_nasm($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
+  
+  if (extract_nasm($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
+  
+  if (install_nasm($target) != 0) {
+    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+    exit 1;
+  }
 }
 
 exit 0;

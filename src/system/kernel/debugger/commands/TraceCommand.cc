@@ -313,7 +313,10 @@ const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset,
   size_t nInstruction = 0;
 
   Disassembler disassembler;
-  
+#ifdef BITS_64
+  disassembler.setMode(64);
+#endif
+
   uintptr_t nLocation;
   LargeStaticString text;
   if (index == m_LastLine)

@@ -18,28 +18,28 @@
 const char *g_pOpcodes[64] = {
   0,             // Special
   0,             // RegImm
-  "j",
-  "jal",
-  "beq",
-  "bne",
-  "blez",
-  "bgtz",
-  "addi",        // 8
-  "addiu",
-  "slti",
-  "sltiu",
-  "andi",
-  "ori",
-  "xori",
-  "lui",
-  "cop0",        // 16
-  "cop1",
-  "cop2",
-  "cop3",
-  "beql",
-  "bnel",
-  "blezl",
-  "bgtzl",
+  "j     ",
+  "jal   ",
+  "beq   ",
+  "bne   ",
+  "blez  ",
+  "bgtz  ",
+  "addi  ",        // 8
+  "addiu ",
+  "slti  ",
+  "sltiu ",
+  "andi  ",
+  "ori   ",
+  "xori  ",
+  "lui   ",
+  "cop0  ",        // 16
+  "cop1  ",
+  "cop2  ",
+  "cop3  ",
+  "beql  ",
+  "bnel  ",
+  "blezl ",
+  "bgtzl ",
   0,             // 24
   0,
   0,
@@ -48,96 +48,96 @@ const char *g_pOpcodes[64] = {
   0,
   0,
   0,
-  "lb",          // 32
-  "lh",
-  "lwl",
-  "lw",
-  "lbu",
-  "lhu",
-  "lwr",
+  "lb    ",          // 32
+  "lh    ",
+  "lwl   ",
+  "lw    ",
+  "lbu   ",
+  "lhu   ",
+  "lwr   ",
   0,
-  "sb",          // 40
-  "sh",
-  "swl",
-  "sw",
+  "sb    ",          // 40
+  "sh    ",
+  "swl   ",
+  "sw    ",
   0,
   0,
-  "swr",
-  "cache",
-  "ll",          // 48
-  "lwc1",
-  "lwc2",
-  "lwc3",
+  "swr   ",
+  "cache ",
+  "ll    ",          // 48
+  "lwc1  ",
+  "lwc2  ",
+  "lwc3  ",
   0,
-  "ldc1",
-  "ldc2",
-  "ldc3",
-  "sc",          // 56
-  "swc1",
-  "swc2",
-  "swc3",
+  "ldc1  ",
+  "ldc2  ",
+  "ldc3  ",
+  "sc    ",          // 56
+  "swc1  ",
+  "swc2  ",
+  "swc3  ",
   0,
-  "sdc1",
-  "sdc2",
-  "sdc3"
+  "sdc1  ",
+  "sdc2  ",
+  "sdc3  "
 };
 
 const char *g_pSpecial[64] = {
-  "sll",
+  "sll   ",
   0,
-  "srl",
-  "sra",
-  "sllv",
+  "srl   ",
+  "sra   ",
+  "sllv  ",
   0,
-  "srlv",
-  "srav",
-  "jr",          // 8
-  "jalr",
+  "srlv  ",
+  "srav  ",
+  "jr    ",          // 8
+  "jalr  ",
   0,
   0,
   "syscall",
-  "break",
+  "break ",
   0,
-  "sync",
-  "mfhi",        // 16
-  "mthi",
-  "mflo",
-  "mtlo",
-  0,
-  0,
-  0,
-  0,
-  "mult",        // 24
-  "multu",
-  "div",
-  "divu",
+  "sync  ",
+  "mfhi  ",        // 16
+  "mthi  ",
+  "mflo  ",
+  "mtlo  ",
   0,
   0,
   0,
   0,
-  "add",         // 32
-  "addu",
-  "sub",
-  "subu",
-  "and",
-  "or",
-  "xor",
-  "nor",
+  "mult  ",        // 24
+  "multu ",
+  "div   ",
+  "divu  ",
+  0,
+  0,
+  0,
+  0,
+  "add   ",         // 32
+  "addu  ",
+  "sub   ",
+  "subu  ",
+  "and   ",
+  "or    ",
+  "xor   ",
+  "nor   ",
   0,             // 40
   0,
-  "slt",
-  "sltu",
+  "slt   ",
+  "sltu  ",
   0,
   0,
   0,
   0,
-  "tge",          // 48
-  "tgeu",
-  "tlt",
-  "tltu",
-  "teq",
+  "tge   ",          // 48
+  "tgeu  ",
+  "tlt   ",
+  "tltu  ",
+  "teq   ",
   0,
-  "tne",
+  "tne   ",
   0,
   0,              // 56
   0,
@@ -150,21 +150,21 @@ const char *g_pSpecial[64] = {
 };
 
 const char *g_pRegimm[32] = {
-  "bltz",
-  "bgez",
-  "bltzl",
-  "bgezl",
+  "bltz  ",
+  "bgez  ",
+  "bltzl ",
+  "bgezl ",
   0,
   0,
   0,
   0,
-  "tgei",        // 8
-  "tgeiu",
-  "tlti",
-  "tltiu",
-  "teqi",
+  "tgei  ",        // 8
+  "tgeiu ",
+  "tlti  ",
+  "tltiu ",
+  "teqi  ",
   0,
-  "tnei",
+  "tnei  ",
   0,
   "bltzal",      // 16
   "bgezal",
@@ -446,12 +446,12 @@ void MipsDisassembler::disassembleSpecial(uint32_t nInstruction, LargeStaticStri
       text += g_pRegisters[nRs];
       break;
     case 010: // JR
-      text += "jr ";
+      text += "jr     ";
       text += g_pRegisters[nRs];
       break;
     case 011: // JALR
     {
-      text += "jalr ";
+      text += "jalr   ";
       if (nRd != 31)
       {
         text += g_pRegisters[nRd];
@@ -490,14 +490,14 @@ void MipsDisassembler::disassembleSpecial(uint32_t nInstruction, LargeStaticStri
       text += g_pSpecial[nFunct];
       text += " ";
       text += g_pRegisters[nRs];
-      text += " ";
+      text += ", ";
       text += g_pRegisters[nRt];
       break;
     case 041: // ADDU
       if (nRt == 0)
       {
         // If this is an add of zero, it is actually a "move".
-        text += "move ";
+        text += "move   ";
         text += g_pRegisters[nRd];
         text += ", ";
         text += g_pRegisters[nRs];

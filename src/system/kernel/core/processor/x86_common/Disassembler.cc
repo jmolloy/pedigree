@@ -32,6 +32,7 @@ X86Disassembler::~X86Disassembler()
 void X86Disassembler::setLocation(uintptr_t nLocation)
 {
   m_Location = nLocation;
+  ud_set_mode(&m_Obj, m_Mode);
   ud_set_pc(&m_Obj, m_Location);
   ud_set_input_buffer(&m_Obj, reinterpret_cast<uint8_t*>(m_Location), 4096);
   ud_disassemble(&m_Obj);
