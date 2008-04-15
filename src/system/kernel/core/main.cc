@@ -124,14 +124,27 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   Debugger::instance().breakpoint(st);
   return; // Go back to the YAMON prompt.
 #endif
+  
+  /* segfault if this is in
+  s->write( "foobar\r\n" );
+  s->write( "here's where the debugger's sposed to start yey\r\n" );
+  s->write( "woot\r\n" );
+#if defined(ARM_COMMON)
+  s->write( "ARM_COMMON\r\n" );
+#endif
+#if defined(DEBUGGER)
+  s->write( "DEBUGGER\r\n" );
+#endif
 
 #if defined(ARM_COMMON) && defined(DEBUGGER)
+#warning Are you sure you want the debugger compiled with ARM (QEMU segfaults)?
   InterruptState myState;
   LargeStaticString str;
   str.append( "fubar" );
   s->write("About to start debugger!\r\n" );
   Debugger::instance().start(myState,str);
 #endif
+  */
 
   for (;;)
   {

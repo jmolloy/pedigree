@@ -134,17 +134,17 @@ extern "C" int __start()
   memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
   
   // TODO: remove this when happy with relevant code
-  writeStr( "about to do software interrupt\r\n" );
+  /*writeStr( "about to do software interrupt\r\n" );
   asm volatile( "swi #1" );
   writeStr( "swi done and returned\r\n" );
   
   *((uint32_t*) 0x100) = 0; //0xdeadbeef;
   void (*fn)();
   fn = (void(*)()) 0x100;
-  fn();
+  fn();*/
   
-  writeStr( "complete\n" );
-  while( 1 );
+  writeStr( "complete\r\n" );
+  //while( 1 );
 
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
@@ -165,7 +165,7 @@ extern "C" int __start()
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
 
-  writeStr( "[ARMBOOT] That's boot-tastic! I'm gonna start main() now...\r\n" );
+  writeStr( "[ARMBOOT] That's boot-tastic! I'm gonna start main() now\r\n" );
 
   main(&bs);
   
