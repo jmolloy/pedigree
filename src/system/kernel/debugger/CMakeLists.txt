@@ -20,9 +20,15 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
+
+if(DEBUGGER)
 add_subdirectory(commands)
 add_subdirectory(libudis86)
 
 add_kernel_src(debugger
                Backtrace.cc Debugger.cc DebuggerIO.cc DwarfCfiAutomaton.cc DwarfUnwinder.cc
                LocalIO.cc panic.cc Scrollable.cc SerialIO.cc)
+else(DEBUGGER)
+add_kernel_src(debugger
+               LocalIO.cc SerialIO.cc DebuggerIO.cc panic.cc)
+endif(DEBUGGER)

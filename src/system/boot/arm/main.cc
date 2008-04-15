@@ -64,6 +64,45 @@ void writeStr(const char *str)
   while ((c = *str++))
     writeChar(c);
 }
+
+void writeHex(unsigned int n)
+{
+    bool noZeroes = true;
+
+    int i;
+    unsigned int tmp;
+    for (i = 28; i > 0; i -= 4)
+    {
+        tmp = (n >> i) & 0xF;
+        if (tmp == 0 && noZeroes)
+        {
+            continue;
+        }
+    
+        if (tmp >= 0xA)
+        {
+            noZeroes = false;
+            writeChar (tmp-0xA+'a');
+        }
+        else
+        {
+            noZeroes = false;
+            writeChar( tmp+'0');
+        }
+    }
+  
+    tmp = n & 0xF;
+    if (tmp >= 0xA)
+    {
+        writeChar (tmp-0xA+'a');
+    }
+    else
+    {
+        writeChar( tmp+'0');
+    }
+
+}
+
 extern "C" int __start();
 extern "C" int start()
 {
@@ -73,6 +112,7 @@ extern "C" int start()
   asm volatile( "b __start" );
   for( ;; );
 }
+
 
 extern "C" void arm_swint_handler()
 {

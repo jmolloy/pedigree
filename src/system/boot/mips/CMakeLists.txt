@@ -27,7 +27,8 @@ include_directories(.)
 add_custom_target(autogen.h ALL perl
 ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/mkheader.pl
 ${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel
-                  DEPENDS kernel)
+                  DEPENDS kernel
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips)
 
 add_executable(bootloader ${BOOT_SRC})
 add_dependencies(bootloader autogen.h)

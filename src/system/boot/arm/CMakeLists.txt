@@ -27,6 +27,7 @@ include_directories(.)
 add_custom_target(autogen.h ALL perl
 ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/mkheader.pl
 ${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm
                   DEPENDS kernel)
 
 add_executable(bootloader ${BOOT_SRC})
