@@ -1,3 +1,0 @@
-#!/bin/bash
-
-qemu-system-x86_64 -smp 2 -fda built/floppy.img -serial /dev/tty

@@ -29,7 +29,7 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
     `mcopy -Do -i  ./floppy.img src/system/kernel/kernel ::/`;
   } else {
     `mkdir -p /tmp/pedigree-image`;
-    `cp ../build/images/floppy_ext2.img ./floppy.img`;
+    `cp ../images/floppy_ext2.img ./floppy.img`;
     `sudo /sbin/losetup /dev/loop0 ./floppy.img`;
     `sudo mount -o loop /dev/loop0 /tmp/pedigree-image`;
     `sudo cp src/system/kernel/kernel /tmp/pedigree-image/kernel`;
@@ -40,7 +40,7 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
 
 # How about a mips target?
 if ($compiler =~ m/mips64el-elf/) {
-  `../build/compilers/mips64el-elf/bin/objcopy src/system/boot/mips/bootloader -O srec ./bootloader.srec`;
+  `../compilers/mips64el-elf/bin/objcopy src/system/boot/mips/bootloader -O srec ./bootloader.srec`;
   `cp src/system/boot/mips/bootloader ./bootloader`;
 }
 

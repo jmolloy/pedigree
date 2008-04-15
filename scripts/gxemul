@@ -1,0 +1,2 @@
+#!/bin/bash
+gxemul -E evbmips -e malta -x -O bootloader.srec

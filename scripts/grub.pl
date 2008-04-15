@@ -56,7 +56,7 @@ sub extract {
 sub patch_grub
 {
   print "\e[32mPatching grub...\e[0m\n";
-  `cd compilers/tmp_build/grub-$GRUB_VERSION && patch -p1 <../../../grub_amd64.patch`;
+  `cd compilers/tmp_build/grub-$GRUB_VERSION && patch -p1 <../../grub_amd64.patch`;
   return 1 if $? != 0;
 
   return 0;

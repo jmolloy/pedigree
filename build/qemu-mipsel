@@ -1,1 +1,0 @@
-qemu-system-mipsel -cpu 34Kf -M malta -nographic -kernel built/bootloader

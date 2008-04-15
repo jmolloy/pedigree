@@ -106,7 +106,7 @@ sub extract {
 sub patch_amd64
 {
   print "\e[32mPatching gcc...\e[0m\n";
-  `patch ./compilers/tmp_build/gcc-$COMPILER_VERSION/gcc/config.gcc <gcc_amd64.patch`;
+  `patch ./compilers/tmp_build/gcc-$COMPILER_VERSION/gcc/config.gcc <./compilers/gcc_amd64.patch`;
   return 1 if $? != 0;
 	
   return 0;

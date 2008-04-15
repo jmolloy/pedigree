@@ -129,11 +129,11 @@ set(CMAKE_SHARED_LIBRARY_CXX_FLAGS)
 
 # Set the C and C++ compiler lines.
 if(COLORGCC)
-  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/build/${COMPILER}-g++)
-  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/build/${COMPILER}-gcc)
+  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/scripts/${COMPILER}-g++)
+  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/scripts/${COMPILER}-gcc)
 else(COLORGCC)
-  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-c++)
-  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-gcc)
+  set(CMAKE_CXX_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/${COMPILER}-c++)
+  set(CMAKE_C_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/${COMPILER}-gcc)
 endif(COLORGCC)
 
 set(CMAKE_CXX_FLAGS ${PEDIGREE_CXXFLAGS})
@@ -144,12 +144,12 @@ set(CMAKE_ASM-ATT_FLAGS ${PEDIGREE_ASFLAGS})
 if(X86_COMMON)
   set(CMAKE_ASM-ATT_COMPILER nasm)
 else(X86_COMMON)
-  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/build/compilers/bin/${COMPILER}-as)
+  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/${COMPILER}-as)
 endif(X86_COMMON)
 
 # Create a target used for checking if a compiler is present.
-add_custom_target(check_compiler ALL perl ./checkBuildSystem.pl ${COMPILER}
-                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/build)
+add_custom_target(check_compiler ALL perl ./scripts/checkBuildSystem.pl ${COMPILER}
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR})
 
 # Recurse into the Kernel directory first.
 add_subdirectory(src/system/kernel)

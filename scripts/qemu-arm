@@ -1,0 +1,4 @@
+#!/bin/sh
+
+qemu-system-arm -M versatilepb -kernel bootloader -serial /dev/tty
+#qemu-system-arm -M integratorcp -kernel bootloader -serial /dev/tty

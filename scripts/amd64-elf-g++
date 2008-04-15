@@ -196,7 +196,7 @@ $0 =~ m%(.*)/(.*)$%;
 $progName = $2 || $0;
 $dir = $1 || die;
 
-$compiler = "$dir/compilers/bin/$progName" || die;
+$compiler = "$dir/../compilers/bin/$progName" || die;
 
 # Get the terminal type. 
 $terminal = $ENV{"TERM"} || "dumb";
