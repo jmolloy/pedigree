@@ -46,6 +46,6 @@ if ($compiler =~ m/mips64el-elf/) {
 
 # How about an arm target?
 if ($compiler =~ m/arm-elf/) {
-  `cp src/system/boot/mips/bootloader ./bootloader`;
+  `cp src/system/boot/arm/bootloader ./bootloader`;
 }
 exit 0;
