@@ -65,7 +65,7 @@ protected:
 #include <core/processor/mips_common/Disassembler.h>
 #endif
 #ifdef ARM926E
-#include <core/processor/arm_926e/Disassembler.h>
+#include <core/processor/arm_common/Disassembler.h>
 #endif
 
 #endif

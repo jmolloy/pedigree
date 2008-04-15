@@ -14,35 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#
-# NOTE: To ensure proper scoping, the add_subdirectory calls must come BEFORE
-#       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
-#       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
-#
-
-if(MIPS_AU1500)
-  add_subdirectory(au1500)
-endif(MIPS_AU1500)
-
-if(MIPS_MALTA)
-  add_subdirectory(malta)
-endif(MIPS_MALTA)
-
 if(MIPS_COMMON)
-  add_subdirectory(mips_common)
+  add_subdirectory(mips)
 endif(MIPS_COMMON)
 
-if(X86_COMMON)
-  add_subdirectory(x86_common)
-endif(X86_COMMON)
-
-if(ARM_VERSATILE)
-  add_subdirectory(arm_versatile)
-endif(ARM_VERSATILE)
-
 if(ARM_COMMON)
-  add_subdirectory(arm_common)
+  add_subdirectory(arm)
 endif(ARM_COMMON)
-
-# This is required to push any changes the add_subdirectory commands may have made up to parent scope.
-add_kernel_src(machine)

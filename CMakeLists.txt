@@ -71,8 +71,8 @@ endif(MIPS_COMMON)
 if(ARM_COMMON)
 
   set(BOOTLOADER_BUILT bootloader)
-  set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m32")
-  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
+  set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib")
+  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib")
   set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-arm.ld -mxgot")
   
 endif(ARM_COMMON)

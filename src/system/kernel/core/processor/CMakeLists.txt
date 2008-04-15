@@ -44,10 +44,18 @@ if(X86_COMMON)
   add_subdirectory(x86_common)
 endif(X86_COMMON)
 
-if(NOT MIPS_COMMON)
+if(ARM926E)
+  add_subdirectory(arm_926e)
+endif(ARM926E)
+
+if(ARM_COMMON)
+  add_subdirectory(arm_common)
+endif(ARM_COMMON)
+
+if(NOT MIPS_COMMON AND NOT ARM_COMMON)
   add_kernel_src(core/processor
                  IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
-else(NOT MIPS_COMMON)
+else(NOT MIPS_COMMON AND NOT ARM_COMMON)
   add_kernel_src(core/processor
                  IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
-endif(NOT MIPS_COMMON)
+endif(NOT MIPS_COMMON AND NOT ARM_COMMON)

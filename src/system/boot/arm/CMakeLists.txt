@@ -14,35 +14,20 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#
-# NOTE: To ensure proper scoping, the add_subdirectory calls must come BEFORE
-#       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
-#       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
-#
+#########################################################################################
+# Sources list.
+set(BOOT_SRC main.cc Elf32.cc arm_support.s autogen.h)
 
-if(MIPS_AU1500)
-  add_subdirectory(au1500)
-endif(MIPS_AU1500)
+#########################################################################################
+# Script begin.
 
-if(MIPS_MALTA)
-  add_subdirectory(malta)
-endif(MIPS_MALTA)
+include_directories(.)
 
-if(MIPS_COMMON)
-  add_subdirectory(mips_common)
-endif(MIPS_COMMON)
+# Add an extra target to create the bootloader.
+add_custom_command(OUTPUT autogen.h
+                   COMMAND perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/mkheader.pl)
 
-if(X86_COMMON)
-  add_subdirectory(x86_common)
-endif(X86_COMMON)
-
-if(ARM_VERSATILE)
-  add_subdirectory(arm_versatile)
-endif(ARM_VERSATILE)
-
-if(ARM_COMMON)
-  add_subdirectory(arm_common)
-endif(ARM_COMMON)
-
-# This is required to push any changes the add_subdirectory commands may have made up to parent scope.
-add_kernel_src(machine)
+add_executable(bootloader ${BOOT_SRC})
+add_dependencies(bootloader kernel)
+set_target_properties(bootloader PROPERTIES LINK_FLAGS
+                      "-T ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/link-arm.ld")
