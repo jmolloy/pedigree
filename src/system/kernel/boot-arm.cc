@@ -6,3 +6,4 @@ extern "C" int start(BootstrapStruct_t *bs)
   _main(bs);
   return 0x13371337;
 }
+//mfj

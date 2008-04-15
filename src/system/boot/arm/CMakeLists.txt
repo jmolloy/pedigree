@@ -24,11 +24,12 @@ set(BOOT_SRC main.cc Elf32.cc arm_support.s autogen.h)
 include_directories(.)
 
 # Add an extra target to create the bootloader.
-add_custom_command(OUTPUT autogen.h
-                   COMMAND perl
-                   ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/mkheader.pl ${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel)
+add_custom_target(autogen.h ALL perl
+${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/mkheader.pl
+${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel
+                  DEPENDS kernel)
 
 add_executable(bootloader ${BOOT_SRC})
-add_dependencies(bootloader kernel)
+add_dependencies(bootloader autogen.h)
 set_target_properties(bootloader PROPERTIES LINK_FLAGS
                       "-T ${PEDIGREE_SOURCE_DIR}/src/system/boot/arm/link-arm.ld")
