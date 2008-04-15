@@ -25,7 +25,8 @@ include_directories(.)
 
 # Add an extra target to create the bootloader.
 add_custom_command(OUTPUT autogen.h
-                   COMMAND perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/mkheader.pl)
+                   COMMAND perl
+                   ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/mkheader.pl ${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel)
 
 add_executable(bootloader ${BOOT_SRC})
 add_dependencies(bootloader kernel)
