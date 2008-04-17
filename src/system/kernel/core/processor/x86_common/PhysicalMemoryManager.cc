@@ -48,7 +48,7 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
   m_PageStack.free(page);
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
-                                                    size_t count,
+                                                    size_t cPages,
                                                     size_t pageConstraints,
                                                     size_t Flags,
                                                     physical_uintptr_t start)
@@ -61,34 +61,39 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
 
     // Allocate the virtual address space
     uintptr_t vAddress;
-    if (m_MemoryRegions.allocate(count * PhysicalMemoryManager::getPageSize(),
+    if (m_MemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
                                  vAddress)
          == false)
       return false;
 
     // Map the physical memory into the allocated space
     VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
-    for (size_t i = 0;i < count;i++)
+    for (size_t i = 0;i < cPages;i++)
       if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
                                   reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
                                   Flags)
           == false)
       {
-        m_MemoryRegions.free(vAddress, count * PhysicalMemoryManager::getPageSize());
+        m_MemoryRegions.free(vAddress, cPages * PhysicalMemoryManager::getPageSize());
         return false;
       }
 
+    // Set the memory-region's members
     Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
     Region.m_PhysicalAddress = start;
-    Region.m_Size = count * PhysicalMemoryManager::getPageSize();
+    Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
 
     // TODO: Remove the memory from the m_PhysicalRanges range-list (if desired/possible)
+
+    // Add to the list of memory-regions
+    PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
     return true;
   }
   else
   {
     // TODO
     // TODO: Allocate the virtual address space
+    // TODO: Add to the list of memory-regions
   }
   return false;
 }

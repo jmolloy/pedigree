@@ -85,8 +85,8 @@ uint64_t Rtc::getTickCount()
 
 bool Rtc::initialise()
 {
-  // Allocate the I/O port range
-  if (m_IoPort.allocate(0x70, 2, "CMOS") == false)
+  // Allocate the I/O port range"CMOS"
+  if (m_IoPort.allocate(0x70, 2) == false)
     return false;
 
   // Register the irq
@@ -183,7 +183,7 @@ void Rtc::uninitialise()
 }
 
 Rtc::Rtc()
-  : m_IoPort(), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(0), m_Month(0),
+  : m_IoPort("CMOS"), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(0), m_Month(0),
     m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0)
 {
 }

@@ -20,6 +20,9 @@
 #include <Scrollable.h>
 #include <Backtrace.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 /**
  * Allows the tracing of an execution path, single stepping and continuing to breakpoints,
  * while displaying a disassembly, the target CPU state and a stack backtrace.
@@ -120,5 +123,7 @@ private:
   int m_nExec;
   int m_nInterface;
 };
+
+/** @} */
 
 #endif

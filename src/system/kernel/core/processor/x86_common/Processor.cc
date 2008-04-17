@@ -15,11 +15,6 @@
  */
 #include <processor/Processor.h>
 
-void Processor::halt()
-{
-  asm volatile("hlt");
-}
-
 size_t Processor::getDebugBreakpointCount()
 {
   return 4;
@@ -156,6 +151,11 @@ void Processor::writeMachineSpecificRegister(uint32_t index, uint64_t value)
 {
   uint32_t eax = value, edx = value >> 32;
   asm volatile("wrmsr" :: "a" (eax), "d" (edx), "c" (index));
+}
+
+void Processor::invalidate(void *pAddress)
+{
+  asm volatile("invlpg (%0)" :: "a" (pAddress));
 }
 
 void Processor::cpuid(uint32_t inEax,

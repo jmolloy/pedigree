@@ -28,6 +28,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
+  /** VirtualAddressSpace::getKernelAddressSpace needs access to m_KernelSpace */
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   public:
     //

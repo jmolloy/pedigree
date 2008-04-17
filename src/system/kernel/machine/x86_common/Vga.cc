@@ -15,6 +15,8 @@
  */
 #include "Vga.h"
 #include <utilities/utility.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/PhysicalMemoryManager.h>
 
 /// \warning 80x50 and 90x60 modes don't work, because we don't have an 8x8 font to install.
 uint8_t g_80x25_text[] =
@@ -107,7 +109,8 @@ unsigned int g_pModeHeights[] = {25,50,30,60,0};
 #define NUM_MODES 4
 
 X86Vga::X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase) :
-  m_RegisterPort(),
+  m_RegisterPort("VGA controller"),
+  m_Framebuffer("VGA framebuffer"),
   m_pFramebuffer( reinterpret_cast<uint8_t*> (nFramebufferBase) ),
   m_nWidth(80),
   m_nHeight(25),
@@ -207,12 +210,18 @@ void X86Vga::restoreMode()
 
 void X86Vga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
-  memcpy (m_pFramebuffer, pBuffer, nBufLen);
+  if (m_Framebuffer == true)
+    memcpy(m_Framebuffer.virtualAddress(), pBuffer, nBufLen);
+  else
+    memcpy(m_pFramebuffer, pBuffer, nBufLen);
 }
 
 void X86Vga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
-  memcpy (pBuffer, m_pFramebuffer, nBufLen);
+  if (m_Framebuffer == true)
+    memcpy(pBuffer, m_Framebuffer.virtualAddress(), nBufLen);
+  else
+    memcpy(pBuffer, m_pFramebuffer, nBufLen);
 }
 
 void X86Vga::moveCursor (size_t nX, size_t nY)
@@ -231,7 +240,16 @@ void X86Vga::moveCursor (size_t nX, size_t nY)
 bool X86Vga::initialise()
 {
   // TODO: We should allocate the value passed to the constructor
-  return m_RegisterPort.allocate(VGA_BASE, 0x1B, "VGA controller");
+  if (m_RegisterPort.allocate(VGA_BASE, 0x1B) == false)
+    return false;
+
+  // Allocate the Video RAM
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  return physicalMemoryManager.allocateRegion(m_Framebuffer,
+                                              2,
+                                              PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                              VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::WriteThrough,
+                                              reinterpret_cast<uintptr_t>(m_pFramebuffer));
 }
 
 bool X86Vga::setMode(int nMode)

@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 /**
  * Debugger command that causes the debugger to quit.
  */
@@ -53,5 +56,7 @@ public:
   }
   
 };
+
+/** @} */
 
 #endif

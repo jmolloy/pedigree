@@ -25,6 +25,7 @@
 /** @addtogroup kernel
  * @{ */
 
+/** Add a notice to the log */
 #define NOTICE(text) \
   do \
   { \
@@ -32,6 +33,7 @@
   } \
   while (0)
 
+/** Add a warning message to the log */
 #define WARNING(text) \
   do \
   { \
@@ -39,6 +41,7 @@
   } \
   while (0)
 
+/** Add a error message to the log */
 #define ERROR(text) \
   do \
   { \
@@ -46,6 +49,7 @@
   } \
   while (0)
 
+/** Add a fatal message to the log */
 #define FATAL(text) \
   do \
   { \
@@ -74,7 +78,11 @@ enum Modifier
   Flush
 };
 
-/** Implements a kernel log that can be used to debug problems. */
+/** Implements a kernel log that can be used to debug problems.
+ *\brief the kernel's log
+ *\note You should use the NOTICE, WARNING, ERROR and FATAL macros to write something
+ *      into the log. Direct access to the log should only be needed to rethrieve
+ *      the entries from the log (within the debugger's log viewer for example). */
 class Log
 {
 public:
@@ -86,6 +94,43 @@ public:
     Error,
     Fatal
   };
+
+  /** Retrieves the static Log instance.
+   *\return instance of the log class */
+  inline static Log &instance()
+    {return m_Instance;}
+
+  /** Adds an entry to the log.
+   *\param[in] str the null-terminated ASCII string that should be added */
+  Log &operator<< (const char *str);
+  /** Adds an entry to the log
+   *\param[in] str the null-terminated ASCII string that should be added */
+  inline Log &operator<< (char *str)
+    {return (*this) << (reinterpret_cast<const char*>(str));}
+  /** Adds an entry to the log
+   *\param[in] b boolean value */
+  Log &operator<< (bool b);
+  /** Adds an entry to the log (integer type)
+   *\param[in] n the number */
+  template<class T>
+  Log &operator << (T n);
+
+  /** Starts an entry in the log.
+   *\todo This function should gain and release spinlocks, depending on level. */
+  Log &operator<< (SeverityLevel level);
+  /** Changes the number type between hex and decimal. */
+  Log &operator<< (NumberType type);
+  /** Modifier */
+  Log &operator<< (Modifier type);
+
+  /** Get the number of static entries in the log.
+   *\return the number of static entries in the log */
+  inline size_t getStaticEntryCount() const
+    {return m_StaticEntries;}
+  /** Get the number of dynamic entries in the log
+   *\return the number of dynamic entries in the log */
+  inline size_t getDynamicEntryCount() const
+    {return m_DynamicLog.count();}
 
   /** Stores an entry in the log.
    *\param[in] T type of the log's text */
@@ -109,55 +154,24 @@ public:
   /** Type of a dynamic log entry (memory-management involved) */
   typedef LogEntry<String> DynamicLogEntry;
 
-  /** Retrieves the static Log instance. */
-  inline static Log &instance()
-  {
-    return m_Instance;
-  }
-
-  /** Adds an entry to the log. */
-  Log &operator<< (const char *str);
-  inline Log &operator<< (char *str)
-    {return (*this) << (reinterpret_cast<const char*>(str));}
-  Log &operator<< (bool b);
-  template<class T>
-  Log &operator << (T n);
-
-  /** Starts an entry in the log.
-   *\todo This function should gain and release spinlocks, depending on level. */
-  Log &operator<< (SeverityLevel level);
-  /** Changes the number type between hex and decimal. */
-  Log &operator<< (NumberType type);
-  /** Modifier */
-  Log &operator<< (Modifier type);
-
   /** Returns the n'th static log entry, counting from the start. */
-  const StaticLogEntry &getStaticEntry(size_t n) const
-  {
-    return m_StaticLog[n];
-  }
+  inline const StaticLogEntry &getStaticEntry(size_t n) const
+    {return m_StaticLog[n];}
   /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
-  const DynamicLogEntry &getDynamicEntry(size_t n) const
-  {
-    return *m_DynamicLog[n - m_StaticEntries];
-  }
-
-  /** Returns the number of static entries in the log. */
-  size_t getStaticEntryCount() const
-  {
-    return m_StaticEntries;
-  }
-  /** Return the number of dynamic entries in the log */
-  size_t getDynamicEntryCount() const
-  {
-    return m_DynamicLog.count();
-  }
+  inline const DynamicLogEntry &getDynamicEntry(size_t n) const
+    {return *m_DynamicLog[n - m_StaticEntries];}
 
 private:
   /** Default constructor - does nothing. */
   Log();
   /** Default destructor - does nothing */
   ~Log();
+  /** Copy-constructor
+   *\note NOT implemented */
+  Log(const Log &);
+  /** Assignment operator
+   *\note NOT implemented */
+  Log &operator = (const Log &);
 
   /** Static buffer of log messages. */
   StaticLogEntry m_StaticLog[LOG_ENTRIES];

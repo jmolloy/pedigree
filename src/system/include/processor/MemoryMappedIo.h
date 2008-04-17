@@ -19,6 +19,7 @@
 #include <processor/types.h>
 #include <processor/IoBase.h>
 #include <processor/MemoryRegion.h>
+#include <processor/Processor.h>
 #include <utilities/utility.h>
 
 /** @addtogroup kernelprocessor
@@ -31,7 +32,8 @@ class MemoryMappedIo : public IoBase,
 {
   public:
     /** The default constructor */
-    inline MemoryMappedIo(){}
+    inline MemoryMappedIo(const char *pName)
+      : IoBase(), MemoryRegion(pName){}
     /** The destructor frees the allocated ressources */
     inline virtual ~MemoryMappedIo(){}
 
@@ -77,37 +79,77 @@ size_t MemoryMappedIo::size() const
 }
 uint8_t MemoryMappedIo::read8(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (offset >= size())
+      Processor::halt();
+  #endif
+
   return *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset));
 }
 uint16_t MemoryMappedIo::read16(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 1) >= size())
+      Processor::halt();
+  #endif
+
   return *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset));
 }
 uint32_t MemoryMappedIo::read32(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 3) >= size())
+      Processor::halt();
+  #endif
+
   return *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset));
 }
 #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
   uint64_t MemoryMappedIo::read64(size_t offset)
   {
+    #if defined(ADDITIONAL_CHECKS)
+      if ((offset + 7) >= size())
+        Processor::halt();
+    #endif
+
     return *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset));
   }
 #endif
 void MemoryMappedIo::write8(uint8_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (offset >= size())
+      Processor::halt();
+  #endif
+
   *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
 void MemoryMappedIo::write16(uint16_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 1) >= size())
+      Processor::halt();
+  #endif
+
   *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
 void MemoryMappedIo::write32(uint32_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 3) >= size())
+      Processor::halt();
+  #endif
+
   *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
 #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
   void MemoryMappedIo::write64(uint64_t value, size_t offset)
   {
+    #if defined(ADDITIONAL_CHECKS)
+      if ((offset + 7) >= size())
+        Processor::halt();
+    #endif
+
     *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset)) = value;
   }
 #endif

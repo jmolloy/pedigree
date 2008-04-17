@@ -18,26 +18,21 @@
 #include "BootstrapInfo.h"
 
 #ifdef DEBUGGER
-#include <Debugger.h>
+  #include <Debugger.h>
 #endif
 
 #include <Log.h>
-#include <Elf32.h>
-
 #include <utilities/StaticString.h>
+#include "cppsupport.h"                   // initialiseConstructors()
+#include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
+#include <machine/Machine.h>              // Machine::initialise()
 
-// initialiseConstructors()
-#include "cppsupport.h"
-// Processor::initialise1(), Processor::initialise2()
-#include <processor/Processor.h>
-// Machine::initialise()
-#include <machine/Machine.h>
-
-#ifdef X64
-#include <Elf64.h>
-Elf64 elf("kernel");
-#else
-Elf32 elf("kernel");
+#if defined(BITS_64)
+  #include <Elf64.h>
+  Elf64 elf("kernel");
+#elif defined(BITS_32)
+  #include <Elf32.h>
+  Elf32 elf("kernel");
 #endif
 FileLoader *g_pKernel = &elf;
 

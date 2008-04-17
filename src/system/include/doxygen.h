@@ -67,3 +67,13 @@
  * mips-common machine-specific kernel
  *\brief mips-common machine-specific kernel
  *  @ingroup kernelmachine */
+
+/** @defgroup kerneldebugger debugger
+ * the kernel debugger
+ *\brief the kernel debugger
+ * @ingroup kernel */
+
+/** @defgroup kerneldebuggercommands commands
+ * kernel debugger commands
+ *\brief kernel debugger commands
+ * @ingroup kerneldebugger */

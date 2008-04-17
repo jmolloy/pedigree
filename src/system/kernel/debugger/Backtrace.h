@@ -21,6 +21,9 @@
 #include <processor/StackFrame.h>
 #include <utilities/StaticString.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #define MAX_STACK_FRAMES 20
 
 class Backtrace
@@ -85,5 +88,7 @@ private:
    */
   size_t m_nStackFrames;
 };
+
+/** @} */
 
 #endif

@@ -33,8 +33,8 @@ class MemoryRegion
   friend class X86CommonPhysicalMemoryManager;
   public:
     /** The default constructor does nothing  */
-    inline MemoryRegion()
-      : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0){}
+    inline MemoryRegion(const char *pName)
+      : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0), m_pName(pName){}
     /** The destructor does nothing */
     inline virtual ~MemoryRegion(){}
 
@@ -56,6 +56,12 @@ class MemoryRegion
     inline size_t size() const
     {
       return m_Size;
+    }
+    /** Get the name of the memory-region
+     *\return pointer to the name of the memory-region */
+    inline const char *name() const
+    {
+      return m_pName;
     }
 
     inline operator bool() const
@@ -92,6 +98,8 @@ class MemoryRegion
     physical_uintptr_t m_PhysicalAddress;
     /** The size of the memory-region in bytes */
     size_t m_Size;
+    /** User-visible name of the memory-region */
+    const char *m_pName;
 };
 
 /** @} */

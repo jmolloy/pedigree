@@ -51,6 +51,42 @@ namespace DebugFlags
 class Processor
 {
   public:
+    /** Identifier of a processor */
+    typedef size_t Id;
+
+    /** Information about one specific processor in a system with one or more than
+     *  one processor. */
+    class Information
+    {
+      public:
+        /** Get the processor identifier
+         *\return identifier of the processor */
+        inline Id id()
+          {return m_ProcessorId;}
+
+        /** The destructor does nothing */
+        inline virtual ~Information(){}
+      protected:
+        /** Construct a Processor::Information object
+         *\param[in] ProcessorId Identifier of the processor */
+        inline Information(Processor::Id ProcessorId)
+          : m_ProcessorId(ProcessorId){}
+
+      private:
+        /** Default constructor
+         *\note NOT implemented */
+        Information();
+        /** Copy-constructor
+         *\note NOT implemented */
+        Information(const Information &);
+        /** Assignment operator
+         *\note NOT implemented */
+        Information &operator = (const Information &);
+
+        /** Identifier of this processor */
+        Processor::Id m_ProcessorId;
+    };
+
     /** Initialises the processor specific interface. After this function call the whole
      *  processor-specific interface is initialised. Note though, that only the
      *  bootstrap processor is started. Multiprocessor/-core facilities are available after
@@ -87,7 +123,7 @@ class Processor
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
     /** Halt this processor */
-    static void halt();
+    inline static void halt() ALWAYS_INLINE;
 
     /** Return the (total) number of breakpoints
      *\return (total) number of breakpoints */
@@ -135,6 +171,11 @@ class Processor
        *\param[in] index the register index
        *\param[in] value the new value of the register */
       static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
+      /** Invalidate the TLB entry containing a specific virtual address
+       *\param[in] pAddress the specific virtual address
+       *\todo Figure out if we want to flush the TLB of every processor or if
+       *      this should be handled by the upper layers */
+      static void invalidate(void *pAddress);
       /** Executes the CPUID machine instruction
        *\param[in] inEax eax before the CPUID instruction
        *\param[in] inEcx ecx before the CPUID instruction
@@ -160,6 +201,7 @@ class Processor
 
     /** Populate 'str' with a string describing the characteristics of this processor. */
     static void identify(HugeStaticString &str);
+
   private:
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
@@ -169,6 +211,8 @@ class Processor
 
 #if defined(X86_COMMON)
   #include <processor/x86_common/Processor.h>
+#elif defined(MIPS_COMMON)
+  #include <processor/mips_common/Processor.h>
 #endif
 
 #endif

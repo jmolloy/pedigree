@@ -15,6 +15,7 @@
  */
 #include <panic.h>
 #include <utilities/utility.h>
+#include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
 #include "VirtualAddressSpace.h"
 
@@ -119,10 +120,12 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
     return false;
 
+  // Flush the TLB (if we are marking a page as swapped-out)
+  if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
+    Processor::invalidate(virtualAddress);
+
   // Map the page
   *pageTableEntry = physicalAddress | Flags;
-
-  // TODO: Might need a TLB flush (if we are mapping a swapped-out page again)
 
   return true;
 }
@@ -170,10 +173,11 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
     return;
   }
 
+  // Invalidate the TLB entry
+  Processor::invalidate(virtualAddress);
+
   // Unmap the page
   *pageTableEntry = 0;
-
-  // TODO: definitly needs a TLB flush
 }
 
 bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddress,

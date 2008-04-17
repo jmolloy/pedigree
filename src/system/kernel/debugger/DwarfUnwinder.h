@@ -16,6 +16,9 @@
 #ifndef DWARFUNWINDER_H
 #define DWARFUNWINDER_H
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #include <compiler.h>
 #include <processor/state.h>
 #include <processor/types.h>
@@ -71,5 +74,7 @@ class DwarfUnwinder
      */
     size_t m_nLength;
 };
+
+/** @} */
 
 #endif

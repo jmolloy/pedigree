@@ -16,34 +16,66 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_IO_H
 #define KERNEL_PROCESSOR_X86_COMMON_IO_H
 
+#include <processor/Processor.h>
+
 uint8_t IoPort::read8(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (offset >= m_Size)
+      Processor::halt();
+  #endif
+
   uint8_t value;
   asm volatile("inb %%dx, %%al":"=a" (value):"d" (m_IoPort + offset));
   return value;
 }
 uint16_t IoPort::read16(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 1) >= m_Size)
+      Processor::halt();
+  #endif
+
   uint16_t value;
   asm volatile("inw %%dx, %%ax":"=a" (value):"d" (m_IoPort + offset));
   return value;
 }
 uint32_t IoPort::read32(size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 3) >= m_Size)
+      Processor::halt();
+  #endif
+
   uint32_t value;
   asm volatile("in %%dx, %%eax":"=a" (value):"d" (m_IoPort + offset));
   return value;
 }
 void IoPort::write8(uint8_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (offset >= m_Size)
+      Processor::halt();
+  #endif
+
   asm volatile("outb %%al, %%dx"::"d" (m_IoPort + offset), "a" (value));
 }
 void IoPort::write16(uint16_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 1) >= m_Size)
+      Processor::halt();
+  #endif
+
   asm volatile("outw %%ax, %%dx"::"d" (m_IoPort + offset), "a" (value));
 }
 void IoPort::write32(uint32_t value, size_t offset)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (offset >= m_Size)
+      Processor::halt();
+  #endif
+
   asm volatile("out %%eax, %%dx"::"d" (m_IoPort + offset), "a" (value));
 }
 

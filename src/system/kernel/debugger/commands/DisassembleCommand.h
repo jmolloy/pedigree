@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 class DebuggerIO;
 
 class DisassembleCommand : public DebuggerCommand
@@ -41,5 +44,7 @@ public:
    */
   const NormalStaticString getString();
 };
+
+/** @} */
 
 #endif

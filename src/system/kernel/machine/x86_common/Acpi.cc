@@ -142,7 +142,7 @@ void Acpi::initialise()
 }
 
 Acpi::Acpi()
-  : m_bValid(0), m_pRsdtPointer(0), m_AcpiMemoryRegion(), m_pRsdt(0), m_pFacp(0)
+  : m_bValid(0), m_pRsdtPointer(0), m_AcpiMemoryRegion("ACPI"), m_pRsdt(0), m_pFacp(0)
   #if defined(APIC)
     , m_pApic(0), m_bValidApicInfo(false), m_bHasPICs(false), m_LocalApicAddress(0), m_IoApics()
     #if defined(MULTIPROCESSOR)
@@ -306,8 +306,7 @@ Acpi::RsdtPointer *Acpi::find(void *pMemory, size_t sMemory)
   while (reinterpret_cast<uintptr_t>(pRdstPointer) < (reinterpret_cast<uintptr_t>(pMemory) + sMemory))
   {
     if (pRdstPointer->signature == 0x2052545020445352ULL &&
-        checksum(pRdstPointer)
-        == true)
+        checksum(pRdstPointer) == true)
       return pRdstPointer;
     pRdstPointer = adjust_pointer(pRdstPointer, 16);
   }

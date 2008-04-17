@@ -20,7 +20,10 @@
  * @{ */
 
 /** Global != operator is provided for every type that provides a == operator
- *\brief Global != operator for types with overloaded == operator */
+ *\brief Global != operator for types with overloaded == operator
+ *\param[in] x1 first operand
+ *\param[in] x2 second operand
+ *\return true, if the objects are not equal, false otherwise */
 template<class T1, class T2>
 bool operator != (const T1 &x1, const T2 &x2)
 {
@@ -28,7 +31,9 @@ bool operator != (const T1 &x1, const T2 &x2)
 }
 /** Global postincrement operator is provided for every type that provides a
  *  preincrement operator.
- *\brief Global postincrement operator for types with overloaded preincrement operator */
+ *\brief Global postincrement operator for types with overloaded preincrement operator
+ *\param[in] x object
+ *\return original object */
 template<class T>
 T operator ++ (T &x, int)
 {
@@ -38,7 +43,9 @@ T operator ++ (T &x, int)
 }
 /** Global postdecrement operator is provided for every type that provides a
  *  predecrement operator.
- *\brief Global postdecrement operator for types with overloaded predecrement operator */
+ *\brief Global postdecrement operator for types with overloaded predecrement operator
+ *\param[in] x object
+ *\return original object */
 template<class T>
 T operator -- (T &x, int)
 {

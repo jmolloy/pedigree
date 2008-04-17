@@ -19,6 +19,9 @@
 #include <DwarfState.h>
 #include <processor/types.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 // These three are different - they have a delta/register number stored in the lower 6 bits.
 #define DW_CFA_advance_loc        0x40
 #define DW_CFA_offset             0x80
@@ -123,5 +126,7 @@ class DwarfCfiAutomaton
      */
     uintptr_t m_nStartingPc;
 };
+
+/** @} */
 
 #endif

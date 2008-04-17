@@ -17,6 +17,7 @@
 #define KERNEL_PROCESSOR_PHYSICALMEMORYMANAGER_H
 
 #include <compiler.h>
+#include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/MemoryRegion.h>
 
@@ -51,7 +52,8 @@ class PhysicalMemoryManager
 
     /** Get the size of one page
      *\return size of one page in bytes */
-    inline static size_t getPageSize(){return PAGE_SIZE;}
+    inline static size_t getPageSize()
+      {return PAGE_SIZE;}
     /** Allocate a 'normal' page. Normal means that the page does not need to fullfill any
      *  constraints. These kinds of pages can be used to map normal memory into a virtual
      *  address space.
@@ -63,21 +65,57 @@ class PhysicalMemoryManager
 
     /** Allocate a memory-region with specific constraints the pages need to fullfill.
      *\param[in] Region reference to the MemoryRegion object
-     *\param[in] count the number of pages to allocate for the MemoryRegion object
+     *\param[in] cPages the number of pages to allocate for the MemoryRegion object
      *\param[in] pageConstraints the constraints the pages have to fullfill
+     *\param[in] Flags flags from the VirtualAddressSpace class namespace
      *\param[in] start the physical address of the beginning of the region (optional)
      *\return true, if a valid MemoryRegion object is created, false otherwise */
     virtual bool allocateRegion(MemoryRegion &Region,
-                                size_t count,
+                                size_t cPages,
                                 size_t pageConstraints,
                                 size_t Flags,
                                 physical_uintptr_t start = -1) = 0;
 
+    /** Structure containing information about one memory region. */
+    struct MemoryRegionInfo
+    {
+      /** Constructor initialises all structure members
+       *\param[in] pVirtualAddress virtual address of the beginning of the memory region
+       *\param[in] PhysicalAddress physical address of the beginning of the memory region (or 0)
+       *\param[in] sAddress size (in bytes) of the memory region
+       *\param[in] Name user-visible name of the memory region */
+      inline MemoryRegionInfo(void *VirtualAddress,
+                              physical_uintptr_t PhysicalAddress,
+                              size_t size,
+                              const char *name)
+        : pVirtualAddress(VirtualAddress), physicalAddress(PhysicalAddress), sVirtualAddress(size), pName(name){}
+
+      /** Virtual address of the memory region */
+      void *pVirtualAddress;
+      /** Physical address of the memory region (or 0) */
+      physical_uintptr_t physicalAddress;
+      /** Size (in bytes) of the memory region */
+      size_t sVirtualAddress;
+      /** Pointer to the user-visible name of the memory region */
+      const char *pName;
+    };
+
+    /** Copy the memory region list
+     *\param[in,out] MemoryRegions container for the copy of the memory regions */
+    void allocateMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
+      /** Free the memory region list created with allocateMemoryRegionList.
+       *\param[in,out] MemoryRegions container of the copy of the memory regions */
+    void freeMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
+
   protected:
     /** The constructor */
-    inline PhysicalMemoryManager(){}
+    inline PhysicalMemoryManager()
+      : m_MemoryRegions(){}
     /** The destructor */
     inline virtual ~PhysicalMemoryManager(){}
+
+    /** List of memory-regions */
+    Vector<MemoryRegion*> m_MemoryRegions;
 
   private:
     /** The copy-constructor

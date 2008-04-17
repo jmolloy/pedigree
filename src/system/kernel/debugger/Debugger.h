@@ -22,6 +22,9 @@
 #include <processor/InterruptManager.h>
 #include <LocalIO.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #define ASSERT_FAILED_SENTINEL 0xa55e4710 // A cack-handed way of writing "assertio(n)".
 
 /**
@@ -76,6 +79,8 @@ private:
    */
   static Debugger m_Instance;
 };
+
+/** @} */
 
 #endif
 

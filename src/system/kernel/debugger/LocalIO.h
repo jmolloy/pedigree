@@ -16,6 +16,9 @@
 #ifndef LOCALIO_H
 #define LOCALIO_H
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #include <DebuggerIO.h>
 #include <machine/Vga.h>
 #include <machine/Keyboard.h>
@@ -153,5 +156,7 @@ protected:
     LocalIO(const LocalIO &);
     LocalIO &operator = (const LocalIO &);
 };
+
+/** @} */
 
 #endif

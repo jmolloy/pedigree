@@ -19,6 +19,9 @@
 #include <processor/types.h>
 #include "DebuggerIO.h"
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 class Scrollable
 {
   public:
@@ -52,5 +55,7 @@ class Scrollable
     char m_ScrollUp;
     char m_ScrollDown;
 };
+
+/** @} */
 
 #endif

@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 /**
  * Debugger command that allows viewing of the Cpu dump.
  */
@@ -54,5 +57,6 @@ public:
   
 };
 
-#endif
+/** @} */
 
+#endif

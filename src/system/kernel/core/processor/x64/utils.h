@@ -21,11 +21,19 @@
 /** @addtogroup kernelprocessorx64
  * @{ */
 
-inline physical_uintptr_t physicalAddress(physical_uintptr_t address)
+/** Get the virtual address from the physical address. This is possible on x64
+ *  because the whole physical memory is mapped into the virtual address space
+ *\param[in] address the physical address
+ *\return the virtual address */
+inline uintptr_t physicalAddress(physical_uintptr_t address)
 {
-  return address + 0xFFFF800000000000;
+  return static_cast<uintptr_t>(address + 0xFFFF800000000000);
 }
 
+/** Get the virtual address from the physical address. This is possible on x64
+ *  because the whole physical memory is mapped into the virtual address space
+ *\param[in] pAddress the physical address
+ *\return the virtual address */
 template<typename T>
 inline T *physicalAddress(T *pAddress)
 {

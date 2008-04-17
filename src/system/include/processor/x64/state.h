@@ -408,12 +408,10 @@ size_t X64SyscallState::getRegisterSize(size_t index) const
 
 size_t X64SyscallState::getSyscallService() const
 {
-  // TODO: Is this a wise decision?
   return ((m_Rax >> 32) & 0xFFFFFFFF);
 }
 size_t X64SyscallState::getSyscallNumber() const
 {
-  // TODO: Is this a wise decision?
   return (m_Rax & 0xFFFFFFFF);
 }
 

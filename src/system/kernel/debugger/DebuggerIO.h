@@ -19,6 +19,9 @@
 
 #include <utilities/StaticString.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #define COMMAND_MAX    256
 class DebuggerCommand;
 
@@ -163,6 +166,8 @@ protected:
    */
   bool m_bRefreshesEnabled;
 };
+
+/** @} */
 
 #endif
 

@@ -13,46 +13,75 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#if defined(DEBUGGER)
-  #include <panic.h>
-  #include <processor/Processor.h>
-#endif
+#include <processor/Processor.h>
 #include <processor/IoPortManager.h>
 
 #if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
   IoPortManager IoPortManager::m_Instance;
-  
-  bool IoPortManager::allocate(const IoPort *Port,
+
+  bool IoPortManager::allocate(IoPort *Port,
                                io_port_t ioPort,
                                size_t size)
   {
-    #if defined(DEBUGGER)
+    #if defined(ADDITIONAL_CHECKS)
       if (Processor::isInitialised() == 0)
-        panic("IoPortManager::allocate(): function misused");
+        Processor::halt();
     #endif
 
-    if (m_List.allocateSpecific(ioPort, size) == true)
-    {
-      // TODO Add the I/O port to another list
-      return true;
-    }
-    return false;
+    // Remove the I/O ports from the list of free I/O ports
+    if (m_FreeIoPorts.allocateSpecific(ioPort, size) == false)
+      return false;
+
+    // Add information to the list of used I/O ports
+    m_UsedIoPorts.pushBack(Port);
+    return true;
   }
-  void IoPortManager::free(const IoPort *Port)
+
+  void IoPortManager::free(IoPort *Port)
   {
-    #if defined(DEBUGGER)
+    #if defined(ADDITIONAL_CHECKS)
       if (Processor::isInitialised() == 0)
-        panic("IoPortManager::free(): function misused");
+        Processor::halt();
     #endif
 
-    m_List.free(Port->base(), Port->size());
-    // TODO Remove the I/O Port from another list
+    // Remove from the used I/O ports list
+    Vector<IoPort*>::Iterator i = m_UsedIoPorts.begin();
+    Vector<IoPort*>::Iterator end = m_UsedIoPorts.end();
+    for (;i != end;i++)
+      if ((*i) == Port)
+      {
+        m_UsedIoPorts.erase(i);
+        break;
+      }
+
+    // Add to the free I/O ports list
+    m_FreeIoPorts.free(Port->base(), Port->size());
   }
-  
+
+  void IoPortManager::allocateIoPortList(Vector<IoPortInfo*> &IoPorts)
+  {
+    for (size_t i = 0;i < m_UsedIoPorts.count();i++)
+    {
+      IoPortInfo *pIoPortInfo = new IoPortInfo(m_UsedIoPorts[i]->base(),
+                                               m_UsedIoPorts[i]->size(),
+                                               m_UsedIoPorts[i]->name());
+      IoPorts.pushBack(pIoPortInfo);
+    }
+  }
+
+  void IoPortManager::freeIoPortList(Vector<IoPortInfo*> &IoPorts)
+  {
+    while (IoPorts.count() != 0)
+    {
+      IoPortInfo *pIoPortInfo = IoPorts.popBack();
+      delete pIoPortInfo;
+    }
+  }
+
   void IoPortManager::initialise(io_port_t ioPortBase, size_t size)
   {
-    m_List.free(ioPortBase, size);
+    m_FreeIoPorts.free(ioPortBase, size);
   }
 
 #endif

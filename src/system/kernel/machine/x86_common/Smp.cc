@@ -70,11 +70,15 @@ void Smp::initialise()
     return;
   }
 
-  // PIC-Mode implemented?
-  m_bPICMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
+  #if defined(APIC)
 
-  // Local APIC address
-  m_LocalApicAddress = m_pConfigTable->localApicAddress;
+    // PIC-Mode implemented?
+    m_bPICMode = ((m_pFloatingPointer->features[1] & 0x80) == 0x80);
+
+    // Local APIC address
+    m_LocalApicAddress = m_pConfigTable->localApicAddress;
+
+  #endif
 
   // Loop through the configuration table base entries
   uint8_t *pType = reinterpret_cast<uint8_t*>(adjust_pointer(m_pConfigTable, sizeof(ConfigTableHeader)));
@@ -199,8 +203,7 @@ Smp::FloatingPointer *Smp::find(void *pMemory, size_t sMemory)
   while (reinterpret_cast<uintptr_t>(pFloatingPointer) < (reinterpret_cast<uintptr_t>(pMemory) + sMemory))
   {
     if (pFloatingPointer->signature == 0x5F504D5F &&
-        checksum(pFloatingPointer)
-        == true)
+        checksum(pFloatingPointer) == true)
       return pFloatingPointer;
     pFloatingPointer = adjust_pointer(pFloatingPointer, 16);
   }

@@ -17,7 +17,7 @@
 #include <Log.h>
 
 X86Serial::X86Serial()
-  : m_Port()
+  : m_Port("COM")
 {
 }
 
@@ -27,7 +27,7 @@ X86Serial::~X86Serial()
 
 void X86Serial::setBase(uintptr_t nBaseAddr)
 {
-  m_Port.allocate(nBaseAddr, 8, "COM");
+  m_Port.allocate(nBaseAddr, 8);
 
   m_Port.write8(0x00, serial::inten); // Disable all interrupts
   m_Port.write8(0x80, serial::lctrl); // Enable DLAB (set baud rate divisor)

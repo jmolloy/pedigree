@@ -14,12 +14,21 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_UTILITIES_PANIC_H
-#define KERNEL_UTILITIES_PANIC_H
+#ifndef KERNEL_PANIC_H
+#define KERNEL_PANIC_H
 
-/** Prints out a message to the screen, prints out the 4 most recent severe log
- * entries, and halts the processor.
+/** @addtogroup kernel
+ * @{ */
+
+/** Prints out a message to the screen and the most recent log entries and halts the
+ *  processor. This function should only be called in unrecoverable emergency cases,
+ *  e.g. when the kernel is unable to successfully complete its initialisation.
+ *\note This function and all functions called from this function may not allocate any
+ *      ressources, e.g. no I/O port & memory-region allocations and even no 'normal'
+ *      memory allocations.
  *\param[in] msg the message to print to the screen */
 void panic( const char* msg );
+
+/** @} */
 
 #endif

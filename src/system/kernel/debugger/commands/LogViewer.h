@@ -16,6 +16,9 @@
 #ifndef LOGVIEWER_H
 #define LOGVIEWER_H
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 #include <Scrollable.h>
 #include <DebuggerCommand.h>
 
@@ -61,5 +64,7 @@ public:
   virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
   virtual size_t getLineCount();  
 };
+
+/** @} */
 
 #endif

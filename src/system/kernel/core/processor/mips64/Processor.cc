@@ -24,8 +24,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2()
 {
-  // TODO: Process SMP/ACPI tables
-
   // TODO
 
   m_Initialised = 2;

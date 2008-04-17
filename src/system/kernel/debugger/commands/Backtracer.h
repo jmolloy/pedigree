@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 class DebuggerIO;
 
 class Backtracer : public DebuggerCommand
@@ -42,5 +45,7 @@ public:
   const NormalStaticString getString();
   
 };
+
+/** @} */
 
 #endif

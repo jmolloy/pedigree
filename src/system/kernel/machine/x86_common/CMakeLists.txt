@@ -24,13 +24,21 @@ add_kernel_src(machine/x86_common
                Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc)
 
 if(ACPI)
-  add_kernel_src(machine/x86_common Acpi.cc)
+  add_kernel_src(machine/x86_common
+                 Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc Acpi.cc)
 endif(ACPI)
 
 if(APIC)
-  add_kernel_src(machine/x86_common Apic.cc)
+  add_kernel_src(machine/x86_common
+                 Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc Apic.cc)
 endif(APIC)
 
 if(SMP)
-  add_kernel_src(machine/x86_common Smp.cc)
+  add_kernel_src(machine/x86_common
+                 Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc Smp.cc)
 endif(SMP)
+
+if(SMBIOS)
+  add_kernel_src(machine/x86_common
+                 Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc SMBios.cc)
+endif(SMBIOS)

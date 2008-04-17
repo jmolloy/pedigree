@@ -20,6 +20,9 @@
 #include <processor/state.h>
 #include <utilities/StaticString.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 class DebuggerIO;
 
 /**
@@ -52,5 +55,7 @@ public:
    */
   virtual const NormalStaticString getString() = 0;
 };
+
+/** @} */
 
 #endif

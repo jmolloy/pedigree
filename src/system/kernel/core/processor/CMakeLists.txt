@@ -54,8 +54,8 @@ endif(ARM_COMMON)
 
 if(NOT MIPS_COMMON AND NOT ARM_COMMON)
   add_kernel_src(core/processor
-                 IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
+                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
 else(NOT MIPS_COMMON AND NOT ARM_COMMON)
   add_kernel_src(core/processor
-                 IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
+                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
 endif(NOT MIPS_COMMON AND NOT ARM_COMMON)

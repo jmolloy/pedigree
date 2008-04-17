@@ -20,6 +20,9 @@
 #include <utilities/utility.h>
 #include <Log.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 #define DWARF_MAX_REGISTERS 50
 
 #ifdef X86
@@ -217,5 +220,7 @@ class DwarfState
      */
     uintptr_t m_ReturnAddress;
 };
+
+/** @} */
 
 #endif

@@ -13,38 +13,14 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef CPUINFO_COMMAND_H
-#define CPUINFO_COMMAND_H
+#ifndef KERNEL_PROCESSOR_MIPS_COMMON_PROCESSOR_H
+#define KERNEL_PROCESSOR_MIPS_COMMON_PROCESSOR_H
 
-#include <DebuggerCommand.h>
-
-/** @addtogroup kerneldebuggercommands
- * @{ */
-
-class DebuggerIO;
-
-class CpuInfoCommand : public DebuggerCommand
+void Processor::halt()
 {
-public:
-  CpuInfoCommand();
-  ~CpuInfoCommand();
-  
-  /**
-   * Return an autocomplete string, given an input string.
-   */
-  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
-
-  /**
-   * Execute the command with the given screen.
-   */
-  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
-  
-  /**
-   * Returns the string representation of this command.
-   */
-  const NormalStaticString getString();
-};
-
-/** @} */
+  // TODO: gcc will most certainly optimize this away in -O1/2/3 so please
+  //       replace it with some unoptimizable mighty magic
+  for (;;);
+}
 
 #endif

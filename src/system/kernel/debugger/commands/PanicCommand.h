@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 /**
  * Debugger command that permits a kernel panic to be emulated
  */
@@ -53,5 +56,7 @@ public:
   }
   
 };
+
+/** @} */
 
 #endif

@@ -16,13 +16,6 @@
 #include <processor/Processor.h>
 #include <Log.h>
 
-void Processor::halt()
-{
-  // TODO: gcc will most certainly optimize this away in -O1/2/3 so please
-  //       replace it with some unoptimizable mighty magic
-  for (;;);
-}
-
 size_t Processor::getDebugBreakpointCount()
 {
   return 0;
@@ -53,10 +46,6 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 void Processor::setInterrupts(bool bEnable)
 {
   /// \todo Implement.
-//   if (bEnable)
-//     asm volatile("sti");
-//   else
-//     asm volatile("cli");
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)

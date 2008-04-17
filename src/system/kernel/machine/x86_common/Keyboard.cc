@@ -28,7 +28,7 @@ X86Keyboard::X86Keyboard(uint32_t portBase) :
   m_bCtrl(false),
   m_bAlt(false),
   m_bCapsLock(false),
-  m_Port()
+  m_Port("PS/2 Keyboard controller")
 { 
 }
 
@@ -38,7 +38,7 @@ X86Keyboard::~X86Keyboard()
 
 void X86Keyboard::initialise()
 {
-  m_Port.allocate(0x60/*portBase*/, 4, "PS/2 Keyboard controller");
+  m_Port.allocate(0x60/*portBase*/, 5);
   // Initialise the keyboard map.
   initKeymap();
 }

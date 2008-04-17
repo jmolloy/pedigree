@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_PC_PC_H
-#define MACHINE_PC_PC_H
+#ifndef KERNEL_MACHINE_X86_COMMON_PC_H
+#define KERNEL_MACHINE_X86_COMMON_PC_H
 
 #include <machine/Machine.h>
 #include "Pic.h"
@@ -23,6 +23,9 @@
 #include "Serial.h"
 #include "Vga.h"
 #include "Keyboard.h"
+#if defined(SMBIOS)
+  #include "SMBios.h"
+#endif
 #include "LocalApic.h"
 
 /**
@@ -59,6 +62,10 @@ class Pc : public Machine
     X86Serial m_pSerial[2];
     X86Vga m_Vga;
     X86Keyboard m_Keyboard;
+
+    #if defined(SMBIOS)
+      SMBios m_SMBios;
+    #endif
 
     #if defined(APIC)
       LocalApic m_LocalApic;

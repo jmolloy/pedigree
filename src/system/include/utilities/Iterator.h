@@ -130,7 +130,10 @@ class Iterator
     Struct *m_Node;
 };
 
-/** Comparison operator for the Iterator class */
+/** Comparison operator for the Iterator class
+ *\param[in] x1 the first operand
+ *\param[in] x2 the second operand
+ *\return true, if the two iterator point to the same object, false otherwise */
 template<typename originalT,
          class Struct,
          Struct *(Struct::*FunctionPrev)(),

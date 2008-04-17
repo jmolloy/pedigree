@@ -63,9 +63,9 @@ void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 bool Pic::initialise()
 {
   // Allocate the I/O ports
-  if (m_SlavePort.allocate(0xA0, 4, "PIC #1") == false)
+  if (m_SlavePort.allocate(0xA0, 4) == false)
     return false;
-  if (m_MasterPort.allocate(0x20, 4, "PIC #2") == false)
+  if (m_MasterPort.allocate(0x20, 4) == false)
     return false;
 
   // Initialise the slave and master PIC
@@ -91,7 +91,7 @@ bool Pic::initialise()
 }
 
 Pic::Pic()
-  : m_SlavePort(), m_MasterPort()
+  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
 {
   for (size_t i = 0;i < 16;i++)
     m_Handler[i] = 0;

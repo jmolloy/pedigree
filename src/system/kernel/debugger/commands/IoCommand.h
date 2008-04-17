@@ -13,31 +13,29 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MEMORYINSPECTOR_H
-#define MEMORYINSPECTOR_H
-
-#include <DebuggerCommand.h>
-#include <Scrollable.h>
+#ifndef KERNEL_DEBUGGER_IOLIST_H
+#define KERNEL_DEBUGGER_IOLIST_H
 
 /** @addtogroup kerneldebuggercommands
  * @{ */
 
+#include <DebuggerCommand.h>
+
 /**
- * A debugger command to inspect memory at a location.
+ * Debugger command that list allocated I/O ports and memory-regions
  */
-class MemoryInspector : public DebuggerCommand,
-                        public Scrollable
+class IoCommand : public DebuggerCommand
 {
 public:
   /**
    * Default constructor - zero's stuff.
    */
-  MemoryInspector();
+  IoCommand();
 
   /**
    * Default destructor - does nothing.
    */
-  ~MemoryInspector();
+  ~IoCommand();
 
   /**
    * Return an autocomplete string, given an input string.
@@ -54,22 +52,9 @@ public:
    */
   const NormalStaticString getString()
   {
-    return NormalStaticString("memory");
+    return NormalStaticString("io");
   }
-
-  //
-  // Scrollable interface
-  //
-  virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual size_t getLineCount();
-
-private:
-  void resetStatusLine(DebuggerIO *pScreen);
-  void doGoto(DebuggerIO *pScreen, InterruptState &state);
-  void doSearch(bool bForward, DebuggerIO *pScreen, InterruptState &state);
-  bool tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state);
-  size_t m_nCharsPerLine;
+  
 };
 
 /** @} */

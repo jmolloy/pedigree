@@ -16,14 +16,37 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_PROCESSOR_H
 #define KERNEL_PROCESSOR_X86_COMMON_PROCESSOR_H
 
-void Processor::breakpoint()
-{
-  asm volatile ("int $3");
-}
+#include <processor/types.h>
+#include <processor/Processor.h>
 
-void Processor::halt()
+/** @addtogroup kernelprocessorx86common
+ * @{ */
+
+/** Common x86 processor information structure
+ *\todo Local APIC Id, pointer to the TSS */
+class X86CommonProcessor : public Processor::Information
 {
-  asm volatile("hlt");
-}
+  public:
+    /** Construct a X86CommonProcessor object
+     *\param[in] ProcessorId Identifier of the processor
+     *\todo the local APIC id */
+    inline X86CommonProcessor(Processor::Id ProcessorId)
+      : Information(ProcessorId){}
+    /** The destructor does nothing */
+    inline virtual ~X86CommonProcessor(){}
+
+  private:
+    /** Default constructor
+     *\note NOT implemented */
+    X86CommonProcessor();
+    /** Copy-constructor
+     *\note NOT implemented */
+    X86CommonProcessor(const X86CommonProcessor &);
+    /** Assignment operator
+     *\note NOT implemented */
+    X86CommonProcessor &operator = (const X86CommonProcessor &);
+};
+
+/** @} */
 
 #endif

@@ -88,6 +88,7 @@ SRCFILES += debugger/libudis86/mnemonics.c \
             debugger/commands/TraceCommand.cc \
             debugger/commands/MemoryInspector.cc \
             debugger/commands/CpuInfoCommand.cc \
+		        debugger/commands/IoCommand.cc \
             debugger/LocalIO.cc \
             debugger/SerialIO.cc \
             debugger/Debugger.cc \
@@ -127,12 +128,15 @@ ifdef BITS_64
 SRCFILES += linker/Elf64.cc
 endif
 
-SRCFILES += utilities/String.cc utilities/List.cc utilities/Vector.cc
+SRCFILES += utilities/String.cc \
+            utilities/List.cc \
+            utilities/Vector.cc
 SRCFILES += Log.cc BootstrapInfo.cc
 SRCFILES += core/processor/IoPort.c \
             core/processor/Processor.cc \
             core/processor/IoPortManager.cc \
-            core/processor/StackFrameBase.cc
+            core/processor/StackFrameBase.cc \
+            core/processor/PhysicalMemoryManager.cc
 
 # TODO
 ifdef X86_COMMON
@@ -171,6 +175,10 @@ ifdef X86_COMMON
   ifdef MULTIPROCESSOR
     SRCFILES += core/processor/x86_common/Multiprocessor.cc
   endif
+
+	ifdef SMBIOS
+		SRCFILES += machine/x86_common/SMBios.cc
+	endif
 endif
 
 ###################################################################
@@ -205,9 +213,10 @@ endif
 ###################################################################
 # mips common source list.
 ifdef MIPS_COMMON
-SRCFILES += boot-mips.cc \
-            core/processor/mips_common/Processor.cc \
-            core/processor/mips_common/Disassembler.cc
+	SRCFILES += boot-mips.cc \
+  	          core/processor/mips_common/Processor.cc \
+    	        core/processor/mips_common/Disassembler.cc \
+							core/processor/mips_common/PhysicalMemoryManager.cc
 endif
 
 ifdef MIPS_MALTA

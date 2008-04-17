@@ -28,6 +28,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPML4 */
   friend class Processor;
+  /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_KernelSpace */
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   public:
     //
@@ -51,8 +52,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     /** Map the page directory pointer table, the page directory, the page table or the page
      *  frame if none is currently present
      *\note This should only be used from the PhysicalMemoryManager
-     *\param[in] physicalAddress the physical page that should be used as page table or
-     *                           page frame
+     *\param[in] physAddress the physical page that should be used as page table or page frame
      *\param[in] virtualAddress the virtual address that should be checked for the existance
      *                          of a page directory pointer table, page directory, page table 
      *                          or page frame

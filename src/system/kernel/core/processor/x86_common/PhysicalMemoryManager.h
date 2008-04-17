@@ -38,7 +38,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     virtual physical_uintptr_t allocatePage();
     virtual void freePage(physical_uintptr_t page);
     virtual bool allocateRegion(MemoryRegion &Region,
-                                size_t count,
+                                size_t cPages,
                                 size_t pageConstraints,
                                 size_t Flags,
                                 physical_uintptr_t start = -1);
@@ -75,7 +75,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
         /** Default constructor does nothing */
         PageStack();
         /** Allocate a page with certain constraints
-         *\param[in] constaints either below4GB or below64GB or 0
+         *\param[in] constraints either below4GB or below64GB or 0
          *\return The physical address of the allocated page or 0 */
         physical_uintptr_t allocate(size_t constraints);
         /** Free a physical page
@@ -123,7 +123,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
       RangeList<uint64_t> m_AcpiRanges;
     #endif
 
-    /** Virtual-memory available for MemoryRegions */
+    /** Virtual-memory available for MemoryRegions
+     *\todo rename this member (conflicts with PhysicalMemoryManager::m_MemoryRegions) */
     RangeList<uintptr_t> m_MemoryRegions;
 
     /** The X86CommonPhysicalMemoryManager class instance */

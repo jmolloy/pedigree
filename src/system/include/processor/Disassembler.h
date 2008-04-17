@@ -19,6 +19,9 @@
 #include <processor/types.h>
 #include <utilities/StaticString.h>
 
+/** @addtogroup kernelprocessor
+ * @{ */
+
 /**
  * Abstraction of a code disassembler.
  */
@@ -57,6 +60,8 @@ public:
 protected:
   DisassemblerBase() {};
 };
+
+/** @} */
 
 #ifdef X86_COMMON
 #include <core/processor/x86_common/Disassembler.h>

@@ -56,6 +56,8 @@ void Pc::initialise()
         ioApics = &acpi.getIoApicList();
         bApicValid = true;
       }
+    #endif
+    #if defined(ACPI) && defined(SMP)
       else
     #endif
     #if defined(SMP)
@@ -92,7 +94,7 @@ void Pc::initialise()
       if (pic.initialise() == false)
         panic("Pc: Pic initialisation failed");
 
-  #if defined(ACPI)
+  #if defined(APIC)
     }
   #endif
 
@@ -115,6 +117,11 @@ void Pc::initialise()
     panic("Pc: Pit initialisation failed");
 
   m_Keyboard.initialise();
+
+  // Find and parse the SMBIOS tables
+  #if defined(SMBIOS)
+    m_SMBios.initialise();
+  #endif
 
   m_bInitialised = true;
 }
@@ -161,6 +168,9 @@ Keyboard *Pc::getKeyboard()
 
 Pc::Pc()
   : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)
+  #if defined(SMBIOS)
+    , m_SMBios()
+  #endif
   #if defined(APIC)
     , m_LocalApic()
   #endif

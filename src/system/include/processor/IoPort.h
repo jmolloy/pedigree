@@ -31,8 +31,8 @@
   {
     public:
       /** The default constructor does nothing */
-      inline IoPort()
-        : m_IoPort(0), m_Size(0), m_Name(){}
+      inline IoPort(const char *name)
+        : m_IoPort(0), m_Size(0), m_Name(name){}
       /** The destructor frees the allocated ressources */
       inline virtual ~IoPort(){free();}
 
@@ -56,15 +56,16 @@
 
       /** Get the base I/O port */
       inline io_port_t base() const;
-      /** Get the name of the I/O port range */
-      inline const String &name() const;
+      /** Get the name of the I/O port range
+       *\return pointer to the name of the I/O port range */
+      inline const char *name() const;
       /** Free an I/O port range */
       void free();
       /** Allocate an I/O port range
        *\param[in] ioPort the base I/O port
        *\param[in] size the number of successive I/O ports - 1
        *\return true, if successfull, false otherwise */
-      bool allocate(io_port_t ioPort, size_t size, const char *name);
+      bool allocate(io_port_t ioPort, size_t size);
 
     private:
       /** The copy-constructor
@@ -78,8 +79,8 @@
       io_port_t m_IoPort;
       /** The number of successive I/O ports - 1 */
       size_t m_Size;
-      /** The name String */
-      String m_Name;
+      /** User-visible name of this I/O port range */
+      const char *m_Name;
   };
 
 #endif
@@ -102,13 +103,13 @@
   {
     return m_IoPort;
   }
-  const String &IoPort::name() const
-  {
-    return m_Name;
-  }
   IoPort::operator bool() const
   {
     return (m_Size != 0);
+  }
+  const char *IoPort::name() const
+  {
+    return m_Name;
   }
 #endif
 

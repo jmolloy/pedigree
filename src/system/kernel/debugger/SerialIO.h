@@ -19,6 +19,9 @@
 #include <DebuggerIO.h>
 #include <machine/Serial.h>
 
+/** @addtogroup kerneldebugger
+ * @{ */
+
 class DebuggerCommand;
 
 /**
@@ -141,5 +144,7 @@ private:
   SerialIO(const SerialIO &);
   SerialIO &operator = (const SerialIO &);
 };
+
+/** @} */
 
 #endif

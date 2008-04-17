@@ -18,6 +18,9 @@
 
 #include <DebuggerCommand.h>
 
+/** @addtogroup kerneldebuggercommands
+ * @{ */
+
 /**
  * Allows step execution.
  */
@@ -52,5 +55,7 @@ public:
     return NormalStaticString("step");
   }
 };
+
+/** @} */
 
 #endif
