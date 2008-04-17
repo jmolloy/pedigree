@@ -1,0 +1,8 @@
+#!/usr/bin/expect
+
+# Create the process.
+spawn qemu-system-x86_64 -nographic -fda $argv
+set timeout 10
+expect "Press any key to enter the debugger..." {}
+timeout {echo "Oh shit!"}
+
