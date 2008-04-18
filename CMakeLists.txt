@@ -114,6 +114,11 @@ if(ARM_COMMON)
   set(COMPILER arm-elf)
 endif(ARM_COMMON)
 
+if(DEBUGGER)
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g1 -gdwarf-2")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g1 -gdwarf-2")
+endif(DEBUGGER)
+
 # Add compiler #defines.
 foreach(definition ${DEFINES})
   add_definitions(-D${definition}=1)
@@ -151,8 +156,14 @@ endif(X86_COMMON)
 add_custom_target(check_compiler ALL perl ./scripts/checkBuildSystem.pl ${COMPILER}
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR})
 
+# Create a target for creating the Version.cc file.
+add_custom_target(version.cc ALL perl ./scripts/createVersionCc.pl ${DEFINES}
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR})
+
 # Recurse into the Kernel directory first.
 add_subdirectory(src/system/kernel)
+
+add_dependencies(kernel version.cc check_compiler)
 
 # Then the bootloader.
 add_subdirectory(src/system/boot)

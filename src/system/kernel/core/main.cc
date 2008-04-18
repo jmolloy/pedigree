@@ -26,6 +26,10 @@
 #include "cppsupport.h"                   // initialiseConstructors()
 #include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
 #include <machine/Machine.h>              // Machine::initialise()
+#include <Version.h>
+#include <LocalIO.h>
+#include <SerialIO.h>
+#include <DebuggerIO.h>
 
 #if defined(BITS_64)
   #include <Elf64.h>
@@ -35,39 +39,29 @@
   Elf32 elf("kernel");
 #endif
 FileLoader *g_pKernel = &elf;
+LocalIO *g_pLocalIO;
+SerialIO *g_pSerialIO1;
+SerialIO *g_pSerialIO2;
 
-/// NOTE JamesM is doing some testing here.
-class Foo
+/// Initialises the boot output.
+void initialiseBootOutput()
 {
-public:
-    Foo(){}
-    ~Foo(){}
-void mytestfunc(bool a, char b)
-{
-  //InterruptState state;
-  //Debugger::instance().breakpoint();
-  #ifdef X86_COMMON
-    Processor::breakpoint();
-  #else
-    int c = 3/0;
-#endif
-}
-};
-
-extern "C" void woot()
-{
-  Foo foo;
-  foo.mytestfunc(false, 'g');
-#ifdef X86_COMMON
-  Processor::breakpoint();
+  g_pLocalIO->enableCli();
+  g_pSerialIO1->enableCli();
+#ifndef ARM_COMMON
+  g_pSerialIO2->enableCli();
 #endif
 }
 
-extern "C" void bar()
+/// Allows output to any DebuggerIO terminal.
+void bootOutput(HugeStaticString &str,
+                DebuggerIO::Colour front=DebuggerIO::LightGrey,
+                DebuggerIO::Colour back=DebuggerIO::Black)
 {
-  woot();
-#ifdef X86_COMMON
-  Processor::breakpoint();
+  g_pLocalIO->writeCli(str, front, back);
+  g_pSerialIO1->writeCli(str, front, back);
+#ifndef ARM_COMMON
+  g_pSerialIO2->writeCli(str, front, back);
 #endif
 }
 
@@ -97,51 +91,51 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-#if defined(DEBUGGER) && !defined(ARM_COMMON)
-  NOTICE("VBE info available? " << bootstrapInfo.hasVbeInfo());
-//   int a = 3/0;
-  bar();
-#endif
-  
-  Serial *s = machine.getSerial(0);
-  s->write('b');
-  s->write('a');
-  s->write('r');
-  
-/*
-// this has to be here if the debugger isn't used otherwise 'a' is undeclared
-#if !(defined(DEBUGGER) && defined(DEBUGGER_RUN_AT_START))
-  int
-#endif
-  a = 3/0;*/
-#if defined(MIPS_COMMON) || defined(ARM_COMMON)
+#if defined(ARM_COMMON)
    InterruptState st;
    LargeStaticString str("I r cool");
    Debugger::instance().start(st, str);
   return; // Go back to the YAMON prompt.
 #endif
+
+  // Initialise the boot output.
+  LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
+  g_pLocalIO = &localIO;
+  SerialIO serialIO1(Machine::instance().getSerial(0));
+  g_pSerialIO1 = &serialIO1;
+#ifndef ARM_COMMON
+  SerialIO serialIO2(Machine::instance().getSerial(1));
+  g_pSerialIO2 = &serialIO2;
+#endif
+  initialiseBootOutput();
   
-  /* segfault if this is in
-  s->write( "foobar\r\n" );
-  s->write( "here's where the debugger's sposed to start yey\r\n" );
-  s->write( "woot\r\n" );
-#if defined(ARM_COMMON)
-  s->write( "ARM_COMMON\r\n" );
-#endif
-#if defined(DEBUGGER)
-  s->write( "DEBUGGER\r\n" );
-#endif
+  // Spew out a starting string.
+  HugeStaticString str;
+  str += "Pedigree - revision ";
+  str += g_pBuildRevision;
+  str += "\n=======================\n";
+  bootOutput(str, DebuggerIO::White, DebuggerIO::Black);
 
-#if defined(ARM_COMMON) && defined(DEBUGGER)
-#warning Are you sure you want the debugger compiled with ARM (QEMU segfaults)?
-  InterruptState myState;
-  LargeStaticString str;
-  str.append( "fubar" );
-  s->write("About to start debugger!\r\n" );
-  Debugger::instance().start(myState,str);
-#endif
-  */
+  str.clear();
+  str += "Build at ";
+  str += g_pBuildTime;
+  str += " by ";
+  str += g_pBuildUser;
+  str += " on ";
+  str += g_pBuildMachine;
+  str += "\n";
+  bootOutput(str);
 
+  str.clear();
+  str += "Build flags: ";
+  str += g_pBuildFlags;
+  str += "\n";
+  bootOutput(str);
+
+#ifdef DEBUGGER_RUN_AT_START
+  Processor::breakpoint();
+#endif
+  
   for (;;)
   {
     #ifdef X86_COMMON

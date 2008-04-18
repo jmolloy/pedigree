@@ -28,7 +28,7 @@ endmacro(add_kernel_src)
 
 #########################################################################################
 # Sources list.
-set(KERNEL_SRC BootstrapInfo.cc Log.cc)
+set(KERNEL_SRC BootstrapInfo.cc Log.cc Version.cc)
 if(MIPS_COMMON)
   set(KERNEL_SRC ${KERNEL_SRC} boot-mips.cc)
 endif(MIPS_COMMON)

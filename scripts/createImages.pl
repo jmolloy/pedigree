@@ -24,6 +24,7 @@ my $compiler = $ARGV[0];
 # Are we making an X86 target?
 if ($compiler =~ m/(i686|amd64)-elf/) {
   # Are we on cygwin?
+  `cp src/system/kernel/kernel kernel`;
   if ($ENV{TERM} =~ m/cygwin/i) {
     `cp ../images/floppy_fat.img ./floppy.img`;
     `mcopy -Do -i  ./floppy.img src/system/kernel/kernel ::/`;

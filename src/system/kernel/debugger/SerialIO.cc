@@ -20,6 +20,7 @@
 #include <processor/IoPort.h>
 #include <Log.h>
 #include <utilities/StaticString.h>
+/// \todo needs a bit of a tidyup!
 
 SerialIO::SerialIO(Serial *pSerial) :
   m_UpperCliLimit(0),

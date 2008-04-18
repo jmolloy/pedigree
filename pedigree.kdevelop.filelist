@@ -8,8 +8,10 @@ scripts
 scripts/checkBuildSystem.pl
 scripts/colorgcc.pl
 scripts/createImages.pl
+scripts/createVersionCc.pl
 scripts/grub.pl
 scripts/parseBuildFlags.pl
+scripts/runNightlyTest.pl
 src
 src/drivers
 src/drivers/Makefile
@@ -114,6 +116,9 @@ src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
 src/system/kernel/Makefile
+src/system/kernel/Version.cc
+src/system/kernel/Version.h
+src/system/kernel/boot-arm.cc
 src/system/kernel/boot-mips.cc
 src/system/kernel/core
 src/system/kernel/core/lib

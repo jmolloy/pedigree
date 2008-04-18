@@ -18,6 +18,8 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 
+#include <Log.h>
+
 /// \warning 80x50 and 90x60 modes don't work, because we don't have an 8x8 font to install.
 uint8_t g_80x25_text[] =
 {
@@ -191,13 +193,10 @@ bool X86Vga::isLargestTextMode ()
 void X86Vga::rememberMode()
 {
   int mode = getMode();
+  
   if (mode > -1)
   {
     memcpy (m_pStoredMode, g_pModeDescriptions[mode], 61);
-  }
-  else
-  {
-    memcpy (m_pStoredMode, g_pModeDescriptions[0], 61);
   }
 }
   
