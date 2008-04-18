@@ -48,7 +48,7 @@ class X86InterruptManager : public ::InterruptManager,
     /** Initialises this processors IDTR
      *\note This should only be called from initialiseProcessor()
      *\todo and some smp/acpi function */
-    static void initialiseProcessor();
+    static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
     /** Sets up an interrupt gate
@@ -56,12 +56,14 @@ class X86InterruptManager : public ::InterruptManager,
      *\param[in] interruptHandler address of the assembler interrupt handler stub
      *\param[in] userspace is the userspace allowed to call this callgate?
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
-    void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace);
+    void setInterruptGate(size_t interruptNumber,
+                          uintptr_t interruptHandler,
+                          bool userspace) INITIALISATION_ONLY;
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
     /** The constructor */
-    X86InterruptManager();
+    X86InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor
      *\note NOT implemented */
     X86InterruptManager(const X86InterruptManager &);

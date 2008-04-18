@@ -43,11 +43,11 @@ class Pic : public IrqManager,
     /** Initialises the PIC hardware and registers the interrupts with the
      *  InterruptManager.
      *\return true, if successfull, false otherwise */
-    bool initialise();
+    bool initialise() INITIALISATION_ONLY;
 
   private:
     /** The default constructor */
-    Pic();
+    Pic() INITIALISATION_ONLY;
     /** The destructor */
     inline virtual ~Pic(){}
     /** The copy-constructor

@@ -30,7 +30,7 @@ class IoApic
   public:
     /** The default constructor */
     inline IoApic()
-      : m_IoSpace(){}
+      : m_IoSpace("I/O APIC"){}
     /** The destructor */
     inline virtual ~IoApic(){}
 

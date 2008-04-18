@@ -20,9 +20,9 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(core/processor/x86_common
-               Disassembler.cc PhysicalMemoryManager.cc Processor.cc)
+# HACK: We are currently using #if define's within the optional source code files
+#       (optional files are in the second line) due to a CMake bug/feature
 
-if(MULTIPROCESSOR)
-  add_kernel_src(core/processor/x86_common Multiprocessor.cc)
-endif(MULTIPROCESSOR)
+add_kernel_src(core/processor/x86_common
+               Disassembler.cc PhysicalMemoryManager.cc Processor.cc
+               Multiprocessor.cc)

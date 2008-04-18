@@ -18,11 +18,6 @@
 
 X86GdtManager X86GdtManager::m_Instance;
 
-X86GdtManager &X86GdtManager::instance()
-{
-  return m_Instance;
-}
-
 void X86GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries

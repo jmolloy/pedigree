@@ -28,20 +28,21 @@ class X86GdtManager
   public:
     /** Get the gdt manager instance
      *\return instance of the gdt manager */
-    static X86GdtManager &instance();
+    inline static X86GdtManager &instance()
+      {return m_Instance;}
 
     /** Initialise the GDT
      *\param[in] processorCount the number of processors
      *\note This should only be called from initialiseProcessor2() */
-    void initialise(size_t processorCount);
+    void initialise(size_t processorCount) INITIALISATION_ONLY;
     /** Initialises this processors GDTR
      *\note This should only be called from initialiseProcessor2()
      *\todo and some smp/acpi function */
-    static void initialiseProcessor();
+    static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
     /** The constructor */
-    X86GdtManager();
+    X86GdtManager() INITIALISATION_ONLY;
     /** Copy constructor
      *\note NOT implemented */
     X86GdtManager(const X86GdtManager &);
@@ -57,11 +58,15 @@ class X86GdtManager
      *\param[in] limit the size of the segment (either in bytes or in 4kb units)
      *\param[in] flags the flags
      *\param[in] flags2 additional flags */
-    void setSegmentDescriptor(size_t index, uint32_t base, uint32_t limit, uint8_t flags, uint8_t flags2);
+    void setSegmentDescriptor(size_t index,
+                              uint32_t base,
+                              uint32_t limit,
+                              uint8_t flags,
+                              uint8_t flags2) INITIALISATION_ONLY;
     /** Set up a task-state-segment descriptor
      *\param[in] index the descriptor index
      *\param[in] base the base address */
-    void setTssDescriptor(size_t index, uint32_t base);
+    void setTssDescriptor(size_t index, uint32_t base) INITIALISATION_ONLY;
 
     /** Protected-mode segment descriptor structure */
     struct segment_descriptor

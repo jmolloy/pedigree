@@ -1,3 +1,4 @@
+#if defined(APIC)
 /*
  * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
@@ -81,3 +82,5 @@ bool LocalApic::initialiseProcessor()
 
   return true;
 }
+
+#endif

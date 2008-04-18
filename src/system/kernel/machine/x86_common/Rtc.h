@@ -45,7 +45,7 @@ class Rtc : public Timer,
 
     /** Initialises the class
      *\return true, if successfull, false otherwise */
-    bool initialise();
+    bool initialise() INITIALISATION_ONLY;
     /** Synchronise the time/date with the hardware
      *\todo We might want to add this to the Timer interface */
     void synchronise();
@@ -54,7 +54,7 @@ class Rtc : public Timer,
 
   protected:
     /** The default constructor */
-    Rtc();
+    Rtc() INITIALISATION_ONLY;
     /** The destructor */
     inline virtual ~Rtc(){}
 

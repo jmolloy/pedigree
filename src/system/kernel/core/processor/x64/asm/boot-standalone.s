@@ -9,7 +9,7 @@ MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 64]
 
-[SECTION .bootstrap]
+[SECTION .init.multiboot]
 align 4
 mboot:
   dd MBOOT_HEADER_MAGIC
@@ -19,10 +19,10 @@ mboot:
 [GLOBAL start]
 [GLOBAL pml4]
 [EXTERN _main]
-[EXTERN code]
+[EXTERN init]
 [EXTERN end]
 
-;[SECTION .text]
+[SECTION .init.text]
 KERNEL_BASE        equ 0xFFFFFFFF7FF00000
 start:
   cli
@@ -71,7 +71,7 @@ start:
 
   ; Map the kernel
   mov rax, pagetable0 - KERNEL_BASE + 0x08
-  mov rbx, code
+  mov rbx, init
   mov rcx, end
   mov r8, KERNEL_BASE
   .mapkernel:
@@ -169,14 +169,11 @@ start:
   mov rax, GDTR
   lgdt [rax]
 
-  mov rax, rsp
-  sub rsp, 15
-  mov r11, 0xFFFFFFFFFFFFFFF0
-  and rsp, r11
+  xor rax, rax
   mov r11, 0x10
   push r11
   push rax
-  pushf
+  pushfq
   mov rax, 0x08
   push rax
   mov rax, callmain
@@ -193,7 +190,7 @@ callmain:
   call _main
   jmp $
 
-; [SECTION .data]
+[SECTION .data]
   GDTR:
     dw 23
     dq GDT
@@ -209,61 +206,49 @@ callmain:
     db 0x92
     dw 0
 
-; [SECTION .bss]
-align 4096
+[SECTION .asm.bss]
 pml4:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory pointer table for 0-256GB
 pagedirectorypointer0:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory pointer table for the upmost 256GB
 pagedirectorypointer1:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory pointer table for the physical memory mapping
 pagedirectorypointer2:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory for the 0-1GB
 pagedirectory0:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory for the kernel code/data
 pagedirectory1:
-  resb 4096
+  times 4096 db 0
 
 ; Page directory for the kernel stack
 pagedirectory2:
-  resb 4096
+  times 4096 db 0
 
 ; Page directories for the physical memory mapping
 pagedirectory3:
-  resb 4096
-  resb 4096
-  resb 4096
-  resb 4096
+  times 4096 db 0
+  times 4096 db 0
+  times 4096 db 0
+  times 4096 db 0
 
 ; Page table for the kernel code/data
 pagetable0:
-  resb 4096
+  times 4096 db 0
 
 ; Page table for the kernel stack
 pagetable1:
-  resb 4096
+  times 4096 db 0
 
 ; The kernel stack
 stack:
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
+  times 98304 db 0

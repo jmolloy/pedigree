@@ -37,7 +37,7 @@ class Acpi
 
     /** Search for the tables and initialise internal data structures
      *\note the first MB of RAM must be identity mapped */
-    void initialise();
+    void initialise() INITIALISATION_ONLY;
 
     #if defined(APIC)
       inline bool validApicInfo()
@@ -50,7 +50,7 @@ class Acpi
 
   private:
     /** The constructor does nothing */
-    Acpi();
+    Acpi() INITIALISATION_ONLY;
     /** Copy-constructor
      *\note NOT implemented (singleton class) */
     Acpi(const Acpi &);
@@ -155,14 +155,14 @@ class Acpi
       uint16_t flags;
     } PACKED;
 
-    void parseFixedACPIDescriptionTable();
+    void parseFixedACPIDescriptionTable() INITIALISATION_ONLY;
     #if defined(APIC)
-      void parseMultipleApicDescriptionTable();
+      void parseMultipleApicDescriptionTable() INITIALISATION_ONLY;
     #endif
-    bool find();
-    RsdtPointer *find(void *pMemory, size_t sMemory);
-    bool checksum(const RsdtPointer *pRdstPointer);
-    bool checksum(const SystemDescriptionTableHeader *pHeader);
+    bool find() INITIALISATION_ONLY;
+    RsdtPointer *find(void *pMemory, size_t sMemory) INITIALISATION_ONLY;
+    bool checksum(const RsdtPointer *pRdstPointer) INITIALISATION_ONLY;
+    bool checksum(const SystemDescriptionTableHeader *pHeader) INITIALISATION_ONLY;
 
     bool m_bValid;
     RsdtPointer *m_pRsdtPointer;

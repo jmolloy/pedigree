@@ -25,12 +25,12 @@ class SMBios
 {
   public:
     /** The default constructor does nothing */
-    SMBios();
+    SMBios() INITIALISATION_ONLY;
     /** The destructor does nothing */
     ~SMBios();
 
     /** Find and parse the SMBios tables */
-    void initialise();
+    void initialise() INITIALISATION_ONLY;
 
   private:
     /** Copy-constructor
@@ -75,10 +75,10 @@ class SMBios
       uint32_t biosCharacteristics;
     } PACKED;
 
-    Header *next(Header *pHeader);
-    const char *getString(const Header *pHeader, size_t index);
-    void find();
-    bool checksum(const EntryPoint *pEntryPoint);
+    Header *next(Header *pHeader) INITIALISATION_ONLY;
+    const char *getString(const Header *pHeader, size_t index) INITIALISATION_ONLY;
+    void find() INITIALISATION_ONLY;
+    bool checksum(const EntryPoint *pEntryPoint) INITIALISATION_ONLY;
 
     EntryPoint *m_pEntryPoint;
 };

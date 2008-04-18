@@ -18,11 +18,6 @@
 
 X64GdtManager X64GdtManager::m_Instance;
 
-X64GdtManager &X64GdtManager::instance()
-{
-  return m_Instance;
-}
-
 void X64GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries

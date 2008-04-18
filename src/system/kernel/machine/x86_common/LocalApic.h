@@ -30,14 +30,14 @@ class LocalApic
   public:
     /** The default constructor */
     inline LocalApic()
-      : m_IoSpace(){}
+      : m_IoSpace("Local APIC"){}
     /** The destructor */
     inline virtual ~LocalApic(){}
 
     /** Initialise the local APIC class. This includes allocating the I/O space. */
-    bool initialise(uint64_t physicalAddress);
+    bool initialise(uint64_t physicalAddress) INITIALISATION_ONLY;
     /** Initialise the local APIC on the current processor */
-    bool initialiseProcessor();
+    bool initialiseProcessor() INITIALISATION_ONLY;
 
   private:
     /** The copy-constructor

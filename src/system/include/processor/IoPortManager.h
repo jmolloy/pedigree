@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_IOPORTMANAGER_H
 #define KERNEL_PROCESSOR_IOPORTMANAGER_H
 
+#include <compiler.h>
 #include <processor/types.h>
 #include <processor/IoPort.h>
 #include <utilities/Vector.h>
@@ -79,7 +80,7 @@
       /** Initialise the IoPortManager with an initial I/O range
        *\param[in] ioPortBase base I/O port for the range
        *\param[in] size number of successive I/O ports - 1 */
-      void initialise(io_port_t ioPortBase, size_t size);
+      void initialise(io_port_t ioPortBase, size_t size) INITIALISATION_ONLY;
 
     private:
       /** The default constructor */

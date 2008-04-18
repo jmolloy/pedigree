@@ -38,13 +38,13 @@ class Pit : public SchedulerTimer,
 
     /** Initialises the class
      *\return true, if successfull, false otherwise */
-    bool initialise();
+    bool initialise() INITIALISATION_ONLY;
      /** Uninitialises the class */
     void uninitialise();
 
   protected:
     /** The default constructor */
-    Pit();
+    Pit() INITIALISATION_ONLY;
     /** The destructor */
     inline virtual ~Pit(){}
 

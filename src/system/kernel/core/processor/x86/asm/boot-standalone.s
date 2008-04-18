@@ -8,8 +8,9 @@ MBOOT_HEADER_FLAGS equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
 MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 32]
+
+[SECTION .init.multiboot]
 align 4
-[SECTION .bootstrap]
 mboot:
   dd MBOOT_HEADER_MAGIC
   dd MBOOT_HEADER_FLAGS
@@ -18,7 +19,7 @@ mboot:
 [GLOBAL start]
 [EXTERN _main]
 
-; [SECTION .text]
+[SECTION .init.text]
 start:
   cli
   push ebx
@@ -116,23 +117,11 @@ callmain:
   call _main
   jmp $
 
-; [SECTION .bss]
-align 4096
+[SECTION .asm.bss]
 global pagedirectory
 pagedirectory:
-  resb 4096
+  times 4096 db 0
 pagetable0:
-  resb 4096
+  times 4096 db 0
 stack:
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
-  resb 8192
+  times 98304 db 0

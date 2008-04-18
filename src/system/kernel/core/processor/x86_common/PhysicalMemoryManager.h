@@ -16,6 +16,7 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_PHYSICALMEMORYMANAGER_H
 #define KERNEL_PROCESSOR_X86_COMMON_PHYSICALMEMORYMANAGER_H
 
+#include <compiler.h>
 #include <BootstrapInfo.h>
 #include <utilities/RangeList.h>
 #include <processor/PhysicalMemoryManager.h>
@@ -45,7 +46,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** Initialise the page stack
      *\param[in] Info reference to the multiboot information structure */
-    void initialise(const BootstrapStruct_t &Info);
+    void initialise(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
 
     #if defined(ACPI)
       inline const RangeList<uint64_t> &getAcpiRanges() const
@@ -54,7 +55,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
   protected:
     /** The constructor */
-    X86CommonPhysicalMemoryManager();
+    X86CommonPhysicalMemoryManager() INITIALISATION_ONLY;
     /** The destructor */
     virtual ~X86CommonPhysicalMemoryManager();
 
@@ -73,7 +74,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     {
       public:
         /** Default constructor does nothing */
-        PageStack();
+        PageStack() INITIALISATION_ONLY;
         /** Allocate a page with certain constraints
          *\param[in] constraints either below4GB or below64GB or 0
          *\return The physical address of the allocated page or 0 */

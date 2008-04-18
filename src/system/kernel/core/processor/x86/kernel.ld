@@ -5,16 +5,27 @@ ENTRY(start)
 SECTIONS
 {
   . = 0xC0100000;
+  .init : AT(ADDR(.init) - 0xC0000000)
+  {
+    . = ALIGN(4096);
+    init = .; _init = .; __init = .;
+    *(.init.multiboot)
+    *(.init.text);
+    *(.init.data);
+    . = ALIGN(4096);
+  }
+
   .text : AT(ADDR(.text) - 0xC0000000)
   {
+    . = ALIGN(4096);
     code = .; _code = .; __code = .;
-    *(.bootstrap)
-    *(.text)
+    *(.text*)
     . = ALIGN(4096);
   }
 
   .data : AT(ADDR(.data) - 0xC0000000)
   {
+    . = ALIGN(4096);
     start_ctors = .;
     *(.ctors)
     end_ctors = .;
@@ -22,16 +33,20 @@ SECTIONS
 
     data = .; _data = .; __data = .;
     *(.data)
-    *(.rodata)
+    *(.rodata*)
     . = ALIGN(4096);
   }
 
   .bss : AT(ADDR(.bss) - 0xC0000000)
   {
+    . = ALIGN(4096);
     bss = .; _bss = .; __bss = .;
+    *(.asm.bss)
     *(.bss)
     . = ALIGN(4096);
   }
+
+  /DISCARD/ : { *(.comment) }
 
   end = .; _end = .; __end = .;
 }

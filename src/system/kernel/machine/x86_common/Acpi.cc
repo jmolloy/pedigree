@@ -1,3 +1,5 @@
+#if defined(ACPI)
+
 /*
  * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
@@ -333,3 +335,5 @@ bool Acpi::checksum(const SystemDescriptionTableHeader *pHeader)
 {
   return ::checksum(reinterpret_cast<const uint8_t*>(pHeader), pHeader->length);
 }
+
+#endif

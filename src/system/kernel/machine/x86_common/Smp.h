@@ -38,7 +38,7 @@ class Smp
 
     /** Search for the tables and initialise internal data structures
      *\note the first MB of RAM must be identity mapped */
-    void initialise();
+    void initialise() INITIALISATION_ONLY;
     /** Were valid tables found? */
     inline bool valid()
       {return m_bValid;}
@@ -56,7 +56,7 @@ class Smp
 
   private:
     /** The constructor does nothing */
-    Smp();
+    Smp() INITIALISATION_ONLY;
     /** Copy-constructor
      *\note NOT implemented (singleton class) */
     Smp(const Smp &);
@@ -152,20 +152,20 @@ class Smp
 
     /** Find the floating pointer structure
      *\return true, if we successfully found one, false otherwise */
-    bool find();
+    bool find() INITIALISATION_ONLY;
     /** Find the floating pointer structure within a specific memory area
      *\param[in] pMemory pointer to the beginning of the area
      *\param[in] sMemory size in bytes of the area
      *\return pointer to the floating pointer structure, 0 otherwise */
-    FloatingPointer *find(void *pMemory, size_t sMemory);
+    FloatingPointer *find(void *pMemory, size_t sMemory) INITIALISATION_ONLY;
     /** Check if the checksum of the floating pointer structure is valid
      *\param[in] pFloatingPointer pointer to the floating pointer structure
      *\return true, if the checksum is valid, false otherwise */
-    bool checksum(const FloatingPointer *pFloatingPointer);
+    bool checksum(const FloatingPointer *pFloatingPointer) INITIALISATION_ONLY;
     /** Check if the checksum of the configuration table is valid
      *\param[in] pConfigTable pointer to the configuration table
      *\return true, if the checksum is valid, false otherwise */
-    bool checksum(const ConfigTableHeader *pConfigTable);
+    bool checksum(const ConfigTableHeader *pConfigTable) INITIALISATION_ONLY;
 
     /** Were tables found and are they valid? */
     bool m_bValid;

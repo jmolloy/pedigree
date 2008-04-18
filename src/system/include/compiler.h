@@ -46,6 +46,10 @@
 /** The expression is very unlikely to be true */
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 
+/** Pack initialisation functions into a special section that could be freed after
+ *  the kernel initialisation is finished */
+#define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
+
 /** @} */
 
 #endif

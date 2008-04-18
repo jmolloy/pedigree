@@ -1,3 +1,5 @@
+#if defined (APIC)
+
 /*
  * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
@@ -41,7 +43,7 @@ void Apic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 bool Apic::initialise()
 {
   // TODO
-  return true;
+  return false;
 /*
   if (m_LocalApic.initialise(localApic) == false)
   {
@@ -51,3 +53,5 @@ bool Apic::initialise()
 
   return true;*/
 }
+
+#endif

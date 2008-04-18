@@ -16,7 +16,6 @@
 #ifndef KERNEL_PROCESSOR_INTERRUPTMANAGER_H
 #define KERNEL_PROCESSOR_INTERRUPTMANAGER_H
 
-#include <compiler.h>
 #include <processor/types.h>
 #include <processor/state.h>
 #include <processor/InterruptHandler.h>

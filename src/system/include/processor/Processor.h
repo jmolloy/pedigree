@@ -94,13 +94,13 @@ class Processor
      *\brief first stage in the initialisation of the processor-specific interface
      *\note This function should only be called once and by main()
      *\param[in] Info reference to the multiboot information structure */
-    static void initialise1(const BootstrapStruct_t &Info);
+    static void initialise1(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
     /** Initialises the Multiprocessor/-core functionality of the processor-specific
      *  interface. This function may only be called after initialiseProcessor1 and
      *  after the whole machine specific interface has been initialised.
      *\brief second/last stage in the initialisation of the processor-specific interface
      *\note This function should only be called once and by main() */
-    static void initialise2();
+    static void initialise2() INITIALISATION_ONLY;
     /** Is the processor-specific interface initialised?
      *\return 0, if nothing has been initialised, 1, if initialise1() has been executed
      *        successfully, 2, if initialise2() has been executed successfully */

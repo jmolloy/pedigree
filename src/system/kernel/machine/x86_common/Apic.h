@@ -41,7 +41,7 @@ class Apic : public IrqManager
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
 
-    bool initialise();
+    bool initialise() INITIALISATION_ONLY;
 
   private:
     /** The copy-constructor

@@ -18,8 +18,8 @@
  *                                                  ===========
  */
 
-const char *g_pBuildTime = "19:27 Friday 18-Apr-2008";
-const char *g_pBuildRevision = "321";
-const char *g_pBuildFlags = "DEBUGGER_QWERTY DEBUGGER DEBUGGER_RUN_AT_START DWARF X86 ADDITIONAL_CHECKS BITS_32 LITTLE_ENDIAN KERNEL_STANDALONE X86_COMMON";
-const char *g_pBuildUser = "james";
-const char *g_pBuildMachine = "lister (i686)";
+const char *g_pBuildTime = "23:15 Friday 18-Apr-2008";
+const char *g_pBuildRevision = "322";
+const char *g_pBuildFlags = "X64 BITS_64 APIC SMP SMP_NOTICE SMP_ERROR ACPI ACPI_NOTICE ACPI_ERROR DEBUGGER_QWERTY DEBUGGER DEBUGGER_RUN_AT_START DWARF ADDITIONAL_CHECKS LITTLE_ENDIAN KERNEL_STANDALONE X86_COMMON";
+const char *g_pBuildUser = "bluecode";
+const char *g_pBuildMachine = "blueserver (i686)";

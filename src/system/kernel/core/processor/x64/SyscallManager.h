@@ -35,14 +35,14 @@ class X64SyscallManager : public ::SyscallManager
     /** Initialises this processors syscall handling
      *\note This should only be called from initialiseProcessor()
      *\todo and some smp/acpi function */
-    static void initialiseProcessor();
+    static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
     /** Called when a syscall was called
      *\param[in] syscallState reference to the usermode state before the syscall */
     static void syscall(SyscallState &syscallState);
     /** The constructor */
-    X64SyscallManager();
+    X64SyscallManager() INITIALISATION_ONLY;
     /** Copy constructor
      *\note NOT implemented */
     X64SyscallManager(const X64SyscallManager &);

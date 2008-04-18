@@ -27,7 +27,7 @@ global _ZN9Processor14getDebugStatusEv
 ;### Code section #############################################################
 ;##############################################################################
 [bits 64]
-[section .code]
+[section .text]
 
 _ZN9Processor14getBasePointerEv:
   mov rax, rbp

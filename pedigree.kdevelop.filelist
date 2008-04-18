@@ -115,7 +115,6 @@ src/system/kernel
 src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
-src/system/kernel/Makefile
 src/system/kernel/Version.cc
 src/system/kernel/Version.h
 src/system/kernel/boot-arm.cc

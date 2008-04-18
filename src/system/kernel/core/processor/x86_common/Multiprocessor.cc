@@ -1,3 +1,4 @@
+#if defined(MULTIPROCESSOR)
 /*
  * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
  *
@@ -96,3 +97,5 @@ size_t initialiseMultiprocessor()
   clearContainer(Processors, IoApics);
   return 1;
 }
+
+#endif

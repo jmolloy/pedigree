@@ -36,7 +36,7 @@ class Pc : public Machine
   public:
     inline static Pc &instance(){return m_Instance;}
 
-    virtual void initialise();
+    virtual void initialise() INITIALISATION_ONLY;
 
     virtual Serial *getSerial(size_t n);
     virtual size_t getNumSerial();
@@ -51,7 +51,7 @@ class Pc : public Machine
     /**
     * Default constructor, does nothing.
     */
-    Pc();
+    Pc() INITIALISATION_ONLY;
     Pc(const Pc &);
     Pc &operator = (const Pc &);
     /**

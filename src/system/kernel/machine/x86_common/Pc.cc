@@ -73,7 +73,8 @@ void Pc::initialise()
     // the ACPI/SMP structures
     Apic apic;
     if (bApicValid == true && 
-        apic.initialise(localApicAddress) == true)
+        m_LocalApic.initialise(localApicAddress) == true &&
+        apic.initialise() == true)
     {
       // TODO: initialise local APIC
 

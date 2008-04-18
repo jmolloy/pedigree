@@ -15,6 +15,7 @@
 ;
 
 [bits 64]
+[section .init.text]
 
 ; X64GdtManager::loadSegmentRegisters
 global _ZN13X64GdtManager20loadSegmentRegistersEv
