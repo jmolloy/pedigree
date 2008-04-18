@@ -5,13 +5,14 @@
 #
 # Print a string explaining why we died
 proc abort {message} {
- puts "Error: $message  - Exiting!\n"
- exit
+puts "Error: $message  - Exiting!\n"
+exit
 }
 
 # Create the process.
-spawn qemu-system-x86_64 -nographic -fda $argv
+spawn ../scripts/$argv
 set timeout 10
+
 expect {
   "Press any key to enter the debugger..." {exit 0}
   timeout {abort "Oh shit!"}
