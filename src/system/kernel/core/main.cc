@@ -114,9 +114,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   int
 #endif
   a = 3/0;*/
-#if defined(MIPS_COMMON) && defined(MIPS_MALTA_BONITO64)
-//   InterruptState st;
-//   Debugger::instance().breakpoint(st);
+#if defined(MIPS_COMMON) || defined(ARM_COMMON)
+   InterruptState st;
+   LargeStaticString str("I r cool");
+   Debugger::instance().start(st, str);
   return; // Go back to the YAMON prompt.
 #endif
   

@@ -91,12 +91,15 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
    */
   LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   SerialIO serialIO(Machine::instance().getSerial(0));
+#ifndef ARM_COMMON
   SerialIO serialIO2(Machine::instance().getSerial(1));
+  DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
+  int nInterfaces = 3;
+#else
+  DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
+  int nInterfaces = 2;
+#endif
 
- DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
- int nInterfaces = 3;
-//   DebuggerIO *pInterfaces[] = {&localIO};
-//   int nInterfaces=1;
   // IO interface.
   DebuggerIO *pIo = 0;
   int nChosenInterface = -1;
