@@ -55,7 +55,7 @@ char X86Keyboard::getChar()
 
   // Get the scancode for the pending keystroke.
   scancode = m_Port.read8(0);
-  
+
   // We don't care about 'special' scancodes which start with 0xe0.
   if (scancode == 0xe0)
     return 0;
@@ -67,7 +67,7 @@ char X86Keyboard::getChar()
     bKeypress = false;
     scancode &= 0x7f;
   }
-   
+
   bool bUseUpper = false;  // Use the upper case keymap.
   bool bUseNums = false;   // Use the upper case keymap for numbers.
   // Certain scancodes have special meanings.
@@ -103,7 +103,7 @@ char X86Keyboard::getChar()
 
   if (m_bShift)
     bUseNums = true;
-  
+
   if (!bKeypress)
     return 0;
 
@@ -143,7 +143,7 @@ char X86Keyboard::getCharNonBlock()
 
   // Get the scancode for the pending keystroke.
   scancode = m_Port.read8(0);
-  
+
   // We don't care about 'special' scancodes which start with 0xe0.
   if (scancode == 0xe0)
     return 0;
@@ -155,7 +155,7 @@ char X86Keyboard::getCharNonBlock()
     bKeypress = false;
     scancode &= 0x7f;
   }
-   
+
   bool bUseUpper = false;  // Use the upper case keymap.
   bool bUseNums = false;   // Use the upper case keymap for numbers.
   // Certain scancodes have special meanings.
@@ -191,7 +191,7 @@ char X86Keyboard::getCharNonBlock()
 
   if (m_bShift)
     bUseNums = true;
-  
+
   if (!bKeypress)
     return 0;
 

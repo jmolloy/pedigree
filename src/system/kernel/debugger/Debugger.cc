@@ -148,7 +148,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
       for (int i = 0; i < nInterfaces; i++)
       {
         char c = pInterfaces[i]->getCharNonBlock();
-        if ((c >= 32 && c <= 127) || c == '\n' || c == 0x08 || c == '\r' || c == 0x09)
+        if ((c >= 32 && static_cast<unsigned char>(c) <= 127) || c == '\n' ||
+            c == 0x08 || c == '\r' || c == 0x09)
         {
           pIo = pInterfaces[i];
           nChosenInterface = i;

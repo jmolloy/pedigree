@@ -121,14 +121,47 @@ class DwarfState
       memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }
     ~DwarfState() {}
-    
+
+    /**
+     * Copy constructor.
+     */
+    DwarfState(const DwarfState &other) :
+      m_CfaState(other.m_CfaState),
+      m_CfaRegister(other.m_CfaRegister),
+      m_CfaOffset(other.m_CfaOffset),
+      m_CfaExpression(other.m_CfaExpression),
+      m_ReturnAddress(other.m_ReturnAddress)
+    {
+      memcpy (static_cast<void *> (m_RegisterStates),
+              static_cast<const void *> (other.m_RegisterStates),
+              sizeof(RegisterState) * DWARF_MAX_REGISTERS);
+      memcpy (static_cast<void *> (m_R),
+              static_cast<const void *> (other.m_R),
+              sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+    }
+
+    DwarfState &operator=(const DwarfState &other)
+    {
+      m_CfaState = other.m_CfaState;
+      m_CfaRegister = other.m_CfaRegister;
+      m_CfaOffset = other.m_CfaOffset;
+      m_CfaExpression = other.m_CfaExpression;
+      m_ReturnAddress = other.m_ReturnAddress;
+      memcpy (static_cast<void *> (m_RegisterStates),
+              static_cast<const void *> (other.m_RegisterStates),
+              sizeof(RegisterState) * DWARF_MAX_REGISTERS);
+      memcpy (static_cast<void *> (m_R),
+              static_cast<const void *> (other.m_R),
+              sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+      return *this;
+    }
+     
     processor_register_t getCfa(const DwarfState &initialState)
     {
       switch (m_CfaState)
       {
         case ValOffset:
         {
-//           WARNING("m_CfaRegister: " << Dec << m_CfaRegister << ", off: " << m_CfaOffset);
           return initialState.m_R[m_CfaRegister] + static_cast<ssize_t> (m_CfaOffset);
         }
         case ValExpression:
@@ -219,6 +252,7 @@ class DwarfState
      * The column which contains the function return address.
      */
     uintptr_t m_ReturnAddress;
+
 };
 
 /** @} */
