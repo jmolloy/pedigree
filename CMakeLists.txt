@@ -174,4 +174,3 @@ add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
 include(CTest)
-add_test(DebuggerStart ../tests/DebuggerStart.exp)
