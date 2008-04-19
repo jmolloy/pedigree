@@ -213,6 +213,8 @@ class Processor
   #include <processor/x86_common/Processor.h>
 #elif defined(MIPS_COMMON)
   #include <processor/mips_common/Processor.h>
+#elif defined(ARM_COMMON)
+  #include <processor/arm_common/Processor.h>
 #endif
 
 #endif

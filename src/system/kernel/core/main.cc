@@ -93,8 +93,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
 #if defined(ARM_COMMON)
    InterruptState st;
-   LargeStaticString str("I r cool");
-   Debugger::instance().start(st, str);
+   LargeStaticString str2("I r cool");
+   Debugger::instance().start(st, str2);
   return; // Go back to the YAMON prompt.
 #endif
 

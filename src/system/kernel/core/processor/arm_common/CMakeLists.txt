@@ -21,4 +21,4 @@
 #
 
 add_kernel_src(core/processor/arm_common
-               Disassembler.cc)
+               Disassembler.cc PhysicalMemoryManager.cc)

@@ -42,13 +42,6 @@ void Processor::identify(HugeStaticString &str)
   str += "Arm926E";
 }
 
-void Processor::halt()
-{
-  asm volatile( "_halting:\r\nb _halting" );
-  for( ;; );
-}
-
-
 size_t Processor::getDebugBreakpointCount()
 {
   return 0;

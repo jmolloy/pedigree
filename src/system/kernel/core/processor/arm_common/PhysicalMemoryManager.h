@@ -13,22 +13,22 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_PROCESSOR_MIPS_COMMON_PHYSICALMEMORYMANAGER_H
-#define KERNEL_PROCESSOR_MIPS_COMMON_PHYSICALMEMORYMANAGER_H
+#ifndef KERNEL_PROCESSOR_ARM_COMMON_PHYSICALMEMORYMANAGER_H
+#define KERNEL_PROCESSOR_ARM_COMMON_PHYSICALMEMORYMANAGER_H
 
 #include <processor/PhysicalMemoryManager.h>
 
-/** @addtogroup kernelprocessormipscommon
+/** @addtogroup kernelprocessorarmcommon
  * @{ */
 
-/** The common mips implementation of the PhysicalMemoryManager
- *\brief Implementation of the PhysicalMemoryManager for common mips */
-class MipsCommonPhysicalMemoryManager : public PhysicalMemoryManager
+/** The common arm implementation of the PhysicalMemoryManager
+ *\brief Implementation of the PhysicalMemoryManager for common arm */
+class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
   public:
-    /** Get the MipsCommonPhysicalMemoryManager instance
-     *\return instance of the MipsCommonPhysicalMemoryManager */
-    inline static MipsCommonPhysicalMemoryManager &instance(){return m_Instance;}
+    /** Get the ArmCommonPhysicalMemoryManager instance
+     *\return instance of the ArmCommonPhysicalMemoryManager */
+    inline static ArmCommonPhysicalMemoryManager &instance(){return m_Instance;}
 
     //
     // PhysicalMemoryManager Interface
@@ -43,20 +43,20 @@ class MipsCommonPhysicalMemoryManager : public PhysicalMemoryManager
 
   protected:
     /** The constructor */
-    MipsCommonPhysicalMemoryManager();
+    ArmCommonPhysicalMemoryManager();
     /** The destructor */
-    virtual ~MipsCommonPhysicalMemoryManager();
+    virtual ~ArmCommonPhysicalMemoryManager();
 
   private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    MipsCommonPhysicalMemoryManager(const MipsCommonPhysicalMemoryManager &);
+    ArmCommonPhysicalMemoryManager(const ArmCommonPhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    MipsCommonPhysicalMemoryManager &operator = (const MipsCommonPhysicalMemoryManager &);
+    ArmCommonPhysicalMemoryManager &operator = (const ArmCommonPhysicalMemoryManager &);
 
-    /** The MipsCommonPhysicalMemoryManager class instance */
-    static MipsCommonPhysicalMemoryManager m_Instance;
+    /** The ArmCommonPhysicalMemoryManager class instance */
+    static ArmCommonPhysicalMemoryManager m_Instance;
 };
 
 /** @} */

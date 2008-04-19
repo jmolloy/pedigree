@@ -15,35 +15,35 @@
  */
 #include "PhysicalMemoryManager.h"
 
-MipsCommonPhysicalMemoryManager MipsCommonPhysicalMemoryManager::m_Instance;
+ArmCommonPhysicalMemoryManager ArmCommonPhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
-  return MipsCommonPhysicalMemoryManager::instance();
+  return ArmCommonPhysicalMemoryManager::instance();
 }
 
-physical_uintptr_t MipsCommonPhysicalMemoryManager::allocatePage()
+physical_uintptr_t ArmCommonPhysicalMemoryManager::allocatePage()
 {
   // TODO
   return 0;
 }
-void MipsCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
+void ArmCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
   // TODO
 }
-bool MipsCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
-                                                     size_t cPages,
-                                                     size_t pageConstraints,
-                                                     size_t Flags,
-                                                     physical_uintptr_t start)
+bool ArmCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
+                                                    size_t cPages,
+                                                    size_t pageConstraints,
+                                                    size_t Flags,
+                                                    physical_uintptr_t start)
 {
   // TODO
   return false;
 }
 
-MipsCommonPhysicalMemoryManager::MipsCommonPhysicalMemoryManager()
+ArmCommonPhysicalMemoryManager::ArmCommonPhysicalMemoryManager()
 {
 }
-MipsCommonPhysicalMemoryManager::~MipsCommonPhysicalMemoryManager()
+ArmCommonPhysicalMemoryManager::~ArmCommonPhysicalMemoryManager()
 {
 }

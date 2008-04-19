@@ -13,15 +13,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef KERNEL_PROCESSOR_ARM_COMMON_PROCESSOR_H
+#define KERNEL_PROCESSOR_ARM_COMMON_PROCESSOR_H
 
-#ifndef KERNEL_CPPSUPPORT_H
-#define KERNEL_CPPSUPPORT_H
-
-#include <compiler.h>
-
-/** 
- * Calls the constructors of global objects
- */
-void initialiseConstructors() INITIALISATION_ONLY;
+void Processor::halt()
+{
+  asm volatile( "_halting:\r\nb _halting" );
+  for( ;; );
+}
 
 #endif
