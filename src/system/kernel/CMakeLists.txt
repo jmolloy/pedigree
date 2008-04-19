@@ -24,6 +24,7 @@ macro(add_kernel_src directory)
     endif(NOT ${var} STREQUAL ${directory})
   endforeach(var ${ARGV})
   set(KERNEL_SRC ${KERNEL_SRC} ${src} PARENT_SCOPE)
+  set(KERNEL_SRC ${KERNEL_SRC} ${src}) # Possible hack.
 endmacro(add_kernel_src)
 
 #########################################################################################
