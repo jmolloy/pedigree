@@ -16,6 +16,11 @@
 #ifndef KERNEL_PROCESSOR_MIPS_COMMON_PROCESSOR_H
 #define KERNEL_PROCESSOR_MIPS_COMMON_PROCESSOR_H
 
+void Processor::breakpoint()
+{
+  asm volatile ("break");
+}
+
 void Processor::halt()
 {
   // TODO: gcc will most certainly optimize this away in -O1/2/3 so please
