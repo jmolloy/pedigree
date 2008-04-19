@@ -20,7 +20,7 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(linker Elf32.cc)
+add_kernel_src(linker Elf32.cc KernelElf.cc)
 
 if(BITS_64)
   add_kernel_src(linker Elf64.cc)

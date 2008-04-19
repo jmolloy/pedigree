@@ -19,27 +19,8 @@
 
 #include <compiler.h>
 #include <processor/types.h>
-
-#ifndef SHT_PROGBITS // This could have been set in Elf64.h
-#define SHT_PROGBITS      0x1     // The data is contained in the program file.
-#define SHT_SYMTAB        0x2     // Symbol table
-#define SHT_STRTAB        0x3     // String table
-#define SHT_RELA          0x4
-#define SHT_HASH          0x5     // Symbol hash table
-#define SHT_DYNAMIC       0x6     // Dynamic linking information
-#define SHT_NOTE          0x7
-#define SHT_NOBITS        0x8     // The data is not contained in the program file.
-#define SHT_REL           0x9
-#define SHT_DYNSYM        0xb
-#define SHT_INIT_ARRAY    0xe
-#define SHT_FINI_ARRAY    0xf
-#define SHT_PREINIT_ARRAY 0x10
-
-#define SHF_WRITE         0x1
-#define SHF_ALLOC         0x2
-#define SHF_EXECINSTR     0x4
-#define SHF_MASKPROC      0xf0000000
-#endif // SHT_PROGBITS
+#include <FileLoader.h>
+#include <Elf.h>
 
 #define ELF32_R_SYM(val)  ((val) >> 8)
 #define ELF32_R_TYPE(val) ((val) & 0xff)
@@ -47,10 +28,6 @@
 #define ELF32_ST_BIND(i)	((i)>>4)
 #define ELF32_ST_TYPE(i)	((i)&0xf)
 #define ELF32_ST_INFO(b, t)	(((b)<<4)+((t)&0xf))
-
-class BootstrapInfo;
-
-#include <FileLoader.h>
 
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
@@ -64,9 +41,8 @@ class Elf32 : virtual public FileLoader
 public:
   /**
    * Default constructor - loads no data.
-   * \param name An identifier for this ELF file. This is copied into the class.
    */
-  Elf32(const char *name);
+  Elf32();
 
   /**
    * Destructor. Doesn't do much.
@@ -79,11 +55,6 @@ public:
    */
   bool load(uint8_t *pBuffer, unsigned int nBufferLength);
   
-  /**
-   * Extracts the symbol and string tables from the given BootstrapInfo class.
-   */
-  bool load(BootstrapInfo *pBootstrap);
-
   /**
    * Writes all writeable sections to their virtual addresses.
    * \return True on success.
@@ -127,17 +98,10 @@ public:
    */
   uint32_t getEntryPoint();
   
-  virtual uint32_t debugFrameTable();
-  virtual uint32_t debugFrameTableLength();
+  virtual uintptr_t debugFrameTable();
+  virtual uintptr_t debugFrameTableLength();
 
-private:
-  /** The copy-constructor
-   *\note currently not implemented */
-  Elf32(const Elf32 &);
-  /** The assignment operator
-   *\note currently not implemented */
-  Elf32 &operator = (const Elf32 &);
-
+protected:
   struct Elf32Header_t
   {
     uint8_t  ident[16];
@@ -214,10 +178,18 @@ private:
   Elf32SectionHeader_t *m_pShstrtab;
   Elf32SectionHeader_t *m_pGotTable; // Global offset table.
   Elf32SectionHeader_t *m_pRelTable;
+  Elf32SectionHeader_t *m_pDebugTable;
   Elf32SectionHeader_t *m_pSectionHeaders;
   uint32_t             m_nSectionHeaders;
-  char                 m_pId [128];
   uint8_t              *m_pBuffer; ///< Offset of the file in memory.
+
+private:
+  /** The copy-constructor
+   *\note currently not implemented */
+  Elf32(const Elf32 &);
+  /** The assignment operator
+   *\note currently not implemented */
+  Elf32 &operator = (const Elf32 &);
 };
 
 

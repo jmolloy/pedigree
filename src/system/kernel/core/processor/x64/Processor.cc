@@ -74,10 +74,9 @@ void Processor::initialise2()
   X64GdtManager::initialiseProcessor();
 
   // Unmap the identity mapping of the first MBs
-  // TODO: This will break some other things I need to figure out first
-  //X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-  //*reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
-  //invalidate(0);
+  X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+  *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
+  invalidate(0);
 
   m_Initialised = 2;
 }

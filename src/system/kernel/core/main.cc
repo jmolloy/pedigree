@@ -26,19 +26,12 @@
 #include "cppsupport.h"                   // initialiseConstructors()
 #include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
 #include <machine/Machine.h>              // Machine::initialise()
+#include <KernelElf.h>                    // KernelElf::initialise()
 #include <Version.h>
 #include <LocalIO.h>
 #include <SerialIO.h>
 #include <DebuggerIO.h>
 
-#if defined(BITS_64)
-  #include <Elf64.h>
-  Elf64 elf("kernel");
-#elif defined(BITS_32)
-  #include <Elf32.h>
-  Elf32 elf("kernel");
-#endif
-FileLoader *g_pKernel = &elf;
 LocalIO *g_pLocalIO;
 SerialIO *g_pSerialIO1;
 SerialIO *g_pSerialIO2;
@@ -71,13 +64,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
-  // Create a BootstrapInfo object to parse bsInf.
-  BootstrapInfo bootstrapInfo(bsInf);
-
-  elf.load(&bootstrapInfo);
-
   // Initialise the processor-specific interface
   Processor::initialise1(*bsInf);
+
+  // Initialise the Kernel Elf class
+  KernelElf::instance().initialise(*bsInf);
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();

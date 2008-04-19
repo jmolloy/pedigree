@@ -23,9 +23,6 @@
 #include <DwarfUnwinder.h>
 #include <FileLoader.h>
 
-// TEMP!
-extern FileLoader *g_pKernel;
-
 Backtracer::Backtracer()
 {
 }

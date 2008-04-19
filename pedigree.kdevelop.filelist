@@ -113,7 +113,6 @@ src/system/include/utilities/demangle.h
 src/system/include/utilities/template.h
 src/system/include/utilities/utility.h
 src/system/kernel
-src/system/kernel/BootstrapInfo.cc
 src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
 src/system/kernel/Version.cc
@@ -134,9 +133,6 @@ src/system/kernel/core/lib/string.c
 src/system/kernel/core/lib/vsprintf.c
 src/system/kernel/core/main.cc
 src/system/kernel/core/main.h
-src/system/kernel/core/memory
-src/system/kernel/core/memory/MemoryMap.cc
-src/system/kernel/core/memory/MemoryMap.h
 src/system/kernel/core/process
 src/system/kernel/core/process/LockManager.cc
 src/system/kernel/core/process/Mutex.cc
@@ -292,11 +288,14 @@ src/system/kernel/debugger/libudis86/udis86.c
 src/system/kernel/debugger/libudis86/udis86.h
 src/system/kernel/debugger/panic.cc
 src/system/kernel/linker
+src/system/kernel/linker/Elf.h
 src/system/kernel/linker/Elf32.cc
 src/system/kernel/linker/Elf32.h
 src/system/kernel/linker/Elf64.cc
 src/system/kernel/linker/Elf64.h
 src/system/kernel/linker/FileLoader.h
+src/system/kernel/linker/KernelElf.cc
+src/system/kernel/linker/KernelElf.h
 src/system/kernel/machine
 src/system/kernel/machine/arm_versatile
 src/system/kernel/machine/arm_versatile/Keyboard.cc

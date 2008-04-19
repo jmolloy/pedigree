@@ -20,11 +20,8 @@
 #include <FileLoader.h>
 #include <Log.h>
 #include <utilities/demangle.h>
-
 #include <processor/Disassembler.h>
-
-// TEMP!
-extern FileLoader *g_pKernel;
+#include <KernelElf.h>
 
 DisassembleCommand::DisassembleCommand()
 {
@@ -83,7 +80,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     // What symbol are we in?
     // TODO grep the memory map for the right ELF to look at.
     uintptr_t symStart = 0;
-    const char *pSym = g_pKernel->lookupSymbol(location, &symStart);
+    const char *pSym = KernelElf::instance().lookupSymbol(location, &symStart);
     if (location == symStart)
     {
 #ifdef BITS_32

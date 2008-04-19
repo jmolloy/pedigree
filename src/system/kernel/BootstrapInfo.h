@@ -74,53 +74,6 @@ struct MemoryMapEntry_t
   uint32_t type;
 } PACKED;
 
-/**
- * Parser for a boot-time structure detailing the whereabouts of e.g.
- * the kernel symbol table, and a memory map.
- * \note This class makes a copy of the given BootstrapStruct.
- */
-class BootstrapInfo
-{
-public:
-  /**
-   * Constructor. Should initialise the m_BootstrapInfo member, and not much else.
-   */
-  BootstrapInfo(BootstrapStruct_t *info);
-
-  /**
-   * Destructor. Shouldn't do anything.
-   */
-  ~BootstrapInfo();
-
-  /**
-   * Retrieves the number of kernel ELF section headers.
-   */
-  int getSectionHeaderCount();
-  
-  /**
-   * Retrieves a pointer to the n'th kernel ELF section header.
-   *
-   * Assumes n is less than getSectionHeaderCount().
-   */
-  uint8_t *getSectionHeader(int n);
-  
-  /**
-   * Retrieves an index, suitable for use with getSectionHeader, to access
-   * the String Table section of the kernel ELF header.
-   */
-  int getStringTable();
-  
-  /**
-   * Discovers whether VBE information is present.
-   * \return True if the VBE info is present.
-   */
-  bool hasVbeInfo();
-  
-private:
-  BootstrapStruct_t m_BootstrapInfo;
-  
-};
-
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
 #if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
 #define MULTIBOOT_FLAG_MEM     0x001

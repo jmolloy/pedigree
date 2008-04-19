@@ -70,10 +70,9 @@ void Processor::initialise2()
   X86GdtManager::initialiseProcessor();
 
   // Unmap the identity mapping of the first MBs
-  // TODO: This will break some other things I need to figure out first
-  //X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-  //*reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
-  //invalidate(0);
+  X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+  *reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
+  invalidate(0);
 
   m_Initialised = 2;
 }

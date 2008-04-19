@@ -21,7 +21,6 @@
 #
 
 add_subdirectory(lib)
-add_subdirectory(memory)
 add_subdirectory(process)
 add_subdirectory(processor)
 

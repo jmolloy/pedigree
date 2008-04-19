@@ -19,18 +19,18 @@
 #include <utilities/utility.h>
 #include <BootstrapInfo.h>
 
-Elf64::Elf64(const char *name) :
+Elf64::Elf64() :
   m_pHeader(0),
   m_pSymbolTable(0),
   m_pStringTable(0),
   m_pShstrtab(0),
   m_pGotTable(0),
   m_pRelTable(0),
+  m_pDebugTable(0),
   m_pSectionHeaders(0),
   m_nSectionHeaders(0),
   m_pBuffer(0)
 {
-  strncpy(m_pId, name, 127);
 }
 
 Elf64::~Elf64()
@@ -49,7 +49,7 @@ bool Elf64::load(uint8_t *pBuffer, unsigned int nBufferLength)
        (m_pHeader->ident[3] != 127) )
   {
     m_pHeader = 0;
-    ERROR("ELF file with id '" << m_pId << "'; ident check failed!");
+    ERROR("ELF file: ident check failed!");
     return false;
   }
   
@@ -78,7 +78,7 @@ bool Elf64::load(uint8_t *pBuffer, unsigned int nBufferLength)
   }
   
   if (m_pSymbolTable == 0)
-    WARNING("ELF file with id '" << m_pId << "'; symbol table not found!");
+    WARNING("ELF file: symbol table not found!");
   
   m_pBuffer = pBuffer;
   
@@ -86,50 +86,16 @@ bool Elf64::load(uint8_t *pBuffer, unsigned int nBufferLength)
   return true;
 }
 
-bool Elf64::load(BootstrapInfo *pBootstrap)
-{
-  // Firstly get the section header string table.
-  m_pShstrtab = reinterpret_cast<Elf64SectionHeader_t *>( pBootstrap->getSectionHeader(
-      pBootstrap->getStringTable() ));
-  
-  m_nSectionHeaders = pBootstrap->getSectionHeaderCount();
-  m_pSectionHeaders = reinterpret_cast<Elf64SectionHeader_t*>(pBootstrap->getSectionHeader(0));
-  
-  // Normally we will try to use the sectionHeader->offset member to access data, so an
-  // Elf section's data can be accessed without being mapped into virtual memory. However,
-  // when GRUB loads us, it doesn't tell us where exactly ->offset is with respect to, so here
-  // we fix offset = addr, then we work w.r.t 0x00.
-  
-  // Temporarily load the string table.
-  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
-
-  // Now search for the symbol table.
-  for (int i = 0; i < pBootstrap->getSectionHeaderCount(); i++)
-  {
-    Elf64SectionHeader_t *pSh = reinterpret_cast<Elf64SectionHeader_t *>(pBootstrap->getSectionHeader(i));
-    const char *pStr = pStrtab + pSh->name;
-
-    if (pSh->type == SHT_SYMTAB)
-    {
-      m_pSymbolTable = pSh;
-      m_pSymbolTable->offset = m_pSymbolTable->addr;
-    }
-    else if (!strcmp(pStr, ".strtab"))
-    {
-      m_pStringTable = pSh;
-      m_pStringTable->offset = m_pStringTable->addr;
-    }
-  }
-
-  return true;
-}
-
 bool Elf64::writeSections()
 {
+  // TODO
+  return false;
 }
 
 unsigned int Elf64::getLastAddress()
 {
+  // TODO
+  return 0;
 }
 
 const char *Elf64::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
@@ -173,54 +139,34 @@ const char *Elf64::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 uint32_t Elf64::lookupDynamicSymbolAddress(uint32_t off)
 {
+  // TODO
+  return 0;
 }
 
 char *Elf64::lookupDynamicSymbolName(uint32_t off)
 {
+  // TODO
+  return 0;
 }
 
 uint32_t Elf64::getGlobalOffsetTable()
 {
+  // TODO
+  return 0;
 }
 
 uint32_t Elf64::getEntryPoint()
 {
-}
-
-uint32_t Elf64::debugFrameTable()
-{
-  // Temporarily load the string table.
-  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
-  
-  // Now search for the debug_frame table.
-  for (int i = 0; i < m_nSectionHeaders; i++)
-  {
-    Elf64SectionHeader_t *pSh = &m_pSectionHeaders[i];
-    const char *pStr = pStrtab + pSh->name;
-
-    if (!strcmp(pStr, ".debug_frame"))
-    {
-      return pSh->addr;
-    }
-  }
+  // TODO
   return 0;
 }
 
-uint32_t Elf64::debugFrameTableLength()
+uintptr_t Elf64::debugFrameTable()
 {
-  // Temporarily load the string table.
-  const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
-  
-  // Now search for the debug_frame table.
-  for (int i = 0; i < m_nSectionHeaders; i++)
-  {
-    Elf64SectionHeader_t *pSh = &m_pSectionHeaders[i];
-    const char *pStr = pStrtab + pSh->name;
+  return m_pDebugTable->addr;
+}
 
-    if (!strcmp(pStr, ".debug_frame"))
-    {
-      return pSh->size;
-    }
-  }
-  return 0;
+uintptr_t Elf64::debugFrameTableLength()
+{
+  return m_pDebugTable->size;
 }

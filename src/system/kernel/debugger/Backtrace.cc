@@ -19,9 +19,8 @@
 #include <FileLoader.h>
 #include <Log.h>
 #include <DwarfUnwinder.h>
+#include <KernelElf.h>
 
-// TEMP!
-extern FileLoader *g_pKernel;
 extern uintptr_t start;
 
 Backtrace::Backtrace()
@@ -36,7 +35,7 @@ Backtrace::~Backtrace()
 void Backtrace::performBacktrace(InterruptState &state)
 {
   // Firstly, can we perform a DWARF backtrace?
-  if (g_pKernel->debugFrameTable() > 0 /*&& g_pKernel->debugFrameTableLength() > 0*/)
+  if (KernelElf::instance().debugFrameTable() > 0 /*&& g_pKernel->debugFrameTableLength() > 0*/)
   {
     performDwarfBacktrace(state);
     return;
@@ -60,7 +59,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   m_pStates[0] = initial;
   
   size_t i = 1;
-  DwarfUnwinder du(g_pKernel->debugFrameTable(), g_pKernel->debugFrameTableLength());
+  DwarfUnwinder du(KernelElf::instance().debugFrameTable(), KernelElf::instance().debugFrameTableLength());
   while (i < MAX_STACK_FRAMES)
   {
     if (!du.unwind(initial, next))
@@ -75,7 +74,7 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
     if (next.getBasePointer() == 0) break;
 #else
     uintptr_t symStart;
-    g_pKernel->lookupSymbol(next.getInstructionPointer(), &symStart);
+    KernelElf::instance().lookupSymbol(next.getInstructionPointer(), &symStart);
     if (symStart == reinterpret_cast<uintptr_t> (&start)) break;
 #endif
     m_pReturnAddresses[i] = next.getInstructionPointer();
@@ -123,7 +122,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
   {
     uintptr_t symStart = 0;
 
-    const char *pSym = g_pKernel->lookupSymbol(m_pReturnAddresses[i], &symStart);
+    const char *pSym = KernelElf::instance().lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
     StackFrame sf(m_pStates[i], sym);
     sf.prettyPrint(buf);
