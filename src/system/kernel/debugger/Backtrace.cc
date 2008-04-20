@@ -57,19 +57,18 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   m_pBasePointers[0] = state.getBasePointer();
   m_pReturnAddresses[0] = state.getInstructionPointer();
   m_pStates[0] = initial;
-  
+
   size_t i = 1;
   DwarfUnwinder du(KernelElf::instance().debugFrameTable(), KernelElf::instance().debugFrameTableLength());
+  uintptr_t frameBase;
   while (i < MAX_STACK_FRAMES)
   {
-    if (!du.unwind(initial, next))
+    if (!du.unwind(initial, next, frameBase))
     {
       ERROR("Dwarf unwind failed!");
       return;
     }
     initial = next; // For next round.
-    FATAL("Inptr: " << Hex << next.getInstructionPointer());
-    FATAL("BasePtr: " << Hex << next.getBasePointer());
 #ifndef MIPS_COMMON
     if (next.getBasePointer() == 0) break;
 #else

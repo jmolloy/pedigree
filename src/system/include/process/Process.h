@@ -13,17 +13,22 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <process/Scheduler.h>
+#ifndef PROCESS_H
+#define PROCESS_H
 
-Scheduler Scheduler::m_Instance;
+#include <process/Thread.h>
+#include <processor/state.h>
 
-Scheduler::Scheduler()
+/**
+ * An abstraction of a Process - a container for one or more threads all running in
+ * the same address space.
+ */
+class Process
 {
-}
+public:
 
+  
+private:
+};
 
-Scheduler::~Scheduler()
-{
-}
-
-
+#endif

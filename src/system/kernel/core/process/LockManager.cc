@@ -17,8 +17,10 @@
 #include <LockManager.h>
 #include <Log.h>
 
+LockManager LockManager::m_Instance;
+
 LockManager::LockManager() :
-  m_Stack(10)
+  m_Stack(32)
 {
   m_Stack.clear();
 }
@@ -41,5 +43,3 @@ void LockManager::released(Semaphore& sem)
     FATAL("Lock release out of order.");
   }
 }
-
-#endif

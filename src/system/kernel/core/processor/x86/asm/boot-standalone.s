@@ -124,7 +124,7 @@ start:
 
   ; Set stack
   pop ebx
-  mov esp, 0xFFBFE000
+  mov esp, 0xFFBFDC00
 
   push ebx
   ; clear the stackframe

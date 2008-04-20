@@ -13,17 +13,43 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <process/Scheduler.h>
 
-Scheduler Scheduler::m_Instance;
+#include <Semaphore.h>
 
-Scheduler::Scheduler()
+// Note, this is in its own file purely so that a vtable can be generated.
+Semaphore::Semaphore(size_t nInitialValue)
 {
 }
 
-
-Scheduler::~Scheduler()
+Semaphore::~Semaphore()
 {
 }
 
+void Semaphore::acquire(size_t n)
+{
+//   while (m_Counter == 0);
+//   m_Counter -= n;
+//   while (m_Counter == 0);
+#ifdef STRICT_LOCK_ORDERING
+//     Processor::.acquired(*this);
+#endif
+}
 
+bool Semaphore::tryAcquire(size_t n)
+{
+//   if (m_Counter > 0 && m_Counter.tryDecrement(n))
+//   {
+#ifdef STRICT_LOCK_ORDERING
+//     LockManager::instance().acquired(*this);
+#endif
+    return true;
+//   }
+//   return false;
+}
+
+void Semaphore::release(size_t n)
+{
+//   m_Counter += n;
+#ifdef STRICT_LOCK_ORDERING
+#endif
+}

@@ -54,6 +54,7 @@
   do \
   { \
     Log::instance() << Log::Fatal << text << Flush; \
+    Processor::breakpoint(); \
   } \
   while (0)
 

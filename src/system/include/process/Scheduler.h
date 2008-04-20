@@ -27,6 +27,9 @@ public:
   /** Get the instance of the scheduler */
   inline static Scheduler &instance() {return m_Instance;}
 
+  /** Initialises the scheduler. */
+  bool initialise();
+  
   /** Retrieves the current SchedulingAlgorithm */
   SchedulingAlgorithm *getAlgorithm();
   /** Sets the current SchedulingAlgorithm */

@@ -28,7 +28,7 @@ DwarfUnwinder::~DwarfUnwinder()
 {
 }
 
-bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outState)
+bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outState, uintptr_t &frameBase)
 {
   // Construct a DwarfState object and populate it.
   DwarfState startState;
@@ -176,6 +176,8 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 
     DwarfState *endState = automaton.execute (m_nData+nInstructionStart, nInstructionLength, inState.getInstructionPointer());
 
+    frameBase = endState->getCfa(startState);
+    
 #ifdef X86
     outState.eax = endState->getRegister(DWARF_REG_EAX, startState);
     outState.ebx = endState->getRegister(DWARF_REG_EBX, startState);
@@ -237,7 +239,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 //     outState.m_K1 = endState->getRegister(DWARF_REG_K1, startState);
     outState.m_Gp = endState->getRegister(DWARF_REG_GP, startState);
     outState.m_Sp = /*endState->getRegister(DWARF_REG_SP, startState);*/
-        endState->getCfa(startState);
+        endState->getCfa(startState); /// \warning Hmm, is this a hack?
     outState.m_Fp = endState->getRegister(DWARF_REG_FP, startState);
     outState.m_Ra = endState->getRegister(DWARF_REG_RA, startState);
     outState.m_Epc = endState->getRegister(nReturnAddressRegister, startState);

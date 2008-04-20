@@ -13,17 +13,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include <process/Scheduler.h>
+#ifndef INITIALISE_MULTITASKING_H
+#define INITIALISE_MULTITASKING_H
 
-Scheduler Scheduler::m_Instance;
-
-Scheduler::Scheduler()
-{
-}
+#include <Thread.h>
 
 
-Scheduler::~Scheduler()
-{
-}
 
-
+#endif

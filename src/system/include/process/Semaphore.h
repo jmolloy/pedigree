@@ -43,7 +43,8 @@ public:
   void release(size_t n=1);
   
 private:
-  size_t m_Counter;
+  /// \todo Implement Atomic<T>.
+  // Atomic<size_t> m_Counter;
 };
 
 #endif

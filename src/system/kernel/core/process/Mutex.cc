@@ -22,8 +22,6 @@ Mutex::Mutex() :
 {
 }
 
-~Mutex()
+Mutex::~Mutex()
 {
 }
-
-#endif
