@@ -29,6 +29,7 @@ src/system/boot/mips/mkheader.pl
 src/system/common
 src/system/common/Makefile
 src/system/include
+src/system/include/BootstrapInfo.h
 src/system/include/Log.h
 src/system/include/compiler.h
 src/system/include/doxygen.h
@@ -113,7 +114,6 @@ src/system/include/utilities/demangle.h
 src/system/include/utilities/template.h
 src/system/include/utilities/utility.h
 src/system/kernel
-src/system/kernel/BootstrapInfo.h
 src/system/kernel/Log.cc
 src/system/kernel/Version.cc
 src/system/kernel/Version.h

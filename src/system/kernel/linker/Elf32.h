@@ -22,6 +22,9 @@
 #include <FileLoader.h>
 #include <Elf.h>
 
+/** @addtogroup kernellinker
+ * @{ */
+
 #define ELF32_R_SYM(val)  ((val) >> 8)
 #define ELF32_R_TYPE(val) ((val) & 0xff)
 
@@ -192,5 +195,6 @@ private:
   Elf32 &operator = (const Elf32 &);
 };
 
+/** @} */
 
 #endif

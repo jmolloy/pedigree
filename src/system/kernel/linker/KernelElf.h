@@ -22,6 +22,9 @@
 #include <processor/MemoryRegion.h>
 #include <BootstrapInfo.h>
 
+/** @addtogroup kernellinker
+ * @{ */
+
 class KernelElf
   #if defined(BITS_64)
     : public Elf64
@@ -56,10 +59,14 @@ class KernelElf
       typedef Elf32SectionHeader_t ElfSectionHeader_t;
     #endif
 
-    MemoryRegion m_AdditionalSections;
+    #if defined(X86_COMMON)
+      MemoryRegion m_AdditionalSections;
+    #endif
 
     /** Instance of the KernelElf class */
     static KernelElf m_Instance;
 };
+
+/** @} */
 
 #endif

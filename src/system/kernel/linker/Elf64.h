@@ -22,6 +22,9 @@
 #include <FileLoader.h>
 #include <Elf.h>
 
+/** @addtogroup kernellinker
+ * @{ */
+
 #define ELF64_R_SYM(val)  ((val) >> 8)
 #define ELF64_R_TYPE(val) ((val) & 0xff)
 
@@ -191,5 +194,7 @@ class Elf64 : virtual public FileLoader
    *\note currently not implemented */
     Elf64 &operator = (const Elf64 &);
 };
+
+/** @} */
 
 #endif

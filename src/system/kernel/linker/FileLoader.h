@@ -16,6 +16,9 @@
 #ifndef FILELOADER_H
 #define FILELOADER_H
 
+/** @addtogroup kernellinker
+ * @{ */
+
 class FileLoader
 {
 public:
@@ -44,5 +47,7 @@ public:
   virtual uintptr_t debugFrameTable() = 0;
   virtual uintptr_t debugFrameTableLength() = 0;
 };
+
+/** @} */
 
 #endif

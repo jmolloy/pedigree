@@ -21,7 +21,7 @@
 // TODO: We might find better places in the virtual address-space for the MemoryRegions
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
-  #define KERNEL_VADDRESS 0xC0000000
+  #define KERNEL_VADDRESS 0xBFF00000
   #define KERNEL_MEMORYREGION_SIZE 0x10000000
   #define KERNEL_MEMORYREGION_VADDRESS 0xE0000000
 #elif defined(X64)

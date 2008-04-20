@@ -22,30 +22,34 @@ KernelElf KernelElf::m_Instance;
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
-  // Calculate the range
-  physical_uintptr_t start = pBootstrap.addr;
-  physical_uintptr_t end   = pBootstrap.addr + pBootstrap.num * pBootstrap.size;
-  for (size_t i = 1; i < pBootstrap.num; i++)
-  {
-    ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+  #if defined(X86_COMMON)
 
-    if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
-      if (pSh->addr >= end)
-        end = pSh->addr + pSh->size;
-  }
+    // Calculate the range
+    physical_uintptr_t start = pBootstrap.addr;
+    physical_uintptr_t end   = pBootstrap.addr + pBootstrap.num * pBootstrap.size;
+    for (size_t i = 1; i < pBootstrap.num; i++)
+    {
+      ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+  
+      if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
+        if (pSh->addr >= end)
+          end = pSh->addr + pSh->size;
+    }
+  
+    // Allocate the range
+    // TODO: PhysicalMemoryManager::nonRamMemory?
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    if (physicalMemoryManager.allocateRegion(m_AdditionalSections,
+                                            (end - start + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
+                                            PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                            VirtualAddressSpace::KernelMode,
+                                            start)
+        == false)
+    {
+      return false;
+    }
 
-  // Allocate the range
-  // TODO: PhysicalMemoryManager::nonRamMemory?
-  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  if (physicalMemoryManager.allocateRegion(m_AdditionalSections,
-                                           (end - start + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
-                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
-                                           VirtualAddressSpace::KernelMode,
-                                           start)
-      == false)
-  {
-    return false;
-  }
+  #endif
 
   // Get the string table
   const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + pBootstrap.shndx * pBootstrap.size)->addr);
@@ -55,12 +59,16 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
   {
     ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
 
-    // Adjust the section
-    if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
-    {
-      pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSections.convertPhysicalPointer<void>(pSh->addr));
-      pSh->offset = pSh->addr;
-    }
+    #if defined(X86_COMMON)
+
+      // Adjust the section
+      if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
+      {
+        pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSections.convertPhysicalPointer<void>(pSh->addr));
+        pSh->offset = pSh->addr;
+      }
+
+    #endif
 
     // Save the symbol/string table
     const char *pStr = tmpStringTable + pSh->name;
@@ -74,14 +82,20 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
   // Initialise remaining member variables
   // TODO: What about m_pShstrtab
-  m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(pBootstrap.addr);
+  #if defined(X86_COMMON)
+    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(pBootstrap.addr);
+  #else
+    m_pSectionHeaders = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr);
+  #endif
   m_nSectionHeaders = pBootstrap.num;
 
   return true;
 }
 
 KernelElf::KernelElf()
-  : m_AdditionalSections("Kernel ELF Sections")
+  #if defined(X86_COMMON)
+    : m_AdditionalSections("Kernel ELF Sections")
+  #endif
 {
 }
 KernelElf::~KernelElf()

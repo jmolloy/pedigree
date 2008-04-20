@@ -4,8 +4,8 @@
 ENTRY(start)
 SECTIONS
 {
-  . = 0xC0100000;
-  .init : AT(ADDR(.init) - 0xC0000000)
+  . = 0xC0000000;
+  .init : AT(ADDR(.init) - 0xBFF00000)
   {
     . = ALIGN(4096);
     init = .; _init = .; __init = .;
@@ -15,7 +15,7 @@ SECTIONS
     . = ALIGN(4096);
   }
 
-  .text : AT(ADDR(.text) - 0xC0000000)
+  .text : AT(ADDR(.text) - 0xBFF00000)
   {
     . = ALIGN(4096);
     code = .; _code = .; __code = .;
@@ -23,7 +23,7 @@ SECTIONS
     . = ALIGN(4096);
   }
 
-  .data : AT(ADDR(.data) - 0xC0000000)
+  .data : AT(ADDR(.data) - 0xBFF00000)
   {
     . = ALIGN(4096);
     start_ctors = .;
@@ -37,7 +37,7 @@ SECTIONS
     . = ALIGN(4096);
   }
 
-  .bss : AT(ADDR(.bss) - 0xC0000000)
+  .bss : AT(ADDR(.bss) - 0xBFF00000)
   {
     . = ALIGN(4096);
     bss = .; _bss = .; __bss = .;

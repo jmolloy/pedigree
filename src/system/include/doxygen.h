@@ -43,6 +43,26 @@
  *\brief x86-common processor-specific kernel
  * @ingroup kernelprocessor */
 
+/** @defgroup kernelprocessormipscommon mips-common
+ * mips-common processor-specific kernel
+ *\brief mips-common processor-specific kernel
+ * @ingroup kernelprocessor */
+
+/** @defgroup kernelprocessorARM926E ARM926E
+ * ARM926E processor-specific kernel
+ *\brief ARM926E processor-specific kernel
+ * @ingroup kernelprocessor */
+
+/** @defgroup kernelprocessorarm arm
+ * arm processor-specific kernel
+ *\brief arm processor-specific kernel
+ * @ingroup kernelprocessor */
+
+/** @defgroup kernelprocessorarmcommon arm-common
+ * arm-common processor-specific kernel
+ *\brief arm-common processor-specific kernel
+ * @ingroup kernelprocessor */
+
 /** @defgroup kernelprocessorMIPS64 MIPS64
  * MIPS64 processor-specific kernel
  *\brief MIPS64 processor-specific kernel
@@ -68,6 +88,11 @@
  *\brief mips-common machine-specific kernel
  *  @ingroup kernelmachine */
 
+/** @defgroup kernelmachinearmcommon arm-common
+ * arm-common machine-specific kernel
+ *\brief arm-common machine-specific kernel
+ *  @ingroup kernelmachine */
+
 /** @defgroup kerneldebugger debugger
  * the kernel debugger
  *\brief the kernel debugger
@@ -77,3 +102,8 @@
  * kernel debugger commands
  *\brief kernel debugger commands
  * @ingroup kerneldebugger */
+
+/** @defgroup kernellinker linker
+ * the kernel linker
+ *\brief the kernel linker
+ * @ingroup kernel */

@@ -49,7 +49,7 @@
 extern void *pagedirectory;
 
 X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xD0000000),
-                                                             reinterpret_cast<uintptr_t>(&pagedirectory) - 0xC0000000,
+                                                             reinterpret_cast<uintptr_t>(&pagedirectory) - 0xBFF00000,
                                                              reinterpret_cast<void*>(0xFFBFF000),
                                                              reinterpret_cast<void*>(0xFFC00000));
 
