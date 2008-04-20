@@ -101,6 +101,9 @@ class Processor
      *\brief second/last stage in the initialisation of the processor-specific interface
      *\note This function should only be called once and by main() */
     static void initialise2() INITIALISATION_ONLY;
+    /** End of the kernel core initialisation reached, the initialisation functions
+     *  and data may now get unmapped/freed. */
+    static void initialisationDone();
     /** Is the processor-specific interface initialised?
      *\return 0, if nothing has been initialised, 1, if initialise1() has been executed
      *        successfully, 2, if initialise2() has been executed successfully */

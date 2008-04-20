@@ -99,7 +99,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   g_pSerialIO2 = &serialIO2;
 #endif
   initialiseBootOutput();
-  
+
+  // The initialisation is done here, unmap/free the .init section
+  Processor::initialisationDone();
+
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";

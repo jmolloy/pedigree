@@ -238,7 +238,7 @@ bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
   pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, pageTableIndex);
 
   // Is a page present?
-  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT ||
+  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT &&
       (*pageTableEntry & PAGE_SWAPPED) != PAGE_SWAPPED)
     return false;
 

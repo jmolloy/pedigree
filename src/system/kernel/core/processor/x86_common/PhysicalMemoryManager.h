@@ -48,6 +48,9 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\param[in] Info reference to the multiboot information structure */
     void initialise(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
 
+    /** Unmap & free the .init section */
+    void initialisationDone();
+
     #if defined(ACPI)
       inline const RangeList<uint64_t> &getAcpiRanges() const
           {return m_AcpiRanges;}

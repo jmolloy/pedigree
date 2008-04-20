@@ -202,6 +202,31 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
                        KERNEL_MEMORYREGION_SIZE);
 }
 
+void X86CommonPhysicalMemoryManager::initialisationDone()
+{
+  extern void *init;
+  extern void *code;
+
+  // Unmap & free the .init section
+  VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
+  size_t count = (reinterpret_cast<uintptr_t>(&code) - reinterpret_cast<uintptr_t>(&init)) / getPageSize();
+  for (size_t i = 0;i < count;i++)
+  {
+    void *vAddress = adjust_pointer(reinterpret_cast<void*>(&init), i * getPageSize());
+
+    // Get the physical address
+    size_t flags;
+    physical_uintptr_t pAddress;
+    kernelSpace.getMapping(vAddress, pAddress, flags);
+
+    // Unmap the page
+    kernelSpace.unmap(vAddress);
+
+    // Free the physical page
+    m_RangeBelow16MB.free(pAddress, getPageSize());
+  }
+}
+
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
   : m_PageStack(), m_RangeBelow1MB(), m_RangeBelow16MB(), m_PhysicalRanges(),
   #if defined(ACPI)

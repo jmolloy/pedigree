@@ -14,6 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
+#include "PhysicalMemoryManager.h"
+
+void Processor::initialisationDone()
+{
+  X86CommonPhysicalMemoryManager::instance().initialisationDone();
+}
 
 size_t Processor::getDebugBreakpointCount()
 {

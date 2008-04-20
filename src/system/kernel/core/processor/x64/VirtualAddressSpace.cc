@@ -142,6 +142,7 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   return true;
 }
+
 void X64VirtualAddressSpace::getMapping(void *virtualAddress,
                                         physical_uintptr_t &physAddress,
                                         size_t &flags)
@@ -263,7 +264,7 @@ bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
   uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
 
   // Is a page table or 2MB page present?
-  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT);
+  if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
     return false;
   if ((*pageDirectoryEntry & PAGE_2MB) == PAGE_2MB)
     return false;
@@ -272,7 +273,7 @@ bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
   pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
 
   // Is a page present?
-  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT ||
+  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT &&
       (*pageTableEntry & PAGE_SWAPPED) != PAGE_SWAPPED)
     return false;
 
