@@ -14,11 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BOOTSTRAPINFO_H
-#define BOOTSTRAPINFO_H
+#ifndef KERNEL_BOOTSTRAPINFO_H
+#define KERNEL_BOOTSTRAPINFO_H
 
 #include <compiler.h>
 #include <processor/types.h>
+
+/** @addtogroup kernel
+ * @{ */
 
 struct BootstrapStruct_t
 {
@@ -88,5 +91,7 @@ struct MemoryMapEntry_t
 #define MULTIBOOT_FLAG_APM     0x200
 #define MULTIBOOT_FLAG_VBE     0x400
 #endif
+
+/** @} */
 
 #endif
