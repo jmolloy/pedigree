@@ -13,14 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#if defined(DEBUGGER)
+#ifdef DEBUGGER
 
 #include <processor/StackFrame.h>
+#include <Log.h>
 
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
-  // HACK: I have no idea if this is correct, but it fixes the bug
-  uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_State.ebp + (n + 1) * sizeof(uint32_t));
+  #if defined(OMIT_FRAMEPOINTER)
+    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_State.ebp + (n + 1) * sizeof(uint32_t));
+  #else
+    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_State.ebp + (n + 2) * sizeof(uint32_t));
+  #endif
   return *pPtr;
 }
 
