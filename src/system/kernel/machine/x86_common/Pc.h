@@ -29,7 +29,7 @@
 #include "LocalApic.h"
 
 /**
- * Concretion of the abstract Machine class for a MIPS Malta board.
+ * Concretion of the abstract Machine class for x86 and x64 machines
  */
 class Pc : public Machine
 {
@@ -46,6 +46,13 @@ class Pc : public Machine
     virtual SchedulerTimer *getSchedulerTimer();
     virtual Timer *getTimer();
     virtual Keyboard *getKeyboard();
+
+    #if defined(APIC)
+      /** Get the Local APIC class instance
+       *\return reference to the Local APIC class instance */
+      inline LocalApic &getLocalApic()
+        {return m_LocalApic;}
+    #endif
 
   private:
     /**

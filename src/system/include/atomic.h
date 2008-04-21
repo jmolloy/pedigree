@@ -21,24 +21,52 @@
 /** @addtogroup kernel
  * @{ */
 
-// NOTE: See http://gcc.gnu.org/onlinedocs/gcc-4.3.0/gcc/Atomic-Builtins.html#Atomic-Builtins
+// NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
 //       for more information about gcc's builtin atomic operations
 
 template<typename T>
 class Atomic
 {
   public:
-    Atomic(T value = T()) ALWAYS_INLINE
+    inline Atomic(T value = T())
       : m_Atom(value){}
-    ~Atomic() ALWAYS_INLINE{}
+    inline ~Atomic(){}
+
+    inline T operator += (T x)
+    {
+      return __sync_add_and_fetch(&m_Atom, x);
+    }
+    inline T operator -= (T x)
+    {
+      return __sync_sub_and_fetch(&m_Atom, x);
+    }
+    inline T operator |= (T x)
+    {
+      return __sync_or_and_fetch(&m_Atom, x);
+    }
+    inline T operator &= (T x)
+    {
+      return __sync_and_and_fetch(&m_Atom, x);
+    }
+    inline T operator ^= (T x)
+    {
+      return __sync_xor_and_fetch(&m_Atom, x);
+    }
+    inline bool compareAndSwap(T oldVal, T newVal)
+    {
+      return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
+    }
 
   protected:
-    // TODO
-    Atomic(const Atomic &);
-    Atomic &operator = (const Atomic &);
+    inline Atomic(const Atomic &x)
+      : m_Atom(x.m_Atom){}
+    inline Atomic &operator = (const Atomic &x)
+    {
+      m_Atom = x.m_Atom;
+    }
 
   private:
-    T m_Atom;
+    volatile T m_Atom;
 };
 
 /** @} */

@@ -1,5 +1,4 @@
 # KDevelop Custom Project File List
-build
 docs
 docs/code
 docs/code/example.cc
@@ -81,6 +80,7 @@ src/system/include/processor/arm_926e
 src/system/include/processor/arm_926e/StackFrame.h
 src/system/include/processor/arm_926e/state.h
 src/system/include/processor/arm_common
+src/system/include/processor/arm_common/Processor.h
 src/system/include/processor/arm_common/types.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
@@ -118,7 +118,6 @@ src/system/include/utilities/template.h
 src/system/include/utilities/utility.h
 src/system/kernel
 src/system/kernel/Log.cc
-src/system/kernel/Version.cc
 src/system/kernel/Version.h
 src/system/kernel/boot-arm.cc
 src/system/kernel/boot-mips.cc

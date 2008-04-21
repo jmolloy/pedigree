@@ -148,7 +148,7 @@ Acpi::Acpi()
   #if defined(APIC)
     , m_pApic(0), m_bValidApicInfo(false), m_bHasPICs(false), m_LocalApicAddress(0), m_IoApics()
     #if defined(MULTIPROCESSOR)
-      , m_Processors()
+      , m_bValidProcessorInfo(false), m_Processors()
     #endif
   #endif
 {
@@ -215,8 +215,8 @@ void Acpi::parseFixedACPIDescriptionTable()
           if (bUsable)
           {
             // Add the processor to the list
-            ProcessorInformation *pProcessorInfo = new ProcessorInformation(pLocalApic->processorId,
-                                                                            pLocalApic->apicId);
+            Multiprocessor::ProcessorInformation *pProcessorInfo = new Multiprocessor::ProcessorInformation(pLocalApic->processorId,
+                                                                                                            pLocalApic->apicId);
             m_Processors.pushBack(pProcessorInfo);
           }
         #endif
@@ -231,7 +231,7 @@ void Acpi::parseFixedACPIDescriptionTable()
         // TODO: What should we do with the global system interrupt base?
   
         // Add to the I/O APIC list
-        IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->apicId, pIoApic->address);
+        Multiprocessor::IoApicInformation *pIoApicInfo = new Multiprocessor::IoApicInformation(pIoApic->apicId, pIoApic->address);
         m_IoApics.pushBack(pIoApicInfo);
       }
       // Interrupt Source override
@@ -284,6 +284,9 @@ void Acpi::parseFixedACPIDescriptionTable()
     }
 
     m_bValidApicInfo = true;
+    #if defined(MULTIPROCESSOR)
+      m_bValidProcessorInfo = true;
+    #endif
   }
 #endif
 

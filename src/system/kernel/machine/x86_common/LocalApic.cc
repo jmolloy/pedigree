@@ -44,6 +44,9 @@
 #define LAPIC_REG_CURRENT_COUNT                         0x0390
 #define LAPIC_REG_DIVIDE_CONFIG                         0x03E0
 
+#define ERROR_VECTOR                                    0xFE
+#define SPURIOUS_VECTOR                                 0xFF
+
 bool LocalApic::initialise(uint64_t physicalAddress)
 {
   // Detect local APIC presence
@@ -55,26 +58,77 @@ bool LocalApic::initialise(uint64_t physicalAddress)
     return false;
   }
 
-  // Check Local APIC base address
-  if ((Processor::readMachineSpecificRegister(0x1B) & 0xFFFFFF000ULL) != physicalAddress)
-  {
-    ERROR("Local APIC: Wrong physical address");
+  // Some checks
+  if (check(physicalAddress) == false)
     return false;
-  }
 
   // Allocate the local APIC memory-mapped I/O space
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  return physicalMemoryManager.allocateRegion(m_IoSpace,
-                                              1,
-                                              PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
-                                              VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::CacheDisable,
-                                              physicalAddress);
+  if (physicalMemoryManager.allocateRegion(m_IoSpace,
+                                           1,
+                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                           VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::CacheDisable,
+                                           physicalAddress)
+      == false)
+  {
+    ERROR("Local APIC: Could not allocate the memory region");
+    return false;
+  }
+
+  return initialiseProcessor();
 }
 
 bool LocalApic::initialiseProcessor()
 {
+  // Some checks
+  if (check(m_IoSpace.physicalAddress()) == false)
+    return false;
+
+  // Enable the Local APIC and set the spurious interrupt vector
+  uint32_t tmp = m_IoSpace.read32(LAPIC_REG_SPURIOUS_INT);
+  m_IoSpace.write32((tmp & 0xFFFFFE00) | 0x100 | SPURIOUS_VECTOR, LAPIC_REG_SPURIOUS_INT);
+
+  // Set the task priority to 0
+  tmp = m_IoSpace.read32(LAPIC_REG_TASK_PRIORITY);
+  m_IoSpace.write32(tmp & 0xFFFFFF00, LAPIC_REG_TASK_PRIORITY);
+
+  // Set the LVT error register
+  tmp = m_IoSpace.read32(LAPIC_REG_LVT_ERROR);
+  m_IoSpace.write32((tmp & 0xFFFEEF00) | ERROR_VECTOR, LAPIC_REG_LVT_ERROR);
+
+  // TODO
+
+  return true;
+}
+
+void LocalApic::interProcessorInterrupt(uint8_t destinationApicId,
+                                        uint8_t vector,
+                                        size_t deliveryMode,
+                                        bool bAssert,
+                                        bool bLevelTriggered)
+{
+  while ((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0);
+
+  m_IoSpace.write32(destinationApicId << 24, LAPIC_REG_INT_CMD_HIGH);
+  m_IoSpace.write32(vector | (deliveryMode << 8) | (bAssert ? (1 << 14) : 0) | (bLevelTriggered ? (1 << 15) : 0), LAPIC_REG_INT_CMD_LOW);
+}
+
+uint8_t LocalApic::getId()
+{
+  return ((m_IoSpace.read32(LAPIC_REG_ID) >> 24) & 0xFF);
+}
+
+bool LocalApic::check(uint64_t physicalAddress)
+{
+  // Check whether the Local APIC is enabled or not
+  if ((Processor::readMachineSpecificRegister(0x1B) & 0x800) == 0)
+  {
+    ERROR("Local APIC: Disabled");
+    return false;
+  }
+
   // Check Local APIC base address
-  if ((Processor::readMachineSpecificRegister(0x1B) & 0xFFFFFF000ULL) != m_IoSpace.physicalAddress())
+  if ((Processor::readMachineSpecificRegister(0x1B) & 0xFFFFFF000ULL) != physicalAddress)
   {
     ERROR("Local APIC: Wrong physical address");
     return false;

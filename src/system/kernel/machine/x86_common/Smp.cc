@@ -102,8 +102,8 @@ void Smp::initialise()
         if (bUsable)
         {
           // Add the processor to the list
-          ProcessorInformation *pProcessorInfo = new ProcessorInformation(pProcessor->localApicId,
-                                                                          pProcessor->localApicId);
+          Multiprocessor::ProcessorInformation *pProcessorInfo = new Multiprocessor::ProcessorInformation(pProcessor->localApicId,
+                                                                                                          pProcessor->localApicId);
           m_Processors.pushBack(pProcessorInfo);
         }
       #endif
@@ -137,7 +137,7 @@ void Smp::initialise()
         if (bUsable)
         {
           // Add the I/O APIC to the list
-          IoApicInformation *pIoApicInfo = new IoApicInformation(pIoApic->id, pIoApic->address);
+          Multiprocessor::IoApicInformation *pIoApicInfo = new Multiprocessor::IoApicInformation(pIoApic->id, pIoApic->address);
           m_IoApics.pushBack(pIoApicInfo);
         }
       #endif

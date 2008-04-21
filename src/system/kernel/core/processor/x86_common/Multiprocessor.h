@@ -16,40 +16,45 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
 #define KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
 
+#include <compiler.h>
 #include <processor/types.h>
 
 /** @addtogroup kernelprocessorx86common
  * @{ */
 
-/** Information about one processor. This information is provided by the
- *  SMP or the ACPI tables. */
-struct ProcessorInformation
+class Multiprocessor
 {
-  inline ProcessorInformation(uint8_t processorid, uint8_t apicid)
-    : processorId(processorid), apicId(apicid){}
+  public:
+    /** Information about one processor. This information is provided by the
+     *  SMP or the ACPI tables. */
+    struct ProcessorInformation
+    {
+      inline ProcessorInformation(uint8_t processorid, uint8_t apicid)
+        : processorId(processorid), apicId(apicid){}
+    
+      /** The id of the processor */
+      uint8_t processorId;
+      /** The id of the processor's local APIC */
+      uint8_t apicId;
+    };
 
-  /** The id of the processor */
-  uint8_t processorId;
-  /** The id of the processor's local APIC */
-  uint8_t apicId;
+    /** Information about one I/O APIC. This information is provided by the
+     *  SMP or the ACPI tables. */
+    struct IoApicInformation
+    {
+      inline IoApicInformation(uint8_t apicid, physical_uintptr_t Address)
+        : apicId(apicid), address(Address){}
+    
+      /** The id of the I/O APIC */
+      uint8_t apicId;
+      /** The physical address of the I/O APIC register set */
+      physical_uintptr_t address;
+    };
+
+    /** Startup and initialise all processors
+    *\return the number of initialised processors */
+    static size_t initialise() INITIALISATION_ONLY;
 };
-
-/** Information about one I/O APIC. This information is provided by the
- *  SMP or the ACPI tables. */
-struct IoApicInformation
-{
-  inline IoApicInformation(uint8_t apicid, physical_uintptr_t Address)
-    : apicId(apicid), address(Address){}
-
-  /** The id of the I/O APIC */
-  uint8_t apicId;
-  /** The physical address of the I/O APIC register set */
-  physical_uintptr_t address;
-};
-
-/** Startup and initialise all processors
- *\return the number of initialised processors */
-size_t initialiseMultiprocessor();
 
 /** @} */
 

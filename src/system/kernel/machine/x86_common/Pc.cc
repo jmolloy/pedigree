@@ -42,47 +42,44 @@ void Pc::initialise()
     smp.initialise();
   #endif
 
+  // Check for a local APIC
   #if defined(APIC)
 
+    // Physical address of the local APIC
     uint64_t localApicAddress;
-    Vector<IoApicInformation*> *ioApics;
 
     // Get the Local APIC address & I/O APIC list from either the ACPI or the SMP tables
-    bool bApicValid = false;
+    bool bLocalApicValid = false;
     #if defined(ACPI)
-      if (acpi.validApicInfo() == true)
-      {
+      if ((bLocalApicValid = acpi.validApicInfo()) == true)
         localApicAddress = acpi.getLocalApicAddress();
-        ioApics = &acpi.getIoApicList();
-        bApicValid = true;
-      }
-    #endif
-    #if defined(ACPI) && defined(SMP)
-      else
     #endif
     #if defined(SMP)
-      if (smp.valid() == true)
-      {
+      if (bLocalApicValid == false && (bLocalApicValid = smp.valid()) == true)
         localApicAddress = smp.getLocalApicAddress();
-        ioApics = &smp.getIoApicList();
-        bApicValid = true;
-      }
     #endif
 
     // Initialise the local APIC, if we have gotten valid data from
     // the ACPI/SMP structures
-    Apic apic;
-    if (bApicValid == true && 
-        m_LocalApic.initialise(localApicAddress) == true &&
-        apic.initialise() == true)
+    if (bLocalApicValid == true && 
+        m_LocalApic.initialise(localApicAddress))
     {
-      // TODO: initialise local APIC
-
-      // TODO: Check for I/O Apic
-      // TODO: Initialise the I/O Apic
-      // TODO: IMCR?
-      // TODO: Mask the PICs?
+      NOTICE("Local APIC initialised");
     }
+
+  #endif
+
+  // Check for an I/O APIC
+  #if defined(APIC)
+
+    // TODO: Check for I/O Apic
+    // TODO: Initialise the I/O Apic
+    // TODO: IMCR?
+    // TODO: Mask the PICs?
+    if (false)
+    {
+    }
+
     // Fall back to dual 8259 PICs
     else
     {

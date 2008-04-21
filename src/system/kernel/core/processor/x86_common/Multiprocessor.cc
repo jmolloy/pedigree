@@ -14,8 +14,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "Multiprocessor.h"
+#include <Log.h>
 #include <utilities/Vector.h>
+#include "Multiprocessor.h"
+#include "../../../machine/x86_common/Pc.h"
 
 #if defined(ACPI)
   #include "../../../machine/x86_common/Acpi.h"
@@ -31,71 +33,53 @@
   #error Neither ACPI nor SMP defined
 #endif
 
-static void clearContainer(Vector<ProcessorInformation*> &Processors,
-                           Vector<IoApicInformation*> &IoApics)
+size_t Multiprocessor::initialise()
 {
-  for (size_t i = 0;i < Processors.count();i++)
-    delete Processors[i];
-  for (size_t i = 0;i < Processors.count();i++)
-    delete IoApics[i];
-  Processors.clear();
-  IoApics.clear();
-}
-
-size_t initialiseMultiprocessor()
-{
+  // Did we find a processr list?
   bool bMPInfoFound = false;
-
-  // Are we in PIC mode (otherwise Virtual-Wire mode)
-  bool bPicMode;
-  // Do we have PICs at all
-  bool bHasPics;
-  // Address of the local APICs of every processor
-  uint64_t localApicsAddress;
   // List of information about each usable processor
-  Vector<ProcessorInformation*> Processors;
-  // List of information about each usable I/O APIC
-  Vector<IoApicInformation*> IoApics;
+  const Vector<ProcessorInformation*> *Processors;
 
   #if defined(ACPI)
     // Search through the ACPI tables
     Acpi &acpi = Acpi::instance();
-    bMPInfoFound = acpi.getProcessorList(localApicsAddress,
-                                         Processors,
-                                         IoApics,
-                                         bHasPics,
-                                         bPicMode);
-
-    // Cleanup if the call failed
-    if (bMPInfoFound == false)
-      clearContainer(Processors, IoApics);
+    if ((bMPInfoFound = acpi.validProcessorInfo()) == true)
+      Processors = &acpi.getProcessorList();
   #endif
 
-  // Search through the SMP tables
-  if (bMPInfoFound == false)
-  {
-    #if defined(SMP)
-      Smp &smp = Smp::instance();
-      bMPInfoFound = smp.getProcessorList(localApicsAddress,
-                                          Processors,
-                                          IoApics,
-                                          bHasPics,
-                                          bPicMode);
+  #if defined(SMP)
+    // Search through the SMP tables
+    Smp &smp = Smp::instance();
+    if (bMPInfoFound == false &&
+        (bMPInfoFound = smp.valid()) == true)
+      Processors = &smp.getProcessorList();
+  #endif
 
-      // Cleanup if the call failed
-      if (bMPInfoFound == false)
-        clearContainer(Processors, IoApics);
-    #endif
-  }
-
+  // No processor list found
   if (bMPInfoFound == false)
     return 1;
 
-  // TODO: Evaluate the table and start the application processors
-  //       Set mProcessors
+  NOTICE("Multiprocessor: Found " << Dec << Processors->count() << " processors");
 
-  clearContainer(Processors, IoApics);
-  return 1;
+  // TODO HACK: Inserts a hlt machine instruction
+  uint8_t *startup = (uint8_t*)0x7000;
+  *startup = 0xF4;
+
+  LocalApic &localApic = Pc::instance().getLocalApic();
+  // Startup the application processors through startup interprocessor interrupt
+  for (size_t i = 0;i < Processors->count();i++)
+    if (localApic.getId() != (*Processors)[i]->apicId)
+      {
+        NOTICE("Multiprocessor: Booting processor #" << (*Processors)[i]->processorId);
+
+        localApic.interProcessorInterrupt((*Processors)[i]->apicId,
+                                          0x07,
+                                          LocalApic::deliveryModeStartup,
+                                          true,
+                                          false);
+      }
+
+  return Processors->count();
 }
 
 #endif

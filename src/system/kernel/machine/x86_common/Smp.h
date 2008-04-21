@@ -40,18 +40,22 @@ class Smp
      *\note the first MB of RAM must be identity mapped */
     void initialise() INITIALISATION_ONLY;
     /** Were valid tables found? */
-    inline bool valid()
+    inline bool valid() const
       {return m_bValid;}
 
     #if defined(APIC)
       /** Get the physical address of all local APICs
        *\return physical address of all local APICs */
-      inline uint64_t getLocalApicAddress()
+      inline uint64_t getLocalApicAddress() const
         {return m_LocalApicAddress;}
       /** Get a list of I/O APICs
        *\return list of I/O APICs */ 
-      inline Vector<IoApicInformation*> &getIoApicList()
+      inline const Vector<Multiprocessor::IoApicInformation*> &getIoApicList() const
         {return m_IoApics;}
+      #if defined(MULTIPROCESSOR)
+        inline const Vector<Multiprocessor::ProcessorInformation*> &getProcessorList() const
+          {return m_Processors;}
+      #endif
     #endif
 
   private:
@@ -180,11 +184,11 @@ class Smp
       /** Physical address of all local APICs */
       uint64_t m_LocalApicAddress;
       /** List of I/O APICs */
-      Vector<IoApicInformation*> m_IoApics;
+      Vector<Multiprocessor::IoApicInformation*> m_IoApics;
 
       #if defined(MULTIPROCESSOR)
         /** List of processors */
-        Vector<ProcessorInformation*> m_Processors;
+        Vector<Multiprocessor::ProcessorInformation*> m_Processors;
       #endif
     #endif
 

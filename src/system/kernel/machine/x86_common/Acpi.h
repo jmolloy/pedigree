@@ -40,12 +40,19 @@ class Acpi
     void initialise() INITIALISATION_ONLY;
 
     #if defined(APIC)
-      inline bool validApicInfo()
+      inline bool validApicInfo() const
         {return m_bValidApicInfo;}
-      inline uint64_t getLocalApicAddress()
+      inline uint64_t getLocalApicAddress() const
         {return m_LocalApicAddress;}
-      inline Vector<IoApicInformation*> &getIoApicList()
+      inline const Vector<Multiprocessor::IoApicInformation*> &getIoApicList() const
         {return m_IoApics;}
+
+      #if defined(MULTIPROCESSOR)
+        inline bool validProcessorInfo() const
+          {return m_bValidProcessorInfo;}
+        inline const Vector<Multiprocessor::ProcessorInformation*> &getProcessorList() const
+          {return m_Processors;}
+      #endif
     #endif
 
   private:
@@ -176,10 +183,11 @@ class Acpi
       bool m_bValidApicInfo;
       bool m_bHasPICs;
       uint64_t m_LocalApicAddress;
-      Vector<IoApicInformation*> m_IoApics;
+      Vector<Multiprocessor::IoApicInformation*> m_IoApics;
 
       #if defined(MULTIPROCESSOR)
-        Vector<ProcessorInformation*> m_Processors;
+        bool m_bValidProcessorInfo;
+        Vector<Multiprocessor::ProcessorInformation*> m_Processors;
       #endif
     #endif
 

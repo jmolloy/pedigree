@@ -66,7 +66,7 @@ void Processor::initialise2()
   size_t nProcessors = 1;
 
   #if defined(MULTIPROCESSOR)
-    nProcessors = initialiseMultiprocessor();
+    nProcessors = Multiprocessor::initialise();
   #endif
 
   // Initialise the GDT
