@@ -29,8 +29,9 @@ class MIPS32StackFrame : public StackFrameBase
   public:
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
-    inline MIPS32StackFrame(const ProcessorState &State, LargeStaticString mangledSymbol)
-      : StackFrameBase(State, mangledSymbol){}
+    inline MIPS32StackFrame(const ProcessorState &State, uintptr_t basePointer,
+                            LargeStaticString mangledSymbol)
+      : StackFrameBase(State, basePointer, mangledSymbol){}
     /** The destructor does nothing */
     inline ~MIPS32StackFrame(){}
 

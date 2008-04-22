@@ -36,6 +36,21 @@ LocalIO *g_pLocalIO;
 SerialIO *g_pSerialIO1;
 SerialIO *g_pSerialIO2;
 
+void baz(int a, int b)
+{
+  Processor::breakpoint();
+}
+
+void bar(int a, int b)
+{
+  baz(0x234, 0x387);
+}
+
+void foo(int a, int b)
+{
+  bar(0x789, 0x901);
+}
+
 /// Initialises the boot output.
 void initialiseBootOutput()
 {
@@ -89,6 +104,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   return; // Go back to the YAMON prompt.
 #endif
   Processor::breakpoint();
+  foo(0x456, 0x123);
   // Initialise the boot output.
 //   LocalIO *localIO = new LocalIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
 //   g_pLocalIO = localIO;
@@ -101,8 +117,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   initialiseBootOutput();
 
   // The initialisation is done here, unmap/free the .init section
+#ifndef MIPS_COMMON
   Processor::initialisationDone();
-
+#endif
   // Spew out a starting string.
 //   HugeStaticString str;
 //   str += "Pedigree - revision ";

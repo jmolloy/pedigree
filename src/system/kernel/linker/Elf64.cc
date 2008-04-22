@@ -100,7 +100,6 @@ unsigned int Elf64::getLastAddress()
 
 const char *Elf64::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 {
-  NOTICE("Elf64: lookupSymbol");
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.
 

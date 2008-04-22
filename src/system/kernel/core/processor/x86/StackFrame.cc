@@ -21,9 +21,9 @@
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
   #if defined(OMIT_FRAMEPOINTER)
-    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_State.ebp + (n + 1) * sizeof(uint32_t));
+    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_BasePointer + (n - 1) * sizeof(uint32_t));
   #else
-    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_State.ebp + (n + 2) * sizeof(uint32_t));
+    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_BasePointer + n * sizeof(uint32_t));
   #endif
   return *pPtr;
 }

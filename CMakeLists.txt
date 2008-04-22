@@ -115,9 +115,13 @@ if(ARM_COMMON)
 endif(ARM_COMMON)
 
 if(DEBUGGER)
-  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g1 -gdwarf-2")
-  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g1 -gdwarf-2")
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g3 -gdwarf-2")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g3 -gdwarf-2")
 endif(DEBUGGER)
+if(OMIT_FRAME_POINTER)
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -fomit-frame-pointer")
+endif(OMIT_FRAME_POINTER)
 
 # Add compiler #defines.
 foreach(definition ${DEFINES})
@@ -125,7 +129,7 @@ foreach(definition ${DEFINES})
 endforeach(definition)
 
 # Uncomment this if you want to see the exact commands CMake runs.
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+# set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Remove the default -rdynamic option from the linker flags.
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)

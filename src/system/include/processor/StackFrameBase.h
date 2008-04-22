@@ -32,7 +32,7 @@ class StackFrameBase
   public:
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
-    StackFrameBase(const ProcessorState &State, LargeStaticString mangledSymbol);
+    StackFrameBase(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol);
 
     /** The destructor does nothing */
     inline virtual ~StackFrameBase(){}
@@ -46,6 +46,8 @@ class StackFrameBase
     symbol_t m_Symbol;
     /** The processor state */
     const ProcessorState &m_State;
+    /** The base pointer for this frame. */
+    uintptr_t m_BasePointer;
 
   private:
     /** Returns the n'th 32/64-bit parameter in the stack frame. */

@@ -185,7 +185,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     outState.edx = endState->getRegister(DWARF_REG_EDX, startState);
     outState.esi = endState->getRegister(DWARF_REG_ESI, startState);
     outState.edi = endState->getRegister(DWARF_REG_EDI, startState);
-    outState.esp = endState->getRegister(DWARF_REG_ESP, startState);
+    outState.esp = endState->getCfa(startState); // Architectural rule.
     outState.ebp = endState->getRegister(DWARF_REG_EBP, startState);
     outState.eip = endState->getRegister(nReturnAddressRegister, startState);
 #endif
@@ -197,7 +197,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     outState.rsi = endState->getRegister(DWARF_REG_RSI, startState);
     outState.rdi = endState->getRegister(DWARF_REG_RDI, startState);
     outState.rbp = endState->getRegister(DWARF_REG_RBP, startState);
-    outState.rsp = endState->getRegister(DWARF_REG_RSP, startState);
+    outState.rsp = endState->getCfa(startState); // Architectural rule.
     outState.r8 = endState->getRegister(DWARF_REG_R8, startState);
     outState.r9 = endState->getRegister(DWARF_REG_R9, startState);
     outState.r10 = endState->getRegister(DWARF_REG_R10, startState);
@@ -238,8 +238,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 //     outState.m_K0 = endState->getRegister(DWARF_REG_K0, startState);
 //     outState.m_K1 = endState->getRegister(DWARF_REG_K1, startState);
     outState.m_Gp = endState->getRegister(DWARF_REG_GP, startState);
-    outState.m_Sp = /*endState->getRegister(DWARF_REG_SP, startState);*/
-        endState->getCfa(startState); /// \warning Hmm, is this a hack?
+    outState.m_Sp = endState->getCfa(startState); // Architectural rule.
     outState.m_Fp = endState->getRegister(DWARF_REG_FP, startState);
     outState.m_Ra = endState->getRegister(DWARF_REG_RA, startState);
     outState.m_Epc = endState->getRegister(nReturnAddressRegister, startState);

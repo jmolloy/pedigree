@@ -19,8 +19,9 @@
 #include <utilities/utility.h>
 #include <processor/StackFrameBase.h>
 
-StackFrameBase::StackFrameBase(const ProcessorState &State, LargeStaticString mangledSymbol)
-  : m_Symbol(), m_State(State)
+StackFrameBase::StackFrameBase(const ProcessorState &State, uintptr_t basePointer,
+                               LargeStaticString mangledSymbol)
+  : m_Symbol(), m_State(State), m_BasePointer(basePointer)
 {
   // Demangle the given symbol, storing in m_Symbol for future use.
   demangle(mangledSymbol, &m_Symbol);

@@ -28,8 +28,9 @@ class X64StackFrame : public StackFrameBase
   public:
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
-    inline X64StackFrame(const ProcessorState &State, LargeStaticString mangledSymbol)
-      : StackFrameBase(State, mangledSymbol){}
+    inline X64StackFrame(const ProcessorState &State, uintptr_t baseAddress, 
+                         LargeStaticString mangledSymbol)
+      : StackFrameBase(State, baseAddress, mangledSymbol){}
     /** The destructor does nothing */
     inline ~X64StackFrame(){}
 

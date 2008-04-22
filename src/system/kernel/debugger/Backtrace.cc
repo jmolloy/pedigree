@@ -51,34 +51,53 @@ void Backtrace::performBacktrace(InterruptState &state)
 
 void Backtrace::performDwarfBacktrace(InterruptState &state)
 {
+//   ProcessorState initial(state);
+//   ProcessorState next;
+// 
+//   m_pBasePointers[0] = state.getBasePointer();
+//   m_pReturnAddresses[0] = state.getInstructionPointer();
+//   m_pStates[0] = initial;
+// 
+//   size_t i = 1;
+//   DwarfUnwinder du(KernelElf::instance().debugFrameTable(), KernelElf::instance().debugFrameTableLength());
+//   uintptr_t frameBase;
+//   while (i < MAX_STACK_FRAMES)
+//   {
+//     if (!du.unwind(initial, next, frameBase))
+//     {
+//       ERROR("Dwarf unwind failed!");
+//       return;
+//     }
+//     initial = next; // For next round.
+// #ifndef MIPS_COMMON
+//     if (next.getBasePointer() == 0) break;
+// #else
+//     uintptr_t symStart;
+//     KernelElf::instance().lookupSymbol(next.getInstructionPointer(), &symStart);
+//     if (symStart == reinterpret_cast<uintptr_t> (&start)) break;
+// #endif
+//     m_pReturnAddresses[i] = next.getInstructionPointer();
+//     m_pBasePointers[i] = next.getBasePointer();
+//     m_pStates[i] = next;
+//     m_pStates[i-1].ebp = frameBase-8;
+//     i++;
+//   }
+  
   ProcessorState initial(state);
   ProcessorState next;
-
-  m_pBasePointers[0] = state.getBasePointer();
-  m_pReturnAddresses[0] = state.getInstructionPointer();
-  m_pStates[0] = initial;
-
-  size_t i = 1;
+  
+  size_t i = 0;
   DwarfUnwinder du(KernelElf::instance().debugFrameTable(), KernelElf::instance().debugFrameTableLength());
   uintptr_t frameBase;
   while (i < MAX_STACK_FRAMES)
   {
     if (!du.unwind(initial, next, frameBase))
-    {
-      ERROR("Dwarf unwind failed!");
-      return;
-    }
-    initial = next; // For next round.
-#ifndef MIPS_COMMON
-    if (next.getBasePointer() == 0) break;
-#else
-    uintptr_t symStart;
-    KernelElf::instance().lookupSymbol(next.getInstructionPointer(), &symStart);
-    if (symStart == reinterpret_cast<uintptr_t> (&start)) break;
-#endif
-    m_pReturnAddresses[i] = next.getInstructionPointer();
-    m_pBasePointers[i] = next.getBasePointer();
-    m_pStates[i] = next;
+      break;
+    m_pStates[i] = initial;
+    m_pBasePointers[i] = frameBase;
+    m_pReturnAddresses[i] = initial.getInstructionPointer();
+//     NOTICE("Unwound to EIP " << Hex << initial.getInstructionPointer() << ", frameBase " << frameBase);
+    initial = next;
     i++;
   }
   
@@ -123,7 +142,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
 
     const char *pSym = KernelElf::instance().lookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
-    StackFrame sf(m_pStates[i], sym);
+    StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
     sf.prettyPrint(buf);
   }
 }

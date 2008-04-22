@@ -94,7 +94,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
   {
     case DW_CFA_nop:
     {
-      NOTICE("DW_CFA_nop");
+//       NOTICE("DW_CFA_nop");
       break;
     }
     case DW_CFA_set_loc:

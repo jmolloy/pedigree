@@ -53,6 +53,7 @@ DEBUGGER_QWERTZ:
 
 {VERBOSE_MEMORY_MANAGER}:
 
+{OMIT_FRAME_POINTER}:
 #
 # Additional Flags:
 #  OPTIMIZE_X (X = 1, 2, 3, S)
