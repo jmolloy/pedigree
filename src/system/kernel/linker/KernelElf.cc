@@ -73,11 +73,29 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     // Save the symbol/string table
     const char *pStr = tmpStringTable + pSh->name;
     if (pSh->type == SHT_SYMTAB)
-      m_pSymbolTable = pSh;
+    {
+      #if defined(X86_COMMON)
+        m_pSymbolTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
+      #else
+        m_pSymbolTable = pSh;
+      #endif
+    }
     else if (!strcmp(pStr, ".strtab"))
-      m_pStringTable = pSh;
+    {
+      #if defined(X86_COMMON)
+        m_pStringTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
+      #else
+        m_pStringTable = pSh;
+      #endif
+    }
     else if (!strcmp(pStr, ".debug_frame"))
-      m_pDebugTable = pSh;
+    {
+      #if defined(X86_COMMON)
+        m_pDebugTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
+      #else
+        m_pStringTable = pSh;
+      #endif
+    }
   }
 
   // Initialise remaining member variables

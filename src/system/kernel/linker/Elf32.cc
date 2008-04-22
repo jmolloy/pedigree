@@ -104,9 +104,9 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     return 0; // Just return null if we haven't got a symbol table.
   
   Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
-  
+
   const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
-  
+
   for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
   {
     // Make sure we're looking at an object or function.
