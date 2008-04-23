@@ -153,13 +153,20 @@ sub extract_nasm {
 
 
 # Patch the compiler for amd64
-sub patch_amd64
-{
-  print "\e[32mPatching gcc...\e[0m\n";
+sub patch_amd64 {
+  print "\e[32mPatching gcc (amd64 patch)...\e[0m\n";
   `patch ./compilers/tmp_build/gcc-$COMPILER_VERSION/gcc/config.gcc <./compilers/gcc_amd64.patch`;
   return 1 if $? != 0;
 	
   return 0;
+}
+
+# Patch the compiler to output more DWARF CFI information.
+sub patch_dwarf {
+    print "\e[32mPatching gcc (dwarf patch)...\e[0m\n";
+    `patch -p1 ./compilers/tmp_build/gcc-$COMPILER_VERSION/ <./compilers/gcc_dwarf.patch`;
+    return 1 if $? != 0;
+    return 0;
 }
 
 # Configure, make and make install the compiler.
@@ -289,6 +296,12 @@ if ($install_compiler) {
       print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
       exit 1;
     }
+  }
+
+  if (patch_dwarf() != 0)
+  {
+      print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+      exit 1;
   }
   
   if (install($target) != 0) {
