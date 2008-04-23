@@ -164,7 +164,7 @@ sub patch_amd64 {
 # Patch the compiler to output more DWARF CFI information.
 sub patch_dwarf {
     print "\e[32mPatching gcc (dwarf patch)...\e[0m\n";
-    `patch -p1 ./compilers/tmp_build/gcc-$COMPILER_VERSION/ <./compilers/gcc_dwarf.patch`;
+    `cd ./compilers/tmp_build/gcc-$COMPILER_VERSION/ && patch -p1 <../../gcc_dwarf.patch`;
     return 1 if $? != 0;
     return 0;
 }

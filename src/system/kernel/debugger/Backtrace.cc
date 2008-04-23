@@ -93,10 +93,11 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   {
     if (!du.unwind(initial, next, frameBase))
       break;
-    m_pStates[i] = initial;
+    m_pStates[i] = next;
     m_pBasePointers[i] = frameBase;
+    // This may look strange but it's correct - the i'th instruction pointer is the (i-1)'th return
+    // address.
     m_pReturnAddresses[i] = initial.getInstructionPointer();
-//     NOTICE("Unwound to EIP " << Hex << initial.getInstructionPointer() << ", frameBase " << frameBase);
     initial = next;
     i++;
   }

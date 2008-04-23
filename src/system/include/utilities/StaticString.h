@@ -230,7 +230,7 @@ public:
       append("-");
       nInt = -nInt;
     }
-    append(static_cast<unsigned short>(nInt));
+    append(static_cast<unsigned short>(nInt), nRadix, nLen, c);
   }
 
   void append(int nInt, size_t nRadix=10, size_t nLen=0, char c='0')
@@ -240,7 +240,7 @@ public:
       append("-");
       nInt = -nInt;
     }
-    append(static_cast<unsigned int>(nInt));
+    append(static_cast<unsigned int>(nInt), nRadix, nLen, c);
   }
 
   void append(long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
@@ -250,7 +250,7 @@ public:
       append("-");
       nInt = -nInt;
     }
-    append(static_cast<unsigned long>(nInt));
+    append(static_cast<unsigned long>(nInt), nRadix, nLen, c);
   }
 
   void append(long long nInt, size_t nRadix=10, size_t nLen=0, char c='0')
@@ -260,7 +260,7 @@ public:
       append("-");
       nInt = -nInt;
     }
-    append(static_cast<unsigned long long>(nInt));
+    append(static_cast<unsigned long long>(nInt), nRadix, nLen, c);
   }
 
   void append(unsigned char nInt, size_t nRadix=10, size_t nLen=0, char c='0')

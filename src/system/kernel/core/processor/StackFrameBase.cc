@@ -92,6 +92,28 @@ void StackFrameBase::format(uintptr_t n, const LargeStaticString &type, HugeStat
     else
       dest += "false";
   }
+  // 16-bit value?
+//   else if (type == "short")
+//   {
+//     dest += "0x";
+//     dest.append((short)n, 16);
+//   }
+//   else if (type == "unsigned short")
+//   {
+//     dest += "0x";
+//     dest.append((unsigned short)n, 16);
+//   }
+//   // 32-bit value, in 64-bit mode?
+  else if (type == "int")
+  {
+    dest += "0x";
+    dest.append((int)n, 16);
+  }
+//   else if (type == "unsigned int")
+//   {
+//     dest += "0x";
+//     dest.append((unsigned int)n, 16);
+//   }
   // Else just use a hex integer, represented as a cast.
   else
   {
