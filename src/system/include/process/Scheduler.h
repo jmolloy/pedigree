@@ -16,6 +16,12 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#include <processor/types.h>
+
+class SchedulingAlgorithm;
+class Thread;
+class Processor;
+
 /**
  * \brief This class manages how processes and threads are scheduled across processors.
  * It delegates the task of selecting when to run each process to a SchedulingAlgorithm,

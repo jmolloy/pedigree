@@ -14,5 +14,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#add_kernel_src(core/process
-#               Mutex.cc Scheduler.cc LockManager.cc)
+add_kernel_src(core/process
+               Mutex.cc Scheduler.cc LockManager.cc Semaphore.cc Thread.cc
+               initialiseMultitasking.cc)

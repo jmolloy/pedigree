@@ -28,4 +28,11 @@ uintptr_t X86StackFrame::getParameter(size_t n)
   return *pPtr;
 }
 
+void X86StackFrame::construct(ProcessorState &state,
+                              uintptr_t returnAddress,
+                              unsigned int nParams,
+                              ...)
+{
+}
+
 #endif

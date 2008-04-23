@@ -16,6 +16,8 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
+#include <processor/types.h>
+
 /**
  * A counting semaphore.
  */

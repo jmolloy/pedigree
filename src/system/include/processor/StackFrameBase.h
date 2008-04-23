@@ -41,6 +41,18 @@ class StackFrameBase
      *  its value (hopefully). */
     void prettyPrint(HugeStaticString &buf);
 
+    /** Construct a stack frame, given a ProcessorState. The stack frame should be constructed
+     *  to comply with the default ABI for the current architecture - that implies the stack
+     *  may be changed, so the getStackPointer() member of ProcessorState must be valid.
+     *  \param[out] state The state to modify (construct a stack frame in).
+     *  \param returnAddress The return address of the stack frame.
+     *  \param nParams The number of parameters to the stack frame.
+     *  \param ... The parameters, each sizeof(uintptr_t). */
+    static void construct(ProcessorState &state,
+                          uintptr_t returnAddress,
+                          unsigned int nParams,
+                          ...);
+    
   protected:
     /** The symbol */
     symbol_t m_Symbol;

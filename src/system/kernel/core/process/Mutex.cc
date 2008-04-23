@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Mutex.h>
+#include <process/Mutex.h>
 
 // Note, this is in its own file purely so that a vtable can be generated.
 Mutex::Mutex() :

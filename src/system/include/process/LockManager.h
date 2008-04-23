@@ -16,8 +16,8 @@
 #ifndef LOCK_MANAGER_H
 #define LOCK_MANAGER_H
 
-#include <Semaphore.h>
-#include <Vector.h>
+#include <process/Semaphore.h>
+#include <utilities/Vector.h>
 
 /**
  * A class for managing locks. It is only used if ENFORCE_LOCK_ORDERING is defined,

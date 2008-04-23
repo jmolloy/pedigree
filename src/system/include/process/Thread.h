@@ -17,6 +17,7 @@
 #define THREAD_H
 
 #include <processor/state.h>
+#include <processor/types.h>
 
 class Processor;
 class Process;
@@ -104,6 +105,14 @@ public:
   int getExitCode()
   {
     return m_ExitCode;
+  }
+
+  /**
+   * Retrieves a pointer to the top of the Thread's kernel stack.
+   */
+  uintptr_t *getKernelStack()
+  {
+    return m_pKernelStack;
   }
   
   /**

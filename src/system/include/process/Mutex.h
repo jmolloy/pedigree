@@ -16,7 +16,7 @@
 #ifndef MUTEX_H
 #define MUTEX_H
 
-#include <Semaphore.h>
+#include <process/Semaphore.h>
 
 /**
  * A mutex, or binary semaphore

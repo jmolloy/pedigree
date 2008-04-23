@@ -14,14 +14,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Thread.h>
+#include <process/Thread.h>
+#include <process/Scheduler.h>
+#include <processor/Processor.h>
+#include <processor/StackFrame.h>
 #include <Log.h>
 
 /**
  * The trampoline to start a new thread. It calls pFunc(pParam), then calls pThread->threadExited
  * with the return value.
  */
-static void threadStartTrampoline(Thread *pThread, void *pParam, ThreadStartFunc pFunc)
+static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadStartFunc pFunc)
 {
   int code = pFunc(pParam);
   pThread->threadExited(code);
@@ -30,22 +33,50 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, ThreadStartFunc
 }
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
-               uintptr_t *pStack=0) :
-    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0)
+               uintptr_t *pStack) :
+    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), m_pKernelStack(0)
 {
   // Initialise our kernel stack.
   uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
-  m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t));
+  m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
   
   // If we've been given a user stack pointer, we use that, else we use our kernel stack.
   if (pStack == 0)
     pStack = m_pKernelStack;
+
+  // Start initialising our ProcessorState.
+  m_State.setStackPointer (reinterpret_cast<processor_register_t> (pStack));
+  m_State.setInstructionPointer (reinterpret_cast<processor_register_t>
+                                   (&threadStartTrampoline));
+  
+  // Construct a stack frame in our ProcessorState for the call to threadStartTrampoline.
+  /// \todo Is the implicit conversion done on the this, pParam and pStack parameters acceptable?
+  StackFrame::construct (m_State, // Store the frame in this state.
+                         0,       // We don't care about a return address.
+                         3,       // There are three parameters.
+                         this,    // First parameter.
+                         pParam,  // Second parameter.
+                         pStack); // Third parameter.
+
+  // TODO Register ourselves with the given Process.
+  
+  // Now we are ready to go into the scheduler.
+  Scheduler::instance().addThread(this);
 }
 
 Thread::~Thread()
 {
+  // Remove us from the scheduler.
+  Scheduler::instance().removeThread(this);
+
+  // TODO delete any pointer data.
+  uintptr_t *pKernelStackBottom = m_pKernelStack-(KERNEL_STACK_SIZE/sizeof(uintptr_t))+1;
+  delete [] pKernelStackBottom;
 }
 
 void Thread::threadExited(int code)
 {
+  NOTICE("Thread exited with code " << Dec << code);
+  m_Status = Zombie;
+  delete this;
 }

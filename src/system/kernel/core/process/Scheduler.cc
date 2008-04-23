@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <process/Scheduler.h>
+#include <process/Thread.h>
 
 Scheduler Scheduler::m_Instance;
 
@@ -21,9 +22,14 @@ Scheduler::Scheduler()
 {
 }
 
-
 Scheduler::~Scheduler()
 {
 }
 
+void Scheduler::addThread(Thread *pThread)
+{
+}
 
+void Scheduler::removeThread(Thread *pThread)
+{
+}

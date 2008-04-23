@@ -35,6 +35,11 @@ class X86StackFrame : public StackFrameBase
     /** The destructor does nothing */
     inline ~X86StackFrame(){}
 
+    static void construct(ProcessorState &state,
+                          uintptr_t returnAddress,
+                          unsigned int nParams,
+                          ...);
+    
   private:
     /** Returns the n'th 32-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n);

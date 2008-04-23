@@ -14,10 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <LockManager.h>
+#include <process/LockManager.h>
+#include <processor/Processor.h>
 #include <Log.h>
-
-LockManager LockManager::m_Instance;
 
 LockManager::LockManager() :
   m_Stack(32)
