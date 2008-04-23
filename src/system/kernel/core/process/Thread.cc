@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include <Thread.h>
+#include <Log.h>
+
+/**
+ * The trampoline to start a new thread. It calls pFunc(pParam), then calls pThread->threadExited
+ * with the return value.
+ */
+static void threadStartTrampoline(Thread *pThread, void *pParam, ThreadStartFunc pFunc)
+{
+  int code = pFunc(pParam);
+  pThread->threadExited(code);
+  // Should never get here.
+  FATAL("threadStartTrampoline: Got past threadExited!");
+}
+
+Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+               uintptr_t *pStack=0) :
+    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0)
+{
+  // Initialise our kernel stack.
+  uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
+  m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t));
+  
+  // If we've been given a user stack pointer, we use that, else we use our kernel stack.
+  if (pStack == 0)
+    pStack = m_pKernelStack;
+}
+
+Thread::~Thread()
+{
+}
+
+void Thread::threadExited(int code)
+{
+}

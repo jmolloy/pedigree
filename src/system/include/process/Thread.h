@@ -21,6 +21,8 @@
 class Processor;
 class Process;
 
+#define KERNEL_STACK_SIZE 4096
+
 /**
  * An abstraction of a thread of execution.
  */
@@ -35,15 +37,25 @@ public:
     Zombie
   };
   
+  typedef int (*ThreadStartFunc)(void*);
+  
   /**
    * Creates a new Thread belonging to the given Process. It shares the Process'
    * virtual address space.
    *
    * The constructor registers itself with the Scheduler and parent process - this
    * does not need to be done manually.
+   * 
+   * If kernelMode is true, and pStack is NULL, no stack space is assigned 
    * \param pParent The parent process. Can never be NULL.
+   * \param kernelMode Is the thread going to be operating in kernel space only?
+   * \param pStartFunction The function to be run when the thread starts.
+   * \param pParam A parameter to give the startFunction.
+   * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
+   *               only.
    */
-  Thread(Process *pParent);
+  Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+         uintptr_t *pStack=0);
 
   /**
    * Destroys the Thread.
@@ -51,7 +63,7 @@ public:
    * The destructor unregisters itself with the Scheduler and parent process - this
    * does not need to be done manually.
    */
-  ~Thread();
+  virtual ~Thread();
 
   /**
    * Returns a reference to the Thread's saved context. This function is intended only
@@ -84,24 +96,23 @@ public:
   {
     m_Status = s;
   }
-
+  
   /**
-   * Retrieves the CPU this Thread is running on.
-   * \note Only applicable if getStatus() == Running.
+   * Retrieves the exit status of the Thread.
+   * \note Valid only if the Thread is in the Zombie state.
    */
-  Processor *getCpu() const
+  int getExitCode()
   {
-    return m_pCpu;
-  }
-  /**
-   * Sets the CPU this Thread is currently running on.
-   * \note Intended only to be called by the Scheduler.
-   */
-  void setCpu(Processor *pCpu)
-  {
-    m_pCpu = Cpu;
+    return m_ExitCode;
   }
   
+  /**
+   * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
+   * if it is not being waited on the Thread is destroyed.
+   * \note This is meant to be called only by the thread trampoline - this is the only reason it
+   *       is public. It should NOT be called by anyone else!
+   */
+  void threadExited(int code);
 private:
   /**
    * The state of the processor when we were unscheduled.
@@ -117,12 +128,16 @@ private:
    * Our current status.
    */
   Status m_Status;
-
+  
   /**
-   * The current CPU we're scheduled on.
-   * \note Only valid if m_Status == Running.
+   * Our exit code
    */
-  Processor *m_pCpu;
+  int m_ExitCode;
+  
+  /**
+   * Our kernel stack.
+   */
+  uintptr_t *m_pKernelStack;
 };
 
 #endif
