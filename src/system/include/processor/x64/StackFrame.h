@@ -34,6 +34,11 @@ class X64StackFrame : public StackFrameBase
     /** The destructor does nothing */
     inline ~X64StackFrame(){}
 
+    static void construct(ProcessorState &state,
+                          uintptr_t returnAddress,
+                          unsigned int nParams,
+                          ...);
+
   private:
     /** Returns the n'th 64-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n);

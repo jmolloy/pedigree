@@ -93,7 +93,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
       #if defined(X86_COMMON)
         m_pDebugTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
       #else
-        m_pStringTable = pSh;
+        m_pDebugTable = pSh;
       #endif
     }
   }

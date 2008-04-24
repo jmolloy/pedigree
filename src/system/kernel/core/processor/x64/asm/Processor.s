@@ -38,8 +38,8 @@ _ZN9Processor15getStackPointerEv:
   ret
 
 _ZN9Processor21getInstructionPointerEv:
-  pop rax
-  jmp rax
+  mov rax, [rsp]
+  ret
 
 _ZN9Processor14getDebugStatusEv:
   mov rax, dr6

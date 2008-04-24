@@ -56,6 +56,10 @@ class Atomic
     {
       return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
     }
+    inline operator T () const
+    {
+      return m_Atom;
+    }
 
   protected:
     inline Atomic(const Atomic &x)
@@ -63,6 +67,7 @@ class Atomic
     inline Atomic &operator = (const Atomic &x)
     {
       m_Atom = x.m_Atom;
+      return *this;
     }
 
   private:

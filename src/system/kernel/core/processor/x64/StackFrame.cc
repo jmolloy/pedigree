@@ -34,4 +34,12 @@ uintptr_t X64StackFrame::getParameter(size_t n)
   return *pPtr;
 }
 
+void X64StackFrame::construct(ProcessorState &state,
+                              uintptr_t returnAddress,
+                              unsigned int nParams,
+                              ...)
+{
+  // TODO
+}
+
 #endif
