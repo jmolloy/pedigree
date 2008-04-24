@@ -33,6 +33,8 @@
 #include <DebuggerIO.h>
 #ifdef THREADS
 #include <process/initialiseMultitasking.h>
+#include <process/Thread.h>
+#include <processor/PhysicalMemoryManager.h>
 #endif
 
 LocalIO *g_pLocalIO;
@@ -49,7 +51,7 @@ void bar(int a, int b)
   baz(0x234, 0x387);
 }
 
-void foo(int a, int b)
+int foo(void *a)
 {
   bar(0x789, 0x901);
 }
@@ -147,6 +149,10 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
 #ifdef THREADS
   initialiseMultitasking();
+  // Gets me a stacks.
+  physical_uintptr_t stackBase = PhysicalMemoryManager::instance().allocatePage();
+  VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)0xB0000000, 0);
+  Thread *pThread = new Thread((Process*)0, &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0));
 #endif
   
 #ifdef DEBUGGER_RUN_AT_START

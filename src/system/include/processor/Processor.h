@@ -122,6 +122,9 @@ class Processor
     /** Switch to a different virtual address space
      *\param[in] AddressSpace the new address space */
     void switchAddressSpace(const VirtualAddressSpace &AddressSpace);
+
+    /** Do a context switch. */
+    inline static void contextSwitch(const ProcessorState &state) ALWAYS_INLINE;
     
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
@@ -218,6 +221,10 @@ class Processor
   #include <processor/mips_common/Processor.h>
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/Processor.h>
+#endif
+
+#ifdef X86
+  #include <processor/x86/Processor.h>
 #endif
 
 #endif

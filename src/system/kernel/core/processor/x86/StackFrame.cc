@@ -48,7 +48,7 @@ void X86StackFrame::construct(ProcessorState &state,
   va_list list;
   va_start(list, nParams);
   
-  for(int i = nParams-1; i >= 0; i++)
+  for(int i = nParams-1; i >= 0; i--)
   {
     *++pStack = va_arg(list, uintptr_t);
   }

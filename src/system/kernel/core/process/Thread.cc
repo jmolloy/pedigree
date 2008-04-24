@@ -26,6 +26,8 @@
  */
 static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadStartFunc pFunc)
 {
+  // UNLOCK SCHEDULER
+  
   int code = pFunc(pParam);
   pThread->threadExited(code);
   // Should never get here.

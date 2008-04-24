@@ -330,7 +330,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/include/process</activedir>
+      <activedir>src/system/include/processor/x86</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>

@@ -65,23 +65,26 @@ void Scheduler::threadStatusChanged(Thread *pThread)
 
 void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
 {
-  NOTICE("Woot.\n");
-  Processor::breakpoint();
-  // TODO ZOMG TEH LOCKZ!
-//   Thread *pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
-  
-  // TODO if (pThread == g_pCurrentThread) return;
-  
-//   g_pCurrentThread->setStatus(Thread::Ready);
-//   Processor::saveState (g_pCurrentThread->state());
-//   g_pCurrentThread->state().setInstructionPointer (&endOfScheduleLabel);
-//   
-//   g_pCurrentThread = pThread;
-//   g_pCurrentThread->setStatus(Thread::Running);
-//   Processor::restoreState(g_pCurrentThread->state());
+  Thread *pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
+  Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
 
+  // LOCK
+  NOTICE("Changing from thread " << Hex << (unsigned long)pOldThread << " to " << (unsigned long)pThread);
+  pOldThread->setStatus(Thread::Ready);
+  
+  pThread->setStatus(Thread::Running);
+  g_pCurrentThread = pThread;
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
+  
+  pOldThread->state().setStackPointer(Processor::getStackPointer());
+  pOldThread->state().setBasePointer(Processor::getBasePointer());
+  pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
+
+  if (g_pCurrentThread == pThread)
+    Processor::contextSwitch(pThread->state());
+
+  // UNLOCK
 }
 
 void Scheduler::timer(uint64_t delta, ProcessorState &state)

@@ -94,6 +94,7 @@ src/system/include/process
 src/system/include/process/LockManager.h
 src/system/include/process/Mutex.h
 src/system/include/process/Process.h
+src/system/include/process/RoundRobin.h
 src/system/include/process/Scheduler.h
 src/system/include/process/SchedulingAlgorithm.h
 src/system/include/process/Semaphore.h
@@ -138,6 +139,7 @@ src/system/include/processor/x64/StackFrame.h
 src/system/include/processor/x64/state.h
 src/system/include/processor/x64/types.h
 src/system/include/processor/x86
+src/system/include/processor/x86/Processor.h
 src/system/include/processor/x86/StackFrame.h
 src/system/include/processor/x86/state.h
 src/system/include/processor/x86/types.h
@@ -177,6 +179,7 @@ src/system/kernel/core/main.h
 src/system/kernel/core/process
 src/system/kernel/core/process/LockManager.cc
 src/system/kernel/core/process/Mutex.cc
+src/system/kernel/core/process/RoundRobin.cc
 src/system/kernel/core/process/Scheduler.cc
 src/system/kernel/core/process/Semaphore.cc
 src/system/kernel/core/process/Thread.cc

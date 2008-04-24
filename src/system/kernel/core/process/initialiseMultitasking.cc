@@ -20,7 +20,7 @@
 #include <process/Scheduler.h>
 #include <process/Process.h>
 
-Thread *g_pCurrentThread;
+Thread * volatile g_pCurrentThread;
 
 void initialiseMultitasking()
 {
