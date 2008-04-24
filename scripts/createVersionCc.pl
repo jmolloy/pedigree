@@ -38,7 +38,7 @@ my $month = $months[$time[4]];
 my $dayofmonth = $time[3];
 my $hour = $time[2];
 my $minute = $time[1];
-my $year = $time[7] + 1900;
+my $year = $time[5] + 1900;
 
 my $time = "$hour:$minute $day $dayofmonth-$month-$year";
 

@@ -16,16 +16,17 @@
 #ifndef SCHEDULING_ALGORITHM_H
 #define SCHEDULING_ALGORITHM_H
 
-#include <Thread.h>
+class Thread;
+class Processor;
 
 /**
  * Class providing an abstraction of a long term scheduling algorithm.
  */
-class Scheduler
+class SchedulingAlgorithm
 {
 public:
   /** Destructor */
-  virtual ~Scheduler() {}
+  virtual ~SchedulingAlgorithm() {}
 
   /** Adds a new thread to be scheduled. */
   virtual void addThread(Thread *pThread) =0;
@@ -39,6 +40,9 @@ public:
    * \note It is assumed that this function will set the Thread's TTL and other such values
    *       itself. */
   virtual Thread *getNext(Processor *pProcessor) =0;
+  
+  /** Notifies us that the status of a thread has changed, and that we may need to take action. */
+  virtual void threadStatusChanged(Thread *pThread) =0;
 };
 
 #endif

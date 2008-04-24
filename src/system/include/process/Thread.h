@@ -57,6 +57,12 @@ public:
    */
   Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
          uintptr_t *pStack=0);
+  
+  /**
+   * Alternative constructor - this should be used only by initialiseMultitasking() to
+   * define the first kernel thread.
+   */
+  Thread(Process *pParent);
 
   /**
    * Destroys the Thread.

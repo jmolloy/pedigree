@@ -19,11 +19,12 @@
 #include <processor/IoPort.h>
 #include <machine/IrqManager.h>
 #include <machine/SchedulerTimer.h>
+#include <processor/state.h>
 
 /** @addtogroup kernelmachinex86common
  * @{ */
 
-/** The programmable intervall timer implements the SchedulerTimer interface */
+/** The programmable interval timer implements the SchedulerTimer interface */
 class Pit : public SchedulerTimer,
             private IrqHandler
 {
@@ -37,7 +38,7 @@ class Pit : public SchedulerTimer,
     virtual bool registerHandler(TimerHandler *handler);
 
     /** Initialises the class
-     *\return true, if successfull, false otherwise */
+     *\return true, if successful, false otherwise */
     bool initialise() INITIALISATION_ONLY;
      /** Uninitialises the class */
     void uninitialise();
@@ -59,7 +60,7 @@ class Pit : public SchedulerTimer,
     //
     // IrqHandler interface
     //
-    virtual bool irq(irq_id_t number);
+    virtual bool irq(irq_id_t number, InterruptState &state);
 
     /** The PIT I/O port range */
     IoPort m_IoPort;

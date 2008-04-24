@@ -188,7 +188,7 @@ Rtc::Rtc()
 {
 }
 
-bool Rtc::irq(irq_id_t number)
+bool Rtc::irq(irq_id_t number, InterruptState &state)
 {
   static size_t index = 0;
   // Update the Tick Count

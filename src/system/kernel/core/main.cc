@@ -31,6 +31,9 @@
 #include <LocalIO.h>
 #include <SerialIO.h>
 #include <DebuggerIO.h>
+#ifdef THREADS
+#include <process/initialiseMultitasking.h>
+#endif
 
 LocalIO *g_pLocalIO;
 SerialIO *g_pSerialIO1;
@@ -103,46 +106,49 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
    Debugger::instance().start(st, str2);
   return; // Go back to the YAMON prompt.
 #endif
-  Processor::breakpoint();
-  foo(0x456, 0x123);
+//   foo(0x456, 0x123);
   // Initialise the boot output.
-//   LocalIO *localIO = new LocalIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-//   g_pLocalIO = localIO;
-//   SerialIO *serialIO1 = new SerialIO(Machine::instance().getSerial(0));
-//   g_pSerialIO1 = serialIO1;
-// #ifndef ARM_COMMON
-//   SerialIO *serialIO2 = new SerialIO(Machine::instance().getSerial(1));
-//   g_pSerialIO2 = serialIO2;
-// #endif
-//   initialiseBootOutput();
+  LocalIO *localIO = new LocalIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
+  g_pLocalIO = localIO;
+  SerialIO *serialIO1 = new SerialIO(Machine::instance().getSerial(0));
+  g_pSerialIO1 = serialIO1;
+#ifndef ARM_COMMON
+  SerialIO *serialIO2 = new SerialIO(Machine::instance().getSerial(1));
+  g_pSerialIO2 = serialIO2;
+#endif
+  initialiseBootOutput();
 
   // The initialisation is done here, unmap/free the .init section
 #ifndef MIPS_COMMON
   Processor::initialisationDone();
 #endif
   // Spew out a starting string.
-//   HugeStaticString str;
-//   str += "Pedigree - revision ";
-//   str += g_pBuildRevision;
-//   str += "\n=======================\n";
-//   bootOutput(str, DebuggerIO::White, DebuggerIO::Black);
-// 
-//   str.clear();
-//   str += "Build at ";
-//   str += g_pBuildTime;
-//   str += " by ";
-//   str += g_pBuildUser;
-//   str += " on ";
-//   str += g_pBuildMachine;
-//   str += "\n";
-//   bootOutput(str);
-// 
-//   str.clear();
-//   str += "Build flags: ";
-//   str += g_pBuildFlags;
-//   str += "\n";
-//   bootOutput(str);
+  HugeStaticString str;
+  str += "Pedigree - revision ";
+  str += g_pBuildRevision;
+  str += "\n=======================\n";
+  bootOutput(str, DebuggerIO::White, DebuggerIO::Black);
 
+  str.clear();
+  str += "Build at ";
+  str += g_pBuildTime;
+  str += " by ";
+  str += g_pBuildUser;
+  str += " on ";
+  str += g_pBuildMachine;
+  str += "\n";
+  bootOutput(str);
+
+  str.clear();
+  str += "Build flags: ";
+  str += g_pBuildFlags;
+  str += "\n";
+  bootOutput(str);
+
+#ifdef THREADS
+  initialiseMultitasking();
+#endif
+  
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif

@@ -15,4 +15,21 @@
  */
 
 #include <Log.h>
+#include <process/initialiseMultitasking.h>
+#include <process/Thread.h>
+#include <process/Scheduler.h>
+#include <process/Process.h>
 
+Thread *g_pCurrentThread;
+
+void initialiseMultitasking()
+{
+  // Create the kernel idle process.
+  Process *pProcess = new Process();
+  
+  // Create the kernel idle thread.
+  Thread *pThread = new Thread(pProcess);
+  
+  // Initialise the scheduler.
+  Scheduler::instance().initialise(pThread);
+}

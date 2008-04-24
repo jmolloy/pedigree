@@ -17,6 +17,7 @@
 #define KERNEL_MACHINE_TIMERHANDLER_H
 
 #include <processor/types.h>
+#include <processor/state.h>
 
 /** @addtogroup kernelmachine
  * @{ */
@@ -29,8 +30,9 @@ class TimerHandler
     /** Called when the handler is registered with the Timer/SchedulerTimer class
      * and a timer event occured
      *\param[in] delta time elapsed since the last event
-     *\todo which unit for delta? ns? ms? */
-    virtual void timer(uint64_t delta) = 0;
+     *\param[in,out] state the state of the processor when the event occurred.
+     *\todo which unit for delta? ns? ms? (or us? - JamesM) */
+    virtual void timer(uint64_t delta, ProcessorState &state) = 0;
 
   protected:
     /** Virtual destructor */

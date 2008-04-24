@@ -17,6 +17,8 @@
 #define SCHEDULER_H
 
 #include <processor/types.h>
+#include <processor/state.h>
+#include <machine/TimerHandler.h>
 
 class SchedulingAlgorithm;
 class Thread;
@@ -27,14 +29,14 @@ class Processor;
  * It delegates the task of selecting when to run each process to a SchedulingAlgorithm,
  * and attempts to run in a tickless fashion, if the hardware supports it (Local APIC present).
  */
-class Scheduler
+class Scheduler : public TimerHandler
 {
 public:
   /** Get the instance of the scheduler */
   inline static Scheduler &instance() {return m_Instance;}
 
   /** Initialises the scheduler. */
-  bool initialise();
+  bool initialise(Thread *pInitialThread);
   
   /** Retrieves the current SchedulingAlgorithm */
   SchedulingAlgorithm *getAlgorithm();
@@ -46,22 +48,27 @@ public:
   /** Removes a thread from being scheduled. */
   void removeThread(Thread *pThread);
 
+  /** Called by a thread when its status changes. Should be propagated directly to the
+   *  SchedulingAlgorithm. */
+  void threadStatusChanged(Thread *pThread);
+  
   /** The main schedule function - picks another thread and switches to it.
       \param pProcessor The current processor, in case the SchedulingAlgorithm wants
                         it for heuristics such as core affinity. */
-  void schedule(Processor *pProcessor);
+  void schedule(Processor *pProcessor, ProcessorState &state);
 
+  /** TimerHandler callback. */
+  void timer(uint64_t delta, ProcessorState &state);
 private:
-  /**
-   * Default constructor
-   * \note Private - singleton class.
-   */
+  /** Default constructor
+   *  \note Private - singleton class. */
   Scheduler();
-  /**
-   * Destructor
-   * \note Private - singleton class.
-   */
+  /** Destructor
+   *  \note Private - singleton class. */
   ~Scheduler();
+
+  /** The current SchedulingAlgorithm */
+  SchedulingAlgorithm *m_pSchedulingAlgorithm;
 
   /** The Scheduler instance. */
   static Scheduler m_Instance;

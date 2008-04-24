@@ -122,7 +122,7 @@ class Processor
     /** Switch to a different virtual address space
      *\param[in] AddressSpace the new address space */
     void switchAddressSpace(const VirtualAddressSpace &AddressSpace);
-
+    
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
     /** Halt this processor */

@@ -19,6 +19,7 @@
 #include <processor/IoPort.h>
 #include <machine/IrqManager.h>
 #include <machine/Timer.h>
+#include <processor/state.h>
 
 /** @addtogroup kernelmachinex86common
  * @{ */
@@ -69,7 +70,7 @@ class Rtc : public Timer,
     //
     // IrqHandler interface
     //
-    virtual bool irq(irq_id_t number);
+    virtual bool irq(irq_id_t number, InterruptState &state);
 
     /** Set the index register
      *\param[in] index the new index */

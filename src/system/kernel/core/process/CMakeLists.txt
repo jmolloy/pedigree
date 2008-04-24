@@ -16,4 +16,4 @@
 
 add_kernel_src(core/process
                Mutex.cc Scheduler.cc LockManager.cc Semaphore.cc Thread.cc
-               initialiseMultitasking.cc)
+               initialiseMultitasking.cc RoundRobin.cc)

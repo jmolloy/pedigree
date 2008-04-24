@@ -15,6 +15,7 @@
  */
 #include <compiler.h>
 #include <machine/Machine.h>
+#include <Log.h>
 #include "Pit.h"
 
 Pit Pit::m_Instance;
@@ -23,9 +24,7 @@ bool Pit::registerHandler(TimerHandler *handler)
 {
   if (UNLIKELY(handler == 0 && m_Handler != 0))
     return false;
-  if (UNLIKELY(handler != 0 && m_Handler == 0))
-    return false;
-
+  
   m_Handler = handler;
   return true;
 }
@@ -66,11 +65,12 @@ Pit::Pit()
 {
 }
 
-bool Pit::irq(irq_id_t number)
+bool Pit::irq(irq_id_t number, InterruptState &state)
 {
+  ProcessorState procState(state);
   // TODO: Delta is wrong
   if (LIKELY(m_Handler != 0))
-    m_Handler->timer(0);
+    m_Handler->timer(0, procState);
 
   return true;
 }

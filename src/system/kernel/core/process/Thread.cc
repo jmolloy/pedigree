@@ -64,14 +64,23 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   Scheduler::instance().addThread(this);
 }
 
+Thread::Thread(Process *pParent) :
+    m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0)
+{
+  // TODO Register ourselves with the given Process.
+}
+
 Thread::~Thread()
 {
   // Remove us from the scheduler.
   Scheduler::instance().removeThread(this);
 
   // TODO delete any pointer data.
-  uintptr_t *pKernelStackBottom = m_pKernelStack-(KERNEL_STACK_SIZE/sizeof(uintptr_t))+1;
-  delete [] pKernelStackBottom;
+  if (m_pKernelStack)
+  {
+    uintptr_t *pKernelStackBottom = m_pKernelStack-(KERNEL_STACK_SIZE/sizeof(uintptr_t))+1;
+    delete [] pKernelStackBottom;
+  }
 }
 
 void Thread::threadExited(int code)

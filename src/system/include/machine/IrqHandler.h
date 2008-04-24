@@ -17,6 +17,7 @@
 #define KERNEL_MACHINE_IRQHANDLER_H
 
 #include <machine/types.h>
+#include <processor/state.h>
 
 /** @addtogroup kernelmachine
  * @{ */
@@ -31,7 +32,7 @@ class IrqHandler
      *      you removed the interrupt reason.
      *\param[in] number the irq number
      *\return should return true, if the interrupt reason was removed, or false otherwise */
-    virtual bool irq(irq_id_t number) = 0;
+    virtual bool irq(irq_id_t number, InterruptState &state) = 0;
 
   protected:
     /** Virtual destructor */

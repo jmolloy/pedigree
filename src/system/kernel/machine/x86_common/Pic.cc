@@ -125,7 +125,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq] != 0))
   {
-    if (m_Handler[irq]->irq(irq) == false)
+    if (m_Handler[irq]->irq(irq, state) == false)
     {
       // Disable/Mask the IRQ line (the handler did not remove
       // the interrupt reason, yet)

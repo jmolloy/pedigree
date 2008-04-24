@@ -35,7 +35,7 @@ void DwarfCfiAutomaton::initialise (DwarfState startingState, uintptr_t nCodeLoc
                                     size_t nCodeLen, int32_t nCodeAlignmentFactor,
                                     int32_t nDataAlignmentFactor, uintptr_t nStartingPc)
 {
-  NOTICE("CfiAutomaton starting up at PC=" << Hex << nStartingPc);
+//   NOTICE("CfiAutomaton starting up at PC=" << Hex << nStartingPc);
   m_nCodeAlignmentFactor = nCodeAlignmentFactor;
   m_nDataAlignmentFactor = nDataAlignmentFactor;
   m_nStartingPc = nStartingPc;
@@ -73,7 +73,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
   {
     uint8_t nDelta = pLocation[0] & 0x3f;
     nPc += nDelta * m_nCodeAlignmentFactor;
-    NOTICE("DW_CFA_advance_loc (" << Hex << nDelta << ")");
+//     NOTICE("DW_CFA_advance_loc (" << Hex << nDelta << ")");
   }
   else if ((pLocation[0] & 0xc0) == DW_CFA_offset)
   {
@@ -84,11 +84,11 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
     nLocation += nLocationOffset;
     m_CurrentState.m_RegisterStates[nRegister] = DwarfState::Offset;
     m_CurrentState.m_R[nRegister] = static_cast<ssize_t>(nOffset * m_nDataAlignmentFactor);
-    NOTICE("DW_CFA_offset (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
+//     NOTICE("DW_CFA_offset (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
   }
   else if ((pLocation[0] & 0xc0) == DW_CFA_restore)
   {
-    WARNING("DW_CFA_restore not implemented!");
+//     WARNING("DW_CFA_restore not implemented!");
   }
   else switch (pLocation[0])
   {
@@ -102,7 +102,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       processor_register_t *pAddress = reinterpret_cast<processor_register_t*> (nLocation);
       nPc = *pAddress;
       nLocation += sizeof(processor_register_t);
-      NOTICE("DW_CFA_set_loc (" << Hex << nPc << ")");
+//       NOTICE("DW_CFA_set_loc (" << Hex << nPc << ")");
       break;
     }
     case DW_CFA_advance_loc1:
@@ -110,7 +110,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       uint8_t nDelta = * reinterpret_cast<uint8_t*> (nLocation);
       nLocation += 1;
       nPc += nDelta * m_nCodeAlignmentFactor;
-      NOTICE("DW_CFA_advance_loc1 (" << Hex << nDelta << ")");
+//       NOTICE("DW_CFA_advance_loc1 (" << Hex << nDelta << ")");
       break;
     }
     case DW_CFA_advance_loc2:
@@ -118,7 +118,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       uint16_t nDelta = * reinterpret_cast<uint16_t*> (nLocation);
       nLocation += 2;
       nPc += nDelta * m_nCodeAlignmentFactor;
-      NOTICE("DW_CFA_advance_loc2 (" << Hex << nDelta << ")");
+//       NOTICE("DW_CFA_advance_loc2 (" << Hex << nDelta << ")");
       break;
     }
     case DW_CFA_advance_loc4:
@@ -126,7 +126,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       uint32_t nDelta = * reinterpret_cast<uint32_t*> (nLocation);
       nLocation += 4;
       nPc += nDelta * m_nCodeAlignmentFactor;
-      NOTICE("DW_CFA_advance_loc4 (" << Hex << nDelta << ")");
+//       NOTICE("DW_CFA_advance_loc4 (" << Hex << nDelta << ")");
       break;
     }
 //     case DW_CFA_offset_extended:
@@ -158,7 +158,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       m_CurrentState.m_CfaRegister = DwarfUnwinder::decodeUleb128(pLocation, nOffset);
       m_CurrentState.m_CfaOffset   = static_cast<ssize_t>(DwarfUnwinder::decodeUleb128(pLocation, nOffset));
       nLocation += nOffset;
-      NOTICE("DW_CFA_def_cfa (" << Hex << m_CurrentState.m_CfaRegister << ", " << m_CurrentState.m_CfaOffset << ")");
+//       NOTICE("DW_CFA_def_cfa (" << Hex << m_CurrentState.m_CfaRegister << ", " << m_CurrentState.m_CfaOffset << ")");
       break;
     }
     case DW_CFA_def_cfa_register:
@@ -167,7 +167,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       pLocation = reinterpret_cast<uint8_t*> (nLocation);
       m_CurrentState.m_CfaRegister = DwarfUnwinder::decodeUleb128(pLocation, nOffset);
       nLocation += nOffset;
-      NOTICE("DW_CFA_def_cfa_reg (" << Hex << m_CurrentState.m_CfaRegister << ")");
+//       NOTICE("DW_CFA_def_cfa_reg (" << Hex << m_CurrentState.m_CfaRegister << ")");
       break;
     }
     case DW_CFA_def_cfa_offset:
@@ -176,7 +176,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       pLocation = reinterpret_cast<uint8_t*> (nLocation);
       m_CurrentState.m_CfaOffset = static_cast<ssize_t>(DwarfUnwinder::decodeUleb128(pLocation, nOffset));
       nLocation += nOffset;
-      NOTICE("DW_CFA_def_cfa_offset (" << Hex << m_CurrentState.m_CfaOffset << ")");
+//       NOTICE("DW_CFA_def_cfa_offset (" << Hex << m_CurrentState.m_CfaOffset << ")");
       break;
     }
 //     case DW_CFA_def_cfa_expression:
@@ -198,7 +198,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
 
       m_CurrentState.m_RegisterStates[nRegister] = DwarfState::Offset;
       m_CurrentState.m_R[nRegister] = static_cast<ssize_t>(nOffset * m_nDataAlignmentFactor);
-      NOTICE("DW_CFA_offset_extended_sf (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
+//       NOTICE("DW_CFA_offset_extended_sf (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
       break;
     }
 //     case DW_CFA_def_cfa_sf:

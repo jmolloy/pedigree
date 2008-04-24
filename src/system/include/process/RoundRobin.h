@@ -13,13 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef INITIALISE_MULTITASKING_H
-#define INITIALISE_MULTITASKING_H
+#ifndef ROUND_ROBIN_H
+#define ROUND_ROBIN_H
 
-/// \todo This should be a member of Processor::Information.
-extern class Thread *g_pCurrentThread;
+#include <process/SchedulingAlgorithm.h>
+#include <utilities/List.h>
 
-/// Starts up the threading subsystem.
-void initialiseMultitasking();
+class RoundRobin : public SchedulingAlgorithm
+{
+public:
+  /** Constructor. */
+  RoundRobin();
+  
+  /** Destructor. */
+  virtual ~RoundRobin();
+  
+  virtual void addThread(Thread *pThread);
+  
+  virtual void removeThread(Thread *pThread);
+
+  virtual Thread *getNext(Processor *pProcessor);
+  
+  virtual void threadStatusChanged(Thread *pThread);
+  
+private:
+  typedef List<Thread*> ThreadList;
+  ThreadList m_List;
+};
 
 #endif
