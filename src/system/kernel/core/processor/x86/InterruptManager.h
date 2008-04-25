@@ -20,6 +20,7 @@
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
+#include <process/Mutex.h>
 
 /** @addtogroup kernelprocessorx86
  * @{ */
@@ -98,6 +99,9 @@ class X86InterruptManager : public ::InterruptManager,
     #endif
     /** The syscall handlers */
     SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
+
+    /** Lock */
+    Mutex m_Lock;
 
     /** The instance of the interrupt manager  */
     static X86InterruptManager m_Instance;

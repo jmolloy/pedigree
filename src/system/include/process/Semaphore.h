@@ -16,6 +16,7 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
+#include <Atomic.h>
 #include <processor/types.h>
 
 /**
@@ -45,8 +46,7 @@ public:
   void release(size_t n=1);
   
 private:
-  /// \todo Implement Atomic<T>.
-  // Atomic<size_t> m_Counter;
+  Atomic<ssize_t> m_Counter;
 };
 
 #endif

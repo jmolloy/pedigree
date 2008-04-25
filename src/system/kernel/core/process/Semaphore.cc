@@ -16,8 +16,9 @@
 
 #include <process/Semaphore.h>
 
-// Note, this is in its own file purely so that a vtable can be generated.
+// NOTE, this is in its own file purely so that a vtable can be generated.
 Semaphore::Semaphore(size_t nInitialValue)
+  : m_Counter(nInitialValue)
 {
 }
 
@@ -27,29 +28,29 @@ Semaphore::~Semaphore()
 
 void Semaphore::acquire(size_t n)
 {
-//   while (m_Counter == 0);
-//   m_Counter -= n;
-//   while (m_Counter == 0);
-#ifdef STRICT_LOCK_ORDERING
-//     Processor::.acquired(*this);
-#endif
+  while (tryAcquire(n) == false);
 }
 
 bool Semaphore::tryAcquire(size_t n)
 {
-//   if (m_Counter > 0 && m_Counter.tryDecrement(n))
-//   {
-#ifdef STRICT_LOCK_ORDERING
-//     LockManager::instance().acquired(*this);
-#endif
+  ssize_t value = m_Counter;
+  if ((value - n) < 0)return false;
+
+  if (m_Counter.compareAndSwap(value, value - n))
+  {
+    #ifdef STRICT_LOCK_ORDERING
+      // TODO LockManager::acquired(*this);
+    #endif
     return true;
-//   }
-//   return false;
+  }
+  return false;
 }
 
 void Semaphore::release(size_t n)
 {
-//   m_Counter += n;
-#ifdef STRICT_LOCK_ORDERING
-#endif
+  m_Counter += n;
+
+  #ifdef STRICT_LOCK_ORDERING
+    // TODO LockManager::released(*this);
+  #endif
 }

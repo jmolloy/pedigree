@@ -69,6 +69,7 @@ src/system/common/Makefile
 src/system/include
 src/system/include/Atomic.h
 src/system/include/BootstrapInfo.h
+src/system/include/LockGuard.h
 src/system/include/Log.h
 src/system/include/compiler.h
 src/system/include/doxygen.h

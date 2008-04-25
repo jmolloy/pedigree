@@ -15,6 +15,7 @@
  */
 #include <panic.h>
 #include <Debugger.h>
+#include <LockGuard.h>
 #include <utilities/StaticString.h>
 #include "InterruptManager.h"
 
@@ -67,7 +68,8 @@ InterruptManager &InterruptManager::instance()
 
 bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
-  // TODO: Needs locking
+  LockGuard lockGuard(m_Lock);
+
   if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
     return false;
   if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
@@ -83,7 +85,8 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
   bool X86InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
-    // TODO: Needs locking
+    LockGuard lockGuard(m_Lock);
+
     if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
       return false;
     if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
@@ -107,7 +110,7 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
 {
-  //TODO: Needs locking
+  LockGuard lockGuard(m_Lock);
 
   if (UNLIKELY(Service >= serviceEnd))
     return false;
@@ -195,6 +198,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
 }
 
 X86InterruptManager::X86InterruptManager()
+  : m_Lock()
 {
   // Initialise the pointers to the interrupt handler
   for (size_t i = 0;i < 256;i++)

@@ -13,15 +13,36 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef KERNEL_LOCKGUARD_H
+#define KERNEL_LOCKGUARD_H
 
-#include <process/Mutex.h>
+#include <process/Semaphore.h>
 
-// NOTE, this is in its own file purely so that a vtable can be generated.
-Mutex::Mutex() :
-    Semaphore(1)
+/** @addtogroup kernel
+ * @{ */
+
+class LockGuard
 {
-}
+  public:
+    inline LockGuard(Semaphore &semaphore, size_t n = 1)
+      : m_Semaphore(semaphore), m_Count(n)
+    {
+      m_Semaphore.acquire(m_Count);
+    }
+    inline ~LockGuard()
+    {
+      m_Semaphore.release(m_Count);
+    }
 
-Mutex::~Mutex()
-{
-}
+  private:
+    LockGuard();
+    LockGuard(const LockGuard &);
+    LockGuard &operator = (const LockGuard &);
+
+    Semaphore &m_Semaphore;
+    size_t m_Count;
+};
+
+/** @} */
+
+#endif
