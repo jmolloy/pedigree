@@ -163,6 +163,12 @@ void MIPS32InterruptManager::initialiseProcessor()
 
 void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 {
+  // We don't want interrupts, but we don't need to be in the exception level.
+  uintptr_t sr = interruptState.m_Sr;
+  sr &= ~SR_IE;  // Disable interrupts.
+  sr &= ~SR_EXL; // Remove us from being in exception privilege level.
+  asm volatile ("mtc0 %0, $12" :: "r" (sr));
+  
   // TODO: Needs locking
   size_t intNumber = interruptState.getInterruptNumber();
 

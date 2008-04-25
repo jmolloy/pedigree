@@ -96,6 +96,9 @@ li $k0, 0x80020000     # This will be our kernel stack pointer.
   lw $k1, 124($k0)     # EPC
   mtc0 $k1, $14
   nop
+  lw $k1, 116($k0)     # SR
+  mtc0 $k1, $12
+  nop
   
   lw $at, 0($k0)
   lw $v0, 4($k0)
