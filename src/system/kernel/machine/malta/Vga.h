@@ -110,6 +110,8 @@ class MaltaVga : public Vga
    * \param nY The row to move to.
    */
   virtual void moveCursor (size_t nX, size_t nY) {}
+  
+  operator uint16_t*() const {}
 };
 
 #endif

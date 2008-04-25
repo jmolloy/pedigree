@@ -243,10 +243,10 @@ void LocalIO::scroll()
   uint16_t blank = ' ' | (attributeByte << 8);
   if (m_CursorY >= m_nHeight-m_LowerCliLimit)
   {
-    for (size_t i = m_UpperCliLimit*80; i < (m_nHeight-m_LowerCliLimit-1)*80; i++)
-      m_pFramebuffer[i] = m_pFramebuffer[i+80];
+    for (size_t i = m_UpperCliLimit*m_nWidth; i < (m_nHeight-m_LowerCliLimit-1)*m_nWidth; i++)
+      m_pFramebuffer[i] = m_pFramebuffer[i+m_nWidth];
 
-    for (size_t i = (m_nHeight-m_LowerCliLimit-1)*80; i < (m_nHeight-m_LowerCliLimit)*80; i++)
+    for (size_t i = (m_nHeight-m_LowerCliLimit-1)*m_nWidth; i < (m_nHeight-m_LowerCliLimit)*m_nWidth; i++)
       m_pFramebuffer[i] = blank;
 
     m_CursorY = m_nHeight-m_LowerCliLimit-1;

@@ -25,4 +25,4 @@ add_subdirectory(process)
 add_subdirectory(processor)
 
 add_kernel_src(core
-               main.cc)
+               main.cc BootIO.cc)

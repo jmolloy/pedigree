@@ -223,8 +223,8 @@ class Processor
   #include <processor/arm_common/Processor.h>
 #endif
 
-#ifdef X86
-  #include <processor/x86/Processor.h>
-#endif
+//ifdef X86
+  //include <processor/x86/Processor.h>
+//endif
 
 #endif

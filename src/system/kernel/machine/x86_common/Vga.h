@@ -139,6 +139,14 @@ class X86Vga : public Vga
 
   bool initialise();
 
+  operator uint16_t*() const
+  {
+    if (m_Framebuffer == true)
+      return reinterpret_cast<uint16_t*> (m_Framebuffer.virtualAddress());
+    else
+      return reinterpret_cast<uint16_t*> (m_pFramebuffer);
+  }
+
 private:
   X86Vga(const X86Vga &);
   X86Vga &operator = (const X86Vga &);

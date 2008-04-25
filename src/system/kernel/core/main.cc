@@ -31,15 +31,14 @@
 #include <LocalIO.h>
 #include <SerialIO.h>
 #include <DebuggerIO.h>
+#include "BootIO.h"
 #ifdef THREADS
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
 #include <processor/PhysicalMemoryManager.h>
 #endif
 
-LocalIO *g_pLocalIO;
-SerialIO *g_pSerialIO1;
-SerialIO *g_pSerialIO2;
+BootIO bootIO;
 
 void baz(int a, int b)
 {
@@ -54,28 +53,6 @@ void bar(int a, int b)
 int foo(void *a)
 {
   bar(0x789, 0x901);
-}
-
-/// Initialises the boot output.
-void initialiseBootOutput()
-{
-  g_pLocalIO->enableCli();
-  g_pSerialIO1->enableCli();
-#ifndef ARM_COMMON
-  g_pSerialIO2->enableCli();
-#endif
-}
-
-/// Allows output to any DebuggerIO terminal.
-void bootOutput(HugeStaticString &str,
-                DebuggerIO::Colour front=DebuggerIO::LightGrey,
-                DebuggerIO::Colour back=DebuggerIO::Black)
-{
-  g_pLocalIO->writeCli(str, front, back);
-  g_pSerialIO1->writeCli(str, front, back);
-#ifndef ARM_COMMON
-  g_pSerialIO2->writeCli(str, front, back);
-#endif
 }
 
 /// Kernel entry point.
@@ -110,15 +87,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #endif
 //   foo(0x456, 0x123);
   // Initialise the boot output.
-  LocalIO *localIO = new LocalIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-  g_pLocalIO = localIO;
-  SerialIO *serialIO1 = new SerialIO(Machine::instance().getSerial(0));
-  g_pSerialIO1 = serialIO1;
-#ifndef ARM_COMMON
-  SerialIO *serialIO2 = new SerialIO(Machine::instance().getSerial(1));
-  g_pSerialIO2 = serialIO2;
-#endif
-  initialiseBootOutput();
+  bootIO.initialise();
 
   // The initialisation is done here, unmap/free the .init section
 #ifndef MIPS_COMMON
@@ -129,7 +98,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   str += "Pedigree - revision ";
   str += g_pBuildRevision;
   str += "\n=======================\n";
-  bootOutput(str, DebuggerIO::White, DebuggerIO::Black);
+  bootIO.write(str, BootIO::White, BootIO::Black);
 
   str.clear();
   str += "Build at ";
@@ -139,13 +108,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   str += " on ";
   str += g_pBuildMachine;
   str += "\n";
-  bootOutput(str);
+  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
   str.clear();
   str += "Build flags: ";
   str += g_pBuildFlags;
   str += "\n";
-  bootOutput(str);
+  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
 #ifdef THREADS
   initialiseMultitasking();

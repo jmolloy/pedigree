@@ -102,6 +102,8 @@ public:
    * \param nY The row to move to.
    */
   virtual void moveCursor (size_t nX, size_t nY) =0;
+  
+  virtual operator uint16_t*() const = 0;
 };
 
 #endif
