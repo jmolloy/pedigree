@@ -42,6 +42,9 @@ public:
   LocalIO(Vga *pVga, Keyboard *pKeyboard);
   ~LocalIO();
 
+  void initialise();
+  void destroy();
+  
   /**
    * Forces the command line interface not to use the specified number of lines
    * from either the top or bottom of the screen, respectively. Can be used to 

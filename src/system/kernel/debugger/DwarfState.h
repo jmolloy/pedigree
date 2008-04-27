@@ -180,12 +180,21 @@ class DwarfState
       switch (m_RegisterStates[nRegister])
       {
         case Undefined:
-          WARNING ("Request for undefined register: r" << Dec << nRegister);
+//           WARNING ("Request for undefined register: r" << Dec << nRegister);
+          break;
         case SameValue:
 //           WARNING ("SameValue.");
           return initialState.m_R[nRegister];
         case Offset:
         {
+//           NOTICE("Offset: " << Hex << getCfa(initialState) << ", " << m_R[nRegister]);
+          /// \todo This needs to be better - we need to check if the CFA is borked so we
+          ///       don't try to do a stupid read - This requires VirtualAddressSpace, I think.
+          if (getCfa(initialState) < 0x2000)
+          {
+            WARNING("Malformed CFA!");
+            return 0x0;
+          }
           // "The previous value of this register is saved at the address CFA+N where CFA is the
           //  current CFA value and N is a signed offset."
           return * reinterpret_cast<processor_register_t*>
@@ -207,19 +216,19 @@ class DwarfState
         }
         case Expression:
         {
-          WARNING ("Expression not implemented, r" << Dec << nRegister);
+//           WARNING ("Expression not implemented, r" << Dec << nRegister);
           return 0;
         }
         case ValExpression:
         {
-          WARNING ("ValExpression not implemented, r" << Dec << nRegister);
+//           WARNING ("ValExpression not implemented, r" << Dec << nRegister);
           return 0;
         }
         case Architectural:
-          WARNING ("Request for 'architectural' register: r" << Dec << nRegister);
+//           WARNING ("Request for 'architectural' register: r" << Dec << nRegister);
           return 0;
         default:
-          ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
+//           ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
           return 0;
       }
     }

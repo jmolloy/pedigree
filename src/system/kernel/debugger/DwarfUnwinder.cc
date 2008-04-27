@@ -170,12 +170,9 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     uint32_t nReturnAddressRegister = decodeUleb128(pData, nCie);
     
     DwarfCfiAutomaton automaton;
-
     automaton.initialise (startState, m_nData+nCie, nCieEnd-nCie, nCodeAlignmentFactor,
                           nDataAlignmentFactor, nInitialLocation);
-
     DwarfState *endState = automaton.execute (m_nData+nInstructionStart, nInstructionLength, inState.getInstructionPointer());
-
     frameBase = endState->getCfa(startState);
     
 #ifdef X86

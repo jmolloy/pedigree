@@ -184,6 +184,7 @@ private:
   int getMode();
   
   uint8_t m_pStoredMode[61];
+  size_t m_nStoredWidth, m_nStoredHeight;
   
   int m_nMode;
 };

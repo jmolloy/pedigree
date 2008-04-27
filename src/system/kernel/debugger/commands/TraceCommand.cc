@@ -71,17 +71,17 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   // Give the disassembler 3/4 of the available lines.
   int nLines = ((pScreen->getHeight()-2) * 3) / 4;
   
-  Disassembly disassembly(state);
+  static Disassembly disassembly(state);
   disassembly.move(0, 1);
   disassembly.resize(nCols, nLines);
   disassembly.setScrollKeys('o', 'p');
   
-  Registers registers(state);
+  static Registers registers(state);
   registers.move(nCols+1, 1);
   registers.resize(24, nLines);
   registers.setScrollKeys('j', 'k');
   
-  Stacktrace stacktrace(state);
+  static Stacktrace stacktrace(state);
   stacktrace.move(0, nLines+2);
   stacktrace.resize(pScreen->getWidth(), pScreen->getHeight()-nLines-3);
   stacktrace.setScrollKeys('n', 'm');
@@ -93,7 +93,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   uintptr_t nSymStart = 0;
   KernelElf::instance().lookupSymbol(nIp, &nSymStart);
 
-  Disassembler disassembler;
+  static Disassembler disassembler;
 #ifdef BITS_64
   disassembler.setMode(64);
 #endif

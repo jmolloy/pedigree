@@ -29,6 +29,18 @@ LocalIO::LocalIO(Vga *pVga, Keyboard *pKeyboard) :
   m_pVga(pVga),
   m_pKeyboard(pKeyboard)
 {
+  initialise();
+}
+
+LocalIO::~LocalIO()
+{
+  destroy();
+}
+
+void LocalIO::initialise()
+{
+  m_nWidth = 80; m_nHeight = 25; m_UpperCliLimit = 0; m_LowerCliLimit = 0;
+  m_CursorX = 0; m_CursorY = 0;
   // Clear the framebuffer.
   for (size_t i = 0; i < MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT; i++)
   {
@@ -50,7 +62,7 @@ LocalIO::LocalIO(Vga *pVga, Keyboard *pKeyboard) :
   m_nHeight = m_pVga->getNumRows();
 }
 
-LocalIO::~LocalIO()
+void LocalIO::destroy()
 {
   // Copy our old frame buffer to the screen.
   m_pVga->pokeBuffer( reinterpret_cast<uint8_t*> (m_pOldFramebuffer), MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT*2);

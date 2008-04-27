@@ -116,6 +116,8 @@ X86Vga::X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase) :
   m_pFramebuffer( reinterpret_cast<uint8_t*> (nFramebufferBase) ),
   m_nWidth(80),
   m_nHeight(25),
+  m_nStoredWidth(0),
+  m_nStoredHeight(0),
   m_nMode(0)
 {
 }
@@ -197,6 +199,8 @@ void X86Vga::rememberMode()
   if (mode > -1)
   {
     memcpy (m_pStoredMode, g_pModeDescriptions[mode], 61);
+    m_nStoredWidth = m_nWidth;
+    m_nStoredHeight = m_nHeight;
   }
 }
   
@@ -204,6 +208,8 @@ void X86Vga::restoreMode()
 {
   g_pModeDescriptions[4] = m_pStoredMode;
   setMode(4);
+  m_nWidth = m_nStoredWidth;
+  m_nHeight = m_nStoredHeight;
   m_nMode = -1;
 }
 

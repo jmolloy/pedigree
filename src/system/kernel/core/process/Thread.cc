@@ -18,6 +18,7 @@
 #include <process/Scheduler.h>
 #include <processor/Processor.h>
 #include <processor/StackFrame.h>
+#include <machine/Machine.h>
 #include <Log.h>
 
 /**
@@ -27,6 +28,9 @@
 static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadStartFunc pFunc)
 {
   // UNLOCK SCHEDULER
+  /// \todo What IRQ do we ACK? It's machine specific.
+  Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+  Processor::setInterrupts(true);
   
   int code = pFunc(pParam);
   pThread->threadExited(code);
@@ -58,7 +62,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                          3,       // There are three parameters.
                          this,    // First parameter.
                          pParam,  // Second parameter.
-                         pStack); // Third parameter.
+                         pStartFunction); // Third parameter.
 
   // TODO Register ourselves with the given Process.
   

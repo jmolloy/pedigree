@@ -89,10 +89,11 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   /*
    * I/O implementations.
    */
-  LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-  SerialIO serialIO(Machine::instance().getSerial(0));
+  static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
+  localIO.initialise();
+  static SerialIO serialIO(Machine::instance().getSerial(0));
 #ifndef ARM_COMMON
-  SerialIO serialIO2(Machine::instance().getSerial(1));
+  static SerialIO serialIO2(Machine::instance().getSerial(1));
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
   int nInterfaces = 3;
 #else
@@ -105,17 +106,17 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   int nChosenInterface = -1;
   
   // Commands.
-  DisassembleCommand disassembler;
-  LogViewer logViewer;
-  Backtracer backtracer;
-  QuitCommand quit;
-  BreakpointCommand breakpoint;
-  DumpCommand dump;
-  StepCommand step;
-  MemoryInspector memory;
-  PanicCommand panic;
-  CpuInfoCommand cpuInfo;
-  IoCommand io;
+  static DisassembleCommand disassembler;
+  static LogViewer logViewer;
+  static Backtracer backtracer;
+  static QuitCommand quit;
+  static BreakpointCommand breakpoint;
+  static DumpCommand dump;
+  static StepCommand step;
+  static MemoryInspector memory;
+  static PanicCommand panic;
+  static CpuInfoCommand cpuInfo;
+  static IoCommand io;
   
   size_t nCommands = 12;
   DebuggerCommand *pCommands[] = {&disassembler,
@@ -262,6 +263,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   
   }
   while (bKeepGoing);
+  localIO.destroy();
 }
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)

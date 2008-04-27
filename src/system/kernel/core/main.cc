@@ -45,14 +45,30 @@ void baz(int a, int b)
   Processor::breakpoint();
 }
 
-void bar(int a, int b)
+int bar(void *a)
 {
-  baz(0x234, 0x387);
+  HugeStaticString str;
+  for (;;)
+  {
+    str.clear();
+    str += "c";
+    bootIO.write(str, BootIO::White, BootIO::Red);
+    for(int i = 0; i < 10000000; i++) ;
+  }
+  for(;;);
 }
 
 int foo(void *a)
 {
-  bar(0x789, 0x901);
+  HugeStaticString str;
+  for (;;)
+  {
+    str.clear();
+    str += "b";
+    bootIO.write(str, BootIO::White, BootIO::Green);
+    for(int i = 0; i < 10000000; i++) ;
+  }
+  for(;;);
 }
 
 /// Kernel entry point.
@@ -119,11 +135,23 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifdef THREADS
   initialiseMultitasking();
   // Gets me a stacks.
-  physical_uintptr_t stackBase = PhysicalMemoryManager::instance().allocatePage();
-  VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)0xB0000000, 0);
-  Thread *pThread = new Thread((Process*)0, &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0));
+  physical_uintptr_t stackBase;
+  int i;
+  for (i = 0; i < 5; i++)
+  {
+    stackBase = PhysicalMemoryManager::instance().allocatePage();
+    VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
+  }
+  Thread *pThread = new Thread((Process*)0, &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
+
+  for (i = 0; i < 5; i++)
+  {
+    stackBase = PhysicalMemoryManager::instance().allocatePage();
+    VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0010000+(i*0x1000)), 0);
+  }
+  pThread = new Thread((Process*)0, &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
 #endif
-  
+
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
@@ -133,5 +161,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     #ifdef X86_COMMON
       Processor::setInterrupts(true);
     #endif
+    for(int i = 0; i < 10000000; i++) ;
+    str.clear();
+    str += "a";
+    bootIO.write(str, BootIO::White, BootIO::Blue);
   }
 }

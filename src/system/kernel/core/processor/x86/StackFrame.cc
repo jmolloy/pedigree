@@ -21,6 +21,10 @@
 
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
+  /// Check for borked-ness.
+  /// \todo better way to do this.
+  if (m_BasePointer < 0x2000)
+    return 0;
   #if defined(OMIT_FRAMEPOINTER)
     uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_BasePointer + (n - 1) * sizeof(uint32_t));
   #else
@@ -43,14 +47,14 @@ void X86StackFrame::construct(ProcessorState &state,
   pStack -= nParams+1; // +1 for return address.
   uintptr_t *pStackLowWaterMark = pStack;
   
-  *++pStack = returnAddress;
+  *pStack++ = returnAddress;
   
   va_list list;
   va_start(list, nParams);
   
   for(int i = nParams-1; i >= 0; i--)
   {
-    *++pStack = va_arg(list, uintptr_t);
+    *pStack++ = va_arg(list, uintptr_t);
   }
   
   va_end(list);

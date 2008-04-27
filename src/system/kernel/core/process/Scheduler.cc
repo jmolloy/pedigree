@@ -70,13 +70,14 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
 
   // LOCK
   NOTICE("Changing from thread " << Hex << (unsigned long)pOldThread << " to " << (unsigned long)pThread);
+
   pOldThread->setStatus(Thread::Ready);
-  
+
   pThread->setStatus(Thread::Running);
   g_pCurrentThread = pThread;
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
-  
+
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());

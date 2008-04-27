@@ -48,6 +48,7 @@ void Pic::acknowledgeIrq(irq_id_t Id)
 
   // Enable the irq again (the interrupt reason got removed)
   enable(irq, true);
+  eoi(irq);
 }
 void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
