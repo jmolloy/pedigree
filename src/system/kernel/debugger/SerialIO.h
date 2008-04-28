@@ -88,6 +88,9 @@ public:
    */
   char getChar();
   
+  void initialise();
+  void destroy();
+  
 protected:
  
   /**

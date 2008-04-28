@@ -36,9 +36,9 @@ void BootIO::initialise()
   {
     pVga->setLargestTextMode();
     uint16_t *pFramebuffer = *pVga;
-    
-    for (size_t i = 0; i < pVga->getNumRows()*pVga->getNumCols(); i++)
-      pFramebuffer[i] = 0;
+    if (pFramebuffer != 0)
+      for (size_t i = 0; i < pVga->getNumRows()*pVga->getNumCols(); i++)
+        pFramebuffer[i] = 0;
   }
 }
 
@@ -61,6 +61,8 @@ void BootIO::putCharVga(const char c, Colour foreColour, Colour backColour)
   if (pVga)
   {
     uint16_t *pFramebuffer = *pVga;
+    if (pFramebuffer == 0)
+      return;
     // Backspace?
     if (c == 0x08)
     {

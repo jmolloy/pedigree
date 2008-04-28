@@ -36,6 +36,16 @@ SerialIO::SerialIO(Serial *pSerial) :
   m_pSerial(pSerial),
   m_bCli(false)
 {
+  initialise();
+}
+
+SerialIO::~SerialIO()
+{
+  destroy();
+}
+
+void SerialIO::initialise()
+{
   // Save cursor and attributes.
 //   m_pSerial->write("\033[s");
   
@@ -49,7 +59,7 @@ SerialIO::SerialIO(Serial *pSerial) :
   m_pSerial->write("\033[7h");
 }
 
-SerialIO::~SerialIO()
+void SerialIO::destroy()
 {
   // Pop screen contents.
   m_pSerial->write("\033[?1049l");

@@ -16,6 +16,7 @@
 #if defined(DEBUGGER)
 
 #include <processor/StackFrame.h>
+#include <stdarg.h>
 
 uintptr_t X64StackFrame::getParameter(size_t n)
 {
@@ -39,7 +40,43 @@ void X64StackFrame::construct(ProcessorState &state,
                               unsigned int nParams,
                               ...)
 {
-  // TODO
+  // Obtain the stack pointer.
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+  
+  // How many parameters do we need to push?
+  // We push in reverse order but must iterate through the va_list in forward order,
+  // so we decrement the stack pointer here.
+  ssize_t nToPush = nParams - 6; // 6 Params can be passed in registers.
+  if (nToPush < 0) nToPush = 0;
+  nToPush ++; // But we always have to push our return address.
+  
+  pStack -= nToPush;
+  uintptr_t *pStackLowWaterMark = pStack;
+  
+  *pStack++ = returnAddress;
+  
+  va_list list;
+  va_start(list, nParams);
+  
+  for(int i = nParams-1; i >= 0; i--)
+  {
+    uintptr_t arg = va_arg(list, uintptr_t);
+    switch (i)
+    {
+      case 0: state.rdi = arg; break;
+      case 1: state.rsi = arg; break;
+      case 2: state.rdx = arg; break;
+      case 3: state.rcx = arg; break;
+      case 4: state.r8  = arg; break;
+      case 5: state.r9  = arg; break;
+      default: *pStack++ = arg;
+    }
+  }
+  
+  va_end(list);
+  
+  // Write the new stack pointer back.
+  state.setStackPointer(reinterpret_cast<uintptr_t> (pStackLowWaterMark));
 }
 
 #endif

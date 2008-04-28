@@ -94,4 +94,5 @@ void Thread::threadExited(int code)
   NOTICE("Thread exited with code " << Dec << code);
   m_Status = Zombie;
   delete this;
+  Processor::halt();
 }

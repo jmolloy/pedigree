@@ -32,14 +32,6 @@ void MaltaSerial::setBase(uintptr_t nBaseAddr)
 {
   // We use KSEG1 (uncached physical) for our IO accesses.
   m_pRegs = reinterpret_cast<serial*> (KSEG1(nBaseAddr));
-  LargeStaticString str;
-  str += "rxtx: ";
-  str.append(reinterpret_cast<uintptr_t>(&m_pRegs->rxtx), 16);
-  str += ", lstat : ";
-  str.append(reinterpret_cast<uintptr_t>(&m_pRegs->lstat), 16);
-
-  for (size_t i = 0;i < str.length();i++)
-      write(str[i]);
 }
 
 void MaltaSerial::write(char c)

@@ -55,7 +55,6 @@ int bar(void *a)
     bootIO.write(str, BootIO::White, BootIO::Red);
     for(int i = 0; i < 10000000; i++) ;
   }
-  for(;;);
 }
 
 int foo(void *a)
@@ -68,7 +67,6 @@ int foo(void *a)
     bootIO.write(str, BootIO::White, BootIO::Green);
     for(int i = 0; i < 10000000; i++) ;
   }
-  for(;;);
 }
 
 /// Kernel entry point.
@@ -161,9 +159,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     #ifdef X86_COMMON
       Processor::setInterrupts(true);
     #endif
-    for(int i = 0; i < 10000000; i++) ;
-    str.clear();
-    str += "a";
-    bootIO.write(str, BootIO::White, BootIO::Blue);
+//     for(int i = 0; i < 10000000; i++) ;
+//     str.clear();
+//     str += "a";
+//     bootIO.write(str, BootIO::White, BootIO::Blue);
   }
 }

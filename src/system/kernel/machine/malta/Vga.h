@@ -54,14 +54,14 @@ class MaltaVga : public Vga
    * Tests if the current video mode is the largest text mode.
    * \return True if the current video mode is equal to the largest text mode.
    */
-  virtual bool isLargestTextMode () {}
+  virtual bool isLargestTextMode () {return true;}
   
   /**
    * \return The number of columns in the current mode.
    */
   virtual size_t getNumCols ()
   {
-    return 0;
+    return 80;
   }
   
   /**
@@ -69,7 +69,7 @@ class MaltaVga : public Vga
    */
   virtual size_t getNumRows ()
   {
-    return 0;
+    return 25;
   }
   
   /**
@@ -111,7 +111,7 @@ class MaltaVga : public Vga
    */
   virtual void moveCursor (size_t nX, size_t nY) {}
   
-  operator uint16_t*() const {}
+  operator uint16_t*() const {return 0;}
 };
 
 #endif

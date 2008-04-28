@@ -92,6 +92,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   localIO.initialise();
   static SerialIO serialIO(Machine::instance().getSerial(0));
+  serialIO.initialise();
 #ifndef ARM_COMMON
   static SerialIO serialIO2(Machine::instance().getSerial(1));
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
@@ -264,6 +265,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   }
   while (bKeepGoing);
   localIO.destroy();
+  serialIO.destroy();
 }
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)
