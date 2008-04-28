@@ -25,7 +25,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-    m_pSchedulingAlgorithm(0)
+    m_pSchedulingAlgorithm(0), m_Mutex()
 {
 }
 
@@ -68,8 +68,7 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
   Thread *pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
 
-  // LOCK
-  NOTICE("Changing from thread " << Hex << (unsigned long)pOldThread << " to " << (unsigned long)pThread);
+  m_Mutex.acquire();
 
   pOldThread->setStatus(Thread::Ready);
 
@@ -85,7 +84,7 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
   if (g_pCurrentThread == pThread)
     Processor::contextSwitch(pThread->state());
 
-  // UNLOCK
+  m_Mutex.release();
 }
 
 void Scheduler::timer(uint64_t delta, ProcessorState &state)

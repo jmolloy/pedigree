@@ -27,7 +27,7 @@
  */
 static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadStartFunc pFunc)
 {
-  // UNLOCK SCHEDULER
+  Scheduler::instance().m_Mutex.release();
   /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
   Processor::setInterrupts(true);

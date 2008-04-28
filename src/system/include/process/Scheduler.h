@@ -19,6 +19,7 @@
 #include <processor/types.h>
 #include <processor/state.h>
 #include <machine/TimerHandler.h>
+#include <process/Mutex.h>
 
 class SchedulingAlgorithm;
 class Thread;
@@ -59,6 +60,10 @@ public:
 
   /** TimerHandler callback. */
   void timer(uint64_t delta, ProcessorState &state);
+
+  /** Our "unsafe to reschedule" mutex.
+   *  \note This is public so it can be accessed by the thread start trampoline. */
+  Mutex m_Mutex;
 private:
   /** Default constructor
    *  \note Private - singleton class. */
@@ -69,7 +74,7 @@ private:
 
   /** The current SchedulingAlgorithm */
   SchedulingAlgorithm *m_pSchedulingAlgorithm;
-
+  
   /** The Scheduler instance. */
   static Scheduler m_Instance;
 };
