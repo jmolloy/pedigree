@@ -46,7 +46,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
   m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
   
-  // If we've been given a user stack pointer, we use that, else we use our kernel stack.
+  // If we've been g  NOTICE("rdx: " << Hex << state.rdx );  NOTICE("rdx: " << Hex << state.rdx );iven a user stack pointer, we use that, else we use our kernel stack.
   if (pStack == 0)
     pStack = m_pKernelStack;
 

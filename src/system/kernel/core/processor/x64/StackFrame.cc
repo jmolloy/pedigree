@@ -17,6 +17,7 @@
 
 #include <processor/StackFrame.h>
 #include <stdarg.h>
+#include <Log.h>
 
 uintptr_t X64StackFrame::getParameter(size_t n)
 {
@@ -46,7 +47,8 @@ void X64StackFrame::construct(ProcessorState &state,
   // How many parameters do we need to push?
   // We push in reverse order but must iterate through the va_list in forward order,
   // so we decrement the stack pointer here.
-  ssize_t nToPush = nParams - 6; // 6 Params can be passed in registers.
+  ssize_t nToPush = static_cast <ssize_t> (nParams) - 6; // 6 Params can be passed in registers.
+  
   if (nToPush < 0) nToPush = 0;
   nToPush ++; // But we always have to push our return address.
   
@@ -58,9 +60,10 @@ void X64StackFrame::construct(ProcessorState &state,
   va_list list;
   va_start(list, nParams);
   
-  for(int i = nParams-1; i >= 0; i--)
+  for(int i = 0; i < nParams; i++)
   {
     uintptr_t arg = va_arg(list, uintptr_t);
+    NOTICE("Setting " << Hex << i << ", " << arg);
     switch (i)
     {
       case 0: state.rdi = arg; break;

@@ -95,6 +95,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   serialIO.initialise();
 #ifndef ARM_COMMON
   static SerialIO serialIO2(Machine::instance().getSerial(1));
+  serialIO2.initialise();
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
   int nInterfaces = 3;
 #else
@@ -266,6 +267,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   while (bKeepGoing);
   localIO.destroy();
   serialIO.destroy();
+#ifndef ARM_COMMON
+  serialIO2.destroy();
+#endif
 }
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)

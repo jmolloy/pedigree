@@ -99,6 +99,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
    Debugger::instance().start(st, str2);
   return; // Go back to the YAMON prompt.
 #endif
+  
 //   foo(0x456, 0x123);
   // Initialise the boot output.
   bootIO.initialise();
@@ -135,14 +136,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Gets me a stacks.
   physical_uintptr_t stackBase;
   int i;
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < 10; i++)
   {
     stackBase = PhysicalMemoryManager::instance().allocatePage();
     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
   }
   Thread *pThread = new Thread((Process*)0, &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
 
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < 10; i++)
   {
     stackBase = PhysicalMemoryManager::instance().allocatePage();
     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0010000+(i*0x1000)), 0);
@@ -159,9 +160,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     #ifdef X86_COMMON
       Processor::setInterrupts(true);
     #endif
-//     for(int i = 0; i < 10000000; i++) ;
-//     str.clear();
-//     str += "a";
-//     bootIO.write(str, BootIO::White, BootIO::Blue);
+    for(int i = 0; i < 10000000; i++) ;
+    str.clear();
+    str += "a";
+    bootIO.write(str, BootIO::White, BootIO::Blue);
   }
 }

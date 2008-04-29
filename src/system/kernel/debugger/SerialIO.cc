@@ -21,6 +21,7 @@
 #include <Log.h>
 #include <utilities/StaticString.h>
 /// \todo needs a bit of a tidyup!
+#include <processor/Processor.h>
 
 SerialIO::SerialIO(Serial *pSerial) :
   m_UpperCliLimit(0),

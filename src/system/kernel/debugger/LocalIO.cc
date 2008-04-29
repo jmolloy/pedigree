@@ -18,6 +18,7 @@
 #include <Log.h>
 #include <DebuggerCommand.h>
 #include <utilities/utility.h>
+#include <machine/Machine.h>
 
 LocalIO::LocalIO(Vga *pVga, Keyboard *pKeyboard) :
   m_nWidth(80),

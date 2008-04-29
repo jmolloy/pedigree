@@ -80,7 +80,7 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
-
+  
   if (g_pCurrentThread == pThread)
     Processor::contextSwitch(pThread->state());
 

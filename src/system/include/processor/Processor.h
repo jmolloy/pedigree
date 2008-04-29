@@ -226,5 +226,8 @@ class Processor
 #ifdef X86
   #include <processor/x86/Processor.h>
 #endif
+#ifdef X64
+  #include <processor/x64/Processor.h>
+#endif
 
 #endif
