@@ -50,9 +50,9 @@ extern "C" void __cxa_pure_virtual()
 }
 
 /// Called by G++ if function local statics are initialised for the first time
-extern "C" void __cxa_guard_acquire()
+extern "C" int __cxa_guard_acquire()
 {
-  // TODO
+  return 1;
 }
 extern "C" void __cxa_guard_release()
 {
