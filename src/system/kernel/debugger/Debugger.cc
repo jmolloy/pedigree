@@ -33,6 +33,8 @@
 #include <MemoryInspector.h>
 #include <IoCommand.h>
 #include <ThreadsCommand.h>
+#include <process/Thread.h>
+#include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
 
 Debugger Debugger::m_Instance;
@@ -70,7 +72,6 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 Debugger::Debugger() :
   m_nIoType(DEBUGGER)
 {
-
 }
 
 Debugger::~Debugger()
@@ -85,8 +86,17 @@ void Debugger::initialise()
     ERROR("Debugger: debug interrupt registration failed!");
 }
 
-void Debugger::start(InterruptState &state, LargeStaticString &description)
+/// \todo OZMFGBARBIE, this needs major cleanup. Look at the state of it!! :O
+void Debugger::start(InterruptState &_state, LargeStaticString &description)
 {
+  // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
+  // decide to switch threads.
+  InterruptState state = state;
+#ifdef SMP
+#warning You'll have problems here!
+#endif
+  // The current thread, in case we decide to switch.
+  Thread *pThread = g_pCurrentThread;
   /*
    * I/O implementations.
    */
@@ -120,7 +130,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static PanicCommand panic;
   static CpuInfoCommand cpuInfo;
   static IoCommand io;
-  static ThreadsCommand threads;
+  static ThreadsCommand threads();
+
+  threads.setPointers(&pThread, &state);
 
   size_t nCommands = 13;
   DebuggerCommand *pCommands[] = {&disassembler,

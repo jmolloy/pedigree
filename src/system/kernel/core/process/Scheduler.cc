@@ -83,9 +83,10 @@ void Scheduler::threadStatusChanged(Thread *pThread)
     m_pSchedulingAlgorithm->threadStatusChanged(pThread);
 }
 
-void Scheduler::schedule(Processor *pProcessor, ProcessorState &state)
+void Scheduler::schedule(Processor *pProcessor, ProcessorState &state, Thread *pThread)
 {
-  Thread *pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
+  if (pThread == 0)
+    pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
 
   m_Mutex.acquire();

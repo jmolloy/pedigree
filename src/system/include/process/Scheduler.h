@@ -65,8 +65,10 @@ public:
   
   /** The main schedule function - picks another thread and switches to it.
       \param pProcessor The current processor, in case the SchedulingAlgorithm wants
-                        it for heuristics such as core affinity. */
-  void schedule(Processor *pProcessor, ProcessorState &state);
+                        it for heuristics such as core affinity.
+      \param pThread    The thread to schedule. This is only designed to be used by
+                        the debugger. */
+  void schedule(Processor *pProcessor, ProcessorState &state, Thread *pThread=0);
 
   /** Returns the number of processes currently in operation. */
   size_t getNumProcesses();

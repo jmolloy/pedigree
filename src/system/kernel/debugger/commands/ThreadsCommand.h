@@ -57,6 +57,13 @@ public:
     return NormalStaticString("threads");
   }
   
+  /** Sets the pointers to use to change the thread the debugger debugs. */
+  void setPointers(Thread **ppThread, InterruptState *&prState)
+  {
+    m_ppThread = ppThread;
+    m_prState = prState;
+  }
+
   //
   // Scrollable interface
   //
@@ -67,6 +74,8 @@ public:
 private:
   size_t m_SelectedLine;
   size_t m_nLines;
+  Thread **m_ppThread;
+  InterruptState *&m_prState;
 };
 
 /** @} */
