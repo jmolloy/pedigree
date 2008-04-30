@@ -18,6 +18,7 @@
 
 #include <DebuggerCommand.h>
 #include <Scrollable.h>
+#include <process/Thread.h>
 
 /** @addtogroup kerneldebuggercommands
  * @{ */
@@ -58,10 +59,10 @@ public:
   }
   
   /** Sets the pointers to use to change the thread the debugger debugs. */
-  void setPointers(Thread **ppThread, InterruptState *&prState)
+  void setPointers(Thread **ppThread, InterruptState *pState)
   {
-    m_ppThread = ppThread;
-    m_prState = prState;
+    //m_ppThread = ppThread;
+    //m_pState = pState;
   }
 
   //
@@ -75,7 +76,7 @@ private:
   size_t m_SelectedLine;
   size_t m_nLines;
   Thread **m_ppThread;
-  InterruptState *&m_prState;
+  InterruptState *m_pState;
 };
 
 /** @} */
