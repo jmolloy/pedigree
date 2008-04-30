@@ -20,6 +20,8 @@
 #include <processor/state.h>
 #include <machine/TimerHandler.h>
 #include <process/Mutex.h>
+#include <process/Process.h>
+#include <Atomic.h>
 
 class SchedulingAlgorithm;
 class Thread;
@@ -48,6 +50,14 @@ public:
   void addThread(Thread *pThread);
   /** Removes a thread from being scheduled. */
   void removeThread(Thread *pThread);
+  
+  /** Adds a process.
+   *  \note This is purely for enumeration purposes.
+   *  \return The ID that should be applied to this Process. */
+  size_t addProcess(Process *pProcess);
+  /** Removes a process.
+   *  \note This is purely for enumeration purposes. */
+  void removeProcess(Process *pProcess);
 
   /** Called by a thread when its status changes. Should be propagated directly to the
    *  SchedulingAlgorithm. */
@@ -58,12 +68,19 @@ public:
                         it for heuristics such as core affinity. */
   void schedule(Processor *pProcessor, ProcessorState &state);
 
+  /** Returns the number of processes currently in operation. */
+  size_t getNumProcesses();
+  
+  /** Returns the n'th process currently in operation. */
+  Process *getProcess(size_t n);
+  
   /** TimerHandler callback. */
   void timer(uint64_t delta, ProcessorState &state);
 
   /** Our "unsafe to reschedule" mutex.
    *  \note This is public so it can be accessed by the thread start trampoline. */
   Mutex m_Mutex;
+
 private:
   /** Default constructor
    *  \note Private - singleton class. */
@@ -77,6 +94,12 @@ private:
   
   /** The Scheduler instance. */
   static Scheduler m_Instance;
+  
+  /** All the processes currently in operation, for enumeration purposes. */
+  Vector<Process*> m_Processes;
+
+  /** The next available process ID. */
+  Atomic<size_t> m_NextPid;
 };
 
 #endif

@@ -14,23 +14,53 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Log.h>
-#include <process/initialiseMultitasking.h>
-#include <process/Thread.h>
-#include <process/Scheduler.h>
 #include <process/Process.h>
+#include <processor/Processor.h>
+#include <process/Scheduler.h>
+#include <Log.h>
 
-Thread * volatile g_pCurrentThread;
-
-void initialiseMultitasking()
+Process::Process() :
+  m_NextTid(0)
 {
-  // Create the kernel idle process.
-  Process *pProcess = new Process();
-  pProcess->description() += "Kernel idle process";
-  
-  // Create the kernel idle thread.
-  Thread *pThread = new Thread(pProcess);
-  
-  // Initialise the scheduler.
-  Scheduler::instance().initialise(pThread);
+  m_Id = Scheduler::instance().addProcess(this);
+}
+
+Process::~Process()
+{
+  Scheduler::instance().removeProcess(this);
+}
+
+size_t Process::addThread(Thread *pThread)
+{
+  m_Threads.pushBack(pThread);
+  return (m_NextTid += 1);
+}
+
+void Process::removeThread(Thread *pThread)
+{
+  for(Vector<Thread*>::Iterator it = m_Threads.begin();
+      it != m_Threads.end();
+      it++)
+  {
+    if (*it == pThread)
+    {
+      m_Threads.erase(it);
+      break;
+    }
+  }
+}
+
+size_t Process::getNumThreads()
+{
+  return m_Threads.count();
+}
+
+Thread *Process::getThread(size_t n)
+{
+  if (n >= m_Threads.count())
+  {
+    FATAL("Process::getThread(" << Dec << n << ") - Parameter out of bounds.");
+    return 0;
+  }
+  return m_Threads[n];
 }

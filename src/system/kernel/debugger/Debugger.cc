@@ -32,6 +32,7 @@
 #include <TraceCommand.h>
 #include <MemoryInspector.h>
 #include <IoCommand.h>
+#include <ThreadsCommand.h>
 #include <machine/Machine.h>
 
 Debugger Debugger::m_Instance;
@@ -119,8 +120,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static PanicCommand panic;
   static CpuInfoCommand cpuInfo;
   static IoCommand io;
-  
-  size_t nCommands = 12;
+  static ThreadsCommand threads;
+
+  size_t nCommands = 13;
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -132,7 +134,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &g_Trace,
                                   &panic,
                                   &cpuInfo,
-                                  &io};
+                                  &io,
+                                  &threads};
   
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.

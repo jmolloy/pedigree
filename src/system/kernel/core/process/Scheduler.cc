@@ -25,7 +25,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-    m_pSchedulingAlgorithm(0), m_Mutex()
+  m_pSchedulingAlgorithm(0), m_Mutex(), m_NextPid(0)
 {
 }
 
@@ -55,6 +55,26 @@ void Scheduler::addThread(Thread *pThread)
 void Scheduler::removeThread(Thread *pThread)
 {
   m_pSchedulingAlgorithm->removeThread(pThread);
+}
+
+size_t Scheduler::addProcess(Process *pProcess)
+{
+  m_Processes.pushBack(pProcess);
+  return (m_NextPid += 1);
+}
+
+void Scheduler::removeProcess(Process *pProcess)
+{
+  for(Vector<Process*>::Iterator it = m_Processes.begin();
+      it != m_Processes.end();
+      it++)
+  {
+    if (*it == pProcess)
+    {
+      m_Processes.erase(it);
+      break;
+    }
+  }
 }
 
 void Scheduler::threadStatusChanged(Thread *pThread)
@@ -91,4 +111,19 @@ void Scheduler::timer(uint64_t delta, ProcessorState &state)
 {
   // TODO processor not passed.
   schedule(0, state);
+}
+
+size_t Scheduler::getNumProcesses()
+{
+  return m_Processes.count();
+}
+
+Process *Scheduler::getProcess(size_t n)
+{
+  if (n >= m_Processes.count())
+  {
+    WARNING("Scheduler::getProcess(" << Dec << n << ") parameter outside range.");
+    return 0;
+  }
+  return m_Processes[n];
 }

@@ -121,6 +121,12 @@ public:
     return m_pKernelStack;
   }
   
+  /** Returns the Thread's ID. */
+  size_t getId()
+  {
+    return m_Id;
+  }
+
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
@@ -153,6 +159,11 @@ private:
    * Our kernel stack.
    */
   uintptr_t *m_pKernelStack;
+
+  /**
+   * Our thread ID.
+   */
+  size_t m_Id;
 };
 
 #endif

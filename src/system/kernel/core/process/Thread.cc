@@ -42,11 +42,16 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                uintptr_t *pStack) :
     m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), m_pKernelStack(0)
 {
+  if (pParent == 0)
+  {
+    FATAL("Thread::Thread(): Parent process was NULL!");
+  }
+
   // Initialise our kernel stack.
   uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
   m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
-  
-  // If we've been g  NOTICE("rdx: " << Hex << state.rdx );  NOTICE("rdx: " << Hex << state.rdx );iven a user stack pointer, we use that, else we use our kernel stack.
+
+  // If we've been given a user stack pointer, we use that, else we use our kernel stack.
   if (pStack == 0)
     pStack = m_pKernelStack;
 
@@ -64,7 +69,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                          pParam,  // Second parameter.
                          pStartFunction); // Third parameter.
 
-  // TODO Register ourselves with the given Process.
+  m_Id = m_pParent->addThread(this);
   
   // Now we are ready to go into the scheduler.
   Scheduler::instance().addThread(this);
@@ -73,7 +78,11 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 Thread::Thread(Process *pParent) :
     m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0)
 {
-  // TODO Register ourselves with the given Process.
+  if (pParent == 0)
+  {
+    FATAL("Thread::Thread(): Parent process was NULL!");
+  }
+  m_Id = m_pParent->addThread(this);
 }
 
 Thread::~Thread()
@@ -81,6 +90,8 @@ Thread::~Thread()
   // Remove us from the scheduler.
   Scheduler::instance().removeThread(this);
 
+  m_pParent->removeThread(this);
+  
   // TODO delete any pointer data.
   if (m_pKernelStack)
   {

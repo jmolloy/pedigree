@@ -35,8 +35,8 @@ class Scrollable
     void scrollTo(size_t absolute);
     void refresh(DebuggerIO *pScreen);
     void setScrollKeys(char up, char down);
-	
-	void centreOn(size_t line);
+
+    void centreOn(size_t line);
 
     inline size_t height() const{return m_height;}
     inline size_t width() const{return m_width;}

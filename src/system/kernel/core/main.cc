@@ -36,6 +36,7 @@
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <process/Scheduler.h>
 #endif
 
 BootIO bootIO;
@@ -141,14 +142,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
     stackBase = PhysicalMemoryManager::instance().allocatePage();
     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
   }
-  Thread *pThread = new Thread((Process*)0, &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
+  Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
 
   for (i = 0; i < 10; i++)
   {
     stackBase = PhysicalMemoryManager::instance().allocatePage();
     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0010000+(i*0x1000)), 0);
   }
-  pThread = new Thread((Process*)0, &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
+  pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
 #endif
 
 #ifdef DEBUGGER_RUN_AT_START
