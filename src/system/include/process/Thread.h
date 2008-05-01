@@ -82,6 +82,39 @@ public:
   }
 
   /**
+   * Sets the address of our InterruptState.
+   * \note Only applicable when we are in the kernel.
+   */
+  void setInterruptState(InterruptState *pState)
+  {
+    m_pInterruptState = pState;
+  }
+  /**
+   * Gets the address of our InterruptState.
+   * \note Only applicable when we are in the kernel.
+   */
+  InterruptState *getInterruptState() const
+  {
+    return m_pInterruptState;
+  }
+
+  /**
+   * Informs this thread that the first chance it gets it should breakpoint
+   * back into the debugger.
+   */
+  void setDebugImmediate()
+  {
+    m_DebugImmediate = true;
+  }
+  /**
+   * Returns true if the thread should breakpoint into the debugger.
+   */
+  bool getDebugImmediate()
+  {
+    return m_DebugImmediate;
+  }
+
+  /**
    * Retrieves a pointer to this Thread's parent process.
    */
   Process *getParent() const
@@ -141,6 +174,11 @@ private:
   ProcessorState m_State;
 
   /**
+   * The current address of our InterruptState, if we're in an interrupt handler.
+   */
+  InterruptState *m_pInterruptState;
+
+  /**
    * Our parent process.
    */
   Process *m_pParent;
@@ -159,6 +197,11 @@ private:
    * Our kernel stack.
    */
   uintptr_t *m_pKernelStack;
+
+  /**
+   * True if the thread should break into the debugger.
+   */
+  bool m_DebugImmediate;
 
   /**
    * Our thread ID.

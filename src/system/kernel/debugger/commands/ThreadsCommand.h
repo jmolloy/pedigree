@@ -73,10 +73,9 @@ public:
   virtual size_t getLineCount();
   
 private:
+  bool swapThread(InterruptState &state);
   size_t m_SelectedLine;
   size_t m_nLines;
-  Thread **m_ppThread;
-  InterruptState *m_pState;
 };
 
 /** @} */

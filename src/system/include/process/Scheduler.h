@@ -68,7 +68,9 @@ public:
                         it for heuristics such as core affinity.
       \param pThread    The thread to schedule. This is only designed to be used by
                         the debugger. */
-  void schedule(Processor *pProcessor, ProcessorState &state, Thread *pThread=0);
+  void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread=0);
+
+  void switchToAndDebug(InterruptState &state, Thread *pThread);
 
   /** Returns the number of processes currently in operation. */
   size_t getNumProcesses();
@@ -77,7 +79,7 @@ public:
   Process *getProcess(size_t n);
   
   /** TimerHandler callback. */
-  void timer(uint64_t delta, ProcessorState &state);
+  void timer(uint64_t delta, InterruptState &state);
 
   /** Our "unsafe to reschedule" mutex.
    *  \note This is public so it can be accessed by the thread start trampoline. */

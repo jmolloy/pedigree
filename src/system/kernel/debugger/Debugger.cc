@@ -69,8 +69,22 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   }
 }
 
+void Debugger::switchedThread()
+{
+  InterruptState *pState = Debugger::instance().m_pTempState;
+  if (pState == 0)
+  {
+    // Tell the current thread that the first opportunity it gets it should
+    // break back into the debugger.
+    g_pCurrentThread->setDebugImmediate();
+    return;
+  }
+  LargeStaticString str("Debugger switched threads.");
+  Debugger::instance().start(*pState, str);
+}
+
 Debugger::Debugger() :
-  m_nIoType(DEBUGGER)
+  m_nIoType(DEBUGGER), m_pTempState(0)
 {
 }
 

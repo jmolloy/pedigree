@@ -67,10 +67,9 @@ Pit::Pit()
 
 bool Pit::irq(irq_id_t number, InterruptState &state)
 {
-  ProcessorState procState(state);
   // TODO: Delta is wrong
   if (LIKELY(m_Handler != 0))
-    m_Handler->timer(0, procState);
+    m_Handler->timer(0, state);
 
   return true;
 }

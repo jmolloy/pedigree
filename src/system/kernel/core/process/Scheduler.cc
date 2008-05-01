@@ -19,6 +19,8 @@
 #include <process/RoundRobin.h>
 #include <process/initialiseMultitasking.h>
 #include <processor/Processor.h>
+#include <processor/StackFrame.h>
+#include <Debugger.h>
 #include <machine/Machine.h>
 #include <Log.h>
 
@@ -83,7 +85,7 @@ void Scheduler::threadStatusChanged(Thread *pThread)
     m_pSchedulingAlgorithm->threadStatusChanged(pThread);
 }
 
-void Scheduler::schedule(Processor *pProcessor, ProcessorState &state, Thread *pThread)
+void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *pThread)
 {
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
@@ -98,6 +100,7 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state, Thread *p
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
 
+  pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
@@ -108,7 +111,7 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state, Thread *p
   m_Mutex.release();
 }
 
-void Scheduler::switchToAndDebug(Thread *pThread)
+void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
 {
   Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
 
@@ -122,11 +125,13 @@ void Scheduler::switchToAndDebug(Thread *pThread)
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
 
+  pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
-  
-  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 1, pThread->getKernelStack());
+
+  Debugger::instance().m_pTempState = pThread->getInterruptState();
+  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 0);
   pThread->state().setInstructionPointer(reinterpret_cast<uintptr_t> (&Debugger::switchedThread));
 
   if (g_pCurrentThread == pThread)
@@ -135,7 +140,7 @@ void Scheduler::switchToAndDebug(Thread *pThread)
   //m_Mutex.release();
 }
 
-void Scheduler::timer(uint64_t delta, ProcessorState &state)
+void Scheduler::timer(uint64_t delta, InterruptState &state)
 {
   // TODO processor not passed.
   schedule(0, state);

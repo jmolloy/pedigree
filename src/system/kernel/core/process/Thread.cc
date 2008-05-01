@@ -30,6 +30,10 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadS
   Scheduler::instance().m_Mutex.release();
   /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+
+  if (pThread->getDebugImmediate())
+     Processor::breakpoint();
+  
   Processor::setInterrupts(true);
   
   int code = pFunc(pParam);
@@ -40,7 +44,7 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadS
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                uintptr_t *pStack) :
-    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), m_pKernelStack(0)
+  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
 {
   if (pParent == 0)
   {
@@ -76,7 +80,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-    m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0)
+  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
 {
   if (pParent == 0)
   {

@@ -32,7 +32,7 @@ class TimerHandler
      *\param[in] delta time elapsed since the last event
      *\param[in,out] state the state of the processor when the event occurred.
      *\todo which unit for delta? ns? ms? (or us? - JamesM) */
-    virtual void timer(uint64_t delta, ProcessorState &state) = 0;
+    virtual void timer(uint64_t delta, InterruptState &state) = 0;
 
   protected:
     /** Virtual destructor */

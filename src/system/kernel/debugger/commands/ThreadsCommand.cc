@@ -21,6 +21,7 @@
 #include <process/Process.h>
 #include <KernelElf.h>
 #include <utilities/demangle.h>
+#include <process/initialiseMultitasking.h>
 
 ThreadsCommand::ThreadsCommand()
   : DebuggerCommand(), Scrollable(), m_SelectedLine(0), m_nLines(0)
@@ -89,6 +90,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
 
   // Main loop.
   bool bStop = false;
+  bool bReturn = true;
   while(!bStop)
   {
     refresh(pScreen);
@@ -127,6 +129,14 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
       else
         m_SelectedLine = 0;
     }
+    else if (c == '\n' || c == '\r')
+    {
+      if(swapThread(state))
+      {
+        bStop = true;
+        bReturn = false;
+      }
+    }
     else if (c == 'q')
       bStop = true;
   }
@@ -136,7 +146,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
   //        by some random colour!
   pScreen->drawString(" ", 1, 0, DebuggerIO::White, DebuggerIO::Black);
   pScreen->enableCli();
-  return true;
+  return bReturn;
 }
 
 const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
@@ -217,13 +227,18 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       idx++;
     }
   }
-  
-  if (tehThread != 0)
+
+  if (tehThread != 0 && tehThread != g_pCurrentThread)
   {
     Line += "[";
     Line += tehThread->getId();
     Line += "] @ ";
-    uintptr_t ip = tehThread->state().getInstructionPointer();
+    uintptr_t ip;
+    if (tehThread->getInterruptState())
+      ip = tehThread->getInterruptState()->getInstructionPointer();
+    else
+      ip = tehThread->state().getInstructionPointer();
+  
     uintptr_t symStart;
     const char *pSym = KernelElf::instance().lookupSymbol(ip, &symStart);
     LargeStaticString sym;
@@ -231,9 +246,16 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line.append(ip, 16);
     Line += ": ";
     Line += sym;
+    colour = DebuggerIO::LightGrey;
+  }
+  else if (tehThread != 0) // tehThread == g_pCurrentThread
+  {
+    Line += "[";
+    Line += tehThread->getId();
+    Line += "] - CURRENT";
+    colour = DebuggerIO::Yellow;
   }
   
-  colour = DebuggerIO::LightGrey;
   if (index == m_SelectedLine)
     bgColour = DebuggerIO::Blue;
   else
@@ -241,7 +263,43 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
   colOffset = 3;
   return Line;
 }
+
 size_t ThreadsCommand::getLineCount()
 {
   return m_nLines;
+}
+
+bool ThreadsCommand::swapThread(InterruptState &state)
+{
+  // Work through our process list.
+  size_t idx = 0;
+  Process *tehProcess = 0;
+  Thread *tehThread = 0;
+  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  {
+    tehProcess = Scheduler::instance().getProcess(i);
+    if (m_SelectedLine == idx)
+    {
+      tehThread = 0;
+      break;
+    }
+    idx++;
+    for (int j = 0; j < tehProcess->getNumThreads(); j++)
+    {
+      if (m_SelectedLine == idx)
+      {
+        tehThread = tehProcess->getThread(j);
+        break;
+      }
+      idx++;
+    }
+  }
+
+  // We can only swap to threads, not entire processes!
+  if (tehThread == 0)
+    return false;
+
+  Scheduler::instance().switchToAndDebug(state, tehThread);
+
+  return true;
 }
