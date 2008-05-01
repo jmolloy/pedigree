@@ -108,6 +108,33 @@ void Scheduler::schedule(Processor *pProcessor, ProcessorState &state, Thread *p
   m_Mutex.release();
 }
 
+void Scheduler::switchToAndDebug(Thread *pThread)
+{
+  Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
+
+  // We shouldn't need the mutex, as we're debugging, so all processors are halted.
+  //m_Mutex.acquire();
+
+  pOldThread->setStatus(Thread::Ready);
+
+  pThread->setStatus(Thread::Running);
+  g_pCurrentThread = pThread;
+
+  // TODO Change VirtualAddressSpace. This will be a member of Process.
+
+  pOldThread->state().setStackPointer(Processor::getStackPointer());
+  pOldThread->state().setBasePointer(Processor::getBasePointer());
+  pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
+  
+  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 1, pThread->getKernelStack());
+  pThread->state().setInstructionPointer(reinterpret_cast<uintptr_t> (&Debugger::switchedThread));
+
+  if (g_pCurrentThread == pThread)
+    Processor::contextSwitch(pThread->state());
+
+  //m_Mutex.release();
+}
+
 void Scheduler::timer(uint64_t delta, ProcessorState &state)
 {
   // TODO processor not passed.
