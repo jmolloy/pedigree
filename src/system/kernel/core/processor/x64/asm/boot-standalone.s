@@ -60,9 +60,11 @@ start:
   add rbx, 0x1000
   mov [rax + 24], rbx
 
-  ; Identity map 0-2MB
+  ; Identity map 0-4MB
   mov rax, pagedirectory0 - KERNEL_BASE
   mov qword [rax], 0x83
+  add rax, 0x08
+  mov qword [rax], 0x200083
 
   ; Map the page table for the kernel
   mov rax, pagedirectory1 - KERNEL_BASE

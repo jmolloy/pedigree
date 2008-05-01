@@ -19,9 +19,7 @@ build/src/system/kernel/core/process/Makefile
 build/src/system/kernel/core/processor
 build/src/system/kernel/core/processor/Makefile
 build/src/system/kernel/core/processor/x86
-build/src/system/kernel/core/processor/x86/Makefile
 build/src/system/kernel/core/processor/x86/asm
-build/src/system/kernel/core/processor/x86/asm/Makefile
 build/src/system/kernel/core/processor/x86_common
 build/src/system/kernel/core/processor/x86_common/Makefile
 build/src/system/kernel/debugger
