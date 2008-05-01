@@ -108,7 +108,8 @@ void RangeList<T>::free(T address, T length)
     }
 
   cur = m_List.begin();
-  for (;cur != m_List.end();++cur)
+  end = m_List.end();
+  for (;cur != end;++cur)
     if ((*cur)->address == (address + length))
     {
       length += (*cur)->length;

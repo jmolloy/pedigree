@@ -16,11 +16,14 @@
 #ifndef KERNEL_PROCESSOR_PROCESSOR_H
 #define KERNEL_PROCESSOR_PROCESSOR_H
 
+#include <compiler.h>
+#include <BootstrapInfo.h>
+#include <utilities/Vector.h>
+#include <utilities/StaticString.h>
 #include <processor/types.h>
 #include <processor/state.h>
 #include <processor/VirtualAddressSpace.h>
-#include <BootstrapInfo.h>
-#include <utilities/StaticString.h>
+#include <processor/ProcessorInformation.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -51,42 +54,6 @@ namespace DebugFlags
 class Processor
 {
   public:
-    /** Identifier of a processor */
-    typedef size_t Id;
-
-    /** Information about one specific processor in a system with one or more than
-     *  one processor. */
-    class Information
-    {
-      public:
-        /** Get the processor identifier
-         *\return identifier of the processor */
-        inline Id id()
-          {return m_ProcessorId;}
-
-        /** The destructor does nothing */
-        inline virtual ~Information(){}
-      protected:
-        /** Construct a Processor::Information object
-         *\param[in] ProcessorId Identifier of the processor */
-        inline Information(Processor::Id ProcessorId)
-          : m_ProcessorId(ProcessorId){}
-
-      private:
-        /** Default constructor
-         *\note NOT implemented */
-        Information();
-        /** Copy-constructor
-         *\note NOT implemented */
-        Information(const Information &);
-        /** Assignment operator
-         *\note NOT implemented */
-        Information &operator = (const Information &);
-
-        /** Identifier of this processor */
-        Processor::Id m_ProcessorId;
-    };
-
     /** Initialises the processor specific interface. After this function call the whole
      *  processor-specific interface is initialised. Note though, that only the
      *  bootstrap processor is started. Multiprocessor/-core facilities are available after
@@ -121,7 +88,7 @@ class Processor
 
     /** Switch to a different virtual address space
      *\param[in] AddressSpace the new address space */
-    void switchAddressSpace(const VirtualAddressSpace &AddressSpace);
+    static void switchAddressSpace(VirtualAddressSpace &AddressSpace);
 
     /** Do a context switch. */
     inline static void contextSwitch(const ProcessorState &state) ALWAYS_INLINE;
@@ -208,9 +175,28 @@ class Processor
     /** Populate 'str' with a string describing the characteristics of this processor. */
     static void identify(HugeStaticString &str);
 
+    /** Get the ProcessorId of this processor
+     *\return the ProcessorId of this processor */
+    #if !defined(MULTIPROCESSOR)
+      inline static ProcessorId id();
+    #else
+      static ProcessorId id();
+    #endif
+    /** Get the ProcessorInformation structure of this processor
+     *\return the ProcessorInformation structure of this processor */
+    static inline ProcessorInformation &information();
+
   private:
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
+
+    /** If we have only one processor, we define the ProcessorInformation class here
+     *  otherwise we use an array of ProcessorInformation structures */
+    #if !defined(MULTIPROCESSOR)
+      static ProcessorInformation m_ProcessorInformation;
+    #else
+      static Vector<ProcessorInformation*> m_ProcessorInformation;
+    #endif
 };
 
 /** @} */
@@ -229,5 +215,24 @@ class Processor
 #ifdef X64
   #include <processor/x64/Processor.h>
 #endif
+
+//
+// Part of the implementation
+//
+
+#if !defined(MULTIPROCESSOR)
+  ProcessorId Processor::id()
+  {
+    return 0;
+  }
+#endif
+ProcessorInformation &Processor::information()
+{
+  #if !defined(MULTIPROCESSOR)
+    return m_ProcessorInformation;
+  #else
+    // TODO: Do something!
+  #endif
+}
 
 #endif

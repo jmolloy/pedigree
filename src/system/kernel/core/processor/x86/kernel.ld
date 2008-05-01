@@ -12,6 +12,9 @@ SECTIONS
     *(.init.multiboot)
     *(.init.text);
     *(.init.data);
+    trampoline = .;
+    *(.trampoline.text);
+    trampoline_end = .;
     . = ALIGN(4096);
   }
 

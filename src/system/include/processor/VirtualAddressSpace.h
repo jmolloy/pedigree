@@ -103,6 +103,11 @@ class VirtualAddressSpace
      *\param[in] virtualAddress the virtual address */
     virtual void unmap(void *virtualAddress) = 0;
 
+    /** Create a new VirtualAddressSpace. Only the kernel is mapped into that virtual address
+     *  space
+     *\return pointer to the new VirtualAddressSpace, 0 otherwise */
+    static VirtualAddressSpace *create();
+
   protected:
     /** The constructor does nothing */
     inline VirtualAddressSpace(void *Heap)

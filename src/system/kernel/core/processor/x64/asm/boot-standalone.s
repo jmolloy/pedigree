@@ -109,38 +109,6 @@ start:
   mov [rax + 0xFC8], rbx
   add rbx, 4096
   mov [rax + 0xFC0], rbx
-  add rbx, 4096
-  mov [rax + 0xFB8], rbx
-  add rbx, 4096
-  mov [rax + 0xFB0], rbx
-  add rbx, 4096
-  mov [rax + 0xFA8], rbx
-  add rbx, 4096
-  mov [rax + 0xFA0], rbx
-  add rbx, 4096
-  mov [rax + 0xF98], rbx
-  add rbx, 4096
-  mov [rax + 0xF90], rbx
-  add rbx, 4096
-  mov [rax + 0xF88], rbx
-  add rbx, 4096
-  mov [rax + 0xF80], rbx
-  add rbx, 4096
-  mov [rax + 0xF78], rbx
-  add rbx, 4096
-  mov [rax + 0xF70], rbx
-  add rbx, 4096
-  mov [rax + 0xF68], rbx
-  add rbx, 4096
-  mov [rax + 0xF60], rbx
-  add rbx, 4096
-  mov [rax + 0xF58], rbx
-  add rbx, 4096
-  mov [rax + 0xF50], rbx
-  add rbx, 4096
-  mov [rax + 0xF48], rbx
-  add rbx, 4096
-  mov [rax + 0xF40], rbx
 
   ; Map the lower 4GB of physical memory to 0xFFFF800000000000
   mov rax, pagedirectory3 - KERNEL_BASE
@@ -253,4 +221,4 @@ pagetable1:
 
 ; The kernel stack
 stack:
-  times 98304 db 0
+  times 32768 db 0

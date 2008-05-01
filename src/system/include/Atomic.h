@@ -24,6 +24,7 @@
 // NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
 //       for more information about gcc's builtin atomic operations
 
+/** \todo documentation */
 template<typename T>
 class Atomic
 {

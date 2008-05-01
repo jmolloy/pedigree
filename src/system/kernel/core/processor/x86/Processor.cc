@@ -25,7 +25,7 @@
   #include "../x86_common/Multiprocessor.h"
 #endif
 
-void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
+void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
   const X86VirtualAddressSpace &x86AddressSpace = static_cast<const X86VirtualAddressSpace&>(AddressSpace);
 
@@ -38,6 +38,10 @@ void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
   {
     // Set the new page directory
     asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
+
+    // Update the information in the ProcessorInformation structure
+    ProcessorInformation &processorInformation = Processor::information();
+    processorInformation.setVirtualAddressSpace(AddressSpace);
   }
 }
 

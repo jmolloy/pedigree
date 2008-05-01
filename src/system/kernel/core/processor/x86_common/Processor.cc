@@ -175,3 +175,15 @@ void Processor::cpuid(uint32_t inEax,
                  "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx):
                  "a" (inEax), "c" (inEcx));
 }
+
+#if defined(MULTIPROCESSOR)
+
+  #include "../../../machine/x86_common/Pc.h"
+  ProcessorId Processor::id()
+  {
+    // TODO HACK: We actually should not return the ApicId, but the processor Id
+    Pc &pc = Pc::instance();
+    return pc.getLocalApic.getId();
+  }
+
+#endif

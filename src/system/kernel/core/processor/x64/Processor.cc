@@ -26,7 +26,7 @@
   #include "../x86_common/Multiprocessor.h"
 #endif
 
-void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
+void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
   const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
 
@@ -39,6 +39,10 @@ void Processor::switchAddressSpace(const VirtualAddressSpace &AddressSpace)
   {
     // Set the new page directory
     asm volatile ("mov %0, %%cr3" :: "r" (x64AddressSpace.m_PhysicalPML4));
+
+    // Update the information in the ProcessorInformation structure
+    ProcessorInformation &processorInformation = Processor::information();
+    processorInformation.setVirtualAddressSpace(AddressSpace);
   }
 }
 
@@ -85,4 +89,3 @@ void Processor::identify(HugeStaticString &str)
 {
   str = "Rarcaken!!";
 }
-

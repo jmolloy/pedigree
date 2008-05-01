@@ -18,18 +18,17 @@
 #include <utilities/utility.h>
 #include "PhysicalMemoryManager.h"
 
-// TODO: We might find better places in the virtual address-space for the MemoryRegions
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
   #define KERNEL_VADDRESS 0xBFF00000
-  #define KERNEL_MEMORYREGION_SIZE 0x10000000
-  #define KERNEL_MEMORYREGION_VADDRESS 0xE0000000
+  #define KERNEL_MEMORYREGION_SIZE 0x20000000
+  #define KERNEL_MEMORYREGION_VADDRESS 0xD0000000
 #elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
   #include "../x64/utils.h"
   #define KERNEL_VADDRESS 0xFFFFFFFF7FF00000
-  #define KERNEL_MEMORYREGION_SIZE 0x10000000
-  #define KERNEL_MEMORYREGION_VADDRESS 0xFFFFFFFFA0000000
+  #define KERNEL_MEMORYREGION_SIZE 0x50000000
+  #define KERNEL_MEMORYREGION_VADDRESS 0xFFFFFFFF90000000
 #endif
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
@@ -152,10 +151,10 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   }
 
   // Remove the pages used by the kernel from the range-list (below 16MB)
-  extern void *code;
+  extern void *init;
   extern void *end;
-  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(&code) - KERNEL_VADDRESS,
-                                        reinterpret_cast<uintptr_t>(&end) - reinterpret_cast<uintptr_t>(&code))
+  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(&init) - KERNEL_VADDRESS,
+                                        reinterpret_cast<uintptr_t>(&end) - reinterpret_cast<uintptr_t>(&init))
       == false)
   {
     panic("PhysicalMemoryManager: could not remove the kernel image from the range-list");
@@ -221,10 +220,10 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
 
     // Unmap the page
     kernelSpace.unmap(vAddress);
-
-    // Free the physical page
-    m_RangeBelow16MB.free(pAddress, getPageSize());
   }
+
+  // Free the physical page
+  m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - KERNEL_VADDRESS, count * getPageSize());
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
@@ -327,6 +326,7 @@ X86CommonPhysicalMemoryManager::PageStack::PageStack()
     m_StackSize[i] = 0;
   }
 
+  // TODO: We might want to use defines for the locations
   #if defined(X86)
     m_Stack[0] = reinterpret_cast<void*>(0xF0000000);
   #elif defined(X64)

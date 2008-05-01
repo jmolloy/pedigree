@@ -51,12 +51,17 @@
 // Defined in boot-standalone.s
 extern void *pml4;
 
-X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xFFFFFFFF90000000),
+X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xFFFFFFFF88000000),
                                                              reinterpret_cast<uintptr_t>(&pml4) - 0xFFFFFFFF7FF00000);
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
   return X64VirtualAddressSpace::m_KernelSpace;
+}
+
+VirtualAddressSpace *VirtualAddressSpace::create()
+{
+  return new X64VirtualAddressSpace();
 }
 
 bool X64VirtualAddressSpace::isAddressValid(void *virtualAddress)
@@ -234,6 +239,12 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
 }
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
+{
+  // TODO
+}
+
+X64VirtualAddressSpace::X64VirtualAddressSpace()
+  : VirtualAddressSpace(reinterpret_cast<void*>(0x10000000)), m_PhysicalPML4(0)
 {
   // TODO
 }

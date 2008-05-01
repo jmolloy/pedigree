@@ -61,9 +61,12 @@ size_t Multiprocessor::initialise()
 
   NOTICE("Multiprocessor: Found " << Dec << Processors->count() << " processors");
 
-  // TODO HACK: Inserts a hlt machine instruction
-  uint8_t *startup = (uint8_t*)0x7000;
-  *startup = 0xF4;
+  // Copy the trampoline code to 0x7000
+  extern void *trampoline;
+  extern void *trampoline_end;
+  memcpy(reinterpret_cast<void*>(0x7000),
+         &trampoline,
+         reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
 
   LocalApic &localApic = Pc::instance().getLocalApic();
   // Startup the application processors through startup interprocessor interrupt

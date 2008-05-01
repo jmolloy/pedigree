@@ -48,14 +48,20 @@
 // Defined in boot-standalone.s
 extern void *pagedirectory;
 
-X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xD0000000),
+// TODO: We should use defines here too
+X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xC8000000),
                                                              reinterpret_cast<uintptr_t>(&pagedirectory) - 0xBFF00000,
-                                                             reinterpret_cast<void*>(0xFFBFF000),
+                                                             reinterpret_cast<void*>(0xFF7FF000),
                                                              reinterpret_cast<void*>(0xFFC00000));
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
   return X86VirtualAddressSpace::m_KernelSpace;
+}
+
+VirtualAddressSpace *VirtualAddressSpace::create()
+{
+  return new X86VirtualAddressSpace();
 }
 
 bool X86VirtualAddressSpace::isAddressValid(void *virtualAddress)
@@ -210,7 +216,44 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
-  // TODO
+  // TODO: Free things
+}
+
+X86VirtualAddressSpace::X86VirtualAddressSpace()
+  : VirtualAddressSpace(reinterpret_cast<void*>(0x10000000)), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(reinterpret_cast<void*>(0xFFBFF000)),
+    m_VirtualPageTables(reinterpret_cast<void*>(0xFFC00000))
+{
+  // Allocate a new page directory
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  m_PhysicalPageDirectory = physicalMemoryManager.allocatePage();
+  physical_uintptr_t pageTable = physicalMemoryManager.allocatePage();
+
+  // Get the current address space
+  VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
+
+  // TODO HACK FIXME: Map the page directory and page table into the address space
+  virtualAddressSpace.map(m_PhysicalPageDirectory,
+                          0,
+                          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+  virtualAddressSpace.map(pageTable,
+                          reinterpret_cast<void*>(0x1000),
+                          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+
+  // Copy the kernel address space to the new address space
+  memcpy(reinterpret_cast<void*>(0xC00),
+         adjust_pointer(m_KernelSpace.m_VirtualPageDirectory, 0xC00),
+         0x3F8);
+
+  // Map the page tables into the new address space
+  *reinterpret_cast<uint32_t*>(0xFFC) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
+
+  // Map the page directory into the new address space
+  *reinterpret_cast<uint32_t*>(0xFF8) = pageTable | PAGE_PRESENT | PAGE_WRITE;
+  *reinterpret_cast<uint32_t*>(0x1FFC) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
+
+  // TODO HACK FIXME: Unmap the page directory and page table from the address space
+  virtualAddressSpace.unmap(0);
+  virtualAddressSpace.unmap(reinterpret_cast<void*>(0x1000));
 }
 
 X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,

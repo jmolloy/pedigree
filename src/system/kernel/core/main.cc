@@ -109,6 +109,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifndef MIPS_COMMON
   Processor::initialisationDone();
 #endif
+
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";

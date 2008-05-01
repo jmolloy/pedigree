@@ -30,6 +30,8 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
   friend class Processor;
   /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_KernelSpace */
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+  /** VirtualAddressSpace::create needs access to the constructor */
+  friend VirtualAddressSpace *VirtualAddressSpace::create();
   public:
     //
     // VirtualAddressSpace Interface
@@ -69,14 +71,14 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     virtual ~X64VirtualAddressSpace();
 
   private:
+    /** The default constructor */
+    X64VirtualAddressSpace();
     /** The constructor for already present paging structures
      *\param[in] Heap virtual address of the beginning of the heap
-     *\param[in] PhysicalPageDirectory physical address of the page directory */
+     *\param[in] PhysicalPageDirectory physical address of the page directory
+     *\note This constructor is only used to construct the kernel VirtualAddressSpace */
     X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4);
 
-    /** The default constructor 
-     *\note NOT implemented */
-    X64VirtualAddressSpace();
     /** The copy-constructor
      *\note NOT implemented */
     X64VirtualAddressSpace(const X64VirtualAddressSpace &);

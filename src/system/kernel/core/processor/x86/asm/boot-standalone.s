@@ -57,9 +57,9 @@ start:
     cmp ebx, ecx
     jne .mapkernel
 
-  ;Map the pagetable0 for stack and the page-directory to 4GB - 8MB
+  ;Map the pagetable0 for stack and the page-directory to 4GB - 12MB
   mov eax, 0x03 + pagetable0 - KERNEL_BASE
-  mov [pagedirectory - KERNEL_BASE + 0xFF8], eax
+  mov [pagedirectory - KERNEL_BASE + 0xFF4], eax
 
   ;Map the stack and the page-directory into pagetable0
   mov eax, 0x03 + stack - KERNEL_BASE
@@ -70,48 +70,8 @@ start:
   mov [pagetable0 - KERNEL_BASE + 0xFEC], eax
   add eax, 4096
   mov [pagetable0 - KERNEL_BASE + 0xFE8], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFE4], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFE0], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFDC], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFD8], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFD4], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFD0], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFCC], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFC8], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFC4], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFC0], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFBC], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFB8], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFB4], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFB0], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFAC], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFA8], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFA4], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFA0], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xF9C], eax
-  add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xF98], eax
 
-  ; Map the page-directory to 0xFFBFF000
+  ; Map the page-directory to 0xFF7FF000
   mov eax, 0x03 + pagedirectory - KERNEL_BASE
   mov [pagetable0 - KERNEL_BASE + 0xFFC], eax
 
@@ -124,7 +84,7 @@ start:
 
   ; Set stack
   pop ebx
-  mov esp, 0xFFBFDC00
+  mov esp, 0xFF7FDC00
 
   push ebx
   ; clear the stackframe
@@ -145,4 +105,4 @@ pagetable0:
 pagetable1:
   times 4096 db 0
 stack:
-  times 98304 db 0
+  times 16384 db 0

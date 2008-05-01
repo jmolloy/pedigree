@@ -110,6 +110,7 @@ src/system/include/processor/MemoryMappedIo.h
 src/system/include/processor/MemoryRegion.h
 src/system/include/processor/PhysicalMemoryManager.h
 src/system/include/processor/Processor.h
+src/system/include/processor/ProcessorInformation.h
 src/system/include/processor/StackFrame.h
 src/system/include/processor/StackFrameBase.h
 src/system/include/processor/SyscallHandler.h
@@ -120,6 +121,7 @@ src/system/include/processor/arm_926e/StackFrame.h
 src/system/include/processor/arm_926e/state.h
 src/system/include/processor/arm_common
 src/system/include/processor/arm_common/Processor.h
+src/system/include/processor/arm_common/ProcessorInformation.h
 src/system/include/processor/arm_common/types.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
@@ -131,9 +133,11 @@ src/system/include/processor/mips64/state.h
 src/system/include/processor/mips64/types.h
 src/system/include/processor/mips_common
 src/system/include/processor/mips_common/Processor.h
+src/system/include/processor/mips_common/ProcessorInformation.h
 src/system/include/processor/state.h
 src/system/include/processor/types.h
 src/system/include/processor/x64
+src/system/include/processor/x64/Processor.h
 src/system/include/processor/x64/StackFrame.h
 src/system/include/processor/x64/state.h
 src/system/include/processor/x64/types.h
@@ -145,6 +149,7 @@ src/system/include/processor/x86/types.h
 src/system/include/processor/x86_common
 src/system/include/processor/x86_common/IoPort.h
 src/system/include/processor/x86_common/Processor.h
+src/system/include/processor/x86_common/ProcessorInformation.h
 src/system/include/utilities
 src/system/include/utilities/Iterator.h
 src/system/include/utilities/IteratorAdapter.h
@@ -205,6 +210,8 @@ src/system/kernel/core/processor/arm_926e/state.cc
 src/system/kernel/core/processor/arm_common
 src/system/kernel/core/processor/arm_common/Disassembler.cc
 src/system/kernel/core/processor/arm_common/Disassembler.h
+src/system/kernel/core/processor/arm_common/PhysicalMemoryManager.cc
+src/system/kernel/core/processor/arm_common/PhysicalMemoryManager.h
 src/system/kernel/core/processor/mips32
 src/system/kernel/core/processor/mips32/InterruptManager.cc
 src/system/kernel/core/processor/mips32/InterruptManager.h
@@ -270,7 +277,6 @@ src/system/kernel/core/processor/x86_common/Multiprocessor.h
 src/system/kernel/core/processor/x86_common/PhysicalMemoryManager.cc
 src/system/kernel/core/processor/x86_common/PhysicalMemoryManager.h
 src/system/kernel/core/processor/x86_common/Processor.cc
-src/system/kernel/core/processor/x86_common/Processor.h
 src/system/kernel/debugger
 src/system/kernel/debugger/Backtrace.cc
 src/system/kernel/debugger/Backtrace.h
