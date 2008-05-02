@@ -32,7 +32,7 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadS
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
 
   if (pThread->getDebugImmediate())
-     Processor::breakpoint();
+    Processor::breakpoint();
   
   Processor::setInterrupts(true);
   

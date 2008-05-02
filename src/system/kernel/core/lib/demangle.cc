@@ -1289,9 +1289,10 @@ static int parseSeqId(LargeStaticString &src, LargeStaticString &dest, demangle_
 //   return 0;
 // }
 
+/// \warning This function is now non-reentrant, to reduce stack usage.
 void demangle(LargeStaticString src, symbol_t *sym)
 {
-  demangle_t data;
+  static demangle_t data;
   data.nLevel = 0;
   data.nSubstitutions = 0;
   data.nNameParseLevel = 0;
@@ -1313,9 +1314,10 @@ void demangle(LargeStaticString src, symbol_t *sym)
   
 }
 
+/// \warning This function is now non-reentrant, to reduce stack frame usage.
 void demangle_full(LargeStaticString src, LargeStaticString &dest)
 {
-  demangle_t data;
+  static demangle_t data;
   data.nLevel = 0;
   data.nSubstitutions = 0;
   data.nNameParseLevel = 0;

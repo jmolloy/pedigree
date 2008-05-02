@@ -22,6 +22,7 @@
 #include <KernelElf.h>
 #include <utilities/demangle.h>
 #include <process/initialiseMultitasking.h>
+#include <processor/Processor.h>
 
 ThreadsCommand::ThreadsCommand()
   : DebuggerCommand(), Scrollable(), m_SelectedLine(0), m_nLines(0)
@@ -300,6 +301,6 @@ bool ThreadsCommand::swapThread(InterruptState &state)
     return false;
 
   Scheduler::instance().switchToAndDebug(state, tehThread);
-
+  
   return true;
 }

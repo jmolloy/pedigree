@@ -36,6 +36,7 @@
 #include <process/Thread.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
+#include <process/Scheduler.h>
 
 Debugger Debugger::m_Instance;
 
