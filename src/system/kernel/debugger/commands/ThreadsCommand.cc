@@ -132,7 +132,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     }
     else if (c == '\n' || c == '\r')
     {
-      if(swapThread(state))
+      if(swapThread(state, pScreen))
       {
         bStop = true;
         bReturn = false;
@@ -270,7 +270,7 @@ size_t ThreadsCommand::getLineCount()
   return m_nLines;
 }
 
-bool ThreadsCommand::swapThread(InterruptState &state)
+bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
 {
   // Work through our process list.
   size_t idx = 0;
@@ -300,7 +300,8 @@ bool ThreadsCommand::swapThread(InterruptState &state)
   if (tehThread == 0)
     return false;
 
+  pScreen->destroy();
   Scheduler::instance().switchToAndDebug(state, tehThread);
-  
+
   return true;
 }

@@ -127,14 +127,14 @@ void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
 
+  Debugger::instance().m_pTempState = pThread->getInterruptState();
+  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 0);
+  pThread->state().setInstructionPointer(reinterpret_cast<uintptr_t> (&Debugger::switchedThread));
+
   pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
-
-  Debugger::instance().m_pTempState = pThread->getInterruptState();
-  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 0);
-  pThread->state().setInstructionPointer(reinterpret_cast<uintptr_t> (&Debugger::switchedThread));
 
   if (g_pCurrentThread == pThread)
     Processor::contextSwitch(pThread->state());

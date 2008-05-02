@@ -73,7 +73,7 @@ public:
   virtual size_t getLineCount();
   
 private:
-  bool swapThread(InterruptState &state);
+  bool swapThread(InterruptState &state, DebuggerIO *pScreen);
   size_t m_SelectedLine;
   size_t m_nLines;
 };
