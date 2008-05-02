@@ -51,8 +51,8 @@
 // Defined in boot-standalone.s
 extern void *pml4;
 
-X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xFFFFFFFF88000000),
-                                                             reinterpret_cast<uintptr_t>(&pml4) - 0xFFFFFFFF7FF00000);
+X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP,
+                                                             reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS));
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -240,13 +240,30 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
 {
-  // TODO
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+
+  // Switch to the kernel's virtual address space
+  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+
+  // TODO: Free other things, perhaps in VirtualAddressSpace
+  //       We can't do this in VirtualAddressSpace destructor though!
+
+  // Free the PageMapLevel4
+  physicalMemoryManager.freePage(m_PhysicalPML4);
 }
 
 X64VirtualAddressSpace::X64VirtualAddressSpace()
-  : VirtualAddressSpace(reinterpret_cast<void*>(0x10000000)), m_PhysicalPML4(0)
+  : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0)
 {
-  // TODO
+
+  // Allocate a new PageMapLevel4
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  m_PhysicalPML4 = physicalMemoryManager.allocatePage();
+
+  // Copy the kernel PageMapLevel4
+  memcpy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
+         reinterpret_cast<void*>(physicalAddress(m_KernelSpace.m_PhysicalPML4) + 0x800),
+         0x800);
 }
 
 X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4)

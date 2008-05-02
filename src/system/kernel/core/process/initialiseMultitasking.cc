@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(THREADS)
+
 #include <Log.h>
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
@@ -34,3 +36,5 @@ void initialiseMultitasking()
   // Initialise the scheduler.
   Scheduler::instance().initialise(pThread);
 }
+
+#endif

@@ -20,15 +20,9 @@
 
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
-  #define KERNEL_VADDRESS 0xBFF00000
-  #define KERNEL_MEMORYREGION_SIZE 0x20000000
-  #define KERNEL_MEMORYREGION_VADDRESS 0xD0000000
 #elif defined(X64)
   #include "../x64/VirtualAddressSpace.h"
   #include "../x64/utils.h"
-  #define KERNEL_VADDRESS 0xFFFFFFFF7FF00000
-  #define KERNEL_MEMORYREGION_SIZE 0x50000000
-  #define KERNEL_MEMORYREGION_VADDRESS 0xFFFFFFFF90000000
 #endif
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
@@ -153,7 +147,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   // Remove the pages used by the kernel from the range-list (below 16MB)
   extern void *init;
   extern void *end;
-  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(&init) - KERNEL_VADDRESS,
+  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
                                         reinterpret_cast<uintptr_t>(&end) - reinterpret_cast<uintptr_t>(&init))
       == false)
   {
@@ -197,8 +191,8 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
   #endif
 
   // Initialise the range of virtual space for MemoryRegions
-  m_MemoryRegions.free(KERNEL_MEMORYREGION_VADDRESS,
-                       KERNEL_MEMORYREGION_SIZE);
+  m_MemoryRegions.free(reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MEMORYREGION_ADDRESS),
+                       KERNEL_VIRTUAL_MEMORYREGION_SIZE);
 }
 
 void X86CommonPhysicalMemoryManager::initialisationDone()
@@ -223,7 +217,7 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
   }
 
   // Free the physical page
-  m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - KERNEL_VADDRESS, count * getPageSize());
+  m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
@@ -326,11 +320,9 @@ X86CommonPhysicalMemoryManager::PageStack::PageStack()
     m_StackSize[i] = 0;
   }
 
-  // TODO: We might want to use defines for the locations
-  #if defined(X86)
-    m_Stack[0] = reinterpret_cast<void*>(0xF0000000);
-  #elif defined(X64)
-    m_Stack[0] = reinterpret_cast<void*>(0xFFFFFFFF7FC00000);
+  // Set the locations for the page stacks in the virtual address space
+  m_Stack[0] = KERNEL_VIRTUAL_PAGESTACK_4GB;
+  #if defined(X64)
     m_Stack[1] = 0;
     m_Stack[2] = 0;
   #endif

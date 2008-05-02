@@ -85,7 +85,7 @@ void Debugger::switchedThread()
 }
 
 Debugger::Debugger() :
-  m_nIoType(DEBUGGER), m_pTempState(0)
+  m_pTempState(0), m_nIoType(DEBUGGER)
 {
 }
 
@@ -107,7 +107,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
   // decide to switch threads.
 #ifdef SMP
-#warning You'll have problems here!
+#warning You will have problems here!
 #endif
   // The current thread, in case we decide to switch.
   Thread *pThread = g_pCurrentThread;

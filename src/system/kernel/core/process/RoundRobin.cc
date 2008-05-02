@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(THREADS)
 #include <process/RoundRobin.h>
 #include <process/Thread.h>
 #include <Log.h>
@@ -64,3 +65,5 @@ Thread *RoundRobin::getNext(Processor *pProcessor)
 void RoundRobin::threadStatusChanged(Thread *pThread)
 {
 }
+
+#endif

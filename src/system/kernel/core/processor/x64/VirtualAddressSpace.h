@@ -66,8 +66,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
                            void *virtualAddress,
                            size_t flags);
 
-  protected:
-    /** The destructor does nothing */
+    /** The destructor cleans up the address space */
     virtual ~X64VirtualAddressSpace();
 
   private:
@@ -124,5 +123,15 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 };
 
 /** @} */
+
+//
+// Virtual address space layout
+//
+#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
+#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xFFFFFFFF88000000)
+#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF90000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x50000000
 
 #endif

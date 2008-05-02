@@ -168,6 +168,11 @@ public:
    */
   void threadExited(int code);
 private:
+  /** Copy-constructor */
+  Thread(const Thread &);
+  /** Assignment operator */
+  Thread &operator = (const Thread &);
+
   /**
    * The state of the processor when we were unscheduled.
    */

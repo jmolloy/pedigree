@@ -70,7 +70,8 @@ private:
    * Default constructor - does nothing.
    */
   Debugger();
-
+  Debugger(const Debugger &);
+  Debugger &operator = (const Debugger &);
   ~Debugger();
 
   /**

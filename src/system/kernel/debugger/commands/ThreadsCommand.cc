@@ -41,7 +41,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
 {
   // How many lines do we have?
   m_nLines = 0;
-  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     m_nLines++; // For the process.
     m_nLines += Scheduler::instance().getProcess(i)->getNumThreads();
@@ -159,7 +159,7 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
-  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
     if (index == idx)
@@ -169,7 +169,7 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
     }
     idx++;
     
-    for (int j = 0; j < tehProcess->getNumThreads(); j++)
+    for (size_t j = 0; j < tehProcess->getNumThreads(); j++)
     {
       if (index == idx)
       {
@@ -209,7 +209,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
-  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
     if (index == idx)
@@ -218,7 +218,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       break;
     }
     idx++;
-    for (int j = 0; j < tehProcess->getNumThreads(); j++)
+    for (size_t j = 0; j < tehProcess->getNumThreads(); j++)
     {
       if (index == idx)
       {
@@ -276,7 +276,7 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
-  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
     if (m_SelectedLine == idx)
@@ -285,7 +285,7 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
       break;
     }
     idx++;
-    for (int j = 0; j < tehProcess->getNumThreads(); j++)
+    for (size_t j = 0; j < tehProcess->getNumThreads(); j++)
     {
       if (m_SelectedLine == idx)
       {

@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(THREADS)
+
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
 #include <process/Thread.h>
@@ -27,7 +29,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-  m_pSchedulingAlgorithm(0), m_Mutex(), m_NextPid(0)
+  m_Mutex(), m_pSchedulingAlgorithm(0), m_NextPid(0)
 {
 }
 
@@ -162,3 +164,5 @@ Process *Scheduler::getProcess(size_t n)
   }
   return m_Processes[n];
 }
+
+#endif

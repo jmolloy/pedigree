@@ -107,13 +107,13 @@ class VirtualAddressSpace
      *  space
      *\return pointer to the new VirtualAddressSpace, 0 otherwise */
     static VirtualAddressSpace *create();
+    /** The destructor does nothing */
+    inline virtual ~VirtualAddressSpace(){}
 
   protected:
     /** The constructor does nothing */
     inline VirtualAddressSpace(void *Heap)
       : m_Heap(Heap), m_HeapEnd(Heap){}
-    /** The destructor does nothing */
-    inline virtual ~VirtualAddressSpace(){}
 
   private:
     /** The default constructor */

@@ -38,7 +38,7 @@
 #define PAGE_DIRECTORY_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 22) & 0x3FF)
 #define PAGE_TABLE_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 12) & 0x3FF)
 
-#define PAGE_DIRECTORY_ENTRY(pageDir, index) (&reinterpret_cast<uint32_t*>(pageDir)[index]);
+#define PAGE_DIRECTORY_ENTRY(pageDir, index) (&reinterpret_cast<uint32_t*>(pageDir)[index])
 #define PAGE_TABLE_ENTRY(VirtualPageTables, pageDirectoryIndex, index) (&reinterpret_cast<uint32_t*>(adjust_pointer(VirtualPageTables, pageDirectoryIndex * 4096))[index])
 
 #define PAGE_GET_FLAGS(x) (*x & 0xFFF)
@@ -48,11 +48,10 @@
 // Defined in boot-standalone.s
 extern void *pagedirectory;
 
-// TODO: We should use defines here too
-X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(reinterpret_cast<void*>(0xC8000000),
-                                                             reinterpret_cast<uintptr_t>(&pagedirectory) - 0xBFF00000,
-                                                             reinterpret_cast<void*>(0xFF7FF000),
-                                                             reinterpret_cast<void*>(0xFFC00000));
+X86VirtualAddressSpace X86VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP,
+                                                             reinterpret_cast<uintptr_t>(&pagedirectory) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
+                                                             KERNEL_VIRUTAL_PAGE_DIRECTORY,
+                                                             VIRTUAL_PAGE_TABLES);
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -70,9 +69,6 @@ bool X86VirtualAddressSpace::isAddressValid(void *virtualAddress)
 }
 bool X86VirtualAddressSpace::isMapped(void *virtualAddress)
 {
-  // TODO: This currently does not work, if we are not in this virtual address space. First
-  //       I need to figure out if that is a requirement or not.
-
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
@@ -94,9 +90,6 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
                                  void *virtualAddress,
                                  size_t flags)
 {
-  // TODO: This currently does not work, if we are not in this virtual address space. First
-  //       I need to figure out if that is a requirement or not.
-
   size_t Flags = toFlags(flags);
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
@@ -216,12 +209,28 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
-  // TODO: Free things
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+
+  // Switch to this virtual address space
+  Processor::switchAddressSpace(*this);
+
+  // Get the page table used to map this page directory into the address space
+  physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FF) );
+
+  // Switch to the kernel's virtual address space
+  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+
+  // TODO: Free other things, perhaps in VirtualAddressSpace
+  //       We can't do this in VirtualAddressSpace destructor though!
+
+  // Free the page table used to map the page directory into the address space and the page directory itself
+  physicalMemoryManager.freePage(pageTable);
+  physicalMemoryManager.freePage(m_PhysicalPageDirectory);
 }
 
 X86VirtualAddressSpace::X86VirtualAddressSpace()
-  : VirtualAddressSpace(reinterpret_cast<void*>(0x10000000)), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(reinterpret_cast<void*>(0xFFBFF000)),
-    m_VirtualPageTables(reinterpret_cast<void*>(0xFFC00000))
+  : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(VIRTUAL_PAGE_DIRECTORY),
+    m_VirtualPageTables(VIRTUAL_PAGE_TABLES)
 {
   // Allocate a new page directory
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();

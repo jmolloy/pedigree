@@ -13,8 +13,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-if(THREADS)
 add_kernel_src(core/process
                Mutex.cc Scheduler.cc LockManager.cc Semaphore.cc Thread.cc
                initialiseMultitasking.cc RoundRobin.cc Process.cc)
-endif(THREADS)

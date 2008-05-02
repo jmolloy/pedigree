@@ -89,9 +89,15 @@ private:
   /** Default constructor
    *  \note Private - singleton class. */
   Scheduler();
+  /** Copy-constructor
+   *  \note Not implemented - singleton class. */
+  Scheduler(const Scheduler &);
   /** Destructor
    *  \note Private - singleton class. */
   ~Scheduler();
+  /** Assignment operator
+   *  \note Not implemented - singleton class */
+  Scheduler &operator = (const Scheduler &);
 
   /** The current SchedulingAlgorithm */
   SchedulingAlgorithm *m_pSchedulingAlgorithm;

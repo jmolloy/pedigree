@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
+#if defined(THREADS)
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <processor/Processor.h>
@@ -111,3 +111,5 @@ void Thread::threadExited(int code)
   delete this;
   Processor::halt();
 }
+
+#endif
