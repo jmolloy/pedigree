@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(THREADS)
+
 #include "ThreadsCommand.h"
 #include <Log.h>
 #include <utilities/utility.h>
@@ -305,3 +307,5 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
 
   return true;
 }
+
+#endif

@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if defined(THREADS)
 
 #include <process/Process.h>
 #include <processor/Processor.h>
@@ -64,3 +65,5 @@ Thread *Process::getThread(size_t n)
   }
   return m_Threads[n];
 }
+
+#endif

@@ -70,6 +70,7 @@ static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
   }
 }
 
+#if defined(THREADS)
 void Debugger::switchedThread()
 {
   InterruptState *pState = Debugger::instance().m_pTempState;
@@ -83,6 +84,7 @@ void Debugger::switchedThread()
   LargeStaticString str("Debugger switched threads.");
   Debugger::instance().start(*pState, str);
 }
+#endif
 
 Debugger::Debugger() :
   m_pTempState(0), m_nIoType(DEBUGGER)
@@ -110,7 +112,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #warning You will have problems here!
 #endif
   // The current thread, in case we decide to switch.
+#if defined(THREADS)
   Thread *pThread = g_pCurrentThread;
+#endif
   /*
    * I/O implementations.
    */
@@ -144,11 +148,17 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static PanicCommand panic;
   static CpuInfoCommand cpuInfo;
   static IoCommand io;
+#if defined(THREADS)
   static ThreadsCommand threads;
 
   threads.setPointers(&pThread, &state);
+#endif
 
+#if defined(THREADS)
   size_t nCommands = 13;
+#else
+  size_t nCommands = 12;
+#endif
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
                                   &backtracer,
@@ -160,8 +170,10 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &g_Trace,
                                   &panic,
                                   &cpuInfo,
-                                  &io,
-                                  &threads};
+#if defined(THREADS)
+                                  &threads,
+#endif
+                                  &io};
   
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
