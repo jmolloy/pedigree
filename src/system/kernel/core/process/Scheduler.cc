@@ -92,7 +92,6 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
-//  Processor::breakpoint();
 
   m_Mutex.acquire();
 
@@ -102,8 +101,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   g_pCurrentThread = pThread;
 
   // TODO Change VirtualAddressSpace. This will be a member of Process.
-//  NOTICE("Curr: " << Hex << pOldThread->getId() << ", Next: " << pThread->getId());
-//  Processor::breakpoint();
+
   pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
