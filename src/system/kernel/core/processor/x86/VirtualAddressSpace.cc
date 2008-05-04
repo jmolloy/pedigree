@@ -69,6 +69,11 @@ bool X86VirtualAddressSpace::isAddressValid(void *virtualAddress)
 }
 bool X86VirtualAddressSpace::isMapped(void *virtualAddress)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
@@ -90,6 +95,11 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
                                  void *virtualAddress,
                                  size_t flags)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   size_t Flags = toFlags(flags);
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
@@ -132,14 +142,16 @@ void X86VirtualAddressSpace::getMapping(void *virtualAddress,
                                         physical_uintptr_t &physicalAddress,
                                         size_t &flags)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint32_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
-  {
     panic("VirtualAddressSpace::getMapping(): function misused");
-    return;
-  }
 
   // Extract the physical address and the flags
   physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
@@ -147,14 +159,16 @@ void X86VirtualAddressSpace::getMapping(void *virtualAddress,
 }
 void X86VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint32_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
-  {
     panic("VirtualAddressSpace::setFlags(): function misused");
-    return;
-  }
 
   // Set the flags
   PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
@@ -163,14 +177,16 @@ void X86VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 }
 void X86VirtualAddressSpace::unmap(void *virtualAddress)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint32_t *pageTableEntry = 0;
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
-  {
     panic("VirtualAddressSpace::unmap(): function misused");
-    return;
-  }
 
   // Invalidate the TLB entry
   Processor::invalidate(virtualAddress);
@@ -183,6 +199,11 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
                                                void *virtualAddress,
                                                size_t flags)
 {
+  #if defined(ADDITIONAL_CHECKS)
+    if (Processor::readCr3() != m_PhysicalPageDirectory)
+      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+  #endif
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 

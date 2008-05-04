@@ -29,12 +29,8 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
   const X86VirtualAddressSpace &x86AddressSpace = static_cast<const X86VirtualAddressSpace&>(AddressSpace);
 
-  // Get the current page directory
-  uint32_t cr3;
-  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
-
   // Do we need to set a new page directory?
-  if (cr3 != x86AddressSpace.m_PhysicalPageDirectory)
+  if (readCr3() != x86AddressSpace.m_PhysicalPageDirectory)
   {
     // Set the new page directory
     asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
@@ -43,6 +39,13 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
     ProcessorInformation &processorInformation = Processor::information();
     processorInformation.setVirtualAddressSpace(AddressSpace);
   }
+}
+
+physical_uintptr_t Processor::readCr3()
+{
+  physical_uintptr_t cr3;
+  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+  return cr3;
 }
 
 void Processor::initialise1(const BootstrapStruct_t &Info)

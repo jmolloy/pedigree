@@ -163,6 +163,11 @@ class Processor
                         uint32_t &ecx,
                         uint32_t &edx);
     #endif
+
+    #if defined(X86)
+      static physical_uintptr_t readCr3();
+    #endif
+
     #if defined(MIPS_COMMON)
       /** Invalidate a line in the instruction cache.
        *\param[in] nAddr The address in KSEG0 or KSEG1 of a memory location to invalidate from the Icache. */

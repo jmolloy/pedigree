@@ -15,6 +15,7 @@
  */
 #include <panic.h>
 #include <Debugger.h>
+#include <LockGuard.h>
 #include <utilities/StaticString.h>
 #include "InterruptManager.h"
 
@@ -61,7 +62,10 @@ InterruptManager &InterruptManager::instance()
 
 bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
-  // TODO: Needs locking
+  // Lock the class until the end of the function
+  LockGuard lock(m_Lock);
+
+  // Sanity checks
   if (UNLIKELY(interruptNumber >= 256))
     return false;
   if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
@@ -69,7 +73,9 @@ bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
   if (UNLIKELY(handler == 0 && m_Handler[interruptNumber] == 0))
     return false;
 
+  // Change the handler
   m_Handler[interruptNumber] = handler;
+
   return true;
 }
 
@@ -77,7 +83,10 @@ bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
   bool X64InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
-    // TODO: Needs locking
+    // Lock the class until the end of the function
+    LockGuard lock(m_Lock);
+
+    // Sanity checks
     if (UNLIKELY(interruptNumber >= 256))
       return false;
     if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
@@ -85,7 +94,9 @@ bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
     if (UNLIKELY(handler == 0 && m_DbgHandler[interruptNumber] == 0))
       return false;
 
+    // Change the handler
     m_DbgHandler[interruptNumber] = handler;
+
     return true;
   }
   size_t X64InterruptManager::getBreakpointInterruptNumber()
@@ -99,28 +110,6 @@ bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 #endif
 
-void X64InterruptManager::initialiseProcessor()
-{
-  // Load the IDT
-  struct
-  {
-    uint16_t size;
-    uint64_t idt;
-  } PACKED idtr = {4095, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
-
-  asm volatile("lidt %0" : "=m"(idtr));
-}
-
-void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler)
-{
-  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
-  m_IDT[interruptNumber].selector = 0x08;
-  m_IDT[interruptNumber].ist = 0;
-  m_IDT[interruptNumber].flags = 0x8E;
-  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
-  m_IDT[interruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;
-  m_IDT[interruptNumber].res = 0;
-}
 void X64InterruptManager::interrupt(InterruptState &interruptState)
 {
   // TODO: Needs locking
@@ -166,6 +155,33 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
       Debugger::instance().start(interruptState, e);
     }
   }
+}
+
+//
+// Functions only usable in the kernel initialisation phase
+//
+
+void X64InterruptManager::initialiseProcessor()
+{
+  // Load the IDT
+  struct
+  {
+    uint16_t size;
+    uint64_t idt;
+  } PACKED idtr = {4095, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
+
+  asm volatile("lidt %0" : "=m"(idtr));
+}
+
+void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler)
+{
+  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
+  m_IDT[interruptNumber].selector = 0x08;
+  m_IDT[interruptNumber].ist = 0;
+  m_IDT[interruptNumber].flags = 0x8E;
+  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
+  m_IDT[interruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;
+  m_IDT[interruptNumber].res = 0;
 }
 
 X64InterruptManager::X64InterruptManager()

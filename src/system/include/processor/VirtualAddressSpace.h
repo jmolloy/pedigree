@@ -25,9 +25,9 @@
  *  management. This includes management of the mapping between physical and virtual
  *  memory, management of allocated physical memory pages and management of free/allocated
  *  virtual memory.
- *\todo Figure out if we have to be in that particular address space to call expandHeap,
- *      isMapped, map, getMapping, setFlags & unmap or if the implementation must switch
- *      to that particular address space by itself. */
+ *\note If KERNEL_NEEDS_ADDRESS_SPACE_SWITCH is set defined to 1, you have to switch to the
+ *      VirtualAddressSpace you want to change yourself before you call any of the following
+ *      functions: expandHeap, isMapped, map, getMapping, setFlags, unmap */
 class VirtualAddressSpace
 {
   public:

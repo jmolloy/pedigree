@@ -52,7 +52,8 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     // Needed for the PhysicalMemoryManager
     //
     /** Map the page table or the page frame if none is currently present
-     *\note This should only be used from the PhysicalMemoryManager
+     *\note This should only be used from the PhysicalMemoryManager and you have to
+     *      switch to the VirtualAddressSpace you want to change first.
      *\param[in] physicalAddress the physical page that should be used as page table or
      *                           page frame
      *\param[in] virtualAddress the virtual address that should be checked for the existance
@@ -65,7 +66,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                            size_t flags);
 
     /** Initialise the static members of VirtualAddressSpace */
-    static void initialise();
+    static void initialise() INITIALISATION_ONLY;
     /** The destructor cleans up the address space */
     virtual ~X86VirtualAddressSpace();
 
@@ -81,7 +82,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     X86VirtualAddressSpace(void *Heap,
                            physical_uintptr_t PhysicalPageDirectory,
                            void *VirtualPageDirectory,
-                           void *VirtualPageTables);
+                           void *VirtualPageTables) INITIALISATION_ONLY;
 
     /** The copy-constructor
      *\note NOT implemented */

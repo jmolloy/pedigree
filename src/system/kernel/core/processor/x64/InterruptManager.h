@@ -17,6 +17,7 @@
 #define KERNEL_PROCESSOR_X64_INTERRUPTMANAGER_H
 
 #include <compiler.h>
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <processor/InterruptManager.h>
 
@@ -45,14 +46,15 @@ class X64InterruptManager : public ::InterruptManager
     static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
+    /** Called when an interrupt was triggered
+     *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
+    static void interrupt(InterruptState &interruptState);
+
     /** Sets up an interrupt gate
      *\param[in] interruptNumber the interrupt number
      *\param[in] interruptHandler address of the assembler interrupt handler stub
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
     void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler) INITIALISATION_ONLY;
-    /** Called when an interrupt was triggered
-     *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
-    static void interrupt(InterruptState &interruptState);
     /** The constructor */
     X64InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor
@@ -82,6 +84,9 @@ class X64InterruptManager : public ::InterruptManager
       /** Reserved, must be 0 */
       uint32_t res;
     } PACKED;
+
+    /** Spinlock protecting the member variables */
+    Spinlock m_Lock;
 
     /** The interrupt descriptor table (IDT) */
     gate_descriptor m_IDT[256];

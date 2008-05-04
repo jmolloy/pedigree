@@ -69,6 +69,7 @@ src/system/include/Atomic.h
 src/system/include/BootstrapInfo.h
 src/system/include/LockGuard.h
 src/system/include/Log.h
+src/system/include/Spinlock.h
 src/system/include/compiler.h
 src/system/include/doxygen.h
 src/system/include/machine
@@ -142,6 +143,7 @@ src/system/include/processor/x64/StackFrame.h
 src/system/include/processor/x64/state.h
 src/system/include/processor/x64/types.h
 src/system/include/processor/x86
+src/system/include/processor/x86/Processor.h
 src/system/include/processor/x86/StackFrame.h
 src/system/include/processor/x86/state.h
 src/system/include/processor/x86/types.h
