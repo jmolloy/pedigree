@@ -58,7 +58,7 @@ void writeStr(const char *str)
   while ((c = *str++))
     writeChar(c);
 }
-extern "C" int __start();
+extern "C" int __start(char argc, char **argv, char **env, unsigned int ramsize);
 extern "C" int start()
 {
   asm volatile("li $sp, 0x800F0000");
@@ -70,7 +70,7 @@ extern "C" int start()
   asm volatile("j __start");
 }
 
-extern "C" int __start()
+extern "C" int __start(char argc, char **argv, char **env, unsigned int ramsize)
 {
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
@@ -84,6 +84,8 @@ extern "C" int __start()
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
+
+  bs.mem_upper = ramsize;
   
   // For every section header, set .addr = .offset + m_pBuffer.
   for (int i = 0; i < elf.m_pHeader->shnum; i++)

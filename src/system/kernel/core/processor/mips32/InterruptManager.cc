@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "InterruptManager.h"
+#include <processor/TlbManager.h>
 #include <machine/Machine.h>
 #include <machine/types.h>
 #include <utilities/utility.h>
@@ -140,9 +141,6 @@ void MIPS32InterruptManager::initialiseProcessor()
   pCode[3] = 0x00000000;
   
   // Now poke that exception handling stub into memory.
-  memcpy(reinterpret_cast<void*>(KSEG1(0x0)),
-         reinterpret_cast<void*>(pCode),
-         32*4);
   memcpy(reinterpret_cast<void*>(KSEG1(0x80)),
          reinterpret_cast<void*>(pCode),
          32*4);
@@ -155,6 +153,22 @@ void MIPS32InterruptManager::initialiseProcessor()
   memcpy(reinterpret_cast<void*>(KSEG1(0x200)),
          reinterpret_cast<void*>(pCode),
          32*4);
+
+  // Do the same for the TLB refill handler.
+
+  // lui $k0, <upper 16 bits of exception handler>
+  pCode[0] = 0x3c1a0000 | (reinterpret_cast<uint32_t> (&TlbManager::interruptAsm) >> 16);
+  // ori $k0, $k0, <lower 16 bits of exception handler>
+  pCode[1] = 0x375a0000 | (reinterpret_cast<uint32_t> (&TlbManager::interruptAsm) & 0x0000FFFF);
+  // jr $k0
+  pCode[2] = 0x03400008;
+  // nop (delay slot)
+  pCode[3] = 0x00000000;
+
+  memcpy(reinterpret_cast<void*>(KSEG1(0x0)),
+         reinterpret_cast<void*>(pCode),
+         32*4);
+
   
   // Invalidate the instruction cache - force a reload of the exception handlers.
   for (uintptr_t i = KSEG0(0); i < KSEG0(0x200); i += 0x80)

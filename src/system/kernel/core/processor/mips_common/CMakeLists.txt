@@ -21,4 +21,4 @@
 #
 
 add_kernel_src(core/processor/mips_common
-               Disassembler.cc Processor.cc PhysicalMemoryManager.cc)
+               Disassembler.cc Processor.cc PhysicalMemoryManager.cc AsidManager.cc)

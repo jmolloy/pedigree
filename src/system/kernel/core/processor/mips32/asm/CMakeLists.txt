@@ -21,4 +21,4 @@
 #
 
 add_kernel_src(core/processor/mips32/asm
-               InterruptManager.s Processor.s)
+               InterruptManager.s Processor.s Tlb.s)

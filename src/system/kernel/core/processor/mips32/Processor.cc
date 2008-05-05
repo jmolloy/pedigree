@@ -14,14 +14,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <processor/Processor.h>
+#include <processor/TlbManager.h>
 #include "InterruptManager.h"
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
-   MIPS32InterruptManager::initialiseProcessor();
+  MIPS32InterruptManager::initialiseProcessor();
 
   // TODO: Initialise the physical memory-management
+  TlbManager::instance().initialise();
 
   // TODO
 

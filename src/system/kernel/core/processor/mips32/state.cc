@@ -15,7 +15,7 @@
  */
 #include <processor/state.h>
 
-const char *MIPS32InterruptStateRegisterName[33] =
+const char *MIPS32InterruptStateRegisterName[34] =
 {
   "at",
   "v0",
@@ -49,7 +49,8 @@ const char *MIPS32InterruptStateRegisterName[33] =
   "SR",
   "Cause",
   "EPC",
-  "BadVaddr"
+  "BadVaddr",
+  "Context"
 };
 
 MIPS32InterruptState::MIPS32InterruptState() :
@@ -60,7 +61,8 @@ MIPS32InterruptState::MIPS32InterruptState() :
     m_S1(), m_S2(), m_S3(), m_S4(),
     m_S5(), m_S6(), m_S7(), m_T8(),
     m_T9(), m_Gp(), m_Sp(), m_Fp(),
-    m_Ra(), m_Sr(), m_Epc(), m_BadVAddr()
+    m_Ra(), m_Sr(), m_Epc(), m_BadVAddr(),
+    m_Context()
 {
 }
 
@@ -72,7 +74,8 @@ MIPS32InterruptState::MIPS32InterruptState(const MIPS32InterruptState &is) :
     m_S1(is.m_S1), m_S2(is.m_S2), m_S3(is.m_S3), m_S4(is.m_S4),
     m_S5(is.m_S5), m_S6(is.m_S6), m_S7(is.m_S7), m_T8(is.m_T8),
     m_T9(is.m_T9), m_Gp(is.m_Gp), m_Sp(is.m_Sp), m_Fp(is.m_Fp),
-    m_Ra(is.m_Ra), m_Sr(is.m_Sr), m_Epc(is.m_Epc), m_BadVAddr(is.m_BadVAddr)
+    m_Ra(is.m_Ra), m_Sr(is.m_Sr), m_Epc(is.m_Epc), m_BadVAddr(is.m_BadVAddr),
+    m_Context(is.m_Context)
 {
 }
 
@@ -86,12 +89,13 @@ MIPS32InterruptState & MIPS32InterruptState::operator=(const MIPS32InterruptStat
   m_S5=is.m_S5; m_S6=is.m_S6; m_S7=is.m_S7; m_T8=is.m_T8;
   m_T9=is.m_T9; m_Gp=is.m_Gp; m_Sp=is.m_Sp; m_Fp=is.m_Fp;
   m_Ra=is.m_Ra; m_Sr=is.m_Sr; m_Epc=is.m_Epc; m_BadVAddr=is.m_BadVAddr;
+  m_Context=is.m_Context;
   return *this;
 }
 
 size_t MIPS32InterruptState::getRegisterCount() const
 {
-  return 33;
+  return 34;
 }
 processor_register_t MIPS32InterruptState::getRegister(size_t index) const
 {
@@ -130,6 +134,7 @@ processor_register_t MIPS32InterruptState::getRegister(size_t index) const
     case 30: return m_Cause;
     case 31: return m_Epc;
     case 32: return m_BadVAddr;
+    case 33: return m_Context;
     default: return 0;
   }
 }

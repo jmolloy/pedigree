@@ -172,6 +172,8 @@ class MIPS32InterruptState
     uint32_t m_Epc;
     /** Bad virtual address */
     uint32_t m_BadVAddr;
+    /** TLB miss context */
+    uint32_t m_Context;
 } PACKED;
 
 typedef MIPS32InterruptState MIPS32SyscallState;

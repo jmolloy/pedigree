@@ -24,8 +24,7 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t MipsCommonPhysicalMemoryManager::allocatePage()
 {
-  // TODO
-  return 0;
+  return (m_NextPage =+ 0x1000);
 }
 void MipsCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
@@ -41,7 +40,8 @@ bool MipsCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
   return false;
 }
 
-MipsCommonPhysicalMemoryManager::MipsCommonPhysicalMemoryManager()
+MipsCommonPhysicalMemoryManager::MipsCommonPhysicalMemoryManager() :
+  m_NextPage(0x00400000) // Start 4MB in.
 {
 }
 MipsCommonPhysicalMemoryManager::~MipsCommonPhysicalMemoryManager()

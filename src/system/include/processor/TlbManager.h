@@ -13,24 +13,17 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef KERNEL_MACHINE_MIPS_COMMON_TYPES_H
-#define KERNEL_MACHINE_MIPS_COMMON_TYPES_H
+#ifndef TLBMANAGER_H
+#define TLBMANAGER_H
 
-#include <processor/types.h>
+#ifdef MIPS32
+#include <processor/mips32/TlbManager.h>
+typedef MIPS32TlbManager TlbManager;
+#endif
 
-/** @addtogroup kernelmachinemipscommon
- * @{ */
-
-/** Define a type for IRQ identifications */
-typedef uint8_t MIPSCommonirq_id_t;
-
-#define KSEG0(addr) (addr|0x80000000)
-#define KSEG1(addr) (addr|0xa0000000)
-#define IS_KUSEG(addr) (addr<0x80000000)
-#define IS_KSEG0(addr) (addr>=0x80000000 && addr<0xa0000000)
-#define IS_KSEG1(addr) (addr>=0xa0000000 && addr<0xc0000000)
-#define IS_KSEG2(addr) (addr>=0xc0000000)
-
-/** @} */
+#ifdef MIPS64
+#include <processor/mips64/TlbManager.h>
+typedef MIPS64TlbManager TlbManager;
+#endif
 
 #endif

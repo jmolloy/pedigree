@@ -35,7 +35,7 @@ li $k0, 0x80020000     # This will be our kernel stack pointer.
 .stack_good:
   # Here, $k0 holds the value of our kernel stack. $sp is still its pre-exception value.
   # $k1 holds junk.
-  addiu $k0, $k0, -132     # Reserve some space on the stack.
+  addiu $k0, $k0, -136     # Reserve some space on the stack.
   sw $at, 0($k0)
   sw $v0, 4($k0)
   sw $v1, 8($k0)
@@ -76,9 +76,11 @@ li $k0, 0x80020000     # This will be our kernel stack pointer.
   sw $k1, 124($k0)
   mfc0 $k1, $8         # BadVaddr
   sw $k1, 128($k0)
-
+  mfc0 $k1, $4         # Context
+  sw $k1, 132($k0)
+	
   move $sp, $k0        # Set stack pointer to be the bottom limit of our stack frame.
-  addiu $fp, $sp, 132  # Set the frame pointer to be the stack pointer + 116.
+  addiu $fp, $sp, 136  # Set the frame pointer to be the stack pointer + 136.
 
   addiu $sp, -20       # Caller needs to reserve at least 16 bytes on the stack, and must be
                        # 8-byte aligned, so we reserve 20.

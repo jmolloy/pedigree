@@ -156,6 +156,12 @@ else(X86_COMMON)
   set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/${COMPILER}-as)
 endif(X86_COMMON)
 
+# Create an emacs TAGS file.
+add_custom_target(tags
+                  find src/ -name *.h -or -name *.cc | etags -o TAGS -
+		  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}
+                  COMMENT "Creating Emacs tags file")
+
 # Create a target used for checking if a compiler is present.
 add_custom_target(check_compiler ALL perl ./scripts/checkBuildSystem.pl ${COMPILER}
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR})

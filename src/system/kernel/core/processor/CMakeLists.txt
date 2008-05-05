@@ -52,10 +52,10 @@ if(ARM_COMMON)
   add_subdirectory(arm_common)
 endif(ARM_COMMON)
 
-if(NOT MIPS_COMMON AND NOT ARM_COMMON)
+if(NOT ARM_COMMON)
   add_kernel_src(core/processor
                  PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
-else(NOT MIPS_COMMON AND NOT ARM_COMMON)
+else(NOT ARM_COMMON)
   add_kernel_src(core/processor
                  PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
-endif(NOT MIPS_COMMON AND NOT ARM_COMMON)
+endif(NOT ARM_COMMON)

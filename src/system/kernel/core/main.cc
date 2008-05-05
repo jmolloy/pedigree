@@ -109,7 +109,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifndef MIPS_COMMON
   Processor::initialisationDone();
 #endif
-
+  NOTICE("Memory: " << bsInf->mem_upper);
+  
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";
@@ -156,7 +157,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
-  
+  volatile uintptr_t *a = (uintptr_t*)0xdeadbab8;
+  uintptr_t b = *a;
+  b++;
   for (;;)
   {
     #ifdef X86_COMMON
