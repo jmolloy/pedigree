@@ -25,8 +25,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // TODO: Initialise the physical memory-management
   TlbManager::instance().initialise();
 
-  // TODO
-
 //   m_Initialised = 1;
 }
 

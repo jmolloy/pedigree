@@ -32,6 +32,7 @@
 #include <SerialIO.h>
 #include <DebuggerIO.h>
 #include "BootIO.h"
+#include <processor/PhysicalMemoryManager.h>
 #ifdef THREADS
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
@@ -157,9 +158,26 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
-  volatile uintptr_t *a = (uintptr_t*)0xdeadbab8;
+
+  // Try and create a mapping.
+#ifdef MIPS_COMMON
+  physical_uintptr_t stackBase = PhysicalMemoryManager::instance().allocatePage();
+  NOTICE("StackBase = " << Hex << stackBase);
+  bool br = VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xC1505000), 0);
+  NOTICE("b :" << br);
+
+  uintptr_t *leh = reinterpret_cast<uintptr_t*> (stackBase|0xa0000000 + 0x4);
+  *leh = 0x1234567;
+
+  Processor::breakpoint();
+
+  volatile uintptr_t *a = (uintptr_t*)0xC1505004;
   uintptr_t b = *a;
+  NOTICE("b : " << b);
   b++;
+  Processor::breakpoint();
+#endif
+
   for (;;)
   {
     #ifdef X86_COMMON

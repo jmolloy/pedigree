@@ -61,25 +61,181 @@ MIPS32VirtualAddressSpace::~MIPS32VirtualAddressSpace()
 
 bool MIPS32VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  return false;
+  // In MIPS, all possible addresses are valid.
+  return true;
 }
 
 bool MIPS32VirtualAddressSpace::isMapped(void *virtualAddress)
 {
-  return false;
+  // What page is this virtual address in?
+  uintptr_t page = reinterpret_cast<uintptr_t> (virtualAddress) >> 12;
+
+  // What page table chunk is that page's mapping located in?
+  // (pageIndex * 2) / 4096, because each page has 2 words of data associated with it.
+  uintptr_t chunkIdx = (page*2) / 4096;
+  // At what offset in that chunk will we find information about the page mapping?
+  uintptr_t chunkOff = (page*2) % 4096;
+
+  // Get the chunk.
+  uintptr_t chunkAddr = getPageTableChunk(chunkIdx);
+
+  // If it was NULL, there is no mapping.
+  if (chunkAddr == 0)
+    return false;
+
+  // Is this in the first 512MB of RAM? if so, we can access it via KSEG0.
+  if (chunkAddr < 0x20000000)
+  {
+    uintptr_t mapping = * reinterpret_cast<uintptr_t*> (KSEG0(chunkAddr)+chunkOff);
+    // Is it NULL?
+    if (mapping == 0)
+      return false;
+    // Is it valid?
+    if ((mapping & MIPS32_PTE_VALID) == 0)
+      return false;
+    // Otherwise, the mapping is valid.
+    return true;
+  }
+  else
+  {
+    // We need to temporarily map the page into KSEG2.
+    panic("Physical addressing over 512MB not implemented yet!");
+  }
 }
 
 bool MIPS32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
                                     void *virtualAddress,
                                     size_t flags)
 {
-  return false;
+  // Cast virtualAddress into a nicer type for arithmetic.
+  uintptr_t nVirtualAddress = reinterpret_cast<uintptr_t> (virtualAddress);
+
+  // Firstly, do a sanity check to see if virtualAddress is within KSEG2 or KUSEG.
+  if ( !IS_KUSEG(nVirtualAddress) && !IS_KSEG2(nVirtualAddress))
+  {
+    WARNING("MIPS32VirtualAddressSpace::map(" << Hex << physicalAddress << ", " << nVirtualAddress << ", " << flags << "): invalid virtual address.");
+    return false;
+  }
+
+  // Secondly, sanity check to ensure this address isn't where the page table should be...!
+  if ( (nVirtualAddress >= 0xC0000000) && (nVirtualAddress < 0xC0800000) )
+  {
+    WARNING("MIPS32VirtualAddressSpace::map(" << Hex << physicalAddress << ", " << nVirtualAddress << ", " << flags << "): invalid virtual address.");
+    return false;
+  }
+
+  // What page is this virtual address in?
+  uintptr_t page = nVirtualAddress >> 12;
+
+  // What page table chunk is that page's mapping located in?
+  // Each chunk can hold 512 descriptors (4096/8).
+  uintptr_t chunkIdx = page / 512;
+  // At what offset in that chunk will we find information about the page mapping?
+  // Each chunk can hold 512 descriptors (4096/8), each being 8 bytes.
+  uintptr_t chunkOff = (page % 512) * 8;
+
+  // Get the chunk.
+  uintptr_t chunkAddr = getPageTableChunk(chunkIdx);
+
+  // If it was NULL, there is no mapping.
+  if (chunkAddr == 0)
+  {
+    // ...So we have to make one!
+    chunkAddr = generateNullChunk();
+    setPageTableChunk(chunkIdx, chunkAddr);
+  }
+
+  // Is this in the first 512MB of RAM? if so, we can access it via KSEG0.
+  if (chunkAddr < 0x20000000)
+  {
+    uintptr_t *mapping = reinterpret_cast<uintptr_t*> (KSEG0(chunkAddr)+chunkOff);
+    // Is it non-NULL?
+    if (*mapping != 0)
+    {
+      // Address is already mapped.
+      WARNING("MIPS32VirtualAddressSpace::map(" << Hex << physicalAddress << ", " << nVirtualAddress << ", " << flags << "): Address already mapped.");
+      return false;
+    }
+
+    // Make our mapping.
+
+    //  33 22222222221111111111
+    //  10 987654321098765432109876 543 2 1 0
+    // +--+------------------------+---+-+-+-+
+    // |00|  PHYSICAL FRAME NUMBER | C |D|V|G|
+    // +--+------------------------+---+-+-+-+
+
+    uintptr_t pfn = (static_cast<uintptr_t> (physicalAddress) >> 6) & 0x3FFFFFC0; // Shift right 6 because the 12 LSBs of an address are dumped.
+    uintptr_t c   = (flags & CacheDisable) ? MIPS32_PTE_UNCACHED : MIPS32_PTE_CACHED;
+    uintptr_t d   = (flags & Write) ? MIPS32_PTE_DIRTY : 0;
+    uintptr_t v   = MIPS32_PTE_VALID;
+    uintptr_t g   = 0; /// \todo When is an entry global? In KSEG2? But the page table TLB entries are ASID specific... hmm.
+    // Write the EntryLo mapping.
+    *mapping = pfn | c | d | v | g;
+
+    // The next 32 bits are ours to mess around with, we store the processor independent flag set there.
+    *++mapping = flags;
+
+    // We are success.
+    return true;
+  }
+  else
+  {
+    // We need to temporarily map the page into KSEG2.
+    panic("Physical addressing over 512MB not implemented yet!");
+  }
 }
 
 void MIPS32VirtualAddressSpace::getMapping(void *virtualAddress,
                                            physical_uintptr_t &physicalAddress,
                                            size_t &flags)
 {
+  // What page is this virtual address in?
+  uintptr_t page = reinterpret_cast<uintptr_t> (virtualAddress) >> 12;
+
+  // What page table chunk is that page's mapping located in?
+  // (pageIndex * 2) / 4096, because each page has 2 words of data associated with it.
+  uintptr_t chunkIdx = (page*2) / 4096;
+  // At what offset in that chunk will we find information about the page mapping?
+  uintptr_t chunkOff = (page*2) % 4096;
+
+  // Get the chunk.
+  uintptr_t chunkAddr = getPageTableChunk(chunkIdx);
+
+  // If it was NULL, there is no mapping.
+  if (chunkAddr == 0)
+  {
+    physicalAddress = 0;
+    return;
+  }
+
+  // Is this in the first 512MB of RAM? if so, we can access it via KSEG0.
+  if (chunkAddr < 0x20000000)
+  {
+    uintptr_t mapping = * reinterpret_cast<uintptr_t*> (KSEG0(chunkAddr)+chunkOff);
+    uintptr_t _flags  = * reinterpret_cast<uintptr_t*> (KSEG0(chunkAddr)+chunkOff+4);
+    // Is it NULL?
+    if (mapping == 0)
+    {
+      physicalAddress = 0;
+      return;
+    }
+    // Is it valid?
+    if ((mapping & MIPS32_PTE_VALID) == 0)
+    {
+      physicalAddress = 0;
+      return;
+    }
+    // Otherwise, the mapping is valid.
+    physicalAddress = (mapping << 6) & 0xFFFFF000;
+    flags = _flags;
+    return;
+  }
+  else
+  {
+    // We need to temporarily map the page into KSEG2.
+    panic("Physical addressing over 512MB not implemented yet!");
+  }
 }
 
 void MIPS32VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
@@ -107,10 +263,27 @@ uintptr_t MIPS32VirtualAddressSpace::getPageTableChunk(uintptr_t chunkIdx)
   }
 }
 
+void MIPS32VirtualAddressSpace::setPageTableChunk(uintptr_t chunkIdx, uintptr_t chunkAddr)
+{
+  NOTICE("setPageTableChunk(" << Hex << chunkIdx << ", " << chunkAddr << ")");
+  if (chunkIdx < 1024)
+  {
+    m_pKusegDirectory[chunkIdx] = chunkAddr;
+  }
+  else if (chunkIdx >= 1536) // 1536 = 1024+512.
+  {
+    m_pKseg2Directory[chunkIdx-1536] = chunkAddr;
+  }
+  else
+  {
+    ERROR("Invalid page table chunk index: " << Dec << chunkIdx);
+  }
+}
+
 uintptr_t MIPS32VirtualAddressSpace::generateNullChunk()
 {
   physical_uintptr_t frame = PhysicalMemoryManager::instance().allocatePage();
-  
+
   // If the page is under 512MB, we can access it through KSEG0.
   if (frame < 0x20000000)
   {

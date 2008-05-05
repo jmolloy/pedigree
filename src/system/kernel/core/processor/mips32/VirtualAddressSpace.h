@@ -26,10 +26,11 @@
 #endif
 
 /// Platform specific flags.
-#define MIPS32_PTE_GLOBAL 0x1  // If set, the TLB ignores the current ASID.
-#define MIPS32_PTE_VALID  0x2  // If unset, the entry is invalid.
-#define MIPS32_PTE_DIRTY  0x4  // Actually, write-enable. 1 to allow writes, 0 for read-only.
-// ...Plus 3 bit entry for cache behaviour.
+#define MIPS32_PTE_GLOBAL   0x1  // If set, the TLB ignores the current ASID.
+#define MIPS32_PTE_VALID    0x2  // If unset, the entry is invalid.
+#define MIPS32_PTE_DIRTY    0x4  // Actually, write-enable. 1 to allow writes, 0 for read-only.
+#define MIPS32_PTE_UNCACHED 0x10 // No caching - field C = 0x2.
+#define MIPS32_PTE_CACHED   0x18 // Cache without multiprocessor signalling - field C = 0x3
 
 /** @addtogroup kernelprocessorMIPS32
  * @{ */
@@ -113,17 +114,10 @@ private:
    *\note Not implemented */
   MIPS32VirtualAddressSpace &operator = (const MIPS32VirtualAddressSpace &);
 
+  void setPageTableChunk(uintptr_t chunkIdx, uintptr_t chunkAddr);
+
   /** Obtains a new physical frame and generates 'null' entries throughout. */
   uintptr_t generateNullChunk();
-
-  /** Convert the processor independant flags to the processor's representation of the flags
-   *\param[in] flags the processor independant flag representation
-   *\return the proessor specific flag representation */
-  uint32_t toFlags(size_t flags);
-  /** Convert processor's representation of the flags to the processor independant representation
-   *\param[in] Flags the processor specific flag representation
-   *\return the proessor independant flag representation */
-  size_t fromFlags(uint32_t Flags);
 
   /** Our 'directory' - contains the physical address of each page table 'chunk' for KUSEG. */
   uintptr_t m_pKusegDirectory[1024];
@@ -141,6 +135,6 @@ private:
 //
 #define USERSPACE_VIRTUAL_HEAP static_cast<uintptr_t>(0x10000000)
 #define VIRTUAL_PAGE_DIRECTORY static_cast<uintptr_t>(0xC0000000)
-#define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xC0200000)
+#define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xC0800000)
 
 #endif

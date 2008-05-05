@@ -216,14 +216,14 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
   }
 
   // If this was a trap or breakpoint instruction, we need to increase the program counter a bit.
-//   if (intNumber == 9 || intNumber == 13)
-//   {
+  if (intNumber == 9 || intNumber == 13)
+  {
     // ...Unless we were in a branch delay slot!
     if (!interruptState.branchDelay())
     {
       interruptState.m_Epc += 4;
     }
-//   }
+  }
 }
 
 MIPS32InterruptManager::MIPS32InterruptManager()

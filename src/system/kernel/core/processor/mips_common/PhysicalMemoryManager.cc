@@ -24,7 +24,7 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t MipsCommonPhysicalMemoryManager::allocatePage()
 {
-  return (m_NextPage =+ 0x1000);
+  return (m_NextPage += 0x1000);
 }
 void MipsCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {

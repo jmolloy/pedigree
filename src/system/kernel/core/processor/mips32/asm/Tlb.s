@@ -76,6 +76,7 @@ _ZN16MIPS32TlbManager13writeTlbWiredEjjjj:
   tlbwi             # Indexed TLB replacement.
   nop
   mtc0 $t0, $10     # Restore EntryHi.
+  nop
   jr $ra            # Return
   nop
 

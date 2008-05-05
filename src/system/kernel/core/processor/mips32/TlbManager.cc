@@ -73,6 +73,19 @@ void MIPS32TlbManager::interrupt(size_t interruptNumber, InterruptState &state)
   uintptr_t badvaddr = state.m_BadVAddr;
   uintptr_t chunkIdx = (badvaddr >> 12) & 0x7FF;
   
+  // Sanity check - was this TLB miss for the page table? or for elsewhere?
+  if ( (badvaddr < 0xC0000000) || (badvaddr >= 0xC0800000) )
+  {
+    // Page fault.
+    static LargeStaticString str;
+    str.clear();
+    str += "Page fault (";
+    str.append(badvaddr, 16);
+    str += ")";
+    Debugger::instance().start(state, str);
+    panic("Page fault");
+  }
+
   // As the R4000 maps one virtual page to two consecutive physical frames,
   // we need to ensure that the first chunk we ask for is aligned properly.
   uintptr_t chunkSelect = chunkIdx & 0x1; // Which chunk were we accessing?
@@ -82,6 +95,8 @@ void MIPS32TlbManager::interrupt(size_t interruptNumber, InterruptState &state)
   MIPS32VirtualAddressSpace &addressSpace = static_cast<MIPS32VirtualAddressSpace&> (VirtualAddressSpace::getKernelAddressSpace());
   uintptr_t phys1 = addressSpace.getPageTableChunk(chunkIdx);
   uintptr_t phys2 = addressSpace.getPageTableChunk(chunkIdx+1);
+
+  NOTICE("BadVaddr: " << Hex << badvaddr << ", chunkIdx: "<< chunkIdx << ", phys1: " << phys1 << ", phys2: " << phys2);
 
   if ((phys1 == 0 && chunkSelect == 0) ||
       (phys2 == 0 && chunkSelect == 1))
@@ -98,23 +113,39 @@ void MIPS32TlbManager::interrupt(size_t interruptNumber, InterruptState &state)
   AsidManager::Asid asid = 0; // TODO
 
   // Generate an EntryHi value.
-  uintptr_t entryHi = (badvaddr & 0x1FFF) | asid;
+  uintptr_t entryHi = (badvaddr & ~0x1FFF) | asid;
+
+  // Generate an EntryLo0 value.
+  uintptr_t entryLo0 = phys1;
+  if (entryLo0 != 0)
+  {
+    entryLo0 >>= 6;
+    entryLo0 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
+  }
+
+  // Generate an EntryLo1 value.
+  uintptr_t entryLo1 = phys2;
+  if (entryLo1 != 0)
+  {
+    entryLo1 >>= 6;
+    entryLo1 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
+  }
 
   // Write into the TLB.
-  writeTlb(entryHi, phys1, phys2);
+  writeTlb(entryHi, entryLo0, entryLo1);
 
   // Now that the chunk is in the TLB, we can read the bad virtual address
   // and check if it is NULL. If so, this is a page fault.
-  uintptr_t *pBadvaddr = reinterpret_cast<uintptr_t*> (badvaddr);
-  if (*pBadvaddr == 0)
-  {
-    // Page fault.
-    static LargeStaticString str;
-    str.clear();
-    str += "Page fault";
-    Debugger::instance().start(state, str);
-    panic("Page fault");
-  }
+//  uintptr_t *pBadvaddr = reinterpret_cast<uintptr_t*> (badvaddr);
+//  if (*pBadvaddr == 0)
+//  {
+//    // Page fault.
+//    static LargeStaticString str;
+//    str.clear();
+//    str += "Page fault";
+//    Debugger::instance().start(state, str);
+//    panic("Page fault");
+//  }
 
   // Success.
 }
