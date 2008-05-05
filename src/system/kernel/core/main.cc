@@ -155,6 +155,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
 #endif
 
+  char *babypoo = new char[32];
+  NOTICE("babypoo: " << (unsigned int)babypoo);
+
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
