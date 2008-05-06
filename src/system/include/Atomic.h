@@ -35,39 +35,27 @@ class Atomic
 
     inline T operator += (T x)
     {
-//ifndef MIPS_COMMON
       return __sync_add_and_fetch(&m_Atom, x);
-//endif
     }
     inline T operator -= (T x)
     {
-#ifndef MIPS_COMMON
       return __sync_sub_and_fetch(&m_Atom, x);
-#endif
     }
     inline T operator |= (T x)
     {
-#ifndef MIPS_COMMON
       return __sync_or_and_fetch(&m_Atom, x);
-#endif
     }
     inline T operator &= (T x)
     {
-#ifndef MIPS_COMMON
       return __sync_and_and_fetch(&m_Atom, x);
-#endif
     }
     inline T operator ^= (T x)
     {
-#ifndef MIPS_COMMON
       return __sync_xor_and_fetch(&m_Atom, x);
-#endif
     }
     inline bool compareAndSwap(T oldVal, T newVal)
     {
-//ifndef MIPS_COMMON
       return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
-//endif
     }
     inline operator T () const
     {
