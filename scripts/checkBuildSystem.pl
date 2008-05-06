@@ -1,274 +1,86 @@
 #!/usr/bin/perl
-#######################################################################
-# checkBuildSystem.pl - a script to check for and possibly install
-#                       gcc/binutils in the build/ directory.
 
-my $COMPILER_VERSION = "4.2.2";
-my $BINUTILS_VERSION = "2.18";
-my $FTP_DIR = "ftp://ftp.gnu.org/gnu/gcc/gcc-$COMPILER_VERSION";
-my $BINUTILS_FTP_DIR = "ftp://ftp.gnu.org/gnu/binutils";
-my $NASM_VERSION = "2.02";
-my $NASM_DOWNLOAD = "http://downloads.sourceforge.net/nasm/nasm-$NASM_VERSION.tar.gz";
-my $delete_cache = 0;
+use strict;
+use warnings;
 
-# Is the compiler with the given version string (e.g. i686-elf) installed?
-sub is_installed {
-  my ($arch) = @_;
-
-  return -d "./compilers/$arch";
-}
-
-sub is_nasm_installed {
-  my ($arch) = @_;
-  
-  if ($arch =~ m/(i686|amd64)-elf/i) {
-    return -f "./compilers/bin/nasm";
-  } else {
-    return 1;
-  }
-}
-
-# Do we have a compiler download cache?
-sub is_cached {
-  return 1 if (-d "./compilers/dl_cache" and
-               -f "./compilers/dl_cache/gcc-core-$COMPILER_VERSION.tar.bz2" and
-               -f "./compilers/dl_cache/gcc-g++-$COMPILER_VERSION.tar.bz2" and
-               -f "./compilers/dl_cache/binutils-$BINUTILS_VERSION.tar.bz2");
-  return 0;
-}
-
-# Download the compiler.
-sub download {
-  my ($arch) = @_;
-  
-  `mkdir ./compilers/dl_cache` unless (-d "./compilers/dl_cache");
-
-  my $already_cached = 0;
-
-  if (-f "./compilers/dl_cache/gcc-core-$COMPILER_VERSION.tar.bz2") {
-    print "\e[32mGcc core files already downloaded, using cached version.\e[0m\n";
-    $already_cached = 1;
-  } else {
-    print "\e[32mDownloading gcc core files, version $COMPILER_VERSION...\e[0m\n";  
-    `cd ./compilers/dl_cache; wget $FTP_DIR/gcc-core-$COMPILER_VERSION.tar.bz2`;
-    if ($? != 0) {
-      print "\e[31mError: gcc core files failed to download!\e[0m\n";
-      return 1;
-    }
-  }
-
-  if (-f "./compilers/dl_cache/gcc-g++-$COMPILER_VERSION.tar.bz2") { 
-    print "\e[32mG++ files already downloaded, using cached version.\e[0m\n";
-    $already_cached = 1;
-  } else {
-    print "\e[32mDownloading g++, version $COMPILER_VERSION...\e[0m\n";
-    `cd ./compilers/dl_cache; wget $FTP_DIR/gcc-g++-$COMPILER_VERSION.tar.bz2`;
-    if ($? != 0) {
-      print "\e[31mError: g++ files failed to download!\e[0m\n";
-      return 1;
-    }
-  }
-
-  if (-f "./compilers/dl_cache/binutils-$BINUTILS_VERSION.tar.bz2") { 
-    print "\e[32mBinutils files already downloaded, using cached version.\e[0m\n";
-    $already_cached = 1;
-  } else {
-    print "\e[32mDownloading binutils, version $BINUTILS_VERSION...\e[0m\n";
-    `cd ./compilers/dl_cache; wget $BINUTILS_FTP_DIR/binutils-$BINUTILS_VERSION.tar.bz2`;
-    if ($? != 0) {
-      print "\e[31mError: binutils files failed to download!\e[0m\n";
-      return 1;
-    }
-  }
-
-  if ($already_cached == 0) {
-    # Ask the user if he wants to keep the cached files.
-    print "\e[32mThe main compiler tarballs can be kept on disk, in case a new compiler build is needed. This will mean that new compiler builds will be faster, but will consume roughly 50MB of disk space.\nCache compiler files? [yes]\e[0m: ";
-    $delete_cache = 1 if (<STDIN> =~ m/n/i);
-  }
-  return 0;
-}
-
-sub download_nasm {
-  `mkdir ./compilers/dl_cache` unless (-d "./compilers/dl_cache");
-
-  if (-f "./compilers/dl_cache/nasm-$NASM_VERSION.tar.gz") {
-    print "\e[32mNASM files already downloaded, using cached version.\e[0m\n";
-  } else {
-    print "\e[32mDownloading NASM, version $NASM_VERSION...\e[0m\n";
-    `cd ./compilers/dl_cache; wget $NASM_DOWNLOAD`;
-    if ($? != 0) {
-      print "\e[31mError: NASM files failed to download!\e[0m\n";
-      return 1;
-    }
-  }
-  return 0;
-}
-
-# Extract the compiler - assumed download() called and succeeded.
-sub extract {
-  `mkdir ./compilers/tmp_build` unless (-d "./compilers/tmp_build");
-
-  `cp ./compilers/dl_cache/* ./compilers/tmp_build`;
-  return 1 if $? != 0;
-
-  print "\e[32mExtracting downloaded files [1/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf gcc-core-$COMPILER_VERSION.tar.bz2`;
-  return 1 if $? != 0;
-
-  print "\e[32mExtracting downloaded files [2/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf gcc-g++-$COMPILER_VERSION.tar.bz2`;
-  return 1 if $? != 0;
-
-  print "\e[32mExtracting downloaded files [3/3]...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf binutils-$BINUTILS_VERSION.tar.bz2`;
-  return 1 if $? != 0;
-
-  `rm ./compilers/tmp_build/*.tar*`;
-  return 1 if $? != 0;
-
-  `rm -r ./compilers/dl_cache` if $delete_cache == 1;
-
-  return 0;
-}
-
-# Extract the assembler - assumed download_nasm() called and succeeded.
-sub extract_nasm {
-  `mkdir ./compilers/tmp_build` unless (-d "./compilers/tmp_build");
-
-  `cp ./compilers/dl_cache/nasm-$NASM_VERSION.tar.gz ./compilers/tmp_build`;
-  return 1 if $? != 0;
-
-  print "\e[32mExtracting downloaded files...\e[0m\n";
-  `cd ./compilers/tmp_build/; tar -xf nasm-$NASM_VERSION.tar.gz`;
-  return 1 if $? != 0;
-
-  `rm ./compilers/tmp_build/*.tar*`;
-  return 1 if $? != 0;
-
-  `rm -r ./compilers/dl_cache` if $delete_cache == 1;
-
-  return 0;
-}
+my $gcc_version = "4.3.0";
+my $binutils_version = "2.18";
+my $nasm_version = "2.02";
 
 
-# Patch the compiler for amd64
-sub patch_amd64 {
-  print "\e[32mPatching gcc (amd64 patch)...\e[0m\n";
-  `patch ./compilers/tmp_build/gcc-$COMPILER_VERSION/gcc/config.gcc <./compilers/gcc_amd64.patch`;
-  return 1 if $? != 0;
-	
-  return 0;
-}
+my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-$gcc_version.tar.bz2",
+                  'name' => 'Gcc core files',
+                  'filename' => "gcc-core-$gcc_version.tar.bz2",
+                  'extract' => "tar -xjf gcc-core-$gcc_version.tar.bz2",
+                  'arch' => 'all'},
+                 {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-g++-$gcc_version.tar.bz2",
+                  'name' => 'G++',
+                  'filename' => "gcc-g++-$gcc_version.tar.bz2",
+                  'extract' => "tar -xjf gcc-g++-$gcc_version.tar.bz2",
+                  'arch' => 'all'},
+                 {'url' => "ftp://ftp.gnu.org/gnu/binutils/binutils-$binutils_version.tar.bz2",
+                  'name' => 'Binutils',
+                  'filename' => "binutils-$binutils_version.tar.bz2",
+                  'extract' => "tar -xjf binutils-$binutils_version.tar.bz2",
+                  'arch' => 'all'},
+                 {'url' => "http://downloads.sourceforge.net/nasm/nasm-$nasm_version.tar.gz",
+                  'name' => 'Nasm',
+                  'filename' => "nasm-$nasm_version.tar.gz",
+                  'extract' => "tar -xzf nasm-$nasm_version.tar.gz",
+                  'arch' => 'i686-elf amd64-elf'} );
 
-# Patch the compiler to output more DWARF CFI information.
-sub patch_dwarf {
-    print "\e[32mPatching gcc (dwarf patch)...\e[0m\n";
-    `cd ./compilers/tmp_build/gcc-$COMPILER_VERSION/ && patch -p1 <../../gcc_dwarf.patch`;
-    return 1 if $? != 0;
-    return 0;
-}
+my @patch = ( {'cwd' => "gcc-$gcc_version",
+               'name' => 'Dwarf extra info',
+               'flags' => '-p1',
+               'input' => 'gcc_dwarf.patch',
+               'arch' => 'all'},
+              {'cwd' => "gcc-$gcc_version",
+               'name' => 'Amd64',
+               'flags' => '-p0',
+               'input' => 'gcc_amd64.patch',
+               'arch' => 'amd64-elf'},
+              {'cwd' => "binutils-$binutils_version",
+               'name' => 'Makeinfo',
+               'flags' => '',
+               'input' => 'binutils-2.18-makeinfo.patch',
+               'arch' => 'all'} );
 
-# Configure, make and make install the compiler.
-sub install {
-  my ($arch) = @_;
-  
-  `mkdir ./compilers/$arch` unless -d "./compilers/$arch";
+my @compile = ( {'dir' => "binutils-$binutils_version",
+                 'name' => "Binutils",
+                 'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls",
+                 'make' => "all",
+                 'install' => "install",
+                 'arch' => 'all',
+                 'test' => './bin/!TARGET-objdump'},
+                {'dir' => "gcc-$gcc_version",
+                 'name' => "Gcc",
+                 'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
+                 'make' => "all-gcc",
+                 'install' => "install-gcc",
+                 'arch' => 'i686-elf amd64-elf arm-elf',
+                 'test' => './bin/!TARGET-gcc'},
+                {'dir' => "gcc-$gcc_version",
+                 'name' => "Gcc (mips)",
+                 'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib --with-llsc=yes",
+                 'make' => "all-gcc",
+                 'install' => "install-gcc",
+                 'arch' => 'mips64el-elf',
+                 'test' => './bin/!TARGET-gcc'},
+                {'dir' => "nasm-$nasm_version",
+                 'inplace' => 1, # Nasm should be build inside the source tree.
+                 'name' => "Nasm",
+                 'configure' => "--prefix=\$PREFIX",
+                 'make' => "",
+                 'install' => 'install',
+                 'arch' => 'i686-elf amd64-elf',
+                 'test' => './bin/nasm' } );
 
-  `mkdir -p ./compilers/tmp_build/build_binutils`;
-  `mkdir -p ./compilers/tmp_build/build_gcc`;
-
-  print "\e[32mBinutils: \e[0m\e[32;1mPatching...\e[0m ";
-  my ($pwd) = `pwd` =~ m/^[ \n]*(.*?)[ \n]*$/;
-  `cd ./compilers/tmp_build/binutils-$BINUTILS_VERSION; wget http://www.jamesmolloy.co.uk/binutils-2.18-makeinfo.patch`;
-  `cd ./compilers/tmp_build/binutils-$BINUTILS_VERSION; patch <binutils-2.18-makeinfo.patch`;
-
-  print "\e[32;1mConfiguring...\e[0m ";
-  
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_binutils/; ../binutils-$BINUTILS_VERSION/configure --target=\$TARGET --prefix=\$PREFIX --disable-nls >/tmp/binutils-configure.out 2>/tmp/binutils-configure.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/binutils-configure.{out|err})\e[0m"; return 1;}
-  print "\n\e[32;1mCompiling...\e[0m ";
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_binutils/; make all >/tmp/binutils-make.out 2>/tmp/binutils-make.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/binutils-make.{out|err})\e[0m"; return 1;}
-  print "\n\e[32;1mInstalling...\e[0m ";
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_binutils/; make install >/tmp/binutils-make-install.out 2>/tmp/binutils-make-install.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/binutils-make-install.{out|err})\e[0m\n"; return 1;}
-  print "\n";
-
-  print "\e[32mGCC: \e[0m\e[32;1mConfiguring...\e[0m ";
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_gcc/; ../gcc-$COMPILER_VERSION/configure --target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib >/tmp/gcc-configure.out 2>/tmp/gcc-configure.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/gcc-configure.{out|err})\e[0m"; return 1;}
-  print "\n\e[32;1mCompiling...\e[0m ";
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_gcc/; make all-gcc >/tmp/gcc-make.out 2>/tmp/gcc-make.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/gcc-make.{out|err})\e[0m"; return 1;}
-  print "\n\e[32;1mInstalling...\e[0m ";
-  `export PREFIX=$pwd/compilers; export TARGET=$arch; cd ./compilers/tmp_build/build_gcc/; make install-gcc >/tmp/gcc-make-install.out 2>/tmp/gcc-make-install.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/gcc-make-install.{out|err})\e[0m\n"; return 1;}
-  print "\n";
-
-  print "\e[32mCleaning up...\e[0m\n";
-  `rm -rf ./compilers/tmp_build`;
-
-  return 0;
-} 
-
-sub install_nasm {
-
-  my ($pwd) = `pwd` =~ m/^[ \n]*(.*?)[ \n]*$/;
-  
-  print "\e[32mNASM: \e[0m\e[32;1mConfiguring...\e[0m ";
-  `export PREFIX=$pwd/compilers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; ./configure --prefix=\$PREFIX >/tmp/nasm-configure.out 2>/tmp/nasm-configure.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-configure.{out|err})\e[0m"; return 1;}
-  
-  print "\n\e[32;1mCompiling...\e[0m ";
-  `export PREFIX=$pwd/computers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; make >/tmp/nasm-make.out 2>/tmp/nasm-make.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-make.{out|err})\e[0m"; return 1;}
-  print "\n\e[32;1mInstalling...\e[0m ";
-  `export PREFIX=$pwd/compilers; cd ./compilers/tmp_build/nasm-$NASM_VERSION; make install >/tmp/nasm-make-install.out 2>/tmp/nasm-make-install.err`;
-  if ($? != 0) {print "\e[31mFAIL (Log file at /tmp/nasm-make-install.{out|err})\e[0m\n"; return 1;}
-  print "\n";
-
-  print "\e[32mCleaning up...\e[0m\n";
-  `rm -rf ./compilers/tmp_build`;
-  
-  return 0;
-}
-
-#####################################################################################################
+###################################################################################
 # Script start.
 
-die("No target given!") unless scalar @ARGV > 0;
+die ("No target given!") unless scalar @ARGV > 0;
 
 my $target = $ARGV[0];
-my $compiler_already_installed = 0;
-my $assembler_already_installed = 0;
-my $install_compiler = 0;
-my $install_assembler = 0;
-
-if (is_installed($target)) {
-  print "\e[32mTarget $target has a suitable compiler already installed.\e[0m\n";
-  $compiler_already_installed = 1;
-}
-
-unless ($compiler_already_installed) {
-  print "\e[32mTarget $target does not have a suitable compiler. One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
-  $install_compiler = 1;
-  $install_compiler = 0 if <STDIN> =~ m/n/i;
-}
-
-if (is_nasm_installed($target)) {
-  print "\e[32mTarget $target has a suitable assembler already installed, or does not need one.\e[0m\n";
-  $assembler_already_installed = 1;
-}
-
-if (($assembler_already_installed == 0) and ($install_compiler == 0)) {
-  print "\e[32mTarget $target does not have a suitable assembler (NASM). One must be installed before the make process can continue. Install now? [yes]\e[0m: ";
-  $install_assembler = 1;
-  $install_assembler = 0 if <STDIN> =~ m/n/i;
-} elsif ($assembler_already_installed == 0) {
-  $install_assembler = 1;
-}
-
 $ENV{CC} = "";
 $ENV{CXX} = "";
 $ENV{AS} = "";
@@ -278,54 +90,123 @@ $ENV{CXXFLAGS} = "";
 $ENV{LDFLAGS} = "";
 $ENV{ASFLAGS} = "";
 
-if ($install_compiler) {
-  if (download($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+my $prefix = `pwd`;
+chomp $prefix;
+
+# Firstly, find out where to store the compilers.
+unless (-l "./compilers/dir") {
+  print "This appears to be the first time you've compiled this checkout. Where should I look for / store my compilers?\n";
+  my $dir = <STDIN>;
+  chomp $dir;
+ `mkdir -p $dir`;
+  my $stdout = `ln -s $dir ./compilers/dir`;
+  if (length $stdout) {
+    print "That directory wasn't valid.\n";
     exit 1;
   }
-  
-  if (extract($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-    exit 1;
+}
+
+# Are there any compile targets to make?
+my $all_installed = 1;
+foreach (@compile) {
+  my %compile = %$_;
+
+  if ($compile{arch} =~ m/($target)|(all)/i) {
+    # Already installed?
+    my $str = "./compilers/dir/$compile{test}";
+    $str =~ s/!TARGET/$target/;
+    $all_installed = 0 unless (-f $str);
   }
-  
-  if ($target eq "amd64-elf")
-  {
-    if (patch_amd64() != 0)
-    {
-      print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+}
+
+exit 0 if $all_installed;
+
+`mkdir -p ./compilers/dir/dl_cache`;
+`mkdir -p ./compilers/dir/build_tmp`;
+
+print "Downloading/extracting: ";
+# Download everything we need to.
+foreach (@download) {
+  my %download = %$_;
+
+  if ($download{arch} =~ m/($target)|(all)/i) {
+    # Download applies to us.
+    print "$download{name} ";
+    unless (-f "./compilers/dir/dl_cache/$download{filename}") {
+      `cd ./compilers/dir/dl_cache; wget $download{url} 2>&1`;
+      if ($? != 0) {
+        print "Failed (download).\n";
+        exit 1;
+      }
+    }
+    `cd ./compilers/dir/build_tmp; cp ../dl_cache/$download{filename} ./; $download{extract}`;
+    if ($? != 0) {
+      print "Failed (extract).\n";
       exit 1;
     }
   }
+}
+print "\n";
 
-  if (patch_dwarf() != 0)
-  {
-      print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
+# Patch everything we need to.
+print "Patching: ";
+foreach (@patch) {
+  my %patch = %$_;
+
+  if ($patch{arch} =~ m/($target)|(all)/i) {
+    print "$patch{name} ";
+    my $stdout = `cd ./compilers/dir/build_tmp/$patch{cwd}; patch $patch{flags} < $prefix/compilers/$patch{input} 2>&1`;
+    if ($? != 0) {
+      print "\nFailed - output:\n$stdout";
+      `rm -r ./compilers/dir/build_tmp`;
       exit 1;
-  }
-  
-  if (install($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-    exit 1;
+    }
   }
 }
 
-if ($install_assembler) {
-  if (download_nasm($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-    exit 1;
-  }
-  
-  if (extract_nasm($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-    exit 1;
-  }
-  
-  if (install_nasm($target) != 0) {
-    print "\e[31mFATAL ERROR: Script cannot continue.\e[0m\n";
-    exit 1;
+print "\n";
+
+# Compile everything we need to.
+print "Compiling:\n";
+foreach (@compile) {
+  my %compile = %$_;
+
+  if ($compile{arch} =~ m/($target)|(all)/i) {
+    # Already installed?
+    my $str = "./compilers/dir/$compile{test}";
+    $str =~ s/!TARGET/$target/;
+    if (-f $str) {
+      print "    $compile{name}: Already installed.\n";
+      next;
+    }
+    print "    $compile{name}: Configuring ";
+    my $build_dir = "./compilers/dir/build_tmp/build";
+    my $stdout = `cd ./compilers/dir/build_tmp/; mkdir -p build`;
+    if (defined $compile{inplace} and $compile{inplace}) {
+      $build_dir = "./compilers/dir/build_tmp/$compile{dir}";
+    }
+    $stdout = `export PREFIX=$prefix/compilers/dir; export TARGET=$target; cd $build_dir; ../$compile{dir}/configure $compile{configure} 2>&1`;
+    if ($? != 0) {
+      print "Failed. Output: $stdout\n";
+      exit 1;
+    }
+    print "Compiling ";
+    $stdout = `cd $build_dir; make $compile{make} 2>&1`;
+    if ($? != 0) {
+      print "Failed. Output: $stdout\n";
+      exit 1;
+    }
+    print "Installing";
+    $stdout = `cd $build_dir; make $compile{install} 2>&1`;
+    if ($? != 0) {
+      print "Failed. Output: $stdout\n";
+      exit 1;
+    }
+    print "\n";
+    `rm -rf ./compilers/dir/build_tmp/build`;
   }
 }
 
+print "Complete.\n";
+`rm -rf ./compilers/build_tmp`;
 exit 0;
-

@@ -151,9 +151,9 @@ set(CMAKE_ASM-ATT_FLAGS ${PEDIGREE_ASFLAGS})
 
 # Set the assembler.
 if(X86_COMMON)
-  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/nasm)
+  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/dir/bin/nasm)
 else(X86_COMMON)
-  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/bin/${COMPILER}-as)
+  set(CMAKE_ASM-ATT_COMPILER ${PEDIGREE_SOURCE_DIR}/compilers/dir/bin/${COMPILER}-as)
 endif(X86_COMMON)
 
 # Create an emacs TAGS file.
