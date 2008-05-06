@@ -20,5 +20,7 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(debugger/libudis86
-               mnemonics.c opcmap.c input.c decode.c syn.c syn-intel.c syn-att.c udis86.c)
+if(X86_COMMON)
+  add_kernel_src(debugger/libudis86
+                 mnemonics.c opcmap.c input.c decode.c syn.c syn-intel.c syn-att.c udis86.c)
+endif(X86_COMMON)
