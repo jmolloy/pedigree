@@ -41,7 +41,7 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
 
 # How about a mips target?
 if ($compiler =~ m/mips64el-elf/) {
-  `../compilers/mips64el-elf/bin/objcopy src/system/boot/mips/bootloader -O srec ./bootloader.srec`;
+  `../compilers/dir/mips64el-elf/bin/objcopy src/system/boot/mips/bootloader -O srec ./bootloader.srec`;
   `cp src/system/boot/mips/bootloader ./bootloader`;
 }
 

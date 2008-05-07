@@ -110,8 +110,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifndef MIPS_COMMON
   Processor::initialisationDone();
 #endif
-  NOTICE("Memory: " << bsInf->mem_upper);
-  
+
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";
@@ -134,7 +133,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
+  
 #ifdef THREADS
   initialiseMultitasking();
   // Gets me a stacks.
@@ -155,8 +154,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
 #endif
 
-  char *babypoo = new char[32];
-  NOTICE("babypoo: " << (unsigned int)babypoo);
+//  char *babypoo = new char[32];
+//  NOTICE("babypoo: " << (unsigned int)babypoo);
 
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
