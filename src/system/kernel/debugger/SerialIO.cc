@@ -37,7 +37,7 @@ SerialIO::SerialIO(Serial *pSerial) :
   m_pSerial(pSerial),
   m_bCli(false)
 {
-  initialise();
+//  initialise();
 }
 
 SerialIO::~SerialIO()
@@ -49,7 +49,16 @@ void SerialIO::initialise()
 {
   // Save cursor and attributes.
 //   m_pSerial->write("\033[s");
+
+#ifndef SERIAL_IS_FILE
+  // Read cursor location.
+  readCursor();
+  m_nOldCursorX = m_nCursorX;
+  m_nOldCursorY = m_nCursorY;
+  NOTICE(Hex <<"oldx: " << m_nOldCursorX << ", y: " << m_nOldCursorY);
   
+#endif
+
   // Push screen contents.
   m_pSerial->write("\033[?1049h");
   
@@ -77,9 +86,9 @@ void SerialIO::destroy()
   // Set the cursor
   TinyStaticString str;
   str += "\033[";
-  str += m_nOldCursorX;
-  str += ";";
   str += m_nOldCursorY;
+  str += ";";
+  str += m_nOldCursorX;
   str += "H";
   m_pSerial->write(str);
 }
@@ -461,8 +470,10 @@ void SerialIO::readDimensions()
 {
   // Read old cursor position
   readCursor();
+#ifdef SERIAL_IS_FILE
   m_nOldCursorX = m_nCursorX;
   m_nOldCursorY = m_nCursorY;
+#endif
   // Move the cursor off the bottom right somewhere. The device will clamp to its available
   // area.
   m_nCursorY = 10000;
@@ -471,7 +482,8 @@ void SerialIO::readDimensions()
   readCursor();
   m_nWidth = m_nCursorX;
   m_nHeight = m_nCursorY;
-  
+
   // Move the cursor back to the top left.
   m_pSerial->write("\033[0;0H");
+
 }

@@ -18,7 +18,7 @@
 
 size_t Processor::getDebugBreakpointCount()
 {
-  return 0;
+  return 1;
 }
 
 uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
@@ -26,8 +26,37 @@ uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
                                         size_t &nLength,
                                         bool &bEnabled)
 {
-  /// \todo Implement.
-  return 0;
+  if (nBpNumber > 0)
+  {
+    ERROR("Breakpoint out of bounds.");
+    return 0;
+  }
+
+  // Get the register.
+  uint32_t watchLo;
+  asm volatile("mfc0 %0, $18; nop" : "=r" (watchLo));
+  
+  switch (watchLo & 0x3)
+  {
+    case 0:
+      bEnabled = false;
+      nFaultType = DebugFlags::DataReadWrite;
+      break;
+    case 1:
+      bEnabled = true;
+      nFaultType = DebugFlags::DataWrite;
+      break;
+    case 3:
+      bEnabled = true;
+      nFaultType = DebugFlags::DataReadWrite;
+      break;
+    default:
+      bEnabled = false;
+      nFaultType = DebugFlags::DataReadWrite;
+  }
+  nLength = 8;
+
+  return watchLo & 0xFFFFFFFC;
 }
 
 void Processor::enableDebugBreakpoint(size_t nBpNumber,
@@ -35,12 +64,31 @@ void Processor::enableDebugBreakpoint(size_t nBpNumber,
                                       DebugFlags::FaultType nFaultType,
                                       size_t nLength)
 {
-  /// \todo Implement.
+  if (nBpNumber > 0)
+  {
+    ERROR("Breakpoint out of bounds.");
+    return;
+  }
+
+  // Convert to physical address.
+  nLinearAddress &= ~0xc0000000;
+
+  if (nFaultType == DebugFlags::DataWrite) nLinearAddress |= 0x1;
+  else nLinearAddress |= 0x3;
+
+  asm volatile("mtc0 %0, $18; nop" : : "r" (nLinearAddress));
 }
 
 void Processor::disableDebugBreakpoint(size_t nBpNumber)
 {
-  /// \todo Implement.
+  if (nBpNumber > 0)
+  {
+    ERROR("Breakpoint out of bounds.");
+    return;
+  }
+
+  uint32_t watchLo = 0;
+  asm volatile("mtc0 %0, $18; nop" : : "r" (watchLo));
 }
 
 void Processor::setInterrupts(bool bEnable)

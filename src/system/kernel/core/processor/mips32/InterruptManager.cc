@@ -20,6 +20,7 @@
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 #include <Debugger.h>
+#include <Log.h>
 
 #define SYSCALL_INTERRUPT_NUMBER 8
 #define BREAKPOINT_INTERRUPT_NUMBER 9
@@ -81,6 +82,20 @@ bool MIPS32InterruptManager::registerInterruptHandler(size_t interruptNumber, In
     return false;
 
   m_Handler[interruptNumber] = handler;
+  return true;
+}
+
+bool MIPS32InterruptManager::registerExternalInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+{
+  // TODO: Needs locking
+  if (UNLIKELY(interruptNumber >= 8))
+    return false;
+  if (UNLIKELY(handler != 0 && m_ExternalHandler[interruptNumber] != 0))
+    return false;
+  if (UNLIKELY(handler == 0 && m_ExternalHandler[interruptNumber] == 0))
+    return false;
+
+  m_ExternalHandler[interruptNumber] = handler;
   return true;
 }
 
@@ -183,7 +198,28 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
   sr &= ~SR_EXL; // Remove us from being in exception privilege level.
   // TODO set SE_KSU.
   asm volatile ("mtc0 %0, $12" :: "r" (sr));
+
+  // Read the cause register.
+  uint32_t cause;
+  asm volatile("mtc0 %0, $13" : "=r" (cause));
   
+  // Mask off interrupts not enabled.
+  cause &= interruptState.m_Sr;
+
+  // Find the external interrupts pending - TODO mask off masked interrupts.
+  cause = (cause >> 8) & 0xFF;
+
+  // Find the lowest numbered interrupt pending - we will handle this one.
+  uint32_t externalInt = 0xFF;
+  for (int i = 0; i < 8; i++)
+  {
+    if (cause & (1<<i))
+    {
+      externalInt = i;
+      break;
+    }
+  }
+
   // TODO: Needs locking
   size_t intNumber = interruptState.getInterruptNumber();
 
@@ -200,6 +236,9 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
     if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
       m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
   }
+  // External interrupt, handled?
+  else if (intNumber == 0 && m_Instance.m_ExternalHandler[externalInt])
+    m_Instance.m_ExternalHandler[externalInt]->interrupt(externalInt, interruptState);
   // Call the normal interrupt handler, if any, otherwise
   else if (m_Instance.m_Handler[intNumber] != 0)
     m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
@@ -230,9 +269,11 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
 MIPS32InterruptManager::MIPS32InterruptManager()
 {
   // Initialise the pointers to the interrupt handler
-  for (size_t i = 0;i < 256;i++)
+  for (size_t i = 0;i < 64;i++)
   {
     m_Handler[i] = 0;
+    if (i < 8)
+      m_ExternalHandler[i] = 0;
     #ifdef DEBUGGER
       m_DbgHandler[i] = 0;
     #endif

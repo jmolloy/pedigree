@@ -35,6 +35,9 @@ class MIPS32InterruptManager : public ::InterruptManager,
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
+    // Specific to MIPS, all external interrupts are vectored differently. IRQs are vectored in a different manner too.
+    virtual bool registerExternalInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
+  
 
 #ifdef DEBUGGER
     virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
@@ -65,10 +68,11 @@ class MIPS32InterruptManager : public ::InterruptManager,
     /** The destructor */
     virtual ~MIPS32InterruptManager();
 
-    InterruptHandler *m_Handler[256];
+    InterruptHandler *m_Handler[64];
+    InterruptHandler *m_ExternalHandler[8];
 #ifdef DEBUGGER
     /** The debugger interrupt handlers */
-    InterruptHandler *m_DbgHandler[256];
+    InterruptHandler *m_DbgHandler[64];
 #endif
     /** The syscall handlers */
     SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];

@@ -40,7 +40,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
   {
     // Print out the current breakpoint status.
     output = "Current breakpoint status:\n";
-    for(size_t i = 0; i < 4; i++)
+    for(size_t i = 0; i < Processor::getDebugBreakpointCount(); i++)
     {
       DebugFlags::FaultType nFt;
       size_t nLen;
@@ -79,7 +79,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     LargeStaticString inputCopy(input);
     // We expect a number.
     size_t nBp = input.intValue();
-    if (nBp < 0 || nBp > Processor::getDebugBreakpointCount())
+    if (nBp < 0 || nBp >= Processor::getDebugBreakpointCount())
     {
       output = "Invalid breakpoint number.\n";
       return true;
@@ -134,6 +134,37 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
     if (argument.length() == 0)
     {
       output = "Parameter had zero length!\n";
+      return true;
+    }
+
+    // Get the current breakpoint status.
+    DebugFlags::FaultType nFaultType;
+    size_t nLength;
+    bool bEnabled;
+    uintptr_t address = Processor::getDebugBreakpoint(nBp, nFaultType, nLength, bEnabled);
+
+    if (command == "address")
+    {
+      address = argument.intValue();
+      Processor::enableDebugBreakpoint(nBp, address, nFaultType, nLength);
+    }
+    else if (command == "trigger")
+    {
+    }
+    else if (command == "enabled")
+    {
+      if (argument == "yes" || argument == "true")
+      {
+        Processor::enableDebugBreakpoint(nBp, address, nFaultType, nLength);
+      }
+      else
+      {
+        Processor::disableDebugBreakpoint(nBp);
+      }
+    }
+    else
+    {
+      output = "Unrecognised command.\n";
       return true;
     }
     
