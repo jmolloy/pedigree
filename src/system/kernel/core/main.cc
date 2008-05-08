@@ -171,13 +171,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   uintptr_t *leh = reinterpret_cast<uintptr_t*> (stackBase|0xa0000000 + 0x4);
   *leh = 0x1234567;
 
-  Processor::breakpoint();
+//  Processor::breakpoint();
 
   volatile uintptr_t *a = (uintptr_t*)0xC1505004;
   uintptr_t b = *a;
   NOTICE("b : " << b);
   b++;
-  Processor::breakpoint();
+//  Processor::breakpoint();
 #endif
 
   for (;;)

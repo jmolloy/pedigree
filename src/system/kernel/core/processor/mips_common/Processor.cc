@@ -45,7 +45,13 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
-  /// \todo Implement.
+  uint32_t sr;
+  asm volatile("mfc0 %0, $12;nop" : "=r" (sr));
+  if (bEnable)
+    sr |= SR_IE;
+  else
+    sr &= ~SR_IE;
+  asm volatile("mtc0 %0, $12;nop" : : "r" (sr));
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)

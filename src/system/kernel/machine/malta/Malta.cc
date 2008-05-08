@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "Malta.h"
+#include "../mips_common/Timer.h"
 
 Malta Malta::m_Instance;
 
@@ -27,6 +28,8 @@ void Malta::initialise()
   
   m_Serial[0].setBase(0x180003f8);
   m_Serial[1].setBase(0x180002f8);
+  CountCompareTimer::instance().initialise();
+  
   m_bInitialised = true;
 }
 Serial *Malta::getSerial(size_t n)

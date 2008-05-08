@@ -181,6 +181,7 @@ void MIPS32InterruptManager::interrupt(InterruptState &interruptState)
   uintptr_t sr = interruptState.m_Sr;
   sr &= ~SR_IE;  // Disable interrupts.
   sr &= ~SR_EXL; // Remove us from being in exception privilege level.
+  // TODO set SE_KSU.
   asm volatile ("mtc0 %0, $12" :: "r" (sr));
   
   // TODO: Needs locking
