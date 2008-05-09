@@ -127,9 +127,9 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
 #define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
 #define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)
 #define VIRTUAL_PAGE_TABLES reinterpret_cast<void*>(0xFFC00000)
-#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xC8000000)
+#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xC0000000)
 #define KERNEL_VIRUTAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFF7FF000)
-#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xBFF00000)
+#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFF400000 - 0x100000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x20000000

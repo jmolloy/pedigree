@@ -9,6 +9,12 @@ MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
 [BITS 32]
 
+[GLOBAL start]
+[EXTERN _main]
+[EXTERN init]
+[EXTERN end]
+
+; The Multiboot Header
 [SECTION .init.multiboot]
 align 4
 mboot:
@@ -16,13 +22,8 @@ mboot:
   dd MBOOT_HEADER_FLAGS
   dd MBOOT_CHECKSUM
 
-[GLOBAL start]
-[EXTERN _main]
-[EXTERN init]
-[EXTERN end]
-
 [SECTION .init.text]
-KERNEL_BASE        equ 0xBFF00000
+KERNEL_BASE        equ 0xFF300000
 start:
   cli
   push ebx
@@ -35,15 +36,21 @@ start:
   ; Identity map the first 4MB 
   mov eax, 0x83
   mov [pagedirectory - KERNEL_BASE], eax
-  mov eax, 0x03 + pagetable1 - KERNEL_BASE
-  mov [pagedirectory - KERNEL_BASE + 0xC00], eax
 
-  ;Map the page-tables to 4GB - 4MB (the last 4MB)
+  ; Map the pagetable1 for stack
+  mov eax, 0x03 + pagetable1 - KERNEL_BASE
+  mov [pagedirectory - KERNEL_BASE + 0xFF0], eax
+
+  ; Map the pagetable0 for the kernel image and the page-directory
+  mov eax, 0x03 + pagetable0 - KERNEL_BASE
+  mov [pagedirectory - KERNEL_BASE + 0xFF4], eax
+
+  ; Map the page-tables
   mov eax, 0x03 + pagedirectory - KERNEL_BASE
   mov [pagedirectory - KERNEL_BASE + 0xFFC], eax
 
   ; Map the kernel
-  mov eax, pagetable1 - KERNEL_BASE
+  mov eax, pagetable0 - KERNEL_BASE
   mov ebx, init
   mov ecx, end
   mov esi, KERNEL_BASE
@@ -57,19 +64,23 @@ start:
     cmp ebx, ecx
     jne .mapkernel
 
-  ;Map the pagetable0 for stack and the page-directory to 4GB - 12MB
-  mov eax, 0x03 + pagetable0 - KERNEL_BASE
-  mov [pagedirectory - KERNEL_BASE + 0xFF4], eax
-
-  ;Map the stack and the page-directory into pagetable0
+  ; Map the stack and the page-directory into pagetable0
   mov eax, 0x03 + stack - KERNEL_BASE
-  mov [pagetable0 - KERNEL_BASE + 0xFF4], eax
+  mov [pagetable1 - KERNEL_BASE + 0xFF8], eax
   add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFF0], eax
+  mov [pagetable1 - KERNEL_BASE + 0xFF4], eax
   add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFEC], eax
+  mov [pagetable1 - KERNEL_BASE + 0xFF0], eax
   add eax, 4096
-  mov [pagetable0 - KERNEL_BASE + 0xFE8], eax
+  mov [pagetable1 - KERNEL_BASE + 0xFEC], eax
+  add eax, 4096
+  mov [pagetable1 - KERNEL_BASE + 0xFE8], eax
+  add eax, 4096
+  mov [pagetable1 - KERNEL_BASE + 0xFE4], eax
+  add eax, 4096
+  mov [pagetable1 - KERNEL_BASE + 0xFE0], eax
+  add eax, 4096
+  mov [pagetable1 - KERNEL_BASE + 0xFDC], eax
 
   ; Map the page-directory to 0xFF7FF000
   mov eax, 0x03 + pagedirectory - KERNEL_BASE
@@ -84,7 +95,7 @@ start:
 
   ; Set stack
   pop ebx
-  mov esp, 0xFF7FDC00
+  mov esp, 0xFF3FEC00
 
   push ebx
   ; clear the stackframe
@@ -105,4 +116,4 @@ pagetable0:
 pagetable1:
   times 4096 db 0
 stack:
-  times 16384 db 0
+  times 32768 db 0
