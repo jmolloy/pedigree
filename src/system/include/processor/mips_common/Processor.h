@@ -42,6 +42,56 @@
 #define CP0_TAGHI    29
 #define CP0_ERROREPC 30
 
+#define CP0_WRITE_INDEX(val) asm volatile("mtc0 %0, $0; nop" : : "r" (val));
+#define CP0_WRITE_RANDOM(val) asm volatile("mtc0 %0, $1; nop" : : "r" (val));
+#define CP0_WRITE_ENTRYLO0(val) asm volatile("mtc0 %0, $2; nop" : : "r" (val));
+#define CP0_WRITE_ENTRYLO1(val) asm volatile("mtc0 %0, $3; nop" : : "r" (val));
+#define CP0_WRITE_CONTEXT(val) asm volatile("mtc0 %0, $4; nop" : : "r" (val));
+#define CP0_WRITE_PAGEMASK(val) asm volatile("mtc0 %0, $5; nop" : : "r" (val));
+#define CP0_WRITE_WIRED(val) asm volatile("mtc0 %0, $6; nop" : : "r" (val));
+#define CP0_WRITE_BADVADDR(val) asm volatile("mtc0 %0, $8; nop" : : "r" (val));
+#define CP0_WRITE_COUNT(val) asm volatile("mtc0 %0, $9; nop" : : "r" (val));
+#define CP0_WRITE_ENTRYHI(val) asm volatile("mtc0 %0, $10; nop" : : "r" (val));
+#define CP0_WRITE_COMPARE(val) asm volatile("mtc0 %0, $11; nop" : : "r" (val));
+#define CP0_WRITE_SR(val) asm volatile("mtc0 %0, $12; nop" : : "r" (val));
+#define CP0_WRITE_CAUSE(val) asm volatile("mtc0 %0, $13; nop" : : "r" (val));
+#define CP0_WRITE_EPC(val) asm volatile("mtc0 %0, $14; nop" : : "r" (val));
+#define CP0_WRITE_PRID(val) asm volatile("mtc0 %0, $15; nop" : : "r" (val));
+#define CP0_WRITE_CONFIG(val) asm volatile("mtc0 %0, $16; nop" : : "r" (val));
+#define CP0_WRITE_LLADDR(val) asm volatile("mtc0 %0, $17; nop" : : "r" (val));
+#define CP0_WRITE_WATCHLO(val) asm volatile("mtc0 %0, $18; nop" : : "r" (val));
+#define CP0_WRITE_WATCHHI(val) asm volatile("mtc0 %0, $19; nop" : : "r" (val));
+#define CP0_WRITE_ECC(val) asm volatile("mtc0 %0, $26; nop" : : "r" (val));
+#define CP0_WRITE_CACHEERR(val) asm volatile("mtc0 %0, $27; nop" : : "r" (val));
+#define CP0_WRITE_TAGLO(val) asm volatile("mtc0 %0, $28; nop" : : "r" (val));
+#define CP0_WRITE_TAGHI(val) asm volatile("mtc0 %0, $29; nop" : : "r" (val));
+#define CP0_WRITE_ERROREPC(val) asm volatile("mtc0 %0, $30; nop" : : "r" (val));
+
+#define CP0_READ_INDEX(val) asm volatile("mfc0 %0, $0; nop" : "=r" (val));
+#define CP0_READ_RANDOM(val) asm volatile("mfc0 %0, $1; nop" : "=r" (val));
+#define CP0_READ_ENTRYLO0(val) asm volatile("mfc0 %0, $2; nop" : "=r" (val));
+#define CP0_READ_ENTRYLO1(val) asm volatile("mfc0 %0, $3; nop" : "=r" (val));
+#define CP0_READ_CONTEXT(val) asm volatile("mfc0 %0, $4; nop" : "=r" (val));
+#define CP0_READ_PAGEMASK(val) asm volatile("mfc0 %0, $5; nop" : "=r" (val));
+#define CP0_READ_WIRED(val) asm volatile("mfc0 %0, $6; nop" : "=r" (val));
+#define CP0_READ_BADVADDR(val) asm volatile("mfc0 %0, $8; nop" : "=r" (val));
+#define CP0_READ_COUNT(val) asm volatile("mfc0 %0, $9; nop" : "=r" (val));
+#define CP0_READ_ENTRYHI(val) asm volatile("mfc0 %0, $10; nop" : "=r" (val));
+#define CP0_READ_COMPARE(val) asm volatile("mfc0 %0, $11; nop" : "=r" (val));
+#define CP0_READ_SR(val) asm volatile("mfc0 %0, $12; nop" : "=r" (val));
+#define CP0_READ_CAUSE(val) asm volatile("mfc0 %0, $13; nop" : "=r" (val));
+#define CP0_READ_EPC(val) asm volatile("mfc0 %0, $14; nop" : "=r" (val));
+#define CP0_READ_PRID(val) asm volatile("mfc0 %0, $15; nop" : "=r" (val));
+#define CP0_READ_CONFIG(val) asm volatile("mfc0 %0, $16; nop" : "=r" (val));
+#define CP0_READ_LLADDR(val) asm volatile("mfc0 %0, $17; nop" : "=r" (val));
+#define CP0_READ_WATCHLO(val) asm volatile("mfc0 %0, $18; nop" : "=r" (val));
+#define CP0_READ_WATCHHI(val) asm volatile("mfc0 %0, $19; nop" : "=r" (val));
+#define CP0_READ_ECC(val) asm volatile("mfc0 %0, $26; nop" : "=r" (val));
+#define CP0_READ_CACHEERR(val) asm volatile("mfc0 %0, $27; nop" : "=r" (val));
+#define CP0_READ_TAGLO(val) asm volatile("mfc0 %0, $28; nop" : "=r" (val));
+#define CP0_READ_TAGHI(val) asm volatile("mfc0 %0, $29; nop" : "=r" (val));
+#define CP0_READ_ERROREPC(val) asm volatile("mfc0 %0, $30; nop" : "=r" (val));
+
 #define SR_IE   (1<<0)
 #define SR_EXL  (1<<1)
 #define SR_ERL  (1<<2)

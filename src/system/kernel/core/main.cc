@@ -119,7 +119,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   bootIO.write(str, BootIO::White, BootIO::Black);
 
   str.clear();
-  str += "Build at ";
+  str += "Built at ";
   str += g_pBuildTime;
   str += " by ";
   str += g_pBuildUser;
