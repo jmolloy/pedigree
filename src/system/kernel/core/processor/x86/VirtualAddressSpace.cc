@@ -261,29 +261,29 @@ X86VirtualAddressSpace::X86VirtualAddressSpace()
   // Get the current address space
   VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
 
-  // TODO HACK FIXME: Map the page directory and page table into the address space
+  // Map the page directory and page table into the address space (at a temporary location)
   virtualAddressSpace.map(m_PhysicalPageDirectory,
-                          0,
+                          KERNEL_VIRTUAL_TEMP1,
                           VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
   virtualAddressSpace.map(pageTable,
-                          reinterpret_cast<void*>(0x1000),
+                          KERNEL_VIRTUAL_TEMP2,
                           VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
 
   // Copy the kernel address space to the new address space
-  memcpy(reinterpret_cast<void*>(0xC00),
+  memcpy(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xC00),
          adjust_pointer(m_KernelSpace.m_VirtualPageDirectory, 0xC00),
          0x3F8);
 
   // Map the page tables into the new address space
-  *reinterpret_cast<uint32_t*>(0xFFC) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
+  *reinterpret_cast<uint32_t*>(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xFFC)) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
 
   // Map the page directory into the new address space
-  *reinterpret_cast<uint32_t*>(0xFF8) = pageTable | PAGE_PRESENT | PAGE_WRITE;
-  *reinterpret_cast<uint32_t*>(0x1FFC) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
+  *reinterpret_cast<uint32_t*>(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xFF8)) = pageTable | PAGE_PRESENT | PAGE_WRITE;
+  *reinterpret_cast<uint32_t*>(adjust_pointer(KERNEL_VIRTUAL_TEMP2, 0xFFC)) = m_PhysicalPageDirectory | PAGE_PRESENT | PAGE_WRITE;
 
-  // TODO HACK FIXME: Unmap the page directory and page table from the address space
-  virtualAddressSpace.unmap(0);
-  virtualAddressSpace.unmap(reinterpret_cast<void*>(0x1000));
+  // Unmap the page directory and page table from the address space (from the temporary location)
+  virtualAddressSpace.unmap(KERNEL_VIRTUAL_TEMP1);
+  virtualAddressSpace.unmap(KERNEL_VIRTUAL_TEMP2);
 }
 
 X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
