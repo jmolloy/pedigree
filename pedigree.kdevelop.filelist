@@ -21,7 +21,6 @@ build/src/system/kernel/core/processor/Makefile
 build/src/system/kernel/core/processor/x86
 build/src/system/kernel/core/processor/x86/asm
 build/src/system/kernel/core/processor/x86_common
-build/src/system/kernel/core/processor/x86_common/Makefile
 build/src/system/kernel/debugger
 build/src/system/kernel/debugger/Makefile
 build/src/system/kernel/debugger/commands
@@ -33,7 +32,6 @@ build/src/system/kernel/linker/Makefile
 build/src/system/kernel/machine
 build/src/system/kernel/machine/Makefile
 build/src/system/kernel/machine/x86_common
-build/src/system/kernel/machine/x86_common/Makefile
 build/src/system/kernel/utilities
 build/src/system/kernel/utilities/Makefile
 docs
@@ -219,6 +217,7 @@ src/system/kernel/core/processor/mips32/InterruptManager.cc
 src/system/kernel/core/processor/mips32/InterruptManager.h
 src/system/kernel/core/processor/mips32/Processor.cc
 src/system/kernel/core/processor/mips32/StackFrame.cc
+src/system/kernel/core/processor/mips32/TlbManager.cc
 src/system/kernel/core/processor/mips32/VirtualAddressSpace.cc
 src/system/kernel/core/processor/mips32/VirtualAddressSpace.h
 src/system/kernel/core/processor/mips32/asm
@@ -384,6 +383,9 @@ src/system/kernel/machine/malta/Vga.h
 src/system/kernel/machine/malta/bonito64
 src/system/kernel/machine/malta/bonito64/Bonito64.cc
 src/system/kernel/machine/malta/bonito64/Bonito64.h
+src/system/kernel/machine/mips_common
+src/system/kernel/machine/mips_common/Timer.cc
+src/system/kernel/machine/mips_common/Timer.h
 src/system/kernel/machine/x86_common
 src/system/kernel/machine/x86_common/Acpi.cc
 src/system/kernel/machine/x86_common/Acpi.h

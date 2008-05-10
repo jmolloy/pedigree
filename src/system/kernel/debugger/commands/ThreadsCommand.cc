@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #if defined(THREADS)
 
 #include "ThreadsCommand.h"
@@ -161,6 +162,7 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
+  bool stop = false;
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
@@ -176,10 +178,13 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
       if (index == idx)
       {
         tehThread = tehProcess->getThread(j);
+        stop = true;
         break;
       }
       idx++;
     }
+    if (stop)
+      break;
   }
 
   // If this is just a process line.
@@ -211,6 +216,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
+  bool stop = false;
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
@@ -225,10 +231,13 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       if (index == idx)
       {
         tehThread = tehProcess->getThread(j);
+        stop = true;
         break;
       }
       idx++;
     }
+    if (stop)
+      break;
   }
 
   if (tehThread != 0 && tehThread != g_pCurrentThread)
@@ -278,6 +287,7 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
   size_t idx = 0;
   Process *tehProcess = 0;
   Thread *tehThread = 0;
+  bool stop = false;
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     tehProcess = Scheduler::instance().getProcess(i);
@@ -292,10 +302,13 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
       if (m_SelectedLine == idx)
       {
         tehThread = tehProcess->getThread(j);
+        stop = true;
         break;
       }
       idx++;
     }
+    if (stop)
+      break;
   }
 
   // We can only swap to threads, not entire processes!

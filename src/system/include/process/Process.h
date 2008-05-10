@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef PROCESS_H
 #define PROCESS_H
 
@@ -21,6 +22,8 @@
 #include <utilities/Vector.h>
 #include <utilities/StaticString.h>
 #include <Atomic.h>
+
+class VirtualAddressSpace;
 
 /**
  * An abstraction of a Process - a container for one or more threads all running in
@@ -31,6 +34,12 @@ class Process
 public:
   /** Default constructor. */
   Process();
+
+  /** Constructor for creating a new Process. Creates a new Process as
+   * a UNIX fork() would, from the given parent process. This constructor
+   * does not create any threads.
+   * \param pParent The parent process. */
+  Process(Process *pParent);
   
   /** Destructor. */
   ~Process();
@@ -43,7 +52,7 @@ public:
   
   /** Returns the number of threads in this process. */
   size_t getNumThreads();
-  /** Returns the n'th thread in thsi process. */
+  /** Returns the n'th thread in this process. */
   Thread *getThread(size_t n);
   
   /** Returns the process ID. */
@@ -58,6 +67,12 @@ public:
     return str;
   }
 
+  /** Returns our address space */
+  VirtualAddressSpace *getAddressSpace()
+  {
+    return m_pAddressSpace;
+  }
+  
 private:
   /**
    * Our list of threads.
@@ -75,6 +90,14 @@ private:
    * Our description string.
    */
   LargeStaticString str;
+  /**
+   * Our parent process.
+   */
+  Process *m_pParent;
+  /**
+   * Our virtual address space.
+   */
+  VirtualAddressSpace *m_pAddressSpace;
 };
 
 #endif

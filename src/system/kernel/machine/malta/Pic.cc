@@ -65,13 +65,13 @@ void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 bool Pic::initialise()
 {
   // Allocate the I/O ports
-  if (m_SlavePort.allocate(0xA0, 4) == false)
-    return false;
-  if (m_MasterPort.allocate(0x20, 4) == false)
-    return false;
+//  if (m_SlavePort.allocate(0xA0, 4) == false)
+//    return false;
+//  if (m_MasterPort.allocate(0x20, 4) == false)
+//    return false;
 
   // Initialise the slave and master PIC
-  m_MasterPort.write8(0x11, 0);
+/*  m_MasterPort.write8(0x11, 0);
   m_SlavePort.write8(0x11, 0);
   m_MasterPort.write8(BASE_INTERRUPT_VECTOR, 1);
   m_SlavePort.write8(BASE_INTERRUPT_VECTOR + 0x08, 1);
@@ -79,12 +79,10 @@ bool Pic::initialise()
   m_SlavePort.write8(0x02, 1);
   m_MasterPort.write8(0x01, 1);
   m_SlavePort.write8(0x01, 1);
-
+*/
   // Register the interrupts
   InterruptManager &IntManager = InterruptManager::instance();
-  for (size_t i = 0;i < 16;i++)
-    if (IntManager.registerInterruptHandler(i + BASE_INTERRUPT_VECTOR, this) == false)
-      return false;
+  if (IntManager.registerInterruptHandler(0, this) == false)
 
   // Disable all IRQ's (exept IRQ2)
   enableAll(false);
@@ -93,7 +91,7 @@ bool Pic::initialise()
 }
 
 Pic::Pic()
-  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
+//: m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
 {
   for (size_t i = 0;i < 16;i++)
     m_Handler[i] = 0;
@@ -103,7 +101,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 {
   size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
 
-  // Is Spurios IRQ7?
+  // Is Spurious IRQ7?
   if (irq == 7)
   {
     m_MasterPort.write8(0x03, 3);
@@ -152,9 +150,9 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 
 void Pic::eoi(uint8_t irq)
 {
-  m_MasterPort.write8(0x20, 0);
+/*  m_MasterPort.write8(0x20, 0);
   if (irq > 7)
-    m_SlavePort.write8(0x20, 0);
+  m_SlavePort.write8(0x20, 0);*/
 }
 void Pic::enable(uint8_t irq, bool enable)
 {
@@ -164,7 +162,7 @@ void Pic::enable(uint8_t irq, bool enable)
     if (enable == true)mask = mask & ~(1 << irq);
     else mask = mask | (1 << irq);
 
-    m_MasterPort.write8(mask, 1);
+//    m_MasterPort.write8(mask, 1);
   }
   else
   {
@@ -172,19 +170,19 @@ void Pic::enable(uint8_t irq, bool enable)
     if (enable == true)mask = mask & ~(1 << (irq - 8));
     else mask = mask | (1 << (irq - 8));
 
-    m_SlavePort.write8(mask, 1);
+//    m_SlavePort.write8(mask, 1);
   }
 }
 void Pic::enableAll(bool enable)
 {
   if (enable == false)
   {
-    m_MasterPort.write8(0xFB, 1);
-    m_SlavePort.write8(0xFB, 1);
+//    m_MasterPort.write8(0xFB, 1);
+//    m_SlavePort.write8(0xFB, 1);
   }
   else
   {
-    m_MasterPort.write8(0x00, 1);
-    m_SlavePort.write8(0x00, 1);
+//    m_MasterPort.write8(0x00, 1);
+//    m_SlavePort.write8(0x00, 1);
   }
 }

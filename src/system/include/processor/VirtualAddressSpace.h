@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef KERNEL_PROCESSOR_VIRTUALADDRESSSPACE_H
 #define KERNEL_PROCESSOR_VIRTUALADDRESSSPACE_H
 
@@ -51,6 +52,11 @@ class VirtualAddressSpace
      *\return reference to the kernel virtual address space */
     static VirtualAddressSpace &getKernelAddressSpace();
 
+    /** Get the current virtual address space
+     *\return reference to the current virtual address space */
+    static VirtualAddressSpace &getCurrentAddressSpace();
+    static void setCurrentAddressSpace(VirtualAddressSpace *p);
+    
     /** Expand the heap
      *\param[in] pageCount the number of pages that should be allocated and mapped to the heap end
      *\param[in] flags flags that describe which accesses should be allowed on the page

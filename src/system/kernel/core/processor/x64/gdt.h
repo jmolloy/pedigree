@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef KERNEL_PROCESSOR_X64_GDT_H
 #define KERNEL_PROCESSOR_X64_GDT_H
 
@@ -68,6 +69,10 @@ class X64GdtManager
      *\param[in] base the base address */
     void setTssDescriptor(size_t index, uint64_t base) INITIALISATION_ONLY;
 
+    /** Readies a TSS for use.
+     *\param[in] pTss the TSS to ready. */
+    void initialiseTss(struct X64TaskStateSegment *pTss);
+    
     /** Load the new segment registers
      *\note This function is implemented in asm/gdt.s */
     static void loadSegmentRegisters();

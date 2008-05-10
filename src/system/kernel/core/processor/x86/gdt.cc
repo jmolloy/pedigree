@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,10 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "gdt.h"
 #include "tss.h"
 
+#include <utilities/utility.h>
+
 X86GdtManager X86GdtManager::m_Instance;
+
+#ifdef SMP
+#warning Problems here.
+#endif
+X86TaskStateSegment *g_pTss = 0;
 
 void X86GdtManager::initialise(size_t processorCount)
 {
@@ -32,9 +40,11 @@ void X86GdtManager::initialise(size_t processorCount)
   setSegmentDescriptor(2, 0, 0xFFFFF, 0x92, 0xC); // Kernel data
   setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code
   setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data
-  for (size_t i = 0;i < processorCount;i++)
+  for (size_t i = 0; i < processorCount; i++)
   {
     X86TaskStateSegment *Tss = new X86TaskStateSegment;
+    if (i == 0) g_pTss = Tss;
+    initialiseTss(Tss);
     setTssDescriptor(i + 5, reinterpret_cast<uint32_t>(Tss));
     // TODO: The processor object should know about its task-state-segment
   }
@@ -48,6 +58,10 @@ void X86GdtManager::initialiseProcessor()
   } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uintptr_t>(m_Instance.m_Gdt)};
 
   asm volatile("lgdt %0" : "=m"(gdtr));
+#ifdef SMP
+#warning Problems, my son.
+#endif
+  asm volatile("mov $0x2B, %ax; ltr %ax");
 }
 
 X86GdtManager::X86GdtManager()
@@ -70,4 +84,9 @@ void X86GdtManager::setSegmentDescriptor(size_t index, uint32_t base, uint32_t l
 void X86GdtManager::setTssDescriptor(size_t index, uint32_t base)
 {
   setSegmentDescriptor(index, base, sizeof(X86TaskStateSegment), 0x89, 0x00);
+}
+void X86GdtManager::initialiseTss(X86TaskStateSegment *pTss)
+{
+  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
+  pTss->ss0 = 0x10;
 }

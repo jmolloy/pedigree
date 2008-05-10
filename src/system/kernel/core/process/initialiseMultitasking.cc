@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 #include <process/Scheduler.h>
 #include <process/Process.h>
 
-Thread * volatile g_pCurrentThread;
+Thread * volatile g_pCurrentThread = 0;
 
 void initialiseMultitasking()
 {

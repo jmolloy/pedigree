@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,14 +13,19 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "dlmalloc.h"
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <processor/Processor.h>
 
 void *dlmallocSbrk(ssize_t incr)
 {
+  /// \warning This is BAD. We shouldn't have to change address spaces just to add some stuff to the HEAP! needs fixing pronto.
   // NOTE: incr is already page aligned
   VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+  Processor::switchAddressSpace(VAddressSpace);
   void *babypoo = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+  Processor::switchAddressSpace(VirtualAddressSpace::getCurrentAddressSpace());
   return babypoo;
 }

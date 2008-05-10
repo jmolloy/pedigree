@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #if defined(THREADS)
 
 #include <process/Scheduler.h>
@@ -24,6 +25,7 @@
 #include <processor/StackFrame.h>
 #include <Debugger.h>
 #include <machine/Machine.h>
+#include <panic.h>
 #include <Log.h>
 
 Scheduler Scheduler::m_Instance;
@@ -100,7 +102,9 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   pThread->setStatus(Thread::Running);
   g_pCurrentThread = pThread;
 
-  // TODO Change VirtualAddressSpace. This will be a member of Process.
+  Processor::setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+  Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
+  VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
   pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
@@ -125,7 +129,9 @@ void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
   pThread->setStatus(Thread::Running);
   g_pCurrentThread = pThread;
 
-  // TODO Change VirtualAddressSpace. This will be a member of Process.
+  Processor::setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+  Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
+  VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
   Debugger::instance().m_pTempState = pThread->getInterruptState();
   StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 0);

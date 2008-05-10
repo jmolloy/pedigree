@@ -14,50 +14,71 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_MACHINE_X86_COMMON_APIC_H
-#define KERNEL_MACHINE_X86_COMMON_APIC_H
+#ifndef KERNEL_MACHINE_MIPS_COMMON_PIC_H
+#define KERNEL_MACHINE_MIPS_COMMON_PIC_H
 
-#if defined(APIC)
-
-#include "LocalApic.h"
+#include <processor/IoPort.h>
+#include <processor/InterruptManager.h>
 #include <machine/IrqManager.h>
 
 /** @addtogroup kernelmachinex86common
  * @{ */
 
-/** The x86/x64 advanced programmable interrupt controller architecture as IrqManager */
-class Apic : public IrqManager
+/** The x86/x64 programmable interrupt controller as IrqManager */
+class Pic : public IrqManager,
+            private InterruptHandler
 {
   public:
-    /** The default constructor */
-    inline Apic(){}
-    /** The destructor */
-    inline virtual ~Apic(){}
+    /** Get the Pic class instance
+     *\return the Pic class instance */
+    inline static Pic &instance(){return m_Instance;}
 
     //
     // IrqManager interface
     //
-    virtual irq_id_t registerIsaIrqHandler(uint8_t, IrqHandler *handler);
+    virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler);
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
 
+    /** Initialises the PIC hardware and registers the interrupts with the
+     *  InterruptManager.
+     *\return true, if successfull, false otherwise */
     bool initialise() INITIALISATION_ONLY;
 
   private:
+    /** The default constructor */
+    Pic() INITIALISATION_ONLY;
+    /** The destructor */
+    inline virtual ~Pic(){}
     /** The copy-constructor
      *\note NOT implemented */
-    Apic(const Apic &);
+    Pic(const Pic &);
     /** The assignment operator
      *\note NOT implemented */
-    Apic &operator = (const Apic &);
+    Pic &operator = (const Pic &);
 
-    /** The Apic instance */
-    static Apic m_Instance;
+    //
+    // InterruptHandler interface
+    //
+    virtual void interrupt(size_t interruptNumber, InterruptState &state);
+
+    void eoi(uint8_t irq);
+    void enable(uint8_t irq, bool enable);
+    void enableAll(bool enable);
+
+    /** The slave PIC I/O Port range */
+//    IoPort m_SlavePort;
+    /** The master PIC I/O Port range */
+//    IoPort m_MasterPort;
+
+    /** The IRQ handler */
+    IrqHandler *m_Handler[16];
+
+    /** The Pic instance */
+    static Pic m_Instance;
 };
 
 /** @} */
-
-#endif
 
 #endif

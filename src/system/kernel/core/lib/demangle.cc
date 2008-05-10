@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include <utilities/utility.h>
 #include <utilities/demangle.h>
 #include <utilities/StaticString.h>
@@ -160,6 +161,10 @@ static int parseName(LargeStaticString &src, LargeStaticString &dest, demangle_t
     data.nNameParseLevel--;
     return ret;
   }
+
+  // The prefix 'L' means 'static linkage'. We should handle this.
+  if (src[0] == 'L')
+    src.stripFirst(1);
   
   // Here we try and parse a template name, with arguments following.
   if (parseUnscopedTemplateName(src, dest, data) == SUCCESS &&

@@ -22,6 +22,8 @@ global _ZN9Processor15getStackPointerEv
 global _ZN9Processor21getInstructionPointerEv
 ; uintptr_t Processor::getDebugStatus()
 global _ZN9Processor14getDebugStatusEv
+; void Processor::switchToUserMode()
+global _ZN9Processor16switchToUserModeEmm
 
 ;##############################################################################
 ;### Code section #############################################################
@@ -44,3 +46,30 @@ _ZN9Processor21getInstructionPointerEv:
 _ZN9Processor14getDebugStatusEv:
   mov eax, dr6
   ret
+
+_ZN9Processor16switchToUserModeEmm:
+  mov ax, 0x23       ; Load the new data segment descriptor with an RPL of 3.
+  mov ds, ax         ; Propagate the change to all segment registers.
+  mov es, ax
+  mov fs, ax
+  mov gs, ax
+
+  pop edx            ; Pop the return address - useless now.
+  pop edx            ; Pop the EIP to jump to
+
+                     ; The stack now contains the parameter to pass.
+  push 0x0           ; Push a dummy return value so the jumped-to procedure can find its parameter.
+
+  mov eax, esp       ; Save the stack pointer before we pushed anything.
+  push 0x23          ; push the new stack segment with an RPL of 3.
+  push eax           ; Push the value of ESP before we pushed anything.
+  pushfd             ; Push the EFLAGS register.
+
+  pop eax            ; Pull the EFLAGS value back.
+  or eax, 0x200      ; OR-in 0x200 = 1<<9 = IF = Interrupt flag enable.
+  push eax           ; Push the doctored EFLAGS value back.
+
+  push 0x1B          ; Push the new code segment with an RPL of 3.
+  push edx           ; Push the EIP to IRET to.
+
+  iret

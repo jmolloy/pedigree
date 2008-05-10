@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "MemoryInspector.h"
 #include <processor/VirtualAddressSpace.h>
 
@@ -119,7 +120,7 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
   uintptr_t nLine = index*m_nCharsPerLine;
   // Is it paged in?
 #if !defined(MIPS_COMMON) && !defined(ARM_COMMON)
-  if (!VirtualAddressSpace::getKernelAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
+  if (!VirtualAddressSpace::getCurrentAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
   {
     colour = DebuggerIO::Red;
     return "Memory not mapped.";

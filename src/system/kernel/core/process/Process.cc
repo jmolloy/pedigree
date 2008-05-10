@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,17 +13,31 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #if defined(THREADS)
 
 #include <process/Process.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
+#include <processor/VirtualAddressSpace.h>
 #include <Log.h>
 
 Process::Process() :
-  m_NextTid(0)
+  m_NextTid(0), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace())
 {
   m_Id = Scheduler::instance().addProcess(this);
+}
+
+
+Process::Process(Process *pParent) :
+  m_NextTid(0), m_pParent(pParent), m_pAddressSpace(0)
+{
+  m_Id = Scheduler::instance().addProcess(this);
+  /// \todo The call to 'create' here should become 'm_pParent->m_pAddressSpace->clone'.
+  m_pAddressSpace = VirtualAddressSpace::create();
+  // Set a temporary description.
+  str = m_pParent->str;
+  str += "<F>"; // F for forked.
 }
 
 Process::~Process()

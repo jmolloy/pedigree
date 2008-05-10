@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef THREAD_H
 #define THREAD_H
 
@@ -22,7 +23,7 @@
 class Processor;
 class Process;
 
-#define KERNEL_STACK_SIZE 4096
+#define KERNEL_STACK_SIZE (4096*10)
 
 /**
  * An abstraction of a thread of execution.
@@ -160,6 +161,12 @@ public:
     return m_Id;
   }
 
+  /** Returns true if the thread should start in user mode. */
+  bool startUserMode()
+  {
+    return m_StartUserMode;
+  }
+  
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
@@ -212,6 +219,11 @@ private:
    * Our thread ID.
    */
   size_t m_Id;
+
+  /**
+   * Should the thread start in user mode?
+   */
+  bool m_StartUserMode;
 };
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include <processor/Processor.h>
 #include <processor/IoPortManager.h>
 #include "gdt.h"
@@ -24,6 +25,12 @@
 #if defined(MULTIPROCESSOR)
   #include "../x86_common/Multiprocessor.h"
 #endif
+
+#ifdef SMP
+#warning Problems here.
+#endif
+#include "tss.h"
+extern X86TaskStateSegment *g_pTss;
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
@@ -82,6 +89,14 @@ void Processor::initialise2()
   invalidate(0);
 
   m_Initialised = 2;
+}
+
+void Processor::setKernelStack(uintptr_t kernelStack)
+{
+#ifdef SMP
+#error Make sure you access the correct TSS here!
+#endif
+  g_pTss->esp0 = static_cast<uint32_t> (kernelStack);
 }
 
 void Processor::identify(HugeStaticString &str)

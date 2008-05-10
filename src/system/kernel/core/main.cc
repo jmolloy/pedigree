@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -139,19 +139,35 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Gets me a stacks.
   physical_uintptr_t stackBase;
   int i;
-  for (i = 0; i < 10; i++)
+//   for (i = 0; i < 10; i++)
+//   {
+//     stackBase = PhysicalMemoryManager::instance().allocatePage();
+//     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
+//   }
+//   Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
+Thread *pThread;
+  // Fork a new process.
+  Process *pProcess = new Process(Scheduler::instance().getProcess(0));
+ Processor::switchAddressSpace(*pProcess->getAddressSpace());
+ VirtualAddressSpace::setCurrentAddressSpace(pProcess->getAddressSpace());
+  // Add a thread to it.
+  for (i = 0; i < 15; i++)
   {
     stackBase = PhysicalMemoryManager::instance().allocatePage();
-    VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
+    VirtualAddressSpace::getCurrentAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), VirtualAddressSpace::Write);
   }
-  Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
 
-  for (i = 0; i < 10; i++)
-  {
-    stackBase = PhysicalMemoryManager::instance().allocatePage();
-    VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0010000+(i*0x1000)), 0);
-  }
-  pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, (uintptr_t*)(0xB0010FF0 + (i-1)*0x1000));
+ // Create a 'function'.
+ stackBase = PhysicalMemoryManager::instance().allocatePage();
+ VirtualAddressSpace::getCurrentAddressSpace().map(stackBase, (void*)(0x80000000), VirtualAddressSpace::Write);
+ uint8_t *func = reinterpret_cast<uint8_t*> (0x80000000);
+ func[0] = 0xEB;
+ func[1] = 0xFE;
+
+ pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
+ Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+ VirtualAddressSpace::setCurrentAddressSpace(0);
+  
 #endif
 
 //  char *babypoo = new char[32];
@@ -171,13 +187,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   uintptr_t *leh = reinterpret_cast<uintptr_t*> (stackBase|0xa0000000 + 0x4);
   *leh = 0x1234567;
 
-//  Processor::breakpoint();
+ Processor::breakpoint();
 
   volatile uintptr_t *a = (uintptr_t*)0xC1505004;
   uintptr_t b = *a;
   NOTICE("b : " << b);
   b++;
-//  Processor::breakpoint();
+ Processor::breakpoint();
 #endif
 
   for (;;)

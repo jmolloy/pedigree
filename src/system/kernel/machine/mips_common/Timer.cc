@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include <compiler.h>
 #include <processor/InterruptManager.h>
 #include "../core/processor/mips32/InterruptManager.h"
@@ -52,10 +53,10 @@ bool CountCompareTimer::initialise()
 //  Processor::breakpoint();
   sr |= (0x80 << 8); // Enable external interrupt 0 - first two bits are software ints.
   asm volatile("mtc0 %0, $12;nop" : : "r" (sr));
+  
 
   // Set up the compare register.
   asm volatile("mtc0 %0, $11; nop" : : "r" (m_Compare));
-
   // Zero the count register.
   asm volatile("mtc0 $zero, $9; nop");
 

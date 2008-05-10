@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #if defined(THREADS)
 #include <process/Thread.h>
 #include <process/Scheduler.h>
@@ -30,21 +31,24 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadS
   Scheduler::instance().m_Mutex.release();
   /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
-
+  
   if (pThread->getDebugImmediate())
     Processor::breakpoint();
-  
-  Processor::setInterrupts(true);
-  
-  int code = pFunc(pParam);
-  pThread->threadExited(code);
-  // Should never get here.
-  FATAL("threadStartTrampoline: Got past threadExited!");
+
+  if (pThread->startUserMode())
+    Processor::switchToUserMode(reinterpret_cast<uintptr_t> (pFunc), reinterpret_cast<uintptr_t> (pParam));
+  else
+  {
+    int code = pFunc(pParam);
+    pThread->threadExited(code);
+    // Should never get here.
+    FATAL("threadStartTrampoline: Got past threadExited!");
+  }
 }
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                uintptr_t *pStack) :
-  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
+  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_DebugImmediate(false), m_StartUserMode(true)
 {
   if (pParent == 0)
   {
@@ -55,10 +59,13 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
   m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
 
-  // If we've been given a user stack pointer, we use that, else we use our kernel stack.
+  // If we've been given a user stack pointer, we are a user mode thread.
   if (pStack == 0)
+  {
+    m_StartUserMode = false;
     pStack = m_pKernelStack;
-
+  }
+  
   // Start initialising our ProcessorState.
   m_State.setStackPointer (reinterpret_cast<processor_register_t> (pStack));
   m_State.setInstructionPointer (reinterpret_cast<processor_register_t>

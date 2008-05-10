@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,10 +13,17 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "gdt.h"
 #include "tss.h"
+#include <utilities/utility.h>
 
 X64GdtManager X64GdtManager::m_Instance;
+
+#ifdef SMP
+#warning Problems here.
+#endif
+X64TaskStateSegment *g_pTss = 0;
 
 void X64GdtManager::initialise(size_t processorCount)
 {
@@ -35,7 +42,9 @@ void X64GdtManager::initialise(size_t processorCount)
   for (size_t i = 0;i < processorCount;i++)
   {
     X64TaskStateSegment *Tss = new X64TaskStateSegment;
+    if (i == 0) g_pTss = Tss;
     setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
+    initialiseTss(Tss);
     // TODO: The processor object should know about its task-state-segment
   }
 }
@@ -48,6 +57,7 @@ void X64GdtManager::initialiseProcessor()
   } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
 
   asm volatile("lgdt %0" : "=m"(gdtr));
+  asm volatile("mov $0x2B, %ax; ltr %ax");
 
   loadSegmentRegisters();
 }
@@ -75,4 +85,8 @@ void X64GdtManager::setTssDescriptor(size_t index, uint64_t base)
   tss_descriptor *Tss = reinterpret_cast<tss_descriptor*>(&m_Gdt[index + 1]);
   Tss->base3 = (base >> 32) & 0xFFFFFFFF;
   Tss->res = 0;
+}
+void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
+{
+  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
 }

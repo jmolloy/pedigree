@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef KERNEL_PROCESSOR_PROCESSOR_H
 #define KERNEL_PROCESSOR_PROCESSOR_H
 
@@ -86,10 +87,19 @@ class Processor
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
 
+    /** Sets the current kernel stack, to be switched to on interrupt.
+     *\param[in] kernelStack The kernel stack to switch to */
+    static void setKernelStack(uintptr_t kernelStack);
+    
     /** Switch to a different virtual address space
      *\param[in] AddressSpace the new address space */
     static void switchAddressSpace(VirtualAddressSpace &AddressSpace);
 
+    /** Switch to user mode from privileged mode.
+     *\param[in] pc The position to jump to.
+     *\param[in] param The parameter to give. */
+    static void switchToUserMode(uintptr_t pc, uintptr_t param);
+    
     /** Do a context switch. */
     inline static void contextSwitch(const ProcessorState &state) ALWAYS_INLINE;
     

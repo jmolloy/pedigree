@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,6 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include <panic.h>
 #include <utilities/utility.h>
 #include <processor/Processor.h>
@@ -97,7 +98,7 @@ bool X86VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
 {
   #if defined(ADDITIONAL_CHECKS)
     if (Processor::readCr3() != m_PhysicalPageDirectory)
-      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+      panic("VirtualAddressSpace::map(): not in this VirtualAddressSpace");
   #endif
 
   size_t Flags = toFlags(flags);
@@ -144,7 +145,7 @@ void X86VirtualAddressSpace::getMapping(void *virtualAddress,
 {
   #if defined(ADDITIONAL_CHECKS)
     if (Processor::readCr3() != m_PhysicalPageDirectory)
-      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+      panic("VirtualAddressSpace::getMapping(): not in this VirtualAddressSpace");
   #endif
 
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
@@ -161,7 +162,7 @@ void X86VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
   #if defined(ADDITIONAL_CHECKS)
     if (Processor::readCr3() != m_PhysicalPageDirectory)
-      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+      panic("VirtualAddressSpace::setFlags(): not in this VirtualAddressSpace");
   #endif
 
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
@@ -179,7 +180,7 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 {
   #if defined(ADDITIONAL_CHECKS)
     if (Processor::readCr3() != m_PhysicalPageDirectory)
-      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+      panic("VirtualAddressSpace::unmap(): not in this VirtualAddressSpace");
   #endif
 
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
@@ -201,7 +202,7 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 {
   #if defined(ADDITIONAL_CHECKS)
     if (Processor::readCr3() != m_PhysicalPageDirectory)
-      panic("VirtualAddressSpace::isMapped(): not in this VirtualAddressSpace");
+      panic("VirtualAddressSpace::mapPageStructures(): not in this VirtualAddressSpace");
   #endif
 
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
