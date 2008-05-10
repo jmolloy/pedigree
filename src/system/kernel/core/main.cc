@@ -22,6 +22,7 @@
 #endif
 
 #include <Log.h>
+#include <panic.h>
 #include <utilities/StaticString.h>
 #include "cppsupport.h"                   // initialiseConstructors()
 #include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
@@ -81,7 +82,8 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Processor::initialise1(*bsInf);
 
   // Initialise the Kernel Elf class
-  KernelElf::instance().initialise(*bsInf);
+  if (KernelElf::instance().initialise(*bsInf) == false)
+    panic("KernelElf::initialise() failed");
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
@@ -134,10 +136,12 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
   
+
+  physical_uintptr_t stackBase;
+
 #ifdef THREADS
   initialiseMultitasking();
   // Gets me a stacks.
-  physical_uintptr_t stackBase;
   int i;
 //   for (i = 0; i < 10; i++)
 //   {
@@ -179,12 +183,12 @@ Thread *pThread;
 
   // Try and create a mapping.
 #ifdef MIPS_COMMON
-  physical_uintptr_t stackBase = PhysicalMemoryManager::instance().allocatePage();
+  stackBase = PhysicalMemoryManager::instance().allocatePage();
   NOTICE("StackBase = " << Hex << stackBase);
   bool br = VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xC1505000), 0);
   NOTICE("b :" << br);
 
-  uintptr_t *leh = reinterpret_cast<uintptr_t*> (stackBase|0xa0000000 + 0x4);
+  uintptr_t *leh = reinterpret_cast<uintptr_t*> ((stackBase|0xa0000000) + 0x4);
   *leh = 0x1234567;
 
  Processor::breakpoint();

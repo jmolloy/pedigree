@@ -74,6 +74,9 @@ public:
   }
   
 private:
+  Process(const Process &);
+  Process &operator = (const Process &);
+
   /**
    * Our list of threads.
    */

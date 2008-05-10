@@ -23,9 +23,18 @@ void *dlmallocSbrk(ssize_t incr)
 {
   /// \warning This is BAD. We shouldn't have to change address spaces just to add some stuff to the HEAP! needs fixing pronto.
   // NOTE: incr is already page aligned
+
   VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+
+#ifndef MIPS_COMMON
   Processor::switchAddressSpace(VAddressSpace);
-  void *babypoo = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+#endif
+
+  void *pHeap = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+
+#ifndef MIPS_COMMON
   Processor::switchAddressSpace(VirtualAddressSpace::getCurrentAddressSpace());
-  return babypoo;
+#endif
+
+  return pHeap;
 }

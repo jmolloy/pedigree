@@ -228,6 +228,8 @@ src/system/kernel/core/processor/mips64
 src/system/kernel/core/processor/mips64/Processor.cc
 src/system/kernel/core/processor/mips64/StackFrame.cc
 src/system/kernel/core/processor/mips_common
+src/system/kernel/core/processor/mips_common/AsidManager.cc
+src/system/kernel/core/processor/mips_common/AsidManager.h
 src/system/kernel/core/processor/mips_common/Disassembler.cc
 src/system/kernel/core/processor/mips_common/Disassembler.h
 src/system/kernel/core/processor/mips_common/PhysicalMemoryManager.cc

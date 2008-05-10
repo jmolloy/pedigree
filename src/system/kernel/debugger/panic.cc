@@ -100,7 +100,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
     }
 
     // print the line
-    if( bPrintThisLine = true )
+    if( bPrintThisLine == true )
     {
       ++iUsedEntries;
       pScreen->drawString( Line, nLines + iUsedEntries, 0, DebuggerIO::White, DebuggerIO::Black );
