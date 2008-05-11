@@ -261,6 +261,11 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
   m_PhysicalPML4 = physicalMemoryManager.allocatePage();
 
+  // Initialise the page directory
+  memset(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4)),
+         0,
+         0x800);
+
   // Copy the kernel PageMapLevel4
   memcpy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
          reinterpret_cast<void*>(physicalAddress(m_KernelSpace.m_PhysicalPML4) + 0x800),

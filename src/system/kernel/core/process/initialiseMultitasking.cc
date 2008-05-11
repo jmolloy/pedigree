@@ -22,8 +22,6 @@
 #include <process/Scheduler.h>
 #include <process/Process.h>
 
-Thread * volatile g_pCurrentThread = 0;
-
 void initialiseMultitasking()
 {
   // Create the kernel idle process.

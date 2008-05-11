@@ -31,7 +31,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-  m_Mutex(), m_pSchedulingAlgorithm(0), m_NextPid(0)
+  m_Mutex(), m_pSchedulingAlgorithm(0), m_Processes(), m_NextPid(0)
 {
 }
 
@@ -45,7 +45,7 @@ bool Scheduler::initialise(Thread *pThread)
   m_pSchedulingAlgorithm = new RoundRobin();
 
   pThread->setStatus(Thread::Running);
-  g_pCurrentThread = pThread;
+  Processor::information().setCurrentThread(pThread);
 
   m_pSchedulingAlgorithm->addThread(pThread);
   
@@ -93,16 +93,16 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 {
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
-  Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
+  Thread * const pOldThread = Processor::information().getCurrentThread();
 
   m_Mutex.acquire();
 
   pOldThread->setStatus(Thread::Ready);
 
   pThread->setStatus(Thread::Running);
-  g_pCurrentThread = pThread;
+  Processor::information().setCurrentThread(pThread);
 
-  Processor::setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+  Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
   VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
@@ -111,7 +111,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
   
-  if (g_pCurrentThread == pThread)
+  if (Processor::information().getCurrentThread() == pThread)
     Processor::contextSwitch(pThread->state());
 
   m_Mutex.release();
@@ -119,7 +119,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
 void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
 {
-  Thread * const pOldThread = const_cast<Thread* const> (g_pCurrentThread);
+  Thread * const pOldThread = Processor::information().getCurrentThread();
 
   // We shouldn't need the mutex, as we're debugging, so all processors are halted.
   //m_Mutex.acquire();
@@ -127,9 +127,9 @@ void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
   pOldThread->setStatus(Thread::Ready);
 
   pThread->setStatus(Thread::Running);
-  g_pCurrentThread = pThread;
+  Processor::information().setCurrentThread(pThread);
 
-  Processor::setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+  Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
   VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
@@ -142,7 +142,7 @@ void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
 
-  if (g_pCurrentThread == pThread)
+  if (Processor::information().getCurrentThread() == pThread)
     Processor::contextSwitch(pThread->state());
 
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);

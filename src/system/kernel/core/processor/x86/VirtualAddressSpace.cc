@@ -185,6 +185,16 @@ X86VirtualAddressSpace::X86VirtualAddressSpace()
                           KERNEL_VIRTUAL_TEMP2,
                           VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
 
+  // Initialise the page directory
+  memset(KERNEL_VIRTUAL_TEMP1,
+         0,
+         0xC00);
+
+  // Initialise the page table
+  memset(KERNEL_VIRTUAL_TEMP2,
+         0,
+         0x1000);
+
   // Copy the kernel address space to the new address space
   memcpy(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xC00),
          adjust_pointer(X86KernelVirtualAddressSpace::m_Instance.m_VirtualPageDirectory, 0xC00),

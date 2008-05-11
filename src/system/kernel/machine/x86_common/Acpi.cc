@@ -207,7 +207,6 @@ void Acpi::parseFixedACPIDescriptionTable()
       if (*pType == 0)
       {
         ProcessorLocalApic *pLocalApic = reinterpret_cast<ProcessorLocalApic*>(adjust_pointer(pType, 2));
-        // TODO: BSP?
         bool bUsable = ((pLocalApic->flags & 0x01) == 0x01);
         NOTICE(" Processor #" << Dec << pLocalApic->processorId << (bUsable ? " usable" : " unusable"));
 

@@ -25,54 +25,81 @@
 // NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
 //       for more information about gcc's builtin atomic operations
 
-/** \todo documentation */
+/** Wrapper around gcc's builtin atomic operations */
 template<typename T>
 class Atomic
 {
   public:
+    /** The constructor
+     *\param[in] value initial value */
     inline Atomic(T value = T())
       : m_Atom(value){}
-    inline ~Atomic(){}
-
-    inline T operator += (T x)
-    {
-      return __sync_add_and_fetch(&m_Atom, x);
-    }
-    inline T operator -= (T x)
-    {
-      return __sync_sub_and_fetch(&m_Atom, x);
-    }
-    inline T operator |= (T x)
-    {
-      return __sync_or_and_fetch(&m_Atom, x);
-    }
-    inline T operator &= (T x)
-    {
-      return __sync_and_and_fetch(&m_Atom, x);
-    }
-    inline T operator ^= (T x)
-    {
-      return __sync_xor_and_fetch(&m_Atom, x);
-    }
-    inline bool compareAndSwap(T oldVal, T newVal)
-    {
-      return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
-    }
-    inline operator T () const
-    {
-      return m_Atom;
-    }
-
-  protected:
+    /** The copy-constructor
+     *\param[in] x reference object */
     inline Atomic(const Atomic &x)
       : m_Atom(x.m_Atom){}
+    /** The assignment operator
+     *\param[in] x reference object */
     inline Atomic &operator = (const Atomic &x)
     {
       m_Atom = x.m_Atom;
       return *this;
     }
+    /** The destructor does nothing */
+    inline ~Atomic(){}
+
+    /** Addition
+     *\param[in] x value to add
+     *\return the value after the addition */
+    inline T operator += (T x)
+    {
+      return __sync_add_and_fetch(&m_Atom, x);
+    }
+    /** Subtraction
+     *\param[in] x value to subtract
+     *\return the value after the subtraction */
+    inline T operator -= (T x)
+    {
+      return __sync_sub_and_fetch(&m_Atom, x);
+    }
+    /** Bitwise or
+     *\param[in] x the operand
+     *\return the value after the bitwise or */
+    inline T operator |= (T x)
+    {
+      return __sync_or_and_fetch(&m_Atom, x);
+    }
+    /** Bitwise and
+     *\param[in] x the operand
+     *\return the value after the bitwise and */
+    inline T operator &= (T x)
+    {
+      return __sync_and_and_fetch(&m_Atom, x);
+    }
+    /** Bitwise xor
+     *\param[in] x the operand
+     *\return the value after the bitwise xor */
+    inline T operator ^= (T x)
+    {
+      return __sync_xor_and_fetch(&m_Atom, x);
+    }
+    /** Compare and swap
+     *\param[in] oldVal the comparision value
+     *\param[in] newVal the new value
+     *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
+    inline bool compareAndSwap(T oldVal, T newVal)
+    {
+      return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
+    }
+    /** Get the value
+     *\return the value of the Atomic */
+    inline operator T () const
+    {
+      return m_Atom;
+    }
 
   private:
+    /** The atomic value */
     volatile T m_Atom;
 };
 

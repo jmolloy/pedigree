@@ -39,8 +39,7 @@ class MIPSCommonProcessorInformation
 
   protected:
     /** Construct a MIPSCommonProcessorInformation object
-     *\param[in] processorId Identifier of the processor
-     *\todo the local APIC id */
+     *\param[in] processorId Identifier of the processor */
     inline MIPSCommonProcessorInformation(ProcessorId processorId)
       : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()){}
     /** The destructor does nothing */

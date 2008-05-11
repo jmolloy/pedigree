@@ -26,8 +26,7 @@
  * @{ */
 
 /** The x86/x64 local APIC
- *\todo Initialise the Local APIC Timer
- *\todo Get Local APIC Id */
+ *\todo Initialise the Local APIC Timer */
 class LocalApic
 {
   public:

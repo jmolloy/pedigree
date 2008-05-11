@@ -240,7 +240,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       break;
   }
 
-  if (tehThread != 0 && tehThread != g_pCurrentThread)
+  if (tehThread != 0 && tehThread != Processor::information().getCurrentThread())
   {
     Line += "[";
     Line += tehThread->getId();

@@ -78,7 +78,7 @@ void Debugger::switchedThread()
   {
     // Tell the current thread that the first opportunity it gets it should
     // break back into the debugger.
-    g_pCurrentThread->setDebugImmediate();
+    Processor::information().getCurrentThread()->setDebugImmediate();
     return;
   }
   LargeStaticString str("Debugger switched threads.");
@@ -113,7 +113,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
   // The current thread, in case we decide to switch.
 #if defined(THREADS)
-  Thread *pThread = g_pCurrentThread;
+  Thread *pThread = Processor::information().getCurrentThread();
 #endif
   /*
    * I/O implementations.

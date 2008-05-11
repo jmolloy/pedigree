@@ -17,9 +17,6 @@
 #ifndef INITIALISE_MULTITASKING_H
 #define INITIALISE_MULTITASKING_H
 
-/// \todo This should be a member of Processor::Information.
-extern class Thread * volatile g_pCurrentThread;
-
 /// Starts up the threading subsystem.
 void initialiseMultitasking();
 

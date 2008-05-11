@@ -59,10 +59,6 @@ bool Elf64::load(uint8_t *pBuffer, unsigned int nBufferLength)
   // Find the string table.
   m_pStringTable = &m_pSectionHeaders[m_pHeader->shstrndx];
 
-  // FIXME TODO HACK huh?
-  // m_pBootstrap->getSectionHeader(
-  //    pBootstrap->getStringTable() )
-
   // Temporarily load the string table.
   const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pStringTable->offset]);
   

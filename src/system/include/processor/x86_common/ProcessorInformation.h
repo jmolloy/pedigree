@@ -17,6 +17,7 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_PROCESSORINFORMATION_H
 #define KERNEL_PROCESSOR_X86_COMMON_PROCESSORINFORMATION_H
 
+#include <process/Thread.h>
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 #if defined(X86)
@@ -28,8 +29,7 @@
 /** @addtogroup kernelprocessorx86common
  * @{ */
 
-/** Common x86 processor information structure
- *\todo Local APIC Id, pointer to the TSS */
+/** Common x86 processor information structure */
 class X86CommonProcessorInformation
 {
   friend class Processor;
@@ -69,14 +69,18 @@ class X86CommonProcessorInformation
 
     inline uintptr_t getKernelStack() const;
     inline void setKernelStack(uintptr_t stack);
+    inline Thread *getCurrentThread() const
+      {return m_pCurrentThread;}
+    inline void setCurrentThread(Thread *pThread)
+      {m_pCurrentThread = pThread;}
 
   protected:
     /** Construct a X86CommonProcessor object
-     *\param[in] processorId Identifier of the processor
-     *\todo the local APIC id */
+     *\param[in] processorId Identifier of the processor */
     inline X86CommonProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
       : m_ProcessorId(processorId), m_TssSelector(0), m_Tss(0),
-        m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()), m_LocalApicId(apicId){}
+        m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()), m_LocalApicId(apicId),
+        m_pCurrentThread(0){}
     /** The destructor does nothing */
     inline virtual ~X86CommonProcessorInformation(){}
 
@@ -101,6 +105,8 @@ class X86CommonProcessorInformation
     VirtualAddressSpace *m_VirtualAddressSpace;
     /** Local APIC Id */
     uint8_t m_LocalApicId;
+    /** The current thread */
+    Thread *m_pCurrentThread;
 };
 
 /** @} */
