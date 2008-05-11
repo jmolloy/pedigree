@@ -182,9 +182,25 @@ void Processor::cpuid(uint32_t inEax,
   #include "../../../machine/x86_common/Pc.h"
   ProcessorId Processor::id()
   {
-    // TODO HACK: We actually should not return the ApicId, but the processor Id
     Pc &pc = Pc::instance();
-    return pc.getLocalApic.getId();
+    uint8_t apicId = pc.getLocalApic().getId();
+
+    for (size_t i = 0;i < m_ProcessorInformation.count();i++)
+      if (m_ProcessorInformation[i]->m_LocalApicId == apicId)
+        return m_ProcessorInformation[i]->m_ProcessorId;
+
+    return 0;
+  }
+  ProcessorInformation &Processor::information()
+  {
+    Pc &pc = Pc::instance();
+    uint8_t apicId = pc.getLocalApic().getId();
+
+    for (size_t i = 0;i < m_ProcessorInformation.count();i++)
+      if (m_ProcessorInformation[i]->m_LocalApicId == apicId)
+        return *m_ProcessorInformation[i];
+
+    return *reinterpret_cast<ProcessorInformation*>(0);
   }
 
 #endif

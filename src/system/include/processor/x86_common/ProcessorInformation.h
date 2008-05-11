@@ -33,6 +33,7 @@
 class X86CommonProcessorInformation
 {
   friend class Processor;
+  friend class Multiprocessor;
   public:
     #if defined(X86)
       typedef X86TaskStateSegment TaskStateSegment;
@@ -73,8 +74,9 @@ class X86CommonProcessorInformation
     /** Construct a X86CommonProcessor object
      *\param[in] processorId Identifier of the processor
      *\todo the local APIC id */
-    inline X86CommonProcessorInformation(ProcessorId processorId)
-      : m_ProcessorId(processorId), m_TssSelector(0), m_Tss(0), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()){}
+    inline X86CommonProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
+      : m_ProcessorId(processorId), m_TssSelector(0), m_Tss(0),
+        m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()), m_LocalApicId(apicId){}
     /** The destructor does nothing */
     inline virtual ~X86CommonProcessorInformation(){}
 
@@ -97,6 +99,8 @@ class X86CommonProcessorInformation
     TaskStateSegment *m_Tss;
     /** The current VirtualAddressSpace */
     VirtualAddressSpace *m_VirtualAddressSpace;
+    /** Local APIC Id */
+    uint8_t m_LocalApicId;
 };
 
 /** @} */

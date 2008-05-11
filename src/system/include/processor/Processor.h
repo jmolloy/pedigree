@@ -54,6 +54,7 @@ namespace DebugFlags
  *      data on the processor that is executing this code. */
 class Processor
 {
+  friend class Multiprocessor;
   public:
     /** Initialises the processor specific interface. After this function call the whole
      *  processor-specific interface is initialised. Note though, that only the
@@ -195,7 +196,11 @@ class Processor
     #endif
     /** Get the ProcessorInformation structure of this processor
      *\return the ProcessorInformation structure of this processor */
-    static inline ProcessorInformation &information();
+    #if !defined(MULTIPROCESSOR)
+      static inline ProcessorInformation &information();
+    #else
+      static ProcessorInformation &information();
+    #endif
 
   private:
     /** How far has the processor-specific interface been initialised */
@@ -236,14 +241,10 @@ class Processor
   {
     return 0;
   }
-#endif
-ProcessorInformation &Processor::information()
-{
-  #if !defined(MULTIPROCESSOR)
+  ProcessorInformation &Processor::information()
+  {
     return m_ProcessorInformation;
-  #else
-    // TODO: Do something!
-  #endif
-}
+  }
+#endif
 
 #endif

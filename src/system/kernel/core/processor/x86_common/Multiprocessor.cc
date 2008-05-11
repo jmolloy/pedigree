@@ -72,16 +72,24 @@ size_t Multiprocessor::initialise()
   LocalApic &localApic = Pc::instance().getLocalApic();
   // Startup the application processors through startup interprocessor interrupt
   for (size_t i = 0;i < Processors->count();i++)
-    if (localApic.getId() != (*Processors)[i]->apicId)
-      {
-        NOTICE("Multiprocessor: Booting processor #" << (*Processors)[i]->processorId);
+  {
+    // Add a ProcessorInformation object
+    ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
+                                                                        (*Processors)[i]->apicId);
+    Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
 
-        localApic.interProcessorInterrupt((*Processors)[i]->apicId,
-                                          0x07,
-                                          LocalApic::deliveryModeStartup,
-                                          true,
-                                          false);
-      }
+    // Startup the processor
+    if (localApic.getId() != (*Processors)[i]->apicId)
+    {
+      NOTICE("Multiprocessor: Booting processor #" << (*Processors)[i]->processorId);
+
+      localApic.interProcessorInterrupt((*Processors)[i]->apicId,
+                                        0x07,
+                                        LocalApic::deliveryModeStartup,
+                                        true,
+                                        false);
+    }
+  }
 
   return Processors->count();
 }
