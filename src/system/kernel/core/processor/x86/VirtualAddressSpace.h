@@ -29,8 +29,6 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
-  /** VirtualAddressSpace::getKernelAddressSpace needs access to m_KernelSpace */
-  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   /** VirtualAddressSpace::create needs access to the constructor */
   friend VirtualAddressSpace *VirtualAddressSpace::create();
   public:
@@ -39,7 +37,6 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     //
     virtual bool isAddressValid(void *virtualAddress);
     virtual bool isMapped(void *virtualAddress);
-
     virtual bool map(physical_uintptr_t physicalAddress,
                      void *virtualAddress,
                      size_t flags);
@@ -71,9 +68,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     /** The destructor cleans up the address space */
     virtual ~X86VirtualAddressSpace();
 
-  private:
-    /** The default constructor */
-    X86VirtualAddressSpace();
+  protected:
     /** The constructor for already present paging structures
      *\param[in] Heap virtual address of the beginning of the heap
      *\param[in] PhysicalPageDirectory physical address of the page directory
@@ -84,6 +79,20 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                            physical_uintptr_t PhysicalPageDirectory,
                            void *VirtualPageDirectory,
                            void *VirtualPageTables) INITIALISATION_ONLY;
+
+    bool doIsMapped(void *virtualAddress);
+    bool doMap(physical_uintptr_t physicalAddress,
+               void *virtualAddress,
+               size_t flags);
+    void doGetMapping(void *virtualAddress,
+                      physical_uintptr_t &physicalAddress,
+                      size_t &flags);
+    void doSetFlags(void *virtualAddress, size_t newFlags);
+    void doUnmap(void *virtualAddress);
+
+  private:
+    /** The default constructor */
+    X86VirtualAddressSpace();
 
     /** The copy-constructor
      *\note NOT implemented */
@@ -115,9 +124,43 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     void *m_VirtualPageDirectory;
     /** Virtual address of the page tables */
     void *m_VirtualPageTables;
+};
+
+/** The kernel's VirtualAddressSpace on x86 */
+class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
+{
+  /** X86VirtualAddressSpace needs access to m_Instance */
+  friend class X86VirtualAddressSpace;
+  /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_Instance */
+  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+  public:
+    //
+    // VirtualAddressSpace Interface
+    //
+    virtual bool isMapped(void *virtualAddress);
+    virtual bool map(physical_uintptr_t physicalAddress,
+                     void *virtualAddress,
+                     size_t flags);
+    virtual void getMapping(void *virtualAddress,
+                            physical_uintptr_t &physicalAddress,
+                            size_t &flags);
+    virtual void setFlags(void *virtualAddress, size_t newFlags);
+    virtual void unmap(void *virtualAddress);
+
+  private:
+    /** The constructor */
+    X86KernelVirtualAddressSpace();
+    /** The destructor */
+    ~X86KernelVirtualAddressSpace();
+    /** The copy-constructor
+     *\note NOT implemented (Singleton) */
+    X86KernelVirtualAddressSpace(const X86KernelVirtualAddressSpace &);
+    /** The assignment operator
+     *\note NOT implemented (Singleton) */
+    X86KernelVirtualAddressSpace &operator = (const X86KernelVirtualAddressSpace &);
 
     /** The kernel virtual address space */
-    static X86VirtualAddressSpace m_KernelSpace;
+    static X86KernelVirtualAddressSpace m_Instance;
 };
 
 /** @} */

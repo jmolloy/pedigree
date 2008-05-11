@@ -15,26 +15,18 @@
  */
 
 #include "dlmalloc.h"
-#include <processor/VirtualAddressSpace.h>
-#include <processor/PhysicalMemoryManager.h>
 #include <processor/Processor.h>
+#include <processor/PhysicalMemoryManager.h>
 
 void *dlmallocSbrk(ssize_t incr)
 {
-  /// \warning This is BAD. We shouldn't have to change address spaces just to add some stuff to the HEAP! needs fixing pronto.
   // NOTE: incr is already page aligned
 
+  // Get the current address space
   VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
 
-#ifndef MIPS_COMMON
-  Processor::switchAddressSpace(VAddressSpace);
-#endif
-
-  void *pHeap = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-
-#ifndef MIPS_COMMON
-  Processor::switchAddressSpace(VirtualAddressSpace::getCurrentAddressSpace());
-#endif
-
+  // Expand the heap
+  void *pHeap = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(),
+                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
   return pHeap;
 }
