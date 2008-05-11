@@ -27,9 +27,6 @@
   #include "../x86_common/Multiprocessor.h"
 #endif
 
-#include "tss.h"
-extern X64TaskStateSegment *g_pTss;
-
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
   const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
@@ -87,14 +84,6 @@ void Processor::initialise2()
   invalidate(0);
 
   m_Initialised = 2;
-}
-
-void Processor::setKernelStack(uintptr_t kernelStack)
-{
-#ifdef SMP
-#error Make sure you access the correct TSS here!
-#endif
-  g_pTss->rsp0 = static_cast<uint64_t> (kernelStack);
 }
 
 void Processor::identify(HugeStaticString &str)

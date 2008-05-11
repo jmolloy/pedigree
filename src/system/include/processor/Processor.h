@@ -87,10 +87,6 @@ class Processor
      *\return instruction-pointer of the calling function */
     static uintptr_t getInstructionPointer();
 
-    /** Sets the current kernel stack, to be switched to on interrupt.
-     *\param[in] kernelStack The kernel stack to switch to */
-    static void setKernelStack(uintptr_t kernelStack);
-    
     /** Switch to a different virtual address space
      *\param[in] AddressSpace the new address space */
     static void switchAddressSpace(VirtualAddressSpace &AddressSpace);

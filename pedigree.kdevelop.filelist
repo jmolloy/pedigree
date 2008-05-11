@@ -139,11 +139,13 @@ src/system/include/processor/x64
 src/system/include/processor/x64/Processor.h
 src/system/include/processor/x64/StackFrame.h
 src/system/include/processor/x64/state.h
+src/system/include/processor/x64/tss.h
 src/system/include/processor/x64/types.h
 src/system/include/processor/x86
 src/system/include/processor/x86/Processor.h
 src/system/include/processor/x86/StackFrame.h
 src/system/include/processor/x86/state.h
+src/system/include/processor/x86/tss.h
 src/system/include/processor/x86/types.h
 src/system/include/processor/x86_common
 src/system/include/processor/x86_common/IoPort.h
@@ -254,7 +256,6 @@ src/system/kernel/core/processor/x64/asm/trampoline.s
 src/system/kernel/core/processor/x64/gdt.cc
 src/system/kernel/core/processor/x64/gdt.h
 src/system/kernel/core/processor/x64/state.cc
-src/system/kernel/core/processor/x64/tss.h
 src/system/kernel/core/processor/x64/utils.h
 src/system/kernel/core/processor/x86
 src/system/kernel/core/processor/x86/InterruptManager.cc
@@ -271,7 +272,6 @@ src/system/kernel/core/processor/x86/asm/trampoline.s
 src/system/kernel/core/processor/x86/gdt.cc
 src/system/kernel/core/processor/x86/gdt.h
 src/system/kernel/core/processor/x86/state.cc
-src/system/kernel/core/processor/x86/tss.h
 src/system/kernel/core/processor/x86_common
 src/system/kernel/core/processor/x86_common/Disassembler.cc
 src/system/kernel/core/processor/x86_common/Disassembler.h

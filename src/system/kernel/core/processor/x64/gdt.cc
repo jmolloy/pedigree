@@ -15,15 +15,10 @@
  */
 
 #include "gdt.h"
-#include "tss.h"
 #include <utilities/utility.h>
+#include <processor/Processor.h>
 
 X64GdtManager X64GdtManager::m_Instance;
-
-#ifdef SMP
-#warning Problems here.
-#endif
-X64TaskStateSegment *g_pTss = 0;
 
 void X64GdtManager::initialise(size_t processorCount)
 {
@@ -42,10 +37,12 @@ void X64GdtManager::initialise(size_t processorCount)
   for (size_t i = 0;i < processorCount;i++)
   {
     X64TaskStateSegment *Tss = new X64TaskStateSegment;
-    if (i == 0) g_pTss = Tss;
-    setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
     initialiseTss(Tss);
-    // TODO: The processor object should know about its task-state-segment
+    setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
+
+    ProcessorInformation &processorInfo = Processor::information();
+    processorInfo.setTss(Tss);
+    processorInfo.setTssSelector((2 * i + 5) << 3);
   }
 }
 void X64GdtManager::initialiseProcessor()
@@ -57,7 +54,7 @@ void X64GdtManager::initialiseProcessor()
   } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
 
   asm volatile("lgdt %0" : "=m"(gdtr));
-  asm volatile("mov $0x2B, %ax; ltr %ax");
+  asm volatile("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
 
   loadSegmentRegisters();
 }
