@@ -56,8 +56,17 @@ include_directories(../include
 
 add_definitions(-D__UD_STANDALONE__)
 
+# One file needs to be assembled to binary on x86 and x64.
+if(X86)
+  add_custom_command(OUTPUT trampoline.bin
+                     COMMAND nasm -f binary -o ${PEDIGREE_BINARY_DIR}/src/system/kernel/CMakeFiles/kernel.dir/core/processor/x86/asm/trampoline.bin ${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/asm/trampoline.s)
+endif(X86)
+if(X64)
+  # Do da same.
+endif(X64)
 
 add_executable(kernel ${KERNEL_SRC})
 target_link_libraries(kernel gcc)
 set_target_properties(kernel PROPERTIES LINK_FLAGS
                       "-T ${LINKER_SCRIPT}")
+
