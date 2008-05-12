@@ -252,6 +252,7 @@ src/system/kernel/core/processor/x64/asm/Processor.s
 src/system/kernel/core/processor/x64/asm/SyscallManager.s
 src/system/kernel/core/processor/x64/asm/boot-standalone.s
 src/system/kernel/core/processor/x64/asm/gdt.s
+src/system/kernel/core/processor/x64/asm/multiprocessor.s
 src/system/kernel/core/processor/x64/asm/trampoline.s
 src/system/kernel/core/processor/x64/gdt.cc
 src/system/kernel/core/processor/x64/gdt.h
@@ -268,6 +269,7 @@ src/system/kernel/core/processor/x86/asm
 src/system/kernel/core/processor/x86/asm/InterruptManager.s
 src/system/kernel/core/processor/x86/asm/Processor.s
 src/system/kernel/core/processor/x86/asm/boot-standalone.s
+src/system/kernel/core/processor/x86/asm/multiprocessor.s
 src/system/kernel/core/processor/x86/asm/trampoline.s
 src/system/kernel/core/processor/x86/gdt.cc
 src/system/kernel/core/processor/x86/gdt.h
