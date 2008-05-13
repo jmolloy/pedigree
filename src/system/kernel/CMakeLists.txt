@@ -74,13 +74,4 @@ set_target_properties(kernel PROPERTIES LINK_FLAGS
 if(X86_COMMON AND MULTIPROCESSOR)
   add_dependencies(kernel
                    trampoline)
-  if (X86)
-    add_custom_command(TARGET kernel
-                       POST_BUILD
-                       COMMAND rm ${PEDIGREE_BINARY_DIR}/src/system/kernel/CMakeFiles/kernel.dir/core/processor/x86/asm/trampoline.bin)
-  elseif(X64)
-    add_custom_command(TARGET kernel
-                       POST_BUILD
-                       COMMAND rm ${PEDIGREE_BINARY_DIR}/src/system/kernel/CMakeFiles/kernel.dir/core/processor/x64/asm/trampoline.bin)
-  endif(X86)
 endif(X86_COMMON AND MULTIPROCESSOR)

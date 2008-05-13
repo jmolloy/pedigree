@@ -171,7 +171,7 @@ void X64InterruptManager::initialiseProcessor()
     uint64_t idt;
   } PACKED idtr = {4095, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
 
-  asm volatile("lidt %0" : "=m"(idtr));
+  asm volatile("lidt %0" :: "m"(idtr));
 }
 
 void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler)

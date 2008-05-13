@@ -133,7 +133,7 @@ void X86InterruptManager::initialiseProcessor()
     uint32_t idt;
   } PACKED idtr = {2047, reinterpret_cast<uintptr_t>(&m_Instance.m_IDT)};
 
-  asm volatile("lidt %0" : "=m"(idtr));
+  asm volatile("lidt %0" :: "m"(idtr));
 }
 
 void X86InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace)

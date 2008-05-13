@@ -67,6 +67,7 @@ src/system/include/Atomic.h
 src/system/include/BootstrapInfo.h
 src/system/include/LockGuard.h
 src/system/include/Log.h
+src/system/include/Singleton.h
 src/system/include/Spinlock.h
 src/system/include/compiler.h
 src/system/include/doxygen.h

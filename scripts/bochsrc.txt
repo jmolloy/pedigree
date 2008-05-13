@@ -2,8 +2,8 @@
 config_interface: textconfig
 display_library: x
 megs: 32
-romimage: file="/usr/share/bochs/BIOS-bochs-latest"
-vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="/usr/local/share/bochs/BIOS-bochs-latest"
+vgaromimage: file="/usr/local/share/bochs/VGABIOS-lgpl-latest"
 boot: floppy
 floppy_bootsig_check: disabled=0
 floppya: 1_44="floppy.img", status=inserted

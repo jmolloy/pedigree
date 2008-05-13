@@ -69,6 +69,8 @@ size_t Multiprocessor::initialise()
          &trampoline,
          reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
 
+  
+
   LocalApic &localApic = Pc::instance().getLocalApic();
   // Startup the application processors through startup interprocessor interrupt
   for (size_t i = 0;i < Processors->count();i++)
