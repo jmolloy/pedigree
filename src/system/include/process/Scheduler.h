@@ -71,7 +71,9 @@ public:
                         the debugger. */
   void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread=0);
 
+#ifdef DEBUGGER
   void switchToAndDebug(InterruptState &state, Thread *pThread);
+#endif
 
   /** Returns the number of processes currently in operation. */
   size_t getNumProcesses();

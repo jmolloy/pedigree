@@ -17,8 +17,6 @@
 #ifndef KERNEL_PROCESSOR_STACKFRAMEBASE_H
 #define KERNEL_PROCESSOR_STACKFRAMEBASE_H
 
-#if defined(DEBUGGER)
-
 #include <processor/types.h>
 #include <processor/state.h>
 #include <utilities/demangle.h>
@@ -31,6 +29,7 @@
 class StackFrameBase
 {
   public:
+#if defined(DEBUGGER)
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
     StackFrameBase(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol);
@@ -41,6 +40,7 @@ class StackFrameBase
     /** Returns a pretty printed string containing the function name and each parameter with
      *  its value (hopefully). */
     void prettyPrint(HugeStaticString &buf);
+#endif
 
     /** Construct a stack frame, given a ProcessorState. The stack frame should be constructed
      *  to comply with the default ABI for the current architecture - that implies the stack
@@ -53,7 +53,7 @@ class StackFrameBase
                           uintptr_t returnAddress,
                           unsigned int nParams,
                           ...);
-    
+#if defined(DEBUGGER)    
   protected:
     /** The symbol */
     symbol_t m_Symbol;
@@ -74,10 +74,9 @@ class StackFrameBase
 
     /** Formats a number, given the 'type' of that number. */
     void format(uintptr_t n, const LargeStaticString &type, HugeStaticString &dest);
+#endif
 };
 
 /** @} */
-
-#endif
 
 #endif

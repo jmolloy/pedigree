@@ -14,12 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifdef DEBUGGER
-
 #include <processor/StackFrame.h>
 #include <stdarg.h>
 #include <Log.h>
 
+#ifdef DEBUGGER
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
   /// Check for borked-ness.
@@ -33,6 +32,7 @@ uintptr_t X86StackFrame::getParameter(size_t n)
   #endif
   return *pPtr;
 }
+#endif
 
 void X86StackFrame::construct(ProcessorState &state,
                               uintptr_t returnAddress,
@@ -64,4 +64,3 @@ void X86StackFrame::construct(ProcessorState &state,
   state.setStackPointer(reinterpret_cast<uintptr_t> (pStackLowWaterMark));
 }
 
-#endif

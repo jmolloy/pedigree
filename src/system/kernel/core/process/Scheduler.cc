@@ -41,7 +41,6 @@ Scheduler::~Scheduler()
 
 bool Scheduler::initialise(Thread *pThread)
 {
-  NOTICE("Scheduler booting.");
   m_pSchedulingAlgorithm = new RoundRobin();
 
   pThread->setStatus(Thread::Running);
@@ -117,6 +116,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   m_Mutex.release();
 }
 
+#ifdef DEBUGGER
 void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
 {
   Thread * const pOldThread = Processor::information().getCurrentThread();
@@ -147,6 +147,7 @@ void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
 
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
 }
+#endif
 
 void Scheduler::timer(uint64_t delta, InterruptState &state)
 {

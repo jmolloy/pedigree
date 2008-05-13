@@ -24,5 +24,8 @@
 #       (optional files are in the second line) due to a CMake bug/feature
 
 add_kernel_src(core/processor/x86_common
-               Disassembler.cc PhysicalMemoryManager.cc Processor.cc
+               PhysicalMemoryManager.cc Processor.cc
                Multiprocessor.cc)
+if(DEBUGGER)
+  add_kernel_src(core/processor/x86_common Disassembler.cc)
+endif(DEBUGGER)

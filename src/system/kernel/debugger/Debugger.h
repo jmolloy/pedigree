@@ -27,6 +27,7 @@
 
 #define ASSERT_FAILED_SENTINEL 0xa55e4710 // A cack-handed way of writing "assertio(n)".
 
+#ifdef DEBUGGER
 /**
  * Implements the main kernel debugger. This class interfaces with the machine
  * abstraction to provide trap and breakpoint services. It exposes a set of commands,
@@ -86,6 +87,8 @@ private:
 };
 
 /** @} */
+
+#endif
 
 #endif
 

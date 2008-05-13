@@ -193,7 +193,11 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
         e.append(", errorcode 0x");
         e.append(interruptState.m_Errorcode, 16, 8, '0');
       }
+#ifdef DEBUGGER
       Debugger::instance().start(interruptState, e);
+#else
+      panic(e);
+#endif
     }
   }
 }
