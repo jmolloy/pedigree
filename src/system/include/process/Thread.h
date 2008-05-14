@@ -83,23 +83,6 @@ public:
   }
 
   /**
-   * Sets the address of our InterruptState.
-   * \note Only applicable when we are in the kernel.
-   */
-  void setInterruptState(InterruptState *pState)
-  {
-    m_pInterruptState = pState;
-  }
-  /**
-   * Gets the address of our InterruptState.
-   * \note Only applicable when we are in the kernel.
-   */
-  InterruptState *getInterruptState() const
-  {
-    return m_pInterruptState;
-  }
-
-  /**
    * Informs this thread that the first chance it gets it should breakpoint
    * back into the debugger.
    */
@@ -184,11 +167,6 @@ private:
    * The state of the processor when we were unscheduled.
    */
   ProcessorState m_State;
-
-  /**
-   * The current address of our InterruptState, if we're in an interrupt handler.
-   */
-  InterruptState *m_pInterruptState;
 
   /**
    * Our parent process.

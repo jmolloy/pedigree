@@ -113,6 +113,9 @@ class VirtualAddressSpace
      *  space
      *\return pointer to the new VirtualAddressSpace, 0 otherwise */
     static VirtualAddressSpace *create();
+    /** Clone this VirtualAddressSpace. That means that we copy-on-write-map the application
+     *  image. */
+    VirtualAddressSpace *clone();
     /** The destructor does nothing */
     inline virtual ~VirtualAddressSpace(){}
 

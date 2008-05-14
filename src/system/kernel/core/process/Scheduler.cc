@@ -105,7 +105,6 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
   VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
-  pOldThread->setInterruptState(&state);
   pOldThread->state().setStackPointer(Processor::getStackPointer());
   pOldThread->state().setBasePointer(Processor::getBasePointer());
   pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());

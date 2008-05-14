@@ -48,7 +48,7 @@ static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadS
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                uintptr_t *pStack) :
-  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_DebugImmediate(false), m_StartUserMode(true)
+  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_DebugImmediate(false), m_StartUserMode(true)
 {
   if (pParent == 0)
   {
@@ -87,7 +87,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-  m_State(), m_pInterruptState(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
+  m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
 {
   if (pParent == 0)
   {

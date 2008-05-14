@@ -93,3 +93,15 @@ void VirtualAddressSpace::rollbackHeapExpansion(void *virtualAddress, size_t pag
     virtualAddress = adjust_pointer(virtualAddress, PhysicalMemoryManager::getPageSize());
   }
 }
+
+VirtualAddressSpace *VirtualAddressSpace::clone()
+{
+  // Create a new virtual address space
+  VirtualAddressSpace *pClone = VirtualAddressSpace::create();
+  if (pClone == 0)
+    return 0;
+
+  // TODO: Do it! We need to know where the code/data segments are
+
+  return pClone;
+}

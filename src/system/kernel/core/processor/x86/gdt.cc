@@ -53,7 +53,7 @@ void X86GdtManager::initialiseProcessor()
     uint32_t gdt;
   } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uintptr_t>(m_Instance.m_Gdt)};
 
-  asm volatile("lgdt %0" : "=m"(gdtr));
+  asm volatile("lgdt %0" :: "m"(gdtr));
   asm volatile("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
 }
 
