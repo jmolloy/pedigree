@@ -34,6 +34,7 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
     `sudo /sbin/losetup /dev/loop0 ./floppy.img`;
     `sudo mount -o loop /dev/loop0 /tmp/pedigree-image`;
     `sudo cp src/system/kernel/kernel /tmp/pedigree-image/kernel`;
+    `sudo cp src/system/modules/initrd.tar /tmp/pedigree-image/initrd.tar`;
     `sudo umount /dev/loop0`;
     `sudo /sbin/losetup -d /dev/loop0`;
   }

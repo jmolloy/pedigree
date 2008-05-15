@@ -19,32 +19,4 @@
 
 #include <Log.h>
 
-void Processor::contextSwitch(const ProcessorState &state)
-{
-  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.rsp);
-
-  *--pStack = state.rip;
-  *--pStack = state.rbp;
-  *--pStack = state.rax;
-  *--pStack = state.rbx;
-  *--pStack = state.rcx;
-  *--pStack = state.rdx;
-  *--pStack = state.rsi;
-  *--pStack = state.rdi;
-
-  // TODO MOAR REGISTERZ SAVED!!111!!1
-  
-  // Now we change stacks.
-  asm volatile("mov %0, %%rsp" : : "r" (reinterpret_cast<uintptr_t> (pStack)));
-
-  asm volatile("pop %rdi; \
-      pop %rsi; \
-      pop %rdx; \
-      pop %rcx; \
-      pop %rbx; \
-      pop %rax; \
-      pop %rbp; \
-      ret");
-}
-
 #endif

@@ -58,7 +58,10 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     if (m_MemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
                                  vAddress)
          == false)
+    {
+      WARNING("AllocateRegion: MemoryRegion allocation failed.");
       return false;
+    }
 
     // Map the physical memory into the allocated space
     VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
@@ -69,6 +72,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
           == false)
       {
         m_MemoryRegions.free(vAddress, cPages * PhysicalMemoryManager::getPageSize());
+        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
         return false;
       }
 
@@ -85,6 +89,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
   }
   else
   {
+    WARNING("AllocateRegion: Got to bad code!");
     // TODO
     // TODO: Allocate the virtual address space
     // TODO: Add to the list of memory-regions

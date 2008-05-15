@@ -164,6 +164,8 @@ src/system/include/utilities/demangle.h
 src/system/include/utilities/template.h
 src/system/include/utilities/utility.h
 src/system/kernel
+src/system/kernel/Archive.cc
+src/system/kernel/Archive.h
 src/system/kernel/Log.cc
 src/system/kernel/Version.h
 src/system/kernel/boot-arm.cc

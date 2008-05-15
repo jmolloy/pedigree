@@ -29,7 +29,7 @@ endmacro(add_kernel_src)
 
 #########################################################################################
 # Sources list.
-set(KERNEL_SRC Log.cc Version.cc)
+set(KERNEL_SRC Log.cc Version.cc Archive.cc)
 if(MIPS_COMMON)
   set(KERNEL_SRC ${KERNEL_SRC} boot-mips.cc)
 endif(MIPS_COMMON)

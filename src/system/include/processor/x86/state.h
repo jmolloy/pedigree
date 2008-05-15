@@ -101,7 +101,7 @@ class X86InterruptState
 
     /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
      *  set the processor to 'state'. */
-  static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
+    static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
 
   private:
     /** The default constructor

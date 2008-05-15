@@ -24,6 +24,8 @@ global _ZN9Processor21getInstructionPointerEv
 global _ZN9Processor14getDebugStatusEv
 ; void Processor::switchToUserMode()
 global _ZN9Processor16switchToUserModeEmm
+; void Processor::contextSwitch(InterruptState*)
+global _ZN9Processor13contextSwitchEP17X64InterruptState
 
 ;##############################################################################
 ;### Code section #############################################################
@@ -47,6 +49,31 @@ _ZN9Processor14getDebugStatusEv:
   mov rax, dr6
   ret
 
+_ZN9Processor13contextSwitchEP17X64InterruptState:
+  ; Change the stack pointer to point to the top of the passed InterruptState object.
+  mov rsp, rdi
+
+  ; Restore the registers
+  pop r15
+  pop r14
+  pop r13
+  pop r12
+  pop r11
+  pop r10
+  pop r9
+  pop r8
+  pop rbp
+  pop rsi
+  pop rdi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+
+  ; Remove the errorcode and the interrupt number from the stack
+  add rsp, 0x10
+  iretq
+
 _ZN9Processor16switchToUserModeEmm:
   mov ax, 0x23       ; Load the new data segment descriptor with an RPL of 3.
   mov ds, ax         ; Propagate the change to all segment registers.
@@ -54,11 +81,8 @@ _ZN9Processor16switchToUserModeEmm:
   mov fs, ax
   mov gs, ax
 
-  pop rdx            ; Pop the return address - useless now.
-  pop rdx            ; Pop the RIP to jump to
-
-                     ; The stack now contains the parameter to pass.
-  push 0x0           ; Push a dummy return value so the jumped-to procedure can find its parameter.
+  mov rdx, rdi       ; First parameter is the address to jump to. Store in RDX.
+  mov rdi, rsi       ; Second parameter to this function is the first to the called function.
 
   mov rax, rsp       ; Save the stack pointer before we pushed anything.
   push 0x23          ; push the new stack segment with an RPL of 3.

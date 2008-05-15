@@ -19,5 +19,4 @@
 
 #include <Log.h>
 
-
 #endif

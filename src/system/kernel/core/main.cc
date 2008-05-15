@@ -40,6 +40,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <process/Scheduler.h>
 #endif
+#include <Archive.h>
 
 BootIO bootIO;
 
@@ -93,6 +94,12 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Debugger::instance().initialise();
 #endif
 
+#ifdef X86_COMMON
+  if (bsInf->mods_count == 0)
+    panic("Initrd module not loaded!");
+  uint32_t initrdLocation = * reinterpret_cast<uint32_t*> (bsInf->mods_addr);
+#endif
+  
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
@@ -107,7 +114,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 //   foo(0x456, 0x123);
   // Initialise the boot output.
   bootIO.initialise();
-
+  
   // The initialisation is done here, unmap/free the .init section
 #ifndef MIPS_COMMON
   Processor::initialisationDone();
@@ -139,6 +146,17 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   physical_uintptr_t stackBase;
 
+#ifdef X86_COMMON
+//   Archive initrd(reinterpret_cast<uint8_t*> (initrdLocation));
+//   size_t nFiles = initrd.getNumFiles();
+//   NOTICE("nFiles: " << nFiles);
+//   for (int i = 0; i < nFiles; i++)
+//   {
+//     NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
+//   }
+//   Processor::breakpoint();
+#endif
+  
 #ifdef THREADS
   initialiseMultitasking();
   // Gets me a stacks.
@@ -163,13 +181,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
  // Create a 'function'.
  stackBase = PhysicalMemoryManager::instance().allocatePage();
- VirtualAddressSpace::getCurrentAddressSpace().map(stackBase, (void*)(0x80000000), VirtualAddressSpace::Write);
- uint8_t *func = reinterpret_cast<uint8_t*> (0x80000000);
+ VirtualAddressSpace::getCurrentAddressSpace().map(stackBase, (void*)(0x70000000), VirtualAddressSpace::Write);
+ uint8_t *func = reinterpret_cast<uint8_t*> (0x70000000);
  func[0] = 0xEB;
  func[1] = 0xFE;
 
- pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
- Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+//  pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
+//  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
  VirtualAddressSpace::setCurrentAddressSpace(0);
   
 #endif
@@ -180,7 +198,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
-
+  
   // Try and create a mapping.
 #ifdef MIPS_COMMON
   stackBase = PhysicalMemoryManager::instance().allocatePage();

@@ -117,3 +117,39 @@ const char *X64SyscallState::getRegisterName(size_t index) const
 {
   return X64SyscallStateRegisterName[index];
 }
+
+X64InterruptState *X64InterruptState::construct(X64ProcessorState &state, bool userMode)
+{
+  // Obtain the stack pointer.
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+
+  if (userMode)
+  {
+    *--pStack = (userMode) ? 0x23 : 0x10; // SS
+    *--pStack = state.rsp; // RSP
+  }
+  *--pStack = 0x200; // RFLAGS - IF enabled.
+  *--pStack = (userMode) ? 0x1b : 0x08; // CS
+  *--pStack = state.rip; // RIP
+  *--pStack = 0; // Error code
+  *--pStack = 0; // Interrupt number
+  *--pStack = state.rax; // RAX
+  *--pStack = state.rbx; // RBX
+  *--pStack = state.rcx; // RCX
+  *--pStack = state.rdx; // RDX
+  *--pStack = state.rdi; // RDI
+  *--pStack = state.rsi; // RSI
+  *--pStack = state.rbp; // RBP
+  *--pStack = state.r8;
+  *--pStack = state.r9;
+  *--pStack = state.r10;
+  *--pStack = state.r11;
+  *--pStack = state.r12;
+  *--pStack = state.r13;
+  *--pStack = state.r14;
+  *--pStack = state.r15;
+  
+  X64InterruptState *toRet = reinterpret_cast<X64InterruptState*> (pStack);
+
+  return toRet;
+}

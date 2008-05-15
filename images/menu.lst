@@ -6,3 +6,4 @@ timeout 3
 title  Pedigree
 root   (fd0)
 kernel /kernel
+module /initrd.tar

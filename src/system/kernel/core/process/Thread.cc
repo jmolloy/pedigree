@@ -34,7 +34,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   // Initialise our kernel stack.
   uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
   m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
-
+NOTICE("Kernel stack at " << (uintptr_t)m_pKernelStack);
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
   if (pStack == 0)

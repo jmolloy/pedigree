@@ -178,6 +178,11 @@ add_subdirectory(src/system/kernel)
 
 add_dependencies(kernel version.cc check_compiler)
 
+# Recurse into the Modules directory.
+add_subdirectory(src/system/modules)
+
+add_dependencies(initrd kernel)
+
 # Then the bootloader.
 add_subdirectory(src/system/boot)
 
@@ -185,5 +190,7 @@ add_subdirectory(src/system/boot)
 add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
                   DEPENDS kernel ${BOOTLOADER_BUILT}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
+
+add_dependencies(create_images initrd)
 
 include(CTest)
