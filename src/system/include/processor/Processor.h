@@ -98,7 +98,7 @@ class Processor
     static void switchToUserMode(uintptr_t pc, uintptr_t param);
     
     /** Do a context switch. */
-    inline static void contextSwitch(const ProcessorState &state) ALWAYS_INLINE;
+    inline static void contextSwitch(InterruptState *state);
     
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;

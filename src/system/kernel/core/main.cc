@@ -143,13 +143,13 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   initialiseMultitasking();
   // Gets me a stacks.
   int i;
-//   for (i = 0; i < 10; i++)
-//   {
-//     stackBase = PhysicalMemoryManager::instance().allocatePage();
-//     VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), 0);
-//   }
-//   Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, (uintptr_t*)(0xB0000FF0 + (i-1)*0x1000));
-Thread *pThread;
+   // for (i = 0; i < 10; i++)
+   // {
+   //   stackBase = PhysicalMemoryManager::instance().allocatePage();
+   //   VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0100000+(i*0x1000)), 0);
+   // }
+   Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
+//Thread *pThread;
   // Fork a new process.
   Process *pProcess = new Process(Scheduler::instance().getProcess(0));
  Processor::switchAddressSpace(*pProcess->getAddressSpace());

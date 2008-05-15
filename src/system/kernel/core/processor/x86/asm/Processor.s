@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+; Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
 ;
 ; Permission to use, copy, modify, and distribute this software for any
 ; purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,8 @@ global _ZN9Processor21getInstructionPointerEv
 global _ZN9Processor14getDebugStatusEv
 ; void Processor::switchToUserMode()
 global _ZN9Processor16switchToUserModeEmm
+; void Processor::contextSwitch(InterruptState*)
+global _ZN9Processor13contextSwitchEP17X86InterruptState
 
 ;##############################################################################
 ;### Code section #############################################################
@@ -46,6 +48,18 @@ _ZN9Processor21getInstructionPointerEv:
 _ZN9Processor14getDebugStatusEv:
   mov eax, dr6
   ret
+
+_ZN9Processor13contextSwitchEP17X86InterruptState:
+  ; Change the stack pointer to point to the top of the passed InterruptState object.
+  mov esp, [esp+4]
+
+  ; Restore the registers
+  pop ds
+  popa
+
+  ; Remove the errorcode and the interrupt number from the stack
+  add esp, 0x08
+  iret
 
 _ZN9Processor16switchToUserModeEmm:
   mov ax, 0x23       ; Load the new data segment descriptor with an RPL of 3.

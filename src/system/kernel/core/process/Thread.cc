@@ -22,33 +22,9 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
-/**
- * The trampoline to start a new thread. It calls pFunc(pParam), then calls pThread->threadExited
- * with the return value.
- */
-static void threadStartTrampoline(Thread *pThread, void *pParam, Thread::ThreadStartFunc pFunc)
-{
-  Scheduler::instance().m_Mutex.release();
-  /// \todo What IRQ do we ACK? It's machine specific.
-  Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
-  
-  if (pThread->getDebugImmediate())
-    Processor::breakpoint();
-
-  if (pThread->startUserMode())
-    Processor::switchToUserMode(reinterpret_cast<uintptr_t> (pFunc), reinterpret_cast<uintptr_t> (pParam));
-  else
-  {
-    int code = pFunc(pParam);
-    pThread->threadExited(code);
-    // Should never get here.
-    FATAL("threadStartTrampoline: Got past threadExited!");
-  }
-}
-
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                uintptr_t *pStack) :
-  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_DebugImmediate(false), m_StartUserMode(true)
+  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pInterruptState(0)
 {
   if (pParent == 0)
   {
@@ -60,25 +36,26 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
 
   // If we've been given a user stack pointer, we are a user mode thread.
+  bool bUserMode = true;
   if (pStack == 0)
   {
-    m_StartUserMode = false;
+    bUserMode = false;
     pStack = m_pKernelStack;
   }
   
   // Start initialising our ProcessorState.
   m_State.setStackPointer (reinterpret_cast<processor_register_t> (pStack));
   m_State.setInstructionPointer (reinterpret_cast<processor_register_t>
-                                   (&threadStartTrampoline));
+                                   (pStartFunction));
   
-  // Construct a stack frame in our ProcessorState for the call to threadStartTrampoline.
-  /// \todo Is the implicit conversion done on the this, pParam and pStack parameters acceptable?
+  // Construct a stack frame in our ProcessorState for the call to the thread starting function.
   StackFrame::construct (m_State, // Store the frame in this state.
-                         0,       // We don't care about a return address.
-                         3,       // There are three parameters.
-                         this,    // First parameter.
-                         pParam,  // Second parameter.
-                         pStartFunction); // Third parameter.
+                         reinterpret_cast<uintptr_t> (&threadExited), // Return to threadExited.
+                         1,       // There is one parameter.
+                         pParam); // Parameter
+
+  // Construct an interrupt state on the stack too.
+  m_pInterruptState = InterruptState::construct (m_State, bUserMode);
 
   m_Id = m_pParent->addThread(this);
   
@@ -87,7 +64,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-  m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_DebugImmediate(false)
+  m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0)
 {
   if (pParent == 0)
   {
@@ -114,8 +91,9 @@ Thread::~Thread()
 void Thread::threadExited(int code)
 {
   NOTICE("Thread exited with code " << Dec << code);
-  m_Status = Zombie;
-  delete this;
+  // TODO apply these to the current thread - we don't have a this pointer.
+//  m_Status = Zombie;
+//  delete this;
   Processor::halt();
 }
 

@@ -19,32 +19,5 @@
 
 #include <Log.h>
 
-void Processor::contextSwitch(const ProcessorState &state)
-{
-  // Here we change stacks and set everything up for an IRET.
-  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.esp);
-
-  *--pStack = state.eip;
-  *--pStack = state.ebp;
-  *--pStack = state.eax;
-  *--pStack = state.ebx;
-  *--pStack = state.ecx;
-  *--pStack = state.edx;
-  *--pStack = state.esi;
-  *--pStack = state.edi;
-  
-  // Now we change stacks.
-  asm volatile("mov %0, %%esp" : : "r" (reinterpret_cast<uintptr_t> (pStack)));
-
-  asm volatile("pop %edi; \
-                pop %esi; \
-                pop %edx; \
-                pop %ecx; \
-                pop %ebx; \
-                pop %eax; \
-                pop %ebp; \
-                ret");
-}
-
 
 #endif

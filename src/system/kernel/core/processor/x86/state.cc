@@ -52,3 +52,33 @@ const char *X86InterruptState::getRegisterName(size_t index) const
 {
   return X86InterruptStateRegisterName[index];
 }
+
+X86InterruptState *X86InterruptState::construct(X86ProcessorState &state, bool userMode)
+{
+  // Obtain the stack pointer.
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+
+  if (userMode)
+  {
+    *--pStack = (userMode) ? 0x23 : 0x10; // SS
+    *--pStack = state.esp; // ESP
+  }
+  *--pStack = 0x200; // EFLAGS - IF enabled.
+  *--pStack = (userMode) ? 0x1b : 0x08; // CS
+  *--pStack = state.eip; // EIP
+  *--pStack = 0; // Error code
+  *--pStack = 0; // Interrupt number
+  *--pStack = state.eax; // EAX
+  *--pStack = state.ecx; // ECX
+  *--pStack = state.edx; // EDX
+  *--pStack = state.ebx; // EBX
+  *--pStack = 0; // Reserved/unused
+  *--pStack = state.ebp; // EBP
+  *--pStack = state.esi; // ESI
+  *--pStack = state.edi; // EDI
+  *--pStack = (userMode) ? 0x23 : 0x10; // DS.
+
+  X86InterruptState *toRet = reinterpret_cast<X86InterruptState*> (pStack);
+
+  return toRet;
+}

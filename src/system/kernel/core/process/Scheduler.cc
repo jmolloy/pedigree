@@ -94,6 +94,9 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = Processor::information().getCurrentThread();
 
+  if (pThread->getStatus() != Thread::Ready)
+    return;
+
   m_Mutex.acquire();
 
   pOldThread->setStatus(Thread::Ready);
@@ -105,48 +108,17 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
   VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
 
-  pOldThread->state().setStackPointer(Processor::getStackPointer());
-  pOldThread->state().setBasePointer(Processor::getBasePointer());
-  pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
-  
-  if (Processor::information().getCurrentThread() == pThread)
-    Processor::contextSwitch(pThread->state());
+  pOldThread->setInterruptState(&state);
+  pOldThread->state() = state;
 
   m_Mutex.release();
-}
 
-#ifdef DEBUGGER
-void Scheduler::switchToAndDebug(InterruptState &state, Thread *pThread)
-{
-  Thread * const pOldThread = Processor::information().getCurrentThread();
-
-  // We shouldn't need the mutex, as we're debugging, so all processors are halted.
-  //m_Mutex.acquire();
-
-  pOldThread->setStatus(Thread::Ready);
-
-  pThread->setStatus(Thread::Running);
-  Processor::information().setCurrentThread(pThread);
-
-  Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
-  Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
-  VirtualAddressSpace::setCurrentAddressSpace( pThread->getParent()->getAddressSpace() );
-
-  Debugger::instance().m_pTempState = pThread->getInterruptState();
-  StackFrame::construct(pThread->state(), pThread->state().getInstructionPointer(), 0);
-  pThread->state().setInstructionPointer(reinterpret_cast<uintptr_t> (&Debugger::switchedThread));
-
-  pOldThread->setInterruptState(&state);
-  pOldThread->state().setStackPointer(Processor::getStackPointer());
-  pOldThread->state().setBasePointer(Processor::getBasePointer());
-  pOldThread->state().setInstructionPointer(Processor::getInstructionPointer());
-
-  if (Processor::information().getCurrentThread() == pThread)
-    Processor::contextSwitch(pThread->state());
-
+  /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+
+  Processor::contextSwitch(pThread->getInterruptState());
+
 }
-#endif
 
 void Scheduler::timer(uint64_t delta, InterruptState &state)
 {

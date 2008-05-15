@@ -316,7 +316,7 @@ bool ThreadsCommand::swapThread(InterruptState &state, DebuggerIO *pScreen)
     return false;
 
   pScreen->destroy();
-  Scheduler::instance().switchToAndDebug(state, tehThread);
+//  Scheduler::instance().switchToAndDebug(state, tehThread);
 
   return true;
 }

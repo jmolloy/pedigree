@@ -62,8 +62,6 @@ public:
    */
   virtual void interrupt(size_t interruptNumber, InterruptState &state);
 
-  static void switchedThread();
-
   InterruptState *m_pTempState;
 
 private:

@@ -82,20 +82,13 @@ public:
     return m_State;
   }
 
-  /**
-   * Informs this thread that the first chance it gets it should breakpoint
-   * back into the debugger.
-   */
-  void setDebugImmediate()
+  InterruptState *getInterruptState()
   {
-    m_DebugImmediate = true;
+    return m_pInterruptState;
   }
-  /**
-   * Returns true if the thread should breakpoint into the debugger.
-   */
-  bool getDebugImmediate()
+  void setInterruptState(InterruptState *p)
   {
-    return m_DebugImmediate;
+    m_pInterruptState = p;
   }
 
   /**
@@ -143,12 +136,6 @@ public:
   {
     return m_Id;
   }
-
-  /** Returns true if the thread should start in user mode. */
-  bool startUserMode()
-  {
-    return m_StartUserMode;
-  }
   
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
@@ -156,7 +143,7 @@ public:
    * \note This is meant to be called only by the thread trampoline - this is the only reason it
    *       is public. It should NOT be called by anyone else!
    */
-  void threadExited(int code);
+  static void threadExited(int code);
 private:
   /** Copy-constructor */
   Thread(const Thread &);
@@ -189,19 +176,11 @@ private:
   uintptr_t *m_pKernelStack;
 
   /**
-   * True if the thread should break into the debugger.
-   */
-  bool m_DebugImmediate;
-
-  /**
    * Our thread ID.
    */
   size_t m_Id;
 
-  /**
-   * Should the thread start in user mode?
-   */
-  bool m_StartUserMode;
+  InterruptState *m_pInterruptState;
 };
 
 #endif

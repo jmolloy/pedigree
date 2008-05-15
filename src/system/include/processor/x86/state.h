@@ -99,6 +99,10 @@ class X86InterruptState
      *\param[in] flags the new flags */
     inline void setFlags(uint32_t flags);
 
+    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
+     *  set the processor to 'state'. */
+  static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
+
   private:
     /** The default constructor
      *\note NOT implemented */
