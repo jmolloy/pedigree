@@ -17,8 +17,8 @@
 #include <process/Mutex.h>
 
 // NOTE, this is in its own file purely so that a vtable can be generated.
-Mutex::Mutex() :
-    Semaphore(1)
+Mutex::Mutex(bool bLocked) :
+    Semaphore(bLocked ? 0 : 1)
 {
 }
 

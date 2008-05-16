@@ -18,21 +18,6 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 
-VirtualAddressSpace *g_pCurrentAddressSpace = 0;
-
-VirtualAddressSpace &VirtualAddressSpace::getCurrentAddressSpace()
-{
-  if (g_pCurrentAddressSpace == 0)
-    return VirtualAddressSpace::getKernelAddressSpace();
-  else
-    return *g_pCurrentAddressSpace;
-}
-
-void VirtualAddressSpace::setCurrentAddressSpace(VirtualAddressSpace *p)
-{
-  g_pCurrentAddressSpace = p;
-}
-
 void *VirtualAddressSpace::expandHeap(size_t pageCount, size_t flags)
 {
   void *Heap = m_HeapEnd;

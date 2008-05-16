@@ -35,17 +35,17 @@ public:
   /** Attempts to acquire n items from the semaphore. This will block until the semaphore
    *  is non-zero.
    * \param n The number of semaphore items required. Must be non-zero. */
-  virtual void acquire(size_t n=1);
+  void acquire(size_t n=1);
 
   /** Attempts to acquire n items from the semaphore. This will not block.
    * \param n The number of semaphore items required. Must be non-zero.
    * \return True if acquire succeeded, false otherwise. */
-  virtual bool tryAcquire(size_t n=1);
+  bool tryAcquire(size_t n=1);
 
   /** Releases n items from the semaphore.
    * \param n The number of semaphore items to release. Must be non-zero. */
-  virtual void release(size_t n=1);
-  
+  void release(size_t n=1);
+
 private:
   Atomic<ssize_t> m_Counter;
 };

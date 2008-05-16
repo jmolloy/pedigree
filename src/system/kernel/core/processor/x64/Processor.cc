@@ -71,7 +71,7 @@ void Processor::initialise2()
   size_t nProcessors = 1;
 
   #if defined(MULTIPROCESSOR)
-    nProcessors = Multiprocessor::initialise();
+    nProcessors = Multiprocessor::initialise1();
   #endif
 
   // Initialise the GDT
@@ -82,6 +82,11 @@ void Processor::initialise2()
   X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
   *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
   invalidate(0);
+
+  #if defined(MULTIPROCESSOR)
+    if (nProcessors != 1)
+      Multiprocessor::initialise2();
+  #endif
 
   m_Initialised = 2;
 }

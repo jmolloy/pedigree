@@ -114,6 +114,17 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 
   doUnmap(virtualAddress);
 }
+void *X86VirtualAddressSpace::allocateStack()
+{
+  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+}
+void X86VirtualAddressSpace::freeStack(void *pStack)
+{
+  // Add the stack to the list
+  // TODO m_freeStacks.pushBack(pStack);
+
+  // TODO: Really free the stack
+}
 
 bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddress,
                                                void *virtualAddress,
@@ -167,7 +178,7 @@ X86VirtualAddressSpace::~X86VirtualAddressSpace()
 
 X86VirtualAddressSpace::X86VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(VIRTUAL_PAGE_DIRECTORY),
-    m_VirtualPageTables(VIRTUAL_PAGE_TABLES)
+    m_VirtualPageTables(VIRTUAL_PAGE_TABLES), m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks()
 {
   // Allocate a new page directory
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
@@ -215,9 +226,11 @@ X86VirtualAddressSpace::X86VirtualAddressSpace()
 X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
                                                physical_uintptr_t PhysicalPageDirectory,
                                                void *VirtualPageDirectory,
-                                               void *VirtualPageTables)
+                                               void *VirtualPageTables,
+                                               void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
-    m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables)
+    m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
+    m_pStackTop(VirtualStack), m_freeStacks()
 {
 }
 
@@ -326,6 +339,21 @@ void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
   // Unmap the page
   *pageTableEntry = 0;
 }
+void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
+{
+  // Get a virtual address for the stack
+  void *pStack = 0;
+  if (m_freeStacks.count() != 0)
+  {
+    pStack = m_freeStacks.popBack();
+  }
+  else
+  {
+    pStack = m_pStackTop;
+    m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
+  }
+  return pStack;
+}
 
 bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
                                                uint32_t *&pageTableEntry)
@@ -413,11 +441,29 @@ void X86KernelVirtualAddressSpace::unmap(void *virtualAddress)
 {
   doUnmap(virtualAddress);
 }
+void *X86KernelVirtualAddressSpace::allocateStack()
+{
+  void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
+
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
+  {
+    // TODO: Check return values
+    physical_uintptr_t page = physicalMemoryManager.allocatePage();
+
+    map(page,
+        adjust_pointer(pStack, - ((i + 1) * 0x1000)),
+        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+  }
+
+  return pStack;
+}
 X86KernelVirtualAddressSpace::X86KernelVirtualAddressSpace()
   : X86VirtualAddressSpace(KERNEL_VIRTUAL_HEAP,
                            reinterpret_cast<uintptr_t>(&pagedirectory) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
                            KERNEL_VIRUTAL_PAGE_DIRECTORY,
-                           VIRTUAL_PAGE_TABLES)
+                           VIRTUAL_PAGE_TABLES,
+                           KERNEL_VIRTUAL_STACK)
 {
 }
 X86KernelVirtualAddressSpace::~X86KernelVirtualAddressSpace()

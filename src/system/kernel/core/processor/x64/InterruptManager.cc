@@ -186,6 +186,7 @@ void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t int
 }
 
 X64InterruptManager::X64InterruptManager()
+  : m_Lock()
 {
   // Initialise the pointers to the handler
   for (size_t i = 0;i < 256;i++)

@@ -123,11 +123,8 @@ X64InterruptState *X64InterruptState::construct(X64ProcessorState &state, bool u
   // Obtain the stack pointer.
   uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
 
-  if (userMode)
-  {
-    *--pStack = (userMode) ? 0x23 : 0x10; // SS
-    *--pStack = state.rsp; // RSP
-  }
+  *--pStack = (userMode) ? 0x23 : 0x10; // SS
+  *--pStack = state.rsp; // RSP
   *--pStack = 0x200; // RFLAGS - IF enabled.
   *--pStack = (userMode) ? 0x1b : 0x08; // CS
   *--pStack = state.rip; // RIP

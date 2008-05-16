@@ -19,7 +19,6 @@
 ;##############################################################################
 [bits 16]
 [org 0x7000]
-  hlt
   ; Load the new GDT
   lgdt [GDTR]
 
@@ -57,9 +56,7 @@ pmode:
   ; Load the stack
   mov esp, [0x7FF8]
 
-  ; Jump to the kernel
-  ; TODO
-  hlt
+  ; Jump to the kernel's Multiprocessor::applicationProcessorStartup() function
   mov eax, [0x7FF4]
   jmp eax
 ;##########################################################################

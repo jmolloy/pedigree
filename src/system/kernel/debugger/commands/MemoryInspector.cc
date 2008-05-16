@@ -15,7 +15,7 @@
  */
 
 #include "MemoryInspector.h"
-#include <processor/VirtualAddressSpace.h>
+#include <processor/Processor.h>
 
 MemoryInspector::MemoryInspector()
     : DebuggerCommand(), Scrollable(), m_nCharsPerLine(8)
@@ -120,7 +120,7 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
   uintptr_t nLine = index*m_nCharsPerLine;
   // Is it paged in?
 #if !defined(MIPS_COMMON) && !defined(ARM_COMMON)
-  if (!VirtualAddressSpace::getCurrentAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
+  if (!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*> (nLine)))
   {
     colour = DebuggerIO::Red;
     return "Memory not mapped.";

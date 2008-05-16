@@ -121,6 +121,7 @@ start:
     loop .mapphysical
 
   ; Enable EFER.NXE
+  ; TODO: Do we nede to check for NXE support first?
   mov ecx, 0xC0000080
   rdmsr
   or eax, 0x800

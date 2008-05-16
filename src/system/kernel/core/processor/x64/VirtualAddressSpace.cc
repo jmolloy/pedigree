@@ -53,7 +53,8 @@
 extern void *pml4;
 
 X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP,
-                                                             reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS));
+                                                             reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
+                                                             KERNEL_VIRTUAL_STACK);
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -238,6 +239,48 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
 
   return false;
 }
+void *X64VirtualAddressSpace::allocateStack()
+{
+  // Get a virtual address for the stack
+  void *pStack = 0;
+  if (m_freeStacks.count() != 0)
+  {
+    pStack = m_freeStacks.popBack();
+  }
+  else
+  {
+    pStack = m_pStackTop;
+
+    if (m_bKernelSpace)
+      m_pStackTop = adjust_pointer(m_pStackTop, -(KERNEL_STACK_SIZE + 0x1000));
+    else
+      m_pStackTop = adjust_pointer(m_pStackTop, -USERSPACE_VIRTUAL_STACK_SIZE);
+  }
+
+  // Map some pages if this is the kernel space
+  if (m_bKernelSpace)
+  {
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
+    {
+      // TODO: Check return values
+      physical_uintptr_t page = physicalMemoryManager.allocatePage();
+  
+      map(page,
+          adjust_pointer(pStack, - ((i + 1) * 0x1000)),
+          VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    }
+  }
+
+  return pStack;
+}
+void X64VirtualAddressSpace::freeStack(void *pStack)
+{
+  // Add the stack to the list
+  // TODO m_freeStacks.pushBack(pStack);
+
+  // TODO: Really free the stack
+}
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
 {
@@ -254,7 +297,8 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 }
 
 X64VirtualAddressSpace::X64VirtualAddressSpace()
-  : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0)
+  : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0),
+    m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_bKernelSpace(false)
 {
 
   // Allocate a new PageMapLevel4
@@ -272,8 +316,9 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
          0x800);
 }
 
-X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4)
-  : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4)
+X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4, void *VirtualStack)
+  : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4),
+    m_pStackTop(VirtualStack), m_freeStacks(), m_bKernelSpace(true)
 {
 }
 

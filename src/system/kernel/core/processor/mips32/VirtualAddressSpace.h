@@ -96,6 +96,8 @@ public:
                           size_t &flags);
   virtual void setFlags(void *virtualAddress, size_t newFlags);
   virtual void unmap(void *virtualAddress);
+  virtual void *allocateStack();
+  virtual void freeStack(void *pStack);
 
   /** Intended to be called solely by MIPS32TlbManager. Returns the physical address of the
    *  chunkIdx'th 4KB chunk of the page table. */

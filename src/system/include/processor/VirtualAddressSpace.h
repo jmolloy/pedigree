@@ -52,11 +52,6 @@ class VirtualAddressSpace
      *\return reference to the kernel virtual address space */
     static VirtualAddressSpace &getKernelAddressSpace();
 
-    /** Get the current virtual address space
-     *\return reference to the current virtual address space */
-    static VirtualAddressSpace &getCurrentAddressSpace();
-    static void setCurrentAddressSpace(VirtualAddressSpace *p);
-    
     /** Expand the heap
      *\param[in] pageCount the number of pages that should be allocated and mapped to the heap end
      *\param[in] flags flags that describe which accesses should be allowed on the page
@@ -108,6 +103,11 @@ class VirtualAddressSpace
      *      and that is still mapped or marked as swapped out.
      *\param[in] virtualAddress the virtual address */
     virtual void unmap(void *virtualAddress) = 0;
+
+    /** \todo documentation */
+    virtual void *allocateStack() = 0;
+    /** \todo documentation */
+    virtual void freeStack(void *pStack) = 0;
 
     /** Create a new VirtualAddressSpace. Only the kernel is mapped into that virtual address
      *  space

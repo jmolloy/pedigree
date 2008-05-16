@@ -17,6 +17,7 @@
 #ifndef KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
 #define KERNEL_PROCESSOR_X86_COMMON_MULTIPROCESSOR_H
 
+#include <Spinlock.h>
 #include <compiler.h>
 #include <processor/types.h>
 
@@ -54,7 +55,15 @@ class Multiprocessor
 
     /** Startup and initialise all processors
     *\return the number of initialised processors */
-    static size_t initialise() INITIALISATION_ONLY;
+    static size_t initialise1() INITIALISATION_ONLY;
+    /** Initialise the GDT on the other processors */
+    static void initialise2() INITIALISATION_ONLY;
+
+  private:
+    static void applicationProcessorStartup();
+
+    static Spinlock m_ProcessorLock1 INITIALISATION_ONLY_DATA;
+    static Spinlock m_ProcessorLock2 INITIALISATION_ONLY_DATA;
 };
 
 /** @} */

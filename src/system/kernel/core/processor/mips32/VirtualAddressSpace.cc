@@ -32,6 +32,13 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
   return MIPS32VirtualAddressSpace::m_KernelSpace;
 }
 
+VirtualAddressSpace *VirtualAddressSpace::create()
+{
+  // TODO
+  //return new X86VirtualAddressSpace();
+  return 0;
+}
+
 MIPS32VirtualAddressSpace::MIPS32VirtualAddressSpace() :
   VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP))
 {
@@ -261,6 +268,16 @@ uintptr_t MIPS32VirtualAddressSpace::getPageTableChunk(uintptr_t chunkIdx)
     ERROR("Invalid page table chunk index: " << Dec << chunkIdx);
     return 0;
   }
+}
+
+void *MIPS32VirtualAddressSpace::allocateStack()
+{
+  // TODO
+  return 0;
+}
+void MIPS32VirtualAddressSpace::freeStack(void *pStack)
+{
+  // TODO
 }
 
 void MIPS32VirtualAddressSpace::setPageTableChunk(uintptr_t chunkIdx, uintptr_t chunkAddr)

@@ -50,6 +50,7 @@
 /** Pack initialisation functions into a special section that could be freed after
  *  the kernel initialisation is finished */
 #define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
+#define INITIALISATION_ONLY_DATA __attribute__((__section__(".init.data")))
 
 /** @} */
 

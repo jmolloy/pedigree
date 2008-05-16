@@ -243,6 +243,7 @@ src/system/kernel/core/processor/mips_common/Processor.cc
 src/system/kernel/core/processor/x64
 src/system/kernel/core/processor/x64/InterruptManager.cc
 src/system/kernel/core/processor/x64/InterruptManager.h
+src/system/kernel/core/processor/x64/Multiprocessor.cc
 src/system/kernel/core/processor/x64/Processor.cc
 src/system/kernel/core/processor/x64/StackFrame.cc
 src/system/kernel/core/processor/x64/SyscallManager.cc
@@ -264,6 +265,7 @@ src/system/kernel/core/processor/x64/utils.h
 src/system/kernel/core/processor/x86
 src/system/kernel/core/processor/x86/InterruptManager.cc
 src/system/kernel/core/processor/x86/InterruptManager.h
+src/system/kernel/core/processor/x86/Multiprocessor.cc
 src/system/kernel/core/processor/x86/Processor.cc
 src/system/kernel/core/processor/x86/StackFrame.cc
 src/system/kernel/core/processor/x86/VirtualAddressSpace.cc

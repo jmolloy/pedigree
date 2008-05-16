@@ -26,7 +26,7 @@ class Mutex : public Semaphore
 {
 public:
   /** Constructor */
-  Mutex();
+  Mutex(bool bLocked = false);
   /** Destructor */
   ~Mutex();
 };

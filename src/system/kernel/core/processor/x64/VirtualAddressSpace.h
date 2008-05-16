@@ -17,6 +17,7 @@
 #ifndef KERNEL_PROCESSOR_X64_VIRTUALADDRESSSPACE_H
 #define KERNEL_PROCESSOR_X64_VIRTUALADDRESSSPACE_H
 
+#include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 
@@ -29,6 +30,8 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPML4 */
   friend class Processor;
+  /** Multiprocessor::initialise() needs access to m_PhysicalPML4 */
+  friend class Multiprocessor;
   /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_KernelSpace */
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
   /** VirtualAddressSpace::create needs access to the constructor */
@@ -48,6 +51,8 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
+    virtual void freeStack(void *pStack);
 
     //
     // Needed for the PhysicalMemoryManager
@@ -76,8 +81,11 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     /** The constructor for already present paging structures
      *\param[in] Heap virtual address of the beginning of the heap
      *\param[in] PhysicalPageDirectory physical address of the page directory
+     *\param[in] VirtualStack virtual address of the top of the next kernel stack
      *\note This constructor is only used to construct the kernel VirtualAddressSpace */
-    X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4);
+    X64VirtualAddressSpace(void *Heap,
+                           physical_uintptr_t PhysicalPML4,
+                           void *VirtualStack);
 
     /** The copy-constructor
      *\note NOT implemented */
@@ -118,6 +126,13 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 
     /** Physical address of the Page Map Level 4 */
     physical_uintptr_t m_PhysicalPML4;
+    /** Current top of the stacks */
+    void *m_pStackTop;
+    /** List of free stacks */
+    Vector<void*> m_freeStacks;
+    /** Is this the kernel space? */
+    bool m_bKernelSpace;
+
 
     /** The kernel virtual address space */
     static X64VirtualAddressSpace m_KernelSpace;
@@ -129,10 +144,14 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 // Virtual address space layout
 //
 #define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
+#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
 #define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xFFFFFFFF88000000)
 #define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF90000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
+#define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(-0x9000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x50000000
+#define KERNEL_STACK_SIZE 0x8000
 
 #endif

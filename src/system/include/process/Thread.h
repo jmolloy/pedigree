@@ -23,8 +23,6 @@
 class Processor;
 class Process;
 
-#define KERNEL_STACK_SIZE (4096*10)
-
 /**
  * An abstraction of a thread of execution.
  */
@@ -57,7 +55,7 @@ public:
    *               only.
    */
   Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
-         uintptr_t *pStack=0);
+         void *pStack=0);
   
   /**
    * Alternative constructor - this should be used only by initialiseMultitasking() to
@@ -126,7 +124,7 @@ public:
   /**
    * Retrieves a pointer to the top of the Thread's kernel stack.
    */
-  uintptr_t *getKernelStack()
+  void *getKernelStack()
   {
     return m_pKernelStack;
   }
@@ -173,7 +171,7 @@ private:
   /**
    * Our kernel stack.
    */
-  uintptr_t *m_pKernelStack;
+  void *m_pKernelStack;
 
   /**
    * Our thread ID.

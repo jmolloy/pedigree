@@ -1,4 +1,3 @@
-#if defined(MULTIPROCESSOR)
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -20,6 +19,12 @@
 #include "Multiprocessor.h"
 #include "../../../machine/x86_common/Pc.h"
 
+#if defined(X86)
+  #include "../x86/VirtualAddressSpace.h"
+#elif defined(X64)
+  #include "../x64/VirtualAddressSpace.h"
+#endif
+
 #if defined(ACPI)
   #include "../../../machine/x86_common/Acpi.h"
 #endif
@@ -34,7 +39,10 @@
   #error Neither ACPI nor SMP defined
 #endif
 
-size_t Multiprocessor::initialise()
+Spinlock Multiprocessor::m_ProcessorLock1;
+Spinlock Multiprocessor::m_ProcessorLock2(true);
+
+size_t Multiprocessor::initialise1()
 {
   // Did we find a processr list?
   bool bMPInfoFound = false;
@@ -69,12 +77,35 @@ size_t Multiprocessor::initialise()
          &trampoline,
          reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
 
-  
+  // Parameters for the trampiline code
+  #if defined(X86)
+    volatile uint32_t *trampolineStack = reinterpret_cast<volatile uint32_t*>(0x7FF8);
+    volatile uint32_t *trampolineKernelEntry = reinterpret_cast<volatile uint32_t*>(0x7FF4);
+
+    // Set the virtual address space
+    *reinterpret_cast<volatile uint32_t*>(0x7FFC) = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPageDirectory;
+  #elif defined(X64)
+    volatile uint64_t *trampolineStack = reinterpret_cast<volatile uint64_t*>(0x7FF0);
+    volatile uint64_t *trampolineKernelEntry = reinterpret_cast<volatile uint64_t*>(0x7FE8);
+
+    // Set the virtual address space
+    *reinterpret_cast<volatile uint64_t*>(0x7FF8) = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPML4;
+  #endif
+
+  // Set the entry point
+  *trampolineKernelEntry = reinterpret_cast<uintptr_t>(&applicationProcessorStartup);
 
   LocalApic &localApic = Pc::instance().getLocalApic();
+  VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
   // Startup the application processors through startup interprocessor interrupt
   for (size_t i = 0;i < Processors->count();i++)
   {
+    // Allocate kernel stack
+    void *pStack = kernelSpace.allocateStack();
+
+    // Set trampoline stack
+    *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
+
     // Add a ProcessorInformation object
     ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
                                                                         (*Processors)[i]->apicId);
@@ -83,17 +114,31 @@ size_t Multiprocessor::initialise()
     // Startup the processor
     if (localApic.getId() != (*Processors)[i]->apicId)
     {
-      NOTICE("Multiprocessor: Booting processor #" << (*Processors)[i]->processorId);
+      NOTICE("Multiprocessor: Booting processor #" << Dec << (*Processors)[i]->processorId);
+      NOTICE("                Stack @ 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
+      // TODO: We need a timer and send INit IPIs (assert and deassert
+
+      // Send the Startup IPI to the processor
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,
                                         0x07,
                                         LocalApic::deliveryModeStartup,
                                         true,
                                         false);
+
+      // Acquire the lock
+      m_ProcessorLock1.acquire();
+
+      // Wait until the processor is started and has unlocked the lock
+      m_ProcessorLock1.acquire();
+      m_ProcessorLock1.release();
     }
   }
 
   return Processors->count();
 }
 
-#endif
+void Multiprocessor::initialise2()
+{
+  m_ProcessorLock2.release();
+}

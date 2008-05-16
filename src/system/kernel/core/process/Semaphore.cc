@@ -34,7 +34,7 @@ void Semaphore::acquire(size_t n)
 bool Semaphore::tryAcquire(size_t n)
 {
   ssize_t value = m_Counter;
-  if ((value - n) < 0)return false;
+  if ((value - static_cast<ssize_t>(n)) < 0)return false;
 
   if (m_Counter.compareAndSwap(value, value - n))
   {

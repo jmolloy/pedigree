@@ -29,6 +29,8 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
+  /** Multiprocessor::initialise() needs access to m_PhysicalPageDirectory */
+  friend class Multiprocessor;
   /** VirtualAddressSpace::create needs access to the constructor */
   friend VirtualAddressSpace *VirtualAddressSpace::create();
   public:
@@ -45,6 +47,8 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
+    virtual void freeStack(void *pStack);
 
     //
     // Needed for the PhysicalMemoryManager
@@ -74,11 +78,13 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
      *\param[in] PhysicalPageDirectory physical address of the page directory
      *\param[in] VirtualPageDirectory virtual address of the page directory
      *\param[in] VirtualPageTables virtual address of the page tables
+     *\param[in] VirtualStack virtual address of the next stacks
      *\note This constructor is only used to construct the kernel VirtualAddressSpace */
     X86VirtualAddressSpace(void *Heap,
                            physical_uintptr_t PhysicalPageDirectory,
                            void *VirtualPageDirectory,
-                           void *VirtualPageTables) INITIALISATION_ONLY;
+                           void *VirtualPageTables,
+                           void *VirtualStack) INITIALISATION_ONLY;
 
     bool doIsMapped(void *virtualAddress);
     bool doMap(physical_uintptr_t physicalAddress,
@@ -89,6 +95,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                       size_t &flags);
     void doSetFlags(void *virtualAddress, size_t newFlags);
     void doUnmap(void *virtualAddress);
+    void *doAllocateStack(size_t sSize);
 
   private:
     /** The default constructor */
@@ -124,6 +131,10 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     void *m_VirtualPageDirectory;
     /** Virtual address of the page tables */
     void *m_VirtualPageTables;
+    /** Current top of the stacks */
+    void *m_pStackTop;
+    /** List of free stacks */
+    Vector<void*> m_freeStacks;
 };
 
 /** The kernel's VirtualAddressSpace on x86 */
@@ -146,6 +157,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
 
   private:
     /** The constructor */
@@ -169,6 +181,8 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 // Virtual address space layout
 //
 #define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
+#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
 #define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)
 #define VIRTUAL_PAGE_TABLES reinterpret_cast<void*>(0xFFC00000)
 #define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void*>(0xFFBFD000)
@@ -178,6 +192,8 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 #define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFF400000 - 0x100000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(0xFF3F6000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x20000000
+#define KERNEL_STACK_SIZE 0x8000
 
 #endif

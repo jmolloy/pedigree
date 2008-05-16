@@ -23,7 +23,7 @@
 #include <Log.h>
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
-               uintptr_t *pStack) :
+               void *pStack) :
   m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pInterruptState(0)
 {
   if (pParent == 0)
@@ -32,10 +32,9 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   }
 
   // Initialise our kernel stack.
-  uintptr_t *pKernelStackBottom = new uintptr_t[KERNEL_STACK_SIZE/sizeof(uintptr_t)];
-  m_pKernelStack = pKernelStackBottom+(KERNEL_STACK_SIZE/sizeof(uintptr_t))-1;
-NOTICE("Kernel stack at " << (uintptr_t)m_pKernelStack);
-  // If we've been given a user stack pointer, we are a user mode thread.
+  m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  NOTICE("Kernel stack at " << (uintptr_t)m_pKernelStack);
+//  // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
   if (pStack == 0)
   {
@@ -81,11 +80,9 @@ Thread::~Thread()
   m_pParent->removeThread(this);
   
   // TODO delete any pointer data.
+
   if (m_pKernelStack)
-  {
-    uintptr_t *pKernelStackBottom = m_pKernelStack-(KERNEL_STACK_SIZE/sizeof(uintptr_t))+1;
-    delete [] pKernelStackBottom;
-  }
+    VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pKernelStack);
 }
 
 void Thread::threadExited(int code)
