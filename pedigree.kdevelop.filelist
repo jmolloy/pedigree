@@ -427,9 +427,7 @@ src/system/kernel/utilities/String.cc
 src/system/kernel/utilities/Vector.cc
 src/system/modules
 src/system/modules/test
-src/system/modules/test/Makefile
 src/system/modules/test2
-src/system/modules/test2/Makefile
 src/user
 src/user/Makefile
 src/user/applications

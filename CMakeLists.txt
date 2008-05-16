@@ -78,6 +78,16 @@ if(ARM_COMMON)
 endif(ARM_COMMON)
 
 #########################################################################################
+# PPC target options.
+if(PPC_COMMON)
+
+  set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
+  set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-ppc.ld")
+  
+endif(PPC_COMMON)
+
+#########################################################################################
 # Script start.
 
 # Check that multiple targets aren't defined.
@@ -91,6 +101,9 @@ endif(MIPS_COMMON)
 if(ARM_COMMON)
   set(TMP_TARGETS ${TMP_TARGETS} blah)
 endif(ARM_COMMON)
+if(PPC_COMMON)
+  set(TMP_TARGETS ${TMP_TARGETS} blah)
+endif(PPC_COMMON)
 
 list(LENGTH TMP_TARGETS TMP_NUM_TARGETS)
 if(TMP_NUM_TARGETS GREATER 2)
@@ -113,6 +126,9 @@ endif(MIPS_COMMON)
 if(ARM_COMMON)
   set(COMPILER arm-elf)
 endif(ARM_COMMON)
+if(PPC_COMMON)
+  set(COMPILER ppc-elf)
+endif(PPC_COMMON)
 
 if(DEBUGGER)
   set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g3 -gdwarf-2")
