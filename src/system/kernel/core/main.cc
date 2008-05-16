@@ -192,9 +192,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   
 #endif
 
-//  char *babypoo = new char[32];
-//  NOTICE("babypoo: " << (unsigned int)babypoo);
-
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();
 #endif
