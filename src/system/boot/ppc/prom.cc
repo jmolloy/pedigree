@@ -39,10 +39,7 @@ void prom_init(prom_entry pe)
     prom_exit();
   if (prom_get_chosen ("stdout", &prom_stdout, sizeof(prom_stdout)) <= 0)
     prom_exit();
-  prom_putchar('!');
-  prom_putchar('#');
-//  prom_exit();
-//  for(;;);
+  prom_putchar('@');
 }
 
 void *prom_finddevice(const char *dev)
