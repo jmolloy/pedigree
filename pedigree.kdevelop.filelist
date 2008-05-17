@@ -385,6 +385,8 @@ src/system/kernel/machine/malta/Keyboard.cc
 src/system/kernel/machine/malta/Keyboard.h
 src/system/kernel/machine/malta/Malta.cc
 src/system/kernel/machine/malta/Malta.h
+src/system/kernel/machine/malta/Pic.cc
+src/system/kernel/machine/malta/Pic.h
 src/system/kernel/machine/malta/Serial.cc
 src/system/kernel/machine/malta/Serial.h
 src/system/kernel/machine/malta/Vga.cc
@@ -428,7 +430,6 @@ src/system/kernel/utilities/List.cc
 src/system/kernel/utilities/String.cc
 src/system/kernel/utilities/Vector.cc
 src/system/modules
-src/system/modules/test
 src/system/modules/test2
 src/user
 src/user/Makefile

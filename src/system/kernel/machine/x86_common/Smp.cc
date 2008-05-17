@@ -1,4 +1,3 @@
-#if defined(SMP)
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -231,5 +230,3 @@ bool Smp::checksum(const ConfigTableHeader *pConfigTable)
 
   return true;
 }
-
-#endif

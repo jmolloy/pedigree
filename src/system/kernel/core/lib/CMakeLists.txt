@@ -14,11 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-if(X86_COMMON OR MIPS_COMMON)
-  add_kernel_src(core/lib
-                 dlmallocAbort.cc dlmalloc.c dlmallocSbrk.cc cppsupport.cc demangle.cc
-                 memory.c string.c vsprintf.c)
-else(X86_COMMON OR MIPS_COMMON)
 add_kernel_src(core/lib
                cppsupport.cc demangle.cc memory.c string.c vsprintf.c)
+
+if(X86_COMMON OR MIPS_COMMON)
+  add_kernel_src(core/lib
+                 dlmallocAbort.cc dlmalloc.c dlmallocSbrk.cc)
 endif(X86_COMMON OR MIPS_COMMON)

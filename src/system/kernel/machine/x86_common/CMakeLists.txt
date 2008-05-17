@@ -20,9 +20,21 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-# HACK: We are currently using #if define's within the optional source code files
-#       (optional files are in the second line) due to a CMake bug/feature
-
 add_kernel_src(machine/x86_common
-               Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc
-               Acpi.cc Apic.cc LocalApic.cc IoApic.cc Smp.cc SMBios.cc)
+               Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc)
+
+if(ACPI)
+  add_kernel_src(machine/x86_common Acpi.cc)
+endif(ACPI)
+
+if(APIC AND ACPI OR APIC AND SMP)
+  add_kernel_src(machine/x86_common Apic.cc LocalApic.cc IoApic.cc)
+endif(APIC AND ACPI OR APIC AND SMP)
+
+if(SMP)
+  add_kernel_src(machine/x86_common Smp.cc)
+endif(SMP)
+
+if (SMBIOS)
+  add_kernel_src(machine/x86_common SMBios.cc)
+endif(SMBIOS)

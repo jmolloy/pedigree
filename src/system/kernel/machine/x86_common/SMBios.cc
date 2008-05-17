@@ -1,4 +1,3 @@
-#if defined (SMBIOS)
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -110,5 +109,3 @@ SMBios::SMBios()
 SMBios::~SMBios()
 {
 }
-
-#endif

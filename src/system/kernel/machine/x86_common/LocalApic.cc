@@ -1,4 +1,3 @@
-#if defined(APIC)
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -137,5 +136,3 @@ bool LocalApic::check(uint64_t physicalAddress)
 
   return true;
 }
-
-#endif

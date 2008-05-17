@@ -22,6 +22,7 @@
 
 add_kernel_src(core/processor/x86_common
                PhysicalMemoryManager.cc Processor.cc)
+
 if(DEBUGGER)
   add_kernel_src(core/processor/x86_common Disassembler.cc)
 endif(DEBUGGER)

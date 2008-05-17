@@ -1,5 +1,3 @@
-#if defined (APIC)
-
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -18,10 +16,6 @@
 
 #include <Log.h>
 #include "Apic.h"
-
-#if !defined(ACPI) && !defined(SMP)
-  #error Neither ACPI nor SMP defined
-#endif
 
 irq_id_t Apic::registerIsaIrqHandler(uint8_t, IrqHandler *handler)
 {
@@ -54,5 +48,3 @@ bool Apic::initialise()
 
   return true;*/
 }
-
-#endif
