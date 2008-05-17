@@ -1,6 +1,6 @@
 /* Link.ld -- Linker script for the kernel - ensure everything goes in the */
 /*            Correct place.  */
-OUTPUT_ARCH(ppc)
+/*OUTPUT_ARCH(elf32ppc)*/
 ENTRY(start)
 SECTIONS
 {
