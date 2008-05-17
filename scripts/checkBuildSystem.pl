@@ -45,7 +45,15 @@ my @patch = ( {'cwd' => "gcc-$gcc_version",
                'input' => 'binutils-2.18-makeinfo.patch',
                'arch' => 'all'} );
 
-my @compile = ( {'dir' => "binutils-$binutils_version",
+my @compile = ( {'dir' => "nasm-$nasm_version",
+                 'inplace' => 1, # Nasm should be build inside the source tree.
+                 'name' => "Nasm",
+                 'configure' => "--prefix=\$PREFIX",
+                 'make' => "",
+                 'install' => 'install',
+                 'arch' => 'i686-elf amd64-elf',
+                 'test' => './bin/nasm' }, 
+		{'dir' => "binutils-$binutils_version",
                  'name' => "Binutils",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls",
                  'make' => "all",
@@ -65,15 +73,7 @@ my @compile = ( {'dir' => "binutils-$binutils_version",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
                  'arch' => 'mips64el-elf',
-                 'test' => './bin/!TARGET-gcc'},
-                {'dir' => "nasm-$nasm_version",
-                 'inplace' => 1, # Nasm should be build inside the source tree.
-                 'name' => "Nasm",
-                 'configure' => "--prefix=\$PREFIX",
-                 'make' => "",
-                 'install' => 'install',
-                 'arch' => 'i686-elf amd64-elf',
-                 'test' => './bin/nasm' } );
+                 'test' => './bin/!TARGET-gcc'} );
 
 ###################################################################################
 # Script start.
@@ -115,6 +115,9 @@ foreach (@compile) {
     # Already installed?
     my $str = "./compilers/dir/$compile{test}";
     $str =~ s/!TARGET/$target/;
+    open my $fd, ">", "/tmp/cunt";
+    print $fd "Fuck a doodle doo : $str\n";
+    close $fd;
     $all_installed = 0 unless (-f $str);
   }
 }
