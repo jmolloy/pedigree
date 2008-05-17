@@ -7,6 +7,8 @@ void *prom_stdout;
 void *call_prom(const char *service, int nargs, int nret, void *a1, void *a2, void *a3, void *a4)
 {
   prom_args pa;
+  pa.service = service;
+  
   pa.nargs = nargs;
   pa.nret = nret;
   pa.args[0] = a1;
@@ -31,7 +33,7 @@ int prom_get_chosen(char *name, void *mem, int len)
 void prom_init(prom_entry pe)
 {
   prom = pe;
-  prom_exit();
+
   prom_chosen = prom_finddevice("/chosen");
   if (prom_chosen == (void *)-1)
     prom_exit();
@@ -39,8 +41,8 @@ void prom_init(prom_entry pe)
     prom_exit();
   prom_putchar('!');
   prom_putchar('#');
-  prom_exit();
-  for(;;);
+//  prom_exit();
+//  for(;;);
 }
 
 void *prom_finddevice(const char *dev)
