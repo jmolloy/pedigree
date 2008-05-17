@@ -5,7 +5,7 @@ ENTRY(start)
 SECTIONS
 {
 
-    . = 0x000200000;
+    . = 0x001000000;
     .text :
     {
         code = .; _code = .; __code = .;

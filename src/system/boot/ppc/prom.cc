@@ -31,7 +31,7 @@ int prom_get_chosen(char *name, void *mem, int len)
 void prom_init(prom_entry pe)
 {
   prom = pe;
-  
+  prom_exit();
   prom_chosen = prom_finddevice("/chosen");
   if (prom_chosen == (void *)-1)
     prom_exit();
@@ -39,6 +39,7 @@ void prom_init(prom_entry pe)
     prom_exit();
   prom_putchar('!');
   prom_putchar('#');
+  prom_exit();
   for(;;);
 }
 
