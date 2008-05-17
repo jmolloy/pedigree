@@ -74,4 +74,11 @@ set_target_properties(kernel PROPERTIES LINK_FLAGS
 if(X86_COMMON AND MULTIPROCESSOR)
   add_dependencies(kernel
                    trampoline)
+  if(X86)
+    set_source_files_properties(core/processor/x86/asm/multiprocessor.s
+                                PROPERTIES OBJECT_DEPENDS ${PEDIGREE_BINARY_DIR}/src/system/kernel/CMakeFiles/kernel.dir/core/processor/x86/asm/trampoline.bin)
+  else(X86)
+    set_source_files_properties(core/processor/x64/asm/multiprocessor.s
+                                PROPERTIES OBJECT_DEPENDS ${PEDIGREE_BINARY_DIR}/src/system/kernel/CMakeFiles/kernel.dir/core/processor/x64/asm/trampoline.bin)
+  endif(X86)
 endif(X86_COMMON AND MULTIPROCESSOR)
