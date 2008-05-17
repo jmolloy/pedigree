@@ -137,6 +137,16 @@ void Processor::setInterrupts(bool bEnable)
     asm volatile("cli");
 }
 
+bool Processor::getInterrupts()
+{
+  size_t result;
+  asm volatile("pushf\n"
+               "pop %0\n"
+               "and $0x200, %0\n" :
+               "=r" (result));
+  return (result != 0);
+}
+
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
   uintptr_t eflags = state.getFlags();

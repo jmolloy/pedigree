@@ -18,10 +18,10 @@
 #define KERNEL_PROCESSOR_X86_INTERRUPTMANAGER_H
 
 #include <compiler.h>
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
-#include <process/Mutex.h>
 
 /** @addtogroup kernelprocessorx86
  * @{ */
@@ -102,7 +102,7 @@ class X86InterruptManager : public ::InterruptManager,
     SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
 
     /** Lock */
-    Mutex m_Lock;
+    Spinlock m_Lock;
 
     /** The instance of the interrupt manager  */
     static X86InterruptManager m_Instance;

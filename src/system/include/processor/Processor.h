@@ -137,6 +137,9 @@ class Processor
     /** Enable/Disable IRQs
      *\param[in] bEnable true to enable IRSs, false otherwise */
     static void setInterrupts(bool bEnable);
+    /** Get the IRQ state
+     *\return true, if interrupt requests are enabled, false otherwise */
+    static bool getInterrupts();
     /** Enable/Disable single-stepping
      *\param[in] bEnable true to enable single-stepping, false otherwise
      *\param[in] state the interrupt-state */

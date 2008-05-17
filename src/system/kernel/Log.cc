@@ -24,6 +24,7 @@
 Log Log::m_Instance;
 
 Log::Log () :
+  m_Lock(),
   m_DynamicLog(),
   m_StaticEntries(0),
   m_Buffer(),

@@ -17,6 +17,7 @@
 #ifndef KERNEL_LOG_H
 #define KERNEL_LOG_H
 
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
@@ -29,7 +30,9 @@
 #define NOTICE(text) \
   do \
   { \
+    Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Notice << text << Flush; \
+    Log::instance().m_Lock.release(); \
   } \
   while (0)
 
@@ -37,7 +40,9 @@
 #define WARNING(text) \
   do \
   { \
+    Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Warning << text << Flush; \
+    Log::instance().m_Lock.release(); \
   } \
   while (0)
 
@@ -45,7 +50,9 @@
 #define ERROR(text) \
   do \
   { \
+    Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Error << text << Flush; \
+    Log::instance().m_Lock.release(); \
   } \
   while (0)
 
@@ -53,7 +60,9 @@
 #define FATAL(text) \
   do \
   { \
+    Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Fatal << text << Flush; \
+    Log::instance().m_Lock.release(); \
     Processor::breakpoint(); \
   } \
   while (0)
@@ -95,6 +104,10 @@ public:
     Error,
     Fatal
   };
+
+  /** The lock
+   *\note this should only be acquired by the NOTICE, WARNING, ERROR and FATAL macros */
+  Spinlock m_Lock;
 
   /** Retrieves the static Log instance.
    *\return instance of the log class */

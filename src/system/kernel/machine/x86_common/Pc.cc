@@ -124,6 +124,16 @@ void Pc::initialise()
 
   m_bInitialised = true;
 }
+#if defined(MULTIPROCESSOR)
+  void Pc::initialiseProcessor()
+  {
+    // TODO: we might need to initialise per-processor ACPI shit, no idea atm
+
+    // Initialise the local APIC
+    if (m_LocalApic.initialiseProcessor() == false)
+      panic("Pc::initialiseProcessor(): Failed to initialise the local APIC");
+  }
+#endif
 
 Serial *Pc::getSerial(size_t n)
 {

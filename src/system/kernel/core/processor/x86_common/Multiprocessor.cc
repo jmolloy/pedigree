@@ -114,8 +114,7 @@ size_t Multiprocessor::initialise1()
     // Startup the processor
     if (localApic.getId() != (*Processors)[i]->apicId)
     {
-      NOTICE("Multiprocessor: Booting processor #" << Dec << (*Processors)[i]->processorId);
-      NOTICE("                Stack @ 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
+      NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
       // TODO: We need a timer and send INit IPIs (assert and deassert
 

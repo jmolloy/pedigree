@@ -17,8 +17,20 @@
 #ifndef KERNEL_SPINLOCK_H
 #define KERNEL_SPINLOCK_H
 
-#include <process/Mutex.h>
+#include <Atomic.h>
 
-typedef Mutex Spinlock;
+class Spinlock
+{
+  public:
+    inline Spinlock(bool bLocked = false)
+      : m_bInterrupts(), m_Atom(!bLocked){}
+
+    void acquire();
+    void release();
+
+  private:
+    bool m_bInterrupts;
+    Atomic<bool> m_Atom;
+};
 
 #endif

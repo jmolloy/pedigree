@@ -39,6 +39,10 @@ class Pc : public Machine
 
     virtual void initialise() INITIALISATION_ONLY;
 
+    #if defined(MULTIPROCESSOR)
+      void initialiseProcessor() INITIALISATION_ONLY;
+    #endif
+
     virtual Serial *getSerial(size_t n);
     virtual size_t getNumSerial();
     virtual Vga *getVga(size_t n);

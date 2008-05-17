@@ -69,7 +69,7 @@ InterruptManager &InterruptManager::instance()
 
 bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
-  LockGuard lockGuard(m_Lock);
+  LockGuard<Spinlock> lockGuard(m_Lock);
 
   if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
     return false;
@@ -86,7 +86,7 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
   bool X86InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
-    LockGuard lockGuard(m_Lock);
+    LockGuard<Spinlock> lockGuard(m_Lock);
 
     if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
       return false;
@@ -111,7 +111,7 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
 {
-  LockGuard lockGuard(m_Lock);
+  LockGuard<Spinlock> lockGuard(m_Lock);
 
   if (UNLIKELY(Service >= serviceEnd))
     return false;

@@ -167,6 +167,7 @@ src/system/kernel
 src/system/kernel/Archive.cc
 src/system/kernel/Archive.h
 src/system/kernel/Log.cc
+src/system/kernel/Spinlock.cc
 src/system/kernel/Version.h
 src/system/kernel/boot-arm.cc
 src/system/kernel/boot-mips.cc

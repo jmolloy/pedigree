@@ -77,6 +77,7 @@ int foo(void *a)
    on the particular processor */
 void apMain()
 {
+  NOTICE("apMain()");
   Processor::halt();
 }
 

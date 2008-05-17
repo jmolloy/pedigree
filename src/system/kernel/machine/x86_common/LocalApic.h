@@ -86,7 +86,7 @@ class LocalApic
     /** Check whether the local APIC is enabled and at the desired address
      *\param[in] physicalAddress the desired physical address
      *\return true, if the local APIC is enabled and at physicalAddress, false otherwise */
-    bool check(uint64_t physicalAddress);
+    bool check(uint64_t physicalAddress) INITIALISATION_ONLY;
 
     /** The local APIC memory-mapped I/O space */
     MemoryMappedIo m_IoSpace;

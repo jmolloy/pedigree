@@ -18,6 +18,7 @@
 #include "SyscallManager.h"
 #include "InterruptManager.h"
 #include "../x86_common/Multiprocessor.h"
+#include "../../../machine/x86_common/Pc.h"
 
 void Multiprocessor::applicationProcessorStartup()
 {
@@ -41,8 +42,14 @@ void Multiprocessor::applicationProcessorStartup()
   // Invalidate the first 4MB identity mapping
   Processor::invalidate(0);
 
-  // TODO: We might first want to call a machine specific function to do some checks
+  // Initialise the machine-specific interface
+  Pc::instance().initialiseProcessor();
 
+  // TODO: We nede to synchronize the -init section invalidation too
+  //       or do we do we let the VirtualAddressSpace take care of that
+  //       through IPIs (at that time already)?
+
+  // Call the per-processor code in main.cc
   extern void apMain();
   apMain();
 }

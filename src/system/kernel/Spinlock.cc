@@ -13,35 +13,25 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <Spinlock.h>
+#include <processor/Processor.h>
 
-#ifndef KERNEL_LOCKGUARD_H
-#define KERNEL_LOCKGUARD_H
-
-/** @addtogroup kernel
- * @{ */
-
-template<class T>
-class LockGuard
+void Spinlock::acquire()
 {
-  public:
-    inline LockGuard(T &Lock)
-      : m_Lock(Lock)
-    {
-      m_Lock.acquire();
-    }
-    inline ~LockGuard()
-    {
-      m_Lock.release();
-    }
+  // Save the current irq status
+  m_bInterrupts = Processor::getInterrupts();
 
-  private:
-    LockGuard();
-    LockGuard(const LockGuard &);
-    LockGuard &operator = (const LockGuard &);
+  // Disable irqs if not already done
+  if (m_bInterrupts)
+    Processor::setInterrupts(false);
 
-    T &m_Lock;
-};
+  while (m_Atom.compareAndSwap(true, false) == false);
+}
+void Spinlock::release()
+{
+  m_Atom = true;
 
-/** @} */
-
-#endif
+  // Reenable irqs if they were enabled before
+  if (m_bInterrupts)
+    Processor::setInterrupts(true);
+}
