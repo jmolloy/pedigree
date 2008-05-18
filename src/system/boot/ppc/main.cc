@@ -49,10 +49,23 @@ void writeHex(unsigned int n)
     }
 
 }
+extern "C" void foo();
 
-extern "C" void start(unsigned long r3, unsigned long r4, unsigned long r5)
+extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
 {
-  prom_init ( (prom_entry) r5 );
-  writeStr("Cunty balls\n");
+  prom_init((prom_entry) r5);
+  ///prom_init ( (prom_entry) r5 );
+  prom_putchar('!');
+  foo();
+  //writeChar('!');
+  // writeChar('a');
+  //writeChar('n');
+  //writeChar('g');
+  writeStr("Cunty balls");
   writeHex(0xdeadbeef);
+
+}
+extern "C" void foo()
+{
+  prom_putchar('@');
 }
