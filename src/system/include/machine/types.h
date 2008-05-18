@@ -29,7 +29,10 @@
   #include <machine/arm_common/types.h>
   #define MACHINE_SPECIFIC_NAME(x) ARMCommon##x
 #endif
-
+#ifdef PPC_COMMON
+  #include <machine/ppc_common/types.h>
+  #define MACHINE_SPECIFIC_NAME(x) PPCCommon##x
+#endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
 //       the selected machine architecture

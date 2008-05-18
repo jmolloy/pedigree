@@ -226,6 +226,8 @@ class Processor
   #include <processor/mips_common/Processor.h>
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/Processor.h>
+#elif defined(PPC_COMMON)
+  #include <processor/ppc_common/Processor.h>
 #endif
 
 #ifdef X86

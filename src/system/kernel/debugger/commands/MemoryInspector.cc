@@ -279,7 +279,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
   else
   {
 #ifdef BIG_ENDIAN
-#error Big endian people will have problems here.
+#warning Big endian people will have problems here.
 #endif
     // Assume hex integer.
     if (str.left(2) == "0x")

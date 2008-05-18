@@ -16,7 +16,7 @@
 
 #########################################################################################
 # Sources list.
-set(BOOT_SRC boot.s main.cc prom.cc)
+set(BOOT_SRC boot.s main.cc prom.cc Elf32.cc)
 
 #########################################################################################
 # Script begin.
@@ -24,13 +24,11 @@ set(BOOT_SRC boot.s main.cc prom.cc)
 include_directories(.)
 
 # Add an extra target to create the bootloader.
-#add_custom_target(autogen.h ALL perl
-#${PEDIGREE_SOURCE_DIR}/src/system/boot/mips/mkheader.pl
-#${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel
-#                  DEPENDS kernel
-#                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/mips)
+add_custom_target(autogen.h ALL perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/mkheader.pl ${PEDIGREE_BINARY_DIR}/src/system/kernel/kernel
+                  DEPENDS kernel
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc)
 
 add_executable(bootloader ${BOOT_SRC})
-#add_dependencies(bootloader autogen.h)
+add_dependencies(bootloader autogen.h)
 set_target_properties(bootloader PROPERTIES LINK_FLAGS
                       "-T ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/link-ppc.ld")

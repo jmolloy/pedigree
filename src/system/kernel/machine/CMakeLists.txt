@@ -44,5 +44,13 @@ if(ARM_COMMON)
   add_subdirectory(arm_common)
 endif(ARM_COMMON)
 
+if(PPC_MAC)
+  add_subdirectory(mac)
+endif(PPC_MAC)
+
+if(PPC_COMMON)
+  add_subdirectory(ppc_common)
+endif(PPC_COMMON)
+
 # This is required to push any changes the add_subdirectory commands may have made up to parent scope.
 add_kernel_src(machine)

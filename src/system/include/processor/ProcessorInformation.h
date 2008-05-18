@@ -34,6 +34,9 @@ typedef size_t ProcessorId;
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/ProcessorInformation.h>
   #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
+#elif defined(PPC_COMMON)
+  #include <processor/ppc_common/ProcessorInformation.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) PPCCommon##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

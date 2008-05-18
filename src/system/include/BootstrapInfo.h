@@ -27,7 +27,6 @@ struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
   // via the bootstrapper.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
   uint32_t flags;
   
   uint32_t mem_lower;
@@ -64,9 +63,6 @@ struct BootstrapStruct_t
   uint32_t vbe_interface_seg;
   uint32_t vbe_interface_off;
   uint32_t vbe_interface_len;
-#else // KERNEL_STANDALONE
-
-#endif // !KERNEL_STANDALONE
 } PACKED;
 
 struct MemoryMapEntry_t

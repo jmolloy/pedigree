@@ -73,5 +73,8 @@ protected:
 #ifdef ARM926E
 #include <core/processor/arm_common/Disassembler.h>
 #endif
+#ifdef PPC_COMMON
+#include <core/processor/ppc_common/Disassembler.h>
+#endif
 
 #endif

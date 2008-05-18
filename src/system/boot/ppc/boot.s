@@ -1,3 +1,3 @@
 .globl start
-start:	ba _start
-	
+start:
+    ba _start

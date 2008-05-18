@@ -32,6 +32,9 @@
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
+#elif defined(PPC32)
+  #include <processor/ppc32/types.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

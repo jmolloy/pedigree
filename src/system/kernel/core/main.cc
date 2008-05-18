@@ -84,6 +84,9 @@ void apMain()
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
+#ifdef PPC_COMMON
+  for(;;);
+#endif
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
@@ -124,7 +127,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   bootIO.initialise();
   
   // The initialisation is done here, unmap/free the .init section
-#ifndef MIPS_COMMON
+#ifdef X86_COMMON
   Processor::initialisationDone();
 #endif
 

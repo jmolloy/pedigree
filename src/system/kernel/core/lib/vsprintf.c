@@ -47,8 +47,7 @@ static int skip_atoi(const char **s)
 int __res; \
 __asm__("divl %4":"=a" (n),"=d" (__res):"0" (n),"1" (0),"r" (base)); \
  __res; })
-#endif
-#if defined(MIPS_COMMON) || defined(ARM_COMMON)
+#else
 #define do_div(n,base) ({n/base;})
 #endif
 
