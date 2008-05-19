@@ -1,6 +1,7 @@
 #include "prom.h"
 #include "Elf32.h"
 #include "autogen.h"
+#include "Vga.h"
 
 extern int memset(void *buf, int c, size_t len);
 struct BootstrapStruct_t
@@ -121,6 +122,8 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   writeStr("About to jump to kernel - entry point 0x");
   writeHex(elf.getEntryPoint());
   writeStr("\n");
+
+  vga_init();
 
 //   int a = main(&bs);
   for(;;);
