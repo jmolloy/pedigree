@@ -172,5 +172,6 @@ void vga_set_mode(int nMode)
 
 void vga_init()
 {
-  vga_set_mode(0);
+  //vga_set_mode(0);
+  
 }

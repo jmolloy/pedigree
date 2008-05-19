@@ -3,6 +3,7 @@
 prom_entry prom;
 void *prom_chosen;
 void *prom_stdout;
+void *prom_screen;
 
 void *call_prom(const char *service, int nargs, int nret, void *a1, void *a2, void *a3, void *a4)
 {
@@ -39,7 +40,8 @@ void prom_init(prom_entry pe)
     prom_exit();
   if (prom_get_chosen ("stdout", &prom_stdout, sizeof(prom_stdout)) <= 0)
     prom_exit();
-  prom_putchar('@');
+  if (prom_get_chosen ("screen", &prom_screen, sizeof(prom_screen)) <= 0)
+    prom_exit();
 }
 
 void *prom_finddevice(const char *dev)
