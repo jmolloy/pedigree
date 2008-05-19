@@ -149,7 +149,6 @@ src/system/include/processor/ppc32
 src/system/include/processor/ppc32/Processor.h
 src/system/include/processor/ppc32/StackFrame.h
 src/system/include/processor/ppc32/state.h
-src/system/include/processor/ppc32/tss.h
 src/system/include/processor/ppc32/types.h
 src/system/include/processor/ppc_common
 src/system/include/processor/ppc_common/Processor.h
