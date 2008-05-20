@@ -124,10 +124,6 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   writeStr("\n");
 
   vga_init();
-  
-  unsigned int addr;
-  prom_getprop(prom_screen, "address", (void*)&addr, 4);
-  writeHex(addr);
 
 //   int a = main(&bs);
   for(;;);

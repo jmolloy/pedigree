@@ -4,8 +4,9 @@ prom_entry prom;
 void *prom_chosen;
 void *prom_stdout;
 void *prom_screen;
+void *prom_mmu;
 
-void *call_prom(const char *service, int nargs, int nret, void *a1, void *a2, void *a3, void *a4)
+void *call_prom(const char *service, int nargs, int nret, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6)
 {
   prom_args pa;
   pa.service = service;
@@ -16,7 +17,9 @@ void *call_prom(const char *service, int nargs, int nret, void *a1, void *a2, vo
   pa.args[1] = a2;
   pa.args[2] = a3;
   pa.args[3] = a4;
-  for (int i = 4; i < 10; i++)
+  pa.args[4] = a5;
+  pa.args[5] = a6;
+  for (int i = 6; i < 10; i++)
     pa.args[i] = 0;
   
   prom (&pa);
@@ -40,7 +43,10 @@ void prom_init(prom_entry pe)
     prom_exit();
   if (prom_get_chosen ("stdout", &prom_stdout, sizeof(prom_stdout)) <= 0)
     prom_exit();
-  if (prom_get_chosen ("screen", &prom_screen, sizeof(prom_screen)) <= 0)
+  if (prom_get_chosen ("mmu", &prom_mmu, sizeof(prom_mmu)) <= 0)
+    prom_exit();
+  prom_screen = prom_finddevice("screen");
+  if (prom_screen == (void *)-1)
     prom_exit();
 }
 
@@ -65,4 +71,9 @@ void prom_putchar(char c)
     call_prom ("write", 3, 1, prom_stdout, (void*)"\r\n", (void*)2);
   else
     call_prom ("write", 3, 1, prom_stdout, (void*)&c, (void*)1);
+}
+
+void prom_map(unsigned int phys, unsigned int virt, unsigned int size)
+{
+  call_prom("call-method", 6,1,  (void*)"map", (void*)prom_mmu, (void*)-1, (void*)size, (void*)virt, (void*)phys);
 }
