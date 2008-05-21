@@ -149,7 +149,7 @@ foreach(definition ${DEFINES})
 endforeach(definition)
 
 # Uncomment this if you want to see the exact commands CMake runs.
-# set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Remove the default -rdynamic option from the linker flags.
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
