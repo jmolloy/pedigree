@@ -216,6 +216,8 @@ void X86Vga::restoreMode()
 
 void X86Vga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
+  if (!pBuffer)
+    return;
   if (m_Framebuffer == true)
     memcpy(m_Framebuffer.virtualAddress(), pBuffer, nBufLen);
   else

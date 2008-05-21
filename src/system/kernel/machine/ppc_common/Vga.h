@@ -14,11 +14,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef MACHINE_MALTA_VGA_H
-#define MACHINE_MALTA_VGA_H
+#ifndef MACHINE_PPC_VGA_H
+#define MACHINE_PPC_VGA_H
 
 #include <processor/types.h>
 #include <machine/Vga.h>
+#include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
+
+/* We make an assumption about the device size. */
+#define MAX_WIDTH 1024
+#define MAX_HEIGHT 800
+
+#define FONT_WIDTH 8
+#define FONT_HEIGHT 16
+
+/* Routines for taking a 0-255 set of RGB values and converting them to a 8,16 or 32 bpp specific form. */
+#ifdef BIG_ENDIAN
+#define RGB_8(r,g,b) ( ((r&0x3)<<6) | ((g&0x7)<<3) | (b&0x7) )
+#define RGB_16(r,g,b)  ( ((r&0x1f)<<11) | ((g&0x1f)<<6) | (b&0x1f) )
+#define RGB_32(r,g,b) ( 0 | r<<24 | g<<16 | b<<8 )
+#else
+#error Little endian not implemented here.
+#endif
 
 /**
  * Vga device abstraction.
@@ -60,19 +78,13 @@ class PPCVga : public Vga
   /**
    * \return The number of columns in the current mode.
    */
-  virtual size_t getNumCols ()
-  {
-    return 80;
-  }
+  virtual size_t getNumCols ();
   
   /**
    * \return The number of rows in the current mode.
    */
-  virtual size_t getNumRows ()
-  {
-    return 25;
-  }
-  
+  virtual size_t getNumRows ();
+
   /**
    * Stores the current video mode.
    */
@@ -89,10 +101,10 @@ class PPCVga : public Vga
    * The buffer is assumed to be in the correct format for directly copying into video memory.
    * This will obviously depend on the current mode (text/graphical) as well as resolution and
    * bits per pixel (graphics mode only).
-   * \param A pointer to the buffer to swap into video memory.
-   * \param The length of pBuffer.
+   * \param pBuffer A pointer to the buffer to swap into video memory.
+   * \param nBufLen The length of pBuffer.
    */
-  virtual void pokeBuffer (uint8_t *pBuffer, size_t nBufLen) {}
+  virtual void pokeBuffer (uint8_t *pBuffer, size_t nBufLen);
 
   /**
    * Copies the current framebuffer into the given buffer.
@@ -103,7 +115,7 @@ class PPCVga : public Vga
    * \param A pointer to the buffer.
    * \param The length of pBuffer.
    */
-  virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen) {}
+  virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen);
   
   /**
    * Moves the cursor to the position specified by the parameters.
@@ -112,7 +124,25 @@ class PPCVga : public Vga
    */
   virtual void moveCursor (size_t nX, size_t nY) {}
   
-  operator uint16_t*() const {return 0;}
+  operator uint16_t*() const {return m_pTextBuffer;}
+  
+private:
+  /** We use a 16-bit-per-character text mode buffer to simplify things. BootIO is a bit of a
+   *  simpleton, really. */
+  uint16_t m_pTextBuffer[(MAX_WIDTH/FONT_WIDTH)*(MAX_HEIGHT/FONT_HEIGHT)];
+  
+  /** Our real graphics framebuffer
+      \todo: This should be a MemoryMappedIO - needs VirtualAddressSpace though. */
+  uint8_t *m_pFramebuffer;
+  
+  /** Screen width */
+  uint32_t m_Width;
+  /** Screen height */
+  uint32_t m_Height;
+  /** Screen depth - bits per pixel */
+  uint32_t m_Depth;
+  /** Stride - number of bytes per row */
+  uint32_t m_Stride;
 };
 
 #endif
