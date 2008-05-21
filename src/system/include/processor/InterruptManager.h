@@ -33,17 +33,19 @@ class InterruptManager
      *\return instance of the interrupt manager */
     static InterruptManager &instance();
     /** Register an interrupt handler
-     *\param[in] interruptNumber the interrupt's number
-     *\param[in] handler the interrupt handler
+     *\param[in] nInterruptNumber the interrupt's number
+     *\param[in] pHandler the interrupt handler
      *\return true, if successfully registered, false otherwise */
-    virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler) = 0;
+    virtual bool registerInterruptHandler(size_t nInterruptNumber,
+                                          InterruptHandler *pHandler) = 0;
 
     #if defined(DEBUGGER)
       /** Register an interrupt handler (for the kernel debugger)
-       *\param[in] interruptNumber the interrupt's number
-       *\param[in] handler the interrupt handler
+       *\param[in] nInterruptNumber the interrupt's number
+       *\param[in] pHandler the interrupt handler
        *\return true, if successfully registered, false otherwise */
-      virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler) = 0;
+      virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                    InterruptHandler *pHandler) = 0;
       /** Get the interrupt number of the breakpoint exception
        *\return the interrupt number of the breakpoint exception */
       virtual size_t getBreakpointInterruptNumber() PURE = 0;

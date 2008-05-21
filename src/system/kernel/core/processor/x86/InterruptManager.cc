@@ -15,15 +15,18 @@
  */
 
 #include <panic.h>
-#include <Debugger.h>
 #include <LockGuard.h>
 #include <utilities/StaticString.h>
 #include "InterruptManager.h"
+#if defined(DEBUGGER)
+  #include <Debugger.h>
+#endif
 
 #define SYSCALL_INTERRUPT_NUMBER 255
 
-const char* g_ExceptionNames[] = {
-  "Divide Error [div by 0 OR dest operand too small]",
+const char* g_ExceptionNames[] =
+{
+  "Divide Error",
   "Debug",
   "NMI Interrupt",
   "Breakpoint",
@@ -42,18 +45,18 @@ const char* g_ExceptionNames[] = {
   "Alignment Check",
   "Machine-Check",
   "SIMD Floating-Point Exception",
-  "Int20_rsvd",
-  "Int21_rsvd",
-  "Int22_rsvd",
-  "Int23_rsvd",
-  "Int24_rsvd",
-  "Int25_rsvd",
-  "Int26_rsvd",
-  "Int27_rsvd",
-  "Int28_rsvd",
-  "Int29_rsvd",
-  "Int30_rsvd",
-  "Int31_rsvd"
+  "Reserved: Interrupt 20",
+  "Reserved: Interrupt 21",
+  "Reserved: Interrupt 22",
+  "Reserved: Interrupt 23",
+  "Reserved: Interrupt 24",
+  "Reserved: Interrupt 25",
+  "Reserved: Interrupt 26",
+  "Reserved: Interrupt 27",
+  "Reserved: Interrupt 28",
+  "Reserved: Interrupt 29",
+  "Reserved: Interrupt 30",
+  "Reserved: Interrupt 31"
 };
 
 X86InterruptManager X86InterruptManager::m_Instance;
@@ -67,35 +70,37 @@ InterruptManager &InterruptManager::instance()
   return X86InterruptManager::instance();
 }
 
-bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+bool X86InterruptManager::registerInterruptHandler(size_t nInterruptNumber,
+                                                   InterruptHandler *pHandler)
 {
   LockGuard<Spinlock> lockGuard(m_Lock);
 
-  if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+  if (UNLIKELY(nInterruptNumber >= 256 || nInterruptNumber == SYSCALL_INTERRUPT_NUMBER))
     return false;
-  if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
+  if (UNLIKELY(pHandler != 0 && m_pHandler[nInterruptNumber] != 0))
     return false;
-  if (UNLIKELY(handler == 0 && m_Handler[interruptNumber] == 0))
+  if (UNLIKELY(pHandler == 0 && m_pHandler[nInterruptNumber] == 0))
     return false;
 
-  m_Handler[interruptNumber] = handler;
+  m_pHandler[nInterruptNumber] = pHandler;
   return true;
 }
 
 #ifdef DEBUGGER
 
-  bool X86InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  bool X86InterruptManager::registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                             InterruptHandler *pHandler)
   {
     LockGuard<Spinlock> lockGuard(m_Lock);
 
-    if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+    if (UNLIKELY(nInterruptNumber >= 256 || nInterruptNumber == SYSCALL_INTERRUPT_NUMBER))
       return false;
-    if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
+    if (UNLIKELY(pHandler != 0 && m_pDbgHandler[nInterruptNumber] != 0))
       return false;
-    if (UNLIKELY(handler == 0 && m_DbgHandler[interruptNumber] == 0))
+    if (UNLIKELY(pHandler == 0 && m_pDbgHandler[nInterruptNumber] == 0))
       return false;
 
-    m_DbgHandler[interruptNumber] = handler;
+    m_pDbgHandler[nInterruptNumber] = pHandler;
     return true;
   }
   size_t X86InterruptManager::getBreakpointInterruptNumber()
@@ -109,20 +114,117 @@ bool X86InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 #endif
 
-bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
+bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *pHandler)
 {
   LockGuard<Spinlock> lockGuard(m_Lock);
 
   if (UNLIKELY(Service >= serviceEnd))
     return false;
-  if (UNLIKELY(handler != 0 && m_SyscallHandler[Service] != 0))
+  if (UNLIKELY(pHandler != 0 && m_pSyscallHandler[Service] != 0))
     return false;
-  if (UNLIKELY(handler == 0 && m_SyscallHandler[Service] == 0))
+  if (UNLIKELY(pHandler == 0 && m_pSyscallHandler[Service] == 0))
     return false;
 
-  m_SyscallHandler[Service] = handler;
+  m_pSyscallHandler[Service] = pHandler;
   return true;
 }
+
+void X86InterruptManager::interrupt(InterruptState &interruptState)
+{
+  size_t nIntNumber = interruptState.getInterruptNumber();
+
+  #if defined(DEBUGGER)
+  {
+    InterruptHandler *pHandler;
+
+    // Get the debugger handler
+    {
+      LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
+      pHandler = m_Instance.m_pDbgHandler[nIntNumber];
+    }
+
+    // Call the kernel debugger's handler, if any
+    if (pHandler != 0)
+      pHandler->interrupt(nIntNumber, interruptState);
+  }
+  #endif
+
+  // Call the syscall handler, if it is the syscall interrupt
+  if (nIntNumber == SYSCALL_INTERRUPT_NUMBER)
+  {
+    size_t serviceNumber = interruptState.getSyscallService();
+
+    if (UNLIKELY(serviceNumber >= serviceEnd))
+    {
+      // TODO: We should return an error here
+      return;
+    }
+
+    SyscallHandler *pHandler;
+  
+    // Get the syscall handler
+    {
+      LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
+      pHandler = m_Instance.m_pSyscallHandler[serviceNumber];
+    }
+  
+    if (LIKELY(pHandler != 0))
+      pHandler->syscall(interruptState);
+    return;
+  }
+
+  InterruptHandler *pHandler;
+
+  // Get the interrupt handler
+  {
+    LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
+    pHandler = m_Instance.m_pHandler[nIntNumber];
+  }
+
+  // Call the normal interrupt handler, if any
+  if (LIKELY(pHandler != 0))
+  {
+    pHandler->interrupt(nIntNumber, interruptState);
+    return;
+  }
+
+  // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
+  // reserved, not for use by system programmers)
+  // TODO: Rework this
+  if(LIKELY(nIntNumber < 32 &&
+            nIntNumber != 1 &&
+            nIntNumber != 3))
+  {
+    // TODO:: Check for debugger initialisation.
+    // TODO: register dump, maybe a breakpoint so the deubbger can take over?
+    // for now just print out the exception name and number
+    static LargeStaticString e;
+    e.clear();
+    e.append ("Exception #");
+    e.append (nIntNumber, 10);
+    e.append (": \"");
+    e.append (g_ExceptionNames[nIntNumber]);
+    e.append ("\"");
+    if (nIntNumber == 14)
+    {
+      uint32_t cr2;
+      asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
+      e.append(" at 0x");
+      e.append(cr2, 16, 8, '0');
+      e.append(", errorcode 0x");
+      e.append(interruptState.m_Errorcode, 16, 8, '0');
+    }
+#if defined(DEBUGGER)
+    Debugger::instance().start(interruptState, e);
+#else
+    panic(e);
+#endif
+  }
+}
+
+//
+// Functions only usable in the kernel initialisation phase
+//
 
 void X86InterruptManager::initialiseProcessor()
 {
@@ -136,70 +238,15 @@ void X86InterruptManager::initialiseProcessor()
   asm volatile("lidt %0" :: "m"(idtr));
 }
 
-void X86InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler, bool userspace)
+void X86InterruptManager::setInterruptGate(size_t nInterruptNumber,
+                                           uintptr_t interruptHandler,
+                                           bool bUserspace)
 {
-  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
-  m_IDT[interruptNumber].selector = 0x08;
-  m_IDT[interruptNumber].res = 0;
-  m_IDT[interruptNumber].flags = userspace ? 0xEE : 0x8E;
-  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
-}
-void X86InterruptManager::interrupt(InterruptState &interruptState)
-{
-  // TODO: Needs locking
-
-  size_t intNumber = interruptState.getInterruptNumber();
-
-  #ifdef DEBUGGER
-    // Call the kernel debugger's handler, if any
-    if (m_Instance.m_DbgHandler[intNumber] != 0)
-      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
-  #endif
-
-  // Call the syscall handler, if it is the syscall interrupt
-  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
-  {
-    size_t serviceNumber = interruptState.getSyscallService();
-    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
-      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
-  }
-  // Call the normal interrupt handler, if any, otherwise
-  else if (m_Instance.m_Handler[intNumber] != 0)
-    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
-  else
-  {
-    // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
-    // reserved, not for use by system programmers)
-    if(LIKELY(intNumber < 32 &&
-              intNumber != 1 &&
-              intNumber != 3))
-    {
-      // TODO:: Check for debugger initialisation.
-      // TODO: register dump, maybe a breakpoint so the deubbger can take over?
-      // for now just print out the exception name and number
-      static LargeStaticString e;
-      e.clear();
-      e.append ("Exception #");
-      e.append (intNumber, 10);
-      e.append (": \"");
-      e.append (g_ExceptionNames[intNumber]);
-      e.append ("\"");
-      if (intNumber == 14)
-      {
-        uint32_t cr2;
-        asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
-        e.append(" at 0x");
-        e.append(cr2, 16, 8, '0');
-        e.append(", errorcode 0x");
-        e.append(interruptState.m_Errorcode, 16, 8, '0');
-      }
-#ifdef DEBUGGER
-      Debugger::instance().start(interruptState, e);
-#else
-      panic(e);
-#endif
-    }
-  }
+  m_IDT[nInterruptNumber].offset0 = interruptHandler & 0xFFFF;
+  m_IDT[nInterruptNumber].selector = 0x08;
+  m_IDT[nInterruptNumber].res = 0;
+  m_IDT[nInterruptNumber].flags = bUserspace ? 0xEE : 0x8E;
+  m_IDT[nInterruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
 }
 
 X86InterruptManager::X86InterruptManager()
@@ -208,15 +255,15 @@ X86InterruptManager::X86InterruptManager()
   // Initialise the pointers to the interrupt handler
   for (size_t i = 0;i < 256;i++)
   {
-    m_Handler[i] = 0;
-    #ifdef DEBUGGER
-      m_DbgHandler[i] = 0;
+    m_pHandler[i] = 0;
+    #if defined(DEBUGGER)
+      m_pDbgHandler[i] = 0;
     #endif
   }
 
   // Initialise the pointers to the syscall handler
   for (size_t i = 0;i < serviceEnd;i++)
-    m_SyscallHandler[i] = 0;
+    m_pSyscallHandler[i] = 0;
 
   // Initialise the IDT
   extern uintptr_t interrupt_handler_array[];

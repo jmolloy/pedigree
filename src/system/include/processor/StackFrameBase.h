@@ -30,17 +30,16 @@ class StackFrameBase
 {
   public:
 #if defined(DEBUGGER)
-    /** Creates a stack frame based on the given processor state and also the given
-     *  symbol name (mangled). */
-    StackFrameBase(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol);
-
-    /** The destructor does nothing */
-    inline virtual ~StackFrameBase(){}
-
     /** Returns a pretty printed string containing the function name and each parameter with
      *  its value (hopefully). */
     void prettyPrint(HugeStaticString &buf);
 #endif
+
+    /** Creates a stack frame based on the given processor state and also the given
+     *  symbol name (mangled). */
+    StackFrameBase(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol);
+    /** The destructor does nothing */
+    inline virtual ~StackFrameBase(){}
 
     /** Construct a stack frame, given a ProcessorState. The stack frame should be constructed
      *  to comply with the default ABI for the current architecture - that implies the stack

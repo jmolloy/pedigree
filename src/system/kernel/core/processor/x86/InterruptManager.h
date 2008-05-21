@@ -26,7 +26,7 @@
 /** @addtogroup kernelprocessorx86
  * @{ */
 
-/** The interrupt handler on x86 processors */
+/** The interrupt/syscall manager on x86 processors */
 class X86InterruptManager : public ::InterruptManager,
                             public ::SyscallManager
 {
@@ -35,35 +35,42 @@ class X86InterruptManager : public ::InterruptManager,
      *\return instance of the X86InterruptManager class */
     inline static X86InterruptManager &instance(){return m_Instance;}
 
+    //
     // InterruptManager Interface
-    virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
+    //
+    virtual bool registerInterruptHandler(size_t nInterruptNumber,
+                                          InterruptHandler *pHandler);
 
     #ifdef DEBUGGER
-      virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
+      virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                    InterruptHandler *pHandler);
       virtual size_t getBreakpointInterruptNumber() PURE;
       virtual size_t getDebugInterruptNumber() PURE;
     #endif
 
+    //
     // SyscallManager Interface
-    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
+    //
+    virtual bool registerSyscallHandler(Service_t Service,
+                                        SyscallHandler *pHandler);
 
-    /** Initialises this processors IDTR
-     *\note This should only be called from initialiseProcessor()
-     *\todo and some smp/acpi function */
+    /** Initialises this processor's IDTR
+     *\note This should only be called from Processor::initialise1() and
+     *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
-    /** Sets up an interrupt gate
-     *\param[in] interruptNumber the interrupt number
-     *\param[in] interruptHandler address of the assembler interrupt handler stub
-     *\param[in] userspace is the userspace allowed to call this callgate?
-     *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
-    void setInterruptGate(size_t interruptNumber,
-                          uintptr_t interruptHandler,
-                          bool userspace) INITIALISATION_ONLY;
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
+
+    /** Sets up an interrupt gate
+     *\param[in] nInterruptNumber the interrupt number
+     *\param[in] interruptHandler address of the assembler interrupt handler stub
+     *\param[in] bUserspace is the userspace allowed to call this callgate? */
+    void setInterruptGate(size_t nInterruptNumber,
+                          uintptr_t interruptHandler,
+                          bool bUserspace) INITIALISATION_ONLY;
     /** The constructor */
     X86InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor
@@ -76,7 +83,7 @@ class X86InterruptManager : public ::InterruptManager,
     virtual ~X86InterruptManager();
 
     /** Structure of a x86 protected-mode gate descriptor */
-    struct gate_descriptor
+    struct GateDescriptor
     {
       /** Bits 0-15 of the offset */
       uint16_t offset0;
@@ -91,15 +98,15 @@ class X86InterruptManager : public ::InterruptManager,
     } PACKED;
 
     /** The interrupt descriptor table (IDT) */
-    gate_descriptor m_IDT[256];
+    GateDescriptor m_IDT[256];
     /** The normal interrupt handlers */
-    InterruptHandler *m_Handler[256];
+    InterruptHandler *m_pHandler[256];
     #ifdef DEBUGGER
       /** The debugger interrupt handlers */
-      InterruptHandler *m_DbgHandler[256];
+      InterruptHandler *m_pDbgHandler[256];
     #endif
     /** The syscall handlers */
-    SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
+    SyscallHandler *m_pSyscallHandler[SyscallManager::serviceEnd];
 
     /** Lock */
     Spinlock m_Lock;

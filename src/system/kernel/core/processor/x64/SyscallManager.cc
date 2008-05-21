@@ -15,6 +15,7 @@
  */
 
 #include <compiler.h>
+#include <LockGuard.h>
 #include <processor/Processor.h>
 #include "SyscallManager.h"
 
@@ -25,20 +26,46 @@ SyscallManager &SyscallManager::instance()
   return X64SyscallManager::instance();
 }
 
-bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
+bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler *pHandler)
 {
-  // TODO: Needs locking
+  // Lock the class until the end of the function
+  LockGuard<Spinlock> lock(m_Lock);
 
   if (UNLIKELY(Service >= SyscallManager::serviceEnd))
     return false;
-  if (UNLIKELY(handler != 0 && m_Handler[Service] != 0))
+  if (UNLIKELY(pHandler != 0 && m_pHandler[Service] != 0))
     return false;
-  if (UNLIKELY(handler == 0 && m_Handler[Service] == 0))
+  if (UNLIKELY(pHandler == 0 && m_pHandler[Service] == 0))
     return false;
 
-  m_Handler[Service] = handler;
+  m_pHandler[Service] = pHandler;
   return true;
 }
+
+void X64SyscallManager::syscall(SyscallState &syscallState)
+{
+  SyscallHandler *pHandler;
+  size_t serviceNumber = syscallState.getSyscallService();
+
+  if (UNLIKELY(serviceNumber >= serviceEnd))
+  {
+    // TODO: We should return an error here
+    return;
+  }
+
+  // Get the syscall handler
+  {
+    LockGuard<Spinlock> lock(m_Instance.m_Lock);
+    pHandler = m_Instance.m_pHandler[serviceNumber];
+  }
+
+  if (LIKELY(pHandler != 0))
+    pHandler->syscall(syscallState);
+}
+
+//
+// Functions only usable in the kernel initialisation phase
+//
 
 extern "C" void syscall_handler();
 void X64SyscallManager::initialiseProcessor()
@@ -56,20 +83,12 @@ void X64SyscallManager::initialiseProcessor()
   Processor::writeMachineSpecificRegister(0xC0000084,  0x0000000000000200LL);
 }
 
-void X64SyscallManager::syscall(SyscallState &syscallState)
-{
-  // TODO: Needs locking
-
-  size_t serviceNumber = syscallState.getSyscallService();
-  if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_Handler[serviceNumber] != 0))
-    m_Instance.m_Handler[serviceNumber]->syscall(syscallState);
-}
-
 X64SyscallManager::X64SyscallManager()
+  : m_Lock()
 {
   // Initialise the pointers to the handler
   for (size_t i = 0;i < SyscallManager::serviceEnd;i++)
-    m_Handler[i] = 0;
+    m_pHandler[i] = 0;
 }
 X64SyscallManager::~X64SyscallManager()
 {

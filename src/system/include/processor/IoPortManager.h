@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_IOPORTMANAGER_H
 
 #include <compiler.h>
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <processor/IoPort.h>
 #include <utilities/Vector.h>
@@ -85,16 +86,18 @@
 
     private:
       /** The default constructor */
-      inline IoPortManager()
-        : m_FreeIoPorts(), m_UsedIoPorts(){}
+      IoPortManager() INITIALISATION_ONLY;
       /** The destructor */
-      inline virtual ~IoPortManager(){}
+      virtual ~IoPortManager();
       /** The copy-constructor
        *\note No implementation provided (IoPortManager is a singleton) */
       IoPortManager(const IoPortManager &);
       /** The assignment operator
        *\note No implementation provided (IoPortManager is a singleton) */
       IoPortManager &operator = (const IoPortManager &);
+
+      /** Lock */
+      Spinlock m_Lock;
 
       /** The list of free I/O ports */
       RangeList<uint32_t> m_FreeIoPorts;

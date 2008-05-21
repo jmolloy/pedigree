@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <LockGuard.h>
 #include <processor/Processor.h>
 #include <processor/IoPortManager.h>
 
@@ -29,6 +30,9 @@
       if (Processor::isInitialised() == 0)
         Processor::halt();
     #endif
+
+    // Acquire the lock untill the end of the function
+    LockGuard<Spinlock> lock(m_Lock);
 
     // Remove the I/O ports from the list of free I/O ports
     if (m_FreeIoPorts.allocateSpecific(ioPort, size) == false)
@@ -46,6 +50,9 @@
         Processor::halt();
     #endif
 
+    // Acquire the lock untill the end of the function
+    LockGuard<Spinlock> lock(m_Lock);
+
     // Remove from the used I/O ports list
     Vector<IoPort*>::Iterator i = m_UsedIoPorts.begin();
     Vector<IoPort*>::Iterator end = m_UsedIoPorts.end();
@@ -62,6 +69,9 @@
 
   void IoPortManager::allocateIoPortList(Vector<IoPortInfo*> &IoPorts)
   {
+    // Acquire the lock untill the end of the function
+    LockGuard<Spinlock> lock(m_Lock);
+
     for (size_t i = 0;i < m_UsedIoPorts.count();i++)
     {
       IoPortInfo *pIoPortInfo = new IoPortInfo(m_UsedIoPorts[i]->base(),
@@ -80,9 +90,21 @@
     }
   }
 
+  //
+  // Functions only usable in the kernel initialisation phase
+  //
+
   void IoPortManager::initialise(io_port_t ioPortBase, size_t size)
   {
     m_FreeIoPorts.free(ioPortBase, size);
+  }
+
+  IoPortManager::IoPortManager()
+   : m_Lock(), m_FreeIoPorts(), m_UsedIoPorts()
+  {
+  }
+  IoPortManager::~IoPortManager()
+  {
   }
 
 #endif

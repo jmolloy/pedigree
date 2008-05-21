@@ -17,13 +17,14 @@
 #ifndef KERNEL_PROCESSOR_X64_SYSCALLMANAGER_H
 #define KERNEL_PROCESSOR_X64_SYSCALLMANAGER_H
 
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 
 /** @addtogroup kernelprocessorx64
  * @{ */
 
-/** The syscall handler on x64 processors */
+/** The syscall manager on x64 processors */
 class X64SyscallManager : public ::SyscallManager
 {
   public:
@@ -31,17 +32,18 @@ class X64SyscallManager : public ::SyscallManager
      *\return instance of the X64SyscallManager class */
     inline static X64SyscallManager &instance(){return m_Instance;}
 
-    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
+    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *pHandler);
 
     /** Initialises this processors syscall handling
-     *\note This should only be called from initialiseProcessor()
-     *\todo and some smp/acpi function */
+     *\note This should only be called from Processor::initialise1() and
+     *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
     /** Called when a syscall was called
      *\param[in] syscallState reference to the usermode state before the syscall */
     static void syscall(SyscallState &syscallState);
+
     /** The constructor */
     X64SyscallManager() INITIALISATION_ONLY;
     /** Copy constructor
@@ -53,8 +55,11 @@ class X64SyscallManager : public ::SyscallManager
     /** The destructor */
     virtual ~X64SyscallManager();
 
+    /** Spinlock protecting the member variables */
+    Spinlock m_Lock;
+
     /** The syscall handlers */
-    SyscallHandler *m_Handler[SyscallManager::serviceEnd];
+    SyscallHandler *m_pHandler[SyscallManager::serviceEnd];
 
     /** The instance of the syscall manager  */
     static X64SyscallManager m_Instance;

@@ -15,13 +15,16 @@
  */
 
 #include <panic.h>
-#include <Debugger.h>
 #include <LockGuard.h>
 #include <utilities/StaticString.h>
 #include "InterruptManager.h"
+#if defined(DEBUGGER)
+  #include <Debugger.h>
+#endif
 
-const char* g_ExceptionNames[] = {
-  "Divide Error [div by 0 OR dest operand too small]",
+const char* g_ExceptionNames[] =
+{
+  "Divide Error",
   "Debug",
   "NMI Interrupt",
   "Breakpoint",
@@ -40,18 +43,18 @@ const char* g_ExceptionNames[] = {
   "Alignment Check",
   "Machine-Check",
   "SIMD Floating-Point Exception",
-  "Int20_rsvd",
-  "Int21_rsvd",
-  "Int22_rsvd",
-  "Int23_rsvd",
-  "Int24_rsvd",
-  "Int25_rsvd",
-  "Int26_rsvd",
-  "Int27_rsvd",
-  "Int28_rsvd",
-  "Int29_rsvd",
-  "Int30_rsvd",
-  "Int31_rsvd"
+  "Reserved: Interrupt 20",
+  "Reserved: Interrupt 21",
+  "Reserved: Interrupt 22",
+  "Reserved: Interrupt 23",
+  "Reserved: Interrupt 24",
+  "Reserved: Interrupt 25",
+  "Reserved: Interrupt 26",
+  "Reserved: Interrupt 27",
+  "Reserved: Interrupt 28",
+  "Reserved: Interrupt 29",
+  "Reserved: Interrupt 30",
+  "Reserved: Interrupt 31"
 };
 
 X64InterruptManager X64InterruptManager::m_Instance;
@@ -61,42 +64,44 @@ InterruptManager &InterruptManager::instance()
   return X64InterruptManager::instance();
 }
 
-bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+bool X64InterruptManager::registerInterruptHandler(size_t nInterruptNumber,
+                                                   InterruptHandler *pHandler)
 {
   // Lock the class until the end of the function
   LockGuard<Spinlock> lock(m_Lock);
 
   // Sanity checks
-  if (UNLIKELY(interruptNumber >= 256))
+  if (UNLIKELY(nInterruptNumber >= 256))
     return false;
-  if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
+  if (UNLIKELY(pHandler != 0 && m_pHandler[nInterruptNumber] != 0))
     return false;
-  if (UNLIKELY(handler == 0 && m_Handler[interruptNumber] == 0))
+  if (UNLIKELY(pHandler == 0 && m_pHandler[nInterruptNumber] == 0))
     return false;
 
-  // Change the handler
-  m_Handler[interruptNumber] = handler;
+  // Change the pHandler
+  m_pHandler[nInterruptNumber] = pHandler;
 
   return true;
 }
 
-#ifdef DEBUGGER
+#if defined(DEBUGGER)
 
-  bool X64InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  bool X64InterruptManager::registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                             InterruptHandler *pHandler)
   {
     // Lock the class until the end of the function
     LockGuard<Spinlock> lock(m_Lock);
 
     // Sanity checks
-    if (UNLIKELY(interruptNumber >= 256))
+    if (UNLIKELY(nInterruptNumber >= 256))
       return false;
-    if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
+    if (UNLIKELY(pHandler != 0 && m_pDbgHandler[nInterruptNumber] != 0))
       return false;
-    if (UNLIKELY(handler == 0 && m_DbgHandler[interruptNumber] == 0))
+    if (UNLIKELY(pHandler == 0 && m_pDbgHandler[nInterruptNumber] == 0))
       return false;
 
-    // Change the handler
-    m_DbgHandler[interruptNumber] = handler;
+    // Change the pHandler
+    m_pDbgHandler[nInterruptNumber] = pHandler;
 
     return true;
   }
@@ -113,48 +118,70 @@ bool X64InterruptManager::registerInterruptHandler(size_t interruptNumber, Inter
 
 void X64InterruptManager::interrupt(InterruptState &interruptState)
 {
-  // TODO: Needs locking
+  size_t nIntNumber = interruptState.getInterruptNumber();
 
-  size_t intNumber = interruptState.getInterruptNumber();
+  #if defined(DEBUGGER)
+  {
+    InterruptHandler *pHandler;
 
-  #ifdef DEBUGGER
+    // Get the debugger handler
+    {
+      LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
+      pHandler = m_Instance.m_pDbgHandler[nIntNumber];
+    }
+
     // Call the kernel debugger's handler, if any
-    if (m_Instance.m_DbgHandler[intNumber] != 0)
-      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
+    if (pHandler != 0)
+      pHandler->interrupt(nIntNumber, interruptState);
+  }
   #endif
 
-  // Call the normal interrupt handler, if any
-  if (LIKELY(m_Instance.m_Handler[intNumber] != 0))
-    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
-  else
+  InterruptHandler *pHandler;
+
+  // Get the interrupt handler
   {
-    // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
-    // reserved, not for use by system programmers)
-    if(LIKELY(intNumber < 32 &&
-              intNumber != 1 &&
-              intNumber != 3))
+    LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
+    pHandler = m_Instance.m_pHandler[nIntNumber];
+  }
+
+  // Call the normal interrupt handler, if any
+  if (LIKELY(pHandler != 0))
+  {
+    pHandler->interrupt(nIntNumber, interruptState);
+    return;
+  }
+
+  // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
+  // reserved, not for use by system programmers)
+  if(LIKELY(nIntNumber < 32 &&
+            nIntNumber != 1 &&
+            nIntNumber != 3))
+  {
+    // TODO:: Check for debugger initialisation.
+    // TODO: register dump, maybe a breakpoint so the deubbger can take over?
+    // TODO: Rework this
+    // for now just print out the exception name and number
+    static LargeStaticString e;
+    e.clear();
+    e.append ("Exception #0x");
+    e.append (nIntNumber, 16);
+    e.append (": \"");
+    e.append (g_ExceptionNames[nIntNumber]);
+    e.append ("\"");
+    if (nIntNumber == 14)
     {
-      // TODO:: Check for debugger initialisation.
-      // TODO: register dump, maybe a breakpoint so the deubbger can take over?
-      // for now just print out the exception name and number
-      static LargeStaticString e;
-      e.clear();
-      e.append ("Exception #0x");
-      e.append (intNumber, 16);
-      e.append (": \"");
-      e.append (g_ExceptionNames[intNumber]);
-      e.append ("\"");
-      if (intNumber == 14)
-      {
-        uint64_t cr2;
-        asm volatile("mov %%cr2, %%rax" : "=a" (cr2));
-        e.append(" at 0x");
-        e.append(cr2, 16, 16, '0');
-        e.append(", errorcode 0x");
-        e.append(interruptState.m_Errorcode, 16, 8, '0');
-      }
-      Debugger::instance().start(interruptState, e);
+      uint64_t cr2;
+      asm volatile("mov %%cr2, %%rax" : "=a" (cr2));
+      e.append(" at 0x");
+      e.append(cr2, 16, 16, '0');
+      e.append(", errorcode 0x");
+      e.append(interruptState.m_Errorcode, 16, 8, '0');
     }
+#if defined(DEBUGGER)
+    Debugger::instance().start(interruptState, e);
+#else
+    panic(e);
+#endif
   }
 }
 
@@ -174,26 +201,27 @@ void X64InterruptManager::initialiseProcessor()
   asm volatile("lidt %0" :: "m"(idtr));
 }
 
-void X64InterruptManager::setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler)
+void X64InterruptManager::setInterruptGate(size_t nInterruptNumber,
+                                           uintptr_t interruptHandler)
 {
-  m_IDT[interruptNumber].offset0 = interruptHandler & 0xFFFF;
-  m_IDT[interruptNumber].selector = 0x08;
-  m_IDT[interruptNumber].ist = 0;
-  m_IDT[interruptNumber].flags = 0x8E;
-  m_IDT[interruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
-  m_IDT[interruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;
-  m_IDT[interruptNumber].res = 0;
+  m_IDT[nInterruptNumber].offset0 = interruptHandler & 0xFFFF;
+  m_IDT[nInterruptNumber].selector = 0x08;
+  m_IDT[nInterruptNumber].ist = 0;
+  m_IDT[nInterruptNumber].flags = 0x8E;
+  m_IDT[nInterruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
+  m_IDT[nInterruptNumber].offset2 = (interruptHandler >> 32) & 0xFFFFFFFF;
+  m_IDT[nInterruptNumber].res = 0;
 }
 
 X64InterruptManager::X64InterruptManager()
   : m_Lock()
 {
-  // Initialise the pointers to the handler
+  // Initialise the pointers to the pHandler
   for (size_t i = 0;i < 256;i++)
   {
-    m_Handler[i] = 0;
+    m_pHandler[i] = 0;
     #ifdef DEBUGGER
-      m_DbgHandler[i] = 0;
+      m_pDbgHandler[i] = 0;
     #endif
   }
 

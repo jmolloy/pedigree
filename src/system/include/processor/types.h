@@ -61,15 +61,10 @@ typedef PROCESSOR_SPECIFIC_NAME(uint16_t) uint16_t;
 typedef PROCESSOR_SPECIFIC_NAME(int32_t) int32_t;
 /** Define a 32bit unsigned integer type */
 typedef PROCESSOR_SPECIFIC_NAME(uint32_t) uint32_t;
-
-// NOTE: This should be defined in the file included at the top of this file
-//       if this processor architecture does not support a 64bit data type
-#if !defined(KERNEL_PROCESSOR_NO_64BIT_TYPE)
-  /** Define a 64bit signed integer type */
-  typedef PROCESSOR_SPECIFIC_NAME(int64_t) int64_t;
-  /** Define a 64bit unsigned integer type */
-  typedef PROCESSOR_SPECIFIC_NAME(uint64_t) uint64_t;
-#endif
+/** Define a 64bit signed integer type */
+typedef PROCESSOR_SPECIFIC_NAME(int64_t) int64_t;
+/** Define a 64bit unsigned integer type */
+typedef PROCESSOR_SPECIFIC_NAME(uint64_t) uint64_t;
 
 /** Define a signed integer type for pointer arithmetic */
 typedef PROCESSOR_SPECIFIC_NAME(intptr_t) intptr_t;

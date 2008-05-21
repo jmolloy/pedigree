@@ -45,15 +45,11 @@ class MemoryMappedIo : public IoBase,
     inline virtual uint8_t read8(size_t offset = 0);
     inline virtual uint16_t read16(size_t offset = 0);
     inline virtual uint32_t read32(size_t offset = 0);
-    #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
-      inline virtual uint64_t read64(size_t offset = 0);
-    #endif
+    inline virtual uint64_t read64(size_t offset = 0);
     inline virtual void write8(uint8_t value, size_t offset = 0);
     inline virtual void write16(uint16_t value, size_t offset = 0);
     inline virtual void write32(uint32_t value, size_t offset = 0);
-    #if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
-      inline virtual void write64(uint64_t value, size_t offset = 0);
-    #endif
+    inline virtual void write64(uint64_t value, size_t offset = 0);
     inline virtual operator bool() const;
 
     //
@@ -105,17 +101,15 @@ uint32_t MemoryMappedIo::read32(size_t offset)
 
   return *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset));
 }
-#if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
-  uint64_t MemoryMappedIo::read64(size_t offset)
-  {
-    #if defined(ADDITIONAL_CHECKS)
-      if ((offset + 7) >= size())
-        Processor::halt();
-    #endif
+uint64_t MemoryMappedIo::read64(size_t offset)
+{
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 7) >= size())
+      Processor::halt();
+  #endif
 
-    return *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset));
-  }
-#endif
+  return *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset));
+}
 void MemoryMappedIo::write8(uint8_t value, size_t offset)
 {
   #if defined(ADDITIONAL_CHECKS)
@@ -143,17 +137,15 @@ void MemoryMappedIo::write32(uint32_t value, size_t offset)
 
   *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset)) = value;
 }
-#if defined(KERNEL_PROCESSOR_NO_64BIT_TYPE) && defined(BITS_64)
-  void MemoryMappedIo::write64(uint64_t value, size_t offset)
-  {
-    #if defined(ADDITIONAL_CHECKS)
-      if ((offset + 7) >= size())
-        Processor::halt();
-    #endif
+void MemoryMappedIo::write64(uint64_t value, size_t offset)
+{
+  #if defined(ADDITIONAL_CHECKS)
+    if ((offset + 7) >= size())
+      Processor::halt();
+  #endif
 
-    *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset)) = value;
-  }
-#endif
+  *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset)) = value;
+}
 MemoryMappedIo::operator bool() const
 {
   return MemoryRegion::operator bool();

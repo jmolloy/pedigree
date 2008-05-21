@@ -52,6 +52,13 @@ uint32_t IoPort::read32(size_t offset)
   asm volatile("in %%dx, %%eax":"=a" (value):"d" (m_IoPort + offset));
   return value;
 }
+#if defined(BITS_64)
+  uint64_t IoPort::read64(size_t offset)
+  {
+    Processor::halt();
+    return 0;
+  }
+#endif
 void IoPort::write8(uint8_t value, size_t offset)
 {
   #if defined(ADDITIONAL_CHECKS)
@@ -79,5 +86,11 @@ void IoPort::write32(uint32_t value, size_t offset)
 
   asm volatile("out %%eax, %%dx"::"d" (m_IoPort + offset), "a" (value));
 }
+#if defined(BITS_64)
+  void IoPort::write64(uint64_t value, size_t offset)
+  {
+    Processor::halt();
+  }
+#endif
 
 #endif

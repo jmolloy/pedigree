@@ -41,9 +41,8 @@ void Multiprocessor::applicationProcessorStartup()
   // Initialise the machine-specific interface
   Pc::instance().initialiseProcessor();
 
-  // TODO: We nede to synchronize the -init section invalidation too
-  //       or do we do we let the VirtualAddressSpace take care of that
-  //       through IPIs (at that time already)?
+  // We need to synchronize the -init section invalidation
+  Processor::invalidate(0);
 
   // Call the per-processor code in main.cc
   extern void apMain();

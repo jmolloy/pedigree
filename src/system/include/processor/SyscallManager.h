@@ -43,9 +43,9 @@ class SyscallManager
     static SyscallManager &instance();
     /** Register a syscall handler
      *\param[in] Service the service number you want to register
-     *\param[in] handler the interrupt handler
+     *\param[in] pHandler the interrupt handler
      *\return true, if successfully registered, false otherwise */
-    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler) = 0;
+    virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *pHandler) = 0;
 
   protected:
     /** The constructor */

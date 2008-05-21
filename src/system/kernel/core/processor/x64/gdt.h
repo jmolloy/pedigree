@@ -71,7 +71,7 @@ class X64GdtManager
 
     /** Readies a TSS for use.
      *\param[in] pTss the TSS to ready. */
-    void initialiseTss(struct X64TaskStateSegment *pTss);
+    void initialiseTss(struct X64TaskStateSegment *pTss) INITIALISATION_ONLY;
     
     /** Load the new segment registers
      *\note This function is implemented in asm/gdt.s */

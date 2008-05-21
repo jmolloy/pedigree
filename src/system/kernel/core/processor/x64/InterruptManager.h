@@ -25,7 +25,7 @@
 /** @addtogroup kernelprocessorx64
  * @{ */
 
-/** The interrupt handler on x64 processors */
+/** The interrupt manager on x64 processors */
 class X64InterruptManager : public ::InterruptManager
 {
   public:
@@ -33,17 +33,19 @@ class X64InterruptManager : public ::InterruptManager
      *\return instance of the X64InterruptManager class */
     inline static X64InterruptManager &instance(){return m_Instance;}
 
-    virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
+    virtual bool registerInterruptHandler(size_t nInterruptNumber,
+                                          InterruptHandler *pHandler);
 
     #ifdef DEBUGGER
-      virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
+      virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                    InterruptHandler *pHandler);
       virtual size_t getBreakpointInterruptNumber() PURE;
       virtual size_t getDebugInterruptNumber() PURE;
     #endif
 
     /** Initialises this processors IDTR
-     *\note This should only be called from initialiseProcessor()
-     *\todo and some smp/acpi function */
+     *\note This should only be called from Processor::initialise1() and
+     *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
   private:
@@ -55,7 +57,7 @@ class X64InterruptManager : public ::InterruptManager
      *\param[in] interruptNumber the interrupt number
      *\param[in] interruptHandler address of the assembler interrupt handler stub
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
-    void setInterruptGate(size_t interruptNumber, uintptr_t interruptHandler) INITIALISATION_ONLY;
+    void setInterruptGate(size_t nInterruptNumber, uintptr_t interruptHandler) INITIALISATION_ONLY;
     /** The constructor */
     X64InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor
@@ -68,7 +70,7 @@ class X64InterruptManager : public ::InterruptManager
     virtual ~X64InterruptManager();
 
     /** Structure of a x64 long-mode gate descriptor */
-    struct gate_descriptor
+    struct GateDescriptor
     {
       /** Bits 0-15 of the offset */
       uint16_t offset0;
@@ -90,12 +92,12 @@ class X64InterruptManager : public ::InterruptManager
     Spinlock m_Lock;
 
     /** The interrupt descriptor table (IDT) */
-    gate_descriptor m_IDT[256];
+    GateDescriptor m_IDT[256];
     /** The normal interrupt handlers */
-    InterruptHandler *m_Handler[256];
+    InterruptHandler *m_pHandler[256];
     #ifdef DEBUGGER
       /** The debugger interrupt handlers */
-      InterruptHandler *m_DbgHandler[256];
+      InterruptHandler *m_pDbgHandler[256];
     #endif
 
     /** The instance of the interrupt manager  */
