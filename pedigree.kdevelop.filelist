@@ -143,6 +143,7 @@ src/system/include/processor/arm_common/ProcessorInformation.h
 src/system/include/processor/arm_common/types.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
+src/system/include/processor/mips32/TlbManager.h
 src/system/include/processor/mips32/state.h
 src/system/include/processor/mips32/types.h
 src/system/include/processor/mips64

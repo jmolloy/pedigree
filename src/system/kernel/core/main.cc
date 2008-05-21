@@ -44,23 +44,6 @@
 
 BootIO bootIO;
 
-void baz(int a, int b)
-{
-  Processor::breakpoint();
-}
-
-int bar(void *a)
-{
-  HugeStaticString str;
-  for (;;)
-  {
-    str.clear();
-    str += "c";
-    bootIO.write(str, BootIO::White, BootIO::Red);
-    for(int i = 0; i < 10000000; i++) ;
-  }
-}
-
 int foo(void *a)
 {
   HugeStaticString str;
@@ -116,7 +99,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-#if defined(ARM_COMMON)
+#if defined(ARM_COMMON) && defined(DEBUGGER)
    InterruptState st;
    LargeStaticString str2("I r cool");
    Debugger::instance().start(st, str2);
