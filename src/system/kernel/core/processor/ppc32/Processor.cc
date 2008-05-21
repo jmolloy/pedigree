@@ -16,6 +16,7 @@
 
 #include <processor/Processor.h>
 #include <processor/TlbManager.h>
+#include <machine/openfirmware/OpenFirmware.h>
 #include "InterruptManager.h"
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
@@ -23,6 +24,9 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // Initialise this processor's interrupt handling
   PPC32InterruptManager::initialiseProcessor();
 
+  // Initialise openfirmware.
+  OpenFirmware::instance().initialise(reinterpret_cast<OpenFirmware::OFInterface> (Info.prom));
+  
   // TODO: Initialise the physical memory-management
 
 //   m_Initialised = 1;

@@ -25,7 +25,7 @@ Machine &Machine::instance()
 
 void Mac::initialise()
 {
-  
+  m_Vga.initialise();
   m_bInitialised = true;
 }
 Serial *Mac::getSerial(size_t n)

@@ -84,9 +84,6 @@ void apMain()
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t *bsInf)
 {
-#ifdef PPC_COMMON
-  for(;;);
-#endif
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
@@ -96,10 +93,14 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(*bsInf) == false)
     panic("KernelElf::initialise() failed");
-
+  
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
   machine.initialise();
+
+#ifdef PPC_COMMON
+  for(;;);
+#endif
 
 #if defined(DEBUGGER)
   Debugger::instance().initialise();

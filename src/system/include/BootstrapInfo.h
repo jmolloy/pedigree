@@ -22,7 +22,7 @@
 
 /** @addtogroup kernel
  * @{ */
-
+#ifndef PPC_COMMON
 struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
@@ -72,6 +72,20 @@ struct MemoryMapEntry_t
   uint64_t length;
   uint32_t type;
 } PACKED;
+#else
+struct BootstrapStruct_t
+{
+  int (*prom)(struct anon*);
+  uint32_t initrd_start;
+  uint32_t initrd_end;
+
+  /* ELF information */
+  uint32_t num;
+  uint32_t size;
+  uint32_t addr;
+  uint32_t shndx;
+};
+#endif
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
 #if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)

@@ -50,6 +50,7 @@ endif(PPC_MAC)
 
 if(PPC_COMMON)
   add_subdirectory(ppc_common)
+  add_subdirectory(openfirmware)
 endif(PPC_COMMON)
 
 # This is required to push any changes the add_subdirectory commands may have made up to parent scope.

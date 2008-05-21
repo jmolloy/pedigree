@@ -29,8 +29,19 @@ OFDevice::~OFDevice()
 void OFDevice::getProperty(const char *pProperty, NormalStaticString &buf)
 {
   OpenFirmware::instance().call("getprop", 4, static_cast<OFParam> (m_Handle),
-                                              static_cast<OFParam> (reinterpret_cast<char*> (buf)),
-                                              static_cast<OFParam> (64);
+                                              reinterpret_cast<OFParam> (const_cast<char*> (pProperty)), 
+                                              static_cast<OFParam> (const_cast<char*> (static_cast<const char*> (buf))),
+                                              reinterpret_cast<OFParam> (64));
+}
+
+OFHandle OFDevice::getProperty(const char *pProperty)
+{
+  OFHandle h;
+  OpenFirmware::instance().call("getprop", 4, static_cast<OFParam> (m_Handle),
+                                              reinterpret_cast<OFParam> (const_cast<char*> (pProperty)),
+                                              reinterpret_cast<OFParam> (&h),
+                                              reinterpret_cast<OFParam> (sizeof(OFHandle)));
+  return h;
 }
 
 void OFDevice::setProperty(const char *pProperty, NormalStaticString &val)
@@ -38,14 +49,14 @@ void OFDevice::setProperty(const char *pProperty, NormalStaticString &val)
   /// \todo
 }
 
-void OFDevice::executeMethod(const char *method, size_t nArgs, OFParam p1=0,
-                                                               OFParam p2=0,
-                                                               OFParam p3=0,
-                                                               OFParam p4=0,
-                                                               OFParam p5=0,
-                                                               OFParam p6=0)
+void OFDevice::executeMethod(const char *method, size_t nArgs, OFParam p1,
+                                                               OFParam p2,
+                                                               OFParam p3,
+                                                               OFParam p4,
+                                                               OFParam p5,
+                                                               OFParam p6)
 {
-  OpenFirmware::instance().call("call-method", nArgs+2, static_cast<OFParam> (method),
+  OpenFirmware::instance().call("call-method", nArgs+2, reinterpret_cast<OFParam> (const_cast<char*> (method)),
                                                         static_cast<OFParam> (m_Handle),
                                                         p1,p2,p3,p4,p5,p6);
 }

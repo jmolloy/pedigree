@@ -63,9 +63,12 @@ src/system/boot/mips/mkheader.pl
 src/system/boot/ppc
 src/system/boot/ppc/Elf32.cc
 src/system/boot/ppc/Elf32.h
+src/system/boot/ppc/Vga.cc
+src/system/boot/ppc/Vga.h
 src/system/boot/ppc/boot.s
 src/system/boot/ppc/main.cc
 src/system/boot/ppc/mkheader.pl
+src/system/boot/ppc/ppc_font.c
 src/system/boot/ppc/prom.cc
 src/system/boot/ppc/prom.h
 src/system/common
@@ -93,6 +96,10 @@ src/system/include/machine/arm_common
 src/system/include/machine/arm_common/types.h
 src/system/include/machine/mips_common
 src/system/include/machine/mips_common/types.h
+src/system/include/machine/openfirmware
+src/system/include/machine/openfirmware/Device.h
+src/system/include/machine/openfirmware/OpenFirmware.h
+src/system/include/machine/openfirmware/types.h
 src/system/include/machine/ppc_common
 src/system/include/machine/ppc_common/types.h
 src/system/include/machine/types.h

@@ -19,8 +19,8 @@
 
 #include <processor/types.h>
 #include <machine/Vga.h>
-#include <machine/openfirmware/OpenFirmware.h>
-#include <machine/openfirmware/Device.h>
+//include <machine/openfirmware/OpenFirmware.h>
+//include <machine/openfirmware/Device.h>
 
 /* We make an assumption about the device size. */
 #define MAX_WIDTH 1024
@@ -46,7 +46,9 @@ class PPCVga : public Vga
   public:
     PPCVga();
     virtual ~PPCVga();
-  
+
+  void initialise();
+    
   /**
    * Changes the mode the VGA device is in.
    * \param nCols The number of columns required.
@@ -78,12 +80,12 @@ class PPCVga : public Vga
   /**
    * \return The number of columns in the current mode.
    */
-  virtual size_t getNumCols ();
+  virtual size_t getNumCols () {return m_Width/FONT_WIDTH;}
   
   /**
    * \return The number of rows in the current mode.
    */
-  virtual size_t getNumRows ();
+  virtual size_t getNumRows () {return m_Height/FONT_HEIGHT;}
 
   /**
    * Stores the current video mode.
@@ -124,9 +126,11 @@ class PPCVga : public Vga
    */
   virtual void moveCursor (size_t nX, size_t nY) {}
   
-  operator uint16_t*() const {return m_pTextBuffer;}
+  operator uint16_t*() const {return const_cast<uint16_t*> (m_pTextBuffer);}
   
 private:
+  void putChar(char c, int x, int y, unsigned int f, unsigned int b);
+  
   /** We use a 16-bit-per-character text mode buffer to simplify things. BootIO is a bit of a
    *  simpleton, really. */
   uint16_t m_pTextBuffer[(MAX_WIDTH/FONT_WIDTH)*(MAX_HEIGHT/FONT_HEIGHT)];

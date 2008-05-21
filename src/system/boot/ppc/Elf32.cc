@@ -15,6 +15,7 @@
  */
 
 #include "Elf32.h"
+#include "prom.h"
 //include <utilities/utility.h>
 extern void writeStr(const char *str);
 int strncpy(char *dest, const char *src, int len)
@@ -165,6 +166,7 @@ bool Elf32::writeSections()
     {
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
       {
+        prom_map(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size);
         // Copy section data from the file.
         memcpy((uint8_t*)m_pSectionHeaders[i].addr,
                         &m_pBuffer[m_pSectionHeaders[i].offset],
@@ -172,6 +174,7 @@ bool Elf32::writeSections()
       }
       else
       {
+        prom_map(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size);
         memset((uint8_t*)m_pSectionHeaders[i].addr,
                         0,
                         m_pSectionHeaders[i].size);

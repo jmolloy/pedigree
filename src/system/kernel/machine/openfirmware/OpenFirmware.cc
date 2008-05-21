@@ -34,17 +34,17 @@ void OpenFirmware::initialise(OFInterface interface)
 
 OFHandle OpenFirmware::findDevice(const char *pName)
 {
-  return static_cast<OFHandle> (call("finddevice", 1, static_cast<OFParam> (pName)));
+  return static_cast<OFHandle> (call("finddevice", 1, reinterpret_cast<OFParam> (const_cast<char*> (pName))));
 }
 
-OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1=0,
-                                                            OFParam p2=0,
-                                                            OFParam p3=0,
-                                                            OFParam p4=0,
-                                                            OFParam p5=0,
-                                                            OFParam p6=0,
-                                                            OFParam p7=0,
-                                                            OFParam p8=0)
+OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1,
+                                                            OFParam p2,
+                                                            OFParam p3,
+                                                            OFParam p4,
+                                                            OFParam p5,
+                                                            OFParam p6,
+                                                            OFParam p7,
+                                                            OFParam p8)
 {
   PromArgs pa;
   pa.service = pService;
@@ -64,5 +64,5 @@ OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1=0,
   
   m_Interface(&pa);
   
-  return pa.args[nargs];
+  return pa.args[pa.nargs];
 }

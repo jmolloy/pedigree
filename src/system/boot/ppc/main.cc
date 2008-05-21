@@ -6,45 +6,16 @@
 extern int memset(void *buf, int c, size_t len);
 struct BootstrapStruct_t
 {
-  // If we are passed via grub, this information will be completely different to
-  // via the bootstrapper.
-  uint32_t flags;
-  
-  uint32_t mem_lower;
-  uint32_t mem_upper;
-  
-  uint32_t boot_device;
-  
-  uint32_t cmdline;
-  
-  uint32_t mods_count;
-  uint32_t mods_addr;
-  
+  int (*prom)(struct anon*);
+  uint32_t initrd_start;
+  uint32_t initrd_end;
+
   /* ELF information */
   uint32_t num;
   uint32_t size;
   uint32_t addr;
   uint32_t shndx;
-  
-  uint32_t mmap_length;
-  uint32_t mmap_addr;
-  
-  uint32_t drives_length;
-  uint32_t drives_addr;
-  
-  uint32_t config_table;
-  
-  uint32_t boot_loader_name;
-  
-  uint32_t apm_table;
-  
-  uint32_t vbe_control_info;
-  uint32_t vbe_mode_info;
-  uint32_t vbe_mode;
-  uint32_t vbe_interface_seg;
-  uint32_t vbe_interface_off;
-  uint32_t vbe_interface_len;
-} __attribute__((packed));
+};
 
 void writeChar(char c)
 {
@@ -102,7 +73,7 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
 
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
-//   elf.writeSections();
+  elf.writeSections();
   int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
   
   struct BootstrapStruct_t bs;
@@ -112,7 +83,9 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
-
+  bs.initrd_start = bs.initrd_end = 0;
+  bs.prom = (int (*)(struct anon*)) r5;
+  
   // For every section header, set .addr = .offset + m_pBuffer.
   for (int i = 0; i < elf.m_pHeader->shnum; i++)
   {
@@ -123,8 +96,8 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   writeHex(elf.getEntryPoint());
   writeStr("\n");
 
-  vga_init();
+  //vga_init();
 
-//   int a = main(&bs);
+  int a = main(&bs);
   for(;;);
 }

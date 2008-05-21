@@ -19,6 +19,7 @@
 #include <utilities/StaticString.h>
 #include <machine/types.h>
 #include <processor/types.h>
+#include <machine/openfirmware/types.h>
 
 /**
  * Provides an interface to query OpenFirmware about a device.
@@ -32,6 +33,7 @@ class OFDevice
     virtual ~OFDevice();
   
     virtual void getProperty(const char *pProperty, NormalStaticString &buf);
+    virtual OFHandle getProperty(const char *pProperty);
     virtual void setProperty(const char *pProperty, NormalStaticString &val);
     
     virtual void executeMethod(const char *method, size_t nArgs, OFParam p1=0,

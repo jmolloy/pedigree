@@ -16,13 +16,24 @@
 #ifndef MACHINE_OF_OF_H
 #define MACHINE_OF_OF_H
 
+#include <machine/openfirmware/types.h>
+
 /**
  * Interface to OpenFirmware. 
  */
 class OpenFirmware
 {
+private:
+  /** Argument structure for PROM call. */
+  struct PromArgs
+  {
+    const char *service;
+    int nargs;
+    int nret;
+    void *args[10];
+  };
 public:
-  typedef int (*OFInterface)(struct PromArgs *);
+  typedef int (*OFInterface)(PromArgs *);
   
   /** Retrieves the singleton instance of the OpenFirmware class. */
   static OpenFirmware &instance() {return m_Instance;}
@@ -31,7 +42,7 @@ public:
   void initialise(OFInterface interface);
   
   /** Finds a device in the tree by name. */
-  OFDevice findDevice(const char *pName);
+  OFHandle findDevice(const char *pName);
   
   /** Calls OpenFirmware with the given arguments, returning one argument. */
   OFParam call(const char *pService, int nArgs, OFParam p1=0,
@@ -46,15 +57,6 @@ private:
   /** Default constructor is private. */
   OpenFirmware();
   ~OpenFirmware();
-  
-  /** Argument structure for PROM call. */
-  struct PromArgs
-  {
-    const char *service;
-    int nargs;
-    int nret;
-    void *args[10];
-  };
   
   /** The PROM callback. */
   OFInterface m_Interface;
