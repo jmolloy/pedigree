@@ -143,7 +143,6 @@ src/system/include/processor/arm_common/ProcessorInformation.h
 src/system/include/processor/arm_common/types.h
 src/system/include/processor/mips32
 src/system/include/processor/mips32/StackFrame.h
-src/system/include/processor/mips32/TlbManager.h
 src/system/include/processor/mips32/state.h
 src/system/include/processor/mips32/types.h
 src/system/include/processor/mips64
@@ -409,6 +408,7 @@ src/system/kernel/linker/FileLoader.h
 src/system/kernel/linker/KernelElf.cc
 src/system/kernel/linker/KernelElf.h
 src/system/kernel/machine
+src/system/kernel/machine/arm_common
 src/system/kernel/machine/arm_versatile
 src/system/kernel/machine/arm_versatile/Keyboard.cc
 src/system/kernel/machine/arm_versatile/Keyboard.h
@@ -426,6 +426,9 @@ src/system/kernel/machine/au1500/Vga.h
 src/system/kernel/machine/au1500/db1500
 src/system/kernel/machine/au1500/db1500/Db1500.cc
 src/system/kernel/machine/au1500/db1500/Db1500.h
+src/system/kernel/machine/mac
+src/system/kernel/machine/mac/Mac.cc
+src/system/kernel/machine/mac/Mac.h
 src/system/kernel/machine/malta
 src/system/kernel/machine/malta/Keyboard.cc
 src/system/kernel/machine/malta/Keyboard.h
@@ -443,6 +446,18 @@ src/system/kernel/machine/malta/bonito64/Bonito64.h
 src/system/kernel/machine/mips_common
 src/system/kernel/machine/mips_common/Timer.cc
 src/system/kernel/machine/mips_common/Timer.h
+src/system/kernel/machine/openfirmware
+src/system/kernel/machine/openfirmware/Device.cc
+src/system/kernel/machine/openfirmware/OpenFirmware.cc
+src/system/kernel/machine/ppc_common
+src/system/kernel/machine/ppc_common/Font.c
+src/system/kernel/machine/ppc_common/Keyboard.cc
+src/system/kernel/machine/ppc_common/Keyboard.h
+src/system/kernel/machine/ppc_common/Machine.cc
+src/system/kernel/machine/ppc_common/Serial.cc
+src/system/kernel/machine/ppc_common/Serial.h
+src/system/kernel/machine/ppc_common/Vga.cc
+src/system/kernel/machine/ppc_common/Vga.h
 src/system/kernel/machine/x86_common
 src/system/kernel/machine/x86_common/Acpi.cc
 src/system/kernel/machine/x86_common/Acpi.h

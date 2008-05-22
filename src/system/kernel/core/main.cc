@@ -81,12 +81,15 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Machine &machine = Machine::instance();
   machine.initialise();
 
-#ifdef PPC_COMMON
-  for(;;);
-#endif
-
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
+#endif
+
+#ifdef PPC_COMMON
+  InterruptState state;
+  LargeStaticString str4("RAh!");
+  Debugger::instance().start(state, str4);
+  for(;;);
 #endif
 
 #ifdef X86_COMMON

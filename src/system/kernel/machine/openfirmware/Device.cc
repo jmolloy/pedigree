@@ -49,14 +49,15 @@ void OFDevice::setProperty(const char *pProperty, NormalStaticString &val)
   /// \todo
 }
 
-void OFDevice::executeMethod(const char *method, size_t nArgs, OFParam p1,
+OFHandle OFDevice::executeMethod(const char *method, size_t nArgs, OFParam p1,
                                                                OFParam p2,
                                                                OFParam p3,
                                                                OFParam p4,
                                                                OFParam p5,
                                                                OFParam p6)
 {
-  OpenFirmware::instance().call("call-method", nArgs+2, reinterpret_cast<OFParam> (const_cast<char*> (method)),
-                                                        static_cast<OFParam> (m_Handle),
-                                                        p1,p2,p3,p4,p5,p6);
+  return OpenFirmware::instance().call("call-method", nArgs+2,
+                                       reinterpret_cast<OFParam> (const_cast<char*> (method)),
+                                       static_cast<OFParam> (m_Handle),
+                                       p1,p2,p3,p4,p5,p6);
 }

@@ -36,12 +36,12 @@ class OFDevice
     virtual OFHandle getProperty(const char *pProperty);
     virtual void setProperty(const char *pProperty, NormalStaticString &val);
     
-    virtual void executeMethod(const char *method, size_t nArgs, OFParam p1=0,
-                                                                 OFParam p2=0,
-                                                                 OFParam p3=0,
-                                                                 OFParam p4=0,
-                                                                 OFParam p5=0,
-                                                                 OFParam p6=0);
+    virtual OFHandle executeMethod(const char *method, size_t nArgs, OFParam p1=0,
+                                                                     OFParam p2=0,
+                                                                     OFParam p3=0,
+                                                                     OFParam p4=0,
+                                                                     OFParam p5=0,
+                                                                     OFParam p6=0);
   protected:
     OFHandle m_Handle;
 };

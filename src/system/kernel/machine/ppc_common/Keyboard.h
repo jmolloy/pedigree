@@ -18,6 +18,8 @@
 #define MACHINE_MALTA_KEYBOARD_H
 
 #include <machine/Keyboard.h>
+#include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
 
 class PPCKeyboard : public Keyboard
 {
@@ -28,14 +30,14 @@ public:
   /**
    * Initialises the device.
    */
-  virtual void initialise() {}
+  virtual void initialise();
   
   /**
    * Retrieves a character from the keyboard. Blocking I/O.
    * \return The character recieved or zero if it is a character
    *         without an ascii representation.
    */
-  virtual char getChar() {return 0;}
+  virtual char getChar();
   
   /**
    * Retrieves a character from the keyboard. Non blocking I/O.
@@ -43,7 +45,7 @@ public:
    *         without an ascii representation, or zero also if no
    *         character was present.
    */
-  virtual char getCharNonBlock() {return 0;}
+  virtual char getCharNonBlock();
   
   /**
    * \return True if shift is currently held.
@@ -65,6 +67,9 @@ public:
    */
   virtual bool capsLock() {return false;}
 
+private:
+  /** Our keyboard device. */
+  OFDevice m_Dev;
 };
 
 #endif

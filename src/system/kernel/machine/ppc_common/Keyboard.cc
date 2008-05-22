@@ -16,11 +16,42 @@
 
 #include "Keyboard.h"
 
-PPCKeyboard::PPCKeyboard()
+PPCKeyboard::PPCKeyboard() :
+  m_Dev(0)
 {
 }
 
 PPCKeyboard::~PPCKeyboard()
 {
+}
+
+void PPCKeyboard::initialise()
+{
+  m_Dev = OFDevice(OpenFirmware::instance().findDevice("/keyboard"));
+//   m_Dev = OFDevice(chosen.getProperty("stdin"));
+//   for(;;);
+}
+
+char PPCKeyboard::getChar()
+{
+  union un
+  {
+    OFHandle handle;
+    char c[4];
+  };
+  un u;
+  u.handle = m_Dev.executeMethod("key", 0);
+  return u.c[0];
+
+//   char c;
+//   OFHandle h = m_Dev.executeMethod("read", 2, (OFParam)c, (OFParam)1);
+//   if (h != 0)
+//     for(;;);
+//   return c;
+}
+
+char PPCKeyboard::getCharNonBlock()
+{
+  return getChar();
 }
 
