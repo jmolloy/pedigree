@@ -26,8 +26,13 @@
 
 class DebuggerCommand;
 
+#ifdef PPC_COMMON
+#define MAX_CONSOLE_WIDTH 128
+#define MAX_CONSOLE_HEIGHT 48
+#else
 #define MAX_CONSOLE_WIDTH  90
 #define MAX_CONSOLE_HEIGHT 30
+#endif
 #define CONSOLE_DEFAULT_MODE   2
 
 /**
