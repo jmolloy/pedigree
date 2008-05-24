@@ -27,31 +27,36 @@ PPCKeyboard::~PPCKeyboard()
 
 void PPCKeyboard::initialise()
 {
-  m_Dev = OFDevice(OpenFirmware::instance().findDevice("/keyboard"));
-//   m_Dev = OFDevice(chosen.getProperty("stdin"));
+//   m_Dev = OFDevice(OpenFirmware::instance().findDevice("/keyboard"));
+  OFDevice chosen(OpenFirmware::instance().findDevice("/chosen"));
+  m_Dev = chosen.getProperty("stdin");
 //   for(;;);
 }
 
 char PPCKeyboard::getChar()
 {
-  union un
-  {
-    OFHandle handle;
-    char c[4];
-  };
-  un u;
-  u.handle = m_Dev.executeMethod("key", 0);
-  return u.c[0];
-
-//   char c;
-//   OFHandle h = m_Dev.executeMethod("read", 2, (OFParam)c, (OFParam)1);
-//   if (h != 0)
-//     for(;;);
-//   return c;
+  char c[4];
+  while (OpenFirmware::instance().call("read", 3, m_Dev,
+                                       reinterpret_cast<OFParam> (c),
+                                       reinterpret_cast<OFParam> (4)) != 0)
+    ;
+  if ((c[0] < 'A' || c[0] > 'z') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
+    return 0;
+  else
+    return c[0];
 }
 
 char PPCKeyboard::getCharNonBlock()
 {
-  return getChar();
+  char c[4];
+  if (OpenFirmware::instance().call("read", 3, m_Dev,
+                                    reinterpret_cast<OFParam> (c),
+                                    reinterpret_cast<OFParam> (4)) != 0)
+    return 0;
+
+  if (c[0] == '\r')
+    return '\n';
+  else
+    return c[0];
 }
 

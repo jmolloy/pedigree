@@ -32,7 +32,7 @@
 /* Routines for taking a 0-255 set of RGB values and converting them to a 8,16 or 32 bpp specific form. */
 #ifdef BIG_ENDIAN
 #define RGB_8(r,g,b) ( ((r&0x3)<<6) | ((g&0x7)<<3) | (b&0x7) )
-#define RGB_16(r,g,b)  ( ((r&0x1f)<<11) | ((g&0x1f)<<6) | (b&0x1f) )
+#define RGB_16(r,g,b)  ( ((r&0x1f)<<11) | ((g&0x1f)<<6) | ((b&0x1f)<<1) )
 #define RGB_32(r,g,b) ( 0 | r<<24 | g<<16 | b<<8 )
 #else
 #error Little endian not implemented here.
@@ -147,6 +147,8 @@ private:
   uint32_t m_Depth;
   /** Stride - number of bytes per row */
   uint32_t m_Stride;
+  /** Colour index table */
+  uint32_t m_pColours[16];
 };
 
 #endif

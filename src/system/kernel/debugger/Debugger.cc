@@ -269,7 +269,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
       pIo->drawString(str2, pIo->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
       pIo->drawString(str, pIo->getHeight()-1, str2.length(), DebuggerIO::White, DebuggerIO::Green);
     }
-  
+    
     // A command was entered.
     bool bValidCommand = false;
     for (size_t i = 0; i < nCommands; i++)

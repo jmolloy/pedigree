@@ -69,7 +69,7 @@ public:
 
 private:
   /** Our keyboard device. */
-  OFDevice m_Dev;
+  OFHandle m_Dev;
 };
 
 #endif

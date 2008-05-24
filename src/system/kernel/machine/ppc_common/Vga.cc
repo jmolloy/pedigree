@@ -56,6 +56,31 @@ void PPCVga::initialise()
   m_Height = reinterpret_cast<uint32_t> ( screen.getProperty("height") );
   m_Depth = reinterpret_cast<uint32_t> ( screen.getProperty("depth") );
   m_Stride = m_Width;
+
+  if (m_Depth == 8)
+  {
+    for (int i = 0; i < 16; i++)
+      m_pColours[i] = i;
+  }
+  else if (m_Depth == 16)
+  {
+    m_pColours[0] = RGB_16 (0x00, 0x00, 0x00); // Black
+    m_pColours[1] = RGB_16 (0x00, 0x00, 0x99); // Blue
+    m_pColours[2] = RGB_16 (0x00, 0x99, 0x00); // Green
+    m_pColours[3] = RGB_16 (0x00, 0x99, 0x99); // Cyan
+    m_pColours[4] = RGB_16 (0x99, 0x00, 0x00); // Red
+    m_pColours[5] = RGB_16 (0x99, 0x00, 0x99); // Magenta
+    m_pColours[6] = RGB_16 (0x99, 0x66, 0x00); // Brown
+    m_pColours[7] = RGB_16 (0xBB, 0xBB, 0xBB); // Light grey
+    m_pColours[8] = RGB_16 (0x99, 0x99, 0x99); // Dark grey
+    m_pColours[9] = RGB_16 (0x00, 0x00, 0xFF); // Light blue
+    m_pColours[10] =RGB_16 (0x00, 0xFF, 0x00); // Light green
+    m_pColours[11] =RGB_16 (0x00, 0xFF, 0xFF); // Light cyan
+    m_pColours[12] =RGB_16 (0xFF, 0x00, 0x00); // Light red
+    m_pColours[13] =RGB_16 (0xFF, 0x00, 0xFF); // Light magenta
+    m_pColours[14] =RGB_16 (0xFF, 0xFF, 0x00); // Light brown / yellow
+    m_pColours[15] =RGB_16 (0xFF, 0xFF, 0xFF); // White
+  }
   
   // Clear the text framebuffer.
   uint16_t clear = ' ';
@@ -100,7 +125,10 @@ void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
     for (int j = 0; j < (m_Height/FONT_HEIGHT); j++)
     {
       uint16_t ch = m_pTextBuffer[j*(m_Width/FONT_WIDTH)+i];
-      putChar(ch&0xFF, i*FONT_WIDTH, j*FONT_HEIGHT, 0xff, 0x00);
+      unsigned int fg, bg;
+      fg = m_pColours[(ch>>8)&0xF];
+      bg = m_pColours[(ch>>12)&0xF];
+      putChar(ch&0xFF, i*FONT_WIDTH, j*FONT_HEIGHT, fg, bg);
     }
   }
 }
