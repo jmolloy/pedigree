@@ -84,12 +84,12 @@ void PPC32InterruptManager::initialiseProcessor()
   OFDevice mmu (chosen.getProperty("mmu"));
 
   // Identity map the lower area of memory.
-  mmu.executeMethod("map", 4,
-                    reinterpret_cast<OFParam>(0x6a),  // 6a=uncached. TODO change to -1
+  OFParam ret = mmu.executeMethod("map", 4,
+                    reinterpret_cast<OFParam>(-1),  // 6a=uncached. TODO change to -1
                     reinterpret_cast<OFParam>(0x3000),
                     reinterpret_cast<OFParam>(0x0),
                     reinterpret_cast<OFParam>(0x0));
-
+  
   // Copy the interrupt handlers into lower memory.
   memcpy(reinterpret_cast<void*> (0x0100), &isr_reset, 0x100);
   memcpy(reinterpret_cast<void*> (0x0200), &isr_machine_check, 0x100);
@@ -106,11 +106,21 @@ void PPC32InterruptManager::initialiseProcessor()
   memcpy(reinterpret_cast<void*> (0x1300), &isr_instr_breakpoint, 0x100);
   memcpy(reinterpret_cast<void*> (0x1400), &isr_system_management, 0x100);
   memcpy(reinterpret_cast<void*> (0x1700), &isr_thermal_management, 0x100);
+  
+  for (uintptr_t i = 0; i < 0x1800; i += 4)
+    Processor::flushDCache(i);
+
+  asm volatile("sync");
+
+  for (uintptr_t i = 0; i < 0x1800; i += 4)
+    Processor::invalidateICache(i);
+
+  asm volatile("isync");
 }
 
 void PPC32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  LargeStaticString msg("Interrupt!");
+  static LargeStaticString msg("Interrupt!");
   Debugger::instance().start(interruptState, msg);
   for(;;);
 }

@@ -48,3 +48,18 @@ void Processor::setInterrupts(bool bEnable)
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
 }
+
+void Processor::invalidateICache(uintptr_t nAddr)
+{
+  asm volatile("icbi 0, %0" : : "r"(nAddr));
+}
+
+void Processor::invalidateDCache(uintptr_t nAddr)
+{
+  asm volatile("dcbi 0, %0" : : "r"(nAddr));
+}
+
+void Processor::flushDCache(uintptr_t nAddr)
+{
+  asm volatile("dcbf 0, %0" : : "r"(nAddr));
+}

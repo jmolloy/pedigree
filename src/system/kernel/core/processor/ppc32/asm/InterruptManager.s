@@ -226,7 +226,7 @@ isr_common:
   mfsprg 21, 3         # r21 = kernel stack.
 
   cmpi   0, 21, 0      # Compare the values of register 21 and $0, setting condition field 0
-  bne    1f            # If r21 != 0, go to 1:
+#  bne    1f            # If r21 != 0, go to 1:
 
   mr     21, 1         # The kernel stack was 0, use the current stack as the stack pointer
 

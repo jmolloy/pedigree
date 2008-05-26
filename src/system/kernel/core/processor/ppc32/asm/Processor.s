@@ -28,6 +28,9 @@
 .global _ZN9Processor13getInterruptsEv
 
 start:
+  lis 1, stack@ha
+  addi 1,1, stack@l
+  addi 1,1, 32764
   ba _main
 
 _ZN9Processor14getBasePointerEv:
@@ -41,3 +44,9 @@ _ZN9Processor21getInstructionPointerEv:
 
 _ZN9Processor13getInterruptsEv:
   nop
+
+.section .bss
+stack:
+  .rept 32768
+  .byte 0
+  .endr

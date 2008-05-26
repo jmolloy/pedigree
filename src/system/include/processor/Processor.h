@@ -178,13 +178,16 @@ class Processor
       static physical_uintptr_t readCr3();
     #endif
 
-    #if defined(MIPS_COMMON)
+    #if defined(MIPS_COMMON) || defined(PPC_COMMON)
       /** Invalidate a line in the instruction cache.
-       *\param[in] nAddr The address in KSEG0 or KSEG1 of a memory location to invalidate from the Icache. */
+       *\param[in] nAddr The address of a memory location to invalidate from the Icache. */
       static void invalidateICache(uintptr_t nAddr);
       /** Invalidate a line in the data cache.
-       *\param[in] nAddr The address in KSEG0 or KSEG1 of a memory location to invalidate from the Dcache. */
+       *\param[in] nAddr The address of a memory location to invalidate from the Dcache. */
       static void invalidateDCache(uintptr_t nAddr);
+      /** Flush a line in the data cache.
+       *\param[in] nAddr The address of a memory location to flush from the Dcache. */
+      static void flushDCache(uintptr_t nAddr);
     #endif
 
     /** Populate 'str' with a string describing the characteristics of this processor. */
