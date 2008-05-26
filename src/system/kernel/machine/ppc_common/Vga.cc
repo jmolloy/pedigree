@@ -107,28 +107,26 @@ void PPCVga::initialise()
     }
   }
 
-  m_pTextBuffer[0] = 'a';
-  m_pTextBuffer[1] = 'b';
-  pokeBuffer(0, 0);
 }
 
 void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
-  if (pBuffer)
-  {
-    memcpy(m_pTextBuffer, pBuffer, nBufLen);
-  }
-
+  uint16_t *pBuffer16 = reinterpret_cast<uint16_t*> (pBuffer);
   // Refresh screen.
   for(int i = 0; i < (m_Width/FONT_WIDTH); i++)
   {
     for (int j = 0; j < (m_Height/FONT_HEIGHT); j++)
     {
-      uint16_t ch = m_pTextBuffer[j*(m_Width/FONT_WIDTH)+i];
-      unsigned int fg, bg;
-      fg = m_pColours[(ch>>8)&0xF];
-      bg = m_pColours[(ch>>12)&0xF];
-      putChar(ch&0xFF, i*FONT_WIDTH, j*FONT_HEIGHT, fg, bg);
+      int idx = j*(m_Width/FONT_WIDTH)+i;
+      if (pBuffer16[idx] != m_pTextBuffer[idx])
+      {
+        m_pTextBuffer[idx] = pBuffer16[idx];
+        uint16_t ch = m_pTextBuffer[j*(m_Width/FONT_WIDTH)+i];
+        unsigned int fg, bg;
+        fg = m_pColours[(ch>>8)&0xF];
+        bg = m_pColours[(ch>>12)&0xF];
+        putChar(ch&0xFF, i*FONT_WIDTH, j*FONT_HEIGHT, fg, bg);
+      }
     }
   }
 }

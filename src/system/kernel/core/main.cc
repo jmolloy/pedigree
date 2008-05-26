@@ -84,7 +84,7 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
-
+  asm volatile("sc");
 #ifdef PPC_COMMON
   InterruptState state;
   LargeStaticString str4("RAh!");

@@ -21,12 +21,12 @@
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
+  // Initialise openfirmware.
+  OpenFirmware::instance().initialise(reinterpret_cast<OpenFirmware::OFInterface> (Info.prom));
+
   // Initialise this processor's interrupt handling
   PPC32InterruptManager::initialiseProcessor();
 
-  // Initialise openfirmware.
-  OpenFirmware::instance().initialise(reinterpret_cast<OpenFirmware::OFInterface> (Info.prom));
-  
   // TODO: Initialise the physical memory-management
 
 //   m_Initialised = 1;

@@ -100,6 +100,87 @@ class PPC32InterruptState
     /** The destructor
      *\note NOT implemented */
     ~PPC32InterruptState() {}
+
+    /** The interrupt/exception number. */
+    uint32_t m_IntNumber;
+    /** Loop counter */
+    uint32_t m_Ctr;
+    /** Link register */
+    uint32_t m_Lr;
+    /** Condition register */
+    uint32_t m_Cr;
+    /** SRR0 - Contains next program counter location */
+    uint32_t m_Srr0;
+    /** SRR1 - Contains most of the bits from the MSR register */
+    uint32_t m_Srr1;
+    /** DSISR - interrupt information */
+    uint32_t m_Dsisr;
+    /** DAR - interrupt information - data address register */
+    uint32_t m_Dar;
+    /** General purpose register 0 */
+    uint32_t m_R0;
+    /** General purpose register 1 */
+    uint32_t m_R1;
+    /** General purpose register 2 */
+    uint32_t m_R2;
+    /** General purpose register 3 */
+    uint32_t m_R3;
+    /** General purpose register 4 */
+    uint32_t m_R4;
+    /** General purpose register 5 */
+    uint32_t m_R5;
+    /** General purpose register 6 */
+    uint32_t m_R6;
+    /** General purpose register 7 */
+    uint32_t m_R7;
+    /** General purpose register 8 */
+    uint32_t m_R8;
+    /** General purpose register 9 */
+    uint32_t m_R9;
+    /** General purpose register 10 */
+    uint32_t m_R10;
+    /** General purpose register 11 */
+    uint32_t m_R11;
+    /** General purpose register 12 */
+    uint32_t m_R12;
+    /** General purpose register 13 */
+    uint32_t m_R13;
+    /** General purpose register 14 */
+    uint32_t m_R14;
+    /** General purpose register 15 */
+    uint32_t m_R15;
+    /** General purpose register 16 */
+    uint32_t m_R16;
+    /** General purpose register 17 */
+    uint32_t m_R17;
+    /** General purpose register 18 */
+    uint32_t m_R18;
+    /** General purpose register 19 */
+    uint32_t m_R19;
+    /** General purpose register 20 */
+    uint32_t m_R20;
+    /** General purpose register 21 */
+    uint32_t m_R21;
+    /** General purpose register 22 */
+    uint32_t m_R22;
+    /** General purpose register 23 */
+    uint32_t m_R23;
+    /** General purpose register 24 */
+    uint32_t m_R24;
+    /** General purpose register 25 */
+    uint32_t m_R25;
+    /** General purpose register 26 */
+    uint32_t m_R26;
+    /** General purpose register 27 */
+    uint32_t m_R27;
+    /** General purpose register 28 */
+    uint32_t m_R28;
+    /** General purpose register 29 */
+    uint32_t m_R29;
+    /** General purpose register 30 */
+    uint32_t m_R30;
+    /** General purpose register 31 */
+    uint32_t m_R31;
 } PACKED;
 
 typedef PPC32InterruptState PPC32SyscallState;
@@ -113,17 +194,19 @@ typedef PPC32InterruptState PPC32ProcessorState;
 
 uintptr_t PPC32InterruptState::getStackPointer() const
 {
-  return 0;
+  return m_R1;
 }
 void PPC32InterruptState::setStackPointer(uintptr_t stackPointer)
 {
+  m_R1 = stackPointer;
 }
 uintptr_t PPC32InterruptState::getInstructionPointer() const
 {
-  return 0;
+  return m_Srr0;
 }
 void PPC32InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
+  m_Srr0 = instructionPointer;
 }
 uintptr_t PPC32InterruptState::getBasePointer() const
 {
@@ -139,11 +222,11 @@ size_t PPC32InterruptState::getRegisterSize(size_t index) const
 
 bool PPC32InterruptState::kernelMode() const
 {
-  return true;
+  return m_Srr1 & (1<<15);
 }
 size_t PPC32InterruptState::getInterruptNumber() const
 {
-  return 0; // Return the ExcCode field of the Cause register.
+  return m_IntNumber;
 }
 
 size_t PPC32InterruptState::getSyscallService() const

@@ -424,7 +424,8 @@ const char *TraceCommand::Stacktrace::getLine1(size_t index, DebuggerIO::Colour 
   static HugeStaticString str;
   str.clear();
   m_Bt.prettyPrint(str, 1, index);
-  str = str.left(str.length()-1);
+  if (str.length())
+    str = str.left(str.length()-1);
   return str;
 }
 

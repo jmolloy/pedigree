@@ -91,7 +91,6 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   uintptr_t frameBase;
   while (i < MAX_STACK_FRAMES)
   {
-    NOTICE("start unwind");
     if (!du.unwind(initial, next, frameBase))
       break;
     m_pStates[i] = next;

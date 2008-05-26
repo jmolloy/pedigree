@@ -4,6 +4,11 @@
 ENTRY(start)
 SECTIONS
 {
+    . = 0x0;
+    .isr :
+    {
+      *(.isr*)
+    }
 
     . = 0x1000000;
     .text :

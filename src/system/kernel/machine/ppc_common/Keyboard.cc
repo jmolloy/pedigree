@@ -40,7 +40,7 @@ char PPCKeyboard::getChar()
                                        reinterpret_cast<OFParam> (c),
                                        reinterpret_cast<OFParam> (4)) != 0)
     ;
-  if ((c[0] < 'A' || c[0] > 'z') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
+  if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
     return 0;
   else
     return c[0];
@@ -53,7 +53,8 @@ char PPCKeyboard::getCharNonBlock()
                                     reinterpret_cast<OFParam> (c),
                                     reinterpret_cast<OFParam> (4)) != 0)
     return 0;
-
+  if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
+    return 0;
   if (c[0] == '\r')
     return '\n';
   else

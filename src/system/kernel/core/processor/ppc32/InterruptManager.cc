@@ -21,7 +21,24 @@
 #include <processor/Processor.h>
 #include <Debugger.h>
 #include <Log.h>
+#include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
 
+extern "C" int isr_reset;
+extern "C" int isr_machine_check;
+extern "C" int isr_dsi;
+extern "C" int isr_isi;
+extern "C" int isr_interrupt;
+extern "C" int isr_alignment;
+extern "C" int isr_program;
+extern "C" int isr_fpu;
+extern "C" int isr_decrementer;
+extern "C" int isr_sc;
+extern "C" int isr_trace;
+extern "C" int isr_perf_mon;
+extern "C" int isr_instr_breakpoint;
+extern "C" int isr_system_management;
+extern "C" int isr_thermal_management;
 
 PPC32InterruptManager PPC32InterruptManager::m_Instance;
 
@@ -40,7 +57,6 @@ bool PPC32InterruptManager::registerInterruptHandler(size_t interruptNumber, Int
 }
 
 #ifdef DEBUGGER
-
   bool PPC32InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
     return true;
@@ -53,7 +69,6 @@ bool PPC32InterruptManager::registerInterruptHandler(size_t interruptNumber, Int
   {
     return 1;
   }
-
 #endif
 
 bool PPC32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
@@ -63,10 +78,41 @@ bool PPC32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHan
 
 void PPC32InterruptManager::initialiseProcessor()
 {
+  // We know that we get called before the virtual address space is initialised, so
+  // we'll have to do the identity mapping ourselves. How crude!
+  OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
+  OFDevice mmu (chosen.getProperty("mmu"));
+
+  // Identity map the lower area of memory.
+  mmu.executeMethod("map", 4,
+                    reinterpret_cast<OFParam>(0x6a),  // 6a=uncached. TODO change to -1
+                    reinterpret_cast<OFParam>(0x3000),
+                    reinterpret_cast<OFParam>(0x0),
+                    reinterpret_cast<OFParam>(0x0));
+
+  // Copy the interrupt handlers into lower memory.
+  memcpy(reinterpret_cast<void*> (0x0100), &isr_reset, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0200), &isr_machine_check, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0300), &isr_dsi, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0400), &isr_isi, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0500), &isr_interrupt, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0600), &isr_alignment, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0700), &isr_program, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0800), &isr_fpu, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0900), &isr_decrementer, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0C00), &isr_sc, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0D00), &isr_trace, 0x100);
+  memcpy(reinterpret_cast<void*> (0x0F00), &isr_perf_mon, 0x100);
+  memcpy(reinterpret_cast<void*> (0x1300), &isr_instr_breakpoint, 0x100);
+  memcpy(reinterpret_cast<void*> (0x1400), &isr_system_management, 0x100);
+  memcpy(reinterpret_cast<void*> (0x1700), &isr_thermal_management, 0x100);
 }
 
 void PPC32InterruptManager::interrupt(InterruptState &interruptState)
 {
+  LargeStaticString msg("Interrupt!");
+  Debugger::instance().start(interruptState, msg);
+  for(;;);
 }
 
 PPC32InterruptManager::PPC32InterruptManager()
