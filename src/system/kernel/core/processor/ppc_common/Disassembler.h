@@ -53,12 +53,124 @@ public:
    */
   void disassemble(LargeStaticString &text);
 
-private:
+public:
   /**
    * Current disassembling location in memory.
    */
   uintptr_t m_nLocation;
 
+  /** PPC instruction forms */
+  struct InstructionFormI
+  {
+    uint32_t opcode : 6;
+    uint32_t li : 24;
+    uint32_t aa : 1;
+    uint32_t lk : 1;
+  };
+  struct InstructionFormB
+  {
+    uint32_t opcode : 6;
+    uint32_t bo : 5;
+    uint32_t bi : 5;
+    uint32_t bd : 14;
+    uint32_t aa : 1;
+    uint32_t lk : 1;
+  };
+  struct InstructionFormSC
+  {
+    uint32_t opcode : 6;
+    uint32_t zero : 22;
+    uint32_t one : 1;
+    uint32_t zero2 : 1;
+  };
+  struct InstructionFormD
+  {
+    uint32_t opcode : 6;
+    uint32_t d : 5;
+    uint32_t a : 5;
+    uint32_t imm : 16;
+  };
+  struct InstructionFormDS
+  {
+    uint32_t opcode : 6;
+    uint32_t d : 5;
+    uint32_t a : 5;
+    uint32_t ds : 14;
+    uint32_t xo : 2;
+  };
+  struct InstructionFormX
+  {
+    uint32_t opcode : 6;
+    uint32_t d : 5;
+    uint32_t s : 5;
+    uint32_t b : 5;
+    uint32_t xo : 10;
+    uint32_t rc : 1;
+  };
+  struct InstructionFormXL
+  {
+    uint32_t opcode : 6;
+    uint32_t bo : 5;
+    uint32_t bi : 5;
+    uint32_t crbB : 5;
+    uint32_t xo : 10;
+    uint32_t lk : 1;
+  };
+  struct InstructionFormXFX
+  {
+    uint32_t opcode : 6;
+    uint32_t d : 5;
+    uint32_t spr : 10;
+    uint32_t xo : 10;
+    uint32_t zero : 1;
+  };
+  struct InstructionFormXO
+  {
+    uint32_t opcode : 6;
+    uint32_t d : 5;
+    uint32_t a : 5;
+    uint32_t b : 5;
+    uint32_t oe : 1;
+    uint32_t xo : 9;
+    uint32_t rc : 1;
+  };
+
+  /** Main instruction union */
+  union Instruction
+  {
+    InstructionFormI i;
+    InstructionFormB b;
+    InstructionFormSC sc;
+    InstructionFormD d;
+    InstructionFormDS ds;
+    InstructionFormX x;
+    InstructionFormXL xl;
+    InstructionFormXFX xfx;
+    InstructionFormXO xo;
+    uint32_t integer;
+  };
+
+  /** Worker delegates */
+  void integerArithmetic(Instruction insn, LargeStaticString &text);
+  void integerCompare(Instruction insn, LargeStaticString &text);
+  void integerLogical(Instruction insn, LargeStaticString &text);
+  void integerRotate(Instruction insn, LargeStaticString &text);
+  void integerShift(Instruction insn, LargeStaticString &text);
+  void integerLoad(Instruction insn, LargeStaticString &text);
+  void integerStore(Instruction insn, LargeStaticString &text);
+  void integerLoadStoreByteReverse(Instruction insn, LargeStaticString &text);
+  void integerLoadStoreMultiple(Instruction insn, LargeStaticString &text);
+  void integerLoadStoreString(Instruction insn, LargeStaticString &text);
+  void memorySync(Instruction insn, LargeStaticString &text);
+  void branch(Instruction insn, LargeStaticString &text);
+  void conditionRegisterLogical(Instruction insn, LargeStaticString &text);
+  void systemLinkage(Instruction insn, LargeStaticString &text);
+  void trap(Instruction insn, LargeStaticString &text);
+  void processorControl(Instruction insn, LargeStaticString &text);
+  void cacheManagement(Instruction insn, LargeStaticString &text);
+  void segmentRegisterManipulation(Instruction insn, LargeStaticString &text);
+  
+  void null(Instruction insn, LargeStaticString &text);
 };
 
 typedef PPCDisassembler Disassembler;

@@ -15,6 +15,76 @@
  */
 
 #include "Disassembler.h"
+typedef void (PPCDisassembler::*PPCDelegate)(PPCDisassembler::Instruction,LargeStaticString&);
+PPCDelegate ppcLookupTable[] = {
+  &PPCDisassembler::null,            // 0x00
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::integerArithmetic,
+  &PPCDisassembler::integerArithmetic,
+  &PPCDisassembler::integerArithmetic,
+  &PPCDisassembler::integerArithmetic,
+
+  &PPCDisassembler::null,            // 0x10
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::integerArithmetic,
+
+  &PPCDisassembler::null,            // 0x20
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+
+  &PPCDisassembler::null,            // 0x30
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+  &PPCDisassembler::null,
+};
 
 PPCDisassembler::PPCDisassembler()
   : m_nLocation(0)
@@ -43,4 +113,87 @@ void PPCDisassembler::disassemble(LargeStaticString &text)
 {
   uint32_t nInstruction = * reinterpret_cast<uint32_t*> (m_nLocation);
   m_nLocation += 4;
+
+  Instruction insn;
+  insn.integer = nInstruction;
+
+  PPCDelegate delegate = ppcLookupTable[insn.i.opcode];
+  (this->*delegate)(insn, text);
 }
+
+void PPCDisassembler::integerArithmetic(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerCompare(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerLogical(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerRotate(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerShift(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerLoad(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerStore(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerLoadStoreByteReverse(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerLoadStoreMultiple(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::integerLoadStoreString(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::memorySync(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::branch(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::conditionRegisterLogical(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::systemLinkage(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::trap(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::processorControl(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::cacheManagement(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::segmentRegisterManipulation(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::null(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
