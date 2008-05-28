@@ -229,9 +229,18 @@ void PPCDisassembler::subfic(PPCDisassembler::Instruction insn, LargeStaticStrin
 
 void PPCDisassembler::cmpli(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
-  text += "cmpli\t";
-  text += insn.d.d;
-  text += ",";
+  text += "cmpwli\t";
+  switch (insn.d.d&0x7)
+  {
+    case 0: text += ","; break;
+    case 1: text += "cr1,"; break;
+    case 2: text += "cr2,"; break;
+    case 3: text += "cr3,"; break;
+    case 4: text += "cr4,"; break;
+    case 5: text += "cr5,"; break;
+    case 6: text += "cr6,"; break;
+    case 7: text += "cr7,"; break;
+  }
   text += g_pRegisters[insn.d.a];
   text += ",";
   text.append(static_cast<int16_t> (insn.d.imm));
@@ -239,9 +248,18 @@ void PPCDisassembler::cmpli(PPCDisassembler::Instruction insn, LargeStaticString
 
 void PPCDisassembler::cmpi(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
-  text += "cmpi\t";
-  text += insn.d.d;
-  text += ",";
+  text += "cmpwi\t";
+  switch ((insn.d.d>>2)&0x7)
+  {
+    case 0: text += ","; break;
+    case 1: text += "cr1,"; break;
+    case 2: text += "cr2,"; break;
+    case 3: text += "cr3,"; break;
+    case 4: text += "cr4,"; break;
+    case 5: text += "cr5,"; break;
+    case 6: text += "cr6,"; break;
+    case 7: text += "cr7,"; break;
+  }
   text += g_pRegisters[insn.d.a];
   text += ",";
   text.append(static_cast<int16_t> (insn.d.imm));
@@ -289,14 +307,103 @@ void PPCDisassembler::addis(PPCDisassembler::Instruction insn, LargeStaticString
 
 void PPCDisassembler::bc(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
+  text += "b";
+  const char *pMnemonic;
+  const char *pLikely = "";
+  bool invertCondition = false;
+  bool noCondition = false;
+
+  switch (insn.b.bo)
+  {
+    case 0x00: pMnemonic = "dnz"; invertCondition = true; pLikely = "-"; break;
+    case 0x01: pMnemonic = "dnz";  invertCondition = true; pLikely = "+"; break;
+    case 0x02: pMnemonic = "dz";  invertCondition = true; pLikely = "-"; break;
+    case 0x03: pMnemonic = "dz";  invertCondition = true; pLikely = "+"; break;
+    case 0x04: pMnemonic = ""; invertCondition = true; pLikely = "-"; break;
+    case 0x05: pMnemonic = ""; invertCondition = true; pLikely = "+"; break;
+    case 0x08: pMnemonic = "dnz"; pLikely = "-"; break;
+    case 0x09: pMnemonic = "dnz"; pLikely = "+"; break;
+    case 0x0a: pMnemonic = "dz"; pLikely = "-"; break;
+    case 0x0b: pMnemonic = "dz"; pLikely = "+"; break;
+    case 0x0c: pMnemonic = ""; pLikely = "-"; break;
+    case 0x0d: pMnemonic = ""; pLikely = "+"; break;
+    case 0x10: pMnemonic = "dnz"; noCondition = true; pLikely = "-"; break;
+    case 0x11: pMnemonic = "dnz"; noCondition = true; pLikely = "+"; break;
+    case 0x12: pMnemonic = "dz"; noCondition = true; pLikely = "-"; break;
+    case 0x13: pMnemonic = "dz"; noCondition = true; pLikely = "+"; break;
+    case 0x14: pMnemonic = ""; noCondition = true; break;
+  }
+
+  const char *pCondition;
+  if (!invertCondition)
+  {
+    switch (insn.b.bi&0x3)
+    {
+      case 0: pCondition = "lt"; break;
+      case 1: pCondition = "gt"; break;
+      case 2: pCondition = "eq"; break;
+      case 3: pCondition = "so"; break;
+    }
+  }
+  else
+  {
+    switch (insn.b.bi&0x3)
+    {
+      case 0: pCondition = "ge"; break;
+      case 1: pCondition = "le"; break;
+      case 2: pCondition = "ne"; break;
+      case 3: pCondition = "ns"; break;
+    }
+  }
+
+  text += pMnemonic;
+  if (!noCondition)
+    text += pCondition;
+  text += pLikely;
+
+  if (insn.b.lk)
+    text += "l";
+  if (insn.b.aa)
+    text += "a";
+
+  switch (insn.b.bi>>2)
+  {
+    case 0: text += "\t"; break;
+    case 1: text += "\tcr1,"; break;
+    case 2: text += "\tcr2,"; break;
+    case 3: text += "\tcr3,"; break;
+    case 4: text += "\tcr4,"; break;
+    case 5: text += "\tcr5,"; break;
+    case 6: text += "\tcr6,"; break;
+    case 7: text += "\tcr7,"; break;
+  }
+
+  int32_t addr = static_cast<int32_t> (insn.b.bd) << 2;
+  if (insn.b.aa)
+    text.append(static_cast<uint32_t> (addr), 16); // Sign extend with the int32_t cast, then make unsigned with the uint32_t.
+  else
+    text.append(static_cast<uint32_t> (addr+m_nLocation-4), 16);
+  
 }
 
 void PPCDisassembler::sc(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
+  text += "sc";
 }
 
 void PPCDisassembler::b(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
+  text += "b";
+  if (insn.i.lk)
+    text += "l";
+  if (insn.i.aa)
+    text += "a";
+
+  int32_t addr = static_cast<uint32_t> (static_cast<int32_t> (insn.i.li)<<2);
+  if (!intn.i.aa)
+    addr += m_nLocation-4;
+  text += "\t,";
+  text.append(addr, 16);
 }
 
 void PPCDisassembler::op13(PPCDisassembler::Instruction insn, LargeStaticString &text)
