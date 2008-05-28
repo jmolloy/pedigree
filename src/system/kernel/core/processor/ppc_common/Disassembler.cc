@@ -15,75 +15,110 @@
  */
 
 #include "Disassembler.h"
+
+const char *g_pRegisters[32] = {
+  "r0",
+  "r1",
+  "r2",
+  "r3",
+  "r4",
+  "r5",
+  "r6",
+  "r7",
+  "r8",
+  "r9",
+  "r10",
+  "r11",
+  "r12",
+  "r13",
+  "r14",
+  "r15",
+  "r16",
+  "r17",
+  "r18",
+  "r19",
+  "r20",
+  "r21",
+  "r22",
+  "r23",
+  "r24",
+  "r25",
+  "r26",
+  "r27",
+  "r28",
+  "r29",
+  "r30",
+  "r31"};
+
 typedef void (PPCDisassembler::*PPCDelegate)(PPCDisassembler::Instruction,LargeStaticString&);
 PPCDelegate ppcLookupTable[] = {
   &PPCDisassembler::null,            // 0x00
   &PPCDisassembler::null,
   &PPCDisassembler::null,
+  &PPCDisassembler::twi,
   &PPCDisassembler::null,
   &PPCDisassembler::null,
   &PPCDisassembler::null,
+  &PPCDisassembler::mulli,
+  &PPCDisassembler::subfic,
   &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::integerArithmetic,
-  &PPCDisassembler::integerArithmetic,
-  &PPCDisassembler::integerArithmetic,
-  &PPCDisassembler::integerArithmetic,
+  &PPCDisassembler::cmpli,
+  &PPCDisassembler::cmpi,
+  &PPCDisassembler::addic,
+  &PPCDisassembler::addic_dot,
+  &PPCDisassembler::addi,
+  &PPCDisassembler::addis,
 
-  &PPCDisassembler::null,            // 0x10
+  &PPCDisassembler::bc,            // 0x10
+  &PPCDisassembler::sc,
+  &PPCDisassembler::b,
+  &PPCDisassembler::op13,
+  &PPCDisassembler::rlwimi,
   &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::integerArithmetic,
+  &PPCDisassembler::rlwinm,
+  &PPCDisassembler::rlwnm,
+  &PPCDisassembler::ori,
+  &PPCDisassembler::oris,
+  &PPCDisassembler::xori,
+  &PPCDisassembler::xoris,
+  &PPCDisassembler::andi_dot,
+  &PPCDisassembler::andis_dot,
+  &PPCDisassembler::op1e,
+  &PPCDisassembler::op1f,
 
-  &PPCDisassembler::null,            // 0x20
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
+  &PPCDisassembler::lwz,            // 0x20
+  &PPCDisassembler::lwzu,
+  &PPCDisassembler::lbz,
+  &PPCDisassembler::lbzu,
+  &PPCDisassembler::stw,
+  &PPCDisassembler::stwu,
+  &PPCDisassembler::stb,
+  &PPCDisassembler::stbu,
+  &PPCDisassembler::lhz,
+  &PPCDisassembler::lhzu,
+  &PPCDisassembler::lha,
+  &PPCDisassembler::lhau,
+  &PPCDisassembler::sth,
+  &PPCDisassembler::sthu,
+  &PPCDisassembler::lmw,
+  &PPCDisassembler::stmw,
 
-  &PPCDisassembler::null,            // 0x30
+  &PPCDisassembler::lfs,            // 0x30
+  &PPCDisassembler::lfsu,
+  &PPCDisassembler::lfd,
+  &PPCDisassembler::lfdu,
+  &PPCDisassembler::stfs,
+  &PPCDisassembler::stfsu,
+  &PPCDisassembler::stfd,
+  &PPCDisassembler::stfdu,
   &PPCDisassembler::null,
   &PPCDisassembler::null,
+  &PPCDisassembler::op3a,
+  &PPCDisassembler::op3b,
   &PPCDisassembler::null,
   &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
-  &PPCDisassembler::null,
+  &PPCDisassembler::op3e,
+  &PPCDisassembler::op3f,
 };
 
 PPCDisassembler::PPCDisassembler()
@@ -121,79 +156,306 @@ void PPCDisassembler::disassemble(LargeStaticString &text)
   (this->*delegate)(insn, text);
 }
 
-void PPCDisassembler::integerArithmetic(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
+#define SIGNED_D_OP(mnemonic) \
+  do { \
+  text += mnemonic; \
+  text += "\t"; \
+  text += g_pRegisters[insn.d.d]; \
+  text += ","; \
+  text += g_pRegisters[insn.d.a]; \
+  text += ","; \
+text.append (static_cast<int16_t> (insn.d.imm)); } while(0)
 
-void PPCDisassembler::integerCompare(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerLogical(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerRotate(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerShift(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerLoad(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerStore(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerLoadStoreByteReverse(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerLoadStoreMultiple(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::integerLoadStoreString(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::memorySync(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::branch(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::conditionRegisterLogical(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::systemLinkage(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::trap(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::processorControl(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::cacheManagement(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
-
-void PPCDisassembler::segmentRegisterManipulation(PPCDisassembler::Instruction insn, LargeStaticString &text)
-{
-}
+#define UNSIGNED_D_OP(mnemonic) \
+  do { \
+  text += mnemonic; \
+  text += "\t"; \
+  text += g_pRegisters[insn.d.d]; \
+  text += ","; \
+  text += g_pRegisters[insn.d.a]; \
+  text += ","; \
+text.append (static_cast<uint16_t> (insn.d.imm), 16); } while(0)
 
 void PPCDisassembler::null(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  text += "Unrecognised instruction: ";
+  text.append(insn.integer, 16);
+}
+
+void PPCDisassembler::twi(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  const char *pTrapMnemonic;
+  switch (insn.d.d)
+  {
+    case 1: pTrapMnemonic = "lgt"; break;
+    case 2: pTrapMnemonic = "llt"; break;
+    case 3: pTrapMnemonic = "lne"; break;
+    case 4: pTrapMnemonic = "eq"; break;
+    case 5: pTrapMnemonic = "lge"; break;
+    case 6: pTrapMnemonic = "lle"; break;
+    case 8: pTrapMnemonic = "gt"; break;
+    case 0xc: pTrapMnemonic = "ge"; break;
+    case 0x10: pTrapMnemonic = "lt"; break;
+    case 0x14: pTrapMnemonic = "le"; break;
+    case 0x18: pTrapMnemonic = "ne"; break;
+    default:
+      pTrapMnemonic = "";
+  }
+
+  if (insn.d.d == 0x1F) // Unconditional trap
+  {
+    text += "trap";
+  }
+  else
+  {
+    text += "tw";
+    text += pTrapMnemonic;
+    text += "i\t";
+    text += g_pRegisters[insn.d.a];
+    text += ",";
+    text.append(static_cast<int16_t> (insn.d.imm));
+  }
+}
+
+void PPCDisassembler::mulli(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  SIGNED_D_OP("mulli");
+}
+
+void PPCDisassembler::subfic(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  SIGNED_D_OP("subfic");
+}
+
+void PPCDisassembler::cmpli(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  text += "cmpli\t";
+  text += insn.d.d;
+  text += ",";
+  text += g_pRegisters[insn.d.a];
+  text += ",";
+  text.append(static_cast<int16_t> (insn.d.imm));
+}
+
+void PPCDisassembler::cmpi(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  text += "cmpi\t";
+  text += insn.d.d;
+  text += ",";
+  text += g_pRegisters[insn.d.a];
+  text += ",";
+  text.append(static_cast<int16_t> (insn.d.imm));
+}
+
+void PPCDisassembler::addic(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  SIGNED_D_OP("addic");
+}
+
+void PPCDisassembler::addic_dot(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  SIGNED_D_OP("addic.");
+}
+
+void PPCDisassembler::addi(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  if (insn.d.a == 0) // GPR0?
+  {
+    text += "li\t";
+    text += g_pRegisters[insn.d.d];
+    text += ",";
+    text.append(static_cast<int16_t> (insn.d.imm));
+  }
+  else
+  {
+    SIGNED_D_OP("addi");
+  }
+}
+
+void PPCDisassembler::addis(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+  if (insn.d.a == 0) // GPR0?
+  {
+    text += "lis\t";
+    text += g_pRegisters[insn.d.d];
+    text += ",";
+    text.append(static_cast<int16_t> (insn.d.imm));
+  }
+  else
+  {
+    SIGNED_D_OP("addis");
+  }
+}
+
+void PPCDisassembler::bc(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::sc(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::b(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op13(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::rlwimi(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::rlwinm(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::rlwnm(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::ori(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::oris(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::xori(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::xoris(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::andi_dot(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::andis_dot(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op1e(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op1f(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lwz(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lwzu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lbz(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lbzu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stw(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stwu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stb(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stbu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lhz(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lhzu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lha(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lhau(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::sth(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::sthu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lmw(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stmw(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lfs(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lfsu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lfd(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::lfdu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stfs(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stfsu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stfd(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::stfdu(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op3a(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op3b(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op3e(PPCDisassembler::Instruction insn, LargeStaticString &text)
+{
+}
+
+void PPCDisassembler::op3f(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
 }
 
