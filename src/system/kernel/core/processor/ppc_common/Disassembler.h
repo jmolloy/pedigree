@@ -134,6 +134,16 @@ public:
     uint32_t xo : 9;
     uint32_t rc : 1;
   };
+  struct InstructionFormM
+  {
+    uint32_t opcode : 6;
+    uint32_t s : 5;
+    uint32_t a : 5;
+    uint32_t sh : 5;
+    uint32_t mb : 5;
+    uint32_t me : 5;
+    uint32_t rc : 1;
+  };
 
   /** Main instruction union */
   union Instruction
@@ -147,6 +157,7 @@ public:
     InstructionFormXL xl;
     InstructionFormXFX xfx;
     InstructionFormXO xo;
+    InstructionFormM m;
     uint32_t integer;
   };
 

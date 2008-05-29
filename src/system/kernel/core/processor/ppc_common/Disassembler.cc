@@ -74,8 +74,8 @@ PPCDelegate ppcLookupTable[] = {
   &PPCDisassembler::b,
   &PPCDisassembler::op13,
   &PPCDisassembler::rlwimi,
-  &PPCDisassembler::null,
   &PPCDisassembler::rlwinm,
+  &PPCDisassembler::null,
   &PPCDisassembler::rlwnm,
   &PPCDisassembler::ori,
   &PPCDisassembler::oris,
@@ -365,11 +365,10 @@ static const char *sprMnemonic(uint32_t spr)
   }
 }
 
-
 void PPCDisassembler::null(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
   text += "Unrecognised instruction: ";
-  text.append(insn.integer, 16);
+  text.append(insn.i.opcode, 16);
 }
 
 void PPCDisassembler::twi(PPCDisassembler::Instruction insn, LargeStaticString &text)
@@ -626,16 +625,106 @@ void PPCDisassembler::op13(PPCDisassembler::Instruction insn, LargeStaticString 
 void PPCDisassembler::rlwimi(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
   text += "rlwimi";
+  if (insn.m.rc) text += ".";
+  text.pad (8);
+
+  text += g_pRegisters[insn.m.a];
+  text += ",(";
+  text += g_pRegisters[insn.m.s];
+  text += "<<";
+  text += insn.m.sh;
+  text += ")";
+
+  uint32_t mask = 0;
+  if (insn.m.mb < insn.m.me + 1)
+  {
+    for (int i = insn.m.mb; (i%32) <= insn.m.me; i++)
+      mask |= 1>>(i%32);
+    text += "&0x";
+    text.append(mask, 16);
+  }
+  else if (insn.m.mb == insn.m.me + 1)
+  {
+    text += "&0xFFFFFFFF";
+  }
+  else
+  {
+    mask = 0xFFFFFFFF;
+    for (int i = insn.m.me+1; (i%32) <= insn.m.mb-1; i++)
+      mask &= 1>>(i%32);
+    text += "&0x";
+    text.append(mask, 16);
+  }
 }
 
 void PPCDisassembler::rlwinm(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
   text += "rlwinm";
+  if (insn.m.rc) text += ".";
+  text.pad (8);
+
+  text += g_pRegisters[insn.m.a];
+  text += ",(";
+  text += g_pRegisters[insn.m.s];
+  text += "<<";
+  text += insn.m.sh;
+  text += ")";
+
+  uint32_t mask = 0;
+  if (insn.m.mb < insn.m.me + 1)
+  {
+    for (int i = insn.m.mb; i <= insn.m.me; i++)
+      mask |= 1<<i;
+    text += "&0x";
+    text.append(mask, 16);
+  }
+  else if (insn.m.mb == insn.m.me + 1)
+  {
+    text += "&0xFFFFFFFF";
+  }
+  else
+  {
+    mask = 0xFFFFFFFF;
+    for (int i = insn.m.me+1; i <= insn.m.mb-1; i++)
+      mask &= 1>>i;
+    text += "&0x";
+    text.append(mask, 16);
+  }
 }
 
 void PPCDisassembler::rlwnm(PPCDisassembler::Instruction insn, LargeStaticString &text)
 {
   text += "rlwnm";
+  if (insn.m.rc) text += ".";
+  text.pad (8);
+
+  text += g_pRegisters[insn.m.a];
+  text += ",(";
+  text += g_pRegisters[insn.m.s];
+  text += "<<";
+  text += insn.m.sh;
+  text += ")";
+
+  uint32_t mask = 0;
+  if (insn.m.mb < insn.m.me + 1)
+  {
+    for (int i = insn.m.mb; (i%32) <= insn.m.me; i++)
+      mask |= 1>>(i%32);
+    text += "&0x";
+    text.append(mask, 16);
+  }
+  else if (insn.m.mb == insn.m.me + 1)
+  {
+    text += "&0xFFFFFFFF";
+  }
+  else
+  {
+    mask = 0xFFFFFFFF;
+    for (int i = insn.m.me+1; (i%32) <= insn.m.mb-1; i++)
+      mask &= 1>>(i%32);
+    text += "&0x";
+    text.append(mask, 16);
+  }
 }
 
 void PPCDisassembler::ori(PPCDisassembler::Instruction insn, LargeStaticString &text)
