@@ -368,6 +368,21 @@ public:
     }
   }
 
+  void pad(size_t nLen, char c=' ')
+  {
+    // Pad, if needed
+    if (nLen > length())
+    {
+      size_t i;
+      for(i = 0; i < nLen - length(); i++)
+      {
+        m_pData[i + length()] = c;
+      }
+      m_pData[i + length()] = '\0';
+      m_Length += nLen - length();
+    }
+  }
+  
   size_t length() const
   {
     return m_Length;
