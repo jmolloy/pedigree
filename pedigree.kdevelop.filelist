@@ -272,6 +272,7 @@ src/system/kernel/core/processor/ppc32/InterruptManager.cc
 src/system/kernel/core/processor/ppc32/InterruptManager.h
 src/system/kernel/core/processor/ppc32/Processor.cc
 src/system/kernel/core/processor/ppc32/StackFrame.cc
+src/system/kernel/core/processor/ppc32/Translation.h
 src/system/kernel/core/processor/ppc32/VirtualAddressSpace.cc
 src/system/kernel/core/processor/ppc32/VirtualAddressSpace.h
 src/system/kernel/core/processor/ppc32/asm

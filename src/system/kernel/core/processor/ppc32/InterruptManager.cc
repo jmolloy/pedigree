@@ -40,6 +40,24 @@ extern "C" int isr_instr_breakpoint;
 extern "C" int isr_system_management;
 extern "C" int isr_thermal_management;
 
+const char *g_pExceptions[] = {
+  "System reset",
+  "Machine check",
+  "DSI",
+  "ISI",
+  "External interrupt",
+  "Alignment",
+  "Program",
+  "Floating-point unavailable",
+  "Decrementer",
+  "System call",
+  "Trace",
+  "Performance monitor",
+  "Instruction address breakpoint",
+  "System management interrupt",
+  "Thermal management interrupt"
+};
+
 PPC32InterruptManager PPC32InterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
@@ -84,12 +102,11 @@ void PPC32InterruptManager::initialiseProcessor()
   OFDevice mmu (chosen.getProperty("mmu"));
 
   // Identity map the lower area of memory.
-  /*  OFParam ret = mmu.executeMethod("map", 4,
+  OFParam ret = mmu.executeMethod("map", 4,
                     reinterpret_cast<OFParam>(-1),
                     reinterpret_cast<OFParam>(0x3000),
                     reinterpret_cast<OFParam>(0x0),
                     reinterpret_cast<OFParam>(0x0));
-  */
   // Copy the interrupt handlers into lower memory.
   memcpy(reinterpret_cast<void*> (0x0100), &isr_reset, 0x100);
   memcpy(reinterpret_cast<void*> (0x0200), &isr_machine_check, 0x100);
@@ -121,7 +138,11 @@ void PPC32InterruptManager::initialiseProcessor()
 
 void PPC32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  static LargeStaticString msg("Interrupt!");
+  static LargeStaticString msg("Exception #");
+  msg += interruptState.m_IntNumber;
+  msg += ": ";
+  msg += g_pExceptions[interruptState.m_IntNumber];
+  
   Debugger::instance().start(interruptState, msg);
   for(;;);
 }

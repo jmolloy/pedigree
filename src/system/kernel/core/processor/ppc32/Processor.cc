@@ -17,7 +17,10 @@
 #include <processor/Processor.h>
 #include <processor/TlbManager.h>
 #include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
 #include "InterruptManager.h"
+#include "Translation.h"
+#include <Log.h>
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
@@ -34,6 +37,15 @@ void Processor::initialise2()
   // Initialise this processor's interrupt handling
   PPC32InterruptManager::initialiseProcessor();
 
+  // Get the current translations list.
+  OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
+  OFDevice mmu (chosen.getProperty("mmu"));
+
+  Translation translations[256];
+  int ret = mmu.getProperty("translations", reinterpret_cast<void*> (translations), 256*sizeof(Translation));
+
+  NOTICE("Translations request returned " << Dec << ret);
+  
 //   m_Initialised = 2;
 }
 

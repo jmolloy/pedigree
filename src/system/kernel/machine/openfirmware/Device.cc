@@ -44,6 +44,15 @@ OFHandle OFDevice::getProperty(const char *pProperty)
   return h;
 }
 
+int OFDevice::getProperty(const char *pProperty, void *buf, size_t bufLen)
+{
+  return reinterpret_cast<int> (OpenFirmware::instance().call("getprop", 4,
+                                              static_cast<OFParam> (m_Handle),
+                                              reinterpret_cast<OFParam> (const_cast<char*> (pProperty)),
+                                              reinterpret_cast<OFParam> (buf),
+                                              reinterpret_cast<OFParam> (bufLen)));
+}
+
 void OFDevice::setProperty(const char *pProperty, NormalStaticString &val)
 {
   /// \todo

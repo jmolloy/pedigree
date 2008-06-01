@@ -22,8 +22,6 @@
 #include <processor/PhysicalMemoryManager.h>
 #include "VirtualAddressSpace.h"
 
-static bool g_Kseg2Initialised = false;
-
 PPC32VirtualAddressSpace PPC32VirtualAddressSpace::m_KernelSpace;
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
@@ -49,7 +47,6 @@ PPC32VirtualAddressSpace::~PPC32VirtualAddressSpace()
 
 bool PPC32VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  // In MIPS, all possible addresses are valid.
   return true;
 }
 
