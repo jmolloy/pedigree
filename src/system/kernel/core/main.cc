@@ -84,13 +84,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
-  asm volatile("sc");
-#ifdef PPC_COMMON
-  InterruptState state;
-  LargeStaticString str4("RAh!");
-  Debugger::instance().start(state, str4);
-  for(;;);
-#endif
 
 #ifdef X86_COMMON
   if (bsInf->mods_count == 0)
@@ -101,6 +94,11 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
+
+#ifdef PPC_COMMON
+  asm volatile("sc");
+  for(;;);
+#endif
 
 #if defined(ARM_COMMON) && defined(DEBUGGER)
    InterruptState st;
