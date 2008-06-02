@@ -56,8 +56,8 @@ int foo(void *a)
   }
 }
 
-/* Kernel entry point for application processors (after processor/machine has been initialised
-   on the particular processor */
+/** Kernel entry point for application processors (after processor/machine has been initialised
+    on the particular processor */
 void apMain()
 {
   NOTICE("apMain()");
@@ -65,16 +65,16 @@ void apMain()
 }
 
 /// Kernel entry point.
-extern "C" void _main(BootstrapStruct_t *bsInf)
+extern "C" void _main(BootstrapStruct_t &bsInf)
 {
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
   // Initialise the processor-specific interface
-  Processor::initialise1(*bsInf);
+  Processor::initialise1(bsInf);
 
   // Initialise the Kernel Elf class
-  if (KernelElf::instance().initialise(*bsInf) == false)
+  if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
   
   // Initialise the machine-specific interface
@@ -85,12 +85,9 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
   Debugger::instance().initialise();
 #endif
 
-#ifdef X86_COMMON
-  if (bsInf->mods_count == 0)
+  if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
-  uint32_t initrdLocation = * reinterpret_cast<uint32_t*> (bsInf->mods_addr);
-#endif
-  
+
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
@@ -106,10 +103,23 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
    Debugger::instance().start(st, str2);
   return; // Go back to the YAMON prompt.
 #endif
-  
-//   foo(0x456, 0x123);
+
   // Initialise the boot output.
   bootIO.initialise();
+
+  // We have to do this before we call Processor::initialisationDone() otherwise the modules have already
+  // been unmapped on x86/x64
+#ifdef X86_COMMON
+  Processor::breakpoint();
+  Archive initrd(bsInf.getInitrdAddress());
+
+  size_t nFiles = initrd.getNumFiles();
+  NOTICE("nFiles: " << nFiles);
+  for (int i = 0; i < nFiles; i++)
+  {
+    NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
+  }
+#endif
   
   // The initialisation is done here, unmap/free the .init section
 #ifdef X86_COMMON
@@ -142,17 +152,6 @@ extern "C" void _main(BootstrapStruct_t *bsInf)
 
   physical_uintptr_t stackBase;
 
-#ifdef X86_COMMON
-//   Archive initrd(reinterpret_cast<uint8_t*> (initrdLocation));
-//   size_t nFiles = initrd.getNumFiles();
-//   NOTICE("nFiles: " << nFiles);
-//   for (int i = 0; i < nFiles; i++)
-//   {
-//     NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
-//   }
-//   Processor::breakpoint();
-#endif
-  
 #ifdef THREADS
   initialiseMultitasking();
   // Gets me a stacks.

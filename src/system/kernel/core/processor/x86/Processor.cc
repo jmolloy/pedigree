@@ -77,11 +77,6 @@ void Processor::initialise2()
   X86GdtManager::instance().initialise(nProcessors);
   X86GdtManager::initialiseProcessor();
 
-  // Unmap the identity mapping of the first MBs
-  X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-  *reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
-  invalidate(0);
-
   #if defined(MULTIPROCESSOR)
     if (nProcessors != 1)
       Multiprocessor::initialise2();

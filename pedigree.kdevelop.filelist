@@ -492,7 +492,6 @@ src/system/kernel/utilities/List.cc
 src/system/kernel/utilities/String.cc
 src/system/kernel/utilities/Vector.cc
 src/system/modules
-src/system/modules/test2
 src/user
 src/user/Makefile
 src/user/applications

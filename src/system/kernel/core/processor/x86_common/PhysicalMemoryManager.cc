@@ -160,6 +160,8 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     panic("PhysicalMemoryManager: could not remove the kernel image from the range-list");
   }
 
+  // TODO: Remove the multiboot modules too!
+
   // Print the ranges
   #if defined(VERBOSE_MEMORY_MANAGER)
     NOTICE("free memory ranges (below 1MB):");
@@ -186,6 +188,16 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
+
+  NOTICE("inird at " << Hex << (uintptr_t)Info.getInitrdAddress() << " - " << ((uintptr_t)Info.getInitrdAddress() + Info.getInirdSize()));
+
+/*  // Remove the pages used by the initrd (below 16MB)
+  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(Info.getInitrdAddress()),
+                                        Info.getInirdSize())
+      == false)
+  {
+    panic("PhysicalMemoryManager: could not remove the inird image from the range-list");
+  }*/
 
   // Print the ranges
   #if defined(VERBOSE_MEMORY_MANAGER)

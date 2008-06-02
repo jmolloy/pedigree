@@ -16,9 +16,28 @@
 
 #include <processor/Processor.h>
 #include "PhysicalMemoryManager.h"
+#if defined(X86)
+  #include "../../core/processor/x86/VirtualAddressSpace.h"
+#else
+  #include "../../core/processor/x64/VirtualAddressSpace.h"
+#endif
 
 void Processor::initialisationDone()
 {
+  #if defined(X86)
+    // Unmap the identity mapping of the first MBs
+    X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+    *reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
+    invalidate(0);
+  #else
+    // Unmap the identity mapping of the first MBs
+    X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+    *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
+    *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4 + 1) = 0;
+    invalidate(0);
+    invalidate(reinterpret_cast<void*>(0x200000));
+  #endif
+
   X86CommonPhysicalMemoryManager::instance().initialisationDone();
 }
 

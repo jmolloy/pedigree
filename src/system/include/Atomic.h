@@ -53,35 +53,60 @@ class Atomic
      *\return the value after the addition */
     inline T operator += (T x)
     {
-      return __sync_add_and_fetch(&m_Atom, x);
+      #if !defined(ARM_COMMON)
+        return __sync_add_and_fetch(&m_Atom, x);
+      #else
+        m_Atom += x;
+        return m_Atom;
+      #endif
     }
     /** Subtraction
      *\param[in] x value to subtract
      *\return the value after the subtraction */
     inline T operator -= (T x)
     {
-      return __sync_sub_and_fetch(&m_Atom, x);
+      #if !defined(ARM_COMMON)
+        return __sync_sub_and_fetch(&m_Atom, x);
+      #else
+        m_Atom -= x;
+        return m_Atom;
+      #endif
     }
     /** Bitwise or
      *\param[in] x the operand
      *\return the value after the bitwise or */
     inline T operator |= (T x)
     {
-      return __sync_or_and_fetch(&m_Atom, x);
+      #if !defined(ARM_COMMON)
+        return __sync_or_and_fetch(&m_Atom, x);
+      #else
+        m_Atom |= x;
+        return m_Atom;
+      #endif
     }
     /** Bitwise and
      *\param[in] x the operand
      *\return the value after the bitwise and */
     inline T operator &= (T x)
     {
-      return __sync_and_and_fetch(&m_Atom, x);
+      #if !defined(ARM_COMMON)
+        return __sync_and_and_fetch(&m_Atom, x);
+      #else
+        m_Atom &= x;
+        return m_Atom;
+      #endif
     }
     /** Bitwise xor
      *\param[in] x the operand
      *\return the value after the bitwise xor */
     inline T operator ^= (T x)
     {
-      return __sync_xor_and_fetch(&m_Atom, x);
+      #if !defined(ARM_COMMON)
+        return __sync_xor_and_fetch(&m_Atom, x);
+      #else
+        m_Atom ^= x;
+        return m_Atom;
+      #endif
     }
     /** Compare and swap
      *\param[in] oldVal the comparision value
@@ -89,18 +114,18 @@ class Atomic
      *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
     inline bool compareAndSwap(T oldVal, T newVal)
     {
-#ifndef PPC_COMMON
-      return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
-#else
-      // Yes, a big round of applause for the people over at GCC... the above is broken when using
-      // bools, but only one way - c&s false -> true = fine, true -> false = FAIL.
-      if (m_Atom == oldVal)
-      {
-        m_Atom = newVal;
-        return true;
-      }
-      return false;
-#endif
+      #if !(defined(ARM_COMMON) | defined(PPC_COMMON))
+        return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
+      #else
+        // NOTE: Yes, a big round of applause for the people over at GCC... the above is broken when using
+        //       bools, but only one way - c&s false -> true = fine, true -> false = FAIL.
+        if (m_Atom == oldVal)
+        {
+          m_Atom = newVal;
+          return true;
+        }
+        return false;
+      #endif
     }
     /** Get the value
      *\return the value of the Atomic */

@@ -22,69 +22,102 @@
 
 /** @addtogroup kernel
  * @{ */
+
 #ifndef PPC_COMMON
-struct BootstrapStruct_t
-{
-  // If we are passed via grub, this information will be completely different to
-  // via the bootstrapper.
-  uint32_t flags;
-  
-  uint32_t mem_lower;
-  uint32_t mem_upper;
-  
-  uint32_t boot_device;
-  
-  uint32_t cmdline;
-  
-  uint32_t mods_count;
-  uint32_t mods_addr;
-  
-  /* ELF information */
-  uint32_t num;
-  uint32_t size;
-  uint32_t addr;
-  uint32_t shndx;
-  
-  uint32_t mmap_length;
-  uint32_t mmap_addr;
-  
-  uint32_t drives_length;
-  uint32_t drives_addr;
-  
-  uint32_t config_table;
-  
-  uint32_t boot_loader_name;
-  
-  uint32_t apm_table;
-  
-  uint32_t vbe_control_info;
-  uint32_t vbe_mode_info;
-  uint32_t vbe_mode;
-  uint32_t vbe_interface_seg;
-  uint32_t vbe_interface_off;
-  uint32_t vbe_interface_len;
-} PACKED;
 
-struct MemoryMapEntry_t
-{
-  uint32_t size;
-  uint64_t address;
-  uint64_t length;
-  uint32_t type;
-} PACKED;
+  struct BootstrapStruct_t
+  {
+    // If we are passed via grub, this information will be completely different to
+    // via the bootstrapper.
+    uint32_t flags;
+    
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+    
+    uint32_t boot_device;
+    
+    uint32_t cmdline;
+    
+    uint32_t mods_count;
+    uint32_t mods_addr;
+    
+    /* ELF information */
+    uint32_t num;
+    uint32_t size;
+    uint32_t addr;
+    uint32_t shndx;
+    
+    uint32_t mmap_length;
+    uint32_t mmap_addr;
+    
+    uint32_t drives_length;
+    uint32_t drives_addr;
+    
+    uint32_t config_table;
+    
+    uint32_t boot_loader_name;
+    
+    uint32_t apm_table;
+    
+    uint32_t vbe_control_info;
+    uint32_t vbe_mode_info;
+    uint32_t vbe_mode;
+    uint32_t vbe_interface_seg;
+    uint32_t vbe_interface_off;
+    uint32_t vbe_interface_len;
+
+    inline bool isInitrdLoaded() const
+    {
+      return (mods_count != 0);
+    }
+    inline uint8_t *getInitrdAddress() const
+    {
+      return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
+    }
+    inline size_t getInirdSize() const
+    {
+      return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
+             *reinterpret_cast<uint32_t*>(mods_addr);
+    }
+  } PACKED;
+
+  struct MemoryMapEntry_t
+  {
+    uint32_t size;
+    uint64_t address;
+    uint64_t length;
+    uint32_t type;
+  } PACKED;
+
 #else
-struct BootstrapStruct_t
-{
-  int (*prom)(struct anon*);
-  uint32_t initrd_start;
-  uint32_t initrd_end;
 
-  /* ELF information */
-  uint32_t num;
-  uint32_t size;
-  uint32_t addr;
-  uint32_t shndx;
-};
+  struct BootstrapStruct_t
+  {
+    int (*prom)(struct anon*);
+    uint32_t initrd_start;
+    uint32_t initrd_end;
+  
+    /* ELF information */
+    uint32_t num;
+    uint32_t size;
+    uint32_t addr;
+    uint32_t shndx;
+
+    inline bool isInitrdLoaded() const
+    {
+      // TODO: Is that correct JamesM?
+      return true;
+    }
+    inline uint8_t *getInitrdAddress() const
+    {
+      return reinterpret_cast<uint8_t*>(initrd_start);
+    }
+    inline size_t getInirdSize() const
+    {
+      return initrd_end - initrd_start;
+    }
+  };
+
 #endif
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
