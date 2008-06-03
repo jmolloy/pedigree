@@ -117,19 +117,6 @@ public:
   virtual uintptr_t debugFrameTable();
   virtual uintptr_t debugFrameTableLength();
 
-private:
-  /**
-   * Applies one relocation. This overload performs a relocation without addend (REL).
-   * \note Defined in core/processor/.../Elf32.cc
-   */
-  void applyRelocation(Elf32Rel_t rel);
-
-  /**
-   * Applies one relocation. This overload performs a relocation with addend (RELA).
-   * \note Defined in core/processor/.../Elf32.cc
-   */
-  void applyRelocation(Elf32Rela_t rela);
-
 protected:
   struct Elf32Header_t
   {
@@ -208,6 +195,20 @@ protected:
     uint32_t addend;
   } PACKED;
 
+private:
+  /**
+   * Applies one relocation. This overload performs a relocation without addend (REL).
+   * \note Defined in core/processor/.../Elf32.cc
+   */
+  void applyRelocation(Elf32Rel_t rel);
+
+  /**
+   * Applies one relocation. This overload performs a relocation with addend (RELA).
+   * \note Defined in core/processor/.../Elf32.cc
+   */
+  void applyRelocation(Elf32Rela_t rela);
+
+protected:
   Elf32Header_t        *m_pHeader;
   Elf32SectionHeader_t *m_pSymbolTable;
   Elf32SectionHeader_t *m_pStringTable;

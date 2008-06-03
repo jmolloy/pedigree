@@ -110,7 +110,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #ifdef X86_COMMON
-  Archive initrd(bsInf.getInitrdAddress(), bsInf.getInirdSize());
+  Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
   size_t nFiles = initrd.getNumFiles();
   NOTICE("nFiles: " << nFiles);

@@ -86,15 +86,15 @@ bool Elf32::writeSections()
 {
   // We need to create a copy of the header.
   Elf32Header_t *pNewHeader = new Elf32Header_t;
-  memcpy(static_cast<uint8_t*> (pNewHeader),
-         static_cast<uint8_t*> (m_pHeader),
+  memcpy(reinterpret_cast<uint8_t*> (pNewHeader),
+         reinterpret_cast<uint8_t*> (m_pHeader),
          sizeof(Elf32Header_t));
   m_pHeader = pNewHeader;
   
   // We need to create a copy of the section header table.
   Elf32SectionHeader_t *pNewTable = new Elf32SectionHeader_t[m_pHeader->shnum];
-  memcpy(static_cast<uint8_t*> (pNewTable),
-         static_cast<uint8_t*> (m_pSectionHeaders),
+  memcpy(reinterpret_cast<uint8_t*> (pNewTable),
+         reinterpret_cast<uint8_t*> (m_pSectionHeaders),
          sizeof(Elf32Header_t)*m_pHeader->shnum);
   m_pSectionHeaders = pNewTable;
   
