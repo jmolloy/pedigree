@@ -42,7 +42,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (physicalMemoryManager.allocateRegion(m_AdditionalSections,
                                             (end - start + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
-                                            PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                            PhysicalMemoryManager::continuous,
                                             VirtualAddressSpace::KernelMode,
                                             start)
         == false)

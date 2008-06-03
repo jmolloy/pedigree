@@ -66,7 +66,7 @@ bool LocalApic::initialise(uint64_t physicalAddress)
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
   if (physicalMemoryManager.allocateRegion(m_IoSpace,
                                            1,
-                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force,
                                            VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::CacheDisable,
                                            physicalAddress)
       == false)

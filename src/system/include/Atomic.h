@@ -18,6 +18,7 @@
 #define KERNEL_ATOMIC_H
 
 #include <compiler.h>
+#include <utilities/utility.h>
 
 /** @addtogroup kernel
  * @{ */
@@ -25,9 +26,12 @@
 // NOTE: See http://gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
 //       for more information about gcc's builtin atomic operations
 
+template<typename T, bool bAllow = (is_integral<T>::value | is_pointer<T>::value)>
+class Atomic;
+
 /** Wrapper around gcc's builtin atomic operations */
 template<typename T>
-class Atomic
+class Atomic<T, true>
 {
   public:
     /** The constructor
@@ -46,7 +50,7 @@ class Atomic
       return *this;
     }
     /** The destructor does nothing */
-    inline ~Atomic(){}
+    inline virtual ~Atomic(){}
 
     /** Addition
      *\param[in] x value to add
@@ -114,11 +118,9 @@ class Atomic
      *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
     inline bool compareAndSwap(T oldVal, T newVal)
     {
-      #if !(defined(ARM_COMMON) | defined(PPC_COMMON))
+      #if !defined(ARM_COMMON)
         return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
       #else
-        // NOTE: Yes, a big round of applause for the people over at GCC... the above is broken when using
-        //       bools, but only one way - c&s false -> true = fine, true -> false = FAIL.
         if (m_Atom == oldVal)
         {
           m_Atom = newVal;
@@ -137,6 +139,66 @@ class Atomic
   private:
     /** The atomic value */
     volatile T m_Atom;
+};
+
+/** Wrapper around gcc's builtin atomic operations */
+template<>
+class Atomic<bool, true> : Atomic<size_t>
+{
+  public:
+    /** The constructor
+     *\param[in] value initial value */
+    inline Atomic(bool value = false)
+      : Atomic<size_t>(value){}
+    /** The copy-constructor
+     *\param[in] x reference object */
+    inline Atomic(const Atomic &x)
+      : Atomic<size_t>(x){}
+    /** The assignment operator
+     *\param[in] x reference object */
+    inline Atomic &operator = (const Atomic &x)
+    {
+      Atomic<size_t>::operator = (x);
+      return *this;
+    }
+    /** The destructor does nothing */
+    inline ~Atomic(){}
+
+    /** Bitwise or
+     *\param[in] x the operand
+     *\return the value after the bitwise or */
+    inline bool operator |= (bool x)
+    {
+      return Atomic<size_t>::operator |= (x);
+    }
+    /** Bitwise and
+     *\param[in] x the operand
+     *\return the value after the bitwise and */
+    inline bool operator &= (bool x)
+    {
+      return Atomic<size_t>::operator &= (x);
+    }
+    /** Bitwise xor
+     *\param[in] x the operand
+     *\return the value after the bitwise xor */
+    inline bool operator ^= (bool x)
+    {
+      return Atomic<size_t>::operator ^= (x);
+    }
+    /** Compare and swap
+     *\param[in] oldVal the comparision value
+     *\param[in] newVal the new value
+     *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
+    inline bool compareAndSwap(bool oldVal, bool newVal)
+    {
+      return Atomic<size_t>::compareAndSwap(oldVal, newVal);
+    }
+    /** Get the value
+     *\return the value of the Atomic */
+    inline operator bool () const
+    {
+      return Atomic<size_t>::operator size_t();
+    }
 };
 
 /** @} */

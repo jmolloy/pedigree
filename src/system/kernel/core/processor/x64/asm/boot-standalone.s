@@ -28,7 +28,7 @@ start:
   cli
   push rbx
 
-  ; Map a page directory pointer table for 0-256GB and the upmost 256GB and
+  ; Map a page directory pointer table for 0-512GB and the upmost 512GB and
   ; for the pyhsical memory mapping
   mov rax, pml4 - KERNEL_BASE
   mov rbx, pagedirectorypointer0 - KERNEL_BASE + 0x03

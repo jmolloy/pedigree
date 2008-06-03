@@ -107,21 +107,23 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the boot output.
   bootIO.initialise();
 
-  // We have to do this before we call Processor::initialisationDone() otherwise the BootstrapStruct_t
-  // might already be unmapped
+  // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
+  //      BootstrapStruct_t might already be unmapped
 #ifdef X86_COMMON
   Archive initrd(bsInf.getInitrdAddress(), bsInf.getInirdSize());
 
   size_t nFiles = initrd.getNumFiles();
   NOTICE("nFiles: " << nFiles);
-  for (int i = 0; i < nFiles; i++)
+  for (size_t i = 0; i < nFiles; i++)
   {
     NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
   }
   Processor::breakpoint();
 #endif
   
-  // The initialisation is done here, unmap/free the .init section
+  // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
+  // mapping of 0-4MB
+  // NOTE: BootstrapStruct_t unusable after this point
 #ifdef X86_COMMON
   Processor::initialisationDone();
 #endif

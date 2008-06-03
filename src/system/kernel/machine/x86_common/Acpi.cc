@@ -71,8 +71,8 @@ void Acpi::initialise()
   size_t nPages = (sAddress + (PhysicalMemoryManager::getPageSize() - 1)) / PhysicalMemoryManager::getPageSize();
   if (physicalMemoryManager.allocateRegion(m_AcpiMemoryRegion,
                                            nPages,
+                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force,
                                            VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write,
-                                           PhysicalMemoryManager::continuous,
                                            address)
       == false)
   {

@@ -16,6 +16,7 @@
 
 #include "Archive.h"
 #include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
 #include <utilities/StaticString.h>
 #include <panic.h>
 #include <Log.h>
@@ -29,7 +30,7 @@ Archive::Archive(uint8_t *pPhys, size_t sSize) :
   if (PhysicalMemoryManager::instance().allocateRegion(m_Region,
                                                        (sSize + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
                                                        PhysicalMemoryManager::continuous,
-                                                       0, // Flags
+                                                       VirtualAddressSpace::KernelMode,
                                                        reinterpret_cast<physical_uintptr_t>(pPhys))
       == false)
   {
