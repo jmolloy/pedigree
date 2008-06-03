@@ -20,21 +20,21 @@
 #include <panic.h>
 #include <Log.h>
 
-Archive::Archive(uint8_t *pPhys) :
-  m_pPhysicalAddress(pPhys), m_pVirtualAddress(0), m_Region("Archive")
+Archive::Archive(uint8_t *pPhys, size_t sSize) :
+  m_Region("Archive")
 {
-  if (reinterpret_cast<uintptr_t> (m_pPhysicalAddress) & 0x1000)
-  {
+  if ((reinterpret_cast<physical_uintptr_t>(pPhys) & (PhysicalMemoryManager::getPageSize() - 1)) != 0)
     panic("Archive: Alignment issues");
-  }
-  bool b = PhysicalMemoryManager::instance().allocateRegion(m_Region,
-                                                   0xA00, // 2.5K pages = 10MB
-                                                   PhysicalMemoryManager::continuous,
-                                                   0, // Flags
-                                                   reinterpret_cast<physical_uintptr_t> (m_pPhysicalAddress));
-  m_pVirtualAddress = reinterpret_cast<uint8_t*> (m_Region.virtualAddress());
-  if (!b)
+
+  if (PhysicalMemoryManager::instance().allocateRegion(m_Region,
+                                                       (sSize + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
+                                                       PhysicalMemoryManager::continuous,
+                                                       0, // Flags
+                                                       reinterpret_cast<physical_uintptr_t>(pPhys))
+      == false)
+  {
     ERROR("Archive: allocateRegion failed.");
+  }
 }
 
 Archive::~Archive()
@@ -44,92 +44,52 @@ Archive::~Archive()
 
 size_t Archive::getNumFiles()
 {
-  uintptr_t location = reinterpret_cast<uintptr_t> (m_pVirtualAddress);
-  File *pFile = reinterpret_cast<File*> (location);
-  NormalStaticString str;
-  int i = 0;
-  while (pFile->name[0] != '\0')
+  size_t i = 0;
+  File *pFile = getFirst();
+  while (pFile != 0)
   {
-    str = NormalStaticString(pFile->size);
-    size_t size = str.intValue(8); // Octal.
-    size_t nBlocks = size / 512;
-    if (size % 512) nBlocks++;
-    location += 512*(nBlocks+1);
-    pFile = reinterpret_cast<File*> (location);
     i++;
+    pFile = getNext(pFile);
   }
   return i;
 }
 
 size_t Archive::getFileSize(size_t n)
 {
-  uintptr_t location = reinterpret_cast<uintptr_t> (m_pVirtualAddress);
-  File *pFile = reinterpret_cast<File*> (location);
-  NormalStaticString str;
-  int i = 0;
-  while (pFile->name[0] != '\0')
-  {
-    str = NormalStaticString(pFile->size);
-    size_t size = str.intValue(8); // Octal.
-
-    if (i == n)
-    {
-      return size;
-    }
-    
-    size_t nBlocks = size / 512;
-    if (size % 512) nBlocks++;
-    location += 512*(nBlocks+1);
-    pFile = reinterpret_cast<File*> (location);
-    i++;
-  }
-  return 0;
+  File *pFile = get(n);
+  NormalStaticString str(pFile->size);
+  return str.intValue(8); // Octal
 }
 
 char *Archive::getFileName(size_t n)
 {
-  uintptr_t location = reinterpret_cast<uintptr_t> (m_pVirtualAddress);
-  File *pFile = reinterpret_cast<File*> (location);
-  NormalStaticString str;
-  int i = 0;
-  while (pFile->name[0] != '\0')
-  {
-    if (i == n)
-    {
-      return pFile->name;
-    }
-    str = NormalStaticString(pFile->size);
-    size_t size = str.intValue(8); // Octal.
-    size_t nBlocks = size / 512;
-    if (size % 512) nBlocks++;
-    location += 512*(nBlocks+1);
-    pFile = reinterpret_cast<File*> (location);
-    i++;
-  }
-  return 0;
+  return get(n)->name;
 }
 
 uintptr_t *Archive::getFile(size_t n)
 {
-  uintptr_t location = reinterpret_cast<uintptr_t> (m_pVirtualAddress);
-  File *pFile = reinterpret_cast<File*> (location);
-  NormalStaticString str;
-  int i = 0;
-  while (pFile->name[0] != '\0')
-  {
-    if (i == n)
-    {
-      return reinterpret_cast<uintptr_t*> (location+512);
-    }
-    str = NormalStaticString(pFile->size);
-    size_t size = str.intValue(8); // Octal.
-    size_t nBlocks = size / 512;
-    if (size % 512) nBlocks++;
-    location += 512*(nBlocks+1);
-    pFile = reinterpret_cast<File*> (location);
-    i++;
-  }
-  return 0;
+  return reinterpret_cast<uintptr_t*>(reinterpret_cast<uintptr_t>(get(n)) + 512);
 }
 
+Archive::File *Archive::getFirst()
+{
+  return reinterpret_cast<File*> (m_Region.virtualAddress());
+}
 
+Archive::File *Archive::getNext(File *pFile)
+{
+  NormalStaticString str(pFile->size);
+  size_t size = str.intValue(8); // Octal.
+  size_t nBlocks = (size + 511) / 512;
+  pFile = adjust_pointer(pFile, 512 * (nBlocks + 1));
+  if (pFile->name[0] == '\0')return 0;
+  return pFile;
+}
+
+Archive::File *Archive::get(size_t n)
+{
+  File *pFile = getFirst();
+  for (size_t i = 0;i < n;i++)
+    pFile = getNext(pFile);
+  return pFile;
+}

@@ -160,7 +160,13 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     panic("PhysicalMemoryManager: could not remove the kernel image from the range-list");
   }
 
-  // TODO: Remove the multiboot modules too!
+  // Remove the pages used by the initrd (below 16MB)
+  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(Info.getInitrdAddress()),
+                                        Info.getInirdSize())
+      == false)
+  {
+    panic("PhysicalMemoryManager: could not remove the inird image from the range-list");
+  }
 
   // Print the ranges
   #if defined(VERBOSE_MEMORY_MANAGER)
@@ -188,16 +194,6 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
-
-  NOTICE("inird at " << Hex << (uintptr_t)Info.getInitrdAddress() << " - " << ((uintptr_t)Info.getInitrdAddress() + Info.getInirdSize()));
-
-/*  // Remove the pages used by the initrd (below 16MB)
-  if (m_RangeBelow16MB.allocateSpecific(reinterpret_cast<uintptr_t>(Info.getInitrdAddress()),
-                                        Info.getInirdSize())
-      == false)
-  {
-    panic("PhysicalMemoryManager: could not remove the inird image from the range-list");
-  }*/
 
   // Print the ranges
   #if defined(VERBOSE_MEMORY_MANAGER)
@@ -341,6 +337,7 @@ X86CommonPhysicalMemoryManager::PageStack::PageStack()
   // Set the locations for the page stacks in the virtual address space
   m_Stack[0] = KERNEL_VIRTUAL_PAGESTACK_4GB;
   #if defined(X64)
+    // TODO: What about ranges above 4GB
     m_Stack[1] = 0;
     m_Stack[2] = 0;
   #endif

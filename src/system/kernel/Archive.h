@@ -28,7 +28,7 @@ class Archive
 public:
   
   /** Constructor; takes the physical address of a Tar archive. */
-  Archive(uint8_t *pPhys);
+  Archive(uint8_t *pPhys, size_t sSize);
   /** Destructor; returns the physical memory used during construction to the
    *  physical memory pool. */
   ~Archive();
@@ -62,8 +62,10 @@ private:
     char linkname[100];     // Linked-to file name.
   };
 
-  uint8_t *m_pPhysicalAddress;
-  uint8_t *m_pVirtualAddress;
+  File *getFirst();
+  File *getNext(File *pFile);
+  File *get(size_t n);
+
   MemoryRegion m_Region;
 };
 
