@@ -57,6 +57,19 @@ public:
    * of memory containing an ELF object.
    */
   bool load(uint8_t *pBuffer, unsigned int nBufferLength);
+
+  /**
+   * Sets the load base address of the ELF object.
+   * \note Valid only on relocatable files.
+   */
+  void setLoadBase(uintptr_t loadBase);
+
+  /**
+   * Applies all relocations.
+   * \pre writeSections() has been called.
+   * \pre setLoadBase() has been called.
+   */
+  bool relocate();
   
   /**
    * Writes all writeable sections to their virtual addresses.
@@ -103,6 +116,19 @@ public:
   
   virtual uintptr_t debugFrameTable();
   virtual uintptr_t debugFrameTableLength();
+
+private:
+  /**
+   * Applies one relocation. This overload performs a relocation without addend (REL).
+   * \note Defined in core/processor/.../Elf32.cc
+   */
+  void applyRelocation(Elf32Rel_t rel);
+
+  /**
+   * Applies one relocation. This overload performs a relocation with addend (RELA).
+   * \note Defined in core/processor/.../Elf32.cc
+   */
+  void applyRelocation(Elf32Rela_t rela);
 
 protected:
   struct Elf32Header_t
@@ -175,6 +201,13 @@ protected:
     uint32_t info;
   } PACKED;
 
+  struct Elf32Rela_t
+  {
+    uint32_t offset;
+    uint32_t info;
+    uint32_t addend;
+  } PACKED;
+
   Elf32Header_t        *m_pHeader;
   Elf32SectionHeader_t *m_pSymbolTable;
   Elf32SectionHeader_t *m_pStringTable;
@@ -185,6 +218,7 @@ protected:
   Elf32SectionHeader_t *m_pSectionHeaders;
   uint32_t             m_nSectionHeaders;
   uint8_t              *m_pBuffer; ///< Offset of the file in memory.
+  uintptr_t            m_LoadBase;
 
 private:
   /** The copy-constructor

@@ -22,6 +22,7 @@
 #include <compiler.h>
 #include <processor/MemoryRegion.h>
 #include <BootstrapInfo.h>
+#include <Module.h>
 
 /** @addtogroup kernellinker
  * @{ */
@@ -42,6 +43,13 @@ class KernelElf
     /** Extracts the symbol and string tables from the given BootstrapInfo class. */
     bool initialise(const BootstrapStruct_t &pBootstrap) INITIALISATION_ONLY;
 
+    /** Treats the given pointer as an ELF partially linked object file
+     *  and loads it, relocates it and links it.
+     *\param pModule A pointer to an ELF module/driver.
+     *\param len The length of pModule, in bytes.
+     *\return A pointer to a Module class describing the loaded module. */
+    Module *loadModule(uint8_t *pModule, size_t len);
+    
   private:
     /** Default constructor does nothing */
     KernelElf() INITIALISATION_ONLY;
@@ -66,6 +74,9 @@ class KernelElf
 
     /** Instance of the KernelElf class */
     static KernelElf m_Instance;
+
+    /** List of modules */
+    Vector<Module*> m_Modules;
 };
 
 /** @} */

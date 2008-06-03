@@ -74,7 +74,7 @@
     {
       return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
     }
-    inline size_t getInirdSize() const
+    inline size_t getInitrdSize() const
     {
       return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
              *reinterpret_cast<uint32_t*>(mods_addr);

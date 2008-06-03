@@ -35,7 +35,8 @@ class PPC32VirtualAddressSpace : public VirtualAddressSpace
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
 public:
-  // Initialises the virtual memory management system - removes control from OpenFirmware.
+  /// Initialises the virtual memory management system and creates mappings as
+  /// in the given parameter.
   bool initialise();
 
   //

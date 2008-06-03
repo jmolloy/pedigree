@@ -330,7 +330,7 @@
       </environments>
     </make>
     <general>
-      <activedir>src/system/kernel</activedir>
+      <activedir>src/system/kernel/linker</activedir>
     </general>
   </kdevcustomproject>
   <kdevdebugger>
@@ -484,7 +484,7 @@
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonprojectfiles>true</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>
   </kdevfileview>

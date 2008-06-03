@@ -89,6 +89,14 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         m_pStringTable = pSh;
       #endif
     }
+    else if (!strcmp(pStr, ".shstrtab"))
+    {
+      #if defined(X86_COMMON)
+        m_pShstrtab = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
+      #else
+        m_pShstrtab = pSh;
+      #endif
+    }
     else if (!strcmp(pStr, ".debug_frame"))
     {
       #if defined(X86_COMMON)
@@ -100,7 +108,6 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
   }
 
   // Initialise remaining member variables
-  // TODO: What about m_pShstrtab
   #if defined(X86_COMMON)
     m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(pBootstrap.addr);
   #else
@@ -117,6 +124,15 @@ KernelElf::KernelElf()
   #endif
 {
 }
+
 KernelElf::~KernelElf()
 {
+}
+
+Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
+{
+  uintptr_t moduleAddr = reinterpret_cast<uintptr_t> (pModule);
+
+  // Firstly, get the ELF header and check that it's the real deal.
+  Elf32Header_t *pHeader = reinterpret_cast<Elf32Header_t*> (moduleAddr);
 }
