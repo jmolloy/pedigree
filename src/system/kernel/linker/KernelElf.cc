@@ -18,6 +18,7 @@
 #include <utilities/utility.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <Log.h>
 
 KernelElf KernelElf::m_Instance;
 
@@ -129,10 +130,50 @@ KernelElf::~KernelElf()
 {
 }
 
-Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
+ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
-  uintptr_t moduleAddr = reinterpret_cast<uintptr_t> (pModule);
+  ElfType *module = new ElfType();
+  module->load(pModule, len);
 
-  // Firstly, get the ELF header and check that it's the real deal.
-  Elf32Header_t *pHeader = reinterpret_cast<Elf32Header_t*> (moduleAddr);
+  NOTICE("module->load finished.\n");
+  
+  /// \todo assign memory, and a decent address.
+  uintptr_t loadbase = 0x5000000;
+  for(int i = 0; i < 0x2000; i += 0x1000)
+  {
+    bool b = VirtualAddressSpace::getKernelAddressSpace().map(PhysicalMemoryManager::instance().allocatePage(),
+                                                     reinterpret_cast<void*> (loadbase+i),
+                                                     0);
+    if (!b)
+      WARNING("map() failed");
+  }
+  module->setLoadBase(loadbase);
+  NOTICE("module->setLoadBase finished");
+  module->writeSections();
+  NOTICE("module->writeSections() finished");
+  module->relocate();
+  NOTICE("module->relocate() finished");
+
+  m_Modules.pushBack(module);
+  return module;
+}
+
+uintptr_t KernelElf::globalLookupSymbol(const char *pName)
+{
+  NOTICE("globalLookupSymbol: " << pName);
+  // Try a lookup in the kernel.
+  uintptr_t ret;
+  if (ret = lookupSymbol(pName))
+    return ret;
+
+  // OK, try every module.
+  for (Vector<ElfType*>::Iterator it = m_Modules.begin();
+       it != m_Modules.end();
+       it++)
+  {
+    if (ret = (*it)->lookupSymbol(pName))
+      return ret;
+  }
+  WARNING("globalLookupSymbol failed.");
+  return 0;
 }

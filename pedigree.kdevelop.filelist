@@ -309,6 +309,7 @@ src/system/kernel/core/processor/x64/gdt.h
 src/system/kernel/core/processor/x64/state.cc
 src/system/kernel/core/processor/x64/utils.h
 src/system/kernel/core/processor/x86
+src/system/kernel/core/processor/x86/Elf32.cc
 src/system/kernel/core/processor/x86/InterruptManager.cc
 src/system/kernel/core/processor/x86/InterruptManager.h
 src/system/kernel/core/processor/x86/Multiprocessor.cc

@@ -22,17 +22,18 @@
 #include <compiler.h>
 #include <processor/MemoryRegion.h>
 #include <BootstrapInfo.h>
-#include <Module.h>
+#include <utilities/Vector.h>
+
+#if defined(BITS_64)
+typedef Elf64 ElfType;
+#else
+typedef Elf32 ElfType;
+#endif
 
 /** @addtogroup kernellinker
  * @{ */
 
-class KernelElf
-  #if defined(BITS_64)
-    : public Elf64
-  #elif defined(BITS_32)
-    : public Elf32
-  #endif
+class KernelElf : public ElfType
 {
   public:
     /** Get the class instance
@@ -47,8 +48,12 @@ class KernelElf
      *  and loads it, relocates it and links it.
      *\param pModule A pointer to an ELF module/driver.
      *\param len The length of pModule, in bytes.
-     *\return A pointer to a Module class describing the loaded module. */
-    Module *loadModule(uint8_t *pModule, size_t len);
+     *\return A pointer to a Elf class describing the loaded module. */
+    ElfType *loadModule(uint8_t *pModule, size_t len);
+
+    /** Looks up the address of the symbol with name 'pName' globally, that is throughout
+     *  all modules and the kernel itself. */
+    uintptr_t globalLookupSymbol(const char *pName);
     
   private:
     /** Default constructor does nothing */
@@ -76,7 +81,7 @@ class KernelElf
     static KernelElf m_Instance;
 
     /** List of modules */
-    Vector<Module*> m_Modules;
+    Vector<ElfType*> m_Modules;
 };
 
 /** @} */

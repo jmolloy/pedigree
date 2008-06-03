@@ -117,6 +117,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   for (size_t i = 0; i < nFiles; i++)
   {
     NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
+    // Load file.
+    KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
+                                     initrd.getFileSize(i));
+    break; // Don't do test3.o yet
   }
   Processor::breakpoint();
 #endif

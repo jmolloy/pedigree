@@ -93,6 +93,11 @@ public:
   const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
 
   /**
+   * Returns the start address of the symbol with name 'pName'.
+   */
+  uint32_t lookupSymbol(const char *pName);
+  
+  /**
    * Returns the address of the symbol with offset 'off' in the dynamic relocation table.
    */
   uint32_t lookupDynamicSymbolAddress(uint32_t off);
@@ -198,15 +203,19 @@ protected:
 private:
   /**
    * Applies one relocation. This overload performs a relocation without addend (REL).
+   * \param rel The relocation entry to apply.
+   * \param pSh A pointer to the section that the relocation entry refers to.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  void applyRelocation(Elf32Rel_t rel);
+  void applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh);
 
   /**
    * Applies one relocation. This overload performs a relocation with addend (RELA).
+   * \param rel The relocation entry to apply.
+   * \param pSh A pointer to the section that the relocation entry refers to.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  void applyRelocation(Elf32Rela_t rela);
+  void applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh);
 
 protected:
   Elf32Header_t        *m_pHeader;

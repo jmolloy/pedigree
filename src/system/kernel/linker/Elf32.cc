@@ -40,6 +40,7 @@ Elf32::~Elf32()
 
 bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 {
+  NOTICE("Elf32::load");
   // The main header will be at pBuffer[0].
   m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
   
@@ -53,7 +54,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
     ERROR("ELF file: ident check failed!");
     return false;
   }
-  
+
   // Load in the section headers.
   m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(&pBuffer[m_pHeader->shoff]);
   
@@ -90,22 +91,26 @@ bool Elf32::writeSections()
          reinterpret_cast<uint8_t*> (m_pHeader),
          sizeof(Elf32Header_t));
   m_pHeader = pNewHeader;
-  
+  NOTICE("Elf32:writeSections: reassigned pHeader");
   // We need to create a copy of the section header table.
   Elf32SectionHeader_t *pNewTable = new Elf32SectionHeader_t[m_pHeader->shnum];
   memcpy(reinterpret_cast<uint8_t*> (pNewTable),
          reinterpret_cast<uint8_t*> (m_pSectionHeaders),
          sizeof(Elf32Header_t)*m_pHeader->shnum);
   m_pSectionHeaders = pNewTable;
-  
+  NOTICE("Elf32:writeSections: reassigned pSectionHeaders");
+  uintptr_t offset = m_LoadBase;
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     if (m_pSectionHeaders[i].flags & SHF_ALLOC)
     {
       // Add load-base into the equation.
-      m_pSectionHeaders[i].addr += m_LoadBase;
+      if (m_pSectionHeaders[i].addr == 0)
+        m_pSectionHeaders[i].addr += offset;
+
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
       {
+        NOTICE("Copying to " << Hex << m_pSectionHeaders[i].addr);
         // Copy section data from the file.
         memcpy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &m_pBuffer[m_pSectionHeaders[i].offset],
@@ -113,15 +118,16 @@ bool Elf32::writeSections()
       }
       else
       {
+        NOTICE("Zeroing to " << Hex << m_pSectionHeaders[i].addr);
         memset(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         0,
                         m_pSectionHeaders[i].size);
       }
+      offset += m_pSectionHeaders[i].size;
     }
     else
     {
       // Is this .strtab, .symtab or .debug_frame, we need to load it anyway!
-      Elf32SectionHeader_t **ppHeader = 0;
       const char *pStr = reinterpret_cast<const char *>(&m_pBuffer[m_pShstrtab->offset]) +
                            m_pSectionHeaders[i].name;
       if (!strcmp(pStr, ".strtab"))
@@ -130,8 +136,14 @@ bool Elf32::writeSections()
         m_pSymbolTable = &m_pSectionHeaders[i];
       else if (!strcmp(pStr, ".debug_frame"))
         m_pDebugTable = &m_pSectionHeaders[i];
-      else continue;
+      else
+      {
+        // The address of this section is no longer valid, the section is not being loaded.
+        m_pSectionHeaders[i].addr = 0;
+        continue;
+      }
 
+      NOTICE("Reallocating special header");
       // We need to allocate space for this section.
       // For now, we allocate on the kernel heap.
       /// \todo Change this to find some available VA space to mmap into. Will need to know
@@ -139,6 +151,7 @@ bool Elf32::writeSections()
       uint8_t *pSection = new uint8_t[m_pSectionHeaders[i].size];
       memcpy(pSection, &m_pBuffer[m_pSectionHeaders[i].offset], m_pSectionHeaders[i].size);
       m_pSectionHeaders[i].addr = reinterpret_cast<uintptr_t> (pSection);
+      NOTICE("Reallocated special header.");
     }
   }
   
@@ -190,6 +203,36 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
   
 }
 
+uint32_t Elf32::lookupSymbol(const char *pName)
+{
+  if (!m_pSymbolTable || !m_pStringTable)
+    return 0; // Just return null if we haven't got a symbol table.
+  
+  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
+
+  const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable->addr);
+
+  for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
+  {
+    const char *pStr;
+    if (ELF32_ST_TYPE(pSymbol->info) == 3)
+    {
+      // Section type - the name will be the name of the section header it refers to.
+      Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+      // Grab the shstrtab
+      pStr = reinterpret_cast<const char*> (m_pShstrtab->addr) + pSh->name;
+    }
+    else
+      pStr = pStrtab + pSymbol->name;
+    if (!strcmp(pName, pStr))
+    {
+      return pSymbol->value;
+    }
+    pSymbol ++;
+  }
+  return 0;
+}
+
 uint32_t Elf32::lookupDynamicSymbolAddress(uint32_t off)
 {
   // TODO
@@ -221,7 +264,42 @@ void Elf32::setLoadBase(uintptr_t loadBase)
 
 bool Elf32::relocate()
 {
-  
+  // For every section...
+  for (int i = 0; i < m_pHeader->shnum; i++)
+  {
+    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
+    // Grab the section header that this relocation section refers to.
+    Elf32SectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
+    
+    // Is it a relocation section?
+    if (pSh->type == SHT_REL)
+    {
+      NOTICE("Found relocation section.");
+      // For each relocation entry...
+      for (Elf32Rel_t *pRel = reinterpret_cast<Elf32Rel_t*> (&m_pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<Elf32Rel_t*> (&m_pBuffer[pSh->offset+pSh->size]);
+           pRel++)
+      {
+        applyRelocation(*pRel, pLink);
+      }
+      NOTICE("Applied relocations");
+    }
+    // How about a relocation with addend?
+    else if (pSh->type == SHT_RELA)
+    {
+      ERROR("Found relA section");
+      // For each relocation entry...
+      for (Elf32Rela_t *pRel = reinterpret_cast<Elf32Rela_t*> (&m_pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<Elf32Rela_t*> (&m_pBuffer[pSh->offset+pSh->size]);
+           pRel++)
+      {
+        applyRelocation(*pRel, pLink);
+      }
+    }
+  }
+
+  // Success!
+  return true;
 }
 
 uintptr_t Elf32::debugFrameTable()
