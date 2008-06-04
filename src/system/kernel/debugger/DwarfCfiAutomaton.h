@@ -53,6 +53,7 @@
 #define DW_CFA_val_expression     0x16
 #define DW_CFA_lo_user            0x1c
 #define DW_CFA_hi_user            0x3f
+#define DW_CFA_GNU_args_size      0x2e // GNU extension
 
 /**
  * The DWARF debugging standard uses a table for unwinding of the stack.

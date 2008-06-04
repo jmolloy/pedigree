@@ -207,7 +207,7 @@ private:
    * \param pSh A pointer to the section that the relocation entry refers to.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  void applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh);
+  bool applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh);
 
   /**
    * Applies one relocation. This overload performs a relocation with addend (RELA).
@@ -215,7 +215,7 @@ private:
    * \param pSh A pointer to the section that the relocation entry refers to.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  void applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh);
+  bool applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh);
 
 protected:
   Elf32Header_t        *m_pHeader;

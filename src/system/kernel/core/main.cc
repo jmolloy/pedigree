@@ -122,7 +122,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
                                      initrd.getFileSize(i));
     break; // Don't do test3.o yet
   }
-  Processor::breakpoint();
+  void (*ptr)() = (void (*)()) 0x5000000;
+  ptr();
 #endif
   
   // The initialisation is done here, unmap/free the .init section and on x86/64 the identity

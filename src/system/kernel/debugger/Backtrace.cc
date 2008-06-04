@@ -51,38 +51,6 @@ void Backtrace::performBacktrace(InterruptState &state)
 
 void Backtrace::performDwarfBacktrace(InterruptState &state)
 {
-//   ProcessorState initial(state);
-//   ProcessorState next;
-// 
-//   m_pBasePointers[0] = state.getBasePointer();
-//   m_pReturnAddresses[0] = state.getInstructionPointer();
-//   m_pStates[0] = initial;
-// 
-//   size_t i = 1;
-//   DwarfUnwinder du(KernelElf::instance().debugFrameTable(), KernelElf::instance().debugFrameTableLength());
-//   uintptr_t frameBase;
-//   while (i < MAX_STACK_FRAMES)
-//   {
-//     if (!du.unwind(initial, next, frameBase))
-//     {
-//       ERROR("Dwarf unwind failed!");
-//       return;
-//     }
-//     initial = next; // For next round.
-// #ifndef MIPS_COMMON
-//     if (next.getBasePointer() == 0) break;
-// #else
-//     uintptr_t symStart;
-//     KernelElf::instance().lookupSymbol(next.getInstructionPointer(), &symStart);
-//     if (symStart == reinterpret_cast<uintptr_t> (&start)) break;
-// #endif
-//     m_pReturnAddresses[i] = next.getInstructionPointer();
-//     m_pBasePointers[i] = next.getBasePointer();
-//     m_pStates[i] = next;
-//     m_pStates[i-1].ebp = frameBase-8;
-//     i++;
-//   }
-  
   ProcessorState initial(state);
   ProcessorState next;
   
@@ -133,7 +101,7 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
 
 void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromFrame)
 {
-/*  if (nFrames == 0 || nFrames > m_nStackFrames)
+  if (nFrames == 0 || nFrames > m_nStackFrames)
     nFrames = m_nStackFrames;
   // What symbol are we in?
   // TODO grep the memory map for the right ELF to look at.
@@ -145,7 +113,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
     LargeStaticString sym(pSym);
     StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
     sf.prettyPrint(buf);
-    }*/
+  }
 }
 
 size_t Backtrace::numStackFrames()

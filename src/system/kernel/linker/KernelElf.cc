@@ -133,10 +133,14 @@ KernelElf::~KernelElf()
 ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   ElfType *module = new ElfType();
-  module->load(pModule, len);
-
-  NOTICE("module->load finished.\n");
   
+  if (!module->load(pModule, len))
+  {
+    ERROR ("Module load failed (1)");
+    delete module;
+    return 0;
+  }
+
   /// \todo assign memory, and a decent address.
   uintptr_t loadbase = 0x5000000;
   for(int i = 0; i < 0x2000; i += 0x1000)
@@ -148,11 +152,18 @@ ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
       WARNING("map() failed");
   }
   module->setLoadBase(loadbase);
-  NOTICE("module->setLoadBase finished");
-  module->writeSections();
-  NOTICE("module->writeSections() finished");
-  module->relocate();
-  NOTICE("module->relocate() finished");
+  if (!module->writeSections())
+  {
+    ERROR ("Module load failed (2)");
+    delete module;
+    return 0;
+  }
+  if (!module->relocate())
+  {
+    ERROR ("Module load failed (3)");
+    delete module;
+    return 0;
+  }
 
   m_Modules.pushBack(module);
   return module;
@@ -160,7 +171,7 @@ ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)
 {
-  NOTICE("globalLookupSymbol: " << pName);
+  /// \todo This shouldn't match local or weak symbols.
   // Try a lookup in the kernel.
   uintptr_t ret;
   if (ret = lookupSymbol(pName))
@@ -174,6 +185,6 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
     if (ret = (*it)->lookupSymbol(pName))
       return ret;
   }
-  WARNING("globalLookupSymbol failed.");
+  WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
   return 0;
 }

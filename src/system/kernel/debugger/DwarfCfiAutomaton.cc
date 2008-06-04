@@ -222,6 +222,14 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
 //     case DW_CFA_hi_user:
 //     {
 //     }
+    case DW_CFA_GNU_args_size:
+    {
+      uint32_t nLocationOffset = 0;
+      pLocation = reinterpret_cast<uint8_t*> (nLocation);
+      uint32_t nRegister = DwarfUnwinder::decodeUleb128(pLocation, nLocationOffset);
+      nLocation += nLocationOffset;
+      break;
+    }
     default:
       ERROR("Unrecognised DWARF CFA instruction: " << Hex << pLocation[0]);
       nPc ++;

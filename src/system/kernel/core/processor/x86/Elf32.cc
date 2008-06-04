@@ -32,18 +32,18 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-void Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
+bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
 {
   // Section not loaded?
   if (pSh->addr == 0)
-    return;
+    return true; // Not a fatal error.
   
   // Get the address of the unit to be relocated.
   uint32_t address = pSh->addr + rel.offset;
 
   // Addend is the value currently at the given address.
   uint32_t A = * reinterpret_cast<uint32_t*> (address);
-  NOTICE("A: " << Hex << A);
+  
   // 'Place' is the address.
   uint32_t P = address;
   // Symbol location.
@@ -62,9 +62,13 @@ void Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   {
     const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
                          pSymbols[ELF32_R_SYM(rel.info)].name;
+    NOTICE("Relocating symbol \"" << pStr << "\"");
     S = KernelElf::instance().globalLookupSymbol(pStr);
   }
-  NOTICE("S : " << Hex << S);
+  
+  if (S == 0)
+    return false;
+  
   // Base address
   uint32_t B = m_LoadBase;
   
@@ -84,12 +88,13 @@ void Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   }
 
   // Write back the result.
-  NOTICE("Result: " << Hex << result);
   uint32_t *pResult = reinterpret_cast<uint32_t*> (address);
   *pResult = result;
+  return true;
 }
 
-void Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh)
+bool Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh)
 {
   ERROR("The X86 architecture does not use RELA entries!");
+  return false;
 }

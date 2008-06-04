@@ -14,6 +14,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+include_directories(../../include)
+
 add_executable(test2.o test.cc)
 target_link_libraries(test2.o gcc)
 set_target_properties(test2.o PROPERTIES
