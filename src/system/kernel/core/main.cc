@@ -118,12 +118,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   {
     NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
     // Load file.
-    KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
+    Module *m = KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
+    m->entry();
     break; // Don't do test3.o yet
   }
-  void (*ptr)() = (void (*)()) 0x5000000;
-  ptr();
+
 #endif
   
   // The initialisation is done here, unmap/free the .init section and on x86/64 the identity

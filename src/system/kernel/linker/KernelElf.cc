@@ -130,11 +130,11 @@ KernelElf::~KernelElf()
 {
 }
 
-ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
+Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
-  ElfType *module = new ElfType();
+  Module *module = new Module;
   
-  if (!module->load(pModule, len))
+  if (!module->elf.load(pModule, len))
   {
     ERROR ("Module load failed (1)");
     delete module;
@@ -151,20 +151,28 @@ ElfType *KernelElf::loadModule(uint8_t *pModule, size_t len)
     if (!b)
       WARNING("map() failed");
   }
-  module->setLoadBase(loadbase);
-  if (!module->writeSections())
+  module->elf.setLoadBase(loadbase);
+  if (!module->elf.writeSections())
   {
     ERROR ("Module load failed (2)");
     delete module;
     return 0;
   }
-  if (!module->relocate())
+  if (!module->elf.relocate())
   {
     ERROR ("Module load failed (3)");
     delete module;
     return 0;
   }
 
+  // Look up the module's name and entry/exit functions.
+  module->name = *reinterpret_cast<const char**> (module->elf.lookupSymbol("g_pModuleName"));
+  module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
+  module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
+  
+  NOTICE("Name: " << module->name);
+  NOTICE("Entry: " << Hex << (uintptr_t)module->entry);
+  NOTICE("Exit: " << Hex << (uintptr_t)module->exit);
   m_Modules.pushBack(module);
   return module;
 }
@@ -178,11 +186,11 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
     return ret;
 
   // OK, try every module.
-  for (Vector<ElfType*>::Iterator it = m_Modules.begin();
+  for (Vector<Module*>::Iterator it = m_Modules.begin();
        it != m_Modules.end();
        it++)
   {
-    if (ret = (*it)->lookupSymbol(pName))
+    if (ret = (*it)->elf.lookupSymbol(pName))
       return ret;
   }
   WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");

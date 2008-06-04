@@ -33,6 +33,14 @@ typedef Elf32 ElfType;
 /** @addtogroup kernellinker
  * @{ */
 
+struct Module
+{
+  ElfType elf;
+  const char *name;
+  void (*entry)();
+  void (*exit)();
+};
+
 class KernelElf : public ElfType
 {
   public:
@@ -49,7 +57,7 @@ class KernelElf : public ElfType
      *\param pModule A pointer to an ELF module/driver.
      *\param len The length of pModule, in bytes.
      *\return A pointer to a Elf class describing the loaded module. */
-    ElfType *loadModule(uint8_t *pModule, size_t len);
+    Module *loadModule(uint8_t *pModule, size_t len);
 
     /** Looks up the address of the symbol with name 'pName' globally, that is throughout
      *  all modules and the kernel itself. */
@@ -81,7 +89,7 @@ class KernelElf : public ElfType
     static KernelElf m_Instance;
 
     /** List of modules */
-    Vector<ElfType*> m_Modules;
+    Vector<Module*> m_Modules;
 };
 
 /** @} */

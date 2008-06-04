@@ -259,6 +259,22 @@ void Elf32::setLoadBase(uintptr_t loadBase)
 
 bool Elf32::relocate()
 {
+  // Firstly, we need to change the symbol table so that the ::value member is actually valid.
+  // Currently, it's the offset into the symbol's section - we add the section base address
+  // on to that to make it a valid pointer.
+  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
+
+  for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
+  {
+    // Only relocate functions, variables and notypes.
+    if (ELF32_ST_TYPE(pSymbol->info) < 3)
+    {
+      Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+      pSymbol->value += pSh->addr;
+    }
+    pSymbol ++;
+  }
+  
   // For every section...
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
