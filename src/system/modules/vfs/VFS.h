@@ -15,6 +15,7 @@
  */
 
 #include <processor/types.h>
+#include <utilities/List.h>
 #include "Filesystem.h"
 
 /** This class implements a virtual file system.
@@ -40,13 +41,37 @@ public:
   ~VFS();
   
   /** Returns the singleton VFS instance. */
-  VFS &instance();
-  
-  /** Registers a filesystem - initially the FS is referred to by only the given alias.
-   *\param pFs The filesystem to register.
-   *\param pAlias The alias by which it is known.
-   *\return True on success, false on failure.
-   */
-  bool registerFil
-  
+  static VFS &instance();
+
+  /** Adds an alias to an existing filesystem.
+   *\param pFs The filesystem to add an alias for.
+   *\param pAlias The alias to add. */
+  void addAlias(Filesystem *pFs, const char *pAlias);
+
+  /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
+   *  the filesystem is destroyed.
+   *\param pAlias The alias to remove. */
+  void removeAlias(const char *pAlias);
+
+  /** Removes all aliases from a filesystem - the filesystem is destroyed.
+   *\param pFs The filesystem to destroy. */
+  void removeAllAliases(Filesystem *pFs);
+
+  /** Looks up the Filesystem from a given alias.
+   *\param pAlias The alias to search for.
+   *\return The filesystem aliased by pAlias or 0 if none found. */
+  Filesystem *lookupFilesystem(const char *pAlias);
+
+private:
+  /** The static instance object. */
+  static VFS m_Instance;
+
+  /** Structure matching aliases to filesystems.
+   * \todo Use a proper Map class for this. */
+  struct Alias
+  {
+    const char *alias;
+    Filesystem *fs;
+  };
+  List<Alias*> m_Aliases;
 };
