@@ -170,6 +170,18 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
   module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
   
+  // Check for a constructors list and execute.
+  uintptr_t startCtors = module->elf.lookupSymbol("start_ctors");
+  uintptr_t endCtors = module->elf.lookupSymbol("end_ctors");
+  
+  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&startCtors);
+  while (iterator < reinterpret_cast<uintptr_t*>(&endCtors))
+  {
+    void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+    fp();
+    iterator++;
+  }
+
   NOTICE("Name: " << module->name);
   NOTICE("Entry: " << Hex << (uintptr_t)module->entry);
   NOTICE("Exit: " << Hex << (uintptr_t)module->exit);

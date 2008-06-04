@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,23 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES vfs test2 test3)
+include_directories(../../include ../ ./)
 
-#########################################################################################
-
-# Descend into each module's subdirectory first.
-foreach(var ${MODULES})
-  add_subdirectory(${var})
-endforeach(var ${MODULES})
-
-# Pull all the modules together in a tarfile.
-set(OBJS)
-set(MODULE_NAMES)
-foreach(var ${MODULES})
-  set(OBJS ${OBJS} "${var}/${var}.o")
-  set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
-endforeach(var ${MODULES})
-
-add_custom_target(initrd ALL tar -cf initrd.tar ${OBJS}
-                  DEPENDS ${MODULE_NAMES}
-                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR}/src/system/modules)
+add_executable(vfs.o VFS.cc)
+target_link_libraries(vfs.o gcc)
+set_target_properties(vfs.o PROPERTIES
+                            LINK_FLAGS "-r")
