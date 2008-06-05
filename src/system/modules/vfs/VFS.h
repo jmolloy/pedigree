@@ -16,6 +16,7 @@
 
 #include <processor/types.h>
 #include <utilities/List.h>
+#include <utilities/String.h>
 #include "Filesystem.h"
 
 /** This class implements a virtual file system.
@@ -46,12 +47,12 @@ public:
   /** Adds an alias to an existing filesystem.
    *\param pFs The filesystem to add an alias for.
    *\param pAlias The alias to add. */
-  void addAlias(Filesystem *pFs, const char *pAlias);
+  void addAlias(Filesystem *pFs, String alias);
 
   /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
    *  the filesystem is destroyed.
    *\param pAlias The alias to remove. */
-  void removeAlias(const char *pAlias);
+  void removeAlias(String alias);
 
   /** Removes all aliases from a filesystem - the filesystem is destroyed.
    *\param pFs The filesystem to destroy. */
@@ -60,7 +61,7 @@ public:
   /** Looks up the Filesystem from a given alias.
    *\param pAlias The alias to search for.
    *\return The filesystem aliased by pAlias or 0 if none found. */
-  Filesystem *lookupFilesystem(const char *pAlias);
+  Filesystem *lookupFilesystem(String alias);
 
 private:
   /** The static instance object. */
@@ -70,7 +71,7 @@ private:
    * \todo Use a proper Map class for this. */
   struct Alias
   {
-    const char *alias;
+    String alias;
     Filesystem *fs;
   };
   List<Alias*> m_Aliases;

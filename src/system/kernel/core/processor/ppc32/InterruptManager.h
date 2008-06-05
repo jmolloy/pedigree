@@ -20,6 +20,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
+#include <processor/Syscalls.h>
 #include <processor/InterruptManager.h>
 
 /** @addtogroup kernelprocessorPPC32
@@ -73,7 +74,7 @@ class PPC32InterruptManager : public ::InterruptManager,
     InterruptHandler *m_DbgHandler[64];
 #endif
     /** The syscall handlers */
-    SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
+    SyscallHandler *m_SyscallHandler[serviceEnd];
 
     /** The instance of the interrupt manager  */
     static PPC32InterruptManager m_Instance;

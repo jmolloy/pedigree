@@ -32,20 +32,65 @@ VFS::~VFS()
 {
 }
 
-void VFS::addAlias(Filesystem *pFs, const char *pAlias)
+void VFS::addAlias(Filesystem *pFs, String alias)
 {
+  pFs->nAliases++;
+  Alias *pA = new Alias;
+  pA->alias = alias;
+  pA->fs = pFs;
+  m_Aliases.pushBack(pA);
 }
 
-void VFS::removeAlias(const char *pAlias)
+void VFS::removeAlias(String alias)
 {
+  for (List<Alias*>::Iterator it = m_Aliases.begin();
+       it != m_Aliases.end();
+       it++)
+  {
+    if (alias == (*it)->alias))
+    {
+      Filesystem *pFs = (*it)->fs;
+      Alias *pA = *it;
+      m_Aliases.erase(it);
+      delete pA;
+
+      pFs->nAliases--;
+      if (pFs->nAliases == 0)
+      {
+        delete pFs;
+      }
+    }
+  }
 }
 
 void VFS::removeAllAliases(Filesystem *pFs)
 {
+  for (List<Alias*>::Iterator it = m_Aliases.begin();
+       it != m_Aliases.end();
+       it++)
+  {
+    if (pFs == (*it)->fs)
+    {
+      Alias *pA = *it;
+      m_Aliases.erase(it);
+      delete pA;
+    }
+  }
+  delete pFs;
 }
 
-Filesystem *VFS::lookupFilesystem(const char *pAlias)
+Filesystem *VFS::lookupFilesystem(String alias)
 {
+  for (List<Alias*>::Iterator it = m_Aliases.begin();
+       it != m_Aliases.end();
+       it++)
+  {
+    if (alias == (*it)->alias)
+    {
+      return (*it)->pFs;
+    }
+  }
+  return 0;
 }
 
 void initVFS()

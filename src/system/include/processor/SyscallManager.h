@@ -19,6 +19,7 @@
 
 #include <processor/state.h>
 #include <processor/SyscallHandler.h>
+#include <processor/Syscalls.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -27,17 +28,6 @@
 class SyscallManager
 {
   public:
-    /** Standard syscall service numbers */
-    enum Service_t
-    {
-      /** Syscall service number of the kernel core */
-      kernelCore = 0,
-      // TODO: Add more syscall service numbers
-
-      /** The number of syscall service numbers */
-      serviceEnd
-    };
-
     /** Get the syscall manager instance
      *\return instance of the syscall manager */
     static SyscallManager &instance();
