@@ -179,6 +179,17 @@ bool Elf32::writeSections()
                         0,
                         m_pSectionHeaders[i].size);
       }
+      for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size; j += 4) 
+      {
+        asm volatile("dcbst 0, %0" :: "r" (j));
+      }
+  
+      asm volatile("sync");
+      for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size; j += 4) 
+      {
+        asm volatile("icbi 0, %0" :: "r"(j));
+      }
+      asm volatile("sync;isync;");
     }
   } 
 }

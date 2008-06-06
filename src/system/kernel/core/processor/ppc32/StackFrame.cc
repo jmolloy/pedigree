@@ -14,14 +14,28 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <processor/StackFrame.h>
+#include <Log.h>
+
 #if defined(DEBUGGER)
 
-#include <processor/StackFrame.h>
-
-uintptr_t PPC32StackFrame::getParameter(size_t n)
-{
-  // TODO: Implement
-  return 0;
-}
+  uintptr_t PPC32StackFrame::getParameter(size_t n)
+  {
+    if (n == 0)return m_State.m_R3;
+    if (n == 1)return m_State.m_R4;
+    if (n == 2)return m_State.m_R5;
+    if (n == 3)return m_State.m_R6;
+    if (n == 4)return m_State.m_R7;
+    if (n == 5)return m_State.m_R8;
+    if (n == 6)return m_State.m_R9;
+    if (n == 7)return m_State.m_R10;
+  
+    // Slightly difficult - have to follow the back chain pointer then 
+    // go up 2 words to skip the next back chain and the saved LR.
+    WARNING("PPC32StackFrame: More than 8 parameters not implemented yet.");
+//    uint64_t *pPtr = reinterpret_cast<uint64_t*>(m_State.m_R1 + (n - 8) * sizeof(uint64_t));
+//    return *pPtr;
+    return 0;
+  }
 
 #endif

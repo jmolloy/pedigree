@@ -44,14 +44,21 @@
 
 BootIO bootIO;
 
+int bar (void *b)
+{
+    asm volatile("sc");
+}  
+
 int foo(void *a)
 {
+  bar((void*)0x4445566);
   HugeStaticString str;
   for (;;)
   {
     str.clear();
     str += "b";
     bootIO.write(str, BootIO::White, BootIO::Green);
+    
     for(int i = 0; i < 10000000; i++) ;
   }
 }
@@ -93,6 +100,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Processor::initialise2();
 
 #ifdef PPC_COMMON
+  foo((void*)0xdeadbeef);
+  
   asm volatile("sc");
   for(;;);
 #endif

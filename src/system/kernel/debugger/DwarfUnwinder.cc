@@ -33,7 +33,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 {
   // Construct a DwarfState object and populate it.
   DwarfState startState;
-  
+  NOTICE("Unwind start.");
   // Unfortunately the next few lines are highly architecture dependent.
 #ifdef X86
   startState.m_R[DWARF_REG_EAX] = inState.eax;
@@ -97,13 +97,52 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_FP] = inState.m_Fp;
   startState.m_R[DWARF_REG_RA] = inState.m_Ra;
 #endif
-
+#ifdef PPC_COMMON
+  startState.m_R[DWARF_REG_R0] = inState.m_R0;
+  startState.m_R[DWARF_REG_R1] = inState.m_R1;
+  startState.m_R[DWARF_REG_R2] = inState.m_R2;
+  startState.m_R[DWARF_REG_R3] = inState.m_R3;
+  startState.m_R[DWARF_REG_R4] = inState.m_R4;
+  startState.m_R[DWARF_REG_R5] = inState.m_R5;
+  startState.m_R[DWARF_REG_R6] = inState.m_R6;
+  startState.m_R[DWARF_REG_R7] = inState.m_R7;
+  startState.m_R[DWARF_REG_R8] = inState.m_R8;
+  startState.m_R[DWARF_REG_R9] = inState.m_R9;
+  startState.m_R[DWARF_REG_R10] = inState.m_R10;
+  startState.m_R[DWARF_REG_R11] = inState.m_R11;
+  startState.m_R[DWARF_REG_R12] = inState.m_R12;
+  startState.m_R[DWARF_REG_R13] = inState.m_R13;
+  startState.m_R[DWARF_REG_R14] = inState.m_R14;
+  startState.m_R[DWARF_REG_R15] = inState.m_R15;
+  startState.m_R[DWARF_REG_R16] = inState.m_R16;
+  startState.m_R[DWARF_REG_R17] = inState.m_R17;
+  startState.m_R[DWARF_REG_R18] = inState.m_R18;
+  startState.m_R[DWARF_REG_R19] = inState.m_R19;
+  startState.m_R[DWARF_REG_R20] = inState.m_R20;
+  startState.m_R[DWARF_REG_R21] = inState.m_R21;
+  startState.m_R[DWARF_REG_R22] = inState.m_R22;
+  startState.m_R[DWARF_REG_R23] = inState.m_R23;
+  startState.m_R[DWARF_REG_R24] = inState.m_R24;
+  startState.m_R[DWARF_REG_R25] = inState.m_R25;
+  startState.m_R[DWARF_REG_R26] = inState.m_R26;
+  startState.m_R[DWARF_REG_R27] = inState.m_R27;
+  startState.m_R[DWARF_REG_R28] = inState.m_R28;
+  startState.m_R[DWARF_REG_R29] = inState.m_R29;
+  startState.m_R[DWARF_REG_R30] = inState.m_R30;
+  startState.m_R[DWARF_REG_R31] = inState.m_R31;
+  startState.m_R[DWARF_REG_CR] = inState.m_Cr;
+  startState.m_R[DWARF_REG_LR] = inState.m_Lr;
+//  startState.m_R[DWARF_REG_CTR] = inState.m_Ctr;
+#endif
+  NOTICE("Unwind 2");
   // For each CIE or FDE...
   size_t nIndex = 0;
   while (nIndex < m_nLength)
   {
+    NOTICE("Unwind 3: " << Hex << m_nData);
     // Get the length of this entry.
     uint32_t nLength = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
+    NOTICE("Unwind 4");
     nIndex += sizeof(uint32_t);
     const uint32_t k_nCieId = 0xFFFFFFFF;
     
@@ -115,6 +154,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 
     // Get the type of this entry (or CIE pointer if this is a FDE).
     uint32_t nCie = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
+    NOTICE("Unwind 5");
     nIndex += sizeof(uint32_t);
     
     // Is this a CIE?
@@ -166,8 +206,8 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     nCie++; // Step over null byte.
 
     uint8_t *pData = reinterpret_cast<uint8_t*> (m_nData);
-    uint32_t nCodeAlignmentFactor   = decodeUleb128(pData, nCie);
-    uint32_t nDataAlignmentFactor   = decodeSleb128(pData, nCie);
+    int32_t nCodeAlignmentFactor   = decodeUleb128(pData, nCie);
+    int32_t nDataAlignmentFactor   = decodeSleb128(pData, nCie);
     uint32_t nReturnAddressRegister = decodeUleb128(pData, nCie);
     
     DwarfCfiAutomaton automaton;
@@ -240,6 +280,46 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     outState.m_Fp = endState->getRegister(DWARF_REG_FP, startState);
     outState.m_Ra = endState->getRegister(DWARF_REG_RA, startState);
     outState.m_Epc = endState->getRegister(nReturnAddressRegister, startState);
+#endif
+#ifdef PPC_COMMON
+    outState.m_R0 = endState->getRegister(DWARF_REG_R0, startState);
+    outState.m_R1 = endState->getCfa(startState); // Architectural rule.
+    outState.m_R2 = endState->getRegister(DWARF_REG_R2, startState);
+    outState.m_R3 = endState->getRegister(DWARF_REG_R3, startState);
+    outState.m_R4 = endState->getRegister(DWARF_REG_R4, startState);
+    outState.m_R5 = endState->getRegister(DWARF_REG_R5, startState);
+    outState.m_R6 = endState->getRegister(DWARF_REG_R6, startState);
+    outState.m_R7 = endState->getRegister(DWARF_REG_R7, startState);
+    outState.m_R8 = endState->getRegister(DWARF_REG_R8, startState);
+    outState.m_R9 = endState->getRegister(DWARF_REG_R9, startState);
+    outState.m_R10 = endState->getRegister(DWARF_REG_R10, startState);
+    outState.m_R11 = endState->getRegister(DWARF_REG_R11, startState);
+    outState.m_R12 = endState->getRegister(DWARF_REG_R12, startState);
+    outState.m_R13 = endState->getRegister(DWARF_REG_R13, startState);
+    outState.m_R14 = endState->getRegister(DWARF_REG_R14, startState);
+    outState.m_R15 = endState->getRegister(DWARF_REG_R15, startState);
+    outState.m_R16 = endState->getRegister(DWARF_REG_R16, startState);
+    outState.m_R17 = endState->getRegister(DWARF_REG_R17, startState);
+    outState.m_R18 = endState->getRegister(DWARF_REG_R18, startState);
+    outState.m_R19 = endState->getRegister(DWARF_REG_R19, startState);
+    outState.m_R20 = endState->getRegister(DWARF_REG_R20, startState);
+    outState.m_R21 = endState->getRegister(DWARF_REG_R21, startState);
+    outState.m_R22 = endState->getRegister(DWARF_REG_R22, startState);
+    outState.m_R23 = endState->getRegister(DWARF_REG_R23, startState);
+    outState.m_R24 = endState->getRegister(DWARF_REG_R24, startState);
+    outState.m_R25 = endState->getRegister(DWARF_REG_R25, startState);
+    outState.m_R26 = endState->getRegister(DWARF_REG_R26, startState);
+    outState.m_R27 = endState->getRegister(DWARF_REG_R27, startState);
+    outState.m_R28 = endState->getRegister(DWARF_REG_R28, startState);
+    outState.m_R29 = endState->getRegister(DWARF_REG_R29, startState);
+    outState.m_R30 = endState->getRegister(DWARF_REG_R30, startState);
+    outState.m_R31 = endState->getRegister(DWARF_REG_R31, startState);
+    outState.m_Cr = endState->getRegister(DWARF_REG_CR, startState);
+    outState.m_Lr = endState->getRegister(DWARF_REG_LR, startState);
+//    outState.m_Ctr = endState->getRegister(DWARF_REG_CTR, startState);
+    // Ah so. G++ doesn't really support the DWARF standard (AGAIN) it seems, it leaves the
+    // return address in LR, and doesn't use the correct numbering. Nice.
+    outState.m_Srr0 = outState.m_Lr; //endState->getRegister(nReturnAddressRegister, startState);
 #endif
     return true;
   }

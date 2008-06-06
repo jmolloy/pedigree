@@ -31,6 +31,8 @@ start:
   lis 1, stack@ha
   addi 1,1, stack@l
   addi 1,1, 32764
+  li 2, 0x0
+  mtlr 2
   ba _main
 
 _ZN9Processor14getBasePointerEv:

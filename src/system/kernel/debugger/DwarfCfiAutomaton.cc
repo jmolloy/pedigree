@@ -192,13 +192,15 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       uint32_t nRegister = DwarfUnwinder::decodeUleb128(pLocation, nLocationOffset);
       nLocation += nLocationOffset;
 
+      nLocationOffset = 0;
       pLocation = reinterpret_cast<uint8_t*> (nLocation);
       int32_t nOffset = DwarfUnwinder::decodeSleb128(pLocation, nLocationOffset);
+      
       nLocation += nLocationOffset;
 
       m_CurrentState.m_RegisterStates[nRegister] = DwarfState::Offset;
       m_CurrentState.m_R[nRegister] = static_cast<ssize_t>(nOffset * m_nDataAlignmentFactor);
-//       NOTICE("DW_CFA_offset_extended_sf (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
+//      NOTICE("DW_CFA_offset_extended_sf (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
       break;
     }
 //     case DW_CFA_def_cfa_sf:

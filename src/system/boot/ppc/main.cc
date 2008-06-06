@@ -92,6 +92,8 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
 
+  // Cache flush.
+
   writeStr("About to jump to kernel - entry point 0x");
   writeHex(elf.getEntryPoint());
   writeStr("\n");
