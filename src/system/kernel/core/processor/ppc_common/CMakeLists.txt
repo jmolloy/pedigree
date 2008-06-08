@@ -21,4 +21,4 @@
 #
 
 add_kernel_src(core/processor/ppc_common
-               Disassembler.cc Processor.cc PhysicalMemoryManager.cc)
+               Disassembler.cc Processor.cc PhysicalMemoryManager.cc VsidManager.cc)

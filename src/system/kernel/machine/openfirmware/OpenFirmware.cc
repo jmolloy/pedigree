@@ -61,8 +61,9 @@ OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1,
   pa.args[9] = 0;
   pa.nargs = nArgs;
   pa.nret = 1;
-  
-  m_Interface(&pa);
-  
+
+  if (m_Interface(&pa) < 0)
+    return reinterpret_cast<OFParam>(-1);
+
   return pa.args[pa.nargs];
 }

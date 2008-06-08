@@ -14,39 +14,50 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_PPC_COMMON_PROCESSOR_H
-#define KERNEL_PROCESSOR_PPC_COMMON_PROCESSOR_H
+#include "VsidManager.h"
 
-void Processor::breakpoint()
+VsidManager VsidManager::m_Instance;
+
+VsidManager &VsidManager::instance()
 {
-  asm volatile("sc");
+  return m_Instance;
 }
 
-void Processor::halt()
+VsidManager::VsidManager() :
+  m_HighWaterMark(1), m_pStack(0), m_Mutex()
 {
-  // TODO: gcc will most certainly optimize this away in -O1/2/3 so please
-  //       replace it with some unoptimizable mighty magic
-  for (;;);
 }
 
-void Processor::invalidate(void *pAddress)
+VsidManager::~VsidManager()
 {
-  asm volatile("tlbie %0" : : "r" (pAddress));
 }
 
-void Processor::setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool userKey)
+VsidManager::Vsid VsidManager::obtainVsid()
 {
-  for (int i = 0; i < 16; i++)
-  {
-    uint32_t seg = 0;
-    if (supervisorKey)
-      seg |= 0x40000000;
-    if (userKey)
-      seg |= 0x20000000;
-    seg |= (segmentBase+i)&0x00FFFFFF;
-    asm volatile("mtsr %0, %1" : :"r"(i), "r"(seg));
-  }
-  asm volatile("sync");
+  /// \todo Locking
+
+  // Is the stack NULL?
+  if (m_pStack == 0)
+    // Return the high water mark and increment.
+    return m_HighWaterMark++;
+
+  // Pop the stack.
+  VsidStack *pPopped = m_pStack;
+  m_pStack = m_pStack->next;
+
+  Vsid vsid = pPopped->vsid;
+  delete pPopped;
+
+  return vsid;
 }
 
-#endif
+void VsidManager::returnVsid(VsidManager::Vsid vsid)
+{
+  /// \todo Locking
+  /// \todo decrement high water mark if possible
+  
+  VsidStack *pPushed = new VsidStack;
+  pPushed->vsid = vsid;
+  pPushed->next = m_pStack;
+  m_pStack = pPushed;
+}

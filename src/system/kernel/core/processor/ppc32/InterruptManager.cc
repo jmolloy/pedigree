@@ -138,13 +138,36 @@ void PPC32InterruptManager::initialiseProcessor()
 
 void PPC32InterruptManager::interrupt(InterruptState &interruptState)
 {
-  static LargeStaticString msg("Exception #");
-  msg += interruptState.m_IntNumber;
-  msg += ": ";
-  msg += g_pExceptions[interruptState.m_IntNumber];
-  
-  Debugger::instance().start(interruptState, msg);
-  for(;;);
+  // TODO: Needs locking
+  size_t intNumber = interruptState.getInterruptNumber();
+
+  #ifdef DEBUGGER
+//    // Call the kernel debugger's handler, if any
+//    if (m_Instance.m_DbgHandler[intNumber] != 0)
+//      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
+  #endif
+
+  // Call the syscall handler, if it is the syscall interrupt
+//  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
+//  {
+//    size_t serviceNumber = interruptState.getSyscallService();
+//    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
+//      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
+//  }
+//  else if (m_Instance.m_Handler[intNumber] != 0)
+//    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
+//  else
+//  {
+    // TODO:: Check for debugger initialisation.
+    static LargeStaticString e;
+    e.clear();
+    e.append ("Exception #");
+    e.append (interruptState.m_IntNumber, 10);
+    e.append (": \"");
+    e.append (g_pExceptions[intNumber]);
+    e.append ("\"");
+    Debugger::instance().start(interruptState, e);
+//  }
 }
 
 PPC32InterruptManager::PPC32InterruptManager()

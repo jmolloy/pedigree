@@ -34,15 +34,16 @@ void PPCVga::initialise()
   // Firstly get the screen device.
   // TODO: deal more cleanly with failure.
   OFDevice screen(OpenFirmware::instance().findDevice("screen"));
+
   // Get the 'chosen' device.
   OFDevice chosen(OpenFirmware::instance().findDevice("/chosen"));
-  
+
   // Now we can get the MMU device from chosen.
   OFDevice mmu( chosen.getProperty("mmu") );
-  
+
   // Get the (physical) framebuffer address.
   OFParam physFbAddr = screen.getProperty("address");
-  
+
   // Create a mapping with OpenFirmware.
   /// \todo Something with VirtualAddressSpace here?
   mmu.executeMethod("map", 4,
@@ -55,8 +56,8 @@ void PPCVga::initialise()
   m_Width = reinterpret_cast<uint32_t> ( screen.getProperty("width") );
   m_Height = reinterpret_cast<uint32_t> ( screen.getProperty("height") );
   m_Depth = reinterpret_cast<uint32_t> ( screen.getProperty("depth") );
-  m_Stride = m_Width;
-
+  m_Stride = reinterpret_cast<uint32_t> ( screen.getProperty("linebytes") );
+  
   if (m_Depth == 8)
   {
     for (int i = 0; i < 16; i++)
@@ -80,6 +81,7 @@ void PPCVga::initialise()
     m_pColours[13] =RGB_16 (0xFF, 0x00, 0xFF); // Light magenta
     m_pColours[14] =RGB_16 (0xFF, 0xFF, 0x00); // Light brown / yellow
     m_pColours[15] =RGB_16 (0xFF, 0xFF, 0xFF); // White
+    m_Stride /= 2; // 16bpp = 2 bytes per pixel.
   }
   
   // Clear the text framebuffer.
@@ -88,6 +90,7 @@ void PPCVga::initialise()
   {
     m_pTextBuffer[i] = clear;
   }
+
   // Clear the graphics framebuffer.
   uint16_t *p16Fb = reinterpret_cast<uint16_t*> (m_pFramebuffer);
   uint32_t *p32Fb = reinterpret_cast<uint32_t*> (m_pFramebuffer);
@@ -157,11 +160,11 @@ void PPCVga::putChar(char c, int x, int y, unsigned int f, unsigned int b)
       }
 
       if (m_Depth == 8)
-        m_pFramebuffer[y*m_Width + i*m_Width + x + j] = col&0xFF;
+        m_pFramebuffer[y*m_Stride + i*m_Stride + x + j] = col&0xFF;
       else if (m_Depth == 16)
-        p16Fb[y*m_Width + i*m_Width + x + j] = col&0xFFFF;
+        p16Fb[y*m_Stride + i*m_Stride + x + j] = col&0xFFFF;
       else
-        p32Fb[y*m_Width + i*m_Width + x + j] = col;
+        p32Fb[y*m_Stride + i*m_Stride + x + j] = col;
     }
   }
 }

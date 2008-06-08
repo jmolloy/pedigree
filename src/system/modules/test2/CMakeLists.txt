@@ -16,7 +16,7 @@
 
 include_directories(../../include)
 
-add_executable(test2.o test.cc)
+add_executable(test2.o test.cc rar.cc)
 target_link_libraries(test2.o gcc)
 set_target_properties(test2.o PROPERTIES
                               LINK_FLAGS "-r")

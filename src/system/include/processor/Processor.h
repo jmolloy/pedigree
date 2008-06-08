@@ -154,11 +154,6 @@ class Processor
        *\param[in] index the register index
        *\param[in] value the new value of the register */
       static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
-      /** Invalidate the TLB entry containing a specific virtual address
-       *\param[in] pAddress the specific virtual address
-       *\todo Figure out if we want to flush the TLB of every processor or if
-       *      this should be handled by the upper layers */
-      static void invalidate(void *pAddress);
       /** Executes the CPUID machine instruction
        *\param[in] inEax eax before the CPUID instruction
        *\param[in] inEcx ecx before the CPUID instruction
@@ -173,6 +168,11 @@ class Processor
                         uint32_t &ecx,
                         uint32_t &edx);
     #endif
+    /** Invalidate the TLB entry containing a specific virtual address
+     *\param[in] pAddress the specific virtual address
+     *\todo Figure out if we want to flush the TLB of every processor or if
+     *      this should be handled by the upper layers */
+    inline static void invalidate(void *pAddress);
 
     #if defined(X86)
       static physical_uintptr_t readCr3();
@@ -208,6 +208,10 @@ class Processor
       static ProcessorInformation &information();
     #endif
 
+    #ifdef PPC_COMMON
+      inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
+ userKey);
+    #endif
   private:
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;

@@ -33,7 +33,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 {
   // Construct a DwarfState object and populate it.
   DwarfState startState;
-  NOTICE("Unwind start.");
+
   // Unfortunately the next few lines are highly architecture dependent.
 #ifdef X86
   startState.m_R[DWARF_REG_EAX] = inState.eax;
@@ -134,15 +134,14 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
   startState.m_R[DWARF_REG_LR] = inState.m_Lr;
 //  startState.m_R[DWARF_REG_CTR] = inState.m_Ctr;
 #endif
-  NOTICE("Unwind 2");
+
   // For each CIE or FDE...
   size_t nIndex = 0;
   while (nIndex < m_nLength)
   {
-    NOTICE("Unwind 3: " << Hex << m_nData);
     // Get the length of this entry.
     uint32_t nLength = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
-    NOTICE("Unwind 4");
+
     nIndex += sizeof(uint32_t);
     const uint32_t k_nCieId = 0xFFFFFFFF;
     
@@ -154,7 +153,6 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
 
     // Get the type of this entry (or CIE pointer if this is a FDE).
     uint32_t nCie = * reinterpret_cast<uint32_t*> (m_nData+nIndex);
-    NOTICE("Unwind 5");
     nIndex += sizeof(uint32_t);
     
     // Is this a CIE?

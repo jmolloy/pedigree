@@ -37,193 +37,269 @@
 isr_reset:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 0    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 0    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_machine_check:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 1    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 1    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_dsi:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 2    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 2    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_isi:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 3    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 3    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_interrupt:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 4    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 4    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_alignment:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 5    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 5    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_program:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 6    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 6    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_fpu:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 7    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 7    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_decrementer:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 8    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 8    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_sc:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20, 9    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 9    # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_trace:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20,10    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 10   # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_perf_mon:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20,11    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 11   # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_instr_breakpoint:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20,12    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 12   # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_system_management:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20,13    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 13   # Exception code
+  blr              # Jump to isr_common in the higher half
 
 isr_thermal_management:
   mtsprg  0, 20    # Move r20 into sprg0
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
-
-  li      20,14    # r20 = 0 - exception vector.
+  mflr    20
+  mtsprg  3, 20    # sprg3 = link register.
 
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
 
-  ba    isr_common
+  lis     20, isr_common@ha
+  addi    20, 20, isr_common@l
+  mtlr    20       # Address of isr_common is now in LR.
+
+  li      20, 14   # Exception code
+  blr              # Jump to isr_common in the higher half
 
 # We are jumped to here with r20 = interrupt vector, r21 = junk, but usable,
 # no other registers usable, instruction translation enabled.
 # SPRG0 = saved r20.
 # SPRG1 = saved r21
-# SPRG3 = kernel stack.
+# SPRG3 = saved LR.
 isr_common:
   mfcr   21            # Get the condition register
   mtsprg 2, 21         # Save CR in SPRG2 - we're about to do a conditional.
 
-  mfsprg 21, 3         # r21 = kernel stack.
+  # TODO find a place to keep the kernel stack.
+  #mfsprg 21, 2         # r21 = kernel stack.
 
   cmpi   0, 21, 0      # Compare the values of register 21 and $0, setting condition field 0
 #  bne    1f            # If r21 != 0, go to 1:
@@ -234,7 +310,7 @@ isr_common:
   stw    20, -0xa0(21) # Save the interrupt number
   mfctr  20            # Get CTR
   stw    20, -0x9c(21) # Save CTR
-  mflr   20            # Get LR
+  mfsprg 20, 3         # Get LR
   stw    20, -0x98(21) # Save LR
   mfsprg 20, 2         # Get CR back
   stw    20, -0x94(21) # Save CR
@@ -285,3 +361,59 @@ isr_common:
 
   mr     3, 1          # First argument is a pointer to the stack.
   bl     _ZN21PPC32InterruptManager9interruptER19PPC32InterruptState
+
+  addi   21, 1, 0xa0   # Reset r21.
+
+  lwz     31, -0x04(21)
+  lwz     30, -0x08(21)
+  lwz     29, -0x0c(21)
+  lwz     28, -0x10(21)
+  lwz     27, -0x14(21)
+  lwz     26, -0x18(21)
+  lwz     25, -0x1c(21)
+  lwz     24, -0x20(21)
+  lwz     23, -0x24(21)
+  lwz     22, -0x28(21)
+  lwz     20, -0x2c(21)
+  mtsprg   1, 20         # Save r21's value again
+  lwz     20, -0x30(21)
+  mtsprg   0, 20         # Save r20's value again
+  lwz     19, -0x34(21)
+  lwz     18, -0x38(21)
+  lwz     17, -0x3c(21)
+  lwz     16, -0x40(21)
+  lwz     15, -0x44(21)
+  lwz     14, -0x48(21)
+  lwz     13, -0x4c(21)
+  lwz     12, -0x50(21)
+  lwz     11, -0x54(21)
+  lwz     10, -0x58(21)
+  lwz      9, -0x5c(21)
+  lwz      8, -0x60(21)
+  lwz      7, -0x64(21)
+  lwz      6, -0x68(21)
+  lwz      5, -0x6c(21)
+  lwz      4, -0x70(21)
+  lwz      3, -0x74(21)
+  lwz      2, -0x78(21)
+  lwz      1, -0x7c(21)
+  lwz      0, -0x80(21)
+  lwz     20, -0x84(21) # Get DAR
+  mtspr  19, 20        # Save DAR
+  lwz     20, -0x88(21) # Get DSISR
+  mtspr  18, 20        # Save DSISR
+  lwz     20, -0x8c(21) # Get SRR1
+  mtspr  27, 20        # Save SRR1
+  lwz     20, -0x90(21) # Get SRR0
+  mtspr  26, 20        # Save SRR0
+  lwz     20, -0x94(21) # Get CR
+  mtcr   20            # Save CR
+  lwz     20, -0x98(21) # Get LR
+  mtlr   20            # Save LR
+  lwz     20, -0x9c(21) # Get CTR
+  mtctr  20            # Save CTR
+
+  mfsprg 20, 0         # Get r20's value
+  mfsprg 21, 0         # Get r21's value
+
+  rfi                  # Return from interrupt

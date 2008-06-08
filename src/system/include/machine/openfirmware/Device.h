@@ -35,6 +35,8 @@ class OFDevice
     virtual void getProperty(const char *pProperty, NormalStaticString &buf);
     virtual OFHandle getProperty(const char *pProperty);
     virtual int getProperty(const char *pProperty, void *buf, size_t bufLen);
+    virtual int getPropertyLength(const char *pProperty);
+    virtual int getNextProperty(const char *pPrevious, const char *pNext);
     virtual void setProperty(const char *pProperty, NormalStaticString &val);
     
     virtual OFHandle executeMethod(const char *method, size_t nArgs, OFParam p1=0,

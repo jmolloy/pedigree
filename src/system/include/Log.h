@@ -70,7 +70,7 @@
 /** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
 /** The maximum number of static entries in the log. */
-#define LOG_ENTRIES 32
+#define LOG_ENTRIES 160
 
 /** Radix for Log's integer output */
 enum NumberType

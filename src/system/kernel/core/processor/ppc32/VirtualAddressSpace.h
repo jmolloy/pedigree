@@ -20,6 +20,7 @@
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 #include <machine/ppc_common/types.h>
+#include "../ppc_common/VsidManager.h"
 
 /// 4K page sizes.
 #ifndef PAGE_SIZE
@@ -29,16 +30,25 @@
 /** @addtogroup kernelprocessorPPC32
  * @{ */
 
+/**
+ * In PPC we have to keep a shadow page table for all address spaces, as 
+ * the hashed processor page table is finite in size and thus not all mappings
+ * may be able to fit.
+ *
+ * We use an intel-style two level page table system. These page tables are 
+ * never given verbatim to the processor, however, so we are able to take some
+ * shortcuts that aren't possible in the x86 architecture.
+ *
+ * The lower X bytes of virtual address space are reserved for the kernel,
+ * and any map(), isMapped(), setFlags(), or unmap() calls get forwarded
+ * directly to the kernel address space.
+ **/
 class PPC32VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
 public:
-  /// Initialises the virtual memory management system and creates mappings as
-  /// in the given parameter.
-  bool initialise();
-
   //
   // VirtualAddressSpace Interface
   //
@@ -61,6 +71,12 @@ protected:
   virtual ~PPC32VirtualAddressSpace();
 
 private:
+  /** The type of a shadow page table - x86 style */
+  struct ShadowPageTable
+  {
+    uint32_t entries[1024];
+  };
+
   /** The constructor for already present paging structures */
   PPC32VirtualAddressSpace();
   /** The copy-constructor
@@ -70,8 +86,17 @@ private:
    *\note Not implemented */
   PPC32VirtualAddressSpace &operator = (const PPC32VirtualAddressSpace &);
 
+  /** Initialises the kernel address space, called by Processor. */
+  bool initialise();
+
   /** The kernel virtual address space */
   static PPC32VirtualAddressSpace m_KernelSpace;
+
+  /** The x86-style shadow page directory */
+  ShadowPageTable *m_pPageDirectory[1024];
+  
+  /** The VSIDs - Virtual segment identifiers */
+  VsidManager::Vsid m_Vsid;
 };
 
 /** @} */
@@ -79,8 +104,9 @@ private:
 //
 // Virtual address space layout
 //
-#define USERSPACE_VIRTUAL_HEAP static_cast<uintptr_t>(0x10000000)
-#define VIRTUAL_PAGE_DIRECTORY static_cast<uintptr_t>(0xC0000000)
-#define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xC0800000)
+#define KERNEL_INITIAL_PAGE_TABLES static_cast<uintptr_t>(0xC0000000)
+#define KERNEL_SPACE_START     static_cast<uintptr_t>(0x80000000)
+#define USERSPACE_VIRTUAL_HEAP static_cast<uintptr_t>(0x60000000)
+#define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xD0000000)
 
 #endif

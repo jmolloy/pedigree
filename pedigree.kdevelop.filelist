@@ -409,8 +409,6 @@ src/system/kernel/linker/Elf64.h
 src/system/kernel/linker/FileLoader.h
 src/system/kernel/linker/KernelElf.cc
 src/system/kernel/linker/KernelElf.h
-src/system/kernel/linker/Module.cc
-src/system/kernel/linker/Module.h
 src/system/kernel/machine
 src/system/kernel/machine/arm_common
 src/system/kernel/machine/arm_versatile

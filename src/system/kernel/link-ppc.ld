@@ -10,7 +10,7 @@ SECTIONS
       *(.isr*)
     }
 
-    . = 0x1000000;
+    . = 0xe0000000;
     .text :
     {
         code = .; _code = .; __code = .;
@@ -42,7 +42,7 @@ SECTIONS
         . = ALIGN(4096);
     }
 
-    /DISCARD/ : { *(.comment) *(.eh_frame) *(.debug_abbrev) *(.debug_info) *(.debug_line) *(.debug_loc) *(.debug_pubnames) *(.debug_aranges) *(.debug_str) *(.stab) *(.stabstr) }
+    /DISCARD/ : { *(.comment) *(.eh_frame) *(.debug_abbrev) *(.debug_info) *(.debug_line) *(.debug_loc) *(.debug_pubnames) *(.debug_aranges) *(.debug_str) *(.debug_macinfo) *(.debug_ranges) *(.gnu.attributes) *(.stab) *(.stabstr) }
 
     end = .; _end = .; __end = .;
 }

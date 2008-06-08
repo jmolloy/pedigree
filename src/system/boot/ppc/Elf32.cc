@@ -160,13 +160,15 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 
 bool Elf32::writeSections()
 {
+  unsigned int physAddress = 0x1000000;
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     if (m_pSectionHeaders[i].flags & SHF_ALLOC)
     {
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
       {
-        prom_map(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size);
+        prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
+        physAddress += m_pSectionHeaders[i].size;
         // Copy section data from the file.
         memcpy((uint8_t*)m_pSectionHeaders[i].addr,
                         &m_pBuffer[m_pSectionHeaders[i].offset],
@@ -174,7 +176,8 @@ bool Elf32::writeSections()
       }
       else
       {
-        prom_map(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size);
+        prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
+        physAddress += m_pSectionHeaders[i].size;
         memset((uint8_t*)m_pSectionHeaders[i].addr,
                         0,
                         m_pSectionHeaders[i].size);
