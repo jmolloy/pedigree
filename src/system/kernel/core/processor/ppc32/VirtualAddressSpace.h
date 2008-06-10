@@ -48,6 +48,8 @@ class PPC32VirtualAddressSpace : public VirtualAddressSpace
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+  /** HashedPageTable needs access to */
+  friend class HashedPageTable;
 public:
   //
   // VirtualAddressSpace Interface

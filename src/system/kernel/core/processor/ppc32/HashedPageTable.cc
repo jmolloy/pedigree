@@ -94,7 +94,7 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   m_pHtab = reinterpret_cast<PTEG*> (HTAB_VIRTUAL);
 
   // Initialise by setting everything to zero.
-//  memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
+  memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
 
   // Add a new translation for the HTAB.
   pTranslations[nTranslations].virt = HTAB_VIRTUAL;
@@ -107,12 +107,26 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   for (int i = 0; i < nTranslations; i++)
   {
     Translation translation = pTranslations[i];
-    NOTICE("Translation: " <<Hex << translation.virt << ", " <<translation.phys << ", " << translation.size);
     for (int j = 0; j < translation.size; j += 0x1000)
     {
       // The VSID is for kernel space, which starts at 0 and extends to 15.
       // We use the top 4 bits as an index.
-//      addMapping(translation.virt+j, translation.phys+j, translation.mode, 0 + (translation.virt>>28));
+      // Convert 'mode' into a VirtualAddressSpace:: form.
+      uint32_t mode = translation.mode;
+      uint32_t newMode = VirtualAddressSpace::Write;
+      if (mode&0x20) newMode |= VirtualAddressSpace::WriteThrough;
+      if (mode&0x10) newMode |= VirtualAddressSpace::CacheDisable;
+
+      // Special case for 0xDF000000 - that is our trampoline and needs to keep the
+      // current VSID - See below.
+      uint32_t vsid = 0 + (translation.virt>>28);
+      if (translation.virt == 0xdf000000)
+      {
+        NOTICE("Loggage");
+        asm volatile("mfsr %0, 13" : : "r" (vsid));
+        vsid &= 0x0FFFFFFFF;
+       }
+      addMapping(translation.virt+j, translation.phys+j, newMode, vsid);
     }
   }
 
@@ -121,7 +135,22 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   // Install the HTAB.
   /// \todo Get rid of this hardcoded 0x200000.
   uint32_t sdr1 = 0x200000 | g_pHtabSizes[selectedIndex].mask;
+
+  // When we change page table, we will be running in invalid segments (there is no
+  // way to guarantee that the VSIDs openfirmware has set up are the same as ours).
+  // So, we have a trampoline which is linked at an address in a different segment
+  // to all the kernel code (0xDF000000). We call that, which changes all segment
+  // registers except SR 0xD (so it doesn't affect its own code), then changes
+  // page tables. It jumps back here, and we're running in the new segment and
+  // in the new page table.
+  // We still need to change segment register 0xD to be 0x0000000d, however.
   sdr1_trampoline(sdr1);
+  asm volatile("mtsr 13, %0" : : "r" (13));
+  asm volatile("sync");
+  asm volatile("isync");
+
+  // All done. Tell the "real" virtual memory manager about the mappings we just made.
+  
 }
 
 void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAddress, uint32_t mode, uint32_t vsid)
@@ -134,13 +163,6 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
   primaryHash &= m_Mask;
   secondaryHash &= m_Mask;
 
-  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
-  {
-  NOTICE("ea: " << Hex << effectiveAddress << ", pa: " << physicalAddress << ", vsid: " << vsid);
-  WARNING("primaryHash: " << Hex << primaryHash << ", api: " << ((effectiveAddress&0x0FFFFFFF)>>22) << ", rpn: " << (physicalAddress>>12));
-  }
-
-
   for (int i = 0; i < 8; i++)
   {
     if (m_pHtab[primaryHash].entries[i].v == 0)
@@ -151,18 +173,20 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       m_pHtab[primaryHash].entries[i].api = (effectiveAddress>>22)&0x3F;
       m_pHtab[primaryHash].entries[i].rpn = physicalAddress>>12;
       m_pHtab[primaryHash].entries[i].wimg = 0;
-      if (mode & VirtualAddressSpace::Write)
+      if (mode & VirtualAddressSpace::WriteThrough)
+        m_pHtab[primaryHash].entries[i].wimg |= 0xa; // Set memory protect too.
+      if (mode & VirtualAddressSpace::CacheDisable)
+        m_pHtab[primaryHash].entries[i].wimg |= 0x5; // Set Guarded too.
+
+      if (mode & VirtualAddressSpace::CopyOnWrite)
+        m_pHtab[primaryHash].entries[i].pp = 2;
+      else if (mode & VirtualAddressSpace::Write)
         m_pHtab[primaryHash].entries[i].pp = 0;
       else
         m_pHtab[primaryHash].entries[i].pp = 1;
       asm volatile("eieio");
       m_pHtab[primaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
-  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
-  {
-    uint32_t a = *(uint32_t*)(&m_pHtab[primaryHash].entries[i]);
-    NOTICE("Primary hash, i: " << i << ", " << a << ", " << sizeof(PTE));
-  }
       return;
     }
   }
@@ -176,17 +200,20 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       m_pHtab[secondaryHash].entries[i].api = (effectiveAddress&0x0FFFFFFF)>>22;
       m_pHtab[secondaryHash].entries[i].rpn = physicalAddress>>12;
       m_pHtab[secondaryHash].entries[i].wimg = 0;
-      if (mode & VirtualAddressSpace::Write)
+      if (mode & VirtualAddressSpace::WriteThrough)
+        m_pHtab[secondaryHash].entries[i].wimg |= 0xa; // Set memory protect too.
+      if (mode & VirtualAddressSpace::CacheDisable)
+        m_pHtab[secondaryHash].entries[i].wimg |= 0x5; // Set Guarded too.
+
+      if (mode & VirtualAddressSpace::CopyOnWrite)
+        m_pHtab[secondaryHash].entries[i].pp = 2;
+      else if (mode & VirtualAddressSpace::Write)
         m_pHtab[secondaryHash].entries[i].pp = 0;
       else
         m_pHtab[secondaryHash].entries[i].pp = 1;
       asm volatile("eieio");
       m_pHtab[secondaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
-  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
-  {
-    NOTICE("Secondary hash, i: " << i);
-  }
       return;
     }
   }
@@ -198,13 +225,21 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
   m_pHtab[primaryHash].entries[0].api = (effectiveAddress&0x0FFFFFFF)>>22;
   m_pHtab[primaryHash].entries[0].rpn = physicalAddress>>12;
   m_pHtab[primaryHash].entries[0].wimg = 0;
-  if (mode & VirtualAddressSpace::Write)
+  if (mode & VirtualAddressSpace::WriteThrough)
+    m_pHtab[primaryHash].entries[0].wimg |= 0xa; // Set memory protect too.
+  if (mode & VirtualAddressSpace::CacheDisable)
+    m_pHtab[primaryHash].entries[0].wimg |= 0x5; // Set Guarded too.
+
+  if (mode & VirtualAddressSpace::CopyOnWrite)
+    m_pHtab[primaryHash].entries[0].pp = 2;
+  else if (mode & VirtualAddressSpace::Write)
     m_pHtab[primaryHash].entries[0].pp = 0;
   else
     m_pHtab[primaryHash].entries[0].pp = 1;
   asm volatile("eieio");
   m_pHtab[primaryHash].entries[0].v = 1; // Valid.
   asm volatile("sync");
+  return;
 }
 
 void HashedPageTable::removeMapping(uint32_t effectiveAddress, uint32_t vsid)

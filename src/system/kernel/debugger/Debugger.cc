@@ -169,7 +169,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
     for (int i = 0; i < nInterfaces; i++)
     {
       pInterfaces[i]->disableCli();
-      pInterfaces[i]->drawString("Press any key to enter the debugger...", 0, 0, DebuggerIO::LightBlue, DebuggerIO::Black);
+      pInterfaces[i]->drawString(description/*"Press any key to enter the debugger..."*/, 0, 0, DebuggerIO::LightBlue, DebuggerIO::Black);
     }
     // Poll each device.
     while (pIo == 0)

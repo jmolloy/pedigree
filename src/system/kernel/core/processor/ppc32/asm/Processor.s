@@ -53,15 +53,11 @@ _ZN9Processor13getInterruptsEv:
 sdr1_trampoline:
   sync
   isync
-  #lis 4, 0x6000       # r4 = 0x60000000
-  # Skip 0 - can't change the SR we're currently executing.
+  lis 4, 0x0000       # r4 = 0x60000000
+  mtsr 0, 4
   addi 4, 4, 1        # r4 = 0x60000001
-#  mtsr 1, 4
+  mtsr 1, 4
   addi 4, 4, 1
-  addi 4, 4, 1
-  addi 4,4,1
-  addi 4,4,1
-  addi 4,4,1
   mtsr 2, 4
   addi 4, 4, 1
   mtsr 3, 4
@@ -84,7 +80,7 @@ sdr1_trampoline:
   addi 4, 4, 1
   mtsr 12, 4
   addi 4, 4, 1
-  mtsr 13, 4
+# mtsr 13, 4
   addi 4, 4, 1
   mtsr 14, 4
   addi 4, 4, 1
