@@ -1,13 +1,12 @@
 /* Link.ld -- Linker script for the kernel - ensure everything goes in the */
 /*            Correct place.  */
-/*OUTPUT_ARCH(mips)*/
 ENTRY(start)
 SECTIONS
 {
-    . = 0x0;
-    .isr :
+    . = 0xDF000000; /* Must be within 24 bits of the kernel */
+    .sdr1_trampoline.text :
     {
-      *(.isr*)
+      *(.sdr1_trampoline)
     }
 
     . = 0xe0000000;

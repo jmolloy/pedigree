@@ -26,6 +26,8 @@
 .global _ZN9Processor14getDebugStatusEv
 # bool Processor::getInterrupts()
 .global _ZN9Processor13getInterruptsEv
+# extern "C" void sdr1_trampoline(uint32_t sdr1)
+.global sdr1_trampoline
 
 start:
   lis 1, stack@ha
@@ -46,6 +48,53 @@ _ZN9Processor21getInstructionPointerEv:
 
 _ZN9Processor13getInterruptsEv:
   nop
+
+.section .sdr1_trampoline, "a"
+sdr1_trampoline:
+  sync
+  isync
+  #lis 4, 0x6000       # r4 = 0x60000000
+  # Skip 0 - can't change the SR we're currently executing.
+  addi 4, 4, 1        # r4 = 0x60000001
+#  mtsr 1, 4
+  addi 4, 4, 1
+  addi 4, 4, 1
+  addi 4,4,1
+  addi 4,4,1
+  addi 4,4,1
+  mtsr 2, 4
+  addi 4, 4, 1
+  mtsr 3, 4
+  addi 4, 4, 1
+  mtsr 4, 4
+  addi 4, 4, 1
+  mtsr 5, 4
+  addi 4, 4, 1
+  mtsr 6, 4
+  addi 4, 4, 1
+  mtsr 7, 4
+  addi 4, 4, 1
+  mtsr 8, 4
+  addi 4, 4, 1
+  mtsr 9, 4
+  addi 4, 4, 1
+  mtsr 10, 4
+  addi 4, 4, 1
+  mtsr 11, 4
+  addi 4, 4, 1
+  mtsr 12, 4
+  addi 4, 4, 1
+  mtsr 13, 4
+  addi 4, 4, 1
+  mtsr 14, 4
+  addi 4, 4, 1
+  mtsr 15, 4
+  sync
+  isync
+  mtsdr1 3   # Parameter -> sdr1
+  sync
+  isync
+  blr        # Jump back.
 
 .section .bss
 stack:

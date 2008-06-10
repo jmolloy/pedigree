@@ -73,7 +73,7 @@ isr_dsi:
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
   mflr    20
   mtsprg  3, 20    # sprg3 = link register.
-
+        
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back
@@ -90,7 +90,7 @@ isr_isi:
   mtsprg  1, 21    # Move r21 into sprg1 ... now we have 2 registers to work with.
   mflr    20
   mtsprg  3, 20    # sprg3 = link register.
-
+        
   mfmsr   21       # Move MSR into r21
   ori    21, 21,0x30 # Enable instruction translation
   mtmsr   21       # Write MSR back

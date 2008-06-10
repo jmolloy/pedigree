@@ -91,7 +91,7 @@ enum Modifier
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
  *\note You should use the NOTICE, WARNING, ERROR and FATAL macros to write something
- *      into the log. Direct access to the log should only be needed to rethrieve
+ *      into the log. Direct access to the log should only be needed to retrieve
  *      the entries from the log (within the debugger's log viewer for example). */
 class Log
 {

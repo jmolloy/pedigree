@@ -98,11 +98,11 @@ void Processor::initialise2()
   uint32_t nTranslations = getTranslations(pTranslations) / sizeof(Translation);
   uint32_t ramMax = detectMemory();
   uint32_t bleh = 0;
-
+  PPC32InterruptManager::initialiseProcessor();
   HashedPageTable::instance().initialise(pTranslations, nTranslations, ramMax);
 
   // Initialise this processor's interrupt handling
-  PPC32InterruptManager::initialiseProcessor();
+
 //   m_Initialised = 2;
 }
 

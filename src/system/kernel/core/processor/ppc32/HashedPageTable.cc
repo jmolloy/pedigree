@@ -22,6 +22,8 @@
 #include <Log.h>
 #include <panic.h>
 
+extern "C" void sdr1_trampoline(uint32_t);
+
 /** A page table size, with memory hint and mask. */
 struct HTABSize
 {
@@ -87,11 +89,12 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
                     reinterpret_cast<OFParam>(0x200000)); // Map at 2MB. TODO use pTranslations here
 
   m_Size = g_pHtabSizes[selectedIndex].size;
-  m_Mask = g_pHtabSizes[selectedIndex].mask;
+  // There is a minimum mask of 10 bits - the .mask parameter details how many *more* bits are masked.
+  m_Mask = (g_pHtabSizes[selectedIndex].mask<<10) | 0x0000003FF;
   m_pHtab = reinterpret_cast<PTEG*> (HTAB_VIRTUAL);
 
   // Initialise by setting everything to zero.
-  memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
+//  memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
 
   // Add a new translation for the HTAB.
   pTranslations[nTranslations].virt = HTAB_VIRTUAL;
@@ -104,32 +107,39 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   for (int i = 0; i < nTranslations; i++)
   {
     Translation translation = pTranslations[i];
+    NOTICE("Translation: " <<Hex << translation.virt << ", " <<translation.phys << ", " << translation.size);
     for (int j = 0; j < translation.size; j += 0x1000)
     {
       // The VSID is for kernel space, which starts at 0 and extends to 15.
       // We use the top 4 bits as an index.
-      addMapping(translation.virt+j, translation.phys+j, translation.mode, 0 + (translation.virt>>28));
+//      addMapping(translation.virt+j, translation.phys+j, translation.mode, 0 + (translation.virt>>28));
     }
   }
 
   // Set up the segment registers for the kernel address space.
-  Processor::setSegmentRegisters(0<<4, true, true);
 
   // Install the HTAB.
   /// \todo Get rid of this hardcoded 0x200000.
-  uint32_t sdr1 = 0x200000 | m_Mask;
-  asm volatile("mtspr 25, %0" : : "r" (sdr1));
+  uint32_t sdr1 = 0x200000 | g_pHtabSizes[selectedIndex].mask;
+  sdr1_trampoline(sdr1);
 }
 
 void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAddress, uint32_t mode, uint32_t vsid)
 {
   uint32_t input1 = vsid&0x7FFFF; // Mask only the bottom 19 bits.
-  uint32_t input2 = (effectiveAddress&0x0FFFFFFF) >> 12;
+  uint32_t input2 = (effectiveAddress>>12)&0xffff;
   uint32_t primaryHash = input1 ^ input2;
   uint32_t secondaryHash = ~primaryHash;
 
   primaryHash &= m_Mask;
   secondaryHash &= m_Mask;
+
+  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
+  {
+  NOTICE("ea: " << Hex << effectiveAddress << ", pa: " << physicalAddress << ", vsid: " << vsid);
+  WARNING("primaryHash: " << Hex << primaryHash << ", api: " << ((effectiveAddress&0x0FFFFFFF)>>22) << ", rpn: " << (physicalAddress>>12));
+  }
+
 
   for (int i = 0; i < 8; i++)
   {
@@ -138,7 +148,7 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       // Set the PTE up.
       m_pHtab[primaryHash].entries[i].vsid = vsid;
       m_pHtab[primaryHash].entries[i].h = 0; // Primary hash
-      m_pHtab[primaryHash].entries[i].api = (effectiveAddress&0x0FFFFFFF)>>22;
+      m_pHtab[primaryHash].entries[i].api = (effectiveAddress>>22)&0x3F;
       m_pHtab[primaryHash].entries[i].rpn = physicalAddress>>12;
       m_pHtab[primaryHash].entries[i].wimg = 0;
       if (mode & VirtualAddressSpace::Write)
@@ -148,6 +158,11 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       asm volatile("eieio");
       m_pHtab[primaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
+  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
+  {
+    uint32_t a = *(uint32_t*)(&m_pHtab[primaryHash].entries[i]);
+    NOTICE("Primary hash, i: " << i << ", " << a << ", " << sizeof(PTE));
+  }
       return;
     }
   }
@@ -168,6 +183,10 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       asm volatile("eieio");
       m_pHtab[secondaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
+  if (effectiveAddress >= 0xe002f000 && effectiveAddress < 0xe0030000)
+  {
+    NOTICE("Secondary hash, i: " << i);
+  }
       return;
     }
   }

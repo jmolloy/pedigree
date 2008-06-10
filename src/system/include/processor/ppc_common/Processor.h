@@ -36,16 +36,32 @@ void Processor::invalidate(void *pAddress)
 
 void Processor::setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool userKey)
 {
+  uint32_t segs[16];
   for (int i = 0; i < 16; i++)
   {
-    uint32_t seg = 0;
+    segs[i] = 0;
     if (supervisorKey)
-      seg |= 0x40000000;
+      segs[i] |= 0x40000000;
     if (userKey)
-      seg |= 0x20000000;
-    seg |= (segmentBase+i)&0x00FFFFFF;
-    asm volatile("mtsr %0, %1" : :"r"(i), "r"(seg));
+      segs[i] |= 0x20000000;
+    segs[i] |= (segmentBase+i)&0x00FFFFFF;
   }
+  asm volatile("mtsr 0, %0" : :"r"(segs[0]));
+  asm volatile("mtsr 1, %0" : :"r"(segs[1]));
+  asm volatile("mtsr 2, %0" : :"r"(segs[2]));
+  asm volatile("mtsr 3, %0" : :"r"(segs[3]));
+  asm volatile("mtsr 4, %0" : :"r"(segs[4]));
+  asm volatile("mtsr 5, %0" : :"r"(segs[5]));
+  asm volatile("mtsr 6, %0" : :"r"(segs[6]));
+  asm volatile("mtsr 7, %0" : :"r"(segs[7]));
+  asm volatile("mtsr 8, %0" : :"r"(segs[8]));
+  asm volatile("mtsr 9, %0" : :"r"(segs[9]));
+  asm volatile("mtsr 10, %0" : :"r"(segs[10]));
+  asm volatile("mtsr 11, %0" : :"r"(segs[11]));
+  asm volatile("mtsr 12, %0" : :"r"(segs[12]));
+  asm volatile("mtsr 13, %0" : :"r"(segs[13]));
+  asm volatile("mtsr 14, %0" : :"r"(segs[14]));
+  asm volatile("mtsr 15, %0" : :"r"(segs[15]));
   asm volatile("sync");
 }
 
