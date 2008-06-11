@@ -50,8 +50,6 @@ static uint32_t detectMemory()
   {
     uint32_t address = registers[i*2];
     uint32_t size = registers[i*2+1];
-    NOTICE("Address: " << Hex << address);
-    NOTICE("Size: " << Hex << size);
     if (address != currentMax && size > 0)
       // This means we have a memory hole. We don't handle holes atm, so we have to signal it.
       panic("Memory hole detected, and not handled");
@@ -60,21 +58,6 @@ static uint32_t detectMemory()
 
   NOTICE("Detected " << Dec << (currentMax/0x100000) << "MB of installed RAM.");
   return currentMax;
-}
-
-static uint32_t getTranslations(Translation *translations)
-{
-  // Get the current translations list.
-  OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
-  OFDevice mmu (chosen.getProperty("mmu"));
-
-  if (mmu.getProperty("translations", translations, sizeof(Translation)*256) == -1)
-  {
-    ERROR("Translations not detected correctly");
-    return 0;
-  }
-
-  return mmu.getPropertyLength("translations");
 }
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
@@ -88,21 +71,26 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2()
 {
+  Translations translations;
+  uint32_t ramMax = detectMemory();
+
+  // Remove some of the chaff we don't care about - that is
+  // anything mapped below KERNEL_SPACE_START that is not in the
+  // bottom 0x3000.
+  translations.removeRange(0x3000, KERNEL_SPACE_START);
 
   PPC32VirtualAddressSpace &v = static_cast<PPC32VirtualAddressSpace&>
     (PPC32VirtualAddressSpace::getKernelAddressSpace());
   
-  v.initialise();
+  v.initialise(translations);
 
-  Translation pTranslations[256];
-  uint32_t nTranslations = getTranslations(pTranslations) / sizeof(Translation);
-  uint32_t ramMax = detectMemory();
+  HashedPageTable::instance().initialise(translations, ramMax);
+  m_Initialised = 2;
 
-  HashedPageTable::instance().initialise(pTranslations, nTranslations, ramMax);
+  v.initialRoster(translations);
+  // Initialise this processor's interrupt handling  
   PPC32InterruptManager::initialiseProcessor();
-  // Initialise this processor's interrupt handling
 
-//   m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)

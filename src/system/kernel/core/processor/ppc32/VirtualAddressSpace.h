@@ -21,6 +21,7 @@
 #include <processor/VirtualAddressSpace.h>
 #include <machine/ppc_common/types.h>
 #include "../ppc_common/VsidManager.h"
+#include "Translation.h"
 
 /// 4K page sizes.
 #ifndef PAGE_SIZE
@@ -48,8 +49,6 @@ class PPC32VirtualAddressSpace : public VirtualAddressSpace
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
   friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
-  /** HashedPageTable needs access to */
-  friend class HashedPageTable;
 public:
   //
   // VirtualAddressSpace Interface
@@ -89,7 +88,10 @@ private:
   PPC32VirtualAddressSpace &operator = (const PPC32VirtualAddressSpace &);
 
   /** Initialises the kernel address space, called by Processor. */
-  bool initialise();
+  bool initialise(Translations &translations);
+
+  /** Adds the given translations into the page table, called by HashedPageTable. */
+  void initialRoster(Translations &translations);
 
   /** The kernel virtual address space */
   static PPC32VirtualAddressSpace m_KernelSpace;

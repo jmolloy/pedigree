@@ -4,7 +4,7 @@ ENTRY(start)
 SECTIONS
 {
     . = 0xDF000000; /* Must be within 24 bits of the kernel */
-    .sdr1_trampoline.text :
+    .sdr1_trampoline :
     {
       *(.sdr1_trampoline)
     }

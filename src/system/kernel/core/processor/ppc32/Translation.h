@@ -16,15 +16,51 @@
 #ifndef TRANSLATION_H
 #define TRANSLATION_H
 
+#include <processor/types.h>
+
+#define NUM_TRANSLATIONS 256
+
 /**
  * Representation of a translation entry as given by OpenFirmware.
  */
-struct Translation
+class Translations
 {
-  uint32_t virt;
-  uint32_t size;
-  uint32_t phys;
-  uint32_t mode;
-};
+public:
+  struct Translation
+  {
+    uint32_t virt;
+    uint32_t size;
+    uint32_t phys;
+    uint32_t mode;
+  };
 
+  Translations();
+  ~Translations();
+
+  /** Obtains the n'th translation. */
+  Translation getTranslation(size_t n);
+
+  /** Returns the number of valid translations. */
+  size_t getNumTranslations();
+
+  /** Adds a translation to the end of our array.  */
+  void addTranslation(uint32_t virt, uint32_t phys, uint32_t size, uint32_t mode);
+
+  /** Attempts to find a free section of physical memory.
+      \param size The size of memory to look for, in bytes.
+      \return 0 on failure.
+      \note This function only finds memory on a 1MB boundary, for
+      convenience. */
+  uint32_t findFreePhysicalMemory(uint32_t size);
+
+  /** Removes any translations with virtual addresses in the range of start..end. */
+  void removeRange(uintptr_t start, uintptr_t end);
+
+private:
+  /** The main translations array */
+  Translation m_pTranslations[NUM_TRANSLATIONS];
+  
+  /** The current number of valid translations. */
+  size_t m_nTranslations;
+};
 #endif

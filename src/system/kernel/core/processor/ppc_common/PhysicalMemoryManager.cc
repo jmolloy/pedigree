@@ -15,6 +15,7 @@
  */
 
 #include "PhysicalMemoryManager.h"
+#include <Log.h>
 
 PpcCommonPhysicalMemoryManager PpcCommonPhysicalMemoryManager::m_Instance;
 
@@ -25,6 +26,7 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t PpcCommonPhysicalMemoryManager::allocatePage()
 {
+  NOTICE("AllocatePage");
   return (m_NextPage += 0x1000);
 }
 void PpcCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)

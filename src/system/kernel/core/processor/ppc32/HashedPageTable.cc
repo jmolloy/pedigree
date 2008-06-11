@@ -63,7 +63,7 @@ HashedPageTable::~HashedPageTable()
 {
 }
 
-void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslations, uint32_t ramMax)
+void HashedPageTable::initialise(Translations &translations, uint32_t ramMax)
 {
   // How big should our page table be?
   int selectedIndex = 0;
@@ -97,16 +97,12 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
 
   // Add a new translation for the HTAB.
-  pTranslations[nTranslations].virt = HTAB_VIRTUAL;
-  pTranslations[nTranslations].phys = 0x200000;
-  pTranslations[nTranslations].mode = 0x2;
-  pTranslations[nTranslations].size = m_Size;
-  nTranslations++;
+  translations.addTranslation(HTAB_VIRTUAL, 0x200000, 0x2, m_Size);
 
   // For each translation, add mappings.
-  for (int i = 0; i < nTranslations; i++)
+  for (int i = 0; i < translations.getNumTranslations(); i++)
   {
-    Translation translation = pTranslations[i];
+    Translations::Translation translation = translations.getTranslation(i);
     for (int j = 0; j < translation.size; j += 0x1000)
     {
       // The VSID is for kernel space, which starts at 0 and extends to 15.
@@ -122,8 +118,7 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
       uint32_t vsid = 0 + (translation.virt>>28);
       if (translation.virt == 0xdf000000)
       {
-        NOTICE("Loggage");
-        asm volatile("mfsr %0, 13" : : "r" (vsid));
+        asm volatile("mfsr %0, 13" : "=r" (vsid));
         vsid &= 0x0FFFFFFFF;
        }
       addMapping(translation.virt+j, translation.phys+j, newMode, vsid);
@@ -148,9 +143,6 @@ void HashedPageTable::initialise(Translation *pTranslations, size_t &nTranslatio
   asm volatile("mtsr 13, %0" : : "r" (13));
   asm volatile("sync");
   asm volatile("isync");
-
-  // All done. Tell the "real" virtual memory manager about the mappings we just made.
-  
 }
 
 void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAddress, uint32_t mode, uint32_t vsid)

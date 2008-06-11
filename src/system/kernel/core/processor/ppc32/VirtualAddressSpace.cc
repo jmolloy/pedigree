@@ -47,7 +47,7 @@ PPC32VirtualAddressSpace::PPC32VirtualAddressSpace() :
   // Grab some VSIDs.
   m_Vsid = VsidManager::instance().obtainVsid();
 
-  // Is this the kernel address space we're initialising?
+  memset(reinterpret_cast<uint8_t*>(m_pPageDirectory), 0, sizeof(m_pPageDirectory));
 }
 
 PPC32VirtualAddressSpace::~PPC32VirtualAddressSpace()
@@ -59,18 +59,26 @@ PPC32VirtualAddressSpace::~PPC32VirtualAddressSpace()
   VsidManager::instance().returnVsid(m_Vsid);
 }
 
-bool PPC32VirtualAddressSpace::initialise()
+bool PPC32VirtualAddressSpace::initialise(Translations &translations)
 {
   // We need to map our page tables in.
   OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
   OFDevice mmu (chosen.getProperty("mmu"));
-  /// \todo Is identity mapping the best idea? Means we can only run on >80MB of RAM.
-  /// \todo Grab some memory from the PMM.
+
+  // Try and find some free physical memory to put the initial page tables in.
+  uint32_t phys = translations.findFreePhysicalMemory(0x100000);
+  if (phys == 0)
+    panic("Couldn't find anywhere to load the initial page tables!");
+  // We've got some physical RAM - now add a translation for it so that
+  // when the hashed page table initialises it maps us in.
+  /// \todo the 0x6a is temporary and wrong. Find a proper mode. (0x2 doesn't seem to work)
+  translations.addTranslation(KERNEL_INITIAL_PAGE_TABLES, phys, 0x100000, 0x6a);
+
   OFParam ret =  mmu.executeMethod("map", 4,
                                   reinterpret_cast<OFParam>(-1),
                                   reinterpret_cast<OFParam>(0x100000),
                                   reinterpret_cast<OFParam>(KERNEL_INITIAL_PAGE_TABLES),
-                                  reinterpret_cast<OFParam>(0x100000));
+                                  reinterpret_cast<OFParam>(phys));
   if (ret == reinterpret_cast<OFParam>(-1))
     panic("Kernel page table mapping failed");
 
@@ -82,6 +90,51 @@ bool PPC32VirtualAddressSpace::initialise()
   /// \todo Holy magic numbers, batman! the 0x100 is a bit hardcoded, isn't it?
   for (int i = 0; i < 0x100; i++)
     m_pPageDirectory[1023-i] = reinterpret_cast<ShadowPageTable*> (KERNEL_INITIAL_PAGE_TABLES + i*0x1000);
+
+  // We need one more, for the IVT (zero'th entry)
+  //static ShadowPageTable zero;
+  //memset(reinterpret_cast<uint8_t*> (&zero), 0, sizeof(ShadowPageTable));
+  //m_pPageDirectory[0] = &zero;
+}
+
+void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
+{
+  if (this != &m_KernelSpace)
+    panic("initialRoster() called on a VA space that is not the kernel space!");
+
+  // For every translation...
+  for (int i = 0; i < translations.getNumTranslations(); i++)
+  {
+    Translations::Translation t = translations.getTranslation(i);
+    // For every page in this translation...
+    for (int j = 0; j < t.size; j += 0x1000)
+    {
+      void *virtualAddress = reinterpret_cast<void*> (t.virt+j);
+      uint32_t physicalAddress = t.phys+j;
+
+      uint32_t mode = t.mode;
+      uint32_t newMode = VirtualAddressSpace::Write;
+      if (mode&0x20) newMode |= VirtualAddressSpace::WriteThrough;
+      if (mode&0x10) newMode |= VirtualAddressSpace::CacheDisable;
+
+      // Grab the page directory entry.
+      ShadowPageTable *pTable = m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)];
+         
+      // Sanity check.
+      if (pTable == 0)
+      {
+        ERROR("New table for address " << Hex <<t.virt+j << ", PDIDX " << PAGE_DIRECTORY_INDEX(virtualAddress));
+        pTable = new ShadowPageTable;
+        WARNING("pTable: " << (uint32_t)pTable);
+        memset(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
+        m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
+      }
+
+      // Grab the page table entry.
+      pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
+                  (physicalAddress&0xFFFFF000) | newMode;
+    }
+  }
 }
 
 bool PPC32VirtualAddressSpace::isAddressValid(void *virtualAddress)
@@ -122,7 +175,7 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
   // If so, redirect to the kernel address space.
   uintptr_t addr = reinterpret_cast<uintptr_t> (virtualAddress);
   if (addr >= KERNEL_SPACE_START && this != &m_KernelSpace)
-  m_KernelSpace.getMapping(virtualAddress, physicalAddress, flags);
+    m_KernelSpace.map(physicalAddress, virtualAddress, flags);
 
   // Grab the page directory entry.
   ShadowPageTable *pTable = m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)];

@@ -63,7 +63,7 @@ extern "C" void __cxa_guard_release()
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {
-#if defined(X86_COMMON) || defined(MIPS_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   return malloc(size);
 #else
   return 0;
@@ -71,7 +71,7 @@ void *operator new (size_t size) throw()
 }
 void *operator new[] (size_t size) throw()
 {
-#if defined(X86_COMMON) || defined(MIPS_COMMON) 
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   return malloc(size);
 #else
   return 0;
@@ -87,13 +87,13 @@ void *operator new[] (size_t size, void* memory) throw()
 }
 void operator delete (void * p)
 {
-#if defined(X86_COMMON) || defined(MIPS_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   free(p);
 #endif
 }
 void operator delete[] (void * p)
 {
-#if defined(X86_COMMON) || defined(MIPS_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   free(p);
 #endif
 }

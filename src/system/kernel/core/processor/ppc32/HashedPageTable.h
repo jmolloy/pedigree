@@ -39,7 +39,7 @@ public:
   static HashedPageTable &instance();
 
   /** Initialises the page table. */
-  void initialise(Translation *pTranslations, size_t &nTranslations, uint32_t ramMax);
+  void initialise(Translations &translations, uint32_t ramMax);
 
   /** Adds a page table entry mapping effectiveAddress to physicalAddress for the given VSID, with
       mode 'mode'.

@@ -23,4 +23,4 @@
 add_subdirectory(asm)
 add_kernel_src(core/processor/ppc32
                InterruptManager.cc Processor.cc StackFrame.cc state.cc
-               VirtualAddressSpace.cc Elf32.cc HashedPageTable.cc) 
+               VirtualAddressSpace.cc Elf32.cc HashedPageTable.cc Translation.cc)
