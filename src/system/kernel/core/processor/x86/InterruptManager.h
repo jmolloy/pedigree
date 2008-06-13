@@ -106,7 +106,7 @@ class X86InterruptManager : public ::InterruptManager,
       InterruptHandler *m_pDbgHandler[256];
     #endif
     /** The syscall handlers */
-    SyscallHandler *m_pSyscallHandler[SyscallManager::serviceEnd];
+    SyscallHandler *m_pSyscallHandler[serviceEnd];
 
     /** Lock */
     Spinlock m_Lock;

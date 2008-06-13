@@ -42,11 +42,19 @@
 #endif
 #include <Archive.h>
 
+#ifdef X86_COMMON
+#include <machine/Device.h>
+
+Device Device::m_Root;
+#endif
+
 BootIO bootIO;
 
 int bar (void *b)
 {
-    asm volatile("sc");
+#ifdef PPC_COMMON
+  asm volatile("sc");
+#endif
 }  
 
 int foo(void *a)
@@ -115,6 +123,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the boot output.
   bootIO.initialise();
+
+#ifdef X86_COMMON
+  Machine::instance().initialiseDeviceTree();
+#endif
 
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped

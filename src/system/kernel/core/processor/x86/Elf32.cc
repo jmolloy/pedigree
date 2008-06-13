@@ -62,7 +62,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   {
     const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
                          pSymbols[ELF32_R_SYM(rel.info)].name;
-    NOTICE("Relocating symbol \"" << pStr << "\"");
+//    NOTICE("Relocating symbol \"" << pStr << "\"");
     S = KernelElf::instance().globalLookupSymbol(pStr);
     if (S == 0)
     {
@@ -71,6 +71,8 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
       // in .text - like a function pointer.
       S = lookupSymbol(pStr);
     }
+    if (S == 0)
+      WARNING("Relocation failed for symbol \"" << pStr << "\"");
   }
   
   if (S == 0)

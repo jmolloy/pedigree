@@ -43,6 +43,8 @@ class Machine
      */
     virtual void initialise() =0;
     inline bool isInitialised(){return m_bInitialised;}
+
+    virtual void initialiseDeviceTree() = 0;
     
     /**
      * Returns the n'th Serial device.

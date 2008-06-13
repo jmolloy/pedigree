@@ -13,43 +13,42 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_BUS_H
-#define MACHINE_BUS_H
+#ifndef MACHINE_CONTROLLER_H
+#define MACHINE_CONTROLLER_H
 
 #include <machine/Device.h>
 
 /**
- * A bus is a device which provides a view onto other devices.
+ * A controller is a hub that controls multiple devices.
  */
-///\todo add property for "is address in IO space? or memory mapped?"
-class Bus : public Device
+class Controller : public Device
 {
 public:
-  Bus(const char *pName) :
-    m_pName(pName)
+  Controller()
   {
   }
-  virtual ~Bus()
+  Controller(Controller *pDev) :
+    Device(pDev)
+  {
+  }
+  virtual ~Controller()
   {
   }
 
   virtual Type getType()
   {
-    return Device::Bus;
+    return Device::Controller;
   }
 
   virtual void getName(NormalStaticString &str)
   {
-    str += m_pName;
+    str += "Generic controller";
   }
 
   virtual void dump(LargeStaticString &str)
   {
-    str += m_pName;
+    str += "Generic controller";
   }
-
-private:
-  const char *m_pName;
 };
 
 #endif

@@ -26,6 +26,10 @@
 #if defined(APIC)
   #include "Apic.h"
 #endif
+#include <machine/Device.h>
+#include <machine/Bus.h>
+#include <machine/Disk.h>
+#include <machine/Controller.h>
 
 Pc Pc::m_Instance;
 
@@ -134,6 +138,31 @@ void Pc::initialise()
       panic("Pc::initialiseProcessor(): Failed to initialise the local APIC");
   }
 #endif
+
+void Pc::initialiseDeviceTree()
+{
+  // Firstly add the ISA bus.
+  Bus *pIsa = new Bus("ISA");
+
+  // ATA controllers.
+  Controller *pAtaMaster = new Controller();
+  pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8));
+  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F6, 8));
+  pIsa->addChild(pAtaMaster);
+  pAtaMaster->setParent(pIsa);
+
+  Controller *pAtaSlave = new Controller();
+  pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8));
+  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8));
+  pIsa->addChild(pAtaSlave);
+  pAtaSlave->setParent(pIsa);
+
+  Device::root().addChild(pIsa);
+  pIsa->setParent(&Device::root());
+
+  // TODO:: probe PCI devices.
+  
+}
 
 Serial *Pc::getSerial(size_t n)
 {

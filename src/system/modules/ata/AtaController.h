@@ -13,43 +13,34 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_BUS_H
-#define MACHINE_BUS_H
+#ifndef ATA_ATA_CONTROLLER_H
+#define ATA_ATA_CONTROLLER_H
 
+#include <processor/types.h>
 #include <machine/Device.h>
+#include <machine/Disk.h>
+#include <machine/Controller.h>
+#include <processor/IoPort.h>
+#include "AtaDisk.h"
 
-/**
- * A bus is a device which provides a view onto other devices.
- */
-///\todo add property for "is address in IO space? or memory mapped?"
-class Bus : public Device
+/** The controller for up to two AtaDisks. This uses a background thread
+ * and a request queue. */
+class AtaController : public Controller
 {
 public:
-  Bus(const char *pName) :
-    m_pName(pName)
-  {
-  }
-  virtual ~Bus()
-  {
-  }
-
-  virtual Type getType()
-  {
-    return Device::Bus;
-  }
+  AtaController(Controller *pDev);
+  ~AtaController();
 
   virtual void getName(NormalStaticString &str)
   {
-    str += m_pName;
+    str += "ata";
   }
 
-  virtual void dump(LargeStaticString &str)
-  {
-    str += m_pName;
-  }
-
-private:
-  const char *m_pName;
+#ifndef X86_COMMON
+#error No port IO. Must use mmapped IO.
+#endif
+  IoPort m_CommandRegs;
+  IoPort m_ControlRegs;
 };
 
 #endif

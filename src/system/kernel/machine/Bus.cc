@@ -13,43 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_BUS_H
-#define MACHINE_BUS_H
 
-#include <machine/Device.h>
+#include <machine/Bus.h>
 
-/**
- * A bus is a device which provides a view onto other devices.
- */
-///\todo add property for "is address in IO space? or memory mapped?"
-class Bus : public Device
-{
-public:
-  Bus(const char *pName) :
-    m_pName(pName)
-  {
-  }
-  virtual ~Bus()
-  {
-  }
-
-  virtual Type getType()
-  {
-    return Device::Bus;
-  }
-
-  virtual void getName(NormalStaticString &str)
-  {
-    str += m_pName;
-  }
-
-  virtual void dump(LargeStaticString &str)
-  {
-    str += m_pName;
-  }
-
-private:
-  const char *m_pName;
-};
-
-#endif
+Bus::Bus(const char *pName)

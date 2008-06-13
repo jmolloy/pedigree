@@ -95,7 +95,7 @@ bool Elf32::writeSections()
   Elf32SectionHeader_t *pNewTable = new Elf32SectionHeader_t[m_pHeader->shnum];
   memcpy(reinterpret_cast<uint8_t*> (pNewTable),
          reinterpret_cast<uint8_t*> (m_pSectionHeaders),
-         sizeof(Elf32Header_t)*m_pHeader->shnum);
+         sizeof(Elf32SectionHeader_t)*m_pHeader->shnum);
   m_pSectionHeaders = pNewTable;
 
   uintptr_t offset = m_LoadBase;

@@ -14,23 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES ata test2 test3)
+include_directories(../../include)
 
-#########################################################################################
-
-# Descend into each module's subdirectory first.
-foreach(var ${MODULES})
-  add_subdirectory(${var})
-endforeach(var ${MODULES})
-
-# Pull all the modules together in a tarfile.
-set(OBJS)
-set(MODULE_NAMES)
-foreach(var ${MODULES})
-  set(OBJS ${OBJS} "${var}/${var}.o")
-  set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
-endforeach(var ${MODULES})
-
-add_custom_target(initrd ALL tar -cf initrd.tar ${OBJS}
-                  DEPENDS ${MODULE_NAMES}
-                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR}/src/system/modules)
+add_executable(ata.o main.cc AtaController.cc AtaDisk.cc)
+target_link_libraries(ata.o gcc)
+set_target_properties(ata.o PROPERTIES
+                            LINK_FLAGS "-r")

@@ -207,6 +207,6 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
     if (ret = (*it)->elf.lookupSymbol(pName))
       return ret;
   }
-  WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
+//  WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
   return 0;
 }
