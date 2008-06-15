@@ -47,6 +47,10 @@ class VirtualAddressSpace
     static const size_t CopyOnWrite   = 0x20;
     /** If this flag is set, the page is swapped out */
     static const size_t Swapped       = 0x40;
+    /** If this flag is set, the page is memory coherent - only applicable to PPC */
+    static const size_t MemoryCoherent= 0x80;
+    /** If this flag is set, the page is guarded - only applicable to PPC */
+    static const size_t Guarded       = 0x100;
 
     /** Get the kernel virtual address space
      *\return reference to the kernel virtual address space */

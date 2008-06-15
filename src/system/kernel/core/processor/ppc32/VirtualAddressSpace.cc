@@ -23,6 +23,7 @@
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
 #include "VirtualAddressSpace.h"
+#include "HashedPageTable.h"
 
 #define PAGE_DIRECTORY_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 22) & 0x3FF)
 #define PAGE_TABLE_INDEX(x) ((reinterpret_cast<uintptr_t>(x) >> 12) & 0x3FF)
@@ -119,17 +120,15 @@ void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
 
       // Grab the page directory entry.
       ShadowPageTable *pTable = m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)];
-         
+
       // Sanity check.
       if (pTable == 0)
       {
-        ERROR("New table for address " << Hex <<t.virt+j << ", PDIDX " << PAGE_DIRECTORY_INDEX(virtualAddress));
         pTable = new ShadowPageTable;
-        WARNING("pTable: " << (uint32_t)pTable);
+
         memset(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
         m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
       }
-
       // Grab the page table entry.
       pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
                   (physicalAddress&0xFFFFF000) | newMode;
@@ -192,6 +191,9 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
   // Grab the page table entry.
   pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
     (physicalAddress&0xFFFFF000) | flags;
+
+  // Put it in the hash table.
+  HashedPageTable::instance().addMapping(addr, physicalAddress, flags, m_Vsid*8 + addr>>28  );
 
   return true;
 }
@@ -257,6 +259,8 @@ void PPC32VirtualAddressSpace::unmap(void *virtualAddress)
 
   // Grab the PTE.
   pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 0;
+
+  // Unmap from the hash table.
 }
 
 void *PPC32VirtualAddressSpace::allocateStack()

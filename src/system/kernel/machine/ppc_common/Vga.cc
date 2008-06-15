@@ -121,7 +121,7 @@ void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
     for (int j = 0; j < (m_Height/FONT_HEIGHT); j++)
     {
       int idx = j*(m_Width/FONT_WIDTH)+i;
-      if (pBuffer16[idx] != m_pTextBuffer[idx])
+      if ((pBuffer16 == m_pTextBuffer) || (pBuffer16[idx] != m_pTextBuffer[idx]))
       {
         m_pTextBuffer[idx] = pBuffer16[idx];
         uint16_t ch = m_pTextBuffer[j*(m_Width/FONT_WIDTH)+i];

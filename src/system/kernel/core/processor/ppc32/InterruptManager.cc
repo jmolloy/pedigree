@@ -21,8 +21,10 @@
 #include <processor/Processor.h>
 #include <Debugger.h>
 #include <Log.h>
+#include <panic.h>
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
+#include <LockGuard.h>
 
 extern "C" int isr_reset;
 extern "C" int isr_machine_check;
@@ -69,23 +71,43 @@ InterruptManager &InterruptManager::instance()
   return PPC32InterruptManager::instance();
 }
 
-bool PPC32InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+bool PPC32InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *pHandler)
 {
+  LockGuard<Spinlock> lockGuard(m_Lock);
+
+  if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+    return false;
+  if (UNLIKELY(pHandler != 0 && m_pHandler[interruptNumber] != 0))
+    return false;
+  if (UNLIKELY(pHandler == 0 && m_pHandler[interruptNumber] == 0))
+    return false;
+
+  m_pHandler[interruptNumber] = pHandler;
   return true;
 }
 
 #ifdef DEBUGGER
-  bool PPC32InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  bool PPC32InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *pHandler)
   {
+    LockGuard<Spinlock> lockGuard(m_Lock);
+
+    if (UNLIKELY(interruptNumber >= 256 || interruptNumber == SYSCALL_INTERRUPT_NUMBER))
+      return false;
+    if (UNLIKELY(pHandler != 0 && m_pDbgHandler[interruptNumber] != 0))
+      return false;
+    if (UNLIKELY(pHandler == 0 && m_pDbgHandler[interruptNumber] == 0))
+      return false;
+
+    m_pDbgHandler[interruptNumber] = pHandler;
     return true;
   }
   size_t PPC32InterruptManager::getBreakpointInterruptNumber()
   {
-    return 3;
+    return TRAP_INTERRUPT_NUMBER;
   }
   size_t PPC32InterruptManager::getDebugInterruptNumber()
   {
-    return 1;
+    return TRACE_INTERRUPT_NUMBER;
   }
 #endif
 
@@ -142,22 +164,22 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
   size_t intNumber = interruptState.getInterruptNumber();
 
   #ifdef DEBUGGER
-//    // Call the kernel debugger's handler, if any
-//    if (m_Instance.m_DbgHandler[intNumber] != 0)
-//      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
+    // Call the kernel debugger's handler, if any
+    if (m_Instance.m_pDbgHandler[intNumber] != 0)
+      m_Instance.m_pDbgHandler[intNumber]->interrupt(intNumber, interruptState);
   #endif
 
   // Call the syscall handler, if it is the syscall interrupt
-//  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
-//  {
-//    size_t serviceNumber = interruptState.getSyscallService();
-//    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
-//      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
-//  }
-//  else if (m_Instance.m_Handler[intNumber] != 0)
-//    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
-//  else
-//  {
+  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
+  {
+    size_t serviceNumber = interruptState.getSyscallService();
+    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_pSyscallHandler[serviceNumber] != 0))
+    m_Instance.m_pSyscallHandler[serviceNumber]->syscall(interruptState);
+  }
+  else if (m_Instance.m_pHandler[intNumber] != 0)
+    m_Instance.m_pHandler[intNumber]->interrupt(intNumber, interruptState);
+  else if (intNumber != 6 && intNumber != 10)
+  {
     // TODO:: Check for debugger initialisation.
     static LargeStaticString e;
     e.clear();
@@ -166,8 +188,18 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
     e.append (": \"");
     e.append (g_pExceptions[intNumber]);
     e.append ("\"");
+#ifdef DEBUGGER
     Debugger::instance().start(interruptState, e);
-//  }
+#else
+    panic(e);
+#endif
+  }
+
+  // Some interrupts (like Program) require the PC to be advanced before returning.
+  if (intNumber == TRAP_INTERRUPT_NUMBER)
+  {
+    interruptState.m_Srr0 += 4;
+  }
 }
 
 PPC32InterruptManager::PPC32InterruptManager()

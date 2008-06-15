@@ -67,12 +67,30 @@ private:
     uint32_t h : 1;     // Hash function identifier
     uint32_t api : 6;   // Abbreviated page index.
     uint32_t rpn : 20;  // Physical page number.
-    uint32_t reserved1 : 2;
+    uint32_t reserved1 : 3;
     uint32_t r : 1;     // Reference bit.
     uint32_t c : 1;     // Change bit.
     uint32_t wimg: 4;   // Memory/cache control bits.
     uint32_t reserved2 : 1;
     uint32_t pp : 2;    // Page protection bits.
+  };
+  /** A BAT table entry - upper half */
+  struct BATU
+  {
+    uint32_t bepi : 15; // Effective page index.
+    uint32_t unused : 4;
+    uint32_t bl : 11;   // Block size mask.
+    uint32_t vs : 1;    // Supervisor valid.
+    uint32_t vp : 1;    // User valid.
+  };
+  /** A BAT table entry - lower half */
+  struct BATL
+  {
+    uint32_t brpn : 15; // Real page index.
+    uint32_t unused1 : 10;
+    uint32_t wimg : 4;  // Memory/cache control bits.
+    uint32_t unused2 : 1;
+    uint32_t pp : 2;    // Page access protections.
   };
 
   /** A page table entry group (PTEG) */
@@ -80,6 +98,11 @@ private:
   {
     PTE entries[8];
   };
+
+  /** Sets an IBAT entry */
+  void setIBAT(size_t n, uintptr_t virt, physical_uintptr_t phys, size_t size, uint32_t mode);
+  /** Set a DBAT entry */
+  void setDBAT(size_t n, uintptr_t virt, physical_uintptr_t phys, size_t size, uint32_t mode);
 
   /** Pointer to the HTAB. */
   PTEG *m_pHtab;

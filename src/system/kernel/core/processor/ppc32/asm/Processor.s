@@ -90,6 +90,15 @@ sdr1_trampoline:
   mtsdr1 3   # Parameter -> sdr1
   sync
   isync
+  lis 4, 0xFFFF
+  ori 4, 4, 0xF000
+1:
+  tlbie 4
+  addi 4, 4, -0x1000
+  cmp 7, 4, 0x0
+  bne 1b
+  sync
+  isync
   blr        # Jump back.
 
 .section .bss

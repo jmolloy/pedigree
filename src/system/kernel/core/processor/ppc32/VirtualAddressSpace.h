@@ -112,5 +112,7 @@ private:
 #define KERNEL_SPACE_START     static_cast<uintptr_t>(0x80000000)
 #define USERSPACE_VIRTUAL_HEAP static_cast<uintptr_t>(0x60000000)
 #define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xD0000000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS static_cast<uintptr_t>(0xA0000000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE static_cast<uintptr_t>(0x20000000)
 
 #endif

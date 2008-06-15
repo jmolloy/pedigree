@@ -18,6 +18,7 @@
 #define KERNEL_UTILITIES_RANGELIST_H
 
 #include <utilities/List.h>
+#include <Log.h>
 
 /** @addtogroup kernelutilities
  * @{ */

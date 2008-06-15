@@ -43,10 +43,21 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
+  uint32_t msr;
+  asm volatile("mfmsr %0" : "=r" (msr));
+  if (bEnable)
+    msr |= MSR_EE;
+  else
+    msr &= ~MSR_EE;
+  asm volatile("mtmsr %0" : : "r" (msr));
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
+  if (bEnable)
+    state.m_Srr1 |= MSR_SE;
+  else
+    state.m_Srr1 &= ~MSR_SE;
 }
 
 void Processor::invalidateICache(uintptr_t nAddr)

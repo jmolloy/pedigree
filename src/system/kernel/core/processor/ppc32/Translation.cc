@@ -37,7 +37,7 @@ Translations::Translations() :
   m_nTranslations = mmu.getPropertyLength("translations") / sizeof(Translation);
   for (int i = 0; i < m_nTranslations; i++)
   {
-    NOTICE("T: " << Hex << m_pTranslations[i].virt << ", " << m_pTranslations[i].phys << ", " << m_pTranslations[i].size);
+    NOTICE("T: " << Hex << m_pTranslations[i].virt << ", " << m_pTranslations[i].phys << ", " << m_pTranslations[i].size << ", " << m_pTranslations[i].mode);
   }
 }
 
@@ -66,15 +66,20 @@ void Translations::addTranslation(uint32_t virt, uint32_t phys, uint32_t size, u
     panic("Too many translations!");
 }
 
-uint32_t Translations::findFreePhysicalMemory(uint32_t size)
+/// \todo Buggy, I think.
+uint32_t Translations::findFreePhysicalMemory(uint32_t size, uint32_t align)
 {
-  // For every page on a megabyte boundary...
-  for (uint32_t i = 0; i < 0xFFF; i++)
+  // Quickly grab the SDR1 value so that we don't accidentally overwrite it.
+  uint32_t sdr1;
+  asm volatile("mfsdr1 %0" : "=r" (sdr1));
+  sdr1 &= 0xFFFFF000;
+
+  // For every page on an 'align' boundary...
+  for (uint32_t i = 0x000000; i < 0xFFFFFFFF-align; i += align)
   {
-    uint32_t addr = i << 20;
+    uint32_t addr = i;
     // Is this address taken?
     bool taken = false;
-    NOTICE("n : " << Dec << m_nTranslations);
 
     for (int j = 0; j < m_nTranslations; j++)
     {
@@ -95,6 +100,10 @@ uint32_t Translations::findFreePhysicalMemory(uint32_t size)
         break;
       }
     }
+    // Check SDR1
+    if ( (sdr1 >= addr && sdr1 < addr+size) ||
+         ((sdr1+0x1000000) >= addr && (sdr1+0x1000000) < (addr+size) ))
+      taken = true;
     if (!taken) return addr;
   }
   return 0;

@@ -21,6 +21,7 @@
 #include "../ppc_common/Serial.h"
 #include "../ppc_common/Vga.h"
 #include "../ppc_common/Keyboard.h"
+#include "../ppc_common/Decrementer.h"
 
 /**
  * Concretion of the abstract Machine class for a MIPS Malta board.
@@ -53,7 +54,7 @@ private:
   virtual ~Mac();
 
   PPCSerial m_Serial[2];
-  //SchedulerTimer m_SchedulerTimer;
+  Decrementer m_Decrementer;
   //Timer m_Timers;
   PPCVga m_Vga;
   PPCKeyboard m_Keyboard;

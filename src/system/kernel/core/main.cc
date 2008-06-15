@@ -108,10 +108,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Processor::initialise2();
 
 #ifdef PPC_COMMON
-  foo((void*)0xdeadbeef);
   
-  asm volatile("sc");
-  for(;;);
+  //foo((void*)0xdeadbeef);
+  
 #endif
 
 #if defined(ARM_COMMON) && defined(DEBUGGER)
@@ -239,9 +238,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   for (;;)
   {
-    #ifdef X86_COMMON
-      Processor::setInterrupts(true);
-    #endif
+    //Processor::setInterrupts(true);
     for(int i = 0; i < 10000000; i++) ;
     str.clear();
     str += "a";

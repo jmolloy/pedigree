@@ -17,6 +17,8 @@
 #include <processor/Processor.h>
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
+#include <processor/PhysicalMemoryManager.h>
+#include "../ppc_common/PhysicalMemoryManager.h"
 #include "HashedPageTable.h"
 #include "VirtualAddressSpace.h"
 #include "InterruptManager.h"
@@ -77,7 +79,8 @@ void Processor::initialise2()
   // Remove some of the chaff we don't care about - that is
   // anything mapped below KERNEL_SPACE_START that is not in the
   // bottom 0x3000.
-  translations.removeRange(0x3000, KERNEL_SPACE_START);
+//  translations.removeRange(0x3000, KERNEL_SPACE_START);
+  translations.removeRange(0xD0000000, 0xDE000000);
 
   PPC32VirtualAddressSpace &v = static_cast<PPC32VirtualAddressSpace&>
     (PPC32VirtualAddressSpace::getKernelAddressSpace());
@@ -85,12 +88,21 @@ void Processor::initialise2()
   v.initialise(translations);
 
   HashedPageTable::instance().initialise(translations, ramMax);
-  m_Initialised = 2;
+  
+  // Initialise this processor's interrupt handling
+  /// \note This is now done in HashedPageTable::initialise, so that page table
+  ///       problems can be caught easier.
+  //PPC32InterruptManager::initialiseProcessor();
 
+  // Initialise the virtual address space.
   v.initialRoster(translations);
-  // Initialise this processor's interrupt handling  
-  PPC32InterruptManager::initialiseProcessor();
 
+  // And the physical memory manager.
+  PpcCommonPhysicalMemoryManager &p = static_cast<PpcCommonPhysicalMemoryManager&>
+    (PpcCommonPhysicalMemoryManager::instance());
+  p.initialise(translations, ramMax);
+
+  m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)

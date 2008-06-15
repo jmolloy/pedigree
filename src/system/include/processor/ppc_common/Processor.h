@@ -17,9 +17,25 @@
 #ifndef KERNEL_PROCESSOR_PPC_COMMON_PROCESSOR_H
 #define KERNEL_PROCESSOR_PPC_COMMON_PROCESSOR_H
 
+#define MSR_POW 0x00040000
+#define MSR_ILE 0x00010000
+#define MSR_EE  0x00008000
+#define MSR_PR  0x00004000
+#define MSR_FP  0x00002000
+#define MSR_ME  0x00001000
+#define MSR_FE0 0x00000800
+#define MSR_SE  0x00000400
+#define MSR_BE  0x00000200
+#define MSR_FE1 0x00000100
+#define MSR_IP  0x00000040
+#define MSR_IR  0x00000020
+#define MSR_DR  0x00000010
+#define MSR_RI  0x00000002
+#define MSR_LE  0x00000001
+
 void Processor::breakpoint()
 {
-  asm volatile("sc");
+  asm volatile("trap");
 }
 
 void Processor::halt()
@@ -54,14 +70,15 @@ void Processor::setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bo
   asm volatile("mtsr 5, %0" : :"r"(segs[5]));
   asm volatile("mtsr 6, %0" : :"r"(segs[6]));
   asm volatile("mtsr 7, %0" : :"r"(segs[7]));
-  asm volatile("mtsr 8, %0" : :"r"(segs[8]));
-  asm volatile("mtsr 9, %0" : :"r"(segs[9]));
-  asm volatile("mtsr 10, %0" : :"r"(segs[10]));
-  asm volatile("mtsr 11, %0" : :"r"(segs[11]));
-  asm volatile("mtsr 12, %0" : :"r"(segs[12]));
-  asm volatile("mtsr 13, %0" : :"r"(segs[13]));
-  asm volatile("mtsr 14, %0" : :"r"(segs[14]));
-  asm volatile("mtsr 15, %0" : :"r"(segs[15]));
+  // Don't set kernel regs!
+  // asm volatile("mtsr 8, %0" : :"r"(segs[8]));
+  // asm volatile("mtsr 9, %0" : :"r"(segs[9]));
+  // asm volatile("mtsr 10, %0" : :"r"(segs[10]));
+  // asm volatile("mtsr 11, %0" : :"r"(segs[11]));
+  // asm volatile("mtsr 12, %0" : :"r"(segs[12]));
+  // asm volatile("mtsr 13, %0" : :"r"(segs[13]));
+  // asm volatile("mtsr 14, %0" : :"r"(segs[14]));
+  // asm volatile("mtsr 15, %0" : :"r"(segs[15]));
   asm volatile("sync");
 }
 

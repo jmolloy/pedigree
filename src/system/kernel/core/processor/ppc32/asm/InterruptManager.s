@@ -398,10 +398,10 @@ isr_common:
   lwz      2, -0x78(21)
   lwz      1, -0x7c(21)
   lwz      0, -0x80(21)
-  lwz     20, -0x84(21) # Get DAR
-  mtspr  19, 20        # Save DAR
-  lwz     20, -0x88(21) # Get DSISR
-  mtspr  18, 20        # Save DSISR
+#   lwz     20, -0x84(21) # Get DAR
+#   mtspr  19, 20        # Save DAR
+#   lwz     20, -0x88(21) # Get DSISR
+#   mtspr  18, 20        # Save DSISR
   lwz     20, -0x8c(21) # Get SRR1
   mtspr  27, 20        # Save SRR1
   lwz     20, -0x90(21) # Get SRR0

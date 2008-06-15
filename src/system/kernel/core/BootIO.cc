@@ -53,6 +53,12 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
       Machine::instance().getSerial(i)->write(str[j]);
     endColour(Machine::instance().getSerial(i));
   }
+#ifdef PPC_COMMON
+  // For PPC: causes the graphics framebuffer to be updated from the text one.
+  Vga *pVga = Machine::instance().getVga(0);
+  uint16_t *pFramebuffer = *pVga;
+  pVga->pokeBuffer(reinterpret_cast<uint8_t*>(pFramebuffer),0);
+#endif
 }
 
 void BootIO::putCharVga(const char c, Colour foreColour, Colour backColour)
@@ -72,7 +78,8 @@ void BootIO::putCharVga(const char c, Colour foreColour, Colour backColour)
       else
       {
         m_CursorX = pVga->getNumCols()-1;
-        m_CursorY--;
+        if (m_CursorY > 0)
+          m_CursorY--;
       }
       
       // Erase the contents of the cell currently.

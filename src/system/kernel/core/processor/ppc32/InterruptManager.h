@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_PPC32_INTERRUPTMANAGER_H
 
 #include <compiler.h>
+#include <Spinlock.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/Syscalls.h>
@@ -67,18 +68,24 @@ class PPC32InterruptManager : public ::InterruptManager,
     /** The destructor */
     virtual ~PPC32InterruptManager();
 
-    InterruptHandler *m_Handler[64];
-    InterruptHandler *m_ExternalHandler[8];
+    InterruptHandler *m_pHandler[64];
 #ifdef DEBUGGER
     /** The debugger interrupt handlers */
-    InterruptHandler *m_DbgHandler[64];
+    InterruptHandler *m_pDbgHandler[64];
 #endif
     /** The syscall handlers */
-    SyscallHandler *m_SyscallHandler[serviceEnd];
+    SyscallHandler *m_pSyscallHandler[serviceEnd];
+
+    /** Lock */
+    Spinlock m_Lock;
 
     /** The instance of the interrupt manager  */
     static PPC32InterruptManager m_Instance;
 };
+
+#define SYSCALL_INTERRUPT_NUMBER 9
+#define TRAP_INTERRUPT_NUMBER 6
+#define TRACE_INTERRUPT_NUMBER 10
 
 /** @} */
 

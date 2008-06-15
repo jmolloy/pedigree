@@ -18,16 +18,24 @@
 #define KERNEL_PROCESSOR_PPC32_COMMON_PHYSICALMEMORYMANAGER_H
 
 #include <processor/PhysicalMemoryManager.h>
+#include <utilities/RangeList.h>
+#include "../ppc32/Translation.h"
 
-/** @addtogroup kernelprocessormipscommon
+/** @addtogroup kernelprocessorppccommon
  * @{ */
 
-/** \warning The implementation of this module has been seriously hacked 
- *  together. It needs changing, currently it doesn't even support freeing
- *  of pages! */
-
-/** The common mips implementation of the PhysicalMemoryManager
- *\brief Implementation of the PhysicalMemoryManager for common mips */
+/** The common PPC implementation of the PhysicalMemoryManager.
+ *
+ *  This implementation has two modes - the initial mode and the 'normal' mode.
+ *  In the initial mode the PMM will allocate a contiguous set of frames starting
+ *  from PMM_INITIAL_START. There is no way to free pages in this mode.
+ *
+ *  In 'normal' mode the PMM uses a page stack and a rangelist for allocation/
+ *  deallocation.
+ *
+ *  The PMM is in initial mode as soon as the constructor is called - a call to
+ *  'initialise' will put it into normal mode.
+ *\brief Implementation of the PhysicalMemoryManager for common ppc */
 class PpcCommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
 public:
@@ -46,6 +54,8 @@ public:
                               size_t Flags,
                               physical_uintptr_t start = -1);
 
+  void initialise(Translations &translations, uintptr_t ramMax);
+
 protected:
   /** The constructor */
   PpcCommonPhysicalMemoryManager();
@@ -60,11 +70,60 @@ private:
    *\note Not implemented (singleton) */
   PpcCommonPhysicalMemoryManager &operator = (const PpcCommonPhysicalMemoryManager &);
 
-  uintptr_t m_NextPage;
+  /** The stack of available pages. */
+  class PageStack
+  {
+  public:
+    /** Default constructor does nothing */
+    PageStack() INITIALISATION_ONLY;
+    /** Allocate a page with certain constraints
+     *\return The physical address of the allocated page or 0 */
+    physical_uintptr_t allocate();
+    /** Free a physical page
+     *\param[in] physicalAddress physical address of the page */
+    void free(uintptr_t physicalAddress);
+    /** The destructor does nothing */
+    inline ~PageStack(){}
+
+  private:
+    /** The copy-constructor
+     *\note Not implemented */
+    PageStack(const PageStack &);
+    /** The copy-constructor
+     *\note Not implemented */
+    PageStack &operator = (const PageStack &);
+
+    /** Pointer to the base address of the stack. The stack grows upwards. */
+    physical_uintptr_t *m_Stack;
+    /** Size of the currently mapped stack */
+    size_t m_StackMax;
+    /** Currently used size of the stack */
+    size_t m_StackSize;
+  };
+
+  /** The page stack */
+  PageStack m_PageStack;
+
+  /** The current operating mode. True for 'initial', false for 'normal'. */
+  bool m_InitialMode;  
+
+  /** Variable used in initial mode to keep track of where the next page to allocate is. */
+  physical_uintptr_t m_NextPage;
+
+  /** RangeList of free physical memory */
+  RangeList<uint64_t> m_PhysicalRanges;
+
+  /** Virtual memory available for MemoryRegions */
+  RangeList<uintptr_t> m_MemoryRegions;
 
   /** The PpcCommonPhysicalMemoryManager class instance */
   static PpcCommonPhysicalMemoryManager m_Instance;
 };
+
+//
+// Initial physical layout.
+//
+#define PMM_INITIAL_START 0x2000000
 
 /** @} */
 

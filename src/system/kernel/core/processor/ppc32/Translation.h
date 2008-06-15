@@ -48,10 +48,8 @@ public:
 
   /** Attempts to find a free section of physical memory.
       \param size The size of memory to look for, in bytes.
-      \return 0 on failure.
-      \note This function only finds memory on a 1MB boundary, for
-      convenience. */
-  uint32_t findFreePhysicalMemory(uint32_t size);
+      \return 0 on failure. */
+  uint32_t findFreePhysicalMemory(uint32_t size, uint32_t align=0x100000);
 
   /** Removes any translations with virtual addresses in the range of start..end. */
   void removeRange(uintptr_t start, uintptr_t end);

@@ -91,6 +91,8 @@ endif(PPC_COMMON)
 #########################################################################################
 # Script start.
 
+execute_process(COMMAND touch "${PEDIGREE_SOURCE_DIR}/src/system/kernel/Version.cc")
+
 # Check that multiple targets aren't defined.
 set(TMP_TARGETS blah)
 if(X86_COMMON)

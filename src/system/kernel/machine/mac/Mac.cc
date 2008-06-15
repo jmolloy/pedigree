@@ -27,6 +27,7 @@ void Mac::initialise()
 {
   m_Vga.initialise();
   m_Keyboard.initialise();
+  m_Decrementer.initialise();
   m_bInitialised = true;
 }
 Serial *Mac::getSerial(size_t n)
@@ -52,8 +53,7 @@ IrqManager *Mac::getIrqManager()
 }
 SchedulerTimer *Mac::getSchedulerTimer()
 {
-  // TODO
-  return 0;
+  return &m_Decrementer;
 }
 Timer *Mac::getTimer()
 {
