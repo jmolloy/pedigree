@@ -119,10 +119,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
   return true;
 }
 
-KernelElf::KernelElf()
+KernelElf::KernelElf() :
   #if defined(X86_COMMON)
-    : m_AdditionalSections("Kernel ELF Sections")
+  m_AdditionalSections("Kernel ELF Sections"),
   #endif
+  m_Modules()
 {
 }
 
@@ -185,8 +186,8 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   }
 
   NOTICE("Name: " << module->name);
-  NOTICE("Entry: " << Hex << (uintptr_t)module->entry);
-  NOTICE("Exit: " << Hex << (uintptr_t)module->exit);
+  NOTICE("Entry: " << Hex << reinterpret_cast<uintptr_t> (module->entry));
+  NOTICE("Exit: " << Hex << reinterpret_cast<uintptr_t>(module->exit));
   m_Modules.pushBack(module);
   return module;
 }
@@ -196,7 +197,7 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
   /// \todo This shouldn't match local or weak symbols.
   // Try a lookup in the kernel.
   uintptr_t ret;
-  if (ret = lookupSymbol(pName))
+  if ((ret = lookupSymbol(pName)))
     return ret;
 
   // OK, try every module.
@@ -204,7 +205,7 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
        it != m_Modules.end();
        it++)
   {
-    if (ret = (*it)->elf.lookupSymbol(pName))
+    if ((ret = (*it)->elf.lookupSymbol(pName)))
       return ret;
   }
 //  WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");

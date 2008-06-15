@@ -68,6 +68,9 @@ public:
   virtual bool capsLock() {return false;}
 
 private:
+  PPCKeyboard(const PPCKeyboard &);
+  PPCKeyboard &operator = (const PPCKeyboard &);
+
   /** Our keyboard device. */
   OFHandle m_Dev;
 };

@@ -56,7 +56,7 @@ HashedPageTable &HashedPageTable::instance()
 }
 
 HashedPageTable::HashedPageTable() :
-  m_pHtab(0)
+  m_pHtab(0), m_Size(0), m_Mask(0)
 {
 }
 
@@ -91,7 +91,7 @@ void HashedPageTable::initialise(Translations &translations, uint32_t ramMax)
   OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
   OFDevice mmu (chosen.getProperty("mmu"));
 
-  OFParam ret = mmu.executeMethod("map", 4,
+  mmu.executeMethod("map", 4,
                     reinterpret_cast<OFParam>(0x2), // M=1
                     reinterpret_cast<OFParam>(g_pHtabSizes[selectedIndex].size),
                     reinterpret_cast<OFParam>(HTAB_VIRTUAL),
@@ -105,10 +105,10 @@ void HashedPageTable::initialise(Translations &translations, uint32_t ramMax)
   memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
        
   // For each translation, add mappings.
-  for (int i = 0; i < translations.getNumTranslations(); i++)
+  for (unsigned int i = 0; i < translations.getNumTranslations(); i++)
   {
     Translations::Translation translation = translations.getTranslation(i);
-    for (int j = 0; j < translation.size; j += 0x1000)
+    for (unsigned int j = 0; j < translation.size; j += 0x1000)
     {
       // The VSID is for kernel space, which starts at 0 and extends to 15.
       // We use the top 4 bits as an index.

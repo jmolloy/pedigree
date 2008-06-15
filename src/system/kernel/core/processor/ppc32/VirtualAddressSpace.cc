@@ -43,7 +43,7 @@ VirtualAddressSpace *VirtualAddressSpace::create()
 }
 
 PPC32VirtualAddressSpace::PPC32VirtualAddressSpace() :
-  VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP))
+  VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP)), m_Vsid(0)
 {
   // Grab some VSIDs.
   m_Vsid = VsidManager::instance().obtainVsid();
@@ -92,10 +92,7 @@ bool PPC32VirtualAddressSpace::initialise(Translations &translations)
   for (int i = 0; i < 0x100; i++)
     m_pPageDirectory[1023-i] = reinterpret_cast<ShadowPageTable*> (KERNEL_INITIAL_PAGE_TABLES + i*0x1000);
 
-  // We need one more, for the IVT (zero'th entry)
-  //static ShadowPageTable zero;
-  //memset(reinterpret_cast<uint8_t*> (&zero), 0, sizeof(ShadowPageTable));
-  //m_pPageDirectory[0] = &zero;
+  return true;
 }
 
 void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
@@ -104,11 +101,11 @@ void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
     panic("initialRoster() called on a VA space that is not the kernel space!");
 
   // For every translation...
-  for (int i = 0; i < translations.getNumTranslations(); i++)
+  for (unsigned int i = 0; i < translations.getNumTranslations(); i++)
   {
     Translations::Translation t = translations.getTranslation(i);
     // For every page in this translation...
-    for (int j = 0; j < t.size; j += 0x1000)
+    for (unsigned int j = 0; j < t.size; j += 0x1000)
     {
       void *virtualAddress = reinterpret_cast<void*> (t.virt+j);
       uint32_t physicalAddress = t.phys+j;
@@ -193,7 +190,7 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     (physicalAddress&0xFFFFF000) | flags;
 
   // Put it in the hash table.
-  HashedPageTable::instance().addMapping(addr, physicalAddress, flags, m_Vsid*8 + addr>>28  );
+  HashedPageTable::instance().addMapping(addr, physicalAddress, flags, m_Vsid*8 + (addr>>28)  );
 
   return true;
 }

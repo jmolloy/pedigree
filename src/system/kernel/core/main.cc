@@ -50,27 +50,6 @@ Device Device::m_Root;
 
 BootIO bootIO;
 
-int bar (void *b)
-{
-#ifdef PPC_COMMON
-  asm volatile("sc");
-#endif
-}  
-
-int foo(void *a)
-{
-  bar((void*)0x4445566);
-  HugeStaticString str;
-  for (;;)
-  {
-    str.clear();
-    str += "b";
-    bootIO.write(str, BootIO::White, BootIO::Green);
-    
-    for(int i = 0; i < 10000000; i++) ;
-  }
-}
-
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -238,7 +217,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   for (;;)
   {
-    //Processor::setInterrupts(true);
+    Processor::setInterrupts(true);
     for(int i = 0; i < 10000000; i++) ;
     str.clear();
     str += "a";

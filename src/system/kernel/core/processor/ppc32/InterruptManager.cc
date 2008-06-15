@@ -124,7 +124,7 @@ void PPC32InterruptManager::initialiseProcessor()
   OFDevice mmu (chosen.getProperty("mmu"));
 
   // Identity map the lower area of memory.
-  OFParam ret = mmu.executeMethod("map", 4,
+  mmu.executeMethod("map", 4,
                     reinterpret_cast<OFParam>(-1),
                     reinterpret_cast<OFParam>(0x3000),
                     reinterpret_cast<OFParam>(0x0),
@@ -202,7 +202,8 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
   }
 }
 
-PPC32InterruptManager::PPC32InterruptManager()
+PPC32InterruptManager::PPC32InterruptManager() :
+  m_Lock()
 {
 }
 PPC32InterruptManager::~PPC32InterruptManager()

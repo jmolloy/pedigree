@@ -45,7 +45,7 @@ bool Decrementer::initialise()
   OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
   OFDevice cpu (chosen.getProperty("cpu"));
   m_Frequency = reinterpret_cast<uint32_t> (cpu.getProperty("timebase-frequency"));
-  if (m_Frequency == -1)
+  if (static_cast<int32_t> (m_Frequency) == -1)
   {
     WARNING("Cpu::timebase-frequency property not available!");
     m_Frequency = 0x1000000; // 16MHz
@@ -68,10 +68,12 @@ Decrementer::Decrementer()
 
 void Decrementer::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  Processor::breakpoint();
+  // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
+  uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
+  asm volatile("mtdec %0" : : "r" (n));
 
   // TODO: Delta is wrong
   if (LIKELY(m_Handler != 0))
-    m_Handler->timer(0, state);
+    m_Handler->timer(DECREMENTER_PERIOD, state);
 
 }

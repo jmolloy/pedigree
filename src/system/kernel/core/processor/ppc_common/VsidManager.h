@@ -50,6 +50,9 @@ public:
   void returnVsid(Vsid vsid);
 
 private:
+  VsidManager(const VsidManager &);
+  VsidManager &operator = (const VsidManager &);
+
   /** Stack entry type */
   struct VsidStack
   {

@@ -47,7 +47,9 @@ _ZN9Processor21getInstructionPointerEv:
   nop
 
 _ZN9Processor13getInterruptsEv:
-  nop
+  mfmsr 3           # Grab the MSR in r3
+  andi. 3, 3, 0x8000 # AND with MSR_EE
+  blr
 
 .section .sdr1_trampoline, "a"
 sdr1_trampoline:

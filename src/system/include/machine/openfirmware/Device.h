@@ -46,6 +46,8 @@ class OFDevice
                                                                      OFParam p5=0,
                                                                      OFParam p6=0);
   protected:
+    OFDevice(const OFDevice &);
+    OFDevice &operator = (const OFDevice &);
     OFHandle m_Handle;
 };
 

@@ -59,6 +59,9 @@ public:
   uint32_t getMapping(uint32_t effectiveAddress, uint32_t vsid);
 
 private:
+  HashedPageTable(const HashedPageTable &);
+  HashedPageTable &operator = (const HashedPageTable &);
+
   /** A page table entry (PTE) */
   struct PTE
   {

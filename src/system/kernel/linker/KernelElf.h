@@ -33,12 +33,17 @@ typedef Elf32 ElfType;
 /** @addtogroup kernellinker
  * @{ */
 
-struct Module
+class Module
 {
+public:
+  Module() : elf(), name(0), entry(0), exit(0) {}
   ElfType elf;
   const char *name;
   void (*entry)();
   void (*exit)();
+protected:
+  Module(const Module &);
+  Module &operator = (const Module &);
 };
 
 class KernelElf : public ElfType

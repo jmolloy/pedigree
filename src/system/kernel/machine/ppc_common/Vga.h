@@ -22,14 +22,14 @@
 //include <machine/openfirmware/OpenFirmware.h>
 //include <machine/openfirmware/Device.h>
 
-/* We make an assumption about the device size. */
+// We make an assumption about the device size.
 #define MAX_WIDTH 1024
 #define MAX_HEIGHT 800
 
 #define FONT_WIDTH 8
 #define FONT_HEIGHT 16
 
-/* Routines for taking a 0-255 set of RGB values and converting them to a 8,16 or 32 bpp specific form. */
+// Routines for taking a 0-255 set of RGB values and converting them to a 8,16 or 32 bpp specific form.
 #ifdef BIG_ENDIAN
 #define RGB_8(r,g,b) ( ((r&0x3)<<6) | ((g&0x7)<<3) | (b&0x7) )
 #define RGB_16(r,g,b)  ( ((r&0x1f)<<11) | ((g&0x1f)<<6) | ((b&0x1f)<<1) )
@@ -129,6 +129,9 @@ class PPCVga : public Vga
   operator uint16_t*() const {return const_cast<uint16_t*> (m_pTextBuffer);}
   
 private:
+  PPCVga(const PPCVga &);
+  PPCVga &operator = (const PPCVga &);
+
   void putChar(char c, int x, int y, unsigned int f, unsigned int b);
   
   /** We use a 16-bit-per-character text mode buffer to simplify things. BootIO is a bit of a

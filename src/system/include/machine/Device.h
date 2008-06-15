@@ -54,7 +54,7 @@ public:
   
   Device();
   Device(Device *p);
-  ~Device();
+  virtual ~Device();
 
   /** Retrieves the root device */
   static Device &root()

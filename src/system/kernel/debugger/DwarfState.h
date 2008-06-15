@@ -273,6 +273,7 @@ class DwarfState
 //           ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
           return 0;
       }
+      return 0;
     }
     
     /**

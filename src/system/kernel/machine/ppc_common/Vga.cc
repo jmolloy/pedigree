@@ -86,7 +86,7 @@ void PPCVga::initialise()
   
   // Clear the text framebuffer.
   uint16_t clear = ' ';
-  for (int i = 0; i < (m_Width/FONT_WIDTH)*(m_Height/FONT_HEIGHT); i++)
+  for (unsigned int i = 0; i < (m_Width/FONT_WIDTH)*(m_Height/FONT_HEIGHT); i++)
   {
     m_pTextBuffer[i] = clear;
   }
@@ -94,7 +94,7 @@ void PPCVga::initialise()
   // Clear the graphics framebuffer.
   uint16_t *p16Fb = reinterpret_cast<uint16_t*> (m_pFramebuffer);
   uint32_t *p32Fb = reinterpret_cast<uint32_t*> (m_pFramebuffer);
-  for (int i = 0; i < m_Stride*m_Height; i++)
+  for (unsigned int i = 0; i < m_Stride*m_Height; i++)
   {
     switch (m_Depth)
     {
@@ -116,9 +116,9 @@ void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
   uint16_t *pBuffer16 = reinterpret_cast<uint16_t*> (pBuffer);
   // Refresh screen.
-  for(int i = 0; i < (m_Width/FONT_WIDTH); i++)
+  for(unsigned int i = 0; i < (m_Width/FONT_WIDTH); i++)
   {
-    for (int j = 0; j < (m_Height/FONT_HEIGHT); j++)
+    for (unsigned int j = 0; j < (m_Height/FONT_HEIGHT); j++)
     {
       int idx = j*(m_Width/FONT_WIDTH)+i;
       if ((pBuffer16 == m_pTextBuffer) || (pBuffer16[idx] != m_pTextBuffer[idx]))
@@ -141,7 +141,7 @@ void PPCVga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 
 void PPCVga::putChar(char c, int x, int y, unsigned int f, unsigned int b)
 {
-  int idx = ((int)c) * FONT_HEIGHT;
+  int idx = static_cast<int>(c) * FONT_HEIGHT;
   uint16_t *p16Fb = reinterpret_cast<uint16_t*> (m_pFramebuffer);
   uint32_t *p32Fb = reinterpret_cast<uint32_t*> (m_pFramebuffer);
   for (int i = 0; i < FONT_HEIGHT; i++)

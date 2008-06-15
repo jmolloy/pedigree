@@ -278,9 +278,6 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
   }
   else
   {
-#ifdef BIG_ENDIAN
-#warning Big endian people will have problems here.
-#endif
     // Assume hex integer.
     if (str.left(2) == "0x")
       str.stripFirst(2);

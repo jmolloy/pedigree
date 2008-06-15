@@ -26,20 +26,22 @@ int strncpy(char *dest, const char *src, int len)
     len--;
   }
   *dest = '\0';
+  return 0;
 }
 int memset(void *buf, int c, size_t len)
 {
-  unsigned char *tmp = (unsigned char *)buf;
+  unsigned char *tmp = reinterpret_cast<unsigned char *> (buf);
   while(len--)
   {
     *tmp++ = c;
   }
+  return 0;
 }
 
 void memcpy(void *dest, const void *src, size_t len)
 {
-  const unsigned char *sp = (const unsigned char *)src;
-  unsigned char *dp = (unsigned char *)dest;
+  const unsigned char *sp = reinterpret_cast<const unsigned char *> (src);
+  unsigned char *dp = reinterpret_cast<unsigned char *>(dest);
   for (; len != 0; len--) *dp++ = *sp++;
 }
 
@@ -91,7 +93,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
        (m_pHeader->ident[3] != 'F') ||
        (m_pHeader->ident[0] != 127) )
   {
-    m_pHeader = (Elf32Header_t*)0;
+    m_pHeader = 0;
     return false;
   }
   
@@ -170,7 +172,7 @@ bool Elf32::writeSections()
         prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
         physAddress += m_pSectionHeaders[i].size+0x1000;
         // Copy section data from the file.
-        memcpy((uint8_t*)m_pSectionHeaders[i].addr,
+        memcpy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &m_pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
       }
@@ -178,7 +180,7 @@ bool Elf32::writeSections()
       {
         prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
         physAddress += m_pSectionHeaders[i].size+0x1000;
-        memset((uint8_t*)m_pSectionHeaders[i].addr,
+        memset(reinterpret_cast<uint8_t*>(m_pSectionHeaders[i].addr),
                         0,
                         m_pSectionHeaders[i].size);
       }
@@ -195,16 +197,18 @@ bool Elf32::writeSections()
       asm volatile("sync;isync;");
     }
   } 
+  return true;
 }
 
 unsigned int Elf32::getLastAddress()
 {
+  return 0;
 }
 
 const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
-    return (const char*)2; // Just return null if we haven't got a symbol table.
+    return 0; // Just return null if we haven't got a symbol table.
   
   Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(&m_pBuffer[m_pSymbolTable->offset]);
   const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
@@ -234,20 +238,23 @@ const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
     }
     pSymbol ++;
   }
-  return (const char*)3;
+  return 0;
   
 }
 
 uint32_t Elf32::lookupDynamicSymbolAddress(uint32_t off)
 {
+  return 0;
 }
 
 char *Elf32::lookupDynamicSymbolName(uint32_t off)
 {
+  return 0;
 }
 
 uint32_t Elf32::getGlobalOffsetTable()
 {
+  return 0;
 }
 
 uint32_t Elf32::getEntryPoint()

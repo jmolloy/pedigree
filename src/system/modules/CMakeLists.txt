@@ -14,7 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES ata test2 test3)
+set(MODULES test2 test3)
+if(X86_COMMON)
+  set(MODULES ${MODULES} ata)
+endif(X86_COMMON)
 
 #########################################################################################
 

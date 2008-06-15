@@ -85,7 +85,7 @@ void PpcCommonPhysicalMemoryManager::initialise(Translations &translations, uint
   // are designed to contain areas of physical address space not covered by other
   // allocators (e.g. for PCI mapping), so we don't add anything below ramMax.
   m_PhysicalRanges.free(ramMax, 0x100000000ULL-ramMax);
-  for (int i = 0; i < translations.getNumTranslations(); i++)
+  for (unsigned int i = 0; i < translations.getNumTranslations(); i++)
   {
     Translations::Translation t = translations.getTranslation(i);
     // Normally we would check allocateSpecific for success, but it may fail as things like PCI address spaces

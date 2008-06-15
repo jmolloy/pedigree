@@ -100,6 +100,6 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
 
   //vga_init();
 
-  int a = main(&bs);
+  main(&bs);
   for(;;);
 }

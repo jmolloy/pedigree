@@ -35,7 +35,7 @@ Translations::Translations() :
   }
 
   m_nTranslations = mmu.getPropertyLength("translations") / sizeof(Translation);
-  for (int i = 0; i < m_nTranslations; i++)
+  for (unsigned int i = 0; i < m_nTranslations; i++)
   {
     NOTICE("T: " << Hex << m_pTranslations[i].virt << ", " << m_pTranslations[i].phys << ", " << m_pTranslations[i].size << ", " << m_pTranslations[i].mode);
   }
@@ -81,7 +81,7 @@ uint32_t Translations::findFreePhysicalMemory(uint32_t size, uint32_t align)
     // Is this address taken?
     bool taken = false;
 
-    for (int j = 0; j < m_nTranslations; j++)
+    for (unsigned int j = 0; j < m_nTranslations; j++)
     {
       // We're looking for the two regions to be disjoint.
       // Start address in our range?
@@ -115,7 +115,7 @@ void Translations::removeRange(uintptr_t start, uintptr_t end)
   while (removed)
   {
     removed = false;
-    for (int i = 0; i < m_nTranslations; i++)
+    for (unsigned int i = 0; i < m_nTranslations; i++)
     {
       if (m_pTranslations[i].virt >= start && m_pTranslations[i].virt < end)
       {

@@ -65,7 +65,8 @@ Keyboard *Mac::getKeyboard()
   return &m_Keyboard;
 }
 
-Mac::Mac()
+Mac::Mac() :
+  m_Decrementer(), m_Vga(), m_Keyboard()
 {
 }
 Mac::~Mac()
