@@ -50,6 +50,11 @@ Device Device::m_Root;
 
 BootIO bootIO;
 
+int foo (void*)
+{
+  for(;;);
+}
+
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -167,24 +172,24 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
    //   stackBase = PhysicalMemoryManager::instance().allocatePage();
    //   VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0100000+(i*0x1000)), 0);
    // }
-   Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
+//    Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
 //Thread *pThread;
   // Fork a new process.
-  Process *pProcess = new Process(Scheduler::instance().getProcess(0));
- Processor::switchAddressSpace(*pProcess->getAddressSpace());
+//   Process *pProcess = new Process(Scheduler::instance().getProcess(0));
+//  Processor::switchAddressSpace(*pProcess->getAddressSpace());
   // Add a thread to it.
-  for (i = 0; i < 15; i++)
-  {
-    stackBase = PhysicalMemoryManager::instance().allocatePage();
-    Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), VirtualAddressSpace::Write);
-  }
+//   for (i = 0; i < 15; i++)
+//   {
+//     stackBase = PhysicalMemoryManager::instance().allocatePage();
+//     Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), VirtualAddressSpace::Write);
+//   }
 
  // Create a 'function'.
- stackBase = PhysicalMemoryManager::instance().allocatePage();
- Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0x70000000), VirtualAddressSpace::Write);
- uint8_t *func = reinterpret_cast<uint8_t*> (0x70000000);
- func[0] = 0xEB;
- func[1] = 0xFE;
+//  stackBase = PhysicalMemoryManager::instance().allocatePage();
+//  Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0x70000000), VirtualAddressSpace::Write);
+//  uint8_t *func = reinterpret_cast<uint8_t*> (0x70000000);
+//  func[0] = 0xEB;
+//  func[1] = 0xFE;
 
 //  pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
 //  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());

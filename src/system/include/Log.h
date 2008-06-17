@@ -117,6 +117,7 @@ public:
   /** Adds an entry to the log.
    *\param[in] str the null-terminated ASCII string that should be added */
   Log &operator<< (const char *str);
+  Log &operator<< (String str);
   /** Adds an entry to the log
    *\param[in] str the null-terminated ASCII string that should be added */
   inline Log &operator<< (char *str)

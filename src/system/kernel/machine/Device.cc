@@ -41,9 +41,9 @@ Device::~Device()
   }
 }
 
-void Device::getName(NormalStaticString &str)
+void Device::getName(String &str)
 {
-  str += "Root";
+  str = "Root";
 }
 
 /** Adds a device as a child of this device. */
@@ -79,5 +79,21 @@ void Device::removeChild(Device *d)
       it != m_Children.end();
       it++, i++)
   if (*it == d)
-  m_Children.erase(it);
+  {
+    m_Children.erase(it);
+    break;
+  }
+}
+
+void Device::replaceChild(Device *src, Device *dest)
+{
+  int i = 0;
+  for(Vector<Device*>::Iterator it = m_Children.begin();
+      it != m_Children.end();
+      it++, i++)
+    if (*it == src)
+  {
+    *it = dest;
+    break;
+  }
 }

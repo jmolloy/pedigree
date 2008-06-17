@@ -110,7 +110,7 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
   {
     uintptr_t symStart = 0;
 
-    const char *pSym = KernelElf::instance().lookupSymbol(m_pReturnAddresses[i], &symStart);
+    const char *pSym = KernelElf::instance().globalLookupSymbol(m_pReturnAddresses[i], &symStart);
     LargeStaticString sym(pSym);
     StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
     sf.prettyPrint(buf);

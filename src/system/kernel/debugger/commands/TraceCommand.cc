@@ -92,7 +92,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   // find the first instruction for the function that we're in right now
   uintptr_t nIp = state.getInstructionPointer();
   uintptr_t nSymStart = 0;
-  KernelElf::instance().lookupSymbol(nIp, &nSymStart);
+  KernelElf::instance().globalLookupSymbol(nIp, &nSymStart);
 
   static Disassembler disassembler;
 #ifdef BITS_64
@@ -211,7 +211,7 @@ TraceCommand::Disassembly::Disassembly(InterruptState &state)
   // Try and count how many lines of instructions we have.
   m_nIp = state.getInstructionPointer();
   uintptr_t nSymStart = 0;
-  KernelElf::instance().lookupSymbol(m_nIp, &nSymStart);
+  KernelElf::instance().globalLookupSymbol(m_nIp, &nSymStart);
   
   Disassembler disassembler;
 #ifdef BITS_64
@@ -228,7 +228,7 @@ TraceCommand::Disassembly::Disassembly(InterruptState &state)
     text.clear();
     disassembler.disassemble(text);
     uintptr_t nSym;
-    KernelElf::instance().lookupSymbol(nLocation, &nSym);
+    KernelElf::instance().globalLookupSymbol(nLocation, &nSym);
     if (nSym == nLocation && nSym != nSymStart) // New symbol. Quit.
       break;
     m_nInstructions++;
@@ -243,7 +243,7 @@ const char *TraceCommand::Disassembly::getLine1(size_t index, DebuggerIO::Colour
     // We treat index == 0 slightly differently - it's the symbol name.
     colour = DebuggerIO::Yellow;
     uintptr_t nSym;
-    const char *pSym = KernelElf::instance().lookupSymbol(m_nFirstInstruction, &nSym);
+    const char *pSym = KernelElf::instance().globalLookupSymbol(m_nFirstInstruction, &nSym);
     sym.clear();
     demangle_full(LargeStaticString(pSym), sym);
     sym += ":";

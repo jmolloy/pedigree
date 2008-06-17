@@ -67,6 +67,7 @@ class KernelElf : public ElfType
     /** Looks up the address of the symbol with name 'pName' globally, that is throughout
      *  all modules and the kernel itself. */
     uintptr_t globalLookupSymbol(const char *pName);
+    const char *globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
     
   private:
     /** Default constructor does nothing */

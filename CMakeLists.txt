@@ -198,7 +198,13 @@ add_subdirectory(src/system/kernel)
 add_dependencies(kernel version.cc check_compiler)
 
 # Recurse into the Modules directory.
-add_subdirectory(src/system/modules)
+#add_subdirectory(src/system/modules)
+add_subdirectory(src/drivers)
+
+# Add an initrd target.
+add_custom_target(initrd ALL tar --absolute-names --transform='s,/.*/,,' -cf initrd.tar ${DRIVER_OBJS}
+                  DEPENDS ${DRIVER_NAMES}
+                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
 add_dependencies(initrd kernel)
 

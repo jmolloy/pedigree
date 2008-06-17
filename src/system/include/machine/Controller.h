@@ -40,14 +40,14 @@ public:
     return Device::Controller;
   }
 
-  virtual void getName(NormalStaticString &str)
+  virtual void getName(String &str)
   {
-    str += "Generic controller";
+    str = "Generic controller";
   }
 
-  virtual void dump(LargeStaticString &str)
+  virtual void dump(String &str)
   {
-    str += "Generic controller";
+    str = "Generic controller";
   }
 };
 

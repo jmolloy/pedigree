@@ -144,7 +144,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 
   /// \todo assign memory, and a decent address.
   uintptr_t loadbase = 0x5000000;
-  for(int i = 0; i < 0x2000; i += 0x1000)
+  for(int i = 0; i < 0x20000; i += 0x1000)
   {
     bool b = VirtualAddressSpace::getKernelAddressSpace().map(PhysicalMemoryManager::instance().allocatePage(),
                                                      reinterpret_cast<void*> (loadbase+i),
@@ -208,6 +208,26 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
     if ((ret = (*it)->elf.lookupSymbol(pName)))
       return ret;
   }
-//  WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
+  //WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
+  return 0;
+}
+
+const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
+{
+  /// \todo This shouldn't match local or weak symbols.
+  // Try a lookup in the kernel.
+  const char *ret;
+  
+  if ((ret = lookupSymbol(addr, startAddr)))
+    return ret;
+
+  // OK, try every module.
+  for (Vector<Module*>::Iterator it = m_Modules.begin();
+       it != m_Modules.end();
+       it++)
+  {
+    if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
+      return ret;
+  }
   return 0;
 }

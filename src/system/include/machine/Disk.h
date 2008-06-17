@@ -40,14 +40,14 @@ public:
     return Device::Disk;
   }
 
-  virtual void getName(NormalStaticString &str)
+  virtual void getName(String &str)
   {
-    str += "Generic disk";
+    str = "Generic disk";
   }
 
-  virtual void dump(LargeStaticString &str)
+  virtual void dump(String &str)
   {
-    str += "Generic disk";
+    str = "Generic disk";
   }
 
   /** Read nBytes from location on disk and store in 'buffer'.

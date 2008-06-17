@@ -42,6 +42,12 @@ Log &Log::operator<< (const char *str)
   return *this;
 }
 
+Log &Log::operator<< (String str)
+{
+  m_Buffer.str.append(str);
+  return *this;
+}
+
 Log &Log::operator<< (bool b)
 {
   if (b)

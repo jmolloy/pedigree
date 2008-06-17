@@ -16,7 +16,6 @@
 #ifndef MACHINE_DEVICE_H
 #define MACHINE_DEVICE_H
 
-#include <utilities/StaticString.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <processor/types.h>
@@ -74,7 +73,7 @@ public:
   }
 
   /** Stores the device's name in str. */
-  virtual void getName(NormalStaticString &str);
+  virtual void getName(String &str);
   
   /** Returns the (abstract) type of the device. */
   virtual Type getType()
@@ -83,7 +82,7 @@ public:
   }
   
   /** Dumps a textual representation of the device into the given string. */
-  virtual void dump(LargeStaticString &str)
+  virtual void dump(String &str)
   {
   }
 
@@ -98,6 +97,7 @@ public:
   size_t getNumChildren();
   void removeChild(size_t n);
   void removeChild(Device *d);
+  void replaceChild(Device *src, Device *dest);
 
 private:
   Device(const Device&);

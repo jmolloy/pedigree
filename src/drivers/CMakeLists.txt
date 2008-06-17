@@ -14,26 +14,33 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES)
+set(DRIVERS)
 if(X86_COMMON)
-  set(MODULES ${MODULES} ata)
+  set(X86DRIVERS ata)
 endif(X86_COMMON)
 
 #########################################################################################
 
 # Descend into each module's subdirectory first.
-foreach(var ${MODULES})
+foreach(var ${DRIVERS})
   add_subdirectory(${var})
-endforeach(var ${MODULES})
+endforeach(var ${DRIVERS})
+foreach(var ${X86DRIVERS})
+  add_subdirectory("x86/${var}")
+endforeach(var ${X86DRIVERS})
 
 # Pull all the modules together in a tarfile.
 set(OBJS)
-set(MODULE_NAMES)
-foreach(var ${MODULES})
+set(DRIVER_NAMES)
+foreach(var ${DRIVERS})
   set(OBJS ${OBJS} "${var}/${var}.o")
-  set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
-endforeach(var ${MODULES})
+  set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
+endforeach(var ${DRIVERS})
 
-add_custom_target(initrd ALL tar -cf initrd.tar ${OBJS}
-                  DEPENDS ${MODULE_NAMES}
-                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR}/src/system/modules)
+foreach(var ${X86DRIVERS})
+  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/drivers/x86/${var}/${var}.o")
+  set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
+endforeach(var ${X86DRIVERS})
+
+set(DRIVER_OBJS ${OBJS} PARENT_SCOPE)
+set(DRIVER_NAMES ${DRIVER_NAMES} PARENT_SCOPE)
