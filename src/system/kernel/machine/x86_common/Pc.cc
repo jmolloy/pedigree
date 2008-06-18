@@ -147,7 +147,7 @@ void Pc::initialiseDeviceTree()
   // ATA controllers.
   Controller *pAtaMaster = new Controller();
   pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8));
-  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F6, 8));
+  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8));
   pIsa->addChild(pAtaMaster);
   pAtaMaster->setParent(pIsa);
 

@@ -21,8 +21,9 @@
 #include "AtaController.h"
 
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
-  Disk(pDev), m_IsMaster(isMaster)
+  Disk(), m_IsMaster(isMaster)
 {
+  m_pParent = pDev;
 }
 
 AtaDisk::~AtaDisk()
@@ -32,8 +33,8 @@ AtaDisk::~AtaDisk()
 bool AtaDisk::initialise()
 {
   // Grab our parent.
-  AtaController *pParent = reinterpret_cast<AtaController*> (m_pParent);
-
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
+  
   // Grab our parent's IoPorts for command and control accesses.
 #ifndef X86_COMMON
 #error Look here for problems.
@@ -41,10 +42,13 @@ bool AtaDisk::initialise()
   IoPort &commandRegs = pParent->m_CommandRegs;
   IoPort &controlRegs = pParent->m_ControlRegs;
 
+  // Drive spin-up
+  commandRegs.write8(0x00, 6);
+  
   //
   // Start IDENTIFY command.
   //
-
+  
   // Send drive select.
   commandRegs.write8( (m_IsMaster)?0xA0:0xB0, 6 );
   // Read the status 5 times as a delay for the drive to go about its business.
@@ -60,16 +64,15 @@ bool AtaDisk::initialise()
   if (status == 0)
     // Device does not exist.
     return false;
-  NOTICE("Status: " << Hex <<status);
-  return false;
+
   // Poll until BSY is clear and either ERR or DRQ are set
   while ( ((status&0x80) != 0))// || ((status&0x9) == 0) )
     status = commandRegs.read8(7);
-  return false;
+
   // If ERR was set we had an err0r.
   if (status & 0x1)
   {
-    ERROR("ATA drive errored on IDENTIFY!");
+    WARNING("ATA drive errored on IDENTIFY! Possible ATAPI device?");
     return false;
   }
 
@@ -86,7 +89,7 @@ bool AtaDisk::initialise()
     m_pName[i*2+1] = m_pIdent[0x1B+i] & 0xFF;
   }
   // The device name is padded by spaces. Backtrack through converting spaces into NULL bytes.
-  for (int i = 40; i > 0; i--)
+  for (int i = 39; i > 0; i--)
   {
     if (m_pName[i] != ' ')
       break;
@@ -102,7 +105,7 @@ bool AtaDisk::initialise()
     m_pSerialNumber[i*2+1] = m_pIdent[0x0A+i] & 0xFF;
   }
   // The serial number is padded by spaces. Backtrack through converting spaces into NULL bytes.
-  for (int i = 20; i > 0; i--)
+  for (int i = 19; i > 0; i--)
   {
     if (m_pSerialNumber[i] != ' ')
       break;
@@ -117,7 +120,7 @@ bool AtaDisk::initialise()
     m_pFirmwareRevision[i*2+1] = m_pIdent[0x17+i] & 0xFF;
   }
   // The device name is padded by spaces. Backtrack through converting spaces into NULL bytes.
-  for (int i = 8; i > 0; i--)
+  for (int i = 7; i > 0; i--)
   {
     if (m_pFirmwareRevision[i] != ' ')
       break;
@@ -125,5 +128,5 @@ bool AtaDisk::initialise()
   }
   m_pFirmwareRevision[8] = '\0';
 
-  NOTICE("Detected device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
+  NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
 }

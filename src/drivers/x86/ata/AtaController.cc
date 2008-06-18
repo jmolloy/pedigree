@@ -26,13 +26,12 @@ AtaController::AtaController(Controller *pDev) :
     /// \todo String operator== problem here.
     if (!strcmp(m_Addresses[i]->m_Name, "command"))
     {
-      NOTICE("Command: " << m_Addresses[i]->m_Address);
       m_CommandRegs.allocate(m_Addresses[i]->m_Address, m_Addresses[i]->m_Size);
     }
     if (!strcmp(m_Addresses[i]->m_Name, "control"))
       m_ControlRegs.allocate(m_Addresses[i]->m_Address, m_Addresses[i]->m_Size);
   }
-  NOTICE("AtaController(), " << Hex << (uint32_t)pDev << ", this " << (uint32_t)this);
+
   // Create two disks - master and slave.
   AtaDisk *pMaster = new AtaDisk(this, true);
   AtaDisk *pSlave = new AtaDisk(this, false);
@@ -51,7 +50,6 @@ AtaController::AtaController(Controller *pDev) :
     addChild(pSlave);
   else
     delete pSlave;
-
 }
 
 AtaController::~AtaController()
