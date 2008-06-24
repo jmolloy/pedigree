@@ -44,7 +44,8 @@ public:
                        uintptr_t p6=0, uintptr_t p7=0, uintptr_t p8=0);
 
 protected:
-  /** Callback */
+  /** Callback - classes are expected to inherit and override this function. It's called when a 
+      request needs to be executed (by the worker thread). */
   virtual int executeRequest(uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5,
                              uintptr_t p6, uintptr_t p7, uintptr_t p8) = 0;
 private:
