@@ -30,7 +30,7 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 }
 
 Arm926EVirtualAddressSpace::Arm926EVirtualAddressSpace() :
-  VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP))
+  VirtualAddressSpace(reinterpret_cast<void*> (0))
 {
 }
 
