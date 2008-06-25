@@ -15,6 +15,7 @@
  */
 
 #include "Disassembler.h"
+#include <Log.h>
 
 const char *g_pRegisters[32] = {
   "r0",

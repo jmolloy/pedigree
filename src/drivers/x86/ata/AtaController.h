@@ -21,11 +21,16 @@
 #include <machine/Disk.h>
 #include <machine/Controller.h>
 #include <processor/IoPort.h>
+#include <utilities/RequestQueue.h>
+#include <machine/IrqHandler.h>
 #include "AtaDisk.h"
+
+#define ATA_CMD_READ  0
+#define ATA_CMD_WRITE 1
 
 /** The controller for up to two AtaDisks. This uses a background thread
  * and a request queue. */
-class AtaController : public Controller
+class AtaController : public Controller, public RequestQueue, public IrqHandler
 {
 public:
   AtaController(Controller *pDev);
@@ -36,9 +41,12 @@ public:
     str = "ata";
   }
 
-#ifndef X86_COMMON
-#error No port IO. Must use mmapped IO.
-#endif
+  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
+
+  // IRQ handler callback.
+  virtual bool irq(irq_id_t number, InterruptState &state);
+
   IoPort m_CommandRegs;
   IoPort m_ControlRegs;
 };

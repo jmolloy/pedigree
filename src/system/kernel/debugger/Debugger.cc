@@ -115,7 +115,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
   int nInterfaces = 2;
 #endif
-
+  
   // IO interface.
   DebuggerIO *pIo = 0;
   int nChosenInterface = -1;

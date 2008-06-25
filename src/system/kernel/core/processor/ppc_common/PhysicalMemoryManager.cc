@@ -49,7 +49,90 @@ bool PpcCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                      size_t Flags,
                                                      physical_uintptr_t start)
 {
-  // TODO
+  // Allocate a specific physical memory region (always physically continuous)
+  if (start != static_cast<physical_uintptr_t>(-1))
+  {
+    if ((pageConstraints & continuous) != continuous)
+      panic("PhysicalMemoryManager::allocateRegion(): function misused");
+
+    // Remove the memory from the range-lists (if desired/possible)
+    if ((pageConstraints & nonRamMemory) == nonRamMemory)
+    {
+      if (m_PhysicalRanges.allocateSpecific(start, cPages * getPageSize()) == false)
+        if ((pageConstraints & force) != force)
+          return false;
+    }
+
+    // Allocate the virtual address space
+    uintptr_t vAddress;
+    if (m_MemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
+                                 vAddress)
+         == false)
+    {
+      WARNING("AllocateRegion: MemoryRegion allocation failed.");
+      return false;
+    }
+
+    // Map the physical memory into the allocated space
+    VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+    for (size_t i = 0;i < cPages;i++)
+      if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
+                                  reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                  Flags)
+          == false)
+      {
+        m_MemoryRegions.free(vAddress, cPages * PhysicalMemoryManager::getPageSize());
+        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+        return false;
+      }
+
+    // Set the memory-region's members
+    Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
+    Region.m_PhysicalAddress = start;
+    Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
+
+    // Add to the list of memory-regions
+    PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
+    return true;
+  }
+  else
+  {
+    // Allocate the virtual address space
+    uintptr_t vAddress;
+    if (m_MemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
+                                 vAddress)
+         == false)
+    {
+      WARNING("AllocateRegion: MemoryRegion allocation failed.");
+      return false;
+    }
+
+    uint32_t start = 0;
+    VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+    // Map the physical memory into the allocated space
+    for (size_t i = 0;i < cPages;i++)
+    {
+      physical_uintptr_t page = m_PageStack.allocate();
+
+      if (virtualAddressSpace.map(page,
+                                  reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                  Flags)
+          == false)
+      {
+        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+        return false;
+      }
+    }
+
+    // Set the memory-region's members
+    Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
+    Region.m_PhysicalAddress = start;
+    Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
+
+    // Add to the list of memory-regions
+    PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
+    return true;
+  }
   return false;
 }
 

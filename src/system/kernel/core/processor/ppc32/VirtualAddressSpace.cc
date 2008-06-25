@@ -262,8 +262,8 @@ void PPC32VirtualAddressSpace::unmap(void *virtualAddress)
 
 void *PPC32VirtualAddressSpace::allocateStack()
 {
-  // TODO
-  return 0;
+  uint8_t *pStackTop = new uint8_t[0x4000];
+  return pStackTop+0x4000-4;
 }
 void PPC32VirtualAddressSpace::freeStack(void *pStack)
 {

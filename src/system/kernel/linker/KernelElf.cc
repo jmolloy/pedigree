@@ -131,6 +131,7 @@ KernelElf::~KernelElf()
 {
 }
 
+uintptr_t loadbase = 0x5000000;
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   Module *module = new Module;
@@ -143,7 +144,6 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   }
 
   /// \todo assign memory, and a decent address.
-  uintptr_t loadbase = 0x5000000;
   for(int i = 0; i < 0x20000; i += 0x1000)
   {
     bool b = VirtualAddressSpace::getKernelAddressSpace().map(PhysicalMemoryManager::instance().allocatePage(),
@@ -184,11 +184,12 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
       iterator++;
     }
   }
-
+  loadbase += 0x100000;
   NOTICE("Name: " << module->name);
   NOTICE("Entry: " << Hex << reinterpret_cast<uintptr_t> (module->entry));
   NOTICE("Exit: " << Hex << reinterpret_cast<uintptr_t>(module->exit));
   m_Modules.pushBack(module);
+
   return module;
 }
 
@@ -229,5 +230,6 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
       return ret;
   }
+  WARNING("GlobalLookupSymbol failed: " << Hex << addr);
   return 0;
 }

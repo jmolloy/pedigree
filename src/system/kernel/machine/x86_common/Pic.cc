@@ -110,9 +110,11 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
     if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
     {
       NOTICE("PIC: spurious IRQ7");
+      eoi(irq);
       return;
     }
   }
+  /// \todo Logic faulty here, reporting spurious interrupts for disk accesses!
   // Is spurious IRQ15?
   else if (irq == 15)
   {
@@ -120,6 +122,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
     if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
     {
       NOTICE("PIC: spurious IRQ15");
+      eoi(irq);
       return;
     }
   }

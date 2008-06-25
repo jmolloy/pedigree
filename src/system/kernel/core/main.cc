@@ -50,17 +50,36 @@ Device Device::m_Root;
 
 BootIO bootIO;
 
-int foo (void*)
-{
-  for(;;);
-}
-
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
 {
   NOTICE("apMain()");
   Processor::halt();
+}
+
+int foo(void *p)
+{
+  HugeStaticString str;
+  for (;;)
+  {
+    for(int i = 0; i < 10000000; i++) ;
+    str.clear();
+    str += "b";
+    bootIO.write(str, BootIO::White, BootIO::Green);
+  }
+}
+
+int bar(void *p)
+{
+  HugeStaticString str;
+  for (;;)
+  {
+    for(int i = 0; i < 10000000; i++) ;
+    str.clear();
+    str += "c";
+    bootIO.write(str, BootIO::White, BootIO::Red);
+  }
 }
 
 /// Kernel entry point.
@@ -91,12 +110,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-#ifdef PPC_COMMON
-  
-  //foo((void*)0xdeadbeef);
-  
-#endif
-
 #if defined(ARM_COMMON) && defined(DEBUGGER)
    InterruptState st;
    LargeStaticString str2("I r cool");
@@ -111,9 +124,44 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Machine::instance().initialiseDeviceTree();
 #endif
 
+#ifdef THREADS
+  initialiseMultitasking();
+  // Gets me a stacks.
+  int i;
+   // for (i = 0; i < 10; i++)
+   // {
+   //   stackBase = PhysicalMemoryManager::instance().allocatePage();
+   //   VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0100000+(i*0x1000)), 0);
+   // }
+    Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
+    pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, 0);
+//Thread *pThread;
+  // Fork a new process.
+//   Process *pProcess = new Process(Scheduler::instance().getProcess(0));
+//  Processor::switchAddressSpace(*pProcess->getAddressSpace());
+  // Add a thread to it.
+//   for (i = 0; i < 15; i++)
+//   {
+//     stackBase = PhysicalMemoryManager::instance().allocatePage();
+//     Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), VirtualAddressSpace::Write);
+//   }
+
+ // Create a 'function'.
+//  stackBase = PhysicalMemoryManager::instance().allocatePage();
+//  Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0x70000000), VirtualAddressSpace::Write);
+//  uint8_t *func = reinterpret_cast<uint8_t*> (0x70000000);
+//  func[0] = 0xEB;
+//  func[1] = 0xFE;
+
+//  pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
+//  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+// VirtualAddressSpace::setCurrentAddressSpace(0);
+  Processor::setInterrupts(true);
+#endif
+
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
-#ifdef X86_COMMON
+#if defined(X86_COMMON) || defined(PPC_COMMON)
   Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
   size_t nFiles = initrd.getNumFiles();
@@ -125,7 +173,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     Module *m = KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
     m->entry();
-    break; // Don't do test3.o yet
   }
 
 #endif
@@ -162,40 +209,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   
 
   physical_uintptr_t stackBase;
-
-#ifdef THREADS
-  initialiseMultitasking();
-  // Gets me a stacks.
-  int i;
-   // for (i = 0; i < 10; i++)
-   // {
-   //   stackBase = PhysicalMemoryManager::instance().allocatePage();
-   //   VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0100000+(i*0x1000)), 0);
-   // }
-//    Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
-//Thread *pThread;
-  // Fork a new process.
-//   Process *pProcess = new Process(Scheduler::instance().getProcess(0));
-//  Processor::switchAddressSpace(*pProcess->getAddressSpace());
-  // Add a thread to it.
-//   for (i = 0; i < 15; i++)
-//   {
-//     stackBase = PhysicalMemoryManager::instance().allocatePage();
-//     Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0xB0000000+(i*0x1000)), VirtualAddressSpace::Write);
-//   }
-
- // Create a 'function'.
-//  stackBase = PhysicalMemoryManager::instance().allocatePage();
-//  Processor::information().getVirtualAddressSpace().map(stackBase, (void*)(0x70000000), VirtualAddressSpace::Write);
-//  uint8_t *func = reinterpret_cast<uint8_t*> (0x70000000);
-//  func[0] = 0xEB;
-//  func[1] = 0xFE;
-
-//  pThread = new Thread(pProcess, reinterpret_cast<int (*)(void*)> (func), (void*)0x136, reinterpret_cast<uintptr_t*> ((0xB0000FF0 + (i-1)*0x1000)));
-//  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
-// VirtualAddressSpace::setCurrentAddressSpace(0);
-  
-#endif
 
 #ifdef DEBUGGER_RUN_AT_START
   Processor::breakpoint();

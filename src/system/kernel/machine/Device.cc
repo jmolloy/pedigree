@@ -16,10 +16,10 @@
 
 #include <machine/Device.h>
 
-Device::Device() : m_Addresses(), m_Children(), m_pParent(0)
+Device::Device() : m_Addresses(), m_Children(), m_pParent(0), m_InterruptNumber(0)
 {
 }
-Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0)
+Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_InterruptNumber(p->m_InterruptNumber)
 {
   m_pParent = p->m_pParent;
   for (unsigned int i = 0; i < p->m_Children.count(); i++)

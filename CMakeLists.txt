@@ -211,6 +211,10 @@ add_dependencies(initrd kernel)
 # Then the bootloader.
 add_subdirectory(src/system/boot)
 
+if (PPC_COMMON)
+  add_dependencies(autogen_initrd.h initrd)
+endif (PPC_COMMON)
+
 # Create a target used for creating the image files.
 add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
                   DEPENDS kernel ${BOOTLOADER_BUILT}

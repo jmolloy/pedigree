@@ -183,7 +183,7 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     // count it!
     uint32_t size = pSymbol->size;
     if (size == 0)
-      size = 1;
+      size = 0x100;
     if ( (addr >= pSymbol->value) &&
          (addr < (pSymbol->value + size)) )
     {

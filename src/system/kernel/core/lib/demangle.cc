@@ -17,6 +17,7 @@
 #include <utilities/utility.h>
 #include <utilities/demangle.h>
 #include <utilities/StaticString.h>
+#include <Log.h>
 
 // Uncomment these if running standalone.
 //include <stdio.h>
@@ -135,8 +136,9 @@ static int parseMangledName(LargeStaticString &src, LargeStaticString &dest, dem
   data.nParams = 0;
   do
   {
-    if (parseType(src, data.params[data.nParams++], data) == FAIL)
+    if (parseType(src, data.params[data.nParams], data) == FAIL)
       END_FAIL("MangledName");
+    data.nParams++;
   } while (src.length() > 0);
   END_SUCCESS("MangledName");
 }
@@ -717,7 +719,7 @@ static int parseType(LargeStaticString &src, LargeStaticString &dest, demangle_t
     
     src = origsrc;
     dest = origdest;
-    
+
     LargeStaticString tmp;
     if (parseName(src, tmp, data) == SUCCESS)
     {
@@ -1326,6 +1328,8 @@ void demangle_full(LargeStaticString src, LargeStaticString &dest)
   data.nLevel = 0;
   data.nSubstitutions = 0;
   data.nNameParseLevel = 0;
+  data.nParams = 0;
+
   int code = parseMangledName(src, dest, data);
   // HACK:: Bit of a hack here - we prepend "::" to every identifier. It looks a bit ugly.
   if (dest[0] == ':' && dest[1] == ':')
@@ -1338,7 +1342,7 @@ void demangle_full(LargeStaticString src, LargeStaticString &dest)
   }
   
   dest += "(";
-  for (size_t i = 0; i < data.nParams; i++)
+  for (size_t i = 0; i < data.nParams ; i++)
   {
     if (i > 0)
       dest += ", ";

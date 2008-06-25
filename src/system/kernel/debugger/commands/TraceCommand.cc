@@ -26,20 +26,6 @@
 #include <processor/Disassembler.h>
 #include <KernelElf.h>
 
-/* TODO: Unused local function
-static void addToBuffer(uintptr_t n, uintptr_t *pBuffer, unsigned int &nInstr, unsigned int nLinesToCache)
-{
-  if (nInstr == nLinesToCache)
-  {
-    for (unsigned int i = 1; i < nLinesToCache; i++)
-      pBuffer[i-1] = pBuffer[i];
-    pBuffer[nLinesToCache-1] = n;
-  }
-  else
-    pBuffer[nInstr++] = n;
-}
-*/
-
 TraceCommand::TraceCommand()
   : DebuggerCommand(),
     m_nExec(-1),

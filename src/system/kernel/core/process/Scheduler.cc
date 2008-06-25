@@ -112,8 +112,10 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
   m_Mutex.release();
 
+#ifdef X86_COMMON
   /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+#endif
 
   Processor::contextSwitch(pThread->getInterruptState());
 

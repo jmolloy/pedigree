@@ -52,7 +52,7 @@ if ($compiler =~ m/arm-elf/) {
 }
 
 # PPC?
-if ($compile =~ m/ppc/) {
+if ($compiler =~ m/ppc/) {
   `cp src/system/boot/ppc/bootloader ./bootloader`;
   unless (-f "hdd_ppc_16h_63spt_100c.img") {
     `cp ../images/hdd_ppc_16h_63spt_100c.img .`;

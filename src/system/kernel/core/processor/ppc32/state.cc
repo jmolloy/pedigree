@@ -15,8 +15,10 @@
  */
 
 #include <processor/state.h>
+#include <processor/Processor.h>
+#include <Log.h>
 
-const char *PPC32InterruptStateRegisterName[39] =
+const char *PPC32InterruptStateRegisterName[40] =
 {
   "r0",
   "r1",
@@ -56,11 +58,12 @@ const char *PPC32InterruptStateRegisterName[39] =
   "srr0",
   "srr1",
   "dsisr",
-  "dar"
+  "dar",
+  "xer"
 };
 
 PPC32InterruptState::PPC32InterruptState() :
-  m_IntNumber(0), m_Ctr(0), m_Lr(0), m_Cr(0), m_Srr0(0), m_Srr1(0),
+  m_IntNumber(0), m_Xer(0), m_Ctr(0), m_Lr(0), m_Cr(0), m_Srr0(0), m_Srr1(0),
   m_Dsisr(0), m_Dar(0),
   m_R0(0), m_R1(0), m_R2(0), m_R3(0), m_R4(0), m_R5(0),
   m_R6(0), m_R7(0), m_R8(0), m_R9(0), m_R10(0), m_R11(0),
@@ -72,7 +75,7 @@ PPC32InterruptState::PPC32InterruptState() :
 }
 
 PPC32InterruptState::PPC32InterruptState(const PPC32InterruptState &is) :
-  m_IntNumber(is.m_IntNumber), m_Ctr(is.m_Ctr), m_Lr(is.m_Lr), m_Cr(is.m_Cr), m_Srr0(is.m_Srr0), m_Srr1(is.m_Srr1),
+  m_IntNumber(is.m_IntNumber), m_Xer(is.m_Xer), m_Ctr(is.m_Ctr), m_Lr(is.m_Lr), m_Cr(is.m_Cr), m_Srr0(is.m_Srr0), m_Srr1(is.m_Srr1),
   m_Dsisr(is.m_Dsisr), m_Dar(is.m_Dar),
   m_R0(is.m_R0), m_R1(is.m_R1), m_R2(is.m_R2), m_R3(is.m_R3), m_R4(is.m_R4), m_R5(is.m_R5),
   m_R6(is.m_R6), m_R7(is.m_R7), m_R8(is.m_R8), m_R9(is.m_R9), m_R10(is.m_R10), m_R11(is.m_R11),
@@ -85,7 +88,7 @@ PPC32InterruptState::PPC32InterruptState(const PPC32InterruptState &is) :
 
 PPC32InterruptState & PPC32InterruptState::operator=(const PPC32InterruptState &is)
 {
-  m_IntNumber = is.m_IntNumber; m_Ctr = is.m_Ctr; m_Lr = is.m_Lr; m_Cr = is.m_Cr; m_Srr0 = is.m_Srr0; m_Srr1 = is.m_Srr1;
+  m_IntNumber = is.m_IntNumber; m_Xer = is.m_Xer; m_Ctr = is.m_Ctr; m_Lr = is.m_Lr; m_Cr = is.m_Cr; m_Srr0 = is.m_Srr0; m_Srr1 = is.m_Srr1;
   m_Dsisr = is.m_Dsisr; m_Dar = is.m_Dar;
   m_R0 = is.m_R0; m_R1 = is.m_R1; m_R2 = is.m_R2; m_R3 = is.m_R3; m_R4 = is.m_R4; m_R5 = is.m_R5;
   m_R6 = is.m_R6; m_R7 = is.m_R7; m_R8 = is.m_R8; m_R9 = is.m_R9; m_R10 = is.m_R10; m_R11 = is.m_R11;
@@ -98,7 +101,7 @@ PPC32InterruptState & PPC32InterruptState::operator=(const PPC32InterruptState &
 
 size_t PPC32InterruptState::getRegisterCount() const
 {
-  return 39;
+  return 40;
 }
 processor_register_t PPC32InterruptState::getRegister(size_t index) const
 {
@@ -143,10 +146,64 @@ processor_register_t PPC32InterruptState::getRegister(size_t index) const
     case 36: return m_Srr1;
     case 37: return m_Dsisr;
     case 38: return m_Dar;
+    case 39: return m_Xer;
     default: return 0;
   }
 }
 const char *PPC32InterruptState::getRegisterName(size_t index) const
 {
   return PPC32InterruptStateRegisterName[index];
+}
+
+PPC32InterruptState *PPC32InterruptState::construct(PPC32ProcessorState &state, bool userMode)
+{
+  // Obtain the stack pointer.
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+
+  uint32_t msr = MSR_IR | MSR_DR | MSR_EE;
+  if (userMode) msr |= MSR_PR;
+
+  *pStack-- = 0xdeadbeef; //state.m_R31;
+  *pStack-- = state.m_R30;
+  *pStack-- = state.m_R29;
+  *pStack-- = state.m_R28;
+  *pStack-- = state.m_R27;
+  *pStack-- = state.m_R26;
+  *pStack-- = state.m_R25;
+  *pStack-- = state.m_R24;
+  *pStack-- = state.m_R23;
+  *pStack-- = state.m_R22;
+  *pStack-- = state.m_R21;
+  *pStack-- = 0xdeadbeef/*state.m_R20*/;
+  *pStack-- = state.m_R19;
+  *pStack-- = state.m_R18;
+  *pStack-- = state.m_R17;
+  *pStack-- = state.m_R16;
+  *pStack-- = state.m_R15;
+  *pStack-- = state.m_R14;
+  *pStack-- = state.m_R13;
+  *pStack-- = state.m_R12;
+  *pStack-- = state.m_R11;
+  *pStack-- = state.m_R10;
+  *pStack-- = state.m_R9;
+  *pStack-- = state.m_R8;
+  *pStack-- = state.m_R7;
+  *pStack-- = state.m_R6;
+  *pStack-- = state.m_R5;
+  *pStack-- = state.m_R4;
+  *pStack-- = state.m_R3;
+  *pStack-- = state.m_R2;
+  *pStack-- = state.m_R1;
+  *pStack-- = state.m_R0;
+  *pStack-- = 0; // DAR
+  *pStack-- = 0; // DSISR
+  *pStack-- = msr; // SRR1
+  *pStack-- = state.getInstructionPointer(); // SRR0
+  *pStack-- = state.m_Cr;
+  *pStack-- = state.m_Lr;
+  *pStack-- = state.m_Ctr;
+  *pStack-- = state.m_Xer;
+  
+  PPC32InterruptState *toRet = reinterpret_cast<PPC32InterruptState*> (pStack);
+  return toRet;
 }

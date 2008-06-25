@@ -105,14 +105,13 @@
 
     inline bool isInitrdLoaded() const
     {
-      // TODO: Is that correct JamesM?
       return true;
     }
     inline uint8_t *getInitrdAddress() const
     {
       return reinterpret_cast<uint8_t*>(initrd_start);
     }
-    inline size_t getInirdSize() const
+    inline size_t getInitrdSize() const
     {
       return initrd_end - initrd_start;
     }

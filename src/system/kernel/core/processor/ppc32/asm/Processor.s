@@ -26,12 +26,15 @@
 .global _ZN9Processor14getDebugStatusEv
 # bool Processor::getInterrupts()
 .global _ZN9Processor13getInterruptsEv
+# void Processor::contextSwitch(PPC32InterruptState*)
+.global _ZN9Processor13contextSwitchEP19PPC32InterruptState
 # extern "C" void sdr1_trampoline(uint32_t sdr1)
 .global sdr1_trampoline
 
 start:
   lis 1, stack@ha
   addi 1,1, stack@l
+  addi 1,1, 32764
   addi 1,1, 32764
 #  li 2, 0x0
 #  mtlr 2
@@ -50,6 +53,66 @@ _ZN9Processor13getInterruptsEv:
   mfmsr 3           # Grab the MSR in r3
   andi. 3, 3, 0x8000 # AND with MSR_EE
   blr
+
+_ZN9Processor13contextSwitchEP19PPC32InterruptState:
+  mr    21, 3          # R21 = bottom of interrupt state (lowest address)
+  addi  21, 21, 0xa4   # R21 = top of interrupt state (highest address)
+  lwz     31, -0x04(21)
+  lwz     30, -0x08(21)
+  lwz     29, -0x0c(21)
+  lwz     28, -0x10(21)
+  lwz     27, -0x14(21)
+  lwz     26, -0x18(21)
+  lwz     25, -0x1c(21)
+  lwz     24, -0x20(21)
+  lwz     23, -0x24(21)
+  lwz     22, -0x28(21)
+  lwz     20, -0x2c(21)
+#  mtsprg   1, 20         # Save r21's value again
+  lwz     20, -0x30(21)
+#  mtsprg   0, 20         # Save r20's value again
+  lwz     19, -0x34(21)
+  lwz     18, -0x38(21)
+  lwz     17, -0x3c(21)
+  lwz     16, -0x40(21)
+  lwz     15, -0x44(21)
+  lwz     14, -0x48(21)
+  lwz     13, -0x4c(21)
+  lwz     12, -0x50(21)
+  lwz     11, -0x54(21)
+  lwz     10, -0x58(21)
+  lwz      9, -0x5c(21)
+  lwz      8, -0x60(21)
+  lwz      7, -0x64(21)
+  lwz      6, -0x68(21)
+  lwz      5, -0x6c(21)
+  lwz      4, -0x70(21)
+  lwz      3, -0x74(21)
+  lwz      2, -0x78(21)
+  lwz      1, -0x7c(21)
+  lwz      0, -0x80(21)
+#   lwz     20, -0x84(21) # Get DAR
+#   mtspr  19, 20        # Save DAR
+#   lwz     20, -0x88(21) # Get DSISR
+#   mtspr  18, 20        # Save DSISR
+  lwz     20, -0x8c(21) # Get SRR1
+  mtspr  27, 20        # Save SRR1
+  lwz     20, -0x90(21) # Get SRR0
+  mtspr  26, 20        # Save SRR0
+  lwz     20, -0x94(21) # Get CR
+  mtcr   20            # Save CR
+  lwz     20, -0x98(21) # Get LR
+  mtlr   20            # Save LR
+  lwz     20, -0x9c(21) # Get CTR
+  mtctr  20            # Save CTR
+  lwz     20, -0xa0(21) # Get XER
+  mtxer  20            # Save XER
+
+  lwz     20, -0x30(21) # Get r20's value back
+  lwz     21, -0x2c(21) # And r21.
+
+  rfi                  # Return from interrupt
+
 
 .section .sdr1_trampoline, "a"
 sdr1_trampoline:
@@ -108,3 +171,7 @@ stack:
   .rept 32768
   .byte 0
   .endr
+  .rept 32768
+  .byte 0
+  .endr
+

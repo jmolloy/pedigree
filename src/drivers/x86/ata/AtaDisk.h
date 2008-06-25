@@ -20,6 +20,7 @@
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <machine/Controller.h>
+#include <process/Mutex.h>
 
 /** An ATA disk device. Most read/write commands get channeled upstream
  * to the controller, as it has to multiplex between multiple disks. */
@@ -38,7 +39,22 @@ public:
    * \return True if the device is present and was successfully initialised. */
   bool initialise();
 
+  // These are the functions that others call - they add a request to the parent controller's queue.
+  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+
+  // These are the internal functions that the controller calls when it is ready to process our request.
+  uint64_t doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+  uint64_t doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+
+  // Called by our controller when an IRQ has been received.
+  // It may not actually apply to us!
+  void irqReceived();
+
 private:
+  /** Sets the drive up for reading from address 'n' in LBA28 mode. */
+  void setupLBA28(uint64_t n);
+
   /** Is this the master device on the bus? */
   bool m_IsMaster;
   
@@ -54,6 +70,10 @@ private:
   bool m_SupportsLBA28;
   /** Does the device support LBA48? */
   bool m_SupportsLBA48;
+  
+  /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
+   * \todo A condvar would really be better here. */
+  Mutex m_IrqReceived;
 };
 
 #endif

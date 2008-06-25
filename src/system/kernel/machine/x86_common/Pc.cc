@@ -148,12 +148,14 @@ void Pc::initialiseDeviceTree()
   Controller *pAtaMaster = new Controller();
   pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8));
   pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8));
+  pAtaMaster->setInterruptNumber(14);
   pIsa->addChild(pAtaMaster);
   pAtaMaster->setParent(pIsa);
 
   Controller *pAtaSlave = new Controller();
   pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8));
   pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8));
+  pAtaSlave->setInterruptNumber(15);
   pIsa->addChild(pAtaSlave);
   pAtaSlave->setParent(pIsa);
 

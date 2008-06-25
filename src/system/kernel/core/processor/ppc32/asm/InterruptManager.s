@@ -33,6 +33,8 @@
 .global isr_instr_breakpoint
 .global isr_system_management
 .global isr_thermal_management
+# Kernel stack pointer.
+.global kernel_stack
 
 isr_reset:
   mtsprg  0, 20    # Move r20 into sprg0
@@ -298,16 +300,19 @@ isr_common:
   mfcr   21            # Get the condition register
   mtsprg 2, 21         # Save CR in SPRG2 - we're about to do a conditional.
 
-  # TODO find a place to keep the kernel stack.
-  #mfsprg 21, 2         # r21 = kernel stack.
+  lis 21, kernel_stack@ha
+  addi 21, 21, kernel_stack@l
+  lwz 21, 0(21)
 
   cmpi   0, 21, 0      # Compare the values of register 21 and $0, setting condition field 0
-#  bne    1f            # If r21 != 0, go to 1:
+  bne    1f            # If r21 != 0, go to 1:
 
   mr     21, 1         # The kernel stack was 0, use the current stack as the stack pointer
 
 1:
-  stw    20, -0xa0(21) # Save the interrupt number
+  stw    20, -0xa4(21) # Save the interrupt number
+  mtxer  20            # Get XER
+  stw    20, -0xa0(21) # Save XER
   mfctr  20            # Get CTR
   stw    20, -0x9c(21) # Save CTR
   mfsprg 20, 3         # Get LR
@@ -333,7 +338,7 @@ isr_common:
   stw    8 , -0x60(21)
   stw    9 , -0x5c(21)
   stw    10, -0x58(21)
-  stw    11, -0x55(21)
+  stw    11, -0x54(21)
   stw    12, -0x50(21)
   stw    13, -0x4c(21)
   stw    14, -0x48(21)
@@ -357,12 +362,25 @@ isr_common:
   stw    30, -0x08(21)
   stw    31, -0x04(21)
 
-  addi   1, 21, -0xa0  # Set the stack pointer
+  addi   1, 21, -0xa4  # Set the stack pointer
+
+  # OK, by this point we've saved enough state as to be able to nest interrupts.
+  mfmsr  3             # Put the MSR in r3
+  ori 3, 3, 0x2        # MSR_RI - recoverable
+  mtmsr  3
+  
 
   mr     3, 1          # First argument is a pointer to the stack.
   bl     _ZN21PPC32InterruptManager9interruptER19PPC32InterruptState
 
-  addi   21, 1, 0xa0   # Reset r21.
+  # We're not recoverable any more...
+  mfmsr  3
+  lis   4, 0xFFFF      # Load the complement of 0x2 in r4
+  ori   4, 4, 0xFFFD
+  and 3, 3, 4          # r3 = r3 & r4
+  mtmsr  3
+
+  addi   21, 1, 0xa4   # Reset r21.
 
   lwz     31, -0x04(21)
   lwz     30, -0x08(21)
@@ -375,9 +393,9 @@ isr_common:
   lwz     23, -0x24(21)
   lwz     22, -0x28(21)
   lwz     20, -0x2c(21)
-  mtsprg   1, 20         # Save r21's value again
+#  mtsprg   1, 20         # Save r21's value again
   lwz     20, -0x30(21)
-  mtsprg   0, 20         # Save r20's value again
+#  mtsprg   0, 20         # Save r20's value again
   lwz     19, -0x34(21)
   lwz     18, -0x38(21)
   lwz     17, -0x3c(21)
@@ -412,8 +430,16 @@ isr_common:
   mtlr   20            # Save LR
   lwz     20, -0x9c(21) # Get CTR
   mtctr  20            # Save CTR
+  lwz     20, -0xa0(21) # Get XER
+  mtxer  20            # Save XER
 
-  mfsprg 20, 0         # Get r20's value
-  mfsprg 21, 0         # Get r21's value
+  lwz     20, -0x30(21) # Get r20's value back
+  lwz     21, -0x2c(21) # And r21.
 
   rfi                  # Return from interrupt
+
+.section .bss
+kernel_stack:
+  .rept 4
+  .byte 0
+  .endr

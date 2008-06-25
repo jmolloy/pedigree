@@ -34,7 +34,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   // Initialise our kernel stack.
   m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
   NOTICE("Kernel stack at " << (uintptr_t)m_pKernelStack);
-//  // If we've been given a user stack pointer, we are a user mode thread.
+  // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
   if (pStack == 0)
   {

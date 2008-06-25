@@ -1,6 +1,7 @@
 #include "prom.h"
 #include "Elf32.h"
 #include "autogen.h"
+#include "autogen_initrd.h"
 #include "Vga.h"
 
 extern int memset(void *buf, int c, size_t len);
@@ -83,7 +84,8 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;
   bs.addr = (unsigned int)elf.m_pSectionHeaders;
-  bs.initrd_start = bs.initrd_end = 0;
+  bs.initrd_start = (uint32_t)initrd;
+  bs.initrd_end = (uint32_t)initrd+initrd_size;
   bs.prom = (int (*)(struct anon*)) r5;
   
   // For every section header, set .addr = .offset + m_pBuffer.

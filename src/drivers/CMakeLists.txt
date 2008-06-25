@@ -14,33 +14,45 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(DRIVERS)
+set(DRIVERS partition)
 if(X86_COMMON)
   set(X86DRIVERS ata)
 endif(X86_COMMON)
+if(PPC_COMMON)
+  set(PPCDRIVERS test)
+endif(PPC_COMMON)
 
 #########################################################################################
 
 # Descend into each module's subdirectory first.
 foreach(var ${DRIVERS})
-  add_subdirectory(${var})
+  add_subdirectory("common/${var}")
 endforeach(var ${DRIVERS})
 foreach(var ${X86DRIVERS})
   add_subdirectory("x86/${var}")
 endforeach(var ${X86DRIVERS})
+foreach(var ${PPCDRIVERS})
+  add_subdirectory("ppc/${var}")
+endforeach(var ${PPCDRIVERS})
 
 # Pull all the modules together in a tarfile.
 set(OBJS)
 set(DRIVER_NAMES)
-foreach(var ${DRIVERS})
-  set(OBJS ${OBJS} "${var}/${var}.o")
-  set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
-endforeach(var ${DRIVERS})
 
 foreach(var ${X86DRIVERS})
   set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/drivers/x86/${var}/${var}.o")
   set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
 endforeach(var ${X86DRIVERS})
+
+foreach(var ${PPCDRIVERS})
+  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/drivers/ppc/${var}/${var}.o")
+  set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
+endforeach(var ${PPCDRIVERS})
+
+foreach(var ${DRIVERS})
+  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/drivers/common/${var}/${var}.o")
+  set(DRIVER_NAMES ${DRIVER_NAMES} "${var}.o")
+endforeach(var ${DRIVERS})
 
 set(DRIVER_OBJS ${OBJS} PARENT_SCOPE)
 set(DRIVER_NAMES ${DRIVER_NAMES} PARENT_SCOPE)

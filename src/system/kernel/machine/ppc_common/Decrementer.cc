@@ -45,10 +45,10 @@ bool Decrementer::initialise()
   OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
   OFDevice cpu (chosen.getProperty("cpu"));
   m_Frequency = reinterpret_cast<uint32_t> (cpu.getProperty("timebase-frequency"));
-  if (static_cast<int32_t> (m_Frequency) == -1)
+  if (static_cast<int32_t> (m_Frequency) <= 0)
   {
     WARNING("Cpu::timebase-frequency property not available!");
-    m_Frequency = 0x1000000; // 16MHz
+    m_Frequency = 0x100000; 
   }
 
   // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.

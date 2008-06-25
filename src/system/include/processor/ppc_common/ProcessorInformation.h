@@ -19,6 +19,7 @@
 
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
+#include <process/Thread.h>
 
 /** @addtogroup kernelprocessorppccommon
  * @{ */
@@ -37,11 +38,19 @@ class PPCCommonProcessorInformation
     inline void setVirtualAddressSpace(VirtualAddressSpace &virtualAddressSpace)
       {m_VirtualAddressSpace = &virtualAddressSpace;}
 
+    inline uintptr_t getKernelStack() const;
+    inline void setKernelStack(uintptr_t stack);
+    inline Thread *getCurrentThread() const
+      {return m_pCurrentThread;}
+    inline void setCurrentThread(Thread *pThread)
+      {m_pCurrentThread = pThread;}
+
   protected:
     /** Construct a PPCCommonProcessorInformation object
      *\param[in] processorId Identifier of the processor */
     inline PPCCommonProcessorInformation(ProcessorId processorId)
-      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()){}
+      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
+        m_pCurrentThread(0) {}
     /** The destructor does nothing */
     inline virtual ~PPCCommonProcessorInformation(){}
 
@@ -60,8 +69,24 @@ class PPCCommonProcessorInformation
     ProcessorId m_ProcessorId;
     /** The current VirtualAddressSpace */
     VirtualAddressSpace *m_VirtualAddressSpace;
+    /** The current thread */
+    Thread *m_pCurrentThread;
 };
 
 /** @} */
+
+extern "C" uint32_t kernel_stack;
+//
+// Part of the implementation
+//
+uintptr_t PPCCommonProcessorInformation::getKernelStack() const
+{
+  return kernel_stack;
+}
+void PPCCommonProcessorInformation::setKernelStack(uintptr_t stack)
+{
+  kernel_stack = stack;
+}
+
 
 #endif

@@ -21,7 +21,7 @@
 #include <processor/types.h>
 #include <processor/StackFrameBase.h>
 
-/** @addtogroup kernelprocessorPPC32
+/** @addtogroup kernelprocessorPPC32b
  * @{ */
 
 /** mips32 StackFrame */
@@ -35,6 +35,11 @@ class PPC32StackFrame : public StackFrameBase
       : StackFrameBase(State, basePointer, mangledSymbol){}
     /** The destructor does nothing */
     inline ~PPC32StackFrame(){}
+
+    static void construct(ProcessorState &state,
+                          uintptr_t returnAddress,
+                          unsigned int nParams,
+                          ...);
 
   private:
     /** Returns the n'th 64-bit parameter in the stack frame. */

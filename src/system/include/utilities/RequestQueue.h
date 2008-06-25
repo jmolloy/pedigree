@@ -40,24 +40,25 @@ public:
   void destroy();
   
   /** Adds a request to the queue. Blocks until it finishes and returns the result. */
-  uintptr_t addRequest(uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0,
-                       uintptr_t p6=0, uintptr_t p7=0, uintptr_t p8=0);
+  uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
+                     uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
 protected:
   /** Callback - classes are expected to inherit and override this function. It's called when a 
       request needs to be executed (by the worker thread). */
-  virtual int executeRequest(uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5,
-                             uintptr_t p6, uintptr_t p7, uintptr_t p8) = 0;
+  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                  uint64_t p6, uint64_t p7, uint64_t p8) = 0;
 private:
   /** Request structure */
   class Request
   {
   public:
-    Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),mutex(true);
-    ~Request();
-    uintptr_t p1,p2,p3,p4,p5,p6,p7,p8;
-    uintptr_t ret;
+    Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),mutex(true),next(0) {}
+    ~Request() {}
+    uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
+    uint64_t ret;
     Mutex mutex;
+    Request *next;
   };
   
   /** Thread trampoline */
@@ -73,7 +74,10 @@ private:
   Semaphore m_RequestQueueSize;
   
   /** True if the worker thread should cleanup and stop. */
-  bool m_Stop;
-}
+  volatile bool m_Stop;
+  
+  /** Mutex to be held when the request queue is being changed. */
+  Mutex m_RequestQueueMutex;
+};
 
 #endif

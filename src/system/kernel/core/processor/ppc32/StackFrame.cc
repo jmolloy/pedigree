@@ -39,3 +39,32 @@
   }
 
 #endif
+
+void PPC32StackFrame::construct(ProcessorState &state,
+                                uintptr_t returnAddress,
+                                unsigned int nParams,
+                                ...)
+{
+  state.m_Lr = returnAddress;
+  
+  va_list list;
+  va_start(list, nParams);
+  
+  for(int i = 0; i < nParams; i++)
+  {
+    uintptr_t arg = va_arg(list, uintptr_t);
+    NOTICE("Setting " << Hex << i << ", " << arg);
+    switch (i)
+    {
+      case 0: state.m_R3 = arg; break;
+      case 1: state.m_R4 = arg; break;
+      case 2: state.m_R5 = arg; break;
+      case 3: state.m_R6 = arg; break;
+      case 4: state.m_R7 = arg; break;
+      case 5: state.m_R8 = arg; break;
+      default: ERROR("StackFrame: Too many parameters");
+    }
+  }
+  
+  va_end(list);
+}

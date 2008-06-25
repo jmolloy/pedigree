@@ -91,6 +91,18 @@ public:
   {
     return m_Addresses;
   }
+  
+  /** Returns the interrupt number of the device. */
+  virtual uintptr_t getInterruptNumber()
+  {
+    return m_InterruptNumber;
+  }
+  
+  /** Sets the interrupt number of the device. */
+  virtual void setInterruptNumber(uintptr_t n)
+  {
+    m_InterruptNumber = n;
+  }
 
   void addChild(Device *pDevice);
   Device *getChild(size_t n);
@@ -112,6 +124,8 @@ protected:
   Device *m_pParent;
   /** The root node. */
   static Device m_Root;
+  /** The interrupt number */
+  uintptr_t m_InterruptNumber;
 };
 
 #endif

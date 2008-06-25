@@ -24,6 +24,7 @@
 Archive::Archive(uint8_t *pPhys, size_t sSize) :
   m_Region("Archive")
 {
+
   if ((reinterpret_cast<physical_uintptr_t>(pPhys) & (PhysicalMemoryManager::getPageSize() - 1)) != 0)
     panic("Archive: Alignment issues");
 
@@ -36,6 +37,7 @@ Archive::Archive(uint8_t *pPhys, size_t sSize) :
   {
     ERROR("Archive: allocateRegion failed.");
   }
+
 }
 
 Archive::~Archive()

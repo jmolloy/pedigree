@@ -43,7 +43,7 @@ void searchNode(Device *pDev)
       // Check it's not an ATA controller already.
       String name;
       pChild->getName(name);
-      NOTICE("name: " << name);
+
       if (!strcmp(name, "ata"))
         continue;
       // Get its addresses, and search for "command" and "control".
@@ -71,7 +71,6 @@ void entry()
 {
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
-  NOTICE("I'm started!");
   Device *pDev = &Device::root();
   searchNode(pDev);
 }

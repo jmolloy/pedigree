@@ -62,14 +62,14 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   {
     const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
                          pSymbols[ELF32_R_SYM(rel.info)].name;
-//    NOTICE("Relocating symbol \"" << pStr << "\"");
-    S = KernelElf::instance().globalLookupSymbol(pStr);
+
+    S = lookupSymbol(pStr);
     if (S == 0)
     {
       // Maybe we couldn't find the symbol because it's a symbol in this file.
       // This is the case when f.x. a constant in .rodata wants to point to a symbol
       // in .text - like a function pointer.
-      S = lookupSymbol(pStr);
+      S = KernelElf::instance().globalLookupSymbol(pStr);
     }
     if (S == 0)
       WARNING("Relocation failed for symbol \"" << pStr << "\"");

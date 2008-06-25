@@ -108,3 +108,7 @@ void Processor::initialise2()
 void Processor::identify(HugeStaticString &str)
 {
 }
+
+void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
+{
+}

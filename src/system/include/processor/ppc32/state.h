@@ -23,6 +23,9 @@
 /** @addtogroup kernelprocessorPPC32
  * @{ */
 
+typedef class PPC32InterruptState PPC32SyscallState;
+typedef class PPC32InterruptState PPC32ProcessorState;
+
 /** PPC32 Interrupt State */
 class PPC32InterruptState
 {
@@ -85,6 +88,10 @@ class PPC32InterruptState
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
 
+    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
+     *  set the processor to 'state'. */
+    static PPC32InterruptState *construct(PPC32ProcessorState &state, bool userMode);
+
   private:
     /** The default constructor
      *\note NOT implemented */
@@ -103,6 +110,8 @@ class PPC32InterruptState
 
     /** The interrupt/exception number. */
     uint32_t m_IntNumber;
+    /** Fixed point exception register */
+    uint32_t m_Xer;
     /** Loop counter */
     uint32_t m_Ctr;
     /** Link register */
@@ -182,9 +191,6 @@ class PPC32InterruptState
     /** General purpose register 31 */
     uint32_t m_R31;
 } PACKED;
-
-typedef PPC32InterruptState PPC32SyscallState;
-typedef PPC32InterruptState PPC32ProcessorState;
 
 /** @} */
 

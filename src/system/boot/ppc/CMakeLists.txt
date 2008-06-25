@@ -28,7 +28,11 @@ add_custom_target(autogen.h ALL perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/
                   DEPENDS kernel
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc)
 
+# Add an extra target to create the bootloader.
+add_custom_target(autogen_initrd.h ALL perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/mkheader.pl ${PEDIGREE_BINARY_DIR}/initrd.tar
+                  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc)
+
 add_executable(bootloader ${BOOT_SRC})
-add_dependencies(bootloader autogen.h)
+add_dependencies(bootloader autogen.h autogen_initrd.h)
 set_target_properties(bootloader PROPERTIES LINK_FLAGS
                       "-T ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/link-ppc.ld")
