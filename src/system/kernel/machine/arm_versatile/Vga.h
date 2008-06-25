@@ -107,6 +107,8 @@ class ArmVersatileVga : public Vga
       * \param nY The row to move to.
     */
     void moveCursor (size_t nX, size_t nY) {};
+  
+  operator uint16_t*() const {return 0;}
 
 };
 

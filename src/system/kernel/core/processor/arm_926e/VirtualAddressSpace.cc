@@ -14,3 +14,36 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <panic.h>
+#include <Log.h>
+#include <utilities/utility.h>
+#include <processor/Processor.h>
+#include <processor/types.h>
+#include <processor/PhysicalMemoryManager.h>
+#include "VirtualAddressSpace.h"
+
+Arm926EVirtualAddressSpace Arm926EVirtualAddressSpace::m_KernelSpace;
+
+VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
+{
+  return Arm926EVirtualAddressSpace::m_KernelSpace;
+}
+
+Arm926EVirtualAddressSpace::Arm926EVirtualAddressSpace() :
+  VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP))
+{
+}
+
+Arm926EVirtualAddressSpace::~Arm926EVirtualAddressSpace()
+{
+}
+
+void *Arm926EVirtualAddressSpace::allocateStack()
+{
+  // TODO
+  return 0;
+}
+void Arm926EVirtualAddressSpace::freeStack(void *pStack)
+{
+  // TODO
+}

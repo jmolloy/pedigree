@@ -23,4 +23,9 @@ void Processor::halt()
   for( ;; );
 }
 
+void Processor::breakpoint()
+{
+  //
+}
+
 #endif

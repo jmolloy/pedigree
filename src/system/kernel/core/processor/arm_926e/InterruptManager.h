@@ -72,7 +72,7 @@ class ARM926EInterruptManager : public ::InterruptManager,
     InterruptHandler *m_DbgHandler[256];
 #endif
     /** The syscall handlers */
-    SyscallHandler *m_SyscallHandler[SyscallManager::serviceEnd];
+    SyscallHandler *m_SyscallHandler[/*SyscallManager::*/serviceEnd];
 
     /** The instance of the interrupt manager  */
     static ARM926EInterruptManager m_Instance;

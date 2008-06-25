@@ -48,12 +48,18 @@ scripts/parseBuildFlags.pl
 scripts/runNightlyTest.pl
 src
 src/drivers
-src/drivers/Makefile
 src/subsys
 src/subsys/Makefile
 src/system
 src/system/boot
 src/system/boot/Makefile
+src/system/boot/arm
+src/system/boot/arm/Elf32.cc
+src/system/boot/arm/Elf32.h
+src/system/boot/arm/Makefile
+src/system/boot/arm/arm_support.s
+src/system/boot/arm/main.cc
+src/system/boot/arm/mkheader.pl
 src/system/boot/mips
 src/system/boot/mips/Elf32.cc
 src/system/boot/mips/Elf32.h
@@ -230,6 +236,7 @@ src/system/kernel/core/processor/Processor.cc
 src/system/kernel/core/processor/StackFrameBase.cc
 src/system/kernel/core/processor/VirtualAddressSpace.cc
 src/system/kernel/core/processor/arm_926e
+src/system/kernel/core/processor/arm_926e/Elf32.cc
 src/system/kernel/core/processor/arm_926e/InterruptManager.cc
 src/system/kernel/core/processor/arm_926e/InterruptManager.h
 src/system/kernel/core/processor/arm_926e/Processor.cc

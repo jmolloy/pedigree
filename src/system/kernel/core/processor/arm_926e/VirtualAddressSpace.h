@@ -45,6 +45,8 @@ class Arm926EVirtualAddressSpace : public VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
+    virtual void freeStack(void *pStack);
 
     //
     // Needed for the PhysicalMemoryManager

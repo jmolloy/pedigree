@@ -75,8 +75,14 @@ void Processor::setInterrupts(bool bEnable)
   /// \todo Implement.
 }
 
+bool Processor::getInterrupts()
+{
+  return false;
+}
+
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
-  /// \todo Implement - should be as simple
+  /// \todo Implement
   ERROR("Single step unavailable on ARM.");
 }
+

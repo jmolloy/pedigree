@@ -22,5 +22,5 @@
 
 add_subdirectory(asm)
 add_kernel_src(core/processor/arm_926e
-               InterruptManager.cc Processor.cc StackFrame.cc state.cc)
+               Elf32.cc VirtualAddressSpace.cc InterruptManager.cc Processor.cc StackFrame.cc state.cc)
 
