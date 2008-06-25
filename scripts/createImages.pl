@@ -50,4 +50,16 @@ if ($compiler =~ m/mips64el-elf/) {
 if ($compiler =~ m/arm-elf/) {
   `cp src/system/boot/arm/bootloader ./bootloader`;
 }
+
+# PPC?
+if ($compile =~ m/ppc/) {
+  `cp src/system/boot/ppc/bootloader ./bootloader`;
+  unless (-f "hdd_ppc_16h_63spt_100c.img") {
+    `cp ../images/hdd_ppc_16h_63spt_100c.img .`;
+  }
+  `hmount hdd_ppc_16h_63spt_100c.img`;
+  `hcopy ./bootloader :pedigree`;
+  `humount`;
+}
+
 exit 0;
