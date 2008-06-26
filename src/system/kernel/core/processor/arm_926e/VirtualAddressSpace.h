@@ -89,6 +89,9 @@ class Arm926EVirtualAddressSpace : public VirtualAddressSpace
      *\note Not implemented */
     Arm926EVirtualAddressSpace &operator = (const Arm926EVirtualAddressSpace &);
 
+    /** Initialises the kernel address space, called by Processor. */
+    bool initialise();
+
     /** Get the page table entry, if it exists and check whether a page is mapped or marked as
      *  swapped out.
      *\param[in] virtualAddress the virtual address
