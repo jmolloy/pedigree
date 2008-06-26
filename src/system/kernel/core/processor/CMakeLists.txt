@@ -65,5 +65,5 @@ if(NOT ARM_COMMON)
                  PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
 else(NOT ARM_COMMON)
   add_kernel_src(core/processor
-                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc)
+                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc VirtualAddressSpace.cc)
 endif(NOT ARM_COMMON)

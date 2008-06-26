@@ -30,9 +30,11 @@ RequestQueue::~RequestQueue()
 void RequestQueue::initialise()
 {
   // Start the worker thread.
+#ifdef THREADS
   Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
                                reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
                                reinterpret_cast<void*> (this));
+#endif
 }
 
 void RequestQueue::destroy()
