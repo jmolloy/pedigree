@@ -69,6 +69,87 @@ class Arm926EVirtualAddressSpace : public VirtualAddressSpace
     virtual ~Arm926EVirtualAddressSpace();
 
   private:
+    
+    /** \todo I don't think all this belongs here. Put here to get the
+              structures then read up on how PPC does it. */
+
+    /** The translation table */
+    struct Translation {
+      uint32_t entries[4096];
+    } PACKED;
+    
+    /** Section table (1 MB page table) */
+    struct SectionTable {
+      uint32_t entry; /// \todo I have no idea how this table works
+    } PACKED;
+    
+    /** Coarse page table (64 and 4 KB pages) */
+    struct CoarseTable {
+      uint32_t entries[256];
+    } PACKED;
+    
+    /** Fine page table (64, 4, 1 KB pages) */
+    struct FineTable {
+      uint32_t entries[1024];
+    };
+    
+    // http://www.atmel.com/dyn/resources/prod_documents/ARM_926EJS_TRM.pdf
+    /** First level descriptors (in Translation table)
+        'data' --> entries array  */
+    union FirstLevelDescriptor_Fault {
+      uint32_t data;
+      struct Desc {
+        // bits indicate size and validity, outlined Table 3-3 in doc above
+        uint32_t size_validity_1 : 1;
+        uint32_t size_validity_2 : 1;
+        uint32_t always0 : 30; /// \todo check this is correct (might be 29)
+      };
+    };
+    union FirstLevelDescriptor_Coarse {
+      uint32_t data;
+      struct Desc {
+        // bits indicate size and validity, outlined Table 3-3 in doc above
+        uint32_t size_validity_1 : 1;
+        uint32_t size_validity_2 : 1;
+        uint32_t always0_1 : 1;
+        uint32_t always0_2 : 2;
+        uint32_t always1 : 1;
+        uint32_t domainctl : 3;
+        uint32_t always0_3 : 1;
+        uint32_t coarse_table_addr : 21; /// \todo check this (might be 22)
+      };
+    };
+    union FirstLevelDescriptor_Section {
+      uint32_t data;
+      /// \todo this does not add up to 31 or 32... :S
+      struct Desc {
+        // bits indicate size and validity, outlined Table 3-3 in doc above
+        uint32_t size_validity_1 : 1;
+        uint32_t size_validity_2 : 1;
+        uint32_t cb : 2; // cache control
+        uint32_t always1 : 1;
+        uint32_t domainctl : 3;
+        uint32_t always0 : 1;
+        uint32_t perms : 2; // access permission bits
+        uint32_t always0_2 : 7;
+        uint32_t section_address : 11;
+      };
+    };
+    union FirstLevelDescriptor_Fine {
+      uint32_t data;
+      struct Desc {
+        // bits indicate size and validity, outlined Table 3-3 in doc above
+        uint32_t size_validity_1 : 1;
+        uint32_t size_validity_2 : 1;
+        uint32_t always0_1 : 1;
+        uint32_t always0_2 : 2;
+        uint32_t always1 : 1;
+        uint32_t domainctl : 3;
+        uint32_t always0_3 : 3;
+        uint32_t coarse_table_addr : 19;
+      };
+    };
+
     /** The constructor for already present paging structures
      *\param[in] Heap virtual address of the beginning of the heap
      *\param[in] PhysicalPageDirectory physical address of the page directory
