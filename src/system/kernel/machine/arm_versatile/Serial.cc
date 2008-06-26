@@ -39,5 +39,7 @@ char ArmVersatileSerial::readNonBlock()
 }
 void ArmVersatileSerial::write(char c)
 {
+  if( c == '\n' )
+    write( '\r' );
   m_pRegs->dr = static_cast<uint32_t>(c);
 }

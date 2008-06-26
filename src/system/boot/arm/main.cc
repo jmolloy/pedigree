@@ -184,7 +184,6 @@ extern "C" int __start()
   fn();*/
   
   writeStr( "complete\r\n" );
-  //while( 1 );
 
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);

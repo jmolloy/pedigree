@@ -28,7 +28,8 @@ void ArmVersatile::initialise()
   // the versatile board QEMU emulates has two UARTs (PL011)
   // starting at 0x101f1000
   m_Serial[0].setBase(0x101f1000);
-  m_Serial[1].setBase(0x101f2000);
+  //m_Serial[1].setBase(0x101f2000);
+/// \todo setup second pl011 as well (removed to make it work) and detect existance of pl011s
   m_bInitialised = true;
 }
 Serial *ArmVersatile::getSerial(size_t n)
@@ -37,7 +38,7 @@ Serial *ArmVersatile::getSerial(size_t n)
 }
 size_t ArmVersatile::getNumSerial()
 {
-  return 2;
+  return 1;
 }
 Vga *ArmVersatile::getVga(size_t n)
 {
