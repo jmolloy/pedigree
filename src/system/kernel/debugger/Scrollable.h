@@ -36,6 +36,7 @@ class Scrollable
     void scrollTo(size_t absolute);
     void refresh(DebuggerIO *pScreen);
     void setScrollKeys(char up, char down);
+    ssize_t getLine() {return m_line;}
 
     void centreOn(size_t line);
 

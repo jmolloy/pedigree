@@ -160,8 +160,8 @@ sdr1_trampoline:
 1:
   tlbie 4
   addi 4, 4, -0x1000
-  cmp 7, 4, 0x0
-  bne 1b
+  cmpi 7, 4, 0x0
+  bne 7, 1b
   sync
   isync
   blr        # Jump back.

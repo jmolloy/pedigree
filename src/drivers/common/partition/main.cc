@@ -40,6 +40,9 @@ void searchNode(Device *pDev)
   {
     Device *pChild = pDev->getChild(i);
     // Is this a disk?
+    String mname;
+    pChild->getName(mname);
+
     if (pChild->getType() == Device::Disk)
     {
       // Check that none of its children are Partitions (in which case we've probed this before!)

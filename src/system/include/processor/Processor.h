@@ -191,6 +191,11 @@ class Processor
       /** Flush a line in the data cache.
        *\param[in] nAddr The address of a memory location to flush from the Dcache. */
       static void flushDCache(uintptr_t nAddr);
+      /** Flush from the data cache and invalidate into the instruction cache.
+       * This must be used whenever code is written to memory and needs to be executed.
+       *\param startAddr The first address to be flushed and invalidated.
+       *\param endAddr The last address to be flushed and invalidated. */
+      static void flushDCacheAndInvalidateICache(uintptr_t startAddr, uintptr_t endAddr);
     #endif
 
     /** Populate 'str' with a string describing the characteristics of this processor. */

@@ -20,6 +20,7 @@
 #include <processor/PhysicalMemoryManager.h>
 
 #include <Log.h>
+#include <panic.h>
 
 /// \warning 80x50 and 90x60 modes don't work, because we don't have an 8x8 font to install.
 uint8_t g_80x25_text[] =
@@ -264,7 +265,7 @@ bool X86Vga::setMode(int nMode)
 {
   if (!m_RegisterPort)
     return false;
-
+  return false;
   unsigned int i;
   unsigned char *pMode = g_pModeDescriptions[nMode];
 
@@ -323,6 +324,8 @@ int X86Vga::getMode()
   if (!m_RegisterPort)
     // TODO: What should we return here?
     return 0;
+
+  return 0;
 
   unsigned char aMode[61];
   unsigned char *pMode = &aMode[0];

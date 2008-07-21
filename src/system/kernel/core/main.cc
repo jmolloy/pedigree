@@ -90,7 +90,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
-  
+
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
@@ -98,7 +98,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
   machine.initialise();
-
+  
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
@@ -121,10 +121,33 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the boot output.
   bootIO.initialise();
-
-#ifdef X86_COMMON
+  
+#if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
+
+  // Spew out a starting string.
+  HugeStaticString str;
+  str += "Pedigree - revision ";
+  str += g_pBuildRevision;
+  str += "\n=======================\n";
+  bootIO.write(str, BootIO::White, BootIO::Black);
+
+  str.clear();
+  str += "Built at ";
+  str += g_pBuildTime;
+  str += " by ";
+  str += g_pBuildUser;
+  str += " on ";
+  str += g_pBuildMachine;
+  str += "\n";
+  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
+
+  str.clear();
+  str += "Build flags: ";
+  str += g_pBuildFlags;
+  str += "\n";
+  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
 #ifdef THREADS
   initialiseMultitasking();
@@ -167,14 +190,23 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
   size_t nFiles = initrd.getNumFiles();
-  NOTICE("nFiles: " << nFiles);
+  //NOTICE("nFiles: " << nFiles);
   for (size_t i = 0; i < nFiles; i++)
   {
-    NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
+    //NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
+    uint32_t percentage = ((i+1)*100) / nFiles;
+    str.clear();
+    str += "\rLoading modules: ";
+    str.append(percentage, 10, 3, ' ');
+    str += "% (";
+    str += initrd.getFileName(i);
+    str += ")";
+    bootIO.write(str, BootIO::LightGrey, BootIO::Black);
     // Load file.
     Module *m = KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
-    m->entry();
+    if (m)
+      m->entry();
   }
 
 #endif
@@ -185,29 +217,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #ifdef X86_COMMON
   Processor::initialisationDone();
 #endif
-
-  // Spew out a starting string.
-  HugeStaticString str;
-  str += "Pedigree - revision ";
-  str += g_pBuildRevision;
-  str += "\n=======================\n";
-  bootIO.write(str, BootIO::White, BootIO::Black);
-
-  str.clear();
-  str += "Built at ";
-  str += g_pBuildTime;
-  str += " by ";
-  str += g_pBuildUser;
-  str += " on ";
-  str += g_pBuildMachine;
-  str += "\n";
-  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
-  str.clear();
-  str += "Build flags: ";
-  str += g_pBuildFlags;
-  str += "\n";
-  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
   
 
   physical_uintptr_t stackBase;

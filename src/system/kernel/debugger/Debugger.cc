@@ -33,6 +33,7 @@
 #include <MemoryInspector.h>
 #include <IoCommand.h>
 #include <ThreadsCommand.h>
+#include <DevicesCommand.h>
 #include <process/Thread.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
@@ -109,8 +110,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #ifndef ARM_COMMON
   static SerialIO serialIO2(Machine::instance().getSerial(1));
   serialIO2.initialise();
-  DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
-  int nInterfaces = 3;
+  DebuggerIO *pInterfaces[] = {&localIO};//, &serialIO, &serialIO2};
+  int nInterfaces = 1;//3;
 #else
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
   int nInterfaces = 2;
@@ -132,6 +133,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static PanicCommand panic;
   static CpuInfoCommand cpuInfo;
   static IoCommand io;
+  static DevicesCommand devices;
 #if defined(THREADS)
   static ThreadsCommand threads;
 
@@ -154,6 +156,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &g_Trace,
                                   &panic,
                                   &cpuInfo,
+                                  &devices,
 #if defined(THREADS)
                                   &threads,
 #endif

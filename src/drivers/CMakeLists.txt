@@ -14,9 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(DRIVERS partition)
+set(DRIVERS ata partition)
 if(X86_COMMON)
-  set(X86DRIVERS ata)
+  set(X86DRIVERS)
 endif(X86_COMMON)
 if(PPC_COMMON)
   set(PPCDRIVERS test)

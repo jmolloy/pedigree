@@ -44,6 +44,12 @@ public:
   /** Finds a device in the tree by name. */
   OFHandle findDevice(const char *pName);
   
+  /** Returns the given Device's sibling, or NULL if none. */
+  OFHandle getSibling(class OFDevice *pDev);
+  
+  /** Returns the given Device's first child, or NULL if none. */
+  OFHandle getFirstChild(class OFDevice *pDev);
+  
   /** Calls OpenFirmware with the given arguments, returning one argument. */
   OFParam call(const char *pService, int nArgs, OFParam p1=0,
                                                 OFParam p2=0,

@@ -29,7 +29,8 @@ void probeDevice(Controller *pDev)
   // Replace pDev with pController.
   pDev->getParent()->replaceChild(pDev, pController);
   // And delete pDev for good measure.
-  delete pDev;
+  //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
+  //delete pDev;
 }
 
 void searchNode(Device *pDev)

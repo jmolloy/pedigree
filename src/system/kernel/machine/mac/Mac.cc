@@ -15,6 +15,10 @@
  */
 
 #include "Mac.h"
+#include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
+#include <processor/Processor.h>
+#include <Log.h>
 
 Mac Mac::m_Instance;
 
@@ -71,4 +75,46 @@ Mac::Mac() :
 }
 Mac::~Mac()
 {
+}
+
+static void probeDev(int depth, OFDevice *pDev)
+{
+  OFHandle hChild = OpenFirmware::instance().getFirstChild(pDev);
+  while (hChild != 0)
+  {
+    OFDevice dChild (hChild);
+    hChild = OpenFirmware::instance().getSibling(&dChild);
+    
+    NormalStaticString name, type;
+    dChild.getProperty("name", name);
+    dChild.getProperty("device_type", type);
+    
+    //if (type.length() == 0)
+    //  continue;
+    
+    LargeStaticString str;
+    for (int i = 0; i < depth; i++)
+      str += " ";
+    str += name;
+    str += " : ";
+    str += type;
+    NOTICE(static_cast<const char *> (str));
+    
+    probeDev(depth+1, &dChild);
+  }
+}
+
+void Mac::initialiseDeviceTree()
+{
+  OFDevice root( OpenFirmware::instance().findDevice("/"));
+  
+  probeDev(0, &root);
+
+  // TMP
+  const int ADDR = 0xfe000000;
+  VirtualAddressSpace::getKernelAddressSpace().map(ADDR+0x1000, (void*)(ADDR+0x1000), VirtualAddressSpace::Write);
+  uint8_t *address = (uint8_t*) (ADDR + 0x1c40 + 7);
+  NOTICE("Add: " << Hex << *address);
+
+  Processor::breakpoint();
 }

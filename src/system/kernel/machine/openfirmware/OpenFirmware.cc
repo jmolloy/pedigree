@@ -15,6 +15,7 @@
  */
 
 #include <machine/openfirmware/OpenFirmware.h>
+#include <machine/openfirmware/Device.h>
 
 OpenFirmware OpenFirmware::m_Instance;
 
@@ -35,6 +36,16 @@ void OpenFirmware::initialise(OFInterface interface)
 OFHandle OpenFirmware::findDevice(const char *pName)
 {
   return static_cast<OFHandle> (call("finddevice", 1, reinterpret_cast<OFParam> (const_cast<char*> (pName))));
+}
+
+OFHandle OpenFirmware::getSibling(OFDevice *pDev)
+{
+  return static_cast<OFHandle> (call("peer", 1, static_cast<OFHandle> (pDev->m_Handle)));
+}
+
+OFHandle OpenFirmware::getFirstChild(OFDevice *pDev)
+{
+  return static_cast<OFHandle> (call("child", 1, static_cast<OFHandle> (pDev->m_Handle)));
 }
 
 OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1,

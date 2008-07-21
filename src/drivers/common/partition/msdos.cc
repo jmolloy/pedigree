@@ -26,7 +26,7 @@ bool msdosProbeDisk(Disk *pDisk)
     WARNING("Disk read failure during partition table search.");
     return false;
   }
-  
+  NOTICE("Magic: "<<Hex<<buffer[510]<<", " <<buffer[511]);
   // Check for the magic bytes.
   if (buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
     return false;

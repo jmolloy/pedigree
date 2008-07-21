@@ -14,13 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#
-# NOTE: To ensure proper scoping, the add_subdirectory calls must come BEFORE
-#       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
-#       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
-#
+include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers)
 
-add_kernel_src(debugger/commands
-               Backtracer.cc BreakpointCommand.cc CpuInfoCommand.cc DisassembleCommand.cc
-               DumpCommand.cc LogViewer.cc MemoryInspector.cc PanicCommand.cc StepCommand.cc
-               TraceCommand.cc QuitCommand.cc IoCommand.cc ThreadsCommand.cc DevicesCommand.cc)
+add_executable(test.o main.cc)
+target_link_libraries(test.o gcc)
+set_target_properties(test.o PROPERTIES
+                            LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

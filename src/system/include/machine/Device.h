@@ -19,6 +19,7 @@
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <processor/types.h>
+#include <processor/IoBase.h>
 
 /**
  * Represents a node in the device tree. This could either be a bus (non-leaf node) or a
@@ -27,6 +28,8 @@
 class Device
 {
 public:
+  /** Every device has a type. This can be used to downcast to a more specific class
+   * during runtime without RTTI. */
   enum Type
   {
     Generic,
@@ -39,19 +42,29 @@ public:
     Keyboard,
     Controller
   };
+  /** Each device may have one or more disjoint regions of address space. This can be in I/O space
+      or memory space. */
   class Address
   {
   public:
-    Address(String n, uintptr_t a, size_t s) :
-      m_Name(n), m_Address(a), m_Size(s)
-    {}
-    ~Address() {}
+    /** Constructor, takes arguments and assigns them blindly to member variables, then
+     *  creates the IoPort or MemoryMappedIO instance.  */
+    Address(String n, uintptr_t a, size_t s, bool io);
+    ~Address();
+    /** A textual identifier for this address range. */
     String m_Name;
+    /** The base of the address range. */
     uintptr_t m_Address;
+    /** The length of the address range. */
     size_t m_Size;
+    /** True if the address range is in I/O space, false if in memory space */
+    bool m_IsIoSpace;
+    /** Either IoPort or MemoryMappedIO depending on the address space type. */
+    IoBase *m_Io;
   };
   
   Device();
+  /// \warning This renders 'p' unusable - it deletes all its IoPorts and MemoryMappedIo's.
   Device(Device *p);
   virtual ~Device();
 
@@ -79,6 +92,17 @@ public:
   virtual Type getType()
   {
     return Root;
+  }
+  
+  /** Returns the (specific) type of the device, in string form. */
+  virtual String getSpecificType()
+  {
+    return m_SpecificType;
+  }
+  /** Sets the specific type of the device, in string form. */
+  virtual void setSpecificType(String str)
+  {
+    m_SpecificType = str;
   }
   
   /** Dumps a textual representation of the device into the given string. */
@@ -114,6 +138,8 @@ public:
 private:
   Device(const Device&);
   void operator=(const Device &);
+  
+  void removeIoMappings();
 
 protected:
   /** The address of this device, in its parent's address space. */
@@ -126,6 +152,8 @@ protected:
   static Device m_Root;
   /** The interrupt number */
   uintptr_t m_InterruptNumber;
+  /** The specific device type */
+  String m_SpecificType;
 };
 
 #endif

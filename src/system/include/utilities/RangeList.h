@@ -107,6 +107,7 @@ void RangeList<T>::free(T address, T length)
       length += (*cur)->length;
       delete *cur;
       m_List.erase(cur);
+      break;
     }
 
   cur = m_List.begin();
@@ -117,6 +118,7 @@ void RangeList<T>::free(T address, T length)
       length += (*cur)->length;
       delete *cur;
       m_List.erase(cur);
+      break;
     }
 
   Range *range = new Range(address, length);

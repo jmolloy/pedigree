@@ -20,6 +20,7 @@
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <machine/Controller.h>
+#include <processor/IoBase.h>
 #include <processor/IoPort.h>
 #include <utilities/RequestQueue.h>
 #include <machine/IrqHandler.h>
@@ -47,8 +48,8 @@ public:
   // IRQ handler callback.
   virtual bool irq(irq_id_t number, InterruptState &state);
 
-  IoPort m_CommandRegs;
-  IoPort m_ControlRegs;
+  IoBase *m_pCommandRegs;
+  IoBase *m_pControlRegs;
 };
 
 #endif

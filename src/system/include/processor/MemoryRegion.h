@@ -32,6 +32,7 @@ class MemoryRegion
 {
   /** X86CommonPhysicalMemoryManager needs access to MemoryRegion's members */
   friend class X86CommonPhysicalMemoryManager;
+  /** As does PpcCommonPhysicalMemoryManager. */
   friend class PpcCommonPhysicalMemoryManager;
   public:
     /** The default constructor does nothing  */

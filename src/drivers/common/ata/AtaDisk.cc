@@ -18,6 +18,7 @@
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <machine/Controller.h>
+#include <Log.h>
 #include "AtaController.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
@@ -33,42 +34,43 @@ AtaDisk::~AtaDisk()
 
 bool AtaDisk::initialise()
 {
+
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
   
   // Grab our parent's IoPorts for command and control accesses.
-  IoPort &commandRegs = pParent->m_CommandRegs;
-  IoPort &controlRegs = pParent->m_ControlRegs;
+  IoBase *commandRegs = pParent->m_pCommandRegs;
+  IoBase *controlRegs = pParent->m_pControlRegs;
 
   // Drive spin-up
-  commandRegs.write8(0x00, 6);
+  commandRegs->write8(0x00, 6);
   
   //
   // Start IDENTIFY command.
   //
   
   // Send drive select.
-  commandRegs.write8( (m_IsMaster)?0xA0:0xB0, 6 );
+  commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
   // Read the status 5 times as a delay for the drive to go about its business.
   for (int i = 0; i < 5; i++)
-    commandRegs.read8(7);
+    commandRegs->read8(7);
   
   // Disable IRQs, for the moment.
-//   controlRegs.write8(0x01, 6);
+//   controlRegs->write8(0x01, 6);
   
   // Send IDENTIFY.
-  commandRegs.write8(0xEC, 7);
+  commandRegs->write8(0xEC, 7);
 
   // Read status register.
-  uint8_t status = commandRegs.read8(7);
+  uint8_t status = commandRegs->read8(7);
 
   if (status == 0)
     // Device does not exist.
     return false;
 
   // Poll until BSY is clear and either ERR or DRQ are set
-  while ( ((status&0x80) != 0))// || ((status&0x9) == 0) )
-    status = commandRegs.read8(7);
+  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    status = commandRegs->read8(7);
 
   // If ERR was set we had an err0r.
   if (status & 0x1)
@@ -79,7 +81,7 @@ bool AtaDisk::initialise()
 
   // Read the data.
   for (int i = 0; i < 256; i++)
-    m_pIdent[i] = commandRegs.read16(0);
+    m_pIdent[i] = commandRegs->read16(0);
 
   // Interpret the data.
 
@@ -130,6 +132,8 @@ bool AtaDisk::initialise()
   m_pFirmwareRevision[8] = '\0';
 
   NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
+
+  return true;
 }
 
 uint64_t AtaDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
@@ -155,8 +159,8 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
   
   // Grab our parent's IoPorts for command and control accesses.
-  IoPort &commandRegs = pParent->m_CommandRegs;
-  IoPort &controlRegs = pParent->m_ControlRegs;
+  IoBase *commandRegs = pParent->m_pCommandRegs;
+  IoBase *controlRegs = pParent->m_pControlRegs;
   
   // Get the buffer in pointer form.
   uint16_t *pTarget = reinterpret_cast<uint16_t*> (buffer);
@@ -166,30 +170,30 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
   if (nBytes%512) nSectors++;
   
   // Send drive select.
-  commandRegs.write8( (m_IsMaster)?0xA0:0xB0, 6 );
+  commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
 
   while (nSectors > 0)
   {
     // Wait for status to be ready - spin until READY bit is set.
-    while (!(commandRegs.read8(7) & 0x40))
+    while (!(commandRegs->read8(7) & 0x40))
       ;
 
     // Send out sector count.
     uint8_t nSectorsToRead = (nSectors>255) ? 255 : nSectors;
     nSectors -= nSectorsToRead;
     
-    commandRegs.write8(nSectorsToRead, 2);
+    commandRegs->write8(nSectorsToRead, 2);
     // TODO: LBA28, LBA48 or CHS here.
     setupLBA28(location);
     
     // Enable disk interrupts
-    controlRegs.write8(0x08, 6);
+    controlRegs->write8(0x08, 6);
     
     // Make sure the IrqReceived mutex is locked.
     m_IrqReceived.tryAcquire();
     
     // Send command "read sectors with retry"
-    commandRegs.write8(0x20, 7);
+    commandRegs->write8(0x20, 7);
 
     // We get an IRQ per sector ready to be read.
     for (int i = 0; i < nSectorsToRead; i++)
@@ -199,7 +203,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
       // We got the mutex, so an IRQ must have arrived.
       for (int j = 0; j < 256; j++)
-        *pTarget++ = commandRegs.read16(0);
+        *pTarget++ = commandRegs->read16(0);
     }
   }
   return nBytes;
@@ -222,8 +226,8 @@ void AtaDisk::setupLBA28(uint64_t n)
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
   
   // Grab our parent's IoPorts for command and control accesses.
-  IoPort &commandRegs = pParent->m_CommandRegs;
-  IoPort &controlRegs = pParent->m_ControlRegs;
+  IoBase *commandRegs = pParent->m_pCommandRegs;
+  IoBase *controlRegs = pParent->m_pControlRegs;
   
   // Get the sector number of the address.
   n /= 512; 
@@ -234,8 +238,8 @@ void AtaDisk::setupLBA28(uint64_t n)
   uint8_t head = (uint8_t) ((n>>24) & 0x0F);
   if (m_IsMaster) head |= 0xE0; else head |= 0xF0;
   
-  commandRegs.write8(head, 6);
-  commandRegs.write8(sector, 3);
-  commandRegs.write8(cLow, 4);
-  commandRegs.write8(cHigh, 5);
+  commandRegs->write8(head, 6);
+  commandRegs->write8(sector, 3);
+  commandRegs->write8(cLow, 4);
+  commandRegs->write8(cHigh, 5);
 }

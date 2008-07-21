@@ -72,5 +72,19 @@ void Processor::invalidateDCache(uintptr_t nAddr)
 
 void Processor::flushDCache(uintptr_t nAddr)
 {
-  asm volatile("dcbf 0, %0" : : "r"(nAddr));
+  asm volatile("dcbst 0, %0" : : "r"(nAddr));
+}
+
+void Processor::flushDCacheAndInvalidateICache(uintptr_t startAddr, uintptr_t endAddr)
+{
+  for (uintptr_t i = startAddr; i < endAddr; i += 4)
+    flushDCache(i);
+
+  asm volatile("sync");
+
+  for (uintptr_t i = startAddr; i < endAddr; i += 4)
+    invalidateICache(i);
+  
+  asm volatile("sync");
+  asm volatile("isync");
 }

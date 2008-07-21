@@ -147,7 +147,7 @@ void PPC32InterruptManager::initialiseProcessor()
   memcpy(reinterpret_cast<void*> (0x1700), &isr_thermal_management, 0x100);
 
   for (uintptr_t i = 0x0; i < 0x1800; i += 4)
-    asm volatile("dcbst 0, %0" : : "r" (i));
+    Processor::flushDCache(i);
 
   asm volatile("sync");
 
@@ -191,6 +191,8 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
 #ifdef DEBUGGER
     Debugger::instance().start(interruptState, e);
 #else
+    FATAL("SRR0: " << Hex << interruptState.m_Srr0 << ", SRR1: " << interruptState.m_Srr1);
+    FATAL("DAR: " << interruptState.m_Dar << ", DSISR: " << interruptState.m_Dsisr);
     panic(e);
 #endif
   }

@@ -17,6 +17,7 @@
 #include <LockGuard.h>
 #include <processor/Processor.h>
 #include <processor/IoPortManager.h>
+#include <panic.h>
 
 #if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
@@ -33,7 +34,7 @@
 
     // Acquire the lock untill the end of the function
     LockGuard<Spinlock> lock(m_Lock);
-
+    
     // Remove the I/O ports from the list of free I/O ports
     if (m_FreeIoPorts.allocateSpecific(ioPort, size) == false)
       return false;

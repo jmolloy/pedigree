@@ -18,19 +18,16 @@
 #include <machine/Machine.h>
 
 AtaController::AtaController(Controller *pDev) :
-  Controller(pDev), m_CommandRegs("ATA Controller: command registers"),
-  m_ControlRegs("ATA Controller: control registers")
+  Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0)
 {
   // Initialise our ports.
   for (int i = 0; i < m_Addresses.count(); i++)
   {
     /// \todo String operator== problem here.
-    if (!strcmp(m_Addresses[i]->m_Name, "command"))
-    {
-      m_CommandRegs.allocate(m_Addresses[i]->m_Address, m_Addresses[i]->m_Size);
-    }
-    if (!strcmp(m_Addresses[i]->m_Name, "control"))
-      m_ControlRegs.allocate(m_Addresses[i]->m_Address, m_Addresses[i]->m_Size);
+    if (!strcmp(m_Addresses[i]->m_Name, "command") || !strcmp(m_Addresses[i]->m_Name, "bar0"))
+      m_pCommandRegs = m_Addresses[i]->m_Io;
+    if (!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
+      m_pControlRegs = m_Addresses[i]->m_Io;
   }
 
   // Create two disks - master and slave.
@@ -53,7 +50,7 @@ AtaController::AtaController(Controller *pDev) :
     delete pSlave;
 
   initialise();
-  
+
   Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 }
 

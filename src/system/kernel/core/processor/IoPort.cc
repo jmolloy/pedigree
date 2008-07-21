@@ -16,6 +16,7 @@
 
 #include <processor/IoPort.h>
 #include <processor/IoPortManager.h>
+#include <panic.h>
 
 #if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
 
@@ -26,7 +27,7 @@
       free();
 
     if (IoPortManager::instance().allocate(this, ioPort, size) == true)
-    {
+    {    
       m_IoPort = ioPort;
       m_Size = size;
       return true;

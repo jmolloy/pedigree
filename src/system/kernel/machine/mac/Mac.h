@@ -41,7 +41,7 @@ public:
   virtual Timer *getTimer();
   virtual Keyboard *getKeyboard();
 
-  virtual void initialiseDeviceTree(){}
+  virtual void initialiseDeviceTree();
 
 private:
   /**

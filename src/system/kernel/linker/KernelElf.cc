@@ -16,6 +16,7 @@
 
 #include <KernelElf.h>
 #include <utilities/utility.h>
+#include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
@@ -130,8 +131,11 @@ KernelElf::KernelElf() :
 KernelElf::~KernelElf()
 {
 }
-
+#ifdef PPC_COMMON
+uintptr_t loadbase = 0xe1000000;
+#else
 uintptr_t loadbase = 0x5000000;
+#endif
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   Module *module = new Module;
@@ -184,6 +188,12 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
       iterator++;
     }
   }
+  
+#if defined(PPC_COMMON) || defined(MIPS_COMMON)
+  ///\todo proper size in here.
+  Processor::flushDCacheAndInvalidateICache(loadbase, loadbase+0x20000);
+#endif
+  
   loadbase += 0x100000;
   NOTICE("Name: " << module->name);
   NOTICE("Entry: " << Hex << reinterpret_cast<uintptr_t> (module->entry));
@@ -230,6 +240,6 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
       return ret;
   }
-  WARNING("GlobalLookupSymbol failed: " << Hex << addr);
+  WARNING("KernelElf::GlobalLookupSymbol(" << Hex << addr << ") failed.");
   return 0;
 }

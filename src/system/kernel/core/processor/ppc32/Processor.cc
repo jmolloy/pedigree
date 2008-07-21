@@ -88,7 +88,7 @@ void Processor::initialise2()
   v.initialise(translations);
 
   HashedPageTable::instance().initialise(translations, ramMax);
-  
+
   // Initialise this processor's interrupt handling
   /// \note This is now done in HashedPageTable::initialise, so that page table
   ///       problems can be caught easier.

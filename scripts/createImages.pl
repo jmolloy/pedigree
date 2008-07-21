@@ -59,6 +59,7 @@ if ($compiler =~ m/ppc/) {
   }
   `hmount hdd_ppc_16h_63spt_100c.img`;
   `hcopy ./bootloader :pedigree`;
+  `hattrib -t tbxi :pedigree`;
   `humount`;
 }
 

@@ -35,6 +35,10 @@ Pc Pc::m_Instance;
 
 void Pc::initialise()
 {
+  // Initialise Vga
+  if (m_Vga.initialise() == false)
+    panic("Pc: Vga initialisation failed");
+  
   // Initialise ACPI
   #if defined(ACPI)
     Acpi &acpi = Acpi::instance();
@@ -101,10 +105,6 @@ void Pc::initialise()
     }
   #endif
 
-  // Initialise Vga
-  if (m_Vga.initialise() == false)
-    panic("Pc: Vga initialisation failed");
-
   // Initialise serial ports.
   m_pSerial[0].setBase(0x3F8);
   m_pSerial[1].setBase(0x2F8);
@@ -146,15 +146,17 @@ void Pc::initialiseDeviceTree()
 
   // ATA controllers.
   Controller *pAtaMaster = new Controller();
-  pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8));
-  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8));
+  pAtaMaster->setSpecificType(String("ata"));
+  pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8, true));
+  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8, true));
   pAtaMaster->setInterruptNumber(14);
   pIsa->addChild(pAtaMaster);
   pAtaMaster->setParent(pIsa);
 
   Controller *pAtaSlave = new Controller();
-  pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8));
-  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8));
+  pAtaMaster->setSpecificType(String("ata"));
+  pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8, true));
+  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8, true));
   pAtaSlave->setInterruptNumber(15);
   pIsa->addChild(pAtaSlave);
   pAtaSlave->setParent(pIsa);

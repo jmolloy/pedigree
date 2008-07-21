@@ -81,14 +81,13 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
   {
     const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
                          pSymbols[ELF32_R_SYM(rel.info)].name;
-    NOTICE("Relocating symbol \"" << pStr << "\"");
-    S = KernelElf::instance().globalLookupSymbol(pStr);
+    S = lookupSymbol(pStr);
     if (S == 0)
     {
       // Maybe we couldn't find the symbol because it's a symbol in this file.
       // This is the case when f.x. a constant in .rodata wants to point to a symbol
       // in .text - like a function pointer.
-      S = lookupSymbol(pStr);
+      S = KernelElf::instance().globalLookupSymbol(pStr);
     }
   }
   
@@ -99,8 +98,8 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
   uint32_t B = m_LoadBase;
 
   uint32_t *pResult = reinterpret_cast<uint32_t*> (address);
-  uint32_t result = *pResult; // Currently the result is the addend.
-  NOTICE("A: " << Hex << A << ", P: " << P << ", curr: " << result << ", S:" << S << " Ty: " << ELF32_R_TYPE(rel.info));
+  uint32_t result = *pResult;
+
   switch (ELF32_R_TYPE(rel.info))
   {
     case R_PPC_NONE:
@@ -114,16 +113,16 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
       break;
     case R_PPC_ADDR16:
     case R_PPC_UADDR16:
-      result = HALF16(result, S + A);
+      result = HALF16(result, (S + A));
       break;
     case R_PPC_ADDR16_LO:
-      result = HALF16(result, (S+A) & 0xFFFF );
+      result = HALF16(result, ((S+A) & 0xFFFF) );
       break;
     case R_PPC_ADDR16_HI:
       result = HALF16(result,  ((S+A) >> 16)&0xFFFF );
       break;
     case R_PPC_ADDR16_HA:
-      result = HALF16(result,  HA(S+A) );
+      result = HALF16(result,  HA((S+A)) );
       break;
     case R_PPC_ADDR14:
       result = LOW14(result,  (S+A)>>2 );
@@ -161,8 +160,6 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
     default:
       ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
   }
-
-  NOTICE("Result: "<< result);
 
   // Write back the result.
   *pResult = result;
