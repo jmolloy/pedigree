@@ -26,6 +26,7 @@ class Disk : public Device
 public:
   Disk()
   {
+    m_SpecificType = "Generic Disk";
   }
   Disk(Device *p) :
     Device(p)

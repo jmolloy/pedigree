@@ -153,7 +153,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   if (nIntNumber == SYSCALL_INTERRUPT_NUMBER)
   {
     size_t serviceNumber = interruptState.getSyscallService();
-
+    
     if (UNLIKELY(serviceNumber >= serviceEnd))
     {
       // TODO: We should return an error here
@@ -167,9 +167,9 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
       LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
       pHandler = m_Instance.m_pSyscallHandler[serviceNumber];
     }
-  
+
     if (LIKELY(pHandler != 0))
-      pHandler->syscall(interruptState);
+      interruptState.m_Eax = pHandler->syscall(interruptState);
     return;
   }
 
@@ -222,6 +222,14 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   }
 }
 
+uintptr_t X86InterruptManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+{
+  uint32_t eax = ((service&0xFFFF)<<16) | (function&0xFFFF);
+  uintptr_t ret;
+  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1), "c" (p2), "d" (p3), "S" (p4), "D" (p5));
+  return ret;
+}
+
 //
 // Functions only usable in the kernel initialisation phase
 //
@@ -270,7 +278,7 @@ X86InterruptManager::X86InterruptManager()
   for (size_t i = 0;i < 256;i++)
     setInterruptGate(i,
                      interrupt_handler_array[i],
-                     (i == SYSCALL_INTERRUPT_NUMBER) ? true : false);
+                     (i == SYSCALL_INTERRUPT_NUMBER || i == 3 /* Interrupt number */) ? true : false);
 }
 X86InterruptManager::~X86InterruptManager()
 {

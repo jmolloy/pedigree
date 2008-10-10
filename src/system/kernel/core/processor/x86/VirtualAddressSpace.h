@@ -50,6 +50,9 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     virtual void *allocateStack();
     virtual void freeStack(void *pStack);
 
+    virtual VirtualAddressSpace *clone();
+    virtual void revertToKernelAddressSpace();
+
     //
     // Needed for the PhysicalMemoryManager
     //

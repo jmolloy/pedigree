@@ -26,6 +26,9 @@ include(buildFlags.cmake)
 list(REMOVE_ITEM DEFINES DUMMY_ITEM)
 
 option(COLORGCC "Use the colorgcc script to colourise the compiler output." ON)
+option(COMPILE_NEWLIB "Compile the RedHat Newlib C library from source." OFF)
+option(COMPILE_BASH   "Compile the GNU bash shell from source." OFF)
+
 set(BOOTLOADER_BUILT)
 
 #########################################################################################
@@ -157,6 +160,10 @@ endforeach(definition)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 # Remove the default -fPIC option from the linker flags.
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS)
+# Remove the default -rdynamic option from the linker flags.
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
+# Remove the default -fPIC option from the linker flags.
+set(CMAKE_SHARED_LIBRARY_C_FLAGS)
 
 # Set the C and C++ compiler lines.
 if(COLORGCC)
@@ -198,12 +205,15 @@ add_subdirectory(src/system/kernel)
 add_dependencies(kernel version.cc check_compiler)
 
 # Recurse into the Modules directory.
-#add_subdirectory(src/system/modules)
 add_subdirectory(src/drivers)
+add_subdirectory(src/system/modules)
+
+# Add the subsystems.
+add_subdirectory(src/subsys)
 
 # Add an initrd target.
-add_custom_target(initrd ALL tar --absolute-names --transform='s,/.*/,,' -cf initrd.tar ${DRIVER_OBJS}
-                  DEPENDS ${DRIVER_NAMES}
+add_custom_target(initrd ALL tar --absolute-names --transform='s,/.*/,,' -cf initrd.tar ${DRIVER_OBJS} ${MODULE_OBJS} ${SUBSYS_OBJS}
+                  DEPENDS ${DRIVER_NAMES} ${MODULE_NAMES} ${SUBSYS_NAMES}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
 add_dependencies(initrd kernel)
@@ -215,9 +225,11 @@ if (PPC_COMMON)
   add_dependencies(autogen_initrd.h initrd)
 endif (PPC_COMMON)
 
+add_subdirectory(src/user)
+
 # Create a target used for creating the image files.
-add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER}
-                  DEPENDS kernel ${BOOTLOADER_BUILT}
+add_custom_target(create_images ALL perl ../scripts/createImages.pl ${COMPILER} ${HDD_FILES}
+                  DEPENDS kernel ${BOOTLOADER_BUILT} ${HDD_TARGETS}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
 add_dependencies(create_images initrd)

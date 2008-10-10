@@ -70,6 +70,11 @@ public:
    * \pre setLoadBase() has been called.
    */
   bool relocate();
+
+  /**
+   * Allocates virtual memory for all sections, given "flags".
+   */
+  bool allocateSections();
   
   /**
    * Writes all writeable sections to their virtual addresses.

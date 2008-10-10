@@ -196,6 +196,10 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   uint64_t delta = periodicIrqInfo[m_PeriodicIrqInfoIndex].ns[index];
   index = (index == 0) ? 1 : 0;
   m_TickCount += delta;
+  //if ((m_TickCount/1000000ULL) > 10000)
+  // {
+  //   Processor::breakpoint();
+  // }
 
   // Calculate the new time/date
   m_Nanosecond += delta;
@@ -220,7 +224,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
           m_Hour = 0;
 
           // Are we in a leap year
-          bool isLeap = ((m_Year % 4) == 0) & ((m_Year % 100) != 0) | ((m_Year % 400) == 0);
+          bool isLeap = ((m_Year % 4) == 0) & (((m_Year % 100) != 0) | ((m_Year % 400) == 0));
 
           if (UNLIKELY(((m_DayOfMonth > daysPerMonth[m_Month - 1]) && ((m_Month != 2) || isLeap == false)) ||
                        (m_DayOfMonth > (daysPerMonth[m_Month - 1] + 1))))

@@ -25,4 +25,4 @@ add_subdirectory(process)
 add_subdirectory(processor)
 
 add_kernel_src(core
-               main.cc BootIO.cc)
+               main.cc BootIO.cc KernelCoreSyscallManager.cc)

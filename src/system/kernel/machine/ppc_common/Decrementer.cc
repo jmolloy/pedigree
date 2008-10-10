@@ -66,11 +66,19 @@ Decrementer::Decrementer()
 {
 }
 
+uint32_t numFired = 0;
+
 void Decrementer::interrupt(size_t interruptNumber, InterruptState &state)
 {
   // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
   uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
   asm volatile("mtdec %0" : : "r" (n));
+
+//   numFired++;
+//   if (numFired == 300)
+//   {
+//     Processor::breakpoint();
+//   }
 
   // TODO: Delta is wrong
   if (LIKELY(m_Handler != 0))

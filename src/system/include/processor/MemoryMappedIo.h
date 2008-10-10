@@ -33,8 +33,8 @@ class MemoryMappedIo : public IoBase,
 {
   public:
     /** The default constructor */
-    inline MemoryMappedIo(const char *pName)
-      : IoBase(), MemoryRegion(pName){}
+  inline MemoryMappedIo(const char *pName, uintptr_t offset=0, uintptr_t padding=1)
+    : IoBase(), MemoryRegion(pName), m_Offset(offset), m_Padding(padding) {}
     /** The destructor frees the allocated ressources */
     inline virtual ~MemoryMappedIo(){}
 
@@ -63,6 +63,15 @@ class MemoryMappedIo : public IoBase,
     /** The assignment operator
      *\note NOT implemented */
     MemoryMappedIo &operator = (const MemoryMappedIo &);
+
+    /** MemoryRegion only supports allocation on a page boundary.
+        This variable adds an offset onto each access to make up for this
+        (if required) */
+    uintptr_t m_Offset;
+
+    /** It is possible that registers may not follow one another directly in memory,
+        instead being padded to some boundary. */
+    size_t m_Padding;
 };
 
 /** @} */
@@ -81,7 +90,7 @@ uint8_t MemoryMappedIo::read8(size_t offset)
       Processor::halt();
   #endif
 
-  return *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset));
+  return *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset));
 }
 uint16_t MemoryMappedIo::read16(size_t offset)
 {
@@ -90,7 +99,7 @@ uint16_t MemoryMappedIo::read16(size_t offset)
       Processor::halt();
   #endif
 
-  return *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset));
+  return *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset));
 }
 uint32_t MemoryMappedIo::read32(size_t offset)
 {
@@ -99,7 +108,7 @@ uint32_t MemoryMappedIo::read32(size_t offset)
       Processor::halt();
   #endif
 
-  return *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset));
+  return *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset));
 }
 uint64_t MemoryMappedIo::read64(size_t offset)
 {
@@ -108,7 +117,7 @@ uint64_t MemoryMappedIo::read64(size_t offset)
       Processor::halt();
   #endif
 
-  return *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset));
+  return *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset));
 }
 void MemoryMappedIo::write8(uint8_t value, size_t offset)
 {
@@ -117,7 +126,7 @@ void MemoryMappedIo::write8(uint8_t value, size_t offset)
       Processor::halt();
   #endif
 
-  *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), offset)) = value;
+  *reinterpret_cast<volatile uint8_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset)) = value;
 }
 void MemoryMappedIo::write16(uint16_t value, size_t offset)
 {
@@ -126,7 +135,7 @@ void MemoryMappedIo::write16(uint16_t value, size_t offset)
       Processor::halt();
   #endif
 
-  *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), offset)) = value;
+  *reinterpret_cast<volatile uint16_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset)) = value;
 }
 void MemoryMappedIo::write32(uint32_t value, size_t offset)
 {
@@ -135,7 +144,7 @@ void MemoryMappedIo::write32(uint32_t value, size_t offset)
       Processor::halt();
   #endif
 
-  *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), offset)) = value;
+  *reinterpret_cast<volatile uint32_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset)) = value;
 }
 void MemoryMappedIo::write64(uint64_t value, size_t offset)
 {
@@ -144,7 +153,7 @@ void MemoryMappedIo::write64(uint64_t value, size_t offset)
       Processor::halt();
   #endif
 
-  *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), offset)) = value;
+  *reinterpret_cast<volatile uint64_t*>(adjust_pointer(virtualAddress(), (offset*m_Padding)+m_Offset)) = value;
 }
 MemoryMappedIo::operator bool() const
 {

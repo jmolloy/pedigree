@@ -17,6 +17,7 @@
 #include <utilities/RequestQueue.h>
 #include <processor/Processor.h>
 #include <panic.h>
+#include <Log.h>
 
 RequestQueue::RequestQueue() :
   m_pRequestQueue(0), m_RequestQueueSize(0), m_Stop(false), m_RequestQueueMutex(false)
@@ -31,9 +32,9 @@ void RequestQueue::initialise()
 {
   // Start the worker thread.
 #ifdef THREADS
-  Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                               reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                               reinterpret_cast<void*> (this));
+  new Thread(Processor::information().getCurrentThread()->getParent(),
+             reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
+             reinterpret_cast<void*> (this));
 #endif
 }
 
@@ -51,7 +52,7 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
-  
+
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
   
@@ -64,20 +65,21 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
       p = p->next;
     p->next = pReq;
   }
+
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
-  
+
   m_RequestQueueMutex.release();
-  
+
   // Wait for the request to be satisfied. This should sleep the thread.
   pReq->mutex.acquire();
-  
+
   // Grab the result.
   uintptr_t ret = pReq->ret;
   
   // Delete the request structure.
   delete pReq;
-  
+
   return ret;
 }
 
@@ -89,9 +91,8 @@ int RequestQueue::trampoline(void *p)
 
 int RequestQueue::work()
 {
-
   while (true)
-  {
+  {    
     // Sleep on the queue length semaphore - wake when there's something to do.
     m_RequestQueueSize.acquire();
 

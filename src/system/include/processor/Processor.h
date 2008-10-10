@@ -98,9 +98,6 @@ class Processor
     static void switchToUserMode(uintptr_t pc, uintptr_t param);
     
     /** Do a context switch. */
-#ifndef PPC_COMMON
-    inline
-#endif
     static void contextSwitch(InterruptState *state);
     
     /** Trigger a breakpoint */
@@ -175,7 +172,10 @@ class Processor
      *\param[in] pAddress the specific virtual address
      *\todo Figure out if we want to flush the TLB of every processor or if
      *      this should be handled by the upper layers */
-    inline static void invalidate(void *pAddress);
+#ifdef PPC_COMMON
+    inline
+#endif
+    static void invalidate(void *pAddress);
 
     #if defined(X86)
       static physical_uintptr_t readCr3();

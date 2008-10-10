@@ -154,7 +154,7 @@ void PpcCommonPhysicalMemoryManager::initialise(Translations &translations, uint
     for (unsigned int j = 0; j < translations.getNumTranslations(); j++)
     {
       Translations::Translation t = translations.getTranslation(j);
-      if ((i >= t.virt) && (i < t.virt+t.size))
+      if ((i >= t.phys) && (i < t.phys+t.size))
       {
         claimed = true;
         break;

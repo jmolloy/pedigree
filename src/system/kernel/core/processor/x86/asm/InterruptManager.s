@@ -37,6 +37,7 @@ interrupt_handler:
   ; Switch to the kernel data segment
   mov ax, 0x10
   mov ds, ax
+  mov es, ax
 
   ; Create a new stackframe
   xor ebp, ebp
@@ -53,6 +54,8 @@ interrupt_handler:
 
   ; Restore the registers
   pop ds
+  mov ax, ds
+  mov es, ax
   popa
 
   ; Remove the errorcode and the interrupt number from the stack

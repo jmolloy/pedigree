@@ -23,13 +23,14 @@ class Spinlock
 {
   public:
     inline Spinlock(bool bLocked = false)
-      : m_bInterrupts(), m_Atom(!bLocked){}
+      : m_bInterrupts(), magic(0x1234), m_Atom(!bLocked){}
 
     void acquire();
     void release();
 
-  private:
+//  private:
     bool m_bInterrupts;
+  size_t magic;
     Atomic<bool> m_Atom;
 };
 

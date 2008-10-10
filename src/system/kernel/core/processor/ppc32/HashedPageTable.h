@@ -73,7 +73,10 @@ private:
     uint32_t reserved1 : 3;
     uint32_t r : 1;     // Reference bit.
     uint32_t c : 1;     // Change bit.
-    uint32_t wimg: 4;   // Memory/cache control bits.
+    uint32_t w : 1;   // Memory/cache control bits.
+    uint32_t i : 1;
+    uint32_t m : 1;
+    uint32_t g : 1;
     uint32_t reserved2 : 1;
     uint32_t pp : 2;    // Page protection bits.
   };

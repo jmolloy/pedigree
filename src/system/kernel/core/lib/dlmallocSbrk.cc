@@ -16,17 +16,28 @@
 
 #include "dlmalloc.h"
 #include <processor/Processor.h>
+#include <Log.h>
 #include <processor/PhysicalMemoryManager.h>
 
 void *dlmallocSbrk(ssize_t incr)
 {
   // NOTE: incr is already page aligned
 
+  Spinlock lock;
+  lock.acquire();
+
   // Get the current address space
-  VirtualAddressSpace &VAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+  VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
+
+  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
 
   // Expand the heap
-  void *pHeap = VAddressSpace.expandHeap(incr / PhysicalMemoryManager::getPageSize(),
-                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+  void *pHeap = VirtualAddressSpace::getKernelAddressSpace().expandHeap(incr,
+                                                                        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+  
+  Processor::switchAddressSpace(VAddressSpace);
+
+  lock.release();
+
   return pHeap;
 }

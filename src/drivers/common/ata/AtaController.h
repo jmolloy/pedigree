@@ -50,6 +50,9 @@ public:
 
   IoBase *m_pCommandRegs;
   IoBase *m_pControlRegs;
+private:
+  AtaController(const AtaController&);
+  void operator =(const AtaController&);
 };
 
 #endif

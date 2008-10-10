@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef VFS_H
+#define VFS_H
 
 #include <processor/types.h>
 #include <utilities/List.h>
@@ -44,10 +46,16 @@ public:
   /** Returns the singleton VFS instance. */
   static VFS &instance();
 
+  /** Mounts a Disk device as the alias "alias".
+      If alias is zero-length, the Filesystem is asked for its preferred name
+      (usually a volume name of some sort), and returned in "alias" */
+  bool mount(Disk *pDisk, String &alias);
+
   /** Adds an alias to an existing filesystem.
    *\param pFs The filesystem to add an alias for.
    *\param pAlias The alias to add. */
   void addAlias(Filesystem *pFs, String alias);
+  void addAlias(String oldAlias, String newAlias);
 
   /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
    *  the filesystem is destroyed.
@@ -63,6 +71,24 @@ public:
    *\return The filesystem aliased by pAlias or 0 if none found. */
   Filesystem *lookupFilesystem(String alias);
 
+  /** Attempts to obtain a File for a specific path. */
+  File find(String path);
+
+  /** Attempts to create a file. */
+  bool createFile(String path);
+  
+  /** Attempts to create a directory. */
+  bool createDirectory(String path);
+
+  /** Attempts to create a symlink. */
+  bool createSymlink(String path, String value);
+
+  /** Attempts to remove a file/directory/symlink. WILL FAIL IF DIRECTORY NOT EMPTY */
+  bool remove(String path);
+
+  /** Adds a filesystem probe callback - this is called when a device is mounted. */
+  void addProbeCallback(Filesystem::ProbeCallback callback);
+
 private:
   /** The static instance object. */
   static VFS m_Instance;
@@ -71,8 +97,16 @@ private:
    * \todo Use a proper Map class for this. */
   struct Alias
   {
+    Alias() : alias(), fs(0) {}
     String alias;
     Filesystem *fs;
+  private:
+    Alias(const Alias&);
+    void operator =(const Alias&);
   };
   List<Alias*> m_Aliases;
+
+  List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
 };
+
+#endif

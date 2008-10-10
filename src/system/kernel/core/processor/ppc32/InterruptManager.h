@@ -47,6 +47,9 @@ class PPC32InterruptManager : public ::InterruptManager,
 
     // SyscallManager Interface
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
+    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0,
+                              uintptr_t p5=0);
+  
 
     /** Initialises this processors IDTR
      *\note This should only be called from initialiseProcessor()

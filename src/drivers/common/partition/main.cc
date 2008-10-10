@@ -16,22 +16,25 @@
 
 #include <Module.h>
 #include <processor/types.h>
+#include <processor/Processor.h>
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include "msdos.h"
+#include "apple.h"
 #include <Log.h>
 
-void probeDevice(Disk *pDev)
+bool probeDevice(Disk *pDev)
 {
   // Does the disk have an MS-DOS partition table?
   if (msdosProbeDisk(pDev))
-    return;
+    return true;
   
   // No? how about an Apple_Map?
-  //if (appleProbeDisk(pDev))
-    //return;
+  if (appleProbeDisk(pDev))
+    return true;
   
   // Oh well, better luck next time.
+  return false;
 }
 
 void searchNode(Device *pDev)
@@ -43,10 +46,10 @@ void searchNode(Device *pDev)
     String mname;
     pChild->getName(mname);
 
+    bool hasPartitions = false;
     if (pChild->getType() == Device::Disk)
     {
       // Check that none of its children are Partitions (in which case we've probed this before!)
-      bool hasPartitions = false;
       for (unsigned int i = 0; i < pChild->getNumChildren(); i++)
       {
         String name;
@@ -58,10 +61,11 @@ void searchNode(Device *pDev)
         }
       }
       if (!hasPartitions)
-        probeDevice(reinterpret_cast<Disk*> (pChild));
+        hasPartitions = probeDevice(reinterpret_cast<Disk*> (pChild));
     }
-    // Recurse.
-    searchNode(pChild);
+    // Recurse, if we didn't find any partitions.
+    if (!hasPartitions)
+      searchNode(pChild);
   }
 }
 
@@ -80,3 +84,4 @@ void exit()
 const char *g_pModuleName = "partition";
 ModuleEntry g_pModuleEntry = &entry;
 ModuleExit  g_pModuleExit  = &exit;
+const char *g_pDepends[] = {"ata", 0};

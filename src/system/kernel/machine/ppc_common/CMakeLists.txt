@@ -21,4 +21,4 @@
 #
 
 add_kernel_src(machine/ppc_common
-               Keyboard.cc Machine.cc Serial.cc Vga.cc Decrementer.cc)
+               Keyboard.cc Machine.cc Serial.cc Vga.cc Decrementer.cc pci.cc OpenPic.cc Heathrow.cc resolveInterruptNumbers.cc)

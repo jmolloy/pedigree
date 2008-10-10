@@ -19,21 +19,21 @@ if(X86_COMMON)
   set(X86DRIVERS)
 endif(X86_COMMON)
 if(PPC_COMMON)
-  set(PPCDRIVERS test)
+  set(PPCDRIVERS ata-specific)
 endif(PPC_COMMON)
 
 #########################################################################################
 
-# Descend into each module's subdirectory first.
-foreach(var ${DRIVERS})
-  add_subdirectory("common/${var}")
-endforeach(var ${DRIVERS})
+# Descend into each arch's subdirectory first.
 foreach(var ${X86DRIVERS})
   add_subdirectory("x86/${var}")
 endforeach(var ${X86DRIVERS})
 foreach(var ${PPCDRIVERS})
   add_subdirectory("ppc/${var}")
 endforeach(var ${PPCDRIVERS})
+foreach(var ${DRIVERS})
+  add_subdirectory("common/${var}")
+endforeach(var ${DRIVERS})
 
 # Pull all the modules together in a tarfile.
 set(OBJS)

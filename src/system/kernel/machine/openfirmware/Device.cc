@@ -29,12 +29,14 @@ OFDevice::~OFDevice()
 
 void OFDevice::getProperty(const char *pProperty, NormalStaticString &buf)
 {
+  char buf2[64];
   OFParam ret = OpenFirmware::instance().call("instance-to-package", 1, static_cast<OFParam> (m_Handle));
   if (reinterpret_cast<int>(ret) == -1) ret = static_cast<OFParam> (m_Handle);
   OpenFirmware::instance().call("getprop", 4, ret,
                                               reinterpret_cast<OFParam> (const_cast<char*> (pProperty)), 
-                                              static_cast<OFParam> (const_cast<char*> (static_cast<const char*> (buf))),
+                                              static_cast<OFParam> (buf2),
                                               reinterpret_cast<OFParam> (64));
+  buf += buf2;
 }
 
 OFHandle OFDevice::getProperty(const char *pProperty)
@@ -58,6 +60,24 @@ int OFDevice::getProperty(const char *pProperty, void *buf, size_t bufLen)
                                               reinterpret_cast<OFParam> (const_cast<char*> (pProperty)),
                                               reinterpret_cast<OFParam> (buf),
                                               reinterpret_cast<OFParam> (bufLen)));
+}
+
+bool OFDevice::propertyExists(const char *pProperty)
+{
+  OFHandle h;
+  OFParam ret = OpenFirmware::instance().call("instance-to-package", 1, static_cast<OFParam> (m_Handle));
+  if (reinterpret_cast<int>(ret) == -1) ret = static_cast<OFParam> (m_Handle);
+  return OpenFirmware::instance().call("getprop", 4, ret,
+                                       reinterpret_cast<OFParam> (const_cast<char*> (pProperty)),
+                                       reinterpret_cast<OFParam> (&h),
+                                       reinterpret_cast<OFParam> (sizeof(OFHandle))) != reinterpret_cast<OFHandle>(-1);
+}
+
+OFHandle OFDevice::getParent()
+{
+  OFParam ret = OpenFirmware::instance().call("instance-to-package", 1, static_cast<OFParam> (m_Handle));
+  if (reinterpret_cast<int>(ret) == -1) ret = static_cast<OFParam> (m_Handle);
+  return static_cast<OFHandle>(OpenFirmware::instance().call("parent", 1, reinterpret_cast<OFParam> (ret)));
 }
 
 int OFDevice::getPropertyLength(const char *pProperty)

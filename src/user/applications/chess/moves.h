@@ -12,5 +12,6 @@ Bitboard knightMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos);
 Bitboard kingMoves(Bitboard allPieces, Bitboard enemyPieces, Square pos, bool leftRookMoved,
                    bool rightRookMoved, bool kingMoved);
 Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawnsEnPassant, Square pos);
+Bitboard pawnAttackOnly(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawnsEnPassant, Square pos);
 
 #endif

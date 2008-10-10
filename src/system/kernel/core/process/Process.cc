@@ -20,21 +20,26 @@
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
 #include <processor/VirtualAddressSpace.h>
+#include <Elf32.h>
+#include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
 Process::Process() :
-  m_NextTid(0), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace())
+  m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
+  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd("root:/")
 {
   m_Id = Scheduler::instance().addProcess(this);
 }
 
 
 Process::Process(Process *pParent) :
-  m_NextTid(0), m_pParent(pParent), m_pAddressSpace(0)
+  m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0), m_FdMap(), m_NextFd(0), m_FdLock(),
+  m_ExitStatus(0), m_Cwd(pParent->m_Cwd)
 {
+  m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
+
   m_Id = Scheduler::instance().addProcess(this);
-  /// \todo The call to 'create' here should become 'm_pParent->m_pAddressSpace->clone'.
-  m_pAddressSpace = VirtualAddressSpace::create();
+
   // Set a temporary description.
   str = m_pParent->str;
   str += "<F>"; // F for forked.
@@ -78,6 +83,94 @@ Thread *Process::getThread(size_t n)
     return 0;
   }
   return m_Threads[n];
+}
+
+void Process::kill()
+{
+  /// \todo Grab the scheduler lock!
+  Processor::setInterrupts(false);
+
+  NOTICE("Kill: " << m_Id);
+
+  // Bye bye process - have we got any zombie children?
+  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  {
+    Process *pProcess = Scheduler::instance().getProcess(i);
+    NOTICE("pProces: " << (uintptr_t)pProcess);
+    if (pProcess->m_pParent == this)
+    {
+      if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
+      {
+        // Kill 'em all!
+        delete pProcess;
+      }
+      else
+      {
+        pProcess->m_pParent = 0;
+      }
+    }
+  }
+
+  // Kill all our threads except 0, which exists in Zombie state.
+  while (m_Threads.count() > 1)
+  {
+    Thread *pThread = m_Threads[0];
+    m_Threads.erase(m_Threads.begin());
+    delete pThread; // Calls Scheduler::remove and this::remove.
+  }
+
+  m_Threads[0]->setStatus(Thread::Zombie);
+
+  Processor::setInterrupts(true);
+
+  Scheduler::instance().yield(0);
+}
+
+uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
+{
+  // At this point we're uninterruptible, as we're forking.
+  Spinlock lock;
+  lock.acquire();
+
+  // Create a new process for the init process.
+  Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+
+  pProcess->description().clear();
+  pProcess->description().append(name);
+
+  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
+
+  // Switch to the init process' address space.
+  Processor::switchAddressSpace(*pProcess->getAddressSpace());
+
+  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not 
+  // in the kernel address space so we have a clean slate.
+  pProcess->getAddressSpace()->revertToKernelAddressSpace();
+
+  Elf32 initElf;
+  initElf.load(elf, elfSize);
+  initElf.allocateSections();
+  initElf.writeSections();
+
+  for (int j = 0; j < 0x20000; j += 0x1000)
+  {
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                   reinterpret_cast<void*> (j+0x40000000),
+                                                                   VirtualAddressSpace::Write);
+    if (!b)
+      WARNING("map() failed in init");
+  }
+
+  // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
+  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
+
+  // Switch back to the old address space.
+  Processor::switchAddressSpace(oldAS);
+
+  lock.release();
+
+  return pProcess->getId();
 }
 
 #endif

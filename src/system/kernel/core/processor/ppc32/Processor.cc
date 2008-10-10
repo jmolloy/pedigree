@@ -102,6 +102,12 @@ void Processor::initialise2()
     (PpcCommonPhysicalMemoryManager::instance());
   p.initialise(translations, ramMax);
 
+  // Floating point is available.
+  uint32_t msr;
+  asm volatile("mfmsr %0" : "=r" (msr));
+  msr |= MSR_FP;
+  asm volatile("mtmsr %0" :: "r" (msr));
+
   m_Initialised = 2;
 }
 
@@ -111,4 +117,19 @@ void Processor::identify(HugeStaticString &str)
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
+  PPC32VirtualAddressSpace &s = reinterpret_cast<PPC32VirtualAddressSpace&>(AddressSpace);
+  
+  uint32_t vsid = static_cast<uint32_t>(s.m_Vsid)*8;
+
+  asm volatile("mtsr 0, %0" :: "r"(vsid+0));
+  asm volatile("mtsr 1, %0" :: "r"(vsid+1));
+  asm volatile("mtsr 2, %0" :: "r"(vsid+2));
+  asm volatile("mtsr 3, %0" :: "r"(vsid+3));
+  asm volatile("mtsr 4, %0" :: "r"(vsid+4));
+  asm volatile("mtsr 5, %0" :: "r"(vsid+5));
+  asm volatile("mtsr 6, %0" :: "r"(vsid+6));
+  asm volatile("mtsr 7, %0" :: "r"(vsid+7));
+  asm volatile("sync; isync");
+
+  Processor::information().setVirtualAddressSpace(AddressSpace);
 }

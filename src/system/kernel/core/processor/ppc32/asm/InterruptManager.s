@@ -300,14 +300,27 @@ isr_common:
   mfcr   21            # Get the condition register
   mtsprg 2, 21         # Save CR in SPRG2 - we're about to do a conditional.
 
-  lis 21, kernel_stack@ha
-  addi 21, 21, kernel_stack@l
-  lwz 21, 0(21)
+  mfspr  21, 27        # Get SRR1 in R21
+  andi.  21,21,0x4000  # And with 0x4000 to check for MSR_PR - user mode.
 
   cmpi   0, 21, 0      # Compare the values of register 21 and $0, setting condition field 0
-  bne    1f            # If r21 != 0, go to 1:
 
-  mr     21, 1         # The kernel stack was 0, use the current stack as the stack pointer
+  mr     21, 1         # Set the stack (r21) back to the interrupted SP (r1) on the assumption that we don't need to change to kernel stack.
+
+  beq    1f            # If we were in supervisor mode (!MSR_PR), jump to 1:, as we don't need to change the stack.
+
+  lis    21, kernel_stack@ha    # Load the kernel stack address.
+  addi   21, 21, kernel_stack@l #
+  lwz    21, 0(21)              # Dereference pointer.
+
+#  lis 21, kernel_stack@ha
+#  addi 21, 21, kernel_stack@l
+#  lwz 21, 0(21)
+
+#  cmpi   0, 21, 0      # Compare the values of register 21 and $0, setting condition field 0
+#  bne    1f            # If r21 != 0, go to 1:
+
+#  mr     21, 1         # The kernel stack was 0, use the current stack as the stack pointer
 
 1:
   stw    20, -0xa4(21) # Save the interrupt number

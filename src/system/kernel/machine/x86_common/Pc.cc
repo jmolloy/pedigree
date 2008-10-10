@@ -143,6 +143,7 @@ void Pc::initialiseDeviceTree()
 {
   // Firstly add the ISA bus.
   Bus *pIsa = new Bus("ISA");
+  pIsa->setSpecificType(String("isa"));
 
   // ATA controllers.
   Controller *pAtaMaster = new Controller();

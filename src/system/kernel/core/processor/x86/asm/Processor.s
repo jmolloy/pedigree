@@ -55,6 +55,8 @@ _ZN9Processor13contextSwitchEP17X86InterruptState:
 
   ; Restore the registers
   pop ds
+  mov ax, ds
+  mov es, ax
   popa
 
   ; Remove the errorcode and the interrupt number from the stack

@@ -53,7 +53,9 @@ public:
 
 private:
   /** Sets the drive up for reading from address 'n' in LBA28 mode. */
-  void setupLBA28(uint64_t n);
+  void setupLBA28(uint64_t n, uint32_t nSectors);
+  /** Sets the drive up for reading from address 'n' in LBA48 mode. */
+  void setupLBA48(uint64_t n, uint32_t nSectors);
 
   /** Is this the master device on the bus? */
   bool m_IsMaster;

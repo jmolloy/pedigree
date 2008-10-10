@@ -36,11 +36,12 @@ typedef Elf32 ElfType;
 class Module
 {
 public:
-  Module() : elf(), name(0), entry(0), exit(0) {}
+  Module() : elf(), name(0), entry(0), exit(0), depends(0) {}
   ElfType elf;
   const char *name;
   void (*entry)();
   void (*exit)();
+  const char **depends;
 protected:
   Module(const Module &);
   Module &operator = (const Module &);
@@ -81,6 +82,9 @@ class KernelElf : public ElfType
      *\note NOT implemented (singleton class) */
     KernelElf &operator = (const KernelElf &);
 
+    bool moduleDependenciesSatisfied(Module *module);
+    void executeModule(Module *module);
+
     #if defined(BITS_64)
       typedef Elf64SectionHeader_t ElfSectionHeader_t;
     #elif defined(BITS_32)
@@ -96,6 +100,11 @@ class KernelElf : public ElfType
 
     /** List of modules */
     Vector<Module*> m_Modules;
+    /** List of successfully loaded module names. */
+    Vector<char*> m_LoadedModules;
+    /** List of pending modules - modules whose dependencies have not yet been
+        satisfied. */
+    Vector<Module*> m_PendingModules;
 };
 
 /** @} */

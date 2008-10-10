@@ -16,12 +16,18 @@
 #include "AtaController.h"
 #include <Log.h>
 #include <machine/Machine.h>
+#include <processor/Processor.h>
 
 AtaController::AtaController(Controller *pDev) :
   Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0)
 {
+  setSpecificType(String("ata-controller"));
+
+  // Ensure we have no stupid children lying around.
+  m_Children.clear();
+
   // Initialise our ports.
-  for (int i = 0; i < m_Addresses.count(); i++)
+  for (unsigned int i = 0; i < m_Addresses.count(); i++)
   {
     /// \todo String operator== problem here.
     if (!strcmp(m_Addresses[i]->m_Name, "command") || !strcmp(m_Addresses[i]->m_Name, "bar0"))
@@ -29,12 +35,12 @@ AtaController::AtaController(Controller *pDev) :
     if (!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
       m_pControlRegs = m_Addresses[i]->m_Io;
   }
-
+  
   // Create two disks - master and slave.
   AtaDisk *pMaster = new AtaDisk(this, true);
   AtaDisk *pSlave = new AtaDisk(this, false);
 
-  // Try and initialise the disks.
+  // Try and initialise the disks.  
   bool masterInitialised = pMaster->initialise();
   bool slaveInitialised = pSlave->initialise();
 
@@ -49,9 +55,9 @@ AtaController::AtaController(Controller *pDev) :
   else
     delete pSlave;
 
+  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
   initialise();
 
-  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 }
 
 AtaController::~AtaController()
@@ -70,10 +76,10 @@ uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
 
 bool AtaController::irq(irq_id_t number, InterruptState &state)
 {
-  for (int i = 0; i < getNumChildren(); i++)
+  for (unsigned int i = 0; i < getNumChildren(); i++)
   {
     AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
     pDisk->irqReceived();
   }
-  return true;
+  return false; // Keep the IRQ disabled - level triggered.
 }

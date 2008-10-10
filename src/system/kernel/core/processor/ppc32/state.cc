@@ -65,7 +65,7 @@ const char *PPC32InterruptStateRegisterName[40] =
 PPC32InterruptState::PPC32InterruptState() :
   m_IntNumber(0), m_Xer(0), m_Ctr(0), m_Lr(0), m_Cr(0), m_Srr0(0), m_Srr1(0),
   m_Dsisr(0), m_Dar(0),
-  m_R0(0), m_R1(0), m_R2(0), m_R3(0), m_R4(0), m_R5(0),
+  m_R0(0), m_R1(), m_R2(0), m_R3(0), m_R4(0), m_R5(0),
   m_R6(0), m_R7(0), m_R8(0), m_R9(0), m_R10(0), m_R11(0),
   m_R12(0), m_R13(0), m_R14(0), m_R15(0), m_R16(0), m_R17(0),
   m_R18(0), m_R19(0), m_R20(0), m_R21(0), m_R22(0), m_R23(0),
@@ -160,49 +160,50 @@ PPC32InterruptState *PPC32InterruptState::construct(PPC32ProcessorState &state, 
   // Obtain the stack pointer.
   uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
 
-  uint32_t msr = MSR_IR | MSR_DR | MSR_EE;
+  uint32_t msr = MSR_IR | MSR_DR | MSR_EE | MSR_FP;
   if (userMode) msr |= MSR_PR;
 
-  *pStack-- = 0xdeadbeef; //state.m_R31;
-  *pStack-- = state.m_R30;
-  *pStack-- = state.m_R29;
-  *pStack-- = state.m_R28;
-  *pStack-- = state.m_R27;
-  *pStack-- = state.m_R26;
-  *pStack-- = state.m_R25;
-  *pStack-- = state.m_R24;
-  *pStack-- = state.m_R23;
-  *pStack-- = state.m_R22;
-  *pStack-- = state.m_R21;
-  *pStack-- = 0xdeadbeef/*state.m_R20*/;
-  *pStack-- = state.m_R19;
-  *pStack-- = state.m_R18;
-  *pStack-- = state.m_R17;
-  *pStack-- = state.m_R16;
-  *pStack-- = state.m_R15;
-  *pStack-- = state.m_R14;
-  *pStack-- = state.m_R13;
-  *pStack-- = state.m_R12;
-  *pStack-- = state.m_R11;
-  *pStack-- = state.m_R10;
-  *pStack-- = state.m_R9;
-  *pStack-- = state.m_R8;
-  *pStack-- = state.m_R7;
-  *pStack-- = state.m_R6;
-  *pStack-- = state.m_R5;
-  *pStack-- = state.m_R4;
-  *pStack-- = state.m_R3;
-  *pStack-- = state.m_R2;
-  *pStack-- = state.m_R1;
-  *pStack-- = state.m_R0;
-  *pStack-- = 0; // DAR
-  *pStack-- = 0; // DSISR
-  *pStack-- = msr; // SRR1
-  *pStack-- = state.getInstructionPointer(); // SRR0
-  *pStack-- = state.m_Cr;
-  *pStack-- = state.m_Lr;
-  *pStack-- = state.m_Ctr;
-  *pStack-- = state.m_Xer;
+  *--pStack = state.m_R31;
+  *--pStack = state.m_R30;
+  *--pStack = state.m_R29;
+  *--pStack = state.m_R28;
+  *--pStack = state.m_R27;
+  *--pStack = state.m_R26;
+  *--pStack = state.m_R25;
+  *--pStack = state.m_R24;
+  *--pStack = state.m_R23;
+  *--pStack = state.m_R22;
+  *--pStack = state.m_R21;
+  *--pStack = state.m_R20;
+  *--pStack = state.m_R19;
+  *--pStack = state.m_R18;
+  *--pStack = state.m_R17;
+  *--pStack = state.m_R16;
+  *--pStack = state.m_R15;
+  *--pStack = state.m_R14;
+  *--pStack = state.m_R13;
+  *--pStack = state.m_R12;
+  *--pStack = state.m_R11;
+  *--pStack = state.m_R10;
+  *--pStack = state.m_R9;
+  *--pStack = state.m_R8;
+  *--pStack = state.m_R7;
+  *--pStack = state.m_R6;
+  *--pStack = state.m_R5;
+  *--pStack = state.m_R4;
+  *--pStack = state.m_R3;
+  *--pStack = state.m_R2;
+  *--pStack = state.m_R1;
+  *--pStack = state.m_R0;
+  *--pStack = 0; // DAR
+  *--pStack = 0; // DSISR
+  *--pStack = msr; // SRR1
+  *--pStack = state.getInstructionPointer(); // SRR0
+  *--pStack = state.m_Cr;
+  *--pStack = state.m_Lr;
+  *--pStack = state.m_Ctr;
+  *--pStack = state.m_Xer;
+  *--pStack = 0; // IntNumber
   
   PPC32InterruptState *toRet = reinterpret_cast<PPC32InterruptState*> (pStack);
   return toRet;

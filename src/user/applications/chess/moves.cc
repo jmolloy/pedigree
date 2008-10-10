@@ -215,7 +215,7 @@ unsigned char rightCastleSquares[] = {0,0,0,0,0,1,1,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0};
-unsigned char leftCastleMove   [] =  {1,0,0,0,0,0,0,0,
+unsigned char leftCastleMove   [] =  {0,0,1,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
@@ -223,7 +223,7 @@ unsigned char leftCastleMove   [] =  {1,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0};
-unsigned char rightCastleMove   [] = {0,0,0,0,0,0,0,1,
+unsigned char rightCastleMove   [] = {0,0,0,0,0,0,1,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
                                       0,0,0,0,0,0,0,0,
@@ -303,12 +303,22 @@ Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawns
     move = &initialMove;
   
   move->shift(pos.col, pos.row); // That jump table is centred on (0,0).
+
+  // If there is a piece one square above us, we can't move 2 spaces!
+  if (allPieces & Bitboard(Square(pos.row+1, pos.col)))
+    *move = *move & ~Bitboard(Square(pos.row+2, pos.col));
   
   Bitboard attack(pawnAttack);
   attack.shift(pos.col-1, pos.row); // That jump table is centred on (1,0).
   
   // So where can we move?
   Bitboard finalMove = *move & (~allPieces); // We can move wherever there aren't any pieces!
+  
+  // So we now have a bitboard for all the places the pawn can move. But we really need to AND that with
+  // places that white pieces AREN'T.
+  Bitboard noPieces = ~allPieces; // No pieces at all in these squares.
+  Bitboard noFriendlyPieces = noPieces | enemyPieces;
+  finalMove = finalMove & noFriendlyPieces;
   
   // Where can we attack?
   Bitboard finalAttack = attack & enemyPieces; // We can attack wherever there are enemy pieces!
@@ -317,4 +327,19 @@ Bitboard pawnMoves(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawns
   finalAttack = finalAttack | (attack & enemyPawnsEnPassant);
   
   return finalMove | finalAttack;
+}
+
+Bitboard pawnAttackOnly(Bitboard allPieces, Bitboard enemyPieces, Bitboard enemyPawnsEnPassant, Square pos)
+{
+  
+  Bitboard attack(pawnAttack);
+  attack.shift(pos.col-1, pos.row); // That jump table is centred on (1,0).
+  
+  // Where can we attack?
+  Bitboard finalAttack = attack & enemyPieces; // We can attack wherever there are enemy pieces!
+  
+  // But, we can also attack pawns En Passant...
+  finalAttack = finalAttack | (attack & enemyPawnsEnPassant);
+  
+  return finalAttack;
 }

@@ -69,7 +69,7 @@ Log &Log::operator << (T n)
   return *this;
 }
 
-// NOTE: Make sure that the templated << operator gets only instanciated for
+// NOTE: Make sure that the templated << operator gets only instantiated for
 //       integer types.
 template Log &Log::operator << (char);
 template Log &Log::operator << (unsigned char);

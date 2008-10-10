@@ -20,6 +20,7 @@
 #include <DebuggerCommand.h>
 #include <Scrollable.h>
 #include <machine/Device.h>
+#include <utilities/Vector.h>
 
 /** @addtogroup kerneldebuggercommands
  * @{ */
@@ -68,8 +69,11 @@ private:
     const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
     const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
     size_t getLineCount();
+    Device *getDevForIndex(size_t index);
+    size_t m_Line;
   private:
-    size_t nLines;
+    void probeDev(Device *pDev);
+    Vector<Device*> m_LinearTree;
   };
   
   class DeviceInfo : public Scrollable
@@ -77,12 +81,15 @@ private:
     public:
       DeviceInfo();
       ~DeviceInfo() {}
-      void setDevice(int n);
+      void setDevice(Device *dev);
+      Device *getDevice() {return m_pDev;}
       const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
       const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
       size_t getLineCount();
     private:
       Device *m_pDev;
+      DeviceInfo(const DeviceInfo &);
+      void operator =(const DeviceInfo &);
   };
   
   void drawBackground(size_t nLines, DebuggerIO *pScreen);

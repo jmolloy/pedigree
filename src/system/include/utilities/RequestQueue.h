@@ -31,7 +31,7 @@ class RequestQueue
 public:
   /** Creates a new RequestQueue. */
   RequestQueue();
-  ~RequestQueue();
+  virtual ~RequestQueue();
   
   /** Initialises the queue, spawning the worker thread. */
   void initialise();
@@ -49,6 +49,10 @@ protected:
   virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                                   uint64_t p6, uint64_t p7, uint64_t p8) = 0;
 private:
+
+  RequestQueue(const RequestQueue&);
+  void operator =(const RequestQueue&);
+
   /** Request structure */
   class Request
   {
@@ -59,6 +63,9 @@ private:
     uint64_t ret;
     Mutex mutex;
     Request *next;
+  private:
+    Request(const Request&);
+    void operator =(const Request&);
   };
   
   /** Thread trampoline */

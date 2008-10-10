@@ -15,9 +15,7 @@
 #
 
 set(MODULES)
-if(X86_COMMON)
-  set(MODULES ${MODULES} ata)
-endif(X86_COMMON)
+set(MODULES ${MODULES} vfs ext2 init console TUI)
 
 #########################################################################################
 
@@ -30,10 +28,9 @@ endforeach(var ${MODULES})
 set(OBJS)
 set(MODULE_NAMES)
 foreach(var ${MODULES})
-  set(OBJS ${OBJS} "${var}/${var}.o")
+  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/system/modules/${var}/${var}.o")
   set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
 endforeach(var ${MODULES})
 
-add_custom_target(initrd ALL tar -cf initrd.tar ${OBJS}
-                  DEPENDS ${MODULE_NAMES}
-                  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR}/src/system/modules)
+set(MODULE_OBJS ${OBJS} PARENT_SCOPE)
+set(MODULE_NAMES ${MODULE_NAMES} PARENT_SCOPE)

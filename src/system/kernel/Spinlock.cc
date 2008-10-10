@@ -18,18 +18,56 @@
 
 void Spinlock::acquire()
 {
-  // Save the current irq status
-  m_bInterrupts = Processor::getInterrupts();
+  // Save the current irq status.
+
+  // This save to local variable prevents a heinous race condition where the thread is
+  // preempted between the getInterrupts and setInterrupts, then this same spinlock is called
+  // in the new thread with interrupts disabled. It gets back to us, and m_bInterrupts==false.
+  // Oh dear, hanging time.
+  //
+  // We write to a local so the interrupt value is saved onto the stack until interrupts are 
+  // definately disabled; then we can write it back to the member variable.
+  bool bInterrupts = Processor::getInterrupts();
 
   // Disable irqs if not already done
-  if (m_bInterrupts)
+  if (bInterrupts)
     Processor::setInterrupts(false);
 
-  while (m_Atom.compareAndSwap(true, false) == false);
+  m_bInterrupts = bInterrupts;
+
+  // TMP: check for corruption.
+  if (magic != 0x1234)
+  {
+    FATAL("Spinlock: Corruption : " << magic);
+    Processor::breakpoint();
+  }
+
+  while (m_Atom.compareAndSwap(true, false) == false)
+  {
+#ifndef MULTIPROCESSOR
+    FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
+    Processor::breakpoint();
+#endif
+  }
 }
 void Spinlock::release()
 {
-  m_Atom = true;
+  // TMP: check for corruption.
+  if (magic != 0x1234)
+  {
+    FATAL("Spinlock: Corruption : " << magic);
+    Processor::breakpoint();
+  }
+  if (Processor::getInterrupts())
+  {
+    FATAL("Spinlock: release with interrupts enabled!");
+    Processor::breakpoint();
+  }
+  if (m_Atom.compareAndSwap(false, true) == false)
+  {
+    FATAL("Spinlock: failed to release!");
+    Processor::breakpoint();
+  }
 
   // Reenable irqs if they were enabled before
   if (m_bInterrupts)

@@ -21,13 +21,15 @@ void String::assign(const String &x)
 {
   m_Length = x.length();
   reserve(m_Length + 1);
-  memcpy(m_Data, x.m_Data, m_Length + 1);
+  if (m_Length)
+    memcpy(m_Data, x.m_Data, m_Length + 1);
 }
 void String::assign(const char *s)
 {
   m_Length = strlen(s);
   reserve(m_Length + 1);
-  memcpy(m_Data, s, m_Length + 1);
+  if (m_Length)
+    memcpy(m_Data, s, m_Length + 1);
 }
 void String::reserve(size_t size)
 {

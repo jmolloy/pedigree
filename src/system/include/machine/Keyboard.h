@@ -31,6 +31,22 @@ public:
    * Initialises the device.
    */
   virtual void initialise() =0;
+
+  /**
+   * Sets the state of the device. When debugging, it is unwise to rely on interrupt-
+   * driven I/O, however in normal use polling is extremely slow and CPU-intensive.
+   *
+   * The debugger therefore will set the device to "debug state" by calling this function with
+   * the argument "true". In "debug state", any buffered input will be discarded, the device's interrupt
+   * masked, and the device will rely on polling only. This will be the default state.
+   *
+   * When the device is set to "normal state" by calling this function with the argument
+   * "false", interrupts may be used, along with buffered input, and it is recommended that
+   * during blocking I/O a Semaphore is used to signal incoming interrupts, so that the blocked thread
+   * may go to sleep.
+   */
+  virtual void setDebugState(bool enableDebugState) =0;
+  virtual bool getDebugState() =0;
   
   /**
    * Retrieves a character from the keyboard. Blocking I/O.

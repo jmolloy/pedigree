@@ -54,6 +54,9 @@ class X86InterruptManager : public ::InterruptManager,
     virtual bool registerSyscallHandler(Service_t Service,
                                         SyscallHandler *pHandler);
 
+    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0,
+                              uintptr_t p5=0);
+
     /** Initialises this processor's IDTR
      *\note This should only be called from Processor::initialise1() and
      *      Multiprocessor::applicationProcessorStartup() */

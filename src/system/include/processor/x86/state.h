@@ -19,6 +19,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
+#include <Log.h>
 
 /** @addtogroup kernelprocessorx86
  * @{ */
@@ -90,8 +91,10 @@ class X86InterruptState
     /** Get the syscall function number
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
-
-
+    /** Get the n'th parameter for this syscall. */
+    inline uintptr_t getSyscallParameter(size_t n) const;
+    inline void setSyscallReturnValue(uintptr_t val);
+  
     /** Get the flags register
      *\return the flags register */
     inline uint32_t getFlags() const;
@@ -196,6 +199,8 @@ class X86ProcessorState
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
 
+    inline void setSyscallReturnValue(uintptr_t val);
+
     /** The EDI general purpose register */
     uint32_t edi;
     /** The ESI general purpose register */
@@ -271,6 +276,24 @@ size_t X86InterruptState::getSyscallService() const
 size_t X86InterruptState::getSyscallNumber() const
 {
   return (m_Eax & 0xFFFF);
+}
+uintptr_t X86InterruptState::getSyscallParameter(size_t n) const
+{
+  switch (n)
+  {
+    case 0: return m_Ebx;
+    case 1: return m_Ecx;
+    case 2: return m_Edx;
+    case 3: return m_Esi;
+    case 4: return m_Edi;
+    default:
+      WARNING("Bad syscall parameter requested: " << Dec << n);
+      return 0;
+  }
+}
+void X86InterruptState::setSyscallReturnValue(uintptr_t val)
+{
+  m_Eax = val;
 }
 
 uint32_t X86InterruptState::getFlags() const
@@ -352,5 +375,10 @@ void X86ProcessorState::setBasePointer(uintptr_t basePointer)
 {
   ebp = basePointer;
 }
+void X86ProcessorState::setSyscallReturnValue(uintptr_t val)
+{
+  eax = val;
+}
+
 
 #endif

@@ -15,6 +15,7 @@
  */
 
 #include "VsidManager.h"
+#include <Log.h>
 
 VsidManager VsidManager::m_Instance;
 
@@ -24,7 +25,7 @@ VsidManager &VsidManager::instance()
 }
 
 VsidManager::VsidManager() :
-  m_HighWaterMark(1), m_pStack(0), m_Mutex()
+  m_HighWaterMark(2), m_pStack(0), m_Mutex()
 {
 }
 
@@ -35,20 +36,21 @@ VsidManager::~VsidManager()
 VsidManager::Vsid VsidManager::obtainVsid()
 {
   /// \todo Locking
-
+  NOTICE("pStack: " << (uintptr_t)m_pStack << ", hwm: " << m_HighWaterMark);
+  
   // Is the stack NULL?
-  if (m_pStack == 0)
+//  if (m_pStack == 0)
     // Return the high water mark and increment.
     return m_HighWaterMark++;
 
   // Pop the stack.
-  VsidStack *pPopped = m_pStack;
-  m_pStack = m_pStack->next;
+//  VsidStack *pPopped = m_pStack;
+//  m_pStack = m_pStack->next;
 
-  Vsid vsid = pPopped->vsid;
-  delete pPopped;
+//  Vsid vsid = pPopped->vsid;
+//  delete pPopped;
 
-  return vsid;
+//  return vsid;
 }
 
 void VsidManager::returnVsid(VsidManager::Vsid vsid)
@@ -56,8 +58,8 @@ void VsidManager::returnVsid(VsidManager::Vsid vsid)
   /// \todo Locking
   /// \todo decrement high water mark if possible
   
-  VsidStack *pPushed = new VsidStack;
-  pPushed->vsid = vsid;
-  pPushed->next = m_pStack;
-  m_pStack = pPushed;
+//  VsidStack *pPushed = new VsidStack;
+//  pPushed->vsid = vsid;
+//  pPushed->next = m_pStack;
+//  m_pStack = pPushed;
 }

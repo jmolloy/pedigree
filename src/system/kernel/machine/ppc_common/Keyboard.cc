@@ -61,3 +61,6 @@ char PPCKeyboard::getCharNonBlock()
     return c[0];
 }
 
+void PPCKeyboard::setDebugState(bool enableDebugMode)
+{
+}

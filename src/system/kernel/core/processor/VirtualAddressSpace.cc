@@ -17,18 +17,28 @@
 #include <utilities/utility.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <processor/Processor.h>
+#include <Log.h>
 
-void *VirtualAddressSpace::expandHeap(size_t pageCount, size_t flags)
+void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
 {
   void *Heap = m_HeapEnd;
   PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
-  for (size_t i = 0;i < pageCount;i++)
+
+  void *newHeapEnd = adjust_pointer(m_HeapEnd, incr);
+  
+  m_HeapEnd = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(m_HeapEnd)&0xFFFFF000);
+
+  int i = 0;
+  while (reinterpret_cast<uintptr_t>(newHeapEnd) > reinterpret_cast<uintptr_t>(m_HeapEnd))
   {
     // Allocate a page
     physical_uintptr_t page = PMemoryManager.allocatePage();
 
     if (page == 0)
     {
+      ERROR("Out of physical memory!");
+      
       // Reset the heap pointer
       m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
 
@@ -40,20 +50,23 @@ void *VirtualAddressSpace::expandHeap(size_t pageCount, size_t flags)
     // Map the page
     if (map(page, m_HeapEnd, flags) == false)
     {
+      // Map failed - probable double mapping. Go to the next page.
       // Free the page
       PMemoryManager.freePage(page);
 
       // Reset the heap pointer
-      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
+//      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
 
-      //  Free the pages that were already allocated
-      rollbackHeapExpansion(m_HeapEnd, i);
-      return 0;
+      // Free the pages that were already allocated
+//      rollbackHeapExpansion(m_HeapEnd, i);
+//    return 0;
     }
 
     // Go to the next address
     m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
+    i++;
   }
+  m_HeapEnd = newHeapEnd;
   return Heap;
 }
 
@@ -77,16 +90,4 @@ void VirtualAddressSpace::rollbackHeapExpansion(void *virtualAddress, size_t pag
     // Go to the next virtual page
     virtualAddress = adjust_pointer(virtualAddress, PhysicalMemoryManager::getPageSize());
   }
-}
-
-VirtualAddressSpace *VirtualAddressSpace::clone()
-{
-  // Create a new virtual address space
-  VirtualAddressSpace *pClone = VirtualAddressSpace::create();
-  if (pClone == 0)
-    return 0;
-
-  // TODO: Do it! We need to know where the code/data segments are
-
-  return pClone;
 }

@@ -18,6 +18,8 @@
 #include <Elf32.h>
 #include <utilities/utility.h>
 #include <BootstrapInfo.h>
+#include <processor/Processor.h>
+#include <processor/PhysicalMemoryManager.h>
 
 Elf32::Elf32() :
   m_pHeader(0),
@@ -82,6 +84,26 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   return true;
 }
 
+bool Elf32::allocateSections()
+{
+  for (int i = 0; i < m_pHeader->shnum; i++)
+  {
+    if (m_pSectionHeaders[i].flags & SHF_ALLOC)
+    {
+      for (unsigned int j = m_pSectionHeaders[i].addr; j < (m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size)+0x1000; j += 0x1000)
+      {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                       reinterpret_cast<void*> (j&0xFFFFF000),
+                                                                       VirtualAddressSpace::Write);
+        if (!b)
+        WARNING("map() failed for section " << Dec << i << ", address " << Hex << j);
+      }
+    }
+  }
+  return true;
+}
+
 bool Elf32::writeSections()
 {
   // We need to create a copy of the header.
@@ -103,9 +125,20 @@ bool Elf32::writeSections()
   {
     if (m_pSectionHeaders[i].flags & SHF_ALLOC)
     {
-      // Add load-base into the equation.
-      if (m_pSectionHeaders[i].addr == 0)
-        m_pSectionHeaders[i].addr += offset;
+      // If we're loading a relocated file...
+      if (m_LoadBase != 0)
+      {
+        // Add load-base into the equation.
+        if (m_pSectionHeaders[i].addr == 0)
+          m_pSectionHeaders[i].addr = offset;
+        else
+        {
+          int tmp = m_pSectionHeaders[i].addr;
+          m_pSectionHeaders[i].addr += offset;
+          offset += tmp; // The .addr won't be accounted for in the .size, so add it here so we don't
+          // end up overwriting what we just wrote!
+        }
+      }
 
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
       {
@@ -113,6 +146,9 @@ bool Elf32::writeSections()
         memcpy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &m_pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
+#if defined(PPC_COMMON) || defined(MIPS_COMMON)
+        Processor::flushDCacheAndInvalidateICache(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size);
+#endif
       }
       else
       {
@@ -133,6 +169,8 @@ bool Elf32::writeSections()
         m_pSymbolTable = &m_pSectionHeaders[i];
       else if (!strcmp(pStr, ".debug_frame"))
         m_pDebugTable = &m_pSectionHeaders[i];
+      else if (!strcmp(pStr, ".shstrtab"))
+        m_pShstrtab = &m_pSectionHeaders[i];
       else
       {
         // The address of this section is no longer valid, the section is not being loaded.
@@ -214,11 +252,18 @@ uint32_t Elf32::lookupSymbol(const char *pName)
     {
       // Section type - the name will be the name of the section header it refers to.
       Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+      // If it's not allocated, it's a link-once-only section that we can ignore.
+      if (!(pSh->flags & SHF_ALLOC))
+      {
+        pSymbol++;
+        continue;
+      }
       // Grab the shstrtab
       pStr = reinterpret_cast<const char*> (m_pShstrtab->addr) + pSh->name;
     }
     else
       pStr = pStrtab + pSymbol->name;
+    
     if (!strcmp(pName, pStr))
     {
       return pSymbol->value;
@@ -248,8 +293,7 @@ uint32_t Elf32::getGlobalOffsetTable()
 
 uint32_t Elf32::getEntryPoint()
 {
-  // TODO
-  return 0;
+  return m_pHeader->entry;
 }
 
 void Elf32::setLoadBase(uintptr_t loadBase)

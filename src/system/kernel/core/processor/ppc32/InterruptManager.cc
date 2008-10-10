@@ -111,9 +111,32 @@ bool PPC32InterruptManager::registerInterruptHandler(size_t interruptNumber, Int
   }
 #endif
 
-bool PPC32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
+bool PPC32InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *pHandler)
 {
+  LockGuard<Spinlock> lockGuard(m_Lock);
+
+  if (UNLIKELY(Service >= serviceEnd))
+    return false;
+  if (UNLIKELY(pHandler != 0 && m_pSyscallHandler[Service] != 0))
+    return false;
+  if (UNLIKELY(pHandler == 0 && m_pSyscallHandler[Service] == 0))
+    return false;
+
+  m_pSyscallHandler[Service] = pHandler;
   return true;
+}
+
+uintptr_t PPC32InterruptManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+{
+  register uint32_t r3 __asm__ ("r3") = ((service&0xFFFF)<<16) | (function&0xFFFF);
+  register uint32_t r4 __asm__ ("r6") = p1;
+  register uint32_t r5 __asm__ ("r7") = p2;
+  register uint32_t r6 __asm__ ("r8") = p3;
+  register uint32_t r7 __asm__ ("r9") = p4;
+  register uint32_t r8 __asm__ ("r10") = p5;
+
+  asm volatile("sc" : "=r" (r3) : "r" (r3), "r" (r4), "r" (r5), "r" (r6), "r" (r7), "r" (r8));
+  return r3;
 }
 
 void PPC32InterruptManager::initialiseProcessor()
@@ -166,7 +189,9 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
   #ifdef DEBUGGER
     // Call the kernel debugger's handler, if any
     if (m_Instance.m_pDbgHandler[intNumber] != 0)
+    {
       m_Instance.m_pDbgHandler[intNumber]->interrupt(intNumber, interruptState);
+    }
   #endif
 
   // Call the syscall handler, if it is the syscall interrupt
@@ -174,7 +199,7 @@ void PPC32InterruptManager::interrupt(InterruptState &interruptState)
   {
     size_t serviceNumber = interruptState.getSyscallService();
     if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_pSyscallHandler[serviceNumber] != 0))
-    m_Instance.m_pSyscallHandler[serviceNumber]->syscall(interruptState);
+      interruptState.m_R3 = m_Instance.m_pSyscallHandler[serviceNumber]->syscall(interruptState);
   }
   else if (m_Instance.m_pHandler[intNumber] != 0)
     m_Instance.m_pHandler[intNumber]->interrupt(intNumber, interruptState);

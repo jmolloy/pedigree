@@ -143,13 +143,13 @@ class Atomic<T, true>
 
 /** Wrapper around gcc's builtin atomic operations */
 template<>
-class Atomic<bool, true> : Atomic<size_t>
+class Atomic<bool, true> : public Atomic<size_t>
 {
   public:
     /** The constructor
      *\param[in] value initial value */
     inline Atomic(bool value = false)
-      : Atomic<size_t>(value){}
+      : Atomic<size_t>((value)?1:0){}
     /** The copy-constructor
      *\param[in] x reference object */
     inline Atomic(const Atomic &x)
@@ -191,13 +191,13 @@ class Atomic<bool, true> : Atomic<size_t>
      *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
     inline bool compareAndSwap(bool oldVal, bool newVal)
     {
-      return Atomic<size_t>::compareAndSwap(oldVal, newVal);
+      return Atomic<size_t>::compareAndSwap((oldVal)?1:0, (newVal)?1:0);
     }
     /** Get the value
      *\return the value of the Atomic */
     inline operator bool () const
     {
-      return Atomic<size_t>::operator size_t();
+      return (Atomic<size_t>::operator size_t() == 1)?true:false;
     }
 };
 

@@ -78,8 +78,8 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   if (S == 0)
     return false;
   
-  // Base address
-  uint32_t B = m_LoadBase;
+  // Base address - commented out to get rid of "unused" warning.
+  //uint32_t B = m_LoadBase;
   
   uint32_t result = A; // Currently the result is the addend.
   switch (ELF32_R_TYPE(rel.info))

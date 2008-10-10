@@ -23,6 +23,7 @@
 #include <process/initialiseMultitasking.h>
 #include <processor/Processor.h>
 #include <processor/StackFrame.h>
+#include <processor/KernelCoreSyscallManager.h>
 #include <Debugger.h>
 #include <machine/Machine.h>
 #include <panic.h>
@@ -47,6 +48,7 @@ bool Scheduler::initialise(Thread *pThread)
   Processor::information().setCurrentThread(pThread);
 
   m_pSchedulingAlgorithm->addThread(pThread);
+  Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
   
   Machine::instance().getSchedulerTimer()->registerHandler(this);
   return true;
@@ -70,7 +72,8 @@ size_t Scheduler::addProcess(Process *pProcess)
 
 void Scheduler::removeProcess(Process *pProcess)
 {
-  for(Vector<Process*>::Iterator it = m_Processes.begin();
+  m_Mutex.acquire();
+  for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
   {
@@ -80,6 +83,7 @@ void Scheduler::removeProcess(Process *pProcess)
       break;
     }
   }
+  m_Mutex.release();
 }
 
 void Scheduler::threadStatusChanged(Thread *pThread)
@@ -93,13 +97,14 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = Processor::information().getCurrentThread();
-
+  
   if (pThread->getStatus() != Thread::Ready)
     return;
 
   m_Mutex.acquire();
 
-  pOldThread->setStatus(Thread::Ready);
+  if (pOldThread->getStatus() == Thread::Running)
+    pOldThread->setStatus(Thread::Ready);
 
   pThread->setStatus(Thread::Running);
   Processor::information().setCurrentThread(pThread);
@@ -116,15 +121,18 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   /// \todo What IRQ do we ACK? It's machine specific.
   Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
 #endif
-
   Processor::contextSwitch(pThread->getInterruptState());
-
 }
 
 void Scheduler::timer(uint64_t delta, InterruptState &state)
 {
   // TODO processor not passed.
   schedule(0, state);
+}
+
+void Scheduler::yield(Thread *pThread)
+{
+  KernelCoreSyscallManager::instance().call(KernelCoreSyscallManager::yield, reinterpret_cast<uintptr_t>(pThread));
 }
 
 size_t Scheduler::getNumProcesses()
@@ -139,7 +147,15 @@ Process *Scheduler::getProcess(size_t n)
     WARNING("Scheduler::getProcess(" << Dec << n << ") parameter outside range.");
     return 0;
   }
-  return m_Processes[n];
+  int i = 0;
+  for(List<Process*>::Iterator it = m_Processes.begin();
+      it != m_Processes.end();
+      it++)
+  {
+    if (i == n)
+      return *it;
+    i++;
+  }
 }
 
 #endif

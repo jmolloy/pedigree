@@ -42,11 +42,12 @@
 #endif
 #include <Archive.h>
 
-#ifdef X86_COMMON
 #include <machine/Device.h>
 
-Device Device::m_Root;
-#endif
+#include <machine/openfirmware/Device.h>
+
+#include <processor/KernelCoreSyscallManager.h>
+#include <utilities/List.h>
 
 BootIO bootIO;
 
@@ -61,13 +62,16 @@ void apMain()
 int foo(void *p)
 {
   HugeStaticString str;
+  int j=0;
   for (;;)
   {
     for(int i = 0; i < 10000000; i++) ;
     str.clear();
     str += "b";
     bootIO.write(str, BootIO::White, BootIO::Green);
+    j++;
   }
+  return 0;
 }
 
 int bar(void *p)
@@ -80,6 +84,7 @@ int bar(void *p)
     str += "c";
     bootIO.write(str, BootIO::White, BootIO::Red);
   }
+  return 0;
 }
 
 /// Kernel entry point.
@@ -102,7 +107,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
-
+  
 #if !defined(ARM_COMMON)
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
@@ -111,6 +116,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
+
+  List<void*> list;
+  for(int i = 0; i < 20; i++)
+  list.pushBack(0);
+
+  KernelCoreSyscallManager::instance().initialise();
 
 #if 0 && defined(ARM_COMMON) && defined(DEBUGGER)
    InterruptState st;
@@ -121,11 +132,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the boot output.
   bootIO.initialise();
-  
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
-
+  
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";
@@ -151,15 +161,24 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
 #ifdef THREADS
   initialiseMultitasking();
+  // while(1)
+  // {
+  //   NormalStaticString strz;
+  //   Device *d = Device::root().getChild(0);
+  //   OFDevice dev(d->getOFHandle());
+  //   dev.getProperty("device_type", strz);
+  //   Processor::breakpoint();
+  // }
+
   // Gets me a stacks.
-  int i;
+   // int i;
    // for (i = 0; i < 10; i++)
    // {
    //   stackBase = PhysicalMemoryManager::instance().allocatePage();
    //   VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xB0100000+(i*0x1000)), 0);
    // }
-    Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
-    pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, 0);
+//Thread *pThread = new Thread(Scheduler::instance().getProcess(0), &foo, (void*)0x136, 0);
+//    pThread = new Thread(Scheduler::instance().getProcess(0), &bar, (void*)0x136, 0);
 //Thread *pThread;
   // Fork a new process.
 //   Process *pProcess = new Process(Scheduler::instance().getProcess(0));
@@ -183,20 +202,17 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 // VirtualAddressSpace::setCurrentAddressSpace(0);
   Processor::setInterrupts(true);
 #endif
-
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
   size_t nFiles = initrd.getNumFiles();
-  //NOTICE("nFiles: " << nFiles);
   for (size_t i = 0; i < nFiles; i++)
   {
-    //NOTICE("File: " << initrd.getFileName(i) << ", size: " << Hex << initrd.getFileSize(i));
     uint32_t percentage = ((i+1)*100) / nFiles;
     str.clear();
-    str += "\rLoading modules: ";
+    str += "\r                                        \rLoading modules: ";
     str.append(percentage, 10, 3, ' ');
     str += "% (";
     str += initrd.getFileName(i);
@@ -205,8 +221,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     // Load file.
     Module *m = KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
-    if (m)
-      m->entry();
   }
 
 #endif
@@ -219,14 +233,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
   
 
-  physical_uintptr_t stackBase;
-
 #ifdef DEBUGGER_RUN_AT_START
-  Processor::breakpoint();
+//  Processor::breakpoint();
 #endif
   
   // Try and create a mapping.
 #ifdef MIPS_COMMON
+  physical_uintptr_t stackBase;
   stackBase = PhysicalMemoryManager::instance().allocatePage();
   NOTICE("StackBase = " << Hex << stackBase);
   bool br = VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xC1505000), 0);
@@ -246,10 +259,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   for (;;)
   {
+    // Kernel idle thread.
     Processor::setInterrupts(true);
-    for(int i = 0; i < 10000000; i++) ;
-    str.clear();
-    str += "a";
-    bootIO.write(str, BootIO::White, BootIO::Blue);
+    Scheduler::instance().yield();
+    
+//    for(int i = 0; i < 10000000; i++) ;
+//    str.clear();
+//    str += "a";
+//    bootIO.write(str, BootIO::White, BootIO::Blue);
   }
 }

@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_MIPS32_STATE_H
 
 #include <compiler.h>
+#include <Log.h>
 #include <processor/types.h>
 
 /** @addtogroup kernelprocessorPPC32
@@ -87,6 +88,8 @@ class PPC32InterruptState
     /** Get the syscall function number
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
+    inline uintptr_t getSyscallParameter(size_t n) const;
+    inline void setSyscallReturnValue(uintptr_t val);
 
     /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
      *  set the processor to 'state'. */
@@ -237,11 +240,29 @@ size_t PPC32InterruptState::getInterruptNumber() const
 
 size_t PPC32InterruptState::getSyscallService() const
 {
-  return 0;
+  return ((m_R3 >> 16) & 0xFFFF);
 }
 size_t PPC32InterruptState::getSyscallNumber() const
 {
-  return 0;
+  return (m_R3 & 0xFFFF);
+}
+uintptr_t PPC32InterruptState::getSyscallParameter(size_t n) const
+{
+  switch (n)
+  {
+    case 0: return m_R6;
+    case 1: return m_R7;
+    case 2: return m_R8;
+    case 3: return m_R9;
+    case 4: return m_R10;
+    default:
+      WARNING("Bad syscall parameter requested: " << Dec << n);
+      return 0;
+  }
+}
+void PPC32InterruptState::setSyscallReturnValue(uintptr_t val)
+{
+  m_R3 = val;
 }
 
 #endif

@@ -16,7 +16,7 @@
 
 include_directories(../../include ../ ./)
 
-add_executable(vfs.o VFS.cc)
+add_executable(vfs.o VFS.cc File.cc Filesystem.cc)
 target_link_libraries(vfs.o gcc)
 set_target_properties(vfs.o PROPERTIES
-                            LINK_FLAGS "-r")
+                            LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

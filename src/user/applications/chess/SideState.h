@@ -40,7 +40,7 @@ public:
   /**
    * Evaluates to true if the given Move is legal.
    */
-  bool isLegal(Move m);
+  bool isLegal(Move m, Bitboard enemyPieces, Bitboard enemyPawnsEnPassant);
   
   /**
      Evaluates to true if the given Move is a castle.
@@ -52,6 +52,8 @@ public:
   **/
   bool isAttacking(Square sq, Bitboard enemyPieces); // Is (col,row) under attack by us?
   // TODO add en passant.
+  
+  long heuristic();
   
   /**
      Accessors for pieces.
@@ -70,6 +72,7 @@ public:
   **/
   bool rooksMoved[2];
   bool kingMoved;
+  bool hasCastled;
 
   /**
      Bitboards.

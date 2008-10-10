@@ -1,7 +1,10 @@
+#ifndef ENGINE_H
+#define ENGINE_H
 
 #include <pthread.h>
-#include <Move.h>
-#include <BoardState.h>
+#include "Move.h"
+#include "BoardState.h"
+#include "SearchAlgorithm.h"
 
 class Engine
 {
@@ -29,7 +32,7 @@ public:
   /**
      Starts a new search, given the current board state.
   **/
-  void startSearch();
+  void startSearch(Side s, int minD, int maxD);
 
   /**
      Force an exit of the current search.
@@ -39,10 +42,10 @@ public:
   /**
      Is the search complete?
   **/
-  bool searchComplete();
+  bool searchComplete() volatile;
 
   /**
-     Get the move the search reccommends.
+     Get the move the search recommends.
   **/
   Move getMove();
 
@@ -51,17 +54,21 @@ public:
   **/
   void move(Move m);
 
-private:
+  /**
+     For debug purposes.
+  **/
+  void printMoveList();
+
+  /**
+    Trampoline.
+  **/
+  static void *threadTramp(void *ptr);
+
   /**
      The current state of the board.
   **/
   BoardState state;
-
-  /**
-     The StateStore that we can query and save states to.
-  **/
-  //StateStore store;
-
+private:
   /**
      The opening book that we can query.
   **/
@@ -70,6 +77,29 @@ private:
   /**
      The algorithm that does the brunt work for us.
   **/
-  class SearchAlgorithm *search;
+  SearchAlgorithm *search;
 
-}
+  /**
+     Should the worker thread be searching?
+  **/
+  volatile bool doSearch;
+  
+  /**
+     The side to search for a move for.
+  **/
+  volatile Side side;
+  
+  /**
+     The maximum and minimum depths to search to.
+  **/
+  volatile int minDepth, maxDepth;
+  
+  /**
+     The move list that the engine found.
+  **/
+  MoveList moveList;
+  long heuristic;
+
+};
+
+#endif

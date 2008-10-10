@@ -18,6 +18,8 @@
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <process/Scheduler.h>
+#include <process/Process.h>
 #include "VirtualAddressSpace.h"
 
 //
@@ -264,9 +266,6 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
   // Is a page table present?
   if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
-    // TODO If we map within the kernel space we need to add this page table
-    //      to the other address spaces
-
     // Allocate a page
     PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
     uint32_t page = PMemoryManager.allocatePage();
@@ -280,6 +279,24 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
            PhysicalMemoryManager::getPageSize());
+
+    // If we map within the kernel space, we need to add this page table to the 
+    // other address spaces!
+    VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
+    if (virtualAddress >= KERNEL_VIRTUAL_HEAP)
+    {
+      for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+      {
+        Process *p = Scheduler::instance().getProcess(i);
+        Processor::switchAddressSpace(*p->getAddressSpace());
+
+        X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (p->getAddressSpace());
+        pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+        *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+      }
+      Processor::switchAddressSpace(VAS);
+    }
+
   }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
@@ -417,6 +434,96 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
   return flags;
 }
 
+VirtualAddressSpace *X86VirtualAddressSpace::clone()
+{
+  VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
+
+  // Create a new virtual address space
+  VirtualAddressSpace *pClone = VirtualAddressSpace::create();
+  if (pClone == 0)
+  {
+    WARNING("X86VirtualAddressSpace: Clone() failed!");
+    return 0;
+  }
+
+  for (uintptr_t i = 0; i < 1024; i++)
+  {
+    uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
+
+    if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+      continue;
+
+    for (uintptr_t j = 0; j < 1024; j++)
+    {
+      uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
+
+      if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+        continue;
+
+      uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
+
+      void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+      if (getKernelAddressSpace().isMapped(virtualAddress))
+        continue;
+
+      // Page mapped in source address space, but not in kernel.
+      /// \todo Copy on write.
+      physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+
+      // Temporarily map in.
+      map(newFrame,
+          KERNEL_VIRTUAL_TEMP1,
+          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+
+      // Copy across.
+      memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
+
+      // Unmap.
+      unmap(KERNEL_VIRTUAL_TEMP1);
+
+      // Change to the new, cloned address space.
+      Processor::switchAddressSpace(*pClone);
+
+      // Map in.
+      pClone->map(newFrame, virtualAddress, fromFlags(flags));
+
+      // Switch back.
+      Processor::switchAddressSpace(thisAddressSpace);
+    }
+  }
+
+  return pClone;
+}
+
+void X86VirtualAddressSpace::revertToKernelAddressSpace()
+{
+  for (uintptr_t i = 0; i < 1024; i++)
+  {
+    uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
+
+    if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+      continue;
+
+    for (uintptr_t j = 0; j < 1024; j++)
+    {
+      uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
+
+      if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+        continue;
+
+      uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
+
+      void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+      if (getKernelAddressSpace().isMapped(virtualAddress))
+        continue;
+
+      // Page mapped in this address space but not in kernel. Unmap it.
+      unmap(virtualAddress);
+    }
+  }
+}
+
+
 bool X86KernelVirtualAddressSpace::isMapped(void *virtualAddress)
 {
   return doIsMapped(virtualAddress);
@@ -444,10 +551,12 @@ void X86KernelVirtualAddressSpace::unmap(void *virtualAddress)
 void *X86KernelVirtualAddressSpace::allocateStack()
 {
   void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
-
+  WARNING("Stack allocated at " << (uintptr_t)pStack);
+  
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
   for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
   {
+    WARNING("Mapping " << (uintptr_t)adjust_pointer(pStack, - ((i + 1) * 0x1000)));
     // TODO: Check return values
     physical_uintptr_t page = physicalMemoryManager.allocatePage();
 

@@ -16,7 +16,7 @@
 
 include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers)
 
-add_executable(partition.o main.cc msdos.cc)
+add_executable(partition.o main.cc msdos.cc apple.cc Partition.cc)
 target_link_libraries(partition.o gcc)
 set_target_properties(partition.o PROPERTIES
                                   LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

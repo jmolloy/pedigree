@@ -1159,7 +1159,7 @@ int mspace_mallopt(int, int);
 #include <errno.h>       /* for MALLOC_FAILURE_ACTION */
 #endif /* LACKS_ERRNO_H */
 #if FOOTERS
-#include <time.h>        /* for magic initialization */
+//include <time.h>        /* for magic initialization */
 #endif /* FOOTERS */
 #ifndef LACKS_STDLIB_H
 #include <stdlib.h>      /* for abort() */
@@ -2450,8 +2450,9 @@ static int init_mparams(void) {
       }
       else
 #endif /* USE_DEV_RANDOM */
-        s = (size_t)(time(0) ^ (size_t)0x55555555U);
-
+//        s = (size_t)(time(0) ^ (size_t)0x55555555U);
+      s = (size_t)0xfa3629b2;
+      
       s |= (size_t)8U;    /* ensure nonzero */
       s &= ~(size_t)7U;   /* improve chances of fault for bad values */
 

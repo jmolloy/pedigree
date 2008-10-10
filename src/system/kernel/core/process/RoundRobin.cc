@@ -55,11 +55,15 @@ Thread *RoundRobin::getNext(Processor *pProcessor)
 {
   // TODO ZOMG TEH LOCKZ
   Thread *pThread;
+  size_t i = 0;
+  size_t size = m_List.count();
   do
   {
     pThread = m_List.popFront();
     m_List.pushBack(pThread);
-  } while (pThread->getStatus() != Thread::Ready);
+    i++;
+  } while ((pThread->getStatus() != Thread::Ready) &&
+           (i < size));
   return pThread;
 }
 

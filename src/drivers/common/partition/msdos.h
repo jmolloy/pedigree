@@ -26,6 +26,11 @@
 #define MSDOS_IDENT_1 0x55
 #define MSDOS_IDENT_2 0xAA
 
+// Start of partition table in the first sector.
+#define MSDOS_PARTTAB_START 0x1BE
+// Number of partition entries in one table.
+#define MSDOS_PARTTAB_NUM   0x4
+
 /** An MS-DOS partition table entry. */
 typedef struct
 {
@@ -41,11 +46,14 @@ typedef struct
   uint32_t size;
 } __attribute__((packed)) MsdosPartitionInfo;
 
-/** Attempts to find a MS-DOS partition table on pDisk. If found, new MsdosPartition objects are created
+/** Attempts to find a MS-DOS partition table on pDisk. If found, new Partition objects are created
  * and added as children of pDisk.
  * \return true if a ms-dos partition table was found.
  */
 bool msdosProbeDisk(Disk *pDisk);
+
+/** Given a partition table, read and parse the contents. */
+bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk);
 
 
 #endif

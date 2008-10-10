@@ -37,16 +37,20 @@ VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 
 VirtualAddressSpace *VirtualAddressSpace::create()
 {
-  // TODO
-  //return new X86VirtualAddressSpace();
-  return 0;
+  VirtualAddressSpace *p = new PPC32VirtualAddressSpace();
+  p->m_Heap = reinterpret_cast<void*>(USERSPACE_VIRTUAL_HEAP);
+  p->m_HeapEnd = reinterpret_cast<void*>(USERSPACE_VIRTUAL_HEAP);
+  return p;
 }
 
 PPC32VirtualAddressSpace::PPC32VirtualAddressSpace() :
   VirtualAddressSpace(reinterpret_cast<void*> (KERNEL_VIRTUAL_HEAP)), m_Vsid(0)
 {
-  // Grab some VSIDs.
-  m_Vsid = VsidManager::instance().obtainVsid();
+  if (this != &m_KernelSpace)
+  {
+    // Grab some VSIDs.
+    m_Vsid = VsidManager::instance().obtainVsid();
+  }
 
   memset(reinterpret_cast<uint8_t*>(m_pPageDirectory), 0, sizeof(m_pPageDirectory));
 }
@@ -185,10 +189,16 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
   }
 
+  // Check we're not already mapped.
+  if (pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] != 0)
+    return false;
+
   // Grab the page table entry.
   pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
     (physicalAddress&0xFFFFF000) | flags;
 
+  if (this != &m_KernelSpace)
+  NOTICE("Adding mapping: " << addr << ", " << physicalAddress << ", " << m_Vsid);
   // Put it in the hash table.
   HashedPageTable::instance().addMapping(addr, physicalAddress, flags, m_Vsid*8 + (addr>>28)  );
 
@@ -258,14 +268,83 @@ void PPC32VirtualAddressSpace::unmap(void *virtualAddress)
   pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 0;
 
   // Unmap from the hash table.
+  HashedPageTable::instance().removeMapping(reinterpret_cast<uint32_t>(virtualAddress), m_Vsid*8 + (addr>>28));
 }
 
 void *PPC32VirtualAddressSpace::allocateStack()
 {
   uint8_t *pStackTop = new uint8_t[0x4000];
+  
   return pStackTop+0x4000-4;
 }
 void PPC32VirtualAddressSpace::freeStack(void *pStack)
 {
   // TODO
+}
+
+VirtualAddressSpace *PPC32VirtualAddressSpace::clone()
+{
+  PPC32VirtualAddressSpace *newAS = reinterpret_cast<PPC32VirtualAddressSpace*>(VirtualAddressSpace::create());
+  for (uint64_t i = 0; i < 1024; i++)
+  {
+    if (i*1024ULL*4096ULL >= KERNEL_SPACE_START)
+      break;
+
+    if (m_pPageDirectory[i])
+    {
+      ShadowPageTable *pPageTable = m_pPageDirectory[i];
+      for (int j = 0; j < 1024; j++)
+      {
+        if (pPageTable->entries[j] == 0)
+          continue;
+
+        void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+        uint32_t flags = pPageTable->entries[j]&0xFFF;
+
+        // Page mapped in source address space, but not in kernel.
+        /// \todo Copy on write.
+        physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+
+        // Temporarily map in.
+        map(newFrame,
+            KERNEL_VIRTUAL_TEMP1,
+            VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+
+        // Copy across.
+        memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
+
+        // Unmap.
+        unmap(KERNEL_VIRTUAL_TEMP1);
+
+        // Map in.
+        newAS->map(newFrame, virtualAddress, flags);
+      }
+    }
+  }
+  return newAS;
+}
+
+void PPC32VirtualAddressSpace::revertToKernelAddressSpace()
+{
+  // This is easy - we just unmap everything!
+  for (uint64_t i = 0; i < 1024; i++)
+  {
+    if (i*1024ULL*4096ULL >= KERNEL_SPACE_START)
+      break;
+
+    if (m_pPageDirectory[i])
+    {
+      ShadowPageTable *pPageTable = m_pPageDirectory[i];
+      for (int j = 0; j < 1024; j++)
+      {
+        if (i == 0 && j == 0)
+          continue; // Don't unmap the first 4K - contains our interrupt handlers!
+
+        if (pPageTable->entries[j] == 0)
+          continue;
+
+        unmap(reinterpret_cast<void*> ( ((i*1024)+j)*4096 ));
+      }
+    }
+  }
 }

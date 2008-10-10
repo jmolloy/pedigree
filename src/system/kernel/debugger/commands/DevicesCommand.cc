@@ -72,16 +72,20 @@ bool DevicesCommand::execute(const HugeStaticString &input, HugeStaticString &ou
       break;
     else if (c == 'o')
     {
-      tree.scroll(-1);
+      if (tree.m_Line > 0)
+        tree.m_Line--;
+      tree.centreOn(tree.m_Line);
       tree.refresh(pScreen);
-      info.setDevice(tree.getLine());
+      info.setDevice(tree.getDevForIndex(tree.m_Line));
       info.refresh(pScreen);
     }
     else if (c == 'p')
     {
-      tree.scroll(1);
+      if (tree.m_Line < tree.getLineCount()-1)
+        tree.m_Line++;
+      tree.centreOn(tree.m_Line);
       tree.refresh(pScreen);
-      info.setDevice(tree.getLine());
+      info.setDevice(tree.getDevForIndex(tree.m_Line));
       info.refresh(pScreen);
     }
     else if (c == 'j')
@@ -92,6 +96,20 @@ bool DevicesCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     else if (c == 'k')
     {
       info.scroll(1);
+      info.refresh(pScreen);
+    }
+    else if (c == 'd')
+    {
+      // Dump.
+      String str;
+      info.getDevice()->dump(str);
+      drawBackground(0, pScreen);
+      pScreen->drawString("Querying device - press any key to exit. ", 1, 0, DebuggerIO::White, DebuggerIO::Black);
+      pScreen->drawString(str, 2, 0, DebuggerIO::LightGrey, DebuggerIO::Black);
+      while( (c=pScreen->getChar()) == 0)
+        ;
+      drawBackground(nLines, pScreen);
+      tree.refresh(pScreen);
       info.refresh(pScreen);
     }
   }
@@ -120,39 +138,178 @@ void DevicesCommand::drawBackground(size_t nLines, DebuggerIO *pScreen)
   pScreen->drawHorizontalLine('-', nLines+1, 0, pScreen->getWidth(), DebuggerIO::DarkGrey, DebuggerIO::Black);
 }
 
-DevicesCommand::DeviceTree::DeviceTree()
+DevicesCommand::DeviceTree::DeviceTree() :
+  m_Line(0), m_LinearTree()
 {
+  // Create the (flattened) device tree, so we can look up the index of any particular device.
+
+  // Get the first device.
+  Device *device = &Device::root();
   
+  // Start the depth-first search.
+  probeDev(device);
+}
+
+void DevicesCommand::DeviceTree::probeDev(Device *pDev)
+{
+  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+  {
+    m_LinearTree.pushBack(pDev->getChild(i));
+    probeDev(pDev->getChild(i));
+  }
 }
 
 const char *DevicesCommand::DeviceTree::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
+  NormalStaticString str;
+
+  // Grab the device to describe.
+  Device *pDev = m_LinearTree[index];
+
+  // Set the foreground colour.
+  colour = DebuggerIO::Yellow;
+  
+  // If we're the selected line, add our background colour.
+  if (m_Line == index)
+    bgColour = DebuggerIO::Blue;
+
+  // How many parents does this node have? that will determine how many |'s to draw.
+  while (pDev->getParent() != 0)
+  {
+    pDev = pDev->getParent();
+    str += " ";
+  }
+  str += "- ";
+
+  return str;
 }
 
 const char *DevicesCommand::DeviceTree::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
+  static LargeStaticString str;
+
+  // Grab the device to describe.
+  Device *pDev = m_LinearTree[index];
+
+  // Set the foreground colour.
+  colour = DebuggerIO::White;
+
+  String str2;
+  pDev->getName(str2);
+  str += str2;
+  str += "(";
+  str += pDev->getSpecificType();
+  str += ")";
+
+  // Calculate the column offset.
+  // How many parents does this node have? that will determine how many |'s to draw.
+  colOffset = 0;
+  while (pDev->getParent() != 0)
+  {
+    pDev = pDev->getParent();
+    colOffset++;
+  }
+  colOffset += 2; // For '- '
+
+  // If we're selected, add our background colour and pad to the end-of-line.
+  if (m_Line == index)
+  {
+    bgColour = DebuggerIO::Blue;
+  }
+  str.pad(m_width-colOffset);
+
+  return str;
 }
 
 size_t DevicesCommand::DeviceTree::getLineCount()
 {
+  return m_LinearTree.count();
 }
 
-DevicesCommand::DeviceInfo::DeviceInfo()
+Device *DevicesCommand::DeviceTree::getDevForIndex(size_t index)
+{
+  return m_LinearTree[index];
+}
+
+DevicesCommand::DeviceInfo::DeviceInfo() : m_pDev(0)
 {
 }
 
-void DevicesCommand::DeviceInfo::setDevice(int n)
+void DevicesCommand::DeviceInfo::setDevice(Device *dev)
 {
+  m_pDev = dev;
 }
 
 const char *DevicesCommand::DeviceInfo::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
+  colour = DebuggerIO::Yellow;
+  switch (index)
+  {
+    case 0: return "Name";
+    case 1: return "(Abstract) type";
+    case 2: return "(Specific) type";
+    case 3: return "Interrupt";
+    case 4: return "Openfirmware Handle";
+    case 5: return "Addresses";
+    default: return "";
+  };
 }
 
 const char *DevicesCommand::DeviceInfo::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
+  if (!m_pDev) return "";
+  static LargeStaticString str;
+  colOffset = 40;
+  switch (index)
+  {
+    case 0:
+    {
+      String str2;
+      m_pDev->getName(str2);
+      str += str2;
+      break;
+    }
+    case 1:
+      str += m_pDev->getType();
+      break;
+    case 2:
+      str += m_pDev->getSpecificType();
+      break;
+    case 3:
+      str += m_pDev->getInterruptNumber();
+      break;
+    case 4:
+#ifdef OPENFIRMWARE
+      str.append(reinterpret_cast<uintptr_t> (m_pDev->getOFHandle()), 16);
+      break;
+#else
+      str += "Not applicable";
+      break;
+#endif
+    default:
+    {
+      unsigned int i = index-5;
+      if (i >= m_pDev->addresses().count())
+        break;
+      Device::Address *address = m_pDev->addresses()[i];
+      str += address->m_Name;
+      if (address->m_IsIoSpace)
+        str += " (IO) @ ";
+      else
+        str += " (MEM) @ ";
+      str.append(address->m_Address, 16);
+      str += "-";
+      str.append(address->m_Address+address->m_Size, 16);
+      break;
+    }
+  };
+  return str;
 }
 
 size_t DevicesCommand::DeviceInfo::getLineCount()
 {
+  if (m_pDev)
+    return 5+m_pDev->addresses().count();
+  else
+    return 5;
 }

@@ -67,6 +67,9 @@ public:
   virtual void *allocateStack();
   virtual void freeStack(void *pStack);
 
+  virtual VirtualAddressSpace *clone();
+  virtual void revertToKernelAddressSpace();
+
 protected:
   /** The destructor does nothing */
   virtual ~PPC32VirtualAddressSpace();
@@ -78,8 +81,10 @@ private:
     uint32_t entries[1024];
   };
 
+public:
   /** The constructor for already present paging structures */
   PPC32VirtualAddressSpace();
+private:
   /** The copy-constructor
    *\note NOT implemented */
   PPC32VirtualAddressSpace(const PPC32VirtualAddressSpace &);
@@ -99,6 +104,7 @@ private:
   /** The x86-style shadow page directory */
   ShadowPageTable *m_pPageDirectory[1024];
   
+public:
   /** The VSIDs - Virtual segment identifiers */
   VsidManager::Vsid m_Vsid;
 };
@@ -114,5 +120,6 @@ private:
 #define KERNEL_VIRTUAL_HEAP    static_cast<uintptr_t>(0xD0000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS static_cast<uintptr_t>(0xA0000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE static_cast<uintptr_t>(0x20000000)
+#define KERNEL_VIRTUAL_TEMP1   reinterpret_cast<void*>(0xEFFFF000)
 
 #endif

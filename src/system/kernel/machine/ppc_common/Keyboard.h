@@ -31,6 +31,9 @@ public:
    * Initialises the device.
    */
   virtual void initialise();
+
+  virtual void setDebugState(bool enableDebugMode);
+  virtual bool getDebugState() {return true;}
   
   /**
    * Retrieves a character from the keyboard. Blocking I/O.

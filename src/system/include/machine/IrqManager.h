@@ -43,6 +43,8 @@ class IrqManager
      *\param[in] Id the irq's identifier */
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler) = 0;
 
+    virtual void enable(uint8_t irq, bool enable) = 0;
+
   protected:
     /** The default constructor */
     inline IrqManager(){}

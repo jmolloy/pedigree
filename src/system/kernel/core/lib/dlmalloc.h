@@ -36,6 +36,9 @@
 #define LACKS_ERRNO_H
 #define LACKS_STDLIB_H
 
+#define DEBUG 1
+#define FOOTERS 1
+
 #ifdef __cplusplus
   extern "C"
   {

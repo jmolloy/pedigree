@@ -4,6 +4,10 @@
 class Square
 {
 public:
+  Square() :
+    col(-1), row(-1)
+  {}
+  
   Square(int col, int row) :
     col(col), row(row)
   {}
@@ -16,7 +20,12 @@ public:
     row = 7-row;
   }
 
-  unsigned char col, row;
+  bool invalid()
+  {
+    return (col == -1 && row == -1);
+  }
+
+  char col, row;
 };
 
 #endif

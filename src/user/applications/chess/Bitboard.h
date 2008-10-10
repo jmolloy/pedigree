@@ -17,6 +17,11 @@ public:
      square.
   **/
   Bitboard(unsigned char squares[64]);
+  Bitboard(Square sq)
+  {
+    member.i = 0;
+    set(sq.row, sq.col);
+  }
 
   ~Bitboard() {}
 
@@ -58,6 +63,14 @@ public:
   bool set(int rank, int file)
   {
     member.c[rank] |= 0x80 >> file;
+  }
+  
+  /**
+     Clears the entire bitboard.
+  **/
+  void clear()
+  {
+    member.i = 0;
   }
 
   /**

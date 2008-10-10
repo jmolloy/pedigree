@@ -29,7 +29,7 @@ class SyscallHandler
   public:
     /** Called when the handler is registered with the syscall manager and a syscall occurred
      *\param[in] State reference to the state before the syscall */
-    virtual void syscall(SyscallState &State) = 0;
+    virtual uintptr_t syscall(SyscallState &State) = 0;
 
   protected:
     /** Virtual destructor */

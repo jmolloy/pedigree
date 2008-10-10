@@ -18,7 +18,13 @@
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
 #include <processor/Processor.h>
+#include <machine/Device.h>
+#include <machine/ppc_common/pci.h>
+#include <machine/ppc_common/OpenPic.h>
+#include <machine/ppc_common/Heathrow.h>
 #include <Log.h>
+
+extern size_t resolveInterruptNumber(Device *pDev);
 
 Mac Mac::m_Instance;
 
@@ -52,8 +58,7 @@ size_t Mac::getNumVga()
 }
 IrqManager *Mac::getIrqManager()
 {
-  // TODO
-  return 0;
+  return m_pIrqManager;
 }
 SchedulerTimer *Mac::getSchedulerTimer()
 {
@@ -70,51 +75,70 @@ Keyboard *Mac::getKeyboard()
 }
 
 Mac::Mac() :
-  m_Decrementer(), m_Vga(), m_Keyboard()
+  m_Decrementer(), m_Vga(), m_Keyboard(), m_pIrqManager(0)
 {
 }
 Mac::~Mac()
 {
 }
 
-static void probeDev(int depth, OFDevice *pDev)
+// Performs a depth-first probe of the (OpenFirmware) device tree, populating the internal device tree.
+static void probeDev(int depth, OFDevice *pOfDev, Device *pInternalDev)
 {
-  OFHandle hChild = OpenFirmware::instance().getFirstChild(pDev);
+  OFHandle hChild = OpenFirmware::instance().getFirstChild(pOfDev);
   while (hChild != 0)
   {
+    // Convert the device handle into a real device object.
     OFDevice dChild (hChild);
+    OFHandle hOldChild = hChild;
+    // Set hChild to now be a handle for the next device to probe.
     hChild = OpenFirmware::instance().getSibling(&dChild);
-    
-    NormalStaticString name, type;
-    dChild.getProperty("name", name);
+
+    // Populate the new internal device node.
+    NormalStaticString type;
     dChild.getProperty("device_type", type);
-    
-    //if (type.length() == 0)
-    //  continue;
-    
-    LargeStaticString str;
-    for (int i = 0; i < depth; i++)
-      str += " ";
-    str += name;
-    str += " : ";
-    str += type;
-    NOTICE(static_cast<const char *> (str));
-    
-    probeDev(depth+1, &dChild);
+
+    // Prune stupid items.
+    if (type.length() == 0)
+      continue;
+
+    // Create a new internal device node.
+    Device *node = new Device();
+    pInternalDev->addChild(node);
+    node->setParent(pInternalDev);
+
+    node->setSpecificType(String(type));
+    node->setOFHandle(hOldChild);
+    node->setInterruptNumber(resolveInterruptNumber(node));
+
+    probeDev(depth+1, &dChild, node);
   }
 }
 
 void Mac::initialiseDeviceTree()
 {
-  OFDevice root( OpenFirmware::instance().findDevice("/"));
+  // Find the root devices.
+  OFDevice ofRoot( OpenFirmware::instance().findDevice("/") );
+  Device &internalRoot = Device::root();
   
-  probeDev(0, &root);
+  // Start the device probing - this is recursive and obviously starts at a depth of 0.
+  probeDev(0, &ofRoot, &internalRoot);
 
-  // TMP
-  const int ADDR = 0xfe000000;
-  VirtualAddressSpace::getKernelAddressSpace().map(ADDR+0x1000, (void*)(ADDR+0x1000), VirtualAddressSpace::Write);
-  uint8_t *address = (uint8_t*) (ADDR + 0x1c40 + 7);
-  NOTICE("Add: " << Hex << *address);
-
-  Processor::breakpoint();
+  initialisePci();
+  if (!OpenPic::instance().initialise())
+  {
+    // OpenPic not found - try heathrow.
+    if (!Heathrow::instance().initialise())
+    {
+      ERROR ("No IRQ manager found.");
+    }
+    else
+    {
+      m_pIrqManager = &Heathrow::instance();
+    }
+  }
+  else
+  {
+    m_pIrqManager = &OpenPic::instance();
+  }
 }

@@ -134,7 +134,7 @@ KernelElf::~KernelElf()
 #ifdef PPC_COMMON
 uintptr_t loadbase = 0xe1000000;
 #else
-uintptr_t loadbase = 0x5000000;
+uintptr_t loadbase = 0xfa000000;
 #endif
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
@@ -150,13 +150,15 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   /// \todo assign memory, and a decent address.
   for(int i = 0; i < 0x20000; i += 0x1000)
   {
-    bool b = VirtualAddressSpace::getKernelAddressSpace().map(PhysicalMemoryManager::instance().allocatePage(),
-                                                     reinterpret_cast<void*> (loadbase+i),
-                                                     0);
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    bool b = VirtualAddressSpace::getKernelAddressSpace().map(phys,
+                                                              reinterpret_cast<void*> (loadbase+i),
+                                                              VirtualAddressSpace::Write);
     if (!b)
       WARNING("map() failed");
   }
   module->elf.setLoadBase(loadbase);
+
   if (!module->elf.writeSections())
   {
     ERROR ("Module load failed (2)");
@@ -169,38 +171,99 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
     delete module;
     return 0;
   }
-
-  // Look up the module's name and entry/exit functions.
+  
+  // Look up the module's name and entry/exit functions, and dependency list.
   module->name = *reinterpret_cast<const char**> (module->elf.lookupSymbol("g_pModuleName"));
   module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
   module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
+  module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
   
+  NOTICE("Relocated module " << module->name);
+
+#if defined(PPC_COMMON) || defined(MIPS_COMMON)
+  ///\todo proper size in here.
+  Processor::flushDCacheAndInvalidateICache(loadbase, loadbase+0x20000);
+#endif
+  loadbase += 0x100000;
+
+  m_Modules.pushBack(module);
+
+  // Can we load this module yet?
+  if (moduleDependenciesSatisfied(module))
+  {
+    executeModule(module);
+
+    // Now check if we've allowed any currently pending modules to load.
+    bool somethingLoaded = true;
+    while (somethingLoaded)
+    {
+      somethingLoaded = false;
+      for (Vector<Module*>::Iterator it = m_PendingModules.begin();
+           it != m_PendingModules.end();
+           it++)
+      {
+        if (moduleDependenciesSatisfied(*it))
+        {
+          executeModule(*it);
+          m_PendingModules.erase(it);
+          somethingLoaded = true;
+          break;
+        }
+      }
+    }
+  }
+  else
+  {
+    m_PendingModules.pushBack(module);
+  }
+
+  return module;
+}
+
+bool KernelElf::moduleDependenciesSatisfied(Module *module)
+{
+  int i = 0;
+  if (module->depends == 0) return true;
+
+  while (module->depends[i] != 0)
+  {
+    bool found = false;
+    for (int j = 0; j < m_LoadedModules.count(); j++)
+    {
+      if (!strcmp(m_LoadedModules[j], module->depends[i]))
+      {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+    i++;
+  }
+  return true;
+}
+
+void KernelElf::executeModule(Module *module)
+{
+  m_LoadedModules.pushBack(const_cast<char*>(module->name));
+
   // Check for a constructors list and execute.
   uintptr_t startCtors = module->elf.lookupSymbol("start_ctors");
   uintptr_t endCtors = module->elf.lookupSymbol("end_ctors");
+
   if (startCtors && endCtors)
   {
-    uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&startCtors);
-    while (iterator < reinterpret_cast<uintptr_t*>(&endCtors))
+    uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
+    while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
     {
       void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
       fp();
       iterator++;
     }
   }
-  
-#if defined(PPC_COMMON) || defined(MIPS_COMMON)
-  ///\todo proper size in here.
-  Processor::flushDCacheAndInvalidateICache(loadbase, loadbase+0x20000);
-#endif
-  
-  loadbase += 0x100000;
-  NOTICE("Name: " << module->name);
-  NOTICE("Entry: " << Hex << reinterpret_cast<uintptr_t> (module->entry));
-  NOTICE("Exit: " << Hex << reinterpret_cast<uintptr_t>(module->exit));
-  m_Modules.pushBack(module);
 
-  return module;
+  NOTICE("Executing module " << module->name);
+  if (module)
+    module->entry();
 }
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)

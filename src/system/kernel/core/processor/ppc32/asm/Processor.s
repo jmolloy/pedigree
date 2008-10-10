@@ -44,14 +44,20 @@ _ZN9Processor14getBasePointerEv:
   nop
 
 _ZN9Processor15getStackPointerEv:
-  nop
+  mr 3, 1
+  blr
 
 _ZN9Processor21getInstructionPointerEv:
   nop
 
 _ZN9Processor13getInterruptsEv:
+  isync
   mfmsr 3           # Grab the MSR in r3
   andi. 3, 3, 0x8000 # AND with MSR_EE
+  cmpi  0, 3, 0     # Is r3 zero?
+  beq   1f          # No? goto 1f.
+  addi  3, 0, 1     # r3 = $1.
+1:
   blr
 
 _ZN9Processor13contextSwitchEP19PPC32InterruptState:

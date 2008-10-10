@@ -19,6 +19,8 @@
 
 #include <Atomic.h>
 #include <processor/types.h>
+#include <Spinlock.h>
+#include <utilities/List.h>
 
 /**
  * A counting semaphore.
@@ -46,8 +48,20 @@ public:
    * \param n The number of semaphore items to release. Must be non-zero. */
   void release(size_t n=1);
 
-private:
+//private:
+  /** Private copy constructor
+      \note NOT implemented. */
+  Semaphore(const Semaphore&);
+  /** Private operator=
+      \note NOT implemented. */
+  void operator =(const Semaphore&);
+
   Atomic<ssize_t> m_Counter;
+  Spinlock m_BeingModified;
+  List<class Thread*> m_Queue;
+  class Thread *m_pParent;
+  int magic;
+  
 };
 
 #endif

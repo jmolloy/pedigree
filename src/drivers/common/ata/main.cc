@@ -16,6 +16,7 @@
 
 #include <Module.h>
 #include <processor/types.h>
+#include <processor/Processor.h>
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <machine/Controller.h>
@@ -26,8 +27,12 @@ void probeDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
   AtaController *pController = new AtaController(pDev);
+
   // Replace pDev with pController.
+  pController->setParent(pDev->getParent());
   pDev->getParent()->replaceChild(pDev, pController);
+  
+  
   // And delete pDev for good measure.
   //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
   //delete pDev;
@@ -39,14 +44,12 @@ void searchNode(Device *pDev)
   {
     Device *pChild = pDev->getChild(i);
     // Is this a controller?
-    if (pChild->getType() == Device::Controller)
-    {
+//    if (pChild->getType() == Device::Controller)
+//    {
       // Check it's not an ATA controller already.
       String name;
       pChild->getName(name);
 
-      if (!strcmp(name, "ata"))
-        continue;
       // Get its addresses, and search for "command" and "control".
       bool foundCommand = false;
       bool foundControl = false;
@@ -59,10 +62,10 @@ void searchNode(Device *pDev)
         }
         if (!strcmp(pChild->addresses()[j]->m_Name, "control"))
           foundControl = true;
-      }
+      }        
       if (foundCommand && foundControl)
         probeDevice(reinterpret_cast<Controller*> (pChild));
-    }
+//    }
     // Recurse.
     searchNode(pChild);
   }
@@ -72,7 +75,7 @@ void entry()
 {
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
-  Device *pDev = &Device::root();
+  Device *pDev = &Device::root();  
   searchNode(pDev);
 }
 
@@ -84,3 +87,8 @@ void exit()
 const char *g_pModuleName = "ata";
 ModuleEntry g_pModuleEntry = &entry;
 ModuleExit  g_pModuleExit  = &exit;
+#ifdef PPC_COMMON
+const char *g_pDepends[] = {"ata-specific", 0};
+#else
+const char *g_pDepends[] = {0};
+#endif

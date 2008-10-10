@@ -100,6 +100,10 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #if defined(THREADS)
   Thread *pThread = Processor::information().getCurrentThread();
 #endif
+
+  bool debugState = Machine::instance().getKeyboard()->getDebugState();
+  Machine::instance().getKeyboard()->setDebugState(true);
+
   /*
    * I/O implementations.
    */
@@ -141,9 +145,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 13;
+  size_t nCommands = 14;
 #else
-  size_t nCommands = 12;
+  size_t nCommands = 13;
 #endif
   DebuggerCommand *pCommands[] = {&disassembler,
                                   &logViewer,
@@ -173,6 +177,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
     {
       pInterfaces[i]->disableCli();
       pInterfaces[i]->drawString("Press any key to enter the debugger...", 0, 0, DebuggerIO::LightBlue, DebuggerIO::Black);
+      NormalStaticString str;
+      str += description;
+      pInterfaces[i]->drawString(str, 2, 0, DebuggerIO::LightBlue, DebuggerIO::Black);
     }
     // Poll each device.
     while (pIo == 0)
@@ -207,6 +214,12 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   description += "\n";
   pIo->writeCli(description, DebuggerIO::Yellow, DebuggerIO::Black);
   
+  description.clear();
+  description += "Kernel heap ends at ";
+  description.append(reinterpret_cast<uintptr_t>(VirtualAddressSpace::getKernelAddressSpace().m_HeapEnd), 16);
+  description += "\n";
+  pIo->writeCli(description, DebuggerIO::Yellow, DebuggerIO::Black);
+
   // Main CLI loop.
   bool bKeepGoing = false;
   do
@@ -298,6 +311,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #ifndef ARM_COMMON
   serialIO2.destroy();
 #endif
+
+  Machine::instance().getKeyboard()->setDebugState(debugState);
 }
 
 void Debugger::interrupt(size_t interruptNumber, InterruptState &state)

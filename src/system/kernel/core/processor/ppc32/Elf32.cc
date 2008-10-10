@@ -89,8 +89,11 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
       // in .text - like a function pointer.
       S = KernelElf::instance().globalLookupSymbol(pStr);
     }
+    if (S == 0)
+    {
+      ERROR("Relocation failed for symbol " << pStr);
+    }
   }
-  
   if (S == 0)
     return false;
   

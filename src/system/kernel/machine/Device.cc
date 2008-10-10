@@ -20,11 +20,22 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
-Device::Device() : m_Addresses(), m_Children(), m_pParent(0), m_InterruptNumber(0)
+/** Singleton Device instantiation. */
+Device Device::m_Root;
+
+Device::Device() : m_Addresses(), m_Children(), m_pParent(0), 
+#ifdef OPENFIRMWARE
+                   m_OfHandle(0),
+#endif
+                   m_InterruptNumber(0),
+                   m_SpecificType()
 {
 }
 
 Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_InterruptNumber(p->m_InterruptNumber),
+#ifdef OPENFIRMWARE
+                             m_OfHandle(0),
+#endif
                              m_SpecificType(p->m_SpecificType)
 {
   m_pParent = p->m_pParent;
@@ -36,10 +47,11 @@ Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_Interr
   for (unsigned int i = 0; i < p->m_Addresses.count(); i++)
   {
     Address *pa = p->m_Addresses[i];
-    Address *a = new Address(pa->m_Name, pa->m_Address, pa->m_Size, pa->m_IsIoSpace);
+    Address *a = new Address(pa->m_Name, pa->m_Address, pa->m_Size, pa->m_IsIoSpace, pa->m_Padding);
     m_Addresses.pushBack(a);
   }
 }
+
 Device::~Device()
 {
   for (unsigned int i = 0; i < m_Addresses.count(); i++)
@@ -114,14 +126,14 @@ void Device::replaceChild(Device *src, Device *dest)
       it != m_Children.end();
       it++, i++)
     if (*it == src)
-  {
-    *it = dest;
-    break;
-  }
+    {
+      *it = dest;
+      break;
+    }
 }
 
-Device::Address::Address(String n, uintptr_t a, size_t s, bool io) :
-  m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0)
+Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
+  m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad)
 {
 #ifdef KERNEL_PROCESSOR_NO_PORT_IO
   // In this case, IO accesses go through MemoryMappedIo too.
@@ -129,14 +141,14 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io) :
   uint32_t numPages = s / 4096;
   if (s%4096) numPages++;
 
-  MemoryMappedIo *pIo = new MemoryMappedIo(m_Name);
+  MemoryMappedIo *pIo = new MemoryMappedIo(m_Name, a%4096, pad);
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
   if (!physicalMemoryManager.allocateRegion(*pIo,
                                        numPages,
                                        PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
                                        PhysicalMemoryManager::force,
                                        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
-                                       VirtualAddressSpace::WriteThrough,
+                                         VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
                                        a))
   {
     ERROR("Device::Address - allocateRegion failed!");
@@ -155,7 +167,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io) :
     uint32_t numPages = s / 4096;
     if (s%4096) numPages++;
   
-    MemoryMappedIo *io = new MemoryMappedIo(m_Name);
+    MemoryMappedIo *io = new MemoryMappedIo(m_Name, a%4096, pad);
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (!physicalMemoryManager.allocateRegion(*io,
                                         numPages,

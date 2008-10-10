@@ -15,21 +15,45 @@
  */
 
 #include "VFS.h"
+#include <Log.h>
 #include <Module.h>
+#include <utilities/utility.h>
 
-static VFS VFS::m_Instance;
+VFS VFS::m_Instance;
 
 VFS &VFS::instance()
 {
   return m_Instance;
 }
 
-VFS::VFS()
+VFS::VFS() :
+  m_Aliases(), m_ProbeCallbacks()
 {
 }
 
 VFS::~VFS()
 {
+}
+
+bool VFS::mount(Disk *pDisk, String &alias)
+{
+  for (List<Filesystem::ProbeCallback*>::Iterator it = m_ProbeCallbacks.begin();
+       it != m_ProbeCallbacks.end();
+       it++)
+  {
+    Filesystem::ProbeCallback cb = **it;
+    Filesystem *pFs = cb(pDisk);
+    if (pFs)
+    {
+      if (strlen(alias) == 0)
+      {
+        alias = pFs->getVolumeLabel();
+      }
+      addAlias(pFs, alias);
+      return true;
+    }
+  }
+  return false;
 }
 
 void VFS::addAlias(Filesystem *pFs, String alias)
@@ -41,13 +65,32 @@ void VFS::addAlias(Filesystem *pFs, String alias)
   m_Aliases.pushBack(pA);
 }
 
+void VFS::addAlias(String oldAlias, String newAlias)
+{
+  for (List<Alias*>::Iterator it = m_Aliases.begin();
+       it != m_Aliases.end();
+       it++)
+  {
+    if (!strcmp(oldAlias, (*it)->alias))
+    {
+      Filesystem *pFs = (*it)->fs;
+      pFs->nAliases++;
+      Alias *pA = new Alias;
+      pA->alias = newAlias;
+      pA->fs = pFs;
+      m_Aliases.pushBack(pA);
+      return;
+    }
+  }
+}
+
 void VFS::removeAlias(String alias)
 {
   for (List<Alias*>::Iterator it = m_Aliases.begin();
        it != m_Aliases.end();
        it++)
   {
-    if (alias == (*it)->alias))
+    if (alias == (*it)->alias)
     {
       Filesystem *pFs = (*it)->fs;
       Alias *pA = *it;
@@ -85,12 +128,152 @@ Filesystem *VFS::lookupFilesystem(String alias)
        it != m_Aliases.end();
        it++)
   {
-    if (alias == (*it)->alias)
+    if (!strcmp(alias, (*it)->alias))
     {
-      return (*it)->pFs;
+      return (*it)->fs;
     }
   }
   return 0;
+}
+
+File VFS::find(String path)
+{
+  // We expect a colon. If we don't find it, we cry loudly.
+  char *cPath = const_cast<char*> (static_cast<const char*> (path));
+  char *newPath = cPath;
+  while (cPath[0] != '\0' && cPath[0] != ':')
+    cPath++;
+  if (cPath[0] == '\0')
+  {
+    // Error - malformed path!
+    return File();
+  }
+
+  cPath[0] = '\0';
+  cPath++;
+
+  // Attempt to find a filesystem alias.
+  Filesystem *pFs = lookupFilesystem(String(newPath));
+  if (!pFs)
+  {
+    // Error - filesystem not found!
+    return File();
+  }
+  File a = pFs->find(String(cPath));
+  
+  return  a;
+  
+}
+
+void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
+{
+  Filesystem::ProbeCallback *p = new Filesystem::ProbeCallback;
+  *p = callback;
+  m_ProbeCallbacks.pushBack(p);
+}
+
+bool VFS::createFile(String path)
+{
+  // We expect a colon. If we don't find it, we cry loudly.
+  char *cPath = const_cast<char*> (static_cast<const char*> (path));
+  char *newPath = cPath;
+  while (cPath[0] != '\0' && cPath[0] != ':')
+    cPath++;
+  if (cPath[0] == '\0')
+  {
+    // Error - malformed path!
+    return false;
+  }
+
+  cPath[0] = '\0';
+  cPath++;
+
+  // Attempt to find a filesystem alias.
+  Filesystem *pFs = lookupFilesystem(String(newPath));
+  if (!pFs)
+  {
+    // Error - filesystem not found!
+    return false;
+  }
+  return pFs->createFile(String(cPath));
+}
+  
+bool VFS::createDirectory(String path)
+{
+  // We expect a colon. If we don't find it, we cry loudly.
+  char *cPath = const_cast<char*> (static_cast<const char*> (path));
+  char *newPath = cPath;
+  while (cPath[0] != '\0' && cPath[0] != ':')
+    cPath++;
+  if (cPath[0] == '\0')
+  {
+    // Error - malformed path!
+    return false;
+  }
+
+  cPath[0] = '\0';
+  cPath++;
+
+  // Attempt to find a filesystem alias.
+  Filesystem *pFs = lookupFilesystem(String(newPath));
+  if (!pFs)
+  {
+    // Error - filesystem not found!
+    return false;
+  }
+  return pFs->createDirectory(String(cPath));
+}
+
+bool VFS::createSymlink(String path, String value)
+{
+  // We expect a colon. If we don't find it, we cry loudly.
+  char *cPath = const_cast<char*> (static_cast<const char*> (path));
+  char *newPath = cPath;
+  while (cPath[0] != '\0' && cPath[0] != ':')
+    cPath++;
+  if (cPath[0] == '\0')
+  {
+    // Error - malformed path!
+    return false;
+  }
+
+  cPath[0] = '\0';
+  cPath++;
+
+  // Attempt to find a filesystem alias.
+  Filesystem *pFs = lookupFilesystem(String(newPath));
+  if (!pFs)
+  {
+    // Error - filesystem not found!
+    return false;
+  }
+  return pFs->createSymlink(String(cPath), value);
+}
+
+bool VFS::remove(String path)
+{
+  // We expect a colon. If we don't find it, we cry loudly.
+  char *cPath = const_cast<char*> (static_cast<const char*> (path));
+  char *newPath = cPath;
+  while (cPath[0] != '\0' && cPath[0] != ':')
+    cPath++;
+  if (cPath[0] == '\0')
+  {
+    // Error - malformed path!
+    return false;
+  }
+
+  cPath[0] = '\0';
+  cPath++;
+
+  // Attempt to find a filesystem alias.
+  Filesystem *pFs = lookupFilesystem(String(newPath));
+  if (!pFs)
+  {
+    // Error - filesystem not found!
+    return false;
+  }
+  return pFs->remove(String(cPath));
 }
 
 void initVFS()
@@ -101,6 +284,7 @@ void destroyVFS()
 {
 }
 
-const char *g_pModuleName = "VFS";
+const char *g_pModuleName  = "VFS";
 ModuleEntry g_pModuleEntry = &initVFS;
 ModuleExit  g_pModuleExit  = &destroyVFS;
+const char *g_pDepends[] = {0};

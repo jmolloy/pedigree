@@ -40,6 +40,10 @@ class String
     inline size_t length() const;
     inline size_t size() const;
 
+    /** Given a character index, return the index of the next character, interpreting
+        the string as UTF-8 encoded. */
+    inline size_t nextCharacter(size_t c);
+
     void assign(const String &x);
     void assign(const char *s);
     void reserve(size_t size);
@@ -90,7 +94,10 @@ String &String::operator = (const char *s)
 }
 String::operator const char *() const
 {
-  return m_Data;
+  if (m_Data == 0)
+    return "";
+  else
+    return m_Data;
 }
 
 size_t String::length() const
@@ -100,6 +107,12 @@ size_t String::length() const
 size_t String::size() const
 {
   return m_Size;
+}
+
+size_t String::nextCharacter(size_t c)
+{
+  // TODO handle multibyte chars.
+  return c+1;
 }
 
 #endif

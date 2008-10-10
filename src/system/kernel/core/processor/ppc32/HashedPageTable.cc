@@ -86,7 +86,7 @@ void HashedPageTable::initialise(Translations &translations, uint32_t ramMax)
 
   // Write this translation back to the Translations struct.
   translations.addTranslation(HTAB_VIRTUAL, htabPhys, m_Size, 0x10 /* M=1 */);
-  WARNING("htabPhys: " << Hex << htabPhys);
+
   // Make a mapping for our page table.
   OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
   OFDevice mmu (chosen.getProperty("mmu"));
@@ -201,7 +201,10 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       m_pHtab[primaryHash].entries[i].h = 0; // Primary hash
       m_pHtab[primaryHash].entries[i].api = (effectiveAddress>>22)&0x3F;
       m_pHtab[primaryHash].entries[i].rpn = physicalAddress>>12;
-      m_pHtab[primaryHash].entries[i].wimg = wimg;
+      m_pHtab[primaryHash].entries[i].w = (mode&VirtualAddressSpace::WriteThrough)?1:0;
+      m_pHtab[primaryHash].entries[i].i = (mode&VirtualAddressSpace::CacheDisable)?1:0;
+      m_pHtab[primaryHash].entries[i].m = (mode&VirtualAddressSpace::MemoryCoherent)?1:0;
+      m_pHtab[primaryHash].entries[i].g = (mode&VirtualAddressSpace::Guarded)?1:0;
       m_pHtab[primaryHash].entries[i].pp = pp;
       m_pHtab[primaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
@@ -218,7 +221,10 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
       m_pHtab[secondaryHash].entries[i].h = 1; // Secondary hash.
       m_pHtab[secondaryHash].entries[i].api = (effectiveAddress&0x0FFFFFFF)>>22;
       m_pHtab[secondaryHash].entries[i].rpn = physicalAddress>>12;
-      m_pHtab[secondaryHash].entries[i].wimg = wimg;
+      m_pHtab[secondaryHash].entries[i].w = (mode&VirtualAddressSpace::WriteThrough)?1:0;
+      m_pHtab[secondaryHash].entries[i].i = (mode&VirtualAddressSpace::CacheDisable)?1:0;
+      m_pHtab[secondaryHash].entries[i].m = (mode&VirtualAddressSpace::MemoryCoherent)?1:0;
+      m_pHtab[secondaryHash].entries[i].g = (mode&VirtualAddressSpace::Guarded)?1:0;
       m_pHtab[secondaryHash].entries[i].pp = pp;
       m_pHtab[secondaryHash].entries[i].v = 1; // Valid.
       asm volatile("sync");
@@ -228,12 +234,18 @@ void HashedPageTable::addMapping(uint32_t effectiveAddress, uint32_t physicalAdd
   
   // Else destroy the last entry in the first hash.
   /// \todo change this to random replacement.
+  FATAL("api: " << Hex << (m_pHtab[primaryHash].entries[7].api<<22));
+  panic("Destroying hash table entry!");
   m_pHtab[primaryHash].entries[7].v = 0;
   m_pHtab[primaryHash].entries[7].vsid = vsid;
   m_pHtab[primaryHash].entries[7].h = 0; // Primary hash
   m_pHtab[primaryHash].entries[7].api = (effectiveAddress&0x0FFFFFFF)>>22;
   m_pHtab[primaryHash].entries[7].rpn = physicalAddress>>12;
-  m_pHtab[primaryHash].entries[7].wimg = wimg;
+  m_pHtab[primaryHash].entries[7].w = (mode&VirtualAddressSpace::WriteThrough)?1:0;
+  m_pHtab[primaryHash].entries[7].i = (mode&VirtualAddressSpace::CacheDisable)?1:0;
+  m_pHtab[primaryHash].entries[7].m = (mode&VirtualAddressSpace::MemoryCoherent)?1:0;
+  m_pHtab[primaryHash].entries[7].g = (mode&VirtualAddressSpace::Guarded)?1:0;
+
   m_pHtab[primaryHash].entries[7].pp = pp;
   m_pHtab[primaryHash].entries[7].v = 1; // Valid.
   asm volatile("sync");

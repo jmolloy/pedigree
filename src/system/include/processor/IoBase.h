@@ -44,12 +44,12 @@ class IoBase
      *\param[in] offset offset from the I/O base port or the I/O base memory address
      *\return the four byte (32bit) that have been read */
     virtual uint32_t read32(size_t offset = 0) = 0;
-    #if defined(BITS_64)
+#if defined(BITS_64)
       /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region.
        *\param[in] offset offset from the I/O base port or the I/O base memory address
        *\return the eight byte (64bit) that have been read */
       virtual uint64_t read64(size_t offset = 0) = 0;
-    #endif
+#endif
     /** Read eight byte (64bit) from the I/O Port or the memory-mapped I/O region. The
      *  32bit at the lower address are read first, then the 32bit at the higher address.
      *\param[in] offset offset from the I/O base port or the I/O base memory address

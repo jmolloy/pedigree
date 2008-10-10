@@ -19,7 +19,8 @@
 use strict;
 use warnings;
 
-my $compiler = $ARGV[0];
+my $compiler = shift @ARGV;
+my @hdd_files = @ARGV;
 
 # Are we making an X86 target?
 if ($compiler =~ m/(i686|amd64)-elf/) {
@@ -37,6 +38,21 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
     `sudo cp initrd.tar /tmp/pedigree-image/initrd.tar`;
     `sudo umount /dev/loop0`;
     `sudo /sbin/losetup -d /dev/loop0`;
+    `sudo cp ../images/hdd_16h_63spt_100c.img ./`;
+    `sudo /sbin/losetup -o 32256 /dev/loop0 ./hdd_16h_63spt_100c.img`;
+    `sudo mount -t ext2 /dev/loop0 /tmp/pedigree-image`;
+    `sudo mkdir -p /tmp/pedigree-image/applications`;
+    `sudo mkdir -p /tmp/pedigree-image/libraries`;
+    foreach my $file (@hdd_files) {
+	my ($binary) = ($file =~ m/([^\/]+)$/);
+	`sudo cp src/user/$file/$binary /tmp/pedigree-image/$file`;
+    }
+    `sudo umount /dev/loop0`;
+    `sudo /sbin/losetup -d /dev/loop0`;
+    `which qemu-img`;
+    if ($? == 0) {
+	`sudo qemu-img convert hdd_16h_63spt_100c.img -O vmdk hdd_16h_63spt_100c.vmdk`;
+    }
   }
 }
 
@@ -54,13 +70,30 @@ if ($compiler =~ m/arm-elf/) {
 # PPC?
 if ($compiler =~ m/ppc/) {
   `cp src/system/boot/ppc/bootloader ./bootloader`;
+  # HFS image.
   unless (-f "hdd_ppc_16h_63spt_100c.img") {
     `cp ../images/hdd_ppc_16h_63spt_100c.img .`;
   }
   `hmount hdd_ppc_16h_63spt_100c.img`;
   `hcopy ./bootloader :pedigree`;
-  `hattrib -t tbxi :pedigree`;
   `humount`;
+
+  # EXT2 image.
+#  unless (-f "hdd_16h_63spt_100c.img") {
+    `cp ../images/hdd_16h_63spt_100c.img .`;
+#  }
+  `mkdir -p /tmp/pedigree-image`;
+  `sudo /sbin/losetup -o 32256 /dev/loop0 ./hdd_16h_63spt_100c.img`;
+  `sudo mount -t ext2 /dev/loop0 /tmp/pedigree-image`;
+  `sudo mkdir -p /tmp/pedigree-image/applications`;
+  `sudo mkdir -p /tmp/pedigree-image/libraries`;
+  foreach my $file (@hdd_files) {
+      my ($binary) = ($file =~ m/([^\/]+)$/);
+      `sudo cp src/user/$file/$binary /tmp/pedigree-image/$file`;
+  }
+  `sudo cp /home/james/bash-3.2/build-ppc/bash /tmp/pedigree-image/bash`;
+  `sudo umount /dev/loop0`;
+  `sudo /sbin/losetup -d /dev/loop0`;
 }
 
 exit 0;

@@ -16,6 +16,8 @@
 
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
+#include <LockGuard.h>
+#include <Spinlock.h>
 
 OpenFirmware OpenFirmware::m_Instance;
 
@@ -31,6 +33,12 @@ OpenFirmware::~OpenFirmware()
 void OpenFirmware::initialise(OFInterface interface)
 {
   m_Interface = interface;
+
+  // Grab the current state of the SPRG registers.
+  asm volatile("mfsprg0 %0" : "=r" (m_Sprg0));
+  asm volatile("mfsprg1 %0" : "=r" (m_Sprg1));
+  asm volatile("mfsprg2 %0" : "=r" (m_Sprg2));
+  asm volatile("mfsprg3 %0" : "=r" (m_Sprg3));
 }
 
 OFHandle OpenFirmware::findDevice(const char *pName)
@@ -57,6 +65,17 @@ OFParam OpenFirmware::call(const char *pService, int nArgs, OFParam p1,
                                                             OFParam p7,
                                                             OFParam p8)
 {
+  static Spinlock lock;
+  LockGuard<Spinlock> guard(lock); // Grab a spinlock so that only one thing can call the prom at once.
+
+  // Revert the state of the SPRG registers to how OF left them.
+  // These get mashed during our interrupt handlers, but OF needs them left alone
+  // (apparently)!
+  asm volatile("mtsprg0 %0" : : "r" (m_Sprg0));
+  asm volatile("mtsprg1 %0" : : "r" (m_Sprg1));
+  asm volatile("mtsprg2 %0" : : "r" (m_Sprg2));
+  asm volatile("mtsprg3 %0" : : "r" (m_Sprg3));
+
   PromArgs pa;
   pa.service = pService;
   

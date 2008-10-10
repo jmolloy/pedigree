@@ -34,12 +34,14 @@ Backtrace::~Backtrace()
 
 void Backtrace::performBacktrace(InterruptState &state)
 {
+#ifdef DWARF
   // Firstly, can we perform a DWARF backtrace?
   if (KernelElf::instance().debugFrameTable() > 0 /*&& g_pKernel->debugFrameTableLength() > 0*/)
   {
     performDwarfBacktrace(state);
     return;
   }
+#endif
   // Can we perform a "normal", base-pointer-linked-list backtrace?
 #if defined(X86_COMMON)
   WARNING("Dwarf backtracing not available.");
@@ -60,7 +62,10 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
   while (i < MAX_STACK_FRAMES)
   {
     if (!du.unwind(initial, next, frameBase))
+    {
+      m_pReturnAddresses[i++] = initial.getInstructionPointer();
       break;
+    }
     
     m_pStates[i] = next;
     m_pBasePointers[i] = frameBase;
@@ -106,14 +111,24 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
     nFrames = m_nStackFrames;
   // What symbol are we in?
   // TODO grep the memory map for the right ELF to look at.
+  
   for (size_t i = nFromFrame; i < nFrames+nFromFrame; i++)
   {
     uintptr_t symStart = 0;
 
     const char *pSym = KernelElf::instance().globalLookupSymbol(m_pReturnAddresses[i], &symStart);
-    LargeStaticString sym(pSym);
-    StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
-    sf.prettyPrint(buf);
+    if (pSym == 0)
+    {
+      buf.append(m_pReturnAddresses[i], 16);
+      buf += "\n";
+    }
+    else
+    {
+      LargeStaticString sym(pSym);
+      StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
+      
+      sf.prettyPrint(buf);
+    }
   }
 }
 

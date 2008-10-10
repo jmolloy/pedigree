@@ -32,6 +32,9 @@
 class VirtualAddressSpace
 {
   public:
+    /** Debugger can access our private members for statistics reporting. */
+    friend class Debugger;
+  
     /** The page is only accessible from kernel-mode. If this flag is not set the
      *  page is also accessible from user-mode. */
     static const size_t KernelMode    = 0x01;
@@ -60,7 +63,7 @@ class VirtualAddressSpace
      *\param[in] pageCount the number of pages that should be allocated and mapped to the heap end
      *\param[in] flags flags that describe which accesses should be allowed on the page
      *\return pointer to the beginning of the newly allocated/mapped heap, 0 otherwise */
-    virtual void *expandHeap(size_t pageCount, size_t flags);
+    virtual void *expandHeap(ssize_t incr, size_t flags);
 
     /** Is a particular virtual address valid?
      *\param[in] virtualAddress the virtual address to check
@@ -117,9 +120,15 @@ class VirtualAddressSpace
      *  space
      *\return pointer to the new VirtualAddressSpace, 0 otherwise */
     static VirtualAddressSpace *create();
+
     /** Clone this VirtualAddressSpace. That means that we copy-on-write-map the application
      *  image. */
-    VirtualAddressSpace *clone();
+    virtual VirtualAddressSpace *clone() =0;
+
+    /** Undo a clone() - this happens when an application is Exec()'d - we destroy all mappings
+        not in the kernel address space so the space is 'clean'.*/
+    virtual void revertToKernelAddressSpace() =0;
+  
     /** The destructor does nothing */
     inline virtual ~VirtualAddressSpace(){}
 

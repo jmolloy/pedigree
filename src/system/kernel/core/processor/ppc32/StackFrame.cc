@@ -50,7 +50,7 @@ void PPC32StackFrame::construct(ProcessorState &state,
   va_list list;
   va_start(list, nParams);
   
-  for(int i = 0; i < nParams; i++)
+  for(unsigned int i = 0; i < nParams; i++)
   {
     uintptr_t arg = va_arg(list, uintptr_t);
     NOTICE("Setting " << Hex << i << ", " << arg);

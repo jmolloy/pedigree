@@ -18,6 +18,7 @@
 #define MACHINE_MAC_MAC_H
 
 #include <machine/Machine.h>
+#include <machine/IrqManager.h>
 #include "../ppc_common/Serial.h"
 #include "../ppc_common/Vga.h"
 #include "../ppc_common/Keyboard.h"
@@ -60,6 +61,7 @@ private:
   //Timer m_Timers;
   PPCVga m_Vga;
   PPCKeyboard m_Keyboard;
+  IrqManager *m_pIrqManager;
 
   static Mac m_Instance;
 };

@@ -18,13 +18,18 @@
 #define MACHINE_X86_KEYBOARD_H
 
 #include <machine/Keyboard.h>
+#include <machine/IrqManager.h>
 #include <processor/types.h>
 #include <processor/IoPort.h>
+#include <process/Semaphore.h>
+
+#define BUFLEN 256
 
 /**
  * Keyboard device abstraction.
  */
-class X86Keyboard : public Keyboard
+class X86Keyboard : public Keyboard,
+                    private IrqHandler
 {
 public:
   X86Keyboard (uint32_t portBase);
@@ -34,6 +39,9 @@ public:
    * Initialises the device.
    */
   virtual void initialise();
+
+  virtual void setDebugState(bool enableDebugState);
+  virtual bool getDebugState();
   
   /**
    * Retrieves a character from the keyboard. Blocking I/O.
@@ -69,8 +77,23 @@ public:
    * \return True if caps lock is currently on.
    */
   virtual bool capsLock();
-  
+
+  //
+  // IrqHandler interface
+  //
+  virtual bool irq(irq_id_t number, InterruptState &state);
+
 private:
+  /**
+   * Converts a scancode into a "real" character.
+   */
+  char scancodeToChar(uint8_t scancode);
+
+  /**
+   * True if we're in debug state.
+   */
+  bool m_bDebugState;
+
   /**
    * True if shift is held.
    */
@@ -95,6 +118,22 @@ private:
    * The IO port through which to access the keyboard.
    */
   IoPort m_Port;
+
+  /**
+   * Circular input buffer.
+   */
+  char m_Buffer[BUFLEN];
+  int m_BufStart, m_BufEnd;
+
+  /**
+   * Semaphore for how many items are in the buffer.
+   */
+  Semaphore m_BufLength;
+
+  /**
+   * IRQ id.
+   */
+  irq_id_t m_IrqId;
 };
 
 #endif

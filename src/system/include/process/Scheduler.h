@@ -71,6 +71,10 @@ public:
                         the debugger. */
   void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread=0);
 
+  /** Causes a syscall to yield the processor to a given thread
+      If pThread is 0, the next available thread is chosen. */
+  void yield(Thread *pThread=0);
+
 #ifdef DEBUGGER
   void switchToAndDebug(InterruptState &state, Thread *pThread);
 #endif
@@ -86,7 +90,7 @@ public:
 
   /** Our "unsafe to reschedule" mutex.
    *  \note This is public so it can be accessed by the thread start trampoline. */
-  Mutex m_Mutex;
+  Spinlock m_Mutex;
 
 private:
   /** Default constructor
@@ -109,7 +113,7 @@ private:
   static Scheduler m_Instance;
   
   /** All the processes currently in operation, for enumeration purposes. */
-  Vector<Process*> m_Processes;
+  List<Process*> m_Processes;
 
   /** The next available process ID. */
   Atomic<size_t> m_NextPid;

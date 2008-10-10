@@ -15,7 +15,9 @@
  */
 
 #include <processor/types.h>
+#include <Spinlock.h>
 #include "cppsupport.h"
+#include <panic.h>
 
 // Required for G++ to link static init/destructors.
 void *__dso_handle;
@@ -60,11 +62,16 @@ extern "C" void __cxa_guard_release()
   // TODO
 }
 
+Spinlock g_MallocLock(false);
+
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  return malloc(size);
+  g_MallocLock.acquire();
+  void *ret = malloc(size);
+  g_MallocLock.release();
+  return ret;
 #else
   return 0;
 #endif
@@ -72,7 +79,10 @@ void *operator new (size_t size) throw()
 void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  return malloc(size);
+  g_MallocLock.acquire();
+  void *ret = malloc(size);
+  g_MallocLock.release();
+  return ret;
 #else
   return 0;
 #endif
@@ -88,20 +98,26 @@ void *operator new[] (size_t size, void* memory) throw()
 void operator delete (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+  g_MallocLock.acquire();
   free(p);
+  g_MallocLock.release();
 #endif
 }
 void operator delete[] (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+  g_MallocLock.acquire();
   free(p);
+  g_MallocLock.release();
 #endif
 }
 void operator delete (void *p, void *q)
 {
   // TODO
+  panic("Operator delete -implement");
 }
 void operator delete[] (void *p, void *q)
 {
   // TODO
+  panic("Operator delete[] -implement");
 }

@@ -17,6 +17,7 @@
 #define MACHINE_OF_OF_H
 
 #include <machine/openfirmware/types.h>
+#include <processor/types.h>
 
 /**
  * Interface to OpenFirmware. 
@@ -69,6 +70,14 @@ private:
   
   /** The singleton instance */
   static OpenFirmware m_Instance;
+
+  /** OpenFirmware requires the saving of these registers. It shouldn't, but it
+      does. */
+  processor_register_t m_Sprg0;
+  processor_register_t m_Sprg1;
+  processor_register_t m_Sprg2;
+  processor_register_t m_Sprg3;
+  
 };
 
 #endif

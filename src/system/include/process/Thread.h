@@ -64,6 +64,12 @@ public:
   Thread(Process *pParent);
 
   /**
+   * Constructor for when forking a process. Assumes pParent has already been set up with a clone
+   * of the current address space and sets up the new thread to return to the caller in that address space.
+   */
+  Thread(Process *pParent, ProcessorState state);
+
+  /**
    * Destroys the Thread.
    *
    * The destructor unregisters itself with the Scheduler and parent process - this
@@ -107,10 +113,7 @@ public:
   /**
    * Sets our current status.
    */
-  void setStatus(Status s)
-  {
-    m_Status = s;
-  }
+  void setStatus(Status s);
   
   /**
    * Retrieves the exit status of the Thread.
@@ -134,7 +137,19 @@ public:
   {
     return m_Id;
   }
-  
+
+  /** Returns the last error that occurred (errno). */
+  size_t getErrno()
+  {
+    return m_Errno;
+  }
+
+  /** Sets the last error - errno. */
+  void setErrno(size_t errno)
+  {
+    m_Errno = errno;
+  }
+
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
@@ -177,6 +192,11 @@ private:
    * Our thread ID.
    */
   size_t m_Id;
+
+  /**
+   * The number of the last error to occur.
+   */
+  size_t m_Errno;
 
   InterruptState *m_pInterruptState;
 };

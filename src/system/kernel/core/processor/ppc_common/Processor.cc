@@ -43,6 +43,7 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
+  asm volatile("sync; isync;");
   uint32_t msr;
   asm volatile("mfmsr %0" : "=r" (msr));
   if (bEnable)
@@ -50,6 +51,7 @@ void Processor::setInterrupts(bool bEnable)
   else
     msr &= ~MSR_EE;
   asm volatile("mtmsr %0" : : "r" (msr));
+  asm volatile("sync; isync;");
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)

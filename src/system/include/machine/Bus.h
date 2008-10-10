@@ -49,6 +49,9 @@ public:
   }
 
 private:
+  Bus(const Bus&);
+  void operator =(const Bus&);
+
   const char *m_pName;
 };
 

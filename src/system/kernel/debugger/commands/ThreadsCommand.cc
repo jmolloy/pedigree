@@ -242,6 +242,15 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
 
   if (tehThread != 0 && tehThread != Processor::information().getCurrentThread())
   {
+    Thread::Status status = tehThread->getStatus();
+    switch(status)
+    {
+      case Thread::Running: Line += "r"; break;
+      case Thread::Ready:   Line += "R"; break;
+      case Thread::Sleeping:Line += "S"; break;
+      case Thread::Zombie:  Line += "Z"; break;
+    }
+
     Line += "[";
     Line += tehThread->getId();
     Line += "] @ ";
@@ -253,15 +262,26 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
   
     uintptr_t symStart;
     const char *pSym = KernelElf::instance().lookupSymbol(ip, &symStart);
-    LargeStaticString sym;
-    demangle_full(LargeStaticString(pSym), sym);
-    Line.append(ip, 16);
-    Line += ": ";
-    Line += sym;
+    if (pSym)
+    {
+      LargeStaticString sym;
+      demangle_full(LargeStaticString(pSym), sym);
+      Line.append(ip, 16);
+      Line += ": ";
+      Line += sym;
+    }
     colour = DebuggerIO::LightGrey;
   }
   else if (tehThread != 0) // tehThread == g_pCurrentThread
   {
+    Thread::Status status = tehThread->getStatus();
+    switch(status)
+    {
+      case Thread::Running: Line += "r"; break;
+      case Thread::Ready:   Line += "R"; break;
+      case Thread::Sleeping:Line += "S"; break;
+      case Thread::Zombie:  Line += "Z"; break;
+    }
     Line += "[";
     Line += tehThread->getId();
     Line += "] - CURRENT";
