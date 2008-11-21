@@ -48,6 +48,8 @@ ARM_INTEGRATOR: ARM926E
 *DEBUGGER_QWERTY:
 DEBUGGER_QWERTZ:
 
+*ECHO_CONSOLE_TO_SERIAL:
+
 # Set this to true if one or more serial ports are redirected to a non vt100 compliant terminal, for example a file.
 {SERIAL_IS_FILE}:
 

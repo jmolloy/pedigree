@@ -30,7 +30,7 @@ void destroy()
 {
 }
 
-const char *g_pModuleName  = "posix";
-ModuleEntry g_pModuleEntry = &init;
-ModuleExit  g_pModuleExit  = &destroy;
-const char *g_pDepends[] = {"console", "TUI", 0};
+MODULE_NAME("posix");
+MODULE_ENTRY(&init);
+MODULE_EXIT(&destroy);
+MODULE_DEPENDS("console", "TUI");

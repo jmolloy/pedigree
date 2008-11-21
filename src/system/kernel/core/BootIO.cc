@@ -46,6 +46,7 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
 {
   for(size_t i = 0; i < str.length(); i++)
     putCharVga(str[i], foreColour, backColour);
+#ifndef ECHO_CONSOLE_TO_SERIAL
   for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
   {
     startColour(Machine::instance().getSerial(i), foreColour, backColour);
@@ -53,6 +54,8 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
       Machine::instance().getSerial(i)->write(str[j]);
     endColour(Machine::instance().getSerial(i));
   }
+#endif
+
 #ifdef PPC_COMMON
   // For PPC: causes the graphics framebuffer to be updated from the text one.
   Vga *pVga = Machine::instance().getVga(0);
@@ -81,45 +84,45 @@ void BootIO::putCharVga(const char c, Colour foreColour, Colour backColour)
         if (m_CursorY > 0)
           m_CursorY--;
       }
-      
+
       // Erase the contents of the cell currently.
       uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
       pFramebuffer[m_CursorY*pVga->getNumCols() + m_CursorX] = ' ' | (attributeByte << 8);
-      
+
     }
-  
+
     // Tab?
     else if (c == 0x09 && ( ((m_CursorX+8)&~(8-1)) < pVga->getNumCols()) )
       m_CursorX = (m_CursorX+8) & ~(8-1);
-  
+
     // Carriage return?
     else if (c == '\r')
       m_CursorX = 0;
-  
+
     // Newline?
     else if (c == '\n')
     {
       m_CursorX = 0;
       m_CursorY++;
     }
-  
+
     // Normal character?
     else if (c >= ' ')
     {
       uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
       pFramebuffer[m_CursorY*pVga->getNumCols() + m_CursorX] = c | (attributeByte << 8);
-  
+
       // Increment the cursor.
       m_CursorX++;
     }
-  
+
     // Do we need to wrap?
     if (m_CursorX >= pVga->getNumCols())
     {
       m_CursorX = 0;
       m_CursorY ++;
     }
-    
+
     // Get a space character with the default colour attributes.
     uint8_t attributeByte = (Black << 4) | (White & 0x0F);
     uint16_t blank = ' ' | (attributeByte << 8);

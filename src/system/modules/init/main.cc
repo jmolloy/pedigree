@@ -28,6 +28,8 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
 #include <machine/Machine.h>
+#include <linker/DynamicLinker.h>
+#include <panic.h>
 #include "../../kernel/core/BootIO.h"
 
 extern BootIO bootIO;
@@ -52,7 +54,7 @@ static bool findDisks(Device *pDev)
     if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
         pChild->getType() == Device::Disk)
     {
-      if (probeDisk(static_cast<Disk*> (pChild)) ) return true;
+      if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
     }
     else
     {
@@ -85,14 +87,71 @@ void init()
   init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   Machine::instance().getKeyboard()->setDebugState(false);
-  Process::create(buffer, init.getSize(), "init");
+
+  // At this point we're uninterruptible, as we're forking.
+  Spinlock lock;
+  lock.acquire();
+
+  // Create a new process for the init process.
+  Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+
+  pProcess->description().clear();
+  pProcess->description().append("init");
+
+  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
+
+  // Switch to the init process' address space.
+  Processor::switchAddressSpace(*pProcess->getAddressSpace());
+
+  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not 
+  // in the kernel address space so we have a clean slate.
+  pProcess->getAddressSpace()->revertToKernelAddressSpace();
+
+  static Elf32 initElf;
+  initElf.load(buffer, init.getSize());
+  initElf.allocateSegments();
+  initElf.writeSegments();
+
+  uintptr_t iter = 0;
+  const char *lib;
+  while (lib=initElf.neededLibrary(iter))
+  {
+    if (!DynamicLinker::instance().load(lib, pProcess))
+    {
+      panic("Init program failed to load!");
+      return;
+    }
+  }
+  initElf.relocateDynamic(&DynamicLinker::resolve);
+  DynamicLinker::instance().registerElf(&initElf);
+
+  for (int j = 0; j < 0x20000; j += 0x1000)
+  {
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                   reinterpret_cast<void*> (j+0x40000000),
+                                                                   VirtualAddressSpace::Write);
+    if (!b)
+      WARNING("map() failed in init");
+  }
+
+  // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
+  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
+
+  // Switch back to the old address space.
+  Processor::switchAddressSpace(oldAS);
+
+  delete [] buffer;
+
+  lock.release();
+
 }
 
 void destroy()
 {
 }
 
-const char *g_pModuleName  = "init";
-ModuleEntry g_pModuleEntry = &init;
-ModuleExit  g_pModuleExit  = &destroy;
-const char *g_pDepends[] = {"VFS", "ext2", "posix", "partition", "TUI", 0};
+MODULE_NAME("init");
+MODULE_ENTRY(&init);
+MODULE_EXIT(&destroy);
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker");

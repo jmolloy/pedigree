@@ -15,11 +15,11 @@
 #
 
 set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
-add_executable(shell parser.tab.c lex.yy.c shell.c)
+add_executable(shell parser.tab.c lex.yy.c shell.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
 set_target_properties(shell PROPERTIES
                             LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")
-target_link_libraries(shell gcc)
 target_link_libraries(shell c)
+target_link_libraries(shell gcc)
 target_link_libraries(shell m)
-add_dependencies(shell posix-usermode)
+add_dependencies(shell posix-usermode crt0.o)

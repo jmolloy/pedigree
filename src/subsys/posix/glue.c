@@ -187,10 +187,6 @@ int waitpid(int pid, int *status, int options)
 
 int write(int file, char *ptr, int len)
 {
-  // if (ptr && ptr[0] == 0x08)
-  // {
-  //   asm volatile("sti");
-  // }
   return syscall3(POSIX_WRITE, file, ptr, len);
 }
 
@@ -454,3 +450,10 @@ int fcntl(int fildes, int cmd, ...)
   errno = ENOSYS;
   return -1;
 }
+
+int sigprocmask(int how, int set, int oset)
+{
+  errno = ENOSYS;
+  return -1;
+}
+

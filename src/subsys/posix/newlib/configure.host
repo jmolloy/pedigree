@@ -392,11 +392,12 @@ case "${host}" in
 	unix_dir=unix
 	posix_dir=posix
 	newlib_cflags="${newlib_cflags} -D__i386__ -DHAVE_OPENDIR -D_I386MACH_ALLOW_HW_INTERRUPTS"
+	newlib_cflags="${newlib_cflags} -fPIC -D_I386MACH_NEED_SOTYPE_FUNCTION"
 	;;
   powerpc-unknown-elf)
 	unix_dir=unix
 	posix_dir=posix
-	newlib_cflags="${newlib_cflags} -D__PPC__ -D_BIG_ENDIAN -DHAVE_OPENDIR"
+	newlib_cflags="${newlib_cflags} -D__PPC__ -D_BIG_ENDIAN -DHAVE_OPENDIR -fPIC"
 	;;
   i[34567]86-pc-linux-*)
 	sys_dir=linux

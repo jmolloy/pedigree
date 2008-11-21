@@ -49,7 +49,7 @@ bool Scheduler::initialise(Thread *pThread)
 
   m_pSchedulingAlgorithm->addThread(pThread);
   Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
-  
+
   Machine::instance().getSchedulerTimer()->registerHandler(this);
   return true;
 }
@@ -97,7 +97,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = Processor::information().getCurrentThread();
-  
+
   if (pThread->getStatus() != Thread::Ready)
     return;
 
@@ -105,6 +105,11 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
   if (pOldThread->getStatus() == Thread::Running)
     pOldThread->setStatus(Thread::Ready);
+
+  if (pThread->getParent() == 0)
+  {
+    FATAL ("Address space zero: tid " << Hex << pThread->getId());
+  }
 
   pThread->setStatus(Thread::Running);
   Processor::information().setCurrentThread(pThread);

@@ -19,8 +19,9 @@
 
 #include <process/Thread.h>
 #include <processor/Processor.h>
+#include <errors.h>
 
 // For setting a thread's error number when a problem occurs in a syscall.
-#define SYSCALL_ERROR(x) Processor::information().getCurrentThread()->setErrno(x)
+#define SYSCALL_ERROR(x) Processor::information().getCurrentThread()->setErrno(Error::x)
 
 #endif

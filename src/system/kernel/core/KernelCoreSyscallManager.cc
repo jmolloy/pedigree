@@ -32,6 +32,10 @@ KernelCoreSyscallManager::~KernelCoreSyscallManager()
 
 void KernelCoreSyscallManager::initialise()
 {
+  for (int i = 0; i < 16; i++)
+  {
+    m_Functions[i] = 0;
+  }
   SyscallManager::instance().registerSyscallHandler(kernelCore, this);
 }
 
@@ -50,6 +54,22 @@ uintptr_t KernelCoreSyscallManager::syscall(SyscallState &state)
   switch (state.getSyscallNumber())
   {
     case yield: Scheduler::instance().schedule(0, state, reinterpret_cast<Thread*> (state.getSyscallParameter(0))); return 0;
-    default: ERROR ("KernelCoreSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
+    default:
+    {
+      if (m_Functions[state.getSyscallNumber()] == 0)
+      {
+        ERROR ("KernelCoreSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber());
+        return 0;
+      }
+      else
+      {
+        return m_Functions[state.getSyscallNumber()](state);
+      }
+    }
   }
+}
+
+uintptr_t KernelCoreSyscallManager::registerSyscall(Function_t function, SyscallCallback func)
+{
+  m_Functions[function] = func;
 }

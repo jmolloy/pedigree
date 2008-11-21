@@ -21,7 +21,8 @@
 size_t strlen(const char *src)
 {
   size_t i = 0;
-  while (*src++) i++;
+  while (*src++)
+    i++;
   return i;
 }
 

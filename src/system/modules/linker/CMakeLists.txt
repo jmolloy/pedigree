@@ -14,12 +14,13 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
-include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
-add_executable(apptest main.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
-set_target_properties(apptest PROPERTIES
-                              LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")
-target_link_libraries(apptest c)
-target_link_libraries(apptest m)
-target_link_libraries(apptest gcc)
-add_dependencies(apptest posix-usermode crt0.o)
+include_directories(../../include ../../kernel/linker ../ ./)
+
+if (X86)
+  set(ASMSRC asm-i686.s)
+endif (X86)
+
+add_executable(linker.o DynamicLinker.cc ${ASMSRC})
+target_link_libraries(linker.o gcc)
+set_target_properties(linker.o PROPERTIES
+                               LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

@@ -30,7 +30,7 @@ File Filesystem::find(String path)
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
   char *pathSegment;
-  
+
   File curDir = getRoot();
 
   if (cPath[0] != '/')
@@ -40,15 +40,21 @@ File Filesystem::find(String path)
   while (cPath[0])
   {
     bool terminate = false;
-    
+
     pathSegment = cPath;
-    
+
     while (cPath[0] != '\0' && cPath[0] != '/')
       cPath++;
-    
+
     if (cPath[0] == '\0') terminate = true;
 
     cPath[0] = '\0';
+
+    if (pathSegment == cPath) // Multiple '/''s - just ignore and continue.
+    {
+      cPath++;
+      continue;
+    }
 
     if (!curDir.isDirectory())
     {
@@ -89,7 +95,7 @@ bool Filesystem::createFile(String path)
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
   char *pathSegment;
-  
+
   File curDir = getRoot();
 
   if (cPath[0] != '/')
@@ -99,12 +105,12 @@ bool Filesystem::createFile(String path)
   while (cPath[0])
   {
     bool terminate = false;
-    
+
     pathSegment = cPath;
-    
+
     while (cPath[0] != '\0' && cPath[0] != '/')
       cPath++;
-    
+
     if (cPath[0] == '\0') terminate = true;
 
     cPath[0] = '\0';
@@ -154,7 +160,7 @@ bool Filesystem::createDirectory(String path)
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
   char *pathSegment;
-  
+
   File curDir = getRoot();
 
   if (cPath[0] != '/')
@@ -164,12 +170,12 @@ bool Filesystem::createDirectory(String path)
   while (cPath[0])
   {
     bool terminate = false;
-    
+
     pathSegment = cPath;
-    
+
     while (cPath[0] != '\0' && cPath[0] != '/')
       cPath++;
-    
+
     if (cPath[0] == '\0') terminate = true;
 
     cPath[0] = '\0';
@@ -219,7 +225,7 @@ bool Filesystem::createSymlink(String path, String value)
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
   char *pathSegment;
-  
+
   File curDir = getRoot();
 
   if (cPath[0] != '/')
@@ -229,12 +235,12 @@ bool Filesystem::createSymlink(String path, String value)
   while (cPath[0])
   {
     bool terminate = false;
-    
+
     pathSegment = cPath;
-    
+
     while (cPath[0] != '\0' && cPath[0] != '/')
       cPath++;
-    
+
     if (cPath[0] == '\0') terminate = true;
 
     cPath[0] = '\0';
@@ -284,7 +290,7 @@ bool Filesystem::remove(String path)
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
   char *pathSegment;
-  
+
   File parent = File();
   File curDir = getRoot();
 
@@ -295,12 +301,12 @@ bool Filesystem::remove(String path)
   while (cPath[0])
   {
     bool terminate = false;
-    
+
     pathSegment = cPath;
-    
+
     while (cPath[0] != '\0' && cPath[0] != '/')
       cPath++;
-    
+
     if (cPath[0] == '\0') terminate = true;
 
     cPath[0] = '\0';

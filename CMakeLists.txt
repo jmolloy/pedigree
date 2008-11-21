@@ -17,7 +17,7 @@
 #########################################################################################
 # The project name and CMake version.
 project(PEDIGREE C CXX ASM-ATT)
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 2.6)
 
 set(DEFINES DUMMY_ITEM DUMMY_ITEM)
 
@@ -31,19 +31,22 @@ option(COMPILE_BASH   "Compile the GNU bash shell from source." OFF)
 
 set(BOOTLOADER_BUILT)
 
+# JamesM: Note - removed -pedantic from CXXFLAGS due to an errant warning about variadic macros used in drivers/Module.h
+#         not being standard C++.
+
 #########################################################################################
 # X86 and X64 target options.
 if(X86_COMMON)
 
   if(X64)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
-    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m64 -mno-red-zone -mno-sse -mcmodel=kernel")
     set(PEDIGREE_ASFLAGS "-felf64")
     set(LINKER_SCRIPT
   "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x64/kernel.ld -nostdlib -nostdinc")
   else(X64)
     set(PEDIGREE_CFLAGS "-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32")
-    set(PEDIGREE_CXXFLAGS "-march=i486 -Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
+    set(PEDIGREE_CXXFLAGS "-march=i486 -Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
     set(PEDIGREE_ASFLAGS "-felf")
     set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc")
   endif(X64)
@@ -57,11 +60,11 @@ if(MIPS_COMMON)
   set(BOOTLOADER_BUILT bootloader)
   if(MIPS64)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static -fomit-frame-pointer")
-    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static -fomit-frame-pointer")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=64 -mxgot -static -fomit-frame-pointer")
     set(PEDIGREE_ASFLAGS "-G0 -mips64 -mabi=64")
   else(MIPS64)
     set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -mtune=r4000")
-    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -mtune=r4000")
+    set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -G0 -mips32 -mabi=32 -mxgot -static -fomit-frame-pointer -mtune=r4000")
     # NOTE: errors occur if you add more than one thing to ASFLAGS!
     set(PEDIGREE_ASFLAGS "-mips32")
     set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-mips.ld -mxgot")
@@ -75,7 +78,7 @@ if(ARM_COMMON)
 
   set(BOOTLOADER_BUILT bootloader)
   set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -fomit-frame-pointer")
-  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
   set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-arm.ld -mxgot")
   
 endif(ARM_COMMON)
@@ -86,7 +89,7 @@ if(PPC_COMMON)
 
   set(BOOTLOADER_BUILT bootloader)
   set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -fomit-frame-pointer")
-  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -pedantic -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
   set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-ppc.ld")
   
 endif(PPC_COMMON)

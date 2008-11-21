@@ -15,6 +15,8 @@
  */
 
 #include "file-syscalls.h"
+#include "system-syscalls.h"
+#include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>
@@ -29,22 +31,87 @@
 #include <panic.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/StackFrame.h>
+#include <linker/DynamicLinker.h>
+#include <utilities/String.h>
+#include <utilities/Vector.h>
+
+// Defined in file-syscalls.cc
+extern String prepend_cwd(const char *cwd);
 
 //
 // Syscalls pertaining to system operations.
 //
 
+/// Saves a char** array in the Vector of String*s given.
+static void save_string_array(const char **array, Vector<String*> &rArray)
+{
+  while (*array)
+  {
+    String *pStr = new String(*array);
+    rArray.pushBack(pStr);
+    array++;
+  }
+}
+/// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
+/// returning the end of the char** array created in arrayEndLoc and the start as the function return value.
+static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
+{
+  char **pMasterArray = reinterpret_cast<char**> (arrayLoc);
+
+  char *pPtr = reinterpret_cast<char*> (arrayLoc + sizeof(char*) * (rArray.count()+1) );
+  int i = 0;
+  for (Vector<String*>::Iterator it = rArray.begin();
+       it != rArray.end();
+       it++)
+  {
+    String *pStr = *it;
+
+    strcpy(pPtr, *pStr);
+    pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
+
+    pMasterArray[i] = pPtr;
+
+    pPtr += pStr->length()+1;
+    i++;
+
+    delete pStr;
+  }
+
+  pMasterArray[i] = 0; // Null terminate.
+  arrayEndLoc = reinterpret_cast<uintptr_t> (pPtr);
+
+  return pMasterArray;
+}
+
 int posix_sbrk(int delta)
 {
-  return reinterpret_cast<int>(
+  int ret = reinterpret_cast<int>(
     Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
+  
+  if (ret == 0)
+  {
+    SYSCALL_ERROR(OutOfMemory);
+    return -1;
+  }
+  else
+    return ret;
 }
 
 int posix_fork(ProcessorState state)
 {
   Processor::setInterrupts(false);
 
+  // Create a new process.
   Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+
+  if (!pProcess)
+  {
+    SYSCALL_ERROR(OutOfMemory);
+    return -1;
+  }
+
+  // Register with the dynamic linker.
+  DynamicLinker::instance().registerProcess(pProcess);
 
   // Copy over stdin, stdout & stderr.
   for (int i = 0; i < 3; i++)
@@ -57,19 +124,23 @@ int posix_fork(ProcessorState state)
     pProcess->nextFd();
   }
 
-  state.setSyscallReturnValue(0); // Child returns 0.
+  // Child returns 0.
+  state.setSyscallReturnValue(0);
+  
+  // Create a new thread for the new process.
   Thread *pThread = new Thread(pProcess, state);
 
-  return pProcess->getId(); // Parent returns child ID.
+  // Parent returns child ID.
+  return pProcess->getId();
 }
 
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state)
 {
   Processor::setInterrupts(false);
-  NOTICE("Execve: "<<name);
-  if (argv == 0/* || env == 0*/)
+
+  if (argv == 0 || env == 0)
   {
-    NOTICE("Argv = 0");
+    SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
 
@@ -78,213 +149,138 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   // Ensure we only have one thread running (us).
   if (pProcess->getNumThreads() > 1)
   {
-    FATAL("Execve with multiple threads!");
-    Processor::breakpoint();
+    SYSCALL_ERROR(ExecFormatError);
+    return -1;
   }
 
   // Attempt to find the file, first!
-  const char *cwd = Processor::information().getCurrentThread()->getParent()->getCwd();
-
-  char *newName = new char[2048];
-  newName[0] = '\0';
-
-  // If the string starts with a '/', add on the current working filesystem.
-  if (name[0] == '/')
-  {
-    int i = 0;
-    while (cwd[i] != ':')
-      newName[i] = cwd[i++];
-    newName[i++] = ':';
-    newName[i] = '\0';
-    strcat(newName, name);
-  }
-
-  if (newName[0] == '\0')
-    strcat(newName, name);
-
-  // If the name doesn't contain a colon, add the cwd.
-  int i = 0;
-  bool contains = false;
-  while (newName[i])
-  {
-    if (newName[i++] == ':')
-    {
-      contains = true;
-      break;
-    }
-  }
-
-  if (!contains)
-  {
-    newName[0] = '\0';
-    strcat(newName, cwd);
-    strcat(newName, name);
-  }
-
-  File file = VFS::instance().find(String(newName));
-
-  delete [] newName;
+  File file = VFS::instance().find(prepend_cwd(name));
 
   if (!file.isValid())
   {
     // Error - not found.
-    NOTICE("Not found");
+    SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
   if (file.isDirectory())
   {
     // Error - is directory.
+    SYSCALL_ERROR(IsADirectory);
     return -1;
   }
   if (file.isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
+    SYSCALL_ERROR(Unimplemented);
     return -1;
   }
 
   // Attempt to load the file.
   uint8_t *buffer = new uint8_t[file.getSize()+1];
 
-  file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer));
+  if (buffer == 0)
+  {
+    SYSCALL_ERROR(OutOfMemory);
+  }
 
-  Elf32 elf;
-  if (!elf.load(buffer, file.getSize()))
+  if (file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer)) != file.getSize())
+  {
+    SYSCALL_ERROR(TooBig);
+    delete [] buffer;
+    return -1;
+  }
+
+  Elf32 *elf = new Elf32();
+  if (!elf->load(buffer, file.getSize()))
   {
     // Error - bad file.
     delete [] buffer;
-    NOTICE("Bad file.");
+    SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
 
   pProcess->description() = String(name);
 
-  char **new_argv = new char *[1024];
-  char *loc = new char[4096*3];
-  char *saved_loc1 = loc;
-
-  i = 0;
-  while (*argv)
-  {
-    new_argv[i++] = loc;
-    strcpy(loc, *argv);
-    loc += strlen(*argv);
-    *loc++ = '\0'; // Make sure the string is null-terminated.
-    argv++;
-  }
-  new_argv[i] = 0;
-
-  char **saved_argv = new_argv;
-  argv = const_cast<const char**>(new_argv);
-
-  char **new_env = new char *[1024];
-  loc = new char[4096*3];
-  char *saved_loc2 = loc;
-
-  i = 0;
-  while (*env)
-  {
-    new_env[i++] = loc;
-    strcpy(loc, *env);
-    loc += strlen(*env);
-    *loc++ = '\0'; // Make sure the string is null-terminated.
-    env++;
-  }
-  new_env[i] = 0;
-
-  char **saved_env = new_env;
-  env = const_cast<const char**>(new_env);
+  // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
+  Vector<String*> savedArgv, savedEnv;
+  save_string_array(argv, savedArgv);
+  save_string_array(env, savedEnv);
 
   // Get rid of all the crap from the last elf image.
   /// \todo Preserve anonymous mmaps etc.
 
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  if (!elf.allocateSections())
+  if (!elf->allocateSegments())
   {
     // Error
-    //delete [] buffer;
+    delete [] buffer;
     // Time to kill the task.
-    NOTICE("Kill task here");
-    panic("Kill task here");
+    ERROR("Could not allocate memory for ELF file.");
     return -1;
   }
 
-  if (!elf.writeSections())
+  if (!elf->writeSegments())
   {
     // Error.
     //delete [] buffer;
-    NOTICE("Kill task here (2)");
-    panic("Kill task here (2)");
+    ERROR("Could not write ELF segments.");
     return -1;
   }
 
+  DynamicLinker::instance().unregisterProcess(pProcess);
+
+  uintptr_t iter = 0;
+  const char *lib;
+  while (lib=elf->neededLibrary(iter))
+  {
+    if (!DynamicLinker::instance().load(lib))
+    {
+      ERROR("Shared dependency '" << lib << "' not found.");
+      return -1;
+    }
+  }
+
+  elf->relocateDynamic(&DynamicLinker::resolve);
+
+  DynamicLinker::instance().registerElf(elf);
+
   // Create a new stack.
-  for (int j = 0; j < 0x20000; j += 0x1000)
+  for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x40000000),
+                                                                   reinterpret_cast<void*> (j+STACK_END),
                                                                    VirtualAddressSpace::Write);
     if (!b)
-    WARNING("map() failed in execve");
+      WARNING("map() failed in execve");
   }
 
   // Create room for the argv and env list.
-  for (int j = 0; j < 0x8000; j += 0x1000)
+  for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x40100000),
+                                                                   reinterpret_cast<void*> (j+ARGV_ENV_LOC),
                                                                    VirtualAddressSpace::Write);
     if (!b)
-    WARNING("map() failed in execve");
+      WARNING("map() failed in execve (2)");
   }
 
-  new_argv = reinterpret_cast<char**>(0x40100000);
-  loc = reinterpret_cast<char*>(0x40101000);
+  // Load the saved argv and env into this address space, starting at "location".
+  uintptr_t location = ARGV_ENV_LOC;
+  argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
+  env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
 
-  i = 0;
-  while (*argv)
-  {
-    new_argv[i++] = loc;
-    strcpy(loc, *argv);
-    loc += strlen(*argv);
-    *loc++ = '\0'; // Make sure the string is null-terminated.
-    argv++;
-  }
-  new_argv[i] = 0;
 
-  new_env = reinterpret_cast<char**>(loc);
-  loc += 1024;
-
-  i = 0;
-  while (*env)
-  {
-    new_env[i++] = loc;
-    strcpy(loc, *env);
-    loc += strlen(*env);
-    *loc++ = '\0'; // Make sure the string is null-terminated.
-    env++;
-  }
-  new_env[i] = 0;
-
-  NOTICE("Deleting saved buffers");
-  delete [] saved_argv;
-  NOTICE("1");
-  delete [] saved_env;
-  NOTICE("2");
-  delete [] saved_loc1;
-  NOTICE("3");
-  delete [] saved_loc2;
-  NOTICE("Execve: all good!");
   ProcessorState pState = state;
-  pState.setStackPointer(0x40020000-8);
-  pState.setInstructionPointer(elf.getEntryPoint());
+  pState.setStackPointer(STACK_START-8);
+  pState.setInstructionPointer(elf->getEntryPoint());
 
-  StackFrame::construct(pState, 0, 2, new_argv, new_env);
+  StackFrame::construct(pState, 0, 2, argv, env);
 
   state.setStackPointer(pState.getStackPointer());
-  state.setInstructionPointer(elf.getEntryPoint());
+  state.setInstructionPointer(elf->getEntryPoint());
 
   /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON

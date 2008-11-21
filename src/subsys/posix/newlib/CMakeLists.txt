@@ -40,12 +40,12 @@ else (EXISTS ${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib/newlib-1.15.0/config
 
   list(GET MYSTATUS 0 WASERROR)
   list(GET MYSTATUS 1 ERRSTR)
-  if (WASERR EQUAL 0)
+  if (NOT WASERR)
     execute_process(COMMAND tar -xzf newlib-1.15.0.tar.gz
                     WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib)
-  else (WASERR EQUAL 0)
+  else (NOT WASERR)
     message(FATAL_ERROR "Newlib failed to download: ${ERRSTR}")
-  endif (WASERR EQUAL 0)
+  endif (NOT WASERR)
 
   execute_process(COMMAND cp configure.host newlib-1.15.0/newlib/configure.host
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib)

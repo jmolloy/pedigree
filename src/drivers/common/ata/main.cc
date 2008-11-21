@@ -84,11 +84,11 @@ void exit()
 
 }
 
-const char *g_pModuleName = "ata";
-ModuleEntry g_pModuleEntry = &entry;
-ModuleExit  g_pModuleExit  = &exit;
+MODULE_NAME("ata");
+MODULE_ENTRY(&entry);
+MODULE_EXIT(&exit);
 #ifdef PPC_COMMON
-const char *g_pDepends[] = {"ata-specific", 0};
+MODULE_DEPENDS("ata-specific");
 #else
-const char *g_pDepends[] = {0};
+MODULE_DEPENDS(0);
 #endif

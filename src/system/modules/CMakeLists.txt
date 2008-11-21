@@ -15,7 +15,7 @@
 #
 
 set(MODULES)
-set(MODULES ${MODULES} vfs ext2 init console TUI)
+set(MODULES ${MODULES} vfs ext2 init console TUI linker)
 
 #########################################################################################
 

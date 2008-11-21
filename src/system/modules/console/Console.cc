@@ -89,7 +89,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
 
 uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  // \todo Sanity checking.
+  /// \todo Sanity checking.
   Console *pC = m_Consoles[pFile->getInode()-0xdeadbe00];
   return pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
 }
@@ -116,7 +116,8 @@ void destroyConsole()
 {
 }
 
-const char *g_pModuleName  = "console";
-ModuleEntry g_pModuleEntry = &initConsole;
-ModuleExit  g_pModuleExit  = &destroyConsole;
-const char *g_pDepends[] = {0};
+MODULE_NAME("console");
+MODULE_ENTRY(&initConsole);
+MODULE_EXIT(&destroyConsole);
+MODULE_DEPENDS(0);
+

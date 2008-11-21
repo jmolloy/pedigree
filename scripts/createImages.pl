@@ -33,7 +33,7 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
     `mkdir -p /tmp/pedigree-image`;
     `cp ../images/floppy_ext2.img ./floppy.img`;
     `sudo /sbin/losetup /dev/loop0 ./floppy.img`;
-    `sudo mount -o loop /dev/loop0 /tmp/pedigree-image`;
+    `sudo mount -t ext2 /dev/loop0 /tmp/pedigree-image`;
     `sudo cp src/system/kernel/kernel /tmp/pedigree-image/kernel`;
     `sudo cp initrd.tar /tmp/pedigree-image/initrd.tar`;
     `sudo umount /dev/loop0`;
@@ -47,6 +47,8 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
 	my ($binary) = ($file =~ m/([^\/]+)$/);
 	`sudo cp src/user/$file/$binary /tmp/pedigree-image/$file`;
     }
+    `sudo cp libc.so /tmp/pedigree-image/libraries/libc.so`;
+    `sudo cp libm.so /tmp/pedigree-image/libraries/libm.so`;
     `sudo umount /dev/loop0`;
     `sudo /sbin/losetup -d /dev/loop0`;
     `which qemu-img`;

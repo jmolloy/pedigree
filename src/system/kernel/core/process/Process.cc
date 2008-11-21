@@ -149,8 +149,15 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
 
   Elf32 initElf;
   initElf.load(elf, elfSize);
-  initElf.allocateSections();
-  initElf.writeSections();
+  uintptr_t iter = 0;
+  const char *lib = initElf.neededLibrary(iter);
+  initElf.allocateSegments();
+  initElf.writeSegments();
+
+  if (lib)
+  {
+    NOTICE("InitElf needs " << lib);
+  }
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {

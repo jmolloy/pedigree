@@ -146,7 +146,7 @@ void destroy()
 {
 }
 
-const char *g_pModuleName  = "TUI";
-ModuleEntry g_pModuleEntry = &init;
-ModuleExit  g_pModuleExit  = &destroy;
-const char *g_pDepends[] = {"console", 0};
+MODULE_NAME("TUI");
+MODULE_ENTRY(&init);
+MODULE_EXIT(&destroy);
+MODULE_DEPENDS("console");

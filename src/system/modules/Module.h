@@ -20,4 +20,9 @@
 typedef void (*ModuleEntry)();
 typedef void (*ModuleExit)();
 
+#define MODULE_NAME(x) const char *g_pModuleName __attribute__((section(".modinfo"))) = x
+#define MODULE_ENTRY(x) ModuleEntry g_pModuleEntry __attribute__((section(".modinfo"))) = x
+#define MODULE_EXIT(x) ModuleExit g_pModuleExit __attribute__((section(".modinfo"))) = x
+#define MODULE_DEPENDS(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
+
 #endif

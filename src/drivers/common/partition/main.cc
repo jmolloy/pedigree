@@ -81,7 +81,7 @@ void exit()
 
 }
 
-const char *g_pModuleName = "partition";
-ModuleEntry g_pModuleEntry = &entry;
-ModuleExit  g_pModuleExit  = &exit;
-const char *g_pDepends[] = {"ata", 0};
+MODULE_NAME("partition");
+MODULE_ENTRY(&entry);
+MODULE_EXIT(&exit);
+MODULE_DEPENDS("ata");

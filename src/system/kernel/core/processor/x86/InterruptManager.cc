@@ -169,7 +169,10 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     }
 
     if (LIKELY(pHandler != 0))
+    {
       interruptState.m_Eax = pHandler->syscall(interruptState);
+      interruptState.m_Ebx = Processor::information().getCurrentThread()->getErrno();
+    }
     return;
   }
 

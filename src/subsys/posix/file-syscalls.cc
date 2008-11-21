@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <process/Process.h>
@@ -55,7 +56,7 @@ extern int posix_getpid();
 
 typedef Tree<size_t,void*> FdMap;
 
-static String prepend_cwd(const char *name)
+String prepend_cwd(const char *name)
 {
   const char *cwd = Processor::information().getCurrentThread()->getParent()->getCwd();
 
@@ -94,7 +95,7 @@ static String prepend_cwd(const char *name)
     strcat(newName, cwd);
     strcat(newName, name);
   }
-  
+
   String str(newName);
   delete [] newName;
 
@@ -106,6 +107,13 @@ int posix_close(int fd)
   NOTICE("close(" << fd << ")");
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+
+  if (!f)
+  {
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
+  }
+
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
   delete f;
   return 0;
@@ -116,7 +124,7 @@ int posix_open(const char *name, int flags, int mode)
   NOTICE("open(" << name << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  
+
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
   // Check for /dev/tty, and link to our controlling console.
@@ -134,16 +142,19 @@ int posix_open(const char *name, int flags, int mode)
   if (!file.isValid()) /// \todo Deal with O_CREAT
   {
     // Error - not found.
+    SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
   if (file.isDirectory())
   {
     // Error - is directory.
+    SYSCALL_ERROR(IsADirectory);
     return -1;
   }
   if (file.isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
+    SYSCALL_ERROR(Unimplemented);
     return -1;
   }
   FileDescriptor *f = new FileDescriptor;
@@ -151,12 +162,12 @@ int posix_open(const char *name, int flags, int mode)
   f->offset = 0;
   fdMap.insert(fd, reinterpret_cast<void*>(f));
 
-  return static_cast<int>(fd);
+  return static_cast<int> (fd);
 }
 
 int posix_read(int fd, char *ptr, int len)
 {
-  NOTICE("read(" << Dec << fd << ", " << Hex << (uintptr_t)ptr << ")");
+  NOTICE("read(" << Dec << fd << ", " << Hex << (uintptr_t)ptr << ", " << len << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -164,6 +175,7 @@ int posix_read(int fd, char *ptr, int len)
   if (!pFd)
   {
     // Error - no such file descriptor.
+    SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
 
@@ -174,7 +186,7 @@ int posix_read(int fd, char *ptr, int len)
   delete [] kernelBuf;
 
   pFd->offset += nRead;
-  
+
   return static_cast<int>(nRead);
 }
 
@@ -189,9 +201,10 @@ int posix_write(int fd, char *ptr, int len)
   if (!pFd)
   {
     // Error - no such file descriptor.
+    SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-  
+
   /// \todo Sanity checks.
   // Copy to kernel.
   char *kernelBuf = new char[len];
@@ -212,6 +225,7 @@ int posix_lseek(int file, int ptr, int dir)
   if (!pFd)
   {
     // Error - no such file descriptor.
+    SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
 
@@ -248,17 +262,19 @@ int posix_stat(const char *name, struct stat *st)
   NOTICE("stat(" << name << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  
+
   File file = VFS::instance().find(prepend_cwd(name));
 
   if (!file.isValid())
   {
     // Error - not found.
+    SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
   if (file.isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
+    SYSCALL_ERROR(Unimplemented);
     return -1;
   }
 
@@ -287,7 +303,7 @@ int posix_fstat(int fd, struct stat *st)
   {
     // Error - no such file descriptor.
     return -1;
-  }  
+  }
 
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(pFd->file.getFilesystem()));
   st->st_ino   = static_cast<short>(pFd->file.getInode());
@@ -312,7 +328,7 @@ int posix_opendir(const char *dir, dirent *ent)
   NOTICE("opendir(" << dir << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  
+
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
   File file = VFS::instance().find(prepend_cwd(dir));
@@ -348,14 +364,14 @@ int posix_readdir(int fd, dirent *ent)
   NOTICE("readdir(" << fd << ", " << (uintptr_t)ent << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  
+
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
   {
     // Error - no such file descriptor.
     return -1;
   }
-  
+
   /// \todo Sanity checks.
   File file = pFd->file.firstChild();
   if (!file.isValid())

@@ -40,7 +40,7 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
   uint8_t buffer[512];
   m_pDisk->read(1024, 512,
                 reinterpret_cast<uintptr_t> (buffer));
-  
+
   memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
 
   // Read correctly?
@@ -112,6 +112,7 @@ String Ext2Filesystem::getVolumeLabel()
 
 uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
+
   // Sanity check.
   if (pFile->isDirectory())
     return 0;
@@ -131,6 +132,7 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
   uint64_t firstByte = location;
   uint64_t lastByte = location+size-1;
+  NOTICE("firstByte: " << Hex << firstByte << ", lastByte: " << lastByte);
 
   // Find the largest contiguous number of blocks possible to read.
   // Remember that "buffer" is only "size" long, so we can't overflow by reading
@@ -144,13 +146,19 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
   buf[m_BlockSize] = 0xEE;
 
-  // Check if firstByte lies on a block boundary.
-  if ( (firstByte % m_BlockSize) != 0)
+  bool lessThanOneBlock = firstBlock == lastBlock;
+
+  // Check if firstByte lies on a block boundary, or if there is only one block to be read.
+  if ( (firstByte % m_BlockSize) != 0 || lessThanOneBlock)
   {
     // First byte is not on a block boundary - read in the block the first byte is in and
-    // memcpy the amount required to make it up to a block boundary.
+    // memcpy the amount required to make it up to a block boundary, or less if the end byte is under that.
     uint32_t firstBlockPartialOffset = firstByte % m_BlockSize;
-    uint32_t firstBlockPartialLength = m_BlockSize - firstBlockPartialOffset;
+    uint32_t firstBlockPartialLength;
+    if (firstBlock == lastBlock)
+      firstBlockPartialLength = (lastByte % m_BlockSize) - firstBlockPartialOffset + 1;
+    else
+      firstBlockPartialLength = m_BlockSize - firstBlockPartialOffset;
 
     readInodeData(inode, reinterpret_cast<uintptr_t>(buf), firstBlock, firstBlock);
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(&buf[firstByte%m_BlockSize]), firstBlockPartialLength);
@@ -160,17 +168,19 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
   // If the last byte doesn't lie on a block boundary, fetch one less block
   // so we don't memory overflow. We'll deal with this case in the next section.
-  if ( (lastByte % m_BlockSize) != 0)
+  if ( (lastByte % m_BlockSize) != (m_BlockSize-1))
     lastBlock--;
 
-  if (firstBlock <= lastBlock)
+  NOTICE("Firstblock " << firstBlock << ", lastblock " << lastBlock);
+  if (firstBlock <= lastBlock && !lessThanOneBlock)
   {
     readInodeData(inode, buffer+currentLocation, firstBlock, lastBlock);
     currentLocation += (lastBlock-firstBlock+1)*m_BlockSize;
   }
 
-  // If we deducted a block in the previous if(), we need to deal with it now.
-  if ( (lastByte % m_BlockSize) != 0)
+  // If we deducted a block in the previous if(), we need to deal with it now, only if the first block != last block, as that is dealt with
+  // in the first if ().
+  if ( (lastByte % m_BlockSize) != (m_BlockSize-1) && !lessThanOneBlock)
   {
     uint32_t lastBlockPartialLength = (lastByte % m_BlockSize)+1;
     readInodeData(inode, reinterpret_cast<uintptr_t>(buf), lastBlock+1, lastBlock+1);
@@ -180,7 +190,9 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
   // Sanity check.
   if (currentLocation != size)
+  {
     ERROR("Ext2: read(), size calculation error!");
+  }
 
   if (buf[m_BlockSize] != 0xEE)
   {
@@ -202,7 +214,7 @@ void Ext2Filesystem::fileAttributeChanged(File *pFile)
 }
 
 File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
-{  
+{
   // Sanity check.
   if (!pFile->isDirectory())
     return File();
@@ -217,7 +229,7 @@ File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
     Processor::breakpoint();
     return File();
   }
-  
+
   uintptr_t bufferSize = LITTLE_TO_HOST32(inode.i_size);
   if (LITTLE_TO_HOST32(inode.i_size) % m_BlockSize)
     bufferSize += m_BlockSize - (LITTLE_TO_HOST32(inode.i_size)%m_BlockSize);
@@ -238,7 +250,7 @@ File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
       char *name = new char[directory->d_namelen+1];
       strncpy(name, directory->d_name, directory->d_namelen);
       name[directory->d_namelen] = '\0';
-      
+
       String sName = String(name);
       delete [] name;
 
@@ -397,7 +409,8 @@ void destroyExt2()
 {
 }
 
-const char *g_pModuleName  = "ext2";
-ModuleEntry g_pModuleEntry = &initExt2;
-ModuleExit  g_pModuleExit  = &destroyExt2;
-const char *g_pDepends[] = {"VFS", 0};
+MODULE_NAME("ext2");
+MODULE_ENTRY(&initExt2);
+MODULE_EXIT(&destroyExt2);
+MODULE_DEPENDS("VFS");
+

@@ -22,10 +22,12 @@ set(LIBM)
 if(X86)
   set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libc.a")
   set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libm.a")
+  set(STUB i686-elf)
 endif(X86)
 if(PPC_COMMON)
   set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-ppc-libc.a")
   set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-ppc-libm.a")
+  set(STUB ppc-elf)
 endif(PPC_COMMON)
 
 include_directories(../../system/include ../../system/kernel/linker ../../system/modules/ ./)
@@ -36,11 +38,16 @@ target_link_libraries(posix.o gcc)
 set_target_properties(posix.o PROPERTIES
                               LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
 
+add_executable(crt0.o crt0.c)
+set_target_properties(crt0.o PROPERTIES
+                             LINK_FLAGS "-r")
+
 # Now the glue code - compile to a .o...
-add_executable(pedigree-glue.o glue.c crt0.c)
+add_executable(pedigree-glue.o glue.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
                                       LINK_FLAGS "-r")
+
 
 add_subdirectory(newlib)
 
@@ -50,7 +57,9 @@ if (COMPILE_NEWLIB)
   set(LIBM "${PEDIGREE_BINARY_DIR}/libm.a")
 endif (COMPILE_NEWLIB)
 
-add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include"
+set(CCPREFIX "${PEDIGREE_SOURCE_DIR}/compilers/dir/bin")
+
+add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CCPREFIX}/${STUB}-gcc" ${PEDIGREE_BINARY_DIR} "${CCPREFIX}/../lib/gcc/${STUB}/4.3.0/"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 

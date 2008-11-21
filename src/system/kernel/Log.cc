@@ -104,6 +104,29 @@ Log &Log::operator<< (Modifier type)
     }
     else
       m_StaticLog[m_StaticEntries++] = m_Buffer;
+
+#ifdef ECHO_CONSOLE_TO_SERIAL
+    if (Machine::instance().isInitialised() == true)
+    {
+    switch (m_Buffer.type)
+    {
+    case Notice:
+      Machine::instance().getSerial(0)->write("(NN) ");
+      break;
+    case Warning:
+      Machine::instance().getSerial(0)->write("(WW) ");
+      break;
+    case Error:
+      Machine::instance().getSerial(0)->write("(EE) ");
+      break;
+    case Fatal:
+      Machine::instance().getSerial(0)->write("(FF) ");
+      break;
+    }
+    Machine::instance().getSerial(0)->write ( static_cast<const char *> (m_Buffer.str) );
+    Machine::instance().getSerial(0)->write ("\n");
+    }
+#endif
   }
 
   return *this;

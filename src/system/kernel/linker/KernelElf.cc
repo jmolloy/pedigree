@@ -165,7 +165,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
     delete module;
     return 0;
   }
-  if (!module->elf.relocate())
+  if (!module->elf.relocateModinfo())
   {
     ERROR ("Module load failed (3)");
     delete module;
@@ -177,7 +177,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
   module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
   module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
-  
+  NOTICE("At " << (uintptr_t)module->name);
   NOTICE("Relocated module " << module->name);
 
 #if defined(PPC_COMMON) || defined(MIPS_COMMON)
@@ -245,6 +245,13 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
 void KernelElf::executeModule(Module *module)
 {
   m_LoadedModules.pushBack(const_cast<char*>(module->name));
+
+  if (!module->elf.relocate())
+  {
+    ERROR ("Module relocation failed");
+    Processor::breakpoint();
+    return;
+  }
 
   // Check for a constructors list and execute.
   uintptr_t startCtors = module->elf.lookupSymbol("start_ctors");

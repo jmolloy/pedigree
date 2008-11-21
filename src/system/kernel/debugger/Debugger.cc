@@ -109,22 +109,20 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
    */
   static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   localIO.initialise();
+#ifdef ECHO_CONSOLE_TO_SERIAL
+  DebuggerIO *pInterfaces[] = {&localIO};
+  int nInterfaces = 1;
+#else
   static SerialIO serialIO(Machine::instance().getSerial(0));
   serialIO.initialise();
-#ifndef ARM_COMMON
-  static SerialIO serialIO2(Machine::instance().getSerial(1));
-  serialIO2.initialise();
-  DebuggerIO *pInterfaces[] = {&localIO};//, &serialIO, &serialIO2};
-  int nInterfaces = 1;//3;
-#else
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
   int nInterfaces = 2;
 #endif
-  
+
   // IO interface.
   DebuggerIO *pIo = 0;
   int nChosenInterface = -1;
-  
+
   // Commands.
   static DisassembleCommand disassembler;
   static LogViewer logViewer;
@@ -165,7 +163,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &threads,
 #endif
                                   &io};
-  
+
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
   int n = g_Trace.execTrace();
@@ -206,14 +204,14 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   for (int i = 0; i < nInterfaces; i++)
     if (pIo != pInterfaces[i])
       pInterfaces[i]->drawString("Locked by another device.", 1, 0, DebuggerIO::LightRed, DebuggerIO::Black);
-  
+
   pIo->setCliUpperLimit(1); // Give us room for a status bar on top.
   pIo->setCliLowerLimit(1); // And a status bar on the bottom.
   pIo->enableCli(); // Start CLI mode.
 
   description += "\n";
   pIo->writeCli(description, DebuggerIO::Yellow, DebuggerIO::Black);
-  
+
   description.clear();
   description += "Kernel heap ends at ";
   description.append(reinterpret_cast<uintptr_t>(VirtualAddressSpace::getKernelAddressSpace().m_HeapEnd), 16);
@@ -239,7 +237,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
     pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
     // Write the correct text in the upper status line.
     pIo->drawString("Pedigree debugger", 0, 0, DebuggerIO::White, DebuggerIO::Green);
-  
+
     bool matchedCommand = false;
     DebuggerCommand *pAutoComplete = 0;
     while(1)
@@ -248,7 +246,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
       // autocomplete command for if the user presses TAB (if one is defined).
       if (pIo->readCli(command, pAutoComplete))
         break; // Command complete, try and parse it.
-  
+
       // The command wasn't complete - let's parse it and try and get an autocomplete string.
       HugeStaticString str;
       NormalStaticString str2;
@@ -280,12 +278,12 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
           str += " ";
         }
       }
-      
+
       pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
       pIo->drawString(str2, pIo->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
       pIo->drawString(str, pIo->getHeight()-1, str2.length(), DebuggerIO::White, DebuggerIO::Green);
     }
-    
+
     // A command was entered.
     bool bValidCommand = false;
     for (size_t i = 0; i < nCommands; i++)
@@ -297,19 +295,18 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
         bValidCommand = true;
       }
     }
-    
+
     if (!bValidCommand)
     {
       pIo->writeCli("Unrecognised command.\n", DebuggerIO::LightGrey, DebuggerIO::Black);
       bKeepGoing = true;
     }
-  
+
   }
   while (bKeepGoing);
   localIO.destroy();
+#ifndef ECHO_CONSOLE_TO_SERIAL
   serialIO.destroy();
-#ifndef ARM_COMMON
-  serialIO2.destroy();
 #endif
 
   Machine::instance().getKeyboard()->setDebugState(debugState);

@@ -284,7 +284,8 @@ void destroyVFS()
 {
 }
 
-const char *g_pModuleName  = "VFS";
-ModuleEntry g_pModuleEntry = &initVFS;
-ModuleExit  g_pModuleExit  = &destroyVFS;
-const char *g_pDepends[] = {0};
+MODULE_NAME("VFS");
+MODULE_ENTRY(&initVFS);
+MODULE_EXIT(&destroyVFS);
+MODULE_DEPENDS(0);
+

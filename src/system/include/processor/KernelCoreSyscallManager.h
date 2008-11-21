@@ -31,6 +31,9 @@ public:
     /** Yields the processor to another thread. */
     yield = 0,
 
+    /** Dynamic linking request. \note If you change this, update system/modules/linker/asm-*.s ! */
+    link = 1,
+
     /** The last function, for error checking. */
     functionEnd
   };
@@ -42,6 +45,11 @@ public:
 
   /** Called when a syscall arrives. */
   virtual uintptr_t syscall(SyscallState &state);
+
+  typedef uintptr_t (*SyscallCallback)(SyscallState &);
+
+  /** Register a syscall with a callback. */
+  uintptr_t registerSyscall(Function_t function, SyscallCallback func);
 
 protected:
   /** The constructor */
@@ -59,6 +67,9 @@ private:
 
   /** The static singleton instance. */
   static KernelCoreSyscallManager m_Instance;
+  
+  /** Syscall lookup table for registerable syscalls. */
+  SyscallCallback m_Functions[16];
 };
 
 #endif

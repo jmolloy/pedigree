@@ -20,6 +20,5 @@
 
 void dlmallocAbort()
 {
-  Processor::breakpoint();
   panic("dlmallocAbort");
 }

@@ -17,6 +17,15 @@
 #ifndef SYSTEM_SYSCALLS_H
 #define SYSTEM_SYSCALLS_H
 
+#include <processor/Processor.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/state.h>
+
+#define STACK_END    0x40000000
+#define STACK_START  0x40020000
+#define ARGV_ENV_LOC 0x40100000
+#define ARGV_ENV_LEN 0x8000
+
 int posix_sbrk(int delta);
 int posix_fork(ProcessorState state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
