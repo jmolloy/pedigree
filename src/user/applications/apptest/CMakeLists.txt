@@ -16,6 +16,8 @@
 
 set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
 include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
+
+set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
 add_executable(apptest main.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 set_target_properties(apptest PROPERTIES
                               LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")

@@ -15,6 +15,7 @@
 #
 
 set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
+set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
 add_executable(shell parser.tab.c lex.yy.c shell.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
 set_target_properties(shell PROPERTIES

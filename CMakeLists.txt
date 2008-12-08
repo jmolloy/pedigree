@@ -228,6 +228,8 @@ if (PPC_COMMON)
   add_dependencies(autogen_initrd.h initrd)
 endif (PPC_COMMON)
 
+set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
+
 add_subdirectory(src/user)
 
 # Create a target used for creating the image files.
