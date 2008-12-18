@@ -131,7 +131,7 @@ Bios::Bios () : mallocLoc(0x8000)
   iof.outl = &outl;
 
   memset(&M, 0, sizeof(M));
-  M.x86.debug = DEBUG_DECODE_NOPRINT_F;
+  M.x86.debug = 0|DEBUG_MEM_TRACE_F|DEBUG_DECODE_F;
   M.x86.mode = 0;
   memset((void*)0x7C00, 0xF4, 0x100);
 

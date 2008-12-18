@@ -32,8 +32,8 @@ void entry()
   NOTICE("DI: " << Hex << Bios::instance().getDi());
   NOTICE("ES: " << Hex << Bios::instance().getEs());
   NOTICE("AX: " << Bios::instance().getAx());
-  //Processor::breakpoint ();
-  //for(;;);
+  Processor::breakpoint ();
+  for(;;);
 }
 
 void exit()
