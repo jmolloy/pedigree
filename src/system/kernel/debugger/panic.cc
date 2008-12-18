@@ -42,10 +42,10 @@ static size_t newlineCount(const char *pString)
 
 // TODO: We might want a separate parameter for a stacktrace/register dump
 void _panic( const char* msg, DebuggerIO* pScreen )
-{  
+{
   static HugeStaticString panic_output;
   panic_output.clear();
-  
+
   panic_output.append( "PANIC: " );
   panic_output.append( msg );
 
@@ -60,7 +60,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
 
   size_t iEntry = 0, iUsedEntries = 0;
   if ((pScreen->getHeight() - nLines) < (log.getStaticEntryCount() + log.getDynamicEntryCount()))
-    iEntry = log.getStaticEntryCount() + log.getDynamicEntryCount() - (pScreen->getHeight() - nLines);
+    iEntry = log.getStaticEntryCount() + log.getDynamicEntryCount() - (pScreen->getHeight() - nLines) + 1;
   bool bPrintThisLine = false;
   for( ; iEntry < (log.getStaticEntryCount() + log.getDynamicEntryCount()); iEntry++ )
   {
@@ -68,7 +68,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
     {
       const Log::StaticLogEntry &entry = log.getStaticEntry(iEntry);
       level = entry.type;
-      
+
 //      if( level == Log::Fatal || level == Log::Error )
 //      {
         Line.clear();
@@ -77,7 +77,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append("] ");
         Line.append(entry.str);
         Line.append( "\n" );
-        
+
         bPrintThisLine = true;
 //      }
     }
@@ -85,7 +85,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
     {
       const Log::DynamicLogEntry &entry = log.getDynamicEntry(iEntry);
       level = entry.type;
-      
+
 //      if( level == Log::Fatal || level == Log::Error )
 //      {
         Line.clear();
@@ -94,7 +94,7 @@ void _panic( const char* msg, DebuggerIO* pScreen )
         Line.append("] ");
         Line.append(entry.str);
         Line.append( "\n" );
-        
+
         bPrintThisLine = true;
 //      }
     }
@@ -117,10 +117,10 @@ void panic( const char* msg )
   LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   SerialIO serialIO(Machine::instance().getSerial(0));
   SerialIO serialIO2(Machine::instance().getSerial(1));
-  
+
   DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
   int nInterfaces = 3;
-  
+
   for( int nIFace = 0; nIFace < nInterfaces; nIFace++ )
     _panic( msg, pInterfaces[nIFace] );
 

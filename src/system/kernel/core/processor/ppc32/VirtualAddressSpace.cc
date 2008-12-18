@@ -131,7 +131,7 @@ void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
         m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
       }
       // Grab the page table entry.
-      pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
+      pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] =
                   (physicalAddress&0xFFFFF000) | newMode;
     }
   }
@@ -194,11 +194,9 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     return false;
 
   // Grab the page table entry.
-  pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] = 
+  pTable->entries[PAGE_TABLE_INDEX(virtualAddress)] =
     (physicalAddress&0xFFFFF000) | flags;
 
-  if (this != &m_KernelSpace)
-  NOTICE("Adding mapping: " << addr << ", " << physicalAddress << ", " << m_Vsid);
   // Put it in the hash table.
   HashedPageTable::instance().addMapping(addr, physicalAddress, flags, m_Vsid*8 + (addr>>28)  );
 
@@ -214,7 +212,7 @@ void PPC32VirtualAddressSpace::getMapping(void *virtualAddress,
   uintptr_t addr = reinterpret_cast<uintptr_t> (virtualAddress);
   if (addr >= KERNEL_SPACE_START && this != &m_KernelSpace)
     m_KernelSpace.getMapping(virtualAddress, physicalAddress, flags);
- 
+
   // Grab the page directory entry.
   ShadowPageTable *pTable = m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)];
 
@@ -274,7 +272,7 @@ void PPC32VirtualAddressSpace::unmap(void *virtualAddress)
 void *PPC32VirtualAddressSpace::allocateStack()
 {
   uint8_t *pStackTop = new uint8_t[0x4000];
-  
+
   return pStackTop+0x4000-4;
 }
 void PPC32VirtualAddressSpace::freeStack(void *pStack)
@@ -337,8 +335,8 @@ void PPC32VirtualAddressSpace::revertToKernelAddressSpace()
       ShadowPageTable *pPageTable = m_pPageDirectory[i];
       for (int j = 0; j < 1024; j++)
       {
-        if (i == 0 && j == 0)
-          continue; // Don't unmap the first 4K - contains our interrupt handlers!
+        if (i <= 3)
+          continue; // Don't unmap the first 12MB - contains our interrupt handlers and symtab!
 
         if (pPageTable->entries[j] == 0)
           continue;

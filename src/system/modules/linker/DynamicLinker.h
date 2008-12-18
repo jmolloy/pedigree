@@ -43,7 +43,7 @@ public:
   /** Registers the given Elf with the current Process, or load()'s pProcess if that was
       non-zero. */
   void registerElf(Elf32 *pElf);
-  
+
   /** Registers the Elf belonging to the current Process to pProcess too. Used during fork(). */
   void registerProcess(Process *pProcess);
 
@@ -79,21 +79,21 @@ private:
   SharedObject *loadInternal (const char *name);
   SharedObject *loadObject (const char *name);
   SharedObject *mapObject (SharedObject *pSo);
-  
+
   uintptr_t resolveInLibrary(const char *sym, SharedObject *obj);
-  
+
   /** Resolves a reference. */
   uintptr_t resolveSymbol(const char *symbol);
-  
+
   uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
   Elf32 *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);
 
-  void setGot(Elf32 *pElf, uintptr_t value);
+  void initPlt(Elf32 *pElf, uintptr_t value);
 
   Tree<Process*,List<SharedObject*>*> m_ProcessObjects;
   List<SharedObject*> m_Objects;
   Tree<Process*,Elf32*> m_ProcessElfs;
-  
+
   /** Non-zero if load() was called with pProcess != 0, in which case it holds the value of pProcess. */
   Process *m_pInitProcess;
 

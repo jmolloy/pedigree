@@ -52,7 +52,7 @@ void X86Keyboard::initialise()
   {
     ERROR("X86Keyboard: failed to register IRQ handler!");
   }
-  
+
   irqManager.enable(1, false);
 
   // Initialise the keyboard map.
@@ -142,8 +142,8 @@ bool X86Keyboard::capsLock()
 
 void X86Keyboard::setDebugState(bool enableDebugState)
 {
-  m_bDebugState = true;//enableDebugState;
-  IrqManager &irqManager = *Machine::instance().getIrqManager();    
+  m_bDebugState = enableDebugState;
+  IrqManager &irqManager = *Machine::instance().getIrqManager();
   if (m_bDebugState)
   {
     irqManager.enable(1, false);
@@ -176,7 +176,12 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
   // Get the scancode for the pending keystroke.
   scancode = m_Port.read8(0);
 
-  char c = scancodeToChar(scancode); 
+  char c = scancodeToChar(scancode);
+  if (c=='`')
+  {
+    NOTICE("IP: "<< Hex << state.getInstructionPointer() << ", SP:" << state.getStackPointer());
+    Processor::breakpoint();
+  }
   if (c != 0)
   {
     m_Buffer[m_BufEnd++] = c;

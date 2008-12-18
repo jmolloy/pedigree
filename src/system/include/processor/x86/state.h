@@ -94,7 +94,7 @@ class X86InterruptState
     /** Get the n'th parameter for this syscall. */
     inline uintptr_t getSyscallParameter(size_t n) const;
     inline void setSyscallReturnValue(uintptr_t val);
-  
+
     /** Get the flags register
      *\return the flags register */
     inline uint32_t getFlags() const;
@@ -102,7 +102,7 @@ class X86InterruptState
      *\param[in] flags the new flags */
     inline void setFlags(uint32_t flags);
 
-    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
+    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will
      *  set the processor to 'state'. */
     static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
 

@@ -79,7 +79,7 @@ void init()
   File init = VFS::instance().find(String("root:/applications/shell"));
   if (!init.isValid())
   {
-    ERROR("Unable to load init program!");
+    FATAL("Unable to load init program!");
     return;
   }
 
@@ -103,7 +103,7 @@ void init()
   // Switch to the init process' address space.
   Processor::switchAddressSpace(*pProcess->getAddressSpace());
 
-  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not 
+  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
@@ -118,6 +118,7 @@ void init()
   {
     if (!DynamicLinker::instance().load(lib, pProcess))
     {
+      ERROR("Couldn't open needed file '" << lib << "'");
       panic("Init program failed to load!");
       return;
     }
@@ -154,4 +155,4 @@ void destroy()
 MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe");

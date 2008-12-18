@@ -33,12 +33,12 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     for (size_t i = 1; i < pBootstrap.num; i++)
     {
       ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
-  
+
       if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         if (pSh->addr >= end)
           end = pSh->addr + pSh->size;
     }
-  
+
     // Allocate the range
     // TODO: PhysicalMemoryManager::nonRamMemory?
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
@@ -139,7 +139,7 @@ uintptr_t loadbase = 0xfa000000;
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   Module *module = new Module;
-  
+
   if (!module->elf.load(pModule, len))
   {
     ERROR ("Module load failed (1)");
@@ -148,7 +148,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   }
 
   /// \todo assign memory, and a decent address.
-  for(int i = 0; i < 0x20000; i += 0x1000)
+  for(int i = 0; i < 0x40000; i += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     bool b = VirtualAddressSpace::getKernelAddressSpace().map(phys,
@@ -171,7 +171,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
     delete module;
     return 0;
   }
-  
+
   // Look up the module's name and entry/exit functions, and dependency list.
   module->name = *reinterpret_cast<const char**> (module->elf.lookupSymbol("g_pModuleName"));
   module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
@@ -289,7 +289,7 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
     if ((ret = (*it)->elf.lookupSymbol(pName)))
       return ret;
   }
-  //WARNING("KernelElf::globalLookupSymbol(\"" << pName << "\") failed.");
+
   return 0;
 }
 
@@ -298,7 +298,7 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
   /// \todo This shouldn't match local or weak symbols.
   // Try a lookup in the kernel.
   const char *ret;
-  
+
   if ((ret = lookupSymbol(addr, startAddr)))
     return ret;
 

@@ -17,10 +17,13 @@
 include_directories(../../include ../../kernel/linker ../ ./)
 
 if (X86)
-  set(ASMSRC asm-i686.s)
+  set(MYSRC i686/asm-i686.s i686/DynamicLinker.cc)
 endif (X86)
+if (PPC_COMMON)
+  set(MYSRC ppc/asm-ppc.s ppc/DynamicLinker.cc)
+endif (PPC_COMMON)
 
-add_executable(linker.o DynamicLinker.cc ${ASMSRC})
+add_executable(linker.o DynamicLinker.cc ${MYSRC})
 target_link_libraries(linker.o gcc)
 set_target_properties(linker.o PROPERTIES
                                LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

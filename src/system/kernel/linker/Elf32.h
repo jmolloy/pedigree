@@ -77,6 +77,9 @@
 #define ELF32_DT_PREINIT_ARRAY 32    /* Array with addresses of preinit fct*/
 #define ELF32_DT_PREINIT_ARRAYSZ 33    /* size in bytes of ELF32_DT_PREINIT_ARRAY */
 
+#define ELF32_SHT_RELA 4
+#define ELF32_SHT_REL  9
+
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
  * The ELF data can be loaded either by supplying an entire ELF file in a buffer, or
@@ -127,7 +130,7 @@ public:
    * Allocates virtual memory for all sections, given "flags".
    */
   bool allocateSections();
-  
+
   /**
    * Writes all writeable sections to their virtual addresses.
    * \return True on success.
@@ -160,7 +163,7 @@ public:
   const char *neededLibrary(uintptr_t &iter);
 
   /**
-   * Returns the virtual address of the last byte to be written. Used to calculate the 
+   * Returns the virtual address of the last byte to be written. Used to calculate the
    * sbrk memory breakpoint.
    */
   unsigned int getLastAddress();
@@ -178,12 +181,12 @@ public:
    * Returns the start address of the symbol with name 'pName'.
    */
   uint32_t lookupSymbol(const char *pName);
-  
+
   /**
    * Applies the n'th relocation in the relocation table. Used by PLT entries.
    */
   uintptr_t applySpecificRelocation(uint32_t off, SymbolLookupFn fn);
-  
+
   uintptr_t lookupDynamicSymbolAddress(const char *str);
 
   /**
@@ -192,11 +195,13 @@ public:
    */
   uintptr_t getGlobalOffsetTable();
 
+  size_t getPltSize ();
+
   /**
    * Returns the entry point of the file.
    */
   uintptr_t getEntryPoint();
-  
+
   virtual uintptr_t debugFrameTable();
   virtual uintptr_t debugFrameTableLength();
 
@@ -218,7 +223,7 @@ protected:
     uint16_t shnum;
     uint16_t shstrndx;
   } PACKED;
-  
+
   struct Elf32ProgramHeader_t
   {
     uint32_t type;
@@ -230,7 +235,7 @@ protected:
     uint32_t flags;
     uint32_t align;
   } PACKED;
-  
+
   struct Elf32SectionHeader_t
   {
     uint32_t name;
@@ -244,7 +249,7 @@ protected:
     uint32_t addralign;
     uint32_t entsize;
   } PACKED;
-  
+
   struct Elf32Symbol_t
   {
     uint32_t name;
@@ -254,7 +259,7 @@ protected:
     uint8_t  other;
     uint16_t shndx;
   } PACKED;
-  
+
   struct Elf32Dyn_t
   {
     int32_t tag;
@@ -264,7 +269,7 @@ protected:
       uint32_t ptr;
     } un;
   } PACKED;
-  
+
   struct Elf32Rel_t
   {
     uint32_t offset;
@@ -319,6 +324,7 @@ protected:
   Elf32ProgramHeader_t *m_pProgramHeaders;
   uint32_t             m_nProgramHeaders;
   uint8_t              *m_pBuffer;   // Offset of the file in memory.
+  size_t               m_nPltSize;
   uintptr_t            m_LoadBase;
 
 private:

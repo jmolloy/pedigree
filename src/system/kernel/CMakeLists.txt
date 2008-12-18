@@ -52,7 +52,8 @@ include_directories(../include
                     debugger/libudis86
                     debugger/commands
                     linker
-                    core/lib)
+                    core/lib
+                    machine/x86_common/x86emu/include machine/x86_common/x86emu/src/x86emu)
 
 add_definitions(-D__UD_STANDALONE__)
 

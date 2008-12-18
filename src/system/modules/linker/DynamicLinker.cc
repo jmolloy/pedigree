@@ -26,8 +26,6 @@
 #include <process/Scheduler.h>
 #include <panic.h>
 
-extern "C" void resolveSymbol(void);
-
 DynamicLinker DynamicLinker::m_Instance;
 
 uintptr_t DynamicLinker::resolve(const char *str)
@@ -86,7 +84,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadInternal(const char *name)
       return mapObject(pSo);
     }
   }
-  
+
   // Have to load the object for the first time.
   return loadObject(name);
 }
@@ -180,12 +178,13 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
     return 0;
   }
 
+  NOTICE("initPlt: " << name);
   pSo->pFile->setLoadBase(loadBase);
   pSo->pFile->allocateSegments();
   pSo->pFile->writeSegments();
   pSo->pFile->relocateDynamic(&resolve);
   pSo->pBuffer = buffer;
-  setGot(pSo->pFile, loadBase);
+  initPlt(pSo->pFile, loadBase);
 
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
@@ -205,7 +204,7 @@ DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
   // switches back to us, it switches back to init.o's "real" address space, not the one it switched to!
   // So, we have to save the current address space here, and switch back to it at any time it could have been changed.
   VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
-  
+
   uintptr_t loadBase = 0;
 
   // Start at 0x20000000, looking for the next free page.
@@ -236,7 +235,7 @@ DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
   pSo->pFile->allocateSegments();
   pSo->pFile->writeSegments();
   pSo->pFile->relocateDynamic(&resolve);
-  setGot(pSo->pFile, loadBase);
+  initPlt(pSo->pFile, loadBase);
 
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
@@ -249,7 +248,7 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym)
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
   List<SharedObject*> *pList;
-  
+
   pList = m_ProcessObjects.lookup(pProcess);
 
   // Look through the shared object list.
@@ -268,7 +267,7 @@ uintptr_t DynamicLinker::resolveInLibrary(const char *sym, SharedObject *obj)
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
   // Grab the load address of this object in this process.
-  uintptr_t loadBase = reinterpret_cast<uintptr_t> 
+  uintptr_t loadBase = reinterpret_cast<uintptr_t>
                          (obj->addresses.lookup(pProcess));
   // Sanity check
   if (loadBase == 0)
@@ -297,97 +296,10 @@ uintptr_t DynamicLinker::resolveInLibrary(const char *sym, SharedObject *obj)
   return 0;
 }
 
-void DynamicLinker::setGot(Elf32 *pElf, uintptr_t value)
-{
-  uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable());
-  if (!got)
-  {
-    ERROR("DynamicLinker: Global offset table not found!");
-    return;
-  }
-
-  got++;                     // Go to GOT+4
-  *got = value&0xFFFFFFFF;   // Library ID
-  got++;                     // Got to GOT+8
-  // Check if the resolve function has been set already...
-  if (*got != 0)
-    return; // Already set, no need to copy the resolve function again.
-  
-  uintptr_t resolveLocation = 0;
-
-  // Grab a page to copy the PLT resolve function to.
-  // Start at 0x20000000, looking for the next free page.
-  /// \todo Change this to use the size of the elf!
-  for (uintptr_t i = 0x40000000; i < 0x50000000; i += 0x1000) /// \todo Page size here.
-  {
-    bool failed = false;
-    if (Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(i)))
-    {
-      failed = true;
-      continue;
-    }
-
-    resolveLocation = i;
-    break;
-  }
-
-  if (resolveLocation == 0)
-  {
-    ERROR("DynamicLinker: nowhere to put resolve function.");
-    return;
-  }
-
-  physical_uintptr_t physPage = PhysicalMemoryManager::instance().allocatePage();
-  bool b = Processor::information().getVirtualAddressSpace().map(physPage,
-                                                                 reinterpret_cast<void*> (resolveLocation),
-                                                                 VirtualAddressSpace::Write);
-
-  if (!b)
-  {
-    ERROR("DynamicLinker: Could not map resolve function.");
-  }
-
-  // Memcpy over the resolve function into the user address space.
-  // resolveSymbol is an ASM function, defined in ./asm-$ARCH.s
-  memcpy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
-
-  *got = resolveLocation;
-}
-
-uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
-{
-  // Find the correct ELF to patch.
-  Elf32 *pElf = 0;
-  uintptr_t loadBase = 0;
-  
-  if (libraryId == 0)
-    pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
-  else
-  {
-    // Library search.
-    // Grab the list of loaded shared objects for this process.
-    List<SharedObject*> *pList = m_ProcessObjects.lookup(Processor::information().getCurrentThread()->getParent());
-  
-    // Look through the shared object list.
-    for (List<SharedObject*>::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
-    {
-      pElf = findElf(libraryId, *it, loadBase);
-      if (pElf != 0) break;
-    }
-  }
-  
-  pElf->setLoadBase(loadBase);
-  uintptr_t result = pElf->applySpecificRelocation(symIdx, &resolve);
-  
-  return result;
-}
-
 Elf32 *DynamicLinker::findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase)
 {
   // Grab the load address of this object in this process.
-  uintptr_t loadBase = reinterpret_cast<uintptr_t> 
+  uintptr_t loadBase = reinterpret_cast<uintptr_t>
                          (pSo->addresses.lookup(Processor::information().getCurrentThread()->getParent()));
 
   // Sanity check
@@ -449,7 +361,7 @@ void DynamicLinker::registerElf(Elf32 *pElf)
   m_ProcessElfs.remove(pProcess);
   m_ProcessElfs.insert(pProcess, pElf);
 
-  setGot(pElf, 0);
+  initPlt(pElf, 0);
   m_pInitProcess = 0;
 }
 
@@ -457,7 +369,7 @@ void DynamicLinker::registerProcess(Process *pProcess)
 {
   Elf32 *pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
   m_ProcessElfs.insert(pProcess, pElf);
-  
+
   for (List<SharedObject*>::Iterator it = m_Objects.begin();
        it != m_Objects.end();
        it++)
@@ -470,7 +382,7 @@ void DynamicLinker::registerProcess(Process *pProcess)
       pSo->addresses.insert(pProcess, ptr);
     }
   }
-  
+
   m_ProcessObjects.insert ( pProcess, m_ProcessObjects.lookup(Processor::information().getCurrentThread()->getParent()) );
 }
 

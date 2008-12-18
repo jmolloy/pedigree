@@ -43,7 +43,7 @@ typedef struct ___DIR
 } DIR;
 
 struct timeval {
-  unsigned int      tv_sec;
+  unsigned int tv_sec;
   unsigned int tv_usec;
 };
 

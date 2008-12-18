@@ -43,6 +43,7 @@ Elf32::Elf32() :
   m_pProgramHeaders(0),
   m_nProgramHeaders(0),
   m_pBuffer(0),
+  m_nPltSize(0),
   m_LoadBase(0)
 {
 }
@@ -55,7 +56,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 {
   // The main header will be at pBuffer[0].
   m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
-  
+
   // Check the ident.
   if ( (m_pHeader->ident[1] != 'E') ||
        (m_pHeader->ident[2] != 'L') ||
@@ -69,13 +70,13 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 
   // Load in the section headers.
   m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(&pBuffer[m_pHeader->shoff]);
-  
+
   // Find the string table.
   m_pShstrtab = &m_pSectionHeaders[m_pHeader->shstrndx];
 
   // Temporarily load the string table.
   const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pShstrtab->offset]);
-  
+
   // Go through each section header, trying to find .symtab.
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
@@ -85,10 +86,10 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
     if (!strcmp(pStr, ".strtab"))
       m_pStringTable = &m_pSectionHeaders[i];
   }
-  
+
   if (m_pSymbolTable == 0)
     WARNING("ELF file: symbol table not found!");
-  
+
   // Attempt to load in some program headers, if they exist.
   if (m_pHeader->phnum > 0)
   {
@@ -127,6 +128,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
               break;
             case ELF32_DT_RELASZ:
               m_nRelaTableSize = pDyn->un.val;
+              break;
             case ELF32_DT_PLTGOT:
               m_pGotTable = reinterpret_cast<uintptr_t*> (pDyn->un.ptr);
               break;
@@ -146,6 +148,9 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
               }
               break;
             }
+            case ELF32_DT_PLTRELSZ:
+              m_nPltSize = pDyn->un.val;
+              break;
           }
 
           pDyn++;
@@ -345,7 +350,7 @@ bool Elf32::writeSegments()
                           // end up overwriting what we just wrote!
         }
       }
-      
+
       // Copy segment data from the file.
       memcpy(reinterpret_cast<uint8_t*> (loadAddr),
              &m_pBuffer[m_pProgramHeaders[i].offset],
@@ -363,7 +368,7 @@ bool Elf32::writeSegments()
 #endif
     }
   }
-  
+
   // Success.
   return true;
 }
@@ -378,7 +383,7 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.
-  
+
   Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
 
   const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable->addr);
@@ -392,7 +397,7 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
       pSymbol++;
       continue;
     }
-    
+
     // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
     // count it!
     uint32_t size = pSymbol->size;
@@ -409,14 +414,14 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     pSymbol ++;
   }
   return 0;
-  
+
 }
 
 uint32_t Elf32::lookupSymbol(const char *pName)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.
-  
+
   Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable->addr);
 
   const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable->addr);
@@ -439,7 +444,7 @@ uint32_t Elf32::lookupSymbol(const char *pName)
     }
     else
       pStr = pStrtab + pSymbol->name;
-    
+
     if (!strcmp(pName, pStr))
     {
       return pSymbol->value;
@@ -453,11 +458,11 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym)
 {
   if (!m_pDynamicSymbolTable || !m_pDynamicStringTable)
     return 0; // Just return null if we haven't got a symbol table.
-  
+
   /// \todo Make reentrant!
   m_pDynamicSymbolTable = adjust_pointer(m_pDynamicSymbolTable, m_LoadBase);
   m_pDynamicStringTable = adjust_pointer(m_pDynamicStringTable, m_LoadBase);
-  
+
   Elf32Symbol_t *pSymbol = m_pDynamicSymbolTable;
 
   const char *pStrtab = m_pDynamicStringTable;
@@ -466,9 +471,9 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym)
   while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicStringTable))
   {
     const char *pStr = pStrtab + pSymbol->name;
-    
+
     // Check the type is global!
-    
+
     if (!strcmp(sym, pStr))
     {
       m_pDynamicSymbolTable = adjust_pointer(m_pDynamicSymbolTable, -m_LoadBase);
@@ -477,7 +482,7 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym)
     }
     pSymbol ++;
   }
-  
+
   m_pDynamicSymbolTable = adjust_pointer(m_pDynamicSymbolTable, -m_LoadBase);
   m_pDynamicStringTable = adjust_pointer(m_pDynamicStringTable, -m_LoadBase);
   return 0;
@@ -485,7 +490,7 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym)
 
 uintptr_t Elf32::getGlobalOffsetTable()
 {
-  return reinterpret_cast<uint32_t> (m_pGotTable)+m_LoadBase;
+  return reinterpret_cast<uintptr_t> (m_pGotTable)+m_LoadBase;
 }
 
 uint32_t Elf32::getEntryPoint()
@@ -504,6 +509,10 @@ bool Elf32::relocate()
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
+
+    if (pSh->type != ELF32_SHT_REL && pSh->type != ELF32_SHT_RELA)
+      continue;
+
     // Grab the section header that this relocation section refers to.
     Elf32SectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
 
@@ -548,6 +557,8 @@ bool Elf32::relocateModinfo()
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
+    if (pSh->type != ELF32_SHT_REL && pSh->type != ELF32_SHT_RELA)
+      continue;
     // Grab the section header that this relocation section refers to.
     Elf32SectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
 
@@ -588,7 +599,7 @@ bool Elf32::relocateModinfo()
 
 bool Elf32::relocateDynamic(SymbolLookupFn fn)
 {
-  // To make the dynamic symtab a valid pointer, it must be relocated, however each instance of this library could 
+  // To make the dynamic symtab a valid pointer, it must be relocated, however each instance of this library could
   // have the dynamicSymTab at any point! so undo the relocation afterwards.
   /// \todo This should be fully reentrant.
   m_pDynamicSymbolTable = adjust_pointer(m_pDynamicSymbolTable, m_LoadBase);
@@ -641,7 +652,7 @@ bool Elf32::relocateDynamic(SymbolLookupFn fn)
 
 uintptr_t Elf32::applySpecificRelocation(uint32_t off, SymbolLookupFn fn)
 {
-  // To make the dynamic symtab a valid pointer, it must be relocated, however each instance of this library could 
+  // To make the dynamic symtab a valid pointer, it must be relocated, however each instance of this library could
   // have the dynamicSymTab at any point! so undo the relocation afterwards.
   /// \todo This should be fully reentrant.
   m_pDynamicSymbolTable = adjust_pointer(m_pDynamicSymbolTable, m_LoadBase);
@@ -714,4 +725,9 @@ const char *Elf32::neededLibrary(uintptr_t &iter)
     pDyn++;
   }
   return 0;
+}
+
+size_t Elf32::getPltSize ()
+{
+  return m_nPltSize;
 }

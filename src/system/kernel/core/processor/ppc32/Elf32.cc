@@ -34,6 +34,13 @@
 #define R_PPC_REL14       11
 #define R_PPC_REL14_BRTAKEN 12
 #define R_PPC_REL14_BRNTAKEN 13
+#define R_PPC_PLTREL24    18
+#define R_PPC_COPY        19
+#define R_PPC_JMP_SLOT    21
+#define R_PPC_RELATIVE    22
+#define R_PPC_REL32       26
+#define R_PPC_PLT32       27
+#define R_PPC_PLTREL32    28
 #define R_PPC_UADDR32     24
 #define R_PPC_UADDR16     25
 #define R_PPC_REL32       26
@@ -50,27 +57,37 @@
 #define LOW14(r, x) (r | ((x<<2)&0x0000FFFC))
 #define WORD30(r, x) (r | ((x<<2)&0xFFFFFFFC))
 
-bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
+bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
 {
   // Section not loaded?
-  if (pSh->addr == 0)
+  if (pSh && pSh->addr == 0)
     return true; // Not a fatal error.
-  
+
   // Get the address of the unit to be relocated.
-  uint32_t address = pSh->addr + rel.offset;
+  uint32_t address = ((pSh) ? pSh->addr : m_LoadBase) + rel.offset;
 
   // Addend is explicitly given.
   uint32_t A = rel.addend;
-  
+
   // 'Place' is the address.
   uint32_t P = address;
 
   // Symbol location.
   uint32_t S = 0;
-  Elf32Symbol_t *pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable->addr);
+  Elf32Symbol_t *pSymbols = 0;
+  if (!m_pDynamicSymbolTable)
+    pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable->addr);
+  else
+    pSymbols = m_pDynamicSymbolTable;
+
+  const char *pStringTable = 0;
+  if (!m_pDynamicStringTable)
+    pStringTable = reinterpret_cast<const char *> (m_pStringTable->addr);
+  else
+    pStringTable = m_pDynamicStringTable;
 
   // If this is a section header, patch straight to it.
-  if (ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
+  if (pSymbols && ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
   {
     // Section type - the name will be the name of the section header it refers to.
     int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
@@ -79,24 +96,30 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
   }
   else
   {
-    const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
-                         pSymbols[ELF32_R_SYM(rel.info)].name;
-    S = lookupSymbol(pStr);
-    if (S == 0)
+    if (pSymbols[ELF32_R_SYM(rel.info)].name != 0)
     {
-      // Maybe we couldn't find the symbol because it's a symbol in this file.
-      // This is the case when f.x. a constant in .rodata wants to point to a symbol
-      // in .text - like a function pointer.
-      S = KernelElf::instance().globalLookupSymbol(pStr);
-    }
-    if (S == 0)
-    {
-      ERROR("Relocation failed for symbol " << pStr);
+      const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
+      S = lookupSymbol(pStr);
+      if (fn == 0)
+      {
+        S = lookupSymbol(pStr);
+        if (S == 0)
+          S = KernelElf::instance().globalLookupSymbol(pStr);
+
+        if (S == 0)
+          WARNING("Relocation failed for symbol \"" << pStr << "\"");
+      }
+      else
+      {
+        S = fn(pStr);
+        if (S == 0)
+          WARNING("Relocation failed (2) for symbol \"" << pStr << "\"");
+      }
     }
   }
-  if (S == 0)
+  if (S == 0 && pSymbols[ELF32_R_SYM(rel.info)].name != 0)
     return false;
-  
+
   // Base address
   uint32_t B = m_LoadBase;
 
@@ -139,6 +162,9 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
       result = LOW14(result,  (S+A)>>2 );
       result &= ~(1>>10); // Branch predict 0
       break;
+    case R_PPC_RELATIVE:
+      result = *pResult + B;
+      break;
     case R_PPC_REL24:
       result = LOW24(result,  (S+A-P)>>2 );
       break;
@@ -169,7 +195,7 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh)
   return true;
 }
 
-bool Elf32::applyRelocation(Elf32Rel_t rela, Elf32SectionHeader_t *pSh)
+bool Elf32::applyRelocation(Elf32Rel_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
 {
   ERROR("The PPC architecture does not use REL entries!");
   return false;

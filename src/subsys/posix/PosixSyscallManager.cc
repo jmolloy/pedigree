@@ -65,7 +65,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
   switch (state.getSyscallNumber())
   {
     case POSIX_OPEN:
-      return posix_open(reinterpret_cast<const char*>(p1), p2, p3);      
+      return posix_open(reinterpret_cast<const char*>(p1), p2, p3);
     case POSIX_WRITE:
       return posix_write(p1, reinterpret_cast<char*>(p2), p3);
     case POSIX_READ:

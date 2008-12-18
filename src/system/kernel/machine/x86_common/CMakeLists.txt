@@ -21,7 +21,7 @@
 #
 
 add_kernel_src(machine/x86_common
-               Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc)
+               Machine.cc Pc.cc Pic.cc Pit.cc Rtc.cc Serial.cc Vga.cc Keyboard.cc Bios.cc x86emu/src/x86emu/debug.c x86emu/src/x86emu/decode.c x86emu/src/x86emu/fpu.c x86emu/src/x86emu/ops.c x86emu/src/x86emu/ops2.c x86emu/src/x86emu/prim_ops.c x86emu/src/x86emu/sys.c)
 
 if(ACPI)
   add_kernel_src(machine/x86_common Acpi.cc)

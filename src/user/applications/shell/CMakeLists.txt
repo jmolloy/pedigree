@@ -19,7 +19,7 @@ set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPE
 add_executable(shell parser.tab.c lex.yy.c shell.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
 set_target_properties(shell PROPERTIES
-                            LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")
+                            LINK_FLAGS "-Wl,-Bdynamic -L ${PEDIGREE_BINARY_DIR}")
 target_link_libraries(shell c)
 target_link_libraries(shell gcc)
 target_link_libraries(shell m)

@@ -109,7 +109,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
    */
   static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   localIO.initialise();
-#ifdef ECHO_CONSOLE_TO_SERIAL
+//ifdef ECHO_CONSOLE_TO_SERIAL
+#if 1
   DebuggerIO *pInterfaces[] = {&localIO};
   int nInterfaces = 1;
 #else
@@ -306,7 +307,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   while (bKeepGoing);
   localIO.destroy();
 #ifndef ECHO_CONSOLE_TO_SERIAL
-  serialIO.destroy();
+  //serialIO.destroy();
 #endif
 
   Machine::instance().getKeyboard()->setDebugState(debugState);

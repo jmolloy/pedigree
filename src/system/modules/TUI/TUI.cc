@@ -83,10 +83,6 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
           return i;
         }
       }
-      if (c=='`')
-      {
-        Processor::breakpoint();
-      }
 
       // Echo.
       if (m_Echo)

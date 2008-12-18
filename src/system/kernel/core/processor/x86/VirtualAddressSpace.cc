@@ -280,7 +280,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
            0,
            PhysicalMemoryManager::getPageSize());
 
-    // If we map within the kernel space, we need to add this page table to the 
+    // If we map within the kernel space, we need to add this page table to the
     // other address spaces!
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
     if (virtualAddress >= KERNEL_VIRTUAL_HEAP)
@@ -551,12 +551,10 @@ void X86KernelVirtualAddressSpace::unmap(void *virtualAddress)
 void *X86KernelVirtualAddressSpace::allocateStack()
 {
   void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
-  WARNING("Stack allocated at " << (uintptr_t)pStack);
-  
+
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
   for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
   {
-    WARNING("Mapping " << (uintptr_t)adjust_pointer(pStack, - ((i + 1) * 0x1000)));
     // TODO: Check return values
     physical_uintptr_t page = physicalMemoryManager.allocatePage();
 

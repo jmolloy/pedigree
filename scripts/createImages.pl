@@ -93,6 +93,8 @@ if ($compiler =~ m/ppc/) {
       my ($binary) = ($file =~ m/([^\/]+)$/);
       `sudo cp src/user/$file/$binary /tmp/pedigree-image/$file`;
   }
+  `sudo cp libc.so /tmp/pedigree-image/libraries/libc.so`;
+  `sudo cp libm.so /tmp/pedigree-image/libraries/libm.so`;
   `sudo cp /home/james/bash-3.2/build-ppc/bash /tmp/pedigree-image/bash`;
   `sudo umount /dev/loop0`;
   `sudo /sbin/losetup -d /dev/loop0`;
