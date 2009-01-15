@@ -197,11 +197,19 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
     bool somethingLoaded = true;
     while (somethingLoaded)
     {
+      NOTICE("Listing:");
+            for(Vector<Module*>::Iterator it2 = m_PendingModules.begin();
+           it2 != m_PendingModules.end();
+           it2++)
+          {
+            NOTICE("* " << (uintptr_t)*it2 << ", " << (*it2)->name);
+          }
       somethingLoaded = false;
       for (Vector<Module*>::Iterator it = m_PendingModules.begin();
            it != m_PendingModules.end();
            it++)
       {
+        NOTICE("Looking at " << Hex << (uintptr_t)*it);
         if (moduleDependenciesSatisfied(*it))
         {
           executeModule(*it);
@@ -236,7 +244,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
         break;
       }
     }
-    if (!found) return false;
+    if (!found){ WARNING("Dependency " << module->depends[i] << " not found"); return false;}
     i++;
   }
   return true;
@@ -268,7 +276,7 @@ void KernelElf::executeModule(Module *module)
     }
   }
 
-  NOTICE("Executing module " << module->name);
+  NOTICE("Executing module " << module->name << " (" << Hex << (uintptr_t)module << ")");
   if (module)
     module->entry();
 }

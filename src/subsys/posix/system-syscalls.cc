@@ -87,7 +87,7 @@ int posix_sbrk(int delta)
 {
   int ret = reinterpret_cast<int>(
     Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-  
+
   if (ret == 0)
   {
     SYSCALL_ERROR(OutOfMemory);
@@ -126,7 +126,7 @@ int posix_fork(ProcessorState state)
 
   // Child returns 0.
   state.setSyscallReturnValue(0);
-  
+
   // Create a new thread for the new process.
   Thread *pThread = new Thread(pProcess, state);
 
@@ -294,7 +294,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
 int posix_waitpid(int pid, int *status, int options)
 {
-  NOTICE("waitpid(" << pid << ", " << (uintptr_t)status << ", " << options << ")");
   // Don't care about process groups at the moment.
   if (pid < -1)
   {
@@ -322,7 +321,7 @@ int posix_waitpid(int pid, int *status, int options)
         // ECHILD - process n'existe pas.
         return -1;
       }
-      
+
       // Is it actually our child?
       if (pProcess->getParent() != Processor::information().getCurrentThread()->getParent())
       {

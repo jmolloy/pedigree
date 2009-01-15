@@ -76,10 +76,10 @@ void Vector<void*>::clear()
 }
 Vector<void*>::Iterator Vector<void*>::erase(Iterator iter)
 {
-  size_t entriesBefore = (iter - m_Data) / sizeof(void*);
-  memmove(m_Data,
-          iter,
-          (m_Count - entriesBefore) * sizeof(void*));
+  size_t entriesBefore = (iter - m_Data);
+  memmove(iter,
+          iter+1,
+          reinterpret_cast<uintptr_t>(m_Data) + (m_Count-1)*sizeof(void*) - reinterpret_cast<uintptr_t>(iter));
   m_Count--;
   return iter;
 }

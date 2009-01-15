@@ -132,7 +132,6 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
   uint64_t firstByte = location;
   uint64_t lastByte = location+size-1;
-  NOTICE("firstByte: " << Hex << firstByte << ", lastByte: " << lastByte);
 
   // Find the largest contiguous number of blocks possible to read.
   // Remember that "buffer" is only "size" long, so we can't overflow by reading
@@ -171,7 +170,6 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
   if ( (lastByte % m_BlockSize) != (m_BlockSize-1))
     lastBlock--;
 
-  NOTICE("Firstblock " << firstBlock << ", lastblock " << lastBlock);
   if (firstBlock <= lastBlock && !lessThanOneBlock)
   {
     readInodeData(inode, buffer+currentLocation, firstBlock, lastBlock);

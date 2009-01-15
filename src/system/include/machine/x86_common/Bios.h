@@ -33,6 +33,10 @@ public:
   /** Returns n bytes of sub-64K space. */
   uintptr_t malloc (int n);
 
+  void free(uintptr_t)
+  {
+  }
+
   /** Sets the AX register. */
   void setAx (int n);
   /** Sets the BX register. */

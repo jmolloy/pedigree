@@ -18,7 +18,7 @@
 #include <utilities/StaticString.h>
 
 #include "../../core/BootIO.h"
-#include <x86emu.h>
+#include "x86emu/x86emu.h"
 
 extern BootIO bootIO;
 
