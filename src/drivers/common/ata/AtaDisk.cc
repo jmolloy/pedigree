@@ -161,7 +161,7 @@ bool AtaDisk::initialise()
   uint16_t word83 = LITTLE_TO_HOST16(m_pIdent[83]);
   if (word83 & (1<<10))
   {
-    m_SupportsLBA48 = true;
+    m_SupportsLBA48 = /*true*/ false;
   }
   
   NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
@@ -190,7 +190,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     panic("AtaDisk: read request not on a sector boundary!");
   if (nBytes % 512)
     panic("AtaDisk: read request length not a multiple of 512!");
-  
+  ERROR("lba48: " << m_SupportsLBA48);  
   /// \todo DMA?
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -239,7 +239,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     }
     
     // Enable disk interrupts
-    //controlRegs->write8(0x08, 0/*6*/);
+    controlRegs->write8(0x08, 6);
     
     // Make sure the IrqReceived mutex is locked.
     m_IrqReceived.tryAcquire();

@@ -55,6 +55,10 @@ if ($compiler =~ m/(i686|amd64)-elf/) {
     if ($? == 0) {
 	`sudo qemu-img convert hdd_16h_63spt_100c.img -O vmdk hdd_16h_63spt_100c.vmdk`;
     }
+    `which VBoxManage`;
+    if ($? == 0) {
+	`VBoxManage convertdd hdd_16h_63spt_100c.img hdd_16h_63_spt_100c.vdi`;
+    }
   }
 }
 

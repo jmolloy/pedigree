@@ -276,7 +276,7 @@ void KernelElf::executeModule(Module *module)
     }
   }
 
-  NOTICE("Executing module " << module->name << " (" << Hex << (uintptr_t)module << ")");
+  NOTICE("Executing module " << module->name);
   if (module)
     module->entry();
 }

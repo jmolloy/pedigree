@@ -28,11 +28,11 @@ bool probeDevice(Disk *pDev)
   // Does the disk have an MS-DOS partition table?
   if (msdosProbeDisk(pDev))
     return true;
-  
+
   // No? how about an Apple_Map?
   if (appleProbeDisk(pDev))
     return true;
-  
+
   // Oh well, better luck next time.
   return false;
 }

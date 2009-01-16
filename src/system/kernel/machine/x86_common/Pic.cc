@@ -104,28 +104,28 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
 
   // Is Spurios IRQ7?
-  if (irq == 7)
-  {
-    m_MasterPort.write8(0x03, 3);
-    if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
-    {
-      NOTICE("PIC: spurious IRQ7");
-      eoi(irq);
-      return;
-    }
-  }
+//   if (irq == 7)
+//   {
+//     m_MasterPort.write8(0x03, 0);
+//     if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+//     {
+//       NOTICE("PIC: spurious IRQ7");
+//       eoi(irq);
+//       return;
+//     }
+//   }
   /// \todo Logic faulty here, reporting spurious interrupts for disk accesses!
   // Is spurious IRQ15?
-  else if (irq == 15)
-  {
-    m_SlavePort.write8(0x03, 3);
-    if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
-    {
-      NOTICE("PIC: spurious IRQ15");
-      eoi(irq);
-      return;
-    }
-  }
+//   else if (irq == 15)
+//   {
+//     m_SlavePort.write8(0x03, 0);
+//     if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
+//     {
+//       NOTICE("PIC: spurious IRQ15");
+//       eoi(irq);
+//       return;
+//     }
+//   }
 
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq] != 0))
@@ -140,7 +140,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   else
   {
     NOTICE("PIC: unhandled irq #" << irq << " occurred");
- 
+
     #ifdef DEBUGGER
       LargeStaticString str;
       str += "Unhandled IRQ: #";
