@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,23 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES)
-set(MODULES ${MODULES} vfs ext2 fat init console TUI linker)
+include_directories(../../include ../ ./)
 
-#########################################################################################
-
-# Descend into each module's subdirectory first.
-foreach(var ${MODULES})
-  add_subdirectory(${var})
-endforeach(var ${MODULES})
-
-# Pull all the modules together in a tarfile.
-set(OBJS)
-set(MODULE_NAMES)
-foreach(var ${MODULES})
-  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/system/modules/${var}/${var}.o")
-  set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
-endforeach(var ${MODULES})
-
-set(MODULE_OBJS ${OBJS} PARENT_SCOPE)
-set(MODULE_NAMES ${MODULE_NAMES} PARENT_SCOPE)
+add_executable(fat.o FatFilesystem.cc)
+target_link_libraries(fat.o gcc)
+set_target_properties(fat.o PROPERTIES
+                             LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
