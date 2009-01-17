@@ -25,7 +25,7 @@
 
 // helper functions
 
-uint8_t IsPowerOf2(uint32_t n)
+bool isPowerOf2(uint32_t n)
 {
    uint8_t log;
 
@@ -34,11 +34,11 @@ uint8_t IsPowerOf2(uint32_t n)
       if(n & 1)
       {
          n >>= 1;
-         return (n != 0) ? -1 : log;
+         return (n != 0) ? false : true;
       }
       n >>= 1;
    }
-   return -1;
+   return false;
 }
 
 FatFilesystem::FatFilesystem() :
@@ -63,7 +63,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
   
   /** Validate the BPB and check for FAT FS */
   
-  // check first up the first couple of bytes
+  /* check for EITHER a near jmp, or a jmp and a nop */
   if (m_Superblock.BS_jmpBoot[0] != 0xE9)
   {
     if (!(m_Superblock.BS_jmpBoot[0] == 0xEB && m_Superblock.BS_jmpBoot[2] == 0x90))
@@ -78,7 +78,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
   /** Check the FAT FS itself, ensuring it's valid */
   
   // SecPerClus must be a power of 2
-  if (!IsPowerOf2(m_Superblock.BPB_SecPerClus))
+  if (!isPowerOf2(m_Superblock.BPB_SecPerClus))
   {
     ERROR("FAT: SecPerClus not a power of 2 (" << m_Superblock.BPB_SecPerClus << ")");
     return false;
@@ -93,6 +93,10 @@ bool FatFilesystem::initialise(Disk *pDisk)
   
   /** Start loading actual FS info */
   
+  // load the 12/16/32 additional info structures (only one is actually VALID, but both are loaded nonetheless)
+  memcpy(reinterpret_cast<void*> (&m_Superblock16), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock16));
+  memcpy(reinterpret_cast<void*> (&m_Superblock32), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock32));
+  
   // number of root directory sectors
   if (!m_Superblock.BPB_BytsPerSec) // we sanity check the value, because we divide by this later
   {
@@ -102,7 +106,6 @@ bool FatFilesystem::initialise(Disk *pDisk)
   uint32_t rootDirSectors = ((m_Superblock.BPB_RootEntCnt * 32) + (m_Superblock.BPB_BytsPerSec - 1)) / m_Superblock.BPB_BytsPerSec;
   
   // determine the size of the FAT
-  // TODO: see that m_Superblock32 right there... it's not actually defined as anything YET. Fix that.
   uint32_t fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
   
   // find the first data sector
@@ -155,18 +158,26 @@ bool FatFilesystem::initialise(Disk *pDisk)
   m_BlockSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
   
   // TODO: read in the FAT32 FSInfo structure
-  // TODO: m_Superblock16 and m_Superblock32 are not set yet...
-  
-  uint32_t type = m_Type;
-  ERROR("FAT success, type is " << type);
-  
+    
   File rootdir = getRoot();
-  File a = getDirectoryChild(&rootdir, 0);
-  ERROR("FAT: First ent is " << a.getName());
+  int i;
+  for( i = 0; ; i++ )
+  {
+    File a = getDirectoryChild(&rootdir, i);
+    if(!a.isValid())
+      break;
+    ERROR("FAT: Entry " << i << " is " << a.getName());
+  }
+  
+  ERROR("Testing: " << convertFilenameTo(String("Test.txt")));
   
   return true;
 }
-
+  /** Converts a string to 8.3 format */
+  bool convertFilenameTo(String filename);
+  
+  /** Converts a strign from 8.3 format */
+  String convertFilenameFrom(String filename);
 Filesystem *FatFilesystem::probe(Disk *pDisk)
 {
   FatFilesystem *pFs = new FatFilesystem();
@@ -196,42 +207,93 @@ String FatFilesystem::getVolumeLabel()
 {
   // The root directory (typically) contains the volume label, with a specific flag
   // In my experience, it's always the first entry, and it's always there. Even so,
-  // we want to cater to unusual formats. So we check either:
-  // a) the entire root directory (UNTIL found) for FAT12/16
-  // b) the first cluster of the root directory for FAT32
+  // we want to cater to unusual formats.
+  //
+  // In order to do so we check the entire root directory.
   
+  uint8_t* buffer = 0;
+  
+  uint32_t sz = m_BlockSize;
+    
+  uint32_t clus = 0;
   if(m_Type == FAT32)
-  {
-    // TODO: write
+    clus = m_RootDir.cluster;
+  
+  String volid;
+  
+  // allocate buffers
+  if(clus == 0)
+  {    
+    // FAT12/16: read in the entire root directory
+      
+    uint32_t sec = m_RootDir.sector;
+    
+    sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+    
+    buffer = new uint8_t[sz];
+    readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(buffer));
   }
   else
   {
-    uint32_t rootSector = m_RootDir.sector;
-    uint32_t rootDirSize = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
-
-    uint8_t* buffer = new uint8_t[rootDirSize];
-    
-    m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(rootSector), rootDirSize, reinterpret_cast<uintptr_t> (buffer));
-    
-    String volid;
-    
-    size_t i;
-    for(i = 0; i < rootDirSize; i += sizeof(Dir))
+    // Read in the first cluster of the directory
+    buffer = new uint8_t[m_BlockSize];
+    readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
+  }
+  
+  size_t i;
+  bool endOfDir = false;
+  while(true)
+  {
+  
+    for(i = 0; i < sz; i += sizeof(Dir))
     {
       Dir* ent = reinterpret_cast<Dir*>(&buffer[i]);
+      
+      if(ent->DIR_Name[0] == 0)
+      {
+        endOfDir = true;
+        break;
+      }
+      
       if(ent->DIR_Attr & ATTR_VOLUME_ID)
       {
-        volid = String(reinterpret_cast<const char*>(ent->DIR_Name));
-        break;
+        volid =  convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
+        delete buffer;
+        return volid;
       }
     }
     
-    delete buffer;
+    if(endOfDir)
+      break;
     
-    if(volid != "")
-      return volid;
+    if(clus == 0 && m_Type != FAT32)
+      break; // not found
+    
+    // find the next cluster in the chain, if this is the end, break, if not, continue
+    clus = getClusterEntry(clus);
+    if(clus == 0)
+      break; // something broke!
+    
+    bool chainEnd = false;
+    if(m_Type == FAT12)
+      if(clus >= 0x0FF8)
+        chainEnd = true;
+    if(m_Type == FAT16)
+      if(clus >= 0xFFF8)
+        chainEnd = true;
+    if(m_Type == FAT32)
+      if(clus >= 0x0FFFFFF8)
+        chainEnd = true;
+    if(chainEnd)
+      break; // no further clusters
+    
+    // continue by reading in this cluster
+    readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
+    
   }
-
+  
+  delete buffer;
+  
   // none found, do a default
   NormalStaticString str;
   str += "no-volume-label@";
@@ -281,7 +343,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
     
     buffer = new uint8_t[sz];
-    m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), sz, reinterpret_cast<uintptr_t> (buffer));
+    readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(buffer));
   }
   else
   {
@@ -290,17 +352,60 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
   }
   
-  // Parse
-  size_t i, j = 0;
-  for(i = 0; i < sz; i += sizeof(Dir), j++)
+  // was initially separated for FAT12/16 and FAT32, but I hate redundancy (if I can figure out how to make
+  // this code work for the Volume Label as well, I'll be a very happy man)
+  size_t i, j;
+  bool endOfDir = false;
+  while(true)
   {
-    Dir* ent = reinterpret_cast<Dir*>(&buffer[i]);
-    if(j == n)
+  
+    for(i = 0, j = 0; i < sz; i += sizeof(Dir), j++)
     {
-      File ret(String(reinterpret_cast<const char*>(ent->DIR_Name)), 0, 0, 0, ent->DIR_FstClusLO | (ent->DIR_FstClusHI << 16), false, ent->DIR_Attr & ATTR_DIRECTORY, this, ent->DIR_FileSize);
-      delete buffer;
-      return ret;
+      Dir* ent = reinterpret_cast<Dir*>(&buffer[i]);
+      
+      if(ent->DIR_Name[0] == 0)
+      {
+        endOfDir = true;
+        break;
+      }
+      
+      if(j == n)
+      {
+        uint32_t fileCluster = ent->DIR_FstClusLO | (ent->DIR_FstClusHI << 16);
+        String filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
+        File ret(filename, 0, 0, 0, fileCluster, false, ent->DIR_Attr & ATTR_DIRECTORY, this, ent->DIR_FileSize);
+        delete buffer;
+        return ret;
+      }
     }
+    
+    if(endOfDir)
+      break;
+    
+    if(clus == 0 && m_Type != FAT32)
+      break; // not found
+    
+    // find the next cluster in the chain, if this is the end, break, if not, continue
+    clus = getClusterEntry(clus);
+    if(clus == 0)
+      break; // something broke!
+    
+    bool chainEnd = false;
+    if(m_Type == FAT12)
+      if(clus >= 0x0FF8)
+        chainEnd = true;
+    if(m_Type == FAT16)
+      if(clus >= 0xFFF8)
+        chainEnd = true;
+    if(m_Type == FAT32)
+      if(clus >= 0x0FFFFFF8)
+        chainEnd = true;
+    if(chainEnd)
+      break; // no further clusters
+    
+    // continue by reading in this cluster
+    readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
+    
   }
   
   // n too high?
@@ -312,7 +417,13 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
 bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
 {
   block = getSectorNumber(block);
-  m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(block), m_BlockSize, buffer);
+  readSectorBlock(block, m_BlockSize, buffer);
+  return true;
+}
+
+bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
+{
+  m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
   return true;
 }
 
@@ -321,105 +432,143 @@ uint32_t FatFilesystem::getSectorNumber(uint32_t cluster)
   return ((cluster - 2) * m_Superblock.BPB_SecPerClus) + m_DataAreaStart;
 }
 
-/* not for FAT
-FatFilesystem::Inode FatFilesystem::getInode(uint32_t inode)
+uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
 {
-  inode--; // Inode zero is undefined, so it's not used.
-
-  uint32_t index = inode % LITTLE_TO_HOST32(m_Superblock.s_inodes_per_group);
-  uint32_t group = inode / LITTLE_TO_HOST32(m_Superblock.s_inodes_per_group);
-
-  uint64_t inodeTableBlock = LITTLE_TO_HOST32(m_pGroupDescriptors[group].bg_inode_table);
-
-  // The inode table may extend onto multiple blocks - if the inode we want is in another block,
-  // calculate that now.
-  while ( (index*sizeof(Inode)) > m_BlockSize )
+  uint32_t fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
+  
+  uint32_t fatOffset = 0;
+  switch(m_Type)
   {
-    index -= m_BlockSize/sizeof(Inode);
-    inodeTableBlock++;
+    case FAT12:
+      fatOffset = cluster + (cluster / 2);
+      break;
+    
+    case FAT16:
+      fatOffset = cluster * 2;
+      break;
+    
+    case FAT32:
+      fatOffset = cluster * 4;
+      break;
   }
-
-  uint8_t *buffer = new uint8_t[m_BlockSize];
-  m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
-                reinterpret_cast<uintptr_t> (buffer));
-
-  Inode *inodeTable = reinterpret_cast<Inode*> (buffer);
-
-  Inode node = inodeTable[index];
-  delete [] buffer;
-
-  return node;
+  
+  uint32_t fatSecNum = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
+  uint32_t fatEntOffset = fatOffset % m_Superblock.BPB_BytsPerSec;
+  
+  uint8_t secCount = 1;
+  if(m_Type == FAT12)
+    secCount++; // read in an extra sector to avoid boundary checks
+  
+  size_t bufSize = m_Superblock.BPB_BytsPerSec * secCount;
+  uint8_t* buffer = new uint8_t[bufSize];
+  readSectorBlock(fatSecNum, bufSize, reinterpret_cast<uintptr_t>(buffer));
+  
+  uint32_t ret = 0;
+  switch(m_Type)
+  {
+    case FAT12:
+      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+      
+      // FAT12 entries are 1.5 bytes
+      if(cluster & 0x1)
+        ret >>= 4;
+      else
+        ret &= 0x0FFF;
+      ret &= 0xFFFF;
+      
+      break;
+    
+    case FAT16:
+    
+      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+      ret &= 0xFFFF;
+    
+      break;
+    
+    case FAT32:
+    
+      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+    
+      break;
+  }
+  
+  delete buffer;
+  
+  return ret;
+}
+    
+char toUpper(char c)
+{
+  if(c < 'a' || c > 'z')
+    return c; // special chars
+  c += ('A' - 'a');
+  return c;
 }
 
-void FatFilesystem::getBlockNumbersIndirect(uint32_t inode_block, int32_t startBlock, int32_t endBlock, List<uint32_t*> &list)
+char toLower(char c)
 {
-  if (endBlock < 0)
-    return;
-  if (startBlock < 0)
-    startBlock = 0;
+  if(c < 'A' || c > 'Z')
+    return c; // special chars
+  c -= ('A' - 'a');
+  return c;
+}
 
-  uint32_t *buffer = new uint32_t[m_BlockSize/4];
-  readCluster(inode_block, reinterpret_cast<uintptr_t> (buffer));
-
-  for (int i = 0; i < static_cast<int32_t>((m_BlockSize/4)); i++)
+String FatFilesystem::convertFilenameTo(String filename)
+{
+  NormalStaticString ret;
+  int i;
+  for(i = 0; i < 11; i++)
   {
-    if (i >= startBlock && i <= endBlock)
+    if(i >= filename.length())
+      break;
+    if(filename[i] != '.')
+      ret += toUpper(filename[i]);
+    else
     {
-      list.pushBack(reinterpret_cast<uint32_t*>(LITTLE_TO_HOST32(buffer[i])));
+      int j;
+      for(j = i; j < 8; j++)
+        ret += ' ';
+      i++; // skip the period
+      for(j = 0; j < 3; j++)
+          if((i + j) < filename.length())
+            ret += toUpper(filename[i + j]);
+      break;
     }
   }
+  return String(static_cast<const char*>(ret));
 }
 
-void FatFilesystem::getBlockNumbersBiindirect(uint32_t inode_block, int32_t startBlock, int32_t endBlock, List<uint32_t*> &list)
+String FatFilesystem::convertFilenameFrom(String filename)
 {
-  if (endBlock < 0)
-    return;
-  if (startBlock < 0)
-    startBlock = 0;
-
-  uint32_t *buffer = new uint32_t[m_BlockSize/4];
-  readCluster(inode_block, reinterpret_cast<uintptr_t> (buffer));
-
-  for (unsigned int i = 0; i < (m_BlockSize/4); i++)
+  NormalStaticString ret;
+  
+  int i;
+  for(i = 0; i < 8; i++)
   {
-    getBlockNumbersIndirect(LITTLE_TO_HOST32(buffer[i]), startBlock-(i*(m_BlockSize/4)),
-                            endBlock-(i*(m_BlockSize/4)), list);
+    if(i >= filename.length())
+      break;
+    if(filename[i] != ' ')
+      ret += toLower(filename[i]);
+    else
+      break;
   }
-}
-
-void FatFilesystem::getBlockNumbers(Inode inode, uint32_t startBlock, uint32_t endBlock, List<uint32_t*> &list)
-{
-  for (unsigned int i = 0; i < 12; i++)
+  
+  for(i = 0; i < 3; i++)
   {
-    if (i >= startBlock && i <= endBlock)
+    if((8 + i) >= filename.length())
+      break;
+    if(filename[8 + i] != ' ')
     {
-      list.pushBack(reinterpret_cast<uint32_t*>(LITTLE_TO_HOST32(inode.i_block[i])));
+      if(i == 0)
+        ret += '.';
+      ret += toLower(filename[8 + i]);
     }
+    else
+      break;
   }
-
-  getBlockNumbersIndirect(LITTLE_TO_HOST32(inode.i_block[12]), startBlock-12, endBlock-12, list);
-
-  uint32_t numBlockNumbersPerBlock = m_BlockSize/4;
-
-  getBlockNumbersBiindirect(LITTLE_TO_HOST32(inode.i_block[13]), startBlock-(12+numBlockNumbersPerBlock),
-                            endBlock-(12+numBlockNumbersPerBlock), list);
-  // I really hope triindirect isn't needed :(
+  
+  return String(static_cast<const char*>(ret));
 }
-
-void FatFilesystem::readInodeData(Inode inode, uintptr_t buffer, uint32_t startBlock, uint32_t endBlock)
-{
-  List<uint32_t*> list;
-  getBlockNumbers(inode, startBlock, endBlock, list);
-
-  for (List<uint32_t*>::Iterator it = list.begin();
-       it != list.end();
-       it++)
-  {
-    readCluster(reinterpret_cast<uint32_t>(*it), buffer);
-    buffer += m_BlockSize;
-  }
-}
-*/
 
 void FatFilesystem::truncate(File *pFile)
 {

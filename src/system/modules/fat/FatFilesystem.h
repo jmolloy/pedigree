@@ -27,7 +27,7 @@
 #define ATTR_DIRECTORY  0x10
 #define ATTR_ARCHIVE    0x20
 
-/** This class provides an implementation of the second extended filesystem. */
+/** This class provides an implementation of the FAT filesystem. */
 class FatFilesystem : public Filesystem
 {
 public:
@@ -139,20 +139,20 @@ protected:
   /** Reads a cluster from the disk. */
   bool readCluster(uint32_t block, uintptr_t buffer);
   
+  /** Reads a block starting from a specific sector from the disk. */
+  bool readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer);
+  
   /** Obtains the first sector given a cluster number */
   uint32_t getSectorNumber(uint32_t cluster);
-
-  /** Obtains a given numbered Inode. */
-//  Inode getInode(uint32_t inode);
-
-  /** Obtains an array of block numbers for the given inode, given the starting and
-      ending block indices. */
-//  void getBlockNumbers(Inode inode, uint32_t startBlock, uint32_t endBlock, List<uint32_t*> &list);
-
-//  void getBlockNumbersIndirect(uint32_t inode_block, int32_t startBlock, int32_t endBlock, List<uint32_t*> &list);
-//  void getBlockNumbersBiindirect(uint32_t inode_block, int32_t startBlock, int32_t endBlock, List<uint32_t*> &list);
-
-//  void readInodeData(Inode inode, uintptr_t buffer, uint32_t startBlock, uint32_t endBlock);
+  
+  /** Grabs a cluster entry */
+  uint32_t getClusterEntry(uint32_t cluster);
+  
+  /** Converts a string to 8.3 format */
+  String convertFilenameTo(String filename);
+  
+  /** Converts a string from 8.3 format */
+  String convertFilenameFrom(String filename);
   
   /** Our raw device. */
   Disk *m_pDisk;
@@ -166,7 +166,7 @@ protected:
   FatType m_Type;
   
   /** Required information */
-  uint32_t m_DataAreaStart;
+  uint64_t m_DataAreaStart; // data area can potentially start above 4 GB
   uint32_t m_RootDirCount;
   
   /** Root directory information */
