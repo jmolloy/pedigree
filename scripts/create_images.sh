@@ -79,6 +79,15 @@ if which losetup >/dev/null; then
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
 
   fini;
+
+  if which qemu-img >/dev/null; then
+    sudo qemu-img convert $SRCDIR/hdd_16h_63spt_100c.img -O vmdk $SRCDIRhdd_16h_63spt_100c.vmdk
+  fi
+
+  if which VBoxManage >/dev/null; then
+    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63_spt_100c.vdi
+  fi
+
 else
   echo Not creating disk images because \`losetup\' could not be found.
 fi

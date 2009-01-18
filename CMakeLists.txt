@@ -17,7 +17,7 @@
 #########################################################################################
 # The project name and CMake version.
 
-project(pedigree C CXX ASM-ATT)
+project(PEDIGREE C CXX ASM-ATT)
 cmake_minimum_required(VERSION 2.6)
 
 option(COLORGCC "Use the colorgcc script to colourise the compiler output." ON)
@@ -42,10 +42,20 @@ string(REGEX MATCH "([^-]+)" ARCH_SPEC "${MACHINE_SPEC}")
 
 if(ARCH_SPEC MATCHES "i[3456]86")
   set(ARCH "x86")
-  set(ASM-ATT_COMPILER "nasm") # x86 needs a different assembler.
+  get_filename_component(C_COMPILER_DIR ${C_COMPILER} PATH)
+  find_program(NASM NAMES nasm HINTS ${C_COMPILER_DIR} PATHS ${C_COMPILER_DIR})
+  if(NASM STREQUAL "NASM-NOTFOUND")
+    message(FATAL_ERROR "`nasm' not found.")
+  endif(NASM STREQUAL "NASM-NOTFOUND")
+  set(ASM-ATT_COMPILER "${NASM}")
 elseif(ARCH_SPEC MATCHES "amd64|x86[_-]64")
   set(ARCH "x64")
-  set(ASM-ATT_COMPILER "nasm") # x64 needs a different assembler.
+  get_filename_component(C_COMPILER_DIR ${C_COMPILER} PATH)
+  find_program(NASM NAMES nasm HINTS ${C_COMPILER_DIR} PATHS ${C_COMPILER_DIR})
+  if(NASM STREQUAL "NASM-NOTFOUND")
+    message(FATAL_ERROR "`nasm' not found.")
+  endif(NASM STREQUAL "NASM-NOTFOUND")
+  set(ASM-ATT_COMPILER "${NASM}")
 elseif(ARCH_SPEC MATCHES "ppc|powerpc")
   set(ARCH "ppc")
 elseif(ARCH_SPEC MATCHES "mips(eb|be)")
