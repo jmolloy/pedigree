@@ -37,14 +37,14 @@
 # Note:
 #
 # colorgcc will only emit color codes if:
-# 
+#
 #    (1) Its STDOUT is a tty and
 #    (2) the value of $TERM is not listed in the "nocolor" option.
 #
 # If colorgcc colorizes the output, the compiler's STDERR will be
 # combined with STDOUT. Otherwise, colorgcc just passes the output from
 # the compiler through without modification.
-# 
+#
 # Author: Jamie Moyers <jmoyers@geeks.com>
 # Started: April 20, 1999
 # Licence: GNU Public License
@@ -58,7 +58,7 @@
 #       Much improved handling of compiler command line arguments.
 #       exec compiler when not colorizing to preserve STDOUT, STDERR.
 #       Fixed my STDIN kludge.
-#       
+#
 #    <ecarotti@athena.polito.it> (Elias S. G. Carotti)
 #       Corrected handling of text like -DPACKAGE=\"Package\"
 #       Spotted return code bug.
@@ -78,12 +78,12 @@
 #       preserves the original STDOUT and STDERR.
 #
 #       Removed STDIN kludge. STDIN being passed correctly now.
-# 
+#
 # 1.3.1 Added kludge to copy STDIN to the compiler's STDIN.
 #
 # 1.3.0 Now correctly returns (I hope) the return code of the compiler
 #       process as its own.
-# 
+#
 # 1.2.1 Applied patch to handle text similar to -DPACKAGE=\"Package\".
 #
 # 1.2.0 Added tty check. If STDOUT is not a tty, don't do color.
@@ -196,9 +196,9 @@ $0 =~ m%(.*)/(.*)$%;
 $progName = $2 || $0;
 $dir = $1 || die;
 
-$compiler = "$dir/../compilers/dir/bin/$progName" || die;
+$compiler = "$dir/compiler-dir/$progName" || die;
 
-# Get the terminal type. 
+# Get the terminal type.
 $terminal = $ENV{"TERM"} || "dumb";
 
 # If it's in the list of terminal types not to color, or if
@@ -229,7 +229,7 @@ while(<GCCOUT>)
 	 print($colors{"warningNumberColor"}, "$field2:", color("reset"));
 	 srcscan($field3, $colors{"warningMessageColor"});
       }
-      else 
+      else
       {
 	 # Error
 	 print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
@@ -243,7 +243,7 @@ while(<GCCOUT>)
       # No line number, treat as an "introductory" line of text.
       srcscan($_, $colors{"introColor"});
    }
-   else # Anything else.        
+   else # Anything else.
    {
       # Doesn't seem to be a warning or an error. Print normally.
       print(color("reset"), $_);

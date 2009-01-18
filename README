@@ -1,0 +1,8 @@
+BUILD README, TEMPORARY
+=======================
+
+mkdir build/
+cd build/
+cmake -DCROSS=/path/to/compilers/bin/i686-elf- ..
+
+You should give cmake the path to gcc in -DCROSS, ending in '-' so it can add 'gcc', 'g++' or 'as' to the end of the stub and get a valid compiler. It'll work out from the compiler chosen what default options and what architecture to compile.

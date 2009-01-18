@@ -42,27 +42,17 @@ add_executable(crt0.o crt0.c)
 set_target_properties(crt0.o PROPERTIES
                              LINK_FLAGS "-r")
 
+install(TARGETS crt0.o
+        RUNTIME DESTINATION "kernel/")
+
 # Now the glue code - compile to a .o...
 add_executable(pedigree-glue.o glue.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
                                       LINK_FLAGS "-r")
 
-
-add_subdirectory(newlib)
-
-# ...then blend with libc.
-if (COMPILE_NEWLIB)
-  set(LIBC "${PEDIGREE_BINARY_DIR}/libc.a")
-  set(LIBM "${PEDIGREE_BINARY_DIR}/libm.a")
-endif (COMPILE_NEWLIB)
-
 set(CCPREFIX "${PEDIGREE_SOURCE_DIR}/compilers/dir/bin")
 
 add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CCPREFIX}/${STUB}-gcc" ${PEDIGREE_BINARY_DIR} "${CCPREFIX}/../lib/gcc/${STUB}/4.3.0/"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
-
-if (COMPILE_NEWLIB)
-  add_dependencies(posix-usermode newlib)
-endif (COMPILE_NEWLIB)

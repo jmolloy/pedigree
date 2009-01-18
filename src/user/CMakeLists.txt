@@ -22,12 +22,16 @@ set(HDD_TARGETS)
 
 foreach(var ${APPLICATIONS})
   add_subdirectory("applications/${var}")
+  install(FILES "${PEDIGREE_BINARY_DIR}/src/user/applications/${var}/${var}"
+          DESTINATION "applications/")
   set(HDD_FILES ${HDD_FILES} "applications/${var}")
   set(HDD_TARGETS ${HDD_TARGETS} ${var})
 endforeach(var ${APPLICATIONS})
 
 foreach(var ${LIBRARIES})
   add_subdirectory("libraries/${var}")
+  install(FILES "${PEDIGREE_BINARY_DIR}/src/user/libraries/${var}/${var}"
+          DESTINATION "libraries/")
   set(HDD_FILES ${HDD_FILES} "libraries/${var}")
   set(HDD_TARGETS ${HDD_TARGETS} ${var})
 endforeach(var ${LIBRARIES})

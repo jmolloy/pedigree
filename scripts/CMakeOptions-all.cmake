@@ -14,15 +14,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-if (X86)
-  set (BASH_PREFIX "i686-elf")
-endif (X86)
-if (PPC_COMMON)
-  set (BASH_PREFIX "ppc-elf")
-endif (PPC_COMMON)
-
-
-# Just copy the precompiled bash.
-add_custom_target(bash ALL mkdir -p ${PEDIGREE_BINARY_DIR}/src/user/applications/bash
-  COMMAND cp ${BASH_PREFIX}-bash ${PEDIGREE_BINARY_DIR}/src/user/applications/bash/bash
-  WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/user/applications/bash)
+add_option(DEBUGGER      "Enable the run-time kernel debugger." ON)
+add_option(DWARF         "Enable use of the DWARF-2 debugging information format." ON)
+add_option(DEBUGGER_RUN_AT_START "Boot into the debugger on startup." OFF)
+add_option(DEBUGGER_QWERTY "Set the default keymap to QWERTY." ON)
+add_option(DEBUGGER_QWERTZ "Set the default keymap to QWERTZ." OFF)
+add_option(ECHO_CONSOLE_TO_SERIAL "Print the kernel log to serial port 1." ON)
+add_option(SERIAL_IS_FILE "The serial output is not a VT100 compliant tty." ON)
+add_non_user_option(THREADS)

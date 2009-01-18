@@ -72,6 +72,9 @@ target_link_libraries(kernel gcc)
 set_target_properties(kernel PROPERTIES LINK_FLAGS
                       "-T ${LINKER_SCRIPT}")
 
+install(TARGETS kernel
+        RUNTIME DESTINATION "kernel/")
+
 if(X86_COMMON AND MULTIPROCESSOR)
   add_dependencies(kernel
                    trampoline)
