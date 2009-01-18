@@ -154,6 +154,9 @@ protected:
   /** Converts a string from 8.3 format */
   String convertFilenameFrom(String filename);
   
+  /** Is a given cluster *VALUE* EOF? */
+  bool isEof(uint32_t cluster);
+  
   /** Our raw device. */
   Disk *m_pDisk;
 

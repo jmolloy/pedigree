@@ -273,19 +273,9 @@ String FatFilesystem::getVolumeLabel()
     clus = getClusterEntry(clus);
     if(clus == 0)
       break; // something broke!
-    
-    bool chainEnd = false;
-    if(m_Type == FAT12)
-      if(clus >= 0x0FF8)
-        chainEnd = true;
-    if(m_Type == FAT16)
-      if(clus >= 0xFFF8)
-        chainEnd = true;
-    if(m_Type == FAT32)
-      if(clus >= 0x0FFFFFF8)
-        chainEnd = true;
-    if(chainEnd)
-      break; // no further clusters
+
+    if(isEof(clus))
+      break;
     
     // continue by reading in this cluster
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
@@ -301,6 +291,8 @@ String FatFilesystem::getVolumeLabel()
   return String(static_cast<const char*>(str));
 }
 
+/////////////////////////////////////////////////////////////////////////////
+
 uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
 
@@ -308,9 +300,81 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   if (pFile->isDirectory())
     return 0;
 
-  /// \todo Write this
+  // the inode of the file is the first cluster
+  uint32_t clus = pFile->getInode();
+  if(clus == 0)
+  {
+    return 0; // can't do it
+  }
+  
+  // validity checking
+  if(static_cast<size_t>(location) > pFile->getSize())
+  {
+    ERROR("FAT: Attempt to read on file " << pFile->getName() << " with offset past EOF.");
+  }
+  
+  uint64_t endOffset = location + size;
+  uint64_t finalSize = size;
+  if(static_cast<size_t>(endOffset) > pFile->getSize())
+  {
+    finalSize = pFile->getSize() - location;
+  }
+  
+  // finalSize holds the total amount of data to read, now find the cluster and sector offsets
+  uint32_t clusOffset = location / (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec);
+  uint32_t firstOffset = location % (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec); // the offset within the cluster specified above to start reading from
+  uint32_t secOffset = location / m_Superblock.BPB_BytsPerSec;
+  
+  // tracking info
+  uint64_t bytesRead = 0;
+  uint32_t currSec = getSectorNumber(clus) + secOffset;
+  uint64_t currOffset = firstOffset;
+  clus += clusOffset;
+  
+  // buffers
+  uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
+  uint8_t* destBuffer = reinterpret_cast<uint8_t*>(buffer);
+  
+  // main read loop
+  while(true)
+  {
+    // read in the entire cluster
+    readCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
+    
+    // read...
+    while(currOffset < m_BlockSize)
+    {
+      destBuffer[bytesRead] = tmpBuffer[currOffset];
+      currOffset++; bytesRead++;
+      
+      // if at any time we're done, end reading
+      // TODO: do we need a null byte?
+      if(bytesRead == finalSize)
+      {
+        delete tmpBuffer;
+        return bytesRead;
+      }
+    }
+    
+    // end of cluster, set the offset back to zero
+    currOffset = 0;
+    
+    // grab the next cluster, check for EOF
+    clus = getClusterEntry(clus);
+    if(clus == 0)
+      break; // something broke!
+    
+    if(isEof(clus))
+      break;
+  }
+  
+  delete tmpBuffer;
+  
+  // if we reach here, something's gone wrong
   return 0;
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
@@ -390,18 +454,8 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     if(clus == 0)
       break; // something broke!
     
-    bool chainEnd = false;
-    if(m_Type == FAT12)
-      if(clus >= 0x0FF8)
-        chainEnd = true;
-    if(m_Type == FAT16)
-      if(clus >= 0xFFF8)
-        chainEnd = true;
-    if(m_Type == FAT32)
-      if(clus >= 0x0FFFFFF8)
-        chainEnd = true;
-    if(chainEnd)
-      break; // no further clusters
+    if(isEof(clus))
+      break;
     
     // continue by reading in this cluster
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
@@ -569,6 +623,22 @@ String FatFilesystem::convertFilenameFrom(String filename)
   
   return String(static_cast<const char*>(ret));
 }
+
+bool FatFilesystem::isEof(uint32_t cluster)
+{
+  bool chainEnd = false;
+  if(m_Type == FAT12)
+    if(cluster >= 0x0FF8)
+      chainEnd = true;
+  if(m_Type == FAT16)
+    if(cluster >= 0xFFF8)
+      chainEnd = true;
+  if(m_Type == FAT32)
+    if(cluster >= 0x0FFFFFF8)
+      chainEnd = true;
+  return chainEnd;
+}
+
 
 void FatFilesystem::truncate(File *pFile)
 {
