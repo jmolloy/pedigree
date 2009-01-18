@@ -16,7 +16,7 @@
 
 set(DRIVERS ata partition)
 if(X86_COMMON)
-  set(X86DRIVERS vbe)
+  set(X86DRIVERS vbe pci)
 endif(X86_COMMON)
 if(PPC_COMMON)
   set(PPCDRIVERS ata-specific)

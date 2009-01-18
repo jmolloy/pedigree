@@ -51,8 +51,8 @@ target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
                                       LINK_FLAGS "-r")
 
-set(CCPREFIX "${PEDIGREE_SOURCE_DIR}/compilers/dir/bin")
+get_filename_component(COMPILER_DIR ${C_COMPILER} PATH)
 
-add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CCPREFIX}/${STUB}-gcc" ${PEDIGREE_BINARY_DIR} "${CCPREFIX}/../lib/gcc/${STUB}/4.3.0/"
+add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CMAKE_C_COMPILER}" ${PEDIGREE_BINARY_DIR} "${C_COMPILER}/../lib/gcc/${STUB}/4.3.0/"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})

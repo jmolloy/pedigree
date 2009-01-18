@@ -17,6 +17,7 @@
 #include <panic.h>
 #include <LockGuard.h>
 #include <utilities/StaticString.h>
+#include <processor/Processor.h>
 #include "InterruptManager.h"
 #if defined(DEBUGGER)
   #include <Debugger.h>

@@ -18,7 +18,7 @@ struct vbeControllerInfo {
    unsigned char capabilities[4];
    unsigned short videomodes[2];           // isa vbeFarPtr
    short totalMemory;             // as # of 64KB blocks
-};
+} __attribute__((packed));
 
 struct vbeModeInfo {
   short attributes;
@@ -44,7 +44,7 @@ struct vbeModeInfo {
   int framebuffer;
   int offscreen;
   short sz_offscreen; // In KB.
-};
+} __attribute__((packed));
 
 
 void entry()
@@ -54,8 +54,8 @@ void entry()
   List<Display::ScreenMode*> modeList;
 
   // Allocate some space for the information structure and prepare for a BIOS call.
-  vbeControllerInfo *info = reinterpret_cast<vbeControllerInfo*> (Bios::instance().malloc(sizeof(vbeControllerInfo)));
-  vbeModeInfo *mode = reinterpret_cast<vbeModeInfo*> (Bios::instance().malloc(sizeof(vbeModeInfo)));
+  vbeControllerInfo *info = reinterpret_cast<vbeControllerInfo*> (Bios::instance().malloc(/*sizeof(vbeControllerInfo)*/256));
+  vbeModeInfo *mode = reinterpret_cast<vbeModeInfo*> (Bios::instance().malloc(/*sizeof(vbeModeInfo)*/256));
   strncpy (info->signature, "VBE2", 4);
   Bios::instance().setAx (0x4F00);
   Bios::instance().setEs (0x0000);
@@ -86,10 +86,10 @@ void entry()
 
     // Check if this is a graphics mode with LFB support.
     if ( (mode->attributes & 0x90) != 0x90 ) continue;
-  NOTICE("mode->memory_model: " << mode->memory_model);
+
     // Check if this is a packed pixel or direct colour mode.
     if (mode->memory_model != 4 && mode->memory_model != 6) continue;
-  NOTICE("Heir");
+
     // Add this pixel mode.
     Display::ScreenMode *pSm = new Display::ScreenMode;
     pSm->id = modes[i];
@@ -130,4 +130,4 @@ void exit()
 MODULE_NAME("vbe");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("TUI");
+MODULE_DEPENDS("TUI", "pci");

@@ -23,12 +23,13 @@
 /** Singleton Device instantiation. */
 Device Device::m_Root;
 
-Device::Device() : m_Addresses(), m_Children(), m_pParent(0), 
+Device::Device() : m_Addresses(), m_Children(), m_pParent(0),
 #ifdef OPENFIRMWARE
                    m_OfHandle(0),
 #endif
                    m_InterruptNumber(0),
-                   m_SpecificType()
+                   m_SpecificType(),
+                   m_ClassCode(0), m_SubclassCode(0), m_VendorId(0), m_DeviceId(0)
 {
 }
 
@@ -36,7 +37,9 @@ Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_Interr
 #ifdef OPENFIRMWARE
                              m_OfHandle(0),
 #endif
-                             m_SpecificType(p->m_SpecificType)
+                             m_SpecificType(p->m_SpecificType),
+                             m_ClassCode(p->m_ClassCode), m_SubclassCode(p->m_SubclassCode),
+                             m_VendorId(p->m_VendorId), m_DeviceId(p->m_DeviceId)
 {
   m_pParent = p->m_pParent;
   for (unsigned int i = 0; i < p->m_Children.count(); i++)
@@ -166,12 +169,12 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
     /// \todo getPageSize()
     uint32_t numPages = s / 4096;
     if (s%4096) numPages++;
-  
+
     MemoryMappedIo *io = new MemoryMappedIo(m_Name, a%4096, pad);
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (!physicalMemoryManager.allocateRegion(*io,
                                         numPages,
-                                        PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | 
+                                        PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
                                         PhysicalMemoryManager::force,
                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
                                         VirtualAddressSpace::WriteThrough,

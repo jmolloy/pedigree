@@ -72,10 +72,10 @@ public:
     Address(const Address &);
     Address &operator = (const Address &);
   };
-  
+
   Device();
   /// \warning This renders 'p' unusable - it deletes all its IoPorts and MemoryMappedIo's.
-  ///          This is because the new Device must have access to the IoBases of the old 
+  ///          This is because the new Device must have access to the IoBases of the old
   ///          device, and multiple instances of the same IoBase cannot be shared!
   Device(Device *p);
   virtual ~Device();
@@ -85,7 +85,7 @@ public:
   {
     return m_Root;
   }
-  
+
   /** Returns the device's parent */
   inline Device *getParent()
   {
@@ -99,13 +99,13 @@ public:
 
   /** Stores the device's name in str. */
   virtual void getName(String &str);
-  
+
   /** Returns the (abstract) type of the device. */
   virtual Type getType()
   {
     return Root;
   }
-  
+
   /** Returns the (specific) type of the device, in string form. */
   virtual String getSpecificType()
   {
@@ -116,7 +116,36 @@ public:
   {
     m_SpecificType = str;
   }
-  
+
+  /** PCI-specific identifiers - class code, subclass code, vendor and device ID **/
+  void setPciIdentifiers(uint8_t classCode, uint8_t subclassCode, uint16_t vendorId, uint16_t deviceId)
+  {
+    m_ClassCode = classCode;
+    m_SubclassCode = subclassCode;
+    m_VendorId = vendorId;
+    m_DeviceId = deviceId;
+  }
+  /** Returns the PCI class code. */
+  uint8_t getPciClassCode()
+  {
+    return m_ClassCode;
+  }
+  /** Returns the PCI subclass code. */
+  uint8_t getPciSubclassCode()
+  {
+    return m_SubclassCode;
+  }
+  /** Returns the PCI vendor ID. */
+  uint16_t getPciVendorId()
+  {
+    return m_VendorId;
+  }
+  /** Returns the PCI device ID. */
+  uint16_t getPciDeviceId()
+  {
+    return m_DeviceId;
+  }
+
   /** Dumps a textual representation of the device into the given string. */
   virtual void dump(String &str)
   {
@@ -128,13 +157,13 @@ public:
   {
     return m_Addresses;
   }
-  
+
   /** Returns the interrupt number of the device. */
   virtual uintptr_t getInterruptNumber()
   {
     return m_InterruptNumber;
   }
-  
+
   /** Sets the interrupt number of the device. */
   virtual void setInterruptNumber(uintptr_t n)
   {
@@ -178,7 +207,7 @@ private:
   /** Assignment operator.
       \note NOT implemented. */
   void operator=(const Device &);
-  
+
   /** Destroys all IoBases in this class. Called from the constructor Device(Device*). */
   void removeIoMappings();
 
@@ -199,6 +228,14 @@ protected:
   /** OpenFirmware device handle. */
   OFHandle m_OfHandle;
 #endif
+  /** PCI Device class */
+  uint8_t m_ClassCode;
+  /** PCI subclass */
+  uint8_t m_SubclassCode;
+  /** PCI Vendor ID */
+  uint16_t m_VendorId;
+  /** PCI Device ID */
+  uint16_t m_DeviceId;
 };
 
 #endif
