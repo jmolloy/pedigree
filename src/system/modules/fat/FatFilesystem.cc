@@ -159,17 +159,17 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
   // TODO: read in the FAT32 FSInfo structure
 
-//   File init = VFS::instance().find(String("root:/testing.txt"));
-//   if (!init.isValid())
-//   {
-//     FATAL("OH FAIL!");
-//   }
-//   else
-//   {
-//     uint8_t *buffer = new uint8_t[init.getSize()];
-//     init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
-//     WARNING("Read in " << reinterpret_cast<char*>(buffer) << "!");
-//   }
+   //File init = VFS::instance().find(String("root:/testing.txt"));
+   //if (!init.isValid())
+   //{
+   //  FATAL("OH FAIL!");
+   //}
+   //else
+   //{
+   //  uint8_t *buffer = new uint8_t[init.getSize()];
+   //  init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
+   //  WARNING("Read in " << reinterpret_cast<char*>(buffer) << "!");
+   //}
 
   return true;
 }
@@ -320,6 +320,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   uint64_t finalSize = size;
   if(static_cast<size_t>(endOffset) > pFile->getSize())
   {
+    WARNING("FAT: offset + size is larger than the file!");
     finalSize = pFile->getSize() - location;
   }
 
@@ -328,9 +329,12 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   uint32_t firstOffset = location % (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec); // the offset within the cluster specified above to start reading from
 
   // tracking info
+  
   uint64_t bytesRead = 0;
   uint64_t currOffset = firstOffset;
-  clus += clusOffset;
+  //clus += clusOffset;
+  
+  // WARNING("clusOffset = " << clusOffset);
 
   // buffers
   uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
@@ -352,6 +356,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
       // TODO: do we need a null byte?
       if(bytesRead == finalSize)
       {
+        WARNING("Bytes read: " << bytesRead << ". Final size: " << finalSize << ".");
         delete tmpBuffer;
         return bytesRead;
       }
@@ -364,6 +369,8 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     clus = getClusterEntry(clus);
     if(clus == 0)
       break; // something broke!
+    
+    WARNING("New cluster entry is " << clus << ".");
 
     if(isEof(clus))
       break;
@@ -402,6 +409,13 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
       return File();
 
     // FAT12/16: read in the entire root directory, because clus == 0 (which would give an invalid sector)
+    
+    // hack to make lack of root directory containing "." and ".." entries invisible
+    if(n == 1)
+      return File(String("."), 0, 0, 0, 0, false, true, this, 0);
+    if(n == 2)
+      return File(String(".."), 0, 0, 0, 0, false, true, this, 0);
+    n += 2;
 
     uint32_t sec = m_RootDir.sector;
 
@@ -412,6 +426,17 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
   }
   else
   {
+    // root directory?
+    if(clus == m_Superblock32.BPB_RootClus)
+    {
+      // hack to make lack of root directory containing "." and ".." entries invisible
+      if(n == 1)
+        return File(String("."), 0, 0, 0, 0, false, true, this, 0);
+      if(n == 2)
+        return File(String(".."), 0, 0, 0, 0, false, true, this, 0);
+      n += 2;
+    }
+    
     // Read in the first cluster of the directory
     buffer = new uint8_t[m_BlockSize];
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
@@ -482,14 +507,13 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
       if(j == n)
       {
         uint8_t attr = ent->DIR_Attr;
-        ent->DIR_Attr = 0;
         uint32_t fileCluster = ent->DIR_FstClusLO | (ent->DIR_FstClusHI << 16);
         String filename;
         if(nextIsEnd)
           filename = static_cast<const char*>(longFileName); // use the long filename rather than the short one
         else
         {
-          WARNING("Using short filename...");
+          WARNING("FAT: Using short filename rather than long filename");
           filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
         File ret(filename, 0, 0, 0, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
@@ -566,6 +590,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
 
   uint32_t fatSecNum = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
   uint32_t fatEntOffset = fatOffset % m_Superblock.BPB_BytsPerSec;
+  WARNING("fatSecNum = " << fatSecNum << " and fatEntOffset = " << fatEntOffset << ".");
 
   uint8_t secCount = 1;
   if(m_Type == FAT12)
@@ -576,30 +601,32 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
   readSectorBlock(fatSecNum, bufSize, reinterpret_cast<uintptr_t>(buffer));
 
   uint32_t ret = 0;
+  uint16_t tmp = 0;
   switch(m_Type)
   {
     case FAT12:
-      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+      tmp = static_cast<uint32_t>(*(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset])));
 
       // FAT12 entries are 1.5 bytes
       if(cluster & 0x1)
-        ret >>= 4;
+        tmp >>= 4;
       else
-        ret &= 0x0FFF;
-      ret &= 0xFFFF;
+        tmp &= 0x0FFF;
+      tmp &= 0xFFFF;
+      ret = tmp;
 
       break;
 
     case FAT16:
 
-      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+      ret = static_cast<uint32_t>(*(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset])));
       ret &= 0xFFFF;
 
       break;
 
     case FAT32:
 
-      ret = reinterpret_cast<unsigned int>(&buffer[fatEntOffset]);
+      ret = *(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset]));
 
       break;
   }

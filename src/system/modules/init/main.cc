@@ -38,9 +38,22 @@ static bool probeDisk(Disk *pDisk)
 {
   String alias; // Null - gets assigned by the filesystem.
   if (VFS::instance().mount(pDisk, alias))
-  {
-    NOTICE("Mounted " << alias << " successfully as root.");
-    VFS::instance().addAlias(alias, String("root"));
+  {    
+    // search for the root specifier
+    NormalStaticString s;
+    s += alias;
+    s += ":/.pedigree-root";
+    
+    File f = VFS::instance().find(String(static_cast<const char*>(s)));
+    if(f.isValid())
+    {
+      NOTICE("Mounted " << alias << " successfully as root.");
+      VFS::instance().addAlias(alias, String("root"));
+    }
+    else
+    {
+      NOTICE("Mounted " << alias << ".");
+    }
     return false;
   }
   return false;
