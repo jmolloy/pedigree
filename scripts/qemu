@@ -1,3 +1,3 @@
 #!/bin/bash
 
-qemu-system-x86_64 -fda floppy.img -hda hdd_16h_63spt_100c.img -boot a
+qemu-system-x86_64 -fda floppy.img -hda hdd_16h_63spt_100c.img -hdb hdd_16h_63spt_100c_fat16.img -boot a

@@ -22,6 +22,14 @@
 class VbeDisplay : public Display
 {
 public:
+  /** VBE versions, in order. */
+  enum VbeVersion
+  {
+    Vbe1_2,
+    Vbe2_0,
+    Vbe3_0
+  };
+
   VbeDisplay();
   VbeDisplay(Device *p) :
     Display(p)
@@ -40,14 +48,6 @@ public:
   virtual bool setScreenMode(Display::ScreenMode sm);
 
 private:
-
-  /** VBE versions, in order. */
-  enum VbeVersion
-  {
-    Vbe1_2,
-    Vbe2_0,
-    Vbe3_0
-  };
 
   /** VBE version. */
   VbeVersion m_VbeVersion;

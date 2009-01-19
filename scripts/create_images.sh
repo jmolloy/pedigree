@@ -70,6 +70,9 @@ if which losetup >/dev/null; then
   sudo mkdir -p $MOUNTPT/libraries
   sudo mkdir -p $MOUNTPT/modules
 
+  # This is a root filesystem.
+  sudo touch $MOUNTPT/.pedigree-root
+
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`

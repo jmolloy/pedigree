@@ -6,6 +6,7 @@
 #include <utilities/List.h>
 #include <machine/Machine.h>
 #include <machine/Display.h>
+#include "VbeDisplay.h"
 
 #include <machine/x86_common/Bios.h>
 
@@ -46,6 +47,27 @@ struct vbeModeInfo {
   short sz_offscreen; // In KB.
 } __attribute__((packed));
 
+Device *searchNode(Device *pDev, uintptr_t fbAddr)
+{
+  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+  {
+    Device *pChild = pDev->getChild(i);
+
+    // Get its addresses, and search for fbAddr.
+    for (unsigned int j = 0; j < pChild->addresses().count(); j++)
+    {
+      /// \todo Problem with String::operator== - fix.
+      if (pChild->addresses()[j]->m_Address == fbAddr)
+      {
+        return pChild;
+      }
+    }
+
+    // Recurse.
+    return searchNode(pChild, fbAddr);
+  }
+  return 0;
+}
 
 void entry()
 {
@@ -70,6 +92,25 @@ void entry()
     Bios::instance().free(reinterpret_cast<uintptr_t>(info));
     Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
     return;
+  }
+
+  VbeDisplay::VbeVersion vbeVersion;
+  switch (info->version)
+  {
+    case 0x0102:
+      vbeVersion = VbeDisplay::Vbe1_2;
+      break;
+    case 0x0200:
+      vbeVersion = VbeDisplay::Vbe2_0;
+      break;
+    case 0x0300:
+      vbeVersion = VbeDisplay::Vbe3_0;
+      break;
+    default:
+      ERROR("VBE: Unrecognised VESA version: " << Hex << info->version);
+      Bios::instance().free(reinterpret_cast<uintptr_t>(info));
+      Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
+      return;
   }
 
   uint16_t *modes = reinterpret_cast<uint16_t*> (REALMODE_PTR(info->videomodes));
@@ -121,6 +162,9 @@ void entry()
            pSm->framebuffer);
   }
   NOTICE("VESA: End of compatible display modes.");
+
+  // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
+  //Device *pDevice = searchNode(&Device::root());
 }
 
 void exit()
