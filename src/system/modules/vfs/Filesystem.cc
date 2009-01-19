@@ -67,7 +67,8 @@ File Filesystem::find(String path)
          f.isValid();
          f = curDir.nextChild())
     {
-      if (!strcmp(pathSegment, static_cast<const char*> (f.getName())))
+      String s = f.getName();
+      if (!strcmp(pathSegment, static_cast<const char*> (s)))
       {
         bFound = true;
         curDir = f;

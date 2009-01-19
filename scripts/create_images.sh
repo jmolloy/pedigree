@@ -106,6 +106,9 @@ if which losetup >/dev/null; then
   fi
 
   if which VBoxManage >/dev/null; then
+    if [ -f $SRCDIR/hdd_16h_63_spt_100c.vdi ]; then
+      rm $SRCDIR/hdd_16h_63_spt_100c.vdi
+    fi
     VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63_spt_100c.vdi
   fi
 

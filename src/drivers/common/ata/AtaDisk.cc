@@ -40,7 +40,7 @@ bool AtaDisk::initialise()
 
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  
+
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
   // Commented out - unused variable.
@@ -48,20 +48,20 @@ bool AtaDisk::initialise()
 
   // Drive spin-up
   commandRegs->write8(0x00, 6);
-  
+
   //
   // Start IDENTIFY command.
   //
-  
+
   // Send drive select.
   commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
   // Read the status 5 times as a delay for the drive to go about its business.
   for (int i = 0; i < 5; i++)
     commandRegs->read8(7);
-  
+
   // Disable IRQs, for the moment.
 //   controlRegs->write8(0x01, 6);
-  
+
   // Send IDENTIFY.
   uint8_t status = commandRegs->read8(7);
   commandRegs->write8(0xEC, 7);
@@ -76,7 +76,7 @@ bool AtaDisk::initialise()
   // Poll until BSY is clear and either ERR or DRQ are set
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
-  
+
   // If ERR was set we had an err0r.
   if (status & 0x1)
   {
@@ -89,7 +89,7 @@ bool AtaDisk::initialise()
   {
     m_pIdent[i] = commandRegs->read16(0);
   }
-  
+
   status = commandRegs->read8(7);
 
   // Interpret the data.
@@ -114,7 +114,7 @@ bool AtaDisk::initialise()
     m_pName[i] = '\0';
   }
   m_pName[40] = '\0';
-  
+
 
   // Get the serial number.
   for (int i = 0; i < 10; i++)
@@ -163,7 +163,7 @@ bool AtaDisk::initialise()
   {
     m_SupportsLBA48 = /*true*/ false;
   }
-  
+
   NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
   return true;
 }
@@ -190,22 +190,22 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     panic("AtaDisk: read request not on a sector boundary!");
   if (nBytes % 512)
     panic("AtaDisk: read request length not a multiple of 512!");
-  ERROR("lba48: " << m_SupportsLBA48);  
+
   /// \todo DMA?
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  
+
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
   IoBase *controlRegs = pParent->m_pControlRegs;
-  
+
   // Get the buffer in pointer form.
   uint16_t *pTarget = reinterpret_cast<uint16_t*> (buffer);
-  
+
   // How many sectors do we need to read?
   uint32_t nSectors = nBytes / 512;
   if (nBytes%512) nSectors++;
-  
+
   // Send drive select.
   if (m_SupportsLBA48)
     commandRegs->write8( (m_IsMaster)?0x40:0x50, 6 );
@@ -225,7 +225,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     // Send out sector count.
     uint8_t nSectorsToRead = (nSectors>255) ? 255 : nSectors;
     nSectors -= nSectorsToRead;
-    
+
     // TODO: LBA28, LBA48 or CHS here.
     if (m_SupportsLBA48)
       setupLBA48(location, nSectorsToRead);
@@ -237,13 +237,13 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
       }
       setupLBA28(location, nSectorsToRead);
     }
-    
+
     // Enable disk interrupts
     controlRegs->write8(0x08, 6);
-    
+
     // Make sure the IrqReceived mutex is locked.
     m_IrqReceived.tryAcquire();
-    
+
     /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
     // Enable IRQs.
@@ -259,7 +259,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
       // Send command "read sectors with retry"
       commandRegs->write8(0x20, 7);
     }
-    
+
     // Acquire the 'outstanding IRQ' mutex.
     m_IrqReceived.acquire();
 
@@ -292,16 +292,16 @@ void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
 {
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  
+
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
   // Unused variable.
   //IoBase *controlRegs = pParent->m_pControlRegs;
-  
+
   commandRegs->write8(static_cast<uint8_t>(nSectors&0xFF), 2);
 
   // Get the sector number of the address.
-  n /= 512; 
+  n /= 512;
 
   uint8_t sector = static_cast<uint8_t> (n&0xFF);
   uint8_t cLow = static_cast<uint8_t> ((n>>8) & 0xFF);
@@ -319,15 +319,15 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
 {
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  
+
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
   // Unused variable.
   //IoBase *controlRegs = pParent->m_pControlRegs;
-  
+
   // Get the sector number of the address.
-  n /= 512; 
-  
+  n /= 512;
+
   uint8_t lba1 = static_cast<uint8_t> (n&0xFF);
   uint8_t lba2 = static_cast<uint8_t> ((n>>8) & 0xFF);
   uint8_t lba3 = static_cast<uint8_t> ((n>>16) & 0xFF);
