@@ -111,16 +111,16 @@ String VFS::getUniqueAlias(String alias)
 
 bool VFS::aliasExists(String alias)
 {
-  return false;
   for (List<Alias*>::Iterator it = m_Aliases.begin();
        it != m_Aliases.end();
        it++)
   {
     if (alias == (*it)->alias)
     {
-      return false;
+      return true; // alias exists!
     }
   }
+  return false; // doesn't exist
 }
 
 void VFS::removeAlias(String alias)
