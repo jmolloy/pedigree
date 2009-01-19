@@ -42,7 +42,7 @@ bool isPowerOf2(uint32_t n)
 }
 
 FatFilesystem::FatFilesystem() :
-  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32() //, m_pGroupDescriptors(0), m_BlockSize(0)
+  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_Type(FAT12), m_DataAreaStart(0), m_RootDirCount(0), m_RootDir(), m_BlockSize(0)
 {
 }
 
@@ -158,26 +158,22 @@ bool FatFilesystem::initialise(Disk *pDisk)
   m_BlockSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
   
   // TODO: read in the FAT32 FSInfo structure
-    
-  File rootdir = getRoot();
-  int i;
-  for( i = 0; ; i++ )
-  {
-    File a = getDirectoryChild(&rootdir, i);
-    if(!a.isValid())
-      break;
-    ERROR("FAT: Entry " << i << " is " << a.getName());
-  }
   
-  ERROR("Testing: " << convertFilenameTo(String("Test.txt")));
+  File init = VFS::instance().find(String("root:/testing.txt"));
+  if (!init.isValid())
+  {
+    FATAL("OH FAIL!");
+  }
+  else
+  {
+    uint8_t *buffer = new uint8_t[init.getSize()];
+    init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
+    WARNING("Read in " << reinterpret_cast<char*>(buffer) << "!");
+  }
   
   return true;
 }
-  /** Converts a string to 8.3 format */
-  bool convertFilenameTo(String filename);
-  
-  /** Converts a strign from 8.3 format */
-  String convertFilenameFrom(String filename);
+
 Filesystem *FatFilesystem::probe(Disk *pDisk)
 {
   FatFilesystem *pFs = new FatFilesystem();
@@ -330,11 +326,9 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   // finalSize holds the total amount of data to read, now find the cluster and sector offsets
   uint32_t clusOffset = location / (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec);
   uint32_t firstOffset = location % (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec); // the offset within the cluster specified above to start reading from
-  uint32_t secOffset = location / m_Superblock.BPB_BytsPerSec;
   
   // tracking info
   uint64_t bytesRead = 0;
-  uint32_t currSec = getSectorNumber(clus) + secOffset;
   uint64_t currOffset = firstOffset;
   clus += clusOffset;
   
@@ -422,6 +416,13 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     buffer = new uint8_t[m_BlockSize];
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
   }
+
+  // moved this out of the main loop in case of a long filename set crossing a cluster
+  // boundary  
+  NormalStaticString longFileName;
+  longFileName.clear();
+  int32_t longFileNameIndex = 0;
+  bool nextIsEnd = false; // next entry is the short filename entry for this long filename
   
   // was initially separated for FAT12/16 and FAT32, but I hate redundancy (if I can figure out how to make
   // this code work for the Volume Label as well, I'll be a very happy man)
@@ -429,11 +430,6 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
   bool endOfDir = false;
   while(true)
   {
-  
-    NormalStaticString longFileName;
-    longFileName.clear();
-    int32_t longFileNameIndex = 0;
-    bool nextIsEnd = false; // next entry is the short filename entry for this long filename
   
     for(i = 0, j = 0; i < sz; i += sizeof(Dir), j++)
     {
@@ -470,7 +466,10 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           
         // will be zero if the last entry
         if((longFileNameIndex == 0) || (--longFileNameIndex <= 1))
+        {
+          longFileName += '\0';
           nextIsEnd = true;
+        }
         
         j--; // long filename entries don't count in the list
 
@@ -479,13 +478,18 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
       
       if(j == n)
       {
+        uint8_t attr = ent->DIR_Attr;
+        ent->DIR_Attr = 0;
         uint32_t fileCluster = ent->DIR_FstClusLO | (ent->DIR_FstClusHI << 16);
         String filename;
         if(nextIsEnd)
           filename = static_cast<const char*>(longFileName); // use the long filename rather than the short one
         else
+        {
+          WARNING("Using short filename...");
           filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
-        File ret(filename, 0, 0, 0, fileCluster, false, (ent->DIR_Attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
+        }
+        File ret(filename, 0, 0, 0, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
         delete buffer;
         return ret;
       }
@@ -540,9 +544,7 @@ uint32_t FatFilesystem::getSectorNumber(uint32_t cluster)
 }
 
 uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
-{
-  uint32_t fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
-  
+{  
   uint32_t fatOffset = 0;
   switch(m_Type)
   {
@@ -623,7 +625,7 @@ char toLower(char c)
 String FatFilesystem::convertFilenameTo(String filename)
 {
   NormalStaticString ret;
-  int i;
+  size_t i;
   for(i = 0; i < 11; i++)
   {
     if(i >= filename.length())
@@ -649,7 +651,7 @@ String FatFilesystem::convertFilenameFrom(String filename)
 {
   NormalStaticString ret;
   
-  int i;
+  size_t i;
   for(i = 0; i < 8; i++)
   {
     if(i >= filename.length())
@@ -699,18 +701,22 @@ void FatFilesystem::truncate(File *pFile)
 
 bool FatFilesystem::createFile(File parent, String filename)
 {
+  return false;
 }
 
 bool FatFilesystem::createDirectory(File parent, String filename)
 {
+  return false;
 }
 
 bool FatFilesystem::createSymlink(File parent, String filename, String value)
 {
+  return false;
 }
 
 bool FatFilesystem::remove(File parent, File file)
 {
+  return false;
 }
 
 void initFat()
