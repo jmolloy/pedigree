@@ -56,6 +56,12 @@ public:
    *\param pAlias The alias to add. */
   void addAlias(Filesystem *pFs, String alias);
   void addAlias(String oldAlias, String newAlias);
+  
+  /** Gets a unique alias for a filesystem. */
+  String getUniqueAlias(String alias);
+  
+  /** Does a given alias exist? */
+  bool aliasExists(String alias);
 
   /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
    *  the filesystem is destroyed.

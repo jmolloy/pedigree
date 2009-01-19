@@ -49,6 +49,7 @@ bool VFS::mount(Disk *pDisk, String &alias)
       {
         alias = pFs->getVolumeLabel();
       }
+      alias = getUniqueAlias(alias);
       addAlias(pFs, alias);
       return true;
     }
@@ -80,6 +81,44 @@ void VFS::addAlias(String oldAlias, String newAlias)
       pA->fs = pFs;
       m_Aliases.pushBack(pA);
       return;
+    }
+  }
+}
+
+String VFS::getUniqueAlias(String alias)
+{
+  if(!aliasExists(alias))
+    return alias;
+  
+  // <alias>-n is how we keep them unique
+  // negative numbers already have a dash
+  int32_t index = -1;
+  while(true)
+  {
+    NormalStaticString tmpAlias;
+    tmpAlias += static_cast<const char*>(alias);
+    tmpAlias.append(index);
+    
+    String s = String(static_cast<const char*>(tmpAlias));
+    if(!aliasExists(s))
+      return s;
+    index--;
+  }
+  
+  return String();
+}
+
+
+bool VFS::aliasExists(String alias)
+{
+  return false;
+  for (List<Alias*>::Iterator it = m_Aliases.begin();
+       it != m_Aliases.end();
+       it++)
+  {
+    if (alias == (*it)->alias)
+    {
+      return false;
     }
   }
 }
