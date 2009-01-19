@@ -152,19 +152,33 @@ void entry()
   Bios::instance().free(reinterpret_cast<uintptr_t>(info));
   Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
 
-  NOTICE("VESA: Detected compatible display modes:");
+  NOTICE("VBE: Detected compatible display modes:");
+  uintptr_t fbAddr;
   for (List<Display::ScreenMode*>::Iterator it = modeList.begin();
        it != modeList.end();
        it++)
   {
     Display::ScreenMode *pSm = *it;
+    fbAddr = pSm->framebuffer;
     NOTICE(Hex << pSm->id << "\t " << Dec << pSm->width << "x" << pSm->height << "x" << pSm->pf.nBpp << "\t " << Hex <<
            pSm->framebuffer);
   }
-  NOTICE("VESA: End of compatible display modes.");
+  NOTICE("VBE: End of compatible display modes.");
 
   // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
-  //Device *pDevice = searchNode(&Device::root());
+  Device *pDevice = searchNode(&Device::root(), fbAddr);
+  if (!pDevice)
+  {
+    ERROR("VBE: Device mapped to framebuffer address '" << Hex << fbAddr << "' not found.");
+    return;
+  }
+
+//   // Create a new VbeDisplay device node.
+//   VbeDisplay *pDisplay = new VbeDisplay(pDev);
+//
+//   // Replace pDev with pDisplay.
+//   pController->setParent(pDevice->getParent());
+//   pDev->getParent()->replaceChild(pDevice, pController);
 }
 
 void exit()

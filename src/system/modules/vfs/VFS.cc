@@ -89,7 +89,7 @@ String VFS::getUniqueAlias(String alias)
 {
   if(!aliasExists(alias))
     return alias;
-  
+
   // <alias>-n is how we keep them unique
   // negative numbers already have a dash
   int32_t index = -1;
@@ -98,13 +98,13 @@ String VFS::getUniqueAlias(String alias)
     NormalStaticString tmpAlias;
     tmpAlias += static_cast<const char*>(alias);
     tmpAlias.append(index);
-    
+
     String s = String(static_cast<const char*>(tmpAlias));
     if(!aliasExists(s))
       return s;
     index--;
   }
-  
+
   return String();
 }
 
@@ -115,7 +115,7 @@ bool VFS::aliasExists(String alias)
        it != m_Aliases.end();
        it++)
   {
-    if (alias == (*it)->alias)
+    if (!strcmp(static_cast<const char*>(alias), static_cast<const char *>((*it)->alias)))
     {
       return true; // alias exists!
     }
@@ -199,9 +199,9 @@ File VFS::find(String path)
     return File();
   }
   File a = pFs->find(String(cPath));
-  
+
   return  a;
-  
+
 }
 
 void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
@@ -236,7 +236,7 @@ bool VFS::createFile(String path)
   }
   return pFs->createFile(String(cPath));
 }
-  
+
 bool VFS::createDirectory(String path)
 {
   // We expect a colon. If we don't find it, we cry loudly.
