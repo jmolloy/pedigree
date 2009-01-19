@@ -295,10 +295,14 @@ String FatFilesystem::getVolumeLabel()
 
 uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
+  
+  WARNING("FAT: reading a file :D");
 
   // Sanity check.
   if (pFile->isDirectory())
     return 0;
+  
+  WARNING("FAT: 1");
 
   // the inode of the file is the first cluster
   uint32_t clus = pFile->getInode();
@@ -307,10 +311,13 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     return 0; // can't do it
   }
   
+  WARNING("FAT: 2");
+  
   // validity checking
   if(static_cast<size_t>(location) > pFile->getSize())
   {
     ERROR("FAT: Attempt to read on file " << pFile->getName() << " with offset past EOF.");
+    return 0;
   }
   
   uint64_t endOffset = location + size;
@@ -423,23 +430,69 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
   while(true)
   {
   
+    NormalStaticString longFileName;
+    longFileName.clear();
+    int32_t longFileNameIndex = 0;
+    bool nextIsEnd = false; // next entry is the short filename entry for this long filename
+  
     for(i = 0, j = 0; i < sz; i += sizeof(Dir), j++)
     {
       Dir* ent = reinterpret_cast<Dir*>(&buffer[i]);
       
-      if(ent->DIR_Name[0] == 0)
+      uint8_t firstChar = ent->DIR_Name[0];
+      if(firstChar == 0)
       {
         endOfDir = true;
         break;
       }
       
+      if(firstChar == 0xE5)
+      {
+        // deleted file
+        continue;
+      }
+      
+      if((ent->DIR_Attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME)
+      {
+        if(firstChar & 0x40) // first LFN (ie, masked with 0x40 to state LAST_LONG_ENTRY
+          longFileNameIndex = firstChar ^ 0x40;
+        
+        char* entBuffer = reinterpret_cast<char*>(&buffer[i]);
+        
+        // probably a more efficient way of doing this somehow...
+        int a;
+        for(a = 1; a < 11; a += 2)
+          longFileName += entBuffer[a];
+        for(a = 14; a < 26; a += 2)
+          longFileName += entBuffer[a];
+        for(a = 28; a < 32; a += 2)
+          longFileName += entBuffer[a];
+          
+        // will be zero if the last entry
+        if((longFileNameIndex == 0) || (--longFileNameIndex <= 1))
+          nextIsEnd = true;
+        
+        j--; // long filename entries don't count in the list
+
+        continue;
+      }
+      
       if(j == n)
       {
         uint32_t fileCluster = ent->DIR_FstClusLO | (ent->DIR_FstClusHI << 16);
-        String filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
-        File ret(filename, 0, 0, 0, fileCluster, false, ent->DIR_Attr & ATTR_DIRECTORY, this, ent->DIR_FileSize);
+        String filename;
+        if(nextIsEnd)
+          filename = static_cast<const char*>(longFileName); // use the long filename rather than the short one
+        else
+          filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
+        File ret(filename, 0, 0, 0, fileCluster, false, (ent->DIR_Attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
         delete buffer;
         return ret;
+      }
+      else
+      {
+        longFileName.clear();
+        nextIsEnd = false;
       }
     }
     
@@ -496,7 +549,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
     case FAT12:
       fatOffset = cluster + (cluster / 2);
       break;
-    
+      
     case FAT16:
       fatOffset = cluster * 2;
       break;

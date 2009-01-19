@@ -27,6 +27,9 @@
 #define ATTR_DIRECTORY  0x10
 #define ATTR_ARCHIVE    0x20
 
+#define ATTR_LONG_NAME      ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID )
+#define ATTR_LONG_NAME_MASK ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE )
+
 /** This class provides an implementation of the FAT filesystem. */
 class FatFilesystem : public Filesystem
 {

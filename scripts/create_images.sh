@@ -59,9 +59,30 @@ if which losetup >/dev/null; then
   # Unmount floppy.
   fini
 
-  # Mount HDD.
+  # Mount HDD (ext2)
   cp $SRCDIR/../images/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63spt_100c.img
   IMG=$HDIMG
+  OFF=$HDOFF
+  init
+
+  # Create required directories.
+  sudo mkdir -p $MOUNTPT/applications
+  sudo mkdir -p $MOUNTPT/libraries
+  sudo mkdir -p $MOUNTPT/modules
+
+  # Transfer files.
+  for f in $HDFILES; do
+    BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
+    sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
+  done
+  sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
+  sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
+
+  fini;
+
+  # Mount HDD (fat16)
+  cp $SRCDIR/../images/hdd_16h_63spt_100c_fat16.img $SRCDIR/hdd_16h_63spt_100c_fat16.img
+  IMG=hdd_16h_63spt_100c_fat16.img
   OFF=$HDOFF
   init
 
