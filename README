@@ -8,3 +8,13 @@ cmake -DCROSS=/path/to/compilers/bin/i686-elf- ..
 You should give cmake the path to gcc in -DCROSS, ending in '-' so it can add 'gcc', 'g++' or 'as' to the end of the stub and get a valid compiler. It'll work out from the compiler chosen what default options and what architecture to compile.
 
 This must be a full path. It cannot contain bash expansions such as environment variables or '~'.
+
+== CYGWIN USERS ==
+
+CMake needs to be told that you're cross-compiling using a compiler that won't target Win32. You still pass -DCROSS, but you also need to tell it to use the toolchain file:
+
+mkdir build
+cd build
+cmake -DCROSS=/path/to/compilers/bin/i686-elf- -DCMAKE_TOOLCHAIN_FILE=../CygwinToolchain.cmake ..
+
+This forces CMake to use the cross compilers, and uses an unknown target (you WILL see a notification about it) to remove system-specific flags - especially --out-implib.

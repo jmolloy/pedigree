@@ -292,13 +292,9 @@ String FatFilesystem::getVolumeLabel()
 uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
 
-  WARNING("FAT: reading a file :D");
-
   // Sanity check.
   if (pFile->isDirectory())
     return 0;
-
-  WARNING("FAT: 1");
 
   // the inode of the file is the first cluster
   uint32_t clus = pFile->getInode();
@@ -306,8 +302,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   {
     return 0; // can't do it
   }
-
-  WARNING("FAT: 2");
 
   // validity checking
   if(static_cast<size_t>(location) > pFile->getSize())
@@ -332,9 +326,13 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   
   uint64_t bytesRead = 0;
   uint64_t currOffset = firstOffset;
-  //clus += clusOffset;
-  
-  // WARNING("clusOffset = " << clusOffset);
+  while(clusOffset)
+  {
+    clus = getClusterEntry(clus);
+    if(clus == 0 || isEof(clus))
+      return 0; // can't do it
+    clusOffset--;
+  }
 
   // buffers
   uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
@@ -356,7 +354,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
       // TODO: do we need a null byte?
       if(bytesRead == finalSize)
       {
-        WARNING("Bytes read: " << bytesRead << ". Final size: " << finalSize << ".");
         delete tmpBuffer;
         return bytesRead;
       }
@@ -369,8 +366,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     clus = getClusterEntry(clus);
     if(clus == 0)
       break; // something broke!
-    
-    WARNING("New cluster entry is " << clus << ".");
 
     if(isEof(clus))
       break;
@@ -491,7 +486,11 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           tmp[b++]= entBuffer[a];
 
         tmp[b] = '\0';
-        longFileName += tmp;
+        
+        // hack to make long filenames work
+        NormalStaticString latterString = longFileName;
+        longFileName = tmp;
+        longFileName += latterString;
 
         // will be zero if the last entry
         if((longFileNameIndex == 0) || (--longFileNameIndex <= 1))

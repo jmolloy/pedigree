@@ -34,6 +34,7 @@ init() {
 }
 
 fini() {
+  if which losetup >/dev/null 2>&1; then
     DEV=`sudo losetup -a | grep $IMG | cut -f1 -d:`
     if test "x$DEV" = x ; then
         return 0
@@ -42,10 +43,11 @@ fini() {
         sudo umount $DEV
     }
     sudo losetup -d $DEV
+  fi
 }
 trap fini EXIT
 
-if which losetup >/dev/null; then
+if which losetup >/dev/null 2>&1; then
   mkdir -p $MOUNTPT
 
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
@@ -114,6 +116,34 @@ if which losetup >/dev/null; then
     fi
     VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63_spt_100c.vdi
   fi
+
+elif which mcopy >/dev/null 2>&1; then
+
+  cp ../images/floppy_fat.img ./floppy.img
+  mcopy -Do -i ./floppy.img src/system/kernel/kernel ::/
+  mcopy -Do -i ./floppy.img ./initrd.tar ::/
+
+  cp ../images/hdd_16h_63spt_100c.img .
+  cp ../images/hdd_16h_63spt_100c_fat16.img .
+  
+  ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
+  
+  touch ./.pedigree-root
+  
+  mmd -Do applications libraries modules
+  
+  # make this the root disk
+  mcopy -Do ./.pedigree-root C:/
+  
+  rm ./.pedigree-root
+  
+  for f in $HDFILES; do
+    BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
+    mcopy -Do $SRCDIR/src/user/$f/$BINARY C:/$f
+  done
+  
+  mcopy -Do $SRCDIR/libc.so C:/libraries
+  mcopy -Do $SRCDIR/libm.so C:/libraries
 
 else
   echo Not creating disk images because \`losetup\' could not be found.
