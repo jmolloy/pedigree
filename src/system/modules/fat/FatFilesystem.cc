@@ -512,7 +512,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           filename = static_cast<const char*>(longFileName); // use the long filename rather than the short one
         else
         {
-          WARNING("FAT: Using short filename rather than long filename");
+          // WARNING("FAT: Using short filename rather than long filename");
           filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
         File ret(filename, 0, 0, 0, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
@@ -589,7 +589,6 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
 
   uint32_t fatSecNum = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
   uint32_t fatEntOffset = fatOffset % m_Superblock.BPB_BytsPerSec;
-  WARNING("fatSecNum = " << fatSecNum << " and fatEntOffset = " << fatEntOffset << ".");
 
   uint8_t secCount = 1;
   if(m_Type == FAT12)
