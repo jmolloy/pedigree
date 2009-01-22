@@ -18,6 +18,7 @@
 
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
+#include <utilities/Cache.h>
 
 // FAT Attributes
 #define ATTR_READONLY   0x01
@@ -187,6 +188,9 @@ protected:
 
   /** Size of a block (in this case, a cluster) */
   uint32_t m_BlockSize;
+  
+  /** FAT cache */
+  Cache m_FatCache;
 };
 
 #endif

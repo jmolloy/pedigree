@@ -42,7 +42,7 @@ bool isPowerOf2(uint32_t n)
 }
 
 FatFilesystem::FatFilesystem() :
-  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_Type(FAT12), m_DataAreaStart(0), m_RootDirCount(0), m_RootDir(), m_BlockSize(0)
+  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_Type(FAT12), m_DataAreaStart(0), m_RootDirCount(0), m_RootDir(), m_BlockSize(0), m_FatCache()
 {
 }
 
@@ -141,7 +141,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
     case FAT12:
     case FAT16:
 
-      m_RootDir.sector = m_Superblock.BPB_RsvdSecCnt + (m_Superblock.BPB_NumFATs * m_Superblock.BPB_FATSz16);
+      m_RootDir.sector = m_Superblock.BPB_RsvdSecCnt + (m_Superblock.BPB_NumFATs * fatSz);
 
       break;
 
@@ -157,19 +157,22 @@ bool FatFilesystem::initialise(Disk *pDisk)
   m_RootDirCount = rootDirSectors;
   m_BlockSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
 
-  // TODO: read in the FAT32 FSInfo structure
+  /// \todo Read in the FAT32 FSInfo structure
+  
+  // determine the size of the FAT
+  fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
+  fatSz *= m_Superblock.BPB_BytsPerSec;
+  
+  // read the FAT into cache
+  uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt;
+  m_FatCache.resize(fatSz);
 
-   //File init = VFS::instance().find(String("root:/testing.txt"));
-   //if (!init.isValid())
-   //{
-   //  FATAL("OH FAIL!");
-   //}
-   //else
-   //{
-   //  uint8_t *buffer = new uint8_t[init.getSize()];
-   //  init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
-   //  WARNING("Read in " << reinterpret_cast<char*>(buffer) << "!");
-   //}
+  uint8_t* tmpBuffer = new uint8_t[fatSz];
+  readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
+  
+  m_FatCache.write(0, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
+  
+  delete tmpBuffer;
 
   return true;
 }
@@ -586,50 +589,40 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
       fatOffset = cluster * 4;
       break;
   }
+  
+  // read from cache
+  uint32_t fatEntry;
+  m_FatCache.read(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&fatEntry));
 
-  uint32_t fatSecNum = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
-  uint32_t fatEntOffset = fatOffset % m_Superblock.BPB_BytsPerSec;
-
-  uint8_t secCount = 1;
-  if(m_Type == FAT12)
-    secCount++; // read in an extra sector to avoid boundary checks
-
-  size_t bufSize = m_Superblock.BPB_BytsPerSec * secCount;
-  uint8_t* buffer = new uint8_t[bufSize];
-  readSectorBlock(fatSecNum, bufSize, reinterpret_cast<uintptr_t>(buffer));
-
+  // calculate
   uint32_t ret = 0;
-  uint16_t tmp = 0;
   switch(m_Type)
   {
     case FAT12:
-      tmp = static_cast<uint32_t>(*(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset])));
+      ret = fatEntry;
 
       // FAT12 entries are 1.5 bytes
       if(cluster & 0x1)
-        tmp >>= 4;
+        ret >>= 4;
       else
-        tmp &= 0x0FFF;
-      tmp &= 0xFFFF;
-      ret = tmp;
+        ret &= 0x0FFF;
+      ret &= 0xFFFF;
 
       break;
 
     case FAT16:
 
-      ret = static_cast<uint32_t>(*(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset])));
+      ret = fatEntry;
       ret &= 0xFFFF;
 
       break;
 
     case FAT32:
 
-      ret = *(reinterpret_cast<uint16_t*>(&buffer[fatEntOffset]));
+      ret = fatEntry;
 
       break;
   }
-
-  delete buffer;
 
   return ret;
 }
