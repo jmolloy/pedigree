@@ -80,8 +80,9 @@ DynamicLinker::SharedObject *DynamicLinker::loadInternal(const char *name)
     SharedObject *pSo = *it;
     if (!strcmp(name, pSo->name))
     {
-      // Map into this address space.
-      return mapObject(pSo);
+      // Map into this address space, if we can. Sometimes this may fail because the address in the source
+      // AS is taken.
+      if (mapObject(pSo)) return true;
     }
   }
 
