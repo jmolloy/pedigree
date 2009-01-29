@@ -27,7 +27,7 @@
 #define CONFIG_ADDRESS 0
 #define CONFIG_DATA    4
 
-#define MAX_BUS 1
+#define MAX_BUS 4
 
 IoPort configSpace("PCI config space");
 
@@ -92,7 +92,7 @@ uint32_t writeConfig (ConfigAddress addr, uint32_t value)
   uint32_t a = *reinterpret_cast<uint32_t*>(&addr);
 
   configSpace.write32(a, CONFIG_ADDRESS);
-  configSpace.write32(CONFIG_DATA);
+  configSpace.write32(value, CONFIG_DATA);
 }
 
 void readConfigSpace (ConfigAddress addr, ConfigSpace *pCs)
@@ -176,18 +176,23 @@ void entry()
 
         for (int l = 0; l < 6; l++)
         {
+          if (cs.bar[l] == 0) continue;
+
           // Write the BAR with FFFFFFFF to discover the size of mapping that the device requires.
           ConfigAddress ca2;
-          ca2.bus = i; ca2.device = j; ca2.function = k; ca.offset = 0x10 + l*4;
+          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
           writeConfig (ca2, 0xFFFFFFFF);
+          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
           uint32_t mask = readConfig (ca2);
+          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
+          writeConfig(ca2, cs.bar[l]);
 
           // Now work out how much space is required to fill that mask.
           // Assume it doesn't need 4GB of space...
-          uint32_t size = ~mask + 1;
+          uint32_t size = ~(mask&0xFFFFFFF0) + 1; // AND with ~0xF to get rid of the flags field in the bottom 4 bits.
 
           sprintf(c, "bar%d", l);
-          pDevice->addresses().pushBack(new Device::Address(String(c), cs.bar[0]&0xFFFFFFF0, size, (cs.bar[0]&0x1) == 0x1));
+          pDevice->addresses().pushBack(new Device::Address(String(c), cs.bar[l]&0xFFFFFFF0, size, (cs.bar[l]&0x1) == 0x1));
         }
 
         pDevice->setInterruptNumber(cs.interrupt_line);

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,9 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-include_directories(../../include ../ ./)
+include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers ${PEDIGREE_SOURCE_DIR}/src/system/modules)
 
-add_executable(TUI.o TUI.cc Vt100.cc)
-target_link_libraries(TUI.o gcc)
-set_target_properties(TUI.o PROPERTIES
-                            LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
+add_executable(nvidia.o main.cc Dma.cc)
+target_link_libraries(nvidia.o gcc)
+set_target_properties(nvidia.o PROPERTIES
+                               LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

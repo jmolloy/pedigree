@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_MEMORYREGION_H
 
 #include <processor/types.h>
+#include <processor/PhysicalMemoryManager.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
@@ -38,8 +39,8 @@ class MemoryRegion
     /** The default constructor does nothing  */
     inline MemoryRegion(const char *pName)
       : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0), m_pName(pName){}
-    /** The destructor does nothing */
-    inline virtual ~MemoryRegion(){}
+    /** The destructor registers itself from the PMM. */
+    inline virtual ~MemoryRegion() {PhysicalMemoryManager::instance().unmapRegion(this);}
 
     /** Get the address of the beginning of the MemoryRegion in the virtual
      *  address space

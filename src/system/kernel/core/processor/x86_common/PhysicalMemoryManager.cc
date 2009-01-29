@@ -17,6 +17,7 @@
 #include <Log.h>
 #include <panic.h>
 #include <utilities/utility.h>
+#include <processor/MemoryRegion.h>
 #include "PhysicalMemoryManager.h"
 
 #if defined(X86)
@@ -108,7 +109,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
     Region.m_PhysicalAddress = start;
     Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
-
+WARNING("Mapping " << (uintptr_t)vAddress << " to " << (uintptr_t)start << ", for MR " << Region.m_pName);
     // Add to the list of memory-regions
     PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
     return true;
@@ -268,7 +269,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     #endif
   #endif
 
-  // Initialise the free physical ranges 
+  // Initialise the free physical ranges
   // TODO: Ranges above 4GB
   m_PhysicalRanges.free(0, 0x100000000ULL);
   MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
@@ -331,6 +332,26 @@ X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()
 {
 }
 
+void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
+{
+  for (Vector<MemoryRegion*>::Iterator it = PhysicalMemoryManager::m_MemoryRegions.begin();
+       it != PhysicalMemoryManager::m_MemoryRegions.end();
+       it++)
+  {
+    if (*it == pRegion)
+    {
+      NOTICE("Erase region with phys: " << Hex << pRegion->physicalAddress());
+      size_t cPages = pRegion->size() / PhysicalMemoryManager::getPageSize();
+      uintptr_t start = reinterpret_cast<uintptr_t> (pRegion->virtualAddress());
+      VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+      for (size_t i = 0;i < cPages;i++)
+        virtualAddressSpace.unmap(reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize()));
+      m_MemoryRegions.free(start, pRegion->size());
+      PhysicalMemoryManager::m_MemoryRegions.erase(it);
+      break;
+    }
+  }
+}
 
 
 physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t constraints)

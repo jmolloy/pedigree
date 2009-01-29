@@ -19,6 +19,7 @@
 
 #include <console/Console.h>
 #include <utilities/RequestQueue.h>
+#include <machine/Display.h>
 
 /** A text user interface class. This class inherits from RequestQueue so that it
     can expose Console functionality. */
@@ -27,6 +28,9 @@ class TUI : public RequestQueue
 public:
   TUI();
   ~TUI();
+
+  // Called by video drivers to inform us that a mode change has taken place.
+  void modeChanged(Display::ScreenMode mode, void *pFramebuffer);
 
 protected:
   //
@@ -39,6 +43,9 @@ protected:
   bool m_Echo;
   bool m_EchoNewlines;
   bool m_EchoBackspace;
+
+  bool m_bIsTextMode;
+  Display::ScreenMode m_Mode;
 };
 
 #endif

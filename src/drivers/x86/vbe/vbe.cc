@@ -52,7 +52,8 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
   for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
   {
     Device *pChild = pDev->getChild(i);
-
+    String name;
+    pChild->getName(name);
     // Get its addresses, and search for fbAddr.
     for (unsigned int j = 0; j < pChild->addresses().count(); j++)
     {
@@ -64,7 +65,8 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
     }
 
     // Recurse.
-    return searchNode(pChild, fbAddr);
+    Device *pRet = searchNode(pChild, fbAddr);
+    if (pRet) return pRet;
   }
   return 0;
 }
@@ -173,12 +175,13 @@ void entry()
     return;
   }
 
-//   // Create a new VbeDisplay device node.
-//   VbeDisplay *pDisplay = new VbeDisplay(pDev);
-//
-//   // Replace pDev with pDisplay.
-//   pController->setParent(pDevice->getParent());
-//   pDev->getParent()->replaceChild(pDevice, pController);
+  // Create a new VbeDisplay device node.
+  VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, fbAddr);
+  NOTICE("After Display::");
+  // Replace pDev with pDisplay.
+  pDisplay->setParent(pDevice->getParent());
+  pDevice->getParent()->replaceChild(pDevice, pDisplay);
+  NOTICE("After replaceChild");
 }
 
 void exit()

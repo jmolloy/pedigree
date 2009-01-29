@@ -17,6 +17,7 @@
 #define MACHINE_DISPLAY_H
 
 #include <machine/Device.h>
+#include <utilities/List.h>
 
 /**
  * A display is either a dumb framebuffer or something more accelerated.
@@ -101,7 +102,7 @@ public:
 
   /** Fills the given List with all of the available screen modes.
       \return True if operation succeeded, false otherwise. */
-  virtual bool getScreenModes(List<ScreenMode> &sms)
+  virtual bool getScreenModes(List<ScreenMode*> &sms)
   {
     return false;
   }

@@ -35,7 +35,6 @@ LocalIO::LocalIO(Vga *pVga, Keyboard *pKeyboard) :
 
 LocalIO::~LocalIO()
 {
-  destroy();
 }
 
 void LocalIO::initialise()
@@ -50,14 +49,14 @@ void LocalIO::initialise()
     m_pFramebuffer[i] = blank;
   }
   m_pCommand[0] = '\0';
-  
+
   // Save the current mode.
   m_pVga->rememberMode();
   // Copy the current screen contents into our old frame buffer.
   m_pVga->peekBuffer( reinterpret_cast<uint8_t*> (m_pOldFramebuffer), MAX_CONSOLE_WIDTH*MAX_CONSOLE_HEIGHT*2);
   // Set a nice big text mode.
   m_pVga->setLargestTextMode();
-  
+
   // Set our width and height variables.
   m_nWidth = m_pVga->getNumCols();
   m_nHeight = m_pVga->getNumRows();
@@ -86,7 +85,7 @@ void LocalIO::setCliLowerLimit(size_t nlines)
   // Do a quick sanity check.
   if (nlines < m_nHeight)
     m_LowerCliLimit = nlines;
-  
+
   // If the cursor is now in an invalid area, move it back.
   if (m_CursorY >= m_nHeight-m_LowerCliLimit)
     m_CursorY = m_LowerCliLimit;
@@ -106,7 +105,7 @@ void LocalIO::enableCli()
   // Reposition the cursor.
   m_CursorX = 0;
   m_CursorY = m_UpperCliLimit;
-  
+
   // We've enabled the CLI, so let's make sure the screen is ready.
   forceRefresh();
 }
@@ -120,11 +119,11 @@ void LocalIO::disableCli()
     uint16_t blank = ' ' | (attributeByte << 8);
     m_pFramebuffer[i] = blank;
   }
-  
+
   // Reposition the cursor.
   m_CursorX = 0;
   m_CursorY = m_UpperCliLimit;
-  
+
   forceRefresh();
 }
 
@@ -162,7 +161,7 @@ void LocalIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t col
   {
     m_pFramebuffer[row*m_nWidth+i] = c | (attributeByte << 8);
   }
-  
+
   if (m_bRefreshesEnabled)
     forceRefresh();
 }
@@ -185,13 +184,13 @@ void LocalIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEn
     col = m_nWidth-1;
   if (col < 0)
     col = 0;
-  
+
   uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
   for(size_t i = rowStart; i <= rowEnd; i++)
   {
     m_pFramebuffer[i*m_nWidth+col] = c | (attributeByte << 8);
   }
-  
+
   if (m_bRefreshesEnabled)
     forceRefresh();
 }
@@ -202,32 +201,32 @@ void LocalIO::drawString(const char *str, size_t row, size_t col, DebuggerIO::Co
   // Firstly we save the current cursorX and cursorY positions.
   size_t savedX = m_CursorX;
   size_t savedY = m_CursorY;
-  
+
   // Then, we change cursorX and Y to be row, col.
   m_CursorX = col;
   m_CursorY = row;
-  
+
   bool bRefreshWasEnabled = false;
   if (m_bRefreshesEnabled)
   {
     bRefreshWasEnabled = true;
     m_bRefreshesEnabled = false;
   }
-  
+
   // Then, we just call putChar to put the string out for us! :)
   while (*str)
     putChar(*str++, foreColour, backColour);
-  
+
   if (bRefreshWasEnabled)
   {
     m_bRefreshesEnabled = true;
     forceRefresh();
   }
-  
+
   // And restore the cursor.
   m_CursorX = savedX;
   m_CursorY = savedY;
-  
+
   // Ensure the cursor is correct in hardware.
   moveCursor();
 }
@@ -285,11 +284,11 @@ void LocalIO::putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour 
       m_CursorX = m_nWidth-1;
       m_CursorY--;
     }
-    
+
     // Erase the contents of the cell currently.
     uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
     m_pFramebuffer[m_CursorY*m_nWidth + m_CursorX] = ' ' | (attributeByte << 8);
-    
+
   }
 
   // Tab?

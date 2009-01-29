@@ -63,6 +63,22 @@ String prepend_cwd(const char *name)
   char *newName = new char[2048];
   newName[0] = '\0';
 
+  /// \todo This is a workaround for a bash bug where on `cd pedigree:/bleh' it will attempt to stat `/pedigree:' first - note the leading
+  ///       slash. If the name contains a colon, ignore any leading slash.
+  int i = 0;
+  bool contains = false;
+  while (name[i])
+  {
+    if (name[i++] == ':')
+    {
+      contains = true;
+      break;
+    }
+  }
+
+  if (name[0] == '/' && contains)
+    name++;
+
   // If the string starts with a '/', add on the current working filesystem.
   if (name[0] == '/')
   {
@@ -78,8 +94,8 @@ String prepend_cwd(const char *name)
   strcat(newName, name);
 
   // If the name doesn't contain a colon, add the cwd.
-  int i = 0;
-  bool contains = false;
+  i = 0;
+  contains = false;
   while (newName[i])
   {
     if (newName[i++] == ':')
@@ -263,11 +279,13 @@ int posix_stat(const char *name, struct stat *st)
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
+  NOTICE("statting: " << prepend_cwd(name));
   File file = VFS::instance().find(prepend_cwd(name));
 
   if (!file.isValid())
   {
     // Error - not found.
+    NOTICE("filenotfound");
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }

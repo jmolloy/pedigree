@@ -71,6 +71,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\note Not implemented (singleton) */
     X86CommonPhysicalMemoryManager &operator = (const X86CommonPhysicalMemoryManager &);
 
+    void unmapRegion(MemoryRegion *pRegion);
+
     /** The actual page stack contains is a Stack of the pages with the constraints
      *  below4GB and below64GB and those pages without address size constraints.
      *\brief The Stack of pages (below4GB, below64GB, no constraint). */

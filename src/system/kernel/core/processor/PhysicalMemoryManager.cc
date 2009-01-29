@@ -15,6 +15,8 @@
  */
 
 #include <processor/PhysicalMemoryManager.h>
+#include <processor/MemoryRegion.h>
+#include <Log.h>
 
 void PhysicalMemoryManager::allocateMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions)
 {
@@ -24,6 +26,7 @@ void PhysicalMemoryManager::allocateMemoryRegionList(Vector<MemoryRegionInfo*> &
                                                                m_MemoryRegions[i]->physicalAddress(),
                                                                m_MemoryRegions[i]->size(),
                                                                m_MemoryRegions[i]->name());
+    NOTICE("MR: v=" << Hex <<(uintptr_t) m_MemoryRegions[i]->virtualAddress() << ", p= " << (uintptr_t)m_MemoryRegions[i]->physicalAddress() << ", n=" <<  m_MemoryRegions[i]->name());
     MemoryRegions.pushBack(pMemoryRegionInfo);
   }
 }

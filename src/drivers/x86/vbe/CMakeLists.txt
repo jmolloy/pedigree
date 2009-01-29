@@ -14,9 +14,9 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers)
+include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers ${PEDIGREE_SOURCE_DIR}/src/system/modules)
 
-add_executable(vbe.o vbe.cc )#Bios.cc )#x86emu/src/x86emu/debug.c x86emu/src/x86emu/decode.c x86emu/src/x86emu/fpu.c x86emu/src/x86emu/ops.c x86emu/src/x86emu/ops2.c x86emu/src/x86emu/prim_ops.c x86emu/src/x86emu/sys.c)
+add_executable(vbe.o vbe.cc VbeDisplay.cc)
 include_directories(x86emu/include x86emu/src/x86emu)
 target_link_libraries(vbe.o gcc)
 set_target_properties(vbe.o PROPERTIES

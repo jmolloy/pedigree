@@ -20,11 +20,15 @@
 #include <machine/Machine.h>
 #include <machine/Keyboard.h>
 #include <processor/Processor.h>
+#include "Vt100.h"
 
 extern BootIO bootIO;
 
+TUI *g_pTui;
+Vt100 *g_pVt100 = 0;
+
 TUI::TUI() :
-  m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true)
+  m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true)
 {
 }
 
@@ -45,17 +49,28 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
 
   if (operation == CONSOLE_WRITE)
   {
-    // For the moment just forward to BootIO - THIS WILL CHANGE!
     char *buf = new char[size+1];
     memcpy(reinterpret_cast<void*>(buf), reinterpret_cast<void*>(buffer), size);
     buf[size] = '\0';
 
-    str.append(buf);
+    if (m_bIsTextMode)
+    {
+      // For the moment just forward to BootIO
+      str.append(buf);
 
-    delete [] buf;
+      delete [] buf;
 
-    bootIO.write(str, BootIO::LightGreen, BootIO::Black);
-    return size;
+      bootIO.write(str, BootIO::LightGreen, BootIO::Black);
+      return size;
+    }
+    else
+    {
+      // In a graphics mode - forward to the VT100 object.
+      g_pVt100->write(buf);
+
+      delete [] buf;
+      return size;
+    }
   }
   else if (operation == CONSOLE_READ)
   {
@@ -91,9 +106,16 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
              (m_EchoBackspace && c == 0x08) ||
              (c != '\n' && c != 0x08) )
         {
-          str.append(c);
-          bootIO.write(str, BootIO::LightGreen, BootIO::Black);
-          str.clear();
+          if (m_bIsTextMode)
+          {
+            str.append(c);
+            bootIO.write(str, BootIO::LightGreen, BootIO::Black);
+            str.clear();
+          }
+          else
+          {
+            g_pVt100->write(c);
+          }
         }
       }
 
@@ -131,11 +153,20 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
   return 0;
 }
 
+void TUI::modeChanged(Display::ScreenMode mode, void *pFramebuffer)
+{
+  m_Mode = mode;
+
+  g_pVt100 = new Vt100(mode, pFramebuffer);
+
+  m_bIsTextMode = false;
+}
+
 void init()
 {
-  TUI *pTui = new TUI();
-  pTui->initialise();
-  ConsoleManager::instance().registerConsole(String("console0"), pTui, 0);
+  g_pTui = new TUI();
+  g_pTui->initialise();
+  ConsoleManager::instance().registerConsole(String("console0"), g_pTui, 0);
 }
 
 void destroy()

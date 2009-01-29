@@ -38,12 +38,12 @@ static bool probeDisk(Disk *pDisk)
 {
   String alias; // Null - gets assigned by the filesystem.
   if (VFS::instance().mount(pDisk, alias))
-  {    
+  {
     // search for the root specifier
     NormalStaticString s;
     s += alias;
     s += ":/.pedigree-root";
-    
+
     File f = VFS::instance().find(String(static_cast<const char*>(s)));
     if(f.isValid())
     {
@@ -81,7 +81,10 @@ static bool findDisks(Device *pDev)
 void init()
 {
   // Mount all available filesystems.
-  findDisks(&Device::root());
+  if (!findDisks(&Device::root()))
+  {
+//     FATAL("No disks found!");
+  }
 
   HugeStaticString str;
   str += "Loading init program (root:/applications/shell)\n";

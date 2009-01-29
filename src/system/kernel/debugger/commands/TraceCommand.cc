@@ -51,23 +51,23 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   m_nExec = -1;
   // Let's enter 'raw' screen mode.
   pScreen->disableCli();
-  
+
   // Work out where the split will be between the disassembler, reg dump and stacktrace.
   // Give the reg dump 25 columns, hardcoded.
   int nCols = pScreen->getWidth()-25;
   // Give the disassembler 3/4 of the available lines.
   int nLines = ((pScreen->getHeight()-2) * 3) / 4;
-  
+
   static Disassembly disassembly(state);
   disassembly.move(0, 1);
   disassembly.resize(nCols, nLines);
   disassembly.setScrollKeys('o', 'p');
-  
+
   static Registers registers(state);
   registers.move(nCols+1, 1);
   registers.resize(24, nLines);
   registers.setScrollKeys('j', 'k');
-  
+
   static Stacktrace stacktrace(state);
   stacktrace.move(0, nLines+2);
   stacktrace.resize(pScreen->getWidth(), pScreen->getHeight()-nLines-3);
@@ -99,16 +99,16 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
   }
 
   disassembly.centreOn(nInstruction);
-  
+
   pScreen->disableRefreshes();
   drawBackground(nCols, nLines, pScreen);
   registers.refresh(pScreen);
   disassembly.refresh(pScreen);
   stacktrace.refresh(pScreen);
   pScreen->enableRefreshes();
-  
 
-  
+
+
   // Here we enter our main runloop.
   bool bContinue = true;
   while (bContinue)
@@ -121,9 +121,6 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
     else if (c == 's')
     {
       m_nExec = m_nInterface;
-      // HACK on real boxen the screen mode change takes quite a while. If we're single stepping
-      // don't bother changing mode back.
-      Machine::instance().getVga(0)->rememberMode();
       Processor::setSingleStep(true, state);
       return false;
     }
@@ -159,7 +156,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
     }
 
   }
-  
+
   // Let's enter CLI screen mode again.
   pScreen->enableCli();
   return true; // Return control to the debugger.
@@ -178,7 +175,7 @@ void TraceCommand::drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScre
   // Write the correct text in the upper status line.
   pScreen->drawString("Pedigree debugger - Execution Tracer", 0, 0, DebuggerIO::White, DebuggerIO::Green);
   // Write some helper text in the lower status line.
-  pScreen->drawString("s: Step. c: Continue. q: Quit. ?: Current instruction. ?: Breakpoint.", 
+  pScreen->drawString("s: Step. c: Continue. q: Quit. ?: Current instruction. ?: Breakpoint.",
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawString("s", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
   pScreen->drawString("c", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
@@ -198,13 +195,13 @@ TraceCommand::Disassembly::Disassembly(InterruptState &state)
   m_nIp = state.getInstructionPointer();
   uintptr_t nSymStart = 0;
   KernelElf::instance().globalLookupSymbol(m_nIp, &nSymStart);
-  
+
   Disassembler disassembler;
 #ifdef BITS_64
   disassembler.setMode(64);
 #endif
   disassembler.setLocation(nSymStart);
-  
+
   m_nFirstInstruction = nSymStart;
   uintptr_t nLocation = 0;
   LargeStaticString text;
@@ -270,14 +267,14 @@ const char *TraceCommand::Disassembly::getLine1(size_t index, DebuggerIO::Colour
   // Set the stored line counter.
   m_LastLine = index;
   m_LastInstructionLocation = nLocation;
-  
+
   // If this is our actual instruction location, put a blue background over it.
   if (nLocation == m_nIp)
     bgColour = DebuggerIO::Blue;
-  
+
   // We want grey text.
   colour = DebuggerIO::DarkGrey;
-  
+
   // The text being...
   sym.clear();
   sym.append(nLocation, 16, sizeof(uintptr_t)*2, '0');
@@ -321,17 +318,17 @@ const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset,
       nInstruction++;
     }
   }
-  
+
   // If this is our actual instruction location, put a blue background over it.
   if (nLocation == m_nIp)
     bgColour = DebuggerIO::Blue;
-  
+
   // We want white text.
   colour = DebuggerIO::White;
-  
+
   // At offset...
   colOffset = sizeof(uintptr_t)*2+1;
-  
+
   // The text being...
   sym.clear();
   sym += text;

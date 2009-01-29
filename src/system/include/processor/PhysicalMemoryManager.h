@@ -20,16 +20,20 @@
 #include <compiler.h>
 #include <utilities/Vector.h>
 #include <processor/types.h>
-#include <processor/MemoryRegion.h>
 
 /** @addtogroup kernelprocessor
  * @{ */
+
+class MemoryRegion;
 
 /** The PhysicalMemoryManager manages the physical address space. That means it provides
  *  functions to allocate and free pages. */
 class PhysicalMemoryManager
 {
   public:
+    /** MemoryRegion can access our unmapRegion function. */
+    friend class MemoryRegion;
+
     /** If this flag is set the pages are physically continuous */
     static const size_t continuous   = 1 << 0;
     /** If this flag is set we allocate pages that are not in RAM */
@@ -131,6 +135,9 @@ class PhysicalMemoryManager
     /** The copy-constructor
      *\note Not implemented (singleton) */
     PhysicalMemoryManager &operator = (const PhysicalMemoryManager &);
+
+    /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
+    virtual void unmapRegion(MemoryRegion *pRegion) = 0;
 };
 
 /** @} */

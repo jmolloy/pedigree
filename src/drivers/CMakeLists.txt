@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(DRIVERS ata partition)
+set(DRIVERS ata partition nvidia)
 if(X86_COMMON)
   set(X86DRIVERS vbe pci ne2k)
 endif(X86_COMMON)

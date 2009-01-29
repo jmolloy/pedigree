@@ -193,7 +193,7 @@ install(FILES ${PEDIGREE_BINARY_DIR}/initrd.tar
 add_dependencies(initrd kernel)
 
 add_subdirectory(src/user)
-message(${HDD_TARGETS})
+
 # Create a target used for creating the image files.
 add_custom_target(create_images ALL bash ../scripts/create_images.sh ${HDD_FILES}
                   DEPENDS kernel ${BOOTLOADER_BUILT} ${HDD_TARGETS}

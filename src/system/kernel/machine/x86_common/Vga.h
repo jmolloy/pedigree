@@ -54,35 +54,27 @@ class X86Vga : public Vga
   public:
     X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase);
     virtual ~X86Vga();
-  
-    /**
-   * Changes the mode the VGA device is in.
-   * \param nCols The number of columns required.
-   * \param nRows The number of rows required.
-   * \param bIsText True if the caller requires a text mode, false if graphical.
-   * \param nBpp Only applicable for graphics modes - the number of bits per pixel.
-   * \return True on success, false on failure.
-   */
-  virtual bool setMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0);
-  
+
+  virtual bool setMode (int mode);
+
   /**
    * Sets the largest possible text mode.
    * \return True on success, false on failure.
    */
   virtual bool setLargestTextMode ();
-  
+
   /**
    * Tests the current video mode.
    * \return True if the current mode matches the given arguments.
    */
   virtual bool isMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0);
-  
+
   /**
    * Tests if the current video mode is the largest text mode.
    * \return True if the current video mode is equal to the largest text mode.
    */
   virtual bool isLargestTextMode ();
-  
+
   /**
    * \return The number of columns in the current mode.
    */
@@ -90,7 +82,7 @@ class X86Vga : public Vga
   {
     return m_nWidth;
   }
-  
+
   /**
    * \return The number of rows in the current mode.
    */
@@ -98,17 +90,17 @@ class X86Vga : public Vga
   {
     return m_nHeight;
   }
-  
+
   /**
    * Stores the current video mode.
    */
   virtual void rememberMode();
-  
+
   /**
    * Restores the saved video mode from a rememberMode() call.
    */
   virtual void restoreMode();
-  
+
   /**
    * Copies the given buffer into video memory, replacing the current framebuffer.
    *
@@ -130,7 +122,7 @@ class X86Vga : public Vga
    * \param nBufLen The length of pBuffer.
    */
   virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen);
-  
+
   /**
    * Moves the cursor to the position specified by the parameters.
    * \param nX The column to move to.
@@ -163,30 +155,27 @@ private:
    * The framebuffer.
    */
   uint8_t *m_pFramebuffer;
-  
+
   /**
    * The width of the current mode.
    */
   size_t m_nWidth;
-  
+
   /**
    * The height of the current mode.
    */
   size_t m_nHeight;
-  
+
   /**
-   * Sets a specific vga mode.
+   * We keep a count of the number of times we've entered the debugger without leaving it - when we enter the debugger,
+   * we increment this. When we leave, we decrement. If we leave and it reaches zero, we change out of mode 0x3 into
+   * the current video mode.
    */
-  bool setMode(int nMode);
-  
+  int m_ModeStack;
+
   /**
-   * Tries to identify the current vga mode.
+   * Current video mode.
    */
-  int getMode();
-  
-  uint8_t m_pStoredMode[61];
-  size_t m_nStoredWidth, m_nStoredHeight;
-  
   int m_nMode;
 };
 

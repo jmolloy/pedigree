@@ -46,10 +46,13 @@ Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_Interr
   {
     m_Children.pushBack(p->m_Children[i]);
   }
+  NOTICE("RemoveIOMappings");
   p->removeIoMappings();
+  NOTICE("EndRemove");
   for (unsigned int i = 0; i < p->m_Addresses.count(); i++)
   {
     Address *pa = p->m_Addresses[i];
+    NOTICE("New address: n: " << pa->m_Name << ", a: " << (uintptr_t)pa->m_Address);
     Address *a = new Address(pa->m_Name, pa->m_Address, pa->m_Size, pa->m_IsIoSpace, pa->m_Padding);
     m_Addresses.pushBack(a);
   }
@@ -72,6 +75,7 @@ void Device::removeIoMappings()
   for (unsigned int i = 0; i < m_Addresses.count(); i++)
   {
     Address *pa = m_Addresses[i];
+    NOTICE("Address: " << pa->m_Address);
     if (pa->m_Io)
       delete pa->m_Io;
     pa->m_Io = 0;

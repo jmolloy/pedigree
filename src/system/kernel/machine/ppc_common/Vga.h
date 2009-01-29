@@ -48,7 +48,7 @@ class PPCVga : public Vga
     virtual ~PPCVga();
 
   void initialise();
-    
+
   /**
    * Changes the mode the VGA device is in.
    * \param nCols The number of columns required.
@@ -57,31 +57,31 @@ class PPCVga : public Vga
    * \param nBpp Only applicable for graphics modes - the number of bits per pixel.
    * \return True on success, false on failure.
    */
-  virtual bool setMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0) {return false;}
-  
+  virtual bool setMode (int mode) {return false;}
+
   /**
    * Sets the largest possible text mode.
    * \return True on success, false on failure.
    */
   virtual bool setLargestTextMode () {return false;}
-  
+
   /**
    * Tests the current video mode.
    * \return True if the current mode matches the given arguments.
    */
   virtual bool isMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0) {return false;}
-  
+
   /**
    * Tests if the current video mode is the largest text mode.
    * \return True if the current video mode is equal to the largest text mode.
    */
   virtual bool isLargestTextMode () {return true;}
-  
+
   /**
    * \return The number of columns in the current mode.
    */
   virtual size_t getNumCols () {return m_Width/FONT_WIDTH;}
-  
+
   /**
    * \return The number of rows in the current mode.
    */
@@ -91,12 +91,12 @@ class PPCVga : public Vga
    * Stores the current video mode.
    */
   virtual void rememberMode() {}
-  
+
   /**
    * Restores the saved video mode from a rememberMode() call.
    */
   virtual void restoreMode() {}
-  
+
   /**
    * Copies the given buffer into video memory, replacing the current framebuffer.
    *
@@ -118,30 +118,30 @@ class PPCVga : public Vga
    * \param The length of pBuffer.
    */
   virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen);
-  
+
   /**
    * Moves the cursor to the position specified by the parameters.
    * \param nX The column to move to.
    * \param nY The row to move to.
    */
   virtual void moveCursor (size_t nX, size_t nY) {}
-  
+
   operator uint16_t*() const {return const_cast<uint16_t*> (m_pTextBuffer);}
-  
+
 private:
   PPCVga(const PPCVga &);
   PPCVga &operator = (const PPCVga &);
 
   void putChar(char c, int x, int y, unsigned int f, unsigned int b);
-  
+
   /** We use a 16-bit-per-character text mode buffer to simplify things. BootIO is a bit of a
    *  simpleton, really. */
   uint16_t m_pTextBuffer[(MAX_WIDTH/FONT_WIDTH)*(MAX_HEIGHT/FONT_HEIGHT)];
-  
+
   /** Our real graphics framebuffer
       \todo: This should be a MemoryMappedIO - needs VirtualAddressSpace though. */
   uint8_t *m_pFramebuffer;
-  
+
   /** Screen width */
   uint32_t m_Width;
   /** Screen height */

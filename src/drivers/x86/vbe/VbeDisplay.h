@@ -18,6 +18,8 @@
 
 #include <machine/Device.h>
 #include <machine/Display.h>
+#include <utilities/List.h>
+#include <processor/MemoryMappedIo.h>
 
 class VbeDisplay : public Display
 {
@@ -31,10 +33,8 @@ public:
   };
 
   VbeDisplay();
-  VbeDisplay(Device *p) :
-    Display(p)
-  {
-  }
+  VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, uintptr_t fbAddr);
+
   virtual ~VbeDisplay();
 
   virtual void *getFramebuffer();
@@ -43,7 +43,7 @@ public:
 
   virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
 
-  virtual bool getScreenModes(List<Display::ScreenMode> &sms);
+  virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
 
   virtual bool setScreenMode(Display::ScreenMode sm);
 
@@ -51,6 +51,14 @@ private:
 
   /** VBE version. */
   VbeVersion m_VbeVersion;
+
+  /** Screen modes. */
+  List<Display::ScreenMode*> m_ModeList;
+
+  /** Current mode. */
+  Display::ScreenMode m_Mode;
+
+  MemoryMappedIo *m_pFramebuffer;
 };
 
 #endif

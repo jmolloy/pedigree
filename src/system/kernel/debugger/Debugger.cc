@@ -108,9 +108,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
    * I/O implementations.
    */
   static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-  localIO.initialise();
-//ifdef ECHO_CONSOLE_TO_SERIAL
-#if 1
+  //localIO.initialise(); // Not needed - done in constructor.
+#ifdef ECHO_CONSOLE_TO_SERIAL
   DebuggerIO *pInterfaces[] = {&localIO};
   int nInterfaces = 1;
 #else
@@ -305,9 +304,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 
   }
   while (bKeepGoing);
-  localIO.destroy();
+  localIO.destroy(); // Causes rememberMode to be called twice.
 #ifndef ECHO_CONSOLE_TO_SERIAL
-  //serialIO.destroy();
+  serialIO.destroy();
 #endif
 
   Machine::instance().getKeyboard()->setDebugState(debugState);

@@ -93,7 +93,7 @@ void initKeymap()
   keymap_lower[0x37] = '*';  // Keypad-*
   keymap_lower[0x38] = 0x00; // LAlt
   keymap_lower[0x39] = ' ';
-  
+
   keymap_upper[0x02] = '!';
   keymap_upper[0x03] = '@';
   keymap_upper[0x04] = 0x00;
@@ -140,8 +140,8 @@ void initKeymap()
   keymap_upper[0x32] = 'M';
   keymap_upper[0x33] = '<';
   keymap_upper[0x34] = '>';
-  keymap_upper[0x35] = '?';
-  
+  keymap_upper[0x35] = '\\'; /*?*/
+
 }
 
 /** @} */
