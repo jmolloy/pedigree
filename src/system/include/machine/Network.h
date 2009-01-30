@@ -17,13 +17,77 @@
 #define MACHINE_NETWORK_H
 
 #include <machine/Device.h>
+#include <utilities/utility.h>
+
+/** A MAC address */
+class MacAddress
+{
+  public:
+    MacAddress() :
+      mac()
+    {};
+    virtual ~MacAddress() {};
+    
+    void setMac(uint8_t byte, size_t element)
+    {
+      if(element < 6)
+        mac[element] = byte;
+    };
+    
+    void setMac(uint8_t* data)
+    {
+      memcpy(mac, data, 6);
+    };
+    
+    uint8_t getMac(size_t element)
+    {
+      if(element < 6)
+        return mac[element];
+      return 0;
+    };
+    
+    uint8_t* getMac()
+    {
+      return mac;
+    };
+    
+    uint8_t operator [] (size_t offset)
+    {
+      return getMac(offset);
+    };
+    
+    MacAddress& operator = (MacAddress a)
+    {
+      memcpy(mac, a.getMac(), 6);
+      return *this;
+    }
+    
+    MacAddress& operator = (uint8_t* a)
+    {
+      setMac(a);
+      return *this;
+    }
+    
+    operator uint8_t* ()
+    {
+      return getMac();
+    }
+    
+  private:
+  
+    uint8_t   mac[6];
+};
 
 /** Station information */
 struct stationInfo
 {
-  uint32_t  ipv4;     // ipv4 address
-  uint8_t   ipv6[16]; // ipv6 address (not compulsory)
-  uint8_t   mac[6];   // MAC address
+  stationInfo() :
+    ipv4(0), ipv6(), mac()
+  {};
+  
+  uint32_t    ipv4;     // ipv4 address
+  uint8_t     ipv6[16]; // ipv6 address (not compulsory)
+  MacAddress  mac;      // MAC address
 };
 
 /**
@@ -74,13 +138,18 @@ public:
     return false; // failed by default
   }
 
-  
   /** Gets station information (such as IP addresses) */
   virtual stationInfo getStationInfo()
   {
     static stationInfo info;
     return info; // not to be trusted
   }
+  
+  /** Converts an IPv4 address into an integer */
+  static uint32_t convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+  
+  /** Calculates a checksum */
+  static uint16_t calculateChecksum(uintptr_t buffer, size_t nBytes);
 
 };
 

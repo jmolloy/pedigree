@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers)
+include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers ${PEDIGREE_SOURCE_DIR}/src/system/modules)
 
 add_executable(ne2k.o main.cc Ne2k.cc)
 target_link_libraries(ne2k.o gcc)

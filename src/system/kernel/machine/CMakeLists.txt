@@ -54,4 +54,4 @@ if(PPC_COMMON)
 endif(PPC_COMMON)
 
 # This is required to push any changes the add_subdirectory commands may have made up to parent scope.
-add_kernel_src(machine Device.cc)
+add_kernel_src(machine Device.cc Network.cc)

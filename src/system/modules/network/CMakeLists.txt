@@ -14,23 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(MODULES)
-set(MODULES ${MODULES} vfs ext2 fat network init console TUI linker)
+include_directories(../../include ../ ./)
 
-#########################################################################################
+add_executable(network.o NetworkStack.cc Ethernet.cc Arp.cc Ip.cc Icmp.cc)
+target_link_libraries(network.o gcc)
+set_target_properties(network.o PROPERTIES
+                             LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
 
-# Descend into each module's subdirectory first.
-foreach(var ${MODULES})
-  add_subdirectory(${var})
-endforeach(var ${MODULES})
-
-# Pull all the modules together in a tarfile.
-set(OBJS)
-set(MODULE_NAMES)
-foreach(var ${MODULES})
-  set(OBJS ${OBJS} "${PEDIGREE_BINARY_DIR}/src/system/modules/${var}/${var}.o")
-  set(MODULE_NAMES ${MODULE_NAMES} "${var}.o")
-endforeach(var ${MODULES})
-
-set(MODULE_OBJS ${OBJS} PARENT_SCOPE)
-set(MODULE_NAMES ${MODULE_NAMES} PARENT_SCOPE)

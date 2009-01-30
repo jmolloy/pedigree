@@ -21,8 +21,10 @@
 #include <machine/Network.h>
 #include <processor/IoBase.h>
 #include <processor/IoPort.h>
-#include <utilities/RequestQueue.h>
+#include <utilities/List.h>
 #include <machine/IrqHandler.h>
+#include <process/Thread.h>
+#include <process/Semaphore.h>
 
 #define NE2K_VENDOR_ID 0x10ec
 #define NE2K_DEVICE_ID 0x8029
@@ -39,7 +41,7 @@ public:
     str = "ne2k";
   }
   
-  virtual bool send(uint32_t nBytes, uintptr_t buffer);
+  virtual bool send(size_t nBytes, uintptr_t buffer);
   
   virtual bool setStationInfo(stationInfo info);
   
@@ -53,9 +55,15 @@ public:
 private:
 
   void recv();
+  
+  static int trampoline(void* p);
+  
+  void receiveThread();
 
-  stationInfo m_stationInfo;
+  stationInfo m_StationInfo;
   uint8_t m_NextPacket;
+  
+  Semaphore m_PacketReady;
   
   Ne2k(const Ne2k&);
   void operator =(const Ne2k&);

@@ -75,4 +75,4 @@ void exit()
 MODULE_NAME("ne2k");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS(0);
+MODULE_DEPENDS("NetworkStack");
