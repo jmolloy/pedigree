@@ -24,7 +24,7 @@
 #include <Network/Arp.h>
 
 Ne2k::Ne2k(Network* pDev) :
-  Network(pDev), m_StationInfo(), m_pBase(0), m_PacketReady(0)
+  Network(pDev), m_StationInfo(), m_pBase(0), m_PacketQueue(), m_PacketQueueSize(0)
 {
   setSpecificType(String("ne2k-card"));
   
@@ -161,7 +161,7 @@ bool Ne2k::send(uint32_t nBytes, uintptr_t buffer)
   }
   
   // pad the packet to 64 bytes
-  for(; i < 64; i += 2) m_pBase->write8(0, NE_DATA);
+  for(; i < 64; i += 2) m_pBase->write16(0, NE_DATA);
   
   // let it complete
   while(!(m_pBase->read8(NE_ISR) & 0x40));
@@ -189,73 +189,73 @@ void Ne2k::recv()
     return;
   }
   
-  // do/while to keep going if another packet arrives
-  do
-  {
-    // acknowledge the interrupt, fetch the current counter
-    m_pBase->write8(0x01, NE_ISR);
+  // acknowledge the interrupt, fetch the current counter
+  m_pBase->write8(0x01, NE_ISR);
 
-    m_pBase->write8(0x61, NE_CMD);
-    uint8_t current = m_pBase->read8(NE_CURR);
-    m_pBase->write8(0x21, NE_CMD);
+  m_pBase->write8(0x61, NE_CMD);
+  uint8_t current = m_pBase->read8(NE_CURR);
+  m_pBase->write8(0x21, NE_CMD);
+  
+  // read packets until the current packet
+  //while(m_NextPacket != current)
+  //{      
+    // need status and length
+    m_pBase->write8(0, NE_RSAR0);
+    m_pBase->write8(m_NextPacket, NE_RSAR1);
+    m_pBase->write8(4, NE_RBCR0);
+    m_pBase->write8(0, NE_RBCR1);
+    m_pBase->write8(0x0a, NE_CMD); // read, start
     
-    // read packets until the current packet
-    while(m_NextPacket != current)
-    {      
-      // need status and length
-      m_pBase->write8(0, NE_RSAR0);
-      m_pBase->write8(m_NextPacket, NE_RSAR1);
-      m_pBase->write8(4, NE_RBCR0);
-      m_pBase->write8(0, NE_RBCR1);
-      m_pBase->write8(0x0a, NE_CMD); // read, start
-      
-      uint16_t status = m_pBase->read16(NE_DATA);
-      uint16_t length = m_pBase->read16(NE_DATA);
-          
-      if(!length)
-      {
-        ERROR("NE2K: length of packet is invalid!");        
-        break;
-      }
-      
-      // packet buffer - length - 3 because extra bytes are read in
-      // for status & length
-      uint8_t* tmp = new uint8_t[length - 4];
-      uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
-      
-      // check status, new read for the rest of the packet
-      while(!(m_pBase->read8(NE_ISR) & 0x40));
-      m_pBase->write8(0x40, NE_ISR);
-      
-      m_pBase->write8(4, NE_RSAR0);
-      m_pBase->write8(m_NextPacket, NE_RSAR1);
-      m_pBase->write8((length - 4) & 0xff, NE_RBCR0);
-      m_pBase->write8((length - 4) >> 8, NE_RBCR1);
-      m_pBase->write8(0x0a, NE_CMD);
-      
-      // read the packet
-      int i, words = (length - 4) / 2;
-      for(i = 0; i < words; ++i)
-        packBuffer[i] = m_pBase->read16(NE_DATA);
-      if(length & 1)
-        packBuffer[length - 1] = m_pBase->read8(NE_DATA); // odd packet length handler
-      
-      // check status once again
-      while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
-      m_pBase->write8(0x40, NE_ISR);
-      
-      // set the next packet, inform the card of the new boundary
-      m_NextPacket = status >> 8;
-      m_pBase->write8((m_NextPacket == PAGE_RX) ? (PAGE_STOP - 1) : (m_NextPacket - 1), NE_BNDRY);
-      
-      // pass to the network stack
-      NetworkStack::instance().receive(length - 4, reinterpret_cast<uintptr_t>(packBuffer), this, 0);
-      
-      // destroy the buffer now that it's handled
-      delete packBuffer;
+    uint16_t status = m_pBase->read16(NE_DATA);
+    uint16_t length = m_pBase->read16(NE_DATA);
+        
+    if(!length)
+    {
+      ERROR("NE2K: length of packet is invalid!");        
+      //break;
+      return;
     }
-  }
-  while((isr = m_pBase->read8(NE_ISR)) & 0x1);
+    
+    // remove the status and length from the length
+    length -= 4;
+    
+    // packet buffer - length - 3 because extra bytes are read in
+    // for status & length
+    uint8_t* tmp = new uint8_t[length];
+    uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
+    
+    // check status, new read for the rest of the packet
+    while(!(m_pBase->read8(NE_ISR) & 0x40));
+    m_pBase->write8(0x40, NE_ISR);
+    
+    m_pBase->write8(4, NE_RSAR0);
+    m_pBase->write8(m_NextPacket, NE_RSAR1);
+    m_pBase->write8((length) & 0xff, NE_RBCR0);
+    m_pBase->write8((length) >> 8, NE_RBCR1);
+    m_pBase->write8(0x0a, NE_CMD);
+    
+    // read the packet
+    int i, words = (length) / 2;
+    for(i = 0; i < words; ++i)
+      packBuffer[i] = m_pBase->read16(NE_DATA);
+    if(length & 1)
+      packBuffer[length - 1] = m_pBase->read8(NE_DATA); // odd packet length handler
+    
+    // check status once again
+    while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
+    m_pBase->write8(0x40, NE_ISR);
+    
+    // set the next packet, inform the card of the new boundary
+    m_NextPacket = status >> 8;
+    m_pBase->write8((m_NextPacket == PAGE_RX) ? (PAGE_STOP - 1) : (m_NextPacket - 1), NE_BNDRY);
+    
+    // push onto the queue
+    packet* p = new packet;
+    p->ptr = reinterpret_cast<uintptr_t>(packBuffer);
+    p->len = length;
+    m_PacketQueue.pushBack(p);
+    m_PacketQueueSize.release();
+  //}
 
   // unmask interrupts
   m_pBase->write8(0x3f, NE_IMR);
@@ -273,8 +273,18 @@ void Ne2k::receiveThread()
   while(true)
   {
     // handle the incoming packet
-    m_PacketReady.acquire();
-    recv();
+    m_PacketQueueSize.acquire();
+    
+    // grab from the front
+    packet* p = m_PacketQueue.popFront();
+    uint8_t* packBuffer = reinterpret_cast<uint8_t*>(p->ptr);
+    
+    // pass to the network stack
+    NetworkStack::instance().receive(p->len, p->ptr, this, 0);
+    
+    // destroy the buffer now that it's handled
+    delete packBuffer;
+    delete p;
   }
 }
 
@@ -303,8 +313,8 @@ bool Ne2k::irq(irq_id_t number, InterruptState &state)
     // unmask all except the receive irq, because we're handling it
     m_pBase->write8(0x3A, NE_IMR);
     
-    NOTICE("NE2K: Packet Received");
-    m_PacketReady.release();
+    //NOTICE("NE2K: Packet Received");
+    recv();
   }
   
   // packet transmitted?
@@ -318,7 +328,7 @@ bool Ne2k::irq(irq_id_t number, InterruptState &state)
       // ack
       m_pBase->write8(0x0A, NE_ISR);
     
-      NOTICE("NE2K: Packet Transmitted");
+      //NOTICE("NE2K: Packet Transmitted");
     }
   }
   

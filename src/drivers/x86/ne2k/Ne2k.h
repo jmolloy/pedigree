@@ -59,11 +59,18 @@ private:
   static int trampoline(void* p);
   
   void receiveThread();
+  
+  struct packet
+  {
+    uintptr_t ptr;
+    size_t len;
+  };
 
   stationInfo m_StationInfo;
   uint8_t m_NextPacket;
   
-  Semaphore m_PacketReady;
+  Semaphore m_PacketQueueSize;
+  List<packet*> m_PacketQueue;
   
   Ne2k(const Ne2k&);
   void operator =(const Ne2k&);

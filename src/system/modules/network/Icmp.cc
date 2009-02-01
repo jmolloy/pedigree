@@ -100,7 +100,7 @@ void Icmp::receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* p
       
       default:
       
-        NOTICE("ICMP: Unhandled packet");
+        NOTICE("ICMP: Unhandled packet - type is " << header->type << ".");
         break;
     }
   }

@@ -38,7 +38,7 @@ uint16_t Network::calculateChecksum(uintptr_t buffer, size_t nBytes)
 
   // odd bytes
 	if(nBytes > 0)
-		sum += *data++;
+		sum += (*data++) & 0xFF;
 
 	// fold to 16 bits
 	while( sum >> 16 )

@@ -59,7 +59,9 @@ bool Arp::getFromCache(uint32_t ipv4, bool resolve, MacAddress* ent, Network* pC
   send(req->destStation, pCard);
   
   // wait for the reply
+  NOTICE("Arp: Waiting for ARP reply...");
   req->waitSem.acquire();
+  NOTICE("Arp: ARP reply received.");
   
   // load it up
   *ent = req->destStation.mac;

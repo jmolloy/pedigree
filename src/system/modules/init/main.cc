@@ -32,6 +32,10 @@
 #include <panic.h>
 #include "../../kernel/core/BootIO.h"
 
+#include <machine/Network.h>
+#include <network/NetworkStack.h>
+#include <network/UdpManager.h>
+
 extern BootIO bootIO;
 
 static bool probeDisk(Disk *pDisk)
@@ -171,4 +175,4 @@ void destroy()
 MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack");

@@ -24,6 +24,7 @@
 
 // child protocols of IP
 #include "Icmp.h"
+#include "Udp.h"
 
 Ip Ip::ipInstance;
 
@@ -77,12 +78,11 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   delete newPacket;
 }
 
-
 void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
-  
+    
   stationInfo cardInfo = pCard->getStationInfo();
   if(cardInfo.ipv4 == header->ipDest)
   {
@@ -110,10 +110,10 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
           break;
           
         case IP_UDP:
-          NOTICE("IP: UDP packet");
+          //NOTICE("IP: UDP packet");
           
           // udp needs the ip header as well
-          // Udp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
+          Udp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
           break;
           
         case IP_TCP:
@@ -128,5 +128,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
           break;
       }
     }
+    else
+      NOTICE("IP: Checksum invalid!");
   }
 }
