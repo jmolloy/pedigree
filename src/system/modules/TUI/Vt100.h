@@ -140,4 +140,10 @@ private:
 
   bool m_bDontRefresh;
 
+  typedef struct
+  {
+    int params[4];
+    int cur_param;
+  } Vt100Cmd;
+  Vt100Cmd m_Cmd;
 };

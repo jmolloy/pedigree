@@ -25,13 +25,10 @@
 #define RSHIFT    0x36
 #define ALT       0x38
 #define CTRL      0x1d
-#define F1        0x3b
-#define F2        0x3c
-#define F3        0x3d
-#define F4        0x3e
 
 char keymap_lower[256];
 char keymap_upper[256];
+char keymap_special[256];
 
 void initKeymap()
 {
@@ -96,7 +93,7 @@ void initKeymap()
 
   keymap_upper[0x02] = '!';
   keymap_upper[0x03] = '@';
-  keymap_upper[0x04] = 0x00;
+  keymap_upper[0x04] = '#';
   keymap_upper[0x05] = '$';
   keymap_upper[0x06] = '%';
   keymap_upper[0x07] = '^';
@@ -140,7 +137,33 @@ void initKeymap()
   keymap_upper[0x32] = 'M';
   keymap_upper[0x33] = '<';
   keymap_upper[0x34] = '>';
-  keymap_upper[0x35] = '\\'; /*?*/
+  keymap_upper[0x35] = '?';
+
+  memset(keymap_special, 0, 256);
+  keymap_special[0x4B] = KB_ARROWLEFT;
+  keymap_special[0x48] = KB_ARROWUP;
+  keymap_special[0x50] = KB_ARROWDOWN;
+  keymap_special[0x4D] = KB_ARROWRIGHT;
+  keymap_special[0x52] = KB_INSERT;
+  keymap_special[0x47] = KB_HOME;
+  keymap_special[0x49] = KB_PAGEUP;
+  keymap_special[0x53] = KB_DELETE;
+  keymap_special[0x4F] = KB_END;
+  keymap_special[0x51] = KB_PAGEDOWN;
+  keymap_special[0x45] = KB_NUMLOCK;
+  keymap_special[0x3B] = KB_F1;
+  keymap_special[0x3C] = KB_F2;
+  keymap_special[0x3D] = KB_F3;
+  keymap_special[0x3E] = KB_F4;
+  keymap_special[0x3F] = KB_F5;
+  keymap_special[0x40] = KB_F6;
+  keymap_special[0x41] = KB_F7;
+  keymap_special[0x42] = KB_F8;
+  keymap_special[0x43] = KB_F9;
+  keymap_special[0x44] = KB_F10;
+  keymap_special[0x57] = KB_F11;
+  keymap_special[0x58] = KB_F12;
+  keymap_special[0x46] = KB_SCROLLOCK;
 
 }
 

@@ -19,12 +19,54 @@
 
 #include <processor/types.h>
 
+#define KB_ARROWLEFT 24
+#define KB_ARROWUP 1
+#define KB_ARROWDOWN 2
+#define KB_ARROWRIGHT 3
+#define KB_INSERT 4
+#define KB_HOME 5
+#define KB_PAGEUP 6
+#define KB_DELETE 7
+#define KB_END 8
+#define KB_PAGEDOWN 9
+#define KB_NUMLOCK 10
+#define KB_F1 11
+#define KB_F2 12
+#define KB_F3 13
+#define KB_F4 14
+#define KB_F5 15
+#define KB_F6 16
+#define KB_F7 17
+#define KB_F8 18
+#define KB_F9 19
+#define KB_F10 20
+#define KB_F11 21
+#define KB_F12 22
+#define KB_SCROLLOCK 23
+
 /**
  * Keyboard device abstraction.
  */
 class Keyboard
 {
 public:
+
+  /** Character representation including any modifier bits. */
+  typedef struct
+  {
+    uint16_t ctrl : 1;
+    uint16_t alt : 1;
+    uint16_t shift : 1;
+    uint16_t caps_lock : 1;
+    uint16_t num_lock : 1;
+    uint16_t is_special : 1;
+    uint16_t valid : 1;
+    uint16_t reserved : 1;
+    uint16_t value : 8;
+  } Character;
+
+#define CHARACTER_VALID(x) (x.valid==1)
+
   virtual ~Keyboard() {}
   
   /**
@@ -62,6 +104,21 @@ public:
    *         character was present.
    */
   virtual char getCharNonBlock() =0;
+
+  /**
+   * Retrieves a character from the keyboard in special descriptor format.
+   * Blocking I/O.
+   * \return The character received along with any modifier keys used.
+   */
+  virtual Character getCharacter() =0;
+
+  /**
+   * Retrieves a character from the keyboard in special descriptor format.
+   * Nonblocking I/O.
+   * \return The character recieved along with any modifier keys used. The character
+   *         can be tested for validity with the CHARACTER_VALID macro.
+   */
+  virtual Character getCharacterNonBlock() =0;
   
   /**
    * \return True if shift is currently held.

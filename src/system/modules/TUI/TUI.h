@@ -46,6 +46,9 @@ protected:
 
   bool m_bIsTextMode;
   Display::ScreenMode m_Mode;
+
+  char m_pQueue[32];
+  size_t m_QueueLength;
 };
 
 #endif

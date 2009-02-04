@@ -79,13 +79,8 @@ char X86Keyboard::getChar()
   }
   else
   {
-    // But if we're in normal state we can be a little more efficient.
-    m_BufLength.acquire(1);
-
-    char c = m_Buffer[m_BufStart++];
-    m_BufStart = m_BufStart%BUFLEN;
-
-    return c;
+    FATAL("KEYBOARD: getChar() should not be called in normal mode!");
+    return 0;
   }
 }
 
@@ -106,18 +101,33 @@ char X86Keyboard::getCharNonBlock()
   }
   else
   {
-    if (m_BufLength.tryAcquire(1))
-    {
-      char c = m_Buffer[m_BufStart++];
-      m_BufStart = m_BufStart%BUFLEN;
-
-      return c;
-    }
-    else
-    {
-      return 0;
-    }
+    FATAL("KEYBOARD: getCharNonBlock() should not be called in normal mode!");
+    return 0;
   }
+}
+
+Keyboard::Character X86Keyboard::getCharacter()
+{
+  m_BufLength.acquire(1);
+
+  Character c = m_Buffer[m_BufStart++];
+  m_BufStart = m_BufStart%BUFLEN;
+
+  return c;
+}
+
+Keyboard::Character X86Keyboard::getCharacterNonBlock()
+{
+  if (m_BufLength.tryAcquire(1))
+  {
+    Character c = m_Buffer[m_BufStart++];
+    m_BufStart = m_BufStart%BUFLEN;
+
+    return c;
+  }
+  Character c;
+  c.valid = 0;
+  return c;
 }
 
 bool X86Keyboard::shift()
@@ -176,13 +186,12 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
   // Get the scancode for the pending keystroke.
   scancode = m_Port.read8(0);
 
-  char c = scancodeToChar(scancode);
-  if (c=='`')
+  Character c = scancodeToCharacter(scancode);
+  if (c.valid && c.is_special && c.value == KB_F12)
   {
-    NOTICE("IP: "<< Hex << state.getInstructionPointer() << ", SP:" << state.getStackPointer());
     Processor::breakpoint();
   }
-  if (c != 0)
+  if (c.valid)
   {
     m_Buffer[m_BufEnd++] = c;
     m_BufEnd = m_BufEnd%BUFLEN;
@@ -271,4 +280,109 @@ char X86Keyboard::scancodeToChar(uint8_t scancode)
     return keymap_lower[scancode];
   else
     return 0;
+}
+
+Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
+{
+  // We don't care about 'special' scancodes which start with 0xe0.
+  if (scancode == 0xe0)
+  {
+    Character c;
+    c.valid = 0;
+    return c;
+  }
+
+  // Was this a keypress?
+  bool bKeypress = true;
+  if (scancode & 0x80)
+  {
+    bKeypress = false;
+    scancode &= 0x7f;
+  }
+
+  Character c;
+  c.valid = 0;
+  c.ctrl = m_bCtrl;
+  c.alt = m_bAlt;
+  c.shift = m_bShift;
+  c.num_lock = 0;
+  c.is_special = 0;
+  c.reserved = 0;
+
+
+  bool bUseUpper = false;  // Use the upper case keymap.
+  bool bUseNums = false;   // Use the upper case keymap for numbers.
+  // Certain scancodes have special meanings.
+  switch (scancode)
+  {
+  case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
+    if (bKeypress)
+      m_bCapsLock = !m_bCapsLock;
+    return c;
+  case LSHIFT:
+  case RSHIFT:
+    if (bKeypress)
+      m_bShift = true;
+    else
+      m_bShift = false;
+    return c;
+  case CTRL:
+    if (bKeypress)
+      m_bCtrl = true;
+    else
+      m_bCtrl = false;
+    return c;
+  case ALT:
+    if (bKeypress)
+      m_bAlt = true;
+    else
+      m_bAlt = false;
+    return c;
+  }
+
+  if ( (m_bCapsLock && !m_bShift) || (!m_bCapsLock && m_bShift) )
+    bUseUpper = true;
+
+  if (m_bShift)
+    bUseNums = true;
+
+  if (!bKeypress)
+    return c;
+
+  // Now c is valid...
+  c.valid = 1;
+
+  if (scancode < 0x02)
+    c.value = keymap_lower[scancode];
+  else if ( (scancode <  0x0e /* backspace */) ||
+            (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||
+            (scancode >= 0x27 /*;*/ && scancode <= 0x29 /*`*/) ||
+            (scancode == 0x2b) ||
+            (scancode >= 0x33 /*,*/ && scancode <= 0x35 /*/*/) )
+  {
+    if (bUseNums)
+      c.value = keymap_upper[scancode];
+    else
+      c.value = keymap_lower[scancode];
+  }
+  else if ( (scancode >= 0x10 /*Q*/ && scancode <= 0x19 /*P*/) ||
+            (scancode >= 0x1e /*A*/ && scancode <= 0x26 /*L*/) ||
+            (scancode >= 0x2c /*Z*/ && scancode <= 0x32 /*M*/) )
+  {
+    if (bUseUpper)
+      c.value = keymap_upper[scancode];
+    else
+      c.value = keymap_lower[scancode];
+  }
+  else if (scancode <= 0x39 /* space */)
+  {
+    c.value = keymap_lower[scancode];
+  }
+  else
+  {
+    c.is_special = 1;
+    c.value = keymap_special[scancode];
+    if (c.value == 0) c.valid = 0;
+  }
+  return c;
 }

@@ -16,6 +16,7 @@
 #include <machine/x86_common/Bios.h>
 #include <processor/Processor.h>
 #include <utilities/StaticString.h>
+#include <processor/VirtualAddressSpace.h>
 
 #include "../../core/BootIO.h"
 #include "x86emu/x86emu.h"
@@ -156,6 +157,22 @@ uintptr_t Bios::malloc (int n)
 
 void Bios::executeInterrupt (int i)
 {
+  // We need to check if lower memory is identity mapped properly here. If it isn't, we can't
+  // call the BIOS!
+  VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+  if (!va.isMapped (0x00000000))
+  {
+    // We have to map it!
+    for (physical_uintptr_t i = 0; i < 0x100; i++)
+    {
+      if (!va.map(i * 0x1000,
+                  reinterpret_cast<void*> (i*0x1000),
+                  VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write))
+      ERROR("BIOS: Map failed at " << Hex << i*0x1000 << "!");
+
+    }
+  }
+
   X86EMU_prepareForInt(i);
   X86EMU_exec();
 }

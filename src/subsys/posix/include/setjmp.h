@@ -11,6 +11,10 @@
 
 _BEGIN_STD_C
 
+#define sigjmp_buf jmp_buf
+#define sigsetjmp setjmp
+#define siglongjmp longjmp
+
 void	_EXFUN(longjmp,(jmp_buf __jmpb, int __retval));
 int	_EXFUN(setjmp,(jmp_buf __jmpb));
 

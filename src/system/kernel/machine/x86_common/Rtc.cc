@@ -196,10 +196,6 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   uint64_t delta = periodicIrqInfo[m_PeriodicIrqInfoIndex].ns[index];
   index = (index == 0) ? 1 : 0;
   m_TickCount += delta;
-  //if ((m_TickCount/1000000ULL) > 10000)
-  // {
-  //   Processor::breakpoint();
-  // }
 
   // Calculate the new time/date
   m_Nanosecond += delta;

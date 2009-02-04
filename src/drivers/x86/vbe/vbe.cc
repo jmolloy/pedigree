@@ -57,8 +57,7 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
     // Get its addresses, and search for fbAddr.
     for (unsigned int j = 0; j < pChild->addresses().count(); j++)
     {
-      /// \todo Problem with String::operator== - fix.
-      if (pChild->addresses()[j]->m_Address == fbAddr)
+      if (pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
       {
         return pChild;
       }

@@ -105,7 +105,7 @@ void Vt100::write(char *str)
     write(*str++);
 
   m_bDontRefresh = false;
-  refresh(refreshY, refreshX);
+  refresh(refreshY, 0/*refreshX*/);
 }
 
 void Vt100::write(char c)
@@ -126,7 +126,30 @@ void Vt100::write(char c)
   if (m_bChangingState)
   {
     // A VT100 command is being received.
+    if (c == '[') return; // Useless character.
 
+    switch (c)
+    {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (c-'0');
+        break;
+      case ';':
+        m_Cmd.cur_param++;
+        break;
+      default:
+        WARNING("VT100: Invalid character: " << c);
+        m_bChangingState = false;
+        break;
+    }
   }
   else
   {
@@ -137,12 +160,13 @@ void Vt100::write(char c)
       {
         if (pLines[m_CursorY].col > 0)
         {
-          memmove(&pLines[m_CursorY].str[m_CursorX-1], &pLines[m_CursorY].str[m_CursorX], pLines[m_CursorY].col-m_CursorX);
-          if ( (pLines[m_CursorY].col / m_nWidth) != ((pLines[m_CursorY].col - 1) / m_nWidth) )
-            pLines[m_CursorY].rows --;
-          pLines[m_CursorY].col --;
+          //memmove(&pLines[m_CursorY].str[m_CursorX-1], &pLines[m_CursorY].str[m_CursorX], pLines[m_CursorY].col-m_CursorX);
+          //if ( (pLines[m_CursorY].col / m_nWidth) != ((pLines[m_CursorY].col - 1) / m_nWidth) )
+          //  pLines[m_CursorY].rows --;
+          //pLines[m_CursorY].col --;
+          // Don't erase the character, just move the cursor!
           m_CursorX --;
-          refresh(m_CursorY, (m_CursorX != 0) ? (m_CursorX-1) : 0);
+          refresh(m_CursorY, (m_CursorX != 0) ? 0/*(m_CursorX-1)*/ : 0);
         }
         break;
       }
@@ -181,10 +205,22 @@ void Vt100::write(char c)
         break;
       }
 
+      case '\r':
+      {
+        m_CursorX = 0;
+        refresh(m_CursorY, 0);
+        break;
+      }
+
       // VT100 command - changes mode.
       case '\e':
       {
         m_bChangingState = true;
+        m_Cmd.cur_param = 0;
+        m_Cmd.params[0] = 0;
+        m_Cmd.params[1] = 0;
+        m_Cmd.params[2] = 0;
+        m_Cmd.params[3] = 0;
         break;
       }
 
@@ -215,12 +251,13 @@ void Vt100::write(char c)
         }
         NOTICE("C: " << (uint8_t)c);
         // Add the character.
-        pLines[m_CursorY].str[pLines[m_CursorY].col++] = c;
+        pLines[m_CursorY].str[m_CursorX] = c;
+        if (m_CursorX == pLines[m_CursorY].col) pLines[m_CursorY].col++; 
         m_CursorX ++;
         /// \todo Check for str becoming too large and realloc.
 
         // The state may have changed from the cursor position onwards, so render from there.
-        refresh(m_CursorY, (m_CursorX != 0) ? (m_CursorX-1) : 0);
+        refresh(m_CursorY, (m_CursorX != 0) ? 0/*(m_CursorX-1)*/ : 0);
       }
     }
   }
@@ -386,7 +423,7 @@ void Vt100::ensureLineDisplayed(int l)
   // at which point we must stop. Linearly, because we're using a circular queue so because of the wraparound we can't use
   // greater-than/less-than comparison ops.
   uint32_t winEnd = winStart;
-  for (int32_t i = 0; i < m_nHeight;)
+  for (uint32_t i = 0; i < m_nHeight;)
   {
     if (winEnd == l)
       // Line is visible, stop.

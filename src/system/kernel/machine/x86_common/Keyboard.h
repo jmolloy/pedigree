@@ -57,6 +57,9 @@ public:
    *         character was present.
    */
   virtual char getCharNonBlock();
+
+  virtual Character getCharacter();
+  virtual Character getCharacterNonBlock();
   
   /**
    * \return True if shift is currently held.
@@ -88,6 +91,8 @@ private:
    * Converts a scancode into a "real" character.
    */
   char scancodeToChar(uint8_t scancode);
+
+  Character scancodeToCharacter(uint8_t scancode);
 
   /**
    * True if we're in debug state.
@@ -122,7 +127,7 @@ private:
   /**
    * Circular input buffer.
    */
-  char m_Buffer[BUFLEN];
+  Character m_Buffer[BUFLEN];
   int m_BufStart, m_BufEnd;
 
   /**

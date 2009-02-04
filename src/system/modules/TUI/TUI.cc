@@ -28,7 +28,7 @@ TUI *g_pTui;
 Vt100 *g_pVt100 = 0;
 
 TUI::TUI() :
-  m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true)
+  m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true), m_QueueLength(0)
 {
 }
 
@@ -84,12 +84,24 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
 
     char *buf = reinterpret_cast<char*>(buffer);
     int i = 0;
-    char c = 0;
+    char c;
+    Keyboard::Character ch;
 
     while ( i < size )
     {
-      c = pK->getCharNonBlock();
-      if (c == 0)
+      if (m_QueueLength)
+      {
+        buf[i++] = m_pQueue[0];
+        for (int j = 0; j < m_QueueLength-1; j++)
+        {
+          m_pQueue[j] = m_pQueue[j+1];
+        }
+        m_QueueLength--;
+        continue;
+      }
+
+      ch = pK->getCharacterNonBlock();
+      if (ch.valid == 0)
       {
         if (i == 0)
           continue;
@@ -97,6 +109,40 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         {
           return i;
         }
+      }
+      if (ch.is_special)
+      {
+        switch (ch.value)
+        {
+          case KB_ARROWLEFT:
+            c = '\e';
+            m_pQueue[m_QueueLength++] = '[';
+            //m_pQueue[m_QueueLength++] = '1';
+            m_pQueue[m_QueueLength++] = 'D';
+            break;
+          case KB_ARROWRIGHT:
+            c = '\e';
+            m_pQueue[m_QueueLength++] = '[';
+            //m_pQueue[m_QueueLength++] = '1';
+            m_pQueue[m_QueueLength++] = 'C';
+            break;
+          case KB_ARROWUP:
+            c = '\e';
+            m_pQueue[m_QueueLength++] = '[';
+            //m_pQueue[m_QueueLength++] = '1';
+            m_pQueue[m_QueueLength++] = 'A';
+            break;
+          case KB_ARROWDOWN:
+            c = '\e';
+            m_pQueue[m_QueueLength++] = '[';
+            //m_pQueue[m_QueueLength++] = '1';
+            m_pQueue[m_QueueLength++] = 'B';
+            break;
+        }
+      }
+      else
+      {
+        c = ch.value;
       }
 
       // Echo.

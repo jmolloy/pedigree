@@ -28,7 +28,6 @@ void Dma::init()
 
   // Powerup all nvidia hardware function blocks.
   pRegs->write32(0x13111111, NV32_PWRUPCTRL);
-
   // Enable "enhanced mode" (?)
   pRegs->write8(0x04, NVCRTCX_REPAINT1);
 
@@ -371,7 +370,7 @@ void Dma::init()
   // Cache1 DMA Get offset = 0;
   pRegs->write32(0x00000000, NVACC_PF_CACH1_DMAG);
   // Cache1 DMA instance address  = 0x0114e (but haiku has 0x1150 for >=NV40A...
-  if (m_Card > NV40A)
+  if (m_Card >= NV40A)
     pRegs->write32(0x00001150, NVACC_PF_CACH1_DMAI);
   else
     pRegs->write32(0x0000114e, NVACC_PF_CACH1_DMAI);
@@ -482,8 +481,6 @@ void Dma::init()
   writeBuffer(0xffffffff); // Setpattern0
   writeBuffer(0xffffffff); // Setpattern1
 
-    uint32_t dmaget = m_pRegs->read32(NVACC_FIFO + NV_GENERAL_DMAGET) >> 2;
-    NOTICE("0Get: " << Hex << dmaget);
   // Start DMA transfer!
   start();
 }
@@ -511,18 +508,15 @@ void Dma::writeBuffer(uint32_t arg)
 
 void Dma::start()
 {
-  NOTICE("Dma:: start");
   if (m_nCurrent != m_nPut)
   {
     m_nPut = m_nCurrent;
-NOTICE("Put now " << Hex << m_nPut);
     m_pRegs->write32(m_nPut << 2, NVACC_FIFO + NV_GENERAL_DMAPUT);
   }
 }
 
 void Dma::ensureFree(uint16_t cmd_size)
 {
-  NOTICE("Dma::ensureFree("<< Dec << cmd_size << ")");
   while ( (m_nFree < cmd_size) )
   {
     uint32_t dmaget = m_pRegs->read32(NVACC_FIFO + NV_GENERAL_DMAGET) >> 2;
@@ -561,7 +555,6 @@ void Dma::ensureFree(uint16_t cmd_size)
         m_nFree -= 256;
     }
   }
-  NOTICE("Dma::ensureFree -- return");
 }
 
 void Dma::initFifo(uint32_t ch, uint32_t handle)
@@ -576,7 +569,6 @@ void Dma::initFifo(uint32_t ch, uint32_t handle)
 
 void Dma::screenToScreenBlit(uint16_t src_x, uint16_t src_y, uint16_t dest_x, uint16_t dest_y, uint16_t h, uint16_t w)
 {
-  NOTICE("screenToScreenBlit");
   ensureFree(2);
 
   // Now setup ROP (Raster OP) for GXCopy */
@@ -597,7 +589,7 @@ void Dma::screenToScreenBlit(uint16_t src_x, uint16_t src_y, uint16_t dest_x, ui
 void Dma::fillRectangle(uint16_t x, uint16_t y, uint16_t h, uint16_t w)
 {
   uint32_t c = 0xFFFFFFFF;
-  NOTICE("fillRectangle");
+
   ensureFree(2);
 
   // Now setup ROP (Raster OP) for GXCopy
@@ -615,7 +607,6 @@ void Dma::fillRectangle(uint16_t x, uint16_t y, uint16_t h, uint16_t w)
   writeBuffer( ((w+1) << 16) | (h+1) );
 
   start();
-  NOTICE("fillRectangle -- end");
 }
 
 void Dma::setUpReverseEngineeredMagicRegs()
