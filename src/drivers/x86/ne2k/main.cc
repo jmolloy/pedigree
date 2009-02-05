@@ -58,7 +58,7 @@ void searchNode(Device *pDev)
 }
 
 void entry()
-{
+{  
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
   Device *pDev = &Device::root();  

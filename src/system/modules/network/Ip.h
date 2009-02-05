@@ -65,10 +65,18 @@ public:
     uint32_t  ipSrc;
     uint32_t  ipDest;
   } __attribute__ ((packed));
+
+  /** Gets the next IP Packet ID */
+  uint16_t getNextId()
+  {
+    return m_IpId++;
+  }
   
 private:
 
   static Ip ipInstance;
+  
+  uint16_t m_IpId;
 
 };
 

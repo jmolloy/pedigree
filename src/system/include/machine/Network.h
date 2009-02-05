@@ -78,6 +78,15 @@ class MacAddress
     uint8_t   mac[6];
 };
 
+/** An IP address *
+class IpAddress
+{
+  public:
+  
+  private:
+};
+*/
+
 /** Station information */
 struct stationInfo
 {
@@ -87,6 +96,10 @@ struct stationInfo
   
   uint32_t    ipv4;     // ipv4 address
   uint8_t     ipv6[16]; // ipv6 address (not compulsory)
+  
+  uint32_t    subnetMask;
+  uint32_t    gateway;
+  
   MacAddress  mac;      // MAC address
 };
 

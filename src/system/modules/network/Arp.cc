@@ -32,16 +32,12 @@ Arp::~Arp()
 
 bool Arp::getFromCache(uint32_t ipv4, bool resolve, MacAddress* ent, Network* pCard)
 {
-  // search the list
-  for(Vector<arpEntry*>::Iterator it = m_ArpCache.begin();
-      it != m_ArpCache.end();
-      it++)
+  // do we have an entry for it yet?
+  arpEntry* arpEnt;
+  if((arpEnt = m_ArpCache.lookup(ipv4)) != 0)
   {
-    if (((*it)->station.ipv4 == ipv4) && (*it)->valid)
-    {
-      *ent = (*it)->station.mac;
-      return true;
-    }
+    *ent = arpEnt->station.mac;
+    return true;
   }
   
   // not found, do we resolve?
@@ -59,9 +55,7 @@ bool Arp::getFromCache(uint32_t ipv4, bool resolve, MacAddress* ent, Network* pC
   send(req->destStation, pCard);
   
   // wait for the reply
-  NOTICE("Arp: Waiting for ARP reply...");
   req->waitSem.acquire();
-  NOTICE("Arp: ARP reply received.");
   
   // load it up
   *ent = req->destStation.mac;
@@ -96,6 +90,8 @@ void Arp::send(stationInfo req, Network* pCard)
   MacAddress destMac;
   destMac = request->hwDest;
   
+  memset(request->hwDest, 0, 6);
+  
   Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(request), pCard, destMac, ETH_ARP);
   
   delete request;
@@ -110,6 +106,10 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
   stationInfo cardInfo = pCard->getStationInfo();
   if(header->ipDest == cardInfo.ipv4)
   {
+    // grab the source MAC
+    MacAddress sourceMac;
+    sourceMac = header->hwSrc;
+    
     // request?
     if(BIG_TO_HOST16(header->opcode) == ARP_OP_REQUEST)
     {
@@ -122,17 +122,18 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
         return;
       }
       
-      // grab the source MAC
-      MacAddress sourceMac;
-      sourceMac = header->hwSrc;
       MacAddress myMac = cardInfo.mac;
       
-      // add to our local cache
-      arpEntry* ent = new arpEntry;
-      ent->valid = true;
-      ent->station.mac = sourceMac;
-      ent->station.ipv4 = header->ipSrc;
-      m_ArpCache.pushBack(ent);
+      // add to our local cache, if needed
+      if(m_ArpCache.lookup(header->ipSrc) == 0)
+      {
+        arpEntry* ent = new arpEntry;
+        ent->valid = true;
+        ent->station.mac = sourceMac;
+        ent->station.ipv4 = header->ipSrc;
+        m_ArpCache.insert(header->ipSrc, ent);
+        //m_ArpCache.pushBack(ent);
+      }
       
       // allocate the reply
       arpHeader* reply = new arpHeader;
@@ -153,6 +154,17 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     else if(BIG_TO_HOST16(header->opcode) == ARP_OP_REPLY)
     {
       //NOTICE("Arp: Reply");
+      
+      // add to our local cache, if needed
+      if(m_ArpCache.lookup(header->ipSrc) == 0)
+      {
+        arpEntry* ent = new arpEntry;
+        ent->valid = true;
+        ent->station.mac = sourceMac;
+        ent->station.ipv4 = header->ipSrc;
+        m_ArpCache.insert(header->ipSrc, ent);
+        //m_ArpCache.pushBack(ent);
+      }
       
       // search all the requests we've made, trigger the first we find
       for(Vector<arpRequest*>::Iterator it = m_ArpRequests.begin();

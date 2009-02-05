@@ -21,7 +21,7 @@
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
 
-#include <Network/Arp.h>
+#include <network/Arp.h>
 
 Ne2k::Ne2k(Network* pDev) :
   Network(pDev), m_StationInfo(), m_pBase(0), m_PacketQueue(), m_PacketQueueSize(0)
@@ -114,7 +114,7 @@ Ne2k::Ne2k(Network* pDev) :
   
   // send(5, reinterpret_cast<uintptr_t>("Hello"));
   
-  m_StationInfo.ipv4 = Network::convertToIpv4(192, 168, 1, 123); // 0xC0A8017B;
+  //m_StationInfo.ipv4 = Network::convertToIpv4(192, 168, 1, 123);
   
   NetworkStack::instance().registerDevice(this);
 }
@@ -197,8 +197,8 @@ void Ne2k::recv()
   m_pBase->write8(0x21, NE_CMD);
   
   // read packets until the current packet
-  //while(m_NextPacket != current)
-  //{      
+  while(m_NextPacket != current)
+  {      
     // need status and length
     m_pBase->write8(0, NE_RSAR0);
     m_pBase->write8(m_NextPacket, NE_RSAR1);
@@ -216,13 +216,13 @@ void Ne2k::recv()
       return;
     }
     
-    // remove the status and length from the length
+    // remove the status and length bytes
     length -= 4;
     
-    // packet buffer - length - 3 because extra bytes are read in
-    // for status & length
+    // packet buffer
     uint8_t* tmp = new uint8_t[length];
     uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
+    memset(packBuffer, 0, length);
     
     // check status, new read for the rest of the packet
     while(!(m_pBase->read8(NE_ISR) & 0x40));
@@ -239,7 +239,7 @@ void Ne2k::recv()
     for(i = 0; i < words; ++i)
       packBuffer[i] = m_pBase->read16(NE_DATA);
     if(length & 1)
-      packBuffer[length - 1] = m_pBase->read8(NE_DATA); // odd packet length handler
+      packBuffer[length - 1] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
     
     // check status once again
     while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
@@ -252,10 +252,10 @@ void Ne2k::recv()
     // push onto the queue
     packet* p = new packet;
     p->ptr = reinterpret_cast<uintptr_t>(packBuffer);
-    p->len = length;
+    p->len = (i * 2) + ((length & 1) ? 1 : 0); //length;
     m_PacketQueue.pushBack(p);
     m_PacketQueueSize.release();
-  //}
+  }
 
   // unmask interrupts
   m_pBase->write8(0x3f, NE_IMR);
@@ -294,6 +294,10 @@ bool Ne2k::setStationInfo(stationInfo info)
   // 1) can't do info = m_StationInfo for ipv6
   // 2) MAC isn't changeable
   m_StationInfo.ipv4 = info.ipv4;
+  
+  m_StationInfo.subnetMask = info.subnetMask;
+  m_StationInfo.gateway = info.gateway;
+  
   memcpy(m_StationInfo.ipv6, info.ipv6, 16);
 }
 

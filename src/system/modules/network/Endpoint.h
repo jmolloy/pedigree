@@ -76,15 +76,7 @@ class Endpoint
       uint16_t remotePort;
     };
     
-    /** Application interface */
-    virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, Network* pCard)
-    {
-      return false;
-    };
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
-    {
-      return 0;
-    };
+    /** Is data ready to recv yet? */
     virtual bool dataReady(bool block = false)
     {
       return false;
@@ -94,6 +86,50 @@ class Endpoint
     virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
     {
     }
+    
+    /** Connectionless endpoints */
+    virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, Network* pCard)
+    {
+      return false;
+    };
+    virtual size_t recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+    {
+      return 0;
+    };
+    
+    /** Connection-based endpoints */
+    virtual bool connect(Endpoint::RemoteEndpoint remoteHost)
+    {
+      return false;
+    };
+    virtual void close()
+    {
+    };
+    
+    virtual void listen()
+    {
+    };
+    virtual Endpoint* accept()
+    {
+      return 0;
+    };
+    
+    virtual bool send(size_t nBytes, uintptr_t buffer)
+    {
+      return false;
+    };
+    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool block)
+    {
+      return 0;
+    };
+    
+    virtual void setRemoteHost(RemoteEndpoint host)
+    {
+    };
+    
+    virtual void setCard(Network* pCard)
+    {
+    };
   
   private:
   

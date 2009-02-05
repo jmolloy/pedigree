@@ -16,7 +16,7 @@
 
 set(DRIVERS ata partition nvidia)
 if(X86_COMMON)
-  set(X86DRIVERS vbe pci )
+  set(X86DRIVERS vbe pci ne2k)
 endif(X86_COMMON)
 if(PPC_COMMON)
   set(PPCDRIVERS ata-specific)

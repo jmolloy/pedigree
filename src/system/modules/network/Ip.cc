@@ -25,10 +25,12 @@
 // child protocols of IP
 #include "Icmp.h"
 #include "Udp.h"
+#include "Tcp.h"
 
 Ip Ip::ipInstance;
 
-Ip::Ip()
+Ip::Ip() :
+  m_IpId(0)
 {
 }
 
@@ -50,6 +52,8 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   // do the deed
   stationInfo me = pCard->getStationInfo();
   
+  header->id = Ip::instance().getNextId();
+  
   header->ipDest = dest.ipv4; /// \todo IPv6
   header->ipSrc = me.ipv4;
   
@@ -66,6 +70,16 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   
   // copy the payload into the packet
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
+  
+  // send to the gateway if it's outside our subnet
+  if((dest.ipv4 & me.subnetMask) != (me.ipv4 & me.subnetMask))
+  {
+    // NOTICE("IP: Destination requires the use of a gateway!");
+    if(me.gateway)
+      dest.ipv4 = me.gateway;
+    else
+      return;
+  }
   
   // get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
@@ -117,10 +131,10 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
           break;
           
         case IP_TCP:
-          NOTICE("IP: TCP packet");
+          //NOTICE("IP: TCP packet");
           
-          // tc needs the ip header as well
-          // Tcp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
+          // tcp needs the ip header as well
+          Tcp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
           break;
         
         default:

@@ -106,10 +106,7 @@ private:
 
   static UdpManager manager;
 
-  /** Currently known endpoints (all actually UdpEndpoints).
-   * Needs to be a map rather than a vector, so we can do m_Endpoints[destPort] to find
-   * if a given endpoint is taken.
-   */
+  /** Currently known endpoints (all actually UdpEndpoints). */
   Tree<size_t, Endpoint*> m_Endpoints;
 };
 

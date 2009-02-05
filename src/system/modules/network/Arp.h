@@ -18,6 +18,7 @@
 
 #include <utilities/String.h>
 #include <utilities/Vector.h>
+#include <utilities/Tree.h>
 #include <processor/types.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
@@ -95,8 +96,11 @@ private:
     Semaphore waitSem;
   };
   
+  // ARP Cache
+  Tree<uint32_t, arpEntry*> m_ArpCache;
+  
   // ARP cache
-  Vector<arpEntry*> m_ArpCache;
+  //Vector<arpEntry*> m_ArpCache;
   
   // ARP request list
   Vector<arpRequest*> m_ArpRequests;
