@@ -1,12 +1,12 @@
 d0|vt100|DEC VT100 with AVO:\
-	     :ae=^O:as=^N:bl=^G:cd=\E[J:ce=\E[K:cm=\E[%i%d;%dH:co#80:cr=^M:\
-	     :cs=\E[%i%d;%dr:ct=\E[3g:DO=\E[%dB:do=^J:ho=\E[H:is=\E<\E)0:it#8:\
-	     :k0=\EOP:k1=\EOQ:k2=\EOR:k3=\EOS:kb=^H:kd=\EOB:ke=\E[?1l\E>:kl=\EOD:\
-	     :kr=\EOC:ks=\E[?1h\E=:ku=\EOA:l0=PF1:l1=PF2:l2=PF3:l3=PF4:LE=\E[%dD:\
-	     :le=^H:li#24:ll=\E[24H:mb=\E[5m:md=\E[1m:me=\E[m:mr=\E[7m:ms:nd=\E[C:\
+	     :cd=\E[J:ce=\E[K:cm=\E[%i%d;%dH:co#80:cr=\r:\
+	     :cs=\E[%i%d;%dr:ct=\E[3g:DO=\E[%dB:do=\E[A:ho=\E[H:is=\E<\E)0:it#8:\
+	     :k0=\EOP:k1=\EOQ:k2=\EOR:k3=\EOS:kb=\b:kd=\E[B:ke=\E[?1l\E>:kl=\E[D:\
+	     :kr=\E[C:ks=\E[?1h\E=:ku=\EA:l0=PF1:l1=PF2:l2=PF3:l3=PF4:LE=\E[%dD:\
+	     :le=\E[D:li#24:ll=\E[24H:mb=\E[5m:md=\E[1m:me=\E[m:mr=\E[7m:ms:nd=\E[C:\
 	     :nw=\EE:rc=\E8:RI=\E[%dC:\
 	     :rs=^X\E<\E2\E[?9h^]\E^L^X\E[20l\E[?3;9;6l\E[r\E[m\E[q\E(B^O\E)0\E>:\
-	     :sc=\E7:se=\E[m:sf=^J:so=\E[7m:sr=\EM:st=\EH:ta=^I:ti=\E[?7l:\
-	     :te=150\E[?7h:ue=\E[m:UP=\E[%dA:up=\EM:us=\E[4m:vt#3:xo:\
+	     :sc=\E7:se=\E[m:sf=\ED:so=\E[7m:sr=\EM:st=\EH:ta=\t:ti=\E[?7l:\
+	     :te=150\E[?7h:ue=\E[m:UP=\E[%dA:up=\E[A:us=\E[4m:vt#3:xo:\
 	     :cl=\E[H\E[J:\
 	     :bs:kn#4:pt:

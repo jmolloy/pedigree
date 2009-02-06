@@ -111,6 +111,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
       result = S;
       break;
     case R_386_COPY:
+      NOTICE("386_COPY: S: " << Hex << (uintptr_t)S << ", address: " << (uintptr_t)address);
       result = * reinterpret_cast<uintptr_t*> (S);
       break;
     case R_386_RELATIVE:

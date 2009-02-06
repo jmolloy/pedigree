@@ -249,7 +249,7 @@ void Vt100::write(char c)
           pLines[m_CursorY].rows ++;
           ensureLineDisplayed(m_CursorY); // This will handle scrolling in the case the line is now off the screen.
         }
-        NOTICE("C: " << (uint8_t)c);
+//        NOTICE("C: " << (uint8_t)c);
         // Add the character.
         pLines[m_CursorY].str[m_CursorX] = c;
         if (m_CursorX == pLines[m_CursorY].col) pLines[m_CursorY].col++; 
@@ -335,7 +335,7 @@ uint32_t Vt100::compileColour(uint8_t r, uint8_t g, uint8_t b)
 void Vt100::refresh(int32_t line, int32_t col)
 {
   if (m_bDontRefresh) return;
-NOTICE("Refresh: l:" << Dec << line << ", c:" << col);
+//NOTICE("Refresh: l:" << Dec << line << ", c:" << col);
   uint32_t winStart = (m_bIsAlternateWindow) ? m_AlternateWinViewStart : m_WinViewStart;
   Line *pLines = (m_bIsAlternateWindow) ? m_pAlternateLines : m_pLines;
   uint32_t nLines = (m_bIsAlternateWindow) ? m_nAlternateLines : m_nLines;

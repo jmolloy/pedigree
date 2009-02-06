@@ -17,9 +17,11 @@
 #include "syscallNumbers.h"
 
 #include "errno.h"
+#define errno (*__errno())
+extern int *__errno (void);
 
-#undef errno
-extern int errno; // <-- is right according to the newlib documentation, but isn't this racy across threads?
+//undef errno
+//extern int errno; // <-- is right according to the newlib documentation, but isn't this racy across threads?
 
 // Define errno before including syscall.h.
 #include "syscall.h"
@@ -27,6 +29,8 @@ extern int errno; // <-- is right according to the newlib documentation, but isn
 extern void *malloc(int);
 extern void free(void*);
 extern void strcpy(char*,char*);
+
+extern void printf(char*,...);
 
 #define MAXNAMLEN 255
 
@@ -370,11 +374,45 @@ int umask(int mask)
   return 0;
 }
 
-int access(const char *path, int amode)
+int chmod(const char *path, int mode)
 {
   /// \todo Implement
   errno = ENOENT;
   return -1;
+}
+
+int chown(const char *path, int owner, int group)
+{
+  /// \todo Implement
+  errno = ENOENT;
+  return -1;
+}
+
+int utime(const char *path, const struct utimbuf *times)
+{
+  /// \todo Implement
+  errno = ENOENT;
+  return -1;
+}
+
+int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+  /// \todo Implement
+  errno = ENOSYS;
+  return -1;
+}
+
+int dup2(int fildes, int fildes2)
+{
+  errno = ENOENT;
+  return -1;
+}
+
+int access(const char *path, int amode)
+{
+  /// \todo Implement
+  errno = ENOENT;
+  return 0;
 }
 
 const char * const sys_errlist[] = {};

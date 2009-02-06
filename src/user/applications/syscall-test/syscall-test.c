@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #define PASS 1
 #define FAIL 0
@@ -47,6 +48,12 @@ int test_open ()
 
 int main (int argc, char **argv)
 {
+  printf("argc: %d, argv[0]: %s, &optind: %x\n", argc, argv[0], &optind);
+  while(
+    getopt(argc, argv,
+       "h?ABC:DEFHIKLNOQ:RST:UVWY:abcdefgijklmo:pr:s:tvwxz") != -1)
+  {printf("bleh\n");}
+  printf("optind: %d\n", optind);
   printf ("Syscall test starting...\n");
 
   test_open ();

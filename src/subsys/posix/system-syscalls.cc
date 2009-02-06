@@ -272,7 +272,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
   env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
 
-
   ProcessorState pState = state;
   pState.setStackPointer(STACK_START-8);
   pState.setInstructionPointer(elf->getEntryPoint());

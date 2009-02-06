@@ -172,6 +172,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     if (LIKELY(pHandler != 0))
     {
       interruptState.m_Eax = pHandler->syscall(interruptState);
+      NOTICE("Returning errno " << Hex << Processor::information().getCurrentThread()->getErrno());
       interruptState.m_Ebx = Processor::information().getCurrentThread()->getErrno();
     }
     return;

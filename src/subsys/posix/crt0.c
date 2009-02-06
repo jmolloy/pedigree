@@ -2,9 +2,10 @@ extern int write(int,int,int);
 extern int open(char*,int,int);
 extern int main(int,char**);
 extern int _exit(int);
+extern int sprintf(char*, char*, ...);
+extern void setenv(char*,char*,int);
 
 extern char **environ;
-
 void *__gxx_personality_v0;
 
 void _start(char **argv, char **env)
@@ -33,7 +34,20 @@ void _start(char **argv, char **env)
     argc = 0;
     while (*i++)
       argc++;
-    environ = env;
+    i  = env;
+    while (*i)
+    {
+      // Save the key.
+      char *key = *i;
+      char *value = *i;
+      // Iterate until we see the end of the string or an '='.
+      while (*value && *value != '=') value++;
+      // If we found a '=', change it to a NULL terminator (for the key) and increment position.
+      if (*value == '=') *value++ = '\0';
+      // Set the env var.
+      setenv(key, value, 1);
+      *i++;
+    }
   }
 
   _exit(main(argc, argv));

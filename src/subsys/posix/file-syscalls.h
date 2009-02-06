@@ -49,6 +49,8 @@ struct  stat
 };
 
 #define	S_IFCHR	0020000	/* character special */
+#define S_IFDIR 0040000 /* Directory */
+#define S_IFREG 0100000 /* Regular file */
 
 int posix_close(int fd);
 int posix_open(const char *name, int flags, int mode);

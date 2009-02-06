@@ -296,9 +296,23 @@ int posix_stat(const char *name, struct stat *st)
     return -1;
   }
 
+  int mode = 0;
+  if (ConsoleManager::instance().isConsole(file))
+  {
+    mode = S_IFCHR;
+  }
+  else if (file.isDirectory())
+  {
+    mode = S_IFDIR;
+  }
+  else
+  {
+    mode = S_IFREG;
+  }
+
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(file.getFilesystem()));
   st->st_ino   = static_cast<short>(file.getInode());
-  st->st_mode  = (ConsoleManager::instance().isConsole(file))?S_IFCHR:0;
+  st->st_mode  = mode;
   st->st_nlink = 1;
   st->st_uid   = 0;
   st->st_gid   = 0;
@@ -323,9 +337,24 @@ int posix_fstat(int fd, struct stat *st)
     return -1;
   }
 
+  int mode = 0;
+  if (ConsoleManager::instance().isConsole(pFd->file))
+  {
+    mode = S_IFCHR;
+  }
+  else if (pFd->file.isDirectory())
+  {
+    mode = S_IFDIR;
+  }
+  else
+  {
+    mode = S_IFREG;
+  }
+
+
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(pFd->file.getFilesystem()));
   st->st_ino   = static_cast<short>(pFd->file.getInode());
-  st->st_mode  = (ConsoleManager::instance().isConsole(pFd->file))?S_IFCHR:0;
+  st->st_mode  = mode;
   st->st_nlink = 1;
   st->st_uid   = 0;
   st->st_gid   = 0;
