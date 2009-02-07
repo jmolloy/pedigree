@@ -51,19 +51,19 @@ DynamicLinker::~DynamicLinker()
 {
 }
 
-bool DynamicLinker::load(const char *name, Process *pProcess)
+void DynamicLinker::setInitProcess(Process *pProcess)
 {
   m_pInitProcess = pProcess;
+}
+
+bool DynamicLinker::load(const char *name, Process *pProcess)
+{
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
   SharedObject *pSo = loadInternal (name);
 
   if (pSo)
   {
-    List<SharedObject*> *pList = new List<SharedObject*>();
-    pList->pushBack(pSo);
-    m_ProcessObjects.insert(pProcess, pList);
-
     return true;
   }
 
@@ -182,14 +182,17 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   pSo->pFile->setLoadBase(loadBase);
   pSo->pFile->allocateSegments();
   pSo->pFile->writeSegments();
-  pSo->pFile->relocateDynamic(&resolve);
-  pSo->pBuffer = buffer;
-  initPlt(pSo->pFile, loadBase);
 
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
   m_Objects.pushBack(pSo);
+  List<SharedObject*> *pList = new List<SharedObject*>();
+  pList->pushBack(pSo);
+  m_ProcessObjects.insert(pProcess, pList);
 
+  pSo->pFile->relocateDynamic(&resolve);
+  pSo->pBuffer = buffer;
+  initPlt(pSo->pFile, loadBase);
   return pSo;
 }
 
@@ -231,13 +234,16 @@ DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
     return 0;
   }
 
+  List<SharedObject*> *pList = new List<SharedObject*>();
+  pList->pushBack(pSo);
+  m_ProcessObjects.insert(pProcess, pList);
+  pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
+
   pSo->pFile->setLoadBase(loadBase);
   pSo->pFile->allocateSegments();
   pSo->pFile->writeSegments();
   pSo->pFile->relocateDynamic(&resolve);
   initPlt(pSo->pFile, loadBase);
-
-  pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
   return pSo;
 }
@@ -247,9 +253,24 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym)
   Process *pProcess = m_pInitProcess;
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
+  Elf32 *pElf = m_ProcessElfs.lookup(pProcess);
+  if (!pElf)
+  {
+    ERROR("Resolve called on unregistered process");
+    return 0;
+  }
+  
+  uintptr_t addr = pElf->lookupDynamicSymbolAddress(sym);
+  if (addr) return addr;
+
   List<SharedObject*> *pList;
 
   pList = m_ProcessObjects.lookup(pProcess);
+  if (!pList)
+  {
+    ERROR("Resolve called on nonregistered process");
+    return 0;
+  }
 
   // Look through the shared object list.
   for (List<SharedObject*>::Iterator it = pList->begin();
@@ -276,11 +297,11 @@ uintptr_t DynamicLinker::resolveInLibrary(const char *sym, SharedObject *obj)
     FATAL("DynamicLinker: Loadbase is 0!");
     panic("DynamicLinker: Loadbase is 0!");
   }
-
+  NOTICE("loadBase: " << Hex << loadBase << ", obj: " << (uintptr_t)obj);
   /// \todo Terrible terrible reentrancy related race conditions here!
   obj->pFile->setLoadBase(loadBase);
   uintptr_t addr = obj->pFile->lookupDynamicSymbolAddress(sym);
-
+  NOTICE("After.");
   if (addr)
     return addr;
 
@@ -362,7 +383,6 @@ void DynamicLinker::registerElf(Elf32 *pElf)
   m_ProcessElfs.insert(pProcess, pElf);
 
   initPlt(pElf, 0);
-  m_pInitProcess = 0;
 }
 
 void DynamicLinker::registerProcess(Process *pProcess)

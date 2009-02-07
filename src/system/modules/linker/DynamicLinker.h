@@ -31,6 +31,8 @@ public:
   /** Retrieves the singleton instance. */
   static DynamicLinker &instance() {return m_Instance;}
 
+  void setInitProcess(Process *pProcess);
+
   /** Loads a shared library into the current process' address space.
 
       If pProcess is non-zero, the linker assumes it is operating in pProcess'

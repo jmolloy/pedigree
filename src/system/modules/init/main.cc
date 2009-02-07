@@ -146,6 +146,9 @@ void init()
   initElf.allocateSegments();
   initElf.writeSegments();
 
+  DynamicLinker::instance().setInitProcess(pProcess);
+  DynamicLinker::instance().registerElf(&initElf);
+
   uintptr_t iter = 0;
   const char *lib;
   while (lib=initElf.neededLibrary(iter))
@@ -158,7 +161,8 @@ void init()
     }
   }
   initElf.relocateDynamic(&DynamicLinker::resolve);
-  DynamicLinker::instance().registerElf(&initElf);
+
+  DynamicLinker::instance().setInitProcess(0);
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
