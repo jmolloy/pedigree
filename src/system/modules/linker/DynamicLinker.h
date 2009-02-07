@@ -18,7 +18,7 @@
 #define DYNAMIC_LINKER_H
 
 #include <processor/types.h>
-#include <Elf32.h>
+#include <linker/Elf.h>
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <utilities/List.h>
@@ -42,7 +42,7 @@ public:
 
   /** Registers the given Elf with the current Process, or load()'s pProcess if that was
       non-zero. */
-  void registerElf(Elf32 *pElf);
+  void registerElf(Elf *pElf);
 
   /** Registers the Elf belonging to the current Process to pProcess too. Used during fork(). */
   void registerProcess(Process *pProcess);
@@ -74,6 +74,7 @@ private:
     int            nDependencies;
     Tree<Process*,uintptr_t*> addresses; // For each process, the address this object has been relocated to.
     uint8_t       *pBuffer; // The Elf file itself.
+    size_t         nBuffer; // The size of pBuffer.
   };
 
   SharedObject *loadInternal (const char *name);

@@ -17,6 +17,12 @@
 #ifndef KERNEL_LINKER_ELF_H
 #define KERNEL_LINKER_ELF_H
 
+#ifdef VERBOSE_LINKER
+#define DEBUG NOTICE
+#else
+#define DEBUG(...)
+#endif
+
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
 #define SHT_SYMTAB        0x2     // Symbol table
 #define SHT_STRTAB        0x3     // String table
@@ -40,11 +46,11 @@
  * @{ */
 
 #ifdef BITS_32
-#define Elf Elf32
 #include "Elf32.h"
+typedef Elf32 Elf;
 #else
-#define Elf Elf64
 #include "Elf64.h"
+typedef Elf64 Elf;
 #endif
 
 /** @} */

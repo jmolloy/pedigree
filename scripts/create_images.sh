@@ -23,7 +23,7 @@ MOUNTPT="/tmp/$$"
 HDFILES=$@
 
 init() {
-    DEV=`sudo losetup -a | grep $IMG | cut -f1 -d:`
+    DEV=`sudo losetup -j $IMG | cut -f1 -d:`
     if test "x$DEV" = x ; then
         DEV=`sudo losetup --verbose --find -o $OFF $IMG | \
              awk '/\/dev\/loop/{print $4}'`
@@ -35,7 +35,7 @@ init() {
 
 fini() {
   if which losetup >/dev/null 2>&1; then
-    DEV=`sudo losetup -a | grep $IMG | cut -f1 -d:`
+    DEV=`sudo losetup -j $IMG | cut -f1 -d:`
     if test "x$DEV" = x ; then
         return 0
     fi

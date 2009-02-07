@@ -26,6 +26,7 @@
 #include <Spinlock.h>
 #include <LockGuard.h>
 #include <utilities/Tree.h>
+#include <utilities/MemoryAllocator.h>
 
 class VirtualAddressSpace;
 
@@ -125,6 +126,12 @@ public:
     m_Cwd = str;
   }
 
+  /** Returns the memory space allocator for shared libraries. */
+  MemoryAllocator &getSpaceAllocator()
+  {
+    return m_SpaceAllocator;
+  }
+
 private:
   Process(const Process &);
   Process &operator = (const Process &);
@@ -163,7 +170,7 @@ private:
    */
   size_t m_NextFd;
   /**
-   * Lock to guard the next file descriptor while it's being changed.
+   * Lock to guard the next file descriptor while it is being changed.
    */
   Spinlock m_FdLock;
   /**
@@ -174,6 +181,10 @@ private:
    * Current working directory.
    */
   String m_Cwd;
+  /**
+   * Memory allocator for shared libraries - free parts of the address space.
+   */
+  MemoryAllocator m_SpaceAllocator;
 };
 
 #endif

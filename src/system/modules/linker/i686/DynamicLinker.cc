@@ -30,10 +30,11 @@ extern "C" void resolveSymbol(void);
 
 void DynamicLinker::initPlt(Elf32 *pElf, uintptr_t value)
 {
-  uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable());
-  if (!got)
+  // Value == loadBase. If this changes, add an extra parameter to get loadBase here!
+  uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable()+value);
+  if (reinterpret_cast<uintptr_t>(got) == value)
   {
-    ERROR("DynamicLinker: Global offset table not found!");
+    WARNING("DynamicLinker: Global offset table not found!");
     return;
   }
 
@@ -109,8 +110,7 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
     }
   }
 
-  pElf->setLoadBase(loadBase);
-  uintptr_t result = pElf->applySpecificRelocation(symIdx, &resolve);
+  uintptr_t result = pElf->applySpecificRelocation(symIdx, &resolve, loadBase);
 
   return result;
 }

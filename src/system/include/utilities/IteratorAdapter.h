@@ -90,14 +90,14 @@ class IteratorAdapter
     }
     /** Dereference the iterator, aka get the element
      *\return the element the iterator points to */
-    inline T operator *()
+    inline T &operator *()
     {
-      return reinterpret_cast<T>(*m_Iterator);
+      return reinterpret_cast<T&>(*m_Iterator);
     }
     /** Dereference operator yields the element value */
-    T operator ->()
+    T &operator ->()
     {
-      return reinterpret_cast<T>(*m_Iterator);
+      return reinterpret_cast<T&>(*m_Iterator);
     }
 
     /** Get a reference to the iterator

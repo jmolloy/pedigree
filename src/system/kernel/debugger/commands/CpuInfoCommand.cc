@@ -17,7 +17,6 @@
 #include <CpuInfoCommand.h>
 #include <DebuggerIO.h>
 #include <udis86.h>
-#include <FileLoader.h>
 #include <Log.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>

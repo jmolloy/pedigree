@@ -17,18 +17,12 @@
 #ifndef KERNEL_LINKER_KERNELELF_H
 #define KERNEL_LINKER_KERNELELF_H
 
-#include <Elf32.h>
-#include <Elf64.h>
+#include <linker/Elf.h>
 #include <compiler.h>
 #include <processor/MemoryRegion.h>
 #include <BootstrapInfo.h>
 #include <utilities/Vector.h>
-
-#if defined(BITS_64)
-typedef Elf64 ElfType;
-#else
-typedef Elf32 ElfType;
-#endif
+#include <utilities/MemoryAllocator.h>
 
 /** @addtogroup kernellinker
  * @{ */
@@ -36,18 +30,20 @@ typedef Elf32 ElfType;
 class Module
 {
 public:
-  Module() : elf(), name(0), entry(0), exit(0), depends(0) {}
-  ElfType elf;
+  Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
+  Elf elf;
   const char *name;
   void (*entry)();
   void (*exit)();
   const char **depends;
+  uint8_t *buffer;
+  size_t buflen;
 protected:
   Module(const Module &);
   Module &operator = (const Module &);
 };
 
-class KernelElf : public ElfType
+class KernelElf : public Elf
 {
   public:
     /** Get the class instance
@@ -69,6 +65,9 @@ class KernelElf : public ElfType
      *  all modules and the kernel itself. */
     uintptr_t globalLookupSymbol(const char *pName);
     const char *globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
+
+    /** Returns the address space allocator for modules. */
+    MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
     
   private:
     /** Default constructor does nothing */
@@ -105,6 +104,8 @@ class KernelElf : public ElfType
     /** List of pending modules - modules whose dependencies have not yet been
         satisfied. */
     Vector<Module*> m_PendingModules;
+    /** Memory allocator for modules - where they can be loaded. */
+    MemoryAllocator m_ModuleAllocator;
 };
 
 /** @} */

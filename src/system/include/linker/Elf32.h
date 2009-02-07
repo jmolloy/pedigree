@@ -19,8 +19,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
-#include <FileLoader.h>
-#include <Elf.h>
+#include <utilities/List.h>
 
 /** @addtogroup kernellinker
  * @{ */
@@ -103,7 +102,7 @@ public:
   /**
    * Destructor.
    */
-  ~Elf32();
+  virtual ~Elf32();
 
   /**
    * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
@@ -133,7 +132,7 @@ public:
    * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
    * filled however.
    */
-  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase);
+  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, class Process *pProcess=0);
   
   /**
    * Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file
@@ -142,7 +141,7 @@ public:
    * \note PLT relocations are not performed here - they are defined in a different section to the standard Rel
    * and RELA entries, so must be done specifically (via applySpecificRelocation).
    */
-  bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn=0, uintptr_t nStart=0, uintptr_t nEnd=0);
+  bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
 
 
   /**
@@ -173,7 +172,7 @@ public:
   /**
    * Same as lookupSymbol, but acts on the dynamic symbol table instead of the normal one.
    */
-  uintptr_t lookupDynamicSymbolAddress(const char *str);
+  uintptr_t lookupDynamicSymbolAddress(const char *str, uintptr_t loadBase);
   
   /**
    * Applies the n'th relocation in the relocation table. Used by PLT entries.
@@ -315,7 +314,7 @@ protected:
   uintptr_t             m_nDebugTableSize;
   Elf32Symbol_t        *m_pDynamicSymbolTable;
   size_t                m_nDynamicSymbolTableSize;
-  const char           *m_pDynamicStringTable;
+  char                 *m_pDynamicStringTable;
   Elf32SectionHeader_t *m_pSectionHeaders;
   uint32_t              m_nSectionHeaders;
   Elf32ProgramHeader_t *m_pProgramHeaders;
