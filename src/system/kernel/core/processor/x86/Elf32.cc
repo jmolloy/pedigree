@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Elf32.h>
+#include <linker/Elf32.h>
 #include <Log.h>
 #include <KernelElf.h>
 
@@ -32,14 +32,14 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
 {
   // Section not loaded?
   if (pSh && pSh->addr == 0)
     return true; // Not a fatal error.
 
   // Get the address of the unit to be relocated.
-  uint32_t address = ((pSh) ? pSh->addr : m_LoadBase) + rel.offset;
+  uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
   // Addend is the value currently at the given address.
   uint32_t A = * reinterpret_cast<uint32_t*> (address);
@@ -51,13 +51,13 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   uint32_t S = 0;
   Elf32Symbol_t *pSymbols = 0;
   if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable->addr);
+    pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable);
   else
     pSymbols = m_pDynamicSymbolTable;
 
   const char *pStringTable = 0;
   if (!m_pDynamicStringTable)
-    pStringTable = reinterpret_cast<const char *> (m_pStringTable->addr);
+    pStringTable = reinterpret_cast<const char *> (m_pStringTable);
   else
     pStringTable = m_pDynamicStringTable;
 
@@ -72,6 +72,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   else if (ELF32_R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
     const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
+
     if (fn == 0)
     {
       S = lookupSymbol(pStr);
@@ -83,7 +84,12 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
     }
     else
     {
-      S = fn(pStr);
+      // The second parameter is whether to give priority for the looked up
+      // symbol to the "application" elf. If we're processing a COPY reloc,
+      // We don't want to do this - we want to get the weak version and
+      // copy across.
+      /// \todo Semantics will change with the advent of SymbolTable.
+      S = fn(pStr, (ELF32_R_TYPE(rel.info) == R_386_COPY)?false:true);
       if (S == 0)
         WARNING("Relocation failed (2) for symbol \"" << pStr << "\"");
     }
@@ -92,8 +98,8 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   if (S == 0 && (ELF32_R_TYPE(rel.info) != R_386_RELATIVE))
     return false;
 
-  // Base address - commented out to get rid of "unused" warning.
-  uint32_t B = m_LoadBase;
+  // Base address
+  uint32_t B = loadBase;
 
   uint32_t result = A; // Currently the result is the addend.
   switch (ELF32_R_TYPE(rel.info))
@@ -127,7 +133,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   return true;
 }
 
-bool Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
 {
   ERROR("The X86 architecture does not use RELA entries!");
   return false;

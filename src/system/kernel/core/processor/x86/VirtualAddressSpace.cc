@@ -298,6 +298,13 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     }
 
   }
+  // The other corner case is when a table has been used for the kernel before
+  // but is now being mapped as USER mode. We need to ensure that the
+  // directory entry has the USER flags set.
+  else if ( (Flags & PAGE_USER) && ((*pageDirectoryEntry & PAGE_USER) != PAGE_USER))
+  {
+    *pageDirectoryEntry |= PAGE_USER;
+  }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
   uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, pageTableIndex);

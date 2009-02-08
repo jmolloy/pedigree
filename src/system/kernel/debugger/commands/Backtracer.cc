@@ -21,7 +21,6 @@
 #include <utilities/StaticString.h>
 
 #include <DwarfUnwinder.h>
-#include <FileLoader.h>
 
 Backtracer::Backtracer()
 {

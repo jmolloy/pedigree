@@ -28,14 +28,20 @@
 
 DynamicLinker DynamicLinker::m_Instance;
 
-uintptr_t DynamicLinker::resolve(const char *str)
+uintptr_t DynamicLinker::resolve(const char *str, bool useElf)
 {
-  return DynamicLinker::instance().resolveSymbol(str);
+  return DynamicLinker::instance().resolveSymbol(str, useElf);
+}
+
+uintptr_t DynamicLinker::resolveNoElf(const char *str, bool useElf)
+{
+  return DynamicLinker::instance().resolveSymbol(str, false);
 }
 
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 {
-  return DynamicLinker::instance().resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
+  uintptr_t ret= DynamicLinker::instance().resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
+  return ret;
 }
 
 DynamicLinker::DynamicLinker() :
@@ -80,7 +86,6 @@ DynamicLinker::SharedObject *DynamicLinker::loadInternal(const char *name)
     SharedObject *pSo = *it;
     if (!strcmp(name, pSo->name))
     {
-      // Map into this address space.
       return mapObject(pSo);
     }
   }
@@ -110,12 +115,18 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   File file = VFS::instance().find(String(fileName));
 
   if (m_pInitProcess)
+  {
+    Processor::setInterrupts(false);
     Processor::switchAddressSpace(oldAS);
+  }
 
   if (!file.isValid())
   {
     if (m_pInitProcess)
+    {
+      Processor::setInterrupts(false);
       Processor::switchAddressSpace(oldAS);
+    }
 
     ERROR("Unable to load object \"" << name << "\"");
     return 0;
@@ -125,19 +136,20 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   if (m_pInitProcess)
+  {
+    Processor::setInterrupts(false);
     Processor::switchAddressSpace(oldAS);
+  }
 
   SharedObject *pSo = new SharedObject;
-  pSo->pFile = new Elf32();
-  pSo->pFile->load(buffer, file.getSize());
+  pSo->pFile = new Elf();
+  pSo->pFile->create(buffer, file.getSize());
   pSo->refCount = 1;
   pSo->name = String(name);
-
+  
   // Count the number of dependencies.
-  uintptr_t iter = 0;
-  int nDeps = 0;
-  while (pSo->pFile->neededLibrary(iter))
-    nDeps++;
+  List<char*> &dependencies = pSo->pFile->neededLibraries();
+  int nDeps = dependencies.count();
 
   // Allocate space to store the dependencies.
   pSo->pDependencies = new SharedObject *[nDeps];
@@ -145,110 +157,83 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
 
   // Load the dependencies.
   /// \todo Check for cyclic dependencies.
-  iter = 0;
-  for (int i = 0; i < nDeps; i++)
+  int i = 0;
+  for (List<char*>::Iterator it = dependencies.begin();
+       it != dependencies.end();
+       it++,i++)
   {
-    const char *n = pSo->pFile->neededLibrary(iter);
-    pSo->pDependencies[i] = loadInternal(n);
+    pSo->pDependencies[i] = loadInternal(*it);
   }
 
   uintptr_t loadBase = 0;
-
-  // Start at 0x20000000, looking for the next free page.
-  /// \todo Change this to use the size of the elf!
-  for (uintptr_t i = 0x20000000; i < 0x40000000; i += 0x1000) /// \todo Page size here.
+  if (!pSo->pFile->allocate(buffer, file.getSize(), loadBase, pProcess))
   {
-    bool failed = false;
-    for (uintptr_t j = i; j < i+0x40000; j += 0x1000) /// \todo Page size here.
-      if (oldAS.isMapped(reinterpret_cast<void*>(j)))
-      {
-        failed = true;
-        break;
-      }
-
-    if (failed) continue;
-
-    loadBase = i;
-    break;
-  }
-
-  if (loadBase == 0)
-  {
-    ERROR("DynamicLinker: nowhere to put shared object \"" << name << "\"");
+    ERROR("LINKER: nowhere to put shared object \"" << name << "\"");
     return 0;
   }
 
-  NOTICE("initPlt: " << name);
-  pSo->pFile->setLoadBase(loadBase);
-  pSo->pFile->allocateSegments();
-  pSo->pFile->writeSegments();
+  List<SharedObject*> *pList = m_ProcessObjects.lookup(pProcess);
+  if (!pList)
+  {
+    pList = new List<SharedObject*>();
+    m_ProcessObjects.insert(pProcess, pList);
+  }
+  pList->pushBack(pSo);
 
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
   m_Objects.pushBack(pSo);
-  List<SharedObject*> *pList = new List<SharedObject*>();
-  pList->pushBack(pSo);
-  m_ProcessObjects.insert(pProcess, pList);
 
-  pSo->pFile->relocateDynamic(&resolve);
+  if (!pSo->pFile->load(buffer, file.getSize(), loadBase, &resolve))
+  {
+    ERROR("LINKER: load() failed for object \"" << name << "\"");
+  }
+
   pSo->pBuffer = buffer;
+  pSo->nBuffer = file.getSize();
   initPlt(pSo->pFile, loadBase);
   return pSo;
 }
 
 DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
 {
-  Process *pProcess = m_pInitProcess;
-  if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
-  // Here we have a problem. If the init process requires shared libs, we'll be called from init.o.
-  // HOWEVER, init.o has to switch address spaces to map things correctly, which normally is fine because interrupts
-  // are disabled. When we find and read a file, multiple threads are used, which reenables interrupts. When the scheduler
-  // switches back to us, it switches back to init.o's "real" address space, not the one it switched to!
-  // So, we have to save the current address space here, and switch back to it at any time it could have been changed.
-  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
-
-  uintptr_t loadBase = 0;
-
-  // Start at 0x20000000, looking for the next free page.
-  /// \todo Change this to use the size of the elf!
-  for (uintptr_t i = 0x20000000; i < 0x40000000; i += 0x1000) /// \todo Page size here.
+  // Load the dependencies. These should already be loaded - loadInternal will fall through to us (mapObject) again.
+  for (int i = 0; i < pSo->nDependencies; i++)
   {
-    bool failed = false;
-    for (uintptr_t j = i; j < i+0x40000; j += 0x1000) /// \todo Page size here.
-      if (oldAS.isMapped(reinterpret_cast<void*>(j)))
-      {
-        failed = true;
-        break;
-      }
-
-    if (failed) continue;
-
-    loadBase = i;
-    break;
+    mapObject(pSo->pDependencies[i]);
   }
 
-  if (loadBase == 0)
+  /// \todo Change this to using CoW, when we finally implement it :(
+  uintptr_t loadBase = 0;
+  if (!pSo->pFile->allocate(pSo->pBuffer, pSo->nBuffer, loadBase, pProcess))
   {
-    ERROR("DynamicLinker: nowhere to put shared object");
+    ERROR("LINKER: nowhere to put shared object.");
     return 0;
   }
 
-  List<SharedObject*> *pList = new List<SharedObject*>();
+  List<SharedObject*> *pList = m_ProcessObjects.lookup(pProcess);
+  if (!pList)
+  {
+    pList = new List<SharedObject*>();
+    m_ProcessObjects.insert(pProcess, pList);
+  }
   pList->pushBack(pSo);
-  m_ProcessObjects.insert(pProcess, pList);
+
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
-  pSo->pFile->setLoadBase(loadBase);
-  pSo->pFile->allocateSegments();
-  pSo->pFile->writeSegments();
-  pSo->pFile->relocateDynamic(&resolve);
+  if (!pSo->pFile->load(pSo->pBuffer, pSo->nBuffer, loadBase, &resolve))
+  {
+    ERROR("LINKER: load() failed for object.");
+  }
+
   initPlt(pSo->pFile, loadBase);
 
   return pSo;
 }
 
-uintptr_t DynamicLinker::resolveSymbol(const char *sym)
+uintptr_t DynamicLinker::resolveSymbol(const char *sym, bool useElf)
 {
   Process *pProcess = m_pInitProcess;
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
@@ -259,9 +244,13 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym)
     ERROR("Resolve called on unregistered process");
     return 0;
   }
-  
-  uintptr_t addr = pElf->lookupDynamicSymbolAddress(sym);
-  if (addr) return addr;
+
+  if (useElf)
+  {
+    // LoadBase for the program itself is of course zero.
+    uintptr_t addr = pElf->lookupDynamicSymbolAddress(sym,0);
+    if (addr) {WARNING("Addr for " << sym);return addr;}
+  }
 
   List<SharedObject*> *pList;
 
@@ -297,11 +286,9 @@ uintptr_t DynamicLinker::resolveInLibrary(const char *sym, SharedObject *obj)
     FATAL("DynamicLinker: Loadbase is 0!");
     panic("DynamicLinker: Loadbase is 0!");
   }
-  NOTICE("loadBase: " << Hex << loadBase << ", obj: " << (uintptr_t)obj);
-  /// \todo Terrible terrible reentrancy related race conditions here!
-  obj->pFile->setLoadBase(loadBase);
-  uintptr_t addr = obj->pFile->lookupDynamicSymbolAddress(sym);
-  NOTICE("After.");
+
+  uintptr_t addr = obj->pFile->lookupDynamicSymbolAddress(sym, loadBase);
+
   if (addr)
     return addr;
 
@@ -359,7 +346,7 @@ void DynamicLinker::unregisterProcess(Process *pProcess)
   {
     SharedObject *pSo = *it;
     uintptr_t *ptr;
-    if (ptr=pSo->addresses.lookup(pProcess))
+    if ((ptr=pSo->addresses.lookup(pProcess)))
     {
       pSo->refCount--; // Object no longer required.
 
@@ -381,9 +368,13 @@ void DynamicLinker::registerElf(Elf32 *pElf)
 
   m_ProcessElfs.remove(pProcess);
   m_ProcessElfs.insert(pProcess, pElf);
+}
 
+void DynamicLinker::initialiseElf(Elf32 *pElf)
+{
   initPlt(pElf, 0);
 }
+
 
 void DynamicLinker::registerProcess(Process *pProcess)
 {
@@ -396,7 +387,7 @@ void DynamicLinker::registerProcess(Process *pProcess)
   {
     SharedObject *pSo = *it;
     uintptr_t *ptr;
-    if (ptr=pSo->addresses.lookup(Processor::information().getCurrentThread()->getParent()))
+    if ((ptr=pSo->addresses.lookup(Processor::information().getCurrentThread()->getParent())))
     {
       pSo->refCount++; // Another process requires this object.
       pSo->addresses.insert(pProcess, ptr);

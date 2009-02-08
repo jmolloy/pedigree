@@ -25,7 +25,7 @@
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <Log.h>
-#include <Elf32.h>
+#include <linker/Elf.h>
 #include <vfs/File.h>
 #include <vfs/VFS.h>
 #include <panic.h>
@@ -190,8 +190,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     return -1;
   }
 
-  Elf32 *elf = new Elf32();
-  if (!elf->load(buffer, file.getSize()))
+  Elf *elf = new Elf();
+  if (!elf->create(buffer, file.getSize()))
   {
     // Error - bad file.
     delete [] buffer;
@@ -211,7 +211,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  if (!elf->allocateSegments())
+  uintptr_t loadBase;
+  if (!elf->allocate(buffer, file.getSize(), loadBase))
   {
     // Error
     delete [] buffer;
@@ -220,30 +221,25 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     return -1;
   }
 
-  if (!elf->writeSegments())
-  {
-    // Error.
-    //delete [] buffer;
-    ERROR("Could not write ELF segments.");
-    return -1;
-  }
-
   DynamicLinker::instance().unregisterProcess(pProcess);
 
-  uintptr_t iter = 0;
-  const char *lib;
-  while (lib=elf->neededLibrary(iter))
+  DynamicLinker::instance().registerElf(elf);
+
+  List<char*> neededLibraries = elf->neededLibraries();
+  for (List<char*>::Iterator it = neededLibraries.begin();
+       it != neededLibraries.end();
+       it++)
   {
-    if (!DynamicLinker::instance().load(lib))
+    if (!DynamicLinker::instance().load(*it))
     {
-      ERROR("Shared dependency '" << lib << "' not found.");
+      ERROR("Shared dependency '" << *it << "' not found.");
       return -1;
     }
   }
 
-  elf->relocateDynamic(&DynamicLinker::resolve);
+  elf->load(buffer, file.getSize(), loadBase, &DynamicLinker::resolve);
 
-  DynamicLinker::instance().registerElf(elf);
+  DynamicLinker::instance().initialiseElf(elf);
 
   // Create a new stack.
   for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())

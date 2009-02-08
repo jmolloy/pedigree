@@ -75,37 +75,24 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
     // Save the symbol/string table
     const char *pStr = tmpStringTable + pSh->name;
+
     if (pSh->type == SHT_SYMTAB)
     {
-      #if defined(X86_COMMON)
-        m_pSymbolTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
-      #else
-        m_pSymbolTable = pSh;
-      #endif
+      m_pSymbolTable = reinterpret_cast<Elf32Symbol_t*> (pSh->addr);
+      m_nSymbolTableSize = pSh->size;
     }
     else if (!strcmp(pStr, ".strtab"))
     {
-      #if defined(X86_COMMON)
-        m_pStringTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
-      #else
-        m_pStringTable = pSh;
-      #endif
+      m_pStringTable = reinterpret_cast<char*> (pSh->addr);
     }
     else if (!strcmp(pStr, ".shstrtab"))
     {
-      #if defined(X86_COMMON)
-        m_pShstrtab = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
-      #else
-        m_pShstrtab = pSh;
-      #endif
+      m_pShstrtab = reinterpret_cast<char*> (pSh->addr);
     }
     else if (!strcmp(pStr, ".debug_frame"))
     {
-      #if defined(X86_COMMON)
-        m_pDebugTable = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(reinterpret_cast<physical_uintptr_t>(pSh));
-      #else
-        m_pDebugTable = pSh;
-      #endif
+      m_pDebugTable = reinterpret_cast<uint8_t*> (pSh->addr);
+      m_nDebugTableSize = pSh->size;
     }
   }
 
@@ -132,42 +119,37 @@ KernelElf::~KernelElf()
 {
 }
 #ifdef PPC_COMMON
-uintptr_t loadbase = 0xe1000000;
+#define MOD_START 0xe1000000
 #else
-uintptr_t loadbase = 0xfa000000;
+#define MOD_START 0xfa000000
 #endif
+#define MOD_LEN 0x400000
+
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
+  // The module memory allocator requires dynamic memory - this isn't initialised until after our constructor
+  // is called, so check here if we've loaded any modules yet. If not, we can initialise our memory allocator.
+  if (m_Modules.count() == 0)
+  {
+    m_ModuleAllocator.free(MOD_START, MOD_LEN);
+  }
+
   Module *module = new Module;
 
-  if (!module->elf.load(pModule, len))
+  module->buffer = pModule;
+  module->buflen = len;
+
+  if (!module->elf.create(pModule, len))
   {
-    ERROR ("Module load failed (1)");
+    FATAL ("Module load failed (1)");
     delete module;
     return 0;
   }
 
-  /// \todo assign memory, and a decent address.
-  for(int i = 0; i < 0x40000; i += 0x1000)
+  uintptr_t loadBase = 0;
+  if (!module->elf.loadModule(pModule, len, loadBase))
   {
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = VirtualAddressSpace::getKernelAddressSpace().map(phys,
-                                                              reinterpret_cast<void*> (loadbase+i),
-                                                              VirtualAddressSpace::Write);
-    if (!b)
-      WARNING("map() failed");
-  }
-  module->elf.setLoadBase(loadbase);
-
-  if (!module->elf.writeSections())
-  {
-    ERROR ("Module load failed (2)");
-    delete module;
-    return 0;
-  }
-  if (!module->elf.relocateModinfo())
-  {
-    ERROR ("Module load failed (3)");
+    FATAL ("Module load failed (2)");
     delete module;
     return 0;
   }
@@ -177,13 +159,12 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
   module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
   module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
-  NOTICE("Relocated module " << module->name);
+  DEBUG("KERNELELF: Preloaded module " << module->name);
 
 #if defined(PPC_COMMON) || defined(MIPS_COMMON)
   ///\todo proper size in here.
-  Processor::flushDCacheAndInvalidateICache(loadbase, loadbase+0x20000);
+  Processor::flushDCacheAndInvalidateICache(loadBase, loadBase+0x20000);
 #endif
-  loadbase += 0x100000;
 
   m_Modules.pushBack(module);
 
@@ -245,10 +226,9 @@ void KernelElf::executeModule(Module *module)
 {
   m_LoadedModules.pushBack(const_cast<char*>(module->name));
 
-  if (!module->elf.relocate())
+  if (!module->elf.finaliseModule(module->buffer, module->buflen))
   {
-    ERROR ("Module relocation failed");
-    Processor::breakpoint();
+    FATAL ("KERNELELF: Module relocation failed");
     return;
   }
 
@@ -267,7 +247,7 @@ void KernelElf::executeModule(Module *module)
     }
   }
 
-  NOTICE("Executing module " << module->name);
+  NOTICE("KERNELELF: Executing module " << module->name);
   if (module)
     module->entry();
 }
@@ -309,6 +289,6 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
       return ret;
   }
-  WARNING("KernelElf::GlobalLookupSymbol(" << Hex << addr << ") failed.");
+  WARNING("KERNELELF: GlobalLookupSymbol(" << Hex << addr << ") failed.");
   return 0;
 }

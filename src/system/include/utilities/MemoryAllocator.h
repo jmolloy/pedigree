@@ -14,34 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <CpuInfoCommand.h>
-#include <DebuggerIO.h>
-#include <udis86.h>
-#include <Log.h>
-#include <utilities/demangle.h>
-#include <processor/Processor.h>
+#ifndef KERNEL_UTILITIES_MEMORYALLOCATOR_H
+#define KERNEL_UTILITIES_MEMORYALLOCATOR_H
 
+#include <utilities/RangeList.h>
 
-CpuInfoCommand::CpuInfoCommand()
-{
-}
+/** @addtogroup kernelutilities
+ * @{ */
 
-CpuInfoCommand::~CpuInfoCommand()
-{
-}
+typedef RangeList<uintptr_t> MemoryAllocator;
 
-void CpuInfoCommand::autocomplete(const HugeStaticString &input, HugeStaticString &output)
-{
-}
-
-bool CpuInfoCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
-{
-  Processor::identify (output);
-  output += '\n';
-  return true;
-}
-
-const NormalStaticString CpuInfoCommand::getString()
-{
-  return NormalStaticString("cpuinfo");
-}
+/** @} */
+#endif

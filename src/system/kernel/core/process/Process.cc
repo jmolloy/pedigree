@@ -20,24 +20,28 @@
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
 #include <processor/VirtualAddressSpace.h>
-#include <Elf32.h>
+#include <linker/Elf.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd("root:/")
+  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd("root:/"), m_SpaceAllocator()
 {
   m_Id = Scheduler::instance().addProcess(this);
+  m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
+                                                 // This is treated as a "fail number" by the dynamic linker.
 }
 
 
 Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0), m_FdMap(), m_NextFd(0), m_FdLock(),
-  m_ExitStatus(0), m_Cwd(pParent->m_Cwd)
+  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator()
 {
   m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
 
+  m_SpaceAllocator.free(0x00100000, 0x80000000);
+  
   m_Id = Scheduler::instance().addProcess(this);
 
   // Set a temporary description.
@@ -48,6 +52,9 @@ Process::Process(Process *pParent) :
 Process::~Process()
 {
   Scheduler::instance().removeProcess(this);
+  Thread *pThread = m_Threads[0];
+  m_Threads.erase(m_Threads.begin());
+  delete pThread; // Calls Scheduler::remove and this::remove.
 }
 
 size_t Process::addThread(Thread *pThread)
@@ -96,7 +103,7 @@ void Process::kill()
   for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     Process *pProcess = Scheduler::instance().getProcess(i);
-    NOTICE("pProces: " << (uintptr_t)pProcess);
+
     if (pProcess->m_pParent == this)
     {
       if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
@@ -111,7 +118,7 @@ void Process::kill()
     }
   }
 
-  // Kill all our threads except 0, which exists in Zombie state.
+  // Kill all our threads except one, which exists in Zombie state.
   while (m_Threads.count() > 1)
   {
     Thread *pThread = m_Threads[0];
@@ -128,6 +135,7 @@ void Process::kill()
 
 uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
 {
+    FATAL("This function isn't implemented correctly - registration with the dynamic linker is required!");
   // At this point we're uninterruptible, as we're forking.
   Spinlock lock;
   lock.acquire();
@@ -147,17 +155,13 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
   // in the kernel address space so we have a clean slate.
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  Elf32 initElf;
-  initElf.load(elf, elfSize);
-  uintptr_t iter = 0;
-  const char *lib = initElf.neededLibrary(iter);
-  initElf.allocateSegments();
-  initElf.writeSegments();
 
-  if (lib)
-  {
-    NOTICE("InitElf needs " << lib);
-  }
+   Elf initElf;
+//   initElf.load(elf, elfSize);
+//   uintptr_t iter = 0;
+//   const char *lib = initElf.neededLibrary(iter);
+//   initElf.allocateSegments();
+//   initElf.writeSegments();
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {

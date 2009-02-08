@@ -18,7 +18,7 @@
 #define DYNAMIC_LINKER_H
 
 #include <processor/types.h>
-#include <Elf32.h>
+#include <linker/Elf.h>
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <utilities/List.h>
@@ -44,7 +44,10 @@ public:
 
   /** Registers the given Elf with the current Process, or load()'s pProcess if that was
       non-zero. */
-  void registerElf(Elf32 *pElf);
+  void registerElf(Elf *pElf);
+  
+  /** Initialises the ELF. */
+  void initialiseElf(Elf *pElf);
 
   /** Registers the Elf belonging to the current Process to pProcess too. Used during fork(). */
   void registerProcess(Process *pProcess);
@@ -53,7 +56,8 @@ public:
   void unregisterProcess(Process *pProcess);
 
   /** Dynamic resolver function, to be given to ElfXX::relocateDynamic. */
-  static uintptr_t resolve(const char *sym);
+  static uintptr_t resolve(const char *sym, bool useElf);
+  static uintptr_t resolveNoElf(const char *sym, bool useElf);
 
   /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
   static uintptr_t resolvePlt(SyscallState &state);
@@ -76,6 +80,7 @@ private:
     int            nDependencies;
     Tree<Process*,uintptr_t*> addresses; // For each process, the address this object has been relocated to.
     uint8_t       *pBuffer; // The Elf file itself.
+    size_t         nBuffer; // The size of pBuffer.
   };
 
   SharedObject *loadInternal (const char *name);
@@ -85,7 +90,7 @@ private:
   uintptr_t resolveInLibrary(const char *sym, SharedObject *obj);
 
   /** Resolves a reference. */
-  uintptr_t resolveSymbol(const char *symbol);
+  uintptr_t resolveSymbol(const char *symbol, bool useElf);
 
   uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
   Elf32 *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);

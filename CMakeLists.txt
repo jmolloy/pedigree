@@ -115,8 +115,8 @@ function(add_non_user_option e)
   add_definitions("-D${e}=1")
 endfunction(add_non_user_option)
 
-include("${PEDIGREE_SOURCE_DIR}/scripts/CMakeOptions-all.cmake")
 include("${PEDIGREE_SOURCE_DIR}/scripts/CMakeOptions-${ARCH}.cmake")
+include("${PEDIGREE_SOURCE_DIR}/scripts/CMakeOptions-all.cmake")
 
 #########################################################################################
 # Supplemental CFLAGS setup.

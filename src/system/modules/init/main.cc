@@ -21,7 +21,7 @@
 #include <machine/Disk.h>
 #include <Module.h>
 #include <processor/Processor.h>
-#include <Elf32.h>
+#include <linker/Elf.h>
 #include <process/Thread.h>
 #include <process/Process.h>
 #include <process/Scheduler.h>
@@ -140,42 +140,45 @@ void init()
   // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
-
-  static Elf32 initElf;
-  initElf.load(buffer, init.getSize());
-  initElf.allocateSegments();
-  initElf.writeSegments();
+  
+  static Elf initElf;
+  uintptr_t loadBase;
+  initElf.create(buffer, init.getSize());
+  initElf.allocate(buffer, init.getSize(), loadBase, pProcess);
 
   DynamicLinker::instance().setInitProcess(pProcess);
   DynamicLinker::instance().registerElf(&initElf);
 
   uintptr_t iter = 0;
-  const char *lib;
-  while (lib=initElf.neededLibrary(iter))
+  List<char*> neededLibraries = initElf.neededLibraries();
+  for (List<char*>::Iterator it = neededLibraries.begin();
+       it != neededLibraries.end();
+       it++)
   {
-    if (!DynamicLinker::instance().load(lib, pProcess))
+    if (!DynamicLinker::instance().load(*it, pProcess))
     {
-      ERROR("Couldn't open needed file '" << lib << "'");
-      panic("Init program failed to load!");
+      ERROR("Couldn't open needed file '" << *it << "'");
+      FATAL("Init program failed to load!");
       return;
     }
   }
-  initElf.relocateDynamic(&DynamicLinker::resolve);
 
+  initElf.load(buffer, init.getSize(), loadBase, &DynamicLinker::resolve);
+  DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x40000000),
+                                                                   reinterpret_cast<void*> (j+0x20000000),
                                                                    VirtualAddressSpace::Write);
     if (!b)
       WARNING("map() failed in init");
   }
-
+  NOTICE("Entry: " << Hex << initElf.getEntryPoint());
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
+  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
   // Switch back to the old address space.
   Processor::switchAddressSpace(oldAS);

@@ -30,6 +30,7 @@ int main(char argc, char **argv)
 //  setenv("TERM", "vt100", 1);
   while(1)
   {
+    
     fprintf(stderr, "PShell $ ");
       yyparse();
       if (waserr == 1)

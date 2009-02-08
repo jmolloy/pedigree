@@ -19,8 +19,7 @@
 
 #include <compiler.h>
 #include <processor/types.h>
-#include <FileLoader.h>
-#include <Elf.h>
+#include <utilities/List.h>
 
 /** @addtogroup kernellinker
  * @{ */
@@ -87,13 +86,13 @@
  * \note This class does not copy any section data. The supplied buffer pointers must
  *       remain valid throughout the lifespan of this class.
  */
-class Elf32 : virtual public FileLoader
+class Elf32
 {
 public:
   /**
    * A callback type for symbol lookup. This is used by the dynamic linking functions.
    */
-  typedef uintptr_t (*SymbolLookupFn)(const char *);
+  typedef uintptr_t (*SymbolLookupFn)(const char *, bool useElf);
 
   /**
    * Default constructor - loads no data.
@@ -101,72 +100,60 @@ public:
   Elf32();
 
   /**
-   * Destructor. Doesn't do much.
+   * Destructor.
    */
-  ~Elf32();
+  virtual ~Elf32();
 
   /**
    * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
    * of memory containing an ELF object.
+   * 
+   * All important information in the buffer is cached - the buffer can safely be destroyed after
+   * calling this function.
    */
-  bool load(uint8_t *pBuffer, unsigned int nBufferLength);
+  bool create(uint8_t *pBuffer, size_t length);
 
   /**
-   * Sets the load base address of the ELF object.
-   * \note Valid only on relocatable files.
+   * Maps memory at a specified address, loads code there and applies relocations only for the .modinfo section.
+   * Intended use is for loading kernel modules only, there is no provision for dynamic relocations.
    */
-  void setLoadBase(uintptr_t loadBase);
+  bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase);
 
   /**
-   * Applies all (static) relocations.
-   * \pre writeSections() has been called.
-   * \pre setLoadBase() has been called.
+   * Finalises a module - applies all relocations except those in the .modinfo section. At this point it is
+   * assumed that all of this module's dependencies have been loaded.
+   *
+   * The load base must be given again for reentrancy reasons.
    */
-  bool relocate();
-
-  bool relocateModinfo();
-
-  /**
-   * Allocates virtual memory for all sections, given "flags".
-   */
-  bool allocateSections();
+  bool finaliseModule(uint8_t *pBuffer, uint32_t length);
 
   /**
-   * Writes all writeable sections to their virtual addresses.
-   * \return True on success.
+   * Performs the prerequisite allocation for any normal ELF file - library or executable.
+   * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
+   * filled however.
    */
-  bool writeSections();
+  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, class Process *pProcess=0);
+  
+  /**
+   * Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file
+   * is loaded (memory copied and relocated) but this can be changed using the nStart and nEnd
+   * parameters. This allows for lazy loading.
+   * \note PLT relocations are not performed here - they are defined in a different section to the standard Rel
+   * and RELA entries, so must be done specifically (via applySpecificRelocation).
+   */
+  bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
+
 
   /**
-   * Applies all (dynamic) relocations.
-   * \pre writeSegments() has been called.
-   * \pre setLoadBase() has been called.
+   * Returns a list of required libraries before this object will load.
    */
-  bool relocateDynamic(SymbolLookupFn fn);
-
-  /**
-   * Allocates virtual memory for all segments, given "flags".
-   */
-  bool allocateSegments();
-
-  /**
-   * Writes all writeable segments to their virtual addresses.
-   * \return True on success.
-   */
-  bool writeSegments();
-
-  /**
-   * Given an iterator that is initially 0, returns the next needed library.
-   * \param iter A variable that should be 0 initially. It is incremented by the function internally.
-   * \return A string representing the library required, or 0 if there are no more needed libraries.
-   */
-  const char *neededLibrary(uintptr_t &iter);
+  List<char*> &neededLibraries();
 
   /**
    * Returns the virtual address of the last byte to be written. Used to calculate the
    * sbrk memory breakpoint.
    */
-  unsigned int getLastAddress();
+  uintptr_t getLastAddress();
 
   /**
    * Returns the name of the symbol which contains 'addr', and also the starting address
@@ -183,17 +170,21 @@ public:
   uint32_t lookupSymbol(const char *pName);
 
   /**
+   * Same as lookupSymbol, but acts on the dynamic symbol table instead of the normal one.
+   */
+  uintptr_t lookupDynamicSymbolAddress(const char *str, uintptr_t loadBase);
+  
+  /**
    * Applies the n'th relocation in the relocation table. Used by PLT entries.
    */
-  uintptr_t applySpecificRelocation(uint32_t off, SymbolLookupFn fn);
-
-  uintptr_t lookupDynamicSymbolAddress(const char *str);
+  uintptr_t applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_t loadBase);
 
   /**
    * Gets the address of the global offset table.
    * \return Address of the GOT, or 0 if none was found.
    */
   uintptr_t getGlobalOffsetTable();
+
 
   size_t getPltSize ();
 
@@ -202,8 +193,8 @@ public:
    */
   uintptr_t getEntryPoint();
 
-  virtual uintptr_t debugFrameTable();
-  virtual uintptr_t debugFrameTableLength();
+  uintptr_t debugFrameTable();
+  uintptr_t debugFrameTableLength();
 
 protected:
   struct Elf32Header_t
@@ -284,6 +275,10 @@ protected:
   } PACKED;
 
 private:
+
+  bool relocate(uint8_t *pBuffer, uint32_t length);
+  bool relocateModinfo(uint8_t *pBuffer, uint32_t length);
+  
   /**
    * Applies one relocation. This overload performs a relocation without addend (REL).
    * \param rel The relocation entry to apply.
@@ -291,7 +286,7 @@ private:
    * \param fn  A function pointer to a function that, given a string, looks up an address. If NULL, the KernelElf is consulted.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  bool applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn=0);
+  bool applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn=0, uintptr_t loadBase=0);
 
   /**
    * Applies one relocation. This overload performs a relocation with addend (RELA).
@@ -300,13 +295,13 @@ private:
    * \param fn  A function pointer to a function that, given a string, looks up an address. If NULL, the KernelElf is consulted.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  bool applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn=0);
+  bool applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn=0, uintptr_t loadBase=0);
 
 protected:
-  Elf32Header_t        *m_pHeader;
-  Elf32SectionHeader_t *m_pSymbolTable;
-  Elf32SectionHeader_t *m_pStringTable;
-  Elf32SectionHeader_t *m_pShstrtab;
+  Elf32Symbol_t        *m_pSymbolTable;
+  size_t                m_nSymbolTableSize;
+  char                 *m_pStringTable;
+  char                 *m_pShstrtab;
   uintptr_t            *m_pGotTable; // Global offset table.
   Elf32Rel_t           *m_pRelTable; // Dynamic REL relocations.
   Elf32Rela_t          *m_pRelaTable; // Dynamic RELA relocations.
@@ -315,17 +310,18 @@ protected:
   Elf32Rel_t           *m_pPltRelTable;
   Elf32Rela_t          *m_pPltRelaTable;
   bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
-  Elf32ProgramHeader_t *m_pDynamic; // The DYNAMIC program header, if it exists.
-  Elf32SectionHeader_t *m_pDebugTable;
+  uint8_t              *m_pDebugTable;
+  uintptr_t             m_nDebugTableSize;
   Elf32Symbol_t        *m_pDynamicSymbolTable;
-  const char           *m_pDynamicStringTable;
+  size_t                m_nDynamicSymbolTableSize;
+  char                 *m_pDynamicStringTable;
   Elf32SectionHeader_t *m_pSectionHeaders;
-  uint32_t             m_nSectionHeaders;
+  uint32_t              m_nSectionHeaders;
   Elf32ProgramHeader_t *m_pProgramHeaders;
-  uint32_t             m_nProgramHeaders;
-  uint8_t              *m_pBuffer;   // Offset of the file in memory.
-  size_t               m_nPltSize;
-  uintptr_t            m_LoadBase;
+  uint32_t              m_nProgramHeaders;
+  size_t                m_nPltSize;
+  uintptr_t             m_nEntry;
+  List<char*>           m_NeededLibraries;
 
 private:
   /** The copy-constructor

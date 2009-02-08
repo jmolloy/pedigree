@@ -16,10 +16,9 @@
 
 #include <Backtrace.h>
 #include <utilities/utility.h>
-#include <FileLoader.h>
 #include <Log.h>
 #include <DwarfUnwinder.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 extern uintptr_t start;
 
