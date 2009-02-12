@@ -105,6 +105,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_getpid();
     case POSIX_CHDIR:
       return posix_chdir(reinterpret_cast<const char*>(p1));
+    case POSIX_SELECT:
+      return posix_select(static_cast<int>(p1), reinterpret_cast<struct fd_set*>(p2), reinterpret_cast<struct fd_set*>(p3),
+                          reinterpret_cast<struct fd_set*>(p4), reinterpret_cast<struct timeval*>(p5));
     default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
   }
 }

@@ -41,6 +41,7 @@ uintptr_t DynamicLinker::resolveNoElf(const char *str, bool useElf)
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 {
   uintptr_t ret= DynamicLinker::instance().resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
+  NOTICE("resolvePlt: " << Hex << ret);
   return ret;
 }
 
@@ -146,7 +147,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   pSo->pFile->create(buffer, file.getSize());
   pSo->refCount = 1;
   pSo->name = String(name);
-  
+
   // Count the number of dependencies.
   List<char*> &dependencies = pSo->pFile->neededLibraries();
   int nDeps = dependencies.count();
@@ -260,13 +261,14 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym, bool useElf)
     ERROR("Resolve called on nonregistered process");
     return 0;
   }
-
+NOTICE("looking for " << sym);
   // Look through the shared object list.
   for (List<SharedObject*>::Iterator it = pList->begin();
        it != pList->end();
        it++)
   {
     uintptr_t ptr = resolveInLibrary(sym, *it);
+    NOTICE("ptr: " <<Hex << ptr);
     if (ptr != 0) return ptr;
   }
 }

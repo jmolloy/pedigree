@@ -122,7 +122,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(Elf32ProgramHeader_t)*pHeader->phnum);
 
     size_t nDynamicStringTableSize = 0;
-    
+
     // Look for the dynamic program header.
     for (size_t i = 0; i < m_nProgramHeaders; i++)
     {
@@ -130,7 +130,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
       {
         Elf32ProgramHeader_t *pDynamic = &m_pProgramHeaders[i];
         Elf32Dyn_t *pDyn = reinterpret_cast<Elf32Dyn_t*> (&pBuffer[pDynamic->offset]);
-        
+
         // Cycle through all dynamic entries until the NULL entry.
         while (pDyn->tag != ELF32_DT_NULL)
         {
@@ -465,7 +465,7 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
       if (nStart > (loadAddr+m_pProgramHeaders[i].memsz)) continue;
       if (nEnd <= loadAddr) continue;
       uintptr_t sectionStart = (loadAddr >= nStart) ? loadAddr : nStart;
-      
+
       uintptr_t offset = m_pProgramHeaders[i].offset + (sectionStart-loadAddr);
       uintptr_t filesz = (loadAddr+m_pProgramHeaders[i].filesz >= nEnd)
                                                       ? (nEnd-sectionStart)
@@ -616,7 +616,7 @@ uint32_t Elf32::lookupSymbol(const char *pName)
     }
     else
       pStr = pStrtab + pSymbol->name;
-    
+
     if (!strcmp(pName, pStr))
     {
       return pSymbol->value;
@@ -644,6 +644,8 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
     // Check the type is global!
     if (!strcmp(sym, pStr))
     {
+      // If the shndx == UND (0x0), the symbol is in the table but undefined!
+      if (pSymbol->shndx == 0) return 0;
       return pSymbol->value + loadBase;
     }
     pSymbol ++;

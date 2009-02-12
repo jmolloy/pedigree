@@ -50,7 +50,7 @@ int posix_tcgetattr(int fd, struct termios *p)
 
   memset(p->c_cc, 0, NCCS*sizeof(cc_t));
   p->c_cc[VEOL] = '\n';
-  
+
   p->c_iflag = 0;
   p->c_oflag = 0;
   p->c_cflag = 0;

@@ -90,13 +90,13 @@ void init()
   {
 //     FATAL("No disks found!");
   }
-  
+
   // configure network devices (TODO: read from a configuration somewhere OR dhcp)
   size_t first = 2;
   for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
   {
     Network* pCard = NetworkStack::instance().getDevice(i);
-    
+
     stationInfo host;
     host.ipv4 = Network::convertToIpv4(192, 168, 0, first++);
     host.subnetMask = Network::convertToIpv4(255, 255, 255, 0);
@@ -105,12 +105,12 @@ void init()
   }
 
   HugeStaticString str;
-  str += "Loading init program (root:/applications/shell)\n";
+  str += "Loading init program (root:/applications/bash)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
 
   // Load initial program.
-  File init = VFS::instance().find(String("root:/applications/shell"));
+  File init = VFS::instance().find(String("root:/applications/bash"));
   if (!init.isValid())
   {
     FATAL("Unable to load init program!");
@@ -140,7 +140,7 @@ void init()
   // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
-  
+
   static Elf initElf;
   uintptr_t loadBase;
   initElf.create(buffer, init.getSize());

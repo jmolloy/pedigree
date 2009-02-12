@@ -82,6 +82,12 @@ struct  stat
   int   st_ctime;
 };
 
+int mkdir(const char *p)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
 int close(int file)
 {
   return syscall1(POSIX_CLOSE, file);
@@ -441,9 +447,7 @@ int select(int nfds, struct fd_set * readfds,
                      struct fd_set * writefds, struct fd_set * errorfds,
                      struct timeval * timeout)
 {
-  /// \todo Implement
-  errno = ENOSYS;
-  return -1;
+  return syscall5(POSIX_SELECT, nfds, readfds, writefds, errorfds, timeout);
 }
 
 void setgrent()

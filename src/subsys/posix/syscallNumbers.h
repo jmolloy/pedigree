@@ -37,5 +37,6 @@
 #define POSIX_FSTAT      18
 #define POSIX_GETPID     19
 #define POSIX_CHDIR      20
+#define POSIX_SELECT     21
 
 #endif

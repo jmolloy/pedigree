@@ -91,7 +91,9 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     {
       if (m_QueueLength)
       {
-        buf[i++] = m_pQueue[0];
+        c = m_pQueue[0];
+        if (c == '\n') c = '\r';
+        buf[i++] = c;
         for (int j = 0; j < m_QueueLength-1; j++)
         {
           m_pQueue[j] = m_pQueue[j+1];
@@ -107,6 +109,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
           continue;
         else
         {
+NOTICE("TUI: read: Return " << Hex << i);
           return i;
         }
       }
@@ -115,15 +118,15 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         switch (ch.value)
         {
           case KB_ARROWLEFT:
-            c = '\e';
+            c = 0x1B;
             m_pQueue[m_QueueLength++] = '[';
-            //m_pQueue[m_QueueLength++] = '1';
+            //m_pQueue[m_QueueLength++] = 'O';
             m_pQueue[m_QueueLength++] = 'D';
             break;
           case KB_ARROWRIGHT:
             c = '\e';
-            m_pQueue[m_QueueLength++] = '[';
-            //m_pQueue[m_QueueLength++] = '1';
+            //m_pQueue[m_QueueLength++] = '[';
+            m_pQueue[m_QueueLength++] = 'O';
             m_pQueue[m_QueueLength++] = 'C';
             break;
           case KB_ARROWUP:
@@ -137,6 +140,44 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
             m_pQueue[m_QueueLength++] = '[';
             //m_pQueue[m_QueueLength++] = '1';
             m_pQueue[m_QueueLength++] = 'B';
+            break;
+        }
+      }
+      else if (ch.ctrl)
+      {
+        switch (ch.value)
+        {
+          case ' ': c = 0;  break;
+          case 'a':
+          case 'b':
+          case 'c':
+          case 'd':
+          case 'e':
+          case 'f':
+          case 'g':
+          case 'h':
+          case 'i':
+          case 'j':
+          case 'k':
+          case 'l':
+          case 'm':
+          case 'n':
+          case 'o':
+          case 'p':
+          case 'q':
+          case 'r':
+          case 's':
+          case 't':
+          case 'u':
+          case 'v':
+          case 'w':
+          case 'x':
+          case 'y':
+          case 'z':
+            c = ch.value - 'a' + 1;
+            break;
+          default:
+            c = ch.value;
             break;
         }
       }
@@ -164,9 +205,10 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
           }
         }
       }
-
+      if (c == '\n') c = '\r';
       buf[i++] = c;
     }
+NOTICE("TUI: Read return " << Hex << i);
     return i;
   }
   else if (operation == CONSOLE_SETATTR)
@@ -174,6 +216,8 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     m_Echo = static_cast<bool>(p3);
     m_EchoNewlines = static_cast<bool>(p4);
     m_EchoBackspace = static_cast<bool>(p5);
+    m_MapCrToNl = static_cast<bool>(p6);
+    m_MapNlToCr = static_cast<bool>(p7);
     return 0;
   }
   else if (operation == CONSOLE_GETATTR)
@@ -188,13 +232,21 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
   }
   else if (operation == CONSOLE_GETCOLS)
   {
-    /// \todo Implement.
-    return 80;
+    if (m_bIsTextMode)
+      return 80;
+    else
+      return g_pVt100->m_nWidth;
   }
   else if (operation == CONSOLE_GETROWS)
   {
-    /// \todo Implement.
-    return 25;
+    if (m_bIsTextMode)
+      return 25;
+    else
+      return g_pVt100->m_nHeight;
+  }
+  else if (operation == CONSOLE_DATA_AVAILABLE)
+  {
+    return (m_QueueLength > 0);
   }
   return 0;
 }

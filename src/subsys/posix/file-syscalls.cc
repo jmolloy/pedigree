@@ -351,7 +351,6 @@ int posix_fstat(int fd, struct stat *st)
     mode = S_IFREG;
   }
 
-
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(pFd->file.getFilesystem()));
   st->st_ino   = static_cast<short>(pFd->file.getInode());
   st->st_mode  = mode;
@@ -431,9 +430,7 @@ int posix_readdir(int fd, dirent *ent)
   }
 
   ent->d_ino = static_cast<short>(file.getInode());
-  NOTICE("Ino: " << ent->d_ino);
   String tmp = file.getName();
-  NOTICE("tmp: " << static_cast<const char *>(tmp) << ", ent->d_name" << (uintptr_t) ent);
   strcpy(ent->d_name, static_cast<const char*>(tmp));
   ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
 
@@ -502,4 +499,43 @@ int posix_chdir(const char *path)
     delete [] newpath;
   }
   return 0;
+}
+
+int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
+{
+  /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
+  ///       Just readfds, and no timeout.
+  NOTICE("select(" << Dec << nfds << ")\n");
+
+  // Lookup this process.
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  int num_ready = 0;
+  for (int i = 0; i < nfds; i++)
+  {
+    if (FD_ISSET(i, readfds))
+    {
+      // Is the FD a console?
+      FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+      if (!pFd)
+      {
+        // Error - no such file descriptor.
+        ERROR("select: no such file descriptor (" << Dec << i << ")");
+        return -1;
+      }
+
+      if (ConsoleManager::instance().isConsole(pFd->file))
+      {
+        if (ConsoleManager::instance().hasDataAvailable(pFd->file))
+          num_ready ++;
+        else
+          FD_CLR(i, readfds);
+      }
+      else
+        // Regular file - always available to read.
+        num_ready ++;
+    }
+  }
+
+  return num_ready;
 }

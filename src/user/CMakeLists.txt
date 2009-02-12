@@ -15,7 +15,7 @@
 #
 
 set(APPLICATIONS apptest shell bash nano syscall-test)
-set(LIBRARIES)
+set(LIBRARIES ncurses)
 
 set(HDD_FILES)
 set(HDD_TARGETS)
@@ -30,12 +30,12 @@ endforeach(var ${APPLICATIONS})
 
 foreach(var ${LIBRARIES})
   add_subdirectory("libraries/${var}")
-  install(FILES "${PEDIGREE_BINARY_DIR}/src/user/libraries/${var}/${var}"
+  install(FILES "${PEDIGREE_BINARY_DIR}/src/user/libraries/${var}/lib${var}.so"
           DESTINATION "libraries/")
   set(HDD_FILES ${HDD_FILES} "libraries/${var}")
   set(HDD_TARGETS ${HDD_TARGETS} ${var})
 endforeach(var ${LIBRARIES})
 
-list(REMOVE_ITEM HDD_TARGETS bash nano)
+list(REMOVE_ITEM HDD_TARGETS bash nano ncurses)
 set(HDD_TARGETS ${HDD_TARGETS} PARENT_SCOPE)
 set(HDD_FILES ${HDD_FILES} PARENT_SCOPE)

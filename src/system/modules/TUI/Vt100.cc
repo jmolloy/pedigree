@@ -24,16 +24,12 @@
 #define FONT_WIDTH  8
 
 #define NUM_PAGES_SCROLLBACK 3
-#define NUM_PAGES_ALT_SCROLLBACK 2
-
-#define LINE(x) ((x)%m_nLines)
-#define ALTLINE(x) ((x)%m_nAlternateLines)
 
 Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
-  m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)), m_CursorX(0), m_CursorY(0),
-  m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT), m_WinViewStart(0), m_AlternateWinViewStart(0), m_bIsAlternateWindow(false), m_pLines(0), m_pAlternateLines(0),
-  m_nLines(m_nHeight*NUM_PAGES_SCROLLBACK), m_nAlternateLines(m_nHeight*NUM_PAGES_ALT_SCROLLBACK), m_nLinesPos(0),
-  m_nAlternateLinesPos(0), m_nLastPos(0), m_nAlternateLastPos(0), m_bChangingState(false), m_bDontRefresh(false)
+  m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
+  m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT),
+  m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bDontRefresh(false),
+  m_SavedX(0), m_SavedY(0)
 {
   // Precompile colour list.
   m_pColours[C_BLACK] = compileColour(0x00, 0x00, 0x00);
@@ -45,91 +41,45 @@ Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_pColours[C_CYAN]  = compileColour(0x00, 0xB0, 0xB0);
   m_pColours[C_WHITE] = compileColour(0xB0, 0xB0, 0xB0);
 
-  m_pColours[C_BRIGHT + C_BLACK] = compileColour(0x00, 0x00, 0x00);
-  m_pColours[C_BRIGHT + C_RED]   = compileColour(0xFF, 0x00, 0x00);
-  m_pColours[C_BRIGHT + C_GREEN] = compileColour(0x00, 0xFF, 0x00);
-  m_pColours[C_BRIGHT + C_YELLOW]= compileColour(0xFF, 0xFF, 0x00);
-  m_pColours[C_BRIGHT + C_BLUE]  = compileColour(0x00, 0x00, 0xFF);
-  m_pColours[C_BRIGHT + C_MAGENTA]=compileColour(0xFF, 0x00, 0xFF);
-  m_pColours[C_BRIGHT + C_CYAN]  = compileColour(0x00, 0xFF, 0xFF);
+  m_pColours[C_BRIGHT + C_BLACK] = compileColour(0x33, 0x33, 0x33);
+  m_pColours[C_BRIGHT + C_RED]   = compileColour(0xFF, 0x33, 0x33);
+  m_pColours[C_BRIGHT + C_GREEN] = compileColour(0x33, 0xFF, 0x33);
+  m_pColours[C_BRIGHT + C_YELLOW]= compileColour(0xFF, 0xFF, 0x33);
+  m_pColours[C_BRIGHT + C_BLUE]  = compileColour(0x33, 0x33, 0xFF);
+  m_pColours[C_BRIGHT + C_MAGENTA]=compileColour(0xFF, 0x33, 0xFF);
+  m_pColours[C_BRIGHT + C_CYAN]  = compileColour(0x33, 0xFF, 0xFF);
   m_pColours[C_BRIGHT + C_WHITE] = compileColour(0xFF, 0xFF, 0xFF);
 
-  // Create the lines queue.
-  m_pLines = new Line[m_nLines];
-  m_pAlternateLines = new Line[m_nAlternateLines];
-
-  // Create the initial state.
-  m_State.fg = m_pColours[C_WHITE];
-  m_State.bg = m_pColours[C_BLACK];
-
-  // Initialise all lines to a consistent state.
-  for (int i = 0; i < m_nLines; i++)
-  {
-    m_pLines[i].str = 0;
-    m_pLines[i].col = 0;
-    m_pLines[i].rows = 0;
-  }
-  for (int i = 0; i < m_nAlternateLines; i++)
-  {
-    m_pAlternateLines[i].str = 0;
-    m_pAlternateLines[i].col = 0;
-    m_pAlternateLines[i].rows = 0;
-  }
-
-  // Invariant - current insert line is constructed and has a valid 'str' member.
-  m_pLines[0].str = new char[m_nWidth];
-  memset(m_pLines[0].str, 0, m_nWidth);
-  m_pLines[0].initialState = m_State;
-  m_pLines[0].rows = 1;
-
-  m_pAlternateLines[0].str = new char[m_nWidth];
-  memset(m_pAlternateLines[0].str, 0, m_nWidth);
-  m_pAlternateLines[0].initialState = m_State;
-  m_pAlternateLines[0].rows = 1;
-
+  // Create the windows.
+  m_pWindows[0] = new Window(m_nWidth, m_nHeight, this);
+  m_pWindows[1] = new Window(m_nWidth, m_nHeight, this);
 }
 
 Vt100::~Vt100()
 {
-  delete [] m_pLines;
-  delete [] m_pAlternateLines;
+  delete [] m_pWindows;
 }
 
 void Vt100::write(char *str)
 {
-  m_bDontRefresh = true;
-  uint32_t refreshX = m_CursorX;
-  uint32_t refreshY = m_CursorY;
-
   while (*str)
     write(*str++);
-
-  m_bDontRefresh = false;
-  refresh(refreshY, 0/*refreshX*/);
 }
 
 void Vt100::write(char c)
 {
-  Line *pLines;
-  uint32_t nLines;
-  if (m_bIsAlternateWindow)
-  {
-    pLines = m_pAlternateLines;
-    nLines = m_nAlternateLines;
-  }
-  else
-  {
-    pLines = m_pLines;
-    nLines = m_nLines;
-  }
+  NOTICE("VT100: write: " << c << " (" << Hex << (uintptr_t)c << ")");
 
   if (m_bChangingState)
   {
     // A VT100 command is being received.
-    if (c == '[') return; // Useless character.
+    if (c == '?') return; // Useless character.
 
     switch (c)
     {
+      case '[':
+        m_bContainedBracket = true;
+        break;
       case '0':
       case '1':
       case '2':
@@ -145,6 +95,159 @@ void Vt100::write(char c)
       case ';':
         m_Cmd.cur_param++;
         break;
+      case 'h':
+        m_CurrentWindow = 1;
+        m_pWindows[m_CurrentWindow]->refresh();
+        m_bChangingState = false;
+        break;
+      case 'l':
+        m_CurrentWindow = 0;
+        m_pWindows[m_CurrentWindow]->refresh();
+        m_bChangingState = false;
+        break;
+      case 'H':
+        m_pWindows[m_CurrentWindow]->setCursorX( (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : 0);
+        m_pWindows[m_CurrentWindow]->setCursorY( (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0); // One-indexed,but 0,0 is valid too (means 1,1).
+        m_bChangingState = false;
+        break;
+      case 'A':
+        m_pWindows[m_CurrentWindow]->setCursorY( m_pWindows[m_CurrentWindow]->getCursorY() -
+                                                 ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1) );
+        m_bChangingState = false;
+        break;
+      case 'B':
+        m_pWindows[m_CurrentWindow]->setCursorY( m_pWindows[m_CurrentWindow]->getCursorY() +
+                                                 ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1) );
+        m_bChangingState = false;
+        break;
+      case 'C':
+        m_pWindows[m_CurrentWindow]->setCursorX( m_pWindows[m_CurrentWindow]->getCursorX() +
+                                                 ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1) );
+        m_bChangingState = false;
+        break;
+      case 'D':
+        if (m_bContainedBracket)
+        {
+          // If it contained a bracket, it's a cursor command.
+          m_pWindows[m_CurrentWindow]->setCursorX( m_pWindows[m_CurrentWindow]->getCursorX() -
+                                                  ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1) );
+        }
+        else
+        {
+          // Else, it's a scroll downwards command.
+          m_pWindows[m_CurrentWindow]->scrollDown();
+        }
+        m_bChangingState = false;
+        break;
+      case 'M':
+        m_pWindows[m_CurrentWindow]->scrollUp();
+        m_bChangingState = false;
+        break;
+      case 'J':
+        switch (m_Cmd.params[0])
+        {
+          case 0: // Erase down.
+            m_pWindows[m_CurrentWindow]->eraseDown();
+            break;
+          case 1: // Erase up.
+            m_pWindows[m_CurrentWindow]->eraseUp();
+            break;
+          case 2: // Erase entire screen and move to home.
+            m_pWindows[m_CurrentWindow]->eraseScreen();
+            break;
+        }
+        m_bChangingState = false;
+      case 'K':
+        switch (m_Cmd.params[0])
+        {
+          case 0: // Erase end of line.
+            m_pWindows[m_CurrentWindow]->eraseEOL();
+            break;
+          case 1: // Erase start of line.
+            m_pWindows[m_CurrentWindow]->eraseSOL();
+            break;
+          case 2: // Erase entire line.
+            m_pWindows[m_CurrentWindow]->eraseLine();
+            break;
+        }
+        m_bChangingState = false;
+      case 'r':
+        m_pWindows[m_CurrentWindow]->setScrollRegion( (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
+                                                      (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
+        m_bChangingState = false;
+        break;
+      case 'm':
+      {
+        // Colours!
+        for (int i = 0; i < m_Cmd.cur_param+1; i++)
+        {
+          switch (m_Cmd.params[i])
+          {
+            case 0:
+              // Reset all attributes.
+              m_pWindows[m_CurrentWindow]->setBold(false);
+              m_pWindows[m_CurrentWindow]->setFore(C_WHITE);
+              m_pWindows[m_CurrentWindow]->setBack(C_BLACK);
+              break;
+            case 1:
+              // Bold
+              m_pWindows[m_CurrentWindow]->setBold(true);
+              break;
+            case 7:
+            {
+              // Inverse
+              m_pWindows[m_CurrentWindow]->setBold(false);
+              uint8_t tmp = m_pWindows[m_CurrentWindow]->getFore();
+              m_pWindows[m_CurrentWindow]->setFore(m_pWindows[m_CurrentWindow]->getBack());
+              m_pWindows[m_CurrentWindow]->setBack(tmp);
+              break;
+            }
+            case 30:
+            case 31:
+            case 32:
+            case 33:
+            case 34:
+            case 35:
+            case 36:
+            case 37:
+              // Foreground.
+              m_pWindows[m_CurrentWindow]->setFore(m_Cmd.params[i]-30);
+              break;
+            case 40:
+            case 41:
+            case 42:
+            case 43:
+            case 44:
+            case 45:
+            case 46:
+            case 47:
+              // Background.
+              m_pWindows[m_CurrentWindow]->setBack(m_Cmd.params[i]-40);
+              break;
+            default:
+              // Do nothing.
+              break;
+          }
+        }
+        m_bChangingState = false;
+      }
+      case '\e':
+        // We received another VT100 command while expecting a terminating command - this must mean it's one of \e7 or \e8.
+        switch (m_Cmd.params[0])
+        {
+          case 7: // Save cursor.
+            m_SavedX = m_pWindows[m_CurrentWindow]->getCursorX();
+            m_SavedY = m_pWindows[m_CurrentWindow]->getCursorY();
+            m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
+            break;
+          case 8: // Restore cursor.
+            m_pWindows[m_CurrentWindow]->setCursorX(m_SavedX);
+            m_pWindows[m_CurrentWindow]->setCursorY(m_SavedY);
+            m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
+            break;
+        }
+        // We're still changing state, so keep m_bChangingState = true.
+        break;
       default:
         WARNING("VT100: Invalid character: " << c);
         m_bChangingState = false;
@@ -157,82 +260,34 @@ void Vt100::write(char c)
     {
       // Backspace.
       case 0x08:
-      {
-        if (pLines[m_CursorY].col > 0)
-        {
-          //memmove(&pLines[m_CursorY].str[m_CursorX-1], &pLines[m_CursorY].str[m_CursorX], pLines[m_CursorY].col-m_CursorX);
-          //if ( (pLines[m_CursorY].col / m_nWidth) != ((pLines[m_CursorY].col - 1) / m_nWidth) )
-          //  pLines[m_CursorY].rows --;
-          //pLines[m_CursorY].col --;
-          // Don't erase the character, just move the cursor!
-          m_CursorX --;
-          refresh(m_CursorY, (m_CursorX != 0) ? 0/*(m_CursorX-1)*/ : 0);
-        }
+        if (m_pWindows[m_CurrentWindow]->getCursorX() > 0)
+          m_pWindows[m_CurrentWindow]->setCursorX (m_pWindows[m_CurrentWindow]->getCursorX()-1);
         break;
-      }
 
       // Newline.
       case '\n':
-      {
-        // Save the old cursor position for rendering from.
-        uint32_t renderX = m_CursorX;
-        uint32_t renderY = m_CursorY;
-        // Create a new Line.
-        m_CursorY = (m_CursorY+1) % nLines;
-        pLines[m_CursorY].col = 0;
-        pLines[m_CursorY].rows = 1;
-        pLines[m_CursorY].initialState = m_State;
-        for (List<StateChange*>::Iterator it = pLines[m_CursorY].changes.begin();
-             it != pLines[m_CursorY].changes.end();
-             it ++)
-          delete (*it);
-        pLines[m_CursorY].changes.clear();
-        if (pLines[m_CursorY].str == 0)
-          pLines[m_CursorY].str = new char[m_nWidth];
-
-        // If the new line is being created and the last line was the insert position, this line is now the insert position.
-        if (m_bIsAlternateWindow && (m_CursorY-1 == m_nAlternateLinesPos))
-          m_nAlternateLinesPos ++;
-        else if (!m_bIsAlternateWindow && (m_CursorY-1 == m_nLinesPos))
-          m_nLinesPos ++;
-
-        ensureLineDisplayed(m_CursorY);
-
-        m_CursorX = 0;
-
-        // The state may have changed from the cursor position onwards, so render from there.
-        refresh(renderY, renderX);
-        break;
-      }
+        // Newline is a cursor down and carriage return operation.
+        m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
+        // Fall through...
 
       case '\r':
-      {
-        m_CursorX = 0;
-        refresh(m_CursorY, 0);
+        m_pWindows[m_CurrentWindow]->setCursorX (0);
         break;
-      }
 
       // VT100 command - changes mode.
       case '\e':
-      {
         m_bChangingState = true;
+        m_bContainedBracket = false;
         m_Cmd.cur_param = 0;
         m_Cmd.params[0] = 0;
         m_Cmd.params[1] = 0;
         m_Cmd.params[2] = 0;
         m_Cmd.params[3] = 0;
         break;
-      }
 
       case '\t':
-      {
-        m_CursorX = (m_CursorX+8) & ~(8-1);
-        for (uint32_t i = pLines[m_CursorY].col; i < m_CursorX; i++)
-        {
-          pLines[m_CursorY].str[pLines[m_CursorY].col++] = ' ';
-        }
+        m_pWindows[m_CurrentWindow]->setCursorX ( (m_pWindows[m_CurrentWindow]->getCursorX ()+8) & ~(8-1) );
         break;
-      }
 
       case '\007':
       {
@@ -240,31 +295,19 @@ void Vt100::write(char c)
         break;
       }
 
+      case 0xf:
+        break; // SHIFT-IN. No use at all.
+
       // Any other character.
       default:
-      {
-        // Is this going to push us over the edge onto another row?
-        if ( (pLines[m_CursorY].col / m_nWidth) != ((pLines[m_CursorY].col + 1) / m_nWidth) )
-        {
-          pLines[m_CursorY].rows ++;
-          ensureLineDisplayed(m_CursorY); // This will handle scrolling in the case the line is now off the screen.
-        }
-//        NOTICE("C: " << (uint8_t)c);
         // Add the character.
-        pLines[m_CursorY].str[m_CursorX] = c;
-        if (m_CursorX == pLines[m_CursorY].col) pLines[m_CursorY].col++; 
-        m_CursorX ++;
-        /// \todo Check for str becoming too large and realloc.
-
-        // The state may have changed from the cursor position onwards, so render from there.
-        refresh(m_CursorY, (m_CursorX != 0) ? 0/*(m_CursorX-1)*/ : 0);
-      }
+        m_pWindows[m_CurrentWindow]->writeChar(c);
     }
   }
 
 }
 
-void Vt100::putChar(char c, int x, int y, uint32_t f, uint32_t b)
+void Vt100::putCharFb(char c, int x, int y, uint32_t f, uint32_t b)
 {
   int depth = m_Mode.pf.nBpp;
   if (depth != 8 && depth != 16 && depth != 32)
@@ -332,135 +375,257 @@ uint32_t Vt100::compileColour(uint8_t r, uint8_t g, uint8_t b)
          (static_cast<uint32_t>(b) << pf.pBlue);
 }
 
-void Vt100::refresh(int32_t line, int32_t col)
+Vt100::Window::Window(uint32_t nWidth, uint32_t nHeight, Vt100 *pParent) :
+  m_CursorX(0), m_CursorY((NUM_PAGES_SCROLLBACK-1)*nHeight), m_nWidth(nWidth), m_nHeight(nHeight),
+  m_nScrollMin(0), m_nScrollMax(NUM_PAGES_SCROLLBACK*nHeight-1),
+  m_Foreground(C_WHITE), m_Background(C_BLACK), m_bBold(false), m_pParent(pParent), m_View((NUM_PAGES_SCROLLBACK-1)*nHeight),
+  m_pData(0)
 {
-  if (m_bDontRefresh) return;
-//NOTICE("Refresh: l:" << Dec << line << ", c:" << col);
-  uint32_t winStart = (m_bIsAlternateWindow) ? m_AlternateWinViewStart : m_WinViewStart;
-  Line *pLines = (m_bIsAlternateWindow) ? m_pAlternateLines : m_pLines;
-  uint32_t nLines = (m_bIsAlternateWindow) ? m_nAlternateLines : m_nLines;
-  uint32_t pos = (m_bIsAlternateWindow) ? m_nAlternateLinesPos : m_nLinesPos;
-
-  bool bStartedRendering = false;
-  for (int i = 0; i < m_nHeight;)
+  m_pData = new uint16_t[NUM_PAGES_SCROLLBACK*nHeight*nWidth];
+  for (int i = 0; i < NUM_PAGES_SCROLLBACK*nHeight*nWidth; i++)
   {
-    if (!bStartedRendering && ((i + winStart) % nLines) != line)
-    {
-      i += pLines[ (i + winStart) % nLines ].rows;
-      continue;
-    }
-    bStartedRendering = true;
-    State state = renderLine(&pLines[ (i + winStart) % nLines ], i, col, (m_CursorY == ((i+winStart)%nLines)) ? m_CursorX : -1);
-    col = 0;
-    if ( ((i + winStart) % nLines) == pos )
-      break;
-    i += pLines[ (i + winStart) % nLines ].rows;
-    pLines[ (i + winStart) % nLines ].initialState = state;
+    m_pData[i] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
   }
 }
 
-Vt100::State Vt100::renderLine(Line *pLine, int row, int colStart, int cursorCol)
+Vt100::Window::~Window()
 {
-  // Render pLine to 'row' on the screen, starting at colStart. Away we go!
-  State state = pLine->initialState;
-  // We make the assumption here that the list of state changes is ordered.
-  List<StateChange*>::Iterator it = pLine->changes.begin();
+  delete [] m_pData;
+}
 
-  int x = 0;
-  int i;
-  for (i = 0; i < pLine->col; i++,x++)
+void Vt100::Window::writeChar(char c)
+{
+  m_pData[m_CursorX + m_CursorY*m_nWidth] = c | (m_Foreground<<12) | (m_Background<<8);
+  m_pParent->putCharFb(c, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
+  m_CursorX++;
+  if (m_CursorX == m_nWidth)
   {
-    if ((it != pLine->changes.end()) && ((*it)->col == i))
+    m_CursorX = 0;
+    setCursorY (m_CursorY+1-m_View);
+    // setCursorY will do the rest of the refresh - we don't have to.
+  }
+  else
+  {
+    // Draw the new cursor.
+    m_pParent->putCharFb(' ', m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
+  }
+}
+
+void Vt100::Window::setCursorX(uint32_t x)
+{
+  // Re-render whatever was at the cursor position (without the inverted colours).
+  uint16_t data = m_pData[m_CursorX + m_CursorY*m_nWidth];
+  m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>12)&0xF], m_pParent->m_pColours[(data>>8)&0xF]);
+
+  // Now adjust the cursor and render.
+  // We assume here that we won't be going off the screen - that should only be done when chars get written!
+  m_CursorX = x;
+  data = m_pData[m_CursorX + m_CursorY*m_nWidth];
+  // Render with inverse colours.
+  m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>8)&0xF], m_pParent->m_pColours[(data>>12)&0xF]);
+}
+
+void Vt100::Window::setCursorY(uint32_t y)
+{
+  // Re-render whatever was at the cursor position (without the inverted colours).
+  uint16_t data = m_pData[m_CursorX + m_CursorY*m_nWidth];
+  m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>12)&0xF], m_pParent->m_pColours[(data>>8)&0xF]);
+
+  // Now adjust the cursor and render.
+  m_CursorY = y+m_View;
+
+  // Have we gone off the screen?
+  if (m_CursorY > m_nScrollMax)
+  {
+    // Assume that we can only go off the screen by one line... (bad but nice assumption).
+    m_CursorY --; // Bring the cursor back onto the screen.
+
+    // If the scroll region is set (m_nScrollMin != 0), only scroll that region.
+    memmove (reinterpret_cast<uint8_t*>(&m_pData[m_nScrollMin*m_nWidth]),
+             reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+1)*m_nWidth]),
+             (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
+    // Zero out the last row.
+    for (int i = 0; i < m_nWidth; i++)
     {
-      if ((*it)->fg != ~0) state.fg = (*it)->fg;
-      if ((*it)->bg != ~0) state.bg = (*it)->bg;
-      it ++;
+      m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
     }
 
-    if (x == m_nWidth)
-    {
-      /// \todo Here we have to decide whether to wrap or not.
-      row++;
-      x = 0;
-    }
+    // Refresh all.
+    refresh();
+  }
+  else
+  {
+    // Else we haven't gone off the screen, so we can just render the new cursor.
+    data = m_pData[m_CursorX + m_CursorY*m_nWidth];
+    m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>8)&0xF], m_pParent->m_pColours[(data>>12)&0xF]);
+  }
+}
 
-    if (i < colStart) continue;
-    if (i == cursorCol)
-      putChar (pLine->str[i], x, row, state.bg, state.fg);
+void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
+{
+  if (start == ~0 && end == ~0)
+  {
+    m_nScrollMin = 0;
+    m_nScrollMax = m_View+m_nHeight-1;
+  }
+  else
+  {
+    m_nScrollMin = start+m_View;
+    m_nScrollMax = end+m_View;
+  }
+}
+
+void Vt100::Window::eraseEOL()
+{
+  int row = m_CursorY;
+  for (int col = m_CursorX; col < m_nWidth; col++)
+  {
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    if (col == m_CursorX)
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
     else
-      putChar (pLine->str[i], x, row, state.fg, state.bg);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
   }
-
-  if (i != m_nWidth)
-  {
-    for (; i < m_nWidth; i++,x++)
-    {
-      if (x == m_nWidth)
-      {
-        /// \todo Here we have to decide whether to wrap or not.
-        row++;
-        x = 0;
-      }
-      if (i == cursorCol)
-        putChar (' ', x, row, state.bg, state.fg);
-      else
-        putChar (' ', x, row, state.fg, state.bg);
-    }
-  }
-
-  return state;
 }
 
-void Vt100::ensureLineDisplayed(int l)
+void Vt100::Window::eraseSOL()
 {
-  // Is this line currently in the viewable region?
-  uint32_t &winStart = (m_bIsAlternateWindow) ? m_AlternateWinViewStart : m_WinViewStart;
-  uint32_t pos = (m_bIsAlternateWindow) ? m_nAlternateLinesPos : m_nLinesPos;
-  uint32_t nLines = (m_bIsAlternateWindow) ? m_nAlternateLines : m_nLines;
-  Line *pLines = (m_bIsAlternateWindow) ? m_pAlternateLines : m_pLines;
-
-  // We have to advance linearly through the lines when calculating the end of the window in case we encounter the last line,
-  // at which point we must stop. Linearly, because we're using a circular queue so because of the wraparound we can't use
-  // greater-than/less-than comparison ops.
-  uint32_t winEnd = winStart;
-  for (uint32_t i = 0; i < m_nHeight;)
+  int row = m_CursorY;
+  for (int col = 0; col <= m_CursorX; col++)
   {
-    if (winEnd == l)
-      // Line is visible, stop.
-      return;
-    if (winEnd == pos) break;
-    i += pLines[winEnd].rows;
-    winEnd = (winEnd+1) % nLines;
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    if (col == m_CursorX)
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+    else
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
   }
+}
 
-  // This is a speedup for the common case, where a newline character is entered and we fall one line off the screen (i.e. screen
-  // needs scrolling one line up.
-  if (l == winEnd)
+void Vt100::Window::eraseLine()
+{
+  int row = m_CursorY;
+  for (int col = 0; col < m_nWidth; col++)
   {
-    winStart++;
-    int bytespp = m_Mode.pf.nBpp / 8;
-    memmove(reinterpret_cast<void*>(m_pFramebuffer), reinterpret_cast<void*>(&m_pFramebuffer[m_nWidth*FONT_WIDTH*FONT_HEIGHT*bytespp]),
-            m_nWidth*FONT_WIDTH*(m_nHeight-1)*FONT_HEIGHT*bytespp);
-    return;
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    if (col == m_CursorX)
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+    else
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
   }
+}
 
-  // The line is not in the current visible region. We want to scroll so that we can see 'l', but not so that we're off the
-  // end of the screen, so start at the insert position and work backwards until we find 'l'.
-  // NOTE: We add nLines in before the modulus to ensure that the number being modded is positive - % doesn't work on negative values.
-  uint32_t lastPossibleWinStart = (pos - m_nHeight + 1 + nLines) % nLines;
-
-  for (int32_t i = 0; i < m_nHeight;)
+void Vt100::Window::eraseDown()
+{
+  for (int row = m_CursorY; row < m_nHeight+m_View; row++)
   {
-    if ( ((pos - i + nLines) % nLines) == l )
+    for (int col = 0; col < m_nWidth; col ++)
     {
-      winStart = lastPossibleWinStart;
-      refresh(winStart, 0);
-      return;
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      if (col == m_CursorX && row == m_CursorY)
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      else
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
     }
-    i += pLines[(pos - i + nLines) % nLines].rows;
+  }
+}
+
+void Vt100::Window::eraseUp()
+{
+  for (int row = m_View; row <= m_CursorY; row++)
+  {
+    for (int col = 0; col < m_nWidth; col ++)
+    {
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      if (col == m_CursorX && row == m_CursorY)
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      else
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+    }
+  }
+}
+
+void Vt100::Window::eraseScreen()
+{
+  for (int row = m_View; row < m_nHeight+m_View; row++)
+  {
+    for (int col = 0; col < m_nWidth; col ++)
+    {
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      if (col == m_CursorX && row == m_CursorY)
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      else
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+    }
+  }
+}
+
+void Vt100::Window::refresh()
+{
+  for (int r = m_View; r < m_View+m_nHeight; r++)
+  {
+    for (int c = 0; c < m_nWidth; c++)
+    {
+      uint16_t data = m_pData[c+r*m_nWidth];
+      if (c == m_CursorX && r == m_CursorY)
+        m_pParent->putCharFb(data&0xFF, c, r-m_View, m_pParent->m_pColours[(data>>8)&0xF], m_pParent->m_pColours[(data>>12)&0xF]);
+      else
+        m_pParent->putCharFb(data&0xFF, c, r-m_View, m_pParent->m_pColours[(data>>12)&0xF], m_pParent->m_pColours[(data>>8)&0xF]);
+    }
+  }
+}
+
+void Vt100::Window::scrollDown()
+{
+  // If the scroll region is set (m_nScrollMin != 0), only scroll that region.
+  memmove (reinterpret_cast<uint8_t*>(&m_pData[m_nScrollMin*m_nWidth]),
+            reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+1)*m_nWidth]),
+            (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
+  // Zero out the last row.
+  for (int i = 0; i < m_nWidth; i++)
+  {
+    m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
   }
 
-  // Wasn't found in the first screen's-worth, so just set the window offset as 'l'.
-  winStart = l;
-  refresh(winStart, 0);
+  refresh();
+}
+
+void Vt100::Window::scrollUp()
+{
+
+  // If the scroll region is set (m_nScrollMin != 0), only scroll that region.
+  memmove (reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+1)*m_nWidth]),
+            reinterpret_cast<uint8_t*>(&m_pData[m_nScrollMin*m_nWidth]),
+            (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
+
+  // Zero out the first row.
+  for (int i = 0; i < m_nWidth; i++)
+  {
+    m_pData[i+m_nScrollMin*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+  }
+
+  refresh();
+}
+
+void Vt100::Window::setFore(uint8_t c)
+{
+  m_Foreground = (m_bBold) ? c+C_BRIGHT : c;
+}
+
+void Vt100::Window::setBack(uint8_t c)
+{
+  // No bold for backgrounds!
+  m_Background = c;
+}
+
+void Vt100::Window::setBold(bool b)
+{
+  if (m_bBold && !b)
+  {
+    m_Foreground -= C_BRIGHT;
+  }
+  else if (!m_bBold && b)
+  {
+    m_Foreground += C_BRIGHT;
+  }
+  m_bBold = b;
 }

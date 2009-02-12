@@ -72,7 +72,6 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   else if (ELF32_R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
     const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
-
     if (fn == 0)
     {
       S = lookupSymbol(pStr);

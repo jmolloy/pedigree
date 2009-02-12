@@ -78,7 +78,12 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
+    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
+      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
+    fi
+    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
+      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
@@ -103,7 +108,12 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
+    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
+      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
+    fi
+    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
+      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
@@ -129,26 +139,32 @@ elif which mcopy >/dev/null 2>&1; then
 
   cp ../images/hdd_16h_63spt_100c.img .
   cp ../images/hdd_16h_63spt_100c_fat16.img .
-  
+
   ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
-  
+
   touch ./.pedigree-root
-  
+
   mmd -Do applications libraries modules
-  
+
   # make this the root disk
   mcopy -Do ./.pedigree-root C:/
-  
+
   rm ./.pedigree-root
-  
+
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    mcopy -Do $SRCDIR/src/user/$f/$BINARY C:/$f
+    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
+      sudo cp $SRCDIR/src/user/$f/$BINARY C:/$f
+    fi
+    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
+      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries/lib$BINARY.so
+    fi
   done
-  
+
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
+  echo Only creating FAT disk image as \`losetup\' was not found.
 else
-  echo Not creating disk images because \`losetup\' could not be found.
+  echo Not creating disk images because neither \`losetup\' nor \`mtools\' could not be found.
 fi

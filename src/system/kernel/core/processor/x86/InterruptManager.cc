@@ -154,7 +154,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   if (nIntNumber == SYSCALL_INTERRUPT_NUMBER)
   {
     size_t serviceNumber = interruptState.getSyscallService();
-    
+
     if (UNLIKELY(serviceNumber >= serviceEnd))
     {
       // TODO: We should return an error here
@@ -162,7 +162,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     }
 
     SyscallHandler *pHandler;
-  
+
     // Get the syscall handler
     {
       LockGuard<Spinlock> lockGuard(m_Instance.m_Lock);
@@ -172,7 +172,6 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     if (LIKELY(pHandler != 0))
     {
       interruptState.m_Eax = pHandler->syscall(interruptState);
-      NOTICE("Returning errno " << Hex << Processor::information().getCurrentThread()->getErrno());
       interruptState.m_Ebx = Processor::information().getCurrentThread()->getErrno();
     }
     return;

@@ -28,11 +28,7 @@
 
 #define C_BRIGHT 8
 
-/** \brief A VT100 compatible terminal emulator.
-
-    This implementation uses the idea of a "line" to simplify line editing and wrapping - a line can be larger than the width of
-    the screen. The implementation uses a circular queue of Lines as the primary data store, and uses these along with a sliding
-    window to render the screen contents. */
+/** \brief A VT100 compatible terminal emulator. */
 class Vt100
 {
 public:
@@ -44,101 +40,115 @@ public:
 
 private:
 
-  /** The persistent state between characters/lines. */
-  struct State
-  {
-    uint32_t fg;
-    uint32_t bg;
-  };
-
-  /** Here, a field in State with value ~0 indicates the field should not change. */
-  struct StateChange
-  {
-    uint32_t col;
-
-    uint32_t fg;
-    uint32_t bg;
-  };
-
-  /** One line - a set of characters and an associated list of state changes. */
-  struct Line
-  {
-    char *str;
-    int col;
-    State initialState;
-    int rows;
-    List<StateChange*> changes;
-  };
-
-  /** Writes a character out to the framebuffer. Takes a preformatted integer for the foreground and background colours.
-      x and y are in characters, not pixels. */
-  void putChar(char c, int x, int y, uint32_t f, uint32_t b);
-
-  /** Perform a full-on screen refresh. */
-  void refresh(int32_t line=-1, int32_t col=-1);
-
-  /** Render one line, starting at colStart. */
-  State renderLine(Line *pLine, int row, int colStart, int cursorCol);
-
-  /** Force the display engine to display a line - this doesn't refresh it, merely makes sure the visible window
-      is adjusted such that the given line will be on the screen when a refresh occurs. */
-  void ensureLineDisplayed(int l);
-
   /** Creates a colour integer suitable for inserting into the framebuffer from an R, G and B list. */
   uint32_t compileColour(uint8_t r, uint8_t g, uint8_t b);
 
+public:
+  /** Writes a character out to the framebuffer. Takes a preformatted integer for the foreground and background colours.
+      x and y are in characters, not pixels. */
+  void putCharFb(char c, int x, int y, uint32_t f, uint32_t b);
+
+private:
   /** Screen mode, pixel format etc */
   Display::ScreenMode m_Mode;
 
   /** Framebuffer address. */
   uint8_t *m_pFramebuffer;
 
+public:
   /** Colour list. This is the list of precompiled colour values for the current pixel format. */
   uint32_t m_pColours[16];
 
-  State m_State;
-
-  //
-  // Cursor position.
-  //
-  int m_CursorX, m_CursorY;
-
-  //
-  // General properties
-  //
   uint32_t m_nWidth, m_nHeight;
+private:
+  class Window
+  {
+  public:
+    Window(uint32_t nWidth, uint32_t nHeight, Vt100 *pParent);
+    ~Window();
 
-  //
-  // Window properties
-  //
-  uint32_t m_WinViewStart;
-  uint32_t m_AlternateWinViewStart;
-  bool m_bIsAlternateWindow; // An alternate window can be used - fullscreen things like nano use this.
+    /** Writes a character to the screen, incrementing the X cursor and wrapping if nessecary. */
+    void writeChar(char c);
 
-  //
-  // Actual data.
-  //
+    /** Gets/sets the cursor coordinates. */
+    uint32_t getCursorX() {return m_CursorX;}
+    uint32_t getCursorY() {return m_CursorY-m_View;}
+    void setCursorX(uint32_t x);
+    void setCursorY(uint32_t y);
+    void setScrollRegion(uint32_t start, uint32_t end);
 
-  // These are circular queues of lines.
-  Line *m_pLines;
-  Line *m_pAlternateLines;
-  uint32_t m_nLines;
-  uint32_t m_nAlternateLines;
+    /** Erase to end of line. */
+    void eraseEOL();
+    /** Erase to start of line. */
+    void eraseSOL();
+    /** Erase entire line. */
+    void eraseLine();
+    /** Erase from the current line up. */
+    void eraseUp();
+    /** Erase from the current line down. */
+    void eraseDown();
+    /** Erase the entire screen. */
+    void eraseScreen();
+    /** Scroll one line down */
+    void scrollDown();
+    /** Scroll one line up */
+    void scrollUp();
+    /** Sets the (foreground) colour. */
+    void setFore(uint8_t c);
+    /** Sets the (background) colour. */
+    void setBack(uint8_t c);
+    /** Gets the (foreground) colour. */
+    uint8_t getFore() {return m_Foreground;}
+    /** Get the (background) colour. */
+    uint8_t getBack() {return m_Background;}
+    /** Sets whether colours are bold or not. */
+    void setBold(bool b);
 
-  // Current insert position in the m_Lines queue.
-  uint32_t m_nLinesPos;
-  // ... and in the m_AlternateLines queue.
-  uint32_t m_nAlternateLinesPos;
+    /** Perform a full-on screen refresh. */
+    void refresh();
 
-  // Last populated line in the m_Lines queue.
-  uint32_t m_nLastPos;
-  // ... and in the m_AlternateLines queue.
-  uint32_t m_nAlternateLastPos;
+  private:
 
-  // Are we currently interpreting a state change?
+    //
+    // Cursor position.
+    //
+    uint32_t m_CursorX, m_CursorY;
+
+    //
+    // General properties
+    //
+    uint32_t m_nWidth, m_nHeight;
+    uint32_t m_nScrollMin, m_nScrollMax;
+    uint8_t m_Foreground, m_Background;
+    bool m_bBold;
+    Vt100 *m_pParent;
+
+    //
+    // Window properties
+    //
+    uint32_t m_View;
+
+    //
+    // Actual data.
+    //
+    uint16_t *m_pData;
+  };
+
+  /// Two windows - one normal and one alternate.
+  Window *m_pWindows[2];
+  uint8_t m_CurrentWindow;
+
+  /// Are we currently interpreting a state change?
   bool m_bChangingState;
 
+  /// Did this state include a '['? This changes the way some commands are interpreted.
+  bool m_bContainedBracket;
+
+  /// Don't refresh - a string is being processed and a full screen refresh will take place at the end of it.
   bool m_bDontRefresh;
+
+  /// Saved cursor position.
+  uint32_t m_SavedX, m_SavedY;
 
   typedef struct
   {

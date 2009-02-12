@@ -26,6 +26,7 @@
 #define CONSOLE_GETATTR 4
 #define CONSOLE_GETROWS 5
 #define CONSOLE_GETCOLS 6
+#define CONSOLE_DATA_AVAILABLE 7
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.
 
@@ -48,7 +49,7 @@ public:
   // ConsoleManager interface.
   //
   bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
-  
+
   File getConsole(String consoleName);
 
   bool isConsole(File file);
@@ -57,6 +58,7 @@ public:
   void getAttributes(File file, bool *echo, bool *echoNewlines, bool *echoBackspace);
   int  getCols(File file);
   int  getRows(File file);
+  bool hasDataAvailable(File file);
 
   //
   // Filesystem interface.

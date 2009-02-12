@@ -19,7 +19,7 @@
 
 ConsoleManager ConsoleManager::m_Instance;
 
-ConsoleManager::ConsoleManager() : 
+ConsoleManager::ConsoleManager() :
   m_Consoles()
 {
 }
@@ -108,6 +108,12 @@ int ConsoleManager::getRows(File file)
   return static_cast<int>(pC->backEnd->addRequest(CONSOLE_GETROWS));
 }
 
+bool ConsoleManager::hasDataAvailable(File file)
+{
+  /// \todo Sanity checking.
+  Console *pC = m_Consoles[file.getInode()-0xdeadbe00];
+  return static_cast<bool>(pC->backEnd->addRequest(CONSOLE_DATA_AVAILABLE));
+}
 void initConsole()
 {
 }
