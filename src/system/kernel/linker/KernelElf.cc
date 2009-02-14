@@ -78,7 +78,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
     if (pSh->type == SHT_SYMTAB)
     {
-      m_pSymbolTable = reinterpret_cast<Elf32Symbol_t*> (pSh->addr);
+      m_pSymbolTable = reinterpret_cast<ElfSymbol_t*> (pSh->addr);
       m_nSymbolTableSize = pSh->size;
     }
     else if (!strcmp(pStr, ".strtab"))

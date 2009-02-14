@@ -45,6 +45,7 @@ fini() {
     sudo losetup -d $DEV
   fi
 }
+
 trap fini EXIT
 
 if which losetup >/dev/null 2>&1; then

@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Elf32.h>
+#include <Elf.h>
 #include <Log.h>
 #include <KernelElf.h>
 
@@ -57,7 +57,7 @@
 #define LOW14(r, x) (r | ((x<<2)&0x0000FFFC))
 #define WORD30(r, x) (r | ((x<<2)&0xFFFFFFFC))
 
-bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn fn)
 {
   // Section not loaded?
   if (pSh && pSh->addr == 0)
@@ -74,9 +74,9 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh, SymbolLo
 
   // Symbol location.
   uint32_t S = 0;
-  Elf32Symbol_t *pSymbols = 0;
+  ElfSymbol_t *pSymbols = 0;
   if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable->addr);
+    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable->addr);
   else
     pSymbols = m_pDynamicSymbolTable;
 
@@ -91,7 +91,7 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh, SymbolLo
   {
     // Section type - the name will be the name of the section header it refers to.
     int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
-    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[shndx];
+    ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
   else
@@ -195,7 +195,7 @@ bool Elf32::applyRelocation(Elf32Rela_t rel, Elf32SectionHeader_t *pSh, SymbolLo
   return true;
 }
 
-bool Elf32::applyRelocation(Elf32Rel_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf::applyRelocation(ElfRel_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn)
 {
   ERROR("The PPC architecture does not use REL entries!");
   return false;

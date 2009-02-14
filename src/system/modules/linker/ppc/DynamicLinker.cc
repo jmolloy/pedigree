@@ -30,7 +30,7 @@ extern "C" void plt_resolve(void);
 
 #define HA(x) (((x >> 16) + ((x & 0x8000) ? 1 : 0)) & 0xFFFF)
 
-void DynamicLinker::initPlt(Elf32 *pElf, uintptr_t value)
+void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 {
   // The PLT on PowerPC is structured differently to i686. The first 18 words (72 bytes) are reserved for the dynamic linker (us).
   // In there, we copy the contents of ./asm-ppc.s.
@@ -100,7 +100,7 @@ void DynamicLinker::initPlt(Elf32 *pElf, uintptr_t value)
 uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
   // Find the correct ELF to patch.
-  Elf32 *pElf = 0;
+  Elf *pElf = 0;
   uintptr_t loadBase = 0;
 
   if (libraryId == 0)

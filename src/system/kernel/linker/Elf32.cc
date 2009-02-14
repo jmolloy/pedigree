@@ -23,7 +23,7 @@
 #include <KernelElf.h>
 #include <process/Process.h>
 
-Elf32::Elf32() :
+Elf::Elf() :
   m_pSymbolTable(0),
   m_nSymbolTableSize(0),
   m_pStringTable(0),
@@ -51,14 +51,14 @@ Elf32::Elf32() :
 {
 }
 
-Elf32::~Elf32()
+Elf::~Elf()
 {
 }
 
-bool Elf32::create(uint8_t *pBuffer, size_t length)
+bool Elf::create(uint8_t *pBuffer, size_t length)
 {
   // The main header will be at pBuffer[0].
-  Elf32Header_t *pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
+  ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
 
   // Check the ident.
   if ( (pHeader->ident[1] != 'E') ||
@@ -72,17 +72,17 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
 
   // Load in the section headers.
   m_nSectionHeaders = pHeader->shnum;
-  m_pSectionHeaders = new Elf32SectionHeader_t[pHeader->shnum];
-  memcpy (reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(Elf32SectionHeader_t));
+  m_pSectionHeaders = new ElfSectionHeader_t[pHeader->shnum];
+  memcpy (reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
 
   // Find the section header string table.
-  Elf32SectionHeader_t *pShstrtab = &m_pSectionHeaders[pHeader->shstrndx];
+  ElfSectionHeader_t *pShstrtab = &m_pSectionHeaders[pHeader->shstrndx];
 
   // Load the section header string table.
   m_pShstrtab = new char[pShstrtab->size];
   memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], pShstrtab->size);
 
-  Elf32SectionHeader_t *pSymbolTable=0, *pStringTable=0;
+  ElfSectionHeader_t *pSymbolTable=0, *pStringTable=0;
   // Go through each section header, trying to find .symtab.
   for (int i = 0; i < pHeader->shnum; i++)
   {
@@ -100,7 +100,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
   else
   {
     m_nSymbolTableSize = pSymbolTable->size;
-    m_pSymbolTable = new Elf32Symbol_t[m_nSymbolTableSize/sizeof(Elf32Symbol_t)];
+    m_pSymbolTable = new ElfSymbol_t[m_nSymbolTableSize/sizeof(ElfSymbol_t)];
     memcpy (reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
   }
 
@@ -118,8 +118,8 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
   if (pHeader->phnum > 0)
   {
     m_nProgramHeaders = pHeader->phnum;
-    m_pProgramHeaders = new Elf32ProgramHeader_t[pHeader->phnum];
-    memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(Elf32ProgramHeader_t)*pHeader->phnum);
+    m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
+    memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
     size_t nDynamicStringTableSize = 0;
 
@@ -128,8 +128,8 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       if (m_pProgramHeaders[i].type == ELF32_PT_DYNAMIC)
       {
-        Elf32ProgramHeader_t *pDynamic = &m_pProgramHeaders[i];
-        Elf32Dyn_t *pDyn = reinterpret_cast<Elf32Dyn_t*> (&pBuffer[pDynamic->offset]);
+        ElfProgramHeader_t *pDynamic = &m_pProgramHeaders[i];
+        ElfDyn_t *pDyn = reinterpret_cast<ElfDyn_t*> (&pBuffer[pDynamic->offset]);
 
         // Cycle through all dynamic entries until the NULL entry.
         while (pDyn->tag != ELF32_DT_NULL)
@@ -139,7 +139,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
             case ELF32_DT_NEEDED:
               m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
             case ELF32_DT_SYMTAB:
-              m_pDynamicSymbolTable = reinterpret_cast<Elf32Symbol_t*> (pDyn->un.ptr);
+              m_pDynamicSymbolTable = reinterpret_cast<ElfSymbol_t*> (pDyn->un.ptr);
               break;
             case ELF32_DT_STRTAB:
               m_pDynamicStringTable = reinterpret_cast<char*> (pDyn->un.ptr);
@@ -152,10 +152,10 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
               nDynamicStringTableSize = pDyn->un.val;
               break;
             case ELF32_DT_RELA:
-              m_pRelaTable = reinterpret_cast<Elf32Rela_t*> (pDyn->un.ptr);
+              m_pRelaTable = reinterpret_cast<ElfRela_t*> (pDyn->un.ptr);
               break;
             case ELF32_DT_REL:
-              m_pRelTable = reinterpret_cast<Elf32Rel_t*> (pDyn->un.ptr);
+              m_pRelTable = reinterpret_cast<ElfRel_t*> (pDyn->un.ptr);
               break;
             case ELF32_DT_RELSZ:
               m_nRelTableSize = pDyn->un.val;
@@ -169,9 +169,9 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
             case ELF32_DT_JMPREL:
             {
               if (m_bUsesRela)
-                m_pPltRelaTable = reinterpret_cast<Elf32Rela_t*> (pDyn->un.ptr);
+                m_pPltRelaTable = reinterpret_cast<ElfRela_t*> (pDyn->un.ptr);
               else
-                m_pPltRelTable = reinterpret_cast<Elf32Rel_t*> (pDyn->un.ptr);
+                m_pPltRelTable = reinterpret_cast<ElfRel_t*> (pDyn->un.ptr);
               break;
             }
             case ELF32_DT_PLTREL:
@@ -201,12 +201,12 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable)) &&
              (reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) < ph.vaddr+ph.filesz) )
         {
           uintptr_t loc = reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) - ph.vaddr;
-          m_pDynamicSymbolTable = new Elf32Symbol_t[m_nDynamicSymbolTableSize/sizeof(Elf32Symbol_t)];
+          m_pDynamicSymbolTable = new ElfSymbol_t[m_nDynamicSymbolTableSize/sizeof(ElfSymbol_t)];
           memcpy (reinterpret_cast<uint8_t*>(m_pDynamicSymbolTable), &pBuffer[loc],
                   m_nDynamicSymbolTableSize);
           break;
@@ -217,7 +217,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pDynamicStringTable)) &&
              (reinterpret_cast<uintptr_t>(m_pDynamicStringTable) < ph.vaddr+ph.filesz) )
         {
@@ -240,12 +240,12 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pRelTable)) &&
              (reinterpret_cast<uintptr_t>(m_pRelTable) < ph.vaddr+ph.filesz) )
         {
           uintptr_t loc = reinterpret_cast<uintptr_t>(m_pRelTable) - ph.vaddr;
-          m_pRelTable = new Elf32Rel_t[m_nRelTableSize/sizeof(Elf32Rel_t)];
+          m_pRelTable = new ElfRel_t[m_nRelTableSize/sizeof(ElfRel_t)];
           memcpy (reinterpret_cast<uint8_t*>(m_pRelTable), &pBuffer[loc],
                   m_nRelTableSize);
           break;
@@ -256,12 +256,12 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pRelaTable)) &&
              (reinterpret_cast<uintptr_t>(m_pRelaTable) < ph.vaddr+ph.filesz) )
         {
           uintptr_t loc = reinterpret_cast<uintptr_t>(m_pRelaTable) - ph.vaddr;
-          m_pRelaTable = new Elf32Rela_t[m_nRelaTableSize/sizeof(Elf32Rela_t)];
+          m_pRelaTable = new ElfRela_t[m_nRelaTableSize/sizeof(ElfRela_t)];
           memcpy (reinterpret_cast<uint8_t*>(m_pRelaTable), &pBuffer[loc],
                   m_nRelaTableSize);
           break;
@@ -272,12 +272,12 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pPltRelTable)) &&
              (reinterpret_cast<uintptr_t>(m_pPltRelTable) < ph.vaddr+ph.filesz) )
         {
           uintptr_t loc = reinterpret_cast<uintptr_t>(m_pPltRelTable) - ph.vaddr;
-          m_pPltRelTable = new Elf32Rel_t[m_nPltSize/sizeof(Elf32Rel_t)];
+          m_pPltRelTable = new ElfRel_t[m_nPltSize/sizeof(ElfRel_t)];
           memcpy (reinterpret_cast<uint8_t*>(m_pPltRelTable), &pBuffer[loc],
                   m_nPltSize);
           break;
@@ -288,12 +288,12 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
     {
       for (size_t i = 0; i < m_nProgramHeaders; i++)
       {
-        Elf32ProgramHeader_t ph = m_pProgramHeaders[i];
+        ElfProgramHeader_t ph = m_pProgramHeaders[i];
         if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pPltRelaTable)) &&
              (reinterpret_cast<uintptr_t>(m_pPltRelaTable) < ph.vaddr+ph.filesz) )
         {
           uintptr_t loc = reinterpret_cast<uintptr_t>(m_pPltRelaTable) - ph.vaddr;
-          m_pPltRelaTable = new Elf32Rela_t[m_nPltSize/sizeof(Elf32Rela_t)];
+          m_pPltRelaTable = new ElfRela_t[m_nPltSize/sizeof(ElfRela_t)];
           memcpy (reinterpret_cast<uint8_t*>(m_pPltRelaTable), &pBuffer[loc],
                   m_nPltSize);
           break;
@@ -308,7 +308,7 @@ bool Elf32::create(uint8_t *pBuffer, size_t length)
   return true;
 }
 
-bool Elf32::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
+bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
 {
   // Run through the sections to calculate the size required.
   uintptr_t size = 0;
@@ -382,13 +382,13 @@ bool Elf32::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
   // Firstly, we need to change the symbol table so that the ::value member is actually valid.
   // Currently, it's the offset into the symbol's section - we add the section base address
   // on to that to make it a valid pointer.
-  Elf32Symbol_t *pSymbol = m_pSymbolTable;
-  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(Elf32Symbol_t); i++)
+  ElfSymbol_t *pSymbol = m_pSymbolTable;
+  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
   {
     // Only relocate functions, variables and notypes.
     if (ELF32_ST_TYPE(pSymbol->info) < 3 && pSymbol->shndx < m_nSectionHeaders)
     {
-      Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+      ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
       pSymbol->value += pSh->addr;
     }
     pSymbol ++;
@@ -399,12 +399,12 @@ bool Elf32::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
   return true;
 }
 
-bool Elf32::finaliseModule(uint8_t *pBuffer, uint32_t length)
+bool Elf::finaliseModule(uint8_t *pBuffer, uint32_t length)
 {
   return relocate(pBuffer, length);
 }
 
-bool Elf32::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process *pProcess)
+bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process *pProcess)
 {
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
@@ -454,7 +454,7 @@ bool Elf32::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Proce
   return true;
 }
 
-bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn, uintptr_t nStart, uintptr_t nEnd)
+bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn, uintptr_t nStart, uintptr_t nEnd)
 {
   for (size_t i = 0; i < m_nProgramHeaders; i++)
   {
@@ -496,8 +496,8 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
   if (m_pRelTable)
   {
     // For each relocation entry...
-    for (Elf32Rel_t *pRel = m_pRelTable;
-          pRel < (m_pRelTable+(m_nRelTableSize/sizeof(Elf32Rel_t)));
+    for (ElfRel_t *pRel = m_pRelTable;
+          pRel < (m_pRelTable+(m_nRelTableSize/sizeof(ElfRel_t)));
           pRel++)
     {
       if ( (pRel->offset + loadBase < nStart) || (pRel->offset + loadBase > nEnd) )
@@ -510,8 +510,8 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
   if (m_pRelaTable)
   {
     // For each relocation entry...
-    for (Elf32Rela_t *pRel = m_pRelaTable;
-          pRel < (m_pRelaTable+(m_nRelaTableSize/sizeof(Elf32Rela_t)));
+    for (ElfRela_t *pRel = m_pRelaTable;
+          pRel < (m_pRelaTable+(m_nRelaTableSize/sizeof(ElfRela_t)));
           pRel++)
     {
       if (!applyRelocation(*pRel, 0, fn, loadBase))
@@ -523,8 +523,8 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
   if (m_pPltRelTable)
   {
     // For each relocation entry...
-    Elf32Rel_t *pRel = m_pPltRelTable;
-    for (int i = 0; i < m_nPltSize/sizeof(Elf32Rel_t); i++, pRel++)
+    ElfRel_t *pRel = m_pPltRelTable;
+    for (int i = 0; i < m_nPltSize/sizeof(ElfRel_t); i++, pRel++)
     {
       uintptr_t *address = reinterpret_cast<uintptr_t*> (loadBase + pRel->offset);
       *address += loadBase;
@@ -533,8 +533,8 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
   if (m_pPltRelaTable)
   {
     // For each relocation entry...
-    Elf32Rela_t *pRel = m_pPltRelaTable;
-    for (int i = 0; i < m_nPltSize/sizeof(Elf32Rela_t); i++, pRel++)
+    ElfRela_t *pRel = m_pPltRelaTable;
+    for (int i = 0; i < m_nPltSize/sizeof(ElfRela_t); i++, pRel++)
     {
       uintptr_t *address = reinterpret_cast<uintptr_t*> (loadBase + pRel->offset);
       *address += loadBase;
@@ -545,22 +545,22 @@ bool Elf32::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLook
   return true;
 }
 
-uintptr_t Elf32::getLastAddress()
+uintptr_t Elf::getLastAddress()
 {
   // TODO
   return 0;
 }
 
-const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
+const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.
 
-  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable);
+  ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
 
   const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
-  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(Elf32Symbol_t); i++)
+  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
   {
     // Make sure we're looking at an object or function.
     if (ELF32_ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
@@ -589,22 +589,22 @@ const char *Elf32::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 }
 
-uint32_t Elf32::lookupSymbol(const char *pName)
+uint32_t Elf::lookupSymbol(const char *pName)
 {
   if (!m_pSymbolTable || !m_pStringTable)
     return 0; // Just return null if we haven't got a symbol table.
 
-  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable);
+  ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
 
   const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
-  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(Elf32Symbol_t); i++)
+  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
   {
     const char *pStr;
     if (ELF32_ST_TYPE(pSymbol->info) == 3)
     {
       // Section type - the name will be the name of the section header it refers to.
-      Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+      ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
       // If it's not allocated, it's a link-once-only section that we can ignore.
       if (!(pSh->flags & SHF_ALLOC))
       {
@@ -626,12 +626,12 @@ uint32_t Elf32::lookupSymbol(const char *pName)
   return 0;
 }
 
-uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
+uint32_t Elf::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
 {
   if (!m_pDynamicSymbolTable || !m_pDynamicStringTable)
     return 0; // Just return null if we haven't got a symbol table.
 
-  Elf32Symbol_t *pSymbol = m_pDynamicSymbolTable;
+  ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
 
   const char *pStrtab = m_pDynamicStringTable;
 
@@ -654,28 +654,28 @@ uint32_t Elf32::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
   return 0;
 }
 
-uintptr_t Elf32::getGlobalOffsetTable()
+uintptr_t Elf::getGlobalOffsetTable()
 {
   return reinterpret_cast<uintptr_t> (m_pGotTable);
 }
 
-uint32_t Elf32::getEntryPoint()
+uint32_t Elf::getEntryPoint()
 {
   return m_nEntry;
 }
 
-bool Elf32::relocate(uint8_t *pBuffer, uint32_t length)
+bool Elf::relocate(uint8_t *pBuffer, uint32_t length)
 {
   // For every section...
   for (size_t i = 0; i < m_nSectionHeaders; i++)
   {
-    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
+    ElfSectionHeader_t *pSh = &m_pSectionHeaders[i];
 
-    if (pSh->type != ELF32_SHT_REL && pSh->type != ELF32_SHT_RELA)
+    if (pSh->type != SHT_REL && pSh->type != SHT_RELA)
       continue;
 
     // Grab the section header that this relocation section refers to.
-    Elf32SectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
+    ElfSectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
 
     // Grab the shstrtab
     const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
@@ -686,8 +686,8 @@ bool Elf32::relocate(uint8_t *pBuffer, uint32_t length)
     if (pSh->type == SHT_REL)
     {
       // For each relocation entry...
-      for (Elf32Rel_t *pRel = reinterpret_cast<Elf32Rel_t*> (&pBuffer[pSh->offset]);
-           pRel < reinterpret_cast<Elf32Rel_t*> (&pBuffer[pSh->offset+pSh->size]);
+      for (ElfRel_t *pRel = reinterpret_cast<ElfRel_t*> (&pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<ElfRel_t*> (&pBuffer[pSh->offset+pSh->size]);
            pRel++)
       {
         if (!applyRelocation(*pRel, pLink))
@@ -698,8 +698,8 @@ bool Elf32::relocate(uint8_t *pBuffer, uint32_t length)
     else if (pSh->type == SHT_RELA)
     {
       // For each relocation entry...
-      for (Elf32Rela_t *pRel = reinterpret_cast<Elf32Rela_t*> (&pBuffer[pSh->offset]);
-           pRel < reinterpret_cast<Elf32Rela_t*> (&pBuffer[pSh->offset+pSh->size]);
+      for (ElfRela_t *pRel = reinterpret_cast<ElfRela_t*> (&pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<ElfRela_t*> (&pBuffer[pSh->offset+pSh->size]);
            pRel++)
       {
         if (!applyRelocation(*pRel, pLink))
@@ -712,16 +712,16 @@ bool Elf32::relocate(uint8_t *pBuffer, uint32_t length)
   return true;
 }
 
-bool Elf32::relocateModinfo(uint8_t *pBuffer, uint32_t length)
+bool Elf::relocateModinfo(uint8_t *pBuffer, uint32_t length)
 {
   // For every section...
   for (size_t i = 0; i < m_nSectionHeaders; i++)
   {
-    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[i];
-    if (pSh->type != ELF32_SHT_REL && pSh->type != ELF32_SHT_RELA)
+    ElfSectionHeader_t *pSh = &m_pSectionHeaders[i];
+    if (pSh->type != SHT_REL && pSh->type != SHT_RELA)
       continue;
     // Grab the section header that this relocation section refers to.
-    Elf32SectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
+    ElfSectionHeader_t *pLink = &m_pSectionHeaders[pSh->info];
 
     // Grab the shstrtab
     const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
@@ -732,8 +732,8 @@ bool Elf32::relocateModinfo(uint8_t *pBuffer, uint32_t length)
     if (pSh->type == SHT_REL)
     {
       // For each relocation entry...
-      for (Elf32Rel_t *pRel = reinterpret_cast<Elf32Rel_t*> (&pBuffer[pSh->offset]);
-           pRel < reinterpret_cast<Elf32Rel_t*> (&pBuffer[pSh->offset+pSh->size]);
+      for (ElfRel_t *pRel = reinterpret_cast<ElfRel_t*> (&pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<ElfRel_t*> (&pBuffer[pSh->offset+pSh->size]);
            pRel++)
       {
         if (!applyRelocation(*pRel, pLink))
@@ -744,8 +744,8 @@ bool Elf32::relocateModinfo(uint8_t *pBuffer, uint32_t length)
     else if (pSh->type == SHT_RELA)
     {
       // For each relocation entry...
-      for (Elf32Rela_t *pRel = reinterpret_cast<Elf32Rela_t*> (&pBuffer[pSh->offset]);
-           pRel < reinterpret_cast<Elf32Rela_t*> (&pBuffer[pSh->offset+pSh->size]);
+      for (ElfRela_t *pRel = reinterpret_cast<ElfRela_t*> (&pBuffer[pSh->offset]);
+           pRel < reinterpret_cast<ElfRela_t*> (&pBuffer[pSh->offset+pSh->size]);
            pRel++)
       {
         if (!applyRelocation(*pRel, pLink))
@@ -758,13 +758,13 @@ bool Elf32::relocateModinfo(uint8_t *pBuffer, uint32_t length)
   return true;
 }
 
-uintptr_t Elf32::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_t loadBase)
+uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_t loadBase)
 {
   // Is it a relocation section?
   if (m_pPltRelTable)
   {
     // For each relocation entry...
-    Elf32Rel_t *pRel = adjust_pointer(m_pPltRelTable, off);
+    ElfRel_t *pRel = adjust_pointer(m_pPltRelTable, off);
 
     applyRelocation(*pRel, 0, fn, loadBase);
 
@@ -776,7 +776,7 @@ uintptr_t Elf32::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintpt
   if (m_pPltRelaTable)
   {
     // For each relocation entry...
-    Elf32Rela_t *pRel = adjust_pointer(m_pPltRelaTable, off);
+    ElfRela_t *pRel = adjust_pointer(m_pPltRelaTable, off);
 
     applyRelocation(*pRel, 0, fn, loadBase);
 
@@ -787,22 +787,22 @@ uintptr_t Elf32::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintpt
   return 0;
 }
 
-uintptr_t Elf32::debugFrameTable()
+uintptr_t Elf::debugFrameTable()
 {
   return reinterpret_cast<uintptr_t>(m_pDebugTable);
 }
 
-uintptr_t Elf32::debugFrameTableLength()
+uintptr_t Elf::debugFrameTableLength()
 {
   return m_nDebugTableSize;
 }
 
-List<char*> &Elf32::neededLibraries()
+List<char*> &Elf::neededLibraries()
 {
   return m_NeededLibraries;
 }
 
-size_t Elf32::getPltSize ()
+size_t Elf::getPltSize ()
 {
   return m_nPltSize;
 }

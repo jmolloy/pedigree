@@ -239,7 +239,7 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym, bool useElf)
   Process *pProcess = m_pInitProcess;
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
-  Elf32 *pElf = m_ProcessElfs.lookup(pProcess);
+  Elf *pElf = m_ProcessElfs.lookup(pProcess);
   if (!pElf)
   {
     ERROR("Resolve called on unregistered process");
@@ -306,7 +306,7 @@ uintptr_t DynamicLinker::resolveInLibrary(const char *sym, SharedObject *obj)
   return 0;
 }
 
-Elf32 *DynamicLinker::findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase)
+Elf *DynamicLinker::findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase)
 {
   // Grab the load address of this object in this process.
   uintptr_t loadBase = reinterpret_cast<uintptr_t>
@@ -329,7 +329,7 @@ Elf32 *DynamicLinker::findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t 
   // Not found - try the dependencies.
   for (int i = 0; i < pSo->nDependencies; i++)
   {
-    Elf32 *pElf = findElf(libraryId, pSo->pDependencies[i], _loadBase);
+    Elf *pElf = findElf(libraryId, pSo->pDependencies[i], _loadBase);
     if (pElf)
       return pElf;
   }
@@ -363,7 +363,7 @@ void DynamicLinker::unregisterProcess(Process *pProcess)
   }
 }
 
-void DynamicLinker::registerElf(Elf32 *pElf)
+void DynamicLinker::registerElf(Elf *pElf)
 {
   Process *pProcess = m_pInitProcess;
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
@@ -372,7 +372,7 @@ void DynamicLinker::registerElf(Elf32 *pElf)
   m_ProcessElfs.insert(pProcess, pElf);
 }
 
-void DynamicLinker::initialiseElf(Elf32 *pElf)
+void DynamicLinker::initialiseElf(Elf *pElf)
 {
   initPlt(pElf, 0);
 }
@@ -380,7 +380,7 @@ void DynamicLinker::initialiseElf(Elf32 *pElf)
 
 void DynamicLinker::registerProcess(Process *pProcess)
 {
-  Elf32 *pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
+  Elf *pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
   m_ProcessElfs.insert(pProcess, pElf);
 
   for (List<SharedObject*>::Iterator it = m_Objects.begin();

@@ -73,7 +73,7 @@ private:
   {
   public:
     SharedObject() : pFile(0), name(), refCount(1), pDependencies(0), nDependencies(0), addresses() {}
-    Elf32         *pFile;
+    Elf         *pFile;
     String         name;
     int            refCount;
     SharedObject **pDependencies;
@@ -93,13 +93,13 @@ private:
   uintptr_t resolveSymbol(const char *symbol, bool useElf);
 
   uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
-  Elf32 *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);
+  Elf *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);
 
-  void initPlt(Elf32 *pElf, uintptr_t value);
+  void initPlt(Elf *pElf, uintptr_t value);
 
   Tree<Process*,List<SharedObject*>*> m_ProcessObjects;
   List<SharedObject*> m_Objects;
-  Tree<Process*,Elf32*> m_ProcessElfs;
+  Tree<Process*,Elf*> m_ProcessElfs;
 
   /** Non-zero if load() was called with pProcess != 0, in which case it holds the value of pProcess. */
   Process *m_pInitProcess;

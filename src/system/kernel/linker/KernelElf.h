@@ -87,7 +87,7 @@ class KernelElf : public Elf
     #if defined(BITS_64)
       typedef Elf64SectionHeader_t ElfSectionHeader_t;
     #elif defined(BITS_32)
-      typedef Elf32SectionHeader_t ElfSectionHeader_t;
+      typedef ElfSectionHeader_t ElfSectionHeader_t;
     #endif
 
     #if defined(X86_COMMON)

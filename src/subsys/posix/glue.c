@@ -82,6 +82,12 @@ struct  stat
   int   st_ctime;
 };
 
+int ftruncate(int a, int b)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
 int mkdir(const char *p)
 {
   errno = ENOSYS;

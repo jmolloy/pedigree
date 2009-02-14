@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Elf32.h>
+#include <Elf.h>
 #include <Log.h>
 #include <KernelElf.h>
 
@@ -32,7 +32,7 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
+bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh)
 {
   // Section not loaded?
   if (pSh->addr == 0)
@@ -48,14 +48,14 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   uint32_t P = address;
   // Symbol location.
   uint32_t S = 0;
-  Elf32Symbol_t *pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable->addr);
+  ElfSymbol_t *pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable->addr);
 
   // If this is a section header, patch straight to it.
   if (ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
   {
     // Section type - the name will be the name of the section header it refers to.
     int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
-    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[shndx];
+    ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
   else
@@ -100,7 +100,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh)
   return true;
 }
 
-bool Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh)
+bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh)
 {
   ERROR("The ARM architecture does not use RELA entries!");
   return false;

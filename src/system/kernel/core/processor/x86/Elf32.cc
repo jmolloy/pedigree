@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linker/Elf32.h>
+#include <linker/Elf.h>
 #include <Log.h>
 #include <KernelElf.h>
 
@@ -32,7 +32,7 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
+bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
 {
   // Section not loaded?
   if (pSh && pSh->addr == 0)
@@ -49,9 +49,9 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
 
   // Symbol location.
   uint32_t S = 0;
-  Elf32Symbol_t *pSymbols = 0;
+  ElfSymbol_t *pSymbols = 0;
   if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<Elf32Symbol_t*> (m_pSymbolTable);
+    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
   else
     pSymbols = m_pDynamicSymbolTable;
 
@@ -66,7 +66,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   {
     // Section type - the name will be the name of the section header it refers to.
     int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
-    Elf32SectionHeader_t *pSh = &m_pSectionHeaders[shndx];
+    ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
   else if (ELF32_R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
@@ -132,7 +132,7 @@ bool Elf32::applyRelocation(Elf32Rel_t rel, Elf32SectionHeader_t *pSh, SymbolLoo
   return true;
 }
 
-bool Elf32::applyRelocation(Elf32Rela_t rela, Elf32SectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
+bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
 {
   ERROR("The X86 architecture does not use RELA entries!");
   return false;

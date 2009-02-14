@@ -55,6 +55,8 @@ Process::~Process()
   Thread *pThread = m_Threads[0];
   m_Threads.erase(m_Threads.begin());
   delete pThread; // Calls Scheduler::remove and this::remove.
+
+  /// \todo Remove the VM space.
 }
 
 size_t Process::addThread(Thread *pThread)

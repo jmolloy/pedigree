@@ -28,7 +28,7 @@
 
 extern "C" void resolveSymbol(void);
 
-void DynamicLinker::initPlt(Elf32 *pElf, uintptr_t value)
+void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 {
   // Value == loadBase. If this changes, add an extra parameter to get loadBase here!
 
@@ -92,7 +92,7 @@ void DynamicLinker::initPlt(Elf32 *pElf, uintptr_t value)
 uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
   // Find the correct ELF to patch.
-  Elf32 *pElf = 0;
+  Elf *pElf = 0;
   uintptr_t loadBase = 0;
 
   if (libraryId == 0)
