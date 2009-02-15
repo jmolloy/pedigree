@@ -15,7 +15,8 @@
 #
 
 set(MODULES)
-set(MODULES ${MODULES} vfs ext2 fat network init console TUI linker)
+set(MODULES ${MODULES} vfs ext2 fat init console TUI linker)
+# network
 
 #########################################################################################
 

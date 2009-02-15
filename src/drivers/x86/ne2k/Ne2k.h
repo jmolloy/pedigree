@@ -43,9 +43,9 @@ public:
   
   virtual bool send(size_t nBytes, uintptr_t buffer);
   
-  virtual bool setStationInfo(stationInfo info);
+  virtual bool setStationInfo(StationInfo info);
   
-  virtual stationInfo getStationInfo();
+  virtual StationInfo getStationInfo();
   
   // IRQ handler callback.
   virtual bool irq(irq_id_t number, InterruptState &state);
@@ -66,7 +66,7 @@ private:
     size_t len;
   };
 
-  stationInfo m_StationInfo;
+  StationInfo m_StationInfo;
   uint8_t m_NextPacket;
   
   Semaphore m_PacketQueueSize;

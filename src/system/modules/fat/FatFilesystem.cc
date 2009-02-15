@@ -315,9 +315,10 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
   uint64_t endOffset = location + size;
   uint64_t finalSize = size;
+  WARNING(".");
   if(static_cast<size_t>(endOffset) > pFile->getSize())
   {
-    WARNING("FAT: offset + size is larger than the file!");
+    WARNING("FAT: offset + size is larger than the file! Offset = " << location << ", size = " << size << ".");
     finalSize = pFile->getSize() - location;
   }
 
@@ -519,6 +520,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
         File ret(filename, 0, 0, 0, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
+        NOTICE("File " << filename << " has size " << Dec << ent->DIR_FileSize << Hex << ".");
         delete buffer;
         return ret;
       }

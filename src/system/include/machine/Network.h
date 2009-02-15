@@ -13,52 +13,158 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #ifndef MACHINE_NETWORK_H
 #define MACHINE_NETWORK_H
 
 #include <machine/Device.h>
 #include <utilities/utility.h>
 
+/** An IPv4/IPv6 address */
+class IpAddress
+{
+  public:
+  
+    /** The type of an IP address */
+    enum IpType
+    {
+      IPv4 = 0,
+      IPv6
+    };
+    
+    /** Constructors */
+    IpAddress() :
+      m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false)
+    {};
+    IpAddress(IpType type) :
+      m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false)
+    {};
+    IpAddress(uint32_t ipv4) :
+      m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true)
+    {};
+    IpAddress(uint8_t *ipv6) :
+      m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true)
+    {
+      memcpy(m_Ipv6, ipv6, 16);
+    };
+    
+    /** IP setters - only one type is valid at any one point in time */
+    
+    void setIp(uint32_t ipv4)
+    {
+      m_Ipv4 = ipv4;
+      memset(m_Ipv6, 0, 16);
+      m_bSet = true;
+      m_Type = IPv4;
+    }
+    
+    void setIp(uint8_t *ipv6)
+    {
+      m_Ipv4 = 0;
+      memcpy(m_Ipv6, ipv6, 16);
+      m_bSet = true;
+      m_Type = IPv6;
+    }
+    
+    /** IP getters */
+    
+    inline uint32_t getIp()
+    {
+      return m_Ipv4;
+    }
+    
+    inline void getIp(uint8_t *ipv6)
+    {
+      if(ipv6)
+        memcpy(ipv6, m_Ipv6, 16);
+    }
+    
+    /** Type getter */
+    
+    IpType getType()
+    {
+      return m_Type;
+    }
+    
+    /** Operators */
+    
+    IpAddress& operator = (IpAddress a)
+    {
+      if(a.getType() == IPv6)
+      {
+        a.getIp(m_Ipv6);
+        m_Ipv4 = 0;
+        m_Type = IPv6;
+        m_bSet = true;
+      }
+      else
+        a.setIp(a.getIp());
+      return *this;
+    }
+  
+  private:
+  
+    IpType      m_Type;
+    
+    uint32_t    m_Ipv4; // the IPv4 address
+    uint8_t     m_Ipv6[16]; // the IPv6 address
+    
+    bool        m_bSet; // has the IP been set yet?
+};
+
 /** A MAC address */
 class MacAddress
 {
   public:
     MacAddress() :
-      mac()
+      m_Mac(), m_Valid(false)
     {};
     virtual ~MacAddress() {};
+    
+    bool valid()
+    {
+      return m_Valid;
+    }
     
     void setMac(uint8_t byte, size_t element)
     {
       if(element < 6)
-        mac[element] = byte;
+      {
+        m_Mac[element] = byte;
+        m_Valid = true; // it has, at least, a byte, which makes it partially valid
+      }
     };
     
     void setMac(uint8_t* data)
     {
-      memcpy(mac, data, 6);
+      memcpy(m_Mac, data, 6);
+      m_Valid = true;
     };
     
     uint8_t getMac(size_t element)
     {
       if(element < 6)
-        return mac[element];
+        return m_Mac[element];
       return 0;
     };
     
     uint8_t* getMac()
     {
-      return mac;
+      return m_Mac;
     };
     
     uint8_t operator [] (size_t offset)
     {
-      return getMac(offset);
+      if(m_Valid)
+        return getMac(offset);
+      else
+        return 0;
     };
     
     MacAddress& operator = (MacAddress a)
     {
-      memcpy(mac, a.getMac(), 6);
+      if(a.valid())
+        setMac(a.getMac());
       return *this;
     }
     
@@ -75,32 +181,26 @@ class MacAddress
     
   private:
   
-    uint8_t   mac[6];
+    uint8_t   m_Mac[6];
+    bool      m_Valid;
 };
 
-/** An IP address *
-class IpAddress
+/** Station information - basically information about this station, per NIC */
+class StationInfo
 {
   public:
-  
-  private:
-};
-*/
-
-/** Station information */
-struct stationInfo
-{
-  stationInfo() :
-    ipv4(0), ipv6(), mac()
-  {};
-  
-  uint32_t    ipv4;     // ipv4 address
-  uint8_t     ipv6[16]; // ipv6 address (not compulsory)
-  
-  uint32_t    subnetMask;
-  uint32_t    gateway;
-  
-  MacAddress  mac;      // MAC address
+    StationInfo() :
+      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), mac()
+    {};
+    virtual ~StationInfo() {};
+    
+    IpAddress   ipv4;
+    IpAddress   ipv6; // not compulsory
+    
+    IpAddress   subnetMask;
+    IpAddress   gateway;
+    
+    MacAddress  mac; // MAC address
 };
 
 /**
@@ -146,15 +246,15 @@ public:
   
   /** Sets station information (such as IP addresses)
    * \param info The information to set as the station info */
-  virtual bool setStationInfo(stationInfo info)
+  virtual bool setStationInfo(StationInfo info)
   {
     return false; // failed by default
   }
 
   /** Gets station information (such as IP addresses) */
-  virtual stationInfo getStationInfo()
+  virtual StationInfo getStationInfo()
   {
-    static stationInfo info;
+    static StationInfo info;
     return info; // not to be trusted
   }
   

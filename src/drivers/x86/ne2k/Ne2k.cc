@@ -21,8 +21,6 @@
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
 
-#include <network/Arp.h>
-
 Ne2k::Ne2k(Network* pDev) :
   Network(pDev), m_StationInfo(), m_pBase(0), m_PacketQueue(), m_PacketQueueSize(0)
 {
@@ -111,10 +109,6 @@ Ne2k::Ne2k(Network* pDev) :
   
   // start the card working properly
   m_pBase->write8(0x22, NE_CMD);
-  
-  // send(5, reinterpret_cast<uintptr_t>("Hello"));
-  
-  //m_StationInfo.ipv4 = Network::convertToIpv4(192, 168, 1, 123);
   
   NetworkStack::instance().registerDevice(this);
 }
@@ -288,20 +282,17 @@ void Ne2k::receiveThread()
   }
 }
 
-bool Ne2k::setStationInfo(stationInfo info)
+bool Ne2k::setStationInfo(StationInfo info)
 {
-  // done manually for two reasons:
-  // 1) can't do info = m_StationInfo for ipv6
-  // 2) MAC isn't changeable
+  // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
+  m_StationInfo.ipv6 = info.ipv6;
   
   m_StationInfo.subnetMask = info.subnetMask;
   m_StationInfo.gateway = info.gateway;
-  
-  memcpy(m_StationInfo.ipv6, info.ipv6, 16);
 }
 
-stationInfo Ne2k::getStationInfo()
+StationInfo Ne2k::getStationInfo()
 {
   return m_StationInfo;
 }
