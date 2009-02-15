@@ -21,9 +21,7 @@ UdpManager UdpManager::manager;
 
 bool UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, Network* pCard)
 {
-  stationInfo dest;
-  dest.ipv4 = remoteHost.ipv4;
-  Udp::instance().send(dest, getLocalPort(), remoteHost.remotePort, nBytes, buffer, pCard);
+  Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, pCard);
   return true;
 };
 
@@ -90,9 +88,10 @@ bool UdpEndpoint::dataReady(bool block)
     m_DataQueueSize.acquire();
   else
     return m_DataQueueSize.tryAcquire();
+  return true;
 };
 
-void UdpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize)
+void UdpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize)
 {  
   // is there an endpoint for this port?
   Endpoint* e;
@@ -100,7 +99,7 @@ void UdpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPor
   {
     // e->setRemotePort(sourcePort);
     Endpoint::RemoteEndpoint host;
-    host.ipv4 = from.ipv4;
+    host.ip = from;
     if(sourcePort)
       host.remotePort = sourcePort;
     else
@@ -118,7 +117,7 @@ void UdpManager::returnEndpoint(Endpoint* e)
   }
 }
 
-Endpoint* UdpManager::getEndpoint(stationInfo remoteHost, uint16_t localPort, uint16_t remotePort)
+Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
 {
   // is there an endpoint for this port?
   Endpoint* e;

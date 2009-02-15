@@ -22,7 +22,7 @@
 #include <processor/Processor.h>
 
 Ne2k::Ne2k(Network* pDev) :
-  Network(pDev), m_StationInfo(), m_pBase(0), m_PacketQueue(), m_PacketQueueSize(0)
+  Network(pDev), m_pBase(0), m_StationInfo(), m_NextPacket(0), m_PacketQueueSize(0), m_PacketQueue()
 {
   setSpecificType(String("ne2k-card"));
   
@@ -135,7 +135,7 @@ bool Ne2k::send(uint32_t nBytes, uintptr_t buffer)
   m_pBase->write8(0x12, NE_CMD); // write, start
   
   uint16_t* data = reinterpret_cast<uint16_t*>(buffer);
-  int i;
+  size_t i;
   for(i = 0; (i + 1) < nBytes; i += 2)
     m_pBase->write16(data[i/2], NE_DATA);
   
@@ -286,10 +286,13 @@ bool Ne2k::setStationInfo(StationInfo info)
 {
   // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
+  NOTICE("Setting ipv4, " << info.ipv4.getIp() << ", " << m_StationInfo.ipv4.getIp() << "...");
   m_StationInfo.ipv6 = info.ipv6;
   
   m_StationInfo.subnetMask = info.subnetMask;
   m_StationInfo.gateway = info.gateway;
+  
+  return true;
 }
 
 StationInfo Ne2k::getStationInfo()

@@ -327,6 +327,7 @@ void Tree<StateBlockHandle,void*>::clear()
 
 Tree<StateBlockHandle,void*>::Iterator Tree<StateBlockHandle,void*>::erase(Iterator iter)
 {
+  return iter; // to avoid "control reaches end of non-void function" warning
 }
 
 void Tree<StateBlockHandle,void*>::rotateLeft(Node *n)

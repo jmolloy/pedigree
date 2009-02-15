@@ -91,7 +91,7 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
 	return ret;*/
 }
 
-void Udp::send(stationInfo dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, Network* pCard)
+void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, Network* pCard)
 {
   size_t newSize = nBytes + sizeof(udpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -103,19 +103,19 @@ void Udp::send(stationInfo dest, uint16_t srcPort, uint16_t destPort, size_t nBy
   header->checksum = 0;
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
   
-  stationInfo me = pCard->getStationInfo();
+  StationInfo me = pCard->getStationInfo();
   
   if(nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
   
-  header->checksum = Udp::instance().udpChecksum(me.ipv4, dest.ipv4, header);
+  header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
   
   Ip::send(dest, IP_UDP, newSize, packAddr, pCard);
   
   delete newPacket;
 }
 
-void Udp::receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the IP header to find the size, so we can skip options and get to the UDP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);

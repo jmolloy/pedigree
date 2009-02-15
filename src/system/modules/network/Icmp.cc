@@ -31,7 +31,7 @@ Icmp::~Icmp()
 {
 }
 
-void Icmp::send(stationInfo dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network* pCard)
+void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network* pCard)
 {
   size_t newSize = nBytes + sizeof(icmpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -54,7 +54,7 @@ void Icmp::send(stationInfo dest, uint8_t type, uint8_t code, uint16_t id, uint1
   delete newPacket;
 }
 
-void Icmp::receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ip::ipHeader));

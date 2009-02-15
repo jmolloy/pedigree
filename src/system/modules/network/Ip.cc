@@ -38,7 +38,7 @@ Ip::~Ip()
 {
 }
 
-void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
+void Ip::send(IpAddress dest, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
 {
   // allocate space for the new packet with an IP header
   size_t newSize = nBytes + sizeof(ipHeader);
@@ -50,12 +50,12 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   memset(header, 0, sizeof(ipHeader));
   
   // do the deed
-  stationInfo me = pCard->getStationInfo();
+  StationInfo me = pCard->getStationInfo();
   
   header->id = Ip::instance().getNextId();
   
-  header->ipDest = dest.ipv4; /// \todo IPv6
-  header->ipSrc = me.ipv4;
+  header->ipDest = dest.getIp(); /// \todo IPv6
+  header->ipSrc = me.ipv4.getIp();
   
   header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
   
@@ -72,11 +72,10 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
   
   // send to the gateway if it's outside our subnet
-  if((dest.ipv4 & me.subnetMask) != (me.ipv4 & me.subnetMask))
+  if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
   {
-    // NOTICE("IP: Destination requires the use of a gateway!");
-    if(me.gateway)
-      dest.ipv4 = me.gateway;
+    if(me.gateway.getIp())
+      dest = me.gateway;
     else
       return;
   }
@@ -85,7 +84,7 @@ void Ip::send(stationInfo dest, uint8_t type, size_t nBytes, uintptr_t packet, N
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
   ///       it doesn't happen?
   MacAddress destMac;
-  bool macValid = Arp::instance().getFromCache(dest.ipv4, true, &destMac, pCard);
+  bool macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
   if(macValid)
     Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
   
@@ -97,8 +96,8 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
     
-  stationInfo cardInfo = pCard->getStationInfo();
-  if(cardInfo.ipv4 == header->ipDest)
+  StationInfo cardInfo = pCard->getStationInfo();
+  if(cardInfo.ipv4.getIp() == header->ipDest)
   {
     /// \todo Handle fragmentation!
     
@@ -109,10 +108,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
     header->checksum = checksum;
     if(checksum == calcChecksum)
     {
-      // build a stationInfo structure holding information about the system the packet came
-      // from
-      stationInfo sourceStation;
-      sourceStation.ipv4 = header->ipSrc;
+      IpAddress from(header->ipSrc);
       
       switch(header->type)
       {
@@ -120,21 +116,21 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
           //NOTICE("IP: ICMP packet");
           
           // icmp needs the ip header as well
-          Icmp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
+          Icmp::instance().receive(from, nBytes, packet, pCard, offset);
           break;
           
         case IP_UDP:
           //NOTICE("IP: UDP packet");
           
           // udp needs the ip header as well
-          Udp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
+          Udp::instance().receive(from, nBytes, packet, pCard, offset);
           break;
           
         case IP_TCP:
           //NOTICE("IP: TCP packet");
           
           // tcp needs the ip header as well
-          Tcp::instance().receive(sourceStation, nBytes, packet, pCard, offset);
+          Tcp::instance().receive(from, nBytes, packet, pCard, offset);
           break;
         
         default:

@@ -75,7 +75,7 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(newPacket);
   
   // copy in the data
-  stationInfo me = pCard->getStationInfo();
+  StationInfo me = pCard->getStationInfo();
   memcpy(ethHeader->destMac, dest.getMac(), 6);
   memcpy(ethHeader->sourceMac, me.mac, 6);
   ethHeader->type = HOST_TO_BIG16(type);

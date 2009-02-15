@@ -48,10 +48,10 @@ public:
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends an ARP request */
-  void send(stationInfo req, Network* pCard = 0);
+  void send(IpAddress req, Network* pCard = 0);
   
   /** Gets an entry from the ARP cache, and optionally resolves it if needed. */
-  bool getFromCache(uint32_t ipv4, bool resolve, MacAddress* ent, Network* pCard);
+  bool getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard);
   // bool getFromCache(uint8_t ipv6[16], bool resolve, MacAddress* ent);
 
 private:
@@ -78,29 +78,31 @@ private:
   struct arpEntry
   {
     arpEntry() :
-      valid(false), station()
+      valid(false), ip(), mac()
     {};
     
     bool valid;
-    stationInfo station;
+    IpAddress ip;
+    MacAddress mac;
   };
   
   // an ARP request we've sent
   struct arpRequest
   {
     arpRequest() :
-      destStation(), waitSem(0)
+      destIp(), mac(), waitSem(0), success(false)
     {};
     
-    stationInfo destStation;
+    IpAddress destIp;
+    MacAddress mac;
     Semaphore waitSem;
+    
+    bool success;
   };
   
   // ARP Cache
+  /// \todo Implement IPv6 support into the cache
   Tree<uint32_t, arpEntry*> m_ArpCache;
-  
-  // ARP cache
-  //Vector<arpEntry*> m_ArpCache;
   
   // ARP request list
   Vector<arpRequest*> m_ArpRequests;

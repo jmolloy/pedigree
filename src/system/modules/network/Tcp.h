@@ -72,10 +72,10 @@ public:
   } __attribute__ ((packed));
   
   /** Packet arrival callback */
-  void receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends a TCP packet */
-  static void send(stationInfo dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard = 0);
+  static void send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard = 0);
   
   /** Calculates a TCP checksum */
   uint16_t tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint16_t len);

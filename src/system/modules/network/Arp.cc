@@ -30,46 +30,52 @@ Arp::~Arp()
 {
 }
 
-bool Arp::getFromCache(uint32_t ipv4, bool resolve, MacAddress* ent, Network* pCard)
+bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard)
 {
+  // ensure the IP given is valid
+  if(ip.getType() == IpAddress::IPv6)
+    return false; /// \todo IPv6 ARP cache
+  
   // do we have an entry for it yet?
   arpEntry* arpEnt;
-  if((arpEnt = m_ArpCache.lookup(ipv4)) != 0)
+  if((arpEnt = m_ArpCache.lookup(ip.getIp())) != 0)
   {
-    *ent = arpEnt->station.mac;
+    *ent = arpEnt->mac;
     return true;
   }
+  
+  /** The following will work for IPv6, we just need a way of storing that information in the cache */
   
   // not found, do we resolve?
   if(!resolve)
     return false;
   arpRequest* req = new arpRequest;
-  
-  /// \todo IPv6
-  req->destStation.ipv4 = ipv4;
+  req->destIp = ip;
   
   // push this onto the list
   m_ArpRequests.pushBack(req);
   
   // send the request
-  send(req->destStation, pCard);
+  send(req->destIp, pCard);
   
   // wait for the reply
   req->waitSem.acquire();
+  bool success = req->success;
   
   // load it up
-  *ent = req->destStation.mac;
+  if(success)
+    *ent = req->mac;
   
   // clean up
   delete req;
-  
-  // success
-  return true;
+  return success;
 }
 
-void Arp::send(stationInfo req, Network* pCard)
+void Arp::send(IpAddress req, Network* pCard)
 {
-  stationInfo cardInfo = pCard->getStationInfo();
+  /// \todo IPv6
+  
+  StationInfo cardInfo = pCard->getStationInfo();
   
   arpHeader* request = new arpHeader;
   
@@ -77,12 +83,12 @@ void Arp::send(stationInfo req, Network* pCard)
   request->hwSize = 6;
   
   request->protocol = HOST_TO_BIG16(ETH_IP);
-  request->protocolSize = 4; /// \todo IPv6
+  request->protocolSize = 4;
   
   request->opcode = HOST_TO_BIG16(ARP_OP_REQUEST);
   
-  request->ipSrc = cardInfo.ipv4;
-  request->ipDest = req.ipv4;
+  request->ipSrc = cardInfo.ipv4.getIp();
+  request->ipDest = req.getIp();
   
   memcpy(request->hwSrc, cardInfo.mac, 6);
   memset(request->hwDest, 0xff, 6); // broadcast
@@ -103,9 +109,9 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
   arpHeader* header = reinterpret_cast<arpHeader*>(packet + offset);
   
   // is this for us?
-  stationInfo cardInfo = pCard->getStationInfo();
-  if(header->ipDest == cardInfo.ipv4)
-  {
+  StationInfo cardInfo = pCard->getStationInfo();
+  if(cardInfo.ipv4 == header->ipDest)
+  {    
     // grab the source MAC
     MacAddress sourceMac;
     sourceMac = header->hwSrc;
@@ -129,8 +135,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       {
         arpEntry* ent = new arpEntry;
         ent->valid = true;
-        ent->station.mac = sourceMac;
-        ent->station.ipv4 = header->ipSrc;
+        ent->mac = sourceMac;
+        ent->ip.setIp(header->ipSrc);
         m_ArpCache.insert(header->ipSrc, ent);
         //m_ArpCache.pushBack(ent);
       }
@@ -139,7 +145,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       arpHeader* reply = new arpHeader;
       memcpy(reply, header, sizeof(arpHeader));
       reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
-      reply->ipSrc = cardInfo.ipv4;
+      reply->ipSrc = cardInfo.ipv4.getIp();
       reply->ipDest = header->ipSrc;
       memcpy(reply->hwSrc, cardInfo.mac, 6);
       memcpy(reply->hwDest, header->hwSrc, 6);
@@ -156,12 +162,13 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       //NOTICE("Arp: Reply");
       
       // add to our local cache, if needed
+      /// \todo IPv6 cache
       if(m_ArpCache.lookup(header->ipSrc) == 0)
       {
         arpEntry* ent = new arpEntry;
         ent->valid = true;
-        ent->station.mac = sourceMac;
-        ent->station.ipv4 = header->ipSrc;
+        ent->mac = sourceMac;
+        ent->ip.setIp(header->ipSrc);
         m_ArpCache.insert(header->ipSrc, ent);
         //m_ArpCache.pushBack(ent);
       }
@@ -171,10 +178,12 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
           it != m_ArpRequests.end();
           it++)
       {
-        if ((*it)->destStation.ipv4 == header->ipSrc)
+        arpRequest* p = *it;
+        if(p->destIp.getIp() == header->ipSrc)
         {
-          (*it)->destStation.mac = header->hwSrc;
-          (*it)->waitSem.release();
+          p->mac = header->hwSrc;
+          p->waitSem.release();
+          p->success = true;
           m_ArpRequests.erase(it);
           break;
         }

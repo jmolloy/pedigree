@@ -71,6 +71,10 @@ class TcpBuffer
 /** Connection state block handle */
 struct StateBlockHandle
 {
+  StateBlockHandle() :
+    localPort(0), remotePort(0), remoteHost(), listen(false)
+  {};
+
   uint16_t localPort;
   uint16_t remotePort;
   Endpoint::RemoteEndpoint remoteHost;
@@ -85,13 +89,8 @@ struct StateBlockHandle
         return (localPort == a.localPort);
     }
     else
-      return ((localPort == a.localPort) && (remoteHost.ipv4 == a.remoteHost.ipv4) && (remotePort == a.remotePort));
-    /*else if(a.remotePort && !a.remoteHost.ipv4)
-      return ((localPort == a.localPort) && (remotePort == a.remotePort));
-    else if(!a.remotePort && a.remoteHost.ipv4)
-      return ((localPort == a.localPort) && (remoteHost.ipv4 == a.remoteHost.ipv4));
-    else
-      return (localPort == a.localPort);*/
+      return ((localPort == a.localPort) && (remoteHost.ip.getIp() == a.remoteHost.ip.getIp()) && (remotePort == a.remotePort));
+    return false;
   }
   
   bool operator > (StateBlockHandle a)
@@ -103,6 +102,7 @@ struct StateBlockHandle
     }
     else
       return (localPort > a.localPort) || (remotePort > a.remotePort);
+    return false;
   }
 };
 
@@ -115,6 +115,10 @@ class Tree<StateBlockHandle,void*>
     /** Tree node. */
     struct Node
     {
+      Node() :
+        key(), element(0), leftChild(0), rightChild(0), parent(0), height(0)
+      {};
+    
       StateBlockHandle key;
       void *element;
       struct Node *leftChild;

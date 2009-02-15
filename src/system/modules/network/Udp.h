@@ -60,10 +60,10 @@ public:
   }
   
   /** Packet arrival callback */
-  void receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends a UDP packet */
-  static void send(stationInfo dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, Network* pCard = 0);
+  static void send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, Network* pCard = 0);
   
   /** Calculates a UDP checksum */
   uint16_t udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data);

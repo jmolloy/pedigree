@@ -59,7 +59,7 @@ uint16_t Tcp::tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint
   return checksum;
 }
 
-void Tcp::send(stationInfo dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard)
+void Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard)
 {
   size_t newSize = nBytes + sizeof(tcpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -79,19 +79,19 @@ void Tcp::send(stationInfo dest, uint16_t srcPort, uint16_t destPort, uint32_t s
   
   header->checksum = 0;
   
-  stationInfo me = pCard->getStationInfo();
+  StationInfo me = pCard->getStationInfo();
   
   if(nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
   
-  header->checksum = Tcp::instance().tcpChecksum(me.ipv4, dest.ipv4, header, nBytes + sizeof(tcpHeader));
+  header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
   
   Ip::send(dest, IP_TCP, newSize, packAddr, pCard);
   
   delete newPacket;
 }
 
-void Tcp::receive(stationInfo from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the IP header to find the size, so we can skip options and get to the TCP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);

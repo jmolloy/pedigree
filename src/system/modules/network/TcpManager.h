@@ -43,25 +43,25 @@ class TcpEndpoint : public Endpoint
     /** Constructors and destructors */
     TcpEndpoint() :
       Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
     {};
     TcpEndpoint(uint16_t local, uint16_t remote) :
       Endpoint(local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
     {
-      TcpEndpoint();
-      Endpoint(local, remote);
+      //TcpEndpoint();
+      //Endpoint(local, remote);
     };
-    TcpEndpoint(stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteInfo, local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnectionCount(0)
+    TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
+      Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
     {
-      TcpEndpoint();
-      Endpoint(remoteInfo, local, remote);
+      //TcpEndpoint();
+      //Endpoint(remoteIp, local, remote);
     };
-    TcpEndpoint(size_t connId, stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteInfo, local, remote), m_Card(0), m_ConnId(connId), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnectionCount(0)
+    TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
+      Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(connId), m_RemoteHost(), m_DataStream(),
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
     {};
     virtual ~TcpEndpoint() {};
     
@@ -101,30 +101,47 @@ class TcpEndpoint : public Endpoint
   
   private:
   
-    /** Listen endpoint? */
-    bool m_Listening;
-  
-    /** The incoming data stream */
-    TcpBuffer m_DataStream;
-    
-    /** Shadow incoming data stream - actually receives the bytes from the stack until PUSH flag is set */
-    TcpBuffer m_ShadowDataStream;
-    
-    /** Number of bytes we've removed off the front of the (shadow) data stream */
-    size_t nBytesRemoved;
-    
-    /** Incoming connection queue (to be handled by accept) */
-    List<Endpoint*> m_IncomingConnections;
-    Semaphore m_IncomingConnectionCount;
-    
-    /** TcpManager connection ID */
-    size_t m_ConnId;
+    /** Copy constructors */
+    TcpEndpoint(const TcpEndpoint& s) :
+      Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+    {
+      // this isn't actually correct
+      ERROR("Tcp: TcpEndpoint copy constructor has been called.");
+    }
+    TcpEndpoint& operator = (const TcpEndpoint& s)
+    {
+      // this isn't actually correct EITHER
+      ERROR("Tcp: TcpEndpoint copy constructor has been called.");
+      return *this;
+    }
     
     /** The network device to use */
     Network* m_Card;
     
+    /** TcpManager connection ID */
+    size_t m_ConnId;
+    
     /** The host we're connected to at the moment */
     RemoteEndpoint m_RemoteHost;
+  
+    /** The incoming data stream */
+    TcpBuffer m_DataStream;
+    
+    /** Number of bytes we've removed off the front of the (shadow) data stream */
+    size_t nBytesRemoved;
+    
+    /** Shadow incoming data stream - actually receives the bytes from the stack until PUSH flag is set
+      * or the buffer fills up, or the connection starts closing.
+      */
+    TcpBuffer m_ShadowDataStream;
+  
+    /** Listen endpoint? */
+    bool m_Listening;
+    
+    /** Incoming connection queue (to be handled by accept) */
+    List<Endpoint*> m_IncomingConnections;
+    Semaphore m_IncomingConnectionCount;
 };
 
 /**
@@ -134,7 +151,7 @@ class TcpManager
 {
 public:
   TcpManager() :
-    m_NextTcpSequence(0), m_NextConnId(1)
+    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_CurrentConnections(), m_Endpoints(), m_PortsAvailable()
   {};
   virtual ~TcpManager()
   {};
@@ -162,7 +179,7 @@ public:
   void returnEndpoint(Endpoint* e);
   
   /** A new packet has arrived! */
-  void receive(stationInfo from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard);
+  void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard);
   
   /** Sends a TCP packet over the given connection ID */
   void send(size_t connId, uintptr_t payload, bool push, size_t nBytes);
@@ -257,9 +274,6 @@ private:
 
   static TcpManager manager;
   
-  // this keeps track of the next valid connection ID
-  size_t m_NextConnId;
-  
   // TCP is based on connections, so we need to keep track of them
   // before we even think about depositing into Endpoints. These state blocks
   // keep track of important information relating to the connection state.
@@ -267,7 +281,13 @@ private:
   {
     public:
       StateBlock() :
-        waitState(0), pCard(0)
+        currentState(Tcp::CLOSED), localPort(0), remoteHost(),
+        iss(0), snd_nxt(0), snd_una(0), snd_wnd(0), snd_up(0), snd_wl1(0), snd_wl2(0),
+        rcv_nxt(0), rcv_wnd(0), rcv_up(0), irs(0),
+        seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
+        fin_ack(false), fin_seq(0),
+        numEndpointPackets(0), /// \todo Remove, obsolete
+        waitState(0), pCard(0), endpoint(0), connId(0)
       {};
       ~StateBlock()
       {};
@@ -320,10 +340,34 @@ private:
       
       // the id of this specific connection
       size_t connId;
+    
+    private:
+    
+      StateBlock(const StateBlock& s) :
+        currentState(Tcp::CLOSED), localPort(0), remoteHost(),
+        iss(0), snd_nxt(0), snd_una(0), snd_wnd(0), snd_up(0), snd_wl1(0), snd_wl2(0),
+        rcv_nxt(0), rcv_wnd(0), rcv_up(0), irs(0),
+        seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
+        fin_ack(false), fin_seq(0),
+        numEndpointPackets(0), /// \todo Remove, obsolete
+        waitState(0), pCard(0), endpoint(0), connId(0)
+      {
+        // same as TcpEndpoint - the copy constructor should not be called
+        ERROR("Tcp: StateBlock copy constructor called");
+      }
+      StateBlock& operator = (const StateBlock& s)
+      {
+        // this isn't actually correct EITHER
+        ERROR("Tcp: StateBlock copy constructor has been called.");
+        return *this;
+      }
   };
   
   // next TCP sequence number to allocate
   uint32_t m_NextTcpSequence;
+  
+  // this keeps track of the next valid connection ID
+  size_t m_NextConnId;
   
 /*  static int CompareHandles(void* p1, void* p2)
   {

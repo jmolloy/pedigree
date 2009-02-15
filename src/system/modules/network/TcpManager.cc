@@ -164,7 +164,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   StateBlockHandle* handle = new StateBlockHandle;
   handle->localPort = port;
   handle->remotePort = 0;
-  handle->remoteHost.ipv4 = 0;
+  handle->remoteHost.ip.setIp(static_cast<uint32_t>(0));
   handle->listen = true;
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(*handle)) != 0)
@@ -179,6 +179,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   
   stateBlock->connId = connId;
   
+  /* redundant thanks to constructors
   stateBlock->iss = 0;
   stateBlock->snd_nxt = 0;
   stateBlock->snd_una = 0;
@@ -201,6 +202,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   
   stateBlock->fin_ack = false;
   stateBlock->fin_seq = 0;
+  */
   
   stateBlock->currentState = Tcp::LISTEN;
   
@@ -212,6 +214,8 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   
   m_StateBlocks.insert(*handle, stateBlock);
   m_CurrentConnections.insert(connId, handle);
+  
+  return connId;
 }
 
 size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard)
@@ -244,6 +248,7 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   stateBlock->snd_up = 0;
   stateBlock->snd_wl1 = stateBlock->snd_wl2 = 0;
   
+  /* redundant thanks to constructors
   stateBlock->irs = 0;
   stateBlock->rcv_nxt = 0;
   stateBlock->rcv_wnd = 0;
@@ -259,6 +264,7 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   
   stateBlock->fin_ack = false;
   stateBlock->fin_seq = 0;
+  */
   
   stateBlock->currentState = Tcp::SYN_SENT;
   
@@ -271,9 +277,7 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   m_StateBlocks.insert(*handle, stateBlock);
   m_CurrentConnections.insert(connId, handle);
   
-  stationInfo dest;
-  dest.ipv4 = stateBlock->remoteHost.ipv4;
-  Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->iss, 0, Tcp::SYN, stateBlock->snd_wnd, 0, 0, pCard);
+  Tcp::send(stateBlock->remoteHost.ip, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->iss, 0, Tcp::SYN, stateBlock->snd_wnd, 0, 0, pCard);
   
   /// \todo Keep an error state in the stateBlock and break free of this loop
   ///       if an error occurs (such as connection refused)
@@ -297,8 +301,8 @@ void TcpManager::Disconnect(size_t connectionId)
   if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
     return;
   
-  stationInfo dest;
-  dest.ipv4 = stateBlock->remoteHost.ipv4;
+  IpAddress dest;
+  dest = stateBlock->remoteHost.ip;
   
   // this is our FIN
   stateBlock->fin_seq = stateBlock->snd_nxt;
@@ -354,8 +358,8 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
     stateBlock->seg_seq = stateBlock->snd_nxt;
     stateBlock->snd_nxt += segmentSize;
     
-    stationInfo dest;
-    dest.ipv4 = stateBlock->remoteHost.ipv4;
+    IpAddress dest;
+    dest = stateBlock->remoteHost.ip;
     
     Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->seg_seq, stateBlock->rcv_nxt, Tcp::ACK | (push ? Tcp::PSH : 0), stateBlock->snd_wnd, segmentSize, payload + offset, stateBlock->pCard);
     
@@ -363,13 +367,13 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
   }
 }
 
-void TcpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard)
+void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard)
 {  
   // find the state block if possible, if none exists create one
   StateBlockHandle handle;
   handle.localPort = destPort;
   handle.remotePort = sourcePort;
-  handle.remoteHost.ipv4 = from.ipv4;
+  handle.remoteHost.ip = from;
   handle.listen = false; // DON'T look for listen sockets yet
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(handle)) == 0)
@@ -408,7 +412,6 @@ void TcpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPor
   NOTICE("TCP packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << stateBlock->remoteHost.remotePort << ".");
   switch(stateBlock->currentState)
   {
-  
     /* Incoming segment while the state is CLOSED */
     case Tcp::CLOSED:
     
@@ -472,7 +475,7 @@ void TcpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPor
         
         newStateBlock->localPort = destPort;
         newStateBlock->remoteHost.remotePort = sourcePort;
-        newStateBlock->remoteHost.ipv4 = from.ipv4;
+        newStateBlock->remoteHost.ip = from;
         
         newStateBlock->iss = getNextSequenceNumber();
         newStateBlock->snd_nxt = newStateBlock->iss + 1;
@@ -513,8 +516,8 @@ void TcpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPor
         m_CurrentConnections.insert(connId, tmp);
         
         // ACK the SYN
-        stationInfo dest;
-        dest.ipv4 = newStateBlock->remoteHost.ipv4;
+        IpAddress dest;
+        dest = newStateBlock->remoteHost.ip;
         Tcp::send(dest, newStateBlock->localPort, newStateBlock->remoteHost.remotePort, newStateBlock->iss, newStateBlock->rcv_nxt, Tcp::SYN | Tcp::ACK, newStateBlock->snd_wnd, 0, 0, pCard);
       }
       else
@@ -589,291 +592,297 @@ void TcpManager::receive(stationInfo from, uint16_t sourcePort, uint16_t destPor
       
       break;
       
-      /* These all have the same style of handling (with special handling as needed) */
-      case Tcp::SYN_RECEIVED:
-      case Tcp::ESTABLISHED:
-      case Tcp::FIN_WAIT_1:
-      case Tcp::FIN_WAIT_2:
-      case Tcp::CLOSE_WAIT:
-      case Tcp::CLOSING:
-      case Tcp::LAST_ACK:
-      case Tcp::TIME_WAIT:
-      
-        if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd == 0)
-        {
-          // unacceptable
-          if(!(stateBlock->seg_seq == stateBlock->rcv_nxt))
-          {
-            NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 1.");
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-            break;
-          }
-        }
-        
-        if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd > 0)
-        {
-          // unacceptable
-          if(!(stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))
-          {
-            NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 2.");
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-            break;
-          }
-        }
-        
+    /* These all have the same style of handling (with special handling as needed) */
+    case Tcp::SYN_RECEIVED:
+    case Tcp::ESTABLISHED:
+    case Tcp::FIN_WAIT_1:
+    case Tcp::FIN_WAIT_2:
+    case Tcp::CLOSE_WAIT:
+    case Tcp::CLOSING:
+    case Tcp::LAST_ACK:
+    case Tcp::TIME_WAIT:
+    
+      if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd == 0)
+      {
         // unacceptable
-        if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd == 0)
+        if(!(stateBlock->seg_seq == stateBlock->rcv_nxt))
         {
-          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 3.");
+          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 1.");
           Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
           break;
         }
-        
-        if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd > 0)
+      }
+      
+      if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd > 0)
+      {
+        // unacceptable
+        if(!(stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))
         {
-          if(!(
-            (stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))
-            ||
-            (stateBlock->rcv_nxt <= (stateBlock->seg_seq + stateBlock->seg_len - 1) && (stateBlock->seg_seq + stateBlock->seg_len - 1) < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))))
-          {
-            NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 4.");
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 2.");
+          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          break;
+        }
+      }
+      
+      // unacceptable
+      if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd == 0)
+      {
+        NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 3.");
+        Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+        break;
+      }
+      
+      if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd > 0)
+      {
+        if(!(
+          (stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))
+          ||
+          (stateBlock->rcv_nxt <= (stateBlock->seg_seq + stateBlock->seg_len - 1) && (stateBlock->seg_seq + stateBlock->seg_len - 1) < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))))
+        {
+          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 4.");
+          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          break;
+        }
+      }
+      
+      if(header->flags & Tcp::RST)
+      {
+        switch(stateBlock->currentState)
+        {
+          case Tcp::SYN_RECEIVED:
+            // passive open - keep track of what we were in FIRST
+            // we'll need to return to listen if so
+            
+            // active open, we're closed and outta here
             break;
-          }
-        }
-        
-        if(header->flags & Tcp::RST)
-        {
-          switch(stateBlock->currentState)
-          {
-            case Tcp::SYN_RECEIVED:
-              // passive open - keep track of what we were in FIRST
-              // we'll need to return to listen if so
-              
-              // active open, we're closed and outta here
-              break;
-            
-            case Tcp::ESTABLISHED:
-            case Tcp::FIN_WAIT_1:
-            case Tcp::FIN_WAIT_2:
-            case Tcp::CLOSE_WAIT:
-            
-              // blow away segment queues, receive/send exit with error
-              break;
-              
-            case Tcp::CLOSING:
-            case Tcp::LAST_ACK:
-            case Tcp::TIME_WAIT:
-            
-              // close the connection
-              break;
-            
-            default:
-              break;
-          }
           
-          stateBlock->currentState = Tcp::CLOSED;
-          break;
+          case Tcp::ESTABLISHED:
+          case Tcp::FIN_WAIT_1:
+          case Tcp::FIN_WAIT_2:
+          case Tcp::CLOSE_WAIT:
+          
+            // blow away segment queues, receive/send exit with error
+            break;
+            
+          case Tcp::CLOSING:
+          case Tcp::LAST_ACK:
+          case Tcp::TIME_WAIT:
+          
+            // close the connection
+            break;
+          
+          default:
+            break;
         }
         
-        // check security and precedence...
-        
-        if(header->flags & Tcp::SYN)
+        stateBlock->currentState = Tcp::CLOSED;
+        break;
+      }
+      
+      // check security and precedence...
+      
+      if(header->flags & Tcp::SYN)
+      {
+        // reset..
+        NOTICE("TCP: unexpected SYN!");
+        break;
+      }
+      
+      if(header->flags & Tcp::ACK)
+      {
+        switch(stateBlock->currentState)
         {
-          // reset..
-          NOTICE("TCP: unexpected SYN!");
-          break;
-        }
-        
-        if(header->flags & Tcp::ACK)
-        {
-          switch(stateBlock->currentState)
+          case Tcp::SYN_RECEIVED:
           {
-            case Tcp::SYN_RECEIVED:
+            if(!(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt))
             {
-              if(!(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt))
-              {
-                NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is an unacceptable segment ACK.");
-                Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
-                break;
-              }
-              
-              size_t connId = stateBlock->connId;
-              TcpEndpoint* parent = stateBlock->endpoint;
-              stateBlock->endpoint = new TcpEndpoint(connId, from, stateBlock->localPort, stateBlock->remoteHost.remotePort);
-              //TcpEndpoint(size_t connId, stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0)
-              
-              //new TcpEndpoint(connId); //endpoint;
-              
-              // ensure that the parent endpoint handle this properly
-              parent->addIncomingConnection(stateBlock->endpoint);
-              
-              // fall through otherwise
-              stateBlock->currentState = Tcp::ESTABLISHED;
+              NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is an unacceptable segment ACK.");
+              Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
+              break;
             }
             
-            case Tcp::ESTABLISHED:
-            case Tcp::FIN_WAIT_1:
-            case Tcp::FIN_WAIT_2:
-            case Tcp::CLOSE_WAIT:
-            case Tcp::CLOSING:
+            size_t connId = stateBlock->connId;
+            TcpEndpoint* parent = stateBlock->endpoint;
+            stateBlock->endpoint = new TcpEndpoint(connId, from, stateBlock->localPort, stateBlock->remoteHost.remotePort);
+            //TcpEndpoint(size_t connId, stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0)
             
-              if(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
-                stateBlock->snd_una = stateBlock->seg_ack;
-              
-              if(stateBlock->seg_ack < stateBlock->snd_una)
-                break; // dupe ack
-              
-              // remove from retransmission queue any acknowledged packets...
-              
-              if(stateBlock->seg_ack > stateBlock->snd_nxt)
-              {
-                // send an ack?
-              }
-              
-              if(stateBlock->snd_una < stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
-              {
-                if((stateBlock->snd_wl1 < stateBlock->seg_seq) || (stateBlock->snd_wl1 == stateBlock->seg_seq && stateBlock->snd_wl2 <= stateBlock->seg_ack))
-                {
-                  stateBlock->snd_wnd = stateBlock->seg_wnd;
-                  stateBlock->snd_wl1 = stateBlock->seg_seq;
-                  stateBlock->snd_wl2 = stateBlock->seg_ack;
-                }
-              }
-              
-              if(stateBlock->currentState == Tcp::FIN_WAIT_1)
-              {
-                // if this is ack'ing our FIN - how would we know?
-                // probably snd_nxt?
-                
-                if(stateBlock->fin_seq <= stateBlock->seg_ack)
-                {
-                  stateBlock->currentState = Tcp::FIN_WAIT_2;
-                  stateBlock->fin_ack = true; // FIN has been acked
-                }
-              }
-              else if(stateBlock->currentState == Tcp::FIN_WAIT_2)
-              {
-                // user's close can return now, but no deletion of the state block yet
-                
-                if(stateBlock->fin_seq <= stateBlock->seg_ack)
-                {
-                  stateBlock->currentState = Tcp::FIN_WAIT_2;
-                  stateBlock->fin_ack = true; // FIN has been acked
-                }
-              }
-              else if(stateBlock->currentState == Tcp::CLOSING)
-              {
-                if(stateBlock->fin_seq <= stateBlock->seg_ack)
-                {
-                  stateBlock->currentState = Tcp::TIME_WAIT;
-                  stateBlock->fin_ack = true; // FIN has been acked
-                }
-              }
-              
-              break;
-              
-            case Tcp::LAST_ACK:
+            //new TcpEndpoint(connId); //endpoint;
+            
+            // ensure that the parent endpoint handle this properly
+            parent->addIncomingConnection(stateBlock->endpoint);
+            
+            // fall through otherwise
+            stateBlock->currentState = Tcp::ESTABLISHED;
+          }
           
-              // only our FIN ack can come now, so close
-              if(stateBlock->fin_seq == stateBlock->seg_seq)
+          case Tcp::ESTABLISHED:
+          case Tcp::FIN_WAIT_1:
+          case Tcp::FIN_WAIT_2:
+          case Tcp::CLOSE_WAIT:
+          case Tcp::CLOSING:
+          
+            if(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
+              stateBlock->snd_una = stateBlock->seg_ack;
+            
+            if(stateBlock->seg_ack < stateBlock->snd_una)
+              break; // dupe ack
+            
+            // remove from retransmission queue any acknowledged packets...
+            
+            if(stateBlock->seg_ack > stateBlock->snd_nxt)
+            {
+              // send an ack?
+            }
+            
+            if(stateBlock->snd_una < stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
+            {
+              if((stateBlock->snd_wl1 < stateBlock->seg_seq) || (stateBlock->snd_wl1 == stateBlock->seg_seq && stateBlock->snd_wl2 <= stateBlock->seg_ack))
               {
-                stateBlock->currentState = Tcp::CLOSED;
+                stateBlock->snd_wnd = stateBlock->seg_wnd;
+                stateBlock->snd_wl1 = stateBlock->seg_seq;
+                stateBlock->snd_wl2 = stateBlock->seg_ack;
+              }
+            }
+            
+            if(stateBlock->currentState == Tcp::FIN_WAIT_1)
+            {
+              // if this is ack'ing our FIN - how would we know?
+              // probably snd_nxt?
+              
+              if(stateBlock->fin_seq <= stateBlock->seg_ack)
+              {
+                stateBlock->currentState = Tcp::FIN_WAIT_2;
                 stateBlock->fin_ack = true; // FIN has been acked
               }
-              break;
+            }
+            else if(stateBlock->currentState == Tcp::FIN_WAIT_2)
+            {
+              // user's close can return now, but no deletion of the state block yet
               
-            case Tcp::TIME_WAIT:
-            
-              // only a FIN can come in during this state, ACK it and start timeout...
-            
-              break;
-            
-            default:
-              break;
-          }
-          
-          if(stateBlock->currentState == Tcp::CLOSED)
-            break;
-        }
-        else
-          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " has no ACK.");
-        
-        if(header->flags & Tcp::URG)
-        {
-          // handle urgent notification to the application
-        }
-        
-        /* Finally, process the actual segment payload */
-        if(stateBlock->currentState == Tcp::ESTABLISHED || stateBlock->currentState == Tcp::FIN_WAIT_1 || stateBlock->currentState == Tcp::FIN_WAIT_2)
-        {
-          // TODO: handle incoming data... Page 74 of RFC 793          
-          if(stateBlock->seg_len)
-          {
-            NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is ready for payload reading.");
-            
-            stateBlock->rcv_nxt += stateBlock->seg_len;
-            stateBlock->rcv_wnd -= stateBlock->seg_len;
-             
-            stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, header->flags & Tcp::PSH);
-            
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-            alreadyAck = true;
-            
-            stateBlock->numEndpointPackets++;
-          }
-        }
-        
-        if(header->flags & Tcp::FIN)
-        {
-          if(stateBlock->currentState == Tcp::CLOSED || stateBlock->currentState == Tcp::LISTEN || stateBlock->currentState == Tcp::SYN_SENT)
-            break;
-          
-          stateBlock->rcv_nxt = stateBlock->seg_seq + 1;
-          
-          if(!alreadyAck)
-          {
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-            alreadyAck = true;
-          }
-          
-          switch(stateBlock->currentState)
-          {
-            case Tcp::SYN_RECEIVED:
-            case Tcp::ESTABLISHED:
-            
-              stateBlock->currentState = Tcp::CLOSE_WAIT;
-              
-              break;
-            
-            case Tcp::FIN_WAIT_1:
-            
-              // already been acked previously? if so this needs to go to TIME_WAIT
-              // if NOT, closing
-              if(stateBlock->fin_ack)
+              if(stateBlock->fin_seq <= stateBlock->seg_ack)
+              {
+                stateBlock->currentState = Tcp::FIN_WAIT_2;
+                stateBlock->fin_ack = true; // FIN has been acked
+              }
+            }
+            else if(stateBlock->currentState == Tcp::CLOSING)
+            {
+              if(stateBlock->fin_seq <= stateBlock->seg_ack)
+              {
                 stateBlock->currentState = Tcp::TIME_WAIT;
-              else
-                stateBlock->currentState = Tcp::CLOSING;
-              
-              break;
+                stateBlock->fin_ack = true; // FIN has been acked
+              }
+            }
             
-            case Tcp::FIN_WAIT_2:
+            break;
             
-              stateBlock->currentState = Tcp::TIME_WAIT;
-              
-              break;
+          case Tcp::LAST_ACK:
+        
+            // only our FIN ack can come now, so close
+            if(stateBlock->fin_seq == stateBlock->seg_seq)
+            {
+              stateBlock->currentState = Tcp::CLOSED;
+              stateBlock->fin_ack = true; // FIN has been acked
+            }
+            break;
             
-            case Tcp::CLOSE_WAIT:
-            case Tcp::CLOSING:
-            case Tcp::LAST_ACK:
-            
-              // remain this state
-              
-              break;
-          }
+          case Tcp::TIME_WAIT:
+          
+            // only a FIN can come in during this state, ACK it and start timeout...
+          
+            break;
+          
+          default:
+            break;
         }
+        
+        if(stateBlock->currentState == Tcp::CLOSED)
+          break;
+      }
+      else
+        NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " has no ACK.");
       
-        break;
+      if(header->flags & Tcp::URG)
+      {
+        // handle urgent notification to the application
+      }
+      
+      /* Finally, process the actual segment payload */
+      if(stateBlock->currentState == Tcp::ESTABLISHED || stateBlock->currentState == Tcp::FIN_WAIT_1 || stateBlock->currentState == Tcp::FIN_WAIT_2)
+      {
+        // TODO: handle incoming data... Page 74 of RFC 793          
+        if(stateBlock->seg_len)
+        {
+          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is ready for payload reading.");
+          
+          stateBlock->rcv_nxt += stateBlock->seg_len;
+          stateBlock->rcv_wnd -= stateBlock->seg_len;
+           
+          stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, header->flags & Tcp::PSH);
+          
+          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          alreadyAck = true;
+          
+          stateBlock->numEndpointPackets++;
+        }
+      }
+      
+      if(header->flags & Tcp::FIN)
+      {
+        if(stateBlock->currentState == Tcp::CLOSED || stateBlock->currentState == Tcp::LISTEN || stateBlock->currentState == Tcp::SYN_SENT)
+          break;
+        
+        stateBlock->rcv_nxt = stateBlock->seg_seq + 1;
+        
+        if(!alreadyAck)
+        {
+          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          alreadyAck = true;
+        }
+        
+        switch(stateBlock->currentState)
+        {
+          case Tcp::SYN_RECEIVED:
+          case Tcp::ESTABLISHED:
+          
+            stateBlock->currentState = Tcp::CLOSE_WAIT;
+            
+            break;
+          
+          case Tcp::FIN_WAIT_1:
+          
+            // already been acked previously? if so this needs to go to TIME_WAIT
+            // if NOT, closing
+            if(stateBlock->fin_ack)
+              stateBlock->currentState = Tcp::TIME_WAIT;
+            else
+              stateBlock->currentState = Tcp::CLOSING;
+            
+            break;
+          
+          case Tcp::FIN_WAIT_2:
+          
+            stateBlock->currentState = Tcp::TIME_WAIT;
+            
+            break;
+          
+          case Tcp::CLOSE_WAIT:
+          case Tcp::CLOSING:
+          case Tcp::LAST_ACK:
+          
+            // remain this state
+            
+            break;
+          
+          default:
+            break;
+        }
+      }
+    
+      break;
+    
+    default:
+      break;
   }
   
   if(oldState != stateBlock->currentState)

@@ -30,13 +30,13 @@ class Endpoint
   
     /** Constructors and destructors */
     Endpoint() :
-      m_LocalPort(0), m_RemotePort(0), m_RemoteInfo()
+      m_LocalPort(0), m_RemotePort(0), m_RemoteIp()
     {};
     Endpoint(uint16_t local, uint16_t remote) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteInfo()
+      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp()
     {};
-    Endpoint(stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteInfo(remoteInfo)
+    Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
+      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp)
     {};
     virtual ~Endpoint() {};
     
@@ -49,9 +49,9 @@ class Endpoint
     {
       return m_RemotePort;
     }
-    stationInfo getRemoteInfo()
+    IpAddress getRemoteIp()
     {
-      return m_RemoteInfo;
+      return m_RemoteIp;
     }
     
     void setLocalPort(uint16_t port)
@@ -62,17 +62,19 @@ class Endpoint
     {
       m_RemotePort = port;
     }
-    void setRemoteInfo(stationInfo remote)
+    void setRemoteInfo(IpAddress remote)
     {
-      m_RemoteInfo = remote;
+      m_RemoteIp = remote;
     }
     
     /** Special address type, like stationInfo but with port info too */
     struct RemoteEndpoint
     {
-      uint32_t ipv4;
-      uint8_t ipv6[16]; /// \todo IPv4 - AGAIN -_-
+      RemoteEndpoint() :
+        ip(), remotePort(0)
+      {};
       
+      IpAddress ip; // either IPv4 or IPv6
       uint16_t remotePort;
     };
     
@@ -139,8 +141,8 @@ class Endpoint
     /** Our destination port */
     uint16_t m_RemotePort;
     
-    /** Remote station information */
-    stationInfo m_RemoteInfo;
+    /** Remote IP */
+    IpAddress m_RemoteIp;
 };
 
 #endif

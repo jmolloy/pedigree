@@ -38,13 +38,13 @@ class UdpEndpoint : public Endpoint
   
     /** Constructors and destructors */
     UdpEndpoint() :
-      Endpoint(), m_DataQueueSize(0)
+      Endpoint(), m_DataQueue(), m_DataQueueSize(0)
     {};
     UdpEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_DataQueueSize(0)
+      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0)
     {};
-    UdpEndpoint(stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteInfo, local, remote), m_DataQueueSize(0)
+    UdpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
+      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0)
     {};
     virtual ~UdpEndpoint() {};
     
@@ -60,6 +60,10 @@ class UdpEndpoint : public Endpoint
   
     struct DataBlock
     {
+      DataBlock() :
+        size(0), offset(0), ptr(0), remoteHost()
+      {};
+      
       size_t size;
       size_t offset; // if we only do a partial read, this is filled
       uintptr_t ptr;
@@ -89,18 +93,17 @@ public:
   /** For access to the manager without declaring an instance of it */
   static UdpManager& instance()
   {
-    // Endpoint* e = new UdpEndpoint(1024, 2048);
     return manager;
   }
   
   /** Gets a new Endpoint */
-  Endpoint* getEndpoint(stationInfo remoteHost, uint16_t localPort, uint16_t remotePort);
+  Endpoint* getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort);
   
   /** Returns an Endpoint */
   void returnEndpoint(Endpoint* e);
   
   /** A new packet has arrived! */
-  void receive(stationInfo from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize);
+  void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize);
 
 private:
 
