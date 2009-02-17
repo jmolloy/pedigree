@@ -220,7 +220,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
     // Load file.
-    Module *m = KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
+    KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
   }
 

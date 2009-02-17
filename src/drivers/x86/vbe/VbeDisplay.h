@@ -48,6 +48,7 @@ public:
   virtual bool setScreenMode(Display::ScreenMode sm);
 
 private:
+  /** Copy constructor is private. */
 
   /** VBE version. */
   VbeVersion m_VbeVersion;

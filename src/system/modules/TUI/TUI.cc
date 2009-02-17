@@ -30,6 +30,7 @@ Vt100 *g_pVt100 = 0;
 TUI::TUI() :
   m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true), m_QueueLength(0)
 {
+  
 }
 
 TUI::~TUI()

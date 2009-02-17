@@ -31,7 +31,9 @@ public:
     /** Yields the processor to another thread. */
     yield = 0,
 
-    /** Dynamic linking request. \note If you change this, update system/modules/linker/asm-*.s ! */
+    /** Dynamic linking request.
+     *  \note If you change this, update
+     *        system/modules/linker/asm-*.s ! */
     link = 1,
 
     /** The last function, for error checking. */

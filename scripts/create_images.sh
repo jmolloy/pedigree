@@ -101,6 +101,8 @@ if which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
+sudo touch $MOUNTPT/.pedigree-root
+
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications
   sudo mkdir -p $MOUNTPT/libraries
@@ -155,10 +157,10 @@ elif which mcopy >/dev/null 2>&1; then
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
     if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      sudo cp $SRCDIR/src/user/$f/$BINARY C:/$f
+      mcopy $SRCDIR/src/user/$f/$BINARY C:/$f
     fi
     if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries/lib$BINARY.so
+      mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries/lib$BINARY.so
     fi
   done
 

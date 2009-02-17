@@ -7,5 +7,5 @@ log: bochsout.txt
 mouse: enabled=0
 vga: extension=vbe
 
-ata0-master: type=disk, path=hdd_16h_63spt_100c.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
-ata0-slave:  type=disk, path=hdd_16h_63spt_100c_fat16.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
+#ata0-master: type=disk, path=hdd_16h_63spt_100c.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
+ata0-master:  type=disk, path=hdd_16h_63spt_100c_fat16.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto

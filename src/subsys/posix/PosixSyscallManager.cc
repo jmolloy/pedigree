@@ -14,11 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "PosixSyscallManager.h"
 #include <processor/SyscallManager.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
 #include <Log.h>
+
+#include "PosixSyscallManager.h"
 #include "syscallNumbers.h"
 #include "file-syscalls.h"
 #include "system-syscalls.h"
@@ -26,7 +27,6 @@
 
 PosixSyscallManager::PosixSyscallManager()
 {
-  magic = 0x4567;
 }
 
 PosixSyscallManager::~PosixSyscallManager()
@@ -35,17 +35,16 @@ PosixSyscallManager::~PosixSyscallManager()
 
 void PosixSyscallManager::initialise()
 {
-  SyscallHandler *sh = (SyscallHandler*)this;
   SyscallManager::instance().registerSyscallHandler(posix, this);
 }
 
 uintptr_t PosixSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
 {
-  // if (function >= serviceEnd)
-  // {
-  //   ERROR("PosixSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
-  //   return 0;
-  // }
+  if (function >= serviceEnd)
+  {
+    ERROR("PosixSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
+    return 0;
+  }
   return SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
 }
 

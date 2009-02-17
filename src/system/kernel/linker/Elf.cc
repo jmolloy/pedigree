@@ -316,9 +316,9 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
   {
     if (m_pSectionHeaders[i].flags & SHF_ALLOC)
     {
-      /// \todo Total bollocks?
-      size += m_pSectionHeaders[i].addr; // The .addr won't be accounted for in the .size,
-                                           // so add it here so we don't end up overwriting what we just wrote!
+      size += m_pSectionHeaders[i].addr; // If .addr is set, add it as an offset.
+      // Ensure the alignment is as required.
+      while ( (size % m_pSectionHeaders[i].addralign) != 0) size ++;
       size += m_pSectionHeaders[i].size;
     }
   }
@@ -327,7 +327,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
   {
     return false;
   }
-
+WARNING("loadBase: " << Hex << loadBase);
   // Now actually map and populate the sections.
   uintptr_t offset = loadBase;
   for (size_t i = 0; i < m_nSectionHeaders; i++)
@@ -346,13 +346,20 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
                        // end up overwriting what we just wrote!
       }
 
+      // Ensure the alignment is as required.
+      while ( (m_pSectionHeaders[i].addr % m_pSectionHeaders[i].addralign) != 0)
+      {  
+        m_pSectionHeaders[i].addr ++;
+        offset ++;
+      }
+
       // We now know where to place this section, so map some memory for it.
       for (uintptr_t j = m_pSectionHeaders[i].addr;
            j < (m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size)+0x1000; /// \todo This isn't the correct formula - fix.
            j += 0x1000)
       {
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+        /*bool b = */Processor::information().getVirtualAddressSpace().map(phys,
                                             reinterpret_cast<void*> (j&0xFFFFF000),
                                             VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
 //         if (!b)
@@ -524,7 +531,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookup
   {
     // For each relocation entry...
     ElfRel_t *pRel = m_pPltRelTable;
-    for (int i = 0; i < m_nPltSize/sizeof(ElfRel_t); i++, pRel++)
+    for (size_t i = 0; i < m_nPltSize/sizeof(ElfRel_t); i++, pRel++)
     {
       uintptr_t *address = reinterpret_cast<uintptr_t*> (loadBase + pRel->offset);
       *address += loadBase;
@@ -534,7 +541,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookup
   {
     // For each relocation entry...
     ElfRela_t *pRel = m_pPltRelaTable;
-    for (int i = 0; i < m_nPltSize/sizeof(ElfRela_t); i++, pRel++)
+    for (size_t i = 0; i < m_nPltSize/sizeof(ElfRela_t); i++, pRel++)
     {
       uintptr_t *address = reinterpret_cast<uintptr_t*> (loadBase + pRel->offset);
       *address += loadBase;

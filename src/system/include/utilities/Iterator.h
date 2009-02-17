@@ -18,6 +18,7 @@
 #define KERNEL_UTILITIES_ITERATOR_H
 
 #include <utilities/template.h>
+#include <Log.h>
 
 /** @addtogroup kernelutilities
  * @{ */

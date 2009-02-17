@@ -128,7 +128,7 @@ int posix_fork(ProcessorState state)
   state.setSyscallReturnValue(0);
 
   // Create a new thread for the new process.
-  Thread *pThread = new Thread(pProcess, state);
+  new Thread(pProcess, state);
 
   // Parent returns child ID.
   return pProcess->getId();
@@ -303,7 +303,7 @@ int posix_waitpid(int pid, int *status, int options)
     {
       // Does this process exist?
       Process *pProcess;
-      for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         pProcess = Scheduler::instance().getProcess(i);
 
@@ -341,7 +341,7 @@ int posix_waitpid(int pid, int *status, int options)
       // Get any pid.
       Process *thisP = Processor::information().getCurrentThread()->getParent();
       bool hadAnyChildren = false;
-      for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         Process *pProcess = Scheduler::instance().getProcess(i);
 

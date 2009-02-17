@@ -116,7 +116,6 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn 
       result = S;
       break;
     case R_386_COPY:
-      NOTICE("386_COPY: S: " << Hex << (uintptr_t)S << ", address: " << (uintptr_t)address);
       result = * reinterpret_cast<uintptr_t*> (S);
       break;
     case R_386_RELATIVE:

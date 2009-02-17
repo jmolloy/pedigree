@@ -285,7 +285,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
     if (virtualAddress >= KERNEL_VIRTUAL_HEAP)
     {
-      for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         Process *p = Scheduler::instance().getProcess(i);
         Processor::switchAddressSpace(*p->getAddressSpace());
@@ -517,8 +517,6 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
 
       if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
         continue;
-
-      uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
 
       void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
       if (getKernelAddressSpace().isMapped(virtualAddress))

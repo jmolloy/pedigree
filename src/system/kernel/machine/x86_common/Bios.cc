@@ -27,27 +27,27 @@ Bios Bios::m_Instance;
 
 u8 rdb (u32 addr)
 {
-  return  * (u8*)(addr);
+  return * reinterpret_cast<u8*> (addr);
 }
 u16 rdw (u32 addr)
 {
-  return * (u16*)(addr);
+  return * reinterpret_cast<u16*> (addr);
 }
 u32 rdl (u32 addr)
 {
-  return * (u32*)(addr);
+  return * reinterpret_cast<u32*> (addr);
 }
 void wrb (u32 addr, u8 val)
 {
-  * (u8*) (addr) = val;
+  * reinterpret_cast<u8*> (addr) = val;
 }
 void wrw (u32 addr, u16 val)
 {
- * (u16*) (addr) = val;
+ * reinterpret_cast<u16*> (addr) = val;
 }
 void wrl (u32 addr, u32 val)
 {
-  * (u32*) (addr) = val;
+  * reinterpret_cast<u32*> (addr) = val;
 }
 
 
@@ -132,15 +132,15 @@ Bios::Bios () : mallocLoc(0x8000)
   iof.outl = &outl;
 
   memset(&M, 0, sizeof(M));
-  M.x86.debug = 0|DEBUG_MEM_TRACE_F|DEBUG_DECODE_F;
+  M.x86.debug = 0;
   M.x86.mode = 0;
-  memset((void*)0x7C00, 0xF4, 0x100);
+  memset(reinterpret_cast<void*> (0x7C00), 0xF4, 0x100);
 
   X86EMU_setupMemFuncs(&mf);
   X86EMU_setupPioFuncs(&iof);
   M.x86.R_SS = 0x0000;
   M.x86.R_SP = 0x7F00;
-  M.x86.R_IP = 0x7C00; // Set IP to 0x7C00 as there are 0xFF's there which will halt the emulation.
+  M.x86.R_IP = 0x7C00; // Set IP to 0x7C00 as there are 0xF4's there which will halt the emulation.
   M.x86.R_CS = 0x0000;
 }
 

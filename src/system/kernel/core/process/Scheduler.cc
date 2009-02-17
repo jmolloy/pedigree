@@ -152,7 +152,7 @@ Process *Scheduler::getProcess(size_t n)
     WARNING("Scheduler::getProcess(" << Dec << n << ") parameter outside range.");
     return 0;
   }
-  int i = 0;
+  size_t i = 0;
   for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
@@ -161,6 +161,8 @@ Process *Scheduler::getProcess(size_t n)
       return *it;
     i++;
   }
+
+  return 0;
 }
 
 #endif

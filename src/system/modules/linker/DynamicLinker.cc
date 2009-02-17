@@ -41,7 +41,6 @@ uintptr_t DynamicLinker::resolveNoElf(const char *str, bool useElf)
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 {
   uintptr_t ret= DynamicLinker::instance().resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
-  NOTICE("resolvePlt: " << Hex << ret);
   return ret;
 }
 

@@ -29,8 +29,8 @@ X86Vga::X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase) :
   m_pFramebuffer( reinterpret_cast<uint8_t*> (nFramebufferBase) ),
   m_nWidth(80),
   m_nHeight(25),
-  m_nMode(3),
-  m_ModeStack(0)
+  m_ModeStack(0),
+  m_nMode(3)
 {
 }
 

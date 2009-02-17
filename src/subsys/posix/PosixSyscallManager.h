@@ -23,7 +23,7 @@ class PosixSyscallManager : public SyscallHandler
 {
 public:
   void initialise();
-  int magic;
+
   /** Calls a syscall. */
   uintptr_t call(uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0);
 

@@ -204,6 +204,7 @@ void Tree<void*,void*>::clear()
 
 Tree<void*,void*>::Iterator Tree<void*,void*>::erase(Iterator iter)
 {
+  return 0;
 }
 
 void Tree<void*,void*>::rotateLeft(Node *n)

@@ -72,4 +72,5 @@ uintptr_t KernelCoreSyscallManager::syscall(SyscallState &state)
 uintptr_t KernelCoreSyscallManager::registerSyscall(Function_t function, SyscallCallback func)
 {
   m_Functions[function] = func;
+  return 0;
 }

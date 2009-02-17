@@ -24,5 +24,9 @@ add_non_user_options(ADDITIONAL_CHECKS BITS_32 LITTLE_ENDIAN KERNEL_STANDALONE X
 
 set(PEDIGREE_CFLAGS "-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32")
 set(PEDIGREE_CXXFLAGS "-march=i486 -Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -m32")
+if(OMIT_FRAME_POINTER)
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -fomit-frame-pointer")
+endif(OMIT_FRAME_POINTER)
 set(PEDIGREE_ASFLAGS "-felf")
 set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc")

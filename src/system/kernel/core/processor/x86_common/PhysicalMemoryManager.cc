@@ -109,7 +109,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
     Region.m_PhysicalAddress = start;
     Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
-WARNING("Mapping " << (uintptr_t)vAddress << " to " << (uintptr_t)start << ", for MR " << Region.m_pName);
+
     // Add to the list of memory-regions
     PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
     return true;

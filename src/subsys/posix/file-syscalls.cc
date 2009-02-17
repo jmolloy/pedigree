@@ -84,7 +84,10 @@ String prepend_cwd(const char *name)
   {
     int i = 0;
     while (cwd[i] != ':')
-    newName[i] = cwd[i++];
+    {
+      char tmp = cwd[i];
+      newName[++i] = tmp;
+    }
     newName[i++] = ':';
     newName[i] = '\0';
     strcat(newName, name);
@@ -183,7 +186,7 @@ int posix_open(const char *name, int flags, int mode)
 
 int posix_read(int fd, char *ptr, int len)
 {
-  NOTICE("read(" << Dec << fd << ", " << Hex << (uintptr_t)ptr << ", " << len << ")");
+  NOTICE("read(" << Dec << fd << ", " << Hex  << ", " << len << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -267,19 +270,18 @@ int posix_lseek(int file, int ptr, int dir)
 
 int posix_link(char *old, char *_new)
 {
+  return -1;
 }
 
 int posix_unlink(char *name)
 {
+  return -1;
 }
 
 int posix_stat(const char *name, struct stat *st)
 {
   NOTICE("stat(" << name << ")");
-  // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
-  NOTICE("statting: " << prepend_cwd(name));
   File file = VFS::instance().find(prepend_cwd(name));
 
   if (!file.isValid())
@@ -367,11 +369,14 @@ int posix_fstat(int fd, struct stat *st)
 
 int posix_lstat(char *file, struct stat *st)
 {
+  // Unimplemented.
+  return -1;
 }
 
 int posix_opendir(const char *dir, dirent *ent)
 {
   NOTICE("opendir(" << dir << ")");
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -407,7 +412,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-  NOTICE("readdir(" << fd << ", " << (uintptr_t)ent << ")");
+  NOTICE("readdir(" << fd << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -422,7 +427,7 @@ int posix_readdir(int fd, dirent *ent)
   File file = pFd->file.firstChild();
   if (!file.isValid())
     return -1;
-  for (int i = 0; i < pFd->offset; i++)
+  for (uint64_t i = 0; i < pFd->offset; i++)
   {
     file = pFd->file.nextChild();
     if (!file.isValid())

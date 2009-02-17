@@ -21,8 +21,13 @@
 
 #define MAXNAMLEN 255
 
-struct FileDescriptor
+class FileDescriptor
 {
+public:
+  FileDescriptor () :
+    file(), offset(0)
+  {
+  }
   File file;
   uint64_t offset;
 };

@@ -111,13 +111,14 @@ KernelElf::KernelElf() :
   #if defined(X86_COMMON)
   m_AdditionalSections("Kernel ELF Sections"),
   #endif
-  m_Modules()
+  m_Modules(), m_LoadedModules(), m_PendingModules(), m_ModuleAllocator()
 {
 }
 
 KernelElf::~KernelElf()
 {
 }
+
 #ifdef PPC_COMMON
 #define MOD_START 0xe1000000
 #else
@@ -208,7 +209,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
   while (module->depends[i] != 0)
   {
     bool found = false;
-    for (int j = 0; j < m_LoadedModules.count(); j++)
+    for (size_t j = 0; j < m_LoadedModules.count(); j++)
     {
       if (!strcmp(m_LoadedModules[j], module->depends[i]))
       {
@@ -255,10 +256,23 @@ void KernelElf::executeModule(Module *module)
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)
 {
   /// \todo This shouldn't match local or weak symbols.
+bool b = false;
+  if (!strcmp(pName, "_ZN8IteratorIPv11_ListNode_tIS0_EXadL_ZNS2_8previousEvEEXadL_ZNS2_4nextEvEES0_EppEv"))
+  {
+    ERROR("Lookup for 'that symbol'...");
+    b = true;
+  }
+
   // Try a lookup in the kernel.
   uintptr_t ret;
   if ((ret = lookupSymbol(pName)))
-    return ret;
+  {
+    if (b)
+    {
+      NOTICE("Lookup in kernel, " << Hex << ret);
+    }
+      return ret;
+  }
 
   // OK, try every module.
   for (Vector<Module*>::Iterator it = m_Modules.begin();
@@ -266,7 +280,12 @@ uintptr_t KernelElf::globalLookupSymbol(const char *pName)
        it++)
   {
     if ((ret = (*it)->elf.lookupSymbol(pName)))
-      return ret;
+    {    if (b)
+    {
+      NOTICE("Lookup in module, " << Hex << ret);
+    }
+        return ret;
+    }
   }
 
   return 0;

@@ -102,7 +102,7 @@ void Process::kill()
   NOTICE("Kill: " << m_Id);
 
   // Bye bye process - have we got any zombie children?
-  for (int i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+  for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     Process *pProcess = Scheduler::instance().getProcess(i);
 
@@ -176,7 +176,7 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
   }
 
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
+  new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
 
   // Switch back to the old address space.
   Processor::switchAddressSpace(oldAS);

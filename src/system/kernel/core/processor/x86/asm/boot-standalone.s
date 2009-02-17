@@ -107,13 +107,9 @@ callmain:
   call _main
   jmp $
 
-[SECTION .asm.bss]
+[SECTION .asm.bss nobits]
 global pagedirectory
-pagedirectory:
-  times 4096 db 0
-pagetable0:
-  times 4096 db 0
-pagetable1:
-  times 4096 db 0
-stack:
-  times 32768 db 0
+pagedirectory: resb 4096
+pagetable0:    resb 4096
+pagetable1:    resb 4096
+stack:         resb 32678

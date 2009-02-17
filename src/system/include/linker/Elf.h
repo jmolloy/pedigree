@@ -146,8 +146,8 @@ public:
   virtual ~Elf();
 
   /**
-   * Constructs an Elf32 object, and assumes the given pointer to be to a contiguous region
-   * of memory containing an ELF object.
+   * Constructs an Elf object, and assumes the given pointer to be
+   * to a contiguous region of memory containing an ELF object. 
    * 
    * All important information in the buffer is cached - the buffer can safely be destroyed after
    * calling this function.
@@ -342,26 +342,26 @@ private:
   bool applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn=0, uintptr_t loadBase=0);
 
 protected:
-  ElfSymbol_t        *m_pSymbolTable;
+  ElfSymbol_t          *m_pSymbolTable;
   size_t                m_nSymbolTableSize;
   char                 *m_pStringTable;
   char                 *m_pShstrtab;
   uintptr_t            *m_pGotTable; // Global offset table.
-  ElfRel_t           *m_pRelTable; // Dynamic REL relocations.
-  ElfRela_t          *m_pRelaTable; // Dynamic RELA relocations.
+  ElfRel_t             *m_pRelTable; // Dynamic REL relocations.
+  ElfRela_t            *m_pRelaTable; // Dynamic RELA relocations.
   uint32_t              m_nRelTableSize;
   uint32_t              m_nRelaTableSize;
-  ElfRel_t           *m_pPltRelTable;
-  ElfRela_t          *m_pPltRelaTable;
+  ElfRel_t             *m_pPltRelTable;
+  ElfRela_t            *m_pPltRelaTable;
   bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
   uint8_t              *m_pDebugTable;
   uintptr_t             m_nDebugTableSize;
-  ElfSymbol_t        *m_pDynamicSymbolTable;
+  ElfSymbol_t          *m_pDynamicSymbolTable;
   size_t                m_nDynamicSymbolTableSize;
   char                 *m_pDynamicStringTable;
-  ElfSectionHeader_t *m_pSectionHeaders;
+  ElfSectionHeader_t   *m_pSectionHeaders;
   uint32_t              m_nSectionHeaders;
-  ElfProgramHeader_t *m_pProgramHeaders;
+  ElfProgramHeader_t   *m_pProgramHeaders;
   uint32_t              m_nProgramHeaders;
   size_t                m_nPltSize;
   uintptr_t             m_nEntry;

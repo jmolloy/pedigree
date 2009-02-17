@@ -67,12 +67,17 @@ private:
   DynamicLinker();
   /** Destructor is private - singleton class. */
   ~DynamicLinker();
+  /** Copy constructor is private. */
+  DynamicLinker(DynamicLinker &);
+  /** As is operator= */
+  DynamicLinker &operator=(const DynamicLinker&);
 
   /** A shared object/library. */
   class SharedObject
   {
   public:
-    SharedObject() : pFile(0), name(), refCount(1), pDependencies(0), nDependencies(0), addresses() {}
+    SharedObject() : pFile(0), name(), refCount(1), pDependencies(0), nDependencies(0), addresses(),
+      pBuffer(0), nBuffer(0) {}
     Elf         *pFile;
     String         name;
     int            refCount;
@@ -81,6 +86,10 @@ private:
     Tree<Process*,uintptr_t*> addresses; // For each process, the address this object has been relocated to.
     uint8_t       *pBuffer; // The Elf file itself.
     size_t         nBuffer; // The size of pBuffer.
+  private:
+    /** Copy constructor - it's private. It can't be used. */
+    SharedObject (SharedObject &);
+    SharedObject &operator=(const DynamicLinker&);
   };
 
   SharedObject *loadInternal (const char *name);

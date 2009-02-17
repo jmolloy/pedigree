@@ -124,6 +124,10 @@ void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromF
     else
     {
       LargeStaticString sym(pSym);
+
+      buf += "[";
+      buf.append(symStart, 16);
+      buf += "] ";
       StackFrame sf(m_pStates[i], m_pBasePointers[i], sym);
       
       sf.prettyPrint(buf);
