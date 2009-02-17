@@ -290,7 +290,9 @@ bool Ne2k::setStationInfo(StationInfo info)
   m_StationInfo.ipv6 = info.ipv6;
   
   m_StationInfo.subnetMask = info.subnetMask;
+  NOTICE("Setting subnet mask, " << info.subnetMask.getIp() << ", " << m_StationInfo.subnetMask.getIp() << "...");
   m_StationInfo.gateway = info.gateway;
+  NOTICE("Setting gateway, " << info.gateway.getIp() << ", " << m_StationInfo.gateway.getIp() << "...");
   
   return true;
 }

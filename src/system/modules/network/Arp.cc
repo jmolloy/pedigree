@@ -34,7 +34,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 {
   // ensure the IP given is valid
   if(ip.getType() == IpAddress::IPv6)
-    return false; /// \todo IPv6 ARP cache
+    return false; // ARP isn't for IPv6
   
   // do we have an entry for it yet?
   arpEntry* arpEnt;
@@ -43,8 +43,6 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
     *ent = arpEnt->mac;
     return true;
   }
-  
-  /** The following will work for IPv6, we just need a way of storing that information in the cache */
   
   // not found, do we resolve?
   if(!resolve)
@@ -73,8 +71,6 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 
 void Arp::send(IpAddress req, Network* pCard)
 {
-  /// \todo IPv6
-  
   StationInfo cardInfo = pCard->getStationInfo();
   
   arpHeader* request = new arpHeader;
@@ -107,6 +103,13 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
 {  
   // grab the header
   arpHeader* header = reinterpret_cast<arpHeader*>(packet + offset);
+
+  // sanity checking
+  if(header->hwSize != 6 || header->protocolSize != 4)
+  {
+    WARNING("Arp: Request for either unknown MAC format or non-IPv4 address");
+    return;
+  }
   
   // is this for us?
   StationInfo cardInfo = pCard->getStationInfo();
@@ -118,16 +121,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     
     // request?
     if(BIG_TO_HOST16(header->opcode) == ARP_OP_REQUEST)
-    {
-      //NOTICE("Arp: Request");
-      
-      // sanity checking
-      if(header->hwSize != 6 || header->protocolSize != 4)
-      {
-        WARNING("Arp: Request for either unknown MAC format or non-IPv4 address");
-        return;
-      }
-      
+    {      
       MacAddress myMac = cardInfo.mac;
       
       // add to our local cache, if needed
@@ -159,10 +153,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     // reply
     else if(BIG_TO_HOST16(header->opcode) == ARP_OP_REPLY)
     {
-      //NOTICE("Arp: Reply");
-      
       // add to our local cache, if needed
-      /// \todo IPv6 cache
       if(m_ArpCache.lookup(header->ipSrc) == 0)
       {
         arpEntry* ent = new arpEntry;

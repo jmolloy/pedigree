@@ -137,7 +137,7 @@ sudo touch $MOUNTPT/.pedigree-root
 elif which mcopy >/dev/null 2>&1; then
 
   cp ../images/floppy_fat.img ./floppy.img
-  mcopy -Do -i ./floppy.img src/system/kernel/kernel ::/
+  mcopy -Do -i ./floppy.img ./src/system/kernel/kernel ::/
   mcopy -Do -i ./floppy.img ./initrd.tar ::/
 
   cp ../images/hdd_16h_63spt_100c.img .
@@ -154,6 +154,9 @@ elif which mcopy >/dev/null 2>&1; then
 
   rm ./.pedigree-root
 
+  mmd -Do etc
+  mcopy -Do $SRCDIR/../scripts/termcap C:/etc
+    
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
     if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
@@ -166,6 +169,11 @@ elif which mcopy >/dev/null 2>&1; then
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
+
+  mmd -Do C:/etc/terminfo
+  mmd -Do C:/etc/terminfo/v
+  mcopy -Do $SRCDIR/../scripts/vt100 C:/etc/terminfo/v
+
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else

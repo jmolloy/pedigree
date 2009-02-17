@@ -86,7 +86,7 @@ void Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
   
-  Ip::send(dest, IP_TCP, newSize, packAddr, pCard);
+  Ip::send(dest, me.ipv4, IP_TCP, newSize, packAddr, pCard);
   
   delete newPacket;
 }

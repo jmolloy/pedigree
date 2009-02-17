@@ -154,6 +154,13 @@ class MacAddress
       }
     };
     
+    /** Useful for setting a broadcast MAC */
+    void setMac(uint8_t element)
+    {
+      memset(m_Mac, element, 6);
+      m_Valid = true;
+    }
+    
     void setMac(uint8_t* data)
     {
       memcpy(m_Mac, data, 6);

@@ -52,13 +52,11 @@ public:
   
   /** Gets an entry from the ARP cache, and optionally resolves it if needed. */
   bool getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard);
-  // bool getFromCache(uint8_t ipv6[16], bool resolve, MacAddress* ent);
 
 private:
 
   static Arp arpInstance;
 
-  /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
   struct arpHeader
   {
     uint16_t  hwType;
@@ -101,7 +99,6 @@ private:
   };
   
   // ARP Cache
-  /// \todo Implement IPv6 support into the cache
   Tree<uint32_t, arpEntry*> m_ArpCache;
   
   // ARP request list

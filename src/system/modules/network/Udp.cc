@@ -91,10 +91,12 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
 	return ret;*/
 }
 
-void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, Network* pCard)
+void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network* pCard)
 {
   size_t newSize = nBytes + sizeof(udpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
+  memset(newPacket, 0, newSize);
+  
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
   
   udpHeader* header = reinterpret_cast<udpHeader*>(packAddr);
@@ -108,9 +110,18 @@ void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   if(nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
   
+  IpAddress src;
+  if(broadcast)
+    dest.setIp(0xffffffff); // 255.255.255.255
+  else
+    src = me.ipv4;
+  
+  header->checksum = 0;
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
   
-  Ip::send(dest, IP_UDP, newSize, packAddr, pCard);
+  Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
+  
+  NOTICE("network checksum = " << header->checksum << "...");
   
   delete newPacket;
 }

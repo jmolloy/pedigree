@@ -90,7 +90,7 @@ class Endpoint
     }
     
     /** Connectionless endpoints */
-    virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, Network* pCard)
+    virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
     {
       return false;
     };

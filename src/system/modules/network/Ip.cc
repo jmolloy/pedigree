@@ -38,7 +38,7 @@ Ip::~Ip()
 {
 }
 
-void Ip::send(IpAddress dest, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
+void Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
 {
   // allocate space for the new packet with an IP header
   size_t newSize = nBytes + sizeof(ipHeader);
@@ -49,13 +49,14 @@ void Ip::send(IpAddress dest, uint8_t type, size_t nBytes, uintptr_t packet, Net
   ipHeader* header = reinterpret_cast<ipHeader*>(newPacket);
   memset(header, 0, sizeof(ipHeader));
   
-  // do the deed
+  // send the packet
+  
   StationInfo me = pCard->getStationInfo();
   
   header->id = Ip::instance().getNextId();
   
   header->ipDest = dest.getIp(); /// \todo IPv6
-  header->ipSrc = me.ipv4.getIp();
+  header->ipSrc = from.getIp(); //me.ipv4.getIp();
   
   header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
   
@@ -84,7 +85,11 @@ void Ip::send(IpAddress dest, uint8_t type, size_t nBytes, uintptr_t packet, Net
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
   ///       it doesn't happen?
   MacAddress destMac;
-  bool macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
+  bool macValid;
+  if(dest == 0xffffffff)
+    destMac.setMac(0xff);
+  else
+   macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
   if(macValid)
     Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
   
@@ -97,7 +102,9 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
     
   StationInfo cardInfo = pCard->getStationInfo();
-  if(cardInfo.ipv4.getIp() == header->ipDest)
+  
+  // check if this packet is for us, or if it's a broadcast
+  if(cardInfo.ipv4.getIp() == header->ipDest || header->ipDest == 0xffffffff)
   {
     /// \todo Handle fragmentation!
     

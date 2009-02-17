@@ -49,7 +49,8 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packAddr, newSize);
   
-  Ip::send(dest, IP_ICMP, newSize, packAddr, pCard);
+  StationInfo me = pCard->getStationInfo();
+  Ip::send(dest, me.ipv4, IP_ICMP, newSize, packAddr, pCard);
   
   delete newPacket;
 }
