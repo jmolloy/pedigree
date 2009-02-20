@@ -22,6 +22,7 @@
 #include <utilities/List.h>
 #include <processor/Processor.h>
 #include <utilities/StaticString.h>
+#include <syscallError.h>
 
 Ext2Filesystem::Ext2Filesystem() :
   m_pDisk(0), m_Superblock(), m_pGroupDescriptors(0), m_BlockSize(0)
@@ -204,6 +205,12 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
 
 uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
+  //  test whether the entire Filesystem is read-only.
+  if(bReadOnly)
+  {
+    SYSCALL_ERROR(ReadOnlyFilesystem);
+    return 0;
+  }
   return 0;
 }
 

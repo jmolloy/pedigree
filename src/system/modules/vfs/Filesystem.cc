@@ -20,7 +20,7 @@
 #include <processor/Processor.h>
 
 Filesystem::Filesystem() :
-  nAliases(0)
+  nAliases(0), bReadOnly(false)
 {
 }
 

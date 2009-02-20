@@ -22,6 +22,7 @@
 #include <utilities/List.h>
 #include <processor/Processor.h>
 #include <utilities/StaticString.h>
+#include <syscallError.h>
 
 // helper functions
 
@@ -158,20 +159,20 @@ bool FatFilesystem::initialise(Disk *pDisk)
   m_BlockSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
 
   /// \todo Read in the FAT32 FSInfo structure
-  
+
   // determine the size of the FAT
   fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
   fatSz *= m_Superblock.BPB_BytsPerSec;
-  
+
   // read the FAT into cache
   uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt;
   m_FatCache.resize(fatSz);
 
   uint8_t* tmpBuffer = new uint8_t[fatSz];
   readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
-  
+
   m_FatCache.write(0, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
-  
+
   delete tmpBuffer;
 
   return true;
@@ -326,7 +327,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   uint32_t firstOffset = location % (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec); // the offset within the cluster specified above to start reading from
 
   // tracking info
-  
+
   uint64_t bytesRead = 0;
   uint64_t currOffset = firstOffset;
   while(clusOffset)
@@ -384,6 +385,13 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
+  //  test whether the entire Filesystem is read-only.
+  if(bReadOnly)
+  {
+    SYSCALL_ERROR(ReadOnlyFilesystem);
+    return 0;
+  }
+
   return 0;
 }
 
@@ -407,7 +415,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
       return File();
 
     // FAT12/16: read in the entire root directory, because clus == 0 (which would give an invalid sector)
-    
+
     // hack to make lack of root directory containing "." and ".." entries invisible
     if(n == 1)
       return File(String("."), 0, 0, 0, 0, false, true, this, 0);
@@ -434,7 +442,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
         return File(String(".."), 0, 0, 0, 0, false, true, this, 0);
       n += 2;
     }
-    
+
     // Read in the first cluster of the directory
     buffer = new uint8_t[m_BlockSize];
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
@@ -489,7 +497,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           tmp[b++]= entBuffer[a];
 
         tmp[b] = '\0';
-        
+
         // hack to make long filenames work
         NormalStaticString latterString = longFileName;
         longFileName = tmp;
@@ -589,7 +597,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
       fatOffset = cluster * 4;
       break;
   }
-  
+
   // read from cache
   uint32_t fatEntry;
   m_FatCache.read(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&fatEntry));

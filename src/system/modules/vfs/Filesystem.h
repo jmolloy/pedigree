@@ -43,7 +43,7 @@ public:
   virtual bool initialise(Disk *pDisk) =0;
 
   /** Type of the probing callback given to the VFS.
-      Probe function - if this filesystem is found on the given Disk 
+      Probe function - if this filesystem is found on the given Disk
       device, create a new instance of it and return that. Else return 0. */
   typedef Filesystem *(*ProbeCallback)(Disk *);
 
@@ -59,7 +59,7 @@ public:
 
   /** Returns a string identifying the volume label. */
   virtual String getVolumeLabel() =0;
-  
+
   /** Creates a file on the filesystem - fails if the file's parent directory does not exist. */
   bool createFile(String path);
 
@@ -78,7 +78,7 @@ public:
 
   /** A File calls this to pass up a read request. */
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) =0;
-  
+
   /** A File calls this to pass up a write request. */
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) =0;
 
@@ -100,7 +100,8 @@ protected:
   virtual bool createSymlink(File parent, String filename, String value) =0;
   /** remove() calls this after it has parsed the string path. */
   virtual bool remove(File parent, File file) =0;
-
+  /** is this entire filesystem read-only?  */
+  bool bReadOnly;
 private:
   /** Accessed by VFS */
   size_t nAliases;
