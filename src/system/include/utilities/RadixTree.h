@@ -18,6 +18,9 @@
 #define KERNEL_UTILITIES_RADIX_TREE_H
 
 #include <processor/types.h>
+#include <utilities/String.h>
+#include <utilities/Iterator.h>
+#include <utilities/IteratorAdapter.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -36,11 +39,12 @@ private:
   /** Tree node. */
   class Node
   {
+  public:
     String key;
     void *value;
     struct Node *children;
     struct Node *parent;
-    struct Node *next;
+    struct Node *_next;
     struct Node *prev;
 
     /** Get the next data structure in the list
@@ -49,14 +53,14 @@ private:
     {
       if (children)
         return children;
-      else if (next)
-        return next;
+      else if (_next)
+        return _next;
       else
       {
         Node *n = n->parent;
         while (n)
         {
-          if (n->next)
+          if (n->_next)
             return n;
           n = n->parent;
         }
@@ -64,8 +68,8 @@ private:
       }
     }
     /** Get the previous data structure in the list
-     *\return pointer to the previous data structure in the list  
-     * \note Not implemented! */ 
+     *\return pointer to the previous data structure in the list
+     * \note Not implemented! */
     Node *previous()
       {return 0;}
   };
@@ -134,13 +138,101 @@ private:
   /** Internal function to delete a subtree. */
   void deleteNode(Node *node);
   /** Internal function to create a copy of a subtree. */
-  Node *cloneNode(Node *node);
+  Node *cloneNode(Node *node, Node *parent);
 
   /** Number of items in the tree. */
   int nItems;
   /** The tree's root. */
   Node *root;
 };
+
+/** RadixTree template specialisation for pointers. Just forwards to the
+ * void* template specialisation of RadixTree.
+ *\brief RadixTree template specialisation for pointers */
+template<class T>
+class RadixTree<T*>
+{
+  public:
+    /** Iterator */
+    typedef IteratorAdapter<T*, RadixTree<void*>::Iterator>                    Iterator;
+    /** ConstIterator */
+    typedef IteratorAdapter<T* const, RadixTree<void*>::ConstIterator>         ConstIterator;
+
+    /** Default constructor, does nothing */
+    inline RadixTree()
+      : m_VoidRadixTree(){}
+    /** Copy-constructor
+     *\param[in] x reference object */
+    inline RadixTree(const RadixTree &x)
+      : m_VoidRadixTree(x.m_VoidRadixTree){}
+    /** Destructor, deallocates memory */
+    inline ~RadixTree()
+      {}
+
+    /** Assignment operator
+     *\param[in] x the object that should be copied */
+    inline RadixTree &operator = (const RadixTree &x)
+    {
+      m_VoidRadixTree = x.m_VoidRadixTree;
+      return *this;
+    }
+
+    /** Get the number of elements in the RadixTree */
+    inline size_t count() const
+    {
+      return m_VoidRadixTree.count();
+    }
+
+    inline void insert(String key, T *value)
+    {
+      m_VoidRadixTree.insert(key, reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
+    }
+    inline T *lookup(String key)
+    {
+      return reinterpret_cast<T*>(m_VoidRadixTree.lookup(key));
+    }
+    inline void remove(String key)
+    {
+      m_VoidRadixTree.remove(key);
+    }
+
+    /** Get an iterator pointing to the beginning of the RadixTree
+     *\return iterator pointing to the beginning of the RadixTree */
+    inline Iterator begin()
+    {
+      return Iterator(m_VoidRadixTree.begin());
+    }
+    /** Get a constant iterator pointing to the beginning of the RadixTree
+     *\return constant iterator pointing to the beginning of the RadixTree */
+    inline ConstIterator begin() const
+    {
+      return ConstIterator(m_VoidRadixTree.begin());
+    }
+    /** Get an iterator pointing to the end of the RadixTree + 1
+     *\return iterator pointing to the end of the RadixTree + 1 */
+    inline Iterator end()
+    {
+      return Iterator(m_VoidRadixTree.end());
+    }
+    /** Get a constant iterator pointing to the end of the RadixTree + 1
+     *\return constant iterator pointing to the end of the RadixTree + 1 */
+    inline ConstIterator end() const
+    {
+      return ConstIterator(m_VoidRadixTree.end());
+    }
+
+    /** Remove all elements from the RadixTree */
+    inline void clear()
+    {
+      m_VoidRadixTree.clear();
+    }
+
+  private:
+    /** The actual container */
+    RadixTree<void*> m_VoidRadixTree;
+};
+
+/** @} */
 
 #endif
 

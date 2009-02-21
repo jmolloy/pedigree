@@ -38,7 +38,7 @@ RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
 {
   clear();
 
-  root = cloneNode (x.root);
+  root = cloneNode (x.root, 0);
 
   return *this;
 }
@@ -59,13 +59,26 @@ void RadixTree<void*>::insert(String key, void *value)
     root->children = 0;
     root->parent = 0;
     root->prev = 0;
-    root->next = 0;
+    root->_next = 0;
     return;
   }
 
   // Follow the key down as far as we can.
   Node *n = root;
+
   const char *cKey = static_cast<const char *> (key);
+
+  // We need to do a little preperation to ensure the invariant/assumption used in the loop body.
+  // We assume that the current node has at least one character in common with the key. If this is
+  // not the case, a new sibling node is created. So here, we need to scan the top-level siblings
+  // to see if any share the first character of the key.
+  while (n->_next)
+  {
+    if (*static_cast<const char *> (n->key) == *cKey)
+      break;
+    else
+      n = n->_next;
+  }
 
   while (true)
   {
@@ -98,7 +111,7 @@ void RadixTree<void*>::insert(String key, void *value)
       inter->children = n->children;
       inter->parent = n;
       n->children = inter;
-      inter->prev = inter->next = 0;
+      inter->prev = inter->_next = 0;
 
       inter->key = String(nodeKey); // Terminated by nodeKey='\0', above.
       inter->value = n->value;
@@ -130,21 +143,26 @@ void RadixTree<void*>::insert(String key, void *value)
           found = true;
           break;
         }
-        pNode = pNode->next;
+        pNode = pNode->_next;
       }
 
       // If we found a match, next iteration.
-      if (found) continue;
+      if (found)
+      {
+        continue;
+      }
 
       // No match. Add a child.
       pNode = new Node;
       pNode->parent = n;
-      pNode->next = n->children;
+      pNode->_next = n->children;
       pNode->prev = 0;
       pNode->key = String(cKey);
       pNode->value = value;
+      pNode->children = 0;
 
       n->children = pNode;
+
       // Success!
       return;
     }
@@ -158,14 +176,14 @@ void RadixTree<void*>::insert(String key, void *value)
         Node *pNode = new Node;
         pNode->parent = n->parent;
         pNode->prev = n;
-        pNode->next = n->next;
+        pNode->_next = n->_next;
         pNode->key = String(cKey);
         pNode->value = value;
         pNode->children = 0;
-        if (pNode->next)
-          pNode->next->prev = pNode;
+        if (pNode->_next)
+          pNode->_next->prev = pNode;
 
-        n->next = pNode;
+        n->_next = pNode;
 
         // Done.
         return;
@@ -185,13 +203,13 @@ void RadixTree<void*>::insert(String key, void *value)
         Node *pNode2 = new Node;
         pNode2->parent = n;
         pNode2->prev = pNode1;
-        pNode2->next = 0;
+        pNode2->_next = 0;
         pNode2->key = String(cKey);
         pNode2->value = value;
         pNode2->children = 0;
 
         // Cross reference node2 from node1...
-        pNode1->next = pNode2;
+        pNode1->_next = pNode2;
 
         // Now, n's children are pNode1 and pNode2;
         n->children = pNode1;
@@ -234,9 +252,9 @@ void *RadixTree<void*>::lookup(String key)
     if (cKey == static_cast<const char *> (key))
     {
       // No characters matched. We must be at the root level, so go across to the next root sibling.
-      if (n->next)
+      if (n->_next)
       {
-        n = n->next;
+        n = n->_next;
         continue;
       }
       else
@@ -256,10 +274,11 @@ void *RadixTree<void*>::lookup(String key)
       while (n)
       {
         const char *nodeKey2 = static_cast<const char *> (n->key);
+
         // We can make the assumption that the initial character of every child will be different, as else they'd have been
         // conjoined. So we just need to find a child that has the correct starting character. Or fail.
         if (*nodeKey2 == *cKey) break;
-        n = n->next;
+        n = n->_next;
       }
       if (n) continue;
       // We fail :(
@@ -298,9 +317,9 @@ void RadixTree<void*>::remove(String key)
     if (cKey == static_cast<const char *> (key))
     {
       // No characters matched. We must be at the root level, so go across to the next root sibling.
-      if (n->next)
+      if (n->_next)
       {
-        n = n->next;
+        n = n->_next;
         continue;
       }
       else
@@ -322,14 +341,14 @@ void RadixTree<void*>::remove(String key)
       {
         // We're a leaf, so we can delete ourselves.
         // Jump out of the sibling linked list.
-        if (n->next)
-          n->next->prev = n->prev;
+        if (n->_next)
+          n->_next->prev = n->prev;
         if (n->prev)
-          n->prev->next = n->next;
+          n->prev->_next = n->_next;
 
         // Ensure that our parent's children pointer is not pointing at us.
         if (n->parent && n->parent->children == n)
-          n->parent->children = n->next;
+          n->parent->children = n->_next;
 
         // Nothing is pointing at us, so we can die peacefully.
         delete n;
@@ -346,7 +365,7 @@ void RadixTree<void*>::remove(String key)
         // We can make the assumption that the initial character of every child will be different, as else they'd have been
         // conjoined. So we just need to find a child that has the correct starting character. Or fail.
         if (*nodeKey2 == *cKey) break;
-        n = n->next;
+        n = n->_next;
       }
       if (n) continue;
       // We fail :(
@@ -366,12 +385,12 @@ void RadixTree<void*>::deleteNode(Node *node)
 
   deleteNode(node->children);
 
-  deleteNode(node->next);
+  deleteNode(node->_next);
 
   delete node;
 }
 
-Node *RadixTree<void*>::cloneNode(Node *node, Node *parent)
+RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *node, Node *parent)
 {
   // Deal with the easy case first.
   if (!node)
@@ -383,10 +402,10 @@ Node *RadixTree<void*>::cloneNode(Node *node, Node *parent)
   n->key = node->key;
   n->value = node->value;
   n->children = cloneNode(node->children, n);
-  n->next = cloneNode(node->next, parent);
-  if (n->next)
+  n->_next = cloneNode(node->_next, parent);
+  if (n->_next)
   {
-    n->next->prev = n;
+    n->_next->prev = n;
   }
   n->prev = 0;
   n->parent = parent;
@@ -400,3 +419,7 @@ void RadixTree<void*>::clear()
   root = 0;
 }
 
+//
+// Explicitly instantiate RadixTree<void*>
+//
+template class RadixTree<void*>;

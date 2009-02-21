@@ -20,4 +20,4 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(utilities List.cc String.cc Vector.cc RequestQueue.cc Tree.cc Cache.cc)
+add_kernel_src(utilities List.cc String.cc Vector.cc RequestQueue.cc Tree.cc Cache.cc RadixTree.cc)

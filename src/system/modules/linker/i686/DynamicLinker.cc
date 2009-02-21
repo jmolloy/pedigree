@@ -93,10 +93,13 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
   // Find the correct ELF to patch.
   Elf *pElf = 0;
+  Elf *pOrigElf = 0;
   uintptr_t loadBase = 0;
 
+  pOrigElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
+
   if (libraryId == 0)
-    pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
+    pElf = pOrigElf;
   else
   {
     // Library search.
@@ -113,7 +116,7 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
     }
   }
 
-  uintptr_t result = pElf->applySpecificRelocation(symIdx, &resolveNoElf, loadBase);
+  uintptr_t result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
 
   return result;
 }

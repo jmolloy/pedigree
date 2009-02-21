@@ -237,7 +237,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
   }
 
-  elf->load(buffer, file.getSize(), loadBase, &DynamicLinker::resolve);
+  elf->load(buffer, file.getSize(), loadBase, elf->getSymbolTable());
 
   DynamicLinker::instance().initialiseElf(elf);
 

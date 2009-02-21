@@ -141,6 +141,8 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
     Processor::switchAddressSpace(oldAS);
   }
 
+  SymbolTable *pSymtab = m_ProcessElfs.lookup(pProcess)->getSymbolTable();
+
   SharedObject *pSo = new SharedObject;
   pSo->pFile = new Elf();
   pSo->pFile->create(buffer, file.getSize());
@@ -166,7 +168,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   }
 
   uintptr_t loadBase = 0;
-  if (!pSo->pFile->allocate(buffer, file.getSize(), loadBase, pProcess))
+  if (!pSo->pFile->allocate(buffer, file.getSize(), loadBase, pSymtab, pProcess))
   {
     ERROR("LINKER: nowhere to put shared object \"" << name << "\"");
     return 0;
@@ -184,7 +186,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
 
   m_Objects.pushBack(pSo);
 
-  if (!pSo->pFile->load(buffer, file.getSize(), loadBase, &resolve))
+  if (!pSo->pFile->load(buffer, file.getSize(), loadBase, pSymtab))
   {
     ERROR("LINKER: load() failed for object \"" << name << "\"");
   }
@@ -205,9 +207,11 @@ DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
     mapObject(pSo->pDependencies[i]);
   }
 
+  SymbolTable *pSymtab = m_ProcessElfs.lookup(pProcess)->getSymbolTable();
+
   /// \todo Change this to using CoW, when we finally implement it :(
   uintptr_t loadBase = 0;
-  if (!pSo->pFile->allocate(pSo->pBuffer, pSo->nBuffer, loadBase, pProcess))
+  if (!pSo->pFile->allocate(pSo->pBuffer, pSo->nBuffer, loadBase, pSymtab, pProcess))
   {
     ERROR("LINKER: nowhere to put shared object.");
     return 0;
@@ -223,7 +227,7 @@ DynamicLinker::SharedObject *DynamicLinker::mapObject(SharedObject *pSo)
 
   pSo->addresses.insert(pProcess, reinterpret_cast<uintptr_t*>(loadBase));
 
-  if (!pSo->pFile->load(pSo->pBuffer, pSo->nBuffer, loadBase, &resolve))
+  if (!pSo->pFile->load(pSo->pBuffer, pSo->nBuffer, loadBase, pSymtab))
   {
     ERROR("LINKER: load() failed for object.");
   }

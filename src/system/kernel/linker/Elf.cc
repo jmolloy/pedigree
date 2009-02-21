@@ -47,7 +47,8 @@ Elf::Elf() :
   m_nProgramHeaders(0),
   m_nPltSize(0),
   m_nEntry(0),
-  m_NeededLibraries()
+  m_NeededLibraries(),
+  m_SymbolTable(this)
 {
 }
 
@@ -308,7 +309,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
   return true;
 }
 
-bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
+bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymbolTableCopy)
 {
   // Run through the sections to calculate the size required.
   uintptr_t size = 0;
@@ -327,7 +328,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase)
   {
     return false;
   }
-WARNING("loadBase: " << Hex << loadBase);
+
   // Now actually map and populate the sections.
   uintptr_t offset = loadBase;
   for (size_t i = 0; i < m_nSectionHeaders; i++)
@@ -401,6 +402,60 @@ WARNING("loadBase: " << Hex << loadBase);
     pSymbol ++;
   }
 
+  if (m_pSymbolTable && m_pStringTable)
+  {
+    ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+  
+    const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
+
+    for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
+    {
+      const char *pStr;
+  
+      if (ELF32_ST_TYPE(pSymbol->info) == 3)
+      {
+        // Section type - the name will be the name of the section header it refers to.
+        ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+        // If it's not allocated, it's a link-once-only section that we can ignore.
+        if (!(pSh->flags & SHF_ALLOC))
+        {
+          pSymbol++;  
+          continue;
+        }
+        // Grab the shstrtab
+        pStr = reinterpret_cast<const char*> (m_pShstrtab) + pSh->name;
+      }
+      else
+        pStr = pStrtab + pSymbol->name;
+  
+      // Insert the symbol into the symbol table.
+      SymbolTable::Binding binding;
+      switch (ELF32_ST_BIND(pSymbol->info))
+      {
+        case 0: // STB_LOCAL
+          binding = SymbolTable::Local;
+          break;
+        case 1: // STB_GLOBAL
+          binding = SymbolTable::Global;
+          break;
+        case 2: // STB_WEAK
+          binding = SymbolTable::Weak;
+          break;
+        default:
+          binding = SymbolTable::Global;
+      }
+
+      // If the shndx == UND (0x0), the symbol is in the table but undefined!
+      if (*pStr != '\0' && pSymbol->shndx != 0)
+      {
+        m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
+        if (pSymbolTableCopy)
+          pSymbolTableCopy->insert(String(pStr), binding, this, pSymbol->value);
+      }
+      pSymbol++;
+    }
+  }
+
   relocateModinfo(pBuffer, length);
 
   return true;
@@ -411,7 +466,7 @@ bool Elf::finaliseModule(uint8_t *pBuffer, uint32_t length)
   return relocate(pBuffer, length);
 }
 
-bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process *pProcess)
+bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab, Process *pProcess)
 {
   if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
 
@@ -428,7 +483,7 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process
   }
   // Currently size is actually the last loaded address - subtract the first loaded address to make it valid.
   size -= start;
-  NOTICE("m_nEntry: " << m_nEntry);
+
   // Here we use an atrocious heuristic for determining if the Elf needs relocating - if its entry point is < 1MB, it
   // is likely that it needs relocation.
   if (m_nEntry < 0x100000)
@@ -446,7 +501,6 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process
       return false;
   }
 
-  NOTICE("loadBase: " << Hex << loadBase);
   uintptr_t loadAddr = (loadBase==0) ? start : loadBase;
   for (unsigned int j = loadAddr; j < loadAddr+size+0x1000; j += 0x1000)
   {
@@ -458,10 +512,53 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Process
       WARNING("map() failed for address " << Hex << j);
   }
 
+  if (m_pDynamicSymbolTable && m_pDynamicStringTable)
+  {
+    ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
+  
+    const char *pStrtab = m_pDynamicStringTable;
+  
+    /// \todo Don't rely on this. Look at nchain in the hash table.
+    while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) +
+                                                  m_nDynamicSymbolTableSize)
+    {
+      const char *pStr = pStrtab + pSymbol->name;
+  
+      // If the shndx == UND (0x0), the symbol is in the table but undefined!
+      if (pSymbol->shndx != 0)
+      {
+        SymbolTable::Binding binding;
+        switch (ELF32_ST_BIND(pSymbol->info))
+        {
+          case 0: // STB_LOCAL
+            binding = SymbolTable::Local;
+            break;
+          case 1: // STB_GLOBAL
+            binding = SymbolTable::Global;
+            break;
+          case 2: // STB_WEAK
+            binding = SymbolTable::Weak;
+            break;
+          default:
+            binding = SymbolTable::Global;
+        }
+
+        if (*pStr != 0)
+        {
+          m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
+          if (pSymtab)
+            // Add loadBase in when adding to the user-defined symtab, to give the user a "real" value.
+            pSymtab->insert(String(pStr), binding, this, pSymbol->value + loadBase);
+        }
+      }
+      pSymbol ++;
+    }
+  }
+
   return true;
 }
 
-bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn, uintptr_t nStart, uintptr_t nEnd)
+bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab, uintptr_t nStart, uintptr_t nEnd)
 {
   for (size_t i = 0; i < m_nProgramHeaders; i++)
   {
@@ -509,7 +606,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookup
     {
       if ( (pRel->offset + loadBase < nStart) || (pRel->offset + loadBase > nEnd) )
         continue;
-      if (!applyRelocation(*pRel, 0, fn, loadBase))
+      if (!applyRelocation(*pRel, 0, pSymtab, loadBase))
         return false;
     }
   }
@@ -521,7 +618,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookup
           pRel < (m_pRelaTable+(m_nRelaTableSize/sizeof(ElfRela_t)));
           pRel++)
     {
-      if (!applyRelocation(*pRel, 0, fn, loadBase))
+      if (!applyRelocation(*pRel, 0, pSymtab, loadBase))
         return false;
     }
   }
@@ -598,67 +695,16 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 uint32_t Elf::lookupSymbol(const char *pName)
 {
-  if (!m_pSymbolTable || !m_pStringTable)
-    return 0; // Just return null if we haven't got a symbol table.
-
-  ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
-
-  const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
-
-  for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
-  {
-    const char *pStr;
-    if (ELF32_ST_TYPE(pSymbol->info) == 3)
-    {
-      // Section type - the name will be the name of the section header it refers to.
-      ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
-      // If it's not allocated, it's a link-once-only section that we can ignore.
-      if (!(pSh->flags & SHF_ALLOC))
-      {
-        pSymbol++;
-        continue;
-      }
-      // Grab the shstrtab
-      pStr = reinterpret_cast<const char*> (m_pShstrtab) + pSh->name;
-    }
-    else
-      pStr = pStrtab + pSymbol->name;
-
-    if (!strcmp(pName, pStr))
-    {
-      return pSymbol->value;
-    }
-    pSymbol ++;
-  }
-  return 0;
+  return m_SymbolTable.lookup(String(pName), this);
 }
 
 uint32_t Elf::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
 {
-  if (!m_pDynamicSymbolTable || !m_pDynamicStringTable)
-    return 0; // Just return null if we haven't got a symbol table.
-
-  ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
-
-  const char *pStrtab = m_pDynamicStringTable;
-
-  /// \todo Don't rely on this. Look at nchain in the hash table.
-  while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) +
-                                                m_nDynamicSymbolTableSize)
-  {
-    const char *pStr = pStrtab + pSymbol->name;
-
-    // Check the type is global!
-    if (!strcmp(sym, pStr))
-    {
-      // If the shndx == UND (0x0), the symbol is in the table but undefined!
-      if (pSymbol->shndx == 0) return 0;
-      return pSymbol->value + loadBase;
-    }
-    pSymbol ++;
-  }
-
-  return 0;
+  uintptr_t value = m_SymbolTable.lookup(String(sym), this);
+  if (!value)
+    return 0;
+  else
+    return value + loadBase;
 }
 
 uintptr_t Elf::getGlobalOffsetTable()
@@ -765,7 +811,7 @@ bool Elf::relocateModinfo(uint8_t *pBuffer, uint32_t length)
   return true;
 }
 
-uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_t loadBase)
+uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   // Is it a relocation section?
   if (m_pPltRelTable)
@@ -773,7 +819,7 @@ uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_
     // For each relocation entry...
     ElfRel_t *pRel = adjust_pointer(m_pPltRelTable, off);
 
-    applyRelocation(*pRel, 0, fn, loadBase);
+    applyRelocation(*pRel, 0, pSymtab, loadBase, policy);
 
     uintptr_t address = loadBase + pRel->offset;
 
@@ -785,7 +831,7 @@ uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_
     // For each relocation entry...
     ElfRela_t *pRel = adjust_pointer(m_pPltRelaTable, off);
 
-    applyRelocation(*pRel, 0, fn, loadBase);
+    applyRelocation(*pRel, 0, pSymtab, loadBase, policy);
 
     uintptr_t address = loadBase + pRel->offset;
 
@@ -812,4 +858,48 @@ List<char*> &Elf::neededLibraries()
 size_t Elf::getPltSize ()
 {
   return m_nPltSize;
+}
+
+void Elf::populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase)
+{
+  if (m_pDynamicSymbolTable && m_pDynamicStringTable)
+  {
+    ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
+  
+    const char *pStrtab = m_pDynamicStringTable;
+  
+    /// \todo Don't rely on this. Look at nchain in the hash table.
+    while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) +
+                                                  m_nDynamicSymbolTableSize)
+    {
+      const char *pStr = pStrtab + pSymbol->name;
+  
+      // If the shndx == UND (0x0), the symbol is in the table but undefined!
+      if (pSymbol->shndx != 0)
+      {
+        SymbolTable::Binding binding;
+        switch (ELF32_ST_BIND(pSymbol->info))
+        {
+          case 0: // STB_LOCAL
+            binding = SymbolTable::Local;
+            break;
+          case 1: // STB_GLOBAL
+            binding = SymbolTable::Global;
+            break;
+          case 2: // STB_WEAK
+            binding = SymbolTable::Weak;
+            break;
+          default:
+            binding = SymbolTable::Global;
+        }
+
+        if (*pStr != 0)
+        {
+          if (pSymtab)
+            pSymtab->insert(String(pStr), binding, this, pSymbol->value + loadBase);
+        }
+      }
+      pSymbol ++;
+    }
+  }
 }

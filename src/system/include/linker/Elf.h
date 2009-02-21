@@ -20,6 +20,7 @@
 #include <compiler.h>
 #include <processor/types.h>
 #include <utilities/List.h>
+#include <linker/SymbolTable.h>
 
 /** @addtogroup kernellinker
  * @{ */
@@ -158,7 +159,7 @@ public:
    * Maps memory at a specified address, loads code there and applies relocations only for the .modinfo section.
    * Intended use is for loading kernel modules only, there is no provision for dynamic relocations.
    */
-  bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase);
+  bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymbolTableCopy=0);
 
   /**
    * Finalises a module - applies all relocations except those in the .modinfo section. At this point it is
@@ -173,7 +174,7 @@ public:
    * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
    * filled however.
    */
-  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, class Process *pProcess=0);
+  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab=0, class Process *pProcess=0);
   
   /**
    * Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file
@@ -182,7 +183,7 @@ public:
    * \note PLT relocations are not performed here - they are defined in a different section to the standard Rel
    * and RELA entries, so must be done specifically (via applySpecificRelocation).
    */
-  bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolLookupFn fn=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
+  bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
 
 
   /**
@@ -218,7 +219,7 @@ public:
   /**
    * Applies the n'th relocation in the relocation table. Used by PLT entries.
    */
-  uintptr_t applySpecificRelocation(uint32_t off, SymbolLookupFn fn, uintptr_t loadBase);
+  uintptr_t applySpecificRelocation(uint32_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy = SymbolTable::LocalFirst);
 
   /**
    * Gets the address of the global offset table.
@@ -228,6 +229,19 @@ public:
 
 
   size_t getPltSize ();
+
+  /**
+   * Adds all the symbols in this Elf into the given symbol table, adjusted by loadBase.
+   * 
+   * \param pSymtab  Symbol table to populate.
+   * \param loadBase Offset to adjust each value by.
+   */
+  void populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase);
+
+  SymbolTable *getSymbolTable()
+  {
+    return &m_SymbolTable;
+  }
 
   /**
    * Returns the entry point of the file.
@@ -330,7 +344,7 @@ private:
    * \param fn  A function pointer to a function that, given a string, looks up an address. If NULL, the KernelElf is consulted.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  bool applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn fn=0, uintptr_t loadBase=0);
+  bool applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
 
   /**
    * Applies one relocation. This overload performs a relocation with addend (RELA).
@@ -339,7 +353,7 @@ private:
    * \param fn  A function pointer to a function that, given a string, looks up an address. If NULL, the KernelElf is consulted.
    * \note Defined in core/processor/.../Elf32.cc
    */
-  bool applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn=0, uintptr_t loadBase=0);
+  bool applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
 
 protected:
   ElfSymbol_t          *m_pSymbolTable;
@@ -366,6 +380,7 @@ protected:
   size_t                m_nPltSize;
   uintptr_t             m_nEntry;
   List<char*>           m_NeededLibraries;
+  SymbolTable           m_SymbolTable;
 
 private:
   /** The copy-constructor

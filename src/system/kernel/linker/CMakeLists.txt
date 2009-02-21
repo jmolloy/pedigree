@@ -20,4 +20,4 @@
 #       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
 #
 
-add_kernel_src(linker Elf.cc KernelElf.cc)
+add_kernel_src(linker Elf.cc KernelElf.cc SymbolTable.cc)

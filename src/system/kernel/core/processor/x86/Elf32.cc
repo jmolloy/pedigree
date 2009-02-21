@@ -32,7 +32,7 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
+bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   // Section not loaded?
   if (pSh && pSh->addr == 0)
@@ -72,26 +72,18 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn 
   else if (ELF32_R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
     const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
-    if (fn == 0)
-    {
-      S = lookupSymbol(pStr);
-      if (S == 0)
-        S = KernelElf::instance().globalLookupSymbol(pStr);
 
-      if (S == 0)
-        WARNING("Relocation failed for symbol \"" << pStr << "\"");
-    }
-    else
+    if (pSymtab == 0)
+      pSymtab = KernelElf::instance().getSymbolTable();
+
+    if (ELF32_R_TYPE(rel.info) == R_386_COPY)
     {
-      // The second parameter is whether to give priority for the looked up
-      // symbol to the "application" elf. If we're processing a COPY reloc,
-      // We don't want to do this - we want to get the weak version and
-      // copy across.
-      /// \todo Semantics will change with the advent of SymbolTable.
-      S = fn(pStr, (ELF32_R_TYPE(rel.info) == R_386_COPY)?false:true);
-      if (S == 0)
-        WARNING("Relocation failed (2) for symbol \"" << pStr << "\"");
+      policy = SymbolTable::NotOriginatingElf;
     }
+    S = pSymtab->lookup(String(pStr), this, policy);
+
+    if (S == 0)
+      WARNING("Relocation failed for symbol \"" << pStr << "\"");
   }
 
   if (S == 0 && (ELF32_R_TYPE(rel.info) != R_386_RELATIVE))
@@ -131,7 +123,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn 
   return true;
 }
 
-bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn, uintptr_t loadBase)
+bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   ERROR("The X86 architecture does not use RELA entries!");
   return false;

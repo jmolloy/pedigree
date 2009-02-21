@@ -104,6 +104,58 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
   #endif
   m_nSectionHeaders = pBootstrap.num;
 
+  if (m_pSymbolTable && m_pStringTable)
+  {
+    ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+  
+    const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
+
+    for (size_t i = 1; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
+    {
+      const char *pStr;
+  
+      if (ELF32_ST_TYPE(pSymbol->info) == 3)
+      {
+        // Section type - the name will be the name of the section header it refers to.
+        ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+        // If it's not allocated, it's a link-once-only section that we can ignore.
+        if (!(pSh->flags & SHF_ALLOC))
+        {
+          pSymbol++;  
+          continue;
+        }
+        // Grab the shstrtab
+        pStr = reinterpret_cast<const char*> (m_pShstrtab) + pSh->name;
+      }
+      else
+        pStr = pStrtab + pSymbol->name;
+  
+      // Insert the symbol into the symbol table.
+      SymbolTable::Binding binding;
+      switch (ELF32_ST_BIND(pSymbol->info))
+      {
+        case 0: // STB_LOCAL
+          binding = SymbolTable::Local;
+          break;
+        case 1: // STB_GLOBAL
+          binding = SymbolTable::Global;
+          break;
+        case 2: // STB_WEAK
+          binding = SymbolTable::Weak;
+          break;
+        default:
+          binding = SymbolTable::Global;
+      }
+
+      if (*pStr != '\0')
+      {
+        m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
+      }
+      pSymbol++;
+    }
+  }
+
+
   return true;
 }
 
@@ -148,7 +200,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   }
 
   uintptr_t loadBase = 0;
-  if (!module->elf.loadModule(pModule, len, loadBase))
+  if (!module->elf.loadModule(pModule, len, loadBase, &m_SymbolTable))
   {
     FATAL ("Module load failed (2)");
     delete module;
@@ -255,40 +307,7 @@ void KernelElf::executeModule(Module *module)
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)
 {
-  /// \todo This shouldn't match local or weak symbols.
-bool b = false;
-  if (!strcmp(pName, "_ZN8IteratorIPv11_ListNode_tIS0_EXadL_ZNS2_8previousEvEEXadL_ZNS2_4nextEvEES0_EppEv"))
-  {
-    ERROR("Lookup for 'that symbol'...");
-    b = true;
-  }
-
-  // Try a lookup in the kernel.
-  uintptr_t ret;
-  if ((ret = lookupSymbol(pName)))
-  {
-    if (b)
-    {
-      NOTICE("Lookup in kernel, " << Hex << ret);
-    }
-      return ret;
-  }
-
-  // OK, try every module.
-  for (Vector<Module*>::Iterator it = m_Modules.begin();
-       it != m_Modules.end();
-       it++)
-  {
-    if ((ret = (*it)->elf.lookupSymbol(pName)))
-    {    if (b)
-    {
-      NOTICE("Lookup in module, " << Hex << ret);
-    }
-        return ret;
-    }
-  }
-
-  return 0;
+  return m_SymbolTable.lookup(String(pName), this);
 }
 
 const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)

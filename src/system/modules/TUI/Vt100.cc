@@ -68,7 +68,7 @@ void Vt100::write(char *str)
 
 void Vt100::write(char c)
 {
-  NOTICE("VT100: write: " << c << " (" << Hex << (uintptr_t)c << ")");
+  //NOTICE("VT100: write: " << c << " (" << Hex << (uintptr_t)c << ")");
 
   if (m_bChangingState)
   {

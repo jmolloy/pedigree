@@ -126,7 +126,7 @@ void init()
   static Elf initElf;
   uintptr_t loadBase;
   initElf.create(buffer, init.getSize());
-  initElf.allocate(buffer, init.getSize(), loadBase, pProcess);
+  initElf.allocate(buffer, init.getSize(), loadBase, 0, pProcess);
 
   DynamicLinker::instance().setInitProcess(pProcess);
   DynamicLinker::instance().registerElf(&initElf);
@@ -145,7 +145,7 @@ void init()
     }
   }
 
-  initElf.load(buffer, init.getSize(), loadBase, &DynamicLinker::resolve);
+  initElf.load(buffer, init.getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);
 
@@ -158,7 +158,7 @@ void init()
     if (!b)
       WARNING("map() failed in init");
   }
-  NOTICE("Entry: " << Hex << initElf.getEntryPoint());
+
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
   Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
