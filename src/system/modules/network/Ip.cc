@@ -38,8 +38,8 @@ Ip::~Ip()
 {
 }
 
-void Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
-{
+bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
+{  
   // allocate space for the new packet with an IP header
   size_t newSize = nBytes + sizeof(ipHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -71,81 +71,79 @@ void Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   
   // copy the payload into the packet
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
-  
-  // send to the gateway if it's outside our subnet
-  if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
+    
+  // send to the gateway if it's outside our subnet, but only if we have a subnet mask
+  if(me.subnetMask.getIp())
   {
-    if(me.gateway.getIp())
-      dest = me.gateway;
-    else
-      return;
+    if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
+    {
+      if(me.gateway.getIp())
+        dest = me.gateway;
+      else
+        return false;
+    }
   }
-  
+    
   // get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
   ///       it doesn't happen?
   MacAddress destMac;
-  bool macValid;
+  bool macValid = true;
   if(dest == 0xffffffff)
     destMac.setMac(0xff);
   else
-   macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
+    macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
   if(macValid)
     Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
   
   delete newPacket;
+  return macValid;
 }
 
 void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
-    
-  StationInfo cardInfo = pCard->getStationInfo();
   
-  // check if this packet is for us, or if it's a broadcast
-  if(cardInfo.ipv4.getIp() == header->ipDest || header->ipDest == 0xffffffff)
+  /// \todo Handle fragmentation!
+  
+  // check the checksum :D
+  uint16_t checksum = header->checksum;
+  header->checksum = 0;
+  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), sizeof(ipHeader));
+  header->checksum = checksum;
+  if(checksum == calcChecksum)
   {
-    /// \todo Handle fragmentation!
+    IpAddress from(header->ipSrc);
     
-    // check the checksum :D
-    uint16_t checksum = header->checksum;
-    header->checksum = 0;
-    uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), sizeof(ipHeader));
-    header->checksum = checksum;
-    if(checksum == calcChecksum)
+    switch(header->type)
     {
-      IpAddress from(header->ipSrc);
-      
-      switch(header->type)
-      {
-        case IP_ICMP:
-          //NOTICE("IP: ICMP packet");
-          
-          // icmp needs the ip header as well
-          Icmp::instance().receive(from, nBytes, packet, pCard, offset);
-          break;
-          
-        case IP_UDP:
-          //NOTICE("IP: UDP packet");
-          
-          // udp needs the ip header as well
-          Udp::instance().receive(from, nBytes, packet, pCard, offset);
-          break;
-          
-        case IP_TCP:
-          //NOTICE("IP: TCP packet");
-          
-          // tcp needs the ip header as well
-          Tcp::instance().receive(from, nBytes, packet, pCard, offset);
-          break;
+      case IP_ICMP:
+        //NOTICE("IP: ICMP packet");
         
-        default:
-          NOTICE("IP: Unknown packet type");
-          break;
-      }
+        // icmp needs the ip header as well
+        Icmp::instance().receive(from, nBytes, packet, pCard, offset);
+        break;
+        
+      case IP_UDP:
+        //NOTICE("IP: UDP packet");
+        
+        // udp needs the ip header as well
+        Udp::instance().receive(from, nBytes, packet, pCard, offset);
+        break;
+        
+      case IP_TCP:
+        //NOTICE("IP: TCP packet");
+        
+        // tcp needs the ip header as well
+        Tcp::instance().receive(from, nBytes, packet, pCard, offset);
+        break;
+      
+      default:
+        NOTICE("IP: Unknown packet type");
+        break;
     }
-    else
-      NOTICE("IP: Checksum invalid!");
   }
+  else
+    NOTICE("IP: Checksum invalid!");
 }

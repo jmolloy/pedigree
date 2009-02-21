@@ -207,6 +207,7 @@ void entry()
     if(e)
     {
       // DHCP DISCOVER to find potential DHCP servers
+      e->acceptAnyAddress(true);
       
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = 67;
@@ -219,6 +220,7 @@ void entry()
       dhcp.opcode = OP_BOOTREQUEST;
       dhcp.htype = 1; // ethernet
       dhcp.hlen = 6; // 6 bytes in a MAC address
+      dhcp.xid = HOST_TO_BIG32(12345);
       memcpy(dhcp.chaddr, info.mac, 6);
       
       DhcpOptionMagicCookie cookie;
@@ -234,7 +236,13 @@ void entry()
 
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      if(!success)
+      {
+        WARNING("Couldn't send DHCP DISCOVER packet on interface " << i << "!");
+        UdpManager::instance().returnEndpoint(e);
+        continue;
+      }
       
       // Find and respond to the first DHCP offer
       
@@ -242,7 +250,12 @@ void entry()
       DhcpOptionServerIdent dhcpServer;
       
       size_t n = 0;
-      e->dataReady(true);
+      if(e->dataReady(true) == false)
+      {
+        WARNING("Did not receive a reply to DHCP DISCOVER (timed out), interface " << i << "!");
+        UdpManager::instance().returnEndpoint(e);
+        continue;
+      }
       while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)))
       {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
@@ -252,10 +265,24 @@ void entry()
         
         myIpWillBe = incoming->yiaddr;
         
+        size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
+        if(dhcpSizeWithoutOptions == 0)
+        {
+          // no magic cookie, so extensions aren't available
+          dhcpServer.a4 = (incoming->siaddr & 0xFF000000) >> 24;
+          dhcpServer.a3 = (incoming->siaddr & 0x00FF0000) >> 16;
+          dhcpServer.a2 = (incoming->siaddr & 0x0000FF00) >> 8;
+          dhcpServer.a1 = (incoming->siaddr & 0x000000FF);
+          currentState = OFFER_RECVD;
+          break;
+        }
         DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
         DhcpOptionMagicCookie thisCookie = *reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
         if(thisCookie.cookie != MAGIC_COOKIE)
-          break; // invalid offer
+        {
+          NOTICE("Magic cookie incorrect!");
+          break;
+        }
         
         // check the options for the magic cookie and DHCP OFFER
         byteOffset = 0;
@@ -283,11 +310,12 @@ void entry()
       if(currentState != OFFER_RECVD)
       {
         WARNING("Couldn't get a valid offer packet.");
+        UdpManager::instance().returnEndpoint(e);
         continue;
       }
       
       // We want to accept this offer by requesting it from the DHCP server
-      
+            
       currentState = REQUEST_SENT;
       
       DhcpOptionAddrReq addrReq;
@@ -308,7 +336,13 @@ void entry()
       
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      if(!success)
+      {
+        WARNING("Couldn't send DHCP REQUEST packet on interface " << i << "!");
+        UdpManager::instance().returnEndpoint(e);
+        continue;
+      }
       
       // Grab the ACK and update the card
       
@@ -318,9 +352,14 @@ void entry()
       DhcpOptionDefaultGateway defGateway;
       bool gatewaySet = false;
       
-      e->dataReady(true);
-      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)))
+      if(e->dataReady(true) == false)
       {
+        WARNING("Did not receive a reply to DHCP REQUST (timed out), interface " << i << "!");
+        UdpManager::instance().returnEndpoint(e);
+        continue;
+      }
+      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)))
+      {        
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
         
         if(incoming->opcode != OP_BOOTREPLY)
@@ -328,10 +367,20 @@ void entry()
         
         myIpWillBe = incoming->yiaddr;
         
+        size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
+        if(dhcpSizeWithoutOptions == 0)
+        {
+          // no magic cookie, so extensions aren't available
+          currentState = ACK_RECVD;
+          break;
+        }
         DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
         DhcpOptionMagicCookie thisCookie = *reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
         if(thisCookie.cookie != MAGIC_COOKIE)
-          break; // invalid offer
+        {
+          NOTICE("Magic cookie incorrect!");
+          break;
+        }
         
         // check the options for the magic cookie and DHCP OFFER
         byteOffset = 0;
@@ -366,6 +415,7 @@ void entry()
       if(currentState != ACK_RECVD)
       {
         WARNING("Couldn't get a valid ack packet.");
+        UdpManager::instance().returnEndpoint(e);
         continue;
       }
       
@@ -376,12 +426,20 @@ void entry()
       if(subnetMaskSet)
         host.subnetMask.setIp(Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4));
       else
+      {
+        NOTICE("Subnet mask fail");
         host.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
+      }
       if(gatewaySet)
         host.gateway.setIp(Network::convertToIpv4(defGateway.a1, defGateway.a2, defGateway.a3, defGateway.a4));
       else
-        host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
+      {
+        NOTICE("Gateway fail");
+        host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1)); /// \todo Autoconfiguration IPv4 address
+      }
       pCard->setStationInfo(host);
+      
+      UdpManager::instance().returnEndpoint(e);
     }
     
     delete [] buff;

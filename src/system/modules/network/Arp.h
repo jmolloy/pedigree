@@ -19,9 +19,11 @@
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <utilities/Tree.h>
+#include <processor/state.h>
 #include <processor/types.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
+#include <machine/Machine.h>
 
 #include "NetworkStack.h"
 #include "Ethernet.h"
@@ -85,24 +87,51 @@ private:
   };
   
   // an ARP request we've sent
-  struct arpRequest
+  class ArpRequest : public TimerHandler
   {
-    arpRequest() :
-      destIp(), mac(), waitSem(0), success(false)
-    {};
+    public:
+      ArpRequest() :
+        destIp(), mac(), waitSem(0), m_Timeout(30), success(false), m_Nanoseconds(0), m_Seconds(0)
+      {};
+      
+      IpAddress destIp;
+      MacAddress mac;
+      Semaphore waitSem;
+      
+      uint32_t m_Timeout; // defaults to 30 seconds
+      
+      bool success;
+      
+      void timer(uint64_t delta, InterruptState &state)
+      {
+        if(UNLIKELY(m_Seconds < m_Timeout))
+        {
+          m_Nanoseconds += delta;
+          if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
+          {
+            ++m_Seconds;
+            m_Nanoseconds -= 1000000000ULL;
+          }
+          
+          if(UNLIKELY(m_Seconds >= m_Timeout))
+          {
+            success = false;
+            waitSem.release();
+          }
+        }
+      }
+      
+    private:
     
-    IpAddress destIp;
-    MacAddress mac;
-    Semaphore waitSem;
-    
-    bool success;
+      uint64_t m_Nanoseconds;
+      uint64_t m_Seconds;
   };
   
   // ARP Cache
   Tree<uint32_t, arpEntry*> m_ArpCache;
   
   // ARP request list
-  Vector<arpRequest*> m_ArpRequests;
+  Vector<ArpRequest*> m_ArpRequests;
 
 };
 

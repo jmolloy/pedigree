@@ -21,11 +21,8 @@ TcpManager TcpManager::manager;
 
 Endpoint* TcpEndpoint::accept()
 {
-  NOTICE("a");
   m_IncomingConnectionCount.acquire();
-  NOTICE("b");
   Endpoint* e = m_IncomingConnections.popFront();
-  NOTICE("c");
   return e;
 }
 
@@ -62,7 +59,7 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
   if(bBlock)
     queueReady = dataReady(true);
   else
-    queueReady = m_DataStream.getSize() != 0; // m_DataQueue.count() != 0;
+    queueReady = m_DataStream.getSize() != 0;
   
   if(queueReady)
   {    
@@ -81,8 +78,6 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
     
     // remove from the buffer, we've read
     m_DataStream.remove(0, nBytes);
-    // nBytesRemoved += nBytes;
-    // above no longer updated here, it's needed for the shadow stream
     
     // we've read in this block
     return nBytes;
@@ -115,52 +110,51 @@ bool TcpEndpoint::dataReady(bool block)
 {
   if(block)
   {
+    Semaphore timedOut(0);
+    
+    Timer* t = Machine::instance().getTimer();
+    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
+    timeout->setSemaphore(&timedOut);
+    if(t)
+      t->registerHandler(timeout);
+    
+    bool ret = false;
     while(true)
-    {      
-      //if(m_DataQueueSize.tryAcquire())
-      //  return true;
+    {
+      if(timedOut.tryAcquire())
+      {
+        // only acquired if we time out!
+        break;
+      }
+      
       if(m_DataStream.getSize() != 0)
-        return true;
+      {
+        ret = true;
+        break;
+      }
       
       // if there's no more data in the stream, and we need to close, do it
       // you'd think the above would handle this, but timing is an awful thing to assume
       // much testing has led to the addition of the stream size check
       if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
       {
-        NOTICE("CLOSING with " << m_DataStream.getSize() << " bytes in the stream");
-        return false;
+        break;
       }
-      
-      // definitely data around?
-      //NOTICE("State is " << Tcp::stateString(TcpManager::instance().getState(m_ConnId)) << " and number on queue is " << TcpManager::instance().getNumQueuedPackets(m_ConnId) << ".");
-      //if(/*TcpManager::instance().getNumQueuedPackets(m_ConnId) != 0 &&*/ m_DataStream.getSize() != 0) // m_DataQueueSize.tryAcquire())
-      //  return true;
-      
-        
-      // if there's no data on the queue, and we're not in ESTABLISHED, we've probably either
-      // sent a FIN, or received one.
-      // however, segment processing still occurs in FIN_WAIT states, so only check if we're beyond
-      // that
-      // close wait also means that the remote TCP has requested a close, but we need to actually send
-      // our own close
-      /*bool yetAgain = m_DataQueueSize.tryAcquire();
-      if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && !yetAgain) // && TcpManager::instance().getState(m_ConnId) != Tcp::CLOSE_WAIT)
-        return false;
-      else if(yetAgain)
-        return true;*/
     }
+    
+    if(t)
+      t->unregisterHandler(timeout);
+    delete timeout;
+    return ret;
   }
   else
   {
-    return (m_DataStream.getSize() != 0); //m_DataQueueSize.tryAcquire();
+    return (m_DataStream.getSize() != 0);
   }
 };
 
 size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
-{
-  // build a state block for it
-  size_t connId = getConnId();
-  
+{  
   StateBlockHandle* handle = new StateBlockHandle;
   handle->localPort = port;
   handle->remotePort = 0;
@@ -172,6 +166,9 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
     delete handle;
     return 0;
   }
+  
+  // build a state block for it
+  size_t connId = getConnId();
   
   stateBlock = new StateBlock;
   stateBlock->localPort = port;
@@ -219,10 +216,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 }
 
 size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard)
-{
-  // build a state block for it
-  size_t connId = getConnId(); //localPort;
-  
+{  
   StateBlockHandle* handle = new StateBlockHandle;
   handle->localPort = localPort;
   handle->remotePort = remoteHost.remotePort;
@@ -234,6 +228,9 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
     delete handle;
     return 0;
   }
+  
+  // build a state block for it
+  size_t connId = getConnId(); //localPort;
   
   stateBlock = new StateBlock;
   stateBlock->localPort = localPort;
@@ -279,13 +276,20 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   
   Tcp::send(stateBlock->remoteHost.ip, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->iss, 0, Tcp::SYN, stateBlock->snd_wnd, 0, 0, pCard);
   
-  /// \todo Keep an error state in the stateBlock and break free of this loop
-  ///       if an error occurs (such as connection refused)
-  //while(stateBlock->currentState != Tcp::ESTABLISHED)
-    stateBlock->waitState.acquire();
+  bool timedOut = false;
+  Timer* t = Machine::instance().getTimer();
+  NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
+  timeout->setSemaphore(&(stateBlock->waitState));
+  timeout->setTimedOut(&timedOut);
+  if(t)
+    t->registerHandler(timeout);
+  stateBlock->waitState.acquire();
+  if(t)
+    t->unregisterHandler(timeout);
+  delete timeout;
   
   NOTICE("Connect wait returns, state is " << Tcp::stateString(stateBlock->currentState) << ".");
-  if(stateBlock->currentState != Tcp::ESTABLISHED)
+  if((stateBlock->currentState != Tcp::ESTABLISHED) || timedOut)
     return 0; /// \todo Keep track of an error number somewhere in StateBlock
   else
     return connId;
@@ -305,9 +309,7 @@ void TcpManager::Disconnect(size_t connectionId)
   dest = stateBlock->remoteHost.ip;
   
   // this is our FIN
-  stateBlock->fin_seq = stateBlock->snd_nxt;
-  
-  NOTICE("TcpManager::Disconnect, we're working with " << Dec << stateBlock->localPort << Hex << " as the local port");
+  stateBlock->fin_seq = stateBlock->snd_nxt++;
   
   // no FIN received yet
   if(stateBlock->currentState == Tcp::ESTABLISHED)
@@ -325,19 +327,9 @@ void TcpManager::Disconnect(size_t connectionId)
   {
     NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but not valid state!");
   }
-  
-  /// \todo Keep an error state in the stateBlock and break free of this loop
-  ///       if an error occurs (such as connection refused)
-  //while(stateBlock->currentState != Tcp::ESTABLISHED)
-  //  stateBlock->waitState.acquire();
-  
-  //if(stateBlock->currentState != Tcp::ESTABLISHED)
-  //  return 0; /// \todo Keep track of an error number somewhere in StateBlock
-  //else
-  //  return connId;
 }
 
-void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes)
+void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue)
 {
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
@@ -362,8 +354,13 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
     dest = stateBlock->remoteHost.ip;
     
     Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->seg_seq, stateBlock->rcv_nxt, Tcp::ACK | (push ? Tcp::PSH : 0), stateBlock->snd_wnd, segmentSize, payload + offset, stateBlock->pCard);
-    
-    /// \todo Add to the retransmit queue, so we can... retransmit :/
+  }
+  
+  // throw this block onto the retransmission queue (if we should, because this send might be sending unack'd data that's in the retransmit queue)
+  if(addToRetransmitQueue)
+  {
+    stateBlock->retransmitQueue.append(payload, nBytes);
+    stateBlock->waitingForTimeout = true;
   }
 }
 
@@ -377,14 +374,13 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   handle.listen = false; // DON'T look for listen sockets yet
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(handle)) == 0)
-  {
+  {    
     // check for a listen socket
     handle.listen = true;
     if((stateBlock = m_StateBlocks.lookup(handle)) == 0)
     {
       // port doesn't exist, so temporary stateBlock required for proper RST handle
       stateBlock = new StateBlock;
-      //m_StateBlocks.insert(handle, stateBlock);
       
       NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " has no destination.");
       
@@ -409,7 +405,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   // what state are we in?
   // RFC793, page 65 onwards
   Tcp::TcpState oldState = stateBlock->currentState;
-  NOTICE("TCP packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << stateBlock->remoteHost.remotePort << ".");
+  NOTICE("TCP packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << stateBlock->remoteHost.remotePort << "].");
   switch(stateBlock->currentState)
   {
     /* Incoming segment while the state is CLOSED */
@@ -457,13 +453,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
       }
       else if(header->flags & Tcp::SYN)
-      {
-        /// \todo Server-side stuff
-        
+      {        
         // create a new server state block for this incoming connection, and register the new client
         // connection ID with the listening endpoint
-        
-        NOTICE("SYN on a LISTEN socket");
         
         size_t connId = getConnId();
   
@@ -509,10 +501,13 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         newStateBlock->numEndpointPackets = 0;
         
         handle.listen = false;
+        handle.localPort = destPort;
+        handle.remotePort = sourcePort;
+        handle.remoteHost.ip = from;
         m_StateBlocks.insert(handle, newStateBlock);
         
         StateBlockHandle* tmp = new StateBlockHandle;
-        memcpy(tmp, &handle, sizeof(StateBlockHandle));
+        *tmp = handle;
         m_CurrentConnections.insert(connId, tmp);
         
         // ACK the SYN
@@ -679,7 +674,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         break;
       }
       
-      // check security and precedence...
+      // check security and precedence (IP header)...
       
       if(header->flags & Tcp::SYN)
       {
@@ -704,9 +699,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             size_t connId = stateBlock->connId;
             TcpEndpoint* parent = stateBlock->endpoint;
             stateBlock->endpoint = new TcpEndpoint(connId, from, stateBlock->localPort, stateBlock->remoteHost.remotePort);
-            //TcpEndpoint(size_t connId, stationInfo remoteInfo, uint16_t local = 0, uint16_t remote = 0)
-            
-            //new TcpEndpoint(connId); //endpoint;
             
             // ensure that the parent endpoint handle this properly
             parent->addIncomingConnection(stateBlock->endpoint);
@@ -720,18 +712,30 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::FIN_WAIT_2:
           case Tcp::CLOSE_WAIT:
           case Tcp::CLOSING:
-          
-            if(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
-              stateBlock->snd_una = stateBlock->seg_ack;
             
             if(stateBlock->seg_ack < stateBlock->snd_una)
               break; // dupe ack
             
             // remove from retransmission queue any acknowledged packets...
+            stateBlock->retransmitQueue.remove(stateBlock->snd_una - stateBlock->nRemovedFromRetransmit, stateBlock->seg_len);
+            stateBlock->nRemovedFromRetransmit += (stateBlock->seg_ack - stateBlock->snd_una);
+          
+            // update the unack'd data information
+            if(stateBlock->snd_una < stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
+              stateBlock->snd_una = stateBlock->seg_ack;
+            
+            // reset the retransmit timer
+            stateBlock->resetTimer();
+            
+            if(stateBlock->snd_una >= stateBlock->snd_nxt)
+              stateBlock->waitingForTimeout = false;
             
             if(stateBlock->seg_ack > stateBlock->snd_nxt)
             {
-              // send an ack?
+              // ack the ack with the proper sequence number, because the remote TCP has ack'd data that hasn't been sent
+              Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->seg_seq, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+              alreadyAck = true;
+              break;
             }
             
             if(stateBlock->snd_una < stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
@@ -745,10 +749,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             }
             
             if(stateBlock->currentState == Tcp::FIN_WAIT_1)
-            {
-              // if this is ack'ing our FIN - how would we know?
-              // probably snd_nxt?
-              
+            {              
               if(stateBlock->fin_seq <= stateBlock->seg_ack)
               {
                 stateBlock->currentState = Tcp::FIN_WAIT_2;
@@ -789,6 +790,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::TIME_WAIT:
           
             // only a FIN can come in during this state, ACK it and start timeout...
+            stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
+            stateBlock->waitingForTimeout = true;
           
             break;
           
@@ -810,14 +813,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       /* Finally, process the actual segment payload */
       if(stateBlock->currentState == Tcp::ESTABLISHED || stateBlock->currentState == Tcp::FIN_WAIT_1 || stateBlock->currentState == Tcp::FIN_WAIT_2)
       {
-        // TODO: handle incoming data... Page 74 of RFC 793          
         if(stateBlock->seg_len)
         {
-          NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is ready for payload reading.");
-          
           stateBlock->rcv_nxt += stateBlock->seg_len;
           stateBlock->rcv_wnd -= stateBlock->seg_len;
-           
+          
+          NOTICE("Depositing a payload");
           stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, header->flags & Tcp::PSH);
           
           Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
@@ -836,6 +837,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         
         if(!alreadyAck)
         {
+          NOTICE("Sending an ACK");
           Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
           alreadyAck = true;
         }
@@ -854,7 +856,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             // already been acked previously? if so this needs to go to TIME_WAIT
             // if NOT, closing
             if(stateBlock->fin_ack)
+            {
               stateBlock->currentState = Tcp::TIME_WAIT;
+              
+              stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
+              stateBlock->waitingForTimeout = true;
+            }
             else
               stateBlock->currentState = Tcp::CLOSING;
             
@@ -863,6 +870,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::FIN_WAIT_2:
           
             stateBlock->currentState = Tcp::TIME_WAIT;
+            
+            stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
+            stateBlock->waitingForTimeout = true;
             
             break;
           
@@ -873,6 +883,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             // remain this state
             
             break;
+          
+          case Tcp::TIME_WAIT:
+            
+            // reset the timer
+            stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
+            stateBlock->waitingForTimeout = true;
           
           default:
             break;
@@ -907,29 +923,6 @@ void TcpManager::returnEndpoint(Endpoint* e)
     delete e;
   }
 }
-
-/*
-Endpoint* TcpManager::getEndpoint(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, Network* pCard)
-{
-  // is there an endpoint for this port?
-  Endpoint* e;
-  if((e = m_Endpoints.lookup(localPort)) == 0)
-  {
-    if(localPort == 0)
-      localPort = allocatePort();
-  
-    stationInfo remote;
-    remote.ipv4 = remoteHost.ipv4;
-    uint16_t remotePort = remoteHost.remotePort;
-    TcpEndpoint* tmp = new TcpEndpoint(remote, localPort, remotePort);
-    tmp->setCard(pCard);
-    tmp->setRemoteHost(remoteHost);
-    e = static_cast<Endpoint*>(tmp);
-    m_Endpoints.insert(localPort, e);
-  }
-  return e;
-}
-*/
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {

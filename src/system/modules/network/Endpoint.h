@@ -98,6 +98,8 @@ class Endpoint
     {
       return 0;
     };
+    virtual inline bool acceptAnyAddress() { return false; };
+    virtual inline void acceptAnyAddress(bool accept) {};
     
     /** Connection-based endpoints */
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost)

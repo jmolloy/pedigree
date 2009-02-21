@@ -19,7 +19,6 @@
 #include <utilities/String.h>
 #include <utilities/Tree.h>
 #include <utilities/List.h>
-#include <processor/types.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
@@ -38,13 +37,13 @@ class UdpEndpoint : public Endpoint
   
     /** Constructors and destructors */
     UdpEndpoint() :
-      Endpoint(), m_DataQueue(), m_DataQueueSize(0)
+      Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false)
     {};
     UdpEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0)
+      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false)
     {};
     UdpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0)
+      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false)
     {};
     virtual ~UdpEndpoint() {};
     
@@ -52,6 +51,8 @@ class UdpEndpoint : public Endpoint
     virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
     virtual size_t recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost);
     virtual bool dataReady(bool block = false);
+    virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
+    virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; };
     
     /** UdpManager functionality - called to deposit data into our local buffer */
     virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost);
@@ -76,6 +77,9 @@ class UdpEndpoint : public Endpoint
     
     /** Data queue size */
     Semaphore m_DataQueueSize;
+    
+    /** Accept any address? */
+    bool m_bAcceptAll;
 };
 
 /**
@@ -103,7 +107,7 @@ public:
   void returnEndpoint(Endpoint* e);
   
   /** A new packet has arrived! */
-  void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize);
+  void receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard);
 
 private:
 

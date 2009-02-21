@@ -49,7 +49,7 @@ public:
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends an IP packet */
-  static void send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard = 0);
+  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard = 0);
 
   /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
   struct ipHeader

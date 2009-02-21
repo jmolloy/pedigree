@@ -56,6 +56,7 @@ class Timer
     virtual uint64_t getTickCount() = 0;
 
     virtual bool registerHandler(TimerHandler *handler) = 0;
+    virtual bool unregisterHandler(TimerHandler *handler) = 0;
 
   protected:
     /** The default constructor */

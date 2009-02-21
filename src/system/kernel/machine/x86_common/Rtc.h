@@ -22,6 +22,8 @@
 #include <machine/Timer.h>
 #include <processor/state.h>
 
+#define MAX_TIMER_HANDLERS    32
+
 /** @addtogroup kernelmachinex86common
  * @{ */
 
@@ -36,6 +38,7 @@ class Rtc : public Timer,
     // Timer interface
     //
     virtual bool registerHandler(TimerHandler *handler);
+    virtual bool unregisterHandler(TimerHandler *handler);
     virtual size_t getYear();
     virtual uint8_t getMonth();
     virtual uint8_t getDayOfMonth();
@@ -139,6 +142,9 @@ class Rtc : public Timer,
 
     /** The Rtc class instance */
     static Rtc m_Instance;
+    
+    /** All timer handlers installed */
+    TimerHandler* m_Handlers[MAX_TIMER_HANDLERS];
 };
 
 /** @} */

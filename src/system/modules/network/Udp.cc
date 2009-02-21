@@ -91,8 +91,8 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
 	return ret;*/
 }
 
-void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network* pCard)
-{
+bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network* pCard)
+{  
   size_t newSize = nBytes + sizeof(udpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   memset(newPacket, 0, newSize);
@@ -119,11 +119,10 @@ void Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   header->checksum = 0;
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
   
-  Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
-  
-  NOTICE("network checksum = " << header->checksum << "...");
+  bool success = Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
   
   delete newPacket;
+  return success;
 }
 
 void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
@@ -131,6 +130,16 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // grab the IP header to find the size, so we can skip options and get to the UDP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->verlen & 0x0F) * 4; // len is the number of DWORDs
+  
+  // check if this packet is for us, or if it's a broadcast
+  StationInfo cardInfo = pCard->getStationInfo();
+  IpAddress to(ip->ipDest);
+  /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
+  {
+    // not for us, TODO: check a flag to see if we'll accept these sorts of packets
+    // as an example, DHCP will need this
+    return;
+  }*/
   
   // grab the header now
   udpHeader* header = reinterpret_cast<udpHeader*>(packet + offset + ipHeaderSize);
@@ -157,5 +166,5 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   }
   
   // either no checksum, or calculation was successful, either way go on to handle it
-  UdpManager::instance().receive(from, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize);
+  UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
 }

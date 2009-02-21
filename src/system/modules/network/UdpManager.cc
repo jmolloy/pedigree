@@ -21,8 +21,7 @@ UdpManager UdpManager::manager;
 
 bool UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
 {
-  Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
-  return true;
+  return Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
 };
 
 size_t UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
@@ -84,21 +83,44 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
 
 bool UdpEndpoint::dataReady(bool block)
 {
+  bool timedOut = false;
   if(block)
+  {
+    Timer* t = Machine::instance().getTimer();
+    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
+    timeout->setSemaphore(&m_DataQueueSize);
+    timeout->setTimedOut(&timedOut);
+    if(t)
+      t->registerHandler(timeout);
     m_DataQueueSize.acquire();
+    if(t)
+      t->unregisterHandler(timeout);
+    delete timeout;
+  }
   else
     return m_DataQueueSize.tryAcquire();
-  return true;
+  return !timedOut;
 };
 
-void UdpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize)
+void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
 {  
   // is there an endpoint for this port?
   Endpoint* e;
-  NOTICE("Incoming UDP packet on port " << Dec << destPort << Hex << "...");
+  StationInfo cardInfo = pCard->getStationInfo();
   if((e = m_Endpoints.lookup(destPort)) != 0)
   {
-    NOTICE("Passing it through");
+    // check if we should pass on the packet
+    bool passOn = false;
+    if(to.getIp() == 0xffffffff)
+      passOn = e->acceptAnyAddress();
+    if(to.getIp() != cardInfo.ipv4.getIp())
+      passOn = e->acceptAnyAddress();
+    else
+      passOn = true;
+      
+    if(!passOn)
+      return;
+    
     // e->setRemotePort(sourcePort);
     Endpoint::RemoteEndpoint host;
     host.ip = from;

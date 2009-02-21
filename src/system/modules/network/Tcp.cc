@@ -59,7 +59,7 @@ uint16_t Tcp::tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint
   return checksum;
 }
 
-void Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard)
+bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard)
 {
   size_t newSize = nBytes + sizeof(tcpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -86,9 +86,10 @@ void Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
   
-  Ip::send(dest, me.ipv4, IP_TCP, newSize, packAddr, pCard);
+  bool success = Ip::send(dest, me.ipv4, IP_TCP, newSize, packAddr, pCard);
   
   delete newPacket;
+  return success;
 }
 
 void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
@@ -96,6 +97,15 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // grab the IP header to find the size, so we can skip options and get to the TCP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->verlen & 0x0F) * 4; // len is the number of DWORDs
+  
+  // check if this packet is for us, or if it's a broadcast
+  StationInfo cardInfo = pCard->getStationInfo();
+  if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
+  {
+    // not for us (depending on future requirements, we may need to implement a "catch-all"
+    // flag in the same way as UDP)
+    return;
+  }
   
   // find the size of the TCP header + data
   size_t tcpPayloadSize = BIG_TO_HOST16(ip->len) - ipHeaderSize;
@@ -126,6 +136,8 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
       //return;
     }
   }
+  else
+    return; // must have a checksum
   
   // NOTICE("TCP: Packet has arrived! Dest port is " << Dec << BIG_TO_HOST16(header->dest_port) << Hex << " and flags are " << header->flags << ".");
   

@@ -38,7 +38,34 @@ Rtc Rtc::m_Instance;
 
 bool Rtc::registerHandler(TimerHandler *handler)
 {
-  // TODO
+  // find a spare spot and install
+  size_t nHandler;
+  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
+  {
+    if(m_Handlers[nHandler] == 0)
+    {
+      m_Handlers[nHandler] = handler;
+      return true;
+    }
+  }
+  
+  // no room!
+  return false;
+}
+bool Rtc::unregisterHandler(TimerHandler *handler)
+{
+  // find a spare spot and install
+  size_t nHandler;
+  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
+  {
+    if(m_Handlers[nHandler] == handler)
+    {
+      m_Handlers[nHandler] = 0;
+      return true;
+    }
+  }
+  
+  // not found
   return false;
 }
 size_t Rtc::getYear()
@@ -89,6 +116,9 @@ bool Rtc::initialise()
   // Allocate the I/O port range"CMOS"
   if (m_IoPort.allocate(0x70, 2) == false)
     return false;
+  
+  // initialise handlers
+  memset(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
 
   // Register the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();
@@ -189,6 +219,9 @@ Rtc::Rtc()
 {
 }
 
+#include "../../kernel/core/BootIO.h"
+extern BootIO bootIO;
+
 bool Rtc::irq(irq_id_t number, InterruptState &state)
 {
   static size_t index = 0;
@@ -199,16 +232,16 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
 
   // Calculate the new time/date
   m_Nanosecond += delta;
-  if (UNLIKELY(m_Nanosecond >= 1000000ULL))
+  if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
   {
     ++m_Second;
-    m_Nanosecond -= 1000000ULL;
-
+    m_Nanosecond -= 1000000000ULL;
+    
     if (UNLIKELY(m_Second == 60))
     {
       ++m_Minute;
       m_Second = 0;
-
+      
       if (UNLIKELY(m_Minute == 60))
       {
         ++m_Hour;
@@ -242,7 +275,15 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   // Acknowledging the IRQ (within the CMOS)
   read(0x0C);
 
-  // TODO: Call handlers?
+  // call handlers
+  size_t nHandler;
+  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
+  {
+    // timer delta is in nanoseconds
+    if(m_Handlers[nHandler])
+      m_Handlers[nHandler]->timer(delta, state);
+  }
+
   return true;
 }
 

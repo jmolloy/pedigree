@@ -32,11 +32,6 @@
 #include <panic.h>
 #include "../../kernel/core/BootIO.h"
 
-#include <machine/Network.h>
-#include <network/NetworkStack.h>
-#include <network/Tcp.h>
-#include <network/TcpManager.h>
-
 extern BootIO bootIO;
 
 static bool probeDisk(Disk *pDisk)
@@ -90,19 +85,6 @@ void init()
   {
 //     FATAL("No disks found!");
   }
-  
-  // configure network devices (TODO: read from a configuration somewhere OR dhcp)
-  /*size_t first = 2;
-  for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-  {
-    Network* pCard = NetworkStack::instance().getDevice(i);
-
-    StationInfo host;
-    host.ipv4.setIp(Network::convertToIpv4(192, 168, 0, first++));
-    host.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
-    host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
-    pCard->setStationInfo(host);
-  }*/
 
   HugeStaticString str;
   str += "Loading init program (root:/applications/bash)\n";

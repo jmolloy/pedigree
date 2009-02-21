@@ -172,7 +172,6 @@ public:
   void Disconnect(size_t connectionId);
   
   /** Gets a new Endpoint for a connection */
-  //Endpoint* getEndpoint(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort = 0, Network* pCard = NetworkStack::instance().getDevice(0));
   Endpoint* getEndpoint(uint16_t localPort = 0, Network* pCard = NetworkStack::instance().getDevice(0));
   
   /** Returns an Endpoint */
@@ -182,7 +181,7 @@ public:
   void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard);
   
   /** Sends a TCP packet over the given connection ID */
-  void send(size_t connId, uintptr_t payload, bool push, size_t nBytes);
+  void send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue = true);
   
   /** Grabs the current state of a given connection */
   Tcp::TcpState getState(size_t connId)
@@ -277,7 +276,7 @@ private:
   // TCP is based on connections, so we need to keep track of them
   // before we even think about depositing into Endpoints. These state blocks
   // keep track of important information relating to the connection state.
-  class StateBlock
+  class StateBlock : public TimerHandler
   {
     public:
       StateBlock() :
@@ -287,10 +286,21 @@ private:
         seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
         fin_ack(false), fin_seq(0),
         numEndpointPackets(0), /// \todo Remove, obsolete
-        waitState(0), pCard(0), endpoint(0), connId(0)
-      {};
+        waitState(0), pCard(0), endpoint(0), connId(0),
+        retransmitQueue(), nRemovedFromRetransmit(0),
+        waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
+        m_Nanoseconds(0), m_Seconds(0), m_Timeout(30)
+      {
+        Timer* t = Machine::instance().getTimer();
+        if(t)
+          t->registerHandler(this);
+      };
       ~StateBlock()
-      {};
+      {
+        Timer* t = Machine::instance().getTimer();
+        if(t)
+          t->unregisterHandler(this);
+      };
       
       Tcp::TcpState currentState;
       
@@ -340,8 +350,84 @@ private:
       
       // the id of this specific connection
       size_t connId;
+      
+      // retransmission queue
+      TcpBuffer retransmitQueue;
+      
+      // number of bytes removed from the retransmit queue
+      size_t nRemovedFromRetransmit;
+      
+      // timer for all retransmissions (and state changes such as TIME_WAIT)
+      virtual void timer(uint64_t delta, InterruptState& state)
+      {
+        if(!waitingForTimeout)
+          return;
+        
+        if(UNLIKELY(m_Seconds < m_Timeout))
+        {
+          m_Nanoseconds += delta;
+          if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
+          {
+            ++m_Seconds;
+            m_Nanoseconds -= 1000000000ULL;
+          }
+          
+          if(UNLIKELY(m_Seconds >= m_Timeout))
+          {
+            // timeout is hit!
+            waitingForTimeout = false;
+            didTimeout = true;
+            if(useWaitSem)
+              timeoutWait.release();
+            
+            // check to see if there's data on the retransmission queue to send
+            if(retransmitQueue.getSize())
+            {
+              // still more data unack'd
+              NOTICE("Remote TCP did not ack all the data!");
+              
+              //TcpManager::instance().send(connId, retransmitQueue.getBuffer(), true, retransmitQueue.getSize(), false);
+              
+              // reset the timeout
+              //resetTimer();
+            }
+            else if(currentState == Tcp::TIME_WAIT)
+            {
+              // timer has fired, we need to close the connection
+              NOTICE("TIME_WAIT timeout complete");
+              currentState = Tcp::CLOSED;
+            }
+          }
+        }
+      }
+      
+      // resets the timer (to restart a timeout)
+      void resetTimer(uint32_t timeout = 30)
+      {
+        m_Seconds = m_Nanoseconds = 0;
+        m_Timeout = timeout;
+        didTimeout = false;
+      }
+      
+      // are we waiting on a timeout?
+      bool waitingForTimeout;
+      
+      // did the action time out or not?
+      /// \note This ensures that, if we end up releasing the timeout wait semaphore
+      ///       via a non-timeout source (such as a data ack) we know where the release
+      ///       actually came from.
+      bool didTimeout;
+      
+      // timeout wait semaphore (in case)
+      Semaphore timeoutWait;
+      bool useWaitSem;
     
     private:
+      
+      // number of nanoseconds & seconds for the timer
+      uint64_t m_Nanoseconds;
+      uint64_t m_Seconds;
+      uint32_t m_Timeout;
     
       StateBlock(const StateBlock& s) :
         currentState(Tcp::CLOSED), localPort(0), remoteHost(),
@@ -350,7 +436,10 @@ private:
         seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
         fin_ack(false), fin_seq(0),
         numEndpointPackets(0), /// \todo Remove, obsolete
-        waitState(0), pCard(0), endpoint(0), connId(0)
+        waitState(0), pCard(0), endpoint(0), connId(0),
+        retransmitQueue(), nRemovedFromRetransmit(0),
+        waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
+        m_Nanoseconds(0), m_Seconds(0), m_Timeout(30)
       {
         // same as TcpEndpoint - the copy constructor should not be called
         ERROR("Tcp: StateBlock copy constructor called");

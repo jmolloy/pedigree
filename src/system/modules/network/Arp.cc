@@ -31,7 +31,7 @@ Arp::~Arp()
 }
 
 bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard)
-{
+{  
   // ensure the IP given is valid
   if(ip.getType() == IpAddress::IPv6)
     return false; // ARP isn't for IPv6
@@ -47,7 +47,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
   // not found, do we resolve?
   if(!resolve)
     return false;
-  arpRequest* req = new arpRequest;
+  ArpRequest* req = new ArpRequest;
   req->destIp = ip;
   
   // push this onto the list
@@ -57,10 +57,18 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
   send(req->destIp, pCard);
   
   // wait for the reply
+  Timer* t = Machine::instance().getTimer();
+  if(t)
+    t->registerHandler(req);
   req->waitSem.acquire();
   bool success = req->success;
   
-  // load it up
+  // we've returned, stop the handler being called
+  if(t)
+    t->unregisterHandler(req);
+  
+  // if sucessful, load into the passed MacAddress
+  // callers should check the return value to ensure this is valid
   if(success)
     *ent = req->mac;
   
@@ -70,7 +78,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 }
 
 void Arp::send(IpAddress req, Network* pCard)
-{
+{  
   StationInfo cardInfo = pCard->getStationInfo();
   
   arpHeader* request = new arpHeader;
@@ -165,11 +173,11 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       }
       
       // search all the requests we've made, trigger the first we find
-      for(Vector<arpRequest*>::Iterator it = m_ArpRequests.begin();
+      for(Vector<ArpRequest*>::Iterator it = m_ArpRequests.begin();
           it != m_ArpRequests.end();
           it++)
       {
-        arpRequest* p = *it;
+        ArpRequest* p = *it;
         if(p->destIp.getIp() == header->ipSrc)
         {
           p->mac = header->hwSrc;

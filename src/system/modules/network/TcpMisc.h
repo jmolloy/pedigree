@@ -89,20 +89,33 @@ struct StateBlockHandle
         return (localPort == a.localPort);
     }
     else
+    {
+      if(listen)
+        return false;
       return ((localPort == a.localPort) && (remoteHost.ip.getIp() == a.remoteHost.ip.getIp()) && (remotePort == a.remotePort));
+    }
     return false;
   }
   
   bool operator > (StateBlockHandle a)
   {
-    if(a.listen)
+   /* if(a.listen)
     {
       if(listen)
-      return localPort > a.localPort;
+        return localPort > a.localPort;
     }
     else
+    {
+      if(listen)
+        return localPort > a.localPort;
       return (localPort > a.localPort) || (remotePort > a.remotePort);
-    return false;
+    }
+    */
+    if(listen)
+      return localPort > a.localPort;
+    else
+      return remotePort > a.remotePort;
+    //return false;
   }
 };
 
