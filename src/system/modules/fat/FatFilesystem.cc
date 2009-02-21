@@ -383,16 +383,174 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
 /////////////////////////////////////////////////////////////////////////////
 
+uint32_t FatFilesystem::findFreeCluster()
+{
+  int j;
+  uint32_t clus;
+  for(j = (m_Type == FAT32 ? 2 /** \todo FSInfo structure */ : 2); j < (m_Superblock.BPB_TotSec32 / m_Superblock.BPB_SecPerClus); j++)
+  {
+    clus = getClusterEntry(j);
+    if((clus & 0x0FFFFFFF) == 0)
+    {
+      /// \todo For FAT32, update the FSInfo structure
+      return clus;
+    }
+  }
+  return 0;
+}
+
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  //  test whether the entire Filesystem is read-only.
+  // test whether the entire Filesystem is read-only.
   if(bReadOnly)
   {
     SYSCALL_ERROR(ReadOnlyFilesystem);
     return 0;
   }
+  
+  uint32_t firstClus = pFile->getInode();
+  
+  if(firstClus == 0)
+  {
+    // find a free cluser
+    uint32_t freeClus = findFreeCluster();
+    if(freeClus == 0)
+    {
+      WARNING("Write failed: no free clusters!");
+      return 0;
+    }
+    
+    // set EOF
+    if(m_Type == FAT12)
+      setClusterEntry(freeClus, 0x0FF8);
+    else if(m_Type == FAT16)
+      setClusterEntry(freeClus, 0xFFF8);
+    else if(m_Type == FAT32)
+      setClusterEntry(freeClus, 0x0FFFFFF8); 
+    firstClus = freeClus;
+    
+    /// \todo Write the updated cluster into the directory entry
+    // pFile->setInode(freeClus);
+  }
+  
+  uint32_t clusSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
+  uint32_t finalOffset = location + size;
+  uint32_t offsetSector = location / m_Superblock.BPB_BytsPerSec;
+  uint32_t finalSector = finalOffset / m_Superblock.BPB_BytsPerSec;
+  uint32_t clus = 0;
+  
+  uint32_t realSector = ((firstClus - 2) * m_Superblock.BPB_SecPerClus) + m_DataAreaStart;
+  
+  // does the file currently have enough clusters to allow us to write without stopping?
+  int i = clusSize;
+  int j = pFile->getSize() / i;
+  if(pFile->getSize() % i)
+    j++; // extra cluster (integer division)
+  if(j == 0)
+    j = 1; // always one cluster
+  
+  uint32_t finalCluster = j * i;
+  uint32_t numExtraBytes = 0;
+  
+  // if the final offset is past what we already have in the cluster chain, fill in the blanks
+  if(finalOffset > finalCluster)
+  {
+    WARNING("Adding new clusters to chain");
+    
+    numExtraBytes = finalOffset - finalCluster;
+    
+    j = numExtraBytes / i;
+    if(numExtraBytes % i)
+      j++;
+    
+    uint32_t lastClus = 0;
+    clus = getClusterEntry(firstClus);
+    while(!isEof(clus))
+    {
+      lastClus = clus;
+      clus = getClusterEntry(clus);
+    }
 
-  return 0;
+    uint32_t prev;
+    for(i = 0; i < j; i++)
+    {
+      prev = lastClus;
+      lastClus = findFreeCluster();
+                    /// \todo Fix this
+      
+      setClusterEntry(prev, lastClus);
+    }
+    
+    if(m_Type == FAT12)
+      setClusterEntry(lastClus, 0x0FF8);
+    else if(m_Type == FAT16)
+      setClusterEntry(lastClus, 0xFFF8);
+    else if(m_Type == FAT32)
+      setClusterEntry(lastClus, 0x0FFFFFF8); 
+  }
+
+  uint64_t endOffset = finalOffset;
+  uint64_t finalSize = size;
+
+  // finalSize holds the total amount of data to read, now find the cluster and sector offsets
+  uint32_t clusOffset = location / (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec);
+  uint32_t firstOffset = location % (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec); // the offset within the cluster specified above to start reading from
+
+  // tracking info
+
+  uint64_t bytesWritten = 0;
+  uint64_t currOffset = firstOffset;
+  while(clusOffset)
+  {
+    clus = getClusterEntry(clus);
+    if(clus == 0 || isEof(clus))
+      return 0; // can't do it
+    clusOffset--;
+  }
+
+  // buffers
+  uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
+  uint8_t* srcBuffer = reinterpret_cast<uint8_t*>(buffer);
+
+  /// \todo We need to update the directory which contains this file, to ensure that it's got the new size/cluster information
+  
+  // main read loop
+  while(true)
+  {
+    // read in the entire cluster
+    readCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
+
+    // read...
+    while(currOffset < m_BlockSize)
+    {
+      tmpBuffer[bytesWritten] = srcBuffer[currOffset];
+      currOffset++; bytesWritten++;
+
+      if(bytesWritten == finalSize)
+      {
+        writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
+        delete tmpBuffer;
+        return bytesWritten;
+      }
+    }
+    
+    writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
+
+    // end of cluster, set the offset back to zero
+    currOffset = 0;
+
+    // grab the next cluster, check for EOF
+    clus = getClusterEntry(clus);
+    if(clus == 0)
+      break; // something broke!
+
+    if(isEof(clus))
+      break;
+  }
+
+  delete tmpBuffer;
+
+  return bytesWritten;
 }
 
 void FatFilesystem::fileAttributeChanged(File *pFile)
@@ -575,6 +733,31 @@ bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
   return true;
 }
 
+bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
+{
+  if(bReadOnly)
+  {
+    SYSCALL_ERROR(ReadOnlyFilesystem);
+    return false;
+  }
+  
+  block = getSectorNumber(block);
+  writeSectorBlock(block, m_BlockSize, buffer);
+  return true;
+}
+
+bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
+{
+  if(bReadOnly)
+  {
+    SYSCALL_ERROR(ReadOnlyFilesystem);
+    return false;
+  }
+  
+  m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
+  return true;
+}
+
 uint32_t FatFilesystem::getSectorNumber(uint32_t cluster)
 {
   return ((cluster - 2) * m_Superblock.BPB_SecPerClus) + m_DataAreaStart;
@@ -633,6 +816,88 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
   }
 
   return ret;
+}
+
+uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
+{
+  uint32_t fatOffset = 0;
+  switch(m_Type)
+  {
+    case FAT12:
+      fatOffset = cluster + (cluster / 2);
+      break;
+
+    case FAT16:
+      fatOffset = cluster * 2;
+      break;
+
+    case FAT32:
+      fatOffset = cluster * 4;
+      break;
+  }
+  
+  uint32_t ent = getClusterEntry(cluster);
+  
+  uint32_t origEnt = ent;
+  uint32_t setEnt = value;
+  
+  // calculate and write back into the cache
+  /// \todo Write to the disk as well
+  switch(m_Type)
+  {
+    case FAT12:
+    
+      if(cluster & 0x1)
+        setEnt >>= 4;
+      else
+        setEnt &= 0x0FFF;
+      setEnt &= 0xFFFF;
+      
+      if(cluster & 0x1)
+      {
+        value <<= 4;
+        origEnt &= 0x000F;
+      }
+      else
+      {
+        value &= 0x0FFF;
+        origEnt &= 0xF000;
+      }
+      
+      setEnt = origEnt | value;
+      
+      m_FatCache.write(fatOffset, sizeof(uint16_t), reinterpret_cast<uintptr_t>(&setEnt));
+      
+      break;
+      
+    case FAT16:
+    
+      setEnt = value;
+      
+      m_FatCache.write(fatOffset, sizeof(uint16_t), reinterpret_cast<uintptr_t>(&setEnt));
+    
+      break;
+    
+    case FAT32:
+    
+      value &= 0x0FFFFFFF;
+      setEnt = origEnt & 0xF0000000;
+      setEnt |= value;
+      
+      m_FatCache.write(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&setEnt));
+      
+      break;
+	}
+  
+	uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
+  fatOffset %= m_Superblock.BPB_BytsPerSec;
+  
+  // write back to the FAT
+  uint8_t* tmpBuffer = new uint8_t[m_Superblock.BPB_BytsPerSec * 2]; /// \todo Safety checks
+  m_FatCache.read(fatOffset, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(tmpBuffer));
+  writeSectorBlock(fatSector, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(tmpBuffer));
+
+  return setEnt;
 }
 
 char toUpper(char c)

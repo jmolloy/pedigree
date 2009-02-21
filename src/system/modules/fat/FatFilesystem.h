@@ -143,7 +143,13 @@ protected:
   /** Reads a cluster from the disk. */
   bool readCluster(uint32_t block, uintptr_t buffer);
   
+  /** Writes a cluster to the disk. */
+  bool writeCluster(uint32_t block, uintptr_t buffer);
+  
   /** Reads a block starting from a specific sector from the disk. */
+  bool writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer);
+  
+  /** Writes a block starting from a specific sector to the disk. */
   bool readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer);
   
   /** Obtains the first sector given a cluster number */
@@ -152,11 +158,17 @@ protected:
   /** Grabs a cluster entry */
   uint32_t getClusterEntry(uint32_t cluster);
   
+  /** Sets a cluster entry */
+  uint32_t setClusterEntry(uint32_t cluster, uint32_t value);
+  
   /** Converts a string to 8.3 format */
   String convertFilenameTo(String filename);
   
   /** Converts a string from 8.3 format */
   String convertFilenameFrom(String filename);
+  
+  /** Finds a free cluster */
+  uint32_t findFreeCluster();
   
   /** Is a given cluster *VALUE* EOF? */
   bool isEof(uint32_t cluster);
