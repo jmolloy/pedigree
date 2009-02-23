@@ -55,7 +55,7 @@ void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t v
         it != pList->end();
         it++)
   {
-    Symbol *pSym;
+    Symbol *pSym = *it;
     if (pSym->getBinding() == binding && pSym->getParent() == pParent)
       // This item is already in the list. Don't add it again.
       return;
@@ -71,10 +71,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
   {
     return 0;
   }
-  if (policy == NotOriginatingElf)
-  {
-    NOTICE("not orig elf: " << name << ", pElf: " << (uintptr_t)pElf << ", origElf: " << (uintptr_t)m_pOriginatingElf);
-  }
+
   // If we're on a local-first policy, check for local symbols of pElf.
   if (policy == LocalFirst)
   {
@@ -117,7 +114,6 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
     if (pSym->getBinding() == Global &&
         (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
     {
-      NOTICE("here: " << pSym->getValue());
           return pSym->getValue();
     }
   }
@@ -134,7 +130,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
       return pSym->getValue();
     }
   }
-NOTICE("nowt");
+
   // Nothing found.
   return 0;
 }

@@ -125,26 +125,30 @@ void init()
 
   static Elf initElf;
   uintptr_t loadBase;
+
   initElf.create(buffer, init.getSize());
   initElf.allocate(buffer, init.getSize(), loadBase, 0, pProcess);
 
   DynamicLinker::instance().setInitProcess(pProcess);
+  NOTICE("regElf");
   DynamicLinker::instance().registerElf(&initElf);
-
+NOTICE("needed");
   uintptr_t iter = 0;
   List<char*> neededLibraries = initElf.neededLibraries();
   for (List<char*>::Iterator it = neededLibraries.begin();
        it != neededLibraries.end();
        it++)
   {
+    NOTICE("n1");
     if (!DynamicLinker::instance().load(*it, pProcess))
     {
       ERROR("Couldn't open needed file '" << *it << "'");
       FATAL("Init program failed to load!");
       return;
     }
+    NOTICE("n2");
   }
-
+NOTICE("bleh");
   initElf.load(buffer, init.getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);

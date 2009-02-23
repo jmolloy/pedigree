@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-my $gcc_version = "4.3.0";
-my $binutils_version = "2.18";
+my $gcc_version = "4.3.2";
+my $binutils_version = "2.19";
 my $nasm_version = "2.02";
 
 
@@ -29,21 +29,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'extract' => "tar -xzf nasm-$nasm_version.tar.gz",
                   'arch' => 'i686-elf amd64-elf'} );
 
-my @patch = ( {'cwd' => "gcc-$gcc_version",
-               'name' => 'Dwarf extra info',
-               'flags' => '-p1',
-               'input' => 'gcc_dwarf.patch',
-               'arch' => 'ppc-elf amd64-elf mips64el-elf i686-elf'},
-              {'cwd' => "gcc-$gcc_version",
-               'name' => 'Amd64',
-               'flags' => '-p0',
-               'input' => 'gcc_amd64.patch',
-               'arch' => 'amd64-elf'},
-              {'cwd' => "binutils-$binutils_version",
-               'name' => 'Makeinfo',
-               'flags' => '',
-               'input' => 'binutils-2.18-makeinfo.patch',
-               'arch' => 'all'} );
+my @patch = ( );
 
 my @compile = ( {'dir' => "nasm-$nasm_version",
                  'inplace' => 1, # Nasm should be build inside the source tree.
