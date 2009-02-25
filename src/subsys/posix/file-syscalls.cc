@@ -22,6 +22,7 @@
 #include <vfs/File.h>
 #include <vfs/VFS.h>
 #include <console/Console.h>
+#include <network/NetManager.h>
 #include <utilities/utility.h>
 
 #include "file-syscalls.h"
@@ -131,6 +132,12 @@ int posix_close(int fd)
   {
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
+  }
+  
+  if(NetManager::instance().isEndpoint(f->file))
+  {
+    NOTICE("Is an endpoint, removing now...");
+    NetManager::instance().removeEndpoint(f->file);
   }
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
@@ -535,6 +542,19 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
           num_ready ++;
         else
           FD_CLR(i, readfds);
+      }
+      else if (NetManager::instance().isEndpoint(pFd->file))
+      {
+        if(timeout)
+        {
+          /// \todo dataReady needs to have a customisable timeout of some sort...
+        }
+        else
+        {
+          // block while waiting for the data to come
+          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+          p->dataReady(true);
+        }
       }
       else
         // Regular file - always available to read.

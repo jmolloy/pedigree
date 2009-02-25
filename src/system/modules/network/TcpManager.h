@@ -81,6 +81,11 @@ class TcpEndpoint : public Endpoint
       m_RemoteHost = host;
     }
     
+    virtual inline uint32_t getConnId()
+    {
+      return m_ConnId;
+    }
+    
     /** TcpManager functionality - called to deposit data into our local buffer */
     virtual void depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
     
@@ -163,7 +168,7 @@ public:
   }
   
   /** Connects to a remote host (blocks until connected) */
-  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard = NetworkStack::instance().getDevice(0)); /// \todo Actually, local ports should be allocated
+  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard = NetworkStack::instance().getDevice(0));
   
   /** Starts listening for connections */
   size_t Listen(Endpoint* e, uint16_t port, Network* pCard = NetworkStack::instance().getDevice(0));

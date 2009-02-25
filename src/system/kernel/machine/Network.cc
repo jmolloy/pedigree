@@ -27,23 +27,23 @@ uint32_t Network::convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 
 uint16_t Network::calculateChecksum(uintptr_t buffer, size_t nBytes)
 {
-	uint32_t sum = 0;
-	uint16_t* data = reinterpret_cast<uint16_t*>(buffer);
+  uint32_t sum = 0;
+  uint16_t* data = reinterpret_cast<uint16_t*>(buffer);
 
-	while(nBytes > 1)
-	{
-		sum += *data++;
-		nBytes -= sizeof( uint16_t );
-	}
+  while(nBytes > 1)
+  {
+    sum += *data++;
+    nBytes -= sizeof( uint16_t );
+  }
 
   // odd bytes
-	if(nBytes > 0)
-		sum += (*data++) & 0xFF;
+  if(nBytes > 0)
+    sum += (*data++) & 0xFF;
 
-	// fold to 16 bits
-	while( sum >> 16 )
-		sum = ( sum & 0xFFFF ) + ( sum >> 16 );
+  // fold to 16 bits
+  while( sum >> 16 )
+    sum = ( sum & 0xFFFF ) + ( sum >> 16 );
 
   uint16_t ret = static_cast<uint16_t>(~sum);
-	return ret;
+  return ret;
 }

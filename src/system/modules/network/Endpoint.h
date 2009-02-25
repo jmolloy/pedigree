@@ -62,7 +62,7 @@ class Endpoint
     {
       m_RemotePort = port;
     }
-    void setRemoteInfo(IpAddress remote)
+    void setRemoteIp(IpAddress remote)
     {
       m_RemoteIp = remote;
     }
@@ -126,6 +126,11 @@ class Endpoint
     {
       return 0;
     };
+    
+    virtual inline uint32_t getConnId()
+    {
+      return 0;
+    }
     
     virtual void setRemoteHost(RemoteEndpoint host)
     {

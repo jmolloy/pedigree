@@ -14,34 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SYSCALL_NUMBERS_H
-#define SYSCALL_NUMBERS_H
+#ifndef NET_SYSCALLS_H
+#define NET_SYSCALLS_H
 
-#define POSIX_OPEN        1
-#define POSIX_WRITE       2
-#define POSIX_READ        3
-#define POSIX_CLOSE       4
-#define POSIX_SBRK        5
-#define POSIX_FORK        6
-#define POSIX_EXECVE      7
-#define POSIX_WAITPID     8
-#define POSIX_EXIT        9
-#define POSIX_OPENDIR    10
-#define POSIX_READDIR    11
-#define POSIX_REWINDDIR  12
-#define POSIX_CLOSEDIR   13
-#define POSIX_TCGETATTR  14
-#define POSIX_TCSETATTR  15
-#define POSIX_IOCTL      16
-#define POSIX_STAT       17
-#define POSIX_FSTAT      18
-#define POSIX_GETPID     19
-#define POSIX_CHDIR      20
-#define POSIX_SELECT     21
+#include <vfs/File.h>
 
-#define POSIX_SOCKET     22
-#define POSIX_CONNECT    23
-#define POSIX_SEND       24
-#define POSIX_RECV       25
+int posix_socket(int domain, int type, int protocol);
+int posix_connect(int sock, struct sockaddr* address, size_t addrlen);
+ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags);
+ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags);
 
 #endif

@@ -211,7 +211,7 @@ void Ne2k::recv()
     }
     
     // remove the status and length bytes
-    length -= 4;
+    length -= 3;
     
     // packet buffer
     uint8_t* tmp = new uint8_t[length];

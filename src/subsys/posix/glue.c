@@ -82,6 +82,12 @@ struct  stat
   int   st_ctime;
 };
 
+struct sockaddr
+{
+  unsigned int sa_family;
+  char sa_data[14];
+};
+
 int ftruncate(int a, int b)
 {
   errno = ENOSYS;
@@ -505,3 +511,106 @@ int sigprocmask(int how, int set, int oset)
   return -1;
 }
 
+int socket(int domain, int type, int protocol)
+{
+  return syscall3(POSIX_SOCKET, domain, type, protocol);
+}
+
+int connect(int sock, const struct sockaddr* address, unsigned long addrlen)
+{
+  return syscall3(POSIX_CONNECT, sock, (int) address, (int) addrlen);
+}
+
+int send(int sock, const void * buff, unsigned long bufflen, int flags)
+{
+  return syscall4(POSIX_SEND, sock, (int) buff, (int) bufflen, flags);
+}
+
+int recv(int sock, void * buff, unsigned long bufflen, int flags)
+{
+  return syscall4(POSIX_RECV, sock, (int) buff, (int) bufflen, flags);
+}
+
+int accept(int sock, struct sockaddr* remote_addr, unsigned long* addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int bind(int sock, const struct sockaddr* local_addr, unsigned long addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int getpeername(int sock, struct sockaddr* addr, unsigned long* addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int getsockname(int sock, struct sockaddr* addr, unsigned long* addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int getsockopt(int sock, int level, int optname, void* optvalue, unsigned long* optlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int listen(int sock, int backlog)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct sockaddr* remote_addr, unsigned long* addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+long recvmsg(int sock, struct msghdr* msg, int flags)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+long sendmsg(int sock, const struct msghdr* msg, int flags)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const struct sockaddr* remote_addr, unsigned long* addrlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int setsockopt(int sock, int level, int optname, const void* optvalue, unsigned long optlen)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int shutdown(int sock, int how)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int sockatmark(int sock)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int socketpair(int domain, int type, int protocol, int sock_vec[2])
+{
+  errno = ENOSYS;
+  return -1;
+}

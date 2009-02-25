@@ -416,7 +416,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     uint32_t freeClus = findFreeCluster();
     if(freeClus == 0)
     {
-      WARNING("Write failed: no free clusters!");
+      //SYSCALL_ERROR(FilesystemFull);
       return 0;
     }
     
@@ -734,13 +734,7 @@ bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 }
 
 bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
-{
-  if(bReadOnly)
-  {
-    SYSCALL_ERROR(ReadOnlyFilesystem);
-    return false;
-  }
-  
+{  
   block = getSectorNumber(block);
   writeSectorBlock(block, m_BlockSize, buffer);
   return true;
@@ -748,12 +742,6 @@ bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-  if(bReadOnly)
-  {
-    SYSCALL_ERROR(ReadOnlyFilesystem);
-    return false;
-  }
-  
   m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
   return true;
 }
@@ -842,7 +830,6 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
   uint32_t setEnt = value;
   
   // calculate and write back into the cache
-  /// \todo Write to the disk as well
   switch(m_Type)
   {
     case FAT12:
@@ -887,7 +874,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
       m_FatCache.write(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&setEnt));
       
       break;
-	}
+  }
   
 	uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt + (fatOffset / m_Superblock.BPB_BytsPerSec);
   fatOffset %= m_Superblock.BPB_BytsPerSec;

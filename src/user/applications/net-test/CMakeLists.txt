@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,10 +14,13 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-include_directories(../../include ../ ./)
-
-add_executable(network.o NetworkStack.cc Endpoint.cc Ethernet.cc Arp.cc Ip.cc Icmp.cc Udp.cc UdpManager.cc Tcp.cc TcpManager.cc TcpMisc.cc NetManager.cc)
-target_link_libraries(network.o gcc)
-set_target_properties(network.o PROPERTIES
-                             LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
-
+set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
+set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
+add_executable(net-test net-test.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
+include_directories("${PEDIGREE_BINARY_DIR}/include-posix")
+set_target_properties(net-test PROPERTIES
+                            LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")
+target_link_libraries(net-test c)
+target_link_libraries(net-test gcc)
+target_link_libraries(net-test m)
+add_dependencies(net-test posix-usermode crt0.o)

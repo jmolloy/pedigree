@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(APPLICATIONS apptest shell bash nano syscall-test)
+set(APPLICATIONS apptest shell bash nano syscall-test net-test)
 set(LIBRARIES ncurses)
 
 set(HDD_FILES)

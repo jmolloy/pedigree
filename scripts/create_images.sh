@@ -147,14 +147,13 @@ elif which mcopy >/dev/null 2>&1; then
 
   touch ./.pedigree-root
 
-  mmd -Do applications libraries modules
+  mmd -Do applications libraries modules etc
 
   # make this the root disk
   mcopy -Do ./.pedigree-root C:/
 
   rm ./.pedigree-root
 
-  mmd -Do etc
   mcopy -Do $SRCDIR/../scripts/termcap C:/etc
     
   for f in $HDFILES; do
@@ -163,7 +162,7 @@ elif which mcopy >/dev/null 2>&1; then
       mcopy $SRCDIR/src/user/$f/$BINARY C:/$f
     fi
     if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries/lib$BINARY.so
+      mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
     fi
   done
 
