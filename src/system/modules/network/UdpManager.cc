@@ -81,13 +81,14 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
   m_DataQueueSize.release();
 }
 
-bool UdpEndpoint::dataReady(bool block)
+bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 {
   bool timedOut = false;
   if(block)
   {
     Timer* t = Machine::instance().getTimer();
     NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
+    timeout->setTimeout(tmout);
     timeout->setSemaphore(&m_DataQueueSize);
     timeout->setTimedOut(&timedOut);
     if(t)

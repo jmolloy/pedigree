@@ -136,7 +136,6 @@ int posix_close(int fd)
   
   if(NetManager::instance().isEndpoint(f->file))
   {
-    NOTICE("Is an endpoint, removing now...");
     NetManager::instance().removeEndpoint(f->file);
   }
 
@@ -545,15 +544,26 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
       }
       else if (NetManager::instance().isEndpoint(pFd->file))
       {
+          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
         if(timeout)
         {
-          /// \todo dataReady needs to have a customisable timeout of some sort...
+          if(timeout->tv_sec == 0)
+          {
+            bool ready = p->dataReady(false);
+            if(ready)
+              num_ready++;
+          }
+          else
+          {
+            p->dataReady(true, timeout->tv_sec);
+            num_ready++;
+          }
         }
         else
         {
-          // block while waiting for the data to come
-          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-          p->dataReady(true);
+          // block while waiting for the data to come (and wait forever)
+          p->dataReady(true, 0xffffffff);
+          num_ready++;
         }
       }
       else

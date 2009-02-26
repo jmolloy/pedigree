@@ -16,7 +16,7 @@
 
 include_directories(../../include ../ ./)
 
-add_executable(network.o NetworkStack.cc Endpoint.cc Ethernet.cc Arp.cc Ip.cc Icmp.cc Udp.cc UdpManager.cc Tcp.cc TcpManager.cc TcpMisc.cc NetManager.cc)
+add_executable(network.o NetworkStack.cc Endpoint.cc Ethernet.cc Arp.cc Ip.cc Icmp.cc Udp.cc UdpManager.cc Tcp.cc TcpManager.cc TcpEndpoint.cc TcpManagerReceive.cc TcpMisc.cc NetManager.cc)
 target_link_libraries(network.o gcc)
 set_target_properties(network.o PROPERTIES
                              LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

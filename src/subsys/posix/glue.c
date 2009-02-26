@@ -31,6 +31,7 @@ extern void free(void*);
 extern void strcpy(char*,char*);
 
 extern void printf(char*,...);
+extern void sprintf(char*, char*,...);
 
 #define MAXNAMLEN 255
 
@@ -86,6 +87,11 @@ struct sockaddr
 {
   unsigned int sa_family;
   char sa_data[14];
+};
+
+struct in_addr
+{
+  unsigned int s_addr;
 };
 
 int ftruncate(int a, int b)
@@ -610,4 +616,11 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
 {
   errno = ENOSYS;
   return -1;
+}
+
+char* inet_ntoa(struct in_addr addr)
+{
+  static char buff[16];
+  sprintf(buff, "%u.%u.%u.%u", addr.s_addr & 0xff, (addr.s_addr & 0xff00) >> 8, (addr.s_addr & 0xff0000) >> 16, (addr.s_addr & 0xff000000) >> 24);
+  return buff;
 }

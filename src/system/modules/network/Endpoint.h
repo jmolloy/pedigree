@@ -79,7 +79,7 @@ class Endpoint
     };
     
     /** Is data ready to recv yet? */
-    virtual bool dataReady(bool block = false)
+    virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
       return false;
     };

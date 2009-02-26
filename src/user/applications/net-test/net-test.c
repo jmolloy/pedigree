@@ -14,47 +14,78 @@
 
 int main(int argc, char **argv) {
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if(sock == -1)
+  {
+    printf("Couldn't get the socket.");
+    return 0;
+  }
   
   struct sockaddr_in local;
   local.sin_family = AF_INET;
   local.sin_port = htons(80);
   local.sin_addr.s_addr = INADDR_ANY;
   
-  bind(sock, &local, sizeof(local));
+  int res = bind(sock, (struct sockaddr*) &local, sizeof(local));
+  if(res == -1)
+  {
+    printf("Couldn't bind to an address!\n");
+    close(sock);
+    return 0;
+  }
   
   printf("Listening...\n");
   
-  listen(sock, 0);
+  res = listen(sock, 0);
+  if(res == -1)
+  {
+    printf("Couldn't listen\n");
+    close(sock);
+    return 0;
+  }
   
   char* tmp = (char*) malloc(1024);
   
-  size_t sz, n;
+  size_t sz;
+  ssize_t n;
   
   struct sockaddr_in remote;
   int client;
-  while(client = accept(sock, &remote, &sz))
+  while((client = accept(sock, (struct sockaddr*) &remote, &sz)) >= 0)
   {
-    printf("Accepted connection from %x on port %d\n", remote.sin_addr.s_addr, ntohs(remote.sin_port));
+    printf("Accepted connection from %s on port %d\n", inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
     
     // get the request
     fd_set fd;
     FD_ZERO(&fd);
     FD_SET(client, &fd);
 
-    select(sizeof(fd) * 8, &fd, 0, 0, 0);
+    struct timeval tv;
+    tv.tv_sec = 30;
+    if(select(sizeof(fd) * 8, &fd, 0, 0, &tv) == 0)
+    {
+      printf("Timeout while waiting for data to arrive");
+      close(client);
+      continue;
+    }
 
-    while(n = recv(client, tmp, 1024, 0))
+    while((n = recv(client, tmp, 1024, 0)) > 0)
     {
       tmp[n] = 0;
       printf("Read %u bytes: %s", n, tmp);
     }
+    if(n == -1)
+      printf("\nReceive failed\n");
     printf("\n");
     
     // send the reply
     strcpy(tmp, "HTTP/1.1 200 OK\r\nConnection: Close\r\n\r\nHello from Pedigree, via Berkeley Sockets!");
     sz = strlen(tmp);
 
-    send(client, tmp, sz, 0);
+    res = send(client, tmp, sz, 0);
+    if(res == -1)
+    {
+      printf("Sending data failed.\n");
+    }
     
     close(client);
   }
@@ -62,7 +93,6 @@ int main(int argc, char **argv) {
   free(tmp);
   
   close(sock);
-  
 
   /*struct sockaddr_in remote;
   remote.sin_family = AF_INET;

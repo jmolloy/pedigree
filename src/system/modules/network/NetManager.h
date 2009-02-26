@@ -32,7 +32,7 @@
 class NetManager : public Filesystem
 {
 public:
-  NetManager()
+  NetManager() : m_Endpoints()
   {
     m_Endpoints.clear();
   };

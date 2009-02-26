@@ -50,7 +50,7 @@ class UdpEndpoint : public Endpoint
     /** Application interface */
     virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
     virtual size_t recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost);
-    virtual bool dataReady(bool block = false);
+    virtual bool dataReady(bool block = false, uint32_t tmout = 30);
     virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
     virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; };
     

@@ -105,6 +105,8 @@ int fileFromSocket(int sock, File* file)
     return -1;
   
   *file = f->file;
+  
+  return 0;
 }
 
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
@@ -123,7 +125,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
   bool success = false;
   if(file.getSize() == NETMAN_PROTO_TCP)
   {
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
     remoteHost.ip.setIp(sin->sin_addr.s_addr);
     
@@ -135,7 +137,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     // to send to multiple addresses and receive from multiple clients
     // sendto and recvfrom must be used
   
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
     remoteHost.ip.setIp(sin->sin_addr.s_addr);
     
@@ -200,7 +202,7 @@ ssize_t posix_sendto(int sock, const void* buff, size_t bufflen, int flags, cons
   else if(file.getSize() == NETMAN_PROTO_UDP)
   {
     Endpoint::RemoteEndpoint remoteHost;
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
     remoteHost.ip.setIp(sin->sin_addr.s_addr);
     p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, NetworkStack::instance().getDevice(0));
@@ -222,6 +224,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
   int ret = -1;
   if(file.getSize() == NETMAN_PROTO_TCP)
   {
+    /// \todo O_NONBLOCK should control the blocking nature of this call
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false);
   }
   else if(file.getSize() == NETMAN_PROTO_UDP)
@@ -252,7 +255,7 @@ ssize_t posix_recvfrom(int sock, void* buff, size_t bufflen, int flags, struct s
   {
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false);
     
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
     sin->sin_port = HOST_TO_BIG16(p->getRemotePort());
     sin->sin_addr.s_addr = p->getRemoteIp().getIp();
     *addrlen = sizeof(struct sockaddr_in);
@@ -262,7 +265,7 @@ ssize_t posix_recvfrom(int sock, void* buff, size_t bufflen, int flags, struct s
     Endpoint::RemoteEndpoint remoteHost;
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, &remoteHost);
     
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
     sin->sin_port = HOST_TO_BIG16(remoteHost.remotePort);
     sin->sin_addr.s_addr = remoteHost.ip.getIp();
     *addrlen = sizeof(struct sockaddr_in);
@@ -280,18 +283,22 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
     return -1;
   
   Endpoint* p = NetManager::instance().getEndpoint(file);
-  
-  int ret = -1;
-  if(file.getSize() == NETMAN_PROTO_TCP || file.getSize() == NETMAN_PROTO_UDP)
+  if(p)
   {
-    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    int ret = -1;
+    if(file.getSize() == NETMAN_PROTO_TCP || file.getSize() == NETMAN_PROTO_UDP)
+    {
+      const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
+      
+      p->setLocalPort(BIG_TO_HOST16(sin->sin_port));
+      
+      ret = 0;
+    }
     
-    p->setLocalPort(BIG_TO_HOST16(sin->sin_port));
-    
-    ret = 0;
+    return ret;
   }
-  
-  return ret;
+  else
+    return -1;
 }
 
 int posix_listen(int sock, int backlog)
@@ -332,7 +339,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
   {
     if(f.getSize() == NETMAN_PROTO_TCP || f.getSize() == NETMAN_PROTO_UDP)
     {
-      struct sockaddr_in* sin = (struct sockaddr_in*) address;
+      struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
       sin->sin_port = HOST_TO_BIG16(e->getRemotePort());
       sin->sin_addr.s_addr = e->getRemoteIp().getIp();
       

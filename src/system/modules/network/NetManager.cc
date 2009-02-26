@@ -23,7 +23,7 @@ NetManager NetManager::m_Instance;
 
 File NetManager::newEndpoint(int protocol)
 {
-  Endpoint* p;
+  Endpoint* p = 0;
   if(protocol == NETMAN_PROTO_UDP)
   {
     IpAddress a;
@@ -31,7 +31,6 @@ File NetManager::newEndpoint(int protocol)
   }
   else if(protocol == NETMAN_PROTO_TCP)
   {
-    /// \todo Potential for multiple cards, that'll need to be handled
     p = TcpManager::instance().getEndpoint();
   }
   else
@@ -39,20 +38,42 @@ File NetManager::newEndpoint(int protocol)
     ERROR("NetManager::getEndpoint called with unknown protocol");
   }
   
-  size_t n = m_Endpoints.count();
-  m_Endpoints.pushBack(p);
-  return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, protocol);
+  if(p)
+  {
+    size_t n = m_Endpoints.count();
+    m_Endpoints.pushBack(p);
+    return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, protocol);
+  }
+  else
+    return File();
 }
 
 void NetManager::removeEndpoint(File f)
 {
-  size_t removeIndex = f.getInode() & 0x00FFFFFF;
-  // find it and remove it
+  if(!isEndpoint(f))
+    return;
   
   Endpoint* e = getEndpoint(f);
-  e->close(); // UDP endpoints don't implement close() so the default Endpoint::close() would be called, which is a stub
+  if(!e)
+    return;
+  e->close();
   
-  // clean up the actual endpoint itself too...
+  size_t removeIndex = f.getInode() & 0x00FFFFFF, i = 0;
+  bool removed = false;
+  for(Vector<Endpoint*>::Iterator it = m_Endpoints.begin(); it != m_Endpoints.end(); it++, i++)
+  {
+    if(i == removeIndex)
+    {
+      m_Endpoints.erase(it);
+      removed = true;
+      break;
+    }
+  }
+  
+  if(f.getSize() == NETMAN_PROTO_UDP)
+    UdpManager::instance().returnEndpoint(e);
+  else if(f.getSize() == NETMAN_PROTO_TCP)
+    TcpManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File f)
@@ -63,16 +84,30 @@ bool NetManager::isEndpoint(File f)
 
 Endpoint* NetManager::getEndpoint(File f)
 {
-  return m_Endpoints[f.getInode() & 0x00FFFFFF];
+  if(!isEndpoint(f))
+    return 0;
+  size_t indx = f.getInode() & 0x00FFFFFF;
+  if(indx < m_Endpoints.count())
+    return m_Endpoints[indx];
+  else
+    return 0;
 }
 
 File NetManager::accept(File f)
 {
+  if(!isEndpoint(f))
+    return File();
+  
   Endpoint* server = getEndpoint(f);
-  
-  Endpoint* client = server->accept();
-  
-  size_t n = m_Endpoints.count();
-  m_Endpoints.pushBack(client);
-  return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f.getSize());
+  if(server)
+  {
+    Endpoint* client = server->accept();
+    if(client)
+    {
+      size_t n = m_Endpoints.count();
+      m_Endpoints.pushBack(client);
+      return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f.getSize());
+    }
+  }
+  return File();
 }
