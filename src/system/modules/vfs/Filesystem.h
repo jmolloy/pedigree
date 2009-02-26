@@ -101,10 +101,10 @@ protected:
   /** remove() calls this after it has parsed the string path. */
   virtual bool remove(File parent, File file) =0;
   /** is this entire filesystem read-only?  */
-  bool bReadOnly;
+  bool m_bReadOnly;
 private:
   /** Accessed by VFS */
-  size_t nAliases;
+  size_t m_nAliases;
 };
 
 #endif

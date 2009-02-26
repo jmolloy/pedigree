@@ -402,7 +402,7 @@ uint32_t FatFilesystem::findFreeCluster()
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
   // test whether the entire Filesystem is read-only.
-  if(bReadOnly)
+  if(m_bReadOnly)
   {
     SYSCALL_ERROR(ReadOnlyFilesystem);
     return 0;

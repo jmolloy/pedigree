@@ -42,6 +42,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   e.append(cr2, 16, 8, '0');
   e.append(", error code 0x");
   e.append(state.m_Errorcode, 16, 8, '0');
+  ERROR(static_cast<const char*>(e));
 
   #ifdef DEBUGGER
     Debugger::instance().start(state, e);

@@ -59,7 +59,7 @@ bool VFS::mount(Disk *pDisk, String &alias)
 
 void VFS::addAlias(Filesystem *pFs, String alias)
 {
-  pFs->nAliases++;
+  pFs->m_nAliases++;
   Alias *pA = new Alias;
   pA->alias = alias;
   pA->fs = pFs;
@@ -75,7 +75,7 @@ void VFS::addAlias(String oldAlias, String newAlias)
     if (!strcmp(oldAlias, (*it)->alias))
     {
       Filesystem *pFs = (*it)->fs;
-      pFs->nAliases++;
+      pFs->m_nAliases++;
       Alias *pA = new Alias;
       pA->alias = newAlias;
       pA->fs = pFs;
@@ -136,8 +136,8 @@ void VFS::removeAlias(String alias)
       m_Aliases.erase(it);
       delete pA;
 
-      pFs->nAliases--;
-      if (pFs->nAliases == 0)
+      pFs->m_nAliases--;
+      if (pFs->m_nAliases == 0)
       {
         delete pFs;
       }
