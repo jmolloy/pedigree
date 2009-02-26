@@ -57,6 +57,8 @@ public:
   Endpoint* getEndpoint(File f);
   
   void removeEndpoint(File f);
+  
+  File accept(File f);
 
   //
   // Filesystem interface.

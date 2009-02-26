@@ -305,6 +305,10 @@ void entry()
           
           byteOffset += opt->len + 2;
         }
+        
+        // if YOUR-IP is set and no DHCP Message Type was given, assume this is an offer
+        if(myIpWillBe && (currentState != OFFER_RECVD))
+          currentState = OFFER_RECVD;
       }
             
       if(currentState != OFFER_RECVD)
@@ -410,6 +414,10 @@ void entry()
           
           byteOffset += opt->len + 2;
         }
+        
+        // if YOUR-IP is set and no DHCP Message Type was given, assume this is an ack
+        if(myIpWillBe && (currentState != ACK_RECVD))
+          currentState = ACK_RECVD;
       }
       
       if(currentState != ACK_RECVD)

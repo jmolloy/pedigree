@@ -32,7 +32,7 @@
 #include "include/sys/socket.h"
 #include "include/netinet/in.h"
 
-typedef size_t socklen_t;
+typedef size_t size_t;
 typedef uint32_t sa_family_t;
 typedef uint16_t in_port_t;
 typedef uint32_t in_addr_t;
@@ -90,10 +90,8 @@ int posix_socket(int domain, int type, int protocol)
   return static_cast<int> (fd);
 }
 
-int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
+int fileFromSocket(int sock, File* file)
 {
-  NOTICE("posix_connect");
-  
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
 
@@ -106,13 +104,24 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
   if(!NetManager::instance().isEndpoint(f->file))
     return -1;
   
-  Endpoint* p = NetManager::instance().getEndpoint(f->file);
+  *file = f->file;
+}
+
+int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
+{
+  NOTICE("posix_connect");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+  
+  Endpoint* p = NetManager::instance().getEndpoint(file);
 
   Endpoint::RemoteEndpoint remoteHost;
   
   /// \todo Other protocols
   bool success = false;
-  if(f->file.getSize() == NETMAN_PROTO_TCP)
+  if(file.getSize() == NETMAN_PROTO_TCP)
   {
     struct sockaddr_in* sin = (struct sockaddr_in*) address;
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
@@ -120,7 +129,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     
     success = p->connect(remoteHost);
   }
-  else if(f->file.getSize() == NETMAN_PROTO_UDP)
+  else if(file.getSize() == NETMAN_PROTO_UDP)
   {
     // connect on a UDP socket sets a remote address and port for send/recv
     // to send to multiple addresses and receive from multiple clients
@@ -142,26 +151,18 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_send");
   
-  /// \todo Race here - fix.
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
-
-  if (!f)
-  {
-    SYSCALL_ERROR(BadFileDescriptor);
-    return -1;
-  }
-  
-  if(!NetManager::instance().isEndpoint(f->file))
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
     return -1;
   
-  Endpoint* p = NetManager::instance().getEndpoint(f->file);
-    
+  Endpoint* p = NetManager::instance().getEndpoint(file);
+  
   bool success = false;
-  if(f->file.getSize() == NETMAN_PROTO_TCP)
+  if(file.getSize() == NETMAN_PROTO_TCP)
   {
     success = p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
   }
-  else if(f->file.getSize() == NETMAN_PROTO_UDP)
+  else if(file.getSize() == NETMAN_PROTO_UDP)
   {
     // special handling - need to check for a remote host
     IpAddress remoteIp = p->getRemoteIp();
@@ -177,33 +178,58 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
   return success ? bufflen : -1;
 }
 
+ssize_t posix_sendto(int sock, const void* buff, size_t bufflen, int flags, const struct sockaddr* address, size_t addrlen)
+{
+  NOTICE("posix_sendto");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+  
+  Endpoint* p = NetManager::instance().getEndpoint(file);
+    
+  bool success = false;
+  if(file.getSize() == NETMAN_PROTO_TCP)
+  {
+    /// \todo I need to write a sendto for TcpManager and TcpEndpoint
+    ///       which probably means UDP gets a free sendto as well.
+    ///       Until then, this is NOT valid according to the standards.
+    ERROR("TCP sendto called, but not implemented properly!");
+    success = p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
+  }
+  else if(file.getSize() == NETMAN_PROTO_UDP)
+  {
+    Endpoint::RemoteEndpoint remoteHost;
+    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
+    remoteHost.ip.setIp(sin->sin_addr.s_addr);
+    p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, NetworkStack::instance().getDevice(0));
+  }
+  
+  return success ? bufflen : -1;
+}
+
 ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_recv");
   
-  /// \todo Race here - fix.
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
-
-  if (!f)
-  {
-    SYSCALL_ERROR(BadFileDescriptor);
-    return -1;
-  }
-  
-  if(!NetManager::instance().isEndpoint(f->file))
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
     return -1;
   
-  Endpoint* p = NetManager::instance().getEndpoint(f->file);
+  Endpoint* p = NetManager::instance().getEndpoint(file);
     
   int ret = -1;
-  if(f->file.getSize() == NETMAN_PROTO_TCP)
+  if(file.getSize() == NETMAN_PROTO_TCP)
   {
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false);
   }
-  else if(f->file.getSize() == NETMAN_PROTO_UDP)
+  else if(file.getSize() == NETMAN_PROTO_UDP)
   {
     /// \todo Actually, we only should read this data if it's from the IP specified
     ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
+    ///       However, to do that we need to tell recv not to remove from the queue
+    ///       and instead peek at the message (in other words, we need flags)
     Endpoint::RemoteEndpoint remoteHost;
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, &remoteHost);
   }
@@ -211,3 +237,113 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
   return ret;
 }
 
+ssize_t posix_recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockaddr* address, size_t* addrlen)
+{
+  NOTICE("posix_recvfrom");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+  
+  Endpoint* p = NetManager::instance().getEndpoint(file);
+    
+  int ret = -1;
+  if(file.getSize() == NETMAN_PROTO_TCP)
+  {
+    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false);
+    
+    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    sin->sin_port = HOST_TO_BIG16(p->getRemotePort());
+    sin->sin_addr.s_addr = p->getRemoteIp().getIp();
+    *addrlen = sizeof(struct sockaddr_in);
+  }
+  else if(file.getSize() == NETMAN_PROTO_UDP)
+  {
+    Endpoint::RemoteEndpoint remoteHost;
+    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, &remoteHost);
+    
+    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    sin->sin_port = HOST_TO_BIG16(remoteHost.remotePort);
+    sin->sin_addr.s_addr = remoteHost.ip.getIp();
+    *addrlen = sizeof(struct sockaddr_in);
+  }
+  
+  return ret;
+}
+
+int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
+{
+  NOTICE("posix_bind");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+  
+  Endpoint* p = NetManager::instance().getEndpoint(file);
+  
+  int ret = -1;
+  if(file.getSize() == NETMAN_PROTO_TCP || file.getSize() == NETMAN_PROTO_UDP)
+  {
+    struct sockaddr_in* sin = (struct sockaddr_in*) address;
+    
+    p->setLocalPort(BIG_TO_HOST16(sin->sin_port));
+    
+    ret = 0;
+  }
+  
+  return ret;
+}
+
+int posix_listen(int sock, int backlog)
+{
+  NOTICE("posix_listen");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+  
+  Endpoint* p = NetManager::instance().getEndpoint(file);
+  
+  p->listen();
+  
+  return 0;
+}
+
+int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
+{
+  NOTICE("posix_accept");
+  
+  File file;
+  if(fileFromSocket(sock, &file) == -1)
+    return -1;
+    
+  File f = NetManager::instance().accept(file);
+  if(f.getInode() == 0)
+    return -1; // error!
+
+  // add into the descriptor table
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  
+  Endpoint* e = NetManager::instance().getEndpoint(f);
+  
+  if(address && addrlen)
+  {
+    if(f.getSize() == NETMAN_PROTO_TCP || f.getSize() == NETMAN_PROTO_UDP)
+    {
+      struct sockaddr_in* sin = (struct sockaddr_in*) address;
+      sin->sin_port = HOST_TO_BIG16(e->getRemotePort());
+      sin->sin_addr.s_addr = e->getRemoteIp().getIp();
+      
+      *addrlen = sizeof(struct sockaddr_in);
+    }
+  }
+  
+  FileDescriptor *desc = new FileDescriptor;
+  desc->file = f;
+  desc->offset = 0;
+  fdMap.insert(fd, reinterpret_cast<void*>(desc));
+
+  return static_cast<int> (fd);
+}

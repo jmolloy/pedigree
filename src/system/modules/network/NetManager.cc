@@ -65,3 +65,14 @@ Endpoint* NetManager::getEndpoint(File f)
 {
   return m_Endpoints[f.getInode() & 0x00FFFFFF];
 }
+
+File NetManager::accept(File f)
+{
+  Endpoint* server = getEndpoint(f);
+  
+  Endpoint* client = server->accept();
+  
+  size_t n = m_Endpoints.count();
+  m_Endpoints.pushBack(client);
+  return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f.getSize());
+}

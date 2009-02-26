@@ -533,14 +533,12 @@ int recv(int sock, void * buff, unsigned long bufflen, int flags)
 
 int accept(int sock, struct sockaddr* remote_addr, unsigned long* addrlen)
 {
-  errno = ENOSYS;
-  return -1;
+  return syscall3(POSIX_ACCEPT, sock, (int) remote_addr, (int) addrlen);
 }
 
 int bind(int sock, const struct sockaddr* local_addr, unsigned long addrlen)
 {
-  errno = ENOSYS;
-  return -1;
+  return syscall3(POSIX_BIND, sock, (int) local_addr, (int) addrlen);
 }
 
 int getpeername(int sock, struct sockaddr* addr, unsigned long* addrlen)
@@ -563,8 +561,7 @@ int getsockopt(int sock, int level, int optname, void* optvalue, unsigned long* 
 
 int listen(int sock, int backlog)
 {
-  errno = ENOSYS;
-  return -1;
+  return syscall2(POSIX_LISTEN, sock, backlog);
 }
 
 long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct sockaddr* remote_addr, unsigned long* addrlen)

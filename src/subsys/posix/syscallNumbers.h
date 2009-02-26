@@ -43,5 +43,10 @@
 #define POSIX_CONNECT    23
 #define POSIX_SEND       24
 #define POSIX_RECV       25
+#define POSIX_BIND       26
+#define POSIX_LISTEN     27
+#define POSIX_ACCEPT     28
+#define POSIX_RECVFROM   29
+#define POSIX_SENDTO     30
 
 #endif
