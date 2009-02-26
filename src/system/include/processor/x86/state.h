@@ -29,6 +29,7 @@ class X86InterruptState
 {
   friend class X86ProcessorState;
   friend class X86InterruptManager;
+  friend class PageFaultHandler;
   public:
     //
     // General Interface (InterruptState, SyscallState & ProcessorState)

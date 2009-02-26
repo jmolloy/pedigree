@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 //  fprintf(stderr, "argc: %d, env: %s\n", argc, getenv("TERM"));
 
 //  struct stat buf;
-//  int a = fstat(0,&buf); 
+//  int a = fstat(0,&buf);
 
 //  fprintf(stderr, "fstat returned %d, mode: %x\n",a, buf.st_mode);
 
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
 //     lseek(fd, 0, 0);
 //     read(fd, &buf[1], 0x18);
-    
+
 //     if (buf[0] != 0xEE)
 //     {
 //       fprintf(stderr, "Front corruption!: %x\n", buf[0]);
@@ -53,6 +53,9 @@ int main(int argc, char **argv)
   char b[512];
   char *a = getcwd(b,512);
   fprintf(stderr,"cwd: %s\n", b);
-  
+
+  fprintf(stderr,"attempting to page fault!\n");
+  char *x = (char*)0;
+  x[1] = 'p';
   return 0xdeadbaba;
 }

@@ -20,6 +20,7 @@
 #include "InterruptManager.h"
 #include "VirtualAddressSpace.h"
 #include "../x86_common/PhysicalMemoryManager.h"
+#include "PageFaultHandler.h"
 
 // Multiprocessor headers
 #if defined(MULTIPROCESSOR)
@@ -53,6 +54,8 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
   X86InterruptManager::initialiseProcessor();
+
+  PageFaultHandler::instance().initialise();
 
   // Initialise the physical memory-management
   X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
