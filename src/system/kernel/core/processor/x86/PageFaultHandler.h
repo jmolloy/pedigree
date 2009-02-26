@@ -31,8 +31,7 @@ class PageFaultHandler : private InterruptHandler
     inline static PageFaultHandler& instance()  { return(m_Instance); }
 
     /** Register the PageFaultHandler with the InterruptManager.
-     * \return true if sucessful, false otherwise
-     */
+     * \return true if sucessful, false otherwise.  */
     bool initialise();
 
     //
