@@ -31,33 +31,45 @@
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
  ****************************************************************************/
 
-/*
- * unctrl.h
- *
- * Display a printable version of a control character.
- * Control characters are displayed in caret notation (^x), DELETE is displayed
- * as ^?. Printable characters are displayed as is.
- */
+/* $Id: termcap.h.in,v 1.16 2001/03/24 21:53:27 tom Exp $ */
 
-/* $Id: unctrl.h.in,v 1.10 2001/03/24 21:53:25 tom Exp $ */
-
-#ifndef NCURSES_UNCTRL_H_incl
-#define NCURSES_UNCTRL_H_incl	1
+#ifndef NCURSES_TERMCAP_H_incl
+#define NCURSES_TERMCAP_H_incl	1
 
 #undef  NCURSES_VERSION
 #define NCURSES_VERSION "5.6"
 
+#include <ncurses_dll.h>
+
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
+#endif /* __cplusplus */
+
+#include <sys/types.h>
+
+#undef  NCURSES_CONST 
+#define NCURSES_CONST /*nothing*/ 
+
+#undef  NCURSES_OSPEED 
+#define NCURSES_OSPEED short 
+
+extern NCURSES_EXPORT_VAR(char) PC;
+extern NCURSES_EXPORT_VAR(char *) UP;
+extern NCURSES_EXPORT_VAR(char *) BC;
+extern NCURSES_EXPORT_VAR(NCURSES_OSPEED) ospeed; 
+
+#if !defined(NCURSES_TERM_H_incl)
+extern NCURSES_EXPORT(char *) tgetstr (NCURSES_CONST char *, char **);
+extern NCURSES_EXPORT(char *) tgoto (const char *, int, int);
+extern NCURSES_EXPORT(int) tgetent (char *, const char *);
+extern NCURSES_EXPORT(int) tgetflag (NCURSES_CONST char *);
+extern NCURSES_EXPORT(int) tgetnum (NCURSES_CONST char *);
+extern NCURSES_EXPORT(int) tputs (const char *, int, int (*)(int));
 #endif
-
-#include <curses.h>
-
-#undef unctrl
-NCURSES_EXPORT(NCURSES_CONST char *) unctrl (chtype);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* NCURSES_UNCTRL_H_incl */
+#endif /* NCURSES_TERMCAP_H_incl */

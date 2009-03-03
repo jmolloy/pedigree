@@ -152,7 +152,7 @@ NOTICE("bleh");
   initElf.load(buffer, init.getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);
-
+  ERROR("Init elf: " << (uintptr_t)&initElf);
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();

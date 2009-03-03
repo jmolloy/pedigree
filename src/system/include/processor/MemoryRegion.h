@@ -39,7 +39,7 @@ class MemoryRegion
     /** The default constructor does nothing  */
     inline MemoryRegion(const char *pName)
       : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0), m_pName(pName){}
-    /** The destructor registers itself from the PMM. */
+    /** The destructor unregisters itself from the PMM. */
     inline virtual ~MemoryRegion() {PhysicalMemoryManager::instance().unmapRegion(this);}
 
     /** Get the address of the beginning of the MemoryRegion in the virtual

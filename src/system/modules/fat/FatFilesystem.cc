@@ -43,7 +43,7 @@ bool isPowerOf2(uint32_t n)
 }
 
 FatFilesystem::FatFilesystem() :
-  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_Type(FAT12), m_DataAreaStart(0), m_RootDirCount(0), m_RootDir(), m_BlockSize(0), m_FatCache()
+  m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_Type(FAT12), m_DataAreaStart(0), m_RootDirCount(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0)
 {
 }
 
@@ -166,12 +166,12 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
   // read the FAT into cache
   uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt;
-  m_FatCache.resize(fatSz);
+  m_pFatCache = new uint8_t[fatSz];
 
   uint8_t* tmpBuffer = new uint8_t[fatSz];
   readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
 
-  m_FatCache.write(0, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
+  memcpy(reinterpret_cast<void*>(m_pFatCache+0), reinterpret_cast<void*>(tmpBuffer), fatSz);
 
   delete tmpBuffer;
 
@@ -770,8 +770,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster)
   }
 
   // read from cache
-  uint32_t fatEntry;
-  m_FatCache.read(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&fatEntry));
+  uint32_t fatEntry = * reinterpret_cast<uint32_t*> (&m_pFatCache[fatOffset]);
 
   // calculate
   uint32_t ret = 0;
@@ -853,7 +852,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
       
       setEnt = origEnt | value;
       
-      m_FatCache.write(fatOffset, sizeof(uint16_t), reinterpret_cast<uintptr_t>(&setEnt));
+      * reinterpret_cast<uint16_t*> (&m_pFatCache[fatOffset]) = setEnt;
       
       break;
       
@@ -861,7 +860,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
     
       setEnt = value;
       
-      m_FatCache.write(fatOffset, sizeof(uint16_t), reinterpret_cast<uintptr_t>(&setEnt));
+      * reinterpret_cast<uint16_t*> (&m_pFatCache[fatOffset]) = setEnt;
     
       break;
     
@@ -871,7 +870,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
       setEnt = origEnt & 0xF0000000;
       setEnt |= value;
       
-      m_FatCache.write(fatOffset, sizeof(uint32_t), reinterpret_cast<uintptr_t>(&setEnt));
+      * reinterpret_cast<uint32_t*> (&m_pFatCache[fatOffset]) = setEnt;
       
       break;
   }
@@ -881,7 +880,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value)
   
   // write back to the FAT
   uint8_t* tmpBuffer = new uint8_t[m_Superblock.BPB_BytsPerSec * 2]; /// \todo Safety checks
-  m_FatCache.read(fatOffset, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(tmpBuffer));
+  memcpy(reinterpret_cast<void*>(&m_pFatCache[fatOffset]), reinterpret_cast<void*>(tmpBuffer), m_Superblock.BPB_BytsPerSec * 2);
   writeSectorBlock(fatSector, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(tmpBuffer));
 
   return setEnt;

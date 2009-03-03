@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <log.h>
+#include <Log.h>
 #include <Debugger.h>
 #include "PageFaultHandler.h"
 #include <process/Scheduler.h>

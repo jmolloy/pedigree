@@ -380,12 +380,11 @@ void DynamicLinker::initialiseElf(Elf *pElf)
   initPlt(pElf, 0);
 }
 
-
 void DynamicLinker::registerProcess(Process *pProcess)
 {
   Elf *pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
   m_ProcessElfs.insert(pProcess, pElf);
-
+  ERROR("Register process: " << (uintptr_t)pElf << ", process: " << (uintptr_t)pProcess);
   for (List<SharedObject*>::Iterator it = m_Objects.begin();
        it != m_Objects.end();
        it++)

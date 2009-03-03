@@ -199,6 +199,6 @@ add_custom_target(create_images ALL bash ../scripts/create_images.sh ${HDD_FILES
                   DEPENDS kernel ${BOOTLOADER_BUILT} ${HDD_TARGETS}
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
-add_dependencies(create_images initrd bash nano ncurses)
+add_dependencies(create_images initrd bash nano ncurses irb ruby)
 
 include(CPack)

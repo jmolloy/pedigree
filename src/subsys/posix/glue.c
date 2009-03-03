@@ -517,6 +517,18 @@ int sigprocmask(int how, int set, int oset)
   return -1;
 }
 
+int fchown(int fildes, int owner, int group)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
+int rmdir(const char *path)
+{
+  errno = ENOSYS;
+  return -1;
+}
+
 int socket(int domain, int type, int protocol)
 {
   return syscall3(POSIX_SOCKET, domain, type, protocol);

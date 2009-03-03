@@ -25,8 +25,8 @@ add_option(VERBOSE_LINKER "Increases the verbosity of messages from the Elf and 
 add_non_user_option(THREADS)
 
 if(DEBUGGER)
-  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g3 -gdwarf-2")
-  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g3 -gdwarf-2")
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g3 -O2 -gdwarf-2")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g3 -O2 -gdwarf-2")
 else(DEBUGGER)
   set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -g0 -O3")
   set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -g0 -O3")

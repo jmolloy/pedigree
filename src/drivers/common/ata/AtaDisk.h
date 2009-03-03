@@ -21,6 +21,7 @@
 #include <machine/Disk.h>
 #include <machine/Controller.h>
 #include <process/Mutex.h>
+#include <utilities/Cache.h>
 
 /** An ATA disk device. Most read/write commands get channeled upstream
  * to the controller, as it has to multiplex between multiple disks. */
@@ -76,6 +77,9 @@ private:
   /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
    * \todo A condvar would really be better here. */
   Mutex m_IrqReceived;
+
+  /** Sector cache. */
+  Cache<uint8_t*, 512> m_SectorCache;
 };
 
 #endif

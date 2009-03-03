@@ -74,7 +74,6 @@ void Device::removeIoMappings()
   for (unsigned int i = 0; i < m_Addresses.count(); i++)
   {
     Address *pa = m_Addresses[i];
-    NOTICE("Address: " << pa->m_Address);
     if (pa->m_Io)
       delete pa->m_Io;
     pa->m_Io = 0;

@@ -75,7 +75,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         if (m_RangeBelow16MB.allocateSpecific(start, cPages * getPageSize()) == false)
           return false;
       }
-      else
+      else if (start < 0x1000000)
       {
         ERROR("PhysicalMemoryManager: Memory region neither completely below nor above 1MB");
         return false;
@@ -340,7 +340,6 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
   {
     if (*it == pRegion)
     {
-      NOTICE("Erase region with phys: " << Hex << pRegion->physicalAddress());
       size_t cPages = pRegion->size() / PhysicalMemoryManager::getPageSize();
       uintptr_t start = reinterpret_cast<uintptr_t> (pRegion->virtualAddress());
       VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();

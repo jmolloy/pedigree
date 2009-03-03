@@ -57,7 +57,12 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
     // Get its addresses, and search for fbAddr.
     for (unsigned int j = 0; j < pChild->addresses().count(); j++)
     {
-      if (pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
+      /// \bug Some graphics cards don't start their framebuffer directly on a BAR 
+      ///      start address. So we want to test if the fbAddr is within a BAR.
+      ///      Unfortunately, that causes false positives - it picks up PCI-PCI
+      ///      bridges and suchlike that have overlapping addresses. :(
+      ///      I haven't got an answer for this one yet.
+      if (pChild->addresses()[j]->m_Address /*<=*/ == fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
       {
         return pChild;
       }
@@ -164,7 +169,7 @@ void entry()
     NOTICE(Hex << pSm->id << "\t " << Dec << pSm->width << "x" << pSm->height << "x" << pSm->pf.nBpp << "\t " << Hex <<
            pSm->framebuffer);
   }
-  NOTICE("VBE: End of compatible display modes.");
+ NOTICE("VBE: End of compatible display modes.");
 
   // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
   Device *pDevice = searchNode(&Device::root(), fbAddr);
@@ -176,11 +181,10 @@ void entry()
 
   // Create a new VbeDisplay device node.
   VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, fbAddr);
-  NOTICE("After Display::");
+
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());
   pDevice->getParent()->replaceChild(pDevice, pDisplay);
-  NOTICE("After replaceChild");
 }
 
 void exit()

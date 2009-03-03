@@ -202,7 +202,7 @@ protected:
   uint32_t m_BlockSize;
   
   /** FAT cache */
-  Cache m_FatCache;
+  uint8_t *m_pFatCache;
 };
 
 #endif

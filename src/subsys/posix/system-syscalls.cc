@@ -137,7 +137,7 @@ int posix_fork(ProcessorState state)
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state)
 {
   Processor::setInterrupts(false);
-
+  NOTICE("execve");
   if (argv == 0 || env == 0)
   {
     SYSCALL_ERROR(ExecFormatError);
@@ -378,6 +378,9 @@ int posix_exit(int code)
 {
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->setExitStatus(code);
+
+  DynamicLinker::instance().unregisterProcess(pProcess);
+
   pProcess->kill();
 
   // Should NEVER get here.

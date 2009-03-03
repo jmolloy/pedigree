@@ -26,7 +26,8 @@
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
-  Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false), m_IrqReceived(true)
+  Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false), m_IrqReceived(true),
+  m_SectorCache()
 {
   m_pParent = pDev;
 }
@@ -191,6 +192,24 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
   if (nBytes % 512)
     panic("AtaDisk: read request length not a multiple of 512!");
 
+  uint64_t origNBytes = nBytes;
+
+  // Do we have any of these sectors in cache?
+  // \bug Cache key is 32-bits long in x86, but the valid key range is 64 - lg(512) bits.
+  uint64_t end = location+nBytes;
+  for (uint64_t i = location; i < end; i += 512)
+  {
+    if (m_SectorCache.lookup(i/512, reinterpret_cast<uint8_t*> (buffer)))
+    {
+      buffer += 512;
+      location += 512;
+      nBytes -= 512;
+    }
+    else break;
+  }
+  
+  if (nBytes == 0) return origNBytes;
+
   /// \todo DMA?
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -269,12 +288,18 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
       while (commandRegs->read8(7) & 0x80)
         ;
 
+      // Mark the start of the sector.
+      uint8_t *pSector = reinterpret_cast<uint8_t*> (pTarget);
+
       // We got the mutex, so an IRQ must have arrived.
       for (int j = 0; j < 256; j++)
         *pTarget++ = commandRegs->read16(0);
+
+      // Store the sector in the sector cache.
+      m_SectorCache.insert(location/512+i, pSector);
     }
   }
-  return nBytes;
+  return origNBytes;
 }
 
 uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
