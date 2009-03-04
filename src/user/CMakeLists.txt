@@ -14,8 +14,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(APPLICATIONS apptest shell bash nano syscall-test net-test ruby)
-set(LIBRARIES ncurses)
+set(APPLICATIONS apptest shell syscall-test net-test)
+set(LIBRARIES)
 
 set(HDD_FILES)
 set(HDD_TARGETS)
@@ -36,6 +36,6 @@ foreach(var ${LIBRARIES})
   set(HDD_TARGETS ${HDD_TARGETS} ${var})
 endforeach(var ${LIBRARIES})
 
-list(REMOVE_ITEM HDD_TARGETS bash nano ncurses ruby)
+#list(REMOVE_ITEM HDD_TARGETS )
 set(HDD_TARGETS ${HDD_TARGETS} PARENT_SCOPE)
 set(HDD_FILES ${HDD_FILES} PARENT_SCOPE)
