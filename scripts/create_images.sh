@@ -89,7 +89,8 @@ if which losetup >/dev/null 2>&1; then
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
 
-  sudo cp -r $SRCDIR/../images/i686-elf/* $MOUNTPT/
+  sudo cp -ra $SRCDIR/../images/i686-elf/* $MOUNTPT/
+  sudo cp $SRCDIR/../images/i686-elf/.bashrc $MOUNTPT/
 
   sudo mkdir -p $MOUNTPT/etc/terminfo/v
 #  sudo cp $SRCDIR/../scripts/termcap $MOUNTPT/etc

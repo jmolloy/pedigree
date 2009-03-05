@@ -52,6 +52,7 @@ physical_uintptr_t Processor::readCr3()
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
+
   // Initialise this processor's interrupt handling
   X86InterruptManager::initialiseProcessor();
 

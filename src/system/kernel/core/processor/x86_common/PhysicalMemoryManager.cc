@@ -240,7 +240,6 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
       m_AcpiRanges.free(MemoryMap->address, MemoryMap->length);
     }
   #endif
-
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
 

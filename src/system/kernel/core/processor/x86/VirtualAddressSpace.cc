@@ -282,8 +282,10 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
 
     // If we map within the kernel space, we need to add this page table to the
     // other address spaces!
+    // 
+    // Also, we don't want to do this if the processor isn't initialised...
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
-    if (virtualAddress >= KERNEL_VIRTUAL_HEAP)
+    if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_VIRTUAL_HEAP)
     {
       for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {

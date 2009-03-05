@@ -41,6 +41,7 @@ class Apic : public IrqManager
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
+    virtual void enable(irq_id_t Id, bool bEnable);
 
     bool initialise() INITIALISATION_ONLY;
 

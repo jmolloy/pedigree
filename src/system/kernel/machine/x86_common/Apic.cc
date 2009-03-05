@@ -35,6 +35,10 @@ void Apic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
   // TODO
 }
+void Apic::enable(irq_id_t Id, bool bEnable)
+{
+  // TODO
+}
 bool Apic::initialise()
 {
   // TODO

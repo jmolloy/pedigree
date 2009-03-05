@@ -44,7 +44,7 @@ Spinlock Multiprocessor::m_ProcessorLock2(true);
 
 size_t Multiprocessor::initialise1()
 {
-  // Did we find a processr list?
+  // Did we find a processor list?
   bool bMPInfoFound = false;
   // List of information about each usable processor
   const Vector<ProcessorInformation*> *Processors;
@@ -77,7 +77,7 @@ size_t Multiprocessor::initialise1()
          &trampoline,
          reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
 
-  // Parameters for the trampiline code
+  // Parameters for the trampoline code
   #if defined(X86)
     volatile uint32_t *trampolineStack = reinterpret_cast<volatile uint32_t*>(0x7FF8);
     volatile uint32_t *trampolineKernelEntry = reinterpret_cast<volatile uint32_t*>(0x7FF4);
@@ -98,7 +98,7 @@ size_t Multiprocessor::initialise1()
   LocalApic &localApic = Pc::instance().getLocalApic();
   VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
   // Startup the application processors through startup interprocessor interrupt
-  for (size_t i = 0;i < Processors->count();i++)
+  for (size_t i = 0; i < Processors->count(); i++)
   {
     // Allocate kernel stack
     void *pStack = kernelSpace.allocateStack();
@@ -116,7 +116,7 @@ size_t Multiprocessor::initialise1()
     {
       NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
-      // TODO: We need a timer and send INit IPIs (assert and deassert
+      // TODO: We need a timer and send Init IPIs (assert and deassert)
 
       // Send the Startup IPI to the processor
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,

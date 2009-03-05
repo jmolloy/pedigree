@@ -206,7 +206,7 @@ NOTICE("TUI: read: Return " << Hex << i);
           }
         }
       }
-      if (c == '\n') c = '\r';
+//      if (c == '\n') c = '\r';
       buf[i++] = c;
     }
 NOTICE("TUI: Read return " << Hex << i);

@@ -220,10 +220,10 @@ class Processor
       inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
  userKey);
     #endif
-  private:
+
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
-
+  private:
     /** If we have only one processor, we define the ProcessorInformation class here
      *  otherwise we use an array of ProcessorInformation structures */
     #if !defined(MULTIPROCESSOR)

@@ -292,7 +292,7 @@ Ext2Filesystem::Inode Ext2Filesystem::getInode(uint32_t inode)
 
   // The inode table may extend onto multiple blocks - if the inode we want is in another block,
   // calculate that now.
-  while ( (index*sizeof(Inode)) > m_BlockSize )
+  while ( (index*sizeof(Inode)) >= m_BlockSize )
   {
     index -= m_BlockSize/sizeof(Inode);
     inodeTableBlock++;

@@ -17,6 +17,7 @@
 add_option(APIC      "Enable use of the advanced PIC?" OFF)
 add_option(MULTIPROCESSOR "Enable use of multiple processors?" OFF)
 add_option(ACPI      "Enable use of ACPI?" OFF)
+add_option(SMP       "Enable symmetric multiprocessing?" OFF)
 add_option(SMBIOS    "Enable use of SMBIOS?" OFF)
 add_option(OMIT_FRAME_POINTER "Compile without using EBP." OFF)
 

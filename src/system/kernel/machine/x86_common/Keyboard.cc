@@ -308,7 +308,7 @@ Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
   c.num_lock = 0;
   c.is_special = 0;
   c.reserved = 0;
-
+  c.value = 0;
 
   bool bUseUpper = false;  // Use the upper case keymap.
   bool bUseNums = false;   // Use the upper case keymap for numbers.
