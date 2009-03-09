@@ -39,7 +39,7 @@ class TcpManager
 {
 public:
   TcpManager() :
-    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_CurrentConnections(), m_Endpoints(), m_PortsAvailable()
+    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(), m_CurrentConnections(), m_Endpoints(), m_PortsAvailable()
   {};
   virtual ~TcpManager()
   {};
@@ -137,6 +137,9 @@ public:
   /** Allocates a unique local port for a connection with a server */
   uint16_t allocatePort()
   {
+    static uint16_t lastPort = 32768;
+    return lastPort++;
+    
     // default behaviour: start at 32768
     /// \todo Meant to be randomised, and this isn't ideal
     size_t i;
@@ -146,17 +149,24 @@ public:
       if(m_PortsAvailable.lookup(i) == 0)
       {
         used = new bool;
-        *used = true;
-        m_PortsAvailable.insert(i, used);
-        return static_cast<uint16_t>(i);
+        if(used)
+        {
+          *used = true;
+          m_PortsAvailable.insert(i, used);
+          return static_cast<uint16_t>(i);
+        }
       }
       used = m_PortsAvailable.lookup(i);
-      if(!*used)
+      if(used)
       {
-        *used = true;
-        return static_cast<uint16_t>(i);
+        if(!*used)
+        {
+          *used = true;
+          return static_cast<uint16_t>(i);
+        }
       }
     }
+    NOTICE("No ports - i = " << Dec << i << Hex << "!");
     return 0; // no ports :(
   }
 
@@ -170,8 +180,11 @@ private:
   // this keeps track of the next valid connection ID
   size_t m_NextConnId;
   
-  /** This is a lot of fun :D */
+  // standard state blocks
   Tree<StateBlockHandle, StateBlock*> m_StateBlocks;
+  
+  // server state blocks (separated from standard blocks in the list)
+  Tree<StateBlockHandle, StateBlock*> m_ListeningStateBlocks;
   
   /** Current connections - basically a map between connection IDs and handles */
   Tree<size_t, StateBlockHandle*> m_CurrentConnections;

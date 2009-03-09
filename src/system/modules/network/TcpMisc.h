@@ -90,8 +90,9 @@ struct StateBlockHandle
     }
     else
     {
-      if(listen)
+      if(listen && a.listen)
         return false;
+      //NOTICE("Operator == : [" << localPort << ", " << a.localPort << "] [" << remotePort << ", " << a.remotePort << "] [" << remoteHost.ip.getIp() << ", " << a.remoteHost.ip.getIp() << "]?");
       return ((localPort == a.localPort) && (remoteHost.ip.getIp() == a.remoteHost.ip.getIp()) && (remotePort == a.remotePort));
     }
     return false;
@@ -99,23 +100,17 @@ struct StateBlockHandle
   
   bool operator > (StateBlockHandle a)
   {
-   /* if(a.listen)
-    {
-      if(listen)
-        return localPort > a.localPort;
-    }
+    return true;
+    if(listen && a.listen)
+      return (localPort > a.localPort);
     else
     {
-      if(listen)
-        return localPort > a.localPort;
-      return (localPort > a.localPort) || (remotePort > a.remotePort);
+      //NOTICE("Operator > : [" << localPort << ", " << a.localPort << "] [" << remotePort << ", " << a.remotePort << "]");
+      if(localPort)
+        return ((localPort > a.localPort) && (remotePort > a.remotePort));
+      else
+        return (remotePort > a.remotePort);
     }
-    */
-    if(listen)
-      return localPort > a.localPort;
-    else
-      return remotePort > a.remotePort;
-    //return false;
   }
 };
 

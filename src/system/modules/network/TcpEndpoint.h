@@ -89,8 +89,11 @@ class TcpEndpoint : public Endpoint
     {
       if(conn)
       {
+        NOTICE("pushing back");
         m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
+        NOTICE("waking semaphore " << reinterpret_cast<uintptr_t>(&m_IncomingConnectionCount) << "...");
         m_IncomingConnectionCount.release();
+        NOTICE("done");
       }
     }
   

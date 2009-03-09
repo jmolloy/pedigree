@@ -136,7 +136,9 @@ int posix_close(int fd)
   
   if(NetManager::instance().isEndpoint(f->file))
   {
+    NOTICE("Removing the endpoint!");
     NetManager::instance().removeEndpoint(f->file);
+    NOTICE("Removed?");
   }
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
@@ -516,7 +518,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 {
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
-  NOTICE("select(" << Dec << nfds << ")\n");
+  NOTICE("select(" << Dec << nfds << Hex << ")\n");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -544,7 +546,9 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
       }
       else if (NetManager::instance().isEndpoint(pFd->file))
       {
-          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+        Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+        if(!p)
+          continue;
         if(timeout)
         {
           if(timeout->tv_sec == 0)

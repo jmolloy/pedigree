@@ -12,7 +12,10 @@
 
 /** Warning: No real error checking */
 
-int main(int argc, char **argv) {
+#define SERVER 0
+
+int main(int argc, char **argv) {  
+#if SERVER
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(sock == -1)
   {
@@ -52,7 +55,7 @@ int main(int argc, char **argv) {
   int client;
   while((client = accept(sock, (struct sockaddr*) &remote, &sz)) >= 0)
   {
-    printf("Accepted connection from %s on port %d\n", inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
+    //printf("Accepted connection from %s on port %d\n", inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
     
     // get the request
     fd_set fd;
@@ -63,7 +66,7 @@ int main(int argc, char **argv) {
     tv.tv_sec = 30;
     if(select(sizeof(fd) * 8, &fd, 0, 0, &tv) == 0)
     {
-      printf("Timeout while waiting for data to arrive");
+      //printf("Timeout while waiting for data to arrive");
       close(client);
       continue;
     }
@@ -74,75 +77,112 @@ int main(int argc, char **argv) {
       printf("Read %u bytes: %s", n, tmp);
     }
     if(n == -1)
-      printf("\nReceive failed\n");
-    printf("\n");
+      printf("\nReceive failed");
+    //printf("\n");
+    
+    int go_close = 0;
+    if(strcmp(tmp, "quit") == 0)
+      go_close = 1;
     
     // send the reply
-    strcpy(tmp, "HTTP/1.1 200 OK\r\nConnection: Close\r\n\r\nHello from Pedigree, via Berkeley Sockets!");
+    strcpy(tmp, "Win");
     sz = strlen(tmp);
 
     res = send(client, tmp, sz, 0);
     if(res == -1)
     {
-      printf("Sending data failed.\n");
+      //printf("Sending data failed.\n");
     }
     
+    printf("               (Closing... ");
     close(client);
+    printf(" Done!)\n");
+    
+    if(go_close)
+      break;
   }
   
   free(tmp);
   
   close(sock);
-
-  /*struct sockaddr_in remote;
-  remote.sin_family = AF_INET;
-  remote.sin_port = htons(1337);
-  remote.sin_addr.s_addr = 0x0100a8c0; // 0x6E01a8c0
-  //inet_pton(AF_INET, "72.233.89.200", &remote.sin_addr);
-
-  connect(sock, &remote, sizeof(remote));
-
-  size_t sz, n;
-  char* tmp = (char*) malloc(1024);
-  strcpy(tmp, "Does it works?");
-  sz = strlen(tmp);
-
-  send(sock, tmp, sz, 0);
-  printf("Data is sent\n");
   
-  fd_set fd;
-  FD_ZERO(&fd);
-  FD_SET(sock, &fd);
-
-  select(sizeof(fd) * 8, &fd, 0, 0, 0);
-
-  while(n = recv(sock, tmp, 1024, 0))
+#else
+  int z;
+  for(z = 0; z < 1024; z++)
   {
-    tmp[n] = 0;
-    printf("Read %u bytes: %s", n, tmp);
-  }
-  printf("\n");
+    printf("Socket %d...", z);
+    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(sock == -1)
+    {
+      printf("Couldn't get the socket.\n");
+      return 0;
+    }
+    
+    fflush(stdout);
+    
+    struct sockaddr_in remote;
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(1337);
+    remote.sin_addr.s_addr = 0x0100a8c0; //0x2A00a8c0; // 0x6701a8c0
+    //inet_pton(AF_INET, "72.233.89.200", &remote.sin_addr);
 
-  shutdown(sock, SHUT_RDWR);
+    connect(sock, &remote, sizeof(remote));
+
+    /*size_t sz, n;
+    char* tmp = (char*) malloc(1024);
+    strcpy(tmp, "Does it works?");
+    sz = strlen(tmp);
+
+    send(sock, tmp, sz, 0);
+    
+    fd_set fd;
+    FD_ZERO(&fd);
+    FD_SET(sock, &fd);
+
+    select(sizeof(fd) * 8, &fd, 0, 0, 0);
+
+    while(n = recv(sock, tmp, 1024, 0))
+    {
+      tmp[n] = 0;
+      printf("Read %u bytes: %s", n, tmp);
+    }
+    printf("\n");
+    
+    fflush(stdout);
+    
+    free(tmp);
+
+    shutdown(sock, SHUT_RDWR);*/
+    
+    printf(" (Closing) ");
+    
+    fflush(stdout);
+    
+    close(sock);
+    
+    printf(" Done!\n");
+    
+    fflush(stdout);
+    
+    /*
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(1337);
+    remote.sin_addr.s_addr = 0x60100a8c0;
+    
+    connect(sock, &remote, sizeof(remote));
+    
+    strcpy(tmp, "UDP Test");
+    sz = strlen(tmp);
+    send(sock, tmp, sz, 0);
+    printf("UDP data is sent\n");
+    
+    close(sock);
+      */
+  }
   
-  close(sock);
-  
-  sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  
-  remote.sin_family = AF_INET;
-  remote.sin_port = htons(1337);
-  remote.sin_addr.s_addr = 0x60100a8c0;
-  
-  connect(sock, &remote, sizeof(remote));
-  
-  strcpy(tmp, "UDP Test");
-  sz = strlen(tmp);
-  send(sock, tmp, sz, 0);
-  printf("UDP data is sent\n");
-  
-  close(sock);
-  
-  free(tmp);*/
+#endif
 
   return 0;
 }

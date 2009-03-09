@@ -184,7 +184,15 @@ void entry()
     NOTICE("DHCP Client: Configuring card " << Dec << i << Hex << ".");
     Network* pCard = NetworkStack::instance().getDevice(i);
     StationInfo info = pCard->getStationInfo();
-  
+      
+    // set it up
+    StationInfo host2;
+    host2.ipv4.setIp(Network::convertToIpv4(192, 168, 0, 2));
+    host2.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
+    host2.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
+    pCard->setStationInfo(host2);
+    continue;
+    
     IpAddress broadcast(0xffffffff);
     Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);
         

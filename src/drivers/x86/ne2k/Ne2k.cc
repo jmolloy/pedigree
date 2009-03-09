@@ -21,6 +21,8 @@
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
 
+#define NE2K_NO_THREADS
+
 Ne2k::Ne2k(Network* pDev) :
   Network(pDev), m_pBase(0), m_StationInfo(), m_NextPacket(0), m_PacketQueueSize(0), m_PacketQueue()
 {
@@ -247,8 +249,20 @@ void Ne2k::recv()
     packet* p = new packet;
     p->ptr = reinterpret_cast<uintptr_t>(packBuffer);
     p->len = (i * 2) + ((length & 1) ? 1 : 0); //length;
+    
+#ifdef NE2K_NO_THREADS
+    
+    NetworkStack::instance().receive(p->len, p->ptr, this, 0);
+
+    delete packBuffer;
+    delete p;
+    
+#else
+    
     m_PacketQueue.pushBack(p);
     m_PacketQueueSize.release();
+    
+#endif
   }
 
   // unmask interrupts

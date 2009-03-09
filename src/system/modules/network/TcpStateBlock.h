@@ -119,6 +119,7 @@ class StateBlock : public TimerHandler
         m_Nanoseconds += delta;
         if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
         {
+          NOTICE("Another second: " << Dec << m_Seconds << ", " << m_Timeout << Hex << "...");
           ++m_Seconds;
           m_Nanoseconds -= 1000000000ULL;
         }
@@ -130,6 +131,8 @@ class StateBlock : public TimerHandler
           didTimeout = true;
           if(useWaitSem)
             timeoutWait.release();
+          
+          NOTICE("Retransmit timer fired!");
           
           // check to see if there's data on the retransmission queue to send
           if(retransmitQueue.getSize())
@@ -158,6 +161,7 @@ class StateBlock : public TimerHandler
     // resets the timer (to restart a timeout)
     void resetTimer(uint32_t timeout = 30)
     {
+      NOTICE("resetTimer(" << Dec << timeout << Hex << ");");
       m_Seconds = m_Nanoseconds = 0;
       m_Timeout = timeout;
       didTimeout = false;

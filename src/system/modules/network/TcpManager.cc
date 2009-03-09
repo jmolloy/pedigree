@@ -20,8 +20,13 @@
 TcpManager TcpManager::manager;
 
 size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
-{  
+{
+  if(!e || !pCard || !port)
+    return 0;
+  
   StateBlockHandle* handle = new StateBlockHandle;
+  if(!handle)
+    return 0;
   handle->localPort = port;
   handle->remotePort = 0;
   handle->remoteHost.ip.setIp(static_cast<uint32_t>(0));
@@ -37,6 +42,9 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   size_t connId = getConnId();
   
   stateBlock = new StateBlock;
+  if(!stateBlock)
+    return 0;
+  
   stateBlock->localPort = port;
   stateBlock->remoteHost = handle->remoteHost;
   
@@ -50,15 +58,21 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   
   stateBlock->numEndpointPackets = 0;
   
-  m_StateBlocks.insert(*handle, stateBlock);
+  m_ListeningStateBlocks.insert(*handle, stateBlock);
   m_CurrentConnections.insert(connId, handle);
   
   return connId;
 }
 
 size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard)
-{  
+{
+  if(!endpoint || !pCard)
+    return 0;
+  
   StateBlockHandle* handle = new StateBlockHandle;
+  if(!handle)
+    return 0;
+  
   handle->localPort = localPort;
   handle->remotePort = remoteHost.remotePort;
   handle->remoteHost = remoteHost;
@@ -74,6 +88,12 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   size_t connId = getConnId();
   
   stateBlock = new StateBlock;
+  if(!stateBlock)
+  {
+    delete handle;
+    return 0;
+  }
+  
   stateBlock->localPort = localPort;
   stateBlock->remoteHost = remoteHost;
   
@@ -102,16 +122,18 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   bool timedOut = false;
   Timer* t = Machine::instance().getTimer();
   NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-  timeout->setSemaphore(&(stateBlock->waitState));
-  timeout->setTimedOut(&timedOut);
-  if(t)
-    t->registerHandler(timeout);
-  stateBlock->waitState.acquire();
-  if(t)
-    t->unregisterHandler(timeout);
-  delete timeout;
+  if(timeout)
+  {
+    timeout->setSemaphore(&(stateBlock->waitState));
+    timeout->setTimedOut(&timedOut);
+    if(t)
+      t->registerHandler(timeout);
+    stateBlock->waitState.acquire();
+    if(t)
+      t->unregisterHandler(timeout);
+    delete timeout;
+  }
   
-  NOTICE("Connect wait returns, state is " << Tcp::stateString(stateBlock->currentState) << ".");
   if((stateBlock->currentState != Tcp::ESTABLISHED) || timedOut)
     return 0; /// \todo Keep track of an error number somewhere in StateBlock
   else
@@ -149,6 +171,7 @@ void TcpManager::Disconnect(size_t connectionId)
   // LISTEN socket closing
   else if(stateBlock->currentState == Tcp::LISTEN)
   {
+    NOTICE("Disconnect called on a LISTEN socket\n");
     stateBlock->currentState = Tcp::CLOSED;
     removeConn(stateBlock->connId);
   }
@@ -160,6 +183,9 @@ void TcpManager::Disconnect(size_t connectionId)
 
 void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue)
 {
+  if(!payload || !nBytes)
+    return;
+  
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
     return;
@@ -188,32 +214,51 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
   // throw this block onto the retransmission queue (if we should, because this send might be sending unack'd data that's in the retransmit queue)
   if(addToRetransmitQueue)
   {
-    stateBlock->retransmitQueue.append(payload, nBytes);
-    stateBlock->waitingForTimeout = true;
+    NOTICE("Adding to the retransmit queue...");
+    //stateBlock->retransmitQueue.append(payload, nBytes);
+    //stateBlock->resetTimer();
+    //stateBlock->waitingForTimeout = true;
   }
 }
 
 void TcpManager::removeConn(size_t connId)
 {
+  return;
+  NOTICE("Tcp: Removing connection " << connId);
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
     return;
   
   StateBlock* stateBlock;
-  if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
+  if(handle->listen)
+    stateBlock = m_ListeningStateBlocks.lookup(*handle);
+  else
+    stateBlock = m_StateBlocks.lookup(*handle);
+  if(stateBlock == 0)
     return;
   
   // only remove closed connections!
+  NOTICE("Current state of connection " << connId << " is " << Tcp::stateString(stateBlock->currentState) << "...");
   if(stateBlock->currentState != Tcp::CLOSED)
+  {
     return;
-  
+  }
+    
   // remove from the lists
-  m_StateBlocks.remove(*handle);
+  NOTICE("Handle: " << Dec << handle->localPort << ", " << handle->remotePort << ", " << Hex << handle->remoteHost.ip.getIp() << ".");
+  if(handle->listen)
+    m_ListeningStateBlocks.remove(*handle);
+  else
+    m_StateBlocks.remove(*handle);
   m_CurrentConnections.remove(connId);
+  
+  NOTICE("Win");
   
   // destroy the state block (and its internals)
   stateBlock->waitState.release();
   delete stateBlock;
+  
+  NOTICE("Returning now");
   
   // stateBlock->endpoint is what applications are using right now, so
   // we can't really delete it yet. They will do that with returnEndpoint().
@@ -223,7 +268,14 @@ void TcpManager::returnEndpoint(Endpoint* e)
 {
   if(e)
   {
-    m_Endpoints.remove(e->getLocalPort());
+    // remove from the endpoint list
+    //m_Endpoints.remove(e->getConnId());
+    
+    // if we can (state == CLOSED) remove the connection itself
+    // if the state is TIME_WAIT this will be done by the TIME_WAIT timeout
+    removeConn(e->getConnId());
+    
+    // clean up the memory
     delete e;
   }
 }
@@ -231,17 +283,22 @@ void TcpManager::returnEndpoint(Endpoint* e)
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {
   Endpoint* e;
-  if((e = m_Endpoints.lookup(localPort)) == 0)
-  {
+  
+  // this will fail for servers! we need a unique identifier for all TcpEndpoints - shouldn't be
+  // overly difficult to implement (but to lookup... that might be hard?)
+  //if((e = m_Endpoints.lookup(localPort)) == 0)
+  //{
     if(localPort == 0)
       localPort = allocatePort();
     
     TcpEndpoint* tmp = new TcpEndpoint(localPort, 0);
+    if(!tmp)
+      return 0;
     
     tmp->setCard(pCard);
     
     e = static_cast<Endpoint*>(tmp);
-    m_Endpoints.insert(localPort, e);
-  }
+    //m_Endpoints.insert(localPort, e);
+  //}
   return e;
 }

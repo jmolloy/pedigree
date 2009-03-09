@@ -19,6 +19,8 @@
 
 Endpoint* TcpEndpoint::accept()
 {
+  // acquire() will return true when there is at least one release?
+  NOTICE("Endpoint::accept: m_IncomingConnectionCount is at " << reinterpret_cast<uintptr_t>(&m_IncomingConnectionCount) << ".");
   m_IncomingConnectionCount.acquire();
   Endpoint* e = m_IncomingConnections.popFront();
   return e;
@@ -26,6 +28,9 @@ Endpoint* TcpEndpoint::accept()
 
 void TcpEndpoint::listen()
 {
+  NOTICE("Clearing incoming connections");
+  m_IncomingConnections.clear();
+  NOTICE("Cleared");
   m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
 }
 
@@ -33,6 +38,13 @@ bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost)
 {
   setRemoteHost(remoteHost);
   setRemotePort(remoteHost.remotePort);
+  if(getLocalPort() == 0)
+  {
+    uint16_t port = TcpManager::instance().allocatePort();
+    setLocalPort(port);
+    if(getLocalPort() == 0)
+      return false;
+  }
   m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, m_Card);
   if(m_ConnId == 0)
     NOTICE("TcpEndpoint::connect: got 0 for the connection id");
@@ -53,6 +65,9 @@ bool TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 
 size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
 {
+  if(!buffer || !maxSize)
+    return 0;
+  
   bool queueReady = false;
   if(bBlock)
     queueReady = dataReady(true);
@@ -112,10 +127,13 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
     
     Timer* t = Machine::instance().getTimer();
     NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-    timeout->setTimeout(tmout);
-    timeout->setSemaphore(&timedOut);
-    if(t)
-      t->registerHandler(timeout);
+    if(timeout)
+    {
+      timeout->setTimeout(tmout);
+      timeout->setSemaphore(&timedOut);
+      if(t)
+        t->registerHandler(timeout);
+    }
     
     bool ret = false;
     while(true)
@@ -141,9 +159,12 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
       }
     }
     
-    if(t)
-      t->unregisterHandler(timeout);
-    delete timeout;
+    if(timeout)
+    {
+      if(t)
+        t->unregisterHandler(timeout);
+      delete timeout;
+    }
     return ret;
   }
   else

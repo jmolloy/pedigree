@@ -213,6 +213,7 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
     while (!inserted)
     {
       if (key > currentNode->key)
+      {
         if (currentNode->rightChild == 0) // We have found our insert point.
         {
           currentNode->rightChild = n;
@@ -221,7 +222,9 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
         }
         else
           currentNode = currentNode->rightChild;
+      }
       else
+      {
         if (currentNode->leftChild == 0) // We have found our insert point.
         {
           currentNode->leftChild = n;
@@ -230,6 +233,7 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
         }
         else
           currentNode = currentNode->leftChild;
+      }
     }
     
     // The value has been inserted, but has that messed up the balance of the tree?
@@ -250,12 +254,19 @@ void *Tree<StateBlockHandle,void*>::lookup(StateBlockHandle key)
   Node *n = root;
   while (n != 0)
   {
+    NOTICE("n = " << reinterpret_cast<uintptr_t>(n) << "...");
     if (n->key == key)
+    {
       return n->element;
-    else if (n->key > key)
-      n = n->leftChild;
-    else
+    }
+    else if (key > n->key)
+    {
       n = n->rightChild;
+    }
+    else
+    {
+      n = n->leftChild;
+    }
   }
   return 0;
 }

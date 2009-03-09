@@ -63,6 +63,8 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 {
   size_t newSize = nBytes + sizeof(tcpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
+  if(!newPacket)
+    return false;
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
   
   tcpHeader* header = reinterpret_cast<tcpHeader*>(packAddr);
@@ -81,7 +83,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   
   StationInfo me = pCard->getStationInfo();
   
-  if(nBytes)
+  if(payload && nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
   
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
@@ -93,7 +95,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 }
 
 void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
-{  
+{
   // grab the IP header to find the size, so we can skip options and get to the TCP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->verlen & 0x0F) * 4; // len is the number of DWORDs

@@ -3,15 +3,17 @@
 
 #include <inttypes.h>
 
+/// \todo Support big-endian properly and in a way that works
+
 #if (LITTLE_ENDIAN) && (BIG_ENDIAN)
-  #error LITTLE_ENDIAN and BIG_ENDIAN are defined at the same time!
+  //#error LITTLE_ENDIAN and BIG_ENDIAN are defined at the same time!
 #endif
 
 #if !(LITTLE_ENDIAN) && !(BIG_ENDIAN)
-  #error Neither LITTLE_ENDIAN or BIG_ENDIAN are defined!
+  //#error Neither LITTLE_ENDIAN or BIG_ENDIAN are defined!
 #endif
 
-#if LITTLE_ENDIAN
+#if LITTLE_ENDIAN || 1
 
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))

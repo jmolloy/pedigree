@@ -636,3 +636,21 @@ char* inet_ntoa(struct in_addr addr)
   sprintf(buff, "%u.%u.%u.%u", addr.s_addr & 0xff, (addr.s_addr & 0xff00) >> 8, (addr.s_addr & 0xff0000) >> 16, (addr.s_addr & 0xff000000) >> 24);
   return buff;
 }
+
+struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
+{
+  errno = ENOSYS;
+  return 0;
+}
+
+struct hostent* gethostbyname(const char *name)
+{
+  errno = ENOSYS;
+  return 0;
+}
+
+struct servent* getservbyname(const char *name, const char *proto)
+{
+  errno = ENOSYS;
+  return 0;
+}
