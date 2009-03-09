@@ -93,8 +93,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
   // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
   // decide to switch threads.
-#ifdef SMP
-#warning You will have problems here!
+#ifdef MULTIPROCESSOR
+  Machine::instance().stopAllOtherProcessors();
 #endif
   // The current thread, in case we decide to switch.
 #if defined(THREADS)

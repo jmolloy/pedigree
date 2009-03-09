@@ -53,7 +53,8 @@ uintptr_t KernelCoreSyscallManager::syscall(SyscallState &state)
 {
   switch (state.getSyscallNumber())
   {
-    case yield: Scheduler::instance().schedule(0, state, reinterpret_cast<Thread*> (state.getSyscallParameter(0))); return 0;
+    case yield: Scheduler::instance().schedule(0, state, reinterpret_cast<Thread*> (state.getSyscallParameter(0)));
+      return 0;
     default:
     {
       if (m_Functions[state.getSyscallNumber()] == 0)

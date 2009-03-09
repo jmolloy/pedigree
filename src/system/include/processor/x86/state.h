@@ -107,7 +107,7 @@ class X86InterruptState
      *  set the processor to 'state'. */
     static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
 
-  private:
+//  private:
     /** The default constructor
      *\note NOT implemented */
     X86InterruptState();

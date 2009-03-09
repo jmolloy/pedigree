@@ -20,6 +20,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <process/Scheduler.h>
 #include <process/Process.h>
+#include <LockGuard.h>
 #include "VirtualAddressSpace.h"
 
 //
@@ -50,6 +51,13 @@
 
 // Defined in boot-standalone.s
 extern void *pagedirectory;
+
+/** Array of free pages, used during the mapping algorithms in case a new page
+    table needs to be mapped, which must be done without relinquishing the lock
+    (which means we can't call the PMM!) 
+    
+    There is one page per processor. */
+physical_uintptr_t g_EscrowPages[256]; /// \todo MAX_PROCESSORS
 
 X86KernelVirtualAddressSpace X86KernelVirtualAddressSpace::m_Instance;
 
@@ -132,6 +140,8 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
                                                void *virtualAddress,
                                                size_t flags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
@@ -238,6 +248,8 @@ X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
 
 bool X86VirtualAddressSpace::doIsMapped(void *virtualAddress)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
@@ -259,6 +271,19 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
                                    void *virtualAddress,
                                    size_t flags)
 {
+  // Check if we have an allocated escrow page - if we don't, allocate it.
+  if (g_EscrowPages[Processor::id()] == 0)
+  {
+    g_EscrowPages[Processor::id()] = PhysicalMemoryManager::instance().allocatePage();
+    if (g_EscrowPages[Processor::id()] == 0)
+    {
+      // Still 0, we have problems.
+      FATAL("Out of memory");
+    }
+  }
+
+  LockGuard<Spinlock> guard(m_Lock);
+
   size_t Flags = toFlags(flags);
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
@@ -266,11 +291,11 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
   // Is a page table present?
   if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
-    // Allocate a page
-    PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
-    uint32_t page = PMemoryManager.allocatePage();
-    if (page == 0)
-      return false;
+    // We need a page, but calling the PMM could cause reentrancy issues. We 
+    // use our alotted page in the escrow cache then set it to zero so that
+    // it will be replenished next time it needs to be used.
+    uint32_t page = g_EscrowPages[Processor::id()];
+    g_EscrowPages[Processor::id()] = 0;
 
     // Map the page
     *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
@@ -340,6 +365,8 @@ void X86VirtualAddressSpace::doGetMapping(void *virtualAddress,
 }
 void X86VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint32_t *pageTableEntry = 0;
@@ -353,6 +380,8 @@ void X86VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 }
 void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint32_t *pageTableEntry = 0;
@@ -367,6 +396,8 @@ void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   // Get a virtual address for the stack
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
@@ -384,6 +415,8 @@ void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
                                                uint32_t *&pageTableEntry)
 {
+  // Not a public-facing function - locking shouldn't be needed.
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
@@ -445,6 +478,12 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
 
 VirtualAddressSpace *X86VirtualAddressSpace::clone()
 {
+  // No lock guard in here - we assume that if we're cloning, nothing will be trying
+  // to map/unmap memory.
+  // Also, we need a way of solving this as we use the map/unmap functions, which
+  // themselves try and grab the lock.
+  /// \bug This assumption is false!
+
   VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
   // Create a new virtual address space
@@ -506,6 +545,8 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
 
 void X86VirtualAddressSpace::revertToKernelAddressSpace()
 {
+  // Again, similar to clone(), we don't grab the lock. We should, but we don't.
+
   for (uintptr_t i = 0; i < 1024; i++)
   {
     uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
@@ -579,6 +620,11 @@ X86KernelVirtualAddressSpace::X86KernelVirtualAddressSpace()
                            VIRTUAL_PAGE_TABLES,
                            KERNEL_VIRTUAL_STACK)
 {
+  /// \todo MAX_PROCESSORS here.
+  for (int i = 0; i < 256; i++)
+  {
+    g_EscrowPages[i] = 0;
+  }
 }
 X86KernelVirtualAddressSpace::~X86KernelVirtualAddressSpace()
 {

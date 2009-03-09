@@ -19,6 +19,8 @@
 #include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <machine/Machine.h>
+#include <processor/InterruptManager.h>
 
 #define LAPIC_REG_ID                                    0x0020
 #define LAPIC_REG_VERSION                               0x0030
@@ -44,8 +46,12 @@
 #define LAPIC_REG_CURRENT_COUNT                         0x0390
 #define LAPIC_REG_DIVIDE_CONFIG                         0x03E0
 
-#define ERROR_VECTOR                                    0xFE
-#define SPURIOUS_VECTOR                                 0xFF
+#define LAPIC_TIMER_PERIODIC                            0x00020000
+#define LAPIC_MASKED                                    0x00010000
+
+/** Assume 1GHz bus speed, 128 divisor, gives 7812500 for one second delay.
+    For 10ms delay, divide that by 100... */
+#define INITIAL_COUNT_VALUE (78125*40)
 
 bool LocalApic::initialise(uint64_t physicalAddress)
 {
@@ -75,6 +81,14 @@ bool LocalApic::initialise(uint64_t physicalAddress)
     return false;
   }
 
+  // Register the timer vector.
+  if (!InterruptManager::instance().registerInterruptHandler(TIMER_VECTOR, this))
+    return false;
+
+  // Register the IPI halt vector.
+  if (!InterruptManager::instance().registerInterruptHandler(IPI_HALT_VECTOR, this))
+    return false;
+  
   return initialiseProcessor();
 }
 
@@ -96,6 +110,15 @@ bool LocalApic::initialiseProcessor()
   tmp = m_IoSpace.read32(LAPIC_REG_LVT_ERROR);
   m_IoSpace.write32((tmp & 0xFFFEEF00) | ERROR_VECTOR, LAPIC_REG_LVT_ERROR);
 
+  // Set the LVT timer register.
+  m_IoSpace.write32(LAPIC_TIMER_PERIODIC | TIMER_VECTOR, LAPIC_REG_LVT_TIMER);
+
+  // Initialise the intial-count register
+  m_IoSpace.write32(INITIAL_COUNT_VALUE, LAPIC_REG_INITIAL_COUNT);
+
+  // Initialise the divisor register. (Divide by 128)
+  m_IoSpace.write32(0xA, LAPIC_REG_DIVIDE_CONFIG);
+
   // TODO
 
   return true;
@@ -112,6 +135,15 @@ void LocalApic::interProcessorInterrupt(uint8_t destinationApicId,
   m_IoSpace.write32(destinationApicId << 24, LAPIC_REG_INT_CMD_HIGH);
   m_IoSpace.write32(vector | (deliveryMode << 8) | (bAssert ? (1 << 14) : 0) | (bLevelTriggered ? (1 << 15) : 0), LAPIC_REG_INT_CMD_LOW);
 }
+
+void LocalApic::interProcessorInterruptAllExcludingThis(uint8_t vector,
+                                                        size_t deliveryMode)
+{
+  while ((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0);
+
+  m_IoSpace.write32(vector | (deliveryMode << 8) | (1 << 14) | (0x3 << 18), LAPIC_REG_INT_CMD_LOW);
+}
+
 
 uint8_t LocalApic::getId()
 {
@@ -135,4 +167,28 @@ bool LocalApic::check(uint64_t physicalAddress)
   }
 
   return true;
+}
+
+void LocalApic::interrupt(size_t nInterruptNumber, InterruptState &state)
+{
+  if (nInterruptNumber == TIMER_VECTOR)
+  {
+    // TODO: Delta is wrong.
+    if (LIKELY(m_Handler != 0))
+    {
+      m_Handler->timer (0, state);
+    }
+  }
+
+  // The halt IPI is used in the debugger to stop all other cores.
+  if (nInterruptNumber == IPI_HALT_VECTOR)
+  {
+    Processor::halt();
+  }
+}
+
+void LocalApic::ack()
+{
+  // Send EOI.
+  m_IoSpace.write32(0x00000000, LAPIC_REG_EOI);
 }

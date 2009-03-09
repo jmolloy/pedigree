@@ -127,7 +127,7 @@ sudo touch $MOUNTPT/.pedigree-root
   fini;
 
   if which qemu-img >/dev/null; then
-    sudo qemu-img convert $SRCDIR/hdd_16h_63spt_100c.img -O vmdk $SRCDIRhdd_16h_63spt_100c.vmdk
+    sudo qemu-img convert $SRCDIR/hdd_16h_63spt_100c.img -O vmdk $SRCDIR/hdd_16h_63spt_100c.vmdk
   fi
 
   if which VBoxManage >/dev/null; then

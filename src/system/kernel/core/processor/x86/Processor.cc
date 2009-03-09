@@ -21,6 +21,7 @@
 #include "VirtualAddressSpace.h"
 #include "../x86_common/PhysicalMemoryManager.h"
 #include "PageFaultHandler.h"
+#include <process/initialiseMultitasking.h>
 
 // Multiprocessor headers
 #if defined(MULTIPROCESSOR)
@@ -80,6 +81,8 @@ void Processor::initialise2()
   // Initialise the GDT
   X86GdtManager::instance().initialise(nProcessors);
   X86GdtManager::initialiseProcessor();
+
+  initialiseMultitasking();
 
   #if defined(MULTIPROCESSOR)
     if (nProcessors != 1)

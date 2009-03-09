@@ -18,6 +18,10 @@
 #include <machine/Machine.h>
 #include <utilities/utility.h>
 
+#ifdef DEBUGGER
+#include <Debugger.h>
+#endif
+
 #ifdef DEBUGGER_QWERTY
 #include <keymap_qwerty.h>
 #endif
@@ -187,10 +191,14 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
   scancode = m_Port.read8(0);
 
   Character c = scancodeToCharacter(scancode);
+#ifdef DEBUGGER
   if (c.valid && c.is_special && c.value == KB_F12)
   {
-    Processor::breakpoint();
+    LargeStaticString sError;
+    sError += "User-induced breakpoint";
+    Debugger::instance().start(state, sError);
   }
+#endif
   if (c.valid)
   {
     m_Buffer[m_BufEnd++] = c;

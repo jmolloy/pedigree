@@ -39,19 +39,13 @@ void Semaphore::acquire(size_t n)
   for (int i = 0; i < 10; i++)
     if (tryAcquire(n))
     {
-//      m_pParent = Processor::information().getCurrentThread();
       return;
     }
 #endif
   while (true)
   {
     if (tryAcquire(n))
-    {
-//      m_BeingModified.acquire();
-//      m_pParent = Processor::information().getCurrentThread();
-//      m_BeingModified.release();
       return;
-    }
 
     m_BeingModified.acquire();
 
@@ -64,15 +58,14 @@ void Semaphore::acquire(size_t n)
       return;
     }
 
-    m_Queue.pushBack(Processor::information().getCurrentThread());
-    Processor::information().getCurrentThread()->setStatus(Thread::Sleeping);
-
-//    Thread *pParent = m_pParent;
+    if (Processor::information().getCurrentThread()->getStatus() != Thread::Sleeping)
+    {
+      m_Queue.pushBack(Processor::information().getCurrentThread());
+      Processor::information().getCurrentThread()->setStatus(Thread::PreSleep);
+    }
     m_BeingModified.release();
 
-    // Yield.
-    /// \bug This should be m_pParent, but this kills PPC. Zero works. THIS NEEDS INVESTIGATION.
-    Scheduler::instance().yield(/*pParent*/0);
+    Scheduler::instance().yield(0);
   }
   
 }
@@ -97,11 +90,16 @@ void Semaphore::release(size_t n)
   m_Counter += n;
   
   m_BeingModified.acquire();
-  while (m_Queue.count())
+  
+  for (size_t i = 0; i < m_Queue.count(); i++)
   {
     // TODO: Check for dead thread.
     Thread *pThread = m_Queue.popFront();
+
+    while (pThread->getStatus() == Thread::PreSleep) ;
+
     pThread->setStatus(Thread::Ready);
+
     if (pThread == 0)
     {
       FATAL("Semaphore: Null thread!");
@@ -109,7 +107,6 @@ void Semaphore::release(size_t n)
     }
   }
 
-//  m_pParent = 0;
   m_BeingModified.release();
 
   #ifdef STRICT_LOCK_ORDERING

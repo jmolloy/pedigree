@@ -34,7 +34,8 @@ public:
     Ready,
     Running,
     Sleeping,
-    Zombie
+    Zombie,
+    PreSleep
   };
   
   typedef int (*ThreadStartFunc)(void*);
@@ -176,7 +177,7 @@ private:
   /**
    * Our current status.
    */
-  Status m_Status;
+  volatile Status m_Status;
   
   /**
    * Our exit code

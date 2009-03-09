@@ -41,7 +41,12 @@ public:
 
   /** Initialises the scheduler. */
   bool initialise(Thread *pInitialThread);
-  
+
+#ifdef MULTIPROCESSOR
+    /** Initialises the scheduler for the current processor */
+    void initialiseProcessor(Thread *pInitialThread);
+#endif
+
   /** Retrieves the current SchedulingAlgorithm */
   SchedulingAlgorithm *getAlgorithm();
   /** Sets the current SchedulingAlgorithm */
@@ -117,6 +122,7 @@ private:
 
   /** The next available process ID. */
   Atomic<size_t> m_NextPid;
+
 };
 
 #endif

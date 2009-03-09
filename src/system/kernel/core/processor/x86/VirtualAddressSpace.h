@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_X86_VIRTUALADDRESSSPACE_H
 
 #include <processor/types.h>
+#include <Spinlock.h>
 #include <processor/VirtualAddressSpace.h>
 
 /** @addtogroup kernelprocessorx86
@@ -138,6 +139,8 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     void *m_pStackTop;
     /** List of free stacks */
     Vector<void*> m_freeStacks;
+    /** Lock to guard against multiprocessor reentrancy. */
+    Spinlock m_Lock;
 };
 
 /** The kernel's VirtualAddressSpace on x86 */

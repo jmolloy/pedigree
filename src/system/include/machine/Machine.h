@@ -68,7 +68,7 @@ class Machine
     
     virtual IrqManager *getIrqManager() = 0;
     /**
-     * Returns the n'th SchedulerTimer device.
+     * Returns the SchedulerTimer device.
      */
     virtual SchedulerTimer *getSchedulerTimer() =0;
     
@@ -82,6 +82,13 @@ class Machine
      */
     virtual Keyboard *getKeyboard() =0;
     
+#ifdef MULTIPROCESSOR
+    /**
+     * Stops all other cores. This is used during debugger initialisation.
+     */
+    virtual void stopAllOtherProcessors() =0;
+#endif
+
   protected:
     inline Machine()
       : m_bInitialised(false){}

@@ -51,13 +51,39 @@
 #include <linker/SymbolTable.h>
 
 BootIO bootIO;
-
+Semaphore sema(2);
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
 {
-  NOTICE("apMain()");
-  Processor::halt();
+  NOTICE("Processor #" << Processor::id() << " started.");
+
+  Processor::setInterrupts(true);
+  for (;;)
+  {
+//    sema.acquire();
+//    NOTICE("Got Sem: " << Processor::id() << ", apMain()");
+//    sema.release();
+
+    Scheduler::instance().yield();
+//        for (int i = 0; i < 10000000; i++);
+//    NOTICE("Processor " << Processor::id() << ", alive!");
+  }
+}
+
+int idle(void *)
+{
+  Processor::setInterrupts(true);
+  for (;;)
+  {
+    sema.acquire();
+    NOTICE("Got Sem: " << Processor::id() << ", idle()");
+    sema.release();
+
+    //Scheduler::instance().yield();
+    for (int i = 0; i < 10000000; i++);
+//    NOTICE("Processor " << Processor::id() << ", alive!");
+  }
 }
 
 int foo(void *p)
@@ -113,23 +139,23 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
 #endif
-
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-  List<void*> list;
-  for(int i = 0; i < 20; i++)
-  list.pushBack(0);
+#ifdef THREADS
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+  Processor::setInterrupts(true);
+#endif
 
   KernelCoreSyscallManager::instance().initialise();
-
-#if 0 && defined(ARM_COMMON) && defined(DEBUGGER)
-   InterruptState st;
-   LargeStaticString str2("I r cool");
-   Debugger::instance().start(st, str2);
-  return; // Go back to the YAMON prompt.
-#endif
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -160,11 +186,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
-#ifdef THREADS
-  initialiseMultitasking();
-  Processor::setInterrupts(true);
-#endif
-
+  for(;;);
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)

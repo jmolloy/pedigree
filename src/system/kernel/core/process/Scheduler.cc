@@ -28,6 +28,7 @@
 #include <machine/Machine.h>
 #include <panic.h>
 #include <Log.h>
+#include <machine/x86_common/LocalApic.h>
 
 Scheduler Scheduler::m_Instance;
 
@@ -51,8 +52,21 @@ bool Scheduler::initialise(Thread *pThread)
   Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
 
   Machine::instance().getSchedulerTimer()->registerHandler(this);
+
   return true;
 }
+
+#ifdef MULTIPROCESSOR
+  void Scheduler::initialiseProcessor(Thread *pThread)
+  {
+    pThread->setStatus(Thread::Running);
+    Processor::information().setCurrentThread(pThread);
+
+    m_pSchedulingAlgorithm->addThread(pThread);
+
+    Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+  }
+#endif
 
 void Scheduler::addThread(Thread *pThread)
 {
@@ -94,17 +108,26 @@ void Scheduler::threadStatusChanged(Thread *pThread)
 
 void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *pThread)
 {
+  m_Mutex.acquire();
+
   if (pThread == 0)
     pThread = m_pSchedulingAlgorithm->getNext(pProcessor);
   Thread * const pOldThread = Processor::information().getCurrentThread();
 
-  if (pThread->getStatus() != Thread::Ready)
+  if (pThread == 0)
+  {
+    NOTICE("Fail");
+    m_Mutex.release();
     return;
-
-  m_Mutex.acquire();
+  }
 
   if (pOldThread->getStatus() == Thread::Running)
     pOldThread->setStatus(Thread::Ready);
+  else if (pOldThread->getStatus() == Thread::PreSleep)
+  {
+    NOTICE("FNARR");
+    pOldThread->setStatus(Thread::Sleeping);
+  }
 
   if (pThread->getParent() == 0)
   {
@@ -124,7 +147,9 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
 #ifdef X86_COMMON
   /// \todo What IRQ do we ACK? It's machine specific.
-  Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+  //Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+  LocalApic *lApic = static_cast<LocalApic*>(Machine::instance().getSchedulerTimer());
+  lApic->ack();
 #endif
   Processor::contextSwitch(pThread->getInterruptState());
 }

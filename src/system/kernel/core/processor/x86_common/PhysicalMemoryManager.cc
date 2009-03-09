@@ -19,6 +19,7 @@
 #include <utilities/utility.h>
 #include <processor/MemoryRegion.h>
 #include "PhysicalMemoryManager.h"
+#include <LockGuard.h>
 
 #if defined(X86)
   #include "../x86/VirtualAddressSpace.h"
@@ -36,10 +37,14 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   return m_PageStack.allocate(0);
 }
 void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   m_PageStack.free(page);
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
@@ -48,6 +53,8 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t Flags,
                                                     physical_uintptr_t start)
 {
+  LockGuard<Spinlock> guard(m_RegionLock);
+
   // Allocate a specific physical memory region (always physically continuous)
   if (start != static_cast<physical_uintptr_t>(-1))
   {
@@ -299,6 +306,8 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
   extern void *init;
   extern void *code;
 
+  LockGuard<Spinlock> guard(m_Lock);
+
   // Unmap & free the .init section
   VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
   size_t count = (reinterpret_cast<uintptr_t>(&code) - reinterpret_cast<uintptr_t>(&init)) / getPageSize();
@@ -324,7 +333,7 @@ X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
   #if defined(ACPI)
     m_AcpiRanges(),
   #endif
-    m_MemoryRegions()
+    m_MemoryRegions(), m_Lock(), m_RegionLock()
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()
@@ -333,6 +342,8 @@ X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()
 
 void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
 {
+  LockGuard<Spinlock> guard(m_RegionLock);
+
   for (Vector<MemoryRegion*>::Iterator it = PhysicalMemoryManager::m_MemoryRegions.begin();
        it != PhysicalMemoryManager::m_MemoryRegions.end();
        it++)

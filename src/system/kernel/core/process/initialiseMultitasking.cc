@@ -21,12 +21,18 @@
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <process/Process.h>
+#include <processor/Processor.h>
 
 void initialiseMultitasking()
 {
   // Create the kernel idle process.
   Process *pProcess = new Process();
   pProcess->description() += "Kernel idle process";
+
+#ifdef MULTIPROCESSOR
+  pProcess->description() += " - Processor #";
+  pProcess->description() += Processor::id();
+#endif
   
   // Create the kernel idle thread.
   Thread *pThread = new Thread(pProcess);
@@ -34,5 +40,21 @@ void initialiseMultitasking()
   // Initialise the scheduler.
   Scheduler::instance().initialise(pThread);
 }
+
+#ifdef MULTIPROCESSOR
+  void initialiseMultitaskingPerProcessor()
+  {
+    // Create the kernel idle process.
+    Process *pProcess = new Process();
+    pProcess->description() += "Kernel idle process";
+
+    pProcess->description() += " - Processor #";
+    pProcess->description() += Processor::id();
+  
+    // Create the kernel idle thread.
+    Thread *pThread = new Thread(pProcess);  
+    Scheduler::instance().initialiseProcessor(pThread);
+  }
+#endif
 
 #endif

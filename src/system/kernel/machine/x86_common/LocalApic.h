@@ -21,18 +21,28 @@
 
 #include <processor/types.h>
 #include <processor/MemoryMappedIo.h>
+#include <machine/IrqManager.h>
+#include <machine/SchedulerTimer.h>
+#include <processor/state.h>
+#include <processor/InterruptHandler.h>
+
+#define IPI_HALT_VECTOR                                 0xFB
+#define ERROR_VECTOR                                    0xFC
+#define SPURIOUS_VECTOR                                 0xFD
+#define TIMER_VECTOR                                    0xFE
 
 /** @addtogroup kernelmachinex86common
  * @{ */
 
 /** The x86/x64 local APIC
  *\todo Initialise the Local APIC Timer */
-class LocalApic
+class LocalApic : public SchedulerTimer,
+                  private InterruptHandler
 {
   public:
     /** The default constructor */
     inline LocalApic()
-      : m_IoSpace("Local APIC"){}
+      : m_IoSpace("Local APIC"), m_Handler(0) {}
     /** The destructor */
     inline virtual ~LocalApic(){}
 
@@ -71,9 +81,24 @@ class LocalApic
                                  bool bAssert,
                                  bool bLevelTriggered);
 
+    /** Issue an IPI (= Interprocessor Interrupt) to all logical processors except this one.
+     * (i.e. to all other cores).
+     * \param[in] vector The IPI vector
+     * \param[in] deliveryMode The delivery mode */
+    void interProcessorInterruptAllExcludingThis(uint8_t vector,
+                                                 size_t deliveryMode);
+
     /** Get the Local APIC Id for this processor
      *\return the Local APIC Id of this processor */
     uint8_t getId();
+
+    //
+    // SchedulerTimer interface
+    //
+    virtual bool registerHandler(TimerHandler *handler)
+      {m_Handler = handler; return false;}
+
+    void ack();
 
   private:
     /** The copy-constructor
@@ -88,8 +113,17 @@ class LocalApic
      *\return true, if the local APIC is enabled and at physicalAddress, false otherwise */
     bool check(uint64_t physicalAddress) INITIALISATION_ONLY;
 
+    //
+    // InterruptHandler interface
+    //
+    virtual void interrupt(size_t nInterruptNumber, InterruptState &state);
+
+
     /** The local APIC memory-mapped I/O space */
     MemoryMappedIo m_IoSpace;
+
+    /** The scheduler. */
+    TimerHandler *m_Handler;
 };
 
 /** @} */

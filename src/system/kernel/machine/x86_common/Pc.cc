@@ -196,7 +196,7 @@ IrqManager *Pc::getIrqManager()
 
 SchedulerTimer *Pc::getSchedulerTimer()
 {
-  return &Pit::instance();
+  return &m_LocalApic;
 }
 
 Timer *Pc::getTimer()
@@ -208,6 +208,14 @@ Keyboard *Pc::getKeyboard()
 {
   return &m_Keyboard;
 }
+
+#ifdef MULTIPROCESSOR
+  void Pc::stopAllOtherProcessors()
+  {
+    m_LocalApic.interProcessorInterruptAllExcludingThis(IPI_HALT_VECTOR,
+                                                        0 /* Fixed delivery mode */);
+  }
+#endif
 
 Pc::Pc()
   : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)

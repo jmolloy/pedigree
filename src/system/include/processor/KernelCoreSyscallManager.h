@@ -36,6 +36,8 @@ public:
      *        system/modules/linker/asm-*.s ! */
     link = 1,
 
+    sleep = 2,
+
     /** The last function, for error checking. */
     functionEnd
   };

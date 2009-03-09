@@ -182,14 +182,14 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   {
     SYSCALL_ERROR(OutOfMemory);
   }
-
+  NOTICE("Reading file...");
   if (file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer)) != file.getSize())
   {
     SYSCALL_ERROR(TooBig);
     delete [] buffer;
     return -1;
   }
-
+  NOTICE("File read.");
   Elf *elf = new Elf();
   if (!elf->create(buffer, file.getSize()))
   {
@@ -198,7 +198,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
-
+  NOTICE("ELF created.");
   pProcess->description() = String(name);
 
   // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
@@ -236,7 +236,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
       return -1;
     }
   }
-
+  NOTICE("ELF loaded.");
   elf->load(buffer, file.getSize(), loadBase, elf->getSymbolTable());
 
   DynamicLinker::instance().initialiseElf(elf);

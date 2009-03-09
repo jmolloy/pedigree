@@ -20,4 +20,10 @@
 /// Starts up the threading subsystem.
 void initialiseMultitasking();
 
+#ifdef MULTIPROCESSOR
+  /// Starts up the threading subsystem on a subsequently booted application
+  /// processor.
+  void initialiseMultitaskingPerProcessor();
+#endif
+
 #endif

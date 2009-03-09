@@ -18,9 +18,10 @@
 #include <process/RoundRobin.h>
 #include <process/Thread.h>
 #include <Log.h>
+#include <LockGuard.h>
 
 RoundRobin::RoundRobin() :
-    m_List()
+  m_List(), m_Lock(false)
 {
 }
 
@@ -30,13 +31,15 @@ RoundRobin::~RoundRobin()
 
 void RoundRobin::addThread(Thread *pThread)
 {
-  // TODO ZOMG TEH LOCKZ
+  LockGuard<Spinlock> guard(m_Lock);
+
   m_List.pushBack(pThread);
 }
 
 void RoundRobin::removeThread(Thread *pThread)
 {
-  // TODO ZOMG TEH LOCKZ
+  LockGuard<Spinlock> guard(m_Lock);
+
   for(ThreadList::Iterator it = m_List.begin();
       it != m_List.end();
       it++)
@@ -53,8 +56,9 @@ void RoundRobin::removeThread(Thread *pThread)
 
 Thread *RoundRobin::getNext(Processor *pProcessor)
 {
-  // TODO ZOMG TEH LOCKZ
-  Thread *pThread;
+  LockGuard<Spinlock> guard(m_Lock);
+
+  Thread *pThread = 0;
   size_t i = 0;
   size_t size = m_List.count();
   do
@@ -64,7 +68,8 @@ Thread *RoundRobin::getNext(Processor *pProcessor)
     i++;
   } while ((pThread->getStatus() != Thread::Ready) &&
            (i < size));
-  return pThread;
+
+  return (pThread->getStatus() == Thread::Ready) ? pThread : 0;
 }
 
 void RoundRobin::threadStatusChanged(Thread *pThread)

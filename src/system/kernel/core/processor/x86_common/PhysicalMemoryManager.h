@@ -21,6 +21,7 @@
 #include <BootstrapInfo.h>
 #include <utilities/RangeList.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <Spinlock.h>
 
 /** @addtogroup kernelprocessorx86common
  * @{ */
@@ -136,6 +137,9 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** The X86CommonPhysicalMemoryManager class instance */
     static X86CommonPhysicalMemoryManager m_Instance;
+
+    /** To guard against multiprocessor reentrancy. */
+    Spinlock m_Lock, m_RegionLock;
 };
 
 /** @} */

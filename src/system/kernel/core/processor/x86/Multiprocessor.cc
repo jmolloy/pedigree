@@ -17,6 +17,8 @@
 #include "gdt.h"
 #include "InterruptManager.h"
 #include "../x86_common/Multiprocessor.h"
+#include <process/initialiseMultitasking.h>
+
 #include "../../../machine/x86_common/Pc.h"
 
 void Multiprocessor::applicationProcessorStartup()
@@ -43,6 +45,9 @@ void Multiprocessor::applicationProcessorStartup()
 
   // We need to synchronize the -init section invalidation
   Processor::invalidate(0);
+
+  // Start multitasking and ensure there is a spare idle thread for this CPU.
+  initialiseMultitaskingPerProcessor();
 
   // Call the per-processor code in main.cc
   extern void apMain();

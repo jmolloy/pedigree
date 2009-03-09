@@ -19,6 +19,7 @@
 
 #include <process/SchedulingAlgorithm.h>
 #include <utilities/List.h>
+#include <Spinlock.h>
 
 class RoundRobin : public SchedulingAlgorithm
 {
@@ -40,6 +41,8 @@ public:
 private:
   typedef List<Thread*> ThreadList;
   ThreadList m_List;
+
+  Spinlock m_Lock;
 };
 
 #endif

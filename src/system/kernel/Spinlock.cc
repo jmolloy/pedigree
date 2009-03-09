@@ -33,15 +33,6 @@ void Spinlock::acquire()
   if (bInterrupts)
     Processor::setInterrupts(false);
 
-  m_bInterrupts = bInterrupts;
-
-  // TMP: check for corruption.
-  if (magic != 0x1234)
-  {
-    FATAL("Spinlock: Corruption : " << magic);
-    Processor::breakpoint();
-  }
-
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
@@ -49,24 +40,20 @@ void Spinlock::acquire()
     Processor::breakpoint();
 #endif
   }
+  m_bInterrupts = bInterrupts;
+
 }
 void Spinlock::release()
 {
-  // TMP: check for corruption.
-  if (magic != 0x1234)
-  {
-    FATAL("Spinlock: Corruption : " << magic);
-    Processor::breakpoint();
-  }
   if (Processor::getInterrupts())
   {
     FATAL("Spinlock: release with interrupts enabled!");
     Processor::breakpoint();
   }
-  if (m_Atom.compareAndSwap(false, true) == false)
+  while (m_Atom.compareAndSwap(false, true) == false)
   {
-    FATAL("Spinlock: failed to release!");
-    Processor::breakpoint();
+//    FATAL("Spinlock: failed to release!");
+//    Processor::breakpoint();
   }
 
   // Reenable irqs if they were enabled before

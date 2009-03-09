@@ -61,6 +61,11 @@ class Pc : public Machine
         {return m_LocalApic;}
     #endif
 
+    #ifdef MULTIPROCESSOR
+      virtual void stopAllOtherProcessors();
+    #endif
+
+
   private:
     /**
     * Default constructor, does nothing.
