@@ -51,7 +51,7 @@
 #include <linker/SymbolTable.h>
 
 BootIO bootIO;
-Semaphore sema(2);
+Semaphore sema(1);
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -76,12 +76,12 @@ int idle(void *)
   Processor::setInterrupts(true);
   for (;;)
   {
-    sema.acquire();
-    NOTICE("Got Sem: " << Processor::id() << ", idle()");
-    sema.release();
+    //sema.acquire();
+    //NOTICE("Got Sem: " << Processor::id() << ", idle()");
+    //sema.release();
 
-    //Scheduler::instance().yield();
-    for (int i = 0; i < 10000000; i++);
+    Scheduler::instance().yield();
+    //for (int i = 0; i < 10000000; i++);
 //    NOTICE("Processor " << Processor::id() << ", alive!");
   }
 }
@@ -139,23 +139,17 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
 #endif
+
+  KernelCoreSyscallManager::instance().initialise();
+
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
 #ifdef THREADS
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 #endif
-
-  KernelCoreSyscallManager::instance().initialise();
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -186,7 +180,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
-  for(;;);
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)

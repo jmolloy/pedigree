@@ -304,8 +304,24 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
 uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
-  NOTICE("Write: " << Hex << location << ", " << nBytes << ", " << buffer);
-  return 0;
+  if (location % 512)
+    panic("AtaDisk: write request not on a sector boundary!");
+  if (nBytes % 512)
+    panic("AtaDisk: write request length not a multiple of 512!");
+
+  uint64_t origNBytes = nBytes;
+
+  uint64_t end = location+nBytes;
+  for (uint64_t i = location; i < end; i += 512)
+  {
+    m_SectorCache.insert(i/512, reinterpret_cast<uint8_t*> (buffer));
+
+    buffer += 512;
+    location += 512;
+    nBytes -= 512;
+  }
+
+  return origNBytes;
 }
 
 void AtaDisk::irqReceived()

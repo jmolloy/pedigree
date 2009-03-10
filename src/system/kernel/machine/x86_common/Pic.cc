@@ -105,15 +105,15 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 
   // Is Spurios IRQ7?
 //   if (irq == 7)
-//   {
-//     m_MasterPort.write8(0x03, 0);
-//     if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
-//     {
-//       NOTICE("PIC: spurious IRQ7");
-//       eoi(irq);
-//       return;
-//     }
-//   }
+  //  {
+  //    m_MasterPort.write8(0x03, 0);
+  //   if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+  //   {
+  //     NOTICE("PIC: spurious IRQ7");
+  //     eoi(irq);
+  //    return;
+  //  }
+  //}
   /// \todo Logic faulty here, reporting spurious interrupts for disk accesses!
   // Is spurious IRQ15?
 //   else if (irq == 15)
@@ -141,6 +141,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   {
     NOTICE("PIC: unhandled irq #" << irq << " occurred");
 
+    #if 0
     #ifdef DEBUGGER
       LargeStaticString str;
       str += "Unhandled IRQ: #";
@@ -148,6 +149,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
       str += " occurred.";
       Debugger::instance().start(state, str);
     #endif
+      #endif
   }
 
   eoi(irq);

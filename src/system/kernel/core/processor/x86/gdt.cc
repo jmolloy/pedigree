@@ -35,6 +35,7 @@ void X86GdtManager::initialise(size_t processorCount)
   setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code
   setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data
 
+#ifdef MULTIPROCESSOR
   size_t i = 0;
   for (Vector<ProcessorInformation*>::Iterator it = Processor::m_ProcessorInformation.begin();
        it != Processor::m_ProcessorInformation.end();
@@ -48,6 +49,16 @@ void X86GdtManager::initialise(size_t processorCount)
     processorInfo->setTss(Tss);
     processorInfo->setTssSelector((i + 5) << 3);
   }
+#else
+  X86TaskStateSegment *Tss = new X86TaskStateSegment;
+  initialiseTss(Tss);
+  setTssDescriptor(5, reinterpret_cast<uint32_t>(Tss));
+
+  ProcessorInformation &processorInfo = Processor::information();
+  processorInfo.setTss(Tss);
+  processorInfo.setTssSelector(5 << 3);
+#endif
+
 }
 void X86GdtManager::initialiseProcessor()
 {

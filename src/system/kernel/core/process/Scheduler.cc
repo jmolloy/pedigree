@@ -116,7 +116,6 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
   if (pThread == 0)
   {
-    NOTICE("Fail");
     m_Mutex.release();
     return;
   }
@@ -125,7 +124,6 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
     pOldThread->setStatus(Thread::Ready);
   else if (pOldThread->getStatus() == Thread::PreSleep)
   {
-    NOTICE("FNARR");
     pOldThread->setStatus(Thread::Sleeping);
   }
 
@@ -147,9 +145,12 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
 #ifdef X86_COMMON
   /// \todo What IRQ do we ACK? It's machine specific.
-  //Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+#ifndef MULTIPROCESSOR
+  Machine::instance().getIrqManager()->acknowledgeIrq(0x20);
+#else
   LocalApic *lApic = static_cast<LocalApic*>(Machine::instance().getSchedulerTimer());
   lApic->ack();
+#endif
 #endif
   Processor::contextSwitch(pThread->getInterruptState());
 }

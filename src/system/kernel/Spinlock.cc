@@ -40,6 +40,7 @@ void Spinlock::acquire()
     Processor::breakpoint();
 #endif
   }
+
   m_bInterrupts = bInterrupts;
 
 }
@@ -47,7 +48,7 @@ void Spinlock::release()
 {
   if (Processor::getInterrupts())
   {
-    FATAL("Spinlock: release with interrupts enabled!");
+    FATAL("Spinlock: release with interrupts enabled!" << m_bInterrupts);
     Processor::breakpoint();
   }
   while (m_Atom.compareAndSwap(false, true) == false)
@@ -58,5 +59,7 @@ void Spinlock::release()
 
   // Reenable irqs if they were enabled before
   if (m_bInterrupts)
+  {
     Processor::setInterrupts(true);
+  }
 }

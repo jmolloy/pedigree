@@ -18,7 +18,8 @@ struct utmp {
     char ut_id[4];
     char ut_user[UT_NAMESIZE];
     char ut_host[UT_HOSTSIZE];
-    char __filler[52];
+    time_t ut_time;
+    char __filler[48];
 };
 
 #define RUN_LVL         1

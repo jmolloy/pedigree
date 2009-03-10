@@ -94,6 +94,10 @@ gpietsch@comcast.net
 #define REQUIRED_ARG    1
 #define OPTIONAL_ARG    2
 
+#define no_argument 0
+#define required_argument 1
+#define optional_argument 2
+
 /* types defined by this include file */
 
 struct option

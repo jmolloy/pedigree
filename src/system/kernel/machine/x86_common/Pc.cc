@@ -196,7 +196,11 @@ IrqManager *Pc::getIrqManager()
 
 SchedulerTimer *Pc::getSchedulerTimer()
 {
+#ifdef MULTIPROCESSOR
   return &m_LocalApic;
+#else
+  return &Pit::instance();
+#endif
 }
 
 Timer *Pc::getTimer()

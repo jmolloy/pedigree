@@ -407,7 +407,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     SYSCALL_ERROR(ReadOnlyFilesystem);
     return 0;
   }
-  
+
   uint32_t firstClus = pFile->getInode();
   
   if(firstClus == 0)

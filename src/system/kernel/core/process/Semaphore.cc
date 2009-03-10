@@ -46,7 +46,7 @@ void Semaphore::acquire(size_t n)
   {
     if (tryAcquire(n))
       return;
-
+    
     m_BeingModified.acquire();
 
     // To avoid a race condition, check again here after we've disabled interrupts.
@@ -57,6 +57,7 @@ void Semaphore::acquire(size_t n)
       m_BeingModified.release();
       return;
     }
+    Thread *pThread = Processor::information().getCurrentThread();
 
     if (Processor::information().getCurrentThread()->getStatus() != Thread::Sleeping)
     {
@@ -95,9 +96,9 @@ void Semaphore::release(size_t n)
   {
     // TODO: Check for dead thread.
     Thread *pThread = m_Queue.popFront();
-
+//    NOTICE("Releasing " << pThread->getParent()->getId() << ":" << pThread->getId());
     while (pThread->getStatus() == Thread::PreSleep) ;
-
+//NOTICE("Released " << pThread->getParent()->getId() << ":" << pThread->getId());
     pThread->setStatus(Thread::Ready);
 
     if (pThread == 0)

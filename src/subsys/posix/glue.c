@@ -19,10 +19,7 @@
 #include "errno.h"
 #define errno (*__errno())
 extern int *__errno (void);
-
-//undef errno
-//extern int errno; // <-- is right according to the newlib documentation, but isn't this racy across threads?
-
+ 
 // Define errno before including syscall.h.
 #include "syscall.h"
 
@@ -34,6 +31,9 @@ extern void printf(char*,...);
 extern void sprintf(char*, char*,...);
 
 #define MAXNAMLEN 255
+
+#define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
+  errno = ENOSYS;
 
 struct dirent
 {
@@ -55,6 +55,9 @@ struct timeval {
 struct timezone {
   int tz_minuteswest;
   int tz_dsttime;
+};
+
+struct sigevent {
 };
 
 struct passwd {
@@ -94,15 +97,19 @@ struct in_addr
   unsigned int s_addr;
 };
 
+struct sigaction
+{
+};
+
 int ftruncate(int a, int b)
 {
-  errno = ENOSYS;
+  STUBBED("ftruncate");
   return -1;
 }
 
 int mkdir(const char *p)
 {
-  errno = ENOSYS;
+  STUBBED("mkdir")
   return -1;
 }
 
@@ -123,8 +130,7 @@ void _exit(int val)
 
 int fork()
 {
-  int a = syscall0(POSIX_FORK);
-  return a;
+  return syscall0(POSIX_FORK);
 }
 
 int fstat(int file, struct stat *st)
@@ -139,26 +145,25 @@ int getpid()
 
 int _isatty(int file)
 {
-//  errno = ENOSYS;
-//  return -1;
+  STUBBED("_isatty");
   return 1;
 }
 
 int kill(int pid, int sig)
 {
-  errno = ENOSYS;
+  STUBBED("kill");
   return -1;
 }
 
 int link(char *old, char *_new)
 {
-  errno = ENOSYS;
+  STUBBED("link");
   return -1;
 }
 
 int lseek(int file, int ptr, int dir)
 {
-  errno = ENOSYS;
+  STUBBED("lseek");
   return -1;
 }
 
@@ -185,21 +190,21 @@ int stat(const char *file, struct stat *st)
 #ifndef PPC_COMMON
 int times(void *buf)
 {
-  errno = ENOSYS;
+  STUBBED("times");
   return -1;
 }
 #else
 /* PPC has times() defined in terms of getrusage. */
 int getrusage(int target, void *buf)
 {
-  errno = ENOSYS;
+  STUBBED("getrusage");
   return -1;
 }
 #endif
 
 int unlink(char *name)
 {
-  errno = ENOSYS;
+  STUBBED("unlink");
   return -1;
 }
 
@@ -262,14 +267,13 @@ int tcsetattr(int fd, int optional_actions, void *p)
 
 int mkfifo(const char *_path, int __mode)
 {
-  // Named pipes are not supported.
-  errno = ENOSYS;
+  STUBBED("mkfifo");
   return -1;
 }
 
 int gethostname(char *name, int len)
 {
-  /// \todo implement gethostname.
+  STUBBED("gethostname");
   strcpy(name, "pedigree");
   return 0;
 }
@@ -281,19 +285,19 @@ int ioctl(int fd, int command, void *buf)
 
 int tcflow(int fd, int action)
 {
-//  errno = ENOSYS;
+  STUBBED("tcflow");
   return 0;
 }
 
 int tcflush(int fd, int queue_selector)
 {
-//  errno = ENOSYS;
+  STUBBED("tcflush");
   return 0;
 }
 
 int tcdrain(int fd)
 {
-  errno = ENOSYS;
+  STUBBED("tcdrain");
   return -1;
 }
 
@@ -302,43 +306,47 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
   /// \todo Implement.
   tv->tv_sec = 0;
   tv->tv_usec = 0;
+  
+  STUBBED("gettimeofday");
+  errno = 0;
 
   return 0;
 }
 
 long sysconf(int name)
 {
+  STUBBED("sysconf");
   errno = EINVAL;
   return -1;
 }
 
 int getuid()
 {
-  /// \todo Implement.
+  STUBBED("getuid");
   return 0;
 }
 
 int getgid()
 {
-  /// \todo Implement.
+  STUBBED("getgid");
   return 0;
 }
 
 int geteuid()
 {
-  /// \todo Implement.
+  STUBBED("geteuid");
   return 0;
 }
 
 int getegid()
 {
-  /// \todo Implement.
+  STUBBED("getegid");
   return 0;
 }
 
 int getppid()
 {
-  /// \todo Implement.
+  STUBBED("getppid");
   return 0;
 }
 
@@ -370,71 +378,73 @@ char *strsignal(int sig)
 
 int setuid(int uid)
 {
+  STUBBED("setuid");
   errno = EINVAL;
   return -1;
 }
 
 int setgid(int gid)
 {
+  STUBBED("setgid");
   errno = EINVAL;
   return -1;
 }
 
 unsigned int sleep(unsigned int seconds)
 {
-  /// \todo Implement
+  STUBBED("sleep");
   return 0;
 }
 
 unsigned int alarm(unsigned int seconds)
 {
-  /// \todo Implement
+  STUBBED("alarm");
   return 0;
 }
 
 int umask(int mask)
 {
-  /// \todo Implement
+  STUBBED("umask");
   return 0;
 }
 
 int chmod(const char *path, int mode)
 {
-  /// \todo Implement
+  STUBBED("chmod");
   errno = ENOENT;
   return -1;
 }
 
 int chown(const char *path, int owner, int group)
 {
-  /// \todo Implement
+  STUBBED("chown");
   errno = ENOENT;
   return -1;
 }
 
 int utime(const char *path, const struct utimbuf *times)
 {
-  /// \todo Implement
+  STUBBED("utime");
   errno = ENOENT;
   return -1;
 }
 
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-  /// \todo Implement
+  STUBBED("sigaction");
   errno = ENOSYS;
   return -1;
 }
 
 int dup2(int fildes, int fildes2)
 {
-  errno = ENOENT;
+  STUBBED("dup2");
   return -1;
 }
 
 int access(const char *path, int amode)
 {
-  /// \todo Implement
+  STUBBED("access");
   errno = ENOENT;
   return 0;
 }
@@ -445,21 +455,40 @@ long timezone;
 
 long pathconf(const char *path, int name)
 {
-  /// \todo Implement
+  STUBBED("pathconf");
   return 0;
 }
 
 long fpathconf(int filedes, int name)
 {
-  /// \todo Implement
+  STUBBED("fpathconf");
   return 0;
 }
 
 int cfgetospeed(const struct termios *t)
 {
-  /// \todo Implement
+  STUBBED("cfgetospeed");
   return 0;
 }
+
+int cfgetispeed(const struct termios *t)
+{
+  STUBBED("cfgetispeed");
+  return 0;
+}
+
+int cfsetospeed(const struct termios *t, int speed)
+{
+  STUBBED("cfsetospeed");
+  return 0;
+}
+
+int cfsetispeed(const struct termios *t, int speed)
+{
+  STUBBED("cfsetispeed");
+  return 0;
+}
+
 
 int select(int nfds, struct fd_set * readfds,
                      struct fd_set * writefds, struct fd_set * errorfds,
@@ -470,17 +499,17 @@ int select(int nfds, struct fd_set * readfds,
 
 void setgrent()
 {
-  /// \todo Implement
+  STUBBED("setgrent");
 }
 
 void endgrent()
 {
-  /// \todo Implement
+  STUBBED("endgrent");
 }
 
 struct group *getgrent()
 {
-  /// \todo Implement
+  STUBBED("getgrent");
   errno = ENOSYS;
   return 0;
 }
@@ -492,40 +521,38 @@ int chdir(const char *path)
 
 int dup(int fileno)
 {
-  /// \todo Implement
-  errno = ENOSYS;
+  STUBBED("dup");
   return -1;
 }
 
 int pipe(int filedes[2])
 {
-  /// \todo Implement
-  errno = ENOSYS;
+  STUBBED("pipe");
   return -1;
 }
 
 int fcntl(int fildes, int cmd, ...)
 {
-  /// \todo Implement
+  STUBBED("fcntl");
   errno = ENOSYS;
   return -1;
 }
 
 int sigprocmask(int how, int set, int oset)
 {
-  errno = ENOSYS;
+  STUBBED("sigprocmask");
   return -1;
 }
 
 int fchown(int fildes, int owner, int group)
 {
-  errno = ENOSYS;
+  STUBBED("fchown");
   return -1;
 }
 
 int rmdir(const char *path)
 {
-  errno = ENOSYS;
+  STUBBED("rmdir");
   return -1;
 }
 
@@ -561,19 +588,19 @@ int bind(int sock, const struct sockaddr* local_addr, unsigned long addrlen)
 
 int getpeername(int sock, struct sockaddr* addr, unsigned long* addrlen)
 {
-  errno = ENOSYS;
+  STUBBED("getpeername");
   return -1;
 }
 
 int getsockname(int sock, struct sockaddr* addr, unsigned long* addrlen)
 {
-  errno = ENOSYS;
+  STUBBED("getsockname");
   return -1;
 }
 
 int getsockopt(int sock, int level, int optname, void* optvalue, unsigned long* optlen)
 {
-  errno = ENOSYS;
+  STUBBED("getsockopt");
   return -1;
 }
 
@@ -584,49 +611,49 @@ int listen(int sock, int backlog)
 
 long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct sockaddr* remote_addr, unsigned long* addrlen)
 {
-  errno = ENOSYS;
+  STUBBED("recvfrom");
   return -1;
 }
 
 long recvmsg(int sock, struct msghdr* msg, int flags)
 {
-  errno = ENOSYS;
+  STUBBED("recvmsg");
   return -1;
 }
 
 long sendmsg(int sock, const struct msghdr* msg, int flags)
 {
-  errno = ENOSYS;
+  STUBBED("sendmsg");
   return -1;
 }
 
 long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const struct sockaddr* remote_addr, unsigned long* addrlen)
 {
-  errno = ENOSYS;
+  STUBBED("sendto");
   return -1;
 }
 
 int setsockopt(int sock, int level, int optname, const void* optvalue, unsigned long optlen)
 {
-  errno = ENOSYS;
+  STUBBED("setsockopt");
   return -1;
 }
 
 int shutdown(int sock, int how)
 {
-  errno = ENOSYS;
+  STUBBED("shutdown");
   return -1;
 }
 
 int sockatmark(int sock)
 {
-  errno = ENOSYS;
+  STUBBED("sockatmark");
   return -1;
 }
 
 int socketpair(int domain, int type, int protocol, int sock_vec[2])
 {
-  errno = ENOSYS;
+  STUBBED("socketpair");
   return -1;
 }
 
@@ -639,18 +666,49 @@ char* inet_ntoa(struct in_addr addr)
 
 struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
 {
-  errno = ENOSYS;
+  STUBBED("gethostbyaddr");
   return 0;
 }
 
 struct hostent* gethostbyname(const char *name)
 {
-  errno = ENOSYS;
+  STUBBED("gethostbyname");
   return 0;
 }
 
 struct servent* getservbyname(const char *name, const char *proto)
 {
-  errno = ENOSYS;
+  STUBBED("getservbyname");
   return 0;
 }
+
+int getgrnam()
+{
+  STUBBED("getgrnam");
+  return 0;
+}
+
+int getgrgid()
+{
+  STUBBED("getgrgid");
+  return 0;
+}
+
+int symlink()
+{
+  STUBBED("symlink");
+  return 0;
+}
+
+int mknod()
+{
+  STUBBED("mknod");
+  return 0;
+}
+
+int fsync()
+{
+  STUBBED("fsync");
+  return 0;
+}
+

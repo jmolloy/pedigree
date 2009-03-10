@@ -60,7 +60,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
   /// \todo This needs to be implemented for posix_recvfrom/posix_sendto
   // uintptr_t p6 = state.getSyscallParameter(5);
 
-  NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << state.getSyscallNumber());
+//  NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << state.getSyscallNumber());
 
   // We're interruptible.
   Processor::setInterrupts(true);
@@ -131,6 +131,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_SENDTO:
       return posix_sendto(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4), reinterpret_cast<sockaddr*>(p5), reinterpret_cast<size_t>(p6));
     */
+    case POSIX_STUBBED:
+      WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
+      return 0;
     default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
   }
 }

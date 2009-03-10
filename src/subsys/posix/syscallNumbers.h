@@ -49,4 +49,6 @@
 #define POSIX_RECVFROM   29
 #define POSIX_SENDTO     30
 
+#define POSIX_STUBBED    99
+
 #endif

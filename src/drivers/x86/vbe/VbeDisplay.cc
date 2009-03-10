@@ -59,7 +59,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     }
   }
 
-  //setScreenMode(*pSm);
+  setScreenMode(*pSm);
 }
 
 VbeDisplay::~VbeDisplay()

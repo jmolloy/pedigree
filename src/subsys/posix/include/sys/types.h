@@ -24,6 +24,8 @@
 
 #include <machine/_types.h>
 
+struct sigevent {};
+
 #if defined(__rtems__)
 /*
  *  The following section is RTEMS specific and is needed to more

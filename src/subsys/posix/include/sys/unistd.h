@@ -212,7 +212,7 @@ void    _EXFUN(sync, (void));
 int     _EXFUN(sync, (void));
 #endif
 #endif
-int     _EXFUN(readlink, (const char *__path, char *__buf, int __buflen));
+int     _EXFUN(readlink, (const char *__path, char *__buf, size_t __buflen));
 int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 
 #define	F_OK	0
