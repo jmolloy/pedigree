@@ -70,18 +70,19 @@ void apMain()
 //    NOTICE("Processor " << Processor::id() << ", alive!");
   }
 }
-
+Spinlock bleh(false);
 int idle(void *)
 {
   Processor::setInterrupts(true);
   for (;;)
   {
+//    bleh.acquire();
     //sema.acquire();
-    //NOTICE("Got Sem: " << Processor::id() << ", idle()");
+//    NOTICE("Got Sem: " << Processor::id() << ", idle()");
     //sema.release();
-
+//    bleh.release();
     Scheduler::instance().yield();
-    //for (int i = 0; i < 10000000; i++);
+//    for (int i = 0; i < 100000000; i++);
 //    NOTICE("Processor " << Processor::id() << ", alive!");
   }
 }
@@ -179,7 +180,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
+//  for(;;);
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)
