@@ -44,6 +44,8 @@ set_target_properties(crt0.o PROPERTIES
 
 install(TARGETS crt0.o
         RUNTIME DESTINATION "kernel/")
+        
+include_directories(./include ../../system/include ../../system/kernel/linker ../../system/modules/ ./)
 
 # Now the glue code - compile to a .o...
 add_executable(pedigree-glue.o glue.c)

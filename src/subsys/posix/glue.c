@@ -23,6 +23,7 @@ extern int *__errno (void);
 // Define errno before including syscall.h.
 #include "syscall.h"
 
+
 extern void *malloc(int);
 extern void free(void*);
 extern void strcpy(char*,char*);

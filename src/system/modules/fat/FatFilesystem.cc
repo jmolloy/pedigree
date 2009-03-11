@@ -318,8 +318,11 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
   uint64_t finalSize = size;
   if(static_cast<size_t>(endOffset) > pFile->getSize())
   {
-    WARNING("FAT: offset + size is larger than the file! Offset = " << location << ", size = " << size << ".");
     finalSize = pFile->getSize() - location;
+    
+    // overflow (location > size) or zero bytes required (location == size)
+    if(finalSize == 0 || finalSize > pFile->getSize())
+      return 0;
   }
 
   // finalSize holds the total amount of data to read, now find the cluster and sector offsets
@@ -437,7 +440,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
   uint32_t finalOffset = location + size;
   uint32_t offsetSector = location / m_Superblock.BPB_BytsPerSec;
   uint32_t finalSector = finalOffset / m_Superblock.BPB_BytsPerSec;
-  uint32_t clus = 0;
+  uint32_t clus = firstClus;
   
   uint32_t realSector = ((firstClus - 2) * m_Superblock.BPB_SecPerClus) + m_DataAreaStart;
   
@@ -523,12 +526,13 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     // read...
     while(currOffset < m_BlockSize)
     {
-      tmpBuffer[bytesWritten] = srcBuffer[currOffset];
+      tmpBuffer[currOffset] = srcBuffer[bytesWritten];
       currOffset++; bytesWritten++;
 
       if(bytesWritten == finalSize)
       {
         writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
+        
         delete tmpBuffer;
         return bytesWritten;
       }
@@ -716,6 +720,8 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
 
   // n too high?
   delete buffer;
+  
+  NOTICE("File not found!");
 
   return File();
 }

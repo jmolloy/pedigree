@@ -158,7 +158,7 @@ elif which mcopy >/dev/null 2>&1; then
   rm ./.pedigree-root
 
   mcopy -Do $SRCDIR/../scripts/termcap C:/etc
-    
+  
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
     if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
@@ -168,6 +168,9 @@ elif which mcopy >/dev/null 2>&1; then
       mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
     fi
   done
+  
+  mcopy $SRCDIR/../images/i686-elf/.* C:/
+  mcopy $SRCDIR/../images/i686-elf/* C:/
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
