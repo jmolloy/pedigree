@@ -713,3 +713,14 @@ int fsync()
   return 0;
 }
 
+void* popen(const char *command, const char *mode)
+{
+  STUBBED("popen");
+  return 0;
+}
+
+int pclose(void* stream)
+{
+  STUBBED("pclose");
+  return 0;
+}

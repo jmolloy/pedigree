@@ -20,14 +20,15 @@
 
 File::File() :
   m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
-  m_CreationTime(0), m_Inode(0), m_NextChild(-1), m_pFilesystem(0), m_Size(0)
+  m_CreationTime(0), m_Inode(0), m_NextChild(-1), m_pFilesystem(0), m_Size(0),
+  m_CustomField1(0), m_CustomField2(0)
 {
 }
 
 File::File(const File &file) :
   m_Name(file.m_Name), m_AccessedTime(file.m_AccessedTime), m_ModifiedTime(file.m_ModifiedTime),
   m_CreationTime(file.m_CreationTime), m_Inode(file.m_Inode), m_NextChild(file.m_NextChild),
-  m_pFilesystem(file.m_pFilesystem), m_Size(file.m_Size)
+  m_pFilesystem(file.m_pFilesystem), m_Size(file.m_Size), m_CustomField1(file.m_CustomField1), m_CustomField2(file.m_CustomField2)
 {
 }
 
@@ -36,14 +37,15 @@ File &File::operator =(const File& file)
   m_Name = file.m_Name; m_AccessedTime = file.m_AccessedTime, m_ModifiedTime = file.m_ModifiedTime;
   m_CreationTime = file.m_CreationTime; m_Inode = file.m_Inode; m_NextChild = file.m_NextChild;
   m_pFilesystem = file.m_pFilesystem; m_Size = file.m_Size;
+  m_CustomField1 = file.m_CustomField1; m_CustomField2 = file.m_CustomField2;
   return *this;
 }
 
 File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-           uintptr_t inode, bool isSymlink, bool isDirectory, Filesystem *pFs, size_t size) :
+           uintptr_t inode, bool isSymlink, bool isDirectory, Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2) :
   m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
   m_CreationTime(creationTime), m_Inode(inode), m_NextChild(-1), m_pFilesystem(pFs),
-  m_Size(size)
+  m_Size(size), m_CustomField1(custom1), m_CustomField2(custom2)
 {
   if (isDirectory)
     m_NextChild = 0;

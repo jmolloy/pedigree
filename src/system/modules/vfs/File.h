@@ -33,7 +33,7 @@ public:
 
   /** Constructor, should be called only by a Filesystem. */
   File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size);
+       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0);
   /** Destructor - doesn't do anything. */
   ~File();
 
@@ -87,9 +87,30 @@ public:
   {
     return m_Inode;
   }
+  void setInode(uintptr_t inode)
+  {
+    m_Inode = inode;
+  }
   Filesystem *getFilesystem()
   {
     return m_pFilesystem;
+  }
+  
+  uint32_t getCustomField1()
+  {
+    return m_CustomField1;
+  }
+  void setCustomField1(uint32_t custom)
+  {
+    m_CustomField1 = custom;
+  }
+  uint32_t getCustomField2()
+  {
+    return m_CustomField2;
+  }
+  void setCustomField2(uint32_t custom)
+  {
+    m_CustomField2 = custom;
   }
 
 private:
@@ -102,6 +123,9 @@ private:
   ssize_t m_NextChild;
   class Filesystem *m_pFilesystem;
   size_t m_Size;
+  
+  uint32_t m_CustomField1;
+  uint32_t m_CustomField2;
 };
 
 #endif

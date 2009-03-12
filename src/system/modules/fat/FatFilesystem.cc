@@ -410,6 +410,10 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     SYSCALL_ERROR(ReadOnlyFilesystem);
     return 0;
   }
+  
+  int64_t fileSizeChange = 0;
+  if((location + size) > pFile->getSize())
+    fileSizeChange = (location + size) - pFile->getSize();
 
   uint32_t firstClus = pFile->getInode();
   
@@ -433,7 +437,8 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     firstClus = freeClus;
     
     /// \todo Write the updated cluster into the directory entry
-    // pFile->setInode(freeClus);
+    pFile->setInode(freeClus);
+    setCluster(pFile, freeClus);
   }
   
   uint32_t clusSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
@@ -531,6 +536,11 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
 
       if(bytesWritten == finalSize)
       {
+        // update the size on disk, if needed
+        if(fileSizeChange != 0)
+          updateFileSize(pFile, fileSizeChange);
+        
+        // and now actually write the updated file contents
         writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
         
         delete tmpBuffer;
@@ -555,6 +565,111 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
   delete tmpBuffer;
 
   return bytesWritten;
+}
+
+void FatFilesystem::updateFileSize(File* pFile, int64_t sizeChange)
+{
+  // don't bother reading the directory if there's no actual change
+  if(sizeChange == 0)
+    return;
+  
+  // attempt to update the file size in the directory
+  uint32_t dirClus = pFile->getCustomField1();
+  uint32_t dirOffset = pFile->getCustomField2();
+  uint8_t* dirBuffer = 0;
+  
+  bool secMethod = false;
+  if(dirClus == 0)
+  {
+    if(m_Type != FAT32)
+    {
+      uint32_t sec = m_RootDir.sector;
+      uint32_t sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+
+      dirBuffer = new uint8_t[sz];
+      readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
+      
+      secMethod = true;
+    }
+    else
+    {
+      return; // dud directory
+    }
+  }
+  else
+  {
+    dirBuffer = new uint8_t[m_BlockSize];
+    readCluster(dirClus, reinterpret_cast<uintptr_t>(dirBuffer));
+  }
+  
+  Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[dirOffset]);
+  ent->DIR_FileSize += sizeChange;
+  
+  if(secMethod)
+  {
+    uint32_t sec = m_RootDir.sector;
+    uint32_t sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+    writeSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
+    delete dirBuffer;
+  }
+  else
+  {
+    writeCluster(dirClus, reinterpret_cast<uintptr_t>(dirBuffer));
+    delete dirBuffer;
+  }
+}
+  
+void FatFilesystem::setCluster(File* pFile, uint32_t clus)
+{
+  // don't bother reading and writing if the cluster is zero
+  if(clus == 0)
+    return;
+  
+  // attempt to update the file size in the directory
+  uint32_t dirClus = pFile->getCustomField1();
+  uint32_t dirOffset = pFile->getCustomField2();
+  uint8_t* dirBuffer = 0;
+  
+  bool secMethod = false;
+  if(dirClus == 0)
+  {
+    if(m_Type != FAT32)
+    {
+      uint32_t sec = m_RootDir.sector;
+      uint32_t sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+
+      dirBuffer = new uint8_t[sz];
+      readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
+      
+      secMethod = true;
+    }
+    else
+    {
+      return; // dud directory
+    }
+  }
+  else
+  {
+    dirBuffer = new uint8_t[m_BlockSize];
+    readCluster(dirClus, reinterpret_cast<uintptr_t>(dirBuffer));
+  }
+  
+  Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[dirOffset]);
+  ent->DIR_FstClusLO = clus & 0xFFFF;
+  ent->DIR_FstClusHI = (clus >> 16) & 0xFFFF;
+  
+  if(secMethod)
+  {
+    uint32_t sec = m_RootDir.sector;
+    uint32_t sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+    writeSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
+    delete dirBuffer;
+  }
+  else
+  {
+    writeCluster(dirClus, reinterpret_cast<uintptr_t>(dirBuffer));
+    delete dirBuffer;
+  }
 }
 
 void FatFilesystem::fileAttributeChanged(File *pFile)
@@ -688,7 +803,32 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
           // WARNING("FAT: Using short filename rather than long filename");
           filename = convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
-        File ret(filename, 0, 0, 0, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize);
+        
+        Timestamp* wrtTime = reinterpret_cast<Timestamp*>(&(ent->DIR_WrtTime));
+        Date* wrtDate = reinterpret_cast<Date*>(&(ent->DIR_WrtDate));
+        
+        uint32_t seconds = wrtTime->secCount * 2;
+        uint32_t minutes = wrtTime->minutes;
+        uint32_t hours = wrtTime->hours;
+        
+        uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        uint8_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+        
+        uint32_t day = wrtDate->day + (cumulativeDays[wrtDate->month]);
+        uint32_t monthDays = cumulativeDays[wrtDate->month];
+        uint32_t years = wrtDate->years;
+        
+        // defaults to ten years, as FAT dates start at 1980
+        Time writeTime = 10 * 365 * 24 * 60 * 60;
+        writeTime += seconds;
+        writeTime += minutes * 60;
+        writeTime += hours * 60 * 60;
+        
+        writeTime += day * 24 * 60 * 60;
+        writeTime += monthDays * 24 * 60 * 60;
+        writeTime += years * 365 * 24 * 60 * 60;
+        
+        File ret(filename, writeTime, writeTime, writeTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i);
         delete buffer;
         return ret;
       }
@@ -715,7 +855,6 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
 
     // continue by reading in this cluster
     readCluster(clus, reinterpret_cast<uintptr_t> (buffer));
-
   }
 
   // n too high?
@@ -987,6 +1126,7 @@ void FatFilesystem::truncate(File *pFile)
 
 bool FatFilesystem::createFile(File parent, String filename)
 {
+  NOTICE("TODO: Create " << filename << "!");
   return false;
 }
 

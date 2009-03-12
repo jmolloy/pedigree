@@ -1,0 +1,12 @@
+
+*cc1_cpu:
+%{!mtune*: %{m386:mtune=i386 %n`-m386' is deprecated. Use `-march=i386' or `-mtune=i386' instead.
+} %{m486:-mtune=i486 %n`-m486' is deprecated. Use `-march=i486' or `-mtune=i486' instead.
+} %{mpentium:-mtune=pentium %n`-mpentium' is deprecated. Use `-march=pentium' or `-mtune=pentium' instead.
+} %{mpentiumpro:-mtune=pentiumpro %n`-mpentiumpro' is deprecated. Use `-march=pentiumpro' or `-mtune=pentiumpro' instead.
+} %{mcpu=*:-mtune=%* %n`-mcpu=' is deprecated. Use `-mtune=' or '-march=' instead.
+}} %<mcpu=* %{mpni:-msse3 %n`-mpni' is deprecated. Use `-msse3' instead.
+} %{mno-pni:-mno-sse3 %n`-mno-pni' is deprecated. Use `-mno-sse3' instead.
+} %{mintel-syntax:-masm=intel %n`-mintel-syntax' is deprecated. Use `-masm=intel' instead.
+} %{mno-intel-syntax:-masm=att %n`-mno-intel-syntax' is deprecated. Use `-masm=att' instead.
+}

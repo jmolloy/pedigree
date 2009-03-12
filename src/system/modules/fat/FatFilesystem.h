@@ -120,7 +120,7 @@ protected:
     int8_t    BS_FilSysType[8];
   } __attribute__((packed));
 
-  /** An Fat directory entry. */
+  /** A Fat directory entry. */
   struct Dir
   {
     uint8_t   DIR_Name[11];
@@ -135,6 +135,22 @@ protected:
     uint16_t	DIR_WrtDate;
     uint16_t	DIR_FstClusLO;
     uint32_t	DIR_FileSize;
+  } __attribute__((packed));
+  
+  /** A Fat timestamp */
+  struct Timestamp
+  {
+    uint32_t secCount : 5;
+    uint32_t minutes : 6;
+    uint32_t hours : 5;
+  } __attribute__((packed));
+  
+  /** A Fat date */
+  struct Date
+  {
+    uint32_t day : 5;
+    uint32_t month : 4;
+    uint32_t years : 7; // years from 1980, not 1970
   } __attribute__((packed));
 
   FatFilesystem(const FatFilesystem&);
@@ -172,6 +188,12 @@ protected:
   
   /** Is a given cluster *VALUE* EOF? */
   bool isEof(uint32_t cluster);
+  
+  /** Updates the size of a file on disk */
+  void updateFileSize(File* pFile, int64_t sizeChange);
+  
+  /** Sets the cluster for a file on disk */
+  void setCluster(File* pFile, uint32_t clus);
   
   /** Our raw device. */
   Disk *m_pDisk;

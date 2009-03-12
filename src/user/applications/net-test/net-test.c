@@ -14,7 +14,7 @@
 
 #define SERVER 0
 
-int main(int argc, char **argv) {  
+int main(int argc, char **argv) {
 #if SERVER
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(sock == -1)

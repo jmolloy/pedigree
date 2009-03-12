@@ -150,7 +150,7 @@ elif which mcopy >/dev/null 2>&1; then
 
   touch ./.pedigree-root
 
-  mmd -Do applications libraries modules etc
+  mmd -Do applications libraries modules etc usr tmp
 
   # make this the root disk
   mcopy -Do ./.pedigree-root C:/
@@ -169,8 +169,8 @@ elif which mcopy >/dev/null 2>&1; then
     fi
   done
   
-  mcopy $SRCDIR/../images/i686-elf/.* C:/
-  mcopy $SRCDIR/../images/i686-elf/* C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/.* C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
