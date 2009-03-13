@@ -16,7 +16,7 @@
 
 include_directories(../../include ../ ./)
 
-add_executable(ext2.o Ext2Filesystem.cc)
+add_executable(ext2.o Ext2Filesystem.cc Ext2Filesystem-write.cc Ext2Filesystem-read.cc Ext2Filesystem-utilities.cc)
 target_link_libraries(ext2.o gcc)
 set_target_properties(ext2.o PROPERTIES
                              LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

@@ -125,67 +125,6 @@ String prepend_cwd(const char *name)
     }
   }
 
-/*  /// \todo This is a workaround for a bash bug where on `cd pedigree:/bleh' it will attempt to stat `/pedigree:' first - note the leading
-  ///       slash. If the name contains a colon, ignore any leading slash.
-  int i = 0;
-  bool contains = false;
-  while (name[i])
-  {
-    if (name[i++] == ':')
-    {
-      contains = true;
-      break;
-    }
-  }
-
-  if (name[0] == '/' && contains)
-    name++;
-
-  // If the string starts with a '/', add on the current working filesystem.
-  if (name[0] == '/')
-  {
-    int i = 0;
-    while (cwd[i] != ':')
-    {
-      char tmp = cwd[i];
-      newName[++i] = tmp;
-    }
-    newName[i++] = ':';
-    newName[i] = '\0';
-    strcat(newName, name);
-    
-    NOTICE("newName is now " << newName << "...");
-  }
-
-  if (newName[0] == '\0')
-  {
-    NOTICE("here");
-    
-    if(name[0] == '/' && !contains)
-      name++;
-    strcat(newName, name);
-  }
-
-  // If the name doesn't contain a colon, add the cwd.
-  i = 0;
-  contains = false;
-  while (newName[i])
-  {
-    if (newName[i++] == ':')
-    {
-      contains = true;
-      break;
-    }
-  }
-
-  if (!contains)
-  {
-    NOTICE("HAXXED");
-    newName[0] = '\0';
-    strcat(newName, cwd);
-    strcat(newName, name);
-  }*/
-  
   String str(newName);
   delete [] newName;
 
@@ -203,7 +142,7 @@ int posix_close(int fd)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-  
+
   if(NetManager::instance().isEndpoint(f->file))
   {
     NOTICE("Removing the endpoint!");
@@ -393,7 +332,6 @@ int posix_stat(const char *name, struct stat *st)
   if (!file.isValid())
   {
     // Error - not found.
-    NOTICE("filenotfound");
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
@@ -601,11 +539,12 @@ int posix_chdir(const char *path)
   }
   else
   {
+    NOTICE("nick");
     char *newpath = new char[strlen(path)+2];
     strcpy(newpath, path);
     newpath[strlen(path)] = '/';
     newpath[strlen(path)+1] = '\0';
-    NOTICE("chdir: changed path to " << prepend_cwd(newpath));
+
     Processor::information().getCurrentThread()->getParent()->setCwd(prepend_cwd(newpath));
     delete [] newpath;
   }

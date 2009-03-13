@@ -18,6 +18,7 @@
 
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
+#include <process/Mutex.h>
 
 #define EXT2_UNKNOWN   0x0
 #define EXT2_FILE      0x1
@@ -147,7 +148,7 @@ protected:
     uint32_t i_block[15];
     uint32_t i_generation;
     uint32_t i_file_acl;
-    uint32_t i_dir_acl;
+    uint32_t i_dir_acl; // Top 32-bits of file size.
     uint32_t i_faddr;
     uint8_t  i_osd2[12];
   } __attribute__((packed));
@@ -168,6 +169,8 @@ protected:
   /** Obtains a given numbered Inode. */
   Inode getInode(uint32_t inode);
 
+  void setInode(uint32_t inode, Inode in);
+
   /** Reads a block of data from the disk. */
   bool readBlock(uint32_t block, uintptr_t buffer);
 
@@ -179,7 +182,17 @@ protected:
   void getBlockNumbersBiindirect(uint32_t inode_block, int32_t startBlock, int32_t endBlock, List<uint32_t*> &list);
 
   void readInodeData(Inode inode, uintptr_t buffer, uint32_t startBlock, uint32_t endBlock);
-  
+  void writeInodeData(Inode inode, uintptr_t buffer, uint32_t block);
+
+  uint32_t findFreeBlockInBitmap(uint32_t inode);
+  uint32_t findFreeInodeInBitmap();
+
+  void setBlockNumber(uint32_t inode_num, Inode inode, size_t blockIdx, uint32_t blockValue);
+
+  void addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode, String filename, size_t node_type);
+
+  Dir *getDirectoryEntry(Inode inode, uint8_t *buffer, ssize_t n, bool &failed);
+
   /** Our raw device. */
   Disk *m_pDisk;
 
@@ -191,6 +204,12 @@ protected:
 
   /** Size of a block. */
   uint32_t m_BlockSize;
+
+  /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
+  Mutex m_WriteLock;
+
+  /** Is the superblock dirty? Does it need to be written back to disk? */
+  bool m_SuperblockDirty;
 };
 
 #endif

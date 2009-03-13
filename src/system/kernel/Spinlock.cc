@@ -25,7 +25,7 @@ void Spinlock::acquire()
   // in the new thread with interrupts disabled. It gets back to us, and m_bInterrupts==false.
   // Oh dear, hanging time.
   //
-  // We write to a local so the interrupt value is saved onto the stack until interrupts are 
+  // We write to a local so the interrupt value is saved onto the stack until interrupts are
   // definately disabled; then we can write it back to the member variable.
   bool bInterrupts = Processor::getInterrupts();
 
@@ -36,7 +36,7 @@ void Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
-    FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
+//    FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
     Processor::breakpoint();
 #endif
   }
@@ -46,19 +46,22 @@ void Spinlock::acquire()
 }
 void Spinlock::release()
 {
-  if (Processor::getInterrupts())
-  {
-    FATAL("Spinlock: release with interrupts enabled!" << m_bInterrupts);
-    Processor::breakpoint();
-  }
+  //if (Processor::getInterrupts())
+ // {
+  //  FATAL("Spinlock: release with interrupts enabled!" << m_bInterrupts);
+  //  Processor::breakpoint();
+ // }
+
+  bool bInterrupts = m_bInterrupts;
+
   while (m_Atom.compareAndSwap(false, true) == false)
   {
-//    FATAL("Spinlock: failed to release!");
-//    Processor::breakpoint();
+    //FATAL("Spinlock: failed to release!");
+   // Processor::breakpoint();
   }
 
   // Reenable irqs if they were enabled before
-  if (m_bInterrupts)
+  if (bInterrupts)
   {
     Processor::setInterrupts(true);
   }

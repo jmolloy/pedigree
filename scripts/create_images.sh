@@ -68,6 +68,8 @@ if which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
+  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications
   sudo mkdir -p $MOUNTPT/libraries
@@ -89,9 +91,6 @@ if which losetup >/dev/null 2>&1; then
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
 
-  sudo cp -ra $SRCDIR/../images/i686-elf/* $MOUNTPT/
-  sudo cp $SRCDIR/../images/i686-elf/.bashrc $MOUNTPT/
-
   sudo mkdir -p $MOUNTPT/etc/terminfo/v
 #  sudo cp $SRCDIR/../scripts/termcap $MOUNTPT/etc
   sudo cp $SRCDIR/../scripts/vt100 $MOUNTPT/etc/terminfo/v/
@@ -104,7 +103,7 @@ if which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-sudo touch $MOUNTPT/.pedigree-root
+  sudo touch $MOUNTPT/.pedigree-root
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications

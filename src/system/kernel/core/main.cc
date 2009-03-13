@@ -76,11 +76,11 @@ int idle(void *)
   Processor::setInterrupts(true);
   for (;;)
   {
-//    bleh.acquire();
+    //bleh.acquire();
     //sema.acquire();
-//    NOTICE("Got Sem: " << Processor::id() << ", idle()");
+   //NOTICE("Got Sem: " << Processor::id() << ", idle()");
     //sema.release();
-//    bleh.release();
+    //bleh.release();
     Scheduler::instance().yield();
 //    for (int i = 0; i < 100000000; i++);
 //    NOTICE("Processor " << Processor::id() << ", alive!");
@@ -127,15 +127,15 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
-  
+
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
   machine.initialise();
-  
+
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
-  
+
 #if !defined(ARM_COMMON)
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
@@ -149,6 +149,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
 #ifdef THREADS
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 #endif
 
@@ -157,7 +164,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
-  
+
   // Spew out a starting string.
   HugeStaticString str;
   str += "Pedigree - revision ";
@@ -180,7 +187,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-//  for(;;);
+//   for(;;);
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)
@@ -204,19 +211,19 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   }
 
 #endif
-  
+
   // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
   // mapping of 0-4MB
   // NOTE: BootstrapStruct_t unusable after this point
 #ifdef X86_COMMON
   Processor::initialisationDone();
 #endif
-  
+
 
 #ifdef DEBUGGER_RUN_AT_START
   //Processor::breakpoint();
 #endif
-  
+
   // Try and create a mapping.
 #ifdef MIPS_COMMON
   physical_uintptr_t stackBase;
@@ -242,7 +249,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     // Kernel idle thread.
     Processor::setInterrupts(true);
     Scheduler::instance().yield();
-    
+
 //    for(int i = 0; i < 10000000; i++) ;
 //    str.clear();
 //    str += "a";

@@ -29,7 +29,7 @@ class Spinlock
     void release();
 
   private:
-    bool m_bInterrupts;
+    volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
 };
 

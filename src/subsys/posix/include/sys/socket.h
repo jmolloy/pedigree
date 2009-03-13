@@ -44,10 +44,10 @@ struct linger
 
 #endif
 
-#define SOCK_DGRAM      0
-#define SOCK_RAW        1
-#define SOCK_STREAM     2
-#define SOCK_SEQPACKET  3
+#define SOCK_DGRAM      1
+#define SOCK_RAW        2
+#define SOCK_STREAM     3
+#define SOCK_SEQPACKET  4
 
 #define SOL_SOCKET      0
 
@@ -74,31 +74,23 @@ enum SocketOptions
 #define SOMAXCONN     65536
 
 /// \todo check that these are actually exclusive, if not, set to bit values
-enum MessageFlags
-{
-  MSG_CTRUNC = 0,
-  MSG_DONTROUTE,
-  MSG_EOR,
-  MSG_OOB,
-  MSG_NOSIGNAL,
-  MSG_PEEK,
-  MSG_TRUNC,
-  MSG_WAITALL
-};
+#define MSG_CTRUNC 0
+#define MSG_DONTROUTE 1
+#define MSG_EOR 2
+#define MSG_OOB 3
+#define MSG_NOSIGNAL 4
+#define MSG_PEEK 5
+#define MSG_TRUNC 6
+#define MSG_WAITALL 7
 
-enum AddressFamilies
-{
-  AF_INET = 0,
-  AF_INET6,
-  AF_UNSPEC
-};
+#define AF_INET 0
+#define AF_INET6 1
+#define AF_UNSPEC 2
 
-enum ShutdownTypes
-{
-  SHUT_RD = 0, // disables receiving
-  SHUT_WR, // disables sending
-  SHUT_RDWR // disables recv/send
-};
+
+#define  SHUT_RD 0 // disables receiving
+#define  SHUT_WR 1 // disables sending
+#define  SHUT_RDWR 2 // disables recv/send
 
 #ifndef SYS_SOCK_CONSTANTS_ONLY
 int     accept(int, struct sockaddr *, socklen_t *);

@@ -214,7 +214,7 @@ NOTICE("TUI: read: Return " << Hex << i);
 //      if (c == '\n') c = '\r';
       buf[i++] = c;
     }
-NOTICE("TUI: Read return " << Hex << i);
+
     return i;
   }
   else if (operation == CONSOLE_SETATTR)

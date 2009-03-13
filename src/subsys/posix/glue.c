@@ -711,6 +711,12 @@ int fsync()
   return 0;
 }
 
+int inet_pton()
+{
+  STUBBED("inet_pton");
+  return -1;
+}
+
 void* popen(const char *command, const char *mode)
 {
   STUBBED("popen");
@@ -722,3 +728,4 @@ int pclose(void* stream)
   STUBBED("pclose");
   return 0;
 }
+
