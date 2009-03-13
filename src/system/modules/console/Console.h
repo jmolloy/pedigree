@@ -80,7 +80,7 @@ public:
   {return File();}
 
 protected:
-  virtual bool createFile(File parent, String filename)
+  virtual bool createFile(File parent, String filename, uint32_t mask)
   {return false;}
   virtual bool createDirectory(File parent, String filename)
   {return false;}

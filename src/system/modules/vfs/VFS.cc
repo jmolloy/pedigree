@@ -211,7 +211,7 @@ void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
   m_ProbeCallbacks.pushBack(p);
 }
 
-bool VFS::createFile(String path)
+bool VFS::createFile(String path, uint32_t mask)
 {
   // We expect a colon. If we don't find it, we cry loudly.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
@@ -234,7 +234,7 @@ bool VFS::createFile(String path)
     // Error - filesystem not found!
     return false;
   }
-  return pFs->createFile(String(cPath));
+  return pFs->createFile(String(cPath), mask);
 }
 
 bool VFS::createDirectory(String path)

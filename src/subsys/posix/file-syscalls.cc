@@ -168,9 +168,28 @@ int posix_open(const char *name, int flags, int mode)
 
   if (!file.isValid()) /// \todo Deal with O_CREAT
   {
-    // Error - not found.
-    SYSCALL_ERROR(DoesNotExist);
-    return -1;
+    if(flags & O_CREAT)
+    {
+      bool worked = VFS::instance().createFile(prepend_cwd(name), 0777);
+      if(!worked)
+      {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+      }
+      
+      file = VFS::instance().find(prepend_cwd(name));
+      if (!file.isValid())
+      {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+      }
+    }
+    else
+    {
+      // Error - not found.
+      SYSCALL_ERROR(DoesNotExist);
+      return -1;
+    }
   }
   if (file.isDirectory())
   {

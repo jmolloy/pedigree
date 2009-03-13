@@ -81,7 +81,7 @@ public:
   File find(String path);
 
   /** Attempts to create a file. */
-  bool createFile(String path);
+  bool createFile(String path, uint32_t mask);
   
   /** Attempts to create a directory. */
   bool createDirectory(String path);

@@ -91,7 +91,7 @@ File Filesystem::find(String path)
   return curDir;
 }
 
-bool Filesystem::createFile(String path)
+bool Filesystem::createFile(String path, uint32_t mask)
 {
   // We expect a leading '/'.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
@@ -137,7 +137,7 @@ bool Filesystem::createFile(String path)
     if (!bFound && terminate) // TODO cover case with trailing '/'
     {
       // Not found, but nothing left, so create here.
-      createFile(curDir, String(pathSegment));
+      createFile(curDir, String(pathSegment), mask);
       return true;
     }
     else

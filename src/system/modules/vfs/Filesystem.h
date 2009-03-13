@@ -61,7 +61,7 @@ public:
   virtual String getVolumeLabel() =0;
 
   /** Creates a file on the filesystem - fails if the file's parent directory does not exist. */
-  bool createFile(String path);
+  bool createFile(String path, uint32_t mask);
 
   /** Creates a directory on the filesystem. Fails if the dir's parent directory does not exist. */
   bool createDirectory(String path);
@@ -93,7 +93,7 @@ public:
 
 protected:
   /** createFile calls this after it has parsed the string path. */
-  virtual bool createFile(File parent, String filename) =0;
+  virtual bool createFile(File parent, String filename, uint32_t mask) =0;
   /** createDirectory calls this after it has parsed the string path. */
   virtual bool createDirectory(File parent, String filename) =0;
   /** createSymlink calls this after it has parsed the string path. */

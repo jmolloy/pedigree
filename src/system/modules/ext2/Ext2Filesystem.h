@@ -60,7 +60,7 @@ public:
 
 protected:
 
-  virtual bool createFile(File parent, String filename);
+  virtual bool createFile(File parent, String filename, uint32_t mask);
   virtual bool createDirectory(File parent, String filename);
   virtual bool createSymlink(File parent, String filename, String value);
   virtual bool remove(File parent, File file);

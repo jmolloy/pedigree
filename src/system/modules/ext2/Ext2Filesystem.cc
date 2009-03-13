@@ -389,7 +389,7 @@ void Ext2Filesystem::truncate(File *pFile)
 {
 }
 
-bool Ext2Filesystem::createFile(File parent, String filename)
+bool Ext2Filesystem::createFile(File parent, String filename, uint32_t mask)
 {
 }
 

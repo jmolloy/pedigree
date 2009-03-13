@@ -174,6 +174,8 @@ bool FatFilesystem::initialise(Disk *pDisk)
   memcpy(reinterpret_cast<void*>(m_pFatCache+0), reinterpret_cast<void*>(tmpBuffer), fatSz);
 
   delete tmpBuffer;
+  
+  createFile(getRoot(), String("balls.txt"), 0777);
 
   return true;
 }
@@ -390,13 +392,22 @@ uint32_t FatFilesystem::findFreeCluster()
 {
   int j;
   uint32_t clus;
-  for(j = (m_Type == FAT32 ? 2 /** \todo FSInfo structure */ : 2); j < (m_Superblock.BPB_TotSec32 / m_Superblock.BPB_SecPerClus); j++)
+  uint32_t totalSectors = m_Superblock.BPB_TotSec32;
+  if(totalSectors == 0)
+  {
+    if(m_Type != FAT32)
+      totalSectors = m_Superblock.BPB_TotSec16;
+    else
+      return 0;
+  }
+  
+  for(j = (m_Type == FAT32 ? 2 /** \todo FSInfo structure */ : 2); j < (totalSectors / m_Superblock.BPB_SecPerClus); j++)
   {
     clus = getClusterEntry(j);
     if((clus & 0x0FFFFFFF) == 0)
     {
       /// \todo For FAT32, update the FSInfo structure
-      return clus;
+      return j;
     }
   }
   return 0;
@@ -419,24 +430,30 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
   
   if(firstClus == 0)
   {
+    NOTICE("first cluster is zero!");
+    
     // find a free cluser
     uint32_t freeClus = findFreeCluster();
     if(freeClus == 0)
     {
+      NOTICE("No free clusters!");
       //SYSCALL_ERROR(FilesystemFull);
       return 0;
     }
     
+    NOTICE("New cluster is " << freeClus << ", setting its value to " << eofValue() << "...");
+    
     // set EOF
-    if(m_Type == FAT12)
+    setClusterEntry(freeClus, eofValue());
+    /*if(m_Type == FAT12)
       setClusterEntry(freeClus, 0x0FF8);
     else if(m_Type == FAT16)
       setClusterEntry(freeClus, 0xFFF8);
     else if(m_Type == FAT32)
-      setClusterEntry(freeClus, 0x0FFFFFF8); 
+      setClusterEntry(freeClus, 0x0FFFFFF8);*/
     firstClus = freeClus;
     
-    /// \todo Write the updated cluster into the directory entry
+    // write into the directory entry, and into the File itself
     pFile->setInode(freeClus);
     setCluster(pFile, freeClus);
   }
@@ -489,12 +506,13 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
       setClusterEntry(prev, lastClus);
     }
     
-    if(m_Type == FAT12)
+    setClusterEntry(lastClus, eofValue());
+    /*if(m_Type == FAT12)
       setClusterEntry(lastClus, 0x0FF8);
     else if(m_Type == FAT16)
       setClusterEntry(lastClus, 0xFFF8);
     else if(m_Type == FAT32)
-      setClusterEntry(lastClus, 0x0FFFFFF8); 
+      setClusterEntry(lastClus, 0x0FFFFFF8);*/
   }
 
   uint64_t endOffset = finalOffset;
@@ -655,8 +673,10 @@ void FatFilesystem::setCluster(File* pFile, uint32_t clus)
   }
   
   Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[dirOffset]);
+  NOTICE("Cluster was " << ent->DIR_FstClusLO << "/" << ent->DIR_FstClusHI << ".");
   ent->DIR_FstClusLO = clus & 0xFFFF;
   ent->DIR_FstClusHI = (clus >> 16) & 0xFFFF;
+  NOTICE("Cluster is now " << ent->DIR_FstClusLO << "/" << ent->DIR_FstClusHI << ".");
   
   if(secMethod)
   {
@@ -714,7 +734,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     {
       // hack to make lack of root directory containing "." and ".." entries invisible
       if(n == 1)
-        return File(String("."), 0, 0, 0, 0, false, true, this, 0);
+        return File(String("."), 0, 0, 0, clus, false, true, this, 0);
       if(n == 2)
         return File(String(".."), 0, 0, 0, 0, false, true, this, 0);
       n += 2;
@@ -1106,7 +1126,7 @@ String FatFilesystem::convertFilenameFrom(String filename)
 
 bool FatFilesystem::isEof(uint32_t cluster)
 {
-  bool chainEnd = false;
+  /*bool chainEnd = false;
   if(m_Type == FAT12)
     if(cluster >= 0x0FF8)
       chainEnd = true;
@@ -1116,17 +1136,132 @@ bool FatFilesystem::isEof(uint32_t cluster)
   if(m_Type == FAT32)
     if(cluster >= 0x0FFFFFF8)
       chainEnd = true;
-  return chainEnd;
+  return chainEnd;*/
+  
+  return (cluster >= eofValue());
 }
 
+uint32_t FatFilesystem::eofValue()
+{
+  if(m_Type == FAT12)
+    return 0x0FF8;
+  if(m_Type == FAT16)
+    return 0xFFF8;
+  if(m_Type == FAT32)
+    return 0x0FFFFFF8;
+}
 
+// deletes all the data in a file
 void FatFilesystem::truncate(File *pFile)
 {
+  // unlink all the clusters except the first, then set the file size to zero
+  
+  uint32_t clus = pFile->getInode();
+  if(!isEof(clus))
+  {
+    while(true)
+    {
+      uint32_t prev = clus;
+      clus = getClusterEntry(clus);
+      setClusterEntry(prev, 0);
+      
+      if(isEof(clus))
+        break;
+    }
+  }
+  
+  updateFileSize(pFile, -(pFile->getSize()));
 }
 
-bool FatFilesystem::createFile(File parent, String filename)
+bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
 {
-  NOTICE("TODO: Create " << filename << "!");
+  // grab the first cluster of the parent directory
+  uint32_t clus = parent.getInode();
+  uint8_t* buffer;
+  bool secMethod = false;
+  uint32_t rootSec = m_RootDir.sector;
+  uint32_t rootSz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
+  if(clus == 0)
+  {
+    if(m_Type == FAT32)
+      return false;
+    
+    // allocate for the entire root directory
+    buffer = new uint8_t[rootSz];
+    readSectorBlock(rootSec, rootSz, reinterpret_cast<uintptr_t>(buffer));
+    secMethod = true;
+  }
+  else
+  {
+    // read in the cluster
+    buffer = new uint8_t[m_BlockSize];
+    readCluster(clus, reinterpret_cast<uintptr_t>(buffer));
+  }
+  
+  // find the first free element
+  bool spaceFound = false;
+  int offset;
+  while(true)
+  {
+    for(offset = 0; offset < m_BlockSize; offset += sizeof(Dir))
+    {
+      if(buffer[offset] == 0 || buffer[offset] == 0xE5)
+      {
+        spaceFound = true;
+        break;
+      }
+    }
+    
+    if(!spaceFound)
+    {
+      // Root Directory check:
+      // If no space found for our file, and if not FAT32, the root directory is not resizeable so we have to fail
+      if(m_Type != FAT32 && clus == 0)
+      {
+        delete buffer;
+        return false;
+      }
+      
+      // check the next cluster, add a new cluster if needed
+      uint32_t prev = clus;
+      clus = getClusterEntry(clus);
+      
+      if(isEof(clus))
+      {
+        uint32_t newClus = findFreeCluster();
+        if(!newClus)
+        {
+          delete buffer;
+          return false;
+        }
+        
+        setClusterEntry(prev, newClus);
+        setClusterEntry(newClus, eofValue());
+        
+        clus = newClus;
+      }
+      
+      readCluster(clus, reinterpret_cast<uintptr_t>(buffer));
+    }
+    else
+    {
+      // get a Dir struct for it so we can manipulate the data
+      Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
+      memset(ent, 0, sizeof(Dir));
+      
+      /// \todo Long filename support
+      String shortFilename = convertFilenameTo(filename);
+      memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
+      
+      // write the buffer back to the cluster
+      if(!secMethod)
+        writeCluster(clus, reinterpret_cast<uintptr_t>(buffer));
+      else
+        writeSectorBlock(rootSec, rootSz, reinterpret_cast<uintptr_t>(buffer));
+      
+      return true;
+    }
+  }
   return false;
 }
 

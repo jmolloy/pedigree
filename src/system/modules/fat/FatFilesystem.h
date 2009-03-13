@@ -63,7 +63,7 @@ public:
 
 protected:
 
-  virtual bool createFile(File parent, String filename);
+  virtual bool createFile(File parent, String filename, uint32_t mask);
   virtual bool createDirectory(File parent, String filename);
   virtual bool createSymlink(File parent, String filename, String value);
   virtual bool remove(File parent, File file);
@@ -188,6 +188,9 @@ protected:
   
   /** Is a given cluster *VALUE* EOF? */
   bool isEof(uint32_t cluster);
+  
+  /** EOF values */
+  uint32_t eofValue();
   
   /** Updates the size of a file on disk */
   void updateFileSize(File* pFile, int64_t sizeChange);
