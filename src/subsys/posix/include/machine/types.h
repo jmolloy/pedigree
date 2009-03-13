@@ -26,5 +26,3 @@ typedef long int __loff_t;
 #endif
 
 #endif	/* _MACHTYPES_H_ */
-
-

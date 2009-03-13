@@ -60,11 +60,72 @@ typedef Tree<size_t,void*> FdMap;
 String prepend_cwd(const char *name)
 {
   const char *cwd = Processor::information().getCurrentThread()->getParent()->getCwd();
-
+  
   char *newName = new char[2048];
   newName[0] = '\0';
+  
+  // do we have a colon in the name? if so, remove the leading slash
+  int i = 0;
+  bool contains = false;
+  while(name[i])
+  {
+    if(name[i++] == ':')
+    {
+      contains = true;
+      break;
+    }
+  }
+  
+  if(name[0] == '/' && contains)
+  {
+    name++;
+    strcat(newName, name);
+  }
+  else
+  {
+    // otherwise, if there's a '/' at the beginning of the path, add the current filesystem
+    if(name[0] == '/')
+    {
+      i = 0;
+      while(cwd[i] != ':')
+      {
+        char tmp = cwd[i];
+        newName[i++] = tmp;
+      }
+      newName[i++] = ':';
+      newName[i] = 0;
+      
+      // append the current path
+      strcat(newName, name);
+    }
+    else
+    {
+      // if the first element is still null (ie, previous didn't run), just set the
+      // directory to that without a filesystem
+      if (newName[0] == '\0')
+        strcat(newName, name);
+      
+      // prepend the current working filesystem, if no colon
+      i = 0;
+      while(newName[i])
+      {
+        if(newName[i++] == ':')
+        {
+          contains = true;
+          break;
+        }
+      }
+      
+      if(!contains)
+      {
+        newName[0] = '\0';
+        strcat(newName, cwd);
+        strcat(newName, name);
+      }
+    }
+  }
 
-  /// \todo This is a workaround for a bash bug where on `cd pedigree:/bleh' it will attempt to stat `/pedigree:' first - note the leading
+/*  /// \todo This is a workaround for a bash bug where on `cd pedigree:/bleh' it will attempt to stat `/pedigree:' first - note the leading
   ///       slash. If the name contains a colon, ignore any leading slash.
   int i = 0;
   bool contains = false;
@@ -92,10 +153,18 @@ String prepend_cwd(const char *name)
     newName[i++] = ':';
     newName[i] = '\0';
     strcat(newName, name);
+    
+    NOTICE("newName is now " << newName << "...");
   }
 
   if (newName[0] == '\0')
-  strcat(newName, name);
+  {
+    NOTICE("here");
+    
+    if(name[0] == '/' && !contains)
+      name++;
+    strcat(newName, name);
+  }
 
   // If the name doesn't contain a colon, add the cwd.
   i = 0;
@@ -111,11 +180,12 @@ String prepend_cwd(const char *name)
 
   if (!contains)
   {
+    NOTICE("HAXXED");
     newName[0] = '\0';
     strcat(newName, cwd);
     strcat(newName, name);
-  }
-
+  }*/
+  
   String str(newName);
   delete [] newName;
 
@@ -156,6 +226,7 @@ int posix_open(const char *name, int flags, int mode)
 
   // Check for /dev/tty, and link to our controlling console.
   File file = File();
+  String nameWithCwd = prepend_cwd(name);
   if (!strcmp(name, "/dev/tty"))
   {
     /// \todo Should be our ctty.
@@ -163,30 +234,36 @@ int posix_open(const char *name, int flags, int mode)
   }
   else
   {
-    file = VFS::instance().find(prepend_cwd(name));
+    file = VFS::instance().find(nameWithCwd);
   }
 
   if (!file.isValid()) /// \todo Deal with O_CREAT
   {
     if(flags & O_CREAT)
     {
-      bool worked = VFS::instance().createFile(prepend_cwd(name), 0777);
+      NOTICE("Creating the file");
+      bool worked = VFS::instance().createFile(nameWithCwd, 0777);
       if(!worked)
       {
+        NOTICE("failed!");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
       
-      file = VFS::instance().find(prepend_cwd(name));
+      file = VFS::instance().find(nameWithCwd);
       if (!file.isValid())
       {
+        NOTICE("failed -_-");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
+      
+      NOTICE("Created");
     }
     else
     {
       // Error - not found.
+      NOTICE("o.O");
       SYSCALL_ERROR(DoesNotExist);
       return -1;
     }
@@ -194,12 +271,14 @@ int posix_open(const char *name, int flags, int mode)
   if (file.isDirectory())
   {
     // Error - is directory.
+      NOTICE("-______-");
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
   if (file.isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
+      NOTICE(":/");
     SYSCALL_ERROR(Unimplemented);
     return -1;
   }

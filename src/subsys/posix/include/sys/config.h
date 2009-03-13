@@ -201,4 +201,13 @@
 #endif
 #endif
 
+#ifndef PAGESIZE
+#ifndef PAGE_SIZE
+#define PAGESIZE 4096
+#define PAGE_SIZE PAGESIZE
+#else
+#define PAGESIZE PAGE_SIZE
+#endif
+#endif
+
 #endif /* __SYS_CONFIG_H__ */

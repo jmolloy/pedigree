@@ -23,7 +23,6 @@ extern int *__errno (void);
 // Define errno before including syscall.h.
 #include "syscall.h"
 
-
 extern void *malloc(int);
 extern void free(void*);
 extern void strcpy(char*,char*);
@@ -164,8 +163,7 @@ int link(char *old, char *_new)
 
 int lseek(int file, int ptr, int dir)
 {
-  STUBBED("lseek");
-  return -1;
+  return syscall3(POSIX_LSEEK, file, ptr, dir);
 }
 
 int open(const char *name, int flags, int mode)
@@ -314,12 +312,12 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
   return 0;
 }
 
-long sysconf(int name)
+/*long sysconf(int name)
 {
   STUBBED("sysconf");
   errno = EINVAL;
   return -1;
-}
+}*/
 
 int getuid()
 {

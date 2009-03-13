@@ -30,7 +30,7 @@ if(PPC_COMMON)
   set(STUB ppc-elf)
 endif(PPC_COMMON)
 
-include_directories(../../system/include ../../system/kernel/linker ../../system/modules/ ./)
+include_directories(../../system/include ../../system/kernel/linker ../../system/modules/ ./ ./include)
 
 # Do the kernel module first.
 add_executable(posix.o posix.cc PosixSyscallManager.cc file-syscalls.cc system-syscalls.cc console-syscalls.cc net-syscalls.cc)
@@ -45,10 +45,10 @@ set_target_properties(crt0.o PROPERTIES
 install(TARGETS crt0.o
         RUNTIME DESTINATION "kernel/")
         
-include_directories(./include ../../system/include ../../system/kernel/linker ../../system/modules/ ./)
+# include_directories(./include ../../system/include ../../system/kernel/linker ../../system/modules/ ./)
 
 # Now the glue code - compile to a .o...
-add_executable(pedigree-glue.o glue.c)
+add_executable(pedigree-glue.o glue.c glue-sysconf.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
                                       LINK_FLAGS "-r")

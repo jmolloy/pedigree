@@ -38,16 +38,17 @@
 #define POSIX_GETPID     19
 #define POSIX_CHDIR      20
 #define POSIX_SELECT     21
+#define POSIX_LSEEK      22
 
-#define POSIX_SOCKET     22
-#define POSIX_CONNECT    23
-#define POSIX_SEND       24
-#define POSIX_RECV       25
-#define POSIX_BIND       26
-#define POSIX_LISTEN     27
-#define POSIX_ACCEPT     28
-#define POSIX_RECVFROM   29
-#define POSIX_SENDTO     30
+#define POSIX_SOCKET     23
+#define POSIX_CONNECT    24
+#define POSIX_SEND       25
+#define POSIX_RECV       26
+#define POSIX_BIND       27
+#define POSIX_LISTEN     28
+#define POSIX_ACCEPT     29
+#define POSIX_RECVFROM   30
+#define POSIX_SENDTO     31
 
 #define POSIX_STUBBED    99
 

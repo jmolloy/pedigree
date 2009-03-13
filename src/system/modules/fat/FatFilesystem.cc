@@ -430,18 +430,13 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
   
   if(firstClus == 0)
   {
-    NOTICE("first cluster is zero!");
-    
     // find a free cluser
     uint32_t freeClus = findFreeCluster();
     if(freeClus == 0)
     {
-      NOTICE("No free clusters!");
       //SYSCALL_ERROR(FilesystemFull);
       return 0;
     }
-    
-    NOTICE("New cluster is " << freeClus << ", setting its value to " << eofValue() << "...");
     
     // set EOF
     setClusterEntry(freeClus, eofValue());
@@ -1149,6 +1144,7 @@ uint32_t FatFilesystem::eofValue()
     return 0xFFF8;
   if(m_Type == FAT32)
     return 0x0FFFFFF8;
+  return 0;
 }
 
 // deletes all the data in a file
@@ -1175,6 +1171,8 @@ void FatFilesystem::truncate(File *pFile)
 
 bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
 {
+  NOTICE("Creating file " << filename << "!");
+  
   // grab the first cluster of the parent directory
   uint32_t clus = parent.getInode();
   uint8_t* buffer;
@@ -1207,6 +1205,7 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
     {
       if(buffer[offset] == 0 || buffer[offset] == 0xE5)
       {
+        NOTICE("Found space!");
         spaceFound = true;
         break;
       }
@@ -1214,6 +1213,8 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
     
     if(!spaceFound)
     {
+      NOTICE("No space found in this cluster!");
+      
       // Root Directory check:
       // If no space found for our file, and if not FAT32, the root directory is not resizeable so we have to fail
       if(m_Type != FAT32 && clus == 0)
@@ -1245,6 +1246,8 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
     }
     else
     {
+      NOTICE("Writing to disk!");
+      
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
       memset(ent, 0, sizeof(Dir));
@@ -1259,9 +1262,13 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
       else
         writeSectorBlock(rootSec, rootSz, reinterpret_cast<uintptr_t>(buffer));
       
+      NOTICE("Win!");
+      
       return true;
     }
   }
+  
+  NOTICE("EPIC FAILURE");
   return false;
 }
 

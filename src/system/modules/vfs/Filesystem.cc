@@ -140,7 +140,7 @@ bool Filesystem::createFile(String path, uint32_t mask)
       createFile(curDir, String(pathSegment), mask);
       return true;
     }
-    else
+    else if(!bFound && terminate)
     {
       // Error - not found!
       return false;

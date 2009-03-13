@@ -111,6 +111,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_SELECT:
       return posix_select(static_cast<int>(p1), reinterpret_cast<struct fd_set*>(p2), reinterpret_cast<struct fd_set*>(p3),
                           reinterpret_cast<struct fd_set*>(p4), reinterpret_cast<struct timeval*>(p5));
+    case POSIX_LSEEK:
+      return posix_lseek(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3));
     case POSIX_SOCKET:
       return posix_socket(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3));
     case POSIX_CONNECT:
