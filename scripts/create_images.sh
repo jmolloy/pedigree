@@ -140,8 +140,10 @@ sudo touch $MOUNTPT/.pedigree-root
 elif which mcopy >/dev/null 2>&1; then
 
   cp ../images/floppy_fat.img ./floppy.img
-  mcopy -Do -i ./floppy.img ./src/system/kernel/kernel ::/
-  mcopy -Do -i ./floppy.img ./initrd.tar ::/
+  ../scripts/mtsetup.sh ./floppy.img >/dev/null 2>&1
+
+  mcopy -Do ./src/system/kernel/kernel A:/
+  mcopy -Do ./initrd.tar A:/
 
   cp ../images/hdd_16h_63spt_100c.img .
   cp ../images/hdd_16h_63spt_100c_fat16.img .
@@ -168,17 +170,17 @@ elif which mcopy >/dev/null 2>&1; then
       mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
     fi
   done
-  
-  mcopy -Do -s $SRCDIR/../images/i686-elf/.* C:/
-  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
-  mcopy -Do $SRCDIR/libm.so C:/libraries
+  mcopy -Do $SRCDIR/libm.so C:/libraries  
+
+  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
 
   mmd -Do C:/etc/terminfo
   mmd -Do C:/etc/terminfo/v
   mcopy -Do $SRCDIR/../scripts/vt100 C:/etc/terminfo/v
 
+  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else

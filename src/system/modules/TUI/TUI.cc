@@ -182,6 +182,11 @@ NOTICE("TUI: read: Return " << Hex << i);
             break;
         }
       }
+      else if (ch.alt)
+      {
+        c = '\e';
+        m_pQueue[m_QueueLength++] = ch.value | 0x80;
+      }
       else
       {
         c = ch.value;
