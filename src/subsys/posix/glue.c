@@ -301,13 +301,8 @@ int tcdrain(int fd)
 }
 
 int gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-  /// \todo Implement.
-  tv->tv_sec = 0;
-  tv->tv_usec = 0;
-  
-  STUBBED("gettimeofday");
-  errno = 0;
+{  
+  syscall2(POSIX_GETTIMEOFDAY, (int)tv, (int)tz);
 
   return 0;
 }

@@ -133,6 +133,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_SENDTO:
       return posix_sendto(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4), reinterpret_cast<sockaddr*>(p5), reinterpret_cast<size_t>(p6));
     */
+    case POSIX_GETTIMEOFDAY:
+      return posix_gettimeofday(reinterpret_cast<struct timeval *>(p1), reinterpret_cast<struct timezone *>(p2));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

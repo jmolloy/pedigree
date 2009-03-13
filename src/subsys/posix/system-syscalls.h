@@ -26,11 +26,19 @@
 #define ARGV_ENV_LOC 0x40100000
 #define ARGV_ENV_LEN 0x8000
 
+struct timezone
+{
+  int tz_minuteswest;
+  int tz_dsttime;
+};
+
 int posix_sbrk(int delta);
 int posix_fork(ProcessorState state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
 int posix_waitpid(int pid, int *status, int options);
 int posix_exit(int code);
 int posix_getpid();
+
+int posix_gettimeofday(timeval *tv, timezone *tz);
 
 #endif

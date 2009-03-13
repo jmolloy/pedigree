@@ -50,6 +50,8 @@
 #define POSIX_RECVFROM   30
 #define POSIX_SENDTO     31
 
+#define POSIX_GETTIMEOFDAY 32
+
 #define POSIX_STUBBED    99
 
 #endif

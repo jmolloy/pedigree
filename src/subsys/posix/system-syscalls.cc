@@ -34,6 +34,7 @@
 #include <linker/DynamicLinker.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
+#include <machine/Machine.h>
 
 // Defined in file-syscalls.cc
 extern String prepend_cwd(const char *cwd);
@@ -393,3 +394,17 @@ int posix_getpid()
   return pProcess->getId();
 }
 
+int posix_gettimeofday(timeval *tv, timezone *tz)
+{
+  Timer *pTimer = Machine::instance().getTimer();
+
+  tv->tv_sec = pTimer->getYear() * (60*60*24*365) +
+    pTimer->getMonth() * (60*60*24*30) +
+    pTimer->getDayOfMonth() * (60*60*24) +
+    pTimer->getHour() * (60*60) +
+    pTimer->getMinute() * 60 +
+    pTimer->getSecond();
+  tv->tv_usec = 0;
+
+  return 0;
+}
