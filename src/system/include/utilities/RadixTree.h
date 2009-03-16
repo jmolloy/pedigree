@@ -57,7 +57,7 @@ private:
         return _next;
       else
       {
-        Node *n = n->parent;
+        Node *n = parent;
         while (n)
         {
           if (n->_next)
@@ -69,7 +69,7 @@ private:
     }
     /** Get the previous data structure in the list
      *\return pointer to the previous data structure in the list
-     * \note Not implemented! */
+     *\note Not implemented! */
     Node *previous()
       {return 0;}
   };

@@ -38,6 +38,8 @@ class String
     inline String &operator = (const String &x);
     inline String &operator = (const char *s);
     inline operator const char *() const;
+    inline String &operator += (const String &x);
+    inline String &operator += (const char *s);
 
     inline bool operator == (const String &s);
 
@@ -108,6 +110,21 @@ String::operator const char *() const
     return "";
   else
     return m_Data;
+}
+
+String &String::operator += (const String &x)
+{
+  reserve(x.length()+m_Length+1);
+  memcpy(&m_Data[m_Length], x.m_Data, x.length()+1);
+  m_Length += x.length();
+  return *this;
+}
+String &String::operator += (const char *s)
+{
+  reserve(strlen(s)+m_Length+1);
+  memcpy(&m_Data[m_Length], s, strlen(s)+1);
+  m_Length += strlen(s);
+  return *this;
 }
 
 bool String::operator == (const String &s)

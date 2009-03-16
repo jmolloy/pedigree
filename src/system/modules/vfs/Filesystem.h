@@ -20,6 +20,7 @@
 #include <utilities/String.h>
 #include <machine/Disk.h>
 #include <vfs/File.h>
+#include <utilities/RadixTree.h>
 
 /** This class provides the abstract skeleton that all filesystems must implement.
  */
@@ -103,8 +104,26 @@ protected:
   /** is this entire filesystem read-only?  */
   bool m_bReadOnly;
 private:
+
+  /** Internal function to find a node - Returns File() on failure or the node, along with its
+      parent directory in parent, if it exists or not.
+
+      Even if the file didn't exist, the parent is guaranteed to be returned (if the parent directory existed). */
+  File findNode(String path, File &parent);
+
+  /** Internal function to attempt to read from the cache the File for the given canonical path, along with its parent. */
+  File cacheLookup(List<String*> &canonicalPath, File &parent);
+  /** Internal function to insert a canonised path - inode pair into the cache. */
+  void cacheInsert(String canonicalPath, File parent);
+  /** Internal function to create a canonical path from a String. A canonical path is one without NULL segments and without the
+      special files '.' and '..' - that is, if symlinks are ignored, there is one and only one canonical path that could possibly
+      access a particular inode. */
+  void canonisePath(String &path, List<String*> &tokens);
+
   /** Accessed by VFS */
   size_t m_nAliases;
+  /** Patricia tree used as a cache for fast path lookup. */
+  RadixTree<File*> m_Cache;
 };
 
 #endif

@@ -26,301 +26,291 @@ Filesystem::Filesystem() :
 
 File Filesystem::find(String path)
 {
-  List<String*> tokens = path.tokenise('/');
+  File parent;
 
-  File curDir = getRoot();
+  return findNode(path, parent);
+}
+
+bool Filesystem::createFile(String path, uint32_t mask)
+{
+  File parent;
+  File file = findNode(path, parent);
+
+  if (file.isValid())
+  {
+    // File existed.
+    return false;
+  }
+  else
+  {
+    // To calculate the filename, grab the last token in the tokenised path.
+    /// \todo Logic faulty, should actually use the canonical path.
+    List<String*> tokens = path.tokenise('/');
+    String filename;
+    for (List<String*>::Iterator it = tokens.begin();
+         it != tokens.end();
+         it++)
+    {
+      String *pStr = *it;
+      if (pStr->length() > 0)
+        filename = *pStr;
+      delete pStr;
+    }
+    createFile(parent, filename, mask);
+
+    return true;
+  }
+}
+
+bool Filesystem::createDirectory(String path)
+{
+  File parent;
+  File file = findNode(path, parent);
+
+  if (file.isValid())
+  {
+    // File existed.
+    return false;
+  }
+  else
+  {
+    // To calculate the filename, grab the last token in the tokenised path.
+    /// \todo Logic faulty, should actually use the canonical path.
+    List<String*> tokens = path.tokenise('/');
+    String filename;
+    for (List<String*>::Iterator it = tokens.begin();
+         it != tokens.end();
+         it++)
+    {
+      String *pStr = *it;
+      if (pStr->length() > 0)
+        filename = *pStr;
+      delete pStr;
+    }
+    createDirectory(parent, filename);
+
+    return true;
+  }
+}
+
+bool Filesystem::createSymlink(String path, String value)
+{
+  File parent;
+  File file = findNode(path, parent);
+
+  if (file.isValid())
+  {
+    // File existed.
+    return false;
+  }
+  else
+  {
+    // To calculate the filename, grab the last token in the tokenised path.
+    /// \todo Logic faulty, should actually use the canonical path.
+    List<String*> tokens = path.tokenise('/');
+    String filename;
+    for (List<String*>::Iterator it = tokens.begin();
+         it != tokens.end();
+         it++)
+    {
+      String *pStr = *it;
+      if (pStr->length() > 0)
+        filename = *pStr;
+      delete pStr;
+    }
+    createSymlink(parent, filename, value);
+
+    return true;
+  }
+}
+
+bool Filesystem::remove(String path)
+{
+  File parent;
+
+  File file = findNode(path, parent);
+
+  /// \todo Needs removing from cache.
+  return remove(parent, file);
+}
+
+File Filesystem::findNode(String path, File &parent)
+{
+
+  List<String*> tokens;
+  canonisePath(path, tokens);
+
+  // Attempt to fetch from cache.
+  File curDir = cacheLookup(tokens, parent);
+  if (!curDir.isValid())
+  {
+    curDir = getRoot();
+    String curStr;
+    for (List<String*>::Iterator it = tokens.begin();
+        it != tokens.end();
+        it++)
+    {
+      String *pStr = *it;
+
+      if (pStr->length() == 0)
+        continue;
+
+      if (!curDir.isDirectory())
+      {
+        // Error - not a directory!
+        return File();
+      }
+      /// \todo Check for symlinks and follow.
+
+      parent = curDir;
+      bool bFound = false;
+      for (File f = curDir.firstChild();
+          f.isValid();
+          f = curDir.nextChild())
+      {
+        String s = f.getName();
+
+        String tmp = curStr;
+        tmp += "/";
+        tmp += s;
+
+        // Add to cache.
+        cacheInsert(tmp, f);
+
+        if (*pStr == s)
+        {
+          bFound = true;
+          curDir = f;
+          curStr = tmp;
+          break;
+        }
+      }
+      if (!bFound)
+        return File();
+    }
+  }
+
   for (List<String*>::Iterator it = tokens.begin();
        it != tokens.end();
        it++)
   {
-    String *pStr = *it;
-
-    if (pStr->length() == 0)
-      continue;
-
-    if (!curDir.isDirectory())
-    {
-      // Error - not a directory!
-      return File();
-    }
-    /// \todo Check for symlinks and follow.
-
-    bool bFound = false;
-    for (File f = curDir.firstChild();
-         f.isValid();
-         f = curDir.nextChild())
-    {
-      String s = f.getName();
-      if (*pStr == s)
-      {
-        bFound = true;
-        curDir = f;
-        break;
-      }
-    }
-    if (!bFound)
-    {
-      // Error - not found!
-      return File();
-    }
+    delete *it;
   }
 
   return curDir;
 }
 
-bool Filesystem::createFile(String path, uint32_t mask)
+void Filesystem::canonisePath(String &path, List<String*> &tokens)
 {
-  // We expect a leading '/'.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *pathSegment;
+  // Tokenise the string to remove any '..' or '.' references.
+  tokens = path.tokenise('/');
 
-  File curDir = getRoot();
-
-  if (cPath[0] != '/')
-    ERROR("Filesystem::find - path component malformed! (" << cPath << ")");
-
-  cPath++;
-  while (cPath[0])
+  bool bStop = false;
+  while (!bStop)
   {
-    bool terminate = false;
-
-    pathSegment = cPath;
-
-    while (cPath[0] != '\0' && cPath[0] != '/')
-      cPath++;
-
-    if (cPath[0] == '\0') terminate = true;
-
-    cPath[0] = '\0';
-
-    if (!curDir.isDirectory())
+    bStop = true;
+    List<String*>::Iterator iParent = tokens.end();
+    for (List<String*>::Iterator it = tokens.begin();
+        it != tokens.end();
+        it++)
     {
-      // Error - is directory!
-      return false;
-    }
-
-    bool bFound = false;
-    for (File f = curDir.firstChild();
-         f.isValid();
-         f = curDir.nextChild())
-    {
-      if (!strcmp(pathSegment, static_cast<const char*> (f.getName())))
+      String *pStr = *it;
+      if (!strcmp(*pStr, "."))
       {
-        bFound = true;
-        curDir = f;
+        // '.' - just delete this path segment.
+        delete pStr;
+        tokens.erase(it);
+        bStop = false;
         break;
       }
+      else if (!strcmp(*pStr, ".."))
+      {
+        // '..' - delete this path segment and the preceding one (iParent). This is done by erasing iParent and then erasing
+        // the returned Iterator (points to the next valid item).
+        delete pStr;
+        if (iParent != tokens.end())
+        {
+          delete *iParent;
+          it = tokens.erase(iParent);
+        }
+        tokens.erase(it);
+        bStop = false;
+        break;
+      }
+      else if (pStr->length() == 0)
+      {
+        // Pointless node, remove.
+        delete pStr;
+        tokens.erase(it);
+        bStop = false;
+        break;
+      }
+      iParent = it;
     }
-    if (!bFound && terminate) // TODO cover case with trailing '/'
-    {
-      // Not found, but nothing left, so create here.
-      createFile(curDir, String(pathSegment), mask);
-      return true;
-    }
-    else if(!bFound && terminate)
-    {
-      // Error - not found!
-      return false;
-    }
-
-    cPath++;
-    if (cPath[0] == '\0' || terminate)
-    {
-      return false;
-    }
-
   }
-  return false;
 }
 
-bool Filesystem::createDirectory(String path)
+File Filesystem::cacheLookup(List<String*> &canonicalPath, File &parent)
 {
-  // We expect a leading '/'.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *pathSegment;
+  // What are we searching for? the file given by canonicalPath or its parent directory?
+  bool bLookingForParent = false;
 
-  File curDir = getRoot();
+  File theFile;
 
-  if (cPath[0] != '/')
-    ERROR("Filesystem::find - path component malformed! (" << cPath << ")");
-
-  cPath++;
-  while (cPath[0])
+  // If there are no path segments (i.e. we're looking for the root), just return root.
+  if (canonicalPath.count() == 0)
   {
-    bool terminate = false;
+    parent = File();
+    return getRoot();
+  }
 
-    pathSegment = cPath;
-
-    while (cPath[0] != '\0' && cPath[0] != '/')
-      cPath++;
-
-    if (cPath[0] == '\0') terminate = true;
-
-    cPath[0] = '\0';
-
-    if (!curDir.isDirectory())
+  // This algorithm will not return partial matches.
+  int i = canonicalPath.count();
+  while (true)
+  {
+    // Create a String from path segments 0..i exclusive.
+    String constructedPath;
+    size_t j = 0;
+    for (List<String*>::Iterator it = canonicalPath.begin();
+         j < i;
+         it++)
     {
-      // Error - is directory!
-      return false;
+      constructedPath += "/";
+      constructedPath += **it;
+      j++;
     }
 
-    bool bFound = false;
-    for (File f = curDir.firstChild();
-         f.isValid();
-         f = curDir.nextChild())
+    // Look for the file.
+    File *file = m_Cache.lookup(constructedPath);
+    if (bLookingForParent)
     {
-      if (!strcmp(pathSegment, static_cast<const char*> (f.getName())))
-      {
-        bFound = true;
-        curDir = f;
-        break;
-      }
-    }
-    if (!bFound && terminate) // TODO cover case with trailing '/'
-    {
-      // Not found, but nothing left, so create here.
-      createDirectory(curDir, String(pathSegment));
-      return true;
+      // If we were looking for the parent, we can assign the parent and return.
+      parent = (file) ? *file : File();
+      return theFile;
     }
     else
     {
-      // Error - not found!
-      return false;
+      // Else we were looking for the normal file - assign it and start looking for the parent.
+      theFile = (file) ? *file : File();
+      bLookingForParent = true;
+      // To search for the parent, look one path segment less.
+      i--;
+      // If we're down to 0, special-case to root.
+      if (i == 0)
+      {
+        parent = getRoot();
+        return theFile;
+      }
+      continue;
     }
-
-    cPath++;
-    if (cPath[0] == '\0' || terminate)
-    {
-      return false;
-    }
-
   }
-  return false;
+
+  // We shouldn't get here.
+  return File();
 }
 
-bool Filesystem::createSymlink(String path, String value)
+void Filesystem::cacheInsert(String canonicalPath, File parent)
 {
-  // We expect a leading '/'.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *pathSegment;
-
-  File curDir = getRoot();
-
-  if (cPath[0] != '/')
-    ERROR("Filesystem::find - path component malformed! (" << cPath << ")");
-
-  cPath++;
-  while (cPath[0])
-  {
-    bool terminate = false;
-
-    pathSegment = cPath;
-
-    while (cPath[0] != '\0' && cPath[0] != '/')
-      cPath++;
-
-    if (cPath[0] == '\0') terminate = true;
-
-    cPath[0] = '\0';
-
-    if (!curDir.isDirectory())
-    {
-      // Error - is directory!
-      return false;
-    }
-
-    bool bFound = false;
-    for (File f = curDir.firstChild();
-         f.isValid();
-         f = curDir.nextChild())
-    {
-      if (!strcmp(pathSegment, static_cast<const char*> (f.getName())))
-      {
-        bFound = true;
-        curDir = f;
-        break;
-      }
-    }
-    if (!bFound && terminate) // TODO cover case with trailing '/'
-    {
-      // Not found, but nothing left, so create here.
-      createSymlink(curDir, String(pathSegment), value);
-      return true;
-    }
-    else
-    {
-      // Error - not found!
-      return false;
-    }
-
-    cPath++;
-    if (cPath[0] == '\0' || terminate)
-    {
-      return false;
-    }
-
-  }
-  return false;
-}
-
-bool Filesystem::remove(String path)
-{
-  // We expect a leading '/'.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *pathSegment;
-
-  File parent = File();
-  File curDir = getRoot();
-
-  if (cPath[0] != '/')
-    ERROR("Filesystem::find - path component malformed! (" << cPath << ")");
-
-  cPath++;
-  while (cPath[0])
-  {
-    bool terminate = false;
-
-    pathSegment = cPath;
-
-    while (cPath[0] != '\0' && cPath[0] != '/')
-      cPath++;
-
-    if (cPath[0] == '\0') terminate = true;
-
-    cPath[0] = '\0';
-
-    if (!curDir.isDirectory())
-    {
-      // Error - is directory!
-      return false;
-    }
-
-    bool bFound = false;
-    for (File f = curDir.firstChild();
-         f.isValid();
-         f = curDir.nextChild())
-    {
-      if (!strcmp(pathSegment, static_cast<const char*> (f.getName())))
-      {
-        bFound = true;
-        parent = curDir;
-        curDir = f;
-        break;
-      }
-    }
-
-    if (!bFound)
-    {
-      // Error - not found!
-      return false;
-    }
-
-    cPath++;
-    if (cPath[0] == '\0' || terminate)
-    {
-      return remove(parent, curDir);
-    }
-
-  }
-  return remove(parent, curDir);
+  File *pFile = new File(parent);
+  m_Cache.insert(canonicalPath, pFile);
 }
