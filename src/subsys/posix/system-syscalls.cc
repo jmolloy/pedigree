@@ -100,6 +100,8 @@ int posix_sbrk(int delta)
 
 int posix_fork(ProcessorState state)
 {
+  NOTICE("fork");
+  
   Processor::setInterrupts(false);
 
   // Create a new process.
@@ -113,9 +115,36 @@ int posix_fork(ProcessorState state)
 
   // Register with the dynamic linker.
   DynamicLinker::instance().registerProcess(pProcess);
-
+  
+  /// \todo All open descriptors need to be copied, not just stdin, stdout & stderr
+  
+  typedef Tree<size_t,void*> FdMap;
+  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  FdMap childFdMap = pProcess->getFdMap();
+  size_t lastFd = 0;
+  
+  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
+  {
+    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
+    if(!pFd)
+      continue;
+    size_t newFd = reinterpret_cast<size_t>(it.key());
+    
+    FileDescriptor *pFd2 = new FileDescriptor;
+    pFd2->file = pFd->file;
+    pFd2->offset = pFd->offset;
+    pProcess->getFdMap().insert(newFd, reinterpret_cast<void*> (pFd2));
+    
+    size_t diff = newFd - lastFd;
+    if(diff == 0)
+      diff++;
+    lastFd = newFd;
+    for(size_t z = 0; z < diff; z++)
+      pProcess->nextFd();
+  }
+  
   // Copy over stdin, stdout & stderr.
-  for (int i = 0; i < 3; i++)
+  /*for (int i = 0; i < 3; i++)
   {
     FileDescriptor *pFd = reinterpret_cast<FileDescriptor*> (Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(i));
     FileDescriptor *pFd2 = new FileDescriptor;
@@ -123,7 +152,7 @@ int posix_fork(ProcessorState state)
     pFd2->offset = pFd->offset;
     pProcess->getFdMap().insert(i, reinterpret_cast<void*> (pFd2));
     pProcess->nextFd();
-  }
+  }*/
 
   // Child returns 0.
   state.setSyscallReturnValue(0);

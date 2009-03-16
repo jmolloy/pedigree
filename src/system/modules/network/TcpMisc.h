@@ -18,6 +18,7 @@
 #define MACHINE_TCPMISC_H
 
 #include <utilities/Tree.h>
+#include <utilities/Iterator.h>
 #include "Endpoint.h"
 
 #include <Log.h>
@@ -136,8 +137,157 @@ class Tree<StateBlockHandle,void*>
     };
     
   public:
-    /** Random-access iterator for the Vector */
-    typedef void**           Iterator;
+    /** Random access iterator for the Tree.
+      * \note Basically a full reimplementation due to the totally different Node type */
+    /*class Iterator : public Tree<void*,void*>::Iterator
+    {
+      public:
+        Iterator() :
+          pNode(0), pPreviousNode(0)
+        {};
+        Iterator(Iterator& it) :
+          pNode(it.pNode), pPreviousNode(it.pPreviousNode)
+        {};
+        Iterator(Node* p) :
+          pNode(p), pPreviousNode((p != 0) ? p->parent : 0)
+        {};
+        virtual ~Iterator()
+        {};
+        
+        StateBlockHandle key()
+        {
+          if(pNode)
+            return pNode->key;
+          else
+          {
+            static StateBlockHandle handle;
+            return handle;
+          }
+        }
+        
+        void* value()
+        {
+          if(pNode)
+            return pNode->element;
+          else
+            return 0;
+        }
+        
+        void operator ++ ()
+        {
+          traverseNext();
+        }
+        
+        void* operator * ()
+        {
+          // pNode will be null when we reach the end of the list
+          return reinterpret_cast<void*>(pNode);
+        }
+        
+        Iterator& operator = (Iterator& it)
+        {
+          pNode = it.pNode;
+          pPreviousNode = it.pPreviousNode;
+          
+          return *(const_cast<Iterator*>(this));
+        }
+      
+      private:
+        Node* pNode;
+        Node* pPreviousNode;
+        
+        void traverseNext()
+        {
+          if(pNode == 0)
+            return;
+          
+          if((pPreviousNode == pNode->parent) && pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->leftChild;
+            traverseNext();
+          }
+          else if((pPreviousNode == pNode->leftChild) && !pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            return;
+          }
+          else if((pPreviousNode == pNode) && pNode->rightChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->rightChild;
+            traverseNext();
+          }
+          else
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->parent;
+            traverseNext();
+          }
+        }
+    };*/
+    
+    class IteratorNode
+    {
+      public:
+        IteratorNode() : value(0), pNode(0), pPreviousNode(0)
+        {};
+        IteratorNode(Node* node, Node* prev) : value(node), pNode(node), pPreviousNode(prev)
+        {};
+        
+        IteratorNode *next()
+        {
+          traverseNext();
+          
+          value = pNode;
+          
+          return this;
+        }
+        IteratorNode *previous()
+        {
+          return 0;
+        }
+        
+        Node* value;
+      
+      private:
+        
+        Node* pNode;
+        Node* pPreviousNode;
+        
+        void traverseNext()
+        {
+          if(pNode == 0)
+            return;
+          
+          if((pPreviousNode == pNode->parent) && pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->leftChild;
+            traverseNext();
+          }
+          else if((pPreviousNode == pNode->leftChild) && !pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            return;
+          }
+          else if((pPreviousNode == pNode) && pNode->rightChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->rightChild;
+            traverseNext();
+          }
+          else
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->parent;
+            traverseNext();
+          }
+        }
+    };
+    
+    typedef ::Iterator<void*, IteratorNode> Iterator;
+    //typedef void**           Iterator;
     /** Contant random-access iterator for the Vector */
     typedef void** const*     ConstIterator;
     
@@ -174,7 +324,7 @@ class Tree<StateBlockHandle,void*>
      *\return iterator pointing to the beginning of the Vector */
     Iterator begin()
     {
-      return 0;
+      return Iterator(m_Begin);
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
@@ -186,7 +336,7 @@ class Tree<StateBlockHandle,void*>
      *\return iterator pointing to the last element + 1 */
     Iterator end()
     {
-      return 0;
+      return Iterator(0);
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
@@ -209,6 +359,8 @@ class Tree<StateBlockHandle,void*>
     // root node
     Node *root;
     size_t nItems;
+    
+    IteratorNode* m_Begin;
     
     /** The actual container */
     //Tree<void*,void*> m_VoidTree;
@@ -262,7 +414,7 @@ class Tree<StateBlockHandle,V*>
       {m_VoidTree.clear();}
     /** Erase one Element */
     Iterator erase(Iterator iter)
-      {return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast<typename Tree<void*,void*>::Iterator>(iter)));}
+      {return m_VoidTree.erase(iter);} //reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast<typename Tree<void*,void*>::Iterator>(iter)));}
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */

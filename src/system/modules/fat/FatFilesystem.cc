@@ -668,10 +668,8 @@ void FatFilesystem::setCluster(File* pFile, uint32_t clus)
   }
   
   Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[dirOffset]);
-  NOTICE("Cluster was " << ent->DIR_FstClusLO << "/" << ent->DIR_FstClusHI << ".");
   ent->DIR_FstClusLO = clus & 0xFFFF;
   ent->DIR_FstClusHI = (clus >> 16) & 0xFFFF;
-  NOTICE("Cluster is now " << ent->DIR_FstClusLO << "/" << ent->DIR_FstClusHI << ".");
   
   if(secMethod)
   {
@@ -874,8 +872,6 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
 
   // n too high?
   delete buffer;
-  
-  NOTICE("File not found!");
 
   return File();
 }
@@ -1194,14 +1190,30 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
     readCluster(clus, reinterpret_cast<uintptr_t>(buffer));
   }
   
+  // how many long filename entries does the filename require?
+  size_t numRequired = 1; // need *at least* one for the short filename entry
+  size_t fnLength = filename.length();
+  
+  // each long filename entry is 13 bytes of filename
+  size_t numSplit = fnLength / 13;
+  numRequired += (numSplit) + 1; // if fnLength is lower than 13, we still need a long directory entry
+  
+  size_t longFilenameOffset = fnLength;
+  
   // find the first free element
   bool spaceFound = false;
-  int offset;
+  size_t offset;
+  size_t consecutiveFree = 0;
   while(true)
   {
     for(offset = 0; offset < m_BlockSize; offset += sizeof(Dir))
     {
       if(buffer[offset] == 0 || buffer[offset] == 0xE5)
+        consecutiveFree++;
+      else
+        consecutiveFree = 0;
+      
+      if(consecutiveFree == numRequired)
       {
         spaceFound = true;
         break;
@@ -1241,11 +1253,64 @@ bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
     }
     else
     {
+      // long filename entries first
+      size_t currOffset = offset - ((numRequired - 1) * sizeof(Dir));
+      size_t i;
+      for(i = 0; i < (numRequired - 1); i++)
+      {
+        // grab a pointer to the data
+        DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
+        memset(lfn, 0, sizeof(DirLongFilename));
+        
+        if(i == 0)
+          lfn->LDIR_Ord = 0x40 | (numRequired - 1);
+        else
+          lfn->LDIR_Ord = (numRequired - 1 - i);
+        lfn->LDIR_Attr = ATTR_LONG_NAME;
+        
+        // get the next 13 bytes
+        size_t nChars = 13;
+        if(longFilenameOffset >= 13)
+          longFilenameOffset -= nChars;
+        else
+        {
+          // longFilenameOffset is not bigger than 13, so it's the number of characters to copy
+          nChars = longFilenameOffset;
+          longFilenameOffset = 0;
+        }
+        
+        size_t nOffset = longFilenameOffset;
+        size_t nWritten = 0;
+        size_t n;
+        for(n = 0; n < 10; n += 2)
+        {
+          if(nWritten > nChars)
+            break;
+          lfn->LDIR_Name1[n] = filename[nOffset++];
+          nWritten++;
+        }
+        for(n = 0; n < 12; n += 2)
+        {
+          if(nWritten > nChars)
+            break;
+          lfn->LDIR_Name2[n] = filename[nOffset++];
+          nWritten++;
+        }
+        for(n = 0; n < 4; n += 2)
+        {
+          if(nWritten > nChars)
+            break;
+          lfn->LDIR_Name3[n] = filename[nOffset++];
+          nWritten++;
+        }
+        
+        currOffset += sizeof(Dir);
+      }
+      
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
       memset(ent, 0, sizeof(Dir));
       
-      /// \todo Long filename support
       String shortFilename = convertFilenameTo(filename);
       memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
       

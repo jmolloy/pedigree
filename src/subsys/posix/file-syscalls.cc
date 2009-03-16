@@ -176,15 +176,14 @@ int posix_open(const char *name, int flags, int mode)
     file = VFS::instance().find(nameWithCwd);
   }
 
+  bool bCreated = false;
   if (!file.isValid()) /// \todo Deal with O_CREAT
   {
     if(flags & O_CREAT)
     {
-      NOTICE("Creating the file");
       bool worked = VFS::instance().createFile(nameWithCwd, 0777);
       if(!worked)
       {
-        NOTICE("failed!");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
@@ -192,17 +191,15 @@ int posix_open(const char *name, int flags, int mode)
       file = VFS::instance().find(nameWithCwd);
       if (!file.isValid())
       {
-        NOTICE("failed -_-");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
       
-      NOTICE("Created");
+      bCreated = true;
     }
     else
     {
       // Error - not found.
-      NOTICE("o.O");
       SYSCALL_ERROR(DoesNotExist);
       return -1;
     }
@@ -210,20 +207,27 @@ int posix_open(const char *name, int flags, int mode)
   if (file.isDirectory())
   {
     // Error - is directory.
-      NOTICE("-______-");
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
   if (file.isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
-      NOTICE(":/");
     SYSCALL_ERROR(Unimplemented);
     return -1;
   }
+  
+  if((flags & O_CREAT) && (flags & O_EXCL) && !bCreated)
+  {
+    // file exists with O_CREAT and O_EXCL
+    SYSCALL_ERROR(FileExists);
+    return -1;
+  }
+  
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = 0;
+  f->fd = fd;
   fdMap.insert(fd, reinterpret_cast<void*>(f));
 
   return static_cast<int> (fd);
@@ -257,7 +261,8 @@ int posix_read(int fd, char *ptr, int len)
 int posix_write(int fd, char *ptr, int len)
 {
   if (ptr)
-  NOTICE("write(" << fd << ", " << ptr << ")");
+  NOTICE("write(" << fd << ")"); // ", " << ptr << ")");
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -446,6 +451,7 @@ int posix_opendir(const char *dir, dirent *ent)
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = 0;
+  f->fd = fd;
   fdMap.insert(fd, reinterpret_cast<void*>(f));
 
   file = file.firstChild();
@@ -549,6 +555,60 @@ int posix_chdir(const char *path)
     delete [] newpath;
   }
   return 0;
+}
+
+int posix_dup(int fd)
+{
+  NOTICE("dup(" << fd << ")");
+  // grab the file descriptor pointer for the passed descriptor
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+  if(!f)
+  {
+    /// \todo SYSCALL_ERROR of some form
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
+  }
+  
+  // Lookup this process.
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  size_t newFd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  
+  fdMap.insert(newFd, reinterpret_cast<void*>(f));
+  
+  return static_cast<int>(newFd);
+}
+
+int posix_dup2(int fd1, int fd2)
+{
+  NOTICE("dup2(" << fd1 << ", " << fd2 << ")");
+  
+  if(fd2 < 0) /// \todo OR fd2 >= OPEN_MAX
+  {
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1; // EBADF
+  }
+  
+  if(fd1 == fd2)
+    return fd2;
+  
+  // grab the file descriptor pointer for the passed descriptor
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd1));
+  if(!f)
+  {
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
+  }
+  
+  // close the original descriptor
+  posix_close(fd2);
+  
+  // Lookup this process.
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  
+  fdMap.insert(fd2, reinterpret_cast<void*>(f));
+  
+  return static_cast<int>(fd2);
 }
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)

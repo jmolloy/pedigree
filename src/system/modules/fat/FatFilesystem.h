@@ -137,6 +137,19 @@ protected:
     uint32_t	DIR_FileSize;
   } __attribute__((packed));
   
+  /** A Fat long filename directory entry. */
+  struct DirLongFilename
+  {
+    uint8_t   LDIR_Ord;
+    uint8_t   LDIR_Name1[10];
+    uint8_t   LDIR_Attr;
+    uint8_t   LDIR_Type; // always zero for LFN entries
+    uint8_t   LDIR_Chksum;
+    uint8_t   LDIR_Name2[12];
+    uint16_t  LDIR_FstClusLO; // meaningless, and MUST be zero
+    uint8_t   LDIR_Name3[4];
+  } __attribute__((packed));
+  
   /** A Fat timestamp */
   struct Timestamp
   {

@@ -21,12 +21,13 @@
 //
 
 Tree<void*,void*>::Tree() :
-  root(0), nItems(0)
+  root(0), nItems(0), m_Begin(0)
 {
 }
 
 Tree<void*,void*>::~Tree()
 {
+  delete m_Begin;
 }
 
 void Tree<void*,void*>::traverseNode_Insert(Node *n)
@@ -47,10 +48,12 @@ void Tree<void*,void*>::traverseNode_Remove(Node *n)
 
 
 Tree<void*,void*>::Tree(const Tree &x) :
-  root(0), nItems(0)
+  root(0), nItems(0), m_Begin(0)
 {
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
+  
+  m_Begin = new IteratorNode(root, 0);
 }
 
 Tree<void*,void*> &Tree<void*,void*>::operator =(const Tree &x)
@@ -58,6 +61,9 @@ Tree<void*,void*> &Tree<void*,void*>::operator =(const Tree &x)
   clear();
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
+  
+  m_Begin = new IteratorNode(root, 0);
+  
   return *this;
 }
 
@@ -81,7 +87,11 @@ void Tree<void*,void*>::insert(void *key, void *value)
   if (lookup(key)) return; // Key already in tree.
   
   if (root == 0)
+  {
     root = n; // We are the root node.
+    
+    m_Begin = new IteratorNode(root, 0);
+  }
   else
   {
     // Traverse the tree.
@@ -200,11 +210,16 @@ void Tree<void*,void*>::clear()
   traverseNode_Remove(root);
   root = 0;
   nItems = 0;
+  
+  delete m_Begin;
+  m_Begin = 0;
 }
 
+/// \todo Implement
 Tree<void*,void*>::Iterator Tree<void*,void*>::erase(Iterator iter)
 {
-  return 0;
+  static Iterator ret(0);
+  return ret;
 }
 
 void Tree<void*,void*>::rotateLeft(Node *n)

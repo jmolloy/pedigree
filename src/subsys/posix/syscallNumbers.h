@@ -51,6 +51,8 @@
 #define POSIX_SENDTO     31
 
 #define POSIX_GETTIMEOFDAY 32
+#define POSIX_DUP        33
+#define POSIX_DUP2       34
 
 #define POSIX_STUBBED    99
 

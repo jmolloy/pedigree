@@ -432,8 +432,7 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 
 int dup2(int fildes, int fildes2)
 {
-  STUBBED("dup2");
-  return -1;
+  return syscall2(POSIX_DUP2, fildes, fildes2);
 }
 
 int access(const char *path, int amode)
@@ -515,8 +514,7 @@ int chdir(const char *path)
 
 int dup(int fileno)
 {
-  STUBBED("dup");
-  return -1;
+  return syscall1(POSIX_DUP, fileno);
 }
 
 int pipe(int filedes[2])

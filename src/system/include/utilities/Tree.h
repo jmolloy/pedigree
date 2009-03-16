@@ -18,6 +18,7 @@
 #define KERNEL_UTILITIES_TREE_H
 
 #include <processor/types.h>
+#include <utilities/Iterator.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -45,8 +46,170 @@ class Tree<void*,void*>
     };
 
   public:
+    
     /** Random access iterator for the Tree. */
-    typedef void**        Iterator;
+    /*class Iterator
+    {
+      public:
+        Iterator() :
+          pNode(0), pPreviousNode(0)
+        {};
+        Iterator(Iterator& it) :
+          pNode(it.pNode), pPreviousNode(it.pPreviousNode)
+        {};
+        Iterator(Node* p) :
+          pNode(p), pPreviousNode((p != 0) ? p->parent : 0)
+        {};
+        virtual ~Iterator()
+        {};
+        
+        void* key()
+        {
+          if(pNode)
+            return pNode->key;
+          else
+            return 0;
+        }
+        
+        void* value()
+        {
+          if(pNode)
+            return pNode->element;
+          else
+            return 0;
+        }
+        
+        void operator ++ ()
+        {
+          traverseNext();
+        }
+        
+        void* operator * ()
+        {
+          // pNode will be null when we reach the end of the list
+          return reinterpret_cast<void*>(pNode);
+        }
+        
+        bool operator != (Iterator& it)
+        {
+          return pNode != it.pNode;
+        }
+        
+        bool operator == (Iterator& it)
+        {
+          return pNode == it.pNode;
+        }
+        
+        Iterator& operator = (Iterator& it)
+        {
+          pNode = it.pNode;
+          pPreviousNode = it.pPreviousNode;
+          
+          return *(const_cast<Iterator*>(this));
+        }
+        
+      protected:
+        Node* pNode;
+        Node* pPreviousNode;
+        
+        void traverseNext()
+        {
+          if(pNode == 0)
+            return;
+          
+          if((pPreviousNode == pNode->parent) && pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->leftChild;
+            traverseNext();
+          }
+          else if((pPreviousNode == pNode->leftChild) && !pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            return;
+          }
+          else if((pPreviousNode == pNode) && pNode->rightChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->rightChild;
+            traverseNext();
+          }
+          else
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->parent;
+            traverseNext();
+          }
+        }
+    };*/
+
+    /// \todo This actually will mean for each Tree you can only use one iterator at a time, which may
+    ///       not be effective depending on how this is used.
+    class IteratorNode
+    {
+      public:
+        IteratorNode() : value(0), pNode(0), pPreviousNode(0)
+        {};
+        IteratorNode(Node* node, Node* prev) : value(node), pNode(node), pPreviousNode(prev)
+        {
+          // skip the root node, get to the lowest node in the tree
+          traverseNext();
+          value = pNode;
+        };
+        
+        IteratorNode *next()
+        {
+          traverseNext();
+          
+          value = pNode;
+          
+          return this;
+        }
+        IteratorNode *previous()
+        {
+          return 0;
+        }
+        
+        Node* value;
+      
+      private:
+        
+        Node* pNode;
+        Node* pPreviousNode;
+        
+        void traverseNext()
+        {
+          if(pNode == 0)
+            return;
+          
+          if((pPreviousNode == pNode->parent) && pNode->leftChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->leftChild;
+            traverseNext();
+          }
+          else if(((pNode->leftChild) && (pPreviousNode == pNode->leftChild)) || ((!pNode->leftChild) && (pPreviousNode != pNode)) && (pPreviousNode != pNode->rightChild))
+          {
+            pPreviousNode = pNode;
+          }
+          else if((pPreviousNode == pNode) && pNode->rightChild)
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->rightChild;
+            traverseNext();
+          }
+          else
+          {
+            pPreviousNode = pNode;
+            pNode = pNode->parent;
+            traverseNext();
+          }
+        }
+    };
+    
+    //typedef void**        Iterator;
+    
+    typedef ::TreeIterator<void*, IteratorNode> Iterator;
     /** Constant random-access iterator for the Tree */
     typedef void* const*  ConstIterator;
     
@@ -84,7 +247,10 @@ class Tree<void*,void*>
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return 0;
+      if(m_Begin)
+        delete m_Begin;
+      m_Begin = new IteratorNode(root, 0);
+      return Iterator(m_Begin);
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
@@ -96,7 +262,7 @@ class Tree<void*,void*>
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return 0;
+      return Iterator(0);
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
@@ -117,6 +283,8 @@ class Tree<void*,void*>
     
     Node *root;
     size_t nItems;
+    
+    IteratorNode* m_Begin;
 };
 
 /** Tree template specialisation for key pointers and element pointers. Just forwards to the
@@ -206,7 +374,20 @@ template<class V>
 class Tree<size_t,V*>
 {
   public:
-    /** Random-access iterator for the Vector */
+    /** Random access iterator for the Tree. */
+    /*class Iterator : public Tree<void*,void*>::Iterator
+    {
+      public:
+        size_t key()
+        {
+          if(pNode)
+            return reinterpret_cast<size_t>(pNode->key);
+          else
+            return 0;
+        }
+    };*/
+    
+    /// \todo Custom key/value implementations
     typedef Tree<void*,void*>::Iterator      Iterator;
     /** Contant random-access iterator for the Vector */
     typedef Tree<void*,void*>::ConstIterator ConstIterator;
@@ -248,13 +429,16 @@ class Tree<size_t,V*>
       {m_VoidTree.clear();}
     /** Erase one Element */
     Iterator erase(Iterator iter)
+      //{return *reinterpret_cast<Iterator*>(&(m_VoidTree.erase(*reinterpret_cast<Tree<void*,void*>::Iterator*>(&iter))));}
       {return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast<typename Tree<void*,void*>::Iterator>(iter)));}
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.begin());
+      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.begin()));
+      //return reinterpret_cast<Iterator>(m_VoidTree.begin());
+      return m_VoidTree.begin();
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
@@ -266,7 +450,9 @@ class Tree<size_t,V*>
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.end());
+      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.end()));
+      //return reinterpret_cast<Iterator>(m_VoidTree.end());
+      return m_VoidTree.end();
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
@@ -286,7 +472,36 @@ template<>
 class Tree<size_t,size_t>
 {
   public:
-    /** Random-access iterator for the Vector */
+    /** Random access iterator for the Tree. */
+    /*class Iterator : public Tree<void*,void*>::Iterator
+    {
+      public:
+        size_t key()
+        {
+          if(pNode)
+            return reinterpret_cast<size_t>(pNode->key);
+          else
+            return 0;
+        }
+        
+        size_t value()
+        {
+          if(pNode)
+            return reinterpret_cast<size_t>(pNode->element);
+          else
+            return 0;
+        }
+        
+        size_t operator * ()
+        {
+          if(pNode)
+            return reinterpret_cast<size_t>(pNode->element);
+          else
+            return 0;
+        }
+    };*/
+    
+    /// \todo Custom key/value implementations
     typedef Tree<void*,void*>::Iterator      Iterator;
     /** Contant random-access iterator for the Vector */
     typedef Tree<void*,void*>::ConstIterator ConstIterator;
@@ -328,13 +543,17 @@ class Tree<size_t,size_t>
       {m_VoidTree.clear();}
     /** Erase one Element */
     Iterator erase(Iterator iter)
-      {return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast< Tree<void*,void*>::Iterator>(iter)));}
+      {return m_VoidTree.erase(iter);}
+      //{return *reinterpret_cast<Iterator*>(&(m_VoidTree.erase(*reinterpret_cast<Tree<void*,void*>::Iterator*>(&iter))));}
+      //{return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast< Tree<void*,void*>::Iterator>(iter)));}
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.begin());
+      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.begin()));
+      //return reinterpret_cast<Iterator>(m_VoidTree.begin());
+      return m_VoidTree.begin();
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
@@ -346,7 +565,9 @@ class Tree<size_t,size_t>
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.end());
+      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.end()));
+      //return reinterpret_cast<Iterator>(m_VoidTree.end());
+      return m_VoidTree.end();
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */

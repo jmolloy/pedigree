@@ -145,12 +145,13 @@ void TcpBuffer::append(uintptr_t buffer, size_t nBytes)
 //
 
 Tree<StateBlockHandle,void*>::Tree() :
-  root(0), nItems(0)
+  root(0), nItems(0), m_Begin(0)
 {
 }
 
 Tree<StateBlockHandle,void*>::~Tree()
 {
+  delete m_Begin;
 }
 
 void Tree<StateBlockHandle,void*>::traverseNode_Insert(Node *n)
@@ -170,10 +171,12 @@ void Tree<StateBlockHandle,void*>::traverseNode_Remove(Node *n)
 }
 
 Tree<StateBlockHandle,void*>::Tree(const Tree &x) :
-  root(0), nItems(0)
+  root(0), nItems(0), m_Begin(0)
 {
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
+  
+  m_Begin = new IteratorNode(root, 0);
 }
 
 Tree<StateBlockHandle,void*> &Tree<StateBlockHandle,void*>::operator =(const Tree &x)
@@ -181,6 +184,9 @@ Tree<StateBlockHandle,void*> &Tree<StateBlockHandle,void*>::operator =(const Tre
   clear();
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
+  
+  m_Begin = new IteratorNode(root, 0);
+  
   return *this;
 }
 
@@ -204,7 +210,11 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
   if (lookup(key)) return; // Key already in tree.
   
   if (root == 0)
+  {
     root = n; // We are the root node.
+  
+    m_Begin = new IteratorNode(root, 0);
+  }
   else
   {
     // Traverse the tree.
@@ -334,6 +344,9 @@ void Tree<StateBlockHandle,void*>::clear()
   traverseNode_Remove(root);
   root = 0;
   nItems = 0;
+  
+  delete m_Begin;
+  m_Begin = 0;
 }
 
 Tree<StateBlockHandle,void*>::Iterator Tree<StateBlockHandle,void*>::erase(Iterator iter)

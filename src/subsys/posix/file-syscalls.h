@@ -25,11 +25,12 @@ class FileDescriptor
 {
 public:
   FileDescriptor () :
-    file(), offset(0)
+    file(), offset(0), fd(0xFFFFFFFF)
   {
   }
   File file;
   uint64_t offset;
+  size_t fd;
 };
 
 struct dirent
@@ -123,5 +124,8 @@ int posix_ioctl(int fd, int operation, void *buf);
 
 int posix_chdir(const char *path);
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout);
+
+int posix_dup(int fd);
+int posix_dup2(int fd1, int fd2);
 
 #endif
