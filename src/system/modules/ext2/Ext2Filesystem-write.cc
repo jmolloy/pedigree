@@ -73,7 +73,7 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
 
     inode.i_blocks = HOST_TO_LITTLE32(LITTLE_TO_HOST32(inode.i_blocks)+blocksOver);
     setInode(pFile->getInode(), inode);
-    
+
     m_WriteLock.release();
   }
 
@@ -176,21 +176,22 @@ void Ext2Filesystem::setBlockNumber(uint32_t inode_num, Inode inode, size_t bloc
 //  blockIdx -= blockSize/sizeof(uint32_t);
 
   FATAL("EXT2: Bi-indirect setBlockNumber needed!");
-//  if (blockIdx < 
-  
+//  if (blockIdx <
+
 }
 
 void Ext2Filesystem::addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode, String filename, size_t node_type)
 {
   Inode d_ino = getInode(dir_inode);
   Inode c_ino = getInode(child_inode);
-  NOTICE("Add file: name " << filename << ", inode: " << child_inode);
-  if (LITTLE_TO_HOST32(d_ino.i_flags) & 0x10000)  
+
+  if (LITTLE_TO_HOST32(d_ino.i_flags) & 0x10000)
   {
     ERROR("EXT2: addDirectoryEntry: hashed mode directories not implemented yet!");
     return;
   }
 
+  // Length of the directory entry.
   uint32_t reclen = sizeof(uint32_t) + /* d_inode */
     sizeof(uint16_t) + /* d_reclen */
     sizeof(uint8_t) + /* d_namelen */
@@ -214,7 +215,7 @@ void Ext2Filesystem::addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode,
                                          LITTLE_TO_HOST16(lastDirectory->d_reclen) );
 
   uint32_t insertLocation = reinterpret_cast<uint32_t>(directory) - reinterpret_cast<uint32_t> (buffer);
-  NOTICE("insert location: " << insertLocation);
+
   // Failed will be set to true, but that's fine. We wanted to fall off the end.
 
   // We're adding to the end of a directory - are we going to spill onto a new block?
@@ -248,10 +249,10 @@ void Ext2Filesystem::addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode,
 
     d_ino.i_blocks = HOST_TO_LITTLE32(LITTLE_TO_HOST32(d_ino.i_blocks)+blocksOver);
     setInode(dir_inode, d_ino);
-    
+
     m_WriteLock.release();
   }
-  
+
   // Find the last block.
   uint32_t blockNum = (reinterpret_cast<uintptr_t>(lastDirectory)-reinterpret_cast<uintptr_t> (buffer)) / m_BlockSize;
   // Where does that block start in the buffer?
@@ -283,5 +284,5 @@ void Ext2Filesystem::addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode,
     d_ino.i_size = insertLocation+reclen;
     setInode(dir_inode, d_ino);
   }
- 
+
 }

@@ -24,43 +24,26 @@ Filesystem::Filesystem() :
 {
 }
 
-/// \todo This algorithm needs reworking - it can be so much better!
 File Filesystem::find(String path)
 {
-  // We expect a leading '/'.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *pathSegment;
+  List<String*> tokens = path.tokenise('/');
 
   File curDir = getRoot();
-
-  if (cPath[0] != '/')
-    ERROR("Filesystem::find - path component malformed! (" << cPath << ")");
-
-  cPath++;
-  while (cPath[0])
+  for (List<String*>::Iterator it = tokens.begin();
+       it != tokens.end();
+       it++)
   {
-    bool terminate = false;
+    String *pStr = *it;
 
-    pathSegment = cPath;
-
-    while (cPath[0] != '\0' && cPath[0] != '/')
-      cPath++;
-
-    if (cPath[0] == '\0') terminate = true;
-
-    cPath[0] = '\0';
-
-    if (pathSegment == cPath) // Multiple '/''s - just ignore and continue.
-    {
-      cPath++;
+    if (pStr->length() == 0)
       continue;
-    }
 
     if (!curDir.isDirectory())
     {
-      // Error - is directory!
+      // Error - not a directory!
       return File();
     }
+    /// \todo Check for symlinks and follow.
 
     bool bFound = false;
     for (File f = curDir.firstChild();
@@ -68,7 +51,7 @@ File Filesystem::find(String path)
          f = curDir.nextChild())
     {
       String s = f.getName();
-      if (!strcmp(pathSegment, static_cast<const char*> (s)))
+      if (*pStr == s)
       {
         bFound = true;
         curDir = f;
@@ -80,14 +63,8 @@ File Filesystem::find(String path)
       // Error - not found!
       return File();
     }
-
-    cPath++;
-    if (cPath[0] == '\0' || terminate)
-    {
-      return curDir;
-    }
-
   }
+
   return curDir;
 }
 

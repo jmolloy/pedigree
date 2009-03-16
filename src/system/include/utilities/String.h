@@ -21,6 +21,8 @@
  * @{ */
 
 #include <processor/types.h>
+#include <utilities/List.h>
+#include <utilities/utility.h>
 
 /** String class for ASCII strings
  *\todo provide documentation */
@@ -37,12 +39,20 @@ class String
     inline String &operator = (const char *s);
     inline operator const char *() const;
 
+    inline bool operator == (const String &s);
+
     inline size_t length() const;
     inline size_t size() const;
 
     /** Given a character index, return the index of the next character, interpreting
         the string as UTF-8 encoded. */
     inline size_t nextCharacter(size_t c);
+
+    /** Splits the string at the given offset - the front portion will be kept in this string,
+     *  the back portion (including the character at 'offset' will be returned in a new string. */
+    String split(size_t offset);
+
+    List<String*> tokenise(char token);
 
     void assign(const String &x);
     void assign(const char *s);
@@ -98,6 +108,16 @@ String::operator const char *() const
     return "";
   else
     return m_Data;
+}
+
+bool String::operator == (const String &s)
+{
+  if (m_Data == 0 && s.m_Data == 0)
+    return true;
+  else if (m_Data == 0 || s.m_Data == 0)
+    return false;
+  else
+    return !strcmp(m_Data, s.m_Data);
 }
 
 size_t String::length() const

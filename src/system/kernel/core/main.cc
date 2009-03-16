@@ -219,7 +219,6 @@ new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0
   Processor::initialisationDone();
 #endif
 
-
 #ifdef DEBUGGER_RUN_AT_START
   //Processor::breakpoint();
 #endif

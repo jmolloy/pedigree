@@ -21,7 +21,7 @@
 #include <processor/types.h>
 #include <utilities/IteratorAdapter.h>
 #include <utilities/Iterator.h>
-#include <Log.h>
+
 /** @addtogroup kernelutilities
  * @{ */
 

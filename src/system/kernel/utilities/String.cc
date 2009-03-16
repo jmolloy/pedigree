@@ -16,6 +16,7 @@
 
 #include <utilities/utility.h>
 #include <utilities/String.h>
+#include <Log.h>
 
 void String::assign(const String &x)
 {
@@ -45,8 +46,48 @@ void String::reserve(size_t size)
 }
 void String::free()
 {
-  delete []m_Data;
+  delete [] m_Data;
   m_Data = 0;
   m_Length = 0;
   m_Size = 0;
+}
+
+String String::split(size_t offset)
+{
+  String s(&m_Data[offset]);
+  m_Data[offset] = '\0';
+  m_Length = offset;
+
+  return s;
+}
+
+List<String*> String::tokenise(char token)
+{
+  String copy = *this;
+  List<String*> list;
+
+  size_t idx = 0;
+  while (idx < copy.m_Length)
+  {
+    if (copy.m_Data[idx] == token)
+    {
+      String tmp = copy.split(idx+1);
+
+      String *pStr = new String(copy);
+      copy = tmp;
+
+      // pStr will include token, so remove the last character from it.
+      pStr->m_Length --;
+      pStr->m_Data[pStr->length()] = '\0';
+
+      list.pushBack(pStr);
+      idx = 0;
+    }
+    else
+      idx = copy.nextCharacter(idx);
+  }
+
+  list.pushBack(new String(copy));
+
+  return list;
 }
