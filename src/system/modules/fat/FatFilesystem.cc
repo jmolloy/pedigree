@@ -545,13 +545,17 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     while(currOffset < m_BlockSize)
     {
       tmpBuffer[currOffset] = srcBuffer[bytesWritten];
+      
       currOffset++; bytesWritten++;
 
       if(bytesWritten == finalSize)
       {
         // update the size on disk, if needed
         if(fileSizeChange != 0)
+        {
           updateFileSize(pFile, fileSizeChange);
+          pFile->setSize(pFile->getSize() + fileSizeChange);
+        }
         
         // and now actually write the updated file contents
         writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
@@ -890,7 +894,7 @@ bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 }
 
 bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
-{  
+{
   block = getSectorNumber(block);
   writeSectorBlock(block, m_BlockSize, buffer);
   return true;

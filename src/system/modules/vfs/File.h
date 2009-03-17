@@ -68,6 +68,7 @@ public:
   void truncate();
 
   size_t getSize();
+  void setSize(size_t sz);
 
   /** Returns true if the File is actually a symlink. */
   bool isSymlink();

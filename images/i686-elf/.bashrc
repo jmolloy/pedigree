@@ -1,4 +1,4 @@
-export PATH=/applications
+export PATH=/usr/pedigree-native/bin:/applications
 export TERM=vt100
 export RUBYLIB=/libraries/ruby
 

@@ -248,20 +248,26 @@ int posix_read(int fd, char *ptr, int len)
   }
 
   /// \todo Sanity checks.
-  char *kernelBuf = new char[len];
-  uint64_t nRead = pFd->file.read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
-  memcpy(reinterpret_cast<void*>(ptr), reinterpret_cast<void*>(kernelBuf), len);
-  delete [] kernelBuf;
+  uint64_t nRead = 0;
+  if(ptr)
+  {
+    char *kernelBuf = new char[len];
+    nRead = pFd->file.read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
+    memcpy(reinterpret_cast<void*>(ptr), reinterpret_cast<void*>(kernelBuf), len);
+    delete [] kernelBuf;
 
-  pFd->offset += nRead;
+    pFd->offset += nRead;
+  }
 
   return static_cast<int>(nRead);
 }
 
 int posix_write(int fd, char *ptr, int len)
 {
-  if (ptr)
-  NOTICE("write(" << fd << ")"); // ", " << ptr << ")");
+  if(ptr)
+    NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+  else
+    NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
   
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -276,17 +282,23 @@ int posix_write(int fd, char *ptr, int len)
 
   /// \todo Sanity checks.
   // Copy to kernel.
-  char *kernelBuf = new char[len];
-  memcpy(reinterpret_cast<void*>(kernelBuf), reinterpret_cast<void*>(ptr), len);
-  uint64_t nWritten = pFd->file.write(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
-  delete [] kernelBuf;
+  uint64_t nWritten = 0;
+  if(ptr)
+  {
+    char *kernelBuf = new char[len];
+    memcpy(reinterpret_cast<void*>(kernelBuf), reinterpret_cast<void*>(ptr), len);
+    nWritten = pFd->file.write(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
+    delete [] kernelBuf;
+    pFd->offset += nWritten;
+  }
 
-  pFd->offset += nWritten;
   return static_cast<int>(nWritten);
 }
 
 int posix_lseek(int file, int ptr, int dir)
 {
+  NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -294,6 +306,7 @@ int posix_lseek(int file, int ptr, int dir)
   if (!pFd)
   {
     // Error - no such file descriptor.
+    NOTICE("fail");
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
@@ -313,8 +326,8 @@ int posix_lseek(int file, int ptr, int dir)
   }
 
   // Clamp to file size.
-  if (pFd->offset >= fileSize)
-    pFd->offset = fileSize;
+  //if (pFd->offset >= fileSize)
+  //  pFd->offset = fileSize;
   return static_cast<int>(pFd->offset);
 }
 
@@ -369,9 +382,9 @@ int posix_stat(const char *name, struct stat *st)
   st->st_gid   = 0;
   st->st_rdev  = 0;
   st->st_size  = static_cast<int>(file.getSize());
-  st->st_atime = 0;
-  st->st_mtime = 0;
-  st->st_ctime = 0;
+  st->st_atime = static_cast<int>(file.getAccessedTime());
+  st->st_mtime = static_cast<int>(file.getModifiedTime());
+  st->st_ctime = static_cast<int>(file.getCreationTime());
 
   return 0;
 }
@@ -593,7 +606,7 @@ int posix_dup2(int fd1, int fd2)
     return fd2;
   
   // grab the file descriptor pointer for the passed descriptor
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd1));
+  FileDescriptor* f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd1));
   if(!f)
   {
     SYSCALL_ERROR(BadFileDescriptor);
@@ -601,12 +614,18 @@ int posix_dup2(int fd1, int fd2)
   }
   
   // close the original descriptor
-  posix_close(fd2);
+  if(posix_close(fd2) == -1)
+    return -1;
   
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   
-  fdMap.insert(fd2, reinterpret_cast<void*>(f));
+  // copy the descriptor
+  FileDescriptor* f2 = new FileDescriptor;
+  f2->file = f->file;
+  f2->offset = f->offset;
+  
+  fdMap.insert(fd2, reinterpret_cast<void*>(f2));
   
   return static_cast<int>(fd2);
 }

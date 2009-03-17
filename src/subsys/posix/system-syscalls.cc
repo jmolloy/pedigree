@@ -135,24 +135,8 @@ int posix_fork(ProcessorState state)
     pFd2->offset = pFd->offset;
     pProcess->getFdMap().insert(newFd, reinterpret_cast<void*> (pFd2));
     
-    size_t diff = newFd - lastFd;
-    if(diff == 0)
-      diff++;
-    lastFd = newFd;
-    for(size_t z = 0; z < diff; z++)
-      pProcess->nextFd();
+    pProcess->nextFd(newFd + 1);
   }
-  
-  // Copy over stdin, stdout & stderr.
-  /*for (int i = 0; i < 3; i++)
-  {
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*> (Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(i));
-    FileDescriptor *pFd2 = new FileDescriptor;
-    pFd2->file = pFd->file;
-    pFd2->offset = pFd->offset;
-    pProcess->getFdMap().insert(i, reinterpret_cast<void*> (pFd2));
-    pProcess->nextFd();
-  }*/
 
   // Child returns 0.
   state.setSyscallReturnValue(0);

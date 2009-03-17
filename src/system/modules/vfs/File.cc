@@ -38,6 +38,7 @@ File &File::operator =(const File& file)
   m_CreationTime = file.m_CreationTime; m_Inode = file.m_Inode; m_NextChild = file.m_NextChild;
   m_pFilesystem = file.m_pFilesystem; m_Size = file.m_Size;
   m_CustomField1 = file.m_CustomField1; m_CustomField2 = file.m_CustomField2;
+  
   return *this;
 }
 
@@ -118,6 +119,11 @@ void File::truncate()
 size_t File::getSize()
 {
   return m_Size;
+}
+
+void File::setSize(size_t sz)
+{
+  m_Size = sz;
 }
 
 bool File::isSymlink()

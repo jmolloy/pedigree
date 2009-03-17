@@ -139,14 +139,15 @@ if which losetup >/dev/null 2>&1; then
 elif which mcopy >/dev/null 2>&1; then
 
   cp ../images/floppy_fat.img ./floppy.img
-  ../scripts/mtsetup.sh ./floppy.img >/dev/null 2>&1
-
+  
+  ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
+  
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
   cp ../images/hdd_16h_63spt_100c.img .
   cp ../images/hdd_16h_63spt_100c_fat16.img .
-
+  
   ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
 
   touch ./.pedigree-root
@@ -163,23 +164,31 @@ elif which mcopy >/dev/null 2>&1; then
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
     if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      mcopy $SRCDIR/src/user/$f/$BINARY C:/$f
+      mcopy -Do $SRCDIR/src/user/$f/$BINARY C:/$f
     fi
     if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      mcopy $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
+      mcopy -Do $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
     fi
   done
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
-  mcopy -Do $SRCDIR/libm.so C:/libraries  
-
-  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
+  mcopy -Do $SRCDIR/libm.so C:/libraries
 
   mmd -Do C:/etc/terminfo
   mmd -Do C:/etc/terminfo/v
   mcopy -Do $SRCDIR/../scripts/vt100 C:/etc/terminfo/v
+  
+  svn export --force $SRCDIR/../images/i686-elf ./tmp
+  
+  mcopy -Do -s ./tmp/.bashrc C:/
+  mcopy -Do -s ./tmp/* C:/
+  
+  rm -rf ./tmp
+  
+  #mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
+  #mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
-  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
+  # mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else

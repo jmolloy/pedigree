@@ -94,6 +94,11 @@ public:
     LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
     return m_NextFd++;
   }
+  size_t nextFd(size_t fdNum)
+  {
+    LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
+    return (m_NextFd = fdNum);
+  }
 
   /** Sets the exit status of the process. */
   void setExitStatus(int code)
