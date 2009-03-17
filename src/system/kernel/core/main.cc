@@ -51,7 +51,7 @@
 #include <linker/SymbolTable.h>
 
 BootIO bootIO;
-Semaphore sema(1);
+
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -61,29 +61,16 @@ void apMain()
   Processor::setInterrupts(true);
   for (;;)
   {
-//    sema.acquire();
-//    NOTICE("Got Sem: " << Processor::id() << ", apMain()");
-//    sema.release();
-
     Scheduler::instance().yield();
-//        for (int i = 0; i < 10000000; i++);
-//    NOTICE("Processor " << Processor::id() << ", alive!");
   }
 }
-Spinlock bleh(false);
+
 int idle(void *)
 {
   Processor::setInterrupts(true);
   for (;;)
   {
-    //bleh.acquire();
-    //sema.acquire();
-   //NOTICE("Got Sem: " << Processor::id() << ", idle()");
-    //sema.release();
-    //bleh.release();
     Scheduler::instance().yield();
-//    for (int i = 0; i < 100000000; i++);
-//    NOTICE("Processor " << Processor::id() << ", alive!");
   }
 }
 
@@ -149,13 +136,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
 #ifdef THREADS
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
-new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 #endif
 
@@ -187,7 +167,7 @@ new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-//   for(;;);
+
   // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
   //      BootstrapStruct_t might already be unmapped
 #if defined(X86_COMMON) || defined(PPC_COMMON)

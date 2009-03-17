@@ -105,7 +105,7 @@ void Scheduler::threadStatusChanged(Thread *pThread)
   if (m_pSchedulingAlgorithm)
     m_pSchedulingAlgorithm->threadStatusChanged(pThread);
 }
-
+volatile uint32_t bSafeToDisembark = true;
 void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *pThread)
 {
   m_Mutex.acquire();
@@ -123,9 +123,7 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   if (pOldThread->getStatus() == Thread::Running)
     pOldThread->setStatus(Thread::Ready);
   else if (pOldThread->getStatus() == Thread::PreSleep)
-  {
     pOldThread->setStatus(Thread::Sleeping);
-  }
 
   if (pThread->getParent() == 0)
   {
@@ -141,6 +139,9 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   pOldThread->setInterruptState(&state);
   pOldThread->state() = state;
 
+  while (bSafeToDisembark == 0) ;
+
+  bSafeToDisembark = 0;
   m_Mutex.release();
 
 #ifdef X86_COMMON

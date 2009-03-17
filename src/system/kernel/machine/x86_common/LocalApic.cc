@@ -88,7 +88,7 @@ bool LocalApic::initialise(uint64_t physicalAddress)
   // Register the IPI halt vector.
   if (!InterruptManager::instance().registerInterruptHandler(IPI_HALT_VECTOR, this))
     return false;
-  
+
   return initialiseProcessor();
 }
 
@@ -176,13 +176,16 @@ void LocalApic::interrupt(size_t nInterruptNumber, InterruptState &state)
     // TODO: Delta is wrong.
     if (LIKELY(m_Handler != 0))
     {
+      NOTICE("Timer " << Processor::id());
       m_Handler->timer (0, state);
     }
+    ack();
   }
 
   // The halt IPI is used in the debugger to stop all other cores.
   if (nInterruptNumber == IPI_HALT_VECTOR)
   {
+    NOTICE("Halting processor #" << Dec << Processor::id());
     Processor::halt();
   }
 }

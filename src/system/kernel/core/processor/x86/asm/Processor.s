@@ -27,6 +27,9 @@ global _ZN9Processor16switchToUserModeEmm
 ; void Processor::contextSwitch(InterruptState*)
 global _ZN9Processor13contextSwitchEP17X86InterruptState
 
+; volatile bool bSafeToDisembark
+extern bSafeToDisembark
+
 ;##############################################################################
 ;### Code section #############################################################
 ;##############################################################################
@@ -53,6 +56,9 @@ _ZN9Processor13contextSwitchEP17X86InterruptState:
   ; Change the stack pointer to point to the top of the passed InterruptState object.
   mov esp, [esp+4]
 
+  ; Inform the scheduler that we've used all we need from our current stack.
+  mov dword [bSafeToDisembark], 0x1
+
   ; Restore the registers
   pop ds
   mov ax, ds
@@ -61,6 +67,7 @@ _ZN9Processor13contextSwitchEP17X86InterruptState:
 
   ; Remove the errorcode and the interrupt number from the stack
   add esp, 0x08
+
   iret
 
 _ZN9Processor16switchToUserModeEmm:
