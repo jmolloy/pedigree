@@ -107,13 +107,13 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
   if (m_pSymbolTable && m_pStringTable)
   {
     ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
-  
+
     const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
     for (size_t i = 1; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
     {
       const char *pStr;
-  
+
       if (ELF32_ST_TYPE(pSymbol->info) == 3)
       {
         // Section type - the name will be the name of the section header it refers to.
@@ -121,7 +121,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         // If it's not allocated, it's a link-once-only section that we can ignore.
         if (!(pSh->flags & SHF_ALLOC))
         {
-          pSymbol++;  
+          pSymbol++;
           continue;
         }
         // Grab the shstrtab
@@ -129,7 +129,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
       }
       else
         pStr = pStrtab + pSymbol->name;
-  
+
       // Insert the symbol into the symbol table.
       SymbolTable::Binding binding;
       switch (ELF32_ST_BIND(pSymbol->info))
@@ -205,6 +205,26 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
     FATAL ("Module load failed (2)");
     delete module;
     return 0;
+  }
+
+  //  Load the module debug table (if any)
+  if(module->elf.debugFrameTableLength())
+  {
+    uint8_t*  pDebug = new uint8_t[m_nDebugTableSize + module->elf.debugFrameTableLength()];
+    if(UNLIKELY(!pDebug))
+    {
+      ERROR ("Could not load module debug frame information.");
+    }
+    else
+    {
+      memcpy(pDebug, m_pDebugTable, m_nDebugTableSize);
+      memcpy( pDebug + m_nDebugTableSize,
+              reinterpret_cast<const void*>(module->elf.debugFrameTable()),
+              module->elf.debugFrameTableLength());
+      m_nDebugTableSize+= module->elf.debugFrameTableLength();
+      m_pDebugTable = pDebug;
+      NOTICE("Added debug module debug frame information.");
+    }
   }
 
   // Look up the module's name and entry/exit functions, and dependency list.

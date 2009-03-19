@@ -349,7 +349,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
 
       // Ensure the alignment is as required.
       while ( (m_pSectionHeaders[i].addr % m_pSectionHeaders[i].addralign) != 0)
-      {  
+      {
         m_pSectionHeaders[i].addr ++;
         offset ++;
       }
@@ -385,6 +385,53 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
       }
       offset += m_pSectionHeaders[i].size;
     }
+    else
+    {
+      //  Load information from non-allocated sections here
+      const char* pStr = m_pShstrtab + m_pSectionHeaders[i].name;
+      if (!strcmp(pStr, ".debug_frame"))
+      {
+        m_pDebugTable = reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr);
+        m_nDebugTableSize = m_pSectionHeaders[i].size;
+
+        /*  Go through the debug table relocating debug frame information
+            based on the loadBase.                                        */
+        size_t nIndex = 0;
+        while (nIndex < m_nDebugTableSize)
+        {
+          // Get the length of this entry.
+          uint32_t nLength = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+
+          nIndex += sizeof(uint32_t);
+
+          const uint32_t k_nCieId = 0xFFFFFFFF;
+
+          if (nLength == 0xFFFFFFFF)
+          {
+            ERROR("64-bit DWARF file detected, but not supported!");
+            return false;
+          }
+
+          // Get the type of this entry (or CIE pointer if this is a FDE).
+          uint32_t nCie = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+          nIndex += sizeof(uint32_t);
+
+          // Is this a CIE?
+          if (nCie == k_nCieId)
+          {
+           // Skip over everything.
+           nIndex += nLength - sizeof(processor_register_t);
+           continue;
+          }
+
+          // This is a FDE. Get its initial location.
+          uintptr_t *nInitialLocation = reinterpret_cast<uintptr_t*> (m_pDebugTable+nIndex);
+          *nInitialLocation+= loadBase;
+
+          nIndex += nLength - sizeof(processor_register_t);
+        }
+      }
+    }
   }
 
   // Firstly, we need to change the symbol table so that the ::value member is actually valid.
@@ -405,13 +452,13 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
   if (m_pSymbolTable && m_pStringTable)
   {
     ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
-  
+
     const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
     for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
     {
       const char *pStr;
-  
+
       if (ELF32_ST_TYPE(pSymbol->info) == 3)
       {
         // Section type - the name will be the name of the section header it refers to.
@@ -419,7 +466,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
         // If it's not allocated, it's a link-once-only section that we can ignore.
         if (!(pSh->flags & SHF_ALLOC))
         {
-          pSymbol++;  
+          pSymbol++;
           continue;
         }
         // Grab the shstrtab
@@ -427,7 +474,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
       }
       else
         pStr = pStrtab + pSymbol->name;
-  
+
       // Insert the symbol into the symbol table.
       SymbolTable::Binding binding;
       switch (ELF32_ST_BIND(pSymbol->info))
@@ -515,15 +562,15 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
   if (m_pDynamicSymbolTable && m_pDynamicStringTable)
   {
     ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
-  
+
     const char *pStrtab = m_pDynamicStringTable;
-  
+
     /// \todo Don't rely on this. Look at nchain in the hash table.
     while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) +
                                                   m_nDynamicSymbolTableSize)
     {
       const char *pStr = pStrtab + pSymbol->name;
-  
+
       // If the shndx == UND (0x0), the symbol is in the table but undefined!
       if (pSymbol->shndx != 0)
       {
@@ -865,15 +912,15 @@ void Elf::populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase)
   if (m_pDynamicSymbolTable && m_pDynamicStringTable)
   {
     ElfSymbol_t *pSymbol = m_pDynamicSymbolTable;
-  
+
     const char *pStrtab = m_pDynamicStringTable;
-  
+
     /// \todo Don't rely on this. Look at nchain in the hash table.
     while (reinterpret_cast<uintptr_t>(pSymbol) < reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) +
                                                   m_nDynamicSymbolTableSize)
     {
       const char *pStr = pStrtab + pSymbol->name;
-  
+
       // If the shndx == UND (0x0), the symbol is in the table but undefined!
       if (pSymbol->shndx != 0)
       {
