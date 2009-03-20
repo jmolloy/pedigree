@@ -53,6 +53,7 @@
 #define POSIX_GETTIMEOFDAY 32
 #define POSIX_DUP        33
 #define POSIX_DUP2       34
+#define POSIX_UNLINK     35
 
 #define POSIX_STUBBED    99
 

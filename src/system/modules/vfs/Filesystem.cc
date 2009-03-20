@@ -175,7 +175,7 @@ File Filesystem::findNode(String path, File &parent)
         tmp += s;
 
         // Add to cache.
-        cacheInsert(tmp, f);
+        //cacheInsert(tmp, f);
 
         if (*pStr == s)
         {

@@ -139,6 +139,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_dup(static_cast<int>(p1));
     case POSIX_DUP2:
       return posix_dup2(static_cast<int>(p1), static_cast<int>(p2));
+    case POSIX_UNLINK:
+      return posix_unlink(reinterpret_cast<char*>(p1));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

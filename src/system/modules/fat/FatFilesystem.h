@@ -119,6 +119,18 @@ protected:
     int8_t    BS_VolLab[11];
     int8_t    BS_FilSysType[8];
   } __attribute__((packed));
+  
+  /** FAT32 FSInfo structure */
+  struct FSInfo32
+  {
+    uint32_t  FSI_LeadSig; // always 0x41615252
+    uint8_t   FSI_Reserved1[480];
+    uint32_t  FSI_StrucSig; // always 0x61417272
+    uint32_t  FSI_Free_Count; // free cluster count, 0xFFFFFFFF if unknown
+    uint32_t  FSI_NxtFree;
+    uint8_t   FSI_Reserved2[12];
+    uint32_t  FSI_TrailSig; // always 0xAA550000
+  } __attribute__((packed));
 
   /** A Fat directory entry. */
   struct Dir
@@ -184,11 +196,13 @@ protected:
   /** Obtains the first sector given a cluster number */
   uint32_t getSectorNumber(uint32_t cluster);
   
-  /** Grabs a cluster entry */
-  uint32_t getClusterEntry(uint32_t cluster);
+  /** Grabs a cluster entry - bLock determines if this should enforce locking
+    * internally or allow the caller to ensure the FAT is locked. */
+  uint32_t getClusterEntry(uint32_t cluster, bool bLock = true);
   
-  /** Sets a cluster entry */
-  uint32_t setClusterEntry(uint32_t cluster, uint32_t value);
+  /** Sets a cluster entry - bLock determines if this should enforce locking
+    * internally or allow the caller to ensure the FAT is locked. */
+  uint32_t setClusterEntry(uint32_t cluster, uint32_t value, bool bLock = true);
   
   /** Converts a string to 8.3 format */
   String convertFilenameTo(String filename);
@@ -196,20 +210,87 @@ protected:
   /** Converts a string from 8.3 format */
   String convertFilenameFrom(String filename);
   
-  /** Finds a free cluster */
-  uint32_t findFreeCluster();
-  
-  /** Is a given cluster *VALUE* EOF? */
-  bool isEof(uint32_t cluster);
-  
-  /** EOF values */
-  uint32_t eofValue();
+  /** Finds a free cluster - bLock determines if we should enforce locking,
+    * defaults to false because findFreeCluster is generally called within a
+    * function that has already locked the FAT */
+  uint32_t findFreeCluster(bool bLock = false);
   
   /** Updates the size of a file on disk */
   void updateFileSize(File* pFile, int64_t sizeChange);
   
   /** Sets the cluster for a file on disk */
   void setCluster(File* pFile, uint32_t clus);
+  
+  /** Reads part of a directory into a buffer, returns the allocated buffer (which needs to be freed */
+  void* readDirectoryPortion(uint32_t clus);
+  
+  /** Writes part of a directory from a buffer */
+  void writeDirectoryPortion(uint32_t clus, void* p);
+  
+  /** Creates a file - actual doer for the public createFile */
+  File createFile(File parent, String filename, uint32_t mask, bool bDirectory);
+  
+  /** Reads a directory entry from disk */
+  Dir* getDirectoryEntry(uint32_t clus, uint32_t offset);
+  
+  /** Writes a directry entry to disk */
+  void writeDirectoryEntry(Dir* dir, uint32_t clus, uint32_t offset);
+  
+  /** Is a given cluster *VALUE* EOF? */
+  inline bool isEof(uint32_t cluster)
+  {
+    return (cluster >= eofValue());
+  }
+  
+  /** EOF values */
+  inline uint32_t eofValue()
+  {
+    if(m_Type == FAT12)
+      return 0x0FF8;
+    if(m_Type == FAT16)
+      return 0xFFF8;
+    if(m_Type == FAT32)
+      return 0x0FFFFFF8;
+    return 0;
+  }
+  
+  /** Gets a UNIX timestamp from a FAT date/time */
+  inline Time getUnixTimestamp(uint16_t time, uint16_t date)
+  {
+    // cumulative count of days in each month, to add to the current month to get
+    // the number of days before this month
+    static uint16_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+    
+    // struct version of the passed parameters
+    Timestamp* sTime = reinterpret_cast<Timestamp*>(&time);
+    Date* sDate = reinterpret_cast<Date*>(&date);
+    
+    // grab the time information
+    uint32_t seconds = sTime->secCount * 2;
+    uint32_t minutes = sTime->minutes;
+    uint32_t hours = sTime->hours;
+    
+    // grab the date information
+    uint32_t day = sDate->day;
+    uint32_t cumulDays = cumulativeDays[sDate->month - 1];
+    uint32_t years = sDate->years;
+    
+    // defaults to ten years, as FAT dates start at 1980
+    Time ret = 10 * 365 * 24 * 60 * 60;
+    
+    // add the time
+    ret += seconds;
+    ret += minutes * 60;
+    ret += hours * 60 * 60;
+    
+    // and finally the date
+    ret += day * 24 * 60 * 60;
+    ret += cumulDays * 24 * 60 * 60;
+    ret += years * 365 * 24 * 60 * 60;
+    
+    // completed
+    return ret;
+  }
   
   /** Our raw device. */
   Disk *m_pDisk;
@@ -218,6 +299,7 @@ protected:
   Superblock m_Superblock;
   Superblock16 m_Superblock16;
   Superblock32 m_Superblock32;
+  FSInfo32 m_FsInfo;
   
   /** Type of the FAT */
   FatType m_Type;
@@ -241,6 +323,9 @@ protected:
   
   /** FAT cache */
   uint8_t *m_pFatCache;
+  
+  /** FAT lock */
+  Mutex m_FatLock;
 };
 
 #endif

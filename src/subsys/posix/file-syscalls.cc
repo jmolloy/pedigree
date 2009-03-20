@@ -144,11 +144,7 @@ int posix_close(int fd)
   }
 
   if(NetManager::instance().isEndpoint(f->file))
-  {
-    NOTICE("Removing the endpoint!");
     NetManager::instance().removeEndpoint(f->file);
-    NOTICE("Removed?");
-  }
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
   delete f;
@@ -235,7 +231,8 @@ int posix_open(const char *name, int flags, int mode)
 
 int posix_read(int fd, char *ptr, int len)
 {
-  NOTICE("read(" << Dec << fd << ", " << Hex  << ", " << len << ")");
+  NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -247,7 +244,6 @@ int posix_read(int fd, char *ptr, int len)
     return -1;
   }
 
-  /// \todo Sanity checks.
   uint64_t nRead = 0;
   if(ptr)
   {
@@ -258,14 +254,19 @@ int posix_read(int fd, char *ptr, int len)
 
     pFd->offset += nRead;
   }
-
+  
   return static_cast<int>(nRead);
 }
 
 int posix_write(int fd, char *ptr, int len)
 {
   if(ptr)
+  {
+    char c = ptr[len];
+    ptr[len] = 0;
     NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+    ptr[len] = c;
+  }
   else
     NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
   
@@ -280,7 +281,6 @@ int posix_write(int fd, char *ptr, int len)
     return -1;
   }
 
-  /// \todo Sanity checks.
   // Copy to kernel.
   uint64_t nWritten = 0;
   if(ptr)
@@ -306,7 +306,6 @@ int posix_lseek(int file, int ptr, int dir)
   if (!pFd)
   {
     // Error - no such file descriptor.
-    NOTICE("fail");
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
@@ -328,6 +327,7 @@ int posix_lseek(int file, int ptr, int dir)
   // Clamp to file size.
   //if (pFd->offset >= fileSize)
   //  pFd->offset = fileSize;
+  NOTICE("lseek returning " << pFd->offset << ".");
   return static_cast<int>(pFd->offset);
 }
 
@@ -338,7 +338,12 @@ int posix_link(char *old, char *_new)
 
 int posix_unlink(char *name)
 {
-  return -1;
+  NOTICE("unlink(" << name << ")");
+
+  if(VFS::instance().remove(prepend_cwd(name)))
+    return 0;
+  else
+    return -1; /// \todo SYSCALL_ERROR of some sort
 }
 
 int posix_stat(const char *name, struct stat *st)
@@ -423,9 +428,9 @@ int posix_fstat(int fd, struct stat *st)
   st->st_gid   = 0;
   st->st_rdev  = 0;
   st->st_size  = static_cast<int>(pFd->file.getSize());
-  st->st_atime = 0;
-  st->st_mtime = 0;
-  st->st_ctime = 0;
+  st->st_atime = static_cast<int>(pFd->file.getAccessedTime());
+  st->st_mtime = static_cast<int>(pFd->file.getModifiedTime());
+  st->st_ctime = static_cast<int>(pFd->file.getCreationTime());
   return 0;
 }
 
@@ -634,7 +639,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 {
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
-  NOTICE("select(" << Dec << nfds << Hex << ")\n");
+  NOTICE("select(" << Dec << nfds << Hex << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();

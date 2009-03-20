@@ -188,7 +188,7 @@ class Tree<void*,void*>
             pNode = pNode->leftChild;
             traverseNext();
           }
-          else if(((pNode->leftChild) && (pPreviousNode == pNode->leftChild)) || ((!pNode->leftChild) && (pPreviousNode != pNode)) && (pPreviousNode != pNode->rightChild))
+          else if((((pNode->leftChild) && (pPreviousNode == pNode->leftChild)) || ((!pNode->leftChild) && (pPreviousNode != pNode))) && (pPreviousNode != pNode->rightChild))
           {
             pPreviousNode = pNode;
           }

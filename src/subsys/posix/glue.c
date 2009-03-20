@@ -203,8 +203,7 @@ int getrusage(int target, void *buf)
 
 int unlink(char *name)
 {
-  STUBBED("unlink");
-  return -1;
+  return syscall1(POSIX_UNLINK, name);
 }
 
 int wait(int *status)
