@@ -14,8 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "VFS.h"
 #include "File.h"
 #include "Filesystem.h"
+#include <processor/Processor.h>
 #include <Log.h>
 
 File::File() :
@@ -32,6 +34,13 @@ File::File(const File &file) :
 {
 }
 
+File::File(File* file) :
+  m_Name(file->m_Name), m_AccessedTime(file->m_AccessedTime), m_ModifiedTime(file->m_ModifiedTime),
+  m_CreationTime(file->m_CreationTime), m_Inode(file->m_Inode), m_NextChild(file->m_NextChild),
+  m_pFilesystem(file->m_pFilesystem), m_Size(file->m_Size), m_CustomField1(file->m_CustomField1), m_CustomField2(file->m_CustomField2)
+{
+}
+
 File &File::operator =(const File& file)
 {
   m_Name = file.m_Name; m_AccessedTime = file.m_AccessedTime, m_ModifiedTime = file.m_ModifiedTime;
@@ -39,6 +48,7 @@ File &File::operator =(const File& file)
   m_pFilesystem = file.m_pFilesystem; m_Size = file.m_Size;
   m_CustomField1 = file.m_CustomField1; m_CustomField2 = file.m_CustomField2;
   
+  FATAL("File operator = used");
   return *this;
 }
 
@@ -136,15 +146,15 @@ bool File::isDirectory()
   return (m_NextChild >= 0);
 }
 
-File File::firstChild()
+File* File::firstChild()
 {
-  if (!isDirectory()) return File();
+  if (!isDirectory()) return VFS::invalidFile();
   m_NextChild = 1;
   return m_pFilesystem->getDirectoryChild(this, 0);
 }
 
-File File::nextChild()
+File* File::nextChild()
 {
-  if (!isDirectory()) return File();
+  if (!isDirectory()) return VFS::invalidFile();
   return m_pFilesystem->getDirectoryChild(this, m_NextChild++);
 }

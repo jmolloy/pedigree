@@ -131,7 +131,7 @@ int posix_fork(ProcessorState state)
     size_t newFd = reinterpret_cast<size_t>(it.key());
     
     FileDescriptor *pFd2 = new FileDescriptor;
-    pFd2->file = pFd->file;
+    pFd2->file = new File(pFd->file);
     pFd2->offset = pFd->offset;
     pProcess->getFdMap().insert(newFd, reinterpret_cast<void*> (pFd2));
     
@@ -168,47 +168,52 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
 
   // Attempt to find the file, first!
-  File file = VFS::instance().find(prepend_cwd(name));
+  File* file = VFS::instance().find(prepend_cwd(name));
 
-  if (!file.isValid())
+  if (!file->isValid())
   {
     // Error - not found.
+    delete file;
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
-  if (file.isDirectory())
+  if (file->isDirectory())
   {
     // Error - is directory.
+    delete file;
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
-  if (file.isSymlink())
+  if (file->isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
+    delete file;
     SYSCALL_ERROR(Unimplemented);
     return -1;
   }
 
   // Attempt to load the file.
-  uint8_t *buffer = new uint8_t[file.getSize()+1];
+  uint8_t *buffer = new uint8_t[file->getSize()+1];
 
   if (buffer == 0)
   {
     SYSCALL_ERROR(OutOfMemory);
   }
   NOTICE("Reading file...");
-  if (file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer)) != file.getSize())
+  if (file->read(0, file->getSize(), reinterpret_cast<uintptr_t>(buffer)) != file->getSize())
   {
-    SYSCALL_ERROR(TooBig);
     delete [] buffer;
+    delete file;
+    SYSCALL_ERROR(TooBig);
     return -1;
   }
   NOTICE("File read.");
   Elf *elf = new Elf();
-  if (!elf->create(buffer, file.getSize()))
+  if (!elf->create(buffer, file->getSize()))
   {
     // Error - bad file.
     delete [] buffer;
+    delete file;
     SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
@@ -226,12 +231,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
   uintptr_t loadBase;
-  if (!elf->allocate(buffer, file.getSize(), loadBase))
+  if (!elf->allocate(buffer, file->getSize(), loadBase))
   {
     // Error
     delete [] buffer;
     // Time to kill the task.
     ERROR("Could not allocate memory for ELF file.");
+
+    delete file;
+  
     return -1;
   }
 
@@ -247,11 +255,14 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     if (!DynamicLinker::instance().load(*it))
     {
       ERROR("Shared dependency '" << *it << "' not found.");
+
+      delete file;
+  
       return -1;
     }
   }
   NOTICE("ELF loaded.");
-  elf->load(buffer, file.getSize(), loadBase, elf->getSymbolTable());
+  elf->load(buffer, file->getSize(), loadBase, elf->getSymbolTable());
 
   DynamicLinker::instance().initialiseElf(elf);
 
@@ -297,6 +308,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   state.m_R7 = pState.m_R7;
   state.m_R8 = pState.m_R8;
 #endif
+
+  delete file;
 
   return 0;
 }

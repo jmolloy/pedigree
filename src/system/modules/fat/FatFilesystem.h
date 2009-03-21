@@ -53,20 +53,20 @@ public:
 
   virtual bool initialise(Disk *pDisk);
   static Filesystem *probe(Disk *pDisk);
-  virtual File getRoot();
+  virtual File* getRoot();
   virtual String getVolumeLabel();
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
-  virtual File getDirectoryChild(File *pFile, size_t n);
+  virtual File* getDirectoryChild(File *pFile, size_t n);
 
 protected:
 
-  virtual bool createFile(File parent, String filename, uint32_t mask);
-  virtual bool createDirectory(File parent, String filename);
-  virtual bool createSymlink(File parent, String filename, String value);
-  virtual bool remove(File parent, File file);
+  virtual bool createFile(File* parent, String filename, uint32_t mask);
+  virtual bool createDirectory(File* parent, String filename);
+  virtual bool createSymlink(File* parent, String filename, String value);
+  virtual bool remove(File* parent, File* file);
 
   /** The Fat 'superblock', or boot parameter block as we call it normally
       Note that this is from the FAT whitepaper, so the names are as specified
@@ -228,7 +228,7 @@ protected:
   void writeDirectoryPortion(uint32_t clus, void* p);
   
   /** Creates a file - actual doer for the public createFile */
-  File createFile(File parent, String filename, uint32_t mask, bool bDirectory);
+  File* createFile(File* parent, String filename, uint32_t mask, bool bDirectory);
   
   /** Reads a directory entry from disk */
   Dir* getDirectoryEntry(uint32_t clus, uint32_t offset);

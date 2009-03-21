@@ -21,7 +21,7 @@
 
 NetManager NetManager::m_Instance;
 
-File NetManager::newEndpoint(int protocol)
+File* NetManager::newEndpoint(int protocol)
 {
   Endpoint* p = 0;
   if(protocol == NETMAN_PROTO_UDP)
@@ -42,13 +42,13 @@ File NetManager::newEndpoint(int protocol)
   {
     size_t n = m_Endpoints.count();
     m_Endpoints.pushBack(p);
-    return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, protocol);
+    return new File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, protocol);
   }
   else
-    return File();
+    return VFS::invalidFile();
 }
 
-void NetManager::removeEndpoint(File f)
+void NetManager::removeEndpoint(File* f)
 {
   if(!isEndpoint(f))
     return;
@@ -58,7 +58,7 @@ void NetManager::removeEndpoint(File f)
     return;
   e->close();
   
-  size_t removeIndex = f.getInode() & 0x00FFFFFF, i = 0;
+  size_t removeIndex = f->getInode() & 0x00FFFFFF, i = 0;
   bool removed = false;
   for(Vector<Endpoint*>::Iterator it = m_Endpoints.begin(); it != m_Endpoints.end(); it++, i++)
   {
@@ -70,33 +70,33 @@ void NetManager::removeEndpoint(File f)
     }
   }
   
-  if(f.getSize() == NETMAN_PROTO_UDP)
+  if(f->getSize() == NETMAN_PROTO_UDP)
     UdpManager::instance().returnEndpoint(e);
-  else if(f.getSize() == NETMAN_PROTO_TCP)
+  else if(f->getSize() == NETMAN_PROTO_TCP)
     TcpManager::instance().returnEndpoint(e);
 }
 
-bool NetManager::isEndpoint(File f)
+bool NetManager::isEndpoint(File* f)
 {
   /// \todo We can actually check the filename too - if it's "socket" & the flags are set we know it's a socket...
-  return ((f.getInode() & 0xFF000000) == 0xab000000);
+  return ((f->getInode() & 0xFF000000) == 0xab000000);
 }
 
-Endpoint* NetManager::getEndpoint(File f)
+Endpoint* NetManager::getEndpoint(File* f)
 {
   if(!isEndpoint(f))
     return 0;
-  size_t indx = f.getInode() & 0x00FFFFFF;
+  size_t indx = f->getInode() & 0x00FFFFFF;
   if(indx < m_Endpoints.count())
     return m_Endpoints[indx];
   else
     return 0;
 }
 
-File NetManager::accept(File f)
+File* NetManager::accept(File* f)
 {
   if(!isEndpoint(f))
-    return File();
+    return VFS::invalidFile();
   
   Endpoint* server = getEndpoint(f);
   if(server)
@@ -106,8 +106,8 @@ File NetManager::accept(File f)
     {
       size_t n = m_Endpoints.count();
       m_Endpoints.pushBack(client);
-      return File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f.getSize());
+      return new File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f->getSize());
     }
   }
-  return File();
+  return VFS::invalidFile();
 }

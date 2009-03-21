@@ -44,11 +44,17 @@ static bool probeDisk(Disk *pDisk)
     s += alias;
     s += ":/.pedigree-root";
 
-    File f = VFS::instance().find(String(static_cast<const char*>(s)));
-    if(f.isValid())
+    NOTICE("A");
+    File* f = VFS::instance().find(String(static_cast<const char*>(s)));
+    NOTICE("B");
+    if(f)
     {
-      NOTICE("Mounted " << alias << " successfully as root.");
-      VFS::instance().addAlias(alias, String("root"));
+      if(f->isValid())
+      {
+        NOTICE("Mounted " << alias << " successfully as root.");
+        VFS::instance().addAlias(alias, String("root"));
+      }
+    delete f;
     }
     else
     {
@@ -92,15 +98,16 @@ void init()
   str.clear();
 
   // Load initial program.
-  File init = VFS::instance().find(String("root:/applications/bash"));
-  if (!init.isValid())
+  File* initProg = VFS::instance().find(String("root:/applications/bash"));
+  NOTICE("init = " << reinterpret_cast<uintptr_t>(init) << ".");
+  if (!initProg->isValid())
   {
     FATAL("Unable to load init program!");
     return;
   }
 
-  uint8_t *buffer = new uint8_t[init.getSize()];
-  init.read(0, init.getSize(), reinterpret_cast<uintptr_t>(buffer));
+  uint8_t *buffer = new uint8_t[initProg->getSize()];
+  initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   Machine::instance().getKeyboard()->setDebugState(false);
 
@@ -126,8 +133,8 @@ void init()
   static Elf initElf;
   uintptr_t loadBase;
 
-  initElf.create(buffer, init.getSize());
-  initElf.allocate(buffer, init.getSize(), loadBase, 0, pProcess);
+  initElf.create(buffer, initProg->getSize());
+  initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
 
   DynamicLinker::instance().setInitProcess(pProcess);
   NOTICE("regElf");
@@ -149,7 +156,7 @@ NOTICE("needed");
     NOTICE("n2");
   }
 NOTICE("bleh");
-  initElf.load(buffer, init.getSize(), loadBase, initElf.getSymbolTable());
+  initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);
   ERROR("Init elf: " << (uintptr_t)&initElf);
@@ -169,7 +176,15 @@ NOTICE("bleh");
   // Switch back to the old address space.
   Processor::switchAddressSpace(oldAS);
 
+  NOTICE("Here we are!");
+  
   delete [] buffer;
+
+  NOTICE(":/ - " << initProg->getName() << "!");
+  
+  delete initProg;
+
+  NOTICE("win.");
 
   lock.release();
 

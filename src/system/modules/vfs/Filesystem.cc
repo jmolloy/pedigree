@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "VFS.h"
 #include "Filesystem.h"
 #include <Log.h>
 #include <utilities/utility.h>
@@ -24,19 +25,21 @@ Filesystem::Filesystem() :
 {
 }
 
-File Filesystem::find(String path)
+File* Filesystem::find(String path)
 {
-  File parent;
+  File* parent = VFS::invalidFile();
 
-  return findNode(path, parent);
+  File* ret = findNode(path, parent);
+  
+  return ret;
 }
 
 bool Filesystem::createFile(String path, uint32_t mask)
 {
-  File parent;
-  File file = findNode(path, parent);
+  File* parent = VFS::invalidFile();
+  File* file = findNode(path, parent);
 
-  if (file.isValid())
+  if (file->isValid())
   {
     // File existed.
     return false;
@@ -57,19 +60,20 @@ bool Filesystem::createFile(String path, uint32_t mask)
       delete pStr;
     }
     createFile(parent, filename, mask);
-
+    
     return true;
   }
 }
 
 bool Filesystem::createDirectory(String path)
 {
-  File parent;
-  File file = findNode(path, parent);
+  File* parent;
+  File* file = findNode(path, parent);
 
-  if (file.isValid())
+  if (file->isValid())
   {
     // File existed.
+    delete parent;
     return false;
   }
   else
@@ -88,6 +92,8 @@ bool Filesystem::createDirectory(String path)
       delete pStr;
     }
     createDirectory(parent, filename);
+    
+    delete parent;
 
     return true;
   }
@@ -95,12 +101,13 @@ bool Filesystem::createDirectory(String path)
 
 bool Filesystem::createSymlink(String path, String value)
 {
-  File parent;
-  File file = findNode(path, parent);
+  File* parent;
+  File* file = findNode(path, parent);
 
-  if (file.isValid())
+  if (file->isValid())
   {
     // File existed.
+    delete parent;
     return false;
   }
   else
@@ -119,6 +126,8 @@ bool Filesystem::createSymlink(String path, String value)
       delete pStr;
     }
     createSymlink(parent, filename, value);
+    
+    delete parent;
 
     return true;
   }
@@ -126,23 +135,29 @@ bool Filesystem::createSymlink(String path, String value)
 
 bool Filesystem::remove(String path)
 {
-  File parent;
+  File* parent;
 
-  File file = findNode(path, parent);
+  File* file = findNode(path, parent);
 
   /// \todo Needs removing from cache.
-  return remove(parent, file);
+  bool ret = remove(parent, file);
+  
+  delete parent;
+  
+  delete file;
+  
+  return ret;
 }
 
-File Filesystem::findNode(String path, File &parent)
+File* Filesystem::findNode(String path, File* parent)
 {
 
   List<String*> tokens;
   canonisePath(path, tokens);
 
   // Attempt to fetch from cache.
-  File curDir = cacheLookup(tokens, parent);
-  if (!curDir.isValid())
+  File* curDir = cacheLookup(tokens, parent);
+  if (!curDir->isValid())
   {
     curDir = getRoot();
     String curStr;
@@ -155,27 +170,27 @@ File Filesystem::findNode(String path, File &parent)
       if (pStr->length() == 0)
         continue;
 
-      if (!curDir.isDirectory())
+      if (!curDir->isDirectory())
       {
         // Error - not a directory!
-        return File();
+        return VFS::invalidFile();
       }
       /// \todo Check for symlinks and follow.
 
       parent = curDir;
       bool bFound = false;
-      for (File f = curDir.firstChild();
-          f.isValid();
-          f = curDir.nextChild())
+      for (File* f = curDir->firstChild();
+          f->isValid();
+          f = curDir->nextChild())
       {
-        String s = f.getName();
+        String s = f->getName();
 
         String tmp = curStr;
         tmp += "/";
         tmp += s;
 
         // Add to cache.
-        //cacheInsert(tmp, f);
+        // cacheInsert(tmp, f);
 
         if (*pStr == s)
         {
@@ -186,7 +201,7 @@ File Filesystem::findNode(String path, File &parent)
         }
       }
       if (!bFound)
-        return File();
+        return VFS::invalidFile();
     }
   }
 
@@ -250,17 +265,17 @@ void Filesystem::canonisePath(String &path, List<String*> &tokens)
   }
 }
 
-File Filesystem::cacheLookup(List<String*> &canonicalPath, File &parent)
+File* Filesystem::cacheLookup(List<String*> &canonicalPath, File* & parent)
 {
   // What are we searching for? the file given by canonicalPath or its parent directory?
   bool bLookingForParent = false;
 
-  File theFile;
+  File* theFile;
 
   // If there are no path segments (i.e. we're looking for the root), just return root.
   if (canonicalPath.count() == 0)
   {
-    parent = File();
+    parent = VFS::invalidFile();
     return getRoot();
   }
 
@@ -285,13 +300,13 @@ File Filesystem::cacheLookup(List<String*> &canonicalPath, File &parent)
     if (bLookingForParent)
     {
       // If we were looking for the parent, we can assign the parent and return.
-      parent = (file) ? *file : File();
+      parent = (file) ? file : VFS::invalidFile();
       return theFile;
     }
     else
     {
       // Else we were looking for the normal file - assign it and start looking for the parent.
-      theFile = (file) ? *file : File();
+      theFile = (file) ? file : VFS::invalidFile();
       bLookingForParent = true;
       // To search for the parent, look one path segment less.
       i--;
@@ -306,10 +321,10 @@ File Filesystem::cacheLookup(List<String*> &canonicalPath, File &parent)
   }
 
   // We shouldn't get here.
-  return File();
+  return VFS::invalidFile();
 }
 
-void Filesystem::cacheInsert(String canonicalPath, File parent)
+void Filesystem::cacheInsert(String canonicalPath, File* parent)
 {
   File *pFile = new File(parent);
   m_Cache.insert(canonicalPath, pFile);

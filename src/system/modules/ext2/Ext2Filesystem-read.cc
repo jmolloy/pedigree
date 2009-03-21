@@ -116,11 +116,11 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
   return size;
 }
 
-File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
+File* Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
 {
   // Sanity check.
   if (!pFile->isDirectory())
-    return File();
+    return VFS::invalidFile();
 
   Inode inode = getInode(pFile->getInode());
 
@@ -137,7 +137,7 @@ File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
   if (!directory || failed)
   {
     delete [] buffer;
-    return File ();
+    return VFS::invalidFile();
   }
   
   // Create a file.
@@ -150,7 +150,8 @@ File Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
 
   Inode _inode = getInode(LITTLE_TO_HOST32(directory->d_inode));
 
-  File file       (sName,                // Name
+  File* file = new File(
+                  sName,                // Name
                    0,                    // Accessed time
                    0,                    // Modified time
                    0,                    // Creation time

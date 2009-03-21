@@ -197,14 +197,14 @@ Filesystem *FatFilesystem::probe(Disk *pDisk)
   }
 }
 
-File FatFilesystem::getRoot()
+File* FatFilesystem::getRoot()
 {
   // needs to return a file referring to the root directory
   uint32_t cluster = 0;
   if(m_Type == FAT32)
     cluster = m_RootDir.cluster;
 
-  return File(String(""), 0, 0, 0, cluster, false, true, this, 0);
+  return new File(String(""), 0, 0, 0, cluster, false, true, this, 0);
 }
 
 String FatFilesystem::getVolumeLabel()
@@ -700,11 +700,11 @@ void FatFilesystem::fileAttributeChanged(File *pFile)
 {
 }
 
-File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
+File* FatFilesystem::getDirectoryChild(File *pFile, size_t n)
 {
   // Sanity check.
   if (!pFile->isDirectory())
-    return File();
+    return VFS::invalidFile();
     
   // first check that we're not working in the root directory - if so, handle . and .. for it
   uint32_t clus = pFile->getInode();
@@ -716,7 +716,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
     bRootDir = true;
   }
   else if(clus == 0 && m_Type == FAT32)
-    return File();
+    return VFS::invalidFile();
   else
   {
     if(m_Type == FAT32)
@@ -728,9 +728,9 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
   {
     // hack to make lack of root directory containing "." and ".." entries invisible
     if(n == 1)
-      return File(String("."), 0, 0, 0, (m_Type == FAT32) ? clus : 0, false, true, this, 0);
+      return new File(String("."), 0, 0, 0, (m_Type == FAT32) ? clus : 0, false, true, this, 0);
     if(n == 2)
-      return File(String(".."), 0, 0, 0, 0, false, true, this, 0);
+      return new File(String(".."), 0, 0, 0, 0, false, true, this, 0);
     n += 2;
   }
   
@@ -820,7 +820,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
         Time accTime = getUnixTimestamp(0, ent->DIR_LstAccDate);
         Time createTime = getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
         
-        File ret(filename, accTime, writeTime, createTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i);
+        File* ret = new File(filename, accTime, writeTime, createTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i);
         delete [] buffer;
         return ret;
       }
@@ -851,7 +851,7 @@ File FatFilesystem::getDirectoryChild(File *pFile, size_t n)
   
   delete [] buffer;
 
-  return File();
+  return VFS::invalidFile();
 }
 
 bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
@@ -1028,8 +1028,6 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
   fatOffset %= m_Superblock.BPB_BytsPerSec;
   
   // write back to the FAT
-  //uint8_t* tmpBuffer = new uint8_t[m_Superblock.BPB_BytsPerSec * 2]; /// \todo Safety checks
-  //memcpy(reinterpret_cast<void*>(&m_pFatCache[fatOffset]), reinterpret_cast<void*>(tmpBuffer), m_Superblock.BPB_BytsPerSec * 2);
   writeSectorBlock(fatSector, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(m_pFatCache));
 
   if(bLock)
@@ -1138,17 +1136,15 @@ void FatFilesystem::truncate(File *pFile)
   updateFileSize(pFile, -(pFile->getSize()));
 }
 
-bool FatFilesystem::createFile(File parent, String filename, uint32_t mask)
+File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bool bDirectory = false)
 {
-  File f = createFile(parent, filename, mask, false);
-  return f.isValid();
-}
-
-File FatFilesystem::createFile(File parent, String filename, uint32_t mask, bool bDirectory = false)
-{
+  NOTICE("Creating file " << filename << ".");
+  
   // grab the first cluster of the parent directory
-  uint32_t clus = parent.getInode();
+  uint32_t clus = parent->getInode();
   uint8_t* buffer = reinterpret_cast<uint8_t*>(readDirectoryPortion(clus));
+  if(!buffer)
+    return VFS::invalidFile();
   
   // how many long filename entries does the filename require?
   size_t numRequired = 1; // need *at least* one for the short filename entry
@@ -1186,8 +1182,8 @@ File FatFilesystem::createFile(File parent, String filename, uint32_t mask, bool
       // If no space found for our file, and if not FAT32, the root directory is not resizeable so we have to fail
       if(m_Type != FAT32 && clus == 0)
       {
-        delete buffer;
-        return File();
+        delete [] buffer;
+        return VFS::invalidFile();
       }
       
       // check the next cluster, add a new cluster if needed
@@ -1199,8 +1195,8 @@ File FatFilesystem::createFile(File parent, String filename, uint32_t mask, bool
         uint32_t newClus = findFreeCluster();
         if(!newClus)
         {
-          delete buffer;
-          return File();
+          delete [] buffer;
+          return VFS::invalidFile();
         }
         
         setClusterEntry(prev, newClus);
@@ -1280,60 +1276,78 @@ File FatFilesystem::createFile(File parent, String filename, uint32_t mask, bool
       delete [] buffer;
       
       // just make this a stock file
-      File ret(filename, 0, 0, 0, 0, false, bDirectory, this, 0, clus, offset);
+      File* ret = new File(filename, 0, 0, 0, 0, false, bDirectory, this, 0, clus, offset);
       return ret;
     }
   }
-  return File();
+  return VFS::invalidFile();
 }
 
-bool FatFilesystem::createDirectory(File parent, String filename)
+bool FatFilesystem::createFile(File* parent, String filename, uint32_t mask)
 {
-  File f = createFile(parent, filename, 0, true);
-  if(!f.isValid())
+  File* f = createFile(parent, filename, mask, false);
+  bool ret = f->isValid();
+  delete f;
+  return ret;
+}
+
+bool FatFilesystem::createDirectory(File* parent, String filename)
+{
+  File* f = createFile(parent, filename, 0, true);
+  if(!f->isValid())
     return false;
   
   // allocate a cluster for the directory itself
   uint32_t clus = findFreeCluster(true);
   if(!clus)
+  {
+    delete f;
     return false; /// \todo Clean up
-  f.setInode(clus);
-  setCluster(&f, clus);
+  }
+  f->setInode(clus);
+  setCluster(f, clus);
 
   String tmp;
   tmp = filename;
   tmp += "/.";
   
   // create two files, "." and ".."
-  File dot = createFile(f, tmp, 0, true);
+  File* dot = createFile(f, tmp, 0, true);
   
   tmp = filename;
   tmp += "/..";
-  File dotdot = createFile(f, tmp, 0, true);
+  File* dotdot = createFile(f, tmp, 0, true);
   
   // if either is invalid, fail
-  if(!dot.isValid() || !dotdot.isValid());
+  if(!dot->isValid() || !dotdot->isValid())
+  {
+    delete f;
     return false; /// \todo Clean up
+  }
   
   // set the clusters for both
-  dot.setInode(clus);
-  dotdot.setInode(parent.getInode());
+  dot->setInode(clus);
+  dotdot->setInode(parent->getInode());
   
-  setCluster(&dot, dot.getInode());
-  setCluster(&dotdot, dotdot.getInode());
+  setCluster(dot, dot->getInode());
+  setCluster(dotdot, dotdot->getInode());
+  
+  delete dot;
+  delete dotdot;
+  
+  delete f;
   
   return true;
 }
 
-bool FatFilesystem::createSymlink(File parent, String filename, String value)
+bool FatFilesystem::createSymlink(File* parent, String filename, String value)
 {
   return false;
 }
 
-bool FatFilesystem::remove(File parent, File file)
+bool FatFilesystem::remove(File* parent, File* file)
 {
-  // grab a pointer to the passed file object
-  File* pFile = &file;
+  File* pFile = file;
   
   LockGuard<Mutex> guard(m_FatLock);
   

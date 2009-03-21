@@ -20,10 +20,16 @@
 #include <utilities/utility.h>
 
 VFS VFS::m_Instance;
+File* VFS::m_EmptyFile = new File();
 
 VFS &VFS::instance()
 {
   return m_Instance;
+}
+
+File* VFS::invalidFile()
+{
+  return m_EmptyFile;
 }
 
 VFS::VFS() :
@@ -175,7 +181,7 @@ Filesystem *VFS::lookupFilesystem(String alias)
   return 0;
 }
 
-File VFS::find(String path)
+File* VFS::find(String path)
 {
   // We expect a colon. If we don't find it, we cry loudly.
   char *cPath = const_cast<char*> (static_cast<const char*> (path));
@@ -185,7 +191,7 @@ File VFS::find(String path)
   if (cPath[0] == '\0')
   {
     // Error - malformed path!
-    return File();
+    return VFS::invalidFile();
   }
 
   cPath[0] = '\0';
@@ -196,9 +202,9 @@ File VFS::find(String path)
   if (!pFs)
   {
     // Error - filesystem not found!
-    return File();
+    return VFS::invalidFile();
   }
-  File a = pFs->find(String(cPath));
+  File* a = pFs->find(String(cPath));
 
   return  a;
 

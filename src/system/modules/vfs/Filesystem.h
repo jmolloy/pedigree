@@ -53,10 +53,10 @@ public:
                   (e.g. not "root:/file", but "/file").
       \return The file if one was found, or 0 otherwise or if there was an error.
   */
-  virtual File find(String path);
+  virtual File* find(String path);
 
   /** Returns the root filesystem node. */
-  virtual File getRoot() =0;
+  virtual File* getRoot() =0;
 
   /** Returns a string identifying the volume label. */
   virtual String getVolumeLabel() =0;
@@ -90,17 +90,17 @@ public:
   virtual void fileAttributeChanged(File *pFile) =0;
 
   /** A File calls this to get the n'th child of a directory. */
-  virtual File getDirectoryChild(File *pFile, size_t n) =0;
+  virtual File* getDirectoryChild(File *pFile, size_t n) =0;
 
 protected:
   /** createFile calls this after it has parsed the string path. */
-  virtual bool createFile(File parent, String filename, uint32_t mask) =0;
+  virtual bool createFile(File* parent, String filename, uint32_t mask) =0;
   /** createDirectory calls this after it has parsed the string path. */
-  virtual bool createDirectory(File parent, String filename) =0;
+  virtual bool createDirectory(File* parent, String filename) =0;
   /** createSymlink calls this after it has parsed the string path. */
-  virtual bool createSymlink(File parent, String filename, String value) =0;
+  virtual bool createSymlink(File* parent, String filename, String value) =0;
   /** remove() calls this after it has parsed the string path. */
-  virtual bool remove(File parent, File file) =0;
+  virtual bool remove(File* parent, File* file) =0;
   /** is this entire filesystem read-only?  */
   bool m_bReadOnly;
 private:
@@ -109,12 +109,12 @@ private:
       parent directory in parent, if it exists or not.
 
       Even if the file didn't exist, the parent is guaranteed to be returned (if the parent directory existed). */
-  File findNode(String path, File &parent);
+  File* findNode(String path, File* parent);
 
   /** Internal function to attempt to read from the cache the File for the given canonical path, along with its parent. */
-  File cacheLookup(List<String*> &canonicalPath, File &parent);
+  File* cacheLookup(List<String*> &canonicalPath, File* & parent);
   /** Internal function to insert a canonised path - inode pair into the cache. */
-  void cacheInsert(String canonicalPath, File parent);
+  void cacheInsert(String canonicalPath, File* parent);
   /** Internal function to create a canonical path from a String. A canonical path is one without NULL segments and without the
       special files '.' and '..' - that is, if symlinks are ignored, there is one and only one canonical path that could possibly
       access a particular inode. */

@@ -17,6 +17,7 @@
 #ifndef NETMANAGER_H
 #define NETMANAGER_H
 
+#include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
@@ -50,15 +51,15 @@ public:
   // ConsoleManager interface.
   //
   
-  File newEndpoint(int protocol);
+  File* newEndpoint(int protocol);
   
-  bool isEndpoint(File f);
+  bool isEndpoint(File* f);
   
-  Endpoint* getEndpoint(File f);
+  Endpoint* getEndpoint(File* f);
   
-  void removeEndpoint(File f);
+  void removeEndpoint(File* f);
   
-  File accept(File f);
+  File* accept(File* f);
 
   //
   // Filesystem interface.
@@ -66,8 +67,8 @@ public:
 
   virtual bool initialise(Disk *pDisk)
     {return false;}
-  virtual File getRoot()
-  {return File();}
+  virtual File* getRoot()
+  {return VFS::invalidFile();}
   virtual String getVolumeLabel()
   {return String("netman");}
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) { return 0; };
@@ -76,17 +77,17 @@ public:
   {}
   virtual void fileAttributeChanged(File *pFile)
   {}
-  virtual File getDirectoryChild(File *pFile, size_t n)
-  {return File();}
+  virtual File* getDirectoryChild(File *pFile, size_t n)
+  {return VFS::invalidFile();}
 
 protected:
-  virtual bool createFile(File parent, String filename, uint32_t mask)
+  virtual bool createFile(File* parent, String filename, uint32_t mask)
   {return false;}
-  virtual bool createDirectory(File parent, String filename)
+  virtual bool createDirectory(File* parent, String filename)
   {return false;}
-  virtual bool createSymlink(File parent, String filename, String value)
+  virtual bool createSymlink(File* parent, String filename, String value)
   {return false;}
-  virtual bool remove(File parent, File file)
+  virtual bool remove(File* parent, File* file)
   {return false;}
 
 private:

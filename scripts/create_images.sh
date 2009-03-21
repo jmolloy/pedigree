@@ -145,7 +145,7 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
-  cp ../images/hdd_16h_63spt_100c.img .
+  # cp ../images/hdd_16h_63spt_100c.img .
   cp ../images/hdd_16h_63spt_100c_fat16.img .
   
   ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1

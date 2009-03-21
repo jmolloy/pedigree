@@ -28,7 +28,7 @@ public:
     file(), offset(0), fd(0xFFFFFFFF)
   {
   }
-  File file;
+  File* file;
   uint64_t offset;
   size_t fd;
 };

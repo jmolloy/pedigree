@@ -83,7 +83,7 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
   return 0;
 }
 
-int console_getwinsize(File file, winsize_t *buf)
+int console_getwinsize(File* file, winsize_t *buf)
 {
   if (!ConsoleManager::instance().isConsole(file))
   {

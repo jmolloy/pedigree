@@ -16,6 +16,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
@@ -50,15 +51,15 @@ public:
   //
   bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
 
-  File getConsole(String consoleName);
+  File* getConsole(String consoleName);
 
-  bool isConsole(File file);
+  bool isConsole(File* file);
 
-  void setAttributes(File file, bool echo, bool echoNewlines, bool echoBackspace);
-  void getAttributes(File file, bool *echo, bool *echoNewlines, bool *echoBackspace);
-  int  getCols(File file);
-  int  getRows(File file);
-  bool hasDataAvailable(File file);
+  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace);
+  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace);
+  int  getCols(File* file);
+  int  getRows(File* file);
+  bool hasDataAvailable(File* file);
 
   //
   // Filesystem interface.
@@ -66,8 +67,8 @@ public:
 
   virtual bool initialise(Disk *pDisk)
     {return false;}
-  virtual File getRoot()
-  {return File();}
+  virtual File* getRoot()
+  {return VFS::invalidFile();}
   virtual String getVolumeLabel()
   {return String("consolemanager");}
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
@@ -76,17 +77,17 @@ public:
   {}
   virtual void fileAttributeChanged(File *pFile)
   {}
-  virtual File getDirectoryChild(File *pFile, size_t n)
-  {return File();}
+  virtual File* getDirectoryChild(File *pFile, size_t n)
+  {return VFS::invalidFile();}
 
 protected:
-  virtual bool createFile(File parent, String filename, uint32_t mask)
+  virtual bool createFile(File* parent, String filename, uint32_t mask)
   {return false;}
-  virtual bool createDirectory(File parent, String filename)
+  virtual bool createDirectory(File* parent, String filename)
   {return false;}
-  virtual bool createSymlink(File parent, String filename, String value)
+  virtual bool createSymlink(File* parent, String filename, String value)
   {return false;}
-  virtual bool remove(File parent, File file)
+  virtual bool remove(File* parent, File* file)
   {return false;}
 
 private:

@@ -28,6 +28,8 @@ public:
   File();
 
   File(const File &file);
+  
+  File(File* file);
 
   File& operator =(const File&);
 
@@ -79,10 +81,10 @@ public:
   /** Returns the first child of this directory, or an invalid file.
       \note This applies to directories only. Behaviour is undefined if 
             this function is called on a file. */
-  File firstChild();
+  File* firstChild();
 
   /** Returns the next child of this directory, or an invalid file. */
-  File nextChild();
+  File* nextChild();
 
   uintptr_t getInode()
   {

@@ -45,6 +45,9 @@ public:
   
   /** Returns the singleton VFS instance. */
   static VFS &instance();
+  
+  /** Returns the invalid file pointer */
+  static File* invalidFile();
 
   /** Mounts a Disk device as the alias "alias".
       If alias is zero-length, the Filesystem is asked for its preferred name
@@ -78,7 +81,7 @@ public:
   Filesystem *lookupFilesystem(String alias);
 
   /** Attempts to obtain a File for a specific path. */
-  File find(String path);
+  File* find(String path);
 
   /** Attempts to create a file. */
   bool createFile(String path, uint32_t mask);
@@ -98,6 +101,9 @@ public:
 private:
   /** The static instance object. */
   static VFS m_Instance;
+  
+  /** A static File object representing an invalid file */
+  static File* m_EmptyFile;
 
   /** Structure matching aliases to filesystems.
    * \todo Use a proper Map class for this. */

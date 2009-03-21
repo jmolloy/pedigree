@@ -92,9 +92,9 @@ Filesystem *Ext2Filesystem::probe(Disk *pDisk)
   }
 }
 
-File Ext2Filesystem::getRoot()
+File* Ext2Filesystem::getRoot()
 {
-  return File(String(""), 0, 0, 0, EXT2_ROOT_INO, false, true, this, 0);
+  return new File(String(""), 0, 0, 0, EXT2_ROOT_INO, false, true, this, 0);
 }
 
 String Ext2Filesystem::getVolumeLabel()
@@ -120,13 +120,13 @@ void Ext2Filesystem::truncate(File *pFile)
 {
 }
 
-bool Ext2Filesystem::createFile(File parent, String filename, uint32_t mask)
+bool Ext2Filesystem::createFile(File* parent, String filename, uint32_t mask)
 {
   // Grab the parent's inode.
-  Inode inode = getInode(parent.getInode());
+  Inode inode = getInode(parent->getInode());
 
   // Sanity check - the parent must be a directory!
-  if (!parent.isDirectory())
+  if (!parent->isDirectory())
   {
     ERROR("EXT2: createFile called with non-directory as parent!");
     return false;
@@ -170,20 +170,20 @@ bool Ext2Filesystem::createFile(File parent, String filename, uint32_t mask)
   setInode(node_num, newInode);
 
   // Inode created, now it needs to be added to the parent's directory structure.
-  addDirectoryEntry(parent.getInode(), node_num, filename, EXT2_FILE);
+  addDirectoryEntry(parent->getInode(), node_num, filename, EXT2_FILE);
 
   return true;
 }
 
-bool Ext2Filesystem::createDirectory(File parent, String filename)
+bool Ext2Filesystem::createDirectory(File* parent, String filename)
 {
 }
 
-bool Ext2Filesystem::createSymlink(File parent, String filename, String value)
+bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)
 {
 }
 
-bool Ext2Filesystem::remove(File parent, File file)
+bool Ext2Filesystem::remove(File* parent, File* file)
 {
 }
 

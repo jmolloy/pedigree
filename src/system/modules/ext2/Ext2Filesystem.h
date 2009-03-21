@@ -16,6 +16,7 @@
 #ifndef EXT2FILESYSTEM_H
 #define EXT2FILESYSTEM_H
 
+#include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
 #include <process/Mutex.h>
@@ -51,20 +52,20 @@ public:
 
   virtual bool initialise(Disk *pDisk);
   static Filesystem *probe(Disk *pDisk);
-  virtual File getRoot();
+  virtual File* getRoot();
   virtual String getVolumeLabel();
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
-  virtual File getDirectoryChild(File *pFile, size_t n);
+  virtual File* getDirectoryChild(File *pFile, size_t n);
 
 protected:
 
-  virtual bool createFile(File parent, String filename, uint32_t mask);
-  virtual bool createDirectory(File parent, String filename);
-  virtual bool createSymlink(File parent, String filename, String value);
-  virtual bool remove(File parent, File file);
+  virtual bool createFile(File* parent, String filename, uint32_t mask);
+  virtual bool createDirectory(File* parent, String filename);
+  virtual bool createSymlink(File* parent, String filename, String value);
+  virtual bool remove(File* parent, File* file);
 
   /** The Ext2 superblock structure. */
   struct Superblock
