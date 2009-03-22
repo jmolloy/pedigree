@@ -44,9 +44,7 @@ static bool probeDisk(Disk *pDisk)
     s += alias;
     s += ":/.pedigree-root";
 
-    NOTICE("A");
     File* f = VFS::instance().find(String(static_cast<const char*>(s)));
-    NOTICE("B");
     if(f)
     {
       if(f->isValid())
@@ -99,7 +97,6 @@ void init()
 
   // Load initial program.
   File* initProg = VFS::instance().find(String("root:/applications/bash"));
-  NOTICE("init = " << reinterpret_cast<uintptr_t>(init) << ".");
   if (!initProg->isValid())
   {
     FATAL("Unable to load init program!");
@@ -175,16 +172,10 @@ NOTICE("bleh");
 
   // Switch back to the old address space.
   Processor::switchAddressSpace(oldAS);
-
-  NOTICE("Here we are!");
   
   delete [] buffer;
-
-  NOTICE(":/ - " << initProg->getName() << "!");
   
   delete initProg;
-
-  NOTICE("win.");
 
   lock.release();
 

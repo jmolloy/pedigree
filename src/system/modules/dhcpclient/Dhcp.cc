@@ -190,6 +190,7 @@ void entry()
     host2.ipv4.setIp(Network::convertToIpv4(192, 168, 0, 2));
     host2.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
     host2.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
+    host2.dnsServer.setIp(Network::convertToIpv4(192, 168, 0, 1));
     pCard->setStationInfo(host2);
     continue;
     
@@ -452,6 +453,12 @@ void entry()
       {
         NOTICE("Gateway fail");
         host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1)); /// \todo Autoconfiguration IPv4 address
+      }
+      if(false)
+        host.dnsServer.setIp(Network::convertToIpv4(defGateway.a1, defGateway.a2, defGateway.a3, defGateway.a4));
+      else
+      {
+        host.dnsServer.setIp(Network::convertToIpv4(192, 168, 0, 1));
       }
       pCard->setStationInfo(host);
       

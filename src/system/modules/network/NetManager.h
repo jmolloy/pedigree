@@ -60,6 +60,9 @@ public:
   void removeEndpoint(File* f);
   
   File* accept(File* f);
+  
+  uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+  uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
 
   //
   // Filesystem interface.
@@ -71,8 +74,6 @@ public:
   {return VFS::invalidFile();}
   virtual String getVolumeLabel()
   {return String("netman");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) { return 0; };
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) { return 0; };
   virtual void truncate(File *pFile)
   {}
   virtual void fileAttributeChanged(File *pFile)

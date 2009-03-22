@@ -1,8 +1,15 @@
 #ifndef _NETDB_H
 #define _NETDB_H
 
+#ifndef COMPILING_SUBSYS
 #include <inttypes.h>
 #include <netinet/in.h>
+#endif
+
+#ifdef COMPILING_SUBSYS
+typedef unsigned int uint32_t;
+typedef unsigned long size_t;
+#endif
 
 struct hostent
 {

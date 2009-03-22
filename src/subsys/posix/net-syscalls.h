@@ -31,4 +31,7 @@ int posix_listen(int sock, int backlog);
 int posix_bind(int sock, const struct sockaddr *address, size_t addrlen);
 int posix_accept(int sock, struct sockaddr* address, size_t* addrlen);
 
+int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent);
+int posix_gethostbyname(const char* name, void* hostinfo, int offset);
+
 #endif

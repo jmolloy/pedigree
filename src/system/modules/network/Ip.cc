@@ -78,9 +78,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
     if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
     {
       if(me.gateway.getIp())
-      {
         dest = me.gateway;
-      }
       else
         return false;
     }

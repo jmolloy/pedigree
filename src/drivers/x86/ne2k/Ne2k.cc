@@ -308,6 +308,9 @@ bool Ne2k::setStationInfo(StationInfo info)
   m_StationInfo.gateway = info.gateway;
   NOTICE("Setting gateway, " << info.gateway.getIp() << ", " << m_StationInfo.gateway.getIp() << "...");
   
+  m_StationInfo.dnsServer = info.dnsServer;
+  NOTICE("Setting DNS server, " << info.dnsServer.getIp() << ", " << m_StationInfo.dnsServer.getIp() << "...");
+  
   return true;
 }
 

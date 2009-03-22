@@ -24,6 +24,7 @@
 #include <machine/Network.h>
 #include <network/NetManager.h>
 #include <network/NetworkStack.h>
+#include <network/Dns.h>
 
 #include "file-syscalls.h"
 #include "net-syscalls.h"
@@ -353,4 +354,51 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
   fdMap.insert(fd, reinterpret_cast<void*>(desc));
 
   return static_cast<int> (fd);
+}
+
+struct hostent
+{
+  char* h_name;
+  char** h_aliases;
+  int h_addrtype;
+  int h_length;
+  char** h_addr_list;
+};
+
+int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
+{
+  NOTICE("posix_gethostbyaddr");
+  return -1;
+}
+
+int posix_gethostbyname(const char* name, void* hostinfo, int offset)
+{
+  struct info
+  {
+    void* iparr;
+    uint32_t ip;
+    size_t numIps;
+  } *local = reinterpret_cast<info*>(hostinfo);
+  
+  Network* pCard = NetworkStack::instance().getDevice(0);
+  
+  if(offset == 0)
+  {
+    // grab the IP addresses  
+    size_t num = 0;
+    IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
+    if(!num)
+      return -1;
+    local->iparr = reinterpret_cast<void*>(ips);
+    local->numIps = num;
+  }
+  else
+  {
+    IpAddress* ips = reinterpret_cast<IpAddress*>(local->iparr);
+    local->ip = ips[offset - 1].getIp();
+  }
+  
+  return offset;
+  
+  return -1;
 }

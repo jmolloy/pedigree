@@ -111,3 +111,55 @@ File* NetManager::accept(File* f)
   }
   return VFS::invalidFile();
 }
+
+uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+{
+  NOTICE("NetManager::read");
+  
+  Endpoint* p = NetManager::instance().getEndpoint(pFile);
+    
+  int ret = -1;
+  if(pFile->getSize() == NETMAN_PROTO_TCP)
+  {
+    /// \todo O_NONBLOCK should control the blocking nature of this call
+    ret = p->recv(buffer, size, false);
+  }
+  else if(pFile->getSize() == NETMAN_PROTO_UDP)
+  {
+    /// \todo Actually, we only should read this data if it's from the IP specified
+    ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
+    ///       However, to do that we need to tell recv not to remove from the queue
+    ///       and instead peek at the message (in other words, we need flags)
+    Endpoint::RemoteEndpoint remoteHost;
+    ret = p->recv(buffer, size, &remoteHost);
+  }
+  
+  return ret;
+}
+
+uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+{
+  NOTICE("NetManager::write");
+  
+  Endpoint* p = NetManager::instance().getEndpoint(pFile);
+  
+  bool success = false;
+  if(pFile->getSize() == NETMAN_PROTO_TCP)
+  {
+    success = p->send(size, buffer);
+  }
+  else if(pFile->getSize() == NETMAN_PROTO_UDP)
+  {
+    // special handling - need to check for a remote host
+    IpAddress remoteIp = p->getRemoteIp();
+    if(remoteIp.getIp() != 0)
+    {
+      Endpoint::RemoteEndpoint remoteHost;
+      remoteHost.remotePort = p->getRemotePort();
+      remoteHost.ip = remoteIp;
+      p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
+    }
+  }
+  
+  return success ? size : 0;
+}

@@ -97,6 +97,9 @@ struct in_addr
   unsigned int s_addr;
 };
 
+#define COMPILING_SUBSYS
+#include "include/netdb.h"
+
 struct sigaction
 {
 };
@@ -648,6 +651,43 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
   return -1;
 }
 
+unsigned int inet_addr(const char *cp)
+{
+  /// \todo Support formats other than a.b.c.d
+  
+  char* tmp = (char*) malloc(strlen(cp));
+  char* tmp_ptr = tmp; // so we can free the memory
+  strcpy(tmp, cp);
+  
+  // iterate through, removing decimals and taking the four pointers
+  char* elements[4] = {tmp, 0, 0, 0};
+  int num = 1;
+  while(*tmp)
+  {
+    if(*tmp == '.')
+    {
+      *tmp = 0;
+      elements[num++] = tmp + 1;
+    }
+    
+    tmp++;
+  }
+  
+  if(num != 4)
+    return 0;
+  
+  unsigned int a = atoi(elements[0]);
+  unsigned int b = atoi(elements[1]);
+  unsigned int c = atoi(elements[2]);
+  unsigned int d = atoi(elements[3]);
+  
+  unsigned int ret = (d << 24) | (c << 16) | (b << 8) | a;
+  
+  free(tmp_ptr);
+  
+  return ret;
+}
+
 char* inet_ntoa(struct in_addr addr)
 {
   static char buff[16];
@@ -657,13 +697,50 @@ char* inet_ntoa(struct in_addr addr)
 
 struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
 {
-  STUBBED("gethostbyaddr");
+  static struct hostent ret;
+  if(syscall4(POSIX_GETHOSTBYADDR, (int) addr, len, type, (int) &ret) != 0)
+    return &ret;
   return 0;
 }
 
 struct hostent* gethostbyname(const char *name)
 {
-  STUBBED("gethostbyname");
+  static struct hostent ret;
+  
+  struct info
+  {
+    void* iparr;
+    unsigned int ip;
+    size_t numIps;
+  } hostinfo;
+  
+  if(syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) &hostinfo, 0) == 0)
+  {
+    size_t num = hostinfo.numIps;
+    if(num == 0)
+      return 0;
+  
+    ret.h_name = (char*) malloc(strlen(name) + 1);
+    strcpy(ret.h_name, name);
+    ret.h_aliases = 0;
+    ret.h_addrtype = 0;
+    ret.h_length = 4;
+    ret.h_addr_list = (char**) malloc(sizeof(char*) * (num + 1));
+    memset(ret.h_addr_list, 0, sizeof(char*) * (num + 1));
+    
+    size_t i;
+    for(i = 0; i < num; i++)
+    {
+      syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) &hostinfo, i + 1);
+      ret.h_addr_list[i] = (char*) malloc(16);
+      
+      struct in_addr tmp;
+      tmp.s_addr = hostinfo.ip;
+      char* ascii = inet_ntoa(tmp);
+      memcpy(ret.h_addr_list[i], ascii, 16);
+    }
+    return &ret;
+  }
   return 0;
 }
 

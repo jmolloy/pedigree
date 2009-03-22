@@ -284,7 +284,7 @@ class StationInfo
 {
   public:
     StationInfo() :
-      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), mac()
+      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServer(), mac()
     {};
     virtual ~StationInfo() {};
     
@@ -293,6 +293,8 @@ class StationInfo
     
     IpAddress   subnetMask;
     IpAddress   gateway;
+    
+    IpAddress   dnsServer;
     
     MacAddress  mac; // MAC address
 };

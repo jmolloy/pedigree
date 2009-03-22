@@ -55,6 +55,9 @@
 #define POSIX_DUP2       34
 #define POSIX_UNLINK     35
 
+#define POSIX_GETHOSTBYNAME   36
+#define POSIX_GETHOSTBYADDR   37
+
 #define POSIX_STUBBED    99
 
 #endif
