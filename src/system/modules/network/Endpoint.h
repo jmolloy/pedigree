@@ -122,7 +122,7 @@ class Endpoint
     {
       return false;
     };
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool block)
+    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
     {
       return 0;
     };

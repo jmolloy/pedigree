@@ -495,7 +495,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           stateBlock->rcv_wnd -= stateBlock->seg_len;
           
           if(stateBlock->endpoint)
-            stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, header->flags & Tcp::PSH);
+            stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
           
           Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
           alreadyAck = true;

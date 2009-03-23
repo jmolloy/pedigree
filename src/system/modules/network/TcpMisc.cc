@@ -264,7 +264,6 @@ void *Tree<StateBlockHandle,void*>::lookup(StateBlockHandle key)
   Node *n = root;
   while (n != 0)
   {
-    NOTICE("n = " << reinterpret_cast<uintptr_t>(n) << "...");
     if (n->key == key)
     {
       return n->element;

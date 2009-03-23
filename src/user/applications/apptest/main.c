@@ -46,11 +46,11 @@ int  main(int argc, char* argv[])
     }
 
     /* get IP address from name */
-    //pHostInfo=gethostbyname(strHostName);
+    pHostInfo=gethostbyname(strHostName);
     /* copy address into long */
-    //memcpy(&nHostAddress,pHostInfo->h_addr_list[0],pHostInfo->h_length);
-    unsigned char ip[] = {172, 30, 1, 198};
-    memcpy(&nHostAddress,ip,4);
+    memcpy(&nHostAddress,pHostInfo->h_addr_list[0],pHostInfo->h_length);
+    //unsigned char ip[] = {172, 30, 1, 198};
+    //memcpy(&nHostAddress,ip,4);
 
     /* fill address struct */
     Address.sin_addr.s_addr=nHostAddress;

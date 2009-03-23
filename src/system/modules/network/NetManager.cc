@@ -70,10 +70,10 @@ void NetManager::removeEndpoint(File* f)
     }
   }
   
-  if(f->getSize() == NETMAN_PROTO_UDP)
-    UdpManager::instance().returnEndpoint(e);
-  else if(f->getSize() == NETMAN_PROTO_TCP)
-    TcpManager::instance().returnEndpoint(e);
+  //if(f->getSize() == NETMAN_PROTO_UDP)
+  //  UdpManager::instance().returnEndpoint(e);
+  //else if(f->getSize() == NETMAN_PROTO_TCP)
+  //  TcpManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File* f)
@@ -118,11 +118,11 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
   
   Endpoint* p = NetManager::instance().getEndpoint(pFile);
     
-  int ret = -1;
+  int ret = 0;
   if(pFile->getSize() == NETMAN_PROTO_TCP)
   {
     /// \todo O_NONBLOCK should control the blocking nature of this call
-    ret = p->recv(buffer, size, false);
+    ret = p->recv(buffer, size, false, false);
   }
   else if(pFile->getSize() == NETMAN_PROTO_UDP)
   {
@@ -157,7 +157,7 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = p->getRemotePort();
       remoteHost.ip = remoteIp;
-      p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
+      success = p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
     }
   }
   

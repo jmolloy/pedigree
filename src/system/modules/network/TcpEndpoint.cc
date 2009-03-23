@@ -63,10 +63,14 @@ bool TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
   return true;
 };
 
-size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
+size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 {
+  NOTICE("TcpEndpoint::recv");
+  
   if(!buffer || !maxSize)
     return 0;
+  
+  bBlock = true;
   
   bool queueReady = false;
   if(bBlock)
@@ -75,7 +79,8 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
     queueReady = m_DataStream.getSize() != 0;
   
   if(queueReady)
-  {    
+  {
+    NOTICE("Queue is ready, " << m_DataStream.getSize() << " bytes.");
     TcpManager::instance().removeQueuedPackets(m_ConnId);
     
     // read off the front
@@ -86,6 +91,9 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
     if(nBytes > m_DataStream.getSize())
       nBytes = m_DataStream.getSize();
     
+    //if(bPeek)
+    //  return nBytes;
+    
     // copy
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
     
@@ -95,6 +103,8 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock)
     // we've read in this block
     return nBytes;
   }
+  
+  NOTICE("still fail");
   return 0;
 };
 

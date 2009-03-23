@@ -57,7 +57,7 @@ class TcpEndpoint : public Endpoint
     
     /** Application interface */
     virtual bool send(size_t nBytes, uintptr_t buffer);
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool bBlock = false);
+    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool bBlock = false, bool bPeek = false);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
     
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost);

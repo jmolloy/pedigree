@@ -226,7 +226,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
   if(file->getSize() == NETMAN_PROTO_TCP)
   {
     /// \todo O_NONBLOCK should control the blocking nature of this call
-    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false);
+    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false, flags == MSG_PEEK);
   }
   else if(file->getSize() == NETMAN_PROTO_UDP)
   {

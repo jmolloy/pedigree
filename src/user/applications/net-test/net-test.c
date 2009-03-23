@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
   struct sockaddr_in remote;
   remote.sin_family = AF_INET;
   remote.sin_port = htons(80);
-  remote.sin_addr.s_addr = 0x29ea934b; //inet_addr(ent->h_addr_list[0]);
+  remote.sin_addr.s_addr = inet_addr("202.63.42.160"); //0x29ea934b; //inet_addr(ent->h_addr_list[0]);
   
   connect(sock, &remote, sizeof(remote));
 

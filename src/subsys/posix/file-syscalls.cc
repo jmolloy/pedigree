@@ -144,7 +144,10 @@ int posix_close(int fd)
   }
 
   if(NetManager::instance().isEndpoint(f->file))
+  {
+    NOTICE("Closing the endpoint...");
     NetManager::instance().removeEndpoint(f->file);
+  }
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
   delete f->file;
@@ -155,6 +158,7 @@ int posix_close(int fd)
 int posix_open(const char *name, int flags, int mode)
 {
   NOTICE("open(" << name << ")");
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -179,16 +183,11 @@ int posix_open(const char *name, int flags, int mode)
     if(flags & O_CREAT)
     {
       bool worked = VFS::instance().createFile(nameWithCwd, 0777);
-      
-      NOTICE("testing!");
-      
       if(!worked)
       {
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
-      
-      NOTICE("wooh!");
       
       file = VFS::instance().find(nameWithCwd);
       if (!file->isValid())
@@ -196,8 +195,6 @@ int posix_open(const char *name, int flags, int mode)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
-      
-      NOTICE("file created!");
       
       bCreated = true;
     }
@@ -219,9 +216,6 @@ int posix_open(const char *name, int flags, int mode)
   {
     /// \todo Not error - read in symlink and follow.
     delete file;
-    
-    NOTICE("huh?");
-    
     SYSCALL_ERROR(Unimplemented);
     return -1;
   }
@@ -274,14 +268,14 @@ int posix_read(int fd, char *ptr, int len)
 
 int posix_write(int fd, char *ptr, int len)
 {
-  if(ptr)
+  /*if(ptr)
   {
     char c = ptr[len];
     ptr[len] = 0;
     NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
     ptr[len] = c;
   }
-  else
+  else*/
     NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
   
   // Lookup this process.
@@ -499,6 +493,10 @@ int posix_opendir(const char *dir, dirent *ent)
 int posix_readdir(int fd, dirent *ent)
 {
   NOTICE("readdir(" << fd << ")");
+  
+  if(fd == -1)
+    return -1;
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -532,6 +530,9 @@ int posix_readdir(int fd, dirent *ent)
 
 void posix_rewinddir(int fd, dirent *ent)
 {
+  if(fd == -1)
+    return;
+  
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   f->offset = 0;
   posix_readdir(fd, ent);
@@ -539,6 +540,9 @@ void posix_rewinddir(int fd, dirent *ent)
 
 int posix_closedir(int fd)
 {
+  if(fd == -1)
+    return -1;
+  
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
@@ -665,6 +669,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
   NOTICE("select(" << Dec << nfds << Hex << ")");
+  NOTICE("select has pointers: " << reinterpret_cast<uintptr_t>(readfds) << ", " << reinterpret_cast<uintptr_t>(writefds) << ", " << reinterpret_cast<uintptr_t>(errorfds) << ".");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -694,23 +699,34 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
       {
         Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
         if(!p)
+        {
+          FD_CLR(i, readfds);
           continue;
+        }
+        
         if(timeout)
         {
           if(timeout->tv_sec == 0)
           {
-            bool ready = p->dataReady(false);
-            if(ready)
-              num_ready++;
+            NOTICE("No timeout");
+            //size_t val = p->recv(0, 0, false, 5); // 5 = MSG_PEEK
+            //bool ready = p->dataReady(false);
+            num_ready++;
+            /*if(ready)
+            else
+              FD_CLR(i, readfds);*/
           }
           else
           {
+            NOTICE("Timeout: " << timeout->tv_sec << " seconds.");
             p->dataReady(true, timeout->tv_sec);
             num_ready++;
           }
         }
         else
         {
+          NOTICE("Waiting forever");
+          
           // block while waiting for the data to come (and wait forever)
           p->dataReady(true, 0xffffffff);
           num_ready++;

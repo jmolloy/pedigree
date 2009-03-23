@@ -233,11 +233,19 @@ DIR *opendir(const char *dir)
 {
   DIR *p = malloc(sizeof(DIR));
   p->fd = syscall2(POSIX_OPENDIR, dir, &p->ent);
+  if(p->fd < 0)
+  {
+    free(p);
+    return 0;
+  }
   return p;
 }
 
 struct dirent *readdir(DIR *dir)
 {
+  if(!dir)
+    return 0;
+  
   if (syscall2(POSIX_READDIR, dir->fd, &dir->ent) != -1)
     return &dir->ent;
   else
@@ -246,11 +254,17 @@ struct dirent *readdir(DIR *dir)
 
 void rewinddir(DIR *dir)
 {
+  if(!dir)
+    return 0;
+  
   syscall2(POSIX_REWINDDIR, dir->fd, &dir->ent);
 }
 
 int closedir(DIR *dir)
 {
+  if(!dir)
+    return 0;
+  
   syscall1(POSIX_CLOSEDIR, dir->fd);
   free(dir);
   return 0;
@@ -732,12 +746,13 @@ struct hostent* gethostbyname(const char *name)
     for(i = 0; i < num; i++)
     {
       syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) &hostinfo, i + 1);
-      ret.h_addr_list[i] = (char*) malloc(16);
+      ret.h_addr_list[i] = (char*) malloc(4);
       
-      struct in_addr tmp;
-      tmp.s_addr = hostinfo.ip;
-      char* ascii = inet_ntoa(tmp);
-      memcpy(ret.h_addr_list[i], ascii, 16);
+      //struct in_addr tmp;
+      //tmp.s_addr = hostinfo.ip;
+      //char* ascii = inet_ntoa(tmp);
+      char tmp[] = {hostinfo.ip & 0xff, (hostinfo.ip & 0xff00) >> 8, (hostinfo.ip & 0xff0000) >> 16, (hostinfo.ip & 0xff000000) >> 24};
+      memcpy(ret.h_addr_list[i], tmp, 4);
     }
     return &ret;
   }
@@ -798,3 +813,8 @@ int pclose(void* stream)
   return 0;
 }
 
+int readlink(const char* path, char* buf, unsigned int bufsize)
+{
+  STUBBED("readlink");
+  return -1;
+}
