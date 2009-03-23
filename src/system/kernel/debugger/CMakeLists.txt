@@ -27,7 +27,7 @@ add_subdirectory(libudis86)
 
 add_kernel_src(debugger
                Backtrace.cc Debugger.cc DebuggerIO.cc DwarfCfiAutomaton.cc DwarfUnwinder.cc
-               LocalIO.cc panic.cc Scrollable.cc SerialIO.cc)
+               LocalIO.cc panic.cc Scrollable.cc SerialIO.cc SyscallTracer.cc)
 else(DEBUGGER)
 add_kernel_src(debugger
                LocalIO.cc SerialIO.cc DebuggerIO.cc panic.cc)

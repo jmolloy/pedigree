@@ -34,6 +34,7 @@
 #include <IoCommand.h>
 #include <ThreadsCommand.h>
 #include <DevicesCommand.h>
+#include <SyscallTracerCommand.h>
 #include <process/Thread.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
@@ -136,6 +137,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static CpuInfoCommand cpuInfo;
   static IoCommand io;
   static DevicesCommand devices;
+  static SyscallTracerCommand syscallTracer;
+
 #if defined(THREADS)
   static ThreadsCommand threads;
 
@@ -143,11 +146,12 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 14;
+  size_t nCommands = 15;
 #else
-  size_t nCommands = 13;
+  size_t nCommands = 14;
 #endif
-  DebuggerCommand *pCommands[] = {&disassembler,
+  DebuggerCommand *pCommands[] = {&syscallTracer,
+                                  &disassembler,
                                   &logViewer,
                                   &backtracer,
                                   &quit,

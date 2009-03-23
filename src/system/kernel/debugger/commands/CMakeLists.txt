@@ -23,4 +23,5 @@
 add_kernel_src(debugger/commands
                Backtracer.cc BreakpointCommand.cc CpuInfoCommand.cc DisassembleCommand.cc
                DumpCommand.cc LogViewer.cc MemoryInspector.cc PanicCommand.cc StepCommand.cc
-               TraceCommand.cc QuitCommand.cc IoCommand.cc ThreadsCommand.cc DevicesCommand.cc)
+               TraceCommand.cc QuitCommand.cc IoCommand.cc ThreadsCommand.cc DevicesCommand.cc
+               SyscallTracerCommand.cc)
