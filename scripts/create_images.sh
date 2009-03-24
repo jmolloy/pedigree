@@ -174,9 +174,9 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
-  mmd -Do C:/etc/terminfo
-  mmd -Do C:/etc/terminfo/v
-  mcopy -Do $SRCDIR/../scripts/vt100 C:/etc/terminfo/v
+  #mmd -Do C:/etc/terminfo
+  #mmd -Do C:/etc/terminfo/v
+  #mcopy -Do $SRCDIR/../scripts/vt100 C:/etc/terminfo/v
   
   svn export --force $SRCDIR/../images/i686-elf ./tmp
   

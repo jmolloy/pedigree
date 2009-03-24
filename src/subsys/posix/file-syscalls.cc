@@ -268,14 +268,14 @@ int posix_read(int fd, char *ptr, int len)
 
 int posix_write(int fd, char *ptr, int len)
 {
-  /*if(ptr)
+  if(ptr)
   {
     char c = ptr[len];
     ptr[len] = 0;
     NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
     ptr[len] = c;
   }
-  else*/
+  else
     NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
   
   // Lookup this process.

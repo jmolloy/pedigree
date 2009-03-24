@@ -276,7 +276,7 @@ void TcpManager::returnEndpoint(Endpoint* e)
   if(e)
   {
     // remove from the endpoint list
-    //m_Endpoints.remove(e->getConnId());
+    m_Endpoints.remove(e->getConnId());
     
     // if we can (state == CLOSED) remove the connection itself
     // if the state is TIME_WAIT this will be done by the TIME_WAIT timeout

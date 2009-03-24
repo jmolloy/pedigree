@@ -45,6 +45,7 @@ typedef unsigned int tcflag_t;
 # define OCRNL	000004
 # define ONLCR	000010
 # define ONOCR	000020
+# define ONLRET 000040
 # define TAB3	014000
 
 # define CLOCAL	004000

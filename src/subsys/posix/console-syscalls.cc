@@ -45,8 +45,8 @@ int posix_tcgetattr(int fd, struct termios *p)
     return -1;
   }
 
-  bool echo, echoNewlines, echoBackspace;
-  ConsoleManager::instance().getAttributes(pFd->file, &echo, &echoNewlines, &echoBackspace);
+  bool echo, echoNewlines, echoBackspace, nlCausesCr;
+  ConsoleManager::instance().getAttributes(pFd->file, &echo, &echoNewlines, &echoBackspace, &nlCausesCr);
 
   memset(p->c_cc, 0, NCCS*sizeof(cc_t));
   p->c_cc[VEOL] = '\n';
@@ -54,7 +54,7 @@ int posix_tcgetattr(int fd, struct termios *p)
   p->c_iflag = 0;
   p->c_oflag = 0;
   p->c_cflag = 0;
-  p->c_lflag = ((echo)?ECHO:0) | ((echoNewlines)?ECHONL:0) | ((echoBackspace)?ECHOE:0);
+  p->c_lflag = ((echo)?ECHO:0) | ((echoNewlines)?ECHONL:0) | ((echoBackspace)?ECHOE:0) | ((nlCausesCr)?ONLRET:0);
 
   return 0;
 }
@@ -78,7 +78,8 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
   }
 
   /// \todo Sanity checks.
-  ConsoleManager::instance().setAttributes(pFd->file, p->c_lflag&ECHO, p->c_lflag&ECHONL, p->c_lflag&ECHOE);
+  NOTICE("tcsetattr, c_oflag = " << p->c_oflag << " c_iflag = " << p->c_iflag << " c_cflag = " << p->c_cflag << " c_lflag = " << p->c_lflag);
+  ConsoleManager::instance().setAttributes(pFd->file, p->c_lflag&ECHO, p->c_lflag&ECHONL, p->c_lflag&ECHOE, p->c_lflag&ONLRET);
 
   return 0;
 }

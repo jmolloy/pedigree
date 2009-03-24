@@ -129,8 +129,8 @@ void Vt100::write(char c)
         if (m_bContainedBracket)
         {
           // If it contained a bracket, it's a cursor command.
-          m_pWindows[m_CurrentWindow]->setCursorX( m_pWindows[m_CurrentWindow]->getCursorX() -
-                                                  ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1) );
+          m_pWindows[m_CurrentWindow]->setCursorX(m_pWindows[m_CurrentWindow]->getCursorX() - 
+                                                   ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1));
         }
         else
         {
@@ -268,6 +268,8 @@ void Vt100::write(char c)
       case '\n':
         // Newline is a cursor down and carriage return operation.
         m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
+        if(!getNewlineNLCR())
+          break;
         // Fall through...
 
       case '\r':
@@ -438,9 +440,6 @@ void Vt100::Window::setCursorY(uint32_t y)
   // Have we gone off the screen?
   if (m_CursorY > m_nScrollMax)
   {
-    // Assume that we can only go off the screen by one line... (bad but nice assumption).
-    //m_CursorY --; // Bring the cursor back onto the screen.
-    
     size_t nLines = m_CursorY - m_nScrollMax;
     m_CursorY -= nLines;
 

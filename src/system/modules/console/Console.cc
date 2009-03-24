@@ -67,18 +67,18 @@ bool ConsoleManager::isConsole(File* file)
   return ((file->getInode()&0xFFFFFF00) == 0xdeadbe00);
 }
 
-void ConsoleManager::setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace)
+void ConsoleManager::setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr)
 {
   // \todo Sanity checking.
   Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  pC->backEnd->addRequest(CONSOLE_SETATTR, pC->param, echo, echoNewlines, echoBackspace);
+  pC->backEnd->addRequest(CONSOLE_SETATTR, pC->param, echo, echoNewlines, echoBackspace, nlCausesCr);
 }
 
-void ConsoleManager::getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace)
+void ConsoleManager::getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr)
 {
   // \todo Sanity checking.
   Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  pC->backEnd->addRequest(CONSOLE_GETATTR, pC->param, reinterpret_cast<uint64_t>(echo), reinterpret_cast<uint64_t>(echoNewlines), reinterpret_cast<uint64_t>(echoBackspace));
+  pC->backEnd->addRequest(CONSOLE_GETATTR, pC->param, reinterpret_cast<uint64_t>(echo), reinterpret_cast<uint64_t>(echoNewlines), reinterpret_cast<uint64_t>(echoBackspace), reinterpret_cast<uint64_t>(nlCausesCr));
 }
 
 uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)

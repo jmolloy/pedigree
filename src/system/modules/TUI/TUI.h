@@ -45,6 +45,8 @@ protected:
   bool m_EchoBackspace;
   bool m_MapCrToNl;
   bool m_MapNlToCr;
+  
+  bool m_NlCausesCr;
 
   bool m_bIsTextMode;
   Display::ScreenMode m_Mode;

@@ -728,45 +728,6 @@ struct hostent* gethostbyname(const char *name)
     return ret;
   else
     return 0;
-  
-  /*
-  struct info
-  {
-    void* iparr;
-    unsigned int ip;
-    size_t numIps;
-  } hostinfo;
-  
-  if(syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) &hostinfo, 0) == 0)
-  {
-    size_t num = hostinfo.numIps;
-    if(num == 0)
-      return 0;
-  
-    ret.h_name = (char*) malloc(strlen(name) + 1);
-    strcpy(ret.h_name, name);
-    ret.h_aliases = 0;
-    ret.h_addrtype = 0;
-    ret.h_length = 4;
-    ret.h_addr_list = (char**) malloc(sizeof(char*) * (num + 1));
-    memset(ret.h_addr_list, 0, sizeof(char*) * (num + 1));
-    
-    size_t i;
-    for(i = 0; i < num; i++)
-    {
-      syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) &hostinfo, i + 1);
-      ret.h_addr_list[i] = (char*) malloc(4);
-      
-      //struct in_addr tmp;
-      //tmp.s_addr = hostinfo.ip;
-      //char* ascii = inet_ntoa(tmp);
-      char tmp[] = {hostinfo.ip & 0xff, (hostinfo.ip & 0xff00) >> 8, (hostinfo.ip & 0xff0000) >> 16, (hostinfo.ip & 0xff000000) >> 24};
-      memcpy(ret.h_addr_list[i], tmp, 4);
-    }
-    return &ret;
-  }
-  return 0;
-  */
 }
 
 struct servent* getservbyname(const char *name, const char *proto)

@@ -38,6 +38,11 @@ public:
   void write(char c);
   void write(char *str);
 
+  /** Gets whether a newline is to be printed as a NL/CR pair */
+  bool getNewlineNLCR() {return m_bNewlineAlsoCR;}
+  /** Sets whether a newline is to be printed as a NL/CR pair */
+  void setNewlineNLCR(bool b) {m_bNewlineAlsoCR = b;}
+
 private:
 
   /** Creates a colour integer suitable for inserting into the framebuffer from an R, G and B list. */
@@ -149,6 +154,9 @@ private:
 
   /// Saved cursor position.
   uint32_t m_SavedX, m_SavedY;
+  
+  /// Is a newline to be interpreted as a CR as well?
+  bool m_bNewlineAlsoCR;
 
   typedef struct
   {

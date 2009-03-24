@@ -67,6 +67,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     else
     {
       // In a graphics mode - forward to the VT100 object.
+      g_pVt100->setNewlineNLCR(m_NlCausesCr);
       g_pVt100->write(buf);
 
       delete [] buf;
@@ -222,6 +223,8 @@ NOTICE("TUI: read: Return " << Hex << i);
     m_Echo = static_cast<bool>(p3);
     m_EchoNewlines = static_cast<bool>(p4);
     m_EchoBackspace = static_cast<bool>(p5);
+    m_NlCausesCr = static_cast<bool>(p6);
+    
     m_MapCrToNl = static_cast<bool>(p6);
     m_MapNlToCr = static_cast<bool>(p7);
     return 0;
@@ -234,6 +237,8 @@ NOTICE("TUI: read: Return " << Hex << i);
     *echoNewlines = m_EchoNewlines;
     bool *echoBackspace = reinterpret_cast<bool*>(p5);
     *echoBackspace = m_EchoBackspace;
+    bool *nlCausesCr = reinterpret_cast<bool*>(p6);
+    *nlCausesCr = m_NlCausesCr;
     return 0;
   }
   else if (operation == CONSOLE_GETCOLS)

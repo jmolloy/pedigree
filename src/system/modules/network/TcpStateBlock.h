@@ -290,11 +290,7 @@ class StateBlock : public TimerHandler
             NOTICE("TIME_WAIT timeout complete");
             currentState = Tcp::CLOSED;
             
-            /// \todo How to remove this connection and free *this* (ie, this) object, when this function is called from
-            ///       its instance?
-            /// \note I'll do this by having a special trampoline function that destroys the stateBlock, it'll call a thread
-            ///       which will do the dirty work for me.
-            
+            // create the cleanup thread
             new Thread(Processor::information().getCurrentThread()->getParent(),
               reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
               reinterpret_cast<void*> (this));

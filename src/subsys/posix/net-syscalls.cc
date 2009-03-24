@@ -395,7 +395,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     int h_addrtype;
     int h_length;
     char** h_addr_list;
-    char* h_addr;
   } *entry = reinterpret_cast<struct hostent*>(hostinfo);
   uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
   uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
@@ -440,7 +439,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   entry->h_addrtype = AF_INET;
   entry->h_length = 4;
   entry->h_addr_list = addrList;
-  entry->h_addr = addrList[0];
   
   return 0;
   

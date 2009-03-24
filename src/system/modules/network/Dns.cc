@@ -35,6 +35,14 @@ Dns::Dns() :
   m_Endpoint->acceptAnyAddress(true);
 }
 
+Dns::Dns(const Dns& ent) :
+  m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint)
+{
+  new Thread(Processor::information().getCurrentThread()->getParent(),
+             reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
+             reinterpret_cast<void*>(this));
+}
+
 Dns::~Dns()
 {
 }
@@ -63,6 +71,8 @@ void Dns::mainThread()
     {
       // read the packet
       size_t n = e->recv(buffLoc, 512, &remoteHost);
+      if(!n)
+        continue;
       
       // grab the header
       DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
@@ -85,7 +95,7 @@ void Dns::mainThread()
       if(!bFound)
         continue;
       
-      uint16_t qCount = BIG_TO_HOST16(head->qCount);
+      //uint16_t qCount = BIG_TO_HOST16(head->qCount);
       uint16_t ansCount = BIG_TO_HOST16(head->aCount);
       
       // read the hostname to find the start of the question and answer structures
@@ -125,7 +135,7 @@ void Dns::mainThread()
       /// \todo This assumes there's only one question structure
       
       uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen;
-      uintptr_t ansStart = buffLoc + sizeof(DnsHeader) + sizeof(QuestionSecNameSuffix) + hostLen;
+      uintptr_t ansStart = structStart + sizeof(QuestionSecNameSuffix);
       
       req->entry->ip = new IpAddress[ansCount];
       req->entry->numIps = ansCount;
