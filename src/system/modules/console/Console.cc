@@ -92,7 +92,7 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
 {
   /// \todo Sanity checking.
   Console *pC = m_Consoles[pFile->getInode()-0xdeadbe00];
-  return pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
+  uint64_t ret = pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
 }
 
 int ConsoleManager::getCols(File* file)

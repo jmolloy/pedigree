@@ -719,8 +719,17 @@ struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
 
 struct hostent* gethostbyname(const char *name)
 {
-  static struct hostent ret;
+  static struct hostent* ret = 0;
+  if(ret == 0)
+    ret = (struct hostent*) malloc(512);
   
+  int success = syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) ret, 512);
+  if(success == 0)
+    return ret;
+  else
+    return 0;
+  
+  /*
   struct info
   {
     void* iparr;
@@ -757,6 +766,7 @@ struct hostent* gethostbyname(const char *name)
     return &ret;
   }
   return 0;
+  */
 }
 
 struct servent* getservbyname(const char *name, const char *proto)

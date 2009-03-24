@@ -191,8 +191,8 @@ void entry()
     host2.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
     host2.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
     host2.dnsServer.setIp(Network::convertToIpv4(192, 168, 0, 1));
-    //pCard->setStationInfo(host2);
-    //continue;
+    pCard->setStationInfo(host2);
+    continue;
     
     IpAddress broadcast(0xffffffff);
     Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);

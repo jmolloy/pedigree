@@ -345,6 +345,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       
       if(header->flags & Tcp::ACK)
       {
+        // remove all acked segments from the transmit queue
+        stateBlock->ackSegment();
+        
         switch(stateBlock->currentState)
         {
           case Tcp::SYN_RECEIVED:
@@ -455,7 +458,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::LAST_ACK:
         
             // only our FIN ack can come now, so close
-            if(stateBlock->fin_seq == stateBlock->seg_seq)
+            if((stateBlock->fin_seq + 1) == stateBlock->seg_ack)
             {
               stateBlock->currentState = Tcp::CLOSED;
               stateBlock->fin_ack = true; // FIN has been acked
@@ -589,6 +592,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   if(stateBlock->currentState == Tcp::CLOSED)
   {
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused connection to close.");
+    TcpManager::instance().returnEndpoint(stateBlock->endpoint);
     removeConn(stateBlock->connId);
   }
 }

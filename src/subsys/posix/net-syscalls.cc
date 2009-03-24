@@ -373,6 +373,78 @@ int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
 
 int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
+  NOTICE("posix_gethostbyname");
+  
+  // sanity checks
+  if(!hostinfo || !offset)
+    return -1;
+  
+  Network* pCard = NetworkStack::instance().getDevice(0);
+  
+  // do the lookup
+  size_t num = 0;
+  IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
+  if(!num)
+    return -1;
+  
+  // grab the passed hostent
+  struct hostent
+  {
+    char* h_name;
+    char** h_aliases;
+    int h_addrtype;
+    int h_length;
+    char** h_addr_list;
+    char* h_addr;
+  } *entry = reinterpret_cast<struct hostent*>(hostinfo);
+  uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
+  uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
+  
+  memset(hostinfo, 0, offset);
+
+  // copy the hostname
+  char* hostName = reinterpret_cast<char*>(userBlock);
+  strcpy(hostName, name);
+  userBlock += strlen(name) + 1;
+  
+  /// \todo Aliases
+  char** aliases = reinterpret_cast<char**>(0);
+  
+  // address list
+  char** addrList = reinterpret_cast<char**>(userBlock);
+  userBlock += sizeof(char*) * (num + 1); // null terminated list
+  
+  // make sure we don't overflow the buffer
+  if(userBlock < endBlock)
+  {
+    // load each IP into the buffer
+    for(size_t i = 0; i < num; i++)
+    {
+      uint32_t ip = ips[i].getIp();
+      
+      char tmp[] = {ip & 0xff, (ip & 0xff00) >> 8, (ip & 0xff0000) >> 16, (ip & 0xff000000) >> 24};
+      char* ipBlock = reinterpret_cast<char*>(userBlock);
+      memcpy(ipBlock, tmp, 4);
+      
+      addrList[i] = ipBlock;
+      
+      userBlock += 4;
+      if(userBlock >= endBlock)
+        break;
+    }
+  }
+  
+  // build the real hostent
+  entry->h_name = hostName;
+  entry->h_aliases = aliases;
+  entry->h_addrtype = AF_INET;
+  entry->h_length = 4;
+  entry->h_addr_list = addrList;
+  entry->h_addr = addrList[0];
+  
+  return 0;
+  
+  /*
   struct info
   {
     void* iparr;
@@ -401,4 +473,5 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   return offset;
   
   return -1;
+  */
 }

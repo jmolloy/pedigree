@@ -57,38 +57,6 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
   delete tmpPack;
   
   return checksum;
-
-  /*
-
-	uint32_t sum = 0;
-  data->checksum = 0;
-	uint16_t* buffer = reinterpret_cast<uint16_t*>(data);
-  size_t nBytes = BIG_TO_HOST16(data->len);
-  //if((nBytes % 2) != 0)
-  //  nBytes++;
-  NOTICE("data->len is " << BIG_TO_HOST16(data->len) << ", should be " << 13 + 8 << ".");
-  NOTICE("IPs are " << srcip << " and " << destip << "...");
-  
-  size_t i, j;
-  for(i = 0, j = 0; i < nBytes; i += 2, j++)
-    sum += buffer[j];
-  if(nBytes & 0x1)
-    sum += buffer[nBytes-1];
-  
-  // add in the psuedo header
-  sum += srcip;
-  sum += destip;
-  sum += IP_UDP << 8;
-  sum += data->len;
-
-	// fold to 16 bits
-	while( sum >> 16 )
-		sum = ( sum & 0xFFFF ) + ( sum >> 16 );
-
-  uint16_t ret = static_cast<uint16_t>(~sum);
-  /// \todo This simply can't be right - figure out what on earth is going on!
-  //ret--;
-	return ret;*/
 }
 
 bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network* pCard)

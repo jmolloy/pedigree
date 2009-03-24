@@ -18,6 +18,7 @@ struct hostent
   int h_addrtype;
   int h_length;
   char** h_addr_list;
+  char* h_addr;
 };
 
 struct netent

@@ -14,9 +14,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "TcpManager.h"
 #include "TcpMisc.h"
+#include "TcpStateBlock.h"
 
 #include <Log.h>
+
+int stateBlockFree(void* p)
+{
+  StateBlock* stateBlock = reinterpret_cast<StateBlock*>(p);
+  TcpManager::instance().removeConn(stateBlock->connId);
+  return 0;
+}
 
 void TcpBuffer::remove(size_t offset, size_t nBytes)
 {
@@ -120,15 +129,8 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
       uintptr_t destPoint = m_Buffer + offset + nBytes; // right after the incoming data
       uintptr_t sourcePoint = m_Buffer + offset;
       
-      // this sucks.
-      //uint8_t* tmp = new uint8_t[nBytesToShift];
-      
-      // NOTICE("Copying to " << destPoint << " from " << sourcePoint << " " << nBytesToShift << " bytes, with buffer size " << m_BufferSize << ", old size " << oldSize << " and nBytes " << nBytes << ".");
-    
       memcpy(reinterpret_cast<void*>(destPoint), reinterpret_cast<void*>(sourcePoint), nBytesToShift);
     }
-    
-    // NOTICE("m_Buffer = " << m_Buffer << ", size is " << m_BufferSize << ", offset is " << offset << " and nBytes is " << nBytes << ".");
     
     // dump our data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);

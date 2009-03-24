@@ -153,20 +153,27 @@ void TcpManager::Disconnect(size_t connectionId)
   IpAddress dest;
   dest = stateBlock->remoteHost.ip;
   
-  // this is our FIN
-  stateBlock->fin_seq = stateBlock->snd_nxt++;
-  
   // no FIN received yet
   if(stateBlock->currentState == Tcp::ESTABLISHED)
   {
+    stateBlock->fin_seq = stateBlock->snd_nxt;
+    
     stateBlock->currentState = Tcp::FIN_WAIT_1;
-    Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
+    stateBlock->seg_wnd = 0;
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->snd_nxt++;
+    //Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
   }
   // received a FIN already
   else if(stateBlock->currentState == Tcp::CLOSE_WAIT)
   {
+    stateBlock->fin_seq = stateBlock->snd_nxt;
+    
     stateBlock->currentState = Tcp::LAST_ACK;
-    Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
+    stateBlock->seg_wnd = 0;
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->snd_nxt++;
+    //Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
   }
   // LISTEN socket closing
   else if(stateBlock->currentState == Tcp::LISTEN)
@@ -194,8 +201,15 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
   if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
     return;
   
+  if(stateBlock->currentState != Tcp::ESTABLISHED &&
+     stateBlock->currentState != Tcp::FIN_WAIT_1 &&
+     stateBlock->currentState != Tcp::FIN_WAIT_2)
+    return; // we can't send data unless we're in a synchronised state
+  
+  stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
+  
   // first things first, we need to only send 1024 bytes at a time (just to be weird) max
-  size_t offset;
+  /*size_t offset;
   for(offset = 0; offset < nBytes; offset += 1024)
   {
     size_t segmentSize = 0;
@@ -218,13 +232,12 @@ void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes
     //stateBlock->retransmitQueue.append(payload, nBytes);
     //stateBlock->resetTimer();
     //stateBlock->waitingForTimeout = true;
-  }
+  }*/
 }
 
 void TcpManager::removeConn(size_t connId)
 {
-  return;
-  NOTICE("Tcp: Removing connection " << connId);
+  //return;
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
     return;
@@ -238,27 +251,21 @@ void TcpManager::removeConn(size_t connId)
     return;
   
   // only remove closed connections!
-  NOTICE("Current state of connection " << connId << " is " << Tcp::stateString(stateBlock->currentState) << "...");
   if(stateBlock->currentState != Tcp::CLOSED)
   {
     return;
   }
     
   // remove from the lists
-  NOTICE("Handle: " << Dec << handle->localPort << ", " << handle->remotePort << ", " << Hex << handle->remoteHost.ip.getIp() << ".");
   if(handle->listen)
     m_ListeningStateBlocks.remove(*handle);
   else
     m_StateBlocks.remove(*handle);
   m_CurrentConnections.remove(connId);
   
-  NOTICE("Win");
-  
   // destroy the state block (and its internals)
   stateBlock->waitState.release();
   delete stateBlock;
-  
-  NOTICE("Returning now");
   
   // stateBlock->endpoint is what applications are using right now, so
   // we can't really delete it yet. They will do that with returnEndpoint().

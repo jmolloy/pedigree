@@ -17,18 +17,40 @@
 #define TCPSTATEBLOCK_H
 
 #include <processor/types.h>
-#include <process/Semaphore.h>
 #include <machine/Network.h>
+#include <process/Semaphore.h>
+#include <processor/Processor.h>
 
 #include "NetworkStack.h"
 #include "Endpoint.h"
 #include "TcpMisc.h"
+#include "Tcp.h"
+
+/// This is passed a given StateBlock and its sole purpose is to remove it
+/// from the system. It's called as a thread when the TIME_WAIT timeout expires
+/// to enable the block to be freed without requiring intervention.
+int stateBlockFree(void* p);
 
 // TCP is based on connections, so we need to keep track of them
 // before we even think about depositing into Endpoints. These state blocks
 // keep track of important information relating to the connection state.
 class StateBlock : public TimerHandler
 {
+  private:
+  
+    struct Segment
+    {
+      uint32_t  seg_seq; // segment sequence number
+      uint32_t  seg_ack; // ack number
+      uint32_t  seg_len; // segment length
+      uint32_t  seg_wnd; // segment window
+      uint32_t  seg_up; // urgent pointer
+      uint8_t   flags;
+      
+      uintptr_t payload;
+      size_t    nBytes;
+    };
+    
   public:
     StateBlock() :
       currentState(Tcp::CLOSED), localPort(0), remoteHost(),
@@ -40,7 +62,7 @@ class StateBlock : public TimerHandler
       waitState(0), pCard(0), endpoint(0), connId(0),
       retransmitQueue(), nRemovedFromRetransmit(0),
       waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
-      m_Nanoseconds(0), m_Seconds(0), m_Timeout(30)
+      m_Nanoseconds(0), m_Seconds(0), m_Timeout(10)
     {
       Timer* t = Machine::instance().getTimer();
       if(t)
@@ -103,10 +125,126 @@ class StateBlock : public TimerHandler
     size_t connId;
     
     // retransmission queue
-    TcpBuffer retransmitQueue;
+    //TcpBuffer retransmitQueue;
+    List<void*> retransmitQueue;
     
     // number of bytes removed from the retransmit queue
     size_t nRemovedFromRetransmit;
+    
+    /// Handles a segment ack
+    /// \note This will remove acked segments, however if there is only a partial ack on a segment
+    ///       it will split it into two, remove the first, and leave a partial segment on the queue.
+    ///       This behaviour does not affect anything internally as long as this function is always
+    ///       used to acknowledge segments.
+    void ackSegment()
+    {
+      // we assume the seg_* variables have been set by the caller (always done in TcpManager::receive)
+      uint32_t segAck = seg_ack;
+      while(retransmitQueue.count())
+      {
+        // grab the first segment from the queue
+        Segment* seg = reinterpret_cast<Segment*>(retransmitQueue.popFront());
+        if((seg->seg_seq + seg->seg_len) <= segAck)
+        {
+          // this segment is acked, leave it off the queue and free the memory used
+          if(seg->payload)
+            delete [] (reinterpret_cast<uint8_t*>(seg->payload));
+          
+          delete seg;
+          continue;
+        }
+        else
+        {
+          // check if the ack is within this segment
+          if(segAck >= seg->seg_seq)
+          {
+            // it is, so we need to split the segment payload
+            Segment* splitSeg = new Segment;
+            *splitSeg = *seg;
+            
+            // how many bytes are acked?
+            /// \bug This calculation *may* have an off-by-one error
+            size_t nBytesAcked = segAck - seg->seg_seq;
+            
+            // update the sequence number
+            splitSeg->seg_seq = seg->seg_seq + nBytesAcked;
+            splitSeg->seg_len -= nBytesAcked;
+            
+            // and most importantly, recopy the payload
+            if(seg->nBytes && seg->payload)
+            {
+              uint8_t* newPayload = new uint8_t[splitSeg->seg_len];
+              memcpy(newPayload, reinterpret_cast<void*>(seg->payload), seg->nBytes);
+              
+              splitSeg->payload = reinterpret_cast<uintptr_t>(newPayload);
+            }
+            
+            // push on the front, and don't continue (we know there's no potential for further ACKs)
+            retransmitQueue.pushFront(reinterpret_cast<void*>(splitSeg));
+            if(seg->payload)
+              delete [] (reinterpret_cast<uint8_t*>(seg->payload));
+            delete seg;
+            return;
+          }
+        }
+      }
+    }
+    
+    /// Sends a segment over the network
+    bool sendSegment(Segment* seg)
+    {
+      if(seg)
+      {
+        Tcp::send(remoteHost.ip, localPort, remoteHost.remotePort, seg->seg_seq, rcv_nxt, seg->flags, seg->seg_wnd, seg->nBytes, seg->payload, pCard);
+        return true; /// \todo Tcp::send needs to return true or false!
+      }
+      return false;
+    }
+    
+    /// Sends a segment over the network
+    bool sendSegment(uint8_t flags, size_t nBytes, uintptr_t payload, bool addToRetransmitQueue)
+    {
+      // split the passed buffer up into 1024 byte segments and send each
+      size_t offset;
+      for(offset = 0; offset < (nBytes == 0 ? 1 : nBytes); offset += 1024)
+      {
+        Segment* seg = new Segment;
+        
+        size_t segmentSize = 0;
+        if((offset + 1024) >= nBytes)
+          segmentSize = nBytes - offset;
+        
+        seg_seq = snd_nxt;
+        snd_nxt += segmentSize;
+        
+        seg->seg_seq = seg_seq;
+        seg->seg_ack = rcv_nxt;
+        seg->seg_len = segmentSize;
+        seg->seg_wnd = snd_wnd;
+        seg->seg_up = 0;
+        seg->flags = flags;
+        
+        if(nBytes && payload)
+        {
+          uint8_t* newPayload = new uint8_t[nBytes];
+          memcpy(newPayload, reinterpret_cast<void*>(payload), nBytes);
+          
+          seg->payload = reinterpret_cast<uintptr_t>(newPayload);
+        }
+        else
+          seg->payload = 0;
+        seg->nBytes = seg->seg_len;
+        
+        sendSegment(seg);
+        
+        if(addToRetransmitQueue)
+          retransmitQueue.pushBack(reinterpret_cast<void*>(seg));
+        else
+          delete seg;
+      }
+      
+      return true;
+    }
     
     // timer for all retransmissions (and state changes such as TIME_WAIT)
     virtual void timer(uint64_t delta, InterruptState& state)
@@ -119,7 +257,6 @@ class StateBlock : public TimerHandler
         m_Nanoseconds += delta;
         if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
         {
-          NOTICE("Another second: " << Dec << m_Seconds << ", " << m_Timeout << Hex << "...");
           ++m_Seconds;
           m_Nanoseconds -= 1000000000ULL;
         }
@@ -132,18 +269,20 @@ class StateBlock : public TimerHandler
           if(useWaitSem)
             timeoutWait.release();
           
-          NOTICE("Retransmit timer fired!");
-          
           // check to see if there's data on the retransmission queue to send
-          if(retransmitQueue.getSize())
+          if(retransmitQueue.count())
           {
-            // still more data unacked
             NOTICE("Remote TCP did not ack all the data!");
             
-            //TcpManager::instance().send(connId, retransmitQueue.getBuffer(), true, retransmitQueue.getSize(), false);
+            // still more data unacked - grab the first segment and transmit it
+            // note that we don't pop it off the queue permanently, as we are still
+            // waiting for an ack for the segment
+            Segment* seg = reinterpret_cast<Segment*>(retransmitQueue.popFront());
+            sendSegment(seg);
+            retransmitQueue.pushFront(reinterpret_cast<void*>(seg));
             
             // reset the timeout
-            //resetTimer();
+            resetTimer();
           }
           else if(currentState == Tcp::TIME_WAIT)
           {
@@ -151,17 +290,22 @@ class StateBlock : public TimerHandler
             NOTICE("TIME_WAIT timeout complete");
             currentState = Tcp::CLOSED;
             
-            /// \todo How to remove this connection and free the object, when this function is called from
+            /// \todo How to remove this connection and free *this* (ie, this) object, when this function is called from
             ///       its instance?
+            /// \note I'll do this by having a special trampoline function that destroys the stateBlock, it'll call a thread
+            ///       which will do the dirty work for me.
+            
+            new Thread(Processor::information().getCurrentThread()->getParent(),
+              reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
+              reinterpret_cast<void*> (this));
           }
         }
       }
     }
     
     // resets the timer (to restart a timeout)
-    void resetTimer(uint32_t timeout = 30)
+    void resetTimer(uint32_t timeout = 10)
     {
-      NOTICE("resetTimer(" << Dec << timeout << Hex << ");");
       m_Seconds = m_Nanoseconds = 0;
       m_Timeout = timeout;
       didTimeout = false;
@@ -197,7 +341,7 @@ class StateBlock : public TimerHandler
       waitState(0), pCard(0), endpoint(0), connId(0),
       retransmitQueue(), nRemovedFromRetransmit(0),
       waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
-      m_Nanoseconds(0), m_Seconds(0), m_Timeout(30)
+      m_Nanoseconds(0), m_Seconds(0), m_Timeout(10)
     {
       // same as TcpEndpoint - the copy constructor should not be called
       ERROR("Tcp: StateBlock copy constructor called");

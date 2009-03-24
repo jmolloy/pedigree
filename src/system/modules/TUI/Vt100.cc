@@ -430,24 +430,33 @@ void Vt100::Window::setCursorY(uint32_t y)
   // Re-render whatever was at the cursor position (without the inverted colours).
   uint16_t data = m_pData[m_CursorX + m_CursorY*m_nWidth];
   m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>12)&0xF], m_pParent->m_pColours[(data>>8)&0xF]);
-
+  
   // Now adjust the cursor and render.
   m_CursorY = y+m_View;
+  
 
   // Have we gone off the screen?
   if (m_CursorY > m_nScrollMax)
   {
     // Assume that we can only go off the screen by one line... (bad but nice assumption).
-    m_CursorY --; // Bring the cursor back onto the screen.
+    //m_CursorY --; // Bring the cursor back onto the screen.
+    
+    size_t nLines = m_CursorY - m_nScrollMax;
+    m_CursorY -= nLines;
 
     // If the scroll region is set (m_nScrollMin != 0), only scroll that region.
     memmove (reinterpret_cast<uint8_t*>(&m_pData[m_nScrollMin*m_nWidth]),
-             reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+1)*m_nWidth]),
-             (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
-    // Zero out the last row.
-    for (int i = 0; i < m_nWidth; i++)
+             reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+nLines)*m_nWidth]),
+             nLines * ((m_nScrollMax-m_nScrollMin)*m_nWidth*2));
+    
+    // Zero out the last rows.
+    size_t base = m_nScrollMax - nLines;
+    for(size_t line = 0; line <= nLines; line++)
     {
-      m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      for (int i = 0; i < m_nWidth; i++)
+      {
+        m_pData[i+(base + line)*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      }
     }
 
     // Refresh all.
@@ -470,6 +479,11 @@ void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
   }
   else
   {
+    if((start+m_View) > (end+m_View))
+    {
+      ERROR("m_nScrollMin > m_nScrollMax [" << start << ", " << end << ", " << m_View << "]");
+      return;
+    }
     m_nScrollMin = start+m_View;
     m_nScrollMax = end+m_View;
   }
