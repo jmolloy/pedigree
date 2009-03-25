@@ -1,5 +1,5 @@
 export PATH=/usr/pedigree-native/bin:/applications
-export TERM=vt100
+export TERM=xterm
 export RUBYLIB=/libraries/ruby
 
 if [ "$TERM" != "dumb" ]; then

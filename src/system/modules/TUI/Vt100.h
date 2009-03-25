@@ -148,6 +148,7 @@ private:
 
   /// Did this state include a '['? This changes the way some commands are interpreted.
   bool m_bContainedBracket;
+  bool m_bContainedParen;
 
   /// Don't refresh - a string is being processed and a full screen refresh will take place at the end of it.
   bool m_bDontRefresh;

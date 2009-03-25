@@ -67,7 +67,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     else
     {
       // In a graphics mode - forward to the VT100 object.
-      g_pVt100->setNewlineNLCR(m_NlCausesCr);
+      g_pVt100->setNewlineNLCR(true/*m_NlCausesCr*/);
       g_pVt100->write(buf);
 
       delete [] buf;
@@ -127,8 +127,8 @@ NOTICE("TUI: read: Return " << Hex << i);
             break;
           case KB_ARROWRIGHT:
             c = '\e';
-            //m_pQueue[m_QueueLength++] = '[';
-            m_pQueue[m_QueueLength++] = 'O';
+            m_pQueue[m_QueueLength++] = '[';
+            //m_pQueue[m_QueueLength++] = 'O';
             m_pQueue[m_QueueLength++] = 'C';
             break;
           case KB_ARROWUP:

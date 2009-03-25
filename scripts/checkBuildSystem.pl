@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 my $gcc_version = "4.3.2";
-my $binutils_version = "2.19";
+my $binutils_version = "2.19.1";
 my $nasm_version = "2.02";
 
 
@@ -51,7 +51,7 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
-                 'arch' => 'i686-elf amd64-elf arm-elf ppc-elf',
+                 'arch' => 'i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc (mips)",

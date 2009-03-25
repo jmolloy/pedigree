@@ -68,13 +68,14 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
-  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
+  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications
   sudo mkdir -p $MOUNTPT/libraries
   sudo mkdir -p $MOUNTPT/modules
+  sudo mkdir -p $MOUNTPT/tmp
 
   # This is a root filesystem.
   sudo touch $MOUNTPT/.pedigree-root

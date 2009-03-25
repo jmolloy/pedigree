@@ -28,7 +28,7 @@
 Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
   m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT),
-  m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bDontRefresh(false),
+  m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bContainedParen(false), m_bDontRefresh(false),
   m_SavedX(0), m_SavedY(0)
 {
   // Precompile colour list.
@@ -62,6 +62,17 @@ Vt100::~Vt100()
 
 void Vt100::write(char *str)
 {
+  String s(str);
+  char *pStr = const_cast<char*>(static_cast<const char*>(s));
+  int j = s.length();
+  for (int i = 0; i < j; i++)
+  {
+    if(pStr[i] == '\e') pStr[i] = '\\';
+    if (pStr[i] < 0x20) pStr[i] = '#';
+    if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
+  }
+  NOTICE("W: " << pStr);
+    
   while (*str)
     write(*str++);
 }
@@ -75,11 +86,20 @@ void Vt100::write(char c)
     // A VT100 command is being received.
     if (c == '?') return; // Useless character.
 
+    if (m_bContainedParen)
+    {
+      m_bChangingState = false;
+      return;
+    }
+
     switch (c)
     {
       case '[':
         m_bContainedBracket = true;
         break;
+      case '(':
+        m_bContainedParen = true;
+        break; 
       case '0':
       case '1':
       case '2':
@@ -139,6 +159,16 @@ void Vt100::write(char c)
         }
         m_bChangingState = false;
         break;
+      case 'd':
+	// Absolute row reference. (XTERM)
+	m_pWindows[m_CurrentWindow]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
+	m_bChangingState = false;
+	break;
+      case 'G':
+	// Absolute column reference. (XTERM)
+	m_pWindows[m_CurrentWindow]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
+	m_bChangingState = false;
+	break;
       case 'M':
         m_pWindows[m_CurrentWindow]->scrollUp();
         m_bChangingState = false;
@@ -157,6 +187,7 @@ void Vt100::write(char c)
             break;
         }
         m_bChangingState = false;
+	break;
       case 'K':
         switch (m_Cmd.params[0])
         {
@@ -171,6 +202,7 @@ void Vt100::write(char c)
             break;
         }
         m_bChangingState = false;
+	break;
       case 'r':
         m_pWindows[m_CurrentWindow]->setScrollRegion( (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
                                                       (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
@@ -230,6 +262,7 @@ void Vt100::write(char c)
           }
         }
         m_bChangingState = false;
+	break;
       }
       case '\e':
         // We received another VT100 command while expecting a terminating command - this must mean it's one of \e7 or \e8.
@@ -280,6 +313,7 @@ void Vt100::write(char c)
       case '\e':
         m_bChangingState = true;
         m_bContainedBracket = false;
+	m_bContainedParen = false;
         m_Cmd.cur_param = 0;
         m_Cmd.params[0] = 0;
         m_Cmd.params[1] = 0;
