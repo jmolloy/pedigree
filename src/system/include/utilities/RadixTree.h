@@ -40,6 +40,10 @@ private:
   class Node
   {
   public:
+    Node() :
+      key(),value(0),children(0),parent(0),_next(0),prev(0)
+    {}
+
     String key;
     void *value;
     struct Node *children;
@@ -72,6 +76,9 @@ private:
      *\note Not implemented! */
     Node *previous()
       {return 0;}
+  private:
+    Node(const Node&);
+    Node &operator =(const Node&);
   };
 
 public:
@@ -85,7 +92,7 @@ public:
   RadixTree();
   /** The copy-constructor
    *\param[in] x the reference object to copy */
-  RadixTree(const RadixTree &x);
+  RadixTree(const RadixTree<void*> &x);
   /** The destructor, deallocates memory */
   ~RadixTree();
 

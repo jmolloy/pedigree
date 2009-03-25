@@ -216,7 +216,9 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
+#ifndef PPC_COMMON
   IoBase *controlRegs = pParent->m_pControlRegs;
+#endif
 
   // Get the buffer in pointer form.
   uint16_t *pTarget = reinterpret_cast<uint16_t*> (buffer);
@@ -258,8 +260,9 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     }
 
     // Enable disk interrupts
+#ifndef PPC_COMMON
     controlRegs->write8(0x08, 6);
-
+#endif
     // Make sure the IrqReceived mutex is locked.
     m_IrqReceived.tryAcquire();
 

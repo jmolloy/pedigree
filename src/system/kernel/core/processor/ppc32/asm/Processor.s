@@ -31,6 +31,9 @@
 # extern "C" void sdr1_trampoline(uint32_t sdr1)
 .global sdr1_trampoline
 
+# volatile bool bSafeToDisembark
+.extern bSafeToDisembark
+
 start:
   lis 1, stack@ha
   addi 1,1, stack@l
@@ -61,6 +64,13 @@ _ZN9Processor13getInterruptsEv:
   blr
 
 _ZN9Processor13contextSwitchEP19PPC32InterruptState:
+  # Inform the scheduler that we've used all we need from our 
+  # current stack (MP issues).
+  addi  4, 0, 1        # r4 = $1
+  lis   5, bSafeToDisembark@ha # Load &bSafeToDisembark into r5
+  addi  5, 5, bSafeToDisembark@l
+  stw   4, 0(5)        # [bSafeToDisembark] = $0x1
+
   mr    21, 3          # R21 = bottom of interrupt state (lowest address)
   addi  21, 21, 0xa4   # R21 = top of interrupt state (highest address)
   lwz     31, -0x04(21)

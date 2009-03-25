@@ -60,10 +60,5 @@ if(PPC_COMMON)
   add_subdirectory(ppc_common)
 endif(PPC_COMMON)
 
-if(NOT ARM_COMMON)
-  add_kernel_src(core/processor
-                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)
-else(NOT ARM_COMMON)
-  add_kernel_src(core/processor
-                 PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc  StackFrameBase.cc VirtualAddressSpace.cc)
-endif(NOT ARM_COMMON)
+add_kernel_src(core/processor
+               PhysicalMemoryManager.cc IoPort.cc IoPortManager.cc Processor.cc StackFrameBase.cc VirtualAddressSpace.cc)

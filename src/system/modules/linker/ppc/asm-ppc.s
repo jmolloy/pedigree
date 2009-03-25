@@ -27,3 +27,4 @@ plt_call:
   bctr            # 16
 
   nop             # 17
+  nop             # 18

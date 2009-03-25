@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Elf.h>
+#include <linker/Elf.h>
 #include <Log.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 // http://refspecs.freestandards.org/elf/elfspec_ppc.pdf
 
@@ -57,14 +57,14 @@
 #define LOW14(r, x) (r | ((x<<2)&0x0000FFFC))
 #define WORD30(r, x) (r | ((x<<2)&0xFFFFFFFC))
 
-bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   // Section not loaded?
   if (pSh && pSh->addr == 0)
     return true; // Not a fatal error.
 
   // Get the address of the unit to be relocated.
-  uint32_t address = ((pSh) ? pSh->addr : m_LoadBase) + rel.offset;
+  uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
   // Addend is explicitly given.
   uint32_t A = rel.addend;
@@ -76,13 +76,13 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn
   uint32_t S = 0;
   ElfSymbol_t *pSymbols = 0;
   if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable->addr);
+    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
   else
     pSymbols = m_pDynamicSymbolTable;
 
   const char *pStringTable = 0;
   if (!m_pDynamicStringTable)
-    pStringTable = reinterpret_cast<const char *> (m_pStringTable->addr);
+    pStringTable = reinterpret_cast<const char *> (m_pStringTable);
   else
     pStringTable = m_pDynamicStringTable;
 
@@ -94,34 +94,26 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn
     ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
-  else
+  else if (ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE) // Relative doesn't need a symbol!
   {
-    if (pSymbols[ELF32_R_SYM(rel.info)].name != 0)
-    {
-      const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
-      S = lookupSymbol(pStr);
-      if (fn == 0)
-      {
-        S = lookupSymbol(pStr);
-        if (S == 0)
-          S = KernelElf::instance().globalLookupSymbol(pStr);
-
-        if (S == 0)
-          WARNING("Relocation failed for symbol \"" << pStr << "\"");
-      }
-      else
-      {
-        S = fn(pStr);
-        if (S == 0)
-          WARNING("Relocation failed (2) for symbol \"" << pStr << "\"");
-      }
-    }
+    const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
+    
+    if (pSymtab == 0)
+      pSymtab = KernelElf::instance().getSymbolTable();
+    
+    if (ELF32_R_TYPE(rel.info) == R_PPC_COPY)
+      policy = SymbolTable::NotOriginatingElf;
+    S = pSymtab->lookup(String(pStr), this, policy);
+    
+    if (S == 0)
+      WARNING("Relocation failed for symbol \"" << pStr << "\"");
   }
-  if (S == 0 && pSymbols[ELF32_R_SYM(rel.info)].name != 0)
+
+  if (S == 0 && (ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE))
     return false;
 
   // Base address
-  uint32_t B = m_LoadBase;
+  uint32_t B = loadBase;
 
   uint32_t *pResult = reinterpret_cast<uint32_t*> (address);
   uint32_t result = *pResult;
@@ -163,7 +155,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn
       result &= ~(1>>10); // Branch predict 0
       break;
     case R_PPC_RELATIVE:
-      result = *pResult + B;
+      result = *pResult + B; /// \todo Should be A + B?
       break;
     case R_PPC_REL24:
       result = LOW24(result,  (S+A-P)>>2 );
@@ -186,6 +178,9 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn
     case R_PPC_ADDR30:
       result = WORD30(result,  (S+A-P) >> 2 );
       break;
+    case R_PPC_COPY:
+      result = * reinterpret_cast<uintptr_t*> (S);
+      break;
     default:
       ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
   }
@@ -195,7 +190,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolLookupFn
   return true;
 }
 
-bool Elf::applyRelocation(ElfRel_t rela, ElfSectionHeader_t *pSh, SymbolLookupFn fn)
+bool Elf::applyRelocation(ElfRel_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   ERROR("The PPC architecture does not use REL entries!");
   return false;

@@ -49,6 +49,22 @@ public:
    *         character was present.
    */
   virtual char getCharNonBlock();
+
+  /**
+   * Retrieves a character from the keyboard in special descriptor format.
+   * Blocking I/O.
+   * \return The character received along with any modifier keys used.
+   */
+  virtual Character getCharacter();
+
+  /**
+   * Retrieves a character from the keyboard in special descriptor format.
+   * Nonblocking I/O.
+   * \return The character recieved along with any modifier keys used. The character
+   *         can be tested for validity with the CHARACTER_VALID macro.
+   */
+  virtual Character getCharacterNonBlock();
+
   
   /**
    * \return True if shift is currently held.

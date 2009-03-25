@@ -19,6 +19,7 @@
 #include "../ppc32/VirtualAddressSpace.h"
 #include <Log.h>
 #include <panic.h>
+#include <processor/MemoryRegion.h>
 
 PpcCommonPhysicalMemoryManager PpcCommonPhysicalMemoryManager::m_Instance;
 
@@ -183,6 +184,27 @@ void PpcCommonPhysicalMemoryManager::initialise(Translations &translations, uint
 
   // ...And we're now in normal mode.
   m_InitialMode = false;
+}
+
+void PpcCommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
+{
+  
+  for (Vector<MemoryRegion*>::Iterator it = PhysicalMemoryManager::m_MemoryRegions.begin();
+       it != PhysicalMemoryManager::m_MemoryRegions.end();
+       it++)
+  {
+    if (*it == pRegion)
+    {
+      size_t cPages = pRegion->size() / PhysicalMemoryManager::getPageSize();
+      uintptr_t start = reinterpret_cast<uintptr_t> (pRegion->virtualAddress());
+      VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+      for (size_t i = 0;i < cPages;i++)
+        virtualAddressSpace.unmap(reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize()));
+      m_MemoryRegions.free(start, pRegion->size());
+      PhysicalMemoryManager::m_MemoryRegions.erase(it);
+      break;
+    }
+  }
 }
 
 PpcCommonPhysicalMemoryManager::PageStack::PageStack() :

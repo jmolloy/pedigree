@@ -11,7 +11,10 @@ Dma::Dma(IoBase *pRegs, IoBase *pFb, NvCard card, NvType type, uintptr_t ramSize
 
   if (!PhysicalMemoryManager::instance().allocateRegion(m_DmaBuffer,
                                                         10,
-                                                        PhysicalMemoryManager::below16MB | PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+#ifdef X86_COMMON
+                                                        PhysicalMemoryManager::below16MB | 
+#endif
+							PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
                                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write))
   {
     ERROR("NVIDIA: Dma buffer allocation failed!");

@@ -1,4 +1,3 @@
-
 #
 # Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
 #
@@ -15,15 +14,14 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-#
-# NOTE: To ensure proper scoping, the add_subdirectory calls must come BEFORE
-#       any add_kernel_src's in this file. Additionally, at least one add_kernel_src
-#       MUST be added. If no files are to be added, just do "add_kernel_src(directory)".
-#
+add_non_user_options(PPC_COMMON PPC32 BITS_32 BIG_ENDIAN KERNEL_PROCESSOR_NO_PORT_IO OMIT_FRAMEPOINTER OPENFIRMWARE PPC_MAC THREADS)
+set(BOOTLOADER_BUILT bootloader)
 
-add_subdirectory(lib)
-add_subdirectory(process)
-add_subdirectory(processor)
-
-add_kernel_src(core
-               main.cc BootIO.cc KernelCoreSyscallManager.cc)
+set(PEDIGREE_CFLAGS "-fno-builtin -fno-stack-protector -nostdlib -fomit-frame-pointer")
+set(PEDIGREE_CXXFLAGS "-Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-builtin -fno-exceptions -fno-rtti -fno-stack-protector -nostdlib -fomit-frame-pointer")
+if(OMIT_FRAME_POINTER)
+  set(PEDIGREE_CFLAGS "${PEDIGREE_CFLAGS} -fomit-frame-pointer")
+  set(PEDIGREE_CXXFLAGS "${PEDIGREE_CXXFLAGS} -fomit-frame-pointer")
+endif(OMIT_FRAME_POINTER)
+set(PEDIGREE_ASFLAGS "")
+set(LINKER_SCRIPT "${PEDIGREE_SOURCE_DIR}/src/system/kernel/link-ppc.ld")

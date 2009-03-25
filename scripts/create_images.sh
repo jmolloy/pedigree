@@ -13,7 +13,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-
+exit;
 IMG=floppy.img
 OFF=0
 HDIMG=hdd_16h_63spt_100c.img
@@ -25,7 +25,7 @@ HDFILES=$@
 init() {
     DEV=`sudo losetup -j $IMG | cut -f1 -d:`
     if test "x$DEV" = x ; then
-        DEV=`sudo losetup --verbose --find -o $OFF $IMG | \
+        DEV=`sudo losetup --verbose -f -o $OFF $IMG | \
              awk '/\/dev\/loop/{print $4}'`
     fi
     mount | grep $DEV > /dev/null || {
@@ -48,7 +48,7 @@ fini() {
 
 trap fini EXIT
 
-if which losetup >/dev/null 2>&1; then
+if sudo which losetup >/dev/null 2>&1; then
   mkdir -p $MOUNTPT
 
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
@@ -68,7 +68,8 @@ if which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications

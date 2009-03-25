@@ -102,13 +102,12 @@ function(add_option var text default)
   endif(${var})
 endfunction(add_option)
 
-function(add_non_user_options var)
+function(add_non_user_options)
   foreach(e ${ARGN})
     set(${e} ON CACHE INTERNAL "bleh" FORCE)
     add_definitions("-D${e}=1")
   endforeach(e)
 endfunction(add_non_user_options)
-
 
 function(add_non_user_option e)
   set(${e} ON CACHE INTERNAL "bleh" FORCE)
@@ -117,7 +116,6 @@ endfunction(add_non_user_option)
 
 include("${PEDIGREE_SOURCE_DIR}/scripts/CMakeOptions-${ARCH}.cmake")
 include("${PEDIGREE_SOURCE_DIR}/scripts/CMakeOptions-all.cmake")
-
 #########################################################################################
 # Supplemental CFLAGS setup.
 
@@ -200,5 +198,11 @@ add_custom_target(create_images ALL bash ../scripts/create_images.sh ${HDD_FILES
                   WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 
 add_dependencies(create_images initrd bash nano ncurses irb ruby)
+
+add_subdirectory(src/system/boot)
+
+if(PPC_COMMON)
+  add_dependencies(autogen_initrd.h initrd)
+endif(PPC_COMMON)
 
 include(CPack)

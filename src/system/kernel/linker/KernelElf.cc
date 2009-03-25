@@ -155,7 +155,6 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     }
   }
 
-
   return true;
 }
 

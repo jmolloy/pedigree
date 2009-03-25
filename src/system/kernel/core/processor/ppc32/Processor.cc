@@ -23,6 +23,7 @@
 #include "VirtualAddressSpace.h"
 #include "InterruptManager.h"
 #include "Translation.h"
+#include <process/initialiseMultitasking.h>
 #include <Log.h>
 #include <panic.h>
 
@@ -30,6 +31,7 @@ static uint32_t detectMemory()
 {
   // Grab the memory node.
   OFDevice memory (OpenFirmware::instance().findDevice("/memory"));
+
   // Ask it about its registers.
   uint32_t registersLength = memory.getPropertyLength("reg");
   if (registersLength == static_cast<uint32_t> (-1))
@@ -65,14 +67,9 @@ static uint32_t detectMemory()
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise openfirmware.
+
   OpenFirmware::instance().initialise(reinterpret_cast<OpenFirmware::OFInterface> (Info.prom));
 
-  // TODO: Initialise the physical memory-management
-//   m_Initialised = 1;
-}
-
-void Processor::initialise2()
-{
   Translations translations;
   uint32_t ramMax = detectMemory();
 
@@ -92,7 +89,6 @@ void Processor::initialise2()
   // Initialise this processor's interrupt handling
   /// \note This is now done in HashedPageTable::initialise, so that page table
   ///       problems can be caught easier.
-  //PPC32InterruptManager::initialiseProcessor();
 
   // Initialise the virtual address space.
   v.initialRoster(translations);
@@ -102,12 +98,21 @@ void Processor::initialise2()
     (PpcCommonPhysicalMemoryManager::instance());
   p.initialise(translations, ramMax);
 
+  // TODO: Initialise the physical memory-management
+//   m_Initialised = 1;
+}
+
+void Processor::initialise2()
+{
+
   // Floating point is available.
   uint32_t msr;
   asm volatile("mfmsr %0" : "=r" (msr));
   msr |= MSR_FP;
   asm volatile("mtmsr %0" :: "r" (msr));
 
+  initialiseMultitasking();
+  
   m_Initialised = 2;
 }
 

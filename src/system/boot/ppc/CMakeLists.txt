@@ -29,7 +29,9 @@ add_custom_target(autogen.h ALL perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc)
 
 # Add an extra target to create the bootloader.
-add_custom_target(autogen_initrd.h ALL perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/mkheader.pl ${PEDIGREE_BINARY_DIR}/initrd.tar
+add_custom_target(autogen_initrd.h ALL mv ${PEDIGREE_BINARY_DIR}/initrd.tar /tmp/initrd.tar.gz
+                                   COMMAND gunzip -f /tmp/initrd.tar.gz
+				   COMMAND perl ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc/mkheader.pl /tmp/initrd.tar
                   WORKING_DIRECTORY ${PEDIGREE_SOURCE_DIR}/src/system/boot/ppc)
 
 add_executable(bootloader ${BOOT_SRC})

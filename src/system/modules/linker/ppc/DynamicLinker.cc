@@ -101,7 +101,10 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
   // Find the correct ELF to patch.
   Elf *pElf = 0;
+  Elf *pOrigElf = 0;
   uintptr_t loadBase = 0;
+
+  pOrigElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
 
   if (libraryId == 0)
     pElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
@@ -121,8 +124,8 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
     }
   }
 
-  pElf->setLoadBase(loadBase);
-  uintptr_t result = pElf->applySpecificRelocation(symIdx/4, &resolve);
+  /// \todo Why is there a /4 here?
+  uintptr_t result = pElf->applySpecificRelocation(symIdx/4, pOrigElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
 
   return result;
 }

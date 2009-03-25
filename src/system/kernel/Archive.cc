@@ -37,7 +37,6 @@ Archive::Archive(uint8_t *pPhys, size_t sSize) :
   {
     ERROR("Archive: allocateRegion failed.");
   }
-
 }
 
 Archive::~Archive()

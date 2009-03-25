@@ -247,6 +247,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     {
       case Thread::Running: Line += "r"; break;
       case Thread::Ready:   Line += "R"; break;
+      case Thread::PreSleep:Line += "P"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
     }

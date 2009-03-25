@@ -56,6 +56,8 @@ public:
 
   void initialise(Translations &translations, uintptr_t ramMax);
 
+  void unmapRegion(MemoryRegion *pRegion);
+
 protected:
   /** The constructor */
   PpcCommonPhysicalMemoryManager();

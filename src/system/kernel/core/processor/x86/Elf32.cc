@@ -40,11 +40,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
 
   // Get the address of the unit to be relocated.
   uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
-  if (address == 0x080fd6a8)
-  {
-    NOTICE("loadBase: " << loadBase << ", rel.offset: " << rel.offset);
-    NOTICE("Elf: " << (uintptr_t)this);
-  }
+
   // Addend is the value currently at the given address.
   uint32_t A = * reinterpret_cast<uint32_t*> (address);
 

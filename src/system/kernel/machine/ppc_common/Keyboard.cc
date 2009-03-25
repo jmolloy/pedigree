@@ -35,30 +35,68 @@ void PPCKeyboard::initialise()
 
 char PPCKeyboard::getChar()
 {
-  char c[4];
-  while (OpenFirmware::instance().call("read", 3, m_Dev,
-                                       reinterpret_cast<OFParam> (c),
-                                       reinterpret_cast<OFParam> (4)) != 0)
-    ;
-  if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
-    return 0;
-  else
-    return c[0];
+  //  if (m_bDebugState)
+  //{
+    char c[4];
+    while (OpenFirmware::instance().call("read", 3, m_Dev,
+					 reinterpret_cast<OFParam> (c),
+					 reinterpret_cast<OFParam> (4)) != 0)
+      ;
+    if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
+      return 0;
+    else
+      return c[0];
+    //}
+    //else
+    // {
+    //FATAL("KEYBOARD: getChar() should not be called in normal mode!");
+    //return 0;
+    // }
 }
 
 char PPCKeyboard::getCharNonBlock()
 {
-  char c[4];
-  if (OpenFirmware::instance().call("read", 3, m_Dev,
-                                    reinterpret_cast<OFParam> (c),
-                                    reinterpret_cast<OFParam> (4)) != 0)
-    return 0;
-  if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
-    return 0;
-  if (c[0] == '\r')
-    return '\n';
-  else
-    return c[0];
+  //if (m_bDebugState)
+  //{
+    char c[4];
+    if (OpenFirmware::instance().call("read", 3, m_Dev,
+				      reinterpret_cast<OFParam> (c),
+				      reinterpret_cast<OFParam> (4)) != 0)
+      return 0;
+    if ((c[0] < ' ' || c[0] > '~') && c[0] != '\r' && c[0] != 0x08 && c[0] != 0x09)
+      return 0;
+    if (c[0] == '\r')
+      return '\n';
+    else
+      return c[0];
+    //}
+    //else
+    //{
+    //FATAL("KEYBOARD: getCharNonBlock() should not be called in normal mode!");
+    //return 0;
+    // }
+}
+
+Keyboard::Character PPCKeyboard::getCharacter()
+{
+  Character c;
+  c.valid = 1;
+  c.ctrl = c.alt = c.shift = c.caps_lock = 0;
+  c.num_lock = c.is_special = c.reserved = 0;
+  c.value = getChar();
+
+  return c;
+}
+
+Keyboard::Character PPCKeyboard::getCharacterNonBlock()
+{
+  Character c;
+  c.valid = 1;
+  c.ctrl = c.alt = c.shift = c.caps_lock = 0;
+  c.num_lock = c.is_special = c.reserved = 0;
+  c.value = getCharNonBlock();
+
+  return c;
 }
 
 void PPCKeyboard::setDebugState(bool enableDebugMode)

@@ -57,8 +57,7 @@ void Semaphore::acquire(size_t n)
       m_BeingModified.release();
       return;
     }
-    Thread *pThread = Processor::information().getCurrentThread();
-
+    
     if (Processor::information().getCurrentThread()->getStatus() != Thread::Sleeping)
     {
       m_Queue.pushBack(Processor::information().getCurrentThread());

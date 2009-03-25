@@ -57,6 +57,7 @@ public:
 
   /** Copy constructor. */
   SymbolTable(const SymbolTable &symtab);
+  
 
   /** Insert a symbol into the table. */
   void insert(String name, Binding binding, Elf *pParent, uintptr_t value);
@@ -76,6 +77,10 @@ public:
   uintptr_t lookup(String name, Elf *pElf, Policy policy=LocalFirst, Binding *pBinding=0);
 
 private:
+  /** Copy constructor.
+      \note NOT implemented. */
+  SymbolTable &operator =(const SymbolTable&);
+
   class Symbol
   {
   public:
