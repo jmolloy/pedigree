@@ -78,7 +78,6 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
   }
 
   /// \todo Sanity checks.
-  NOTICE("tcsetattr, c_oflag = " << p->c_oflag << " c_iflag = " << p->c_iflag << " c_cflag = " << p->c_cflag << " c_lflag = " << p->c_lflag);
   ConsoleManager::instance().setAttributes(pFd->file, p->c_lflag&ECHO, p->c_lflag&ECHONL, p->c_lflag&ECHOE, p->c_lflag&ONLRET);
 
   return 0;

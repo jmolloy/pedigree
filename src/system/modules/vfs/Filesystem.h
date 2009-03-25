@@ -109,7 +109,7 @@ private:
       parent directory in parent, if it exists or not.
 
       Even if the file didn't exist, the parent is guaranteed to be returned (if the parent directory existed). */
-  File* findNode(String path, File* parent);
+  File* findNode(String path, File*& parent);
 
   /** Internal function to attempt to read from the cache the File for the given canonical path, along with its parent. */
   File* cacheLookup(List<String*> &canonicalPath, File* & parent);

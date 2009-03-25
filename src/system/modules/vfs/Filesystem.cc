@@ -149,7 +149,7 @@ bool Filesystem::remove(String path)
   return ret;
 }
 
-File* Filesystem::findNode(String path, File* parent)
+File* Filesystem::findNode(String path, File*& parent)
 {
 
   List<String*> tokens;

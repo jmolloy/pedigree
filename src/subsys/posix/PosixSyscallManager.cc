@@ -25,6 +25,7 @@
 #include "system-syscalls.h"
 #include "console-syscalls.h"
 #include "net-syscalls.h"
+#include "pipe-syscalls.h"
 
 PosixSyscallManager::PosixSyscallManager()
 {
@@ -60,7 +61,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
   /// \todo This needs to be implemented for posix_recvfrom/posix_sendto
   // uintptr_t p6 = state.getSyscallParameter(5);
 
-//  NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << state.getSyscallNumber());
+  //NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
 
   // We're interruptible.
   Processor::setInterrupts(true);
@@ -145,6 +146,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_gethostbyname(reinterpret_cast<const char*>(p1), reinterpret_cast<void*>(p2), static_cast<int>(p3));
     case POSIX_GETHOSTBYADDR:
       return posix_gethostbyaddr(reinterpret_cast<const void*>(p1), static_cast<unsigned long>(p2), static_cast<int>(p3), reinterpret_cast<void*>(p4));
+    case POSIX_FCNTL:
+      return posix_fcntl(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3), reinterpret_cast<int*>(p4));
+    case POSIX_PIPE:
+      return posix_pipe(reinterpret_cast<int*>(p1));
+    case POSIX_MKDIR:
+      return posix_mkdir(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

@@ -58,6 +58,11 @@
 #define POSIX_GETHOSTBYNAME   36
 #define POSIX_GETHOSTBYADDR   37
 
+#define POSIX_FCNTL      38
+#define POSIX_PIPE       39
+
+#define POSIX_MKDIR      40
+
 #define POSIX_STUBBED    99
 
 #endif

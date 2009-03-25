@@ -356,24 +356,15 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
   return static_cast<int> (fd);
 }
 
-struct hostent
-{
-  char* h_name;
-  char** h_aliases;
-  int h_addrtype;
-  int h_length;
-  char** h_addr_list;
-};
-
 int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
 {
-  NOTICE("posix_gethostbyaddr");
+  NOTICE("gethostbyaddr");
   return -1;
 }
 
 int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
-  NOTICE("posix_gethostbyname");
+  NOTICE("gethostbyname");
   
   // sanity checks
   if(!hostinfo || !offset)
@@ -395,6 +386,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     int h_addrtype;
     int h_length;
     char** h_addr_list;
+    char* h_addr;
   } *entry = reinterpret_cast<struct hostent*>(hostinfo);
   uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
   uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);

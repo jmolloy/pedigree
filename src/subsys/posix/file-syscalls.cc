@@ -51,6 +51,8 @@
 
 extern int posix_getpid();
 
+NullFs NullFs::m_Instance;
+
 //
 // Syscalls pertaining to files.
 //
@@ -172,6 +174,10 @@ int posix_open(const char *name, int flags, int mode)
     /// \todo Should be our ctty.
     file = ConsoleManager::instance().getConsole(String("console0"));
   }
+  else if(!strcmp(name, "/dev/null"))
+  {
+    file = NullFs::instance().getFile();
+  }
   else
   {
     file = VFS::instance().find(nameWithCwd);
@@ -228,6 +234,14 @@ int posix_open(const char *name, int flags, int mode)
     return -1;
   }
   
+  if(flags & O_TRUNC)
+  {
+    NOTICE("Truncating file");
+    
+    // truncate the file
+    file->truncate();
+  }
+  
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = 0;
@@ -253,7 +267,7 @@ int posix_read(int fd, char *ptr, int len)
   }
 
   uint64_t nRead = 0;
-  if(ptr)
+  if(ptr && len)
   {
     char *kernelBuf = new char[len];
     nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
@@ -291,7 +305,7 @@ int posix_write(int fd, char *ptr, int len)
 
   // Copy to kernel.
   uint64_t nWritten = 0;
-  if(ptr)
+  if(ptr && len)
   {
     char *kernelBuf = new char[len];
     memcpy(reinterpret_cast<void*>(kernelBuf), reinterpret_cast<void*>(ptr), len);
@@ -331,11 +345,7 @@ int posix_lseek(int file, int ptr, int dir)
       pFd->offset = fileSize + ptr;
       break;
   }
-
-  // Clamp to file size.
-  //if (pFd->offset >= fileSize)
-  //  pFd->offset = fileSize;
-  NOTICE("lseek returning " << pFd->offset << ".");
+  
   return static_cast<int>(pFd->offset);
 }
 
@@ -602,6 +612,7 @@ int posix_chdir(const char *path)
 int posix_dup(int fd)
 {
   NOTICE("dup(" << fd << ")");
+  
   // grab the file descriptor pointer for the passed descriptor
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   if(!f)
@@ -620,7 +631,8 @@ int posix_dup(int fd)
   FileDescriptor* f2 = new FileDescriptor;
   f2->file = new File(f->file);
   f2->offset = f->offset;
-  
+  f2->fdflags = f->fdflags;
+  f2->flflags = f->flflags;
   fdMap.insert(newFd, reinterpret_cast<void*>(f2));
   
   return static_cast<int>(newFd);
@@ -658,10 +670,18 @@ int posix_dup2(int fd1, int fd2)
   FileDescriptor* f2 = new FileDescriptor;
   f2->file = new File(f->file);
   f2->offset = f->offset;
-  
+  f2->fdflags = f->fdflags;
+  f2->flflags = f->flflags;
   fdMap.insert(fd2, reinterpret_cast<void*>(f2));
   
   return static_cast<int>(fd2);
+}
+
+int posix_mkdir(const char* name, int mode)
+{
+  String nameWithCwd = prepend_cwd(name);
+  bool worked = VFS::instance().createDirectory(nameWithCwd);
+  return worked ? 0 : -1;
 }
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
@@ -669,7 +689,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
   NOTICE("select(" << Dec << nfds << Hex << ")");
-  NOTICE("select has pointers: " << reinterpret_cast<uintptr_t>(readfds) << ", " << reinterpret_cast<uintptr_t>(writefds) << ", " << reinterpret_cast<uintptr_t>(errorfds) << ".");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -708,7 +727,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
           if(timeout->tv_sec == 0)
           {
-            NOTICE("No timeout");
             //size_t val = p->recv(0, 0, false, 5); // 5 = MSG_PEEK
             //bool ready = p->dataReady(false);
             num_ready++;
@@ -718,15 +736,12 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
           }
           else
           {
-            NOTICE("Timeout: " << timeout->tv_sec << " seconds.");
             p->dataReady(true, timeout->tv_sec);
             num_ready++;
           }
         }
         else
         {
-          NOTICE("Waiting forever");
-          
           // block while waiting for the data to come (and wait forever)
           p->dataReady(true, 0xffffffff);
           num_ready++;
@@ -739,4 +754,81 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
   }
 
   return num_ready;
+}
+
+int posix_fcntl(int fd, int cmd, int num, int* args)
+{
+  if(num)
+    NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
+  else
+    NOTICE("fcntl(" << fd << ", " << cmd << ")");
+  
+  // grab the file descriptor pointer for the passed descriptor
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+  if(!f)
+  {
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
+  }
+  
+  switch(cmd)
+  {
+    case F_DUPFD:
+    
+      if(num)
+      {
+        // if there is an argument and it's valid, map fd to the passed descriptor
+        if(args[0] >= 0)
+        {
+          size_t fd2 = static_cast<size_t>(args[0]);
+  
+          // Lookup this process.
+          FileDescriptor* f1 = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd2));
+          if(f1)
+          {
+            fdMap.remove(fd2);
+            delete f1->file;
+            delete f1;
+          }
+          
+          // copy the descriptor
+          FileDescriptor* f2 = new FileDescriptor;
+          f2->file = new File(f->file);
+          f2->offset = f->offset;
+          f2->fdflags = f->fdflags;
+          f2->flflags = f->flflags;
+          fdMap.insert(fd2, reinterpret_cast<void*>(f2));
+          
+          return static_cast<int>(fd2);
+        }
+      }
+      else
+      {
+        size_t fd2 = Processor::information().getCurrentThread()->getParent()->nextFd();
+        
+        // copy the descriptor
+        FileDescriptor* f2 = new FileDescriptor;
+        f2->file = new File(f->file);
+        f2->offset = f->offset;
+        f2->fdflags = f->fdflags;
+        f2->flflags = f->flflags;
+        fdMap.insert(fd2, reinterpret_cast<void*>(f2));
+        
+        return static_cast<int>(fd2);
+      }
+    case F_GETFD:
+      return f->fdflags;
+    case F_SETFD:
+      f->fdflags = args[0];
+      return 0;
+    case F_GETFL:
+      return f->flflags;
+    case F_SETFL:
+      f->flflags = args[0];
+      return 0;
+  }
+  
+  SYSCALL_ERROR(Unimplemented);
+  return -1;
 }

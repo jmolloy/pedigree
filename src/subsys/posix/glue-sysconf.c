@@ -106,7 +106,8 @@ long sysconf (int name)
 #ifdef OPEN_MAX
       return OPEN_MAX;
 #else
-      return -1;
+      /// \note This is a hacked in value, OPEN_MAX should really be defined
+      return 0xffff;
 #endif
   
     case _SC_PAGESIZE:

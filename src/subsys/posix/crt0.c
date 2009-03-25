@@ -1,6 +1,6 @@
 extern int write(int,int,int);
 extern int open(char*,int,int);
-extern int main(int,char**);
+extern int main(int,char**,char**);
 extern int _exit(int);
 extern int sprintf(char*, char*, ...);
 extern void setenv(char*,char*,int);
@@ -50,7 +50,7 @@ void _start(char **argv, char **env)
     }
   }
 
-  _exit(main(argc, argv));
+  _exit(main(argc, argv, env));
 
   // Unreachable.
   for (;;);

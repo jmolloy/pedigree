@@ -47,7 +47,7 @@ fi
 
 # Default MTSETUP .mtoolsrc file
 line1="#MTSETUP"
-line2="MTOOLS_NO_VFAT=1"
+line2="MTOOLS_NO_VFAT=0"
 line3="drive A: file=\"\" 1.44m mformat_only"
 line4="drive C: file=\"\" partition=1"
 
@@ -55,7 +55,7 @@ mtsrc=$HOME/.mtoolsrc
 
 gen_mtsrc () {
    echo "#MTSETUP" > $mtsrc
-   echo "MTOOLS_NO_VFAT=1" >> $mtsrc
+   echo "MTOOLS_NO_VFAT=0" >> $mtsrc
    echo "drive A: file=\"$1\" 1.44m mformat_only" >> $mtsrc
    echo "drive C: file=\"$2\" partition=$3" >> $mtsrc
 }

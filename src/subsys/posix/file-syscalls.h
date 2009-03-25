@@ -17,7 +17,9 @@
 #ifndef FILE_SYSCALLS_H
 #define FILE_SYSCALLS_H
 
+#include <vfs/VFS.h>
 #include <vfs/File.h>
+#include <vfs/Filesystem.h>
 
 #define MAXNAMLEN 255
 
@@ -25,12 +27,15 @@ class FileDescriptor
 {
 public:
   FileDescriptor () :
-    file(), offset(0), fd(0xFFFFFFFF)
+    file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
   {
   }
   File* file;
   uint64_t offset;
   size_t fd;
+  
+  int fdflags;
+  int flflags;
 };
 
 struct dirent
@@ -97,6 +102,67 @@ typedef struct _types_fd_set {
 #define S_IFDIR 0040000 /* Directory */
 #define S_IFREG 0100000 /* Regular file */
 
+#define	F_DUPFD		0	/* Duplicate fildes */
+#define	F_GETFD		1	/* Get fildes flags (close on exec) */
+#define	F_SETFD		2	/* Set fildes flags (close on exec) */
+#define	F_GETFL		3	/* Get file flags */
+#define	F_SETFL		4	/* Set file flags */
+
+/** This class provides /dev/null */
+class NullFs : public Filesystem
+{
+public:
+  NullFs()
+  {};
+
+  virtual ~NullFs()
+  {};
+
+  static NullFs &instance()
+  {
+    return m_Instance;
+  }
+
+  File* getFile()
+  {
+    return new File(String("/dev/null"), 0, 0, 0, 0, false, false, this, 0);
+  }
+
+  virtual bool initialise(Disk *pDisk)
+  {return false;}
+  virtual File* getRoot()
+  {return VFS::invalidFile();}
+  virtual String getVolumeLabel()
+  {return String("consolemanager");}
+  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+  {
+    memset(reinterpret_cast<void*>(buffer), 0, size);
+  }
+  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+  {
+    return 0;
+  }
+  virtual void truncate(File *pFile)
+  {}
+  virtual void fileAttributeChanged(File *pFile)
+  {}
+  virtual File* getDirectoryChild(File *pFile, size_t n)
+  {return VFS::invalidFile();}
+
+protected:
+  virtual bool createFile(File* parent, String filename, uint32_t mask)
+  {return false;}
+  virtual bool createDirectory(File* parent, String filename)
+  {return false;}
+  virtual bool createSymlink(File* parent, String filename, String value)
+  {return false;}
+  virtual bool remove(File* parent, File* file)
+  {return false;}
+
+private:
+  static NullFs m_Instance;
+};
+
 /// \todo These should be time_t and suseconds_t!
 struct timeval {
   unsigned long      tv_sec;
@@ -127,5 +193,9 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 
 int posix_dup(int fd);
 int posix_dup2(int fd1, int fd2);
+
+int posix_fcntl(int fd, int cmd, int num, int* args);
+
+int posix_mkdir(const char* name, int mode);
 
 #endif

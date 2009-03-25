@@ -23,6 +23,8 @@ extern int *__errno (void);
 // Define errno before including syscall.h.
 #include "syscall.h"
 
+#include <stdarg.h>
+
 extern void *malloc(int);
 extern void free(void*);
 extern void strcpy(char*,char*);
@@ -34,6 +36,12 @@ extern void sprintf(char*, char*,...);
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
   errno = ENOSYS;
+
+#define	F_DUPFD		0	/* Duplicate fildes */
+#define	F_GETFD		1	/* Get fildes flags (close on exec) */
+#define	F_SETFD		2	/* Set fildes flags (close on exec) */
+#define	F_GETFL		3	/* Get file flags */
+#define	F_SETFL		4	/* Set file flags */
 
 struct dirent
 {
@@ -110,10 +118,9 @@ int ftruncate(int a, int b)
   return -1;
 }
 
-int mkdir(const char *p)
+int mkdir(const char *p, int mode)
 {
-  STUBBED("mkdir")
-  return -1;
+  return syscall2(POSIX_MKDIR, p, mode);
 }
 
 int close(int file)
@@ -193,6 +200,7 @@ int stat(const char *file, struct stat *st)
 int times(void *buf)
 {
   STUBBED("times");
+  errno = ENOSYS;
   return -1;
 }
 #else
@@ -323,13 +331,6 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
   return 0;
 }
 
-/*long sysconf(int name)
-{
-  STUBBED("sysconf");
-  errno = EINVAL;
-  return -1;
-}*/
-
 int getuid()
 {
   STUBBED("getuid");
@@ -446,11 +447,6 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
   return -1;
 }
 
-int dup2(int fildes, int fildes2)
-{
-  return syscall2(POSIX_DUP2, fildes, fildes2);
-}
-
 int access(const char *path, int amode)
 {
   STUBBED("access");
@@ -533,17 +529,40 @@ int dup(int fileno)
   return syscall1(POSIX_DUP, fileno);
 }
 
+int dup2(int fildes, int fildes2)
+{
+  return syscall2(POSIX_DUP2, fildes, fildes2);
+}
+
 int pipe(int filedes[2])
 {
-  STUBBED("pipe");
-  return -1;
+  return syscall1(POSIX_PIPE, (int) filedes);
 }
 
 int fcntl(int fildes, int cmd, ...)
 {
-  STUBBED("fcntl");
-  errno = ENOSYS;
-  return -1;
+  va_list ap;
+  va_start(ap, cmd);
+  
+  int num = 0;
+  int* args = 0;
+  switch(cmd)
+  {
+    // only one argument for each of these
+    case F_DUPFD:
+    case F_SETFD:
+    case F_SETFL:
+      args = (int*) malloc(sizeof(int));
+      args[0] = va_arg(ap, int);
+      num = 1;
+  };
+  va_end(ap);
+  
+  int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (int) args);
+  
+  if(args)
+    free(args);
+  return ret;
 }
 
 int sigprocmask(int how, int set, int oset)
@@ -722,12 +741,17 @@ struct hostent* gethostbyname(const char *name)
   static struct hostent* ret = 0;
   if(ret == 0)
     ret = (struct hostent*) malloc(512);
+  if(ret == 0)
+    return (struct hostent*) 0x12345;
   
   int success = syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) ret, 512);
   if(success == 0)
+  {
+    ret->h_addr = ret->h_addr_list[0];
     return ret;
+  }
   else
-    return 0;
+    return (struct hostent*) 0x12345;
 }
 
 struct servent* getservbyname(const char *name, const char *proto)

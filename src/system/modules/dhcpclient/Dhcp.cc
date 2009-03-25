@@ -184,6 +184,10 @@ void entry()
     NOTICE("DHCP Client: Configuring card " << Dec << i << Hex << ".");
     Network* pCard = NetworkStack::instance().getDevice(i);
     StationInfo info = pCard->getStationInfo();
+    
+    // check that we should actually try this...
+    if(info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1))
+      continue; // loopback is already set
       
     // set it up
     StationInfo host2;

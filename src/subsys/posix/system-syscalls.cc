@@ -133,8 +133,10 @@ int posix_fork(ProcessorState state)
     FileDescriptor *pFd2 = new FileDescriptor;
     pFd2->file = new File(pFd->file);
     pFd2->offset = pFd->offset;
+    pFd2->fd = pFd->fd;
+    pFd2->fdflags = pFd->fdflags;
+    pFd2->flflags = pFd->flflags;
     pProcess->getFdMap().insert(newFd, reinterpret_cast<void*> (pFd2));
-    
     pProcess->nextFd(newFd + 1);
   }
 
