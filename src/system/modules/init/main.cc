@@ -84,13 +84,14 @@ static bool findDisks(Device *pDev)
 
 void init()
 {
+  static HugeStaticString str;
+
   // Mount all available filesystems.
   if (!findDisks(&Device::root()))
   {
 //     FATAL("No disks found!");
   }
 
-  HugeStaticString str;
   str += "Loading init program (root:/applications/bash)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();

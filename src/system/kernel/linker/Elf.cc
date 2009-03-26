@@ -373,9 +373,6 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
         memcpy (reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
-#if defined(PPC_COMMON) || defined(MIPS_COMMON)
-        Processor::flushDCacheAndInvalidateICache(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size);
-#endif
       }
       else
       {
@@ -383,6 +380,9 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
                         0,
                         m_pSectionHeaders[i].size);
       }
+#if defined(PPC_COMMON) || defined(MIPS_COMMON)
+        Processor::flushDCacheAndInvalidateICache(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size);
+#endif
       offset += m_pSectionHeaders[i].size;
     }
     else

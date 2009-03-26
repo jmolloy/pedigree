@@ -68,8 +68,8 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
-#  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications

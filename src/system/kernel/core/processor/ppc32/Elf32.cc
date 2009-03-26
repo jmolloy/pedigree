@@ -17,6 +17,7 @@
 #include <linker/Elf.h>
 #include <Log.h>
 #include <linker/KernelElf.h>
+#include <processor/Processor.h>
 
 // http://refspecs.freestandards.org/elf/elfspec_ppc.pdf
 
@@ -187,6 +188,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
 
   // Write back the result.
   *pResult = result;
+
+  // Flush all caches.
+  Processor::flushDCacheAndInvalidateICache(reinterpret_cast<uintptr_t>(pResult), reinterpret_cast<uintptr_t>(pResult)+4);
+  
   return true;
 }
 

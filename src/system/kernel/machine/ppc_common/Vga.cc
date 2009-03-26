@@ -18,10 +18,13 @@
 #include <machine/openfirmware/OpenFirmware.h>
 #include <machine/openfirmware/Device.h>
 #include <utilities/utility.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/PhysicalMemoryManager.h>
 #include "Font.c"
 
 PPCVga::PPCVga() :
-  m_pFramebuffer(reinterpret_cast<uint8_t*> (0xb0000000)), m_Width(0), m_Height(0), m_Depth(0), m_Stride(0)
+  m_Framebuffer("VGA framebuffer"), m_pFramebuffer(0),
+  m_Width(0), m_Height(0), m_Depth(0), m_Stride(0)
 {
 }
 
@@ -32,32 +35,42 @@ PPCVga::~PPCVga()
 void PPCVga::initialise()
 {
   // Firstly get the screen device.
-  // TODO: deal more cleanly with failure.
   OFDevice screen(OpenFirmware::instance().findDevice("screen"));
 
   // Get the 'chosen' device.
   OFDevice chosen(OpenFirmware::instance().findDevice("/chosen"));
 
-  // Now we can get the MMU device from chosen.
-  OFDevice mmu( chosen.getProperty("mmu") );
-
   // Get the (physical) framebuffer address.
   OFParam physFbAddr = screen.getProperty("address");
 
+  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  if (!physicalMemoryManager.allocateRegion(m_Framebuffer,
+					    0x01000000/0x1000,
+					    PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force,
+					    VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::WriteThrough,
+					    reinterpret_cast<uintptr_t>(physFbAddr)))
+  {
+    // Panic! but we have no way of indicating failure to the user! argh!!
+    for(;;);
+    return;
+  }
+
+  m_pFramebuffer = reinterpret_cast<uint8_t*> (m_Framebuffer.virtualAddress());
+
   // Create a mapping with OpenFirmware.
   /// \todo Something with VirtualAddressSpace here?
-  mmu.executeMethod("map", 4,
-                    reinterpret_cast<OFParam>(0x6a),
-                    reinterpret_cast<OFParam>(0x01000000),
-                    static_cast<OFParam>(m_pFramebuffer),
-                    physFbAddr); // 0x6a = Uncached.
+  //  mmu.executeMethod("map", 4,
+  //                  reinterpret_cast<OFParam>(0x6a),
+  //    /                reinterpret_cast<OFParam>(0x01000000),
+  //	       //               static_cast<OFParam>(m_pFramebuffer),
+    //	       physF//bAddr); // 0x6a = Uncached.
 
   // Find the device width, height and depth.
   m_Width = reinterpret_cast<uint32_t> ( screen.getProperty("width") );
   m_Height = reinterpret_cast<uint32_t> ( screen.getProperty("height") );
   m_Depth = reinterpret_cast<uint32_t> ( screen.getProperty("depth") );
   m_Stride = reinterpret_cast<uint32_t> ( screen.getProperty("linebytes") );
-  
+
   if (m_Depth == 8)
   {
     for (int i = 0; i < 16; i++)
@@ -109,7 +122,6 @@ void PPCVga::initialise()
         break;
     }
   }
-
 }
 
 void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)

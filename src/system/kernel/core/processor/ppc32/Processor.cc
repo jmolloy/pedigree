@@ -98,7 +98,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
     (PpcCommonPhysicalMemoryManager::instance());
   p.initialise(translations, ramMax);
 
-  // TODO: Initialise the physical memory-management
 //   m_Initialised = 1;
 }
 

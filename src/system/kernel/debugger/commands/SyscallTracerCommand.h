@@ -47,7 +47,6 @@ public:
    */
   const NormalStaticString getString()
   {
-    NOTICE("Got Syscall Command Name");    //  Never even gets logged.
     return NormalStaticString("syscall");
   }
 

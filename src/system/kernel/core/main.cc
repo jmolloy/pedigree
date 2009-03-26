@@ -111,13 +111,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
 
-  // Initialise the Kernel Elf class
-  if (KernelElf::instance().initialise(bsInf) == false)
-    panic("KernelElf::initialise() failed");
-
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
   machine.initialise();
+
+  // Initialise the Kernel Elf class
+  if (KernelElf::instance().initialise(bsInf) == false)
+    panic("KernelElf::initialise() failed");
 
 #if defined(DEBUGGER)
   Debugger::instance().initialise();

@@ -19,6 +19,7 @@
 
 #include <processor/types.h>
 #include <machine/Vga.h>
+#include <processor/MemoryRegion.h>
 //include <machine/openfirmware/OpenFirmware.h>
 //include <machine/openfirmware/Device.h>
 
@@ -43,9 +44,9 @@
  */
 class PPCVga : public Vga
 {
-  public:
-    PPCVga();
-    virtual ~PPCVga();
+public:
+  PPCVga();
+  virtual ~PPCVga();
 
   void initialise();
 
@@ -137,6 +138,8 @@ private:
   /** We use a 16-bit-per-character text mode buffer to simplify things. BootIO is a bit of a
    *  simpleton, really. */
   uint16_t m_pTextBuffer[(MAX_WIDTH/FONT_WIDTH)*(MAX_HEIGHT/FONT_HEIGHT)];
+
+  MemoryRegion m_Framebuffer;
 
   /** Our real graphics framebuffer
       \todo: This should be a MemoryMappedIO - needs VirtualAddressSpace though. */

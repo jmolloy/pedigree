@@ -233,11 +233,6 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
   DEBUG("KERNELELF: Preloaded module " << module->name);
 
-#if defined(PPC_COMMON) || defined(MIPS_COMMON)
-  ///\todo proper size in here.
-  Processor::flushDCacheAndInvalidateICache(loadBase, loadBase+0x20000);
-#endif
-
   m_Modules.pushBack(module);
 
   // Can we load this module yet?
@@ -320,6 +315,7 @@ void KernelElf::executeModule(Module *module)
   }
 
   NOTICE("KERNELELF: Executing module " << module->name);
+
   if (module)
     module->entry();
 }
