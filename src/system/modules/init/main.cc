@@ -189,4 +189,9 @@ void destroy()
 MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
+#ifdef X86_COMMON
 MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack");
+#elif PPC_COMMON
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack");
+#endif
+
