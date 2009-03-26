@@ -116,13 +116,21 @@ void Vt100::write(char c)
         m_Cmd.cur_param++;
         break;
       case 'h':
-        m_CurrentWindow = 1;
-        m_pWindows[m_CurrentWindow]->refresh();
+	// 1049h is the code to switch to the alternate window.
+	if (m_Cmd.params[0] == 1049)
+	{
+	  m_CurrentWindow = 1;
+	  m_pWindows[m_CurrentWindow]->refresh();
+	}
         m_bChangingState = false;
         break;
       case 'l':
-        m_CurrentWindow = 0;
-        m_pWindows[m_CurrentWindow]->refresh();
+	// 1049l is the code to switch back to the main window.
+	if (m_Cmd.params[0] == 1049)
+	{
+	  m_CurrentWindow = 0;
+	  m_pWindows[m_CurrentWindow]->refresh();
+	}
         m_bChangingState = false;
         break;
       case 'H':
@@ -170,13 +178,22 @@ void Vt100::write(char c)
         m_bChangingState = false;
         break;
       case 'M':
-        {
-        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
+      case 'T':
+      {
+        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
         for(size_t i = 0; i < nScrollLines; i++)
           m_pWindows[m_CurrentWindow]->scrollUp();
         m_bChangingState = false;
-        }
         break;
+      }
+      case 'S':
+      {
+        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
+        for(size_t i = 0; i < nScrollLines; i++)
+          m_pWindows[m_CurrentWindow]->scrollDown();
+        m_bChangingState = false;
+        break;
+      }
       case 'P':
         m_pWindows[m_CurrentWindow]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1);
         m_bChangingState = false;
