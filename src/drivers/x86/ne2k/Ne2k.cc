@@ -103,7 +103,7 @@ Ne2k::Ne2k(Network* pDev) :
 #endif
   
   // install the IRQ
-  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
+  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
   
   // clear interrupts and enable them all
   m_pBase->write8(0xff, NE_ISR);
@@ -176,7 +176,7 @@ bool Ne2k::send(uint32_t nBytes, uintptr_t buffer)
 }
 
 void Ne2k::recv()
-{    
+{
   // check for error
   uint8_t isr = m_pBase->read8(NE_ISR);
   if(isr & 0x4)
@@ -218,7 +218,7 @@ void Ne2k::recv()
     // packet buffer
     uint8_t* tmp = new uint8_t[length];
     uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
-    memset(packBuffer, 0, length);
+    memset(tmp, 0, length);
     
     // check status, new read for the rest of the packet
     while(!(m_pBase->read8(NE_ISR) & 0x40));
@@ -229,14 +229,14 @@ void Ne2k::recv()
     m_pBase->write8((length) & 0xff, NE_RBCR0);
     m_pBase->write8((length) >> 8, NE_RBCR1);
     m_pBase->write8(0x0a, NE_CMD);
-    
+
     // read the packet
     int i, words = (length) / 2;
     for(i = 0; i < words; ++i)
       packBuffer[i] = m_pBase->read16(NE_DATA);
     if(length & 1)
-      packBuffer[length - 1] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
-    
+      packBuffer[i] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
+
     // check status once again
     while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
     m_pBase->write8(0x40, NE_ISR);

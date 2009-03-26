@@ -27,6 +27,7 @@
 
 #include "file-syscalls.h"
 #include "console-syscalls.h"
+#include "pipe-syscalls.h"
 
 #define __IOCTL_FIRST 0x1000
 
@@ -244,7 +245,7 @@ int posix_open(const char *name, int flags, int mode)
   
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
-  f->offset = 0;
+  f->offset = (flags & O_APPEND) ? file->getSize() : 0;
   f->fd = fd;
   fdMap.insert(fd, reinterpret_cast<void*>(f));
 
@@ -629,7 +630,7 @@ int posix_dup(int fd)
   
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
-  f2->file = new File(f->file);
+  f2->file = PipeManager::instance().copyPipe(f->file);
   f2->offset = f->offset;
   f2->fdflags = f->fdflags;
   f2->flflags = f->flflags;
@@ -668,7 +669,7 @@ int posix_dup2(int fd1, int fd2)
   
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
-  f2->file = new File(f->file);
+  f2->file = PipeManager::instance().copyPipe(f->file);
   f2->offset = f->offset;
   f2->fdflags = f->fdflags;
   f2->flflags = f->flflags;
@@ -727,12 +728,11 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
           if(timeout->tv_sec == 0)
           {
-            //size_t val = p->recv(0, 0, false, 5); // 5 = MSG_PEEK
-            //bool ready = p->dataReady(false);
-            num_ready++;
-            /*if(ready)
+            int val = p->recv(0, 0, false, 5); // 5 = MSG_PEEK
+            if(val >= 0) /// \todo Zero means EOF, if recv isn't blocking and has no data it'll return zero...
+              num_ready++;
             else
-              FD_CLR(i, readfds);*/
+              NOTICE("Failed, val = " << Dec << val << Hex << ".");
           }
           else
           {
@@ -794,7 +794,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
           
           // copy the descriptor
           FileDescriptor* f2 = new FileDescriptor;
-          f2->file = new File(f->file);
+          f2->file = PipeManager::instance().copyPipe(f->file);
           f2->offset = f->offset;
           f2->fdflags = f->fdflags;
           f2->flflags = f->flflags;
@@ -809,7 +809,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         
         // copy the descriptor
         FileDescriptor* f2 = new FileDescriptor;
-        f2->file = new File(f->file);
+        f2->file = PipeManager::instance().copyPipe(f->file);
         f2->offset = f->offset;
         f2->fdflags = f->fdflags;
         f2->flflags = f->flflags;

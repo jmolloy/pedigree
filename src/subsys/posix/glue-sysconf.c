@@ -1,11 +1,6 @@
-/*#include <sys/types.h>
-#include <unistd.h>
-#include <limits.h>
-#include <time.h>
-#include <errno.h>*/
-
 #define COMPILING_SUBSYS
 
+#include <processor/types.h>
 #include "include/limits.h"
 #include "include/time.h"
 #include "include/unistd.h"

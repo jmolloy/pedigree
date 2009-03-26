@@ -16,6 +16,7 @@
 
 #include "file-syscalls.h"
 #include "system-syscalls.h"
+#include "pipe-syscalls.h"
 #include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
@@ -121,7 +122,6 @@ int posix_fork(ProcessorState state)
   typedef Tree<size_t,void*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   FdMap childFdMap = pProcess->getFdMap();
-  size_t lastFd = 0;
   
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
@@ -131,7 +131,9 @@ int posix_fork(ProcessorState state)
     size_t newFd = reinterpret_cast<size_t>(it.key());
     
     FileDescriptor *pFd2 = new FileDescriptor;
-    pFd2->file = new File(pFd->file);
+
+    // copyPipe will automatically handle the case where the file does not specify a pipe
+    pFd2->file = PipeManager::instance().copyPipe(pFd->file);
     pFd2->offset = pFd->offset;
     pFd2->fd = pFd->fd;
     pFd2->fdflags = pFd->fdflags;
@@ -331,16 +333,18 @@ int posix_waitpid(int pid, int *status, int options)
     if (pid > 0)
     {
       // Does this process exist?
-      Process *pProcess;
+      Process *pProcess = 0;
       for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         pProcess = Scheduler::instance().getProcess(i);
 
-        if (pProcess->getId() == pid)
+        if (static_cast<int>(pProcess->getId()) == pid)
           break;
       }
+      if(pProcess == 0)
+        return -1;
 
-      if (pProcess->getId() != pid)
+      if (static_cast<int>(pProcess->getId()) != pid)
       {
         // ECHILD - process n'existe pas.
         return -1;

@@ -69,7 +69,7 @@ public:
   void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard);
   
   /** Sends a TCP packet over the given connection ID */
-  void send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue = true);
+  int send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue = true);
   
   /** Removes a given (closed) connection from the system */
   void removeConn(size_t connId);

@@ -108,6 +108,8 @@ private:
     uint8_t getBack() {return m_Background;}
     /** Sets whether colours are bold or not. */
     void setBold(bool b);
+    /** Deletes n characters */
+    void deleteCharacters(uint32_t n);
 
     /** Perform a full-on screen refresh. */
     void refresh();

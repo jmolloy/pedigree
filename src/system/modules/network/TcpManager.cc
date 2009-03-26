@@ -188,51 +188,28 @@ void TcpManager::Disconnect(size_t connectionId)
   }
 }
 
-void TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue)
+int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue)
 {
   if(!payload || !nBytes)
-    return;
+    return -1;
   
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
-    return;
+    return -1;
   
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
-    return;
+    return -1;
   
   if(stateBlock->currentState != Tcp::ESTABLISHED &&
      stateBlock->currentState != Tcp::FIN_WAIT_1 &&
      stateBlock->currentState != Tcp::FIN_WAIT_2)
-    return; // we can't send data unless we're in a synchronised state
+    return -1; // we can't send data unless we're in a synchronised state
   
   stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
-  
-  // first things first, we need to only send 1024 bytes at a time (just to be weird) max
-  /*size_t offset;
-  for(offset = 0; offset < nBytes; offset += 1024)
-  {
-    size_t segmentSize = 0;
-    if((offset + 1024) >= nBytes)
-      segmentSize = nBytes - offset;
-    
-    stateBlock->seg_seq = stateBlock->snd_nxt;
-    stateBlock->snd_nxt += segmentSize;
-    
-    IpAddress dest;
-    dest = stateBlock->remoteHost.ip;
-    
-    Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->seg_seq, stateBlock->rcv_nxt, Tcp::ACK | (push ? Tcp::PSH : 0), stateBlock->snd_wnd, segmentSize, payload + offset, stateBlock->pCard);
-  }
-  
-  // throw this block onto the retransmission queue (if we should, because this send might be sending unack'd data that's in the retransmit queue)
-  if(addToRetransmitQueue)
-  {
-    NOTICE("Adding to the retransmit queue...");
-    //stateBlock->retransmitQueue.append(payload, nBytes);
-    //stateBlock->resetTimer();
-    //stateBlock->waitingForTimeout = true;
-  }*/
+
+  // success!
+  return 0;
 }
 
 void TcpManager::removeConn(size_t connId)

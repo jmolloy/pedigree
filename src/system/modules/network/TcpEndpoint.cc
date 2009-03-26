@@ -56,22 +56,21 @@ void TcpEndpoint::close()
   TcpManager::instance().Disconnect(m_ConnId);
 }
 
-bool TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
+int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 {
   /// \todo Send needs to return an error code or something, and PUSH needs to be an option
-  TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
-  return true;
+  return TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
 };
 
-size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
+int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 {
   NOTICE("TcpEndpoint::recv");
   
-  if(!buffer || !maxSize)
-    return 0;
+  if((!buffer || !maxSize) && !bPeek)
+    return -1;
   
   bBlock = true;
-  
+
   bool queueReady = false;
   if(bBlock)
     queueReady = dataReady(true);
@@ -80,9 +79,6 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPe
   
   if(queueReady)
   {
-    NOTICE("Queue is ready, " << m_DataStream.getSize() << " bytes.");
-    TcpManager::instance().removeQueuedPackets(m_ConnId);
-    
     // read off the front
     uintptr_t front = m_DataStream.getBuffer();
     
@@ -90,9 +86,11 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPe
     size_t nBytes = maxSize;
     if(nBytes > m_DataStream.getSize())
       nBytes = m_DataStream.getSize();
-    
-    //if(bPeek)
-    //  return nBytes;
+
+    // if we're merely peeking, return the theoretical maximum number of
+    // bytes readable
+    if(bPeek)
+      return nBytes;
     
     // copy
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
@@ -104,7 +102,7 @@ size_t TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPe
     return nBytes;
   }
   
-  NOTICE("still fail");
+  // no data is available but this is not an error condition
   return 0;
 };
 

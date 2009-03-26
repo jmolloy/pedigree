@@ -118,7 +118,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
   machine.initialise();
-  return;
+
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif

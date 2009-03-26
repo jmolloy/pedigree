@@ -742,7 +742,7 @@ struct hostent* gethostbyname(const char *name)
   if(ret == 0)
     ret = (struct hostent*) malloc(512);
   if(ret == 0)
-    return (struct hostent*) 0x12345;
+    return (struct hostent*) 0;
   
   int success = syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) ret, 512);
   if(success == 0)
@@ -751,7 +751,7 @@ struct hostent* gethostbyname(const char *name)
     return ret;
   }
   else
-    return (struct hostent*) 0x12345;
+    return (struct hostent*) 0;
 }
 
 struct servent* getservbyname(const char *name, const char *proto)

@@ -376,7 +376,10 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   size_t num = 0;
   IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
   if(!num)
+  {
+    NOTICE("No IPs found");
     return -1;
+  }
   
   // grab the passed hostent
   struct hostent

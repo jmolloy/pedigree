@@ -1,0 +1,28 @@
+megs: 256
+romimage: file="C:/program files/bochs-2.3.7/BIOS-bochs-latest"
+vgaromimage: file="C:/program files/bochs-2.3.7/VGABIOS-lgpl-latest"
+floppya: 1_44=floppy.img, status=inserted
+boot: a
+log: bochsout.txt
+mouse: enabled=0
+vga: extension=vbe
+
+cpu: count=1, ips=10000000
+
+clock: sync=both, time0=local
+
+com1: enabled=1, mode=file, dev=serial.txt
+
+#ata0-master: type=disk, path=hdd_16h_63spt_100c.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
+ata0-master:  type=disk, path=hdd_16h_63spt_100c_fat16.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
+
+i440fxsupport: enabled=1, slot1=pcivga, slot2=ne2k
+
+# Gigabit Adapter
+ne2k: ioaddr=0x280, irq=3, mac=b0:cd:b5:50:c2:04, ethmod=win32, ethdev=\Device\NPF_{8A1D815B-9F78-4CC0-8C92-C50EDCB9009F}
+
+# TAP Adapter
+# ne2k: ioaddr=0x380, irq=4, mac=b1:cd:b5:50:c2:03, ethmod=win32, ethdev=\Device\NPF_{88632B00-3ADE-4BED-8D67-CC1865F8DFAD}
+
+# Virtual network (logs to ne2k-pktlog.txt, for testing send on drivers)
+# ne2k: ioaddr=0x280, irq=3, mac=12:34:56:78:90:ab, ethmod=vnet, ethdev="D:\osdev\pedigree\build"

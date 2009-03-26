@@ -24,6 +24,22 @@
 
 int posix_pipe(int filedes[2]);
 
+/** A special version of File which talks to PipeManager every time it is freed */
+class PipeFile : public File
+{
+  public:
+    /** Constructor, creates an invalid file. */
+    PipeFile();
+    PipeFile(const File &file);
+    PipeFile(File* file);
+
+    /** Constructor, should be called only by a Filesystem. */
+    PipeFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+         uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0);
+    /** Destructor - removes a reference from the PipeManager's internal list. */
+    virtual ~PipeFile();
+};
+
 /** This class provides a way for pipes to be created and accessed by user applications */
 class PipeManager : public Filesystem
 {
@@ -41,18 +57,40 @@ public:
   File* getPipe();
   
   bool isPipe(File* file);
-  
-  /*bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
 
-  File* getConsole(String consoleName);
+  File* copyPipe(File* file)
+  {
+    if(isPipe(file))
+    {
+      size_t n = file->getInode() - 0xdcba0000;
+      m_Pipes[n]->nRefs++;
 
-  bool isConsole(File* file);
+      return new PipeFile(*file);
+    }
+    else
+      return new File(*file);
+  }
 
-  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr);
-  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr);
-  int  getCols(File* file);
-  int  getRows(File* file);
-  bool hasDataAvailable(File* file);*/
+  void fileEnds(File* f)
+  {
+    size_t n = f->getInode() - 0xdcba0000;
+    if(--(m_Pipes[n]->nRefs) == 1)
+    {
+      size_t i = 0;
+      for(Vector<Pipe*>::Iterator it = m_Pipes.begin(); it != m_Pipes.end(); it++, i++)
+      {
+        if(i == n)
+        {
+          Pipe* pipe = m_Pipes[n];
+          m_Pipes.erase(it);
+
+          delete pipe->original;
+          delete pipe;
+          break;
+        }
+      }
+    }
+  }
 
   //
   // Filesystem interface.
@@ -86,7 +124,12 @@ protected:
 private:
   struct Pipe
   {
+    Pipe() : fifo(), nRefs(0), original(0) {};
+    ~Pipe() {};
     TcpBuffer fifo;
+
+    size_t nRefs;
+    File* original;
   };
 
   Vector<Pipe*> m_Pipes;

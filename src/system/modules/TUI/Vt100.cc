@@ -160,17 +160,25 @@ void Vt100::write(char c)
         m_bChangingState = false;
         break;
       case 'd':
-	// Absolute row reference. (XTERM)
-	m_pWindows[m_CurrentWindow]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
-	m_bChangingState = false;
-	break;
+        // Absolute row reference. (XTERM)
+        m_pWindows[m_CurrentWindow]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
+        m_bChangingState = false;
+        break;
       case 'G':
-	// Absolute column reference. (XTERM)
-	m_pWindows[m_CurrentWindow]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
-	m_bChangingState = false;
-	break;
+        // Absolute column reference. (XTERM)
+        m_pWindows[m_CurrentWindow]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
+        m_bChangingState = false;
+        break;
       case 'M':
-        m_pWindows[m_CurrentWindow]->scrollUp();
+        {
+        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
+        for(size_t i = 0; i < nScrollLines; i++)
+          m_pWindows[m_CurrentWindow]->scrollUp();
+        m_bChangingState = false;
+        }
+        break;
+      case 'P':
+        m_pWindows[m_CurrentWindow]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1);
         m_bChangingState = false;
         break;
       case 'J':
@@ -187,7 +195,7 @@ void Vt100::write(char c)
             break;
         }
         m_bChangingState = false;
-	break;
+        break;
       case 'K':
         switch (m_Cmd.params[0])
         {
@@ -202,7 +210,7 @@ void Vt100::write(char c)
             break;
         }
         m_bChangingState = false;
-	break;
+        break;
       case 'r':
         m_pWindows[m_CurrentWindow]->setScrollRegion( (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
                                                       (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
@@ -262,7 +270,7 @@ void Vt100::write(char c)
           }
         }
         m_bChangingState = false;
-	break;
+        break;
       }
       case '\e':
         // We received another VT100 command while expecting a terminating command - this must mean it's one of \e7 or \e8.
@@ -313,7 +321,7 @@ void Vt100::write(char c)
       case '\e':
         m_bChangingState = true;
         m_bContainedBracket = false;
-	m_bContainedParen = false;
+        m_bContainedParen = false;
         m_Cmd.cur_param = 0;
         m_Cmd.params[0] = 0;
         m_Cmd.params[1] = 0;
@@ -675,4 +683,23 @@ void Vt100::Window::setBold(bool b)
     m_Foreground += C_BRIGHT;
   }
   m_bBold = b;
+}
+
+void Vt100::Window::deleteCharacters(uint32_t n)
+{
+  // current x position, so we can find out how many positions will need to be cleared
+  uint32_t x = m_CursorX;
+  uint32_t endX = x + n;
+
+  // clears by shifting the following data left into this area
+  memmove(reinterpret_cast<uint8_t*>(&m_pData[x+m_CursorY*m_nWidth]),
+          reinterpret_cast<uint8_t*>(&m_pData[endX+m_CursorY*m_nWidth]),
+          2 * (m_nWidth - endX));
+
+  // Zero out the remainder of the line
+  for (int i = (m_nWidth - n); i < m_nWidth; i++)
+    m_pData[i+m_CursorY*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+
+
+  refresh();
 }

@@ -56,8 +56,8 @@ class TcpEndpoint : public Endpoint
     virtual ~TcpEndpoint() {};
     
     /** Application interface */
-    virtual bool send(size_t nBytes, uintptr_t buffer);
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool bBlock = false, bool bPeek = false);
+    virtual int send(size_t nBytes, uintptr_t buffer);
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock = false, bool bPeek = false);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
     
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost);
@@ -89,11 +89,8 @@ class TcpEndpoint : public Endpoint
     {
       if(conn)
       {
-        NOTICE("pushing back");
         m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
-        NOTICE("waking semaphore " << reinterpret_cast<uintptr_t>(&m_IncomingConnectionCount) << "...");
         m_IncomingConnectionCount.release();
-        NOTICE("done");
       }
     }
   

@@ -24,6 +24,27 @@
 
 PipeManager PipeManager::m_Instance;
 
+PipeFile::PipeFile() : File()
+{};
+
+PipeFile::PipeFile(const File &file) : File(file)
+{};
+
+PipeFile::PipeFile(File* file) : File(file)
+{};
+
+PipeFile::PipeFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+                    uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2)
+                    :
+                    File(name, accessedTime, modifiedTime, creationTime, inode, isSymlink, isDirectory, pFs, size, custom1, custom2)
+{};
+
+PipeFile::~PipeFile()
+{
+  PipeManager::instance().fileEnds(reinterpret_cast<File*>(this));
+}
+
+
 PipeManager::PipeManager() :
   m_Pipes()
 {
@@ -45,6 +66,8 @@ File* PipeManager::getPipe()
   size_t n = m_Pipes.count();
   m_Pipes.pushBack(pipe);
   File* ret = new File(String("pipe"), 0, 0, 0, n + 0xdcba0000, false, false, this, 0);
+  pipe->nRefs = 1;
+  pipe->original = ret;
   return ret;
 }
 
@@ -62,7 +85,6 @@ uint64_t PipeManager::read(File *pFile, uint64_t location, uint64_t size, uintpt
   
   if(pipe->fifo.getSize() == 0)
   {
-    NOTICE("Returning 0");
     return 0;
   }
   
@@ -110,12 +132,12 @@ int posix_pipe(int filedes[2])
   
   // create the file descriptor for both
   FileDescriptor* read = new FileDescriptor;
-  read->file = new File(*p);
+  read->file = PipeManager::instance().copyPipe(p);
   read->offset = 0;
   fdMap.insert(readFd, reinterpret_cast<void*>(read));
   
   FileDescriptor* write = new FileDescriptor;
-  write->file = new File(*p);
+  write->file = PipeManager::instance().copyPipe(p);
   write->offset = 0;
   fdMap.insert(writeFd, reinterpret_cast<void*>(write));
   

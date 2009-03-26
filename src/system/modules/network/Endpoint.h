@@ -90,13 +90,13 @@ class Endpoint
     }
     
     /** Connectionless endpoints */
-    virtual bool send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
+    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
     {
-      return false;
+      return -1;
     };
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+    virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
     {
-      return 0;
+      return -1;
     };
     virtual inline bool acceptAnyAddress() { return false; };
     virtual inline void acceptAnyAddress(bool accept) {};
@@ -118,13 +118,13 @@ class Endpoint
       return 0;
     };
     
-    virtual bool send(size_t nBytes, uintptr_t buffer)
+    virtual int send(size_t nBytes, uintptr_t buffer)
     {
-      return false;
+      return -1;
     };
-    virtual size_t recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
     {
-      return 0;
+      return -1;
     };
     
     virtual inline uint32_t getConnId()

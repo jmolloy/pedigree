@@ -183,6 +183,8 @@ void entry()
   {
     NOTICE("DHCP Client: Configuring card " << Dec << i << Hex << ".");
     Network* pCard = NetworkStack::instance().getDevice(i);
+    if(!pCard)
+      ERROR("DHCP Client: Card " << Dec << i << Hex << " is invalid.");
     StationInfo info = pCard->getStationInfo();
     
     // check that we should actually try this...
@@ -249,7 +251,7 @@ void entry()
 
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
       if(!success)
       {
         WARNING("Couldn't send DHCP DISCOVER packet on interface " << i << "!");
@@ -262,14 +264,14 @@ void entry()
       uint32_t myIpWillBe = 0;
       DhcpOptionServerIdent dhcpServer;
       
-      size_t n = 0;
+      int n = 0;
       if(e->dataReady(true) == false)
       {
         WARNING("Did not receive a reply to DHCP DISCOVER (timed out), interface " << i << "!");
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)))
+      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)) > 0)
       {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
         
@@ -353,7 +355,7 @@ void entry()
       
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard);
+      success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
       if(!success)
       {
         WARNING("Couldn't send DHCP REQUEST packet on interface " << i << "!");
@@ -375,7 +377,7 @@ void entry()
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)))
+      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)) > 0)
       {        
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
         

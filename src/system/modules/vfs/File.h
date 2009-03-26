@@ -37,7 +37,7 @@ public:
   File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
        uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0);
   /** Destructor - doesn't do anything. */
-  ~File();
+  virtual ~File();
 
   /** Returns true if this file is "valid" - i.e. it is a real file/directory */
   bool isValid();

@@ -137,10 +137,11 @@ public:
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
   {
     memset(reinterpret_cast<void*>(buffer), 0, size);
+    return size;
   }
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
   {
-    return 0;
+    return size;
   }
   virtual void truncate(File *pFile)
   {}

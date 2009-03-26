@@ -70,8 +70,8 @@ void Dns::mainThread()
     if(e->dataReady(true))
     {
       // read the packet
-      size_t n = e->recv(buffLoc, 512, &remoteHost);
-      if(!n)
+      int n = e->recv(buffLoc, 512, &remoteHost);
+      if(n <= 0)
         continue;
       
       // grab the header
