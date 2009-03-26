@@ -212,7 +212,12 @@ NOTICE("TUI: read: Return " << Hex << i);
           }
         }
       }
-//      if (c == '\n') c = '\r';
+      // ENTER should actually be \r. Perform this mapping no matter what,
+      // before we perform the NL->CR / CR->NL mappings.
+      if (c == '\n') c = '\r';
+
+      if (c == '\n' && m_MapNlToCrIn) c = '\r';
+      else if (c == '\r' && m_MapCrToNlIn) c = '\n';
       buf[i++] = c;
     }
 
@@ -225,8 +230,9 @@ NOTICE("TUI: read: Return " << Hex << i);
     m_EchoBackspace = static_cast<bool>(p5);
     m_NlCausesCr = static_cast<bool>(p6);
     
-    m_MapCrToNl = static_cast<bool>(p6);
-    m_MapNlToCr = static_cast<bool>(p7);
+    m_MapNlToCrIn = static_cast<bool>(p7);
+    m_MapCrToNlIn = static_cast<bool>(p8);
+    NOTICE("NLTOCR: " << m_MapNlToCrIn);
     return 0;
   }
   else if (operation == CONSOLE_GETATTR)
@@ -239,6 +245,10 @@ NOTICE("TUI: read: Return " << Hex << i);
     *echoBackspace = m_EchoBackspace;
     bool *nlCausesCr = reinterpret_cast<bool*>(p6);
     *nlCausesCr = m_NlCausesCr;
+    bool *mapNlToCrIn = reinterpret_cast<bool*>(p7);
+    *mapNlToCrIn = m_MapNlToCrIn;
+    bool *mapCrToNlIn = reinterpret_cast<bool*>(p8);
+    *mapCrToNlIn = m_MapCrToNlIn;
     return 0;
   }
   else if (operation == CONSOLE_GETCOLS)

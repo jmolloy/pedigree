@@ -55,8 +55,8 @@ public:
 
   bool isConsole(File* file);
 
-  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr);
-  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr);
+  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn);
+  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn);
   int  getCols(File* file);
   int  getRows(File* file);
   bool hasDataAvailable(File* file);

@@ -43,8 +43,8 @@ protected:
   bool m_Echo;
   bool m_EchoNewlines;
   bool m_EchoBackspace;
-  bool m_MapCrToNl;
-  bool m_MapNlToCr;
+  bool m_MapCrToNlIn;
+  bool m_MapNlToCrIn;
   
   bool m_NlCausesCr;
 
