@@ -177,7 +177,6 @@ void Vt100::write(char c)
         m_pWindows[m_CurrentWindow]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0);
         m_bChangingState = false;
         break;
-      case 'M':
       case 'T':
       {
         size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;

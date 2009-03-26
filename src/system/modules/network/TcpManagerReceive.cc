@@ -592,7 +592,14 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   if(stateBlock->currentState == Tcp::CLOSED)
   {
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused connection to close.");
-    TcpManager::instance().returnEndpoint(stateBlock->endpoint);
-    removeConn(stateBlock->connId);
+
+    // If we are in a state that's not created by user intervention, we can safely remove and close the connection
+    // both of these require the user to go through a close() operation, which inherently calls disconnect.
+    /// \note If you're working in kernel space, and you close a connection, *DO NOT* return the endpoint
+    if(oldState == Tcp::LAST_ACK || oldState == Tcp::CLOSING)
+    {
+      TcpManager::instance().returnEndpoint(stateBlock->endpoint);
+      removeConn(stateBlock->connId);
+    }
   }
 }

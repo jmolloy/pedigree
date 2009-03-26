@@ -95,7 +95,6 @@ void Dns::mainThread()
       if(!bFound)
         continue;
       
-      //uint16_t qCount = BIG_TO_HOST16(head->qCount);
       uint16_t ansCount = BIG_TO_HOST16(head->aCount);
       
       // read the hostname to find the start of the question and answer structures
@@ -126,27 +125,60 @@ void Dns::mainThread()
           secSize = *tmp++;
         }
       }
-      
+        
+      // null byte
+      hostLen++;
       req->entry->hostname = hostname;
       
-      // now we need the actual size of the hostname, not the final offset
-      hostLen++;
+      uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix) + 1;
+      uintptr_t ansStart = structStart;
       
-      /// \todo This assumes there's only one question structure
-      
-      uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen;
-      uintptr_t ansStart = structStart + sizeof(QuestionSecNameSuffix);
-      
-      req->entry->ip = new IpAddress[ansCount];
-      req->entry->numIps = ansCount;
+      req->entry->ip = 0;
+      req->entry->numIps = 0;
       
       for(size_t answer = 0; answer < ansCount; answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);
-        if(BIG_TO_HOST16(ans->length) == 4)
+        if(BIG_TO_HOST16(ans->name) & 0x2)
         {
-          uint32_t newIp = *reinterpret_cast<uint32_t*>(ansStart + sizeof(DnsAnswer));
-          req->entry->ip[answer].setIp(newIp);
+          // stores an offset to the name for this entry
+          NOTICE("Is an offset - " << (BIG_TO_HOST16(ans->name) - 2) << " bytes");
+        }
+        else
+        {
+          // apparently this is actually meant to be a proper name component? weird....
+        }
+
+        switch(BIG_TO_HOST16(ans->type))
+        {
+          /** A Record */
+          case 0x0001:
+            {
+              if(BIG_TO_HOST16(ans->length) == 4)
+              {
+                IpAddress* newList = new IpAddress[req->entry->numIps + 1];
+                if(req->entry->ip)
+                {
+                  size_t i;
+                  for(i = 0; i < req->entry->numIps; i++)
+                    newList[i] = req->entry->ip[i];
+                  delete [] req->entry->ip;
+                }
+                req->entry->ip = newList;
+
+                uint32_t newIp = *reinterpret_cast<uint32_t*>(ansStart + sizeof(DnsAnswer));
+                req->entry->ip[req->entry->numIps].setIp(newIp);
+                req->entry->numIps++;
+              }
+            }
+            break;
+          
+          /** CNAME */
+          case 0x0005:
+            {
+              WARNING("TODO: DNS CNAME records --> Hostent aliases");
+            }
+            break;
         }
         
         ansStart += sizeof(DnsAnswer) + BIG_TO_HOST16(ans->length);
@@ -156,6 +188,8 @@ void Dns::mainThread()
       m_DnsCache.pushBack(req->entry);
       req->success = true;
       req->waitSem.release();
+
+      NOTICE("Handled a response");
     }
   }
 }

@@ -235,7 +235,7 @@ int posix_open(const char *name, int flags, int mode)
     return -1;
   }
   
-  if(flags & O_TRUNC)
+  if((flags & O_TRUNC) && ((flags & O_CREAT) || (flags & O_WRONLY) || (flags & O_RDWR)))
   {
     NOTICE("Truncating file");
     
