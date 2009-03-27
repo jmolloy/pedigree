@@ -1,0 +1,11 @@
+Import('*')
+KERNEL_SOURCES = []
+KERNEL_SOURCES += [Glob('*.cc')]
+KERNEL_SOURCES += [Glob('arch/$ARCHITECTURE/common/*.cc')]
+KERNEL_SOURCES += [Glob('arch/$ARCHITECTURE/$MACHINE/*.cc')]
+
+KERNEL_INCLUDES = []
+KERNEL_INCLUDES += [Dir('arch/$ARCHITECTURE/common/')]
+KERNEL_INCLUDES += [Dir('arch/$ARCHITECTURE/$MACHINE/')]
+
+env.Program(target = 'Kernel', source = KERNEL_SOURCES, CPPPATH = KERNEL_INCLUDES)

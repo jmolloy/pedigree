@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Komodo Project File - DO NOT EDIT -->
+<project id="b24c9db1-a56a-6a49-9168-08f923ff0820" kpf_version="4" name="Pedigree.kpf">
+<preference-set idref="b24c9db1-a56a-6a49-9168-08f923ff0820">
+  <boolean id="import_live">1</boolean>
+</preference-set>
+</project>
