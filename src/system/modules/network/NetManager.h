@@ -26,6 +26,7 @@
 
 #define NETMAN_PROTO_UDP    1
 #define NETMAN_PROTO_TCP    2
+#define NETMAN_PROTO_RAW    3
 #define NETMAN_PROTO_UDP6   10
 #define NETMAN_PROTO_TCP6   11
 

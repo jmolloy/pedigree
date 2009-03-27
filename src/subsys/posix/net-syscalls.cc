@@ -77,6 +77,10 @@ int posix_socket(int domain, int type, int protocol)
     else
       valid = false;
   }
+  else if(domain == PF_SOCKET)
+  {
+    file = NetManager::instance().newEndpoint(NETMAN_PROTO_RAW);
+  }
   else
     valid = false;
   
@@ -146,6 +150,8 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     p->setRemoteIp(remoteHost.ip);
     success = true;
   }
+  else if(file->getSize() == NETMAN_PROTO_RAW)
+    success = true; /// \todo If the interface is down, fail
   
   return success ? 0 : -1;
 }

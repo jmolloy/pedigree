@@ -136,6 +136,7 @@ void Dns::mainThread()
       req->entry->ip = 0;
       req->entry->numIps = 0;
       
+      // http://www.zytrax.com/books/dns/ch15/ for future reference
       for(size_t answer = 0; answer < ansCount; answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);

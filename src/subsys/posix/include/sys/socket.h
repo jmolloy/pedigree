@@ -74,18 +74,25 @@ enum SocketOptions
 #define SOMAXCONN     65536
 
 /// \todo check that these are actually exclusive, if not, set to bit values
-#define MSG_CTRUNC 0
+#define MSG_CTRUNC    0
 #define MSG_DONTROUTE 1
-#define MSG_EOR 2
-#define MSG_OOB 3
-#define MSG_NOSIGNAL 4
-#define MSG_PEEK 5
-#define MSG_TRUNC 6
-#define MSG_WAITALL 7
+#define MSG_EOR       2
+#define MSG_OOB       4
+#define MSG_NOSIGNAL  8
+#define MSG_PEEK      16
+#define MSG_TRUNC     32
+#define MSG_WAITALL   64
 
-#define AF_INET 0
-#define AF_INET6 1
-#define AF_UNSPEC 2
+#define PF_INET   0
+#define PF_INET6  1
+#define PF_UNIX   2
+#define PF_SOCKET 3
+#define PF_MAX    3
+
+#define AF_INET   (PF_INET)
+#define AF_INET6  (PF_INET6)
+#define AF_UNIX   (PF_UNIX)
+#define AF_UNSPEC (PF_MAX+1)
 
 
 #define  SHUT_RD 0 // disables receiving

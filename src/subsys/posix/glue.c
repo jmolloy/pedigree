@@ -813,3 +813,9 @@ int readlink(const char* path, char* buf, unsigned int bufsize)
   STUBBED("readlink");
   return -1;
 }
+
+int ftime(struct timeb *tp)
+{
+  STUBBED("ftime");
+  return -1;
+}

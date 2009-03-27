@@ -18,6 +18,7 @@
 #include <network/Endpoint.h>
 #include <network/UdpManager.h>
 #include <network/TcpManager.h>
+#include <network/RawManager.h>
 
 NetManager NetManager::m_Instance;
 
@@ -32,6 +33,10 @@ File* NetManager::newEndpoint(int protocol)
   else if(protocol == NETMAN_PROTO_TCP)
   {
     p = TcpManager::instance().getEndpoint();
+  }
+  else if(protocol == NETMAN_PROTO_RAW)
+  {
+    p = RawManager::instance().getEndpoint();
   }
   else
   {
@@ -74,6 +79,9 @@ void NetManager::removeEndpoint(File* f)
   //  UdpManager::instance().returnEndpoint(e);
   //else if(f->getSize() == NETMAN_PROTO_TCP)
   //  TcpManager::instance().returnEndpoint(e);
+
+  if(f->getSize() == NETMAN_PROTO_RAW)
+    RawManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File* f)
@@ -133,6 +141,10 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
     Endpoint::RemoteEndpoint remoteHost;
     ret = p->recv(buffer, size, &remoteHost);
   }
+  else if(pFile->getSize() == NETMAN_PROTO_RAW)
+  {
+    ret = p->recv(buffer, size, 0);
+  }
   
   return ret;
 }
@@ -159,6 +171,11 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
       remoteHost.ip = remoteIp;
       success = p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
     }
+  }
+  else if(pFile->getSize() == NETMAN_PROTO_RAW)
+  {
+    Endpoint::RemoteEndpoint remoteHost;
+    p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
   }
   
   return success ? size : 0;

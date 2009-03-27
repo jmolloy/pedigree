@@ -1,0 +1,11 @@
+prefix=/usr/pedigree/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: OpenSSL
+Description: Secure Sockets Layer and cryptography libraries
+Version: 0.9.8k
+Requires: 
+Libs: -L${libdir} -lssl -lcrypto -L/usr/pedigree/lib
+Cflags: -I${includedir} 

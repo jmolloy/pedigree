@@ -17,6 +17,7 @@
 #include "Ethernet.h"
 #include "Arp.h"
 #include "Ip.h"
+#include "RawManager.h"
 #include <Module.h>
 #include <Log.h>
 
@@ -35,7 +36,11 @@ Ethernet::~Ethernet()
 void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {  
   // grab the header
-  ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet);
+  ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
+
+  // dump this packet into the RAW sockets
+  NOTICE("Passing on to RawManager");
+  RawManager::instance().receive(packet, nBytes, pCard);
   
   // what type is the packet?
   switch(BIG_TO_HOST16(ethHeader->type))
