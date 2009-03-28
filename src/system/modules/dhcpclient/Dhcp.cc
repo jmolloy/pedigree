@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -70,7 +70,7 @@ struct DhcpOptionMagicCookie
   DhcpOptionMagicCookie() :
     cookie(MAGIC_COOKIE)
   {};
-  
+
   uint32_t cookie;
 } __attribute__((packed));
 
@@ -81,7 +81,7 @@ struct DhcpOptionSubnetMask
   DhcpOptionSubnetMask() :
     code(DHCP_SUBNETMASK), len(4), a1(0), a2(0), a3(0), a4(0)
   {};
-  
+
   uint8_t code;
   uint8_t len;
   uint8_t a1;
@@ -97,7 +97,7 @@ struct DhcpOptionDefaultGateway
   DhcpOptionDefaultGateway() :
     code(DHCP_DEFGATEWAY), len(4), a1(0), a2(0), a3(0), a4(0)
   {};
-  
+
   uint8_t code;
   uint8_t len;
   uint8_t a1;
@@ -124,7 +124,7 @@ struct DhcpOptionAddrReq
   DhcpOptionAddrReq() :
     code(DHCP_ADDRREQ), len(4), a1(0), a2(0), a3(0), a4(0)
   {};
-  
+
   uint8_t code;
   uint8_t len;
   uint8_t a1;
@@ -140,7 +140,7 @@ struct DhcpOptionMsgType
   DhcpOptionMsgType() :
     code(DHCP_MSGTYPE), len(1), opt(DISCOVER)
   {};
-  
+
   uint8_t   code; // = 0x53
   uint8_t   len; // = 1
   uint8_t   opt;
@@ -153,7 +153,7 @@ struct DhcpOptionServerIdent
   DhcpOptionServerIdent() :
     code(DHCP_SERVERIDENT), len(4), a1(0), a2(0), a3(0), a4(0)
   {};
-  
+
   uint8_t code;
   uint8_t len;
   uint8_t a1;
@@ -169,7 +169,7 @@ struct DhcpOptionEnd
   DhcpOptionEnd() :
     code(DHCP_MSGEND)
   {};
-  
+
   uint8_t   code;
 } __attribute__((packed));
 
@@ -204,13 +204,13 @@ void entry()
     
     IpAddress broadcast(0xffffffff);
     Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);
-        
+
     #define BUFFSZ 2048
     uint8_t* buff = new uint8_t[BUFFSZ];
-    
+
     // can be used for anything
     DhcpPacket dhcp;
-    
+
     enum DhcpState
     {
       DISCOVER_SENT = 0, // we've sent DHCP DISCOVER
@@ -219,19 +219,19 @@ void entry()
       ACK_RECVD, // we've received the final ACK
       UNKNOWN
     } currentState;
-      
-    
+
+
     if(e)
     {
       // DHCP DISCOVER to find potential DHCP servers
       e->acceptAnyAddress(true);
-      
+
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = 67;
       remoteHost.ip = broadcast;
-      
+
       currentState = DISCOVER_SENT;
-      
+
       // zero out and fill the initial packet
       memset(&dhcp, 0, sizeof(DhcpPacket));
       dhcp.opcode = OP_BOOTREQUEST;
@@ -239,13 +239,13 @@ void entry()
       dhcp.hlen = 6; // 6 bytes in a MAC address
       dhcp.xid = HOST_TO_BIG32(12345);
       memcpy(dhcp.chaddr, info.mac, 6);
-      
+
       DhcpOptionMagicCookie cookie;
       DhcpOptionMsgType msgTypeOpt;
       DhcpOptionEnd endOpt;
-      
+
       msgTypeOpt.opt = DISCOVER;
-      
+
       size_t byteOffset = 0;
       byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
       byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
@@ -260,12 +260,12 @@ void entry()
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      
+
       // Find and respond to the first DHCP offer
-      
+
       uint32_t myIpWillBe = 0;
       DhcpOptionServerIdent dhcpServer;
-      
+
       int n = 0;
       if(e->dataReady(true) == false)
       {
@@ -276,12 +276,12 @@ void entry()
       while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)) > 0)
       {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
-        
+
         if(incoming->opcode != OP_BOOTREPLY)
           continue;
-        
+
         myIpWillBe = incoming->yiaddr;
-        
+
         size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
         if(dhcpSizeWithoutOptions == 0)
         {
@@ -300,7 +300,7 @@ void entry()
           NOTICE("Magic cookie incorrect!");
           break;
         }
-        
+
         // check the options for the magic cookie and DHCP OFFER
         byteOffset = 0;
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
@@ -319,42 +319,42 @@ void entry()
             DhcpOptionServerIdent* p = reinterpret_cast<DhcpOptionServerIdent*>(opt);
             dhcpServer = *p;
           }
-          
+
           byteOffset += opt->len + 2;
         }
-        
+
         // if YOUR-IP is set and no DHCP Message Type was given, assume this is an offer
         if(myIpWillBe && (currentState != OFFER_RECVD))
           currentState = OFFER_RECVD;
       }
-            
+
       if(currentState != OFFER_RECVD)
       {
         WARNING("Couldn't get a valid offer packet.");
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      
+
       // We want to accept this offer by requesting it from the DHCP server
-            
+
       currentState = REQUEST_SENT;
-      
+
       DhcpOptionAddrReq addrReq;
-      
+
       addrReq.a4 = (myIpWillBe & 0xFF000000) >> 24;
       addrReq.a3 = (myIpWillBe & 0x00FF0000) >> 16;
       addrReq.a2 = (myIpWillBe & 0x0000FF00) >> 8;
       addrReq.a1 = (myIpWillBe & 0x000000FF);
-      
+
       msgTypeOpt.opt = REQUEST;
-      
+
       byteOffset = 0;
       byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
       byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
       byteOffset = addOption(&addrReq, sizeof(addrReq), byteOffset, dhcp.options);
       byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, dhcp.options);
       byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
-      
+
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
       success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
@@ -364,12 +364,12 @@ void entry()
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      
+
       // Grab the ACK and update the card
-      
+
       DhcpOptionSubnetMask subnetMask;
       bool subnetMaskSet = false;
-      
+
       DhcpOptionDefaultGateway defGateway;
       bool gatewaySet = false;
 
@@ -385,14 +385,14 @@ void entry()
         continue;
       }
       while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, &remoteHost)) > 0)
-      {        
+      {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
-        
+
         if(incoming->opcode != OP_BOOTREPLY)
           continue;
-        
+
         myIpWillBe = incoming->yiaddr;
-        
+
         size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
         if(dhcpSizeWithoutOptions == 0)
         {
@@ -407,7 +407,7 @@ void entry()
           NOTICE("Magic cookie incorrect!");
           break;
         }
-        
+
         // check the options for the magic cookie and DHCP OFFER
         byteOffset = 0;
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
@@ -453,23 +453,23 @@ void entry()
           
           byteOffset += opt->len + 2;
         }
-        
+
         // if YOUR-IP is set and no DHCP Message Type was given, assume this is an ack
         if(myIpWillBe && (currentState != ACK_RECVD))
           currentState = ACK_RECVD;
       }
-      
+
       if(currentState != ACK_RECVD)
       {
         WARNING("Couldn't get a valid ack packet.");
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      
+
       // set it up
       StationInfo host;
       host.ipv4.setIp(Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4));
-      
+
       if(subnetMaskSet)
         host.subnetMask.setIp(Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4));
       else
@@ -495,10 +495,10 @@ void entry()
         host.nDnsServers = 0;
       }
       pCard->setStationInfo(host);
-      
+      NOTICE("DHCP completed.");
       UdpManager::instance().returnEndpoint(e);
     }
-    
+
     delete [] buff;
   }
   NOTICE("DHCP Client: Complete");

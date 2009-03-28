@@ -55,7 +55,6 @@ static bool probeDisk(Disk *pDisk)
         NOTICE("Mounted " << alias << " successfully as root.");
         VFS::instance().addAlias(alias, String("root"));
       }
-    delete f;
     }
     else
     {
@@ -151,6 +150,8 @@ void init()
   pProcess->description().clear();
   pProcess->description().append("init");
 
+  pProcess->setCwd(VFS::instance().find(String("root:/")));
+
   VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
 
   // Switch to the init process' address space.
@@ -167,29 +168,25 @@ void init()
   initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
 
   DynamicLinker::instance().setInitProcess(pProcess);
-  NOTICE("regElf");
   DynamicLinker::instance().registerElf(&initElf);
-NOTICE("needed");
+
   uintptr_t iter = 0;
   List<char*> neededLibraries = initElf.neededLibraries();
   for (List<char*>::Iterator it = neededLibraries.begin();
        it != neededLibraries.end();
        it++)
   {
-    NOTICE("n1");
     if (!DynamicLinker::instance().load(*it, pProcess))
     {
       ERROR("Couldn't open needed file '" << *it << "'");
       FATAL("Init program failed to load!");
       return;
     }
-    NOTICE("n2");
   }
-NOTICE("bleh");
   initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
   DynamicLinker::instance().setInitProcess(0);
-  ERROR("Init elf: " << (uintptr_t)&initElf);
+
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
@@ -208,8 +205,6 @@ NOTICE("bleh");
   
   delete [] buffer;
   
-  delete initProg;
-
   lock.release();
 
 }

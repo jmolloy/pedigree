@@ -31,11 +31,11 @@ class PipeFile : public File
     /** Constructor, creates an invalid file. */
     PipeFile();
     PipeFile(const File &file);
-    PipeFile(File* file);
+//    PipeFile(File* file);
 
     /** Constructor, should be called only by a Filesystem. */
     PipeFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-         uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0);
+         uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size);
     /** Destructor - removes a reference from the PipeManager's internal list. */
     virtual ~PipeFile();
 };
@@ -84,7 +84,7 @@ public:
           Pipe* pipe = m_Pipes[n];
           m_Pipes.erase(it);
 
-          delete pipe->original;
+          if (pipe->original->shouldDelete()) delete pipe->original;
           delete pipe;
           break;
         }
@@ -108,8 +108,8 @@ public:
   {}
   virtual void fileAttributeChanged(File *pFile)
   {}
-  virtual File* getDirectoryChild(File *pFile, size_t n)
-  {return VFS::invalidFile();}
+  virtual void cacheDirectoryContents(File *pFile)
+  {}
 
 protected:
   virtual bool createFile(File* parent, String filename, uint32_t mask)

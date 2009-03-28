@@ -30,13 +30,13 @@ PipeFile::PipeFile() : File()
 PipeFile::PipeFile(const File &file) : File(file)
 {};
 
-PipeFile::PipeFile(File* file) : File(file)
-{};
+//PipeFile::PipeFile(File* file) : File(file)
+//{};
 
 PipeFile::PipeFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-                    uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2)
+                    uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size)
                     :
-                    File(name, accessedTime, modifiedTime, creationTime, inode, isSymlink, isDirectory, pFs, size, custom1, custom2)
+                    File(name, accessedTime, modifiedTime, creationTime, inode, isSymlink, isDirectory, pFs, size)
 {};
 
 PipeFile::~PipeFile()
@@ -114,7 +114,7 @@ uint64_t PipeManager::write(File *pFile, uint64_t location, uint64_t size, uintp
   return size;
 }
 
-typedef Tree<size_t,void*> FdMap;
+typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_pipe(int filedes[2])
 {
@@ -134,12 +134,12 @@ int posix_pipe(int filedes[2])
   FileDescriptor* read = new FileDescriptor;
   read->file = PipeManager::instance().copyPipe(p);
   read->offset = 0;
-  fdMap.insert(readFd, reinterpret_cast<void*>(read));
+  fdMap.insert(readFd, read);
   
   FileDescriptor* write = new FileDescriptor;
   write->file = PipeManager::instance().copyPipe(p);
   write->offset = 0;
-  fdMap.insert(writeFd, reinterpret_cast<void*>(write));
+  fdMap.insert(writeFd, write);
   
   return 0;
 }

@@ -22,16 +22,16 @@
 #include "Filesystem.h"
 
 /** This class implements a virtual file system.
- * 
+ *
  * The pedigree VFS is structured in a similar way to windows' - every filesystem
  * is identified by a unique name and accessed thus:
- * 
+ *
  * myfs:/mydir/myfile
- * 
+ *
  * No UNIX-style mounting of filesystems inside filesystems is possible.
- * A filesystem may be referred to by multiple names - a reference count is 
+ * A filesystem may be referred to by multiple names - a reference count is
  * maintained by the filesystem - when no aliases point to it, it is unmounted totally.
- * 
+ *
  * The 'root' filesystem - that is the FS with system data on, is visible by the alias
  * 'root', thus; 'root:/System/Boot/kernel' could be used to access the kernel image.
  */
@@ -42,10 +42,10 @@ public:
   VFS();
   /** Destructor */
   ~VFS();
-  
+
   /** Returns the singleton VFS instance. */
   static VFS &instance();
-  
+
   /** Returns the invalid file pointer */
   static File* invalidFile();
 
@@ -59,10 +59,10 @@ public:
    *\param pAlias The alias to add. */
   void addAlias(Filesystem *pFs, String alias);
   void addAlias(String oldAlias, String newAlias);
-  
+
   /** Gets a unique alias for a filesystem. */
   String getUniqueAlias(String alias);
-  
+
   /** Does a given alias exist? */
   bool aliasExists(String alias);
 
@@ -81,19 +81,19 @@ public:
   Filesystem *lookupFilesystem(String alias);
 
   /** Attempts to obtain a File for a specific path. */
-  File* find(String path);
+  File *find(String path, File *pStartNode=0);
 
   /** Attempts to create a file. */
-  bool createFile(String path, uint32_t mask);
-  
+  bool createFile(String path, uint32_t mask, File *pStartNode=0);
+
   /** Attempts to create a directory. */
-  bool createDirectory(String path);
+  bool createDirectory(String path, File *pStartNode=0);
 
   /** Attempts to create a symlink. */
-  bool createSymlink(String path, String value);
+  bool createSymlink(String path, String value, File *pStartNode=0);
 
   /** Attempts to remove a file/directory/symlink. WILL FAIL IF DIRECTORY NOT EMPTY */
-  bool remove(String path);
+  bool remove(String path, File *pStartNode=0);
 
   /** Adds a filesystem probe callback - this is called when a device is mounted. */
   void addProbeCallback(Filesystem::ProbeCallback callback);
@@ -101,7 +101,7 @@ public:
 private:
   /** The static instance object. */
   static VFS m_Instance;
-  
+
   /** A static File object representing an invalid file */
   static File* m_EmptyFile;
 

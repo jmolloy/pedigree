@@ -207,7 +207,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     }
     else break;
   }
-  
+
   if (nBytes == 0) return origNBytes;
 
   /// \todo DMA?

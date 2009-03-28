@@ -20,6 +20,8 @@
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
 #include <process/Mutex.h>
+#include <utilities/Tree.h>
+#include <utilities/Vector.h>
 
 #define EXT2_UNKNOWN   0x0
 #define EXT2_FILE      0x1
@@ -58,7 +60,7 @@ public:
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
-  virtual File* getDirectoryChild(File *pFile, size_t n);
+  virtual void cacheDirectoryContents(File *pFile);
 
 protected:
 
@@ -211,6 +213,9 @@ protected:
 
   /** Is the superblock dirty? Does it need to be written back to disk? */
   bool m_SuperblockDirty;
+
+  /** The root filesystem node. */
+  File *m_pRoot;
 };
 
 #endif

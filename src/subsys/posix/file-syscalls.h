@@ -33,7 +33,8 @@ public:
   File* file;
   uint64_t offset;
   size_t fd;
-  
+
+  /// \todo What are these? Can they be documented please?
   int fdflags;
   int flflags;
 };
@@ -101,6 +102,7 @@ typedef struct _types_fd_set {
 #define	S_IFCHR	0020000	/* character special */
 #define S_IFDIR 0040000 /* Directory */
 #define S_IFREG 0100000 /* Regular file */
+#define S_IFLNK 0120000 /* symbolic link */
 
 #define	F_DUPFD		0	/* Duplicate fildes */
 #define	F_GETFD		1	/* Get fildes flags (close on exec) */
@@ -147,8 +149,8 @@ public:
   {}
   virtual void fileAttributeChanged(File *pFile)
   {}
-  virtual File* getDirectoryChild(File *pFile, size_t n)
-  {return VFS::invalidFile();}
+  virtual void cacheDirectoryContents(File *pFile)
+  {}
 
 protected:
   virtual bool createFile(File* parent, String filename, uint32_t mask)

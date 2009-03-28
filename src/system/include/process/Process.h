@@ -29,6 +29,8 @@
 #include <utilities/MemoryAllocator.h>
 
 class VirtualAddressSpace;
+class File;
+class FileDescriptor;
 
 /**
  * An abstraction of a Process - a container for one or more threads all running in
@@ -83,7 +85,7 @@ public:
   
   /** Returns the File descriptor map - maps numbers to pointers (of undefined type -
       the subsystem decides what type). */
-  Tree<size_t,void*> &getFdMap()
+  Tree<size_t,FileDescriptor*> &getFdMap()
   {
     return m_FdMap;
   }
@@ -121,14 +123,14 @@ public:
   }
 
   /** Returns the current working directory. */
-  String &getCwd()
+  File *getCwd()
   {
     return m_Cwd;
   }
   /** Sets the current working directory. */
-  void setCwd(String str)
+  void setCwd(File *f)
   {
-    m_Cwd = str;
+    m_Cwd = f;
   }
 
   /** Returns the memory space allocator for shared libraries. */
@@ -169,7 +171,7 @@ private:
    * The file descriptor map. Maps number to pointers, the type of which is decided
    * by the subsystem.
    */
-  Tree<size_t,void*> m_FdMap;
+  Tree<size_t,FileDescriptor*> m_FdMap;
   /**
    * The next available file descriptor.
    */
@@ -185,7 +187,7 @@ private:
   /**
    * Current working directory.
    */
-  String m_Cwd;
+  File *m_Cwd;
   /**
    * Memory allocator for shared libraries - free parts of the address space.
    */

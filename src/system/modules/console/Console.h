@@ -77,8 +77,8 @@ public:
   {}
   virtual void fileAttributeChanged(File *pFile)
   {}
-  virtual File* getDirectoryChild(File *pFile, size_t n)
-  {return VFS::invalidFile();}
+  virtual void cacheDirectoryContents(File *pFile)
+  {}
 
 protected:
   virtual bool createFile(File* parent, String filename, uint32_t mask)

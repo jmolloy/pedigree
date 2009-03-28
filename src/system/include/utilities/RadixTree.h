@@ -21,6 +21,8 @@
 #include <utilities/String.h>
 #include <utilities/Iterator.h>
 #include <utilities/IteratorAdapter.h>
+#include <Log.h>
+#include <processor/Processor.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -55,21 +57,30 @@ private:
      *\return pointer to the next data structure in the list */
     Node *next()
     {
-      if (children)
-        return children;
-      else if (_next)
-        return _next;
-      else
+      Node *node = this;
+      while ((node == this) || (node && (node->value == 0)))
       {
-        Node *n = parent;
-        while (n)
+        if (node->children)
+          node = node->children;
+        else if (node->_next)
+          node = node->_next;
+        else
         {
-          if (n->_next)
-            return n;
-          n = n->parent;
+          Node *n = node->parent;
+          node = 0;
+          while (n)
+          {
+            if (n->_next)
+            {
+              node = n->_next;
+              break;
+            }
+            n = n->parent;
+          }
+          continue;
         }
-        return 0;
       }
+      return node;
     }
     /** Get the previous data structure in the list
      *\return pointer to the previous data structure in the list
@@ -132,13 +143,13 @@ public:
    *\return iterator pointing to the end of the List + 1 */
   inline Iterator end()
   {
-    return Iterator();
+    return Iterator(0);
   }
   /** Get a constant iterator pointing to the end of the List + 1
    *\return constant iterator pointing to the end of the List + 1 */
   inline ConstIterator end() const
   {
-    return ConstIterator();
+    return ConstIterator(0);
   }
 
 private:

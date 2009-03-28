@@ -26,7 +26,7 @@
 
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd("root:/"), m_SpaceAllocator()
+  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator()
 {
   m_Id = Scheduler::instance().addProcess(this);
   m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -

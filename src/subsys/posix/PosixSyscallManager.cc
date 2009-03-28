@@ -57,7 +57,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
   uintptr_t p3 = state.getSyscallParameter(2);
   uintptr_t p4 = state.getSyscallParameter(3);
   uintptr_t p5 = state.getSyscallParameter(4);
-  
+
   /// \todo This needs to be implemented for posix_recvfrom/posix_sendto
   // uintptr_t p6 = state.getSyscallParameter(5);
 
@@ -140,6 +140,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_dup(static_cast<int>(p1));
     case POSIX_DUP2:
       return posix_dup2(static_cast<int>(p1), static_cast<int>(p2));
+    case POSIX_LSTAT:
+      return posix_lstat(reinterpret_cast<char*>(p1), reinterpret_cast<struct stat*>(p2));
     case POSIX_UNLINK:
       return posix_unlink(reinterpret_cast<char*>(p1));
     case POSIX_GETHOSTBYNAME:

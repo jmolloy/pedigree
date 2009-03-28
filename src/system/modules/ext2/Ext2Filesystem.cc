@@ -94,7 +94,9 @@ Filesystem *Ext2Filesystem::probe(Disk *pDisk)
 
 File* Ext2Filesystem::getRoot()
 {
-  return new File(String(""), 0, 0, 0, EXT2_ROOT_INO, false, true, this, 0);
+  if (!m_pRoot)
+    m_pRoot = new File(String(""), 0, 0, 0, EXT2_ROOT_INO, false, true, this, 0, 0, false);
+  return m_pRoot;
 }
 
 String Ext2Filesystem::getVolumeLabel()
@@ -165,12 +167,29 @@ bool Ext2Filesystem::createFile(File* parent, String filename, uint32_t mask)
   newInode.i_file_acl = 0;
   newInode.i_dir_acl = 0;
   newInode.i_faddr = 0;
-  
+
   // Write back.
   setInode(node_num, newInode);
 
   // Inode created, now it needs to be added to the parent's directory structure.
   addDirectoryEntry(parent->getInode(), node_num, filename, EXT2_FILE);
+
+  // Update the directory cache.
+  if (parent->m_bCachePopulated)
+  {
+    parent->m_Cache.insert(filename,
+                           new File (filename,     // Name
+                                     0,                    // Accessed time
+                                     0,                    // Modified time
+                                     0,                    // Creation time
+                                     LITTLE_TO_HOST32(node_num),   // Inode
+                                     false, // Symlink
+                                     false, // Directory
+                                     this,
+                                     LITTLE_TO_HOST32(0),
+                                     parent,
+                                     false));
+  }
 
   return true;
 }

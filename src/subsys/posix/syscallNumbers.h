@@ -53,15 +53,16 @@
 #define POSIX_GETTIMEOFDAY 32
 #define POSIX_DUP        33
 #define POSIX_DUP2       34
-#define POSIX_UNLINK     35
+#define POSIX_LSTAT      35
+#define POSIX_UNLINK     36
 
-#define POSIX_GETHOSTBYNAME   36
-#define POSIX_GETHOSTBYADDR   37
+#define POSIX_GETHOSTBYNAME   37
+#define POSIX_GETHOSTBYADDR   38
 
-#define POSIX_FCNTL      38
-#define POSIX_PIPE       39
+#define POSIX_FCNTL      39
+#define POSIX_PIPE       40
 
-#define POSIX_MKDIR      40
+#define POSIX_MKDIR      41
 
 #define POSIX_STUBBED    99
 

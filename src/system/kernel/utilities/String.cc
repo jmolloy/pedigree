@@ -91,3 +91,9 @@ List<String*> String::tokenise(char token)
 
   return list;
 }
+
+void String::chomp()
+{
+  m_Length --;
+  m_Data[m_Length] = '\0';
+}

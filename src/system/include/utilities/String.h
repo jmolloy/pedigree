@@ -50,6 +50,9 @@ class String
         the string as UTF-8 encoded. */
     inline size_t nextCharacter(size_t c);
 
+    /** Removes the last character from the string. */
+    void chomp();
+
     /** Splits the string at the given offset - the front portion will be kept in this string,
      *  the back portion (including the character at 'offset' will be returned in a new string. */
     String split(size_t offset);

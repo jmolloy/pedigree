@@ -23,6 +23,8 @@
 #include <utilities/RadixTree.h>
 
 /** This class provides the abstract skeleton that all filesystems must implement.
+ *
+ * Thanks to gr00ber at #osdev for the inspiration for the caching algorithms.
  */
 class Filesystem
 {
@@ -51,9 +53,11 @@ public:
   /** Attempt to find a file or directory in this filesystem.
       \param path The path to the file, in UTF-8 format, without filesystem identifier
                   (e.g. not "root:/file", but "/file").
+      \param pStartNode The node to start parsing 'path' from - defaults to / but
+                        is expected to contain the current working directory.
       \return The file if one was found, or 0 otherwise or if there was an error.
   */
-  virtual File* find(String path);
+  virtual File *find(String path, File *pStartNode=0);
 
   /** Returns the root filesystem node. */
   virtual File* getRoot() =0;
@@ -62,16 +66,18 @@ public:
   virtual String getVolumeLabel() =0;
 
   /** Creates a file on the filesystem - fails if the file's parent directory does not exist. */
-  bool createFile(String path, uint32_t mask);
+  bool createFile(String path, uint32_t mask, File *pStartNode=0);
 
   /** Creates a directory on the filesystem. Fails if the dir's parent directory does not exist. */
-  bool createDirectory(String path);
+  bool createDirectory(String path, File *pStartNode=0);
 
   /** Creates a symlink on the filesystem, with the given value. */
-  bool createSymlink(String path, String value);
+  bool createSymlink(String path, String value, File *pStartNode=0);
 
-  /** Removes a file, directory or symlink. WILL FAIL IF DIRECTORY NOT EMPTY! */
-  bool remove(String path);
+  /** Removes a file, directory or symlink.
+      \note Will fail if it is a directory and is not empty. The failure mode
+            is unspecified. */
+  bool remove(String path, File *pStartNode=0);
 
   //
   // File interface.
@@ -89,8 +95,8 @@ public:
   /** A File calls this to propagate a change in a file attribute. */
   virtual void fileAttributeChanged(File *pFile) =0;
 
-  /** A File calls this to get the n'th child of a directory. */
-  virtual File* getDirectoryChild(File *pFile, size_t n) =0;
+  /** A File calls this to have all its children generated and put in its cache. */
+  virtual void cacheDirectoryContents(File *pFile) =0;
 
 protected:
   /** createFile calls this after it has parsed the string path. */
@@ -105,25 +111,19 @@ protected:
   bool m_bReadOnly;
 private:
 
-  /** Internal function to find a node - Returns File() on failure or the node, along with its
-      parent directory in parent, if it exists or not.
+  /** Internal function to find a node - Returns 0 on failure or the node.
+      \param pNode The node to start parsing 'path' from.
+      \param path  The path from pNode to the destination node. */
+  File *findNode(File *pNode, String path);
 
-      Even if the file didn't exist, the parent is guaranteed to be returned (if the parent directory existed). */
-  File* findNode(String path, File*& parent);
-
-  /** Internal function to attempt to read from the cache the File for the given canonical path, along with its parent. */
-  File* cacheLookup(List<String*> &canonicalPath, File* & parent);
-  /** Internal function to insert a canonised path - inode pair into the cache. */
-  void cacheInsert(String canonicalPath, File* parent);
-  /** Internal function to create a canonical path from a String. A canonical path is one without NULL segments and without the
-      special files '.' and '..' - that is, if symlinks are ignored, there is one and only one canonical path that could possibly
-      access a particular inode. */
-  void canonisePath(String &path, List<String*> &tokens);
+  /** Internal function to find a node's parent directory.
+      \param path The path from pStartNode to the original file.
+      \param pStartNode The node to start parsing 'path' from.
+      \param[out] filename The child file's name. */
+  File *findParent(String path, File *pStartNode, String &filename);
 
   /** Accessed by VFS */
   size_t m_nAliases;
-  /** Patricia tree used as a cache for fast path lookup. */
-  RadixTree<File*> m_Cache;
 };
 
 #endif

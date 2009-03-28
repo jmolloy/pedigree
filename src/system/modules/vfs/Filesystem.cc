@@ -19,313 +19,228 @@
 #include <Log.h>
 #include <utilities/utility.h>
 #include <processor/Processor.h>
+#include <syscallError.h>
 
 Filesystem::Filesystem() :
-  m_nAliases(0), m_bReadOnly(false)
+  m_bReadOnly(false), m_nAliases(0)
 {
 }
 
-File* Filesystem::find(String path)
+File *Filesystem::find(String path, File *pStartNode)
 {
-  File* parent = VFS::invalidFile();
-
-  File* ret = findNode(path, parent);
-  
-  return ret;
+  if (!pStartNode) pStartNode = getRoot();
+  return findNode(pStartNode, path);
 }
 
-bool Filesystem::createFile(String path, uint32_t mask)
+bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
 {
-  File* parent = VFS::invalidFile();
-  File* file = findNode(path, parent);
+  if (!pStartNode) pStartNode = getRoot();
+  File *pFile = findNode(pStartNode, path);
 
-  if (file->isValid())
+  if (pFile && pFile->isValid())
   {
-    // File existed.
+    SYSCALL_ERROR(FileExists);
     return false;
   }
-  else
-  {
-    // To calculate the filename, grab the last token in the tokenised path.
-    /// \todo Logic faulty, should actually use the canonical path.
-    List<String*> tokens = path.tokenise('/');
-    String filename;
-    for (List<String*>::Iterator it = tokens.begin();
-         it != tokens.end();
-         it++)
-    {
-      String *pStr = *it;
-      if (pStr->length() > 0)
-        filename = *pStr;
-      delete pStr;
-    }
-    createFile(parent, filename, mask);
-    
-    return true;
-  }
-}
 
-bool Filesystem::createDirectory(String path)
-{
-  File* parent;
-  File* file = findNode(path, parent);
+  String filename;
+  File *pParent = findParent(path, pStartNode, filename);
 
-  if (file->isValid())
+  // Check the parent existed.
+  if (!pParent || !pParent->isValid())
   {
-    // File existed.
-    delete parent;
+    SYSCALL_ERROR(DoesNotExist);
     return false;
   }
-  else
-  {
-    // To calculate the filename, grab the last token in the tokenised path.
-    /// \todo Logic faulty, should actually use the canonical path.
-    List<String*> tokens = path.tokenise('/');
-    String filename;
-    for (List<String*>::Iterator it = tokens.begin();
-         it != tokens.end();
-         it++)
-    {
-      String *pStr = *it;
-      if (pStr->length() > 0)
-        filename = *pStr;
-      delete pStr;
-    }
-    createDirectory(parent, filename);
-    
-    delete parent;
+  ERROR("Making file  with filename " << filename << "r: " << (pParent==getRoot()));
+  // Now make the file.
+  createFile(pParent, filename, mask);
 
-    return true;
-  }
+  return true;
 }
 
-bool Filesystem::createSymlink(String path, String value)
+bool Filesystem::createDirectory(String path, File *pStartNode)
 {
-  File* parent;
-  File* file = findNode(path, parent);
+  if (!pStartNode) pStartNode = getRoot();
+  File *pFile = findNode(pStartNode, path);
 
-  if (file->isValid())
+  if (pFile && pFile->isValid())
   {
-    // File existed.
-    delete parent;
+    SYSCALL_ERROR(FileExists);
     return false;
   }
-  else
+
+  String filename;
+  File *pParent = findParent(path, pStartNode, filename);
+
+  // Check the parent existed.
+  if (!pParent || !pParent->isValid())
   {
-    // To calculate the filename, grab the last token in the tokenised path.
-    /// \todo Logic faulty, should actually use the canonical path.
-    List<String*> tokens = path.tokenise('/');
-    String filename;
-    for (List<String*>::Iterator it = tokens.begin();
-         it != tokens.end();
-         it++)
-    {
-      String *pStr = *it;
-      if (pStr->length() > 0)
-        filename = *pStr;
-      delete pStr;
-    }
-    createSymlink(parent, filename, value);
-    
-    delete parent;
-
-    return true;
+    SYSCALL_ERROR(DoesNotExist);
+    return false;
   }
-}
-
-bool Filesystem::remove(String path)
-{
-  File* parent;
-
-  File* file = findNode(path, parent);
-
-  /// \todo Needs removing from cache.
-  bool ret = remove(parent, file);
   
-  delete parent;
+  // Now make the directory.
+  createDirectory(pParent, filename);
+
+  return true;
+}
+
+bool Filesystem::createSymlink(String path, String value, File *pStartNode)
+{
+  if (!pStartNode) pStartNode = getRoot();
+  File *pFile = findNode(pStartNode, path);
+
+  if (pFile && pFile->isValid())
+  {
+    SYSCALL_ERROR(FileExists);
+    return false;
+  }
+
+  String filename;
+  File *pParent = findParent(path, pStartNode, filename);
+
+  // Check the parent existed.
+  if (!pParent || !pParent->isValid())
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return false;
+  }
   
-  delete file;
-  
-  return ret;
+  // Now make the symlink.
+  createSymlink(pParent, filename, value);
+
+  return true;
 }
 
-File* Filesystem::findNode(String path, File*& parent)
+bool Filesystem::remove(String path, File *pStartNode)
 {
+  if (!pStartNode) pStartNode = getRoot();
 
-  List<String*> tokens;
-  canonisePath(path, tokens);
+  File *pFile = findNode(pStartNode, path);
 
-  // Attempt to fetch from cache.
-  File* curDir = cacheLookup(tokens, parent);
-  if (!curDir->isValid())
+  if (!pFile || !pFile->isValid())
   {
-    curDir = getRoot();
-    String curStr;
-    for (List<String*>::Iterator it = tokens.begin();
-        it != tokens.end();
-        it++)
-    {
-      String *pStr = *it;
-
-      if (pStr->length() == 0)
-        continue;
-
-      if (!curDir->isDirectory())
-      {
-        // Error - not a directory!
-        return VFS::invalidFile();
-      }
-      /// \todo Check for symlinks and follow.
-
-      parent = curDir;
-      bool bFound = false;
-      for (File* f = curDir->firstChild();
-          f->isValid();
-          f = curDir->nextChild())
-      {
-        String s = f->getName();
-
-        String tmp = curStr;
-        tmp += "/";
-        tmp += s;
-
-        // Add to cache.
-        // cacheInsert(tmp, f);
-
-        if (*pStr == s)
-        {
-          bFound = true;
-          curDir = f;
-          curStr = tmp;
-          break;
-        }
-      }
-      if (!bFound)
-        return VFS::invalidFile();
-    }
+    SYSCALL_ERROR(DoesNotExist);
+    return false;
   }
 
-  for (List<String*>::Iterator it = tokens.begin();
-       it != tokens.end();
-       it++)
+  String filename;
+  File *pParent = findParent(path, pStartNode, filename);
+
+  // Check the parent existed.
+  if (!pParent || !pParent->isValid())
   {
-    delete *it;
+    FATAL("Filesystem::remove: Massive algorithmic error.");
+    return false;
   }
 
-  return curDir;
+  pParent->m_Cache.remove(filename);
+  return remove(pParent, pFile);
 }
 
-void Filesystem::canonisePath(String &path, List<String*> &tokens)
+File *Filesystem::findNode(File *pNode, String path)
 {
-  // Tokenise the string to remove any '..' or '.' references.
-  tokens = path.tokenise('/');
+  if (path.length() == 0)
+    return pNode;
 
-  bool bStop = false;
-  while (!bStop)
+  // If the pathname has a leading slash, cd to root and remove it.
+  if (path[0] == '/')
   {
-    bStop = true;
-    List<String*>::Iterator iParent = tokens.end();
-    for (List<String*>::Iterator it = tokens.begin();
-        it != tokens.end();
-        it++)
-    {
-      String *pStr = *it;
-      if (!strcmp(*pStr, "."))
-      {
-        // '.' - just delete this path segment.
-        delete pStr;
-        tokens.erase(it);
-        bStop = false;
-        break;
-      }
-      else if (!strcmp(*pStr, ".."))
-      {
-        // '..' - delete this path segment and the preceding one (iParent). This is done by erasing iParent and then erasing
-        // the returned Iterator (points to the next valid item).
-        delete pStr;
-        if (iParent != tokens.end())
-        {
-          delete *iParent;
-          it = tokens.erase(iParent);
-        }
-        tokens.erase(it);
-        bStop = false;
-        break;
-      }
-      else if (pStr->length() == 0)
-      {
-        // Pointless node, remove.
-        delete pStr;
-        tokens.erase(it);
-        bStop = false;
-        break;
-      }
-      iParent = it;
-    }
-  }
-}
-
-File* Filesystem::cacheLookup(List<String*> &canonicalPath, File* & parent)
-{
-  // What are we searching for? the file given by canonicalPath or its parent directory?
-  bool bLookingForParent = false;
-
-  File* theFile;
-
-  // If there are no path segments (i.e. we're looking for the root), just return root.
-  if (canonicalPath.count() == 0)
-  {
-    parent = VFS::invalidFile();
-    return getRoot();
+    pNode = getRoot();
+    path = String(&path[1]);
   }
 
-  // This algorithm will not return partial matches.
-  int i = canonicalPath.count();
-  while (true)
-  {
-    // Create a String from path segments 0..i exclusive.
-    String constructedPath;
-    size_t j = 0;
-    for (List<String*>::Iterator it = canonicalPath.begin();
-         j < i;
-         it++)
-    {
-      constructedPath += "/";
-      constructedPath += **it;
-      j++;
-    }
+  // Grab the next filename component.
+  size_t i = 0;
+  while (path[i] != '/' && path[i] != '\0')
+    i = path.nextCharacter(i);
 
-    // Look for the file.
-    File *file = m_Cache.lookup(constructedPath);
-    if (bLookingForParent)
+  String restOfPath;
+  // Why did the loop exit?
+  if (path[i] != '\0')
+  {
+    restOfPath = path.split(path.nextCharacter(i));
+    // restOfPath is now 'path', but starting at the next token, and with no leading slash. 
+    // Unfortunately 'path' now has a trailing slash, so chomp it off.
+    path.chomp();
+  }
+
+  // At this point 'path' contains the token to search for. 'restOfPath' contains the path for the next recursion (or nil).
+
+  // If 'path' is zero-lengthed, ignore and recurse.
+  if (path.length() == 0)
+    return findNode(pNode, restOfPath);
+
+  // Firstly, if the current node is a symlink, follow it.
+  while (pNode->isSymlink())
+  {
+    NOTICE("Follow link");
+    pNode = pNode->followLink();
+  }
+
+  // Next, if the current node isn't a directory, die.
+  if (!pNode->isDirectory())
+  {
+    SYSCALL_ERROR(NotADirectory);
+    return 0;
+  }
+
+  // Cache lookup.
+  File *pFile;
+  if (pNode->m_bCachePopulated)
+  {
+    pFile = pNode->m_Cache.lookup(path);
+    if (pFile && pFile->isValid())
     {
-      // If we were looking for the parent, we can assign the parent and return.
-      parent = (file) ? file : VFS::invalidFile();
-      return theFile;
+      // Cache lookup succeeded, recurse and return.
+      return findNode(pFile, restOfPath);
     }
     else
     {
-      // Else we were looking for the normal file - assign it and start looking for the parent.
-      theFile = (file) ? file : VFS::invalidFile();
-      bLookingForParent = true;
-      // To search for the parent, look one path segment less.
-      i--;
-      // If we're down to 0, special-case to root.
-      if (i == 0)
-      {
-        parent = getRoot();
-        return theFile;
-      }
-      continue;
+      // Cache lookup failed, does not exist.
+      return VFS::invalidFile();
     }
   }
+  else
+  {
+    // Directory contents not cached - cache them now.
+    pNode->cacheDirectoryContents();
 
-  // We shouldn't get here.
-  return VFS::invalidFile();
+    // Then lookup.
+    pFile = pNode->m_Cache.lookup(path);
+    if (pFile && pFile->isValid())
+    {
+      // Cache lookup succeeded, recurse and return.
+      return findNode(pFile, restOfPath);
+    }
+    else
+    {
+      // Cache lookup failed, does not exist.
+      return VFS::invalidFile();
+    }
+  }
 }
 
-void Filesystem::cacheInsert(String canonicalPath, File* parent)
+File *Filesystem::findParent(String path, File *pStartNode, String &filename)
 {
-  File *pFile = new File(parent);
-  m_Cache.insert(canonicalPath, pFile);
+  // Work forwards to the end of the path string, attempting to find the last '/'.
+  ssize_t lastSlash = -1;
+  for (size_t i = 0; i < path.length(); i = path.nextCharacter(i))
+    if (path[i] == '/') lastSlash = i;
+
+  // Now, if there were no slashes, the parent node is pStartNode.
+  if (lastSlash == -1)
+  {
+    filename = path;
+    return pStartNode;
+  }
+  else
+  {
+    // Else split the filename off from the rest of the path and follow it.
+    filename = path.split(lastSlash+1);
+    // Remove the trailing '/' from path;
+    path.chomp();
+    return findNode(pStartNode, path);
+  }
 }

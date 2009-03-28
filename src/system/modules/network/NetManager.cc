@@ -18,7 +18,7 @@
 #include <network/Endpoint.h>
 #include <network/UdpManager.h>
 #include <network/TcpManager.h>
-#include <network/RawManager.h>
+//include <network/RawManager.h>
 #include <network/RoutingTable.h>
 
 NetManager NetManager::m_Instance;
@@ -37,7 +37,7 @@ File* NetManager::newEndpoint(int protocol)
   }
   else if(protocol == NETMAN_PROTO_RAW)
   {
-    p = RawManager::instance().getEndpoint();
+//    p = RawManager::instance().getEndpoint();
   }
   else
   {
@@ -81,8 +81,8 @@ void NetManager::removeEndpoint(File* f)
   //else if(f->getSize() == NETMAN_PROTO_TCP)
   //  TcpManager::instance().returnEndpoint(e);
 
-  if(f->getSize() == NETMAN_PROTO_RAW)
-    RawManager::instance().returnEndpoint(e);
+//  if(f->getSize() == NETMAN_PROTO_RAW)
+//    RawManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File* f)

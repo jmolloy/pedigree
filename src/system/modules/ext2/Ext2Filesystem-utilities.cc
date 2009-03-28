@@ -80,7 +80,7 @@ void Ext2Filesystem::setInode(uint32_t inode, Inode in)
 
   m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
                  reinterpret_cast<uintptr_t> (buffer));
-  
+
   delete [] buffer;
 }
 
@@ -160,7 +160,7 @@ uint32_t Ext2Filesystem::findFreeBlockInBitmap(uint32_t inode)
     uint64_t bitmapBlock = LITTLE_TO_HOST32(m_pGroupDescriptors[group].bg_block_bitmap);
     m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*bitmapBlock, m_BlockSize,
                   reinterpret_cast<uintptr_t> (buffer));
-    
+
     for (size_t i = 0; i < m_Superblock.s_blocks_per_group; i += 8*sizeof(uint32_t))
     {
       // We can compare in 4-byte increments, to reduce the time spent looking for a block.
@@ -179,7 +179,7 @@ uint32_t Ext2Filesystem::findFreeBlockInBitmap(uint32_t inode)
             buffer[i+j] = buffer[i+j] | (1<<k);
             m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*bitmapBlock, m_BlockSize,
                            reinterpret_cast<uintptr_t> (buffer));
-            /// \todo Update the group descriptor's free_blocks_count 
+            /// \todo Update the group descriptor's free_blocks_count
             return (group*m_Superblock.s_blocks_per_group) + i*8*sizeof(uint32_t) +
                                                              j*8 +
                                                              k;
@@ -210,7 +210,7 @@ uint32_t Ext2Filesystem::findFreeInodeInBitmap()
     uint64_t inodeBlock = LITTLE_TO_HOST32(m_pGroupDescriptors[group].bg_inode_bitmap);
     m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeBlock, m_BlockSize,
                   reinterpret_cast<uintptr_t> (buffer));
-    
+
     for (size_t i = 0; i < m_Superblock.s_inodes_per_group; i += 8*sizeof(uint32_t))
     {
       // We can compare in 4-byte increments, to reduce the time spent looking for a block.
@@ -229,7 +229,7 @@ uint32_t Ext2Filesystem::findFreeInodeInBitmap()
             buffer[i+j] = buffer[i+j] | (1<<k);
             m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*inodeBlock, m_BlockSize,
                            reinterpret_cast<uintptr_t> (buffer));
-            /// \todo Update the group descriptor's free_inodes_count 
+            /// \todo Update the group descriptor's free_inodes_count
             return (group*m_Superblock.s_inodes_per_group) + i*8*sizeof(uint32_t) +
                                                              j*8 +
                                                              k;
@@ -251,15 +251,22 @@ uint32_t Ext2Filesystem::findFreeInodeInBitmap()
 
 void Ext2Filesystem::readInodeData(Inode inode, uintptr_t buffer, uint32_t startBlock, uint32_t endBlock)
 {
-  List<uint32_t*> list;
-  getBlockNumbers(inode, startBlock, endBlock, list);
-
-  for (List<uint32_t*>::Iterator it = list.begin();
-       it != list.end();
-       it++)
+  if (inode.i_blocks > 0)
   {
-    readBlock(reinterpret_cast<uint32_t>(*it), buffer);
-    buffer += m_BlockSize;
+    List<uint32_t*> list;
+    getBlockNumbers(inode, startBlock, endBlock, list);
+
+    for (List<uint32_t*>::Iterator it = list.begin();
+        it != list.end();
+        it++)
+    {
+      readBlock(reinterpret_cast<uint32_t>(*it), buffer);
+      buffer += m_BlockSize;
+    }
+  }
+  else
+  {
+    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(inode.i_block), 4*15);
   }
 }
 
@@ -311,5 +318,5 @@ Ext2Filesystem::Dir *Ext2Filesystem::getDirectoryEntry(Inode inode, uint8_t *buf
     // n not found, return the directory and set failed to true.
     failed = true;
     return lastdir;
-  }  
+  }
 }

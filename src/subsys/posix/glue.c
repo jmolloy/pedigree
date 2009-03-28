@@ -19,7 +19,7 @@
 #include "errno.h"
 #define errno (*__errno())
 extern int *__errno (void);
- 
+
 // Define errno before including syscall.h.
 #include "syscall.h"
 
@@ -234,7 +234,7 @@ int write(int file, char *ptr, int len)
 
 int lstat(char *file, struct stat *st)
 {
-  return syscall2(POSIX_STAT, file, st);
+  return syscall2(POSIX_LSTAT, file, st);
 }
 
 DIR *opendir(const char *dir)
@@ -325,7 +325,7 @@ int tcdrain(int fd)
 }
 
 int gettimeofday(struct timeval *tv, struct timezone *tz)
-{  
+{
   syscall2(POSIX_GETTIMEOFDAY, (int)tv, (int)tz);
 
   return 0;

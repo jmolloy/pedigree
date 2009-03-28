@@ -508,8 +508,8 @@ void Vt100::Window::setCursorY(uint32_t y)
              nLines * ((m_nScrollMax-m_nScrollMin)*m_nWidth*2));
     
     // Zero out the last rows.
-    size_t base = m_nScrollMax - nLines;
-    for(size_t line = 0; line <= nLines; line++)
+    size_t base = m_nScrollMax - nLines + 1;
+    for(size_t line = 0; line < nLines; line++)
     {
       for (int i = 0; i < m_nWidth; i++)
       {

@@ -112,7 +112,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
 
   // Attempt to open the file.
-  File file = VFS::instance().find(String(fileName));
+  File *file = VFS::instance().find(String(fileName));
 
   if (m_pInitProcess)
   {
@@ -120,7 +120,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
     Processor::switchAddressSpace(oldAS);
   }
 
-  if (!file.isValid())
+  if (!file->isValid())
   {
     if (m_pInitProcess)
     {
@@ -132,8 +132,8 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
     return 0;
   }
 
-  uint8_t *buffer = new uint8_t[file.getSize()];
-  file.read(0, file.getSize(), reinterpret_cast<uintptr_t>(buffer));
+  uint8_t *buffer = new uint8_t[file->getSize()];
+  file->read(0, file->getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   if (m_pInitProcess)
   {
@@ -145,7 +145,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
 
   SharedObject *pSo = new SharedObject;
   pSo->pFile = new Elf();
-  pSo->pFile->create(buffer, file.getSize());
+  pSo->pFile->create(buffer, file->getSize());
   pSo->refCount = 1;
   pSo->name = String(name);
 
@@ -168,7 +168,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
   }
 
   uintptr_t loadBase = 0;
-  if (!pSo->pFile->allocate(buffer, file.getSize(), loadBase, pSymtab, pProcess))
+  if (!pSo->pFile->allocate(buffer, file->getSize(), loadBase, pSymtab, pProcess))
   {
     ERROR("LINKER: nowhere to put shared object \"" << name << "\"");
     return 0;
@@ -186,13 +186,13 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
 
   m_Objects.pushBack(pSo);
 
-  if (!pSo->pFile->load(buffer, file.getSize(), loadBase, pSymtab))
+  if (!pSo->pFile->load(buffer, file->getSize(), loadBase, pSymtab))
   {
     ERROR("LINKER: load() failed for object \"" << name << "\"");
   }
 
   pSo->pBuffer = buffer;
-  pSo->nBuffer = file.getSize();
+  pSo->nBuffer = file->getSize();
   initPlt(pSo->pFile, loadBase);
   return pSo;
 }

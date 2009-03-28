@@ -37,9 +37,6 @@
 #include <utilities/Vector.h>
 #include <machine/Machine.h>
 
-// Defined in file-syscalls.cc
-extern String prepend_cwd(const char *cwd);
-
 //
 // Syscalls pertaining to system operations.
 //
@@ -119,7 +116,7 @@ int posix_fork(ProcessorState state)
   
   /// \todo All open descriptors need to be copied, not just stdin, stdout & stderr
   
-  typedef Tree<size_t,void*> FdMap;
+  typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   FdMap childFdMap = pProcess->getFdMap();
   
@@ -138,7 +135,7 @@ int posix_fork(ProcessorState state)
     pFd2->fd = pFd->fd;
     pFd2->fdflags = pFd->fdflags;
     pFd2->flflags = pFd->flflags;
-    pProcess->getFdMap().insert(newFd, reinterpret_cast<void*> (pFd2));
+    pProcess->getFdMap().insert(newFd, pFd2);
     pProcess->nextFd(newFd + 1);
   }
 
@@ -172,26 +169,23 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
 
   // Attempt to find the file, first!
-  File* file = VFS::instance().find(prepend_cwd(name));
+  File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
 
   if (!file->isValid())
   {
     // Error - not found.
-    delete file;
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
   if (file->isDirectory())
   {
     // Error - is directory.
-    delete file;
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
   if (file->isSymlink())
   {
     /// \todo Not error - read in symlink and follow.
-    delete file;
     SYSCALL_ERROR(Unimplemented);
     return -1;
   }
@@ -207,7 +201,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   if (file->read(0, file->getSize(), reinterpret_cast<uintptr_t>(buffer)) != file->getSize())
   {
     delete [] buffer;
-    delete file;
     SYSCALL_ERROR(TooBig);
     return -1;
   }
@@ -217,7 +210,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   {
     // Error - bad file.
     delete [] buffer;
-    delete file;
     SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
@@ -242,8 +234,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Time to kill the task.
     ERROR("Could not allocate memory for ELF file.");
 
-    delete file;
-  
     return -1;
   }
 
@@ -260,8 +250,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     {
       ERROR("Shared dependency '" << *it << "' not found.");
 
-      delete file;
-  
       return -1;
     }
   }
@@ -312,8 +300,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   state.m_R7 = pState.m_R7;
   state.m_R8 = pState.m_R8;
 #endif
-
-  delete file;
 
   return 0;
 }

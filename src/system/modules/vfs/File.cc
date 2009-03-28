@@ -22,50 +22,38 @@
 
 File::File() :
   m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
-  m_CreationTime(0), m_Inode(0), m_NextChild(-1), m_pFilesystem(0), m_Size(0),
-  m_CustomField1(0), m_CustomField2(0)
+  m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
+  m_bIsDirectory(false), m_bIsSymlink(false),
+  m_pCachedSymlink(0), m_Cache(), m_bCachePopulated(false),
+  m_pParent(0), m_bShouldDelete(true)
 {
 }
 
 File::File(const File &file) :
   m_Name(file.m_Name), m_AccessedTime(file.m_AccessedTime), m_ModifiedTime(file.m_ModifiedTime),
-  m_CreationTime(file.m_CreationTime), m_Inode(file.m_Inode), m_NextChild(file.m_NextChild),
-  m_pFilesystem(file.m_pFilesystem), m_Size(file.m_Size), m_CustomField1(file.m_CustomField1), m_CustomField2(file.m_CustomField2)
+  m_CreationTime(file.m_CreationTime), m_Inode(file.m_Inode),
+  m_pFilesystem(file.m_pFilesystem), m_Size(file.m_Size),
+  m_bIsDirectory(file.m_bIsDirectory), m_bIsSymlink(file.m_bIsSymlink),
+  m_pCachedSymlink(file.m_pCachedSymlink),
+  m_Cache(), m_bCachePopulated(false),
+  m_pParent(file.m_pParent), m_bShouldDelete(file.m_bShouldDelete)
 {
-}
-
-File::File(File* file) :
-  m_Name(file->m_Name), m_AccessedTime(file->m_AccessedTime), m_ModifiedTime(file->m_ModifiedTime),
-  m_CreationTime(file->m_CreationTime), m_Inode(file->m_Inode), m_NextChild(file->m_NextChild),
-  m_pFilesystem(file->m_pFilesystem), m_Size(file->m_Size), m_CustomField1(file->m_CustomField1), m_CustomField2(file->m_CustomField2)
-{
-}
-
-File &File::operator =(const File& file)
-{
-  m_Name = file.m_Name; m_AccessedTime = file.m_AccessedTime, m_ModifiedTime = file.m_ModifiedTime;
-  m_CreationTime = file.m_CreationTime; m_Inode = file.m_Inode; m_NextChild = file.m_NextChild;
-  m_pFilesystem = file.m_pFilesystem; m_Size = file.m_Size;
-  m_CustomField1 = file.m_CustomField1; m_CustomField2 = file.m_CustomField2;
-  
-  FATAL("File operator = used");
-  return *this;
 }
 
 File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-           uintptr_t inode, bool isSymlink, bool isDirectory, Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2) :
+           uintptr_t inode, bool isSymlink, bool isDirectory, Filesystem *pFs, size_t size, File *pParent, bool bShouldDelete) :
   m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
-  m_CreationTime(creationTime), m_Inode(inode), m_NextChild(-1), m_pFilesystem(pFs),
-  m_Size(size), m_CustomField1(custom1), m_CustomField2(custom2)
+  m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
+  m_Size(size), m_bIsDirectory(isDirectory), m_bIsSymlink(isSymlink), m_pCachedSymlink(0), m_Cache(), m_bCachePopulated(false), m_pParent(pParent), m_bShouldDelete(bShouldDelete)
 {
-  if (isDirectory)
-    m_NextChild = 0;
-  if (isSymlink)
-    m_NextChild = -2;
 }
 
 File::~File()
 {
+  if (!m_bShouldDelete)
+  {
+    FATAL("Deleting File with 'should delete' unset!");
+  }
 }
 
 bool File::isValid()
@@ -138,23 +126,54 @@ void File::setSize(size_t sz)
 
 bool File::isSymlink()
 {
-  return (m_NextChild == -2);
+  return m_bIsSymlink;
 }
 
 bool File::isDirectory()
 {
-  return (m_NextChild >= 0);
+  return m_bIsDirectory;
 }
 
-File* File::firstChild()
+File* File::getChild(size_t n)
 {
   if (!isDirectory()) return VFS::invalidFile();
-  m_NextChild = 1;
-  return m_pFilesystem->getDirectoryChild(this, 0);
+  if (!m_bCachePopulated)
+  {
+    m_pFilesystem->cacheDirectoryContents(this);
+    m_bCachePopulated = true;
+  }
+
+  int i = 0;
+  for (RadixTree<File*>::Iterator it = m_Cache.begin();
+       it != m_Cache.end();
+       it++)
+  {
+    if (i == n)
+      return *it;
+    i++;
+  }
+
+  // Not found.
+  return VFS::invalidFile();
 }
 
-File* File::nextChild()
+File *File::followLink()
 {
-  if (!isDirectory()) return VFS::invalidFile();
-  return m_pFilesystem->getDirectoryChild(this, m_NextChild++);
+  if (!isSymlink())
+    return 0;
+
+  if (m_pCachedSymlink)
+    return m_pCachedSymlink;
+
+  char *pBuffer = new char[1024];
+  read(0ULL, static_cast<uint64_t>(getSize()), reinterpret_cast<uintptr_t>(pBuffer));
+  pBuffer[getSize()] = '\0';
+
+  return (m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent));
+}
+
+void File::cacheDirectoryContents()
+{
+  m_pFilesystem->cacheDirectoryContents(this);
+  m_bCachePopulated = true;
 }

@@ -16,7 +16,7 @@
 
 include_directories(../../include ../ ./)
 
-add_executable(fat.o FatFilesystem.cc)
+add_executable(fat.o FatFilesystem.cc FatFile.cc)
 target_link_libraries(fat.o gcc)
 set_target_properties(fat.o PROPERTIES
                              LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

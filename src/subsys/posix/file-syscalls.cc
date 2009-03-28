@@ -58,81 +58,9 @@ NullFs NullFs::m_Instance;
 // Syscalls pertaining to files.
 //
 
-typedef Tree<size_t,void*> FdMap;
+typedef Tree<size_t,FileDescriptor*> FdMap;
 
-String prepend_cwd(const char *name)
-{
-  const char *cwd = Processor::information().getCurrentThread()->getParent()->getCwd();
-  
-  char *newName = new char[2048];
-  newName[0] = '\0';
-  
-  // do we have a colon in the name? if so, remove the leading slash
-  int i = 0;
-  bool contains = false;
-  while(name[i])
-  {
-    if(name[i++] == ':')
-    {
-      contains = true;
-      break;
-    }
-  }
-  
-  if(name[0] == '/' && contains)
-  {
-    name++;
-    strcat(newName, name);
-  }
-  else
-  {
-    // otherwise, if there's a '/' at the beginning of the path, add the current filesystem
-    if(name[0] == '/')
-    {
-      i = 0;
-      while(cwd[i] != ':')
-      {
-        char tmp = cwd[i];
-        newName[i++] = tmp;
-      }
-      newName[i++] = ':';
-      newName[i] = 0;
-      
-      // append the current path
-      strcat(newName, name);
-    }
-    else
-    {
-      // if the first element is still null (ie, previous didn't run), just set the
-      // directory to that without a filesystem
-      if (newName[0] == '\0')
-        strcat(newName, name);
-      
-      // prepend the current working filesystem, if no colon
-      i = 0;
-      while(newName[i])
-      {
-        if(newName[i++] == ':')
-        {
-          contains = true;
-          break;
-        }
-      }
-      
-      if(!contains)
-      {
-        newName[0] = '\0';
-        strcat(newName, cwd);
-        strcat(newName, name);
-      }
-    }
-  }
-
-  String str(newName);
-  delete [] newName;
-
-  return str;
-}
+#define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 int posix_close(int fd)
 {
@@ -153,7 +81,7 @@ int posix_close(int fd)
   }
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
-  delete f->file;
+  if (f->file->shouldDelete()) delete f->file;
   delete f;
   return 0;
 }
@@ -176,7 +104,7 @@ int posix_open(const char *name, int flags, int mode)
 
   // Check for /dev/tty, and link to our controlling console.
   File* file = VFS::invalidFile();
-  String nameWithCwd = prepend_cwd(name);
+
   if (!strcmp(name, "/dev/tty"))
   {
     /// \todo Should be our ctty.
@@ -188,28 +116,28 @@ int posix_open(const char *name, int flags, int mode)
   }
   else
   {
-    file = VFS::instance().find(nameWithCwd);
+    file = VFS::instance().find(String(name), GET_CWD());
   }
 
   bool bCreated = false;
-  if (!file->isValid()) /// \todo Deal with O_CREAT
+  if (!file->isValid())
   {
     if(flags & O_CREAT)
     {
-      bool worked = VFS::instance().createFile(nameWithCwd, 0777);
+      bool worked = VFS::instance().createFile(String(name), 0777, GET_CWD());
       if(!worked)
       {
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
-      
-      file = VFS::instance().find(nameWithCwd);
+
+      file = VFS::instance().find(String(name), GET_CWD());
       if (!file->isValid())
       {
         SYSCALL_ERROR(DoesNotExist);
         return -1;
       }
-      
+
       bCreated = true;
     }
     else
@@ -219,29 +147,24 @@ int posix_open(const char *name, int flags, int mode)
       return -1;
     }
   }
+
+  while (file->isSymlink())
+    file = file->followLink();
+
   if (file->isDirectory())
   {
     // Error - is directory.
-    delete file;
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
-  if (file->isSymlink())
-  {
-    /// \todo Not error - read in symlink and follow.
-    delete file;
-    SYSCALL_ERROR(Unimplemented);
-    return -1;
-  }
-  
+
   if((flags & O_CREAT) && (flags & O_EXCL) && !bCreated)
   {
     // file exists with O_CREAT and O_EXCL
-    delete file;
     SYSCALL_ERROR(FileExists);
     return -1;
   }
-  
+
   if((flags & O_TRUNC) && ((flags & O_CREAT) || (flags & O_WRONLY) || (flags & O_RDWR)))
   {
     NOTICE("Truncating file");
@@ -254,7 +177,7 @@ int posix_open(const char *name, int flags, int mode)
   f->file = file;
   f->offset = (flags & O_APPEND) ? file->getSize() : 0;
   f->fd = fd;
-  fdMap.insert(fd, reinterpret_cast<void*>(f));
+  fdMap.insert(fd, f);
 
   return static_cast<int> (fd);
 }
@@ -262,7 +185,7 @@ int posix_open(const char *name, int flags, int mode)
 int posix_read(int fd, char *ptr, int len)
 {
   NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -284,7 +207,7 @@ int posix_read(int fd, char *ptr, int len)
 
     pFd->offset += nRead;
   }
-  
+
   return static_cast<int>(nRead);
 }
 
@@ -299,7 +222,7 @@ int posix_write(int fd, char *ptr, int len)
   }
   else
     NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -328,7 +251,7 @@ int posix_write(int fd, char *ptr, int len)
 int posix_lseek(int file, int ptr, int dir)
 {
   NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -353,12 +276,13 @@ int posix_lseek(int file, int ptr, int dir)
       pFd->offset = fileSize + ptr;
       break;
   }
-  
+
   return static_cast<int>(pFd->offset);
 }
 
 int posix_link(char *old, char *_new)
 {
+  SYSCALL_ERROR(Unimplemented);
   return -1;
 }
 
@@ -366,7 +290,7 @@ int posix_unlink(char *name)
 {
   NOTICE("unlink(" << name << ")");
 
-  if(VFS::instance().remove(prepend_cwd(name)))
+  if(VFS::instance().remove(String(name), GET_CWD()))
     return 0;
   else
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -383,18 +307,15 @@ int posix_stat(const char *name, struct stat *st)
     return -1;
   }
 
-  File* file = VFS::instance().find(prepend_cwd(name));
+  File* file = VFS::instance().find(String(name), GET_CWD());
+
+  while (file->isSymlink())
+    file = file->followLink();
 
   if (!file->isValid())
   {
     // Error - not found.
     SYSCALL_ERROR(DoesNotExist);
-    return -1;
-  }
-  if (file->isSymlink())
-  {
-    /// \todo Not error - read in symlink and follow.
-    SYSCALL_ERROR(Unimplemented);
     return -1;
   }
 
@@ -467,10 +388,52 @@ int posix_fstat(int fd, struct stat *st)
   return 0;
 }
 
-int posix_lstat(char *file, struct stat *st)
+int posix_lstat(char *name, struct stat *st)
 {
-  // Unimplemented.
-  return -1;
+  NOTICE("lstat(" << name << ")");
+
+  File *file = VFS::instance().find(String(name), GET_CWD());
+
+  int mode = 0;
+  if (!file->isValid())
+  {
+    // Error - not found.
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
+  if (file->isSymlink())
+  {
+    mode = S_IFLNK;
+  }
+  else
+  {
+    if (ConsoleManager::instance().isConsole(file))
+    {
+      mode = S_IFCHR;
+    }
+    else if (file->isDirectory())
+    {
+      mode = S_IFDIR;
+    }
+    else
+    {
+      mode = S_IFREG;
+    }
+  }
+
+  st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(file->getFilesystem()));
+  st->st_ino   = static_cast<short>(file->getInode());
+  st->st_mode  = mode;
+  st->st_nlink = 1;
+  st->st_uid   = 0;
+  st->st_gid   = 0;
+  st->st_rdev  = 0;
+  st->st_size  = static_cast<int>(file->getSize());
+  st->st_atime = static_cast<int>(file->getAccessedTime());
+  st->st_mtime = static_cast<int>(file->getModifiedTime());
+  st->st_ctime = static_cast<int>(file->getCreationTime());
+
+  return 0;
 }
 
 int posix_opendir(const char *dir, dirent *ent)
@@ -482,7 +445,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
-  File* file = VFS::instance().find(prepend_cwd(dir));
+  File* file = VFS::instance().find(String(dir), GET_CWD());
 
   if (!file->isValid())
   {
@@ -490,26 +453,25 @@ int posix_opendir(const char *dir, dirent *ent)
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
+
+  while (file->isSymlink())
+    file = file->followLink();
+
   if (!file->isDirectory())
   {
     // Error - not a directory.
     SYSCALL_ERROR(NotADirectory);
     return -1;
   }
-  if (file->isSymlink())
-  {
-    /// \todo Not error - read in symlink and follow.
-    SYSCALL_ERROR(Unimplemented);
-    return -1;
-  }
-  
+
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = 0;
   f->fd = fd;
-  fdMap.insert(fd, reinterpret_cast<void*>(f));
+  fdMap.insert(fd, f);
 
-  file = file->firstChild();
+
+  file = file->getChild(0);
   ent->d_ino = file->getInode();
 
   return static_cast<int>(fd);
@@ -533,15 +495,9 @@ int posix_readdir(int fd, dirent *ent)
   }
 
   /// \todo Sanity checks.
-  File* file = pFd->file->firstChild();
+  File* file = pFd->file->getChild(pFd->offset);
   if (!file->isValid())
     return -1;
-  for (uint64_t i = 0; i < pFd->offset; i++)
-  {
-    file = pFd->file->nextChild();
-    if (!file->isValid())
-      return -1;
-  }
 
   ent->d_ino = static_cast<short>(file->getInode());
   String tmp = file->getName();
@@ -571,8 +527,7 @@ int posix_closedir(int fd)
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
-  if(f->file)
-    delete f->file;
+  if (f->file->shouldDelete()) delete f->file;
   delete f;
   return 0;
 }
@@ -605,22 +560,12 @@ int posix_chdir(const char *path)
 {
   NOTICE("chdir(" << path << ")");
 
-  // Ensure the cwd ends with a '/'...
-  if (path[strlen(path)-1] == '/')
+  File *dir = VFS::instance().find(String(path), GET_CWD());
+  if (dir)
   {
-    Processor::information().getCurrentThread()->getParent()->setCwd(prepend_cwd(path));
+    Processor::information().getCurrentThread()->getParent()->setCwd(dir);
   }
-  else
-  {
-    NOTICE("nick");
-    char *newpath = new char[strlen(path)+2];
-    strcpy(newpath, path);
-    newpath[strlen(path)] = '/';
-    newpath[strlen(path)+1] = '\0';
 
-    Processor::information().getCurrentThread()->getParent()->setCwd(prepend_cwd(newpath));
-    delete [] newpath;
-  }
   return 0;
 }
 
@@ -636,36 +581,38 @@ int posix_dup(int fd)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   size_t newFd = Processor::information().getCurrentThread()->getParent()->nextFd();
-  
+
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
   f2->file = PipeManager::instance().copyPipe(f->file);
   f2->offset = f->offset;
+
   f2->fdflags = f->fdflags;
   f2->flflags = f->flflags;
-  fdMap.insert(newFd, reinterpret_cast<void*>(f2));
-  
+
+  fdMap.insert(newFd, f2);
+
   return static_cast<int>(newFd);
 }
 
 int posix_dup2(int fd1, int fd2)
 {
   NOTICE("dup2(" << fd1 << ", " << fd2 << ")");
-  
+
   if(fd2 < 0) /// \todo OR fd2 >= OPEN_MAX
   {
     SYSCALL_ERROR(BadFileDescriptor);
     return -1; // EBADF
   }
-  
+
   if(fd1 == fd2)
     return fd2;
-  
+
   // grab the file descriptor pointer for the passed descriptor
   FileDescriptor* f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd1));
   if(!f)
@@ -673,29 +620,30 @@ int posix_dup2(int fd1, int fd2)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-  
+
   // close the original descriptor
   if(posix_close(fd2) == -1)
     return -1;
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  
+
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
   f2->file = PipeManager::instance().copyPipe(f->file);
   f2->offset = f->offset;
+
   f2->fdflags = f->fdflags;
   f2->flflags = f->flflags;
-  fdMap.insert(fd2, reinterpret_cast<void*>(f2));
-  
+
+  fdMap.insert(fd2, f2);
+
   return static_cast<int>(fd2);
 }
 
 int posix_mkdir(const char* name, int mode)
 {
-  String nameWithCwd = prepend_cwd(name);
-  bool worked = VFS::instance().createDirectory(nameWithCwd);
+  bool worked = VFS::instance().createDirectory(String(name), GET_CWD());
   return worked ? 0 : -1;
 }
 
@@ -802,7 +750,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
           if(f1)
           {
             fdMap.remove(fd2);
-            delete f1->file;
+            if (f1->file->shouldDelete()) delete f1->file;
             delete f1;
           }
           
@@ -812,7 +760,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
           f2->offset = f->offset;
           f2->fdflags = f->fdflags;
           f2->flflags = f->flflags;
-          fdMap.insert(fd2, reinterpret_cast<void*>(f2));
+          fdMap.insert(fd2, f2);
           
           return static_cast<int>(fd2);
         }
@@ -827,7 +775,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         f2->offset = f->offset;
         f2->fdflags = f->fdflags;
         f2->flflags = f->flflags;
-        fdMap.insert(fd2, reinterpret_cast<void*>(f2));
+        fdMap.insert(fd2, f2);
         
         return static_cast<int>(fd2);
       }

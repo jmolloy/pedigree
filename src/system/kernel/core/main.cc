@@ -49,6 +49,7 @@
 #include <processor/KernelCoreSyscallManager.h>
 #include <utilities/List.h>
 #include <linker/SymbolTable.h>
+#include <utilities/RadixTree.h>
 
 BootIO bootIO;
 

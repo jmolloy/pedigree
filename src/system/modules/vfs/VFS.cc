@@ -181,33 +181,38 @@ Filesystem *VFS::lookupFilesystem(String alias)
   return 0;
 }
 
-File* VFS::find(String path)
+File *VFS::find(String path, File *pStartNode)
 {
-  // We expect a colon. If we don't find it, we cry loudly.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *newPath = cPath;
-  while (cPath[0] != '\0' && cPath[0] != ':')
-    cPath++;
-  if (cPath[0] == '\0')
+  // Search for a colon.
+  bool bColon = false;
+  size_t i;
+  for (i = 0; i < path.length(); i++)
   {
-    // Error - malformed path!
-    return VFS::invalidFile();
+    if (path[i] == ':')
+    {
+      bColon = true;
+      break;
+    }
   }
 
-  cPath[0] = '\0';
-  cPath++;
-
-  // Attempt to find a filesystem alias.
-  Filesystem *pFs = lookupFilesystem(String(newPath));
-  if (!pFs)
+  if (!bColon)
   {
-    // Error - filesystem not found!
-    return VFS::invalidFile();
+    // Pass directly through to the filesystem, if one specified.
+    if (!pStartNode) return VFS::invalidFile();
+    else return pStartNode->getFilesystem()->find(path, pStartNode);
   }
-  File* a = pFs->find(String(cPath));
-
-  return  a;
-
+  else
+  {
+    String newPath = path.split(i+1);
+    path.chomp();
+    
+    
+    // Attempt to find a filesystem alias.
+    Filesystem *pFs = lookupFilesystem(path);
+    if (!pFs)
+      return VFS::invalidFile();
+    return pFs->find(newPath, pStartNode);
+  }
 }
 
 void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
@@ -217,108 +222,140 @@ void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
   m_ProbeCallbacks.pushBack(p);
 }
 
-bool VFS::createFile(String path, uint32_t mask)
+bool VFS::createFile(String path, uint32_t mask, File *pStartNode)
 {
-  // We expect a colon. If we don't find it, we cry loudly.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *newPath = cPath;
-  while (cPath[0] != '\0' && cPath[0] != ':')
-    cPath++;
-  if (cPath[0] == '\0')
+  // Search for a colon.
+  bool bColon = false;
+  size_t i;
+  for (i = 0; i < path.length(); i++)
   {
-    // Error - malformed path!
-    return false;
+    if (path[i] == ':')
+    {
+      bColon = true;
+      break;
+    }
   }
 
-  cPath[0] = '\0';
-  cPath++;
-
-  // Attempt to find a filesystem alias.
-  Filesystem *pFs = lookupFilesystem(String(newPath));
-  if (!pFs)
+  if (!bColon)
   {
-    // Error - filesystem not found!
-    return false;
+    // Pass directly through to the filesystem, if one specified.
+    if (!pStartNode) return false;
+    else return pStartNode->getFilesystem()->createFile(path, mask, pStartNode);
   }
-  return pFs->createFile(String(cPath), mask);
+  else
+  {
+    String newPath = path.split(i+1);
+    path.chomp();
+    
+    
+    // Attempt to find a filesystem alias.
+    Filesystem *pFs = lookupFilesystem(path);
+    if (!pFs)
+      return false;
+    return pFs->createFile(newPath, mask, pStartNode);
+  }
 }
 
-bool VFS::createDirectory(String path)
+bool VFS::createDirectory(String path, File *pStartNode)
 {
-  // We expect a colon. If we don't find it, we cry loudly.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *newPath = cPath;
-  while (cPath[0] != '\0' && cPath[0] != ':')
-    cPath++;
-  if (cPath[0] == '\0')
+  // Search for a colon.
+  bool bColon = false;
+  size_t i;
+  for (i = 0; i < path.length(); i++)
   {
-    // Error - malformed path!
-    return false;
+    if (path[i] == ':')
+    {
+      bColon = true;
+      break;
+    }
   }
 
-  cPath[0] = '\0';
-  cPath++;
-
-  // Attempt to find a filesystem alias.
-  Filesystem *pFs = lookupFilesystem(String(newPath));
-  if (!pFs)
+  if (!bColon)
   {
-    // Error - filesystem not found!
-    return false;
+    // Pass directly through to the filesystem, if one specified.
+    if (!pStartNode) return false;
+    else return pStartNode->getFilesystem()->createDirectory(path, pStartNode);
   }
-  return pFs->createDirectory(String(cPath));
+  else
+  {
+    String newPath = path.split(i+1);
+    path.chomp();
+    
+    
+    // Attempt to find a filesystem alias.
+    Filesystem *pFs = lookupFilesystem(path);
+    if (!pFs)
+      return false;
+    return pFs->createDirectory(newPath, pStartNode);
+  }
 }
 
-bool VFS::createSymlink(String path, String value)
+bool VFS::createSymlink(String path, String value, File *pStartNode)
 {
-  // We expect a colon. If we don't find it, we cry loudly.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *newPath = cPath;
-  while (cPath[0] != '\0' && cPath[0] != ':')
-    cPath++;
-  if (cPath[0] == '\0')
+  // Search for a colon.
+  bool bColon = false;
+  size_t i;
+  for (i = 0; i < path.length(); i++)
   {
-    // Error - malformed path!
-    return false;
+    if (path[i] == ':')
+    {
+      bColon = true;
+      break;
+    }
   }
 
-  cPath[0] = '\0';
-  cPath++;
-
-  // Attempt to find a filesystem alias.
-  Filesystem *pFs = lookupFilesystem(String(newPath));
-  if (!pFs)
+  if (!bColon)
   {
-    // Error - filesystem not found!
-    return false;
+    // Pass directly through to the filesystem, if one specified.
+    if (!pStartNode) return false;
+    else return pStartNode->getFilesystem()->createSymlink(path, value, pStartNode);
   }
-  return pFs->createSymlink(String(cPath), value);
+  else
+  {
+    String newPath = path.split(i+1);
+    path.chomp();
+    
+    
+    // Attempt to find a filesystem alias.
+    Filesystem *pFs = lookupFilesystem(path);
+    if (!pFs)
+      return false;
+    return pFs->createSymlink(newPath, value, pStartNode);
+  }
 }
 
-bool VFS::remove(String path)
+bool VFS::remove(String path, File *pStartNode)
 {
-  // We expect a colon. If we don't find it, we cry loudly.
-  char *cPath = const_cast<char*> (static_cast<const char*> (path));
-  char *newPath = cPath;
-  while (cPath[0] != '\0' && cPath[0] != ':')
-    cPath++;
-  if (cPath[0] == '\0')
+  // Search for a colon.
+  bool bColon = false;
+  size_t i;
+  for (i = 0; i < path.length(); i++)
   {
-    // Error - malformed path!
-    return false;
+    if (path[i] == ':')
+    {
+      bColon = true;
+      break;
+    }
   }
 
-  cPath[0] = '\0';
-  cPath++;
-
-  // Attempt to find a filesystem alias.
-  Filesystem *pFs = lookupFilesystem(String(newPath));
-  if (!pFs)
+  if (!bColon)
   {
-    // Error - filesystem not found!
-    return false;
+    // Pass directly through to the filesystem, if one specified.
+    if (!pStartNode) return false;
+    else return pStartNode->getFilesystem()->remove(path, pStartNode);
   }
-  return pFs->remove(String(cPath));
+  else
+  {
+    String newPath = path.split(i+1);
+    path.chomp();
+    
+    
+    // Attempt to find a filesystem alias.
+    Filesystem *pFs = lookupFilesystem(path);
+    if (!pFs)
+      return false;
+    return pFs->remove(newPath, pStartNode);
+  }
 }
 
 void initVFS()

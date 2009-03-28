@@ -68,8 +68,8 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
-  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
+  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications
@@ -105,12 +105,17 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo touch $MOUNTPT/.pedigree-root
+  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
   sudo mkdir -p $MOUNTPT/applications
   sudo mkdir -p $MOUNTPT/libraries
   sudo mkdir -p $MOUNTPT/modules
+  sudo mkdir -p $MOUNTPT/tmp
+
+  # This is a root filesystem.
+  sudo touch $MOUNTPT/.pedigree-root
 
   # Transfer files.
   for f in $HDFILES; do
@@ -124,6 +129,10 @@ if sudo which losetup >/dev/null 2>&1; then
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
+
+  sudo mkdir -p $MOUNTPT/etc/terminfo/v
+#  sudo cp $SRCDIR/../scripts/termcap $MOUNTPT/etc
+  sudo cp $SRCDIR/../scripts/vt100 $MOUNTPT/etc/terminfo/v/
 
   fini;
 
@@ -141,14 +150,14 @@ if sudo which losetup >/dev/null 2>&1; then
 elif which mcopy >/dev/null 2>&1; then
 
   cp ../images/floppy_fat.img ./floppy.img
-  
+
   sh ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
-  
+
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
   cp ../images/hdd_16h_63spt_100c_fat16.img .
-  
+
   sh ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
 
   touch ./.pedigree-root
@@ -161,7 +170,7 @@ elif which mcopy >/dev/null 2>&1; then
   rm ./.pedigree-root
 
   mcopy -Do $SRCDIR/../scripts/termcap C:/etc
-  
+
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
     if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
@@ -174,12 +183,12 @@ elif which mcopy >/dev/null 2>&1; then
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
-  
+
   svn export --force $SRCDIR/../images/i686-elf ./tmp
-  
+
   mcopy -Do -s ./tmp/.bashrc C:/
   mcopy -Do -s ./tmp/* C:/
-  
+
   rm -rf ./tmp
 
   echo Only creating FAT disk image as \`losetup\' was not found.

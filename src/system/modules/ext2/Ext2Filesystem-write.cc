@@ -284,5 +284,4 @@ void Ext2Filesystem::addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode,
     d_ino.i_size = insertLocation+reclen;
     setInode(dir_inode, d_ino);
   }
-
 }

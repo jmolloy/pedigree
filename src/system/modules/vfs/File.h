@@ -19,23 +19,25 @@
 #include <Time.h>
 #include <processor/types.h>
 #include <utilities/String.h>
+#include <utilities/RadixTree.h>
 
 /** A File is a file, a directory or a symlink. */
 class File
 {
+  friend class Filesystem;
+
 public:
   /** Constructor, creates an invalid file. */
   File();
 
+  /** Copy constructors are hidden - unused! */
   File(const File &file);
-  
-  File(File* file);
-
+private:
   File& operator =(const File&);
-
+public:
   /** Constructor, should be called only by a Filesystem. */
   File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0);
+       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, File *pParent = 0, bool bShouldDelete = true);
   /** Destructor - doesn't do anything. */
   virtual ~File();
 
@@ -78,13 +80,10 @@ public:
   /** Returns true if the File is actually a directory. */
   bool isDirectory();
 
-  /** Returns the first child of this directory, or an invalid file.
-      \note This applies to directories only. Behaviour is undefined if 
+  /** Returns the n'th child of this directory, or an invalid file.
+      \note This applies to directories only. Behaviour is undefined if
             this function is called on a file. */
-  File* firstChild();
-
-  /** Returns the next child of this directory, or an invalid file. */
-  File* nextChild();
+  File* getChild(size_t n);
 
   uintptr_t getInode()
   {
@@ -94,41 +93,55 @@ public:
   {
     m_Inode = inode;
   }
+
   Filesystem *getFilesystem()
   {
     return m_pFilesystem;
   }
-  
-  uint32_t getCustomField1()
+  void setFilesystem(Filesystem *pFs)
   {
-    return m_CustomField1;
+    m_pFilesystem = pFs;
   }
-  void setCustomField1(uint32_t custom)
+
+  /** Reads the contents of the file as a symbolic link. */
+  File *followLink();
+
+  /** Returns true if this file should be deleted. */
+  bool shouldDelete()
   {
-    m_CustomField1 = custom;
+    return m_bShouldDelete;
   }
-  uint32_t getCustomField2()
+  void setShouldDelete(bool b)
   {
-    return m_CustomField2;
+    m_bShouldDelete = b;
   }
-  void setCustomField2(uint32_t custom)
-  {
-    m_CustomField2 = custom;
-  }
+
+  void cacheDirectoryContents();
 
 private:
-
   String m_Name;
   Time m_AccessedTime;
   Time m_ModifiedTime;
   Time m_CreationTime;
   uintptr_t m_Inode;
-  ssize_t m_NextChild;
+
   class Filesystem *m_pFilesystem;
   size_t m_Size;
-  
-  uint32_t m_CustomField1;
-  uint32_t m_CustomField2;
+
+  bool m_bIsDirectory;
+  bool m_bIsSymlink;
+
+  File *m_pCachedSymlink;
+
+public:
+  /** Directory contents cache. */
+  RadixTree<File*> m_Cache;
+  bool m_bCachePopulated;
+
+  File *m_pParent;
+
+private:
+  bool m_bShouldDelete;
 };
 
 #endif

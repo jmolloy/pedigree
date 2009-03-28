@@ -25,7 +25,7 @@
 #include "file-syscalls.h"
 #include "console-syscalls.h"
 
-typedef Tree<size_t,void*> FdMap;
+typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_tcgetattr(int fd, struct termios *p)
 {

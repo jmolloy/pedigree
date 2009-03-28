@@ -18,7 +18,11 @@
 
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
-#include <utilities/Cache.h>
+#include <utilities/Vector.h>
+#include <utilities/Tree.h>
+#include <process/Mutex.h>
+#include <LockGuard.h>
+#include "FatFile.h"
 
 // FAT Attributes
 #define ATTR_READONLY   0x01
@@ -59,7 +63,7 @@ public:
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
-  virtual File* getDirectoryChild(File *pFile, size_t n);
+  virtual void cacheDirectoryContents(File *pFile);
 
 protected:
 
@@ -326,6 +330,9 @@ protected:
   
   /** FAT lock */
   Mutex m_FatLock;
+
+  /** Root filesystem node. */
+  FatFile *m_pRoot;
 };
 
 #endif

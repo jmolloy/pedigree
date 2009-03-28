@@ -116,11 +116,11 @@ uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uin
   return size;
 }
 
-File* Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
+void Ext2Filesystem::cacheDirectoryContents(File *pFile)
 {
   // Sanity check.
   if (!pFile->isDirectory())
-    return VFS::invalidFile();
+    return;
 
   Inode inode = getInode(pFile->getInode());
 
@@ -132,36 +132,53 @@ File* Ext2Filesystem::getDirectoryChild(File *pFile, size_t n)
 
   readInodeData(inode, reinterpret_cast<uintptr_t> (buffer), 0, (LITTLE_TO_HOST32(inode.i_size)/m_BlockSize)-1);
 
-  bool failed = false;
-  Dir *directory = getDirectoryEntry(inode, buffer, n, failed);
-  if (!directory || failed)
+  size_t i = 0;
+  while (true)
   {
-    delete [] buffer;
-    return VFS::invalidFile();
+    bool failed = false;
+    Dir *directory = getDirectoryEntry(inode, buffer, i, failed);
+    if (!directory || failed || directory->d_inode == 0)
+      break;
+
+    // Create a file.
+    char *name = new char[directory->d_namelen+1];
+    strncpy(name, directory->d_name, directory->d_namelen);
+    name[directory->d_namelen] = '\0';
+
+    String sName = String(name);
+    delete [] name;
+
+    Inode _inode = getInode(LITTLE_TO_HOST32(directory->d_inode));
+
+    File *pFile_;
+    // Special-case '.' and '..'.
+    if (sName == ".")
+    {
+      pFile_ = pFile;
+    }
+    else if (sName == "..")
+    {
+      pFile_ = pFile->m_pParent;
+    }
+    else
+    {
+      pFile_ = new File (sName,                // Name
+                         0,                    // Accessed time
+                         0,                    // Modified time
+                         0,                    // Creation time
+                         LITTLE_TO_HOST32(directory->d_inode),   // Inode
+                         (directory->d_file_type==EXT2_SYMLINK)?true:false, // Symlink
+                         (directory->d_file_type==EXT2_DIRECTORY)?true:false, // Directory
+                         this,
+                         LITTLE_TO_HOST32(_inode.i_size),
+                         pFile /* Parent */,
+                         false /* Cached, please don't delete! */);
+    }
+
+    // Insert into the cache.
+    pFile->m_Cache.insert(sName, pFile_);
+    i++;
   }
-  
-  // Create a file.
-  char *name = new char[directory->d_namelen+1];
-  strncpy(name, directory->d_name, directory->d_namelen);
-  name[directory->d_namelen] = '\0';
-
-  String sName = String(name);
-  delete [] name;
-
-  Inode _inode = getInode(LITTLE_TO_HOST32(directory->d_inode));
-
-  File* file = new File(
-                  sName,                // Name
-                   0,                    // Accessed time
-                   0,                    // Modified time
-                   0,                    // Creation time
-                   LITTLE_TO_HOST32(directory->d_inode),   // Inode
-                   (directory->d_file_type==EXT2_SYMLINK)?true:false, // Symlink
-                   (directory->d_file_type==EXT2_DIRECTORY)?true:false, // Directory
-                   this,
-                   LITTLE_TO_HOST32(_inode.i_size));
 
   delete [] buffer;
-
-  return file;
 }
