@@ -1,4 +1,4 @@
-CFLAGS=-I/usr/pedigree-native/include
+CFLAGS=-O3
 LDFLAGS=-lc -lm
 
 CC=gcc
