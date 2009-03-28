@@ -106,6 +106,17 @@ struct DhcpOptionDefaultGateway
   uint8_t a4;
 } __attribute__((packed));
 
+#define DHCP_DNSSERVERS 6
+struct DhcpOptionDnsServers
+{
+  DhcpOptionDnsServers() :
+    code(DHCP_DNSSERVERS), len(4)
+  {};
+  
+  uint8_t code;
+  uint8_t len; // following this header are len/4 IP addresses
+} __attribute__((packed));
+
 /** Defines the Adddress Request DHCP option (code=50) */
 #define DHCP_ADDRREQ    50
 struct DhcpOptionAddrReq
@@ -190,15 +201,6 @@ void entry()
     // check that we should actually try this...
     if(info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1))
       continue; // loopback is already set
-      
-    // set it up
-    StationInfo host2;
-    host2.ipv4.setIp(Network::convertToIpv4(192, 168, 0, 2));
-    host2.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
-    host2.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
-    host2.dnsServer.setIp(Network::convertToIpv4(192, 168, 0, 1));
-    //pCard->setStationInfo(host2);
-    //continue;
     
     IpAddress broadcast(0xffffffff);
     Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);
@@ -370,6 +372,11 @@ void entry()
       
       DhcpOptionDefaultGateway defGateway;
       bool gatewaySet = false;
+
+      // DNS servers
+      DhcpOptionDnsServers dnsServs;
+      IpAddress* dnsServers = 0;
+      size_t nDnsServers = 0;
       
       if(e->dataReady(true) == false)
       {
@@ -426,6 +433,23 @@ void entry()
             defGateway = *p;
             gatewaySet = true;
           }
+          else if(opt->code == DHCP_DNSSERVERS)
+          {
+            DhcpOptionDnsServers* p = reinterpret_cast<DhcpOptionDnsServers*>(opt);
+            dnsServs = *p;
+
+            nDnsServers = p->len / 4;
+            NOTICE(nDnsServers << " dns servers in DHCP reply");
+            dnsServers = new IpAddress[nDnsServers];
+            uintptr_t base = reinterpret_cast<uintptr_t>(opt + sizeof(DhcpOptionDnsServers));
+            size_t i;
+            for(i = 0; i < nDnsServers; i++)
+            {
+              uint32_t ip = * reinterpret_cast<uint32_t*>(base);
+              dnsServers[i].setIp(ip);
+              base += 4;
+            }
+          }
           
           byteOffset += opt->len + 2;
         }
@@ -460,12 +484,13 @@ void entry()
         NOTICE("Gateway fail");
         host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1)); /// \todo Autoconfiguration IPv4 address
       }
-      if(false)
-        host.dnsServer.setIp(Network::convertToIpv4(defGateway.a1, defGateway.a2, defGateway.a3, defGateway.a4));
-      else
+      if(dnsServers)
       {
-        host.dnsServer.setIp(Network::convertToIpv4(192, 168, 0, 1));
+        host.dnsServers = dnsServers;
+        host.nDnsServers = nDnsServers;
       }
+      else
+        host.dnsServers = 0;
       pCard->setStationInfo(host);
       
       UdpManager::instance().returnEndpoint(e);

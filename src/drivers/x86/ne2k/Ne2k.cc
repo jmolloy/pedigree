@@ -298,18 +298,24 @@ void Ne2k::receiveThread()
 
 bool Ne2k::setStationInfo(StationInfo info)
 {
+  // free the old DNS servers list, if there is one
+  if(m_StationInfo.dnsServers)
+    delete [] m_StationInfo.dnsServers;
+
   // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
-  NOTICE("Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
+  NOTICE("NE2K: Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
   m_StationInfo.ipv6 = info.ipv6;
   
   m_StationInfo.subnetMask = info.subnetMask;
-  NOTICE("Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");
+  NOTICE("NE2K: Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");
   m_StationInfo.gateway = info.gateway;
-  NOTICE("Setting gateway, " << info.gateway.toString() << ", " << m_StationInfo.gateway.toString() << "...");
+  NOTICE("NE2K: Setting gateway, " << info.gateway.toString() << ", " << m_StationInfo.gateway.toString() << "...");
   
-  m_StationInfo.dnsServer = info.dnsServer;
-  NOTICE("Setting DNS server, " << info.dnsServer.toString() << ", " << m_StationInfo.dnsServer.toString() << "...");
+  // Callers do not free their dnsServers memory
+  m_StationInfo.dnsServers = info.dnsServers;
+  m_StationInfo.nDnsServers = info.nDnsServers;
+  NOTICE("NE2K: Setting DNS servers [" << Dec << m_StationInfo.nDnsServers << Hex << " servers being set]...");
   
   return true;
 }

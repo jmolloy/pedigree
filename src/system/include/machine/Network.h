@@ -303,7 +303,10 @@ class StationInfo
 {
   public:
     StationInfo() :
-      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServer(), mac()
+      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServers(0), nDnsServers(0), mac()
+    {};
+    StationInfo(const StationInfo& info) :
+      ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask), gateway(info.gateway), dnsServers(info.dnsServers), nDnsServers(info.nDnsServers), mac(info.mac)
     {};
     virtual ~StationInfo() {};
     
@@ -313,9 +316,16 @@ class StationInfo
     IpAddress   subnetMask;
     IpAddress   gateway;
     
-    IpAddress   dnsServer;
+    IpAddress*  dnsServers;
+    size_t      nDnsServers;
     
     MacAddress  mac; // MAC address
+
+    StationInfo& operator = (const StationInfo& info)
+    {
+      WARNING("StationInfo::operator = (const StationInfo&) called");
+      return *this;
+    }
 };
 
 /**

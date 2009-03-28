@@ -139,7 +139,7 @@ void Dns::mainThread()
       req->entry->numIps = 0;
       
       // http://www.zytrax.com/books/dns/ch15/ for future reference
-      for(size_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
+      for(uint16_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);
         if(BIG_TO_HOST16(ans->name) & 0x2)
@@ -210,7 +210,7 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   
   // grab the DNS server to use
   StationInfo info = pCard->getStationInfo();
-  if(info.dnsServer.getIp() == 0)
+  if(info.nDnsServers == 0)
   {
     nIps = 0;
     return 0;
@@ -262,7 +262,7 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
 
   Endpoint::RemoteEndpoint remoteHost;
   remoteHost.remotePort = 53;
-  remoteHost.ip = info.dnsServer;
+  remoteHost.ip = info.dnsServers[0];
   
   // shove all this into a DnsRequest ready for replies
   DnsRequest* req = new DnsRequest;
