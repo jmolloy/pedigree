@@ -151,29 +151,17 @@ void Ext2Filesystem::cacheDirectoryContents(File *pFile)
     Inode _inode = getInode(LITTLE_TO_HOST32(directory->d_inode));
 
     File *pFile_;
-    // Special-case '.' and '..'.
-    if (sName == ".")
-    {
-      pFile_ = pFile;
-    }
-    else if (sName == "..")
-    {
-      pFile_ = pFile->m_pParent;
-    }
-    else
-    {
-      pFile_ = new File (sName,                // Name
-                         0,                    // Accessed time
-                         0,                    // Modified time
-                         0,                    // Creation time
-                         LITTLE_TO_HOST32(directory->d_inode),   // Inode
-                         (directory->d_file_type==EXT2_SYMLINK)?true:false, // Symlink
-                         (directory->d_file_type==EXT2_DIRECTORY)?true:false, // Directory
-                         this,
-                         LITTLE_TO_HOST32(_inode.i_size),
-                         pFile /* Parent */,
-                         false /* Cached, please don't delete! */);
-    }
+    pFile_ = new File (sName,                // Name
+                       0,                    // Accessed time
+                       0,                    // Modified time
+                       0,                    // Creation time
+                       LITTLE_TO_HOST32(directory->d_inode),   // Inode
+                       (directory->d_file_type==EXT2_SYMLINK)?true:false, // Symlink
+                       (directory->d_file_type==EXT2_DIRECTORY)?true:false, // Directory
+                       this,
+                       LITTLE_TO_HOST32(_inode.i_size),
+                       pFile /* Parent */,
+                       false /* Cached, please don't delete! */);
 
     // Insert into the cache.
     pFile->m_Cache.insert(sName, pFile_);

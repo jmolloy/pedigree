@@ -86,7 +86,14 @@ void Ext2Filesystem::setInode(uint32_t inode, Inode in)
 
 bool Ext2Filesystem::readBlock(uint32_t block, uintptr_t buffer)
 {
-  m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block), m_BlockSize, buffer);
+  if (block == 0)
+  {
+    memset(reinterpret_cast<uint8_t*>(buffer), 0, m_BlockSize);
+  }
+  else
+  {
+    m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block), m_BlockSize, buffer);
+  }
   return true;
 }
 

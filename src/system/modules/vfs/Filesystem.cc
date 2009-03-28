@@ -29,7 +29,8 @@ Filesystem::Filesystem() :
 File *Filesystem::find(String path, File *pStartNode)
 {
   if (!pStartNode) pStartNode = getRoot();
-  return findNode(pStartNode, path);
+  File *a = findNode(pStartNode, path);
+  return a;
 }
 
 bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
@@ -184,6 +185,15 @@ File *Filesystem::findNode(File *pNode, String path)
   {
     SYSCALL_ERROR(NotADirectory);
     return 0;
+  }
+
+  if (!strcmp(path, "."))
+  {
+    return findNode(pNode, restOfPath);
+  }
+  else if (!strcmp(path, ".."))
+  {
+    return findNode(pNode->m_pParent, restOfPath);
   }
 
   // Cache lookup.

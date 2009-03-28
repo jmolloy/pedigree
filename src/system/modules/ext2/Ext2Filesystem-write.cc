@@ -69,6 +69,8 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
       setBlockNumber(pFile->getInode(), inode, i + LITTLE_TO_HOST32(inode.i_blocks), block);
       m_Superblock.s_blocks_count = HOST_TO_LITTLE32(LITTLE_TO_HOST32(m_Superblock.s_blocks_count)+1);
       m_SuperblockDirty = true;
+
+      /// \todo Erase new block with zeroes.
     }
 
     inode.i_blocks = HOST_TO_LITTLE32(LITTLE_TO_HOST32(inode.i_blocks)+blocksOver);

@@ -131,7 +131,10 @@ public:
    *\return iterator pointing to the beginning of the List */
   inline Iterator begin()
   {
-    return Iterator(root);
+    Iterator it(root);
+    if (root->value == 0)
+      it++;
+    return it;
   }
   /** Get a constant iterator pointing to the beginning of the List
    *\return constant iterator pointing to the beginning of the List */

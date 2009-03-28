@@ -503,7 +503,7 @@ int posix_readdir(int fd, dirent *ent)
   String tmp = file->getName();
   strcpy(ent->d_name, static_cast<const char*>(tmp));
   ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
-
+  NOTICE("tmp: " << (uintptr_t)pFd->file << ", " << pFd->file->getName());
   pFd->offset ++;
 
   return 0;
@@ -561,9 +561,15 @@ int posix_chdir(const char *path)
   NOTICE("chdir(" << path << ")");
 
   File *dir = VFS::instance().find(String(path), GET_CWD());
-  if (dir)
+  if (dir && dir->isValid())
   {
     Processor::information().getCurrentThread()->getParent()->setCwd(dir);
+    return 0;
+  }
+  else
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
   }
 
   return 0;

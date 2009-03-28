@@ -189,6 +189,14 @@ bool Ext2Filesystem::createFile(File* parent, String filename, uint32_t mask)
                                      LITTLE_TO_HOST32(0),
                                      parent,
                                      false));
+    File *f = parent->m_Cache.lookup(filename);
+    NOTICE("f: " << (uintptr_t)parent);
+    for (RadixTree<File*>::Iterator it = parent->m_Cache.begin();
+         it != parent->m_Cache.end();
+         it++)
+    {
+      NOTICE("*it: " << (*it)->getName());
+    }
   }
 
   return true;
@@ -204,6 +212,7 @@ bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)
 
 bool Ext2Filesystem::remove(File* parent, File* file)
 {
+  return true;
 }
 
 void initExt2()

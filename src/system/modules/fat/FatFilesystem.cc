@@ -727,9 +727,23 @@ void FatFilesystem::cacheDirectoryContents(File *pFile)
         bRootDir = true;
   }
 
-  pFile->m_Cache.insert(String("."), pFile);
-  pFile->m_Cache.insert(String(".."), pFile->m_pParent);
-  
+  if (bRootDir)
+  {
+    pFile->m_Cache.insert(String("."), new FatFile(String("."),
+                                                   0, 0,
+                                                   0,
+                                                   0, false, 
+                                                   true, this,
+                                                   0, 0, 0, pFile, false));
+    pFile->m_Cache.insert(String(".."), new FatFile(String("."),
+                                                   0, 0,
+                                                   0,
+                                                   0, false, 
+                                                   true, this,
+                                                    0, 0, 0, pFile, false));
+
+  }
+
   // read in the first cluster for this directory
   uint8_t* buffer = reinterpret_cast<uint8_t*>(readDirectoryPortion(clus));
   
@@ -814,18 +828,9 @@ void FatFilesystem::cacheDirectoryContents(File *pFile)
       Time accTime = getUnixTimestamp(0, ent->DIR_LstAccDate);
       Time createTime = getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
       
-      if (!strcmp(filename, ".") || !strcmp(filename, ".."))
-      {
-        NOTICE("Ignoring : " << filename);
-      }
-      else
-      {
-        // Ignore . and .. - these are handled specially above.
-        
-        File *pF = new FatFile(filename, accTime, writeTime, createTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i, pFile, false);
-        NOTICE("Cache: inserting " << filename);
-        pFile->m_Cache.insert(filename, pF);
-      }
+      File *pF = new FatFile(filename, accTime, writeTime, createTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i, pFile, false);
+      NOTICE("Cache: inserting " << filename);
+      pFile->m_Cache.insert(filename, pF);
 
       longFileName.clear();
       nextIsEnd = false;
