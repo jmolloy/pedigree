@@ -24,6 +24,7 @@
 #include <machine/Network.h>
 #include <network/NetManager.h>
 #include <network/NetworkStack.h>
+#include <network/RoutingTable.h>
 #include <network/Dns.h>
 
 #include "file-syscalls.h"
@@ -180,7 +181,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = p->getRemotePort();
       remoteHost.ip = remoteIp;
-      p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, NetworkStack::instance().getDevice(0));
+      p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
     }
   }
   
@@ -212,7 +213,7 @@ ssize_t posix_sendto(int sock, const void* buff, size_t bufflen, int flags, cons
     const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
     remoteHost.ip.setIp(sin->sin_addr.s_addr);
-    p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, NetworkStack::instance().getDevice(0));
+    p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteHost.ip));
   }
   
   return success ? bufflen : -1;
@@ -375,9 +376,10 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   // sanity checks
   if(!hostinfo || !offset)
     return -1;
-  
-  Network* pCard = NetworkStack::instance().getDevice(0);
-  
+
+  // lookups can be done on the default interface
+  Network* pCard = RoutingTable::instance().DefaultRoute();
+
   // do the lookup
   size_t num = 0;
   IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
@@ -442,35 +444,4 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   entry->h_addr_list = addrList;
   
   return 0;
-  
-  /*
-  struct info
-  {
-    void* iparr;
-    uint32_t ip;
-    size_t numIps;
-  } *local = reinterpret_cast<info*>(hostinfo);
-  
-  Network* pCard = NetworkStack::instance().getDevice(0);
-  
-  if(offset == 0)
-  {
-    // grab the IP addresses  
-    size_t num = 0;
-    IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
-    if(!num)
-      return -1;
-    local->iparr = reinterpret_cast<void*>(ips);
-    local->numIps = num;
-  }
-  else
-  {
-    IpAddress* ips = reinterpret_cast<IpAddress*>(local->iparr);
-    local->ip = ips[offset - 1].getIp();
-  }
-  
-  return offset;
-  
-  return -1;
-  */
 }

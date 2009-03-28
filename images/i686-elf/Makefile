@@ -1,8 +1,8 @@
 CFLAGS=-O3
-LDFLAGS=-lc -lm
+LDFLAGS=
 
 CC=gcc
-LD=ld
+LD=gcc
 
 SRCS:=test.c
 OBJS:=test.o
@@ -12,7 +12,7 @@ OUTPUT:=test
 all: $(OUTPUT)
 
 $(OUTPUT) : $(OBJS)
-	$(LD) -o $(OUTPUT) $(OBJS)
+	$(LD) $(OBJS) -o $(OUTPUT)
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@

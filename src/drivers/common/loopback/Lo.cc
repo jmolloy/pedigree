@@ -21,6 +21,8 @@
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
 
+#include <network/RoutingTable.h>
+
 Loopback Loopback::m_Instance;
 
 Loopback::Loopback() :
@@ -31,6 +33,8 @@ Loopback::Loopback() :
   
   m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
   m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+
+  RoutingTable::instance().Add(m_StationInfo.ipv4, this);
 }
 
 Loopback::Loopback(Network* pDev) :
@@ -41,6 +45,8 @@ Loopback::Loopback(Network* pDev) :
   
   m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
   m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+
+  RoutingTable::instance().Add(m_StationInfo.ipv4, this);
 }
 
 Loopback::~Loopback()

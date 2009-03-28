@@ -19,6 +19,7 @@
 #include <network/UdpManager.h>
 #include <network/TcpManager.h>
 #include <network/RawManager.h>
+#include <network/RoutingTable.h>
 
 NetManager NetManager::m_Instance;
 
@@ -169,13 +170,14 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = p->getRemotePort();
       remoteHost.ip = remoteIp;
-      success = p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
+      success = p->send(size, buffer, remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
     }
   }
   else if(pFile->getSize() == NETMAN_PROTO_RAW)
   {
+    /// \todo PF_SOCKET should be able to bind to an address in order to get packets for one interface only
     Endpoint::RemoteEndpoint remoteHost;
-    p->send(size, buffer, remoteHost, false, NetworkStack::instance().getDevice(0));
+    p->send(size, buffer, remoteHost, false, 0);
   }
   
   return success ? size : 0;

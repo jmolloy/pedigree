@@ -380,7 +380,7 @@ void entry()
       
       if(e->dataReady(true) == false)
       {
-        WARNING("Did not receive a reply to DHCP REQUST (timed out), interface " << i << "!");
+        WARNING("Did not receive a reply to DHCP REQUEST (timed out), interface " << i << "!");
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
@@ -413,6 +413,7 @@ void entry()
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
         {
           opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
+          NOTICE("option code is " << opt->code);
           if(opt->code == DHCP_MSGEND)
             break;
           else if(opt->code == DHCP_MSGTYPE)
@@ -439,9 +440,8 @@ void entry()
             dnsServs = *p;
 
             nDnsServers = p->len / 4;
-            NOTICE(nDnsServers << " dns servers in DHCP reply");
             dnsServers = new IpAddress[nDnsServers];
-            uintptr_t base = reinterpret_cast<uintptr_t>(opt + sizeof(DhcpOptionDnsServers));
+            uintptr_t base = reinterpret_cast<uintptr_t>(opt) + sizeof(DhcpOptionDnsServers);
             size_t i;
             for(i = 0; i < nDnsServers; i++)
             {
@@ -490,7 +490,10 @@ void entry()
         host.nDnsServers = nDnsServers;
       }
       else
+      {
         host.dnsServers = 0;
+        host.nDnsServers = 0;
+      }
       pCard->setStationInfo(host);
       
       UdpManager::instance().returnEndpoint(e);

@@ -32,6 +32,9 @@
 #include <panic.h>
 #include "../../kernel/core/BootIO.h"
 
+#include <network/NetworkStack.h>
+#include <network/RoutingTable.h>
+
 extern BootIO bootIO;
 
 static bool probeDisk(Disk *pDisk)
@@ -92,6 +95,36 @@ void init()
 //     FATAL("No disks found!");
   }
 
+  // Build routing tables
+  File* routeConfig = VFS::instance().find(String("root:/config/routes"));
+  if(routeConfig->isValid())
+  {
+    NOTICE("Loading route table from file");
+    /// \todo Write this...
+  }
+  else
+  {
+    // try to find a default configuration that can connect to the outside world
+    bool bRouteFound = false;
+    for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
+    {
+      /// \todo Perhaps try and ping a remote host?
+      Network* card = NetworkStack::instance().getDevice(i);
+      StationInfo info = card->getStationInfo();
+      if(!(info.gateway == 0)) /// \todo write operator !=
+      {
+        RoutingTable::instance().AddNamed(String("default"), card);
+        bRouteFound = true;
+        break;
+      }
+    }
+
+    // otherwise, just assume the default is interface zero
+    if(!bRouteFound)
+      RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
+  }
+
+  HugeStaticString str;
   str += "Loading init program (root:/applications/bash)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();

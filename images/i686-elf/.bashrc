@@ -1,4 +1,4 @@
-export PATH=/usr/pedigree-native/bin:/applications
+export PATH=/applications
 export TERM=xterm
 export RUBYLIB=/libraries/ruby
 

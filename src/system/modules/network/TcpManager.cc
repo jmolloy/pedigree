@@ -15,12 +15,17 @@
  */
 
 #include "TcpManager.h"
+#include "RoutingTable.h"
 #include <Log.h>
 
 TcpManager TcpManager::manager;
 
 size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 {
+  // all callers should have chosen a card based on their bound address
+  if(!pCard)
+    pCard = RoutingTable::instance().DefaultRoute();
+  
   if(!e || !pCard || !port)
     return 0;
   
@@ -66,6 +71,9 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 
 size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard)
 {
+  if(!pCard)
+    pCard = RoutingTable::instance().DetermineRoute(remoteHost.ip);
+
   if(!endpoint || !pCard)
     return 0;
   
@@ -266,6 +274,9 @@ void TcpManager::returnEndpoint(Endpoint* e)
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {
+  if(!pCard)
+    pCard = RoutingTable::instance().DefaultRoute();
+
   Endpoint* e;
   
   // this will fail for servers! we need a unique identifier for all TcpEndpoints - shouldn't be

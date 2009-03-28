@@ -132,7 +132,8 @@ void Dns::mainThread()
       hostLen++;
       req->entry->hostname = hostname;
       
-      uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix) + 1;
+      /// \todo For hosts like GMail, this does not work unless we have a +1 on the end - find out why!
+      uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix);
       uintptr_t ansStart = structStart;
       
       req->entry->ip = 0;

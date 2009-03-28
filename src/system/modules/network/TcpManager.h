@@ -51,16 +51,16 @@ public:
   }
   
   /** Connects to a remote host (blocks until connected) */
-  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard = NetworkStack::instance().getDevice(0));
+  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard = 0);
   
   /** Starts listening for connections */
-  size_t Listen(Endpoint* e, uint16_t port, Network* pCard = NetworkStack::instance().getDevice(0));
+  size_t Listen(Endpoint* e, uint16_t port, Network* pCard = 0);
   
   /** Disconnects from a remote host (blocks until disconnected) */
   void Disconnect(size_t connectionId);
   
   /** Gets a new Endpoint for a connection */
-  Endpoint* getEndpoint(uint16_t localPort = 0, Network* pCard = NetworkStack::instance().getDevice(0));
+  Endpoint* getEndpoint(uint16_t localPort = 0, Network* pCard = 0);
   
   /** Returns an Endpoint */
   void returnEndpoint(Endpoint* e);
