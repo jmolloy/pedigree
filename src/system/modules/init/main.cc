@@ -124,7 +124,6 @@ void init()
       RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
   }
 
-  HugeStaticString str;
   str += "Loading init program (root:/applications/bash)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
