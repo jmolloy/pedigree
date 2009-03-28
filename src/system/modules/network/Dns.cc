@@ -96,6 +96,8 @@ void Dns::mainThread()
         continue;
       
       uint16_t ansCount = BIG_TO_HOST16(head->aCount);
+      uint16_t nameCount = BIG_TO_HOST16(head->nCount);
+      uint16_t addCount = BIG_TO_HOST16(head->dCount);
       
       // read the hostname to find the start of the question and answer structures
       String hostname;
@@ -137,7 +139,7 @@ void Dns::mainThread()
       req->entry->numIps = 0;
       
       // http://www.zytrax.com/books/dns/ch15/ for future reference
-      for(size_t answer = 0; answer < ansCount; answer++)
+      for(size_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);
         if(BIG_TO_HOST16(ans->name) & 0x2)
@@ -189,8 +191,6 @@ void Dns::mainThread()
       m_DnsCache.pushBack(req->entry);
       req->success = true;
       req->waitSem.release();
-
-      NOTICE("Handled a response");
     }
   }
 }

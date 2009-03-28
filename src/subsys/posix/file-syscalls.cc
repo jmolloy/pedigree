@@ -161,6 +161,13 @@ int posix_close(int fd)
 int posix_open(const char *name, int flags, int mode)
 {
   NOTICE("open(" << name << ")");
+
+  // verify the filename - don't try to open a dud file
+  if(name[0] == 0)
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
   
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -368,6 +375,13 @@ int posix_unlink(char *name)
 int posix_stat(const char *name, struct stat *st)
 {
   NOTICE("stat(" << name << ")");
+
+  // verify the filename - don't try to open a dud file (otherwise we'll open the cwd)
+  if(name[0] == 0)
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
 
   File* file = VFS::instance().find(prepend_cwd(name));
 

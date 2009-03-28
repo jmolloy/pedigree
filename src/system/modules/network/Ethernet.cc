@@ -39,7 +39,6 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
 
   // dump this packet into the RAW sockets
-  NOTICE("Passing on to RawManager");
   RawManager::instance().receive(packet, nBytes, pCard);
   
   // what type is the packet?
@@ -89,7 +88,10 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
   
   // send it over the network
-  pCard->send(newSize, reinterpret_cast<uintptr_t>(newPacket));
+  pCard->send(newSize, packAddr);
+
+  // and dump it into any raw sockets
+  RawManager::instance().receive(packAddr, newSize, pCard);
   
   delete newPacket;
 }

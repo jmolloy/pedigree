@@ -188,6 +188,25 @@ class IpAddress
       else
         return false;
     }
+
+    String toString()
+    {
+      /// \todo IPv6
+      if(m_Type == IPv4)
+      {
+        NormalStaticString str;
+        str.clear();
+        str.append(m_Ipv4 & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 8) & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 16) & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 24) & 0xff);
+        return String(static_cast<const char*>(str));
+      }
+      return String("");
+    }
   
   private:
   

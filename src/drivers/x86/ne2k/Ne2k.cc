@@ -300,16 +300,16 @@ bool Ne2k::setStationInfo(StationInfo info)
 {
   // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
-  NOTICE("Setting ipv4, " << info.ipv4.getIp() << ", " << m_StationInfo.ipv4.getIp() << "...");
+  NOTICE("Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
   m_StationInfo.ipv6 = info.ipv6;
   
   m_StationInfo.subnetMask = info.subnetMask;
-  NOTICE("Setting subnet mask, " << info.subnetMask.getIp() << ", " << m_StationInfo.subnetMask.getIp() << "...");
+  NOTICE("Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");
   m_StationInfo.gateway = info.gateway;
-  NOTICE("Setting gateway, " << info.gateway.getIp() << ", " << m_StationInfo.gateway.getIp() << "...");
+  NOTICE("Setting gateway, " << info.gateway.toString() << ", " << m_StationInfo.gateway.toString() << "...");
   
   m_StationInfo.dnsServer = info.dnsServer;
-  NOTICE("Setting DNS server, " << info.dnsServer.getIp() << ", " << m_StationInfo.dnsServer.getIp() << "...");
+  NOTICE("Setting DNS server, " << info.dnsServer.toString() << ", " << m_StationInfo.dnsServer.toString() << "...");
   
   return true;
 }
