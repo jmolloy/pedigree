@@ -1,67 +1,46 @@
-# An attempt at porting Pedigree's build system to SCons
-# - Tyler Kennedy (TkTech)
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+## <3 XLQ
+####################################
 
-# Create a new SCons Enviornment object.
-env = Environment()
-#########################################
-# Setup our environment varibles
-#########################################
-# The base path
-env['COMPILER_PATH'] = '/usr/cross/bin/i586-elf'
-# C Compiler
-env['CC'] = '$COMPILER_PATH-gcc'
-# C++ Compiler
-env['CXX'] = '$COMPILER_PATH-g++'
-# Assembler
-env['AS'] = 'nasm'
-# Linker
-env['LINK'] = '$COMPILER_PATH-ld'
-#########################################
-# Flags
-#########################################
-# C/C++ shared flags
-env['SHARED_FLAGS'] = '-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32 -g0 -O3'
-# C flags
-env['CFLAGS'] = '$SHARED_FLAGS'
-# C++ flags
-env['CXXFLAGS'] = '$SHARED_FLAGS -Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'
-# Assembler flags
-env['ASFLAGS'] = '-f elf'
-# Linker flags
-env['LINKFLAGS'] = '-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'
-#########################################
-# Source defines
-#########################################
-env['CPPDEFINES'] = ['X86','X86_COMMON','BITS_32','THREADS','MULTIPROCESSOR','DEBUGGER','APIC','ACPI','DEBUGGER_QWERTY','SMBIOS','SMP']
-#########################################
-# Setup targets
-#########################################
-### Target 'KERNEL'
-K_DIR = 'src/system/kernel/'
-# Can't just use Glob('src/system/kernel/*.cc') because *Someone* put MIPS and ARM code in the directory -_-
-K_SOURCES  = [K_DIR+'Log.cc',K_DIR+'Archive.cc',K_DIR+'Spinlock.cc']
-K_SOURCES += [Glob(K_DIR + 'core/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'core/processor/x86/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'core/lib/*.c'),Glob(K_DIR + 'core/lib/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'core/utilities/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'debugger/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'linker/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'core/process/*.cc')]
-K_SOURCES += [Glob(K_DIR + 'machine/x86_common/*.cc')]
+import os
 
-# Include directories...
-K_INCLUDES  = ['src/system/include']
-K_INCLUDES += ['src/system/include/linker/']
-K_INCLUDES += ['src/system/include/process/']
-K_INCLUDES += [K_DIR]
-K_INCLUDES += [K_DIR + 'core/']
-K_INCLUDES += [K_DIR + 'core/processor/x86/']
-K_INCLUDES += [K_DIR + 'core/process/']
-K_INCLUDES += [K_DIR + 'core/lib/']
-K_INCLUDES += [K_DIR + 'linker/']
-K_INCLUDES += [K_DIR + 'debugger/']
-K_INCLUDES += [K_DIR + 'debugger/commands/']
-K_INCLUDES += [K_DIR + 'machine/x86_common/']
-# Add it as a target
-env.Program(target = 'Kernel' , source = K_SOURCES, CPPPATH = K_INCLUDES)
-### End 'KERNEL'
+opts = Variables('options.cache')
+opts.AddVariables(
+    ('CC','Sets the C compiler to use.'),
+    ('CXX','Sets the C++ compiler to use.'),
+    ('AS','Sets the assembler to use.'),
+    ('LINK','Sets the linker to use.'),
+    ('CFLAGS','Sets the C compiler flags.','-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32 -g0 -O3'),
+    ('CXXFLAGS','Sets the C++ compiler flags.','-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32 -g0 -O3 -Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'),
+    ('ASFLAGS','Sets the assembler flags.','-f elf'),
+    ('LINKFLAGS','Sets the linker flags','-nostdlib -nostdinc'),
+    ('BUILDDIR','Directory to place build files in.','build'),
+    BoolVariable('verbose','Display verbose build output.',False),
+    BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
+)
+
+env = Environment(options = opts,tools = ['default'],ENV = os.environ) # Create a new environment object passing the options
+Help(opts.GenerateHelpText(env)) # Create the scons help text from the options we specified earlier
+opts.Save('options.cache',env)
+
+####################################
+# Fluff up our build messages
+####################################
+if not env['verbose']:
+    env['CCCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
+    env['ASPPCOMSTR'] =    '    Assembling \033[32m$TARGET\033[0m'
+    env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
+    env['ARCOMSTR'] =      '     Archiving \033[32m$TARGET\033[0m'
+    env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
+    env['NMCOMSTR'] =      '  Creating map \033[32m$TARGET\033[0m'
+    env['DOCCOMSTR'] =     '   Documenting \033[32m$TARGET\033[0m'
+
+####################################
+# Progress through all our sub-directories
+####################################
+SConscript('SConscript',
+           exports = ['env'],
+           build_dir = env['BUILDDIR'],
+           duplicate = 0) # duplicate = 0 stops it from copying the sources to the build dir

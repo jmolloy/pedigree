@@ -1,0 +1,4 @@
+CC = 'gcc'
+CXX = 'g++'
+AS = 'as'
+LINK = '$SMARTLINK'
