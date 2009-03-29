@@ -1,21 +1,28 @@
 #!/usr/bin/env python
+
 #########################################
 # Setup our environment varibles
 #########################################
 Import('*')
-# The base path
-env['COMPILER_PATH'] = '/usr/cross/bin/i586-elf'
+
 # C Compiler
 env['CC'] = '$COMPILER_PATH-gcc'
 # C++ Compiler
 env['CXX'] = '$COMPILER_PATH-g++'
 # Assembler
-env['AS'] = 'nasm'
+if env['ARCH_FAMILY'] = 'x86':
+  env['AS'] = 'nasm'
+else:
+  env['AS'] = '$COMPILER_PATH-as'
 # Linker
 env['LINK'] = '$COMPILER_PATH-ld'
+
 #########################################
 # Flags
 #########################################
+
+# X86 Shared flags.
+
 # C/C++ shared flags
 env['SHARED_FLAGS'] = '-march=i486 -fno-builtin -fno-stack-protector -nostdlib -m32 -g0 -O3'
 # C flags
