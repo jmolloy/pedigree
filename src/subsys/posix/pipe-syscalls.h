@@ -101,7 +101,7 @@ public:
   virtual File* getRoot()
   {return VFS::invalidFile();}
   virtual String getVolumeLabel()
-  {return String("consolemanager");}
+  {return String("pipemanager");}
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile)

@@ -63,7 +63,7 @@ if sudo which losetup >/dev/null 2>&1; then
   fini
 
   # Mount HDD (ext2)
-  cp $SRCDIR/../images/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63spt_100c.img
+  tar -xzf ../images/hdd_ext2.tar.gz
   IMG=$HDIMG
   OFF=$HDOFF
   init
@@ -100,7 +100,7 @@ if sudo which losetup >/dev/null 2>&1; then
   fini;
 
   # Mount HDD (fat16)
-  cp $SRCDIR/../images/hdd_16h_63spt_100c_fat16.img $SRCDIR/hdd_16h_63spt_100c_fat16.img
+  tar -xzf ../images/hdd_fat16.tar.gz
   IMG=hdd_16h_63spt_100c_fat16.img
   OFF=$HDOFF
   init
@@ -156,7 +156,7 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
-  cp ../images/hdd_16h_63spt_100c_fat16.img .
+  tar -xzf ../images/hdd_fat16.tar.gz
 
   sh ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
 

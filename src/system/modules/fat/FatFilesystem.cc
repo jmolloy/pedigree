@@ -205,7 +205,7 @@ File* FatFilesystem::getRoot()
     cluster = m_RootDir.cluster;
 
   if (!m_pRoot)
-    m_pRoot = new FatFile(String(""), 0, 0, 0, cluster, false, true, this, 0, 0, 0, false);
+    m_pRoot = new FatFile(String(""), 0, 0, 0, cluster, false, true, this, 0, 0, 0, 0, false);
 
   return m_pRoot;
 }
@@ -828,10 +828,12 @@ void FatFilesystem::cacheDirectoryContents(File *pFile)
       Time accTime = getUnixTimestamp(0, ent->DIR_LstAccDate);
       Time createTime = getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
       
+      // shouldn't be deleted if it's a directory, else it should be deleteable
       File *pF = new FatFile(filename, accTime, writeTime, createTime, fileCluster, false, (attr & ATTR_DIRECTORY) == ATTR_DIRECTORY, this, ent->DIR_FileSize, clus, i, pFile, false);
       NOTICE("Cache: inserting " << filename);
       pFile->m_Cache.insert(filename, pF);
 
+      longFileNameIndex = 0;
       longFileName.clear();
       nextIsEnd = false;
       j++;
@@ -1293,7 +1295,9 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
       delete [] buffer;
       
       // just make this a stock file.
-      File* ret = new FatFile(filename, 0, 0, 0, 0, false, bDirectory, this, 0, clus, offset);
+      File* ret = new FatFile(filename, 0, 0, 0, 0, false, bDirectory, this, 0, clus, offset, parent, false);
+      NOTICE("Cache: inserting " << filename);
+      parent->m_Cache.insert(filename, ret);
       return ret;
     }
   }
@@ -1382,6 +1386,8 @@ bool FatFilesystem::remove(File* parent, File* file)
   File* pFile = file;
   
   LockGuard<Mutex> guard(m_FatLock);
+
+  /// \todo Unlink the cluster chain
   
   // unlink the entire cluster chain
   /*uint32_t clus = pFile->getInode();

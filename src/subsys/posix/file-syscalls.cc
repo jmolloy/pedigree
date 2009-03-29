@@ -148,8 +148,12 @@ int posix_open(const char *name, int flags, int mode)
     }
   }
 
+  NOTICE("This file '" << file->getName() << "' " << (file->isSymlink() ? "is" : "isn't") << " a symlink.");
   while (file->isSymlink())
+  {
     file = file->followLink();
+    NOTICE("This file '" << file->getName() << "' " << (file->isSymlink() ? "is" : "isn't") << " a symlink.");
+  }
 
   if (file->isDirectory())
   {

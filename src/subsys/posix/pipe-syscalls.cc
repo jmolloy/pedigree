@@ -61,7 +61,6 @@ PipeManager &PipeManager::instance()
 
 File* PipeManager::getPipe()
 {
-  /// \todo Figure out how to free this later
   Pipe* pipe = new Pipe;
   size_t n = m_Pipes.count();
   m_Pipes.pushBack(pipe);

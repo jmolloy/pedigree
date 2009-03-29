@@ -20,7 +20,7 @@
 #include <utilities/utility.h>
 
 VFS VFS::m_Instance;
-File* VFS::m_EmptyFile = new File();
+File* VFS::m_EmptyFile = new File(String("invalid"), 0, 0, 0, 0, false, false, 0, 0, 0, false);
 
 VFS &VFS::instance()
 {
