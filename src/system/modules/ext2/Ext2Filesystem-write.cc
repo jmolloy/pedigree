@@ -62,18 +62,23 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
       if (block == 0)
       {
         SYSCALL_ERROR(NoSpaceLeftOnDevice);
-        WARNING("EXT2: Filesystem full!");
+        FATAL("EXT2: Filesystem full!");
         m_WriteLock.release();
         return 0;
       }
-      setBlockNumber(pFile->getInode(), inode, i + LITTLE_TO_HOST32(inode.i_blocks), block);
+      setBlockNumber(pFile->getInode(), inode, LITTLE_TO_HOST32(inode.i_blocks), block);
       m_Superblock.s_blocks_count = HOST_TO_LITTLE32(LITTLE_TO_HOST32(m_Superblock.s_blocks_count)+1);
       m_SuperblockDirty = true;
 
-      /// \todo Erase new block with zeroes.
+      inode.i_blocks = HOST_TO_LITTLE32(LITTLE_TO_HOST32(inode.i_blocks)+1);
+
+      uint8_t *buf = new uint8_t[m_BlockSize];
+      memset(buf, 0, m_BlockSize);
+      writeInodeData(inode, reinterpret_cast<uintptr_t>(buf), LITTLE_TO_HOST32(inode.i_blocks-1));
+      delete [] buf;
+
     }
 
-    inode.i_blocks = HOST_TO_LITTLE32(LITTLE_TO_HOST32(inode.i_blocks)+blocksOver);
     setInode(pFile->getInode(), inode);
 
     m_WriteLock.release();
@@ -86,17 +91,21 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
   size_t nBytes = size;
   size_t curBlock = location / m_BlockSize;
   size_t offset = location % m_BlockSize;
+  uint8_t *buf = new uint8_t[m_BlockSize];
   while (nBytes)
   {
     if ( nBytes < m_BlockSize )
     {
-      uint8_t *buf = new uint8_t[m_BlockSize];
+      size_t nBytesToWrite = (nBytes+offset > m_BlockSize) ? m_BlockSize-offset : nBytes;
       readInodeData(inode, reinterpret_cast<uintptr_t>(buf), curBlock, curBlock);
-      memcpy(reinterpret_cast<void*>(buf+offset), reinterpret_cast<void*>(buffer), nBytes);
+      memcpy(reinterpret_cast<void*>(buf+offset), reinterpret_cast<void*>(buffer), nBytesToWrite);
       writeInodeData (inode, reinterpret_cast<uintptr_t>(buf), curBlock);
-      nBytes = 0;
-      // Offset may not be zero, but we're exiting anyway. No need to set.
-      break;
+      nBytes -= nBytesToWrite;
+      if (nBytes == 0)
+        break;
+      offset = 0;
+      buffer += nBytesToWrite;
+      curBlock++;
     }
     // If the location is on a block boundary, we can just write directly.
     else if (offset == 0)
@@ -110,7 +119,6 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
     // Else the location is not on a block boundary.
     else
     {
-      uint8_t *buf = new uint8_t[m_BlockSize];
       readInodeData(inode, reinterpret_cast<uintptr_t>(buf), curBlock, curBlock);
       size_t n = m_BlockSize-offset;
       memcpy(reinterpret_cast<void*>(buf+offset), reinterpret_cast<void*>(buffer), n);
@@ -122,11 +130,14 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
     }
   }
 
+  delete [] buf;
+ 
   // Update the inode size.
   /// \todo Handle >4GB files.
-  if ( (location+size) > inode.i_size )
+  if ( (location+size) > LITTLE_TO_HOST32(inode.i_size) )
   {
     inode.i_size = HOST_TO_LITTLE32(location+size);
+    pFile->setSize(location+size);
     setInode(pFile->getInode(), inode);
   }
 
@@ -134,7 +145,7 @@ uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, ui
   return size;
 }
 
-void Ext2Filesystem::setBlockNumber(uint32_t inode_num, Inode inode, size_t blockIdx, uint32_t blockValue)
+void Ext2Filesystem::setBlockNumber(uint32_t inode_num, Inode &inode, size_t blockIdx, uint32_t blockValue)
 {
   uint32_t blockSize = 1024 << m_Superblock.s_log_block_size;
 

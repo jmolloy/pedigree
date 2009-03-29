@@ -170,21 +170,22 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+  //VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
 
   // Switch to this virtual address space
-  Processor::switchAddressSpace(*this);
+  //Processor::switchAddressSpace(*this);
 
   // Get the page table used to map this page directory into the address space
-  physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FF) );
+  //physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FF) );
 
-  // Switch to the kernel's virtual address space
-  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+  // Switch to the original virtual address space
+  //Processor::switchAddressSpace(VAddressSpace);
 
   // TODO: Free other things, perhaps in VirtualAddressSpace
   //       We can't do this in VirtualAddressSpace destructor though!
 
   // Free the page table used to map the page directory into the address space and the page directory itself
-  physicalMemoryManager.freePage(pageTable);
+  //physicalMemoryManager.freePage(pageTable);
   physicalMemoryManager.freePage(m_PhysicalPageDirectory);
 }
 
@@ -565,12 +566,18 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
       if (getKernelAddressSpace().isMapped(virtualAddress))
         continue;
 
+      // Grab the physical address for it.
+      physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
+
       // Page mapped in this address space but not in kernel. Unmap it.
       unmap(virtualAddress);
+
+      // And release the physical memory.
+      /// \todo There's going to be a caveat with CoW here...
+      PhysicalMemoryManager::instance().freePage(physicalAddress);
     }
   }
 }
-
 
 bool X86KernelVirtualAddressSpace::isMapped(void *virtualAddress)
 {

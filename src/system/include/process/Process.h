@@ -31,6 +31,8 @@
 class VirtualAddressSpace;
 class File;
 class FileDescriptor;
+class User;
+class Group;
 
 /**
  * An abstraction of a Process - a container for one or more threads all running in
@@ -139,6 +141,28 @@ public:
     return m_SpaceAllocator;
   }
 
+  /** Gets the current user. */
+  User *getUser()
+  {
+    return m_pUser;
+  }
+  /** Sets the current user. */
+  void setUser(User *pUser)
+  {
+    m_pUser = pUser;
+  }
+
+  /** Gets the current group. */
+  Group *getGroup()
+  {
+    return m_pGroup;
+  }
+  /** Sets the current group. */
+  void setGroup(Group *pGroup)
+  {
+    m_pGroup = pGroup;
+  }
+
 private:
   Process(const Process &);
   Process &operator = (const Process &);
@@ -192,6 +216,10 @@ private:
    * Memory allocator for shared libraries - free parts of the address space.
    */
   MemoryAllocator m_SpaceAllocator;
+  /** Current user. */
+  User *m_pUser;
+  /** Current group. */
+  Group *m_pGroup;
 };
 
 #endif

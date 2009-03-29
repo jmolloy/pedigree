@@ -136,7 +136,7 @@ bool Filesystem::remove(String path, File *pStartNode)
     return false;
   }
 
-  pParent->m_Cache.remove(filename);
+//  pParent->m_Cache.remove(filename);
   return remove(pParent, pFile);
 }
 

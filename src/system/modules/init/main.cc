@@ -35,6 +35,8 @@
 #include <network/NetworkStack.h>
 #include <network/RoutingTable.h>
 
+#include <users/UserManager.h>
+
 extern BootIO bootIO;
 
 static bool probeDisk(Disk *pDisk)
@@ -48,13 +50,10 @@ static bool probeDisk(Disk *pDisk)
     s += ":/.pedigree-root";
 
     File* f = VFS::instance().find(String(static_cast<const char*>(s)));
-    if(f)
+    if(f && f->isValid())
     {
-      if(f->isValid())
-      {
-        NOTICE("Mounted " << alias << " successfully as root.");
-        VFS::instance().addAlias(alias, String("root"));
-      }
+      NOTICE("Mounted " << alias << " successfully as root.");
+      VFS::instance().addAlias(alias, String("root"));
     }
     else
     {
@@ -93,6 +92,9 @@ void init()
   {
 //     FATAL("No disks found!");
   }
+
+  // Initialise user/group configuration.
+  UserManager::instance().initialise();
 
   // Build routing tables
   File* routeConfig = VFS::instance().find(String("root:/config/routes"));
@@ -217,8 +219,8 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users");
 #endif
 

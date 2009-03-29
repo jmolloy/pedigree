@@ -224,7 +224,7 @@ int posix_write(int fd, char *ptr, int len)
   {
     char c = ptr[len];
     ptr[len] = 0;
-    //    NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+    NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
     ptr[len] = c;
   }
   else

@@ -205,8 +205,7 @@ File *VFS::find(String path, File *pStartNode)
   {
     String newPath = path.split(i+1);
     path.chomp();
-    
-    
+
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)

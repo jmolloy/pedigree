@@ -115,7 +115,7 @@ if sudo which losetup >/dev/null 2>&1; then
   sudo mkdir -p $MOUNTPT/tmp
 
   # This is a root filesystem.
-  sudo touch $MOUNTPT/.pedigree-root
+#   sudo touch $MOUNTPT/.pedigree-root
 
   # Transfer files.
   for f in $HDFILES; do

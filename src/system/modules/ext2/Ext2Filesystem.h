@@ -190,7 +190,7 @@ protected:
   uint32_t findFreeBlockInBitmap(uint32_t inode);
   uint32_t findFreeInodeInBitmap();
 
-  void setBlockNumber(uint32_t inode_num, Inode inode, size_t blockIdx, uint32_t blockValue);
+  void setBlockNumber(uint32_t inode_num, Inode &inode, size_t blockIdx, uint32_t blockValue);
 
   void addDirectoryEntry(uint32_t dir_inode, uint32_t child_inode, String filename, size_t node_type);
 

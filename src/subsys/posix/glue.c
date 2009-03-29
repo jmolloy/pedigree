@@ -253,7 +253,7 @@ struct dirent *readdir(DIR *dir)
 {
   if(!dir)
     return 0;
-  
+
   if (syscall2(POSIX_READDIR, dir->fd, &dir->ent) != -1)
     return &dir->ent;
   else
@@ -264,7 +264,7 @@ void rewinddir(DIR *dir)
 {
   if(!dir)
     return 0;
-  
+
   syscall2(POSIX_REWINDDIR, dir->fd, &dir->ent);
 }
 
@@ -272,7 +272,7 @@ int closedir(DIR *dir)
 {
   if(!dir)
     return 0;
-  
+
   syscall1(POSIX_CLOSEDIR, dir->fd);
   free(dir);
   return 0;
@@ -543,7 +543,7 @@ int fcntl(int fildes, int cmd, ...)
 {
   va_list ap;
   va_start(ap, cmd);
-  
+
   int num = 0;
   int* args = 0;
   switch(cmd)
@@ -557,9 +557,9 @@ int fcntl(int fildes, int cmd, ...)
       num = 1;
   };
   va_end(ap);
-  
+
   int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (int) args);
-  
+
   if(args)
     free(args);
   return ret;
@@ -687,11 +687,11 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
 unsigned int inet_addr(const char *cp)
 {
   /// \todo Support formats other than a.b.c.d
-  
+
   char* tmp = (char*) malloc(strlen(cp));
   char* tmp_ptr = tmp; // so we can free the memory
   strcpy(tmp, cp);
-  
+
   // iterate through, removing decimals and taking the four pointers
   char* elements[4] = {tmp, 0, 0, 0};
   int num = 1;
@@ -702,22 +702,22 @@ unsigned int inet_addr(const char *cp)
       *tmp = 0;
       elements[num++] = tmp + 1;
     }
-    
+
     tmp++;
   }
-  
+
   if(num != 4)
     return 0;
-  
+
   unsigned int a = atoi(elements[0]);
   unsigned int b = atoi(elements[1]);
   unsigned int c = atoi(elements[2]);
   unsigned int d = atoi(elements[3]);
-  
+
   unsigned int ret = (d << 24) | (c << 16) | (b << 8) | a;
-  
+
   free(tmp_ptr);
-  
+
   return ret;
 }
 
@@ -743,7 +743,7 @@ struct hostent* gethostbyname(const char *name)
     ret = (struct hostent*) malloc(512);
   if(ret == 0)
     return (struct hostent*) 0;
-  
+
   int success = syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) ret, 512);
   if(success == 0)
   {

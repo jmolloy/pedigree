@@ -169,7 +169,13 @@ File *File::followLink()
   read(0ULL, static_cast<uint64_t>(getSize()), reinterpret_cast<uintptr_t>(pBuffer));
   pBuffer[getSize()] = '\0';
 
-  return (m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent));
+  m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent);
+  if (!m_pCachedSymlink)
+  {
+    NOTICE("followlink returning " << (uintptr_t)m_pCachedSymlink);
+    FATAL("poo");
+  }
+  return m_pCachedSymlink;
 }
 
 void File::cacheDirectoryContents()

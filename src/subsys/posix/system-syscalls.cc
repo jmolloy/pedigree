@@ -192,7 +192,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
   // Attempt to load the file.
   uint8_t *buffer = new uint8_t[file->getSize()+1];
-
+  NOTICE("getSize: " << file->getSize());
   if (buffer == 0)
   {
     SYSCALL_ERROR(OutOfMemory);

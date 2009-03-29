@@ -128,7 +128,7 @@ class VirtualAddressSpace
     /** Undo a clone() - this happens when an application is Exec()'d - we destroy all mappings
         not in the kernel address space so the space is 'clean'.*/
     virtual void revertToKernelAddressSpace() =0;
-  
+
     /** The destructor does nothing */
     inline virtual ~VirtualAddressSpace(){}
 
