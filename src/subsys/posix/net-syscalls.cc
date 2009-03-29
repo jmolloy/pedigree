@@ -26,6 +26,7 @@
 #include <network/NetworkStack.h>
 #include <network/RoutingTable.h>
 #include <network/Dns.h>
+#include <network/Tcp.h>
 
 #include "file-syscalls.h"
 #include "net-syscalls.h"
@@ -91,6 +92,7 @@ int posix_socket(int domain, int type, int protocol)
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = 0;
+  f->fd = fd;
   fdMap.insert(fd, f);
 
   return static_cast<int> (fd);
@@ -124,6 +126,29 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     return -1;
 
   Endpoint* p = NetManager::instance().getEndpoint(file);
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+
+  int endpointState = p->state();
+  if(endpointState != 0xff)
+  {
+    if(endpointState < Tcp::CLOSED)
+    {
+      if(endpointState < Tcp::ESTABLISHED)
+      {
+        // EALREADY - connection attempt in progress
+        SYSCALL_ERROR(Already);
+        return -1;
+      }
+      else
+      {
+        // EISCONN - already connected
+        SYSCALL_ERROR(IsConnected);
+        return -1;
+      }
+    }
+  }
+
+  bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   Endpoint::RemoteEndpoint remoteHost;
 
@@ -135,7 +160,13 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
     remoteHost.ip.setIp(sin->sin_addr.s_addr);
 
-    success = p->connect(remoteHost);
+    success = p->connect(remoteHost, blocking);
+
+    if(!blocking)
+    {
+      SYSCALL_ERROR(InProgress);
+      return -1;
+    }
   }
   else if(file->getSize() == NETMAN_PROTO_UDP)
   {
@@ -170,7 +201,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
   bool success = false;
   if(file->getSize() == NETMAN_PROTO_TCP)
   {
-    success = p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
+    return p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
   }
   else if(file->getSize() == NETMAN_PROTO_UDP)
   {
@@ -228,12 +259,14 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
     return -1;
 
   Endpoint* p = NetManager::instance().getEndpoint(file);
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+
+  bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   int ret = -1;
   if(file->getSize() == NETMAN_PROTO_TCP)
   {
-    /// \todo O_NONBLOCK should control the blocking nature of this call
-    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, false, flags == MSG_PEEK);
+    ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, flags == MSG_PEEK);
   }
   else if(file->getSize() == NETMAN_PROTO_UDP)
   {

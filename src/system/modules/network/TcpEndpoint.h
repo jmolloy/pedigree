@@ -56,11 +56,12 @@ class TcpEndpoint : public Endpoint
     virtual ~TcpEndpoint() {};
     
     /** Application interface */
+    virtual int state();
     virtual int send(size_t nBytes, uintptr_t buffer);
     virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock = false, bool bPeek = false);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
     
-    virtual bool connect(Endpoint::RemoteEndpoint remoteHost);
+    virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true);
     virtual void close();
     
     virtual Endpoint* accept();

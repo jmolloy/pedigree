@@ -110,6 +110,9 @@ typedef struct _types_fd_set {
 #define	F_GETFL		3	/* Get file flags */
 #define	F_SETFL		4	/* Set file flags */
 
+#define	FD_CLOEXEC	1
+#define O_NONBLOCK  0x4000
+
 /** This class provides /dev/null */
 class NullFs : public Filesystem
 {

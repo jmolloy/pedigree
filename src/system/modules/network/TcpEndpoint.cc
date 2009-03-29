@@ -17,6 +17,11 @@
 #include "TcpManager.h"
 #include <Log.h>
 
+int TcpEndpoint::state()
+{
+  return static_cast<int>(TcpManager::instance().getState(m_ConnId));
+}
+
 Endpoint* TcpEndpoint::accept()
 {
   // acquire() will return true when there is at least one release?
@@ -34,7 +39,7 @@ void TcpEndpoint::listen()
   m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
 }
 
-bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost)
+bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
 {
   setRemoteHost(remoteHost);
   setRemotePort(remoteHost.remotePort);
@@ -45,7 +50,7 @@ bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost)
     if(getLocalPort() == 0)
       return false;
   }
-  m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, m_Card);
+  m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock, m_Card);
   if(m_ConnId == 0)
     NOTICE("TcpEndpoint::connect: got 0 for the connection id");
   return (m_ConnId != 0); /// \todo Error codes
@@ -64,12 +69,10 @@ int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 
 int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 {
-  NOTICE("TcpEndpoint::recv");
+  NOTICE("TcpEndpoint::recv will " << (bBlock ? "" : "not ") << "block");
   
   if((!buffer || !maxSize) && !bPeek)
     return -1;
-  
-  bBlock = true;
 
   bool queueReady = false;
   if(bBlock)

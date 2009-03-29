@@ -69,7 +69,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   return connId;
 }
 
-size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard)
+size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, bool bBlock, Network* pCard)
 {
   if(!pCard)
     pCard = RoutingTable::instance().DetermineRoute(remoteHost.ip);
@@ -127,6 +127,9 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   
   Tcp::send(stateBlock->remoteHost.ip, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->iss, 0, Tcp::SYN, stateBlock->snd_wnd, 0, 0, pCard);
   
+  if(!bBlock)
+    return connId; // connection in progress - assume it works
+
   bool timedOut = false;
   Timer* t = Machine::instance().getTimer();
   NetworkBlockTimeout* timeout = new NetworkBlockTimeout;

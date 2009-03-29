@@ -77,6 +77,12 @@ class Endpoint
       IpAddress ip; // either IPv4 or IPv6
       uint16_t remotePort;
     };
+
+    /** What state is the endpoint in? Only really relevant for connection-based sockets I guess */
+    virtual int state()
+    {
+      return -1;
+    }
     
     /** Is data ready to recv yet? */
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
@@ -102,7 +108,7 @@ class Endpoint
     virtual inline void acceptAnyAddress(bool accept) {};
     
     /** Connection-based endpoints */
-    virtual bool connect(Endpoint::RemoteEndpoint remoteHost)
+    virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true)
     {
       return false;
     };

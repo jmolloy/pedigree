@@ -51,7 +51,7 @@ public:
   }
   
   /** Connects to a remote host (blocks until connected) */
-  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, Network* pCard = 0);
+  size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, bool bBlock = true, Network* pCard = 0);
   
   /** Starts listening for connections */
   size_t Listen(Endpoint* e, uint16_t port, Network* pCard = 0);

@@ -23,11 +23,13 @@
 #include <vfs/VFS.h>
 #include <console/Console.h>
 #include <network/NetManager.h>
+#include <network/Tcp.h>
 #include <utilities/utility.h>
 
 #include "file-syscalls.h"
 #include "console-syscalls.h"
 #include "pipe-syscalls.h"
+#include "net-syscalls.h"
 
 #define __IOCTL_FIRST 0x1000
 
@@ -148,12 +150,8 @@ int posix_open(const char *name, int flags, int mode)
     }
   }
 
-  NOTICE("This file '" << file->getName() << "' " << (file->isSymlink() ? "is" : "isn't") << " a symlink.");
   while (file->isSymlink())
-  {
     file = file->followLink();
-    NOTICE("This file '" << file->getName() << "' " << (file->isSymlink() ? "is" : "isn't") << " a symlink.");
-  }
 
   if (file->isDirectory())
   {
@@ -181,6 +179,8 @@ int posix_open(const char *name, int flags, int mode)
   f->file = file;
   f->offset = (flags & O_APPEND) ? file->getSize() : 0;
   f->fd = fd;
+  f->fdflags = 0;
+  f->flflags = flags | mode;
   fdMap.insert(fd, f);
 
   return static_cast<int> (fd);
@@ -200,6 +200,9 @@ int posix_read(int fd, char *ptr, int len)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
+
+  if(NetManager::instance().isEndpoint(pFd->file))
+    return posix_recv(fd, ptr, len, 0);
 
   uint64_t nRead = 0;
   if(ptr && len)
@@ -237,6 +240,9 @@ int posix_write(int fd, char *ptr, int len)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
+
+  if(NetManager::instance().isEndpoint(pFd->file))
+    return posix_send(fd, ptr, len, 0);
 
   // Copy to kernel.
   uint64_t nWritten = 0;
@@ -507,7 +513,7 @@ int posix_readdir(int fd, dirent *ent)
   String tmp = file->getName();
   strcpy(ent->d_name, static_cast<const char*>(tmp));
   ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
-  NOTICE("tmp: " << (uintptr_t)pFd->file << ", " << pFd->file->getName());
+  NOTICE("tmp: " << reinterpret_cast<uintptr_t>(pFd->file) << ", " << pFd->file->getName());
   pFd->offset ++;
 
   return 0;
@@ -669,59 +675,106 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
   int num_ready = 0;
   for (int i = 0; i < nfds; i++)
   {
-    if (FD_ISSET(i, readfds))
+    if(readfds)
     {
-      // Is the FD a console?
-      FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
-      if (!pFd)
+      if (FD_ISSET(i, readfds))
       {
-        // Error - no such file descriptor.
-        ERROR("select: no such file descriptor (" << Dec << i << ")");
-        return -1;
-      }
-
-      if (ConsoleManager::instance().isConsole(pFd->file))
-      {
-        if (ConsoleManager::instance().hasDataAvailable(pFd->file))
-          num_ready ++;
-        else
-          FD_CLR(i, readfds);
-      }
-      else if (NetManager::instance().isEndpoint(pFd->file))
-      {
-        Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-        if(!p)
+        // Is the FD a console?
+        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+        if (!pFd)
         {
-          FD_CLR(i, readfds);
-          continue;
+          // Error - no such file descriptor.
+          ERROR("select: no such file descriptor (" << Dec << i << ")");
+          return -1;
         }
-        
-        if(timeout)
+
+        if (ConsoleManager::instance().isConsole(pFd->file))
         {
-          if(timeout->tv_sec == 0)
+          if (ConsoleManager::instance().hasDataAvailable(pFd->file))
+            num_ready ++;
+          else
+            FD_CLR(i, readfds);
+        }
+        else if (NetManager::instance().isEndpoint(pFd->file))
+        {
+          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+          if(!p)
           {
-            int val = p->recv(0, 0, false, 5); // 5 = MSG_PEEK
-            if(val >= 0) /// \todo Zero means EOF, if recv isn't blocking and has no data it'll return zero...
-              num_ready++;
+            FD_CLR(i, readfds);
+            continue;
+          }
+          
+          if(timeout)
+          {
+            if(timeout->tv_sec == 0)
+            {
+              if(p->state() == 0xff)
+              {
+                if(p->dataReady(false))
+                  num_ready++;
+              }
+              else
+              {
+                if(p->state() == Tcp::ESTABLISHED)
+                  num_ready++;
+                else
+                {
+                  // regardless of the fact that data is available, the socket is still
+                  // readable - it'll just return 0 for EOF.
+                  num_ready++;
+
+                }
+              }
+            }
             else
-              NOTICE("Failed, val = " << Dec << val << Hex << ".");
+            {
+              p->dataReady(true, timeout->tv_sec);
+              num_ready++;
+            }
           }
           else
           {
-            p->dataReady(true, timeout->tv_sec);
+            // block while waiting for the data to come (and wait forever)
+            p->dataReady(true, 0xffffffff);
             num_ready++;
           }
         }
         else
+          // Regular file - always available to read.
+          num_ready ++;
+      }
+    }
+    if(writefds)
+    {
+      if (FD_ISSET(i, writefds))
+      {
+        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+        if (!pFd)
         {
-          // block while waiting for the data to come (and wait forever)
-          p->dataReady(true, 0xffffffff);
-          num_ready++;
+          // Error - no such file descriptor.
+          ERROR("select: no such file descriptor (" << Dec << i << ")");
+          return -1;
+        }
+
+        if (NetManager::instance().isEndpoint(pFd->file))
+        {
+          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+          if(!p)
+            continue;
+
+          int state = p->state();
+
+          if(state == 0xff)
+            num_ready++;
+          else
+          {
+            // writeable state? (though technically FIN_WAIT_2 isn't writeable)
+            /// \todo Timeout lets this check block, but this code won't block...
+            if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
+              num_ready++;
+          }
         }
       }
-      else
-        // Regular file - always available to read.
-        num_ready ++;
     }
   }
 

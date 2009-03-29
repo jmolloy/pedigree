@@ -125,11 +125,22 @@ private:
   struct Pipe
   {
     Pipe() : fifo(), nRefs(0), original(0) {};
+    Pipe(const Pipe& pipe) : fifo(pipe.fifo), nRefs(pipe.nRefs), original(new File(*(pipe.original))) {};
     ~Pipe() {};
+
     TcpBuffer fifo;
 
     size_t nRefs;
     File* original;
+
+    Pipe& operator = (const Pipe& pipe)
+    {
+      fifo = pipe.fifo;
+      nRefs = pipe.nRefs;
+      original = new File(*(pipe.original));
+
+      return *this;
+    }
   };
 
   Vector<Pipe*> m_Pipes;

@@ -256,6 +256,18 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   NOTICE("ELF loaded.");
   elf->load(buffer, file->getSize(), loadBase, elf->getSymbolTable());
 
+  // Close all FD_CLOEXEC descriptors. Done here because from this point we're committed to running -
+  // there's no further return until the end of the function.
+  typedef Tree<size_t,FileDescriptor*> FdMap;
+  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
+  {
+    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
+    if(pFd)
+      if(pFd->fdflags & FD_CLOEXEC)
+        posix_close(reinterpret_cast<int>(it.key()));
+  }
+
   DynamicLinker::instance().initialiseElf(elf);
 
   // Create a new stack.

@@ -48,6 +48,9 @@ namespace Error
     IllegalSeek          =29,
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
+    InProgress           =119,
+    Already              =120,
+    IsConnected          =127,
     Unimplemented        =88
   };
 }

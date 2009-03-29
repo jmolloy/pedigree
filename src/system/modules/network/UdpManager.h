@@ -48,6 +48,7 @@ class UdpEndpoint : public Endpoint
     virtual ~UdpEndpoint() {};
     
     /** Application interface */
+    virtual int state() {return 0xff;} // 0xff signifies UDP
     virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
     virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
