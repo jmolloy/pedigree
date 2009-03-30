@@ -119,9 +119,7 @@ void Dns::mainThread()
         s[1] = 0;
         hostname += s;
         
-        currOffset++;
-        
-        if(currOffset == secSize)
+        if(currOffset++ == secSize)
         {
           hostname += ".";
           secSize = *tmp++;
@@ -131,6 +129,8 @@ void Dns::mainThread()
       // null byte
       hostLen++;
       req->entry->hostname = hostname;
+
+      NOTICE("Obtained hostname " << hostname << " len " << hostLen << ".");
       
       /// \todo For hosts like GMail, this does not work unless we have a +1 on the end - find out why!
       uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix);
@@ -203,7 +203,6 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   {
     if(!strcmp(static_cast<const char*>((*it)->hostname), static_cast<const char*>(hostname)))
     {
-      NOTICE("Obtaining from cache");
       nIps = (*it)->numIps;
       return (*it)->ip;
     }
