@@ -81,7 +81,7 @@ class Endpoint
     /** What state is the endpoint in? Only really relevant for connection-based sockets I guess */
     virtual int state()
     {
-      return -1;
+      return 0xff; // defaults to the standard state for non-connectable sockets
     }
     
     /** Is data ready to recv yet? */

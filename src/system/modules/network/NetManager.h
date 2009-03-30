@@ -24,11 +24,22 @@
 
 #include <network/Endpoint.h>
 
-#define NETMAN_PROTO_UDP    1
-#define NETMAN_PROTO_TCP    2
-#define NETMAN_PROTO_RAW    3
-#define NETMAN_PROTO_UDP6   10
-#define NETMAN_PROTO_TCP6   11
+#define NETMAN_TYPE_UDP    1
+#define NETMAN_TYPE_TCP    2
+#define NETMAN_TYPE_RAW    3
+#define NETMAN_TYPE_UDP6   10
+#define NETMAN_TYPE_TCP6   11
+
+#define IN_PROTOCOLS_DEFINED
+enum Protocols
+{
+  IPPROTO_IP = 0,
+  IPPROTO_IPV6,
+  IPPROTO_ICMP,
+  IPPROTO_RAW,
+  IPPROTO_TCP,
+  IPPROTO_UDP
+};
 
 /** Provides an interface to Endpoints for applications */
 class NetManager : public Filesystem
@@ -52,7 +63,7 @@ public:
   // ConsoleManager interface.
   //
   
-  File* newEndpoint(int protocol);
+  File* newEndpoint(int type, int protocol);
   
   bool isEndpoint(File* f);
   

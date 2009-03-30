@@ -39,7 +39,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
 
   // dump this packet into the RAW sockets
-  RawManager::instance().receive(packet, nBytes, pCard);
+  RawManager::instance().receive(packet, nBytes, 0, -1, pCard);
   
   // what type is the packet?
   switch(BIG_TO_HOST16(ethHeader->type))
@@ -90,8 +90,8 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   // send it over the network
   pCard->send(newSize, packAddr);
 
-  // and dump it into any raw sockets
-  RawManager::instance().receive(packAddr, newSize, pCard);
+  // and dump it into any raw sockets (note the -1 for protocol - this means WIRE level endpoints)
+  RawManager::instance().receive(packAddr, newSize, 0, -1, pCard);
   
   delete newPacket;
 }

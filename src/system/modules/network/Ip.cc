@@ -27,6 +27,10 @@
 #include "Udp.h"
 #include "Tcp.h"
 
+#include "NetManager.h"
+#include "RawManager.h"
+#include "Endpoint.h"
+
 Ip Ip::ipInstance;
 
 Ip::Ip() :
@@ -115,11 +119,15 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
   if(checksum == calcChecksum)
   {
     IpAddress from(header->ipSrc);
+    Endpoint::RemoteEndpoint remoteHost;
+    remoteHost.ip = from;
     
     switch(header->type)
     {
       case IP_ICMP:
         //NOTICE("IP: ICMP packet");
+
+        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
         
         // icmp needs the ip header as well
         Icmp::instance().receive(from, nBytes, packet, pCard, offset);
@@ -127,6 +135,8 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         
       case IP_UDP:
         //NOTICE("IP: UDP packet");
+
+        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
         
         // udp needs the ip header as well
         Udp::instance().receive(from, nBytes, packet, pCard, offset);
@@ -134,6 +144,8 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         
       case IP_TCP:
         //NOTICE("IP: TCP packet");
+
+        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
         
         // tcp needs the ip header as well
         Tcp::instance().receive(from, nBytes, packet, pCard, offset);

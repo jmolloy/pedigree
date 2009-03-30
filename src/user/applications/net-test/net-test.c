@@ -12,7 +12,7 @@
 #include <netdb.h>
 
 int main(int argc, char **argv) {
-  int sock = socket(PF_SOCKET, 0, 0);
+  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
   if(sock == -1)
   {
     printf("Couldn't get a socket: %d [%s]\n", errno, strerror(errno));

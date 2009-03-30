@@ -128,12 +128,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_listen(static_cast<int>(p1), static_cast<int>(p2));
     case POSIX_ACCEPT:
       return posix_accept(static_cast<int>(p1), reinterpret_cast<sockaddr*>(p2), reinterpret_cast<size_t*>(p3));
-    /*
     case POSIX_RECVFROM:
-      return posix_recvfrom(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4), reinterpret_cast<sockaddr*>(p5), reinterpret_cast<size_t*>(p6));
+      return posix_recvfrom(reinterpret_cast<void*>(p1));
     case POSIX_SENDTO:
-      return posix_sendto(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4), reinterpret_cast<sockaddr*>(p5), reinterpret_cast<size_t>(p6));
-    */
+      return posix_sendto(reinterpret_cast<void*>(p1));
     case POSIX_GETTIMEOFDAY:
       return posix_gettimeofday(reinterpret_cast<struct timeval *>(p1), reinterpret_cast<struct timezone *>(p2));
     case POSIX_DUP:

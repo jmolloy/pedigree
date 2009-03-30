@@ -23,6 +23,7 @@ struct sockaddr_in
 
 #endif
 
+#ifndef IN_PROTOCOLS_DEFINED
 enum Protocols
 {
   IPPROTO_IP = 0,
@@ -32,6 +33,7 @@ enum Protocols
   IPPROTO_TCP,
   IPPROTO_UDP
 };
+#endif
 
 #define INADDR_ANY        0
 #define INADDR_BROADCAST  0xffffffff

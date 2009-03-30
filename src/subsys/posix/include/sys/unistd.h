@@ -128,8 +128,8 @@ int     _EXFUN(setgid, (gid_t __gid ));
 #if defined(__CYGWIN__)
 int	_EXFUN(setgroups, (int ngroups, const gid_t *grouplist ));
 #endif
-int     _EXFUN(setpgid, (pid_t __pid, pid_t __pgid ));
-int     _EXFUN(setpgrp, (void ));
+//int     _EXFUN(setpgid, (pid_t __pid, pid_t __pgid ));
+//int     _EXFUN(setpgrp, (void ));
 #if defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
 int	_EXFUN(setregid, (gid_t __rgid, gid_t __egid));
 int	_EXFUN(setreuid, (uid_t __ruid, uid_t __euid));

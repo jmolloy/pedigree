@@ -106,7 +106,9 @@ struct in_addr
 };
 
 #define COMPILING_SUBSYS
+#define SYS_SOCK_CONSTANTS_ONLY
 #include "include/netdb.h"
+#include "include/netinet/in.h"
 
 struct sigaction
 {
@@ -676,10 +678,31 @@ int listen(int sock, int backlog)
   return syscall2(POSIX_LISTEN, sock, backlog);
 }
 
+struct special_send_recv_data
+{
+  int sock;
+  void* buff;
+  unsigned long bufflen;
+  int flags;
+  struct sockaddr* remote_addr;
+  unsigned long* addrlen;
+} __attribute__((packed));
+
 long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct sockaddr* remote_addr, unsigned long* addrlen)
 {
-  STUBBED("recvfrom");
-  return -1;
+  struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+  tmp->sock = sock;
+  tmp->buff = buff;
+  tmp->bufflen = bufflen;
+  tmp->flags = flags;
+  tmp->remote_addr = remote_addr;
+  tmp->addrlen = addrlen;
+
+  int ret = syscall1(POSIX_RECVFROM, (int) tmp);
+
+  free(tmp);
+  
+  return ret;
 }
 
 long recvmsg(int sock, struct msghdr* msg, int flags)
@@ -696,8 +719,19 @@ long sendmsg(int sock, const struct msghdr* msg, int flags)
 
 long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const struct sockaddr* remote_addr, unsigned long* addrlen)
 {
-  STUBBED("sendto");
-  return -1;
+  struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+  tmp->sock = sock;
+  tmp->buff = buff;
+  tmp->bufflen = bufflen;
+  tmp->flags = flags;
+  tmp->remote_addr = remote_addr;
+  tmp->addrlen = addrlen;
+
+  int ret = syscall1(POSIX_SENDTO, (int) tmp);
+
+  free(tmp);
+  
+  return ret;
 }
 
 int setsockopt(int sock, int level, int optname, const void* optvalue, unsigned long optlen)
@@ -798,6 +832,55 @@ struct servent* getservbyname(const char *name, const char *proto)
 {
   STUBBED("getservbyname");
   return 0;
+}
+
+void endprotoent()
+{
+  STUBBED("endprotoent");
+}
+
+struct protoent* getprotobyname(const char *name)
+{
+  static struct protoent* ent = 0;
+  if(ent == 0)
+  {
+    ent = (struct protoent*) malloc(512);
+    ent->p_name = 0;
+  }
+  if(ent->p_name)
+    free(ent->p_name);
+
+  ent->p_name = (char*) malloc(strlen(name) + 1);
+  ent->p_aliases = 0;
+  strcpy(ent->p_name, name);
+
+  if(!strcmp(name, "icmp"))
+    ent->p_proto = IPPROTO_ICMP;
+  else if(!strcmp(name, "udp"))
+    ent->p_proto = IPPROTO_UDP;
+  else if(!strcmp(name, "tcp"))
+    ent->p_proto = IPPROTO_TCP;
+  else
+    ent->p_proto = 0;
+
+  return ent;
+}
+
+struct protoent* getprotobynumber(int proto)
+{
+  STUBBED("getprotobynumber");
+  return 0;
+}
+
+struct protoent* getprotoent()
+{
+  STUBBED("getprotoent");
+  return 0;
+}
+
+void setprotoent(int stayopen)
+{
+  STUBBED("setprotoent");
 }
 
 int getgrnam()

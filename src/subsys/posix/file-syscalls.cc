@@ -722,7 +722,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                   // regardless of the fact that data is available, the socket is still
                   // readable - it'll just return 0 for EOF.
                   num_ready++;
-
                 }
               }
             }

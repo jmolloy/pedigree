@@ -91,17 +91,12 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
         }
         break;
       
-      case ICMP_ECHO_REPLY:
-      
-        // at some point we'll handle sending pings, when we do
-        // the break below will be uncommented
-        // i'll do this once i learn about some form of timing mechanism
-        
-        // break;
-      
       default:
       
-        NOTICE("ICMP: Unhandled packet - type is " << header->type << ".");
+        // Now that things can be moved out to user applications thanks to SOCK_RAW,
+        // the kernel doesn't need to implement too much of the ICMP suite.
+
+        //NOTICE("ICMP: Unhandled packet - type is " << header->type << ".");
         break;
     }
   }
