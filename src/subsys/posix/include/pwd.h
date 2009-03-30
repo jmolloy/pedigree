@@ -42,7 +42,7 @@ extern "C" {
 #include <sys/types.h>
 
 #ifndef _POSIX_SOURCE
-#define	_PATH_PASSWD		"/etc/passwd"
+#define	_PATH_PASSWD		"/config/users"
 
 #define	_PASSWORD_LEN		128	/* max length, not counting NULL */
 #endif

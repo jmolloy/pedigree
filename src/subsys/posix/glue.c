@@ -333,14 +333,12 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 
 int getuid()
 {
-  STUBBED("getuid");
-  return 0;
+  return syscall0(POSIX_GETUID);
 }
 
 int getgid()
 {
-  STUBBED("getgid");
-  return 0;
+  return syscall0(POSIX_GETGID);
 }
 
 int geteuid()
@@ -362,6 +360,7 @@ int getppid()
 }
 
 const char * const sys_siglist[] = {
+  0, 
   "Hangup",
   "Interrupt",
   "Quit",
@@ -517,6 +516,47 @@ struct group *getgrent()
   STUBBED("getgrent");
   errno = ENOSYS;
   return 0;
+}
+
+static struct passwd g_passwd;
+int g_passwd_num = 0;
+char g_passwd_str[256];
+void setpwent()
+{
+  g_passwd_num = 0;
+}
+
+void endpwent()
+{
+  g_passwd_num = 0;
+}
+
+struct passwd *getpwent()
+{
+  if (syscall3(POSIX_GETPWENT, (int)&g_passwd, g_passwd_num, (int)&g_passwd_str) != 0)
+    return 0;
+  g_passwd_num++;
+  return &g_passwd;
+}
+
+struct passwd *getpwuid(int uid)
+{
+  if (syscall3(POSIX_GETPWENT, (int)&g_passwd, uid, (int)&g_passwd_str) != 0)
+    return 0;
+  return &g_passwd;
+}
+
+struct passwd *getpwnam(char *name)
+{
+  if (syscall3(POSIX_GETPWNAM, (int)&g_passwd, (int)name, (int)&g_passwd_str) != 0)
+    return 0;
+  return &g_passwd;
+}
+
+// Pedigree-specific function: login with given uid and password.
+int login(int uid, char *password)
+{
+  return syscall2(PEDIGREE_LOGIN, uid, (int)password);
 }
 
 int chdir(const char *path)
@@ -817,5 +857,23 @@ int readlink(const char* path, char* buf, unsigned int bufsize)
 int ftime(struct timeb *tp)
 {
   STUBBED("ftime");
+  return -1;
+}
+
+int sigmask()
+{
+  STUBBED("sigmask");
+  return -1;
+}
+
+int sigblock()
+{
+  STUBBED("sigblock");
+  return -1;
+}
+
+int sigsetmask()
+{
+  STUBBED("sigsetmask");
   return -1;
 }

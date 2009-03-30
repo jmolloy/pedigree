@@ -63,7 +63,13 @@
 #define POSIX_PIPE       40
 
 #define POSIX_MKDIR      41
+#define POSIX_GETPWENT   42
+#define POSIX_GETPWNAM   43
+#define POSIX_GETUID     44
+#define POSIX_GETGID     45
 
 #define POSIX_STUBBED    99
+
+#define PEDIGREE_LOGIN   101
 
 #endif

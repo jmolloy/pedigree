@@ -32,6 +32,18 @@ struct timezone
   int tz_dsttime;
 };
 
+struct passwd 
+{
+	char	*pw_name;		/* user name */
+	char	*pw_passwd;		/* encrypted password */
+	short 	pw_uid;			/* user uid */
+	short 	pw_gid;			/* user gid */
+	char	*pw_comment;		/* comment */
+	char	*pw_gecos;		/* Honeywell login info */
+	char	*pw_dir;		/* home directory */
+	char	*pw_shell;		/* default shell */
+};
+
 int posix_sbrk(int delta);
 int posix_fork(ProcessorState state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
@@ -40,5 +52,11 @@ int posix_exit(int code);
 int posix_getpid();
 
 int posix_gettimeofday(timeval *tv, timezone *tz);
+
+int posix_getpwent(passwd *pw, int n, char *str);
+int posix_getpwnam(passwd *pw, const char *name, char *str);
+int posix_getuid();
+int posix_getgid();
+int pedigree_login(int uid, const char *password);
 
 #endif

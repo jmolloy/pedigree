@@ -48,80 +48,48 @@ void UserManager::initialiseGroups()
     WARNING("USERS: Read length of file 'groups' differs from as advertised!");
     return;
   }
+  pBuffer[pFile->getSize()] = '\0';
 
   // Start the scan process.
-  char *pStr = 0;
-  enum GroupState
+  List<String*> lines = String(pBuffer).tokenise('\n');
+  for (List<String*>::Iterator it = lines.begin();
+       it != lines.end();
+       it++)
   {
-    Gid = 0,
-    Name,
-    Whitespace
-  };
-
-  GroupState state = Whitespace;
-  GroupState nextstate = Gid;
-  char *pStrings[2];
-  size_t i = 0;
-  while (i < pFile->getSize())
-  {
-    // For every line...
-
-    // Check for a comment.
-    if (pBuffer[i] == '#')
+    String *pStr = *it;
+    if ((*pStr)[0] == '#' || pStr->length() == 0)
     {
-      while (pBuffer[i] != '\n') i++;
+      delete pStr;
       continue;
     }
 
-    // Blank lines...
-    if (pBuffer[i] == '\n')
-    {
-      i++;
-      continue;
-    }
+    List<String*> tokens = pStr->tokenise(';');
+    delete pStr;
 
-    state = Whitespace;
-    nextstate = Gid;
-    bool bStop = false;
+    String id, name;
 
-    while (!bStop)
+    int i = 0;
+    for (List<String*>::Iterator it2 = tokens.begin();
+         it2 != tokens.end();
+         it2++)
     {
-      if (i == pFile->getSize()) pBuffer[i] = '\n';
-      switch (pBuffer[i])
+      switch (i)
       {
-        case '\n':
-          // Command finished.
-          pBuffer[i] = '\0';
-          addGroup(strtoul(pStrings[Gid], 0, 10), String(pStrings[Name]));
-          bStop = true;
+        case 0:
+          id = **it2;
           break;
-
-        case ';':
-          if (state != Whitespace)
-          {
-            pBuffer[i] = '\0'; // Null-terminate current str.
-            state = Whitespace;
-          }
+        case 1:
+          name = **it2;
           break;
-
-        default:
-          if (state == Whitespace)
-          {
-            state = nextstate;
-            nextstate = static_cast<GroupState>(state+1);
-            if (state == Whitespace)
-            {
-              WARNING("USER: Malformed line in 'groups'.");
-              bStop = true;
-              break;
-            }
-            else
-              pStrings[state] = &pBuffer[i];
-          }
       }
+      delete *it2;
       i++;
     }
+    
+    addGroup(strtoul(id, 0, 10), String(name));
   }
+
+  delete [] pBuffer;
 }
 
 void UserManager::initialiseUsers()
@@ -142,88 +110,63 @@ void UserManager::initialiseUsers()
     WARNING("USERS: Read length of file differs from as advertised!");
     return;
   }
+  pBuffer[pFile->getSize()] = '\0';
 
   // Start the scan process.
-  char *pStr = 0;
-  enum UserState
+  List<String*> lines = String(pBuffer).tokenise('\n');
+  for (List<String*>::Iterator it = lines.begin();
+       it != lines.end();
+       it++)
   {
-    Uid = 0,
-    Username,
-    Fullname,
-    Group,
-    Home,
-    Shell,
-    Password,
-    Whitespace
-  };
-
-  UserState state = Whitespace;
-  UserState nextstate = Uid;
-  char *pStrings[7];
-  size_t i = 0;
-  while (i < pFile->getSize())
-  {
-    // For every line...
-
-    // Check for a comment.
-    if (pBuffer[i] == '#')
+    String *pStr = *it;
+    if ((*pStr)[0] == '#' || pStr->length() == 0)
     {
-      while (pBuffer[i] != '\n') i++;
+      delete pStr;
       continue;
     }
 
-    // Blank lines...
-    if (pBuffer[i] == '\n')
-    {
-      i++;
-      continue;
-    }
+    List<String*> tokens = pStr->tokenise(';');
+    delete pStr;
 
-    state = Whitespace;
-    nextstate = Uid;
-    bool bStop = false;
-    while (!bStop)
+    String id, username, fullname, group, home, shell, password;
+
+    int i = 0;
+    for (List<String*>::Iterator it2 = tokens.begin();
+         it2 != tokens.end();
+         it2++)
     {
-      if (i == pFile->getSize()) pBuffer[i] = '\n';
-      switch (pBuffer[i])
+      switch (i)
       {
-        case '\n':
-          // Command finished.
-          pBuffer[i] = '\0';
-          // Add user.
-          addUser(strtoul(pStrings[Uid],0,10), String(pStrings[Username]),
-                  String(pStrings[Fullname]), String(pStrings[Group]),
-                  String(pStrings[Home]), String(pStrings[Shell]),
-                  String(pStrings[Password]));
-          bStop = true;
+        case 0:
+          id = **it2;
           break;
-
-        case ';':
-          if (state != Whitespace)
-          {
-            pBuffer[i] = '\0'; // Null-terminate current str.
-            state = Whitespace;
-          }
+        case 1:
+          username = **it2;
           break;
-
-        default:
-          if (state == Whitespace)
-          {
-            state = nextstate;
-            nextstate = static_cast<UserState>(state+1);
-            if (state == Whitespace)
-            {
-              WARNING("USER: Malformed line in 'users'.");
-              bStop = true;
-              break;
-            }
-            else
-              pStrings[state] = &pBuffer[i];
-          }
+        case 2:
+          fullname = **it2;
+          break;
+        case 3:
+          group = **it2;
+          break;
+        case 4:
+          home = **it2;
+          break;
+        case 5:
+          shell = **it2;
+          break;
+        case 6:
+          password = **it2;
+          break;
       }
+      delete *it2;
       i++;
     }
+    
+    addUser(strtoul(id, 0, 10), username, fullname, group, home, shell, password);
   }
+  
+  delete [] pBuffer;
 }
 
 User *UserManager::getUser(size_t id)

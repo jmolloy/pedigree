@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(APPLICATIONS apptest shell syscall-test net-test)
+set(APPLICATIONS apptest shell syscall-test net-test login)
 set(LIBRARIES)
 
 set(HDD_FILES)

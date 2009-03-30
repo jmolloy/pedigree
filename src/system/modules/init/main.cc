@@ -130,7 +130,7 @@ void init()
   str.clear();
 
   // Load initial program.
-  File* initProg = VFS::instance().find(String("root:/applications/bash"));
+  File* initProg = VFS::instance().find(String("root:/applications/login"));
   if (!initProg->isValid())
   {
     FATAL("Unable to load init program!");
@@ -148,6 +148,8 @@ void init()
 
   // Create a new process for the init process.
   Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+  pProcess->setUser(UserManager::instance().getUser(0));
+  pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
 
   pProcess->description().clear();
   pProcess->description().append("init");

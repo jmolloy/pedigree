@@ -37,6 +37,8 @@
 #include <utilities/Vector.h>
 #include <machine/Machine.h>
 
+#include <users/UserManager.h>
+
 //
 // Syscalls pertaining to system operations.
 //
@@ -437,4 +439,97 @@ int posix_gettimeofday(timeval *tv, timezone *tz)
   tv->tv_usec = 0;
 
   return 0;
+}
+
+char *store_str_to(char *str, char *strend, String s)
+{
+  int i = 0;
+  while (s[i] && str != strend)
+    *str++ = s[i++];
+  *str++ = '\0';
+
+  return str;
+}
+
+int posix_getpwent(passwd *pw, int n, char *str)
+{
+  // Grab the given user.
+  User *pUser = UserManager::instance().getUser(n);
+  if (!pUser) return -1;
+
+  char *strend = str + 256; // If we get here, we've gone off the end of str.
+
+  pw->pw_name = str;
+  str = store_str_to(str, strend, pUser->getUsername());
+
+  pw->pw_passwd = str;
+  *str++ = '\0';
+
+  pw->pw_uid = pUser->getId();
+  pw->pw_gid = pUser->getDefaultGroup()->getId();
+  pw->pw_comment = str;
+  str = store_str_to(str, strend, pUser->getFullName());
+  
+  pw->pw_gecos = str;
+  *str++ = '\0';
+  pw->pw_dir = str;
+  str = store_str_to(str, strend, pUser->getHome());
+
+  pw->pw_shell = str;
+  str = store_str_to(str, strend, pUser->getShell());
+
+  return 0;
+}
+
+int posix_getpwnam(passwd *pw, const char *name, char *str)
+{
+  // Grab the given user.
+  User *pUser = UserManager::instance().getUser(String(name));
+  if (!pUser) return -1;
+
+  char *strend = str + 256; // If we get here, we've gone off the end of str.
+
+  pw->pw_name = str;
+  str = store_str_to(str, strend, pUser->getUsername());
+
+  pw->pw_passwd = str;
+  *str++ = '\0';
+
+  pw->pw_uid = pUser->getId();
+  pw->pw_gid = pUser->getDefaultGroup()->getId();
+  pw->pw_comment = str;
+  str = store_str_to(str, strend, pUser->getFullName());
+  
+  pw->pw_gecos = str;
+  *str++ = '\0';
+
+  pw->pw_dir = str;
+  str = store_str_to(str, strend, pUser->getHome());
+
+  pw->pw_shell = str;
+  str = store_str_to(str, strend, pUser->getShell());
+
+  return 0;
+}
+
+int posix_getuid()
+{
+  return Processor::information().getCurrentThread()->getParent()->getUser()->getId();
+}
+
+int posix_getgid()
+{
+  return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
+}
+
+int pedigree_login(int uid, const char *password)
+{
+  // Grab the given user.
+  User *pUser = UserManager::instance().getUser(uid);
+  if (!pUser) return -1;
+  
+  if (pUser->login(String(password)))
+    return 0;
+  else
+    return -1;  
 }
