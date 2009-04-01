@@ -11,8 +11,13 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+void rofl(int arg)
+{
+  printf("Signal Handler!\n");
+}
+
 int main(int argc, char **argv) {
-  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+/*  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
   if(sock == -1)
   {
     printf("Couldn't get a socket: %d [%s]\n", errno, strerror(errno));
@@ -33,6 +38,12 @@ int main(int argc, char **argv) {
     if(n > 0)
       printf("interface received %d bytes\n", n);
   }
+*/
+
+  signal(SIGHUP, rofl);
+  raise(SIGHUP);
+
+  printf("Raise returns\n");
 
   return 0;
 }

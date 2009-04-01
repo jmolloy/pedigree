@@ -136,8 +136,20 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
 
-  pOldThread->setInterruptState(&state);
-  pOldThread->state() = state;
+  // have we got a saved interrupt state? if so, don't load the old state - we're coming from the signal return.
+  if(pOldThread->shouldUseSaved())
+  {
+    // DO NOT save.
+    //NOTICE("Using saved state");
+    //pOldThread->setInterruptState(pOldThread->getSavedInterruptState());
+    //pOldThread->state() = *(pOldThread->getSavedInterruptState());
+    //pOldThread->useSaved(false);
+  }
+  //else
+  //{
+    pOldThread->setInterruptState(&state);
+    pOldThread->state() = state;
+  //}
 
   while (bSafeToDisembark == 0) ;
 
@@ -153,6 +165,54 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   lApic->ack();
 #endif
 #endif
+
+  // find if the process has any queued signals
+  List<void*>& sigq = pThread->getParent()->getPendingSignals();
+  if(sigq.count())
+  {
+    NOTICE("I HAS SIGNAL");
+
+    void* sig = sigq.popFront();
+    
+    // tis the address of the handler for now
+    pThread->setSavedInterruptState(pThread->getInterruptState());
+    InterruptState* currState = pThread->getInterruptState();
+    pThread->setSavedInterruptState(currState);
+
+    NOTICE("Current state = " << reinterpret_cast<uintptr_t>(currState) << ", IP = " << currState->getInstructionPointer() << ".");
+
+    ProcessorState procState;
+
+    // setup the return instruction pointer
+#ifdef X86_COMMON
+    uintptr_t esp = currState->getStackPointer() - sizeof(InterruptState) - 4;
+    *reinterpret_cast<uint32_t*>(esp) = 0x50000000;
+    procState.setStackPointer(esp);
+#endif
+#ifdef PPC_COMMON
+    procState.m_Lr = 0x50000000;
+#endif
+
+    procState.setInstructionPointer(reinterpret_cast<uintptr_t>(sig));
+    NOTICE("Jumping to " << reinterpret_cast<uintptr_t>(sig) << ".");
+
+    InterruptState* retState = currState->construct(procState, false); // = new InterruptState(*(pThread->getInterruptState()));
+    NOTICE("Return state = " << reinterpret_cast<uintptr_t>(retState) << ", IP = " << retState->getInstructionPointer() << ".");
+    pThread->setInterruptState(retState);
+
+    pThread->useSaved(false);
+
+    NOTICE("DONE!");
+  }
+
+  if(pThread->shouldUseSaved())
+  {
+    NOTICE("setting to the saved state");
+    NOTICE("Return state = " << reinterpret_cast<uintptr_t>(pThread->getSavedInterruptState()) << ", IP = " << pThread->getSavedInterruptState()->getInstructionPointer() << ".");
+    pThread->setInterruptState(pThread->getSavedInterruptState());
+    pThread->useSaved(false);
+  }
+
   Processor::contextSwitch(pThread->getInterruptState());
 }
 

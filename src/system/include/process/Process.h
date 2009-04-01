@@ -163,6 +163,41 @@ public:
     m_pGroup = pGroup;
   }
 
+  /** Gets the pending signals list */
+  List<void*>& getPendingSignals()
+  {
+    return m_PendingSignals;
+  }
+
+  /** Adds a new signal pendng */
+  void addPendingSignal(size_t sig)
+  {
+    void* p = getSignalHandler(sig);
+    m_PendingSignals.pushBack(p);
+  }
+
+  /** Sets a signal handler */
+  void setSignalHandler(size_t sig, void* handler)
+  {
+    m_SignalHandlers.insert(sig % 32, handler);
+  }
+
+  /** Gets a signal handler */
+  void* getSignalHandler(size_t sig)
+  {
+    return m_SignalHandlers.lookup(sig % 32);
+  }
+
+  void setSigReturnStub(uintptr_t p)
+  {
+    m_SigReturnStub = p;
+  }
+
+  uintptr_t getSigReturnStub()
+  {
+    return m_SigReturnStub;
+  }
+
 private:
   Process(const Process &);
   Process &operator = (const Process &);
@@ -220,6 +255,14 @@ private:
   User *m_pUser;
   /** Current group. */
   Group *m_pGroup;
+  /** Pending signals */
+  List<void*> m_PendingSignals;
+
+  /** Signal handlers (userspace pointers) */
+  Tree<size_t, void*> m_SignalHandlers;
+
+  /** Location of the signal handler return stub */
+  uintptr_t m_SigReturnStub;
 };
 
 #endif

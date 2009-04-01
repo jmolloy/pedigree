@@ -156,10 +156,9 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
   
   Endpoint* p = NetManager::instance().getEndpoint(pFile);
   
-  bool success = false;
   if(pFile->getSize() == NETMAN_TYPE_TCP)
   {
-    success = p->send(size, buffer);
+    return p->send(size, buffer);
   }
   else if(pFile->getSize() == NETMAN_TYPE_UDP)
   {
@@ -170,15 +169,13 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
       Endpoint::RemoteEndpoint remoteHost;
       remoteHost.remotePort = p->getRemotePort();
       remoteHost.ip = remoteIp;
-      success = p->send(size, buffer, remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
+      return p->send(size, buffer, remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
     }
   }
   else if(pFile->getSize() == NETMAN_TYPE_RAW)
   {
     /// \todo PF_SOCKET should be able to bind to an address in order to get packets for one interface only
     Endpoint::RemoteEndpoint remoteHost;
-    p->send(size, buffer, remoteHost, false, 0);
+    return p->send(size, buffer, remoteHost, false, 0);
   }
-  
-  return success ? size : 0;
 }

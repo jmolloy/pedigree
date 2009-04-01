@@ -160,11 +160,21 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_getuid();
     case POSIX_GETGID:
       return posix_getgid();
+    case POSIX_SIGACTION:
+      return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3));
+    case POSIX_SIGNAL:
+      return posix_signal(static_cast<int>(p1), reinterpret_cast<void*>(p2));
+    case POSIX_RAISE:
+      return posix_raise(static_cast<int>(p1));
+    case POSIX_KILL:
+      return posix_kill(static_cast<int>(p1), static_cast<int>(p2));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;
     case PEDIGREE_LOGIN:
       return pedigree_login(static_cast<int>(p1), reinterpret_cast<const char *>(p2));
+    case PEDIGREE_SIGRET:
+      return pedigree_sigret();
     default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
   }
 }

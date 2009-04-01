@@ -96,6 +96,16 @@ public:
     m_pInterruptState = p;
   }
 
+  InterruptState *getSavedInterruptState()
+  {
+    return m_pSavedInterruptState;
+  }
+  void setSavedInterruptState(InterruptState *p)
+  {
+    m_pSavedInterruptState = p;
+    //m_pSavedInterruptState = new InterruptState(*p);
+  }
+
   /**
    * Retrieves a pointer to this Thread's parent process.
    */
@@ -151,6 +161,16 @@ public:
     m_Errno = errno;
   }
 
+  bool shouldUseSaved()
+  {
+    return m_bUseSavedState;
+  }
+
+  void useSaved(bool b)
+  {
+    m_bUseSavedState = b;
+  }
+
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
@@ -200,6 +220,13 @@ private:
   size_t m_Errno;
 
   InterruptState *m_pInterruptState;
+
+  /** Signals interrupt threads, so we save the old state when we jump to a signal handler.
+    * When it returns, this state is loaded.
+    */
+  InterruptState *m_pSavedInterruptState;
+
+  bool m_bUseSavedState;
 };
 
 #endif

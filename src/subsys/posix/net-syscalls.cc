@@ -78,7 +78,6 @@ int posix_socket(int domain, int type, int protocol)
       file = NetManager::instance().newEndpoint(NETMAN_TYPE_TCP, protocol);
     else if(type == SOCK_RAW)
     {
-      NOTICE("Creating SOCK_RAW socket");
       file = NetManager::instance().newEndpoint(NETMAN_TYPE_RAW, protocol);
     }
     else

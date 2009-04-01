@@ -68,8 +68,14 @@
 #define POSIX_GETUID     44
 #define POSIX_GETGID     45
 
+#define POSIX_SIGACTION  46
+#define POSIX_SIGNAL     47
+#define POSIX_RAISE      48
+#define POSIX_KILL       49
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101
+#define PEDIGREE_SIGRET  102
 
 #endif

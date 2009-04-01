@@ -44,6 +44,13 @@ struct passwd
 	char	*pw_shell;		/* default shell */
 };
 
+struct sigaction 
+{
+	void (*sa_handler)(int);
+	int sa_mask;
+	int sa_flags;
+};
+
 int posix_sbrk(int delta);
 int posix_fork(ProcessorState state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
@@ -58,5 +65,12 @@ int posix_getpwnam(passwd *pw, const char *name, char *str);
 int posix_getuid();
 int posix_getgid();
 int pedigree_login(int uid, const char *password);
+
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact);
+uintptr_t posix_signal(int sig, void* func);
+int posix_raise(int sig);
+int posix_kill(int pid, int sig);
+
+int pedigree_sigret();
 
 #endif

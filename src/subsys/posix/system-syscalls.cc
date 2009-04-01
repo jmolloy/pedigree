@@ -17,6 +17,7 @@
 #include "file-syscalls.h"
 #include "system-syscalls.h"
 #include "pipe-syscalls.h"
+#include "syscallNumbers.h"
 #include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
@@ -308,6 +309,16 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   state.setStackPointer(pState.getStackPointer());
   state.setInstructionPointer(elf->getEntryPoint());
 
+  int sigret_func = ((1 & 0xFFFF) << 16) | (PEDIGREE_SIGRET & 0xFFFF);
+
+  /// \todo Make this better.
+  char tmpCode[] = {0xb8, sigret_func & 0xff, (sigret_func >> 8) & 0xff, (sigret_func >> 16) & 0xff, (sigret_func >> 24) & 0xff, 0xcd, 0xff};
+  physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+  Processor::information().getVirtualAddressSpace().map(phys,
+                                                        reinterpret_cast<void*> (0x50000000),
+                                                        VirtualAddressSpace::Write);
+  memcpy(reinterpret_cast<void*>(0x50000000), tmpCode, 7);
+
   /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON
   state.m_R6 = pState.m_R6;
@@ -532,4 +543,111 @@ int pedigree_login(int uid, const char *password)
     return 0;
   else
     return -1;  
+}
+
+/* Signals stuff
+(9:12:26 AM) JamesM: add a list of pending signals for each process. When a thread is scheduled, check the pending signal list for its process and run one and only one of them
+(9:12:50 AM) pcmattman: ok cool
+(9:12:52 AM) JamesM: do that by constructing an InterruptState that jumps to your special signal dispatcher in user mode
+(9:13:17 AM) JamesM: and set the registers in the interrupt state such that you can reconstruct the original interrupt state when you return from that stub
+(9:13:25 AM) JamesM: then let the scheduler context switch to that instead
+(9:13:53 AM) JamesM: see Thread() for an example of using StackFrame and InterruptState to create a cross-platform version
+(9:14:04 AM) JamesM: StackFrame should make it easy
+(9:14:10 AM) pcmattman: awesome - thanks
+(9:14:15 AM) JamesM: np
+(9:14:37 AM) JamesM: the only thing I will say is - be aware that some architectures pass most things around in registers, not on the stack
+(9:14:39 AM) JamesM: :-)
+(9:14:56 AM) pcmattman: right
+(9:15:31 AM) froggey: in addition to that, you have to save the current signal mask, mask and unmask some signals, and pass signal information + user context to the handler. you may also need to switch stacks and restart interrupted system calls
+(9:15:31 AM) JamesM: ping me if you need me
+(9:15:43 AM) froggey: plus other stuff
+(9:15:55 AM) pcmattman: yeah
+(9:16:00 AM) pcmattman: that's the complicated part
+(9:16:04 AM) JamesM: interrupted system calls should be dealt with automatically by the scheduler
+(9:16:19 AM) JamesM: InterruptState gets saved, all you have to do is jump to it
+(9:16:47 AM) pcmattman: i know that read/write are meant to set errno to EINTR and return the number of bytes read until interrupted
+(9:16:55 AM) froggey: then suddenly you're left with a half completed system call
+(9:17:53 AM) TkTech: my networks likely to go down a few times
+(9:18:01 AM) JamesM: have a setjmp() style thing at the start of each syscall
+(9:18:09 AM) TkTech: re-organizing and bridging a new rouer
+(9:18:20 AM) JamesM: with a check for interruption after it?
+(9:20:10 AM) froggey: the way most (all?) implementations deal with it is to never switch to a signal handler while running a system call, but instead have some kind of interruptable sleep state which tells the sleeper that sleep was interrupted due to a signal
+(9:20:24 AM) froggey: then the syscall can rewind changes and return EINTR from there
+(9:20:59 AM) froggey: system calls that don't sleep aren't a problem, just let them run to the userspace return uninterrupted and then set up the syscall as normal there
+(9:21:06 AM) JamesM: or posix can get fucked and we can ignore interrupted system calls
+(9:21:28 AM) JamesM: nah I suppose we can't really...
+(9:22:09 AM) froggey: if, for example, process A is blocked on a socket and you want to kill it, then this is where interruptable syscalls are important
+(9:22:15 AM) JamesM: yeah
+*/
+
+/* SIGRET stub code
+
+
+b8 ff 00 00 00
+cd ff
+
+*/
+
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+  NOTICE("sigaction");
+  return -1;
+}
+
+uintptr_t posix_signal(int sig, void* func)
+{
+  NOTICE("signal");
+  void* oldSignalHandler = Processor::information().getCurrentThread()->getParent()->getSignalHandler(static_cast<size_t>(sig));
+  Processor::information().getCurrentThread()->getParent()->setSignalHandler(static_cast<size_t>(sig), func);
+  return reinterpret_cast<uintptr_t>(oldSignalHandler);
+}
+
+int posix_raise(int sig)
+{
+  NOTICE("raise");
+
+  // add the signal to the queue
+  Processor::information().getCurrentThread()->getParent()->addPendingSignal(static_cast<size_t>(sig));
+
+  // let another thread be scheduled; we won't come back until after the pending signal is handled
+  Scheduler::instance().yield(0);
+
+  // reset the saved state so reschedules work properly
+  Processor::information().getCurrentThread()->setSavedInterruptState(0);
+
+  return 0;
+}
+
+int pedigree_sigret()
+{
+  NOTICE("pedigree_sigret");
+
+  // we do not want an interrupt until we're waiting for the signal handler to complete
+  bool bInterrupts = Processor::getInterrupts();
+  if(bInterrupts)
+    Processor::setInterrupts(false);
+
+  // grab the old state, verify it, and promptly switch to it
+  InterruptState* oldState = Processor::information().getCurrentThread()->getSavedInterruptState();
+  InterruptState* currState = Processor::information().getCurrentThread()->getInterruptState();
+  Processor::information().getCurrentThread()->useSaved(true);
+
+  // and now that we're done fiddling with the thread let us be interrupted
+  if(bInterrupts)
+    Processor::setInterrupts(true);
+
+  // reschedule, when we get back to this thread it'll load the old state
+  Scheduler::instance().yield(0);
+  while(1)
+    Processor::halt();
+
+  return 0;
+}
+
+int posix_kill(int pid, int sig)
+{
+  Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
+  p->addPendingSignal(static_cast<size_t>(sig));
+
+  return 0;
 }

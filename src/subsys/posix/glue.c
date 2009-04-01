@@ -25,6 +25,8 @@ extern int *__errno (void);
 
 #include <stdarg.h>
 
+typedef void (*_sig_func_ptr)(int);
+
 extern void *malloc(int);
 extern void free(void*);
 extern void strcpy(char*,char*);
@@ -163,8 +165,7 @@ int _isatty(int file)
 
 int kill(int pid, int sig)
 {
-  STUBBED("kill");
-  return -1;
+  return syscall2(POSIX_KILL, pid, sig);
 }
 
 int link(char *old, char *_new)
@@ -438,13 +439,6 @@ int utime(const char *path, const struct utimbuf *times)
 {
   STUBBED("utime");
   errno = ENOENT;
-  return -1;
-}
-
-int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
-{
-  STUBBED("sigaction");
-  errno = ENOSYS;
   return -1;
 }
 
@@ -959,4 +953,98 @@ int sigsetmask()
 {
   STUBBED("sigsetmask");
   return -1;
+}
+
+int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+  return syscall3(POSIX_SIGACTION, sig, (int) act, (int) oact);
+}
+
+/// \todo These could be better, more correct, etc...
+
+#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { _exit(errcode); }
+#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { printf(msg); _exit(errcode); }
+
+SIGNAL_HANDLER_EXIT     (sigabrt, 1);
+SIGNAL_HANDLER_EXIT     (sigalrm, 1);
+SIGNAL_HANDLER_EXIT     (sigbus, 1);
+SIGNAL_HANDLER_EMPTY    (sigchld);
+SIGNAL_HANDLER_EMPTY    (sigcont); /// \todo Continue & Pause execution
+SIGNAL_HANDLER_EXIT     (sigfpe, 1); // floating point exception signal
+SIGNAL_HANDLER_EXIT     (sighup, 1);
+SIGNAL_HANDLER_EXITMSG  (sigill, 1, "Illegal instruction\n");
+SIGNAL_HANDLER_EXIT     (sigint, 1);
+SIGNAL_HANDLER_EXIT     (sigkill, 1);
+SIGNAL_HANDLER_EXIT     (sigpipe, 1);
+SIGNAL_HANDLER_EXIT     (sigquit, 1);
+SIGNAL_HANDLER_EXITMSG  (sigsegv, 1, "Segmentation fault!\n");
+SIGNAL_HANDLER_EMPTY    (sigstop); /// \todo Continue & Pause execution
+SIGNAL_HANDLER_EXIT     (sigterm, 1);
+SIGNAL_HANDLER_EMPTY    (sigtstp); // terminal stop
+SIGNAL_HANDLER_EMPTY    (sigttin); // background process attempts read
+SIGNAL_HANDLER_EMPTY    (sigttou); // background process attempts write
+SIGNAL_HANDLER_EMPTY    (sigusr1);
+SIGNAL_HANDLER_EMPTY    (sigusr2);
+SIGNAL_HANDLER_EMPTY    (sigurg); // high bandwdith data available at a sockeet
+
+SIGNAL_HANDLER_EMPTY    (sigign);
+
+_sig_func_ptr sigs[32] = {
+                          sigign, // null signal
+                          sighup,
+                          sigint,
+                          sigquit,
+                          sigill,
+                          sigign, // no SIGTRAP
+                          sigign, // no SIGIOT
+                          sigabrt,
+                          sigign, // no SIGEMT
+                          sigfpe,
+                          sigkill,
+                          sigbus,
+                          sigsegv,
+                          sigign, // no SIGSYS
+                          sigpipe,
+                          sigalrm,
+                          sigterm,
+                          sigurg,
+                          sigstop,
+                          sigtstp,
+                          sigcont,
+                          sigchld,
+                          sigign, // no SIGCLD
+                          sigttin,
+                          sigttou,
+                          sigign, // no SIGIO
+                          sigign, // no SIGXCPU
+                          sigign, // no SIGXFSZ
+                          sigign, // no SIGVTALRM
+                          sigign, // no SIGPROF
+                          sigign, // no SIGWINCH,
+                          sigign, // no SIGLOST
+                          sigusr1,
+                          sigusr2
+                         };
+
+_sig_func_ptr signal(int s, _sig_func_ptr func)
+{
+  uint32_t funcAddr = (uint32_t) func;
+  if(funcAddr == 0)
+  {
+    // SIG_DFL: set the default handler
+    func = sigs[s % 32];
+  }
+  else if(funcAddr == 1)
+  {
+    // SIG_IGN: set the ignore handler
+    func = sigign;
+  }
+
+  return (_sig_func_ptr) syscall2(POSIX_SIGNAL, s, (int) func);
+}
+
+int raise(int sig)
+{
+  return syscall1(POSIX_RAISE, sig);
 }
