@@ -751,3 +751,17 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 
   return 0;
 }
+
+int posix_alarm(uint32_t seconds)
+{
+  /// \todo Implement
+  NOTICE("alarm");
+  return 0;
+}
+
+int posix_sleep(uint32_t seconds)
+{
+  /// \todo Implement
+  NOTICE("sleep");
+  return 0;
+}

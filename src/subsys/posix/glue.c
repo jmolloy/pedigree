@@ -408,14 +408,12 @@ int setgid(int gid)
 
 unsigned int sleep(unsigned int seconds)
 {
-  STUBBED("sleep");
-  return 0;
+  return syscall1(POSIX_SLEEP, seconds);
 }
 
 unsigned int alarm(unsigned int seconds)
 {
-  STUBBED("alarm");
-  return 0;
+  return syscall1(POSIX_ALARM, seconds);
 }
 
 int umask(int mask)

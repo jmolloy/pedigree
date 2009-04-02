@@ -74,6 +74,9 @@
 #define POSIX_KILL       49
 #define POSIX_SIGPROCMASK     50
 
+#define POSIX_ALARM      51
+#define POSIX_SLEEP      52
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

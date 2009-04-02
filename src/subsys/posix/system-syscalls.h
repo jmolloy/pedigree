@@ -72,6 +72,9 @@ int posix_raise(int sig);
 int posix_kill(int pid, int sig);
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset);
 
+int posix_alarm(uint32_t seconds);
+int posix_sleep(uint32_t seconds);
+
 int pedigree_sigret();
 
 #endif
