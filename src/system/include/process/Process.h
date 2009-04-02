@@ -163,29 +163,79 @@ public:
     m_pGroup = pGroup;
   }
 
+  /** Public pending signal type - provides for features in sigaction */
+  struct PendingSignal
+  {
+    /// Signal number
+    size_t sig;
+
+    /// Signal handler location
+    uintptr_t sigLocation;
+
+    /// Process signal mask to set when running this signal handler
+    /// \todo Does this then get overridden when the signal handler returns?
+    ///       If so, the previous mask needs to be stored somewhere as well.
+    uint32_t sigMask;
+  };
+
+  /** A signal handler description */
+  struct SignalHandler
+  {
+    /// Signal number
+    size_t sig;
+
+    /// Location of the handler
+    uintptr_t handlerLocation;
+
+    /// Signal mask to set when this signal handler is called
+    uint32_t sigMask;
+
+    /// Signal handler flags
+    uint32_t flags;
+  };
+
   /** Gets the pending signals list */
   List<void*>& getPendingSignals()
   {
     return m_PendingSignals;
   }
 
-  /** Adds a new signal pendng */
-  void addPendingSignal(size_t sig)
+  /** Adds a new pendng signal */
+  void addPendingSignal(size_t sig, PendingSignal* pending)
   {
-    void* p = getSignalHandler(sig);
-    m_PendingSignals.pushBack(p);
+    if(pending)
+    {
+      SignalHandler* p = getSignalHandler(sig);
+      if(p)
+      {
+        pending->sigLocation = p->handlerLocation;
+        pending->sig = sig;
+        m_PendingSignals.pushBack(pending);
+      }
+    }
   }
 
   /** Sets a signal handler */
-  void setSignalHandler(size_t sig, void* handler)
+  void setSignalHandler(size_t sig, SignalHandler* handler)
   {
-    m_SignalHandlers.insert(sig % 32, handler);
+    if(handler)
+    {
+      SignalHandler* tmp;
+      if((tmp = getSignalHandler(sig)) != 0)
+      {
+        m_SignalHandlers.remove(sig % 32);
+        delete tmp;
+      }
+
+      handler->sig = sig;
+      m_SignalHandlers.insert(sig % 32, handler);
+    }
   }
 
   /** Gets a signal handler */
-  void* getSignalHandler(size_t sig)
+  SignalHandler* getSignalHandler(size_t sig)
   {
-    return m_SignalHandlers.lookup(sig % 32);
+    return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
   }
 
   void setSigReturnStub(uintptr_t p)
@@ -196,6 +246,16 @@ public:
   uintptr_t getSigReturnStub()
   {
     return m_SigReturnStub;
+  }
+
+  void setSignalMask(uint32_t mask)
+  {
+    m_SignalMask = mask;
+  }
+
+  uint32_t getSignalMask()
+  {
+    return m_SignalMask;
   }
 
 private:
@@ -263,6 +323,9 @@ private:
 
   /** Location of the signal handler return stub */
   uintptr_t m_SigReturnStub;
+
+  /** Signal mask - if a bit is set, that signal is masked */
+  uint32_t m_SignalMask;
 };
 
 #endif

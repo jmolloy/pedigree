@@ -103,7 +103,6 @@ public:
   void setSavedInterruptState(InterruptState *p)
   {
     m_pSavedInterruptState = p;
-    //m_pSavedInterruptState = new InterruptState(*p);
   }
 
   /**
@@ -171,6 +170,28 @@ public:
     m_bUseSavedState = b;
   }
 
+  /** Information about the currently running signal; if there is one */
+  struct CurrentSignal
+  {
+    CurrentSignal() : bRunning(false), loc(0), oldMask(0), currMask(0) {};
+    virtual ~CurrentSignal() {};
+
+    bool bRunning;
+    uintptr_t loc;
+    uint32_t oldMask;
+    uint32_t currMask;
+  };
+
+  CurrentSignal getCurrentSignal()
+  {
+    return m_CurrentSignal;
+  }
+
+  void setCurrentSignal(CurrentSignal sig)
+  {
+    m_CurrentSignal = sig;
+  }
+
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
@@ -227,6 +248,8 @@ private:
   InterruptState *m_pSavedInterruptState;
 
   bool m_bUseSavedState;
+
+  CurrentSignal m_CurrentSignal;
 };
 
 #endif

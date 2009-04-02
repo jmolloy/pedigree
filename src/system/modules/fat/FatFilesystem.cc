@@ -1171,8 +1171,6 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
     {
       if(buffer[offset] == 0 || buffer[offset] == 0xE5)
       {
-        if(buffer[offset] == 0)
-          NOTICE("null entry found");
         consecutiveFree++;
       }
       else
@@ -1187,13 +1185,10 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
     
     if(!spaceFound)
     {
-      NOTICE("no space found, reading another cluster?");
-      
       // Root Directory check:
       // If no space found for our file, and if not FAT32, the root directory is not resizeable so we have to fail
       if(m_Type != FAT32 && clus == 0)
       {
-        NOTICE("Fail");
         delete [] buffer;
         return VFS::invalidFile();
       }
@@ -1211,15 +1206,11 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
           return VFS::invalidFile();
         }
         
-        NOTICE("adding a new cluster");
-        
         setClusterEntry(prev, newClus);
         setClusterEntry(newClus, eofValue());
         
         clus = newClus;
       }
-      
-      NOTICE("reading...");
       
       readCluster(clus, reinterpret_cast<uintptr_t>(buffer));
     }
@@ -1287,8 +1278,6 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
       
       String shortFilename = convertFilenameTo(filename);
       memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
-      
-      NOTICE("Writing to disk");
       
       writeDirectoryPortion(clus, buffer);
       

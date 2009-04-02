@@ -23,17 +23,19 @@ if(X86)
   set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libc.a")
   set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libm.a")
   set(STUB i686-elf)
+  set(SIGRET "i686")
 endif(X86)
 if(PPC_COMMON)
   set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-ppc-libc.a")
   set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-ppc-libm.a")
   set(STUB ppc-elf)
+  set(SIGRET "ppc")
 endif(PPC_COMMON)
 
 include_directories(../../system/include ../../system/kernel/linker ../../system/modules/ ./ ./include)
 
 # Do the kernel module first.
-add_executable(posix.o posix.cc PosixSyscallManager.cc file-syscalls.cc system-syscalls.cc console-syscalls.cc net-syscalls.cc pipe-syscalls.cc)
+add_executable(posix.o posix.cc PosixSyscallManager.cc file-syscalls.cc system-syscalls.cc console-syscalls.cc net-syscalls.cc pipe-syscalls.cc sigret-${SIGRET}.s)
 target_link_libraries(posix.o gcc)
 set_target_properties(posix.o PROPERTIES
                               LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

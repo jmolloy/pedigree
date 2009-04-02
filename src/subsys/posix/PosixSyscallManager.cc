@@ -168,6 +168,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_raise(static_cast<int>(p1));
     case POSIX_KILL:
       return posix_kill(static_cast<int>(p1), static_cast<int>(p2));
+    case POSIX_SIGPROCMASK:
+      return posix_sigprocmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

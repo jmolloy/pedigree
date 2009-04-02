@@ -116,6 +116,8 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
 
   if (pThread == 0)
   {
+    if(pOldThread->getParent()->getPendingSignals().count())
+      FATAL("Schedule has no threads to switch to yet the process has pending signals.");
     m_Mutex.release();
     return;
   }
@@ -136,20 +138,8 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
   Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
 
-  // have we got a saved interrupt state? if so, don't load the old state - we're coming from the signal return.
-  if(pOldThread->shouldUseSaved())
-  {
-    // DO NOT save.
-    //NOTICE("Using saved state");
-    //pOldThread->setInterruptState(pOldThread->getSavedInterruptState());
-    //pOldThread->state() = *(pOldThread->getSavedInterruptState());
-    //pOldThread->useSaved(false);
-  }
-  //else
-  //{
-    pOldThread->setInterruptState(&state);
-    pOldThread->state() = state;
-  //}
+  pOldThread->setInterruptState(&state);
+  pOldThread->state() = state;
 
   while (bSafeToDisembark == 0) ;
 
@@ -170,45 +160,86 @@ void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *p
   List<void*>& sigq = pThread->getParent()->getPendingSignals();
   if(sigq.count())
   {
-    NOTICE("I HAS SIGNAL");
+    // try to find a non-blocked signal
+    Process::PendingSignal* sig;
+    Process::PendingSignal* firstSig = 0;
+    do
+    {
+      // grab the signal and check against the mask
+      sig = reinterpret_cast<Process::PendingSignal*>(sigq.popFront());
+      if(firstSig == 0)
+        firstSig = sig;
 
-    void* sig = sigq.popFront();
-    
-    // tis the address of the handler for now
-    pThread->setSavedInterruptState(pThread->getInterruptState());
-    InterruptState* currState = pThread->getInterruptState();
-    pThread->setSavedInterruptState(currState);
+      uint32_t sigmask = pThread->getParent()->getSignalMask();
+      if(sigmask & (1 << sig->sig))
+      {
+        /// \todo This will mean the order gets totally messed up... Not so great!
+        sigq.pushBack(sig);
 
-    NOTICE("Current state = " << reinterpret_cast<uintptr_t>(currState) << ", IP = " << currState->getInstructionPointer() << ".");
+        // Blocked, check the next one. If it's the first signal we popped, we've done a full loop
+        // and we know there's no signals we can run.
+        sig = reinterpret_cast<Process::PendingSignal*>(sigq.popFront());
+        if(sig == firstSig)
+        {
+          sigq.pushFront(sig);
+          sig = 0;
+        }
+      }
+      else
+        break;
+    }
+    while(sig);
 
-    ProcessorState procState;
+    // did we find a non-blocked signal?
+    if(sig)
+    {
+      // save the old state, because we're moving to a new state
+      InterruptState* currState = pThread->getInterruptState();
+      pThread->setSavedInterruptState(currState);
+      ProcessorState procState;
 
-    // setup the return instruction pointer
+      // setup the return instruction pointer
+      /// \todo StackFrame members could make this cleaner
 #ifdef X86_COMMON
-    uintptr_t esp = currState->getStackPointer() - sizeof(InterruptState) - 4;
-    *reinterpret_cast<uint32_t*>(esp) = 0x50000000;
-    procState.setStackPointer(esp);
+      uintptr_t esp = currState->getStackPointer() - sizeof(InterruptState) - 4;
+      *reinterpret_cast<uint32_t*>(esp) = pThread->getParent()->getSigReturnStub();
+      procState.setStackPointer(esp);
 #endif
 #ifdef PPC_COMMON
-    procState.m_Lr = 0x50000000;
+      procState.m_Lr = pThread->getParent()->getSigReturnStub();
 #endif
 
-    procState.setInstructionPointer(reinterpret_cast<uintptr_t>(sig));
-    NOTICE("Jumping to " << reinterpret_cast<uintptr_t>(sig) << ".");
+      // we're now jumping to the signal handler
+      procState.setInstructionPointer(sig->sigLocation);
 
-    InterruptState* retState = currState->construct(procState, false); // = new InterruptState(*(pThread->getInterruptState()));
-    NOTICE("Return state = " << reinterpret_cast<uintptr_t>(retState) << ", IP = " << retState->getInstructionPointer() << ".");
-    pThread->setInterruptState(retState);
+      // load the new InterruptState into the thread
+      InterruptState* retState = currState->construct(procState, false);
+      pThread->setInterruptState(retState);
 
-    pThread->useSaved(false);
+      // we do not use the saved state yet
+      pThread->useSaved(false);
 
-    NOTICE("DONE!");
+      // setup the current signal information structure for the thread
+      Thread::CurrentSignal curr;
+      curr.bRunning = true;
+      curr.currMask = sig->sigMask;
+      curr.oldMask = pThread->getParent()->getSignalMask();
+      curr.loc = sig->sigLocation;
+
+      // set the process signal mask as per the mask in the PendingSignal structure
+      pThread->getParent()->setSignalMask(sig->sigMask);
+      pThread->setCurrentSignal(curr);
+
+      // and now we can finally free the pending signal
+      delete sig;
+    }
   }
 
+  // If we need to use the saved state, load it as the current state. This allows the
+  // thread to run without using an invalid state (as would happen if the state from
+  // the assignment earlier was kept.)
   if(pThread->shouldUseSaved())
   {
-    NOTICE("setting to the saved state");
-    NOTICE("Return state = " << reinterpret_cast<uintptr_t>(pThread->getSavedInterruptState()) << ", IP = " << pThread->getSavedInterruptState()->getInstructionPointer() << ".");
     pThread->setInterruptState(pThread->getSavedInterruptState());
     pThread->useSaved(false);
   }

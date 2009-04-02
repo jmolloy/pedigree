@@ -27,7 +27,7 @@
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
   m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(),
-  m_pUser(0), m_pGroup(0)
+  m_pUser(0), m_pGroup(0), m_PendingSignals(), m_SignalHandlers(), m_SigReturnStub(0), m_SignalMask(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
   m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
@@ -37,7 +37,9 @@ Process::Process() :
 
 Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0), m_FdMap(), m_NextFd(0), m_FdLock(),
-  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(), m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup)
+  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(), m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup),
+  m_PendingSignals(pParent->m_PendingSignals), m_SignalHandlers(pParent->m_SignalHandlers), m_SigReturnStub(pParent->m_SigReturnStub),
+  m_SignalMask(pParent->m_SignalMask)
 {
   m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
 

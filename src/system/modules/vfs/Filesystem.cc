@@ -53,11 +53,9 @@ bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
     SYSCALL_ERROR(DoesNotExist);
     return false;
   }
-  ERROR("Making file  with filename " << filename << "r: " << (pParent==getRoot()));
-  // Now make the file.
-  createFile(pParent, filename, mask);
 
-  return true;
+  // Now make the file.
+  return createFile(pParent, filename, mask);
 }
 
 bool Filesystem::createDirectory(String path, File *pStartNode)

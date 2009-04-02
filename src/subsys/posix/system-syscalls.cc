@@ -44,6 +44,12 @@
 // Syscalls pertaining to system operations.
 //
 
+extern "C"
+{
+  extern void sigret_stub();
+  extern char sigret_stub_end;
+}
+
 /// Saves a char** array in the Vector of String*s given.
 static void save_string_array(const char **array, Vector<String*> &rArray)
 {
@@ -309,15 +315,14 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   state.setStackPointer(pState.getStackPointer());
   state.setInstructionPointer(elf->getEntryPoint());
 
-  int sigret_func = ((1 & 0xFFFF) << 16) | (PEDIGREE_SIGRET & 0xFFFF);
-
-  /// \todo Make this better.
-  char tmpCode[] = {0xb8, sigret_func & 0xff, (sigret_func >> 8) & 0xff, (sigret_func >> 16) & 0xff, (sigret_func >> 24) & 0xff, 0xcd, 0xff};
+  /// \todo Can this go somewhere other than 0x50000000? Stack perhaps?
   physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
   Processor::information().getVirtualAddressSpace().map(phys,
                                                         reinterpret_cast<void*> (0x50000000),
                                                         VirtualAddressSpace::Write);
-  memcpy(reinterpret_cast<void*>(0x50000000), tmpCode, 7);
+  NOTICE("Copying " << (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)) << " bytes.");
+  memcpy(reinterpret_cast<void*>(0x50000000), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+  pProcess->setSigReturnStub(0x50000000);
 
   /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON
@@ -545,69 +550,72 @@ int pedigree_login(int uid, const char *password)
     return -1;  
 }
 
-/* Signals stuff
-(9:12:26 AM) JamesM: add a list of pending signals for each process. When a thread is scheduled, check the pending signal list for its process and run one and only one of them
-(9:12:50 AM) pcmattman: ok cool
-(9:12:52 AM) JamesM: do that by constructing an InterruptState that jumps to your special signal dispatcher in user mode
-(9:13:17 AM) JamesM: and set the registers in the interrupt state such that you can reconstruct the original interrupt state when you return from that stub
-(9:13:25 AM) JamesM: then let the scheduler context switch to that instead
-(9:13:53 AM) JamesM: see Thread() for an example of using StackFrame and InterruptState to create a cross-platform version
-(9:14:04 AM) JamesM: StackFrame should make it easy
-(9:14:10 AM) pcmattman: awesome - thanks
-(9:14:15 AM) JamesM: np
-(9:14:37 AM) JamesM: the only thing I will say is - be aware that some architectures pass most things around in registers, not on the stack
-(9:14:39 AM) JamesM: :-)
-(9:14:56 AM) pcmattman: right
-(9:15:31 AM) froggey: in addition to that, you have to save the current signal mask, mask and unmask some signals, and pass signal information + user context to the handler. you may also need to switch stacks and restart interrupted system calls
-(9:15:31 AM) JamesM: ping me if you need me
-(9:15:43 AM) froggey: plus other stuff
-(9:15:55 AM) pcmattman: yeah
-(9:16:00 AM) pcmattman: that's the complicated part
-(9:16:04 AM) JamesM: interrupted system calls should be dealt with automatically by the scheduler
-(9:16:19 AM) JamesM: InterruptState gets saved, all you have to do is jump to it
-(9:16:47 AM) pcmattman: i know that read/write are meant to set errno to EINTR and return the number of bytes read until interrupted
-(9:16:55 AM) froggey: then suddenly you're left with a half completed system call
-(9:17:53 AM) TkTech: my networks likely to go down a few times
-(9:18:01 AM) JamesM: have a setjmp() style thing at the start of each syscall
-(9:18:09 AM) TkTech: re-organizing and bridging a new rouer
-(9:18:20 AM) JamesM: with a check for interruption after it?
-(9:20:10 AM) froggey: the way most (all?) implementations deal with it is to never switch to a signal handler while running a system call, but instead have some kind of interruptable sleep state which tells the sleeper that sleep was interrupted due to a signal
-(9:20:24 AM) froggey: then the syscall can rewind changes and return EINTR from there
-(9:20:59 AM) froggey: system calls that don't sleep aren't a problem, just let them run to the userspace return uninterrupted and then set up the syscall as normal there
-(9:21:06 AM) JamesM: or posix can get fucked and we can ignore interrupted system calls
-(9:21:28 AM) JamesM: nah I suppose we can't really...
-(9:22:09 AM) froggey: if, for example, process A is blocked on a socket and you want to kill it, then this is where interruptable syscalls are important
-(9:22:15 AM) JamesM: yeah
-*/
+/*********************** Signals implementation ***********************/
 
-/* SIGRET stub code
-
-
-b8 ff 00 00 00
-cd ff
-
-*/
+// useful macros from sys/signal.h
+#define sigaddset(what,sig) (*(what) |= (1<<(sig)), 0)
+#define sigdelset(what,sig) (*(what) &= ~(1<<(sig)), 0)
+#define sigemptyset(what)   (*(what) = 0, 0)
+#define sigfillset(what)    (*(what) = ~(0), 0)
+#define sigismember(what,sig) (((*(what)) & (1<<(sig))) != 0)
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
   NOTICE("sigaction");
+ 
+  Thread* pThread = Processor::information().getCurrentThread();
+  Process* pProcess = pThread->getParent();
+
+  // store the old signal handler information if we can
+  if(oact)
+  {
+    Process::SignalHandler* oldSignalHandler = pProcess->getSignalHandler(sig);
+    if(oldSignalHandler)
+    {
+      oact->sa_flags = oldSignalHandler->flags;
+      oact->sa_mask = oldSignalHandler->sigMask;
+      oact->sa_handler = reinterpret_cast<void (*)(int)>(oldSignalHandler->handlerLocation);
+    }
+    else
+      memset(oact, 0, sizeof(struct sigaction));
+  }
+
+  if(act)
+  {
+    Process::SignalHandler* sigHandler = new Process::SignalHandler;
+    sigHandler->handlerLocation = reinterpret_cast<uintptr_t>(act->sa_handler);
+    sigHandler->sigMask = act->sa_mask;
+    sigHandler->flags = act->sa_flags;
+    pProcess->setSignalHandler(sig, sigHandler);
+  }
+  else if(!oact)
+  {
+    SYSCALL_ERROR(InvalidArgument);
+    return -1;
+  }
+
   return -1;
 }
 
 uintptr_t posix_signal(int sig, void* func)
 {
-  NOTICE("signal");
-  void* oldSignalHandler = Processor::information().getCurrentThread()->getParent()->getSignalHandler(static_cast<size_t>(sig));
-  Processor::information().getCurrentThread()->getParent()->setSignalHandler(static_cast<size_t>(sig), func);
-  return reinterpret_cast<uintptr_t>(oldSignalHandler);
+  ERROR("signal called but glue signal should redirect to sigaction");
+  return 0;
 }
 
 int posix_raise(int sig)
 {
   NOTICE("raise");
 
+  // create the pending signal and pass it in
+  Process* pProcess = Processor::information().getCurrentThread()->getParent();
+  Process::SignalHandler* signalHandler = pProcess->getSignalHandler(sig);
+  Process::PendingSignal* pendingSignal = new Process::PendingSignal;
+  if(signalHandler)
+    pendingSignal->sigMask = signalHandler->sigMask;
+
   // add the signal to the queue
-  Processor::information().getCurrentThread()->getParent()->addPendingSignal(static_cast<size_t>(sig));
+  pProcess->addPendingSignal(static_cast<size_t>(sig), pendingSignal);
 
   // let another thread be scheduled; we won't come back until after the pending signal is handled
   Scheduler::instance().yield(0);
@@ -627,10 +635,18 @@ int pedigree_sigret()
   if(bInterrupts)
     Processor::setInterrupts(false);
 
-  // grab the old state, verify it, and promptly switch to it
-  InterruptState* oldState = Processor::information().getCurrentThread()->getSavedInterruptState();
-  InterruptState* currState = Processor::information().getCurrentThread()->getInterruptState();
-  Processor::information().getCurrentThread()->useSaved(true);
+  Thread* pThread = Processor::information().getCurrentThread();
+
+  // set the parent signal mask back the way it was
+  pThread->getParent()->setSignalMask(pThread->getCurrentSignal().oldMask);
+
+  // reset the thread information
+  Thread::CurrentSignal curr;
+  pThread->setCurrentSignal(curr);
+
+  // when we reschedule we will go to the saved state rather than the state picked up
+  // when this thread is switched *from*
+  pThread->useSaved(true);
 
   // and now that we're done fiddling with the thread let us be interrupted
   if(bInterrupts)
@@ -646,8 +662,92 @@ int pedigree_sigret()
 
 int posix_kill(int pid, int sig)
 {
+  NOTICE("kill(" << pid << ", " << sig << ")");
+
   Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
-  p->addPendingSignal(static_cast<size_t>(sig));
+  if(p)
+  {
+    if((p->getSignalMask() & (1 << sig)))
+    {
+      /// \todo What happens when the signal is blocked?
+      return 0;
+    }
+    
+    // build the pending signal and pass it in
+    Process::SignalHandler* signalHandler = p->getSignalHandler(sig);
+    Process::PendingSignal* pendingSignal = new Process::PendingSignal;
+    pendingSignal->sigMask = signalHandler->sigMask;
+
+    // add the signal to the queue
+    p->addPendingSignal(static_cast<size_t>(sig), pendingSignal);
+  }
+  else
+  {
+    SYSCALL_ERROR(NoSuchProcess);
+    return -1;
+  }
+
+  return 0;
+}
+
+int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
+{
+  NOTICE("sigprocmask");
+
+  uint32_t currMask = Processor::information().getCurrentThread()->getParent()->getSignalMask();
+
+  if(oset)
+  {
+    // if no actual passed set, the how argument is invalid and we merely return the current mask
+    *oset = currMask;
+    if(!set)
+      return 0;
+  }
+  if(!set)
+  {
+    SYSCALL_ERROR(InvalidArgument);
+    return -1;
+  }
+
+  uint32_t passedMask = *set;
+
+  // SIGKILL and SIGSTOP are not blockable
+  sigdelset(&passedMask, 9);
+  sigdelset(&passedMask, 17);
+
+  uint32_t returnMask = 0;
+  bool bProcessed = false;
+  switch(how)
+  {
+    // SIG_BLOCK: union of the current set and the passed set
+    case 0:
+      returnMask = currMask | passedMask;
+      bProcessed = true;
+      break;
+     // SIG_SETMASK: set the mask to the passed set
+    case 1:
+      returnMask = passedMask;
+      bProcessed = true;
+      break;
+    // SIG_UNBLOCK: unset the bits in the passed set
+    case 2:
+      returnMask = currMask ^ passedMask;
+      bProcessed = true;
+      break;
+  };
+
+  if(!bProcessed)
+  {
+    SYSCALL_ERROR(InvalidArgument);
+    return -1;
+  }
+  else
+  {
+    Processor::information().getCurrentThread()->getParent()->setSignalMask(returnMask);
+
+    // now that the new signal mask is set, reschedule so that any (now unblocked) signals may run
+    Scheduler::instance().yield(0);
+  }
 
   return 0;
 }

@@ -72,6 +72,7 @@
 #define POSIX_SIGNAL     47
 #define POSIX_RAISE      48
 #define POSIX_KILL       49
+#define POSIX_SIGPROCMASK     50
 
 #define POSIX_STUBBED    99
 

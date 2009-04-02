@@ -25,7 +25,7 @@
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                void *pStack) :
   m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false)
+  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
   if (pParent == 0)
   {
@@ -66,7 +66,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
 Thread::Thread(Process *pParent) :
   m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false)
+  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
   if (pParent == 0)
   {
@@ -81,7 +81,7 @@ Thread::Thread(Process *pParent) :
 
 Thread::Thread(Process *pParent, ProcessorState state) :
   m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false)
+  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
   if (pParent == 0)
   {

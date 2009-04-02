@@ -112,8 +112,11 @@ struct in_addr
 #include "include/netdb.h"
 #include "include/netinet/in.h"
 
-struct sigaction
+struct sigaction 
 {
+	void (*sa_handler)(int);
+	unsigned long sa_mask;
+	int sa_flags;
 };
 
 int ftruncate(int a, int b)
@@ -601,10 +604,9 @@ int fcntl(int fildes, int cmd, ...)
   return ret;
 }
 
-int sigprocmask(int how, int set, int oset)
+int sigprocmask(int how, unsigned long* set, unsigned long* oset)
 {
-  STUBBED("sigprocmask");
-  return -1;
+  return syscall3(POSIX_SIGPROCMASK, how, (int) set, (int) oset);
 }
 
 int fchown(int fildes, int owner, int group)
@@ -955,11 +957,6 @@ int sigsetmask()
   return -1;
 }
 
-int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
-{
-  return syscall3(POSIX_SIGACTION, sig, (int) act, (int) oact);
-}
-
 /// \todo These could be better, more correct, etc...
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { _exit(errcode); }
@@ -990,7 +987,7 @@ SIGNAL_HANDLER_EMPTY    (sigurg); // high bandwdith data available at a sockeet
 
 SIGNAL_HANDLER_EMPTY    (sigign);
 
-_sig_func_ptr sigs[32] = {
+_sig_func_ptr sigs[] = {
                           sigign, // null signal
                           sighup,
                           sigint,
@@ -1027,21 +1024,74 @@ _sig_func_ptr sigs[32] = {
                           sigusr2
                          };
 
-_sig_func_ptr signal(int s, _sig_func_ptr func)
+int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-  uint32_t funcAddr = (uint32_t) func;
-  if(funcAddr == 0)
+  if(sig > 32)
   {
-    // SIG_DFL: set the default handler
-    func = sigs[s % 32];
+    errno = EINVAL;
+    return (_sig_func_ptr) -1;
   }
-  else if(funcAddr == 1)
+  else if(sig == 32)
+    sig = 0; // null signal
+
+  // SIGKILL and SIGSTOP are not catchable
+  else if(sig == 9 || sig == 17)
   {
-    // SIG_IGN: set the ignore handler
-    func = sigign;
+    errno = EINVAL;
+    return (_sig_func_ptr) -1;
   }
 
-  return (_sig_func_ptr) syscall2(POSIX_SIGNAL, s, (int) func);
+  struct sigaction* tmpAct = 0;
+  if(act)
+  {
+    tmpAct = (struct sigaction*) malloc(sizeof(struct sigaction));
+    memcpy(tmpAct, act, sizeof(struct sigaction));
+
+    uint32_t funcAddr = (uint32_t) (act->sa_handler);
+    if(funcAddr == 0)
+    {
+      // SIG_DFL: set the default handler
+      tmpAct->sa_handler = sigs[sig];
+    }
+    else if(funcAddr == 1)
+    {
+      // SIG_IGN: set the ignore handler
+      tmpAct->sa_handler = sigign;
+    }
+    else if(funcAddr == -1)
+    {
+      errno = EINVAL;
+      return (_sig_func_ptr) -1;
+    }
+  }
+
+  int ret = syscall3(POSIX_SIGACTION, sig, (int) tmpAct, (int) oact);
+
+  if(act)
+    free(tmpAct);
+
+  return ret;
+}
+
+_sig_func_ptr signal(int s, _sig_func_ptr func)
+{
+  // obtain the old mask for the sigaction structure, fill it in with default arguments
+  // and pass on to sigaction
+  struct sigaction act;
+  struct sigaction tmp;
+  unsigned long mask = 0;
+  sigprocmask(0, 0, &mask);
+  act.sa_mask = mask;
+  act.sa_handler = func;
+  act.sa_flags = 0;
+  memset(&tmp, 0, sizeof(struct sigaction));
+  if(sigaction(s, &act, &tmp) == 0)
+  {
+    return tmp.sa_handler;
+  }
+  
+  // errno set by sigaction
+  return (_sig_func_ptr) -1;
 }
 
 int raise(int sig)
