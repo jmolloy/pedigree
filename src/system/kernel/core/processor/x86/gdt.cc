@@ -70,6 +70,17 @@ void X86GdtManager::initialiseProcessor()
 
   asm volatile("lgdt %0" :: "m"(gdtr));
   asm volatile("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
+
+  // Flush the segment registers (until now we're running with the ones the Multiboot loader set us
+  // up with, which, when we *reload* them, may not be valid in the new GDT)
+  asm volatile("jmp $0x8, $.flush; \
+                .flush: \
+                mov $0x10, %ax; \
+                mov %ax, %ds; \
+                mov %ax, %es; \
+                mov %ax, %fs; \
+                mov %ax, %gs; \
+                mov %ax, %ss;");
 }
 
 X86GdtManager::X86GdtManager()

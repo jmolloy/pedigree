@@ -26,7 +26,7 @@ mboot:
 KERNEL_BASE        equ 0xFF300000
 start:
   cli
-  push ebx
+  mov edi, ebx
 
   ; Enable PSE (Page Size Extension)
   mov eax, cr4
@@ -94,7 +94,7 @@ start:
   mov cr0, eax
 
   ; Set stack
-  pop ebx
+  mov ebx, edi
   mov esp, 0xFF3FEC00
 
   push ebx
