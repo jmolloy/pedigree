@@ -91,7 +91,7 @@ int posix_socket(int domain, int type, int protocol)
   else
     valid = false;
 
-  if(!valid || !file->isValid())
+  if(!valid)
     return -1;
 
   FileDescriptor *f = new FileDescriptor;

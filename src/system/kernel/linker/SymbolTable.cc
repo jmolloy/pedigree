@@ -114,7 +114,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
     if (pSym->getBinding() == Global &&
         (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
     {
-          return pSym->getValue();
+      return pSym->getValue();
     }
   }
 

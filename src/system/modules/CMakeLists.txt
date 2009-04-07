@@ -15,7 +15,7 @@
 #
 
 set(MODULES)
-set(MODULES ${MODULES} vfs ext2 fat network dhcpclient init console TUI linker users)
+set(MODULES ${MODULES} vfs ext2 network dhcpclient init console TUI linker users) #fat)
 
 #########################################################################################
 

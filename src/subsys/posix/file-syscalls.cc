@@ -20,6 +20,8 @@
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <vfs/File.h>
+#include <vfs/Symlink.h>
+#include <vfs/Directory.h>
 #include <vfs/VFS.h>
 #include <console/Console.h>
 #include <network/NetManager.h>
@@ -31,30 +33,7 @@
 #include "pipe-syscalls.h"
 #include "net-syscalls.h"
 
-#define __IOCTL_FIRST 0x1000
-
-#define TIOCGWINSZ  0x1000  /* Get console window size. */
-#define TIOCSWINSZ  0x1001  /* Set console window size. */
-
-#define __IOCTL_LAST  0x1001
-
-// From newlib's stdio.h
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
-
-// From newlib's fcntl.h
-#define O_RDONLY 0x000
-#define O_WRONLY 0x001
-#define O_RDWR   0x002
-#define O_APPEND 0x008
-#define O_CREAT  0x200
-#define O_TRUNC  0x400
-#define O_EXCL   0x800 // Error on open if file exists.
-
 extern int posix_getpid();
-
-NullFs NullFs::m_Instance;
 
 //
 // Syscalls pertaining to files.
@@ -66,7 +45,7 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_close(int fd)
 {
-  NOTICE("close(" << fd << ")");
+  F_NOTICE("close(" << fd << ")");
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
 
@@ -82,15 +61,16 @@ int posix_close(int fd)
     NetManager::instance().removeEndpoint(f->file);
   }
 
+  f->file->decreaseRefCount( (f->flflags & O_RDWR) || (f->flflags & O_WRONLY) );
+
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
-  if (f->file->shouldDelete()) delete f->file;
   delete f;
   return 0;
 }
 
 int posix_open(const char *name, int flags, int mode)
 {
-  NOTICE("open(" << name << ")");
+  F_NOTICE("open(" << name << ", " << ((mode&O_RDWR)?"O_RDWR":"") << ((mode&O_RDONLY)?"O_RDONLY":"") << ((mode&O_WRONLY)?"O_WRONLY":"") << ")");
 
   // verify the filename - don't try to open a dud file
   if(name[0] == 0)
@@ -98,14 +78,14 @@ int posix_open(const char *name, int flags, int mode)
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
   // Check for /dev/tty, and link to our controlling console.
-  File* file = VFS::invalidFile();
+  File* file = 0;
 
   if (!strcmp(name, "/dev/tty"))
   {
@@ -122,10 +102,11 @@ int posix_open(const char *name, int flags, int mode)
   }
 
   bool bCreated = false;
-  if (!file->isValid())
+  if (!file)
   {
     if(flags & O_CREAT)
     {
+      F_NOTICE("  {O_CREAT}");
       bool worked = VFS::instance().createFile(String(name), 0777, GET_CWD());
       if(!worked)
       {
@@ -134,7 +115,7 @@ int posix_open(const char *name, int flags, int mode)
       }
 
       file = VFS::instance().find(String(name), GET_CWD());
-      if (!file->isValid())
+      if (!file)
       {
         SYSCALL_ERROR(DoesNotExist);
         return -1;
@@ -151,7 +132,7 @@ int posix_open(const char *name, int flags, int mode)
   }
 
   while (file->isSymlink())
-    file = file->followLink();
+    file = Symlink::fromFile(file)->followLink();
 
   if (file->isDirectory())
   {
@@ -169,12 +150,11 @@ int posix_open(const char *name, int flags, int mode)
 
   if((flags & O_TRUNC) && ((flags & O_CREAT) || (flags & O_WRONLY) || (flags & O_RDWR)))
   {
-    NOTICE("Truncating file");
-    
+    F_NOTICE("  {O_TRUNC}");
     // truncate the file
     file->truncate();
   }
-  
+
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
   f->offset = (flags & O_APPEND) ? file->getSize() : 0;
@@ -182,13 +162,14 @@ int posix_open(const char *name, int flags, int mode)
   f->fdflags = 0;
   f->flflags = flags | mode;
   fdMap.insert(fd, f);
+  file->increaseRefCount(false);
 
   return static_cast<int> (fd);
 }
 
 int posix_read(int fd, char *ptr, int len)
 {
-  NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+  F_NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -224,11 +205,12 @@ int posix_write(int fd, char *ptr, int len)
   {
     char c = ptr[len];
     ptr[len] = 0;
-    NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+    F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
     ptr[len] = c;
   }
   else
-    NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+    ;
+    F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -260,7 +242,7 @@ int posix_write(int fd, char *ptr, int len)
 
 int posix_lseek(int file, int ptr, int dir)
 {
-  NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
+  F_NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -298,7 +280,7 @@ int posix_link(char *old, char *_new)
 
 int posix_unlink(char *name)
 {
-  NOTICE("unlink(" << name << ")");
+  F_NOTICE("unlink(" << name << ")");
 
   if(VFS::instance().remove(String(name), GET_CWD()))
     return 0;
@@ -308,7 +290,7 @@ int posix_unlink(char *name)
 
 int posix_stat(const char *name, struct stat *st)
 {
-  NOTICE("stat(" << name << ")");
+  F_NOTICE("stat(" << name << ")");
 
   // verify the filename - don't try to open a dud file (otherwise we'll open the cwd)
   if(name[0] == 0)
@@ -319,10 +301,16 @@ int posix_stat(const char *name, struct stat *st)
 
   File* file = VFS::instance().find(String(name), GET_CWD());
 
-  while (file->isSymlink())
-    file = file->followLink();
+  if (!file)
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
 
-  if (!file->isValid())
+  while (file->isSymlink())
+    file = Symlink::fromFile(file)->followLink();
+
+  if (!file)
   {
     // Error - not found.
     SYSCALL_ERROR(DoesNotExist);
@@ -343,12 +331,23 @@ int posix_stat(const char *name, struct stat *st)
     mode = S_IFREG;
   }
 
+  uint32_t permissions = file->getPermissions();
+  if (permissions & FILE_UR) mode |= S_IRUSR;
+  if (permissions & FILE_UW) mode |= S_IWUSR;
+  if (permissions & FILE_UX) mode |= S_IXUSR;
+  if (permissions & FILE_GR) mode |= S_IRGRP;
+  if (permissions & FILE_GW) mode |= S_IWGRP;
+  if (permissions & FILE_GX) mode |= S_IXGRP;
+  if (permissions & FILE_OR) mode |= S_IROTH;
+  if (permissions & FILE_OW) mode |= S_IWOTH;
+  if (permissions & FILE_OX) mode |= S_IXOTH;
+
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(file->getFilesystem()));
   st->st_ino   = static_cast<short>(file->getInode());
   st->st_mode  = mode;
   st->st_nlink = 1;
-  st->st_uid   = 0;
-  st->st_gid   = 0;
+  st->st_uid   = file->getUid();
+  st->st_gid   = file->getGid();
   st->st_rdev  = 0;
   st->st_size  = static_cast<int>(file->getSize());
   st->st_atime = static_cast<int>(file->getAccessedTime());
@@ -384,12 +383,23 @@ int posix_fstat(int fd, struct stat *st)
     mode = S_IFREG;
   }
 
+  uint32_t permissions = pFd->file->getPermissions();
+  if (permissions & FILE_UR) mode |= S_IRUSR;
+  if (permissions & FILE_UW) mode |= S_IWUSR;
+  if (permissions & FILE_UX) mode |= S_IXUSR;
+  if (permissions & FILE_GR) mode |= S_IRGRP;
+  if (permissions & FILE_GW) mode |= S_IWGRP;
+  if (permissions & FILE_GX) mode |= S_IXGRP;
+  if (permissions & FILE_OR) mode |= S_IROTH;
+  if (permissions & FILE_OW) mode |= S_IWOTH;
+  if (permissions & FILE_OX) mode |= S_IXOTH;
+
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(pFd->file->getFilesystem()));
   st->st_ino   = static_cast<short>(pFd->file->getInode());
   st->st_mode  = mode;
   st->st_nlink = 1;
-  st->st_uid   = 0;
-  st->st_gid   = 0;
+  st->st_uid   = pFd->file->getUid();
+  st->st_gid   = pFd->file->getGid();
   st->st_rdev  = 0;
   st->st_size  = static_cast<int>(pFd->file->getSize());
   st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
@@ -400,12 +410,12 @@ int posix_fstat(int fd, struct stat *st)
 
 int posix_lstat(char *name, struct stat *st)
 {
-  NOTICE("lstat(" << name << ")");
+  //F_NOTICE("lstat(" << name << ")");
 
   File *file = VFS::instance().find(String(name), GET_CWD());
 
   int mode = 0;
-  if (!file->isValid())
+  if (!file)
   {
     // Error - not found.
     SYSCALL_ERROR(DoesNotExist);
@@ -431,12 +441,23 @@ int posix_lstat(char *name, struct stat *st)
     }
   }
 
+  uint32_t permissions = file->getPermissions();
+  if (permissions & FILE_UR) mode |= S_IRUSR;
+  if (permissions & FILE_UW) mode |= S_IWUSR;
+  if (permissions & FILE_UX) mode |= S_IXUSR;
+  if (permissions & FILE_GR) mode |= S_IRGRP;
+  if (permissions & FILE_GW) mode |= S_IWGRP;
+  if (permissions & FILE_GX) mode |= S_IXGRP;
+  if (permissions & FILE_OR) mode |= S_IROTH;
+  if (permissions & FILE_OW) mode |= S_IWOTH;
+  if (permissions & FILE_OX) mode |= S_IXOTH;
+
   st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(file->getFilesystem()));
   st->st_ino   = static_cast<short>(file->getInode());
   st->st_mode  = mode;
   st->st_nlink = 1;
-  st->st_uid   = 0;
-  st->st_gid   = 0;
+  st->st_uid   = file->getGid();
+  st->st_gid   = file->getGid();
   st->st_rdev  = 0;
   st->st_size  = static_cast<int>(file->getSize());
   st->st_atime = static_cast<int>(file->getAccessedTime());
@@ -448,7 +469,7 @@ int posix_lstat(char *name, struct stat *st)
 
 int posix_opendir(const char *dir, dirent *ent)
 {
-  NOTICE("opendir(" << dir << ")");
+  //F_NOTICE("opendir(" << dir << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -457,7 +478,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
   File* file = VFS::instance().find(String(dir), GET_CWD());
 
-  if (!file->isValid())
+  if (!file)
   {
     // Error - not found.
     SYSCALL_ERROR(DoesNotExist);
@@ -465,7 +486,7 @@ int posix_opendir(const char *dir, dirent *ent)
   }
 
   while (file->isSymlink())
-    file = file->followLink();
+    file = Symlink::fromFile(file)->followLink();
 
   if (!file->isDirectory())
   {
@@ -481,7 +502,7 @@ int posix_opendir(const char *dir, dirent *ent)
   fdMap.insert(fd, f);
 
 
-  file = file->getChild(0);
+  file = Directory::fromFile(file)->getChild(0);
   ent->d_ino = file->getInode();
 
   return static_cast<int>(fd);
@@ -489,11 +510,11 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-  NOTICE("readdir(" << fd << ")");
-  
+  //F_NOTICE("readdir(" << fd << ")");
+
   if(fd == -1)
     return -1;
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -505,15 +526,14 @@ int posix_readdir(int fd, dirent *ent)
   }
 
   /// \todo Sanity checks.
-  File* file = pFd->file->getChild(pFd->offset);
-  if (!file->isValid())
+  File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
+  if (!file)
     return -1;
 
   ent->d_ino = static_cast<short>(file->getInode());
   String tmp = file->getName();
   strcpy(ent->d_name, static_cast<const char*>(tmp));
   ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
-  NOTICE("tmp: " << reinterpret_cast<uintptr_t>(pFd->file) << ", " << pFd->file->getName());
   pFd->offset ++;
 
   return 0;
@@ -523,7 +543,7 @@ void posix_rewinddir(int fd, dirent *ent)
 {
   if(fd == -1)
     return;
-  
+
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   f->offset = 0;
   posix_readdir(fd, ent);
@@ -533,18 +553,18 @@ int posix_closedir(int fd)
 {
   if(fd == -1)
     return -1;
-  
+
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
-  if (f->file->shouldDelete()) delete f->file;
+
   delete f;
   return 0;
 }
 
 int posix_ioctl(int fd, int command, void *buf)
 {
-  NOTICE("ioctl(" << Dec << fd << ", " << Hex << command << ")");
+  F_NOTICE("ioctl(" << Dec << fd << ", " << Hex << command << ")");
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   if (!f)
   {
@@ -568,10 +588,10 @@ int posix_ioctl(int fd, int command, void *buf)
 
 int posix_chdir(const char *path)
 {
-  NOTICE("chdir(" << path << ")");
+  F_NOTICE("chdir(" << path << ")");
 
   File *dir = VFS::instance().find(String(path), GET_CWD());
-  if (dir && dir->isValid())
+  if (dir)
   {
     Processor::information().getCurrentThread()->getParent()->setCwd(dir);
     return 0;
@@ -587,8 +607,8 @@ int posix_chdir(const char *path)
 
 int posix_dup(int fd)
 {
-  NOTICE("dup(" << fd << ")");
-  
+  F_NOTICE("dup(" << fd << ")");
+
   // grab the file descriptor pointer for the passed descriptor
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   if(!f)
@@ -605,7 +625,7 @@ int posix_dup(int fd)
 
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
-  f2->file = PipeManager::instance().copyPipe(f->file);
+  f2->file = f->file;
   f2->offset = f->offset;
 
   f2->fdflags = f->fdflags;
@@ -613,12 +633,14 @@ int posix_dup(int fd)
 
   fdMap.insert(newFd, f2);
 
+  f2->file->increaseRefCount((f2->flflags & O_RDWR) || (f2->flflags & O_WRONLY) );
+
   return static_cast<int>(newFd);
 }
 
 int posix_dup2(int fd1, int fd2)
 {
-  NOTICE("dup2(" << fd1 << ", " << fd2 << ")");
+  F_NOTICE("dup2(" << fd1 << ", " << fd2 << ")");
 
   if(fd2 < 0) /// \todo OR fd2 >= OPEN_MAX
   {
@@ -637,6 +659,11 @@ int posix_dup2(int fd1, int fd2)
     return -1;
   }
 
+  // Increase the refcount *before* we close the original, else we might
+  // accidentally trigger an EOF condition on a pipe! (if the write refcount drops
+  // to zero)
+  f->file->increaseRefCount((f->flflags & O_RDWR) || (f->flflags & O_WRONLY) );
+
   // close the original descriptor
   if(posix_close(fd2) == -1)
     return -1;
@@ -646,7 +673,7 @@ int posix_dup2(int fd1, int fd2)
 
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
-  f2->file = PipeManager::instance().copyPipe(f->file);
+  f2->file = f->file;
   f2->offset = f->offset;
 
   f2->fdflags = f->fdflags;
@@ -667,7 +694,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 {
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
-  NOTICE("select(" << Dec << nfds << Hex << ")");
+  F_NOTICE("select(" << Dec << nfds << Hex << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -703,7 +730,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             FD_CLR(i, readfds);
             continue;
           }
-          
+
           if(timeout)
           {
             if(timeout->tv_sec == 0)
@@ -783,10 +810,10 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 int posix_fcntl(int fd, int cmd, int num, int* args)
 {
   if(num)
-    NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
+    F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
   else
-    NOTICE("fcntl(" << fd << ", " << cmd << ")");
-  
+    F_NOTICE("fcntl(" << fd << ", " << cmd << ")");
+
   // grab the file descriptor pointer for the passed descriptor
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
@@ -795,50 +822,53 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-  
+
   switch(cmd)
   {
     case F_DUPFD:
-    
+
       if(num)
       {
         // if there is an argument and it's valid, map fd to the passed descriptor
         if(args[0] >= 0)
         {
           size_t fd2 = static_cast<size_t>(args[0]);
-  
+
           // Lookup this process.
           FileDescriptor* f1 = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd2));
           if(f1)
           {
             fdMap.remove(fd2);
-            if (f1->file->shouldDelete()) delete f1->file;
+            f1->file->decreaseRefCount((f1->flflags & O_RDWR) || (f1->flflags & O_WRONLY) );    NOTICE("lkg");
             delete f1;
           }
-          
+
           // copy the descriptor
           FileDescriptor* f2 = new FileDescriptor;
-          f2->file = PipeManager::instance().copyPipe(f->file);
+          f2->file = f->file;
           f2->offset = f->offset;
           f2->fdflags = f->fdflags;
           f2->flflags = f->flflags;
           fdMap.insert(fd2, f2);
-          
+          f2->file->increaseRefCount((f2->flflags & O_RDWR) || (f2->flflags & O_WRONLY) );
+
           return static_cast<int>(fd2);
         }
       }
       else
       {
         size_t fd2 = Processor::information().getCurrentThread()->getParent()->nextFd();
-        
+
         // copy the descriptor
         FileDescriptor* f2 = new FileDescriptor;
-        f2->file = PipeManager::instance().copyPipe(f->file);
+        f2->file = f->file;
         f2->offset = f->offset;
         f2->fdflags = f->fdflags;
         f2->flflags = f->flflags;
         fdMap.insert(fd2, f2);
-        
+
+        f2->file->increaseRefCount((f2->flflags & O_RDWR) || (f2->flflags & O_WRONLY) );
+
         return static_cast<int>(fd2);
       }
     case F_GETFD:
@@ -852,7 +882,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
       f->flflags = args[0];
       return 0;
   }
-  
+
   SYSCALL_ERROR(Unimplemented);
   return -1;
 }

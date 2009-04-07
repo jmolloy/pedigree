@@ -21,6 +21,10 @@
 #include <processor/Processor.h>
 #include <syscallError.h>
 
+#include "File.h"
+#include "Directory.h"
+#include "Symlink.h"
+
 Filesystem::Filesystem() :
   m_bReadOnly(false), m_nAliases(0)
 {
@@ -38,7 +42,7 @@ bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
   if (!pStartNode) pStartNode = getRoot();
   File *pFile = findNode(pStartNode, path);
 
-  if (pFile && pFile->isValid())
+  if (pFile)
   {
     SYSCALL_ERROR(FileExists);
     return false;
@@ -48,7 +52,7 @@ bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
   File *pParent = findParent(path, pStartNode, filename);
 
   // Check the parent existed.
-  if (!pParent || !pParent->isValid())
+  if (!pParent)
   {
     SYSCALL_ERROR(DoesNotExist);
     return false;
@@ -63,7 +67,7 @@ bool Filesystem::createDirectory(String path, File *pStartNode)
   if (!pStartNode) pStartNode = getRoot();
   File *pFile = findNode(pStartNode, path);
 
-  if (pFile && pFile->isValid())
+  if (pFile)
   {
     SYSCALL_ERROR(FileExists);
     return false;
@@ -73,7 +77,7 @@ bool Filesystem::createDirectory(String path, File *pStartNode)
   File *pParent = findParent(path, pStartNode, filename);
 
   // Check the parent existed.
-  if (!pParent || !pParent->isValid())
+  if (!pParent)
   {
     SYSCALL_ERROR(DoesNotExist);
     return false;
@@ -90,7 +94,7 @@ bool Filesystem::createSymlink(String path, String value, File *pStartNode)
   if (!pStartNode) pStartNode = getRoot();
   File *pFile = findNode(pStartNode, path);
 
-  if (pFile && pFile->isValid())
+  if (pFile)
   {
     SYSCALL_ERROR(FileExists);
     return false;
@@ -100,7 +104,7 @@ bool Filesystem::createSymlink(String path, String value, File *pStartNode)
   File *pParent = findParent(path, pStartNode, filename);
 
   // Check the parent existed.
-  if (!pParent || !pParent->isValid())
+  if (!pParent)
   {
     SYSCALL_ERROR(DoesNotExist);
     return false;
@@ -118,7 +122,7 @@ bool Filesystem::remove(String path, File *pStartNode)
 
   File *pFile = findNode(pStartNode, path);
 
-  if (!pFile || !pFile->isValid())
+  if (!pFile)
   {
     SYSCALL_ERROR(DoesNotExist);
     return false;
@@ -128,7 +132,7 @@ bool Filesystem::remove(String path, File *pStartNode)
   File *pParent = findParent(path, pStartNode, filename);
 
   // Check the parent existed.
-  if (!pParent || !pParent->isValid())
+  if (!pParent)
   {
     FATAL("Filesystem::remove: Massive algorithmic error.");
     return false;
@@ -173,10 +177,7 @@ File *Filesystem::findNode(File *pNode, String path)
 
   // Firstly, if the current node is a symlink, follow it.
   while (pNode->isSymlink())
-  {
-    NOTICE("Follow link");
-    pNode = pNode->followLink();
-  }
+    pNode = Symlink::fromFile(pNode)->followLink();
 
   // Next, if the current node isn't a directory, die.
   if (!pNode->isDirectory())
@@ -194,12 +195,14 @@ File *Filesystem::findNode(File *pNode, String path)
     return findNode(pNode->m_pParent, restOfPath);
   }
 
+  Directory *pDir = Directory::fromFile(pNode);
+
   // Cache lookup.
   File *pFile;
-  if (pNode->m_bCachePopulated)
+  if (pDir->m_bCachePopulated)
   {
-    pFile = pNode->m_Cache.lookup(path);
-    if (pFile && pFile->isValid())
+    pFile = pDir->m_Cache.lookup(path);
+    if (pFile)
     {
       // Cache lookup succeeded, recurse and return.
       return findNode(pFile, restOfPath);
@@ -207,17 +210,17 @@ File *Filesystem::findNode(File *pNode, String path)
     else
     {
       // Cache lookup failed, does not exist.
-      return VFS::invalidFile();
+      return 0;
     }
   }
   else
   {
     // Directory contents not cached - cache them now.
-    pNode->cacheDirectoryContents();
+    pDir->cacheDirectoryContents();
 
     // Then lookup.
-    pFile = pNode->m_Cache.lookup(path);
-    if (pFile && pFile->isValid())
+    pFile = pDir->m_Cache.lookup(path);
+    if (pFile)
     {
       // Cache lookup succeeded, recurse and return.
       return findNode(pFile, restOfPath);
@@ -225,7 +228,7 @@ File *Filesystem::findNode(File *pNode, String path)
     else
     {
       // Cache lookup failed, does not exist.
-      return VFS::invalidFile();
+      return 0;
     }
   }
 }

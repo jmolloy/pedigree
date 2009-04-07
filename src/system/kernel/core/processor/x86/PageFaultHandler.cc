@@ -69,6 +69,9 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   if(code & PFE_RESERVED_BIT) sCode.append("RESERVED BIT SET | ");
   if(code & PFE_INSTRUCTION_FETCH) sCode.append("FETCH |");
 
+  // Ensure the log spinlock isn't going to die on us...
+  Log::instance().m_Lock.release();
+
   ERROR(static_cast<const char*>(sError));
   ERROR(static_cast<const char*>(sCode));
 

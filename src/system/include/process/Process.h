@@ -25,6 +25,7 @@
 #include <Atomic.h>
 #include <Spinlock.h>
 #include <LockGuard.h>
+#include <process/Semaphore.h>
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
 
@@ -49,16 +50,16 @@ public:
    * does not create any threads.
    * \param pParent The parent process. */
   Process(Process *pParent);
-  
+
   /** Destructor. */
   ~Process();
-  
+
   /** Adds a thread to this process.
    *  \return The thread ID to be assigned to the new Thread. */
   size_t addThread(Thread *pThread);
   /** Removes a thread from this process. */
   void removeThread(Thread *pThread);
-  
+
   /** Returns the number of threads in this process. */
   size_t getNumThreads();
   /** Returns the n'th thread in this process. */
@@ -66,7 +67,7 @@ public:
 
   /** Creates a new process, with a single thread and a stack. */
   static uintptr_t create(uint8_t *elf, size_t elfSize, const char *name);
-  
+
   /** Returns the process ID. */
   size_t getId()
   {
@@ -84,7 +85,7 @@ public:
   {
     return m_pAddressSpace;
   }
-  
+
   /** Returns the File descriptor map - maps numbers to pointers (of undefined type -
       the subsystem decides what type). */
   Tree<size_t,FileDescriptor*> &getFdMap()
@@ -315,6 +316,7 @@ private:
   User *m_pUser;
   /** Current group. */
   Group *m_pGroup;
+
   /** Pending signals */
   List<void*> m_PendingSignals;
 
@@ -326,6 +328,9 @@ private:
 
   /** Signal mask - if a bit is set, that signal is masked */
   uint32_t m_SignalMask;
+
+public:
+  Semaphore m_DeadThreads;
 };
 
 #endif

@@ -30,7 +30,7 @@ Vt100 *g_pVt100 = 0;
 TUI::TUI() :
   m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true), m_QueueLength(0)
 {
-  
+
 }
 
 TUI::~TUI()
@@ -110,10 +110,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         if (i == 0)
           continue;
         else
-        {
-NOTICE("TUI: read: Return " << Hex << i);
           return i;
-        }
       }
       if (ch.is_special)
       {
@@ -229,10 +226,9 @@ NOTICE("TUI: read: Return " << Hex << i);
     m_EchoNewlines = static_cast<bool>(p4);
     m_EchoBackspace = static_cast<bool>(p5);
     m_NlCausesCr = static_cast<bool>(p6);
-    
+
     m_MapNlToCrIn = static_cast<bool>(p7);
     m_MapCrToNlIn = static_cast<bool>(p8);
-    NOTICE("NLTOCR: " << m_MapNlToCrIn);
     return 0;
   }
   else if (operation == CONSOLE_GETATTR)

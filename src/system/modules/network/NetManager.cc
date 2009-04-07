@@ -48,10 +48,10 @@ File* NetManager::newEndpoint(int type, int protocol)
   {
     size_t n = m_Endpoints.count();
     m_Endpoints.pushBack(p);
-    return new File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, type);
+    return new File(String("socket"), 0, 0, 0, n + 0xab000000, this, type, 0);
   }
   else
-    return VFS::invalidFile();
+    return 0;
 }
 
 void NetManager::removeEndpoint(File* f)
@@ -88,7 +88,7 @@ void NetManager::removeEndpoint(File* f)
 bool NetManager::isEndpoint(File* f)
 {
   /// \todo We can actually check the filename too - if it's "socket" & the flags are set we know it's a socket...
-  return ((f->getInode() & 0xFF000000) == 0xab000000);
+  return f && ((f->getInode() & 0xFF000000) == 0xab000000);
 }
 
 Endpoint* NetManager::getEndpoint(File* f)
@@ -105,7 +105,7 @@ Endpoint* NetManager::getEndpoint(File* f)
 File* NetManager::accept(File* f)
 {
   if(!isEndpoint(f))
-    return VFS::invalidFile();
+    return 0;
   
   Endpoint* server = getEndpoint(f);
   if(server)
@@ -115,10 +115,10 @@ File* NetManager::accept(File* f)
     {
       size_t n = m_Endpoints.count();
       m_Endpoints.pushBack(client);
-      return new File(String("socket"), 0, 0, 0, n + 0xab000000, false, false, this, f->getSize());
+      return new File(String("socket"), 0, 0, 0, n + 0xab000000, this, f->getSize(), 0);
     }
   }
-  return VFS::invalidFile();
+  return 0;
 }
 
 uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)

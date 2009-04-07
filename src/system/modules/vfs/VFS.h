@@ -46,9 +46,6 @@ public:
   /** Returns the singleton VFS instance. */
   static VFS &instance();
 
-  /** Returns the invalid file pointer */
-  static File* invalidFile();
-
   /** Mounts a Disk device as the alias "alias".
       If alias is zero-length, the Filesystem is asked for its preferred name
       (usually a volume name of some sort), and returned in "alias" */

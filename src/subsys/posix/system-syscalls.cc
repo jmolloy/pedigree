@@ -29,6 +29,7 @@
 #include <Log.h>
 #include <linker/Elf.h>
 #include <vfs/File.h>
+#include <vfs/Symlink.h>
 #include <vfs/VFS.h>
 #include <panic.h>
 #include <processor/PhysicalMemoryManager.h>
@@ -39,7 +40,6 @@
 #include <machine/Machine.h>
 
 #include <users/UserManager.h>
-
 //
 // Syscalls pertaining to system operations.
 //
@@ -107,8 +107,8 @@ int posix_sbrk(int delta)
 
 int posix_fork(ProcessorState state)
 {
-  NOTICE("fork");
-  
+  NOTICE("fork()");
+
   Processor::setInterrupts(false);
 
   // Create a new process.
@@ -122,30 +122,31 @@ int posix_fork(ProcessorState state)
 
   // Register with the dynamic linker.
   DynamicLinker::instance().registerProcess(pProcess);
-  
+
   /// \todo All open descriptors need to be copied, not just stdin, stdout & stderr
-  
+
   typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   FdMap childFdMap = pProcess->getFdMap();
-  
+
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
     if(!pFd)
       continue;
     size_t newFd = reinterpret_cast<size_t>(it.key());
-    
+
     FileDescriptor *pFd2 = new FileDescriptor;
 
-    // copyPipe will automatically handle the case where the file does not specify a pipe
-    pFd2->file = PipeManager::instance().copyPipe(pFd->file);
+    pFd2->file = pFd->file;
     pFd2->offset = pFd->offset;
     pFd2->fd = pFd->fd;
     pFd2->fdflags = pFd->fdflags;
     pFd2->flflags = pFd->flflags;
     pProcess->getFdMap().insert(newFd, pFd2);
     pProcess->nextFd(newFd + 1);
+
+    pFd2->file->increaseRefCount((pFd2->flflags & O_RDWR) || (pFd2->flflags & O_WRONLY) );
   }
 
   // Child returns 0.
@@ -160,8 +161,20 @@ int posix_fork(ProcessorState state)
 
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state)
 {
+  SC_NOTICE("execve(\"" << name << "\")");
+
+  String myArgv;
+  int i;
+  while(argv[i])
+  {
+    myArgv += String(argv[i]);
+    myArgv += " ";
+    i++;
+  }
+  SC_NOTICE("  {" << myArgv << "}");
+
   Processor::setInterrupts(false);
-  NOTICE("execve");
+
   if (argv == 0 || env == 0)
   {
     SYSCALL_ERROR(ExecFormatError);
@@ -180,40 +193,38 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   // Attempt to find the file, first!
   File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
 
-  if (!file->isValid())
+  if (!file)
   {
     // Error - not found.
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
+
+  while (file->isSymlink())
+    file = Symlink::fromFile(file)->followLink();
+
   if (file->isDirectory())
   {
     // Error - is directory.
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
-  if (file->isSymlink())
-  {
-    /// \todo Not error - read in symlink and follow.
-    SYSCALL_ERROR(Unimplemented);
-    return -1;
-  }
 
   // Attempt to load the file.
   uint8_t *buffer = new uint8_t[file->getSize()+1];
-  NOTICE("getSize: " << file->getSize());
+
   if (buffer == 0)
   {
     SYSCALL_ERROR(OutOfMemory);
   }
-  NOTICE("Reading file...");
+
   if (file->read(0, file->getSize(), reinterpret_cast<uintptr_t>(buffer)) != file->getSize())
   {
     delete [] buffer;
     SYSCALL_ERROR(TooBig);
     return -1;
   }
-  NOTICE("File read.");
+
   Elf *elf = new Elf();
   if (!elf->create(buffer, file->getSize()))
   {
@@ -222,7 +233,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     SYSCALL_ERROR(ExecFormatError);
     return -1;
   }
-  NOTICE("ELF created.");
+
   pProcess->description() = String(name);
 
   // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
@@ -262,7 +273,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
       return -1;
     }
   }
-  NOTICE("ELF loaded.");
+
   elf->load(buffer, file->getSize(), loadBase, elf->getSymbolTable());
 
   // Close all FD_CLOEXEC descriptors. Done here because from this point we're committed to running -
@@ -336,6 +347,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
 int posix_waitpid(int pid, int *status, int options)
 {
+  if (options & 1)
+  {
+    SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
+  }
+  else
+  {
+    SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
+  }
+
   // Don't care about process groups at the moment.
   if (pid < -1)
   {
@@ -344,7 +364,6 @@ int posix_waitpid(int pid, int *status, int options)
 
   while (1)
   {
-
     // Is the pid an absolute pid reference?
     if (pid > 0)
     {
@@ -417,7 +436,10 @@ int posix_waitpid(int pid, int *status, int options)
 
     if (options & 1) // WNOHANG set
       return 0;
-    Scheduler::instance().yield(0);
+    /// \todo Bugfix - the following line should be deleted, and the line below uncommented.
+    //Scheduler::instance().yield(0);
+    // Sleep...
+    Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
   }
 
   return -1;
@@ -425,8 +447,23 @@ int posix_waitpid(int pid, int *status, int options)
 
 int posix_exit(int code)
 {
+  SC_NOTICE("exit(" << Dec << (code&0xFF) << Hex << ")");
+
+  /// Here, we should close ALL file descriptors!
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  pProcess->setExitStatus(code);
+  pProcess->setExitStatus( (code&0xFF) << 8 );
+
+  typedef Tree<size_t,FileDescriptor*> FdMap;
+  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
+  {
+    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
+    if(!pFd)
+      continue;
+
+    pFd->file->decreaseRefCount((pFd->flflags & O_RDWR) || (pFd->flflags & O_WRONLY) );
+    delete pFd;
+  }
 
   DynamicLinker::instance().unregisterProcess(pProcess);
 
@@ -446,12 +483,7 @@ int posix_gettimeofday(timeval *tv, timezone *tz)
 {
   Timer *pTimer = Machine::instance().getTimer();
 
-  tv->tv_sec = pTimer->getYear() * (60*60*24*365) +
-    pTimer->getMonth() * (60*60*24*30) +
-    pTimer->getDayOfMonth() * (60*60*24) +
-    pTimer->getHour() * (60*60) +
-    pTimer->getMinute() * 60 +
-    pTimer->getSecond();
+  tv->tv_sec = pTimer->getUnixTimestamp();
   tv->tv_usec = 0;
 
   return 0;
@@ -469,6 +501,8 @@ char *store_str_to(char *str, char *strend, String s)
 
 int posix_getpwent(passwd *pw, int n, char *str)
 {
+  SC_NOTICE("getpwent(" << Dec << n << Hex << ")");
+
   // Grab the given user.
   User *pUser = UserManager::instance().getUser(n);
   if (!pUser) return -1;
@@ -485,7 +519,7 @@ int posix_getpwent(passwd *pw, int n, char *str)
   pw->pw_gid = pUser->getDefaultGroup()->getId();
   pw->pw_comment = str;
   str = store_str_to(str, strend, pUser->getFullName());
-  
+
   pw->pw_gecos = str;
   *str++ = '\0';
   pw->pw_dir = str;
@@ -515,7 +549,7 @@ int posix_getpwnam(passwd *pw, const char *name, char *str)
   pw->pw_gid = pUser->getDefaultGroup()->getId();
   pw->pw_comment = str;
   str = store_str_to(str, strend, pUser->getFullName());
-  
+
   pw->pw_gecos = str;
   *str++ = '\0';
 
@@ -530,11 +564,13 @@ int posix_getpwnam(passwd *pw, const char *name, char *str)
 
 int posix_getuid()
 {
+  SC_NOTICE("getuid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getUser()->getId());
   return Processor::information().getCurrentThread()->getParent()->getUser()->getId();
 }
 
 int posix_getgid()
 {
+  SC_NOTICE("getgid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getGroup()->getId());
   return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
 }
 
@@ -543,11 +579,11 @@ int pedigree_login(int uid, const char *password)
   // Grab the given user.
   User *pUser = UserManager::instance().getUser(uid);
   if (!pUser) return -1;
-  
+
   if (pUser->login(String(password)))
     return 0;
   else
-    return -1;  
+    return -1;
 }
 
 /*********************** Signals implementation ***********************/
@@ -562,7 +598,7 @@ int pedigree_login(int uid, const char *password)
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
   NOTICE("sigaction");
- 
+
   Thread* pThread = Processor::information().getCurrentThread();
   Process* pProcess = pThread->getParent();
 
@@ -672,7 +708,7 @@ int posix_kill(int pid, int sig)
       /// \todo What happens when the signal is blocked?
       return 0;
     }
-    
+
     // build the pending signal and pass it in
     Process::SignalHandler* signalHandler = p->getSignalHandler(sig);
     Process::PendingSignal* pendingSignal = new Process::PendingSignal;

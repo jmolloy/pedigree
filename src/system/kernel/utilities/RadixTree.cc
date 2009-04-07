@@ -116,6 +116,14 @@ void RadixTree<void*>::insert(String key, void *value)
       inter->key = String(nodeKey); // Terminated by nodeKey='\0', above.
       inter->value = n->value;
 
+      // All of inter's new children should be reset with inter as their parent.
+      Node *pN = inter->children;
+      while (pN)
+      {
+        pN->parent = inter;
+        pN = pN->_next;
+      }
+
       // Set the current node's key to be the uncommon suffix.
       * const_cast<char*>(nodeKey) = '\0';
       n->key = String(nodeKeyCopy);
@@ -198,6 +206,14 @@ void RadixTree<void*>::insert(String key, void *value)
         pNode1->key = String(nodeKey);
         pNode1->value =  n->value;
         pNode1->children = n->children;
+
+        // All of pNode1's new children should be reset with inter as their parent.
+        Node *pN = pNode1->children;
+        while (pN)
+        {
+          pN->parent = pNode1;
+          pN = pN->_next;
+        }
 
         // Second child contains no children, and the suffix of cKey where it differs from nodeKey.
         Node *pNode2 = new Node;

@@ -54,8 +54,8 @@ extern void *pagedirectory;
 
 /** Array of free pages, used during the mapping algorithms in case a new page
     table needs to be mapped, which must be done without relinquishing the lock
-    (which means we can't call the PMM!) 
-    
+    (which means we can't call the PMM!)
+
     There is one page per processor. */
 physical_uintptr_t g_EscrowPages[256]; /// \todo MAX_PROCESSORS
 
@@ -131,9 +131,7 @@ void *X86VirtualAddressSpace::allocateStack()
 void X86VirtualAddressSpace::freeStack(void *pStack)
 {
   // Add the stack to the list
-  // TODO m_freeStacks.pushBack(pStack);
-
-  // TODO: Really free the stack
+  m_freeStacks.pushBack(pStack);
 }
 
 bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddress,
@@ -292,7 +290,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
   // Is a page table present?
   if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
-    // We need a page, but calling the PMM could cause reentrancy issues. We 
+    // We need a page, but calling the PMM could cause reentrancy issues. We
     // use our alotted page in the escrow cache then set it to zero so that
     // it will be replenished next time it needs to be used.
     uint32_t page = g_EscrowPages[Processor::id()];
@@ -308,7 +306,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
 
     // If we map within the kernel space, we need to add this page table to the
     // other address spaces!
-    // 
+    //
     // Also, we don't want to do this if the processor isn't initialised...
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_VIRTUAL_HEAP)

@@ -20,16 +20,10 @@
 #include <utilities/utility.h>
 
 VFS VFS::m_Instance;
-File* VFS::m_EmptyFile = new File(String("invalid"), 0, 0, 0, 0, false, false, 0, 0, 0, false);
 
 VFS &VFS::instance()
 {
   return m_Instance;
-}
-
-File* VFS::invalidFile()
-{
-  return m_EmptyFile;
 }
 
 VFS::VFS() :
@@ -198,7 +192,7 @@ File *VFS::find(String path, File *pStartNode)
   if (!bColon)
   {
     // Pass directly through to the filesystem, if one specified.
-    if (!pStartNode) return VFS::invalidFile();
+    if (!pStartNode) return 0;
     else return pStartNode->getFilesystem()->find(path, pStartNode);
   }
   else
@@ -209,7 +203,7 @@ File *VFS::find(String path, File *pStartNode)
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
-      return VFS::invalidFile();
+      return 0;
     return pFs->find(newPath, pStartNode);
   }
 }

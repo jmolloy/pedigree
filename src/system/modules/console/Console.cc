@@ -55,11 +55,11 @@ File* ConsoleManager::getConsole(String consoleName)
     Console *pC = m_Consoles[i];
     if (!strcmp(static_cast<const char*>(pC->name), static_cast<const char*>(consoleName)))
     {
-      return new File(pC->name, 0, 0, 0, i+0xdeadbe00, false, false, this, 0);
+      return new File(pC->name, 0, 0, 0, i+0xdeadbe00, this, 0, 0);
     }
   }
   // Error - not found.
-  return VFS::invalidFile();
+  return 0;
 }
 
 bool ConsoleManager::isConsole(File* file)

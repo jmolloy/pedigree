@@ -350,13 +350,13 @@ int getgid()
 int geteuid()
 {
   STUBBED("geteuid");
-  return 0;
+  return getuid();
 }
 
 int getegid()
 {
   STUBBED("getegid");
-  return 0;
+  return getgid();
 }
 
 int getppid()
@@ -366,7 +366,7 @@ int getppid()
 }
 
 const char * const sys_siglist[] = {
-  0, 
+  0,
   "Hangup",
   "Interrupt",
   "Quit",

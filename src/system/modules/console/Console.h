@@ -68,7 +68,7 @@ public:
   virtual bool initialise(Disk *pDisk)
     {return false;}
   virtual File* getRoot()
-  {return VFS::invalidFile();}
+  {return 0;}
   virtual String getVolumeLabel()
   {return String("consolemanager");}
   virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);

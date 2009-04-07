@@ -13,16 +13,36 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef EXT2_FILE_H
+#define EXT2_FILE_H
 
-#ifndef CONSOLE_SYSCALLS_H
-#define CONSOLE_SYSCALLS_H
-
+#include "ext2.h"
+#include "Ext2Node.h"
 #include <vfs/File.h>
+#include <utilities/Vector.h>
+#include "Ext2Filesystem.h"
 
-#include "newlib.h"
+/** A File is a file, a directory or a symlink. */
+class Ext2File : public File, public Ext2Node
+{
+private:
+  /** Copy constructors are hidden - unused! */
+  Ext2File(const Ext2File &file);
+  Ext2File& operator =(const Ext2File&);
+public:
+  /** Constructor, should be called only by a Filesystem. */
+  Ext2File(String name, uintptr_t inode_num, Inode inode,
+           class Ext2Filesystem *pFs, File *pParent = 0);
+  /** Destructor */
+  virtual ~Ext2File();
 
-int posix_tcgetattr(int fd, struct termios *p);
-int posix_tcsetattr(int fd, int optional_actions, struct termios *p);
-int console_getwinsize(File* file, winsize_t *buf);
+  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+
+  void truncate();
+
+  /** Updates inode attributes. */
+  void fileAttributeChanged();
+};
 
 #endif

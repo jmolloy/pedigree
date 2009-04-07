@@ -27,7 +27,7 @@
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
   m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(),
-  m_pUser(0), m_pGroup(0), m_PendingSignals(), m_SignalHandlers(), m_SigReturnStub(0), m_SignalMask(0)
+  m_pUser(0), m_pGroup(0), m_PendingSignals(), m_SignalHandlers(), m_SigReturnStub(0), m_SignalMask(0), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
   m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
@@ -39,12 +39,12 @@ Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0), m_FdMap(), m_NextFd(0), m_FdLock(),
   m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(), m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup),
   m_PendingSignals(pParent->m_PendingSignals), m_SignalHandlers(pParent->m_SignalHandlers), m_SigReturnStub(pParent->m_SigReturnStub),
-  m_SignalMask(pParent->m_SignalMask)
+  m_SignalMask(pParent->m_SignalMask), m_DeadThreads(0)
 {
   m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
 
   m_SpaceAllocator.free(0x00100000, 0x80000000);
-  
+
   m_Id = Scheduler::instance().addProcess(this);
 
   // Set a temporary description.
@@ -62,11 +62,11 @@ Process::~Process()
   Spinlock lock;
   lock.acquire(); // Disables interrupts.
   VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
-  
+
   Processor::switchAddressSpace(*m_pAddressSpace);
   m_pAddressSpace->revertToKernelAddressSpace();
   Processor::switchAddressSpace(VAddressSpace);
-  
+
   delete m_pAddressSpace;
   lock.release();
 }
@@ -111,7 +111,7 @@ void Process::kill()
   /// \todo Grab the scheduler lock!
   Processor::setInterrupts(false);
 
-  NOTICE("Kill: " << m_Id);
+  NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
 
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
@@ -142,6 +142,9 @@ void Process::kill()
 
   m_Threads[0]->setStatus(Thread::Zombie);
 
+  // Tell any threads that may be waiting for us to die.
+  m_pParent->m_DeadThreads.release();
+
   Processor::setInterrupts(true);
 
   Scheduler::instance().yield(0);
@@ -165,7 +168,7 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
   // Switch to the init process' address space.
   Processor::switchAddressSpace(*pProcess->getAddressSpace());
 
-  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not 
+  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 

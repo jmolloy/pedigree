@@ -14,15 +14,42 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef CONSOLE_SYSCALLS_H
-#define CONSOLE_SYSCALLS_H
+#include "Directory.h"
 
-#include <vfs/File.h>
+Directory::Directory() :
+  File(), m_Cache(), m_bCachePopulated(false)
+{
+}
 
-#include "newlib.h"
+Directory::Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+           uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
+  File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
+  m_Cache(), m_bCachePopulated(false)
+{
+}
 
-int posix_tcgetattr(int fd, struct termios *p);
-int posix_tcsetattr(int fd, int optional_actions, struct termios *p);
-int console_getwinsize(File* file, winsize_t *buf);
+Directory::~Directory()
+{
+}
 
-#endif
+File* Directory::getChild(size_t n)
+{
+  if (!m_bCachePopulated)
+  {
+    cacheDirectoryContents();
+    m_bCachePopulated = true;
+  }
+
+  int i = 0;
+  for (RadixTree<File*>::Iterator it = m_Cache.begin();
+       it != m_Cache.end();
+       it++)
+  {
+    if (i == n)
+      return *it;
+    i++;
+  }
+
+  // Not found.
+  return 0;
+}

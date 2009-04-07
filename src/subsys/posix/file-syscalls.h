@@ -21,6 +21,16 @@
 #include <vfs/File.h>
 #include <vfs/Filesystem.h>
 
+#include "DevFs.h"
+
+#include "newlib.h"
+
+#if 1
+#define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
+#else
+#define F_NOTICE(x)
+#endif
+
 #define MAXNAMLEN 255
 
 class FileDescriptor
@@ -39,141 +49,13 @@ public:
   int flflags;
 };
 
-struct dirent
-{
-  char d_name[MAXNAMLEN];
-  short d_ino;
-};
 
-struct stat
-{
-  short   st_dev;
-  unsigned short   st_ino;
-  unsigned int   st_mode;
-  unsigned short   st_nlink;
-  unsigned short   st_uid;
-  unsigned short   st_gid;
-  short   st_rdev;
-  unsigned long   st_size;
-  int   st_atime;
-  int   st_mtime;
-  int   st_ctime;
-};
-
-
-/* Taken from the newlib source. Don't complain, just leave it... :( */
-
-#  define _SYS_TYPES_FD_SET
-#  define NBBY  8   /* number of bits in a byte */
-/*
- * Select uses bit masks of file descriptors in longs.
- * These macros manipulate such bit fields (the filesystem macros use chars).
- * FD_SETSIZE may be defined by the user, but the default here
- * should be >= NOFILE (param.h).
- */
-#  ifndef FD_SETSIZE
-# define  FD_SETSIZE  64
-#  endif
-
-typedef long  fd_mask;
-#  define NFDBITS (sizeof (fd_mask) * NBBY) /* bits per mask */
-#  ifndef howmany
-# define  howmany(x,y)  (((x)+((y)-1))/(y))
-#  endif
-
-/* We use a macro for fd_set so that including Sockets.h afterwards
-   can work.  */
-typedef struct _types_fd_set {
-  fd_mask fds_bits[howmany(FD_SETSIZE, NFDBITS)];
-} _types_fd_set;
-
-#define fd_set _types_fd_set
-
-#  define FD_SET(n, p)  ((p)->fds_bits[(n)/NFDBITS] |= (1L << ((n) % NFDBITS)))
-#  define FD_CLR(n, p)  ((p)->fds_bits[(n)/NFDBITS] &= ~(1L << ((n) % NFDBITS)))
-#  define FD_ISSET(n, p)  ((p)->fds_bits[(n)/NFDBITS] & (1L << ((n) % NFDBITS)))
-#  define FD_ZERO(p)  (__extension__ (void)({ \
-     size_t __i; \
-     char *__tmp = (char *)p; \
-     for (__i = 0; __i < sizeof (*(p)); ++__i) \
-       *__tmp++ = 0; \
-}))
-
-#define	S_IFCHR	0020000	/* character special */
-#define S_IFDIR 0040000 /* Directory */
-#define S_IFREG 0100000 /* Regular file */
-#define S_IFLNK 0120000 /* symbolic link */
-
-#define	F_DUPFD		0	/* Duplicate fildes */
-#define	F_GETFD		1	/* Get fildes flags (close on exec) */
-#define	F_SETFD		2	/* Set fildes flags (close on exec) */
-#define	F_GETFL		3	/* Get file flags */
-#define	F_SETFL		4	/* Set file flags */
-
-#define	FD_CLOEXEC	1
-#define O_NONBLOCK  0x4000
-
-/** This class provides /dev/null */
-class NullFs : public Filesystem
-{
-public:
-  NullFs()
-  {};
-
-  virtual ~NullFs()
-  {};
-
-  static NullFs &instance()
-  {
-    return m_Instance;
-  }
-
-  File* getFile()
-  {
-    return new File(String("/dev/null"), 0, 0, 0, 0, false, false, this, 0);
-  }
-
-  virtual bool initialise(Disk *pDisk)
-  {return false;}
-  virtual File* getRoot()
-  {return VFS::invalidFile();}
-  virtual String getVolumeLabel()
-  {return String("consolemanager");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
-  {
-    memset(reinterpret_cast<void*>(buffer), 0, size);
-    return size;
-  }
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
-  {
-    return size;
-  }
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
-
-protected:
-  virtual bool createFile(File* parent, String filename, uint32_t mask)
-  {return false;}
-  virtual bool createDirectory(File* parent, String filename)
-  {return false;}
-  virtual bool createSymlink(File* parent, String filename, String value)
-  {return false;}
-  virtual bool remove(File* parent, File* file)
-  {return false;}
-
-private:
-  static NullFs m_Instance;
-};
 
 /// \todo These should be time_t and suseconds_t!
-struct timeval {
-  unsigned long      tv_sec;
-  unsigned long tv_usec;
-};
+// struct timeval {
+//   unsigned long      tv_sec;
+//   unsigned long tv_usec;
+// };
 
 int posix_close(int fd);
 int posix_open(const char *name, int flags, int mode);

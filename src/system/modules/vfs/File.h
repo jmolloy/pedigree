@@ -21,7 +21,18 @@
 #include <utilities/String.h>
 #include <utilities/RadixTree.h>
 
-/** A File is a file, a directory or a symlink. */
+#define FILE_UR 0001
+#define FILE_UW 0002
+#define FILE_UX 0004
+#define FILE_GR 0010
+#define FILE_GW 0020
+#define FILE_GX 0040
+#define FILE_OR 0100
+#define FILE_OW 0200
+#define FILE_OX 0400
+
+/** A File is a regular file - it is also the superclass of Directory, Symlink
+    and Pipe. */
 class File
 {
   friend class Filesystem;
@@ -31,23 +42,21 @@ public:
   File();
 
   /** Copy constructors are hidden - unused! */
-  File(const File &file);
 private:
+  File(const File &file);
   File& operator =(const File&);
+
 public:
   /** Constructor, should be called only by a Filesystem. */
   File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, File *pParent = 0, bool bShouldDelete = true);
+       uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
   /** Destructor - doesn't do anything. */
   virtual ~File();
 
-  /** Returns true if this file is "valid" - i.e. it is a real file/directory */
-  bool isValid();
-
   /** Reads from the file. */
-  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+  virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
   /** Writes to the file. */
-  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+  virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
   /** Returns the time the file was created. */
   Time getCreationTime();
@@ -69,21 +78,24 @@ public:
   // File names cannot be changed.
 
   /** Delete all data from the file. */
-  void truncate();
+  virtual void truncate()
+  {}
 
   size_t getSize();
   void setSize(size_t sz);
 
   /** Returns true if the File is actually a symlink. */
-  bool isSymlink();
+  virtual bool isSymlink()
+  {return false;}
 
   /** Returns true if the File is actually a directory. */
-  bool isDirectory();
+  virtual bool isDirectory()
+  {return false;}
 
-  /** Returns the n'th child of this directory, or an invalid file.
-      \note This applies to directories only. Behaviour is undefined if
-            this function is called on a file. */
-  File* getChild(size_t n);
+  /** Returns true if the File is actually a pipe. */
+  virtual bool isPipe()
+  {return false;}
+
 
   uintptr_t getInode()
   {
@@ -103,22 +115,54 @@ public:
     m_pFilesystem = pFs;
   }
 
-  /** Reads the contents of the file as a symbolic link. */
-  File *followLink();
+  virtual void fileAttributeChanged()
+  {}
 
-  /** Returns true if this file should be deleted. */
-  bool shouldDelete()
+  virtual void increaseRefCount(bool bIsWriter)
   {
-    return m_bShouldDelete;
-  }
-  void setShouldDelete(bool b)
-  {
-    m_bShouldDelete = b;
+    if (bIsWriter)
+      m_nWriters ++;
+    else
+      m_nReaders ++;
   }
 
-  void cacheDirectoryContents();
+  virtual void decreaseRefCount(bool bIsWriter)
+  {
+    if (bIsWriter)
+      m_nWriters --;
+    else
+      m_nReaders --;
+  }
 
-private:
+  void setPermissions(uint32_t perms)
+  {
+    m_Permissions = perms;
+  }
+
+  uint32_t getPermissions()
+  {
+    return m_Permissions;
+  }
+
+  void setUid(size_t uid)
+  {
+    m_Uid = uid;
+  }
+  size_t getUid()
+  {
+    return m_Uid;
+  }
+
+  void setGid(size_t gid)
+  {
+    m_Gid = gid;
+  }
+  size_t getGid()
+  {
+    return m_Gid;
+  }
+
+protected:
   String m_Name;
   Time m_AccessedTime;
   Time m_ModifiedTime;
@@ -128,20 +172,13 @@ private:
   class Filesystem *m_pFilesystem;
   size_t m_Size;
 
-  bool m_bIsDirectory;
-  bool m_bIsSymlink;
-
-  File *m_pCachedSymlink;
-
-public:
-  /** Directory contents cache. */
-  RadixTree<File*> m_Cache;
-  bool m_bCachePopulated;
-
   File *m_pParent;
 
-private:
-  bool m_bShouldDelete;
+  size_t m_nWriters, m_nReaders;
+
+  size_t m_Uid;
+  size_t m_Gid;
+  uint32_t m_Permissions;
 };
 
 #endif

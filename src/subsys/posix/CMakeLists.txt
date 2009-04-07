@@ -35,7 +35,7 @@ endif(PPC_COMMON)
 include_directories(../../system/include ../../system/kernel/linker ../../system/modules/ ./ ./include)
 
 # Do the kernel module first.
-add_executable(posix.o posix.cc PosixSyscallManager.cc file-syscalls.cc system-syscalls.cc console-syscalls.cc net-syscalls.cc pipe-syscalls.cc sigret-${SIGRET}.s)
+add_executable(posix.o posix.cc PosixSyscallManager.cc file-syscalls.cc system-syscalls.cc console-syscalls.cc net-syscalls.cc pipe-syscalls.cc sigret-${SIGRET}.s DevFs.cc)
 target_link_libraries(posix.o gcc)
 set_target_properties(posix.o PROPERTIES
                               LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
@@ -46,7 +46,7 @@ set_target_properties(crt0.o PROPERTIES
 
 install(TARGETS crt0.o
         RUNTIME DESTINATION "kernel/")
-        
+
 # include_directories(./include ../../system/include ../../system/kernel/linker ../../system/modules/ ./)
 
 # Now the glue code - compile to a .o...

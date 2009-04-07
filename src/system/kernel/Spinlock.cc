@@ -62,11 +62,12 @@ void Spinlock::release()
 
   bool bInterrupts = m_bInterrupts;
 
-  while (m_Atom.compareAndSwap(false, true) == false)
-  {
+  m_Atom = false;
+  //while (m_Atom.compareAndSwap(false, true) == false)
+  //{
     //FATAL("Spinlock: failed to release!");
    // Processor::breakpoint();
-  }
+  //}
 
   // Reenable irqs if they were enabled before
   if (bInterrupts)

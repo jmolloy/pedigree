@@ -23,42 +23,20 @@
 File::File() :
   m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
   m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
-  m_bIsDirectory(false), m_bIsSymlink(false),
-  m_pCachedSymlink(0), m_Cache(), m_bCachePopulated(false),
-  m_pParent(0), m_bShouldDelete(true)
-{
-}
-
-File::File(const File &file) :
-  m_Name(file.m_Name), m_AccessedTime(file.m_AccessedTime), m_ModifiedTime(file.m_ModifiedTime),
-  m_CreationTime(file.m_CreationTime), m_Inode(file.m_Inode),
-  m_pFilesystem(file.m_pFilesystem), m_Size(file.m_Size),
-  m_bIsDirectory(file.m_bIsDirectory), m_bIsSymlink(file.m_bIsSymlink),
-  m_pCachedSymlink(file.m_pCachedSymlink),
-  m_Cache(), m_bCachePopulated(false),
-  m_pParent(file.m_pParent), m_bShouldDelete(file.m_bShouldDelete)
+  m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0)
 {
 }
 
 File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-           uintptr_t inode, bool isSymlink, bool isDirectory, Filesystem *pFs, size_t size, File *pParent, bool bShouldDelete) :
+           uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
   m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
   m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
-  m_Size(size), m_bIsDirectory(isDirectory), m_bIsSymlink(isSymlink), m_pCachedSymlink(0), m_Cache(), m_bCachePopulated(false), m_pParent(pParent), m_bShouldDelete(bShouldDelete)
+  m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0)
 {
 }
 
 File::~File()
 {
-  if (!m_bShouldDelete)
-  {
-    FATAL("Deleting File with 'should delete' unset!");
-  }
-}
-
-bool File::isValid()
-{
-  return (m_pFilesystem != 0);
 }
 
 uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer)
@@ -79,7 +57,7 @@ Time File::getCreationTime()
 void File::setCreationTime(Time t)
 {
   m_CreationTime = t;
-  m_pFilesystem->fileAttributeChanged(this);
+  fileAttributeChanged();
 }
 
 Time File::getAccessedTime()
@@ -101,17 +79,12 @@ Time File::getModifiedTime()
 void File::setModifiedTime(Time t)
 {
   m_ModifiedTime = t;
-  m_pFilesystem->fileAttributeChanged(this);
+  fileAttributeChanged();
 }
 
 String File::getName()
 {
   return m_Name;
-}
-
-void File::truncate()
-{
-  m_pFilesystem->truncate(this);
 }
 
 size_t File::getSize()
@@ -122,64 +95,4 @@ size_t File::getSize()
 void File::setSize(size_t sz)
 {
   m_Size = sz;
-}
-
-bool File::isSymlink()
-{
-  return m_bIsSymlink;
-}
-
-bool File::isDirectory()
-{
-  return m_bIsDirectory;
-}
-
-File* File::getChild(size_t n)
-{
-  if (!isDirectory()) return VFS::invalidFile();
-  if (!m_bCachePopulated)
-  {
-    m_pFilesystem->cacheDirectoryContents(this);
-    m_bCachePopulated = true;
-  }
-
-  int i = 0;
-  for (RadixTree<File*>::Iterator it = m_Cache.begin();
-       it != m_Cache.end();
-       it++)
-  {
-    if (i == n)
-      return *it;
-    i++;
-  }
-
-  // Not found.
-  return VFS::invalidFile();
-}
-
-File *File::followLink()
-{
-  if (!isSymlink())
-    return 0;
-
-  if (m_pCachedSymlink)
-    return m_pCachedSymlink;
-
-  char *pBuffer = new char[1024];
-  read(0ULL, static_cast<uint64_t>(getSize()), reinterpret_cast<uintptr_t>(pBuffer));
-  pBuffer[getSize()] = '\0';
-
-  m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent);
-  if (!m_pCachedSymlink)
-  {
-    NOTICE("followlink returning " << (uintptr_t)m_pCachedSymlink);
-    FATAL("poo");
-  }
-  return m_pCachedSymlink;
-}
-
-void File::cacheDirectoryContents()
-{
-  m_pFilesystem->cacheDirectoryContents(this);
-  m_bCachePopulated = true;
 }

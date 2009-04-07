@@ -21,35 +21,18 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/state.h>
 
+#include "newlib.h"
+
+#if 1
+#define SC_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
+#else
+#define SC_NOTICE(x)
+#endif
+
 #define STACK_END    0x40000000
 #define STACK_START  0x40020000
 #define ARGV_ENV_LOC 0x40100000
 #define ARGV_ENV_LEN 0x8000
-
-struct timezone
-{
-  int tz_minuteswest;
-  int tz_dsttime;
-};
-
-struct passwd 
-{
-	char	*pw_name;		/* user name */
-	char	*pw_passwd;		/* encrypted password */
-	short 	pw_uid;			/* user uid */
-	short 	pw_gid;			/* user gid */
-	char	*pw_comment;		/* comment */
-	char	*pw_gecos;		/* Honeywell login info */
-	char	*pw_dir;		/* home directory */
-	char	*pw_shell;		/* default shell */
-};
-
-struct sigaction 
-{
-	void (*sa_handler)(int);
-	int sa_mask;
-	int sa_flags;
-};
 
 int posix_sbrk(int delta);
 int posix_fork(ProcessorState state);

@@ -120,7 +120,7 @@ DynamicLinker::SharedObject *DynamicLinker::loadObject(const char *name)
     Processor::switchAddressSpace(oldAS);
   }
 
-  if (!file->isValid())
+  if (!file)
   {
     if (m_pInitProcess)
     {
@@ -264,14 +264,13 @@ uintptr_t DynamicLinker::resolveSymbol(const char *sym, bool useElf)
     ERROR("Resolve called on nonregistered process");
     return 0;
   }
-NOTICE("looking for " << sym);
+
   // Look through the shared object list.
   for (List<SharedObject*>::Iterator it = pList->begin();
        it != pList->end();
        it++)
   {
     uintptr_t ptr = resolveInLibrary(sym, *it);
-    NOTICE("ptr: " <<Hex << ptr);
     if (ptr != 0) return ptr;
   }
 }

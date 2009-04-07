@@ -23,7 +23,8 @@
 
 #include <Log.h>
 
-/** A TCP "Buffer" (also known as a stream) */
+/** A TCP "Buffer" (also known as a stream)
+ \bug No locking here. */
 class TcpBuffer
 {
   private:

@@ -35,7 +35,7 @@ void UserManager::initialiseGroups()
 {
   // Find and parse the config file.
   File *pFile = VFS::instance().find(String("root:/config/groups"));
-  if (!pFile || !pFile->isValid())
+  if (!pFile)
   {
     ERROR("USERS: Unable to open file root:/config/groups.");
     return;
@@ -97,7 +97,7 @@ void UserManager::initialiseUsers()
   // Find and parse the config file.
   File *pFile = VFS::instance().find(String("root:/config/users"));
 
-  if (!pFile || !pFile->isValid())
+  if (!pFile)
   {
     ERROR("USERS: Unable to open file root:/config/users.");
     return;

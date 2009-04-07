@@ -49,7 +49,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     m_nLines++; // For the process.
     m_nLines += Scheduler::instance().getProcess(i)->getNumThreads();
   }
-  
+
   // Let's enter 'raw' screen mode.
   pScreen->disableCli();
 
@@ -65,14 +65,14 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
                               pScreen->getWidth() - 1,
                               DebuggerIO::White,
                               DebuggerIO::Green);
-  
+
   // Write the correct text in the upper status line.
   pScreen->drawString("Pedigree debugger - Thread selector",
                       0,
                       0,
                       DebuggerIO::White,
                       DebuggerIO::Green);
-  
+
   // Clear the bottom status lines.
   // TODO: If we use arrow keys and page up/down keys we actually can remove the status line
   //       because the interface is then intuitive enough imho.
@@ -85,7 +85,7 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
 
   // Write some helper text in the lower status line.
   // TODO FIXME: Drawing this might screw the top status bar
-  pScreen->drawString("backspace: Page up. space: Page down. q: Quit. enter: Switch to thread", 
+  pScreen->drawString("backspace: Page up. space: Page down. q: Quit. enter: Switch to thread",
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawString("backspace", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
   pScreen->drawString("space", pScreen->getHeight()-1, 20, DebuggerIO::Yellow, DebuggerIO::Green);
@@ -172,7 +172,7 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
       break;
     }
     idx++;
-    
+
     for (size_t j = 0; j < tehProcess->getNumThreads(); j++)
     {
       if (index == idx)
@@ -204,7 +204,7 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
   {
     Line += " | ";
   }
-  
+
   return Line;
 }
 const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
@@ -260,7 +260,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       ip = tehThread->getInterruptState()->getInstructionPointer();
     else
       ip = tehThread->state().getInstructionPointer();
-  
+
     uintptr_t symStart;
     const char *pSym = KernelElf::instance().lookupSymbol(ip, &symStart);
     if (pSym)
@@ -280,6 +280,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     {
       case Thread::Running: Line += "r"; break;
       case Thread::Ready:   Line += "R"; break;
+      case Thread::PreSleep:Line += "P"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
     }
@@ -288,7 +289,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line += "] - CURRENT";
     colour = DebuggerIO::Yellow;
   }
-  
+
   if (index == m_SelectedLine)
     bgColour = DebuggerIO::Blue;
   else

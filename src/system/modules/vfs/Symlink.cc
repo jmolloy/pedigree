@@ -14,15 +14,34 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef CONSOLE_SYSCALLS_H
-#define CONSOLE_SYSCALLS_H
+#include "Symlink.h"
+#include "Filesystem.h"
 
-#include <vfs/File.h>
+Symlink::Symlink() :
+  File(), m_pCachedSymlink(0)
+{
+}
 
-#include "newlib.h"
+Symlink::Symlink(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+           uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
+  File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
+  m_pCachedSymlink(0)
+{
+}
 
-int posix_tcgetattr(int fd, struct termios *p);
-int posix_tcsetattr(int fd, int optional_actions, struct termios *p);
-int console_getwinsize(File* file, winsize_t *buf);
+Symlink::~Symlink()
+{
+}
 
-#endif
+File *Symlink::followLink()
+{
+  if (m_pCachedSymlink)
+    return m_pCachedSymlink;
+
+  char *pBuffer = new char[1024];
+  read(0ULL, static_cast<uint64_t>(getSize()), reinterpret_cast<uintptr_t>(pBuffer));
+  pBuffer[getSize()] = '\0';
+
+  m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent);
+  return m_pCachedSymlink;
+}

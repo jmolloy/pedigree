@@ -60,7 +60,7 @@ public:
   };
 
   //
-  // ConsoleManager interface.
+  // NetManager interface.
   //
   
   File* newEndpoint(int type, int protocol);
@@ -83,7 +83,7 @@ public:
   virtual bool initialise(Disk *pDisk)
     {return false;}
   virtual File* getRoot()
-  {return VFS::invalidFile();}
+  {return 0;}
   virtual String getVolumeLabel()
   {return String("netman");}
   virtual void truncate(File *pFile)

@@ -62,17 +62,17 @@ Vt100::~Vt100()
 
 void Vt100::write(char *str)
 {
-  String s(str);
-  char *pStr = const_cast<char*>(static_cast<const char*>(s));
-  int j = s.length();
-  for (int i = 0; i < j; i++)
-  {
-    if(pStr[i] == '\e') pStr[i] = '\\';
-    if (pStr[i] < 0x20) pStr[i] = '#';
-    if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
-  }
-  NOTICE("W: " << pStr);
-    
+//   String s(str);
+//   char *pStr = const_cast<char*>(static_cast<const char*>(s));
+//   int j = s.length();
+//   for (int i = 0; i < j; i++)
+//   {
+//     if(pStr[i] == '\e') pStr[i] = '\\';
+//     if (pStr[i] < 0x20) pStr[i] = '#';
+//     if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
+//   }
+//   NOTICE("W: " << pStr);
+
   while (*str)
     write(*str++);
 }
@@ -99,7 +99,7 @@ void Vt100::write(char c)
         break;
       case '(':
         m_bContainedParen = true;
-        break; 
+        break;
       case '0':
       case '1':
       case '2':
@@ -157,7 +157,7 @@ void Vt100::write(char c)
         if (m_bContainedBracket)
         {
           // If it contained a bracket, it's a cursor command.
-          m_pWindows[m_CurrentWindow]->setCursorX(m_pWindows[m_CurrentWindow]->getCursorX() - 
+          m_pWindows[m_CurrentWindow]->setCursorX(m_pWindows[m_CurrentWindow]->getCursorX() -
                                                    ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1));
         }
         else
@@ -491,10 +491,10 @@ void Vt100::Window::setCursorY(uint32_t y)
   // Re-render whatever was at the cursor position (without the inverted colours).
   uint16_t data = m_pData[m_CursorX + m_CursorY*m_nWidth];
   m_pParent->putCharFb(data&0xFF, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[(data>>12)&0xF], m_pParent->m_pColours[(data>>8)&0xF]);
-  
+
   // Now adjust the cursor and render.
   m_CursorY = y+m_View;
-  
+
 
   // Have we gone off the screen?
   if (m_CursorY > m_nScrollMax)
@@ -506,7 +506,7 @@ void Vt100::Window::setCursorY(uint32_t y)
     memmove (reinterpret_cast<uint8_t*>(&m_pData[m_nScrollMin*m_nWidth]),
              reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+nLines)*m_nWidth]),
              nLines * ((m_nScrollMax-m_nScrollMin)*m_nWidth*2));
-    
+
     // Zero out the last rows.
     size_t base = m_nScrollMax - nLines + 1;
     for(size_t line = 0; line < nLines; line++)

@@ -33,6 +33,10 @@ int main(int argc, char **argv)
     msg[nread] = '\0';
     printf("%s", msg);
   }
+  else
+  {
+    printf("penis\n");
+  }
 
   while (1)
   {
@@ -69,8 +73,15 @@ int main(int argc, char **argv)
       int pid;
       if ( (pid=fork()) == 0)
       {
+        // Environment:
+        char *newenv[2];
+        newenv[0] = malloc(256);
+        newenv[1] = 0;
+
+        sprintf(newenv[0], "HOME=%s", pw->pw_dir);
+
         // Child.
-        execl(pw->pw_shell, pw->pw_shell, 0);
+        execle(pw->pw_shell, pw->pw_shell, 0, newenv);
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);
         exit(1);
@@ -83,7 +94,7 @@ int main(int argc, char **argv)
 
         continue;
       }
-        
+
     }
 
   }

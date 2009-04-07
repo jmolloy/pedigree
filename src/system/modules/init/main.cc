@@ -50,7 +50,7 @@ static bool probeDisk(Disk *pDisk)
     s += ":/.pedigree-root";
 
     File* f = VFS::instance().find(String(static_cast<const char*>(s)));
-    if(f && f->isValid())
+    if(f)
     {
       NOTICE("Mounted " << alias << " successfully as root.");
       VFS::instance().addAlias(alias, String("root"));
@@ -98,7 +98,7 @@ void init()
 
   // Build routing tables
   File* routeConfig = VFS::instance().find(String("root:/config/routes"));
-  if(routeConfig->isValid())
+  if(routeConfig)
   {
     NOTICE("Loading route table from file");
     /// \todo Write this...
@@ -131,7 +131,7 @@ void init()
 
   // Load initial program.
   File* initProg = VFS::instance().find(String("root:/applications/login"));
-  if (!initProg->isValid())
+  if (!initProg)
   {
     FATAL("Unable to load init program!");
     return;
