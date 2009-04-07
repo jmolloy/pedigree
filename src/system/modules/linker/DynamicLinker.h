@@ -56,8 +56,8 @@ public:
   void unregisterProcess(Process *pProcess);
 
   /** Dynamic resolver function, to be given to ElfXX::relocateDynamic. */
-  static uintptr_t resolve(const char *sym, bool useElf);
-  static uintptr_t resolveNoElf(const char *sym, bool useElf);
+  uintptr_t resolve(const char *sym);
+  //static uintptr_t resolveNoElf(const char *sym, bool useElf);
 
   /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
   static uintptr_t resolvePlt(SyscallState &state);

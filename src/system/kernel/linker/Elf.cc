@@ -570,25 +570,26 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
                                                   m_nDynamicSymbolTableSize)
     {
       const char *pStr = pStrtab + pSymbol->name;
+    
+      SymbolTable::Binding binding;
+      switch (ELF32_ST_BIND(pSymbol->info))
+      {
+        case 0: // STB_LOCAL
+          binding = SymbolTable::Local;
+          break;
+        case 1: // STB_GLOBAL
+          binding = SymbolTable::Global;
+          break;
+        case 2: // STB_WEAK
+          binding = SymbolTable::Weak;
+          break;
+        default:
+          binding = SymbolTable::Global;
+        }
 
       // If the shndx == UND (0x0), the symbol is in the table but undefined!
       if (pSymbol->shndx != 0)
       {
-        SymbolTable::Binding binding;
-        switch (ELF32_ST_BIND(pSymbol->info))
-        {
-          case 0: // STB_LOCAL
-            binding = SymbolTable::Local;
-            break;
-          case 1: // STB_GLOBAL
-            binding = SymbolTable::Global;
-            break;
-          case 2: // STB_WEAK
-            binding = SymbolTable::Weak;
-            break;
-          default:
-            binding = SymbolTable::Global;
-        }
 
         if (*pStr != 0)
         {
@@ -596,6 +597,26 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
           if (pSymtab)
             // Add loadBase in when adding to the user-defined symtab, to give the user a "real" value.
             pSymtab->insert(String(pStr), binding, this, pSymbol->value + loadBase);
+        }
+      }
+      else
+      {
+        // weak symbol? set it as undefined
+        if(binding == SymbolTable::Weak)
+        {
+          //if(ELF32_ST_TYPE(pSymbol->info) == STT_FUNC)
+          //{
+            uint32_t value = pSymbol->value;
+            if(value == 0)
+              value = ~0;
+            if (*pStr != 0)
+            {
+              m_SymbolTable.insert(String(pStr), binding, this, value);
+              if (pSymtab)
+                // Add loadBase in when adding to the user-defined symtab, to give the user a "real" value.
+                pSymtab->insert(String(pStr), binding, this, value);
+            }
+          //}
         }
       }
       pSymbol ++;

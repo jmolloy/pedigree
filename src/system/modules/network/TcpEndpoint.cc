@@ -16,6 +16,7 @@
 
 #include "TcpManager.h"
 #include <Log.h>
+#include <syscallError.h>
 
 int TcpEndpoint::state()
 {
@@ -75,10 +76,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     return -1;
 
   bool queueReady = false;
-  if(bBlock)
-    queueReady = dataReady(true);
-  else
-    queueReady = m_DataStream.getSize() != 0;
+  queueReady = dataReady(bBlock);
   
   if(queueReady)
   {
@@ -105,8 +103,14 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     return nBytes;
   }
   
-  // no data is available but this is not an error condition
-  return 0;
+  // no data is available - EOF?
+  if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2)
+    return 0;
+  else
+  {
+    SYSCALL_ERROR(NoMoreProcesses);
+    return -1;
+  }
 };
 
 void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)

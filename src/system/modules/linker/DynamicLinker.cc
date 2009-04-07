@@ -28,15 +28,29 @@
 
 DynamicLinker DynamicLinker::m_Instance;
 
-uintptr_t DynamicLinker::resolve(const char *str, bool useElf)
+uintptr_t DynamicLinker::resolve(const char *str)
 {
-  return DynamicLinker::instance().resolveSymbol(str, useElf);
+  Process *pProcess = m_pInitProcess;
+  if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
+
+  Elf* thisElf = m_ProcessElfs.lookup(pProcess);
+  SymbolTable *pSymtab = thisElf->getSymbolTable();
+  
+  uintptr_t ret = pSymtab->lookup(String(str), thisElf);
+  if(ret == ~0)
+    ret = 0;
+  NOTICE("Resolved " << String(str) << " to " << ret << ".");
+  return ret;
+
+//  return DynamicLinker::instance().resolveSymbol(str, useElf);
 }
 
+/*
 uintptr_t DynamicLinker::resolveNoElf(const char *str, bool useElf)
 {
   return DynamicLinker::instance().resolveSymbol(str, false);
 }
+*/
 
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 {

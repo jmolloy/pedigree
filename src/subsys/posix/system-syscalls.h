@@ -60,4 +60,9 @@ int posix_sleep(uint32_t seconds);
 
 int pedigree_sigret();
 
+uintptr_t posix_dlopen(const char* file, int mode, void* p);
+uintptr_t posix_dlsym(void* handle, const char* name);
+int       posix_dlclose(void* handle);
+
 #endif
+

@@ -174,6 +174,14 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_alarm(static_cast<uint32_t>(p1));
     case POSIX_SLEEP:
       return posix_sleep(static_cast<uint32_t>(p1));
+    case POSIX_DLOPEN:
+      return posix_dlopen(reinterpret_cast<const char*>(p1), static_cast<int>(p2), reinterpret_cast<void*>(p3));
+    case POSIX_DLSYM:
+      return posix_dlsym(reinterpret_cast<void*>(p1), reinterpret_cast<const char*>(p2));
+    case POSIX_DLCLOSE:
+      return posix_dlclose(reinterpret_cast<void*>(p1));
+    case POSIX_POLL:
+      return posix_poll(reinterpret_cast<pollfd*>(p1), static_cast<unsigned int>(p2), static_cast<int>(p3));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

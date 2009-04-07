@@ -49,14 +49,6 @@ public:
   int flflags;
 };
 
-
-
-/// \todo These should be time_t and suseconds_t!
-// struct timeval {
-//   unsigned long      tv_sec;
-//   unsigned long tv_usec;
-// };
-
 int posix_close(int fd);
 int posix_open(const char *name, int flags, int mode);
 int posix_read(int fd, char *ptr, int len);
@@ -85,5 +77,7 @@ int posix_dup2(int fd1, int fd2);
 int posix_fcntl(int fd, int cmd, int num, int* args);
 
 int posix_mkdir(const char* name, int mode);
+
+int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout);
 
 #endif

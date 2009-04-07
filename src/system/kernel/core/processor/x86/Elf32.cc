@@ -83,11 +83,16 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
     S = pSymtab->lookup(String(pStr), this, policy);
 
     if (S == 0)
-      WARNING("Relocation failed for symbol \"" << pStr << "\"");
+      WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << ELF32_R_TYPE(rel.info) << ")");
+    // This is a weak relocation, but it was undefined.
+    else if(S == ~0)
+      WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
   }
 
   if (S == 0 && (ELF32_R_TYPE(rel.info) != R_386_RELATIVE))
     return false;
+  if (S == ~0)
+    S = 0; // undefined
 
   // Base address
   uint32_t B = loadBase;

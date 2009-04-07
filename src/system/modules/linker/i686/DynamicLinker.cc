@@ -116,7 +116,9 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
     }
   }
 
-  uintptr_t result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
+  uintptr_t result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase);
+  if(result == 0)
+    result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
 
   return result;
 }

@@ -26,6 +26,7 @@
 #include <Spinlock.h>
 #include <LockGuard.h>
 #include <process/Semaphore.h>
+#include <process/Mutex.h>
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
 
@@ -198,12 +199,16 @@ public:
   /** Gets the pending signals list */
   List<void*>& getPendingSignals()
   {
+    LockGuard<Mutex> guard(m_PendingSignalsLock);
+    
     return m_PendingSignals;
   }
 
   /** Adds a new pendng signal */
   void addPendingSignal(size_t sig, PendingSignal* pending)
   {
+    LockGuard<Mutex> guard(m_PendingSignalsLock);
+    
     if(pending)
     {
       SignalHandler* p = getSignalHandler(sig);
@@ -219,23 +224,28 @@ public:
   /** Sets a signal handler */
   void setSignalHandler(size_t sig, SignalHandler* handler)
   {
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    
+    sig %= 32;
     if(handler)
     {
       SignalHandler* tmp;
-      if((tmp = getSignalHandler(sig)) != 0)
+      if((tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig))) != 0)
       {
-        m_SignalHandlers.remove(sig % 32);
-        delete tmp;
+        m_SignalHandlers.remove(sig);
+        // delete tmp;
       }
 
       handler->sig = sig;
-      m_SignalHandlers.insert(sig % 32, handler);
+      m_SignalHandlers.insert(sig, handler);
     }
   }
 
   /** Gets a signal handler */
   SignalHandler* getSignalHandler(size_t sig)
   {
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    
     return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
   }
 
@@ -328,6 +338,14 @@ private:
 
   /** Signal mask - if a bit is set, that signal is masked */
   uint32_t m_SignalMask;
+  
+  /** A lock for access to the signal handlers tree */
+  Mutex m_SignalHandlersLock;
+  
+  /** A lock for access to pending signals
+    * \note This might not actually work - testing required!
+    */
+  Mutex m_PendingSignalsLock;
 
 public:
   Semaphore m_DeadThreads;

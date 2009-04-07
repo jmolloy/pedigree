@@ -236,7 +236,7 @@ typedef unsigned short nlink_t;
  * should be >= NOFILE (param.h).
  */
 #  ifndef	FD_SETSIZE
-#	define	FD_SETSIZE	64
+#	define	FD_SETSIZE	1024
 #  endif
 
 typedef	long	fd_mask;

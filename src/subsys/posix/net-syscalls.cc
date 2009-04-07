@@ -63,12 +63,14 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_socket(int domain, int type, int protocol)
 {
+  NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
+  
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
-  File* file;
+  File* file = 0;
   bool valid = true;
   if(domain == AF_INET)
   {
@@ -81,7 +83,9 @@ int posix_socket(int domain, int type, int protocol)
       file = NetManager::instance().newEndpoint(NETMAN_TYPE_RAW, protocol);
     }
     else
+    {
       valid = false;
+    }
   }
   else if(domain == PF_SOCKET)
   {
@@ -89,10 +93,16 @@ int posix_socket(int domain, int type, int protocol)
     file = NetManager::instance().newEndpoint(NETMAN_TYPE_RAW, 0xff);
   }
   else
+  {
+    NOTICE("domain = " << domain << " - not known!");
     valid = false;
+  }
 
   if(!valid)
+  {
+    NOTICE("None found");
     return -1;
+  }
 
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
@@ -124,11 +134,16 @@ int fileFromSocket(int sock, File* & file)
 
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 {
-  NOTICE("posix_connect");
+  NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
+  
+  if(!file)
+  {
+    return -1;
+  }
 
   Endpoint* p = NetManager::instance().getEndpoint(file);
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
@@ -190,6 +205,8 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
   else if(file->getSize() == NETMAN_TYPE_RAW)
     success = true; /// \todo If the interface is down, fail
   
+  NOTICE("posix_connect returns");
+  
   return success ? 0 : -1;
 }
 
@@ -197,7 +214,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_send");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -247,7 +264,7 @@ ssize_t posix_sendto(void* callInfo)
   const sockaddr* address = tmp->remote_addr;
   size_t* addrlen = tmp->addrlen;
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -277,7 +294,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_recv");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -316,7 +333,7 @@ ssize_t posix_recvfrom(void* callInfo)
   sockaddr* address = tmp->remote_addr;
   size_t* addrlen = tmp->addrlen;
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -355,7 +372,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 {
   NOTICE("posix_bind");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -382,7 +399,7 @@ int posix_listen(int sock, int backlog)
 {
   NOTICE("posix_listen");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 
@@ -397,7 +414,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 {
   NOTICE("posix_accept");
 
-  File* file;
+  File* file = 0;
   if(fileFromSocket(sock, file) == -1)
     return -1;
 

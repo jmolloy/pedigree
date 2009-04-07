@@ -88,6 +88,7 @@ enum SocketOptions
 #define PF_UNIX   2
 #define PF_SOCKET 3
 #define PF_MAX    3
+#define PF_UNSPEC (PF_MAX+1)
 
 #define AF_INET   (PF_INET)
 #define AF_INET6  (PF_INET6)

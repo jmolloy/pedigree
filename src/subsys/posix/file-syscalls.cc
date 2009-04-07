@@ -718,16 +718,13 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         if (ConsoleManager::instance().isConsole(pFd->file))
         {
           if (ConsoleManager::instance().hasDataAvailable(pFd->file))
-            num_ready ++;
-          else
-            FD_CLR(i, readfds);
+            num_ready++;
         }
         else if (NetManager::instance().isEndpoint(pFd->file))
         {
           Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
           if(!p)
           {
-            FD_CLR(i, readfds);
             continue;
           }
 
@@ -735,6 +732,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
           {
             if(timeout->tv_sec == 0)
             {
+              NOTICE("state = " << static_cast<int>(p->state()) << ".");
               if(p->state() == 0xff)
               {
                 if(p->dataReady(false))
@@ -743,7 +741,13 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
               else
               {
                 if(p->state() == Tcp::ESTABLISHED)
-                  num_ready++;
+                {
+                  if(p->dataReady(false))
+                  {
+                    NOTICE("data");
+                    num_ready++;
+                  }
+                }
                 else
                 {
                   // regardless of the fact that data is available, the socket is still
@@ -754,15 +758,15 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             }
             else
             {
-              p->dataReady(true, timeout->tv_sec);
-              num_ready++;
+              if(p->dataReady(true, timeout->tv_sec))
+                num_ready++;
             }
           }
           else
           {
             // block while waiting for the data to come (and wait forever)
-            p->dataReady(true, 0xffffffff);
-            num_ready++;
+            if(p->dataReady(true, 0xffffffff))
+              num_ready++;
           }
         }
         else
@@ -800,6 +804,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
               num_ready++;
           }
         }
+        else
+          num_ready++; // normal files are always ready to write
       }
     }
   }
@@ -886,3 +892,83 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
   SYSCALL_ERROR(Unimplemented);
   return -1;
 }
+
+int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
+{
+  NOTICE("poll(" << Dec << nfds << Hex << ")");
+  
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  unsigned int i;
+  int num_ready = 0;
+  for(i = 0; i < nfds; i++)
+  {
+    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fds[i].fd));
+    
+    // readable?
+    if(fds[i].events & POLLIN)
+    {
+      if (ConsoleManager::instance().isConsole(pFd->file))
+      {
+        //NOTICE("is a console");
+        if (ConsoleManager::instance().hasDataAvailable(pFd->file))
+          num_ready++;
+      }
+      else if (NetManager::instance().isEndpoint(pFd->file))
+      {
+        Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+        if(!p)
+        {
+          continue;
+        }
+        
+        if(timeout)
+        {
+          if(p->dataReady(true, timeout))
+            num_ready++;
+          else
+            fds[i].revents = 0;
+        }
+        else
+        {
+          // don't wait for data
+          if(p->dataReady(false))
+            num_ready++;
+          else
+            fds[i].revents = 0;
+        }
+      }
+      else
+        // Regular file - always available to read.
+        num_ready++;
+    }
+    
+    // writeable?
+    if(fds[i].events & POLLOUT)
+    {
+      if (NetManager::instance().isEndpoint(pFd->file))
+      {
+        Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
+        if(!p)
+          continue;
+
+        int state = p->state();
+
+        if(state == 0xff)
+          num_ready++;
+        else
+        {
+          // writeable state? (though technically FIN_WAIT_2 isn't writeable)
+          /// \todo Timeout lets this check block, but this code won't block...
+          if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
+            num_ready++;
+        }
+      }
+      else
+        num_ready++; // normal files are always ready to write
+    }
+  }
+  
+  return num_ready;
+}
+

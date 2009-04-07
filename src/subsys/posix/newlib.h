@@ -23,4 +23,6 @@
 #include <sys/ioctl.h>
 #include <sys/termios.h>
 
+#include <poll.h>
+
 #endif

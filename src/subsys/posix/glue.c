@@ -19,6 +19,7 @@
 #include "errno.h"
 #define errno (*__errno())
 extern int *__errno (void);
+int h_errno; // required by networking code
 
 // Define errno before including syscall.h.
 #include "syscall.h"
@@ -111,6 +112,7 @@ struct in_addr
 #define SYS_SOCK_CONSTANTS_ONLY
 #include "include/netdb.h"
 #include "include/netinet/in.h"
+#include "include/poll.h"
 
 struct sigaction 
 {
@@ -828,6 +830,28 @@ struct servent* getservbyname(const char *name, const char *proto)
   return 0;
 }
 
+void endservent()
+{
+  STUBBED("endservent");
+}
+
+struct servent* getservbyport(int port, const char *proto)
+{
+  STUBBED("setservbyport");
+  return 0;
+}
+
+struct servent* getservent()
+{
+  STUBBED("setservent");
+  return 0;
+}
+
+void setservent(int stayopen)
+{
+  STUBBED("setservent");
+}
+
 void endprotoent()
 {
   STUBBED("endprotoent");
@@ -913,6 +937,12 @@ int inet_pton()
   return -1;
 }
 
+const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
+{
+  STUBBED("inet_ntop");
+  return 0;
+}
+
 void* popen(const char *command, const char *mode)
 {
   STUBBED("popen");
@@ -960,6 +990,8 @@ int sigsetmask()
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { _exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { printf(msg); _exit(errcode); }
+
+#if 1
 
 SIGNAL_HANDLER_EXIT     (sigabrt, 1);
 SIGNAL_HANDLER_EXIT     (sigalrm, 1);
@@ -1096,3 +1128,73 @@ int raise(int sig)
 {
   return syscall1(POSIX_RAISE, sig);
 }
+
+#else
+
+int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+  STUBBED("sigaction");
+  return -1;
+}
+
+#endif
+
+int sigpending(long* set)
+{
+  STUBBED("sigpending");
+  return -1;
+}
+
+int sigsuspend(const long* sigmask)
+{
+  STUBBED("sigsuspend");
+  return -1;
+}
+
+int fdatasync(int fildes)
+{
+  STUBBED("fdatasync");
+  return -1;
+}
+
+struct dlHandle
+{
+  int mode;
+};
+
+void *dlopen(const char *file, int mode)
+{
+  void* p = (void*) malloc(sizeof(struct dlHandle));
+  if(!p)
+    return 0;
+  void* ret = (void*) syscall3(POSIX_DLOPEN, (int) file, mode, (int) p);
+  if(ret)
+    return ret;
+  free(p);
+  return 0;
+}
+
+void *dlsym(void* handle, const char* name)
+{
+  return (void*) syscall2(POSIX_DLSYM, (int) handle, (int) name);
+}
+
+int dlclose(void *handle)
+{
+  STUBBED("dlclose");
+  if(handle)
+    free(handle);
+  return 0;
+}
+
+char *dlerror()
+{
+  STUBBED("dlerror");
+  return 0;
+}
+
+int poll(struct pollfd fds[], unsigned int nfds, int timeout)
+{
+  return syscall3(POSIX_POLL, fds, nfds, timeout);
+}
+

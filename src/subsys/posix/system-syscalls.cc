@@ -597,7 +597,7 @@ int pedigree_login(int uid, const char *password)
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-  NOTICE("sigaction");
+  NOTICE("sigaction(" << Dec << sig << Hex << ")");
 
   Thread* pThread = Processor::information().getCurrentThread();
   Process* pProcess = pThread->getParent();
@@ -801,3 +801,44 @@ int posix_sleep(uint32_t seconds)
   NOTICE("sleep");
   return 0;
 }
+
+/// \note Currently all functionality can be provided without any extra storage in the handle.
+struct dlHandle
+{
+  int mode;
+};
+
+uintptr_t posix_dlopen(const char* file, int mode, void* p)
+{
+  NOTICE("dlopen(" << file << ")");
+
+  if(!DynamicLinker::instance().load(file))
+  {
+    ERROR("dlopen: couldn't load " << String(file) << ".");
+    return 0;
+  }
+  
+  dlHandle* handle = reinterpret_cast<dlHandle*>(p);
+  
+  return reinterpret_cast<uintptr_t>(handle);
+}
+
+// m_ProcessObjects should be better to use!
+
+uintptr_t posix_dlsym(void* handle, const char* name)
+{
+  NOTICE("dlsym(" << name << ")");
+  
+  if(!handle)
+    return 0;
+  
+  return DynamicLinker::instance().resolve(name);
+}
+
+int posix_dlclose(void* handle)
+{
+  NOTICE("dlclose");
+  
+  return 0;
+}
+
