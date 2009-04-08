@@ -46,9 +46,9 @@ opts.AddVariables(
     ('ASFLAGS','Sets the assembler flags.','-f elf'),
     ('LINKFLAGS','Sets the linker flags','-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'),
     ('BUILDDIR','Directory to place build files in.','build'),
-    ('LIBGCC','The folder containing libgcc.a.'),
-    BoolVariable('verbose','Display verbose build output.',False),
-    BoolVariable('verbose_link','Display verbose linker output.',False),
+    ('LIBGCC','The folder containing libgcc.a.',''),
+    BoolVariable('verbose','Display verbose build output.',0),
+    BoolVariable('verbose_link','Display verbose linker output.',0),
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
 )
 
