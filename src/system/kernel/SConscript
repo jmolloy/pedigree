@@ -19,13 +19,63 @@ files = [
     'Log.cc',
     'Version.cc',
     'Archive.cc',
-    'Spinlock.cc'
+    'Spinlock.cc',
+    Glob('debugger/*.cc'),
+    Glob('debugger/commands/*.cc'),
+    Glob('debugger/libudis86/*.c'),
+    Glob('utilities/*.cc'),
+    Glob('machine/*.cc'),
+    Glob('linker/*.cc'),
+    Glob('core/*.cc'),
+    Glob('core/process/*.cc'),
+    Glob('core/processor/*.cc'),
+    Glob('core/lib/*.cc'),
+    Glob('core/lib/*.c')
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
-    '../include/'
+    '../include/',
+    'debugger/',
+    'debugger/commands/',
+    'debugger/libudis86/',
+    'linker/',
+    'core/',
+    'core/lib/',
+    '.'
 ]
+
+# To add a library add to the list below
+libraries = [
+    'gcc'
+]
+
+# To add a library path add to the list below
+libpaths = [
+    env['LIBGCC']
+]
+
+
+####################################
+# Some clobbered crap to do machine/processor specific includes
+####################################
+if 'X86_COMMON' in env['CPPDEFINES']:
+    files += [Glob('machine/x86_common/*.cc')]
+    files += [
+        'machine/x86_common/x86emu/debug.c',
+        'machine/x86_common/x86emu/decode.c',
+        'machine/x86_common/x86emu/fpu.c',
+        'machine/x86_common/x86emu/ops.c',
+        'machine/x86_common/x86emu/ops2.c',
+        'machine/x86_common/x86emu/prim_ops.c',
+        'machine/x86_common/x86emu/sys.c',
+        Glob('core/processor/x86/*.cc'),
+        Glob('core/processor/x86_common/*.cc'),
+        'core/processor/x86/asm/boot-standalone.s',
+        'core/processor/x86/asm/InterruptManager.s',
+        'core/processor/x86/asm/Processor.s'
+    ]
+    include += ['machine/x86_common/x86_emu/x86emu/']
 
 ####################################
 # You should never need to touch anything below this line.
@@ -34,6 +84,8 @@ include = [
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 env.objects = [env.Object(i) for i in files]
 env['CPPPATH'] = [i for i in include]
+env['LIBS'] = [i for i in libraries]
+env['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(files) == 0:

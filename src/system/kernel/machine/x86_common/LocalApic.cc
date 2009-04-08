@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(APIC)
+
 #include <Log.h>
 #include "LocalApic.h"
 #include <processor/Processor.h>
@@ -195,3 +197,5 @@ void LocalApic::ack()
   // Send EOI.
   m_IoSpace.write32(0x00000000, LAPIC_REG_EOI);
 }
+
+#endif

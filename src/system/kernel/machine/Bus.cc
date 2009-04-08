@@ -14,6 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef JamesSux
+
 #include <machine/Bus.h>
 
 Bus::Bus(const char *pName)
+
+#endif

@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(SMBIOS)
+
 #include <Log.h>
 #include <utilities/utility.h>
 #include "SMBios.h"
@@ -109,3 +111,5 @@ SMBios::SMBios()
 SMBios::~SMBios()
 {
 }
+
+#endif

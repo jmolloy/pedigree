@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+ 
+#ifdef SMP
 
 #include <Log.h>
 #include <utilities/Vector.h>
@@ -141,3 +143,5 @@ void Multiprocessor::initialise2()
 {
   m_ProcessorLock2.release();
 }
+
+#endif

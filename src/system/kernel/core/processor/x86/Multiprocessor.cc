@@ -13,6 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+ 
+#ifdef MULTIPROCESSOR
+ 
 #include <processor/Processor.h>
 #include "gdt.h"
 #include "InterruptManager.h"
@@ -53,3 +56,5 @@ void Multiprocessor::applicationProcessorStartup()
   extern void apMain();
   apMain();
 }
+
+#endif

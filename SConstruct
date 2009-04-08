@@ -25,6 +25,8 @@ defines = [
     'BITS_32',
     'LITTLE_ENDIAN',
     'KERNEL_STANDALONE',
+    'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
+    '__UD_STANDALONE__',
     ## Arch details
     'X86',                      # Sets the target architecture family
     'X86_COMMON'                # Sets the machine type
@@ -40,25 +42,31 @@ opts.AddVariables(
     ('AS','Sets the assembler to use.'),
     ('LINK','Sets the linker to use.'),
     ('CFLAGS','Sets the C compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3'),
-    ('CXXFLAGS','Sets the C++ compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3 -Weffc++ -Wall -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'),
+    ('CXXFLAGS','Sets the C++ compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3 -Weffc++ -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'),
     ('ASFLAGS','Sets the assembler flags.','-f elf'),
-    ('LINKFLAGS','Sets the linker flags','-nostdlib -nostdinc'),
+    ('LINKFLAGS','Sets the linker flags','-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'),
     ('BUILDDIR','Directory to place build files in.','build'),
+    ('LIBGCC','The folder containing libgcc.a.'),
     BoolVariable('verbose','Display verbose build output.',False),
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
 )
 
 env = Environment(options = opts,tools = ['default'],ENV = os.environ) # Create a new environment object passing the options
-env['SCONSFLAGS'] = '-Q'
-#^-- Shuts the bloody thing up
+
 Help(opts.GenerateHelpText(env)) # Create the scons help text from the options we specified earlier
 opts.Save('options.cache',env)
+
+if env['warnings']:
+    env['CXXFLAGS'] += ' -Wall'
+
+#env['LINKFLAGS'] += ' -lc -L' + env['LIBGCC']
 
 ####################################
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
     env['CCCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
+    env['CXXCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
     env['ASPPCOMSTR'] =    '    Assembling \033[32m$TARGET\033[0m'
     env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
     env['ARCOMSTR'] =      '     Archiving \033[32m$TARGET\033[0m'
@@ -71,6 +79,7 @@ if not env['verbose']:
 ####################################
 env['CPPDEFINES'] = []
 env['CPPDEFINES'] = [i for i in defines]
+#^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
 
 ####################################
 # Generate Version.cc

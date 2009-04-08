@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(ACPI)
+
 #include <Log.h>
 #include <utilities/utility.h>
 #include <processor/VirtualAddressSpace.h>
@@ -336,3 +338,5 @@ bool Acpi::checksum(const SystemDescriptionTableHeader *pHeader)
 {
   return ::checksum(reinterpret_cast<const uint8_t*>(pHeader), pHeader->length);
 }
+
+#endif

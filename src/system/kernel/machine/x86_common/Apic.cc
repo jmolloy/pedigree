@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(APIC)
+
 #include <Log.h>
 #include "Apic.h"
 
@@ -52,3 +54,5 @@ bool Apic::initialise()
 
   return true;*/
 }
+
+#endif

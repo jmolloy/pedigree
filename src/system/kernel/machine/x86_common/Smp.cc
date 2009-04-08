@@ -13,6 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+ 
+#if defined(SMP)
 
 #include "Smp.h"
 #include <Log.h>
@@ -230,3 +232,5 @@ bool Smp::checksum(const ConfigTableHeader *pConfigTable)
 
   return true;
 }
+
+#endif
