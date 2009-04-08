@@ -1,0 +1,30 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+# Change to then name of this module
+objname = 'common'
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+    
+]
+
+# To include new files just add to the list, or Glob("*.cpp")
+files = [
+    
+]
+
+####################################
+# You should never need to touch anything below this line.
+# If you do, tell me so I can correct it.
+####################################
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+env.objects = [env.Object(i) for i in files]
+if not len(files) == 0:
+    #^-- Prevents 'no input files'
+    build = env.Program(objname,env.objects)
