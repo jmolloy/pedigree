@@ -1,4 +1,5 @@
 CC = 'gcc'
-CXX = 'g++'
+CXX = '/usr/cross/bin/i586-elf-g++'
 AS = 'as'
 LINK = '$SMARTLINK'
+verbose = True

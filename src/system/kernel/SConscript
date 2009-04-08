@@ -16,7 +16,15 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    
+    'Log.cc',
+    'Version.cc',
+    'Archive.cc',
+    'Spinlock.cc'
+]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    '../include/'
 ]
 
 ####################################
@@ -25,6 +33,9 @@ files = [
 ####################################
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 env.objects = [env.Object(i) for i in files]
+env['CPPPATH'] = [i for i in include]
+#^-- Stupid way of doing it but I plan on adding processing.
+
 if not len(files) == 0:
     #^-- Prevents 'no input files'
     build = env.Program(objname,env.objects)
