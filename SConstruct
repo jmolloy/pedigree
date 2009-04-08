@@ -48,6 +48,7 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.'),
     BoolVariable('verbose','Display verbose build output.',False),
+    BoolVariable('verbose_link','Display verbose linker output.',False),
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
 )
 
@@ -59,7 +60,8 @@ opts.Save('options.cache',env)
 if env['warnings']:
     env['CXXFLAGS'] += ' -Wall'
 
-#env['LINKFLAGS'] += ' -lc -L' + env['LIBGCC']
+if env['verbose_link']:
+    env['LINKFLAGS'] += ' --verbose'
 
 ####################################
 # Fluff up our build messages
@@ -67,7 +69,7 @@ if env['warnings']:
 if not env['verbose']:
     env['CCCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
     env['CXXCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
-    env['ASPPCOMSTR'] =    '    Assembling \033[32m$TARGET\033[0m'
+    env['ASCOMSTR'] =    '    Assembling \033[32m$TARGET\033[0m'
     env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
     env['ARCOMSTR'] =      '     Archiving \033[32m$TARGET\033[0m'
     env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'

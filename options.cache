@@ -1,6 +1,0 @@
-CC = '/usr/cross/bin/i586-elf-gcc'
-CXX = '/usr/cross/bin/i586-elf-g++'
-AS = 'nasm'
-LINK = '/usr/cross/bin/i586-elf-ld'
-LIBGCC = '/usr/cross/lib/gcc/i586-elf/4.3.3/'
-warnings = False
