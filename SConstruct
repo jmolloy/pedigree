@@ -1,7 +1,6 @@
 ####################################
 # SCons build system for Pedigree
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-## <3 XLQ
 ####################################
 
 import os

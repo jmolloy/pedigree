@@ -8,7 +8,11 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'src'
+    'common',
+    'kernel',
+    'modules'
+    #,'boot'
+    # ^-- Need to add ARCH options first
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
