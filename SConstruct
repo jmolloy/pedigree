@@ -44,7 +44,7 @@ opts.AddVariables(
     ('CFLAGS','Sets the C compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3'),
     ('CXXFLAGS','Sets the C++ compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3 -Weffc++ -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'),
     ('ASFLAGS','Sets the assembler flags.','-f elf'),
-    ('LINKFLAGS','Sets the linker flags','-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'),
+    ('LINKFLAGS','Sets the linker flags','-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc -ffreestanding'),
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     BoolVariable('verbose','Display verbose build output.',0),
