@@ -62,16 +62,16 @@ Vt100::~Vt100()
 
 void Vt100::write(char *str)
 {
-//   String s(str);
-//   char *pStr = const_cast<char*>(static_cast<const char*>(s));
-//   int j = s.length();
-//   for (int i = 0; i < j; i++)
-//   {
-//     if(pStr[i] == '\e') pStr[i] = '\\';
-//     if (pStr[i] < 0x20) pStr[i] = '#';
-//     if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
-//   }
-//   NOTICE("W: " << pStr);
+   String s(str);
+   char *pStr = const_cast<char*>(static_cast<const char*>(s));
+   int j = s.length();
+   for (int i = 0; i < j; i++)
+   {
+     if(pStr[i] == '\e') pStr[i] = '\\';
+     if (pStr[i] < 0x20) pStr[i] = '#';
+     if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
+   }
+   NOTICE("W: " << pStr);
 
   while (*str)
     write(*str++);
@@ -88,6 +88,16 @@ void Vt100::write(char c)
 
     if (m_bContainedParen)
     {
+      if (c == '0')
+      {
+        // \e(0 -- enter alternate character mode.
+        m_pWindows[m_CurrentWindow]->setLineDrawingMode(true);
+      }
+      else if (c == 'B')
+      {
+        // \e(B -- exit line drawing mode.
+        m_pWindows[m_CurrentWindow]->setLineDrawingMode(false);
+      }
       m_bChangingState = false;
       return;
     }
@@ -116,21 +126,21 @@ void Vt100::write(char c)
         m_Cmd.cur_param++;
         break;
       case 'h':
-	// 1049h is the code to switch to the alternate window.
-	if (m_Cmd.params[0] == 1049)
-	{
-	  m_CurrentWindow = 1;
-	  m_pWindows[m_CurrentWindow]->refresh();
-	}
+        // 1049h is the code to switch to the alternate window.
+        if (m_Cmd.params[0] == 1049)
+        {
+          m_CurrentWindow = 1;
+          m_pWindows[m_CurrentWindow]->refresh();
+        }
         m_bChangingState = false;
         break;
       case 'l':
-	// 1049l is the code to switch back to the main window.
-	if (m_Cmd.params[0] == 1049)
-	{
-	  m_CurrentWindow = 0;
-	  m_pWindows[m_CurrentWindow]->refresh();
-	}
+        // 1049l is the code to switch back to the main window.
+        if (m_Cmd.params[0] == 1049)
+        {
+          m_CurrentWindow = 0;
+          m_pWindows[m_CurrentWindow]->refresh();
+        }
         m_bChangingState = false;
         break;
       case 'H':
@@ -361,14 +371,37 @@ void Vt100::write(char c)
 
       // Any other character.
       default:
-        // Add the character.
-        m_pWindows[m_CurrentWindow]->writeChar(c);
+        if (!m_pWindows[m_CurrentWindow]->getLineDrawingMode())
+        {
+          // Add the character.
+          m_pWindows[m_CurrentWindow]->writeChar(c);
+        }
+        else
+        {
+          switch (c)
+          {
+            case 'j': c = 188; break; // Lower right corner
+            case 'k': c = 187; break; // Upper right corner
+            case 'l': c = 201; break; // Upper left corner
+            case 'm': c = 200; break; // Lower left corner
+            case 'n': c = 206; break; // Crossing lines.
+            case 'q': c = 205; break; // Horizontal line.
+            case 't': c = 204; break; // Left 'T'
+            case 'u': c = 185; break; // Right 'T'
+            case 'v': c = 202; break; // Bottom 'T'
+            case 'w': c = 203; break; // Top 'T'
+            case 'x': c = 186; break; // Vertical bar
+            default:
+              WARNING("VT100: Unrecognised line character: " << c);
+          }
+          m_pWindows[m_CurrentWindow]->writeChar(c);
+        }
     }
   }
 
 }
 
-void Vt100::putCharFb(char c, int x, int y, uint32_t f, uint32_t b)
+void Vt100::putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b)
 {
   int depth = m_Mode.pf.nBpp;
   if (depth != 8 && depth != 16 && depth != 32)
@@ -439,7 +472,8 @@ uint32_t Vt100::compileColour(uint8_t r, uint8_t g, uint8_t b)
 Vt100::Window::Window(uint32_t nWidth, uint32_t nHeight, Vt100 *pParent) :
   m_CursorX(0), m_CursorY((NUM_PAGES_SCROLLBACK-1)*nHeight), m_nWidth(nWidth), m_nHeight(nHeight),
   m_nScrollMin(0), m_nScrollMax(NUM_PAGES_SCROLLBACK*nHeight-1),
-  m_Foreground(C_WHITE), m_Background(C_BLACK), m_bBold(false), m_pParent(pParent), m_View((NUM_PAGES_SCROLLBACK-1)*nHeight),
+  m_Foreground(C_WHITE), m_Background(C_BLACK), m_bBold(false),
+  m_bLineDrawingMode(false), m_pParent(pParent), m_View((NUM_PAGES_SCROLLBACK-1)*nHeight),
   m_pData(0)
 {
   m_pData = new uint16_t[NUM_PAGES_SCROLLBACK*nHeight*nWidth];
@@ -454,7 +488,17 @@ Vt100::Window::~Window()
   delete [] m_pData;
 }
 
-void Vt100::Window::writeChar(char c)
+void Vt100::Window::setLineDrawingMode(bool b)
+{
+  m_bLineDrawingMode = b;
+}
+
+bool Vt100::Window::getLineDrawingMode()
+{
+  return m_bLineDrawingMode;
+}
+
+void Vt100::Window::writeChar(unsigned char c)
 {
   m_pData[m_CursorX + m_CursorY*m_nWidth] = c | (m_Foreground<<12) | (m_Background<<8);
   m_pParent->putCharFb(c, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);

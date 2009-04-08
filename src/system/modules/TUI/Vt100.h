@@ -51,7 +51,7 @@ private:
 public:
   /** Writes a character out to the framebuffer. Takes a preformatted integer for the foreground and background colours.
       x and y are in characters, not pixels. */
-  void putCharFb(char c, int x, int y, uint32_t f, uint32_t b);
+  void putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b);
 
 private:
   /** Screen mode, pixel format etc */
@@ -73,7 +73,7 @@ private:
     ~Window();
 
     /** Writes a character to the screen, incrementing the X cursor and wrapping if nessecary. */
-    void writeChar(char c);
+    void writeChar(unsigned char c);
 
     /** Gets/sets the cursor coordinates. */
     uint32_t getCursorX() {return m_CursorX;}
@@ -114,6 +114,9 @@ private:
     /** Perform a full-on screen refresh. */
     void refresh();
 
+    void setLineDrawingMode(bool b);
+    bool getLineDrawingMode();
+
   private:
 
     //
@@ -128,6 +131,7 @@ private:
     uint32_t m_nScrollMin, m_nScrollMax;
     uint8_t m_Foreground, m_Background;
     bool m_bBold;
+    bool m_bLineDrawingMode;
     Vt100 *m_pParent;
 
     //
