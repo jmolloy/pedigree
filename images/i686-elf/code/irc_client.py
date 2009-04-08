@@ -33,24 +33,28 @@ def win(stdscr):
 
     server.setblocking(0)
 
-    server.send("NICK pcmattman2\r\nUSER pcmattman none none : 0 : 0\r\nJOIN #mattise\r\n")
+    server.send("NICK pedigree\r\nUSER pedigree none none : 0 : 0\r\nJOIN #mattise\r\n")
 
     title_win = curses.newwin(1, cols, 0, 0)
     recv_win = curses.newwin(rows - 2, cols, 1, 0)
     send_win = curses.newwin(1, cols, rows - 1, 0)
-    
-    recv_win.border()
+    msg_win = curses.newwin(rows - 4, cols - 2, 2, 1)
     
     title_win.bkgd(ord(' '), curses.color_pair(1))
     recv_win.bkgd(ord(' '), curses.color_pair(2))
     send_win.bkgd(ord(' '), curses.color_pair(3))
+    msg_win.bkgd(ord(' '), curses.color_pair(3))
+    
+    recv_win.border()
+    
+    send_win.nodelay(True)
     
     recv_win.standout()
-    recv_win.addstr(0, 1, "pcmattman2 on Freenode.net, in #mattise.", curses.color_pair(2))
+    recv_win.addstr(0, 1, "  pedigree on Freenode.net, in #mattise.  ", curses.color_pair(2))
     recv_win.standend()
     send_win.addstr(0, 0, "> ")
 
-    recv_win.scrollok(True)
+    msg_win.scrollok(True)
 
     title_win.addstr("Pedigree IRC Client [Python + ncurses]", curses.color_pair(1))
     title_win.refresh()
@@ -58,9 +62,6 @@ def win(stdscr):
     send_win.refresh()
 
     running = True
-    
-    y = 1
-    x = 1
 
     # variable names are fun.
     def getnick(first_bit):
@@ -78,8 +79,9 @@ def win(stdscr):
 
         for line in data:
             if(len(line) == 0):
-            
                 continue
+            
+            line.rstrip()
             
             s2 = line.split(" ", 3)
             if(len(s2) <= 1):
@@ -139,13 +141,32 @@ def win(stdscr):
                 msg = "topic change to '" + topic + "': changed by " + getnick(s2[0]) + " in " + s2[2]
                 window.addstr(curry, x, msg)
                 curry += (len(msg) / 80) + 1
+            
+            elif(s2[0].lower() == "notice"):
+                
+                if(s2[2][0] == ':'):
+                    notice = s2[2][1:]
+                else:
+                    notice = s2[2]
+                
+                window.addstr(curry, x, "NOTICE: " + s2[1] + notice)
+                curry += (len(notice) / 80) + 1
+            
+            else:
+                window.addstr(curry, x, line)
+                curry += (len(line) / 80) + 1
 
-        if(curry >= (rows - 4)):
+            if(curry >= (rows - 5)):
+              oldcurry = curry
+              curry = (rows - 5)
+              window.scroll(oldcurry - curry - 1)
+
+        if(curry >= (rows - 5)):
           oldcurry = curry
-          curry = (rows - 4)
-          window.scroll((curry - oldcurry) + 1)
+          curry = (rows - 5)
+          window.scroll(oldcurry - curry - 1)
         window.refresh()
-
+        
         return curry
 
     def get_line(curseswin):
@@ -154,22 +175,20 @@ def win(stdscr):
         curses.noecho()
         return ret
     
+    y = 0
+    x = 0
+    
     try:
-#      res = poller.select([server], [], [], 0)
-#      if(len(res[0]) > 0):
       readbuffer = server.recv(1024)
       splitted = readbuffer.split("\n")
       readbuffer = splitted.pop()
-      y = handle(splitted, server, recv_win, y)
+      y = handle(splitted, server, msg_win, y)
     except:
       pass
     
     data = ""
-    
     send_x = 2
     send_y = 0
-    
-    #send_win.nodelay(True)
 
     while 1:
 				try:
@@ -186,13 +205,15 @@ def win(stdscr):
 									  else:
 										  msg = "PRIVMSG #mattise :" + data
 										  server.send(msg + "\r\n")
-										  y = handle([":pcmattman2!n=pedigree@202.63.42.160.static.rev.aanet.com.au " + msg], server, recv_win, y)
+										  y = handle([":pedigree!n=pedigree@202.63.42.160.static.rev.aanet.com.au " + msg], server, msg_win, y)
 									  send_win.erase()
 									  send_win.addstr(0, 0, "> ")
 									  data = ""
 							elif(ch == 0x7F or ch == 0x08):
+								send_win.addstr(send_y, 2 + len(data) - 1, " ")
 								data = data[0:-1]
-								send_win.addstr(send_y, send_x, data + " ")
+								send_win.erase()
+								send_win.addstr(0, 0, "> " + data)
 							else:
 								data += chr(ch)
 								send_win.addstr(send_y, send_x, data)
@@ -200,12 +221,10 @@ def win(stdscr):
 						send_win.refresh()
 
 						try:
-#							res = poller.select([server], [], [], 0)
-#							if(len(res[0]) > 0):
 							readbuffer = server.recv(1024)
 							splitted = readbuffer.split("\n")
 							readbuffer = splitted.pop()
-							y = handle(splitted, server, recv_win, y)
+							y = handle(splitted, server, msg_win, y)
 						except:
 							pass
 				except KeyboardInterrupt:

@@ -719,6 +719,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
           if (ConsoleManager::instance().hasDataAvailable(pFd->file))
             num_ready++;
+          else
+            FD_CLR(i, readfds);
         }
         else if (NetManager::instance().isEndpoint(pFd->file))
         {
@@ -737,16 +739,17 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
               {
                 if(p->dataReady(false))
                   num_ready++;
+                else
+                  FD_CLR(i, readfds);
               }
               else
               {
                 if(p->state() == Tcp::ESTABLISHED)
                 {
                   if(p->dataReady(false))
-                  {
-                    NOTICE("data");
                     num_ready++;
-                  }
+                  else
+                    FD_CLR(i, readfds);
                 }
                 else
                 {
@@ -760,6 +763,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             {
               if(p->dataReady(true, timeout->tv_sec))
                 num_ready++;
+              else
+                FD_CLR(i, readfds);
             }
           }
           else
@@ -767,6 +772,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             // block while waiting for the data to come (and wait forever)
             if(p->dataReady(true, 0xffffffff))
               num_ready++;
+            else
+              FD_CLR(i, readfds);
           }
         }
         else
@@ -802,6 +809,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             /// \todo Timeout lets this check block, but this code won't block...
             if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
               num_ready++;
+            else
+              FD_CLR(i, writefds);
           }
         }
         else

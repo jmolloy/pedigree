@@ -263,6 +263,98 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
   }
   else if (operation == CONSOLE_DATA_AVAILABLE)
   {
+    // Read - forward to keyboard. THIS WILL CHANGE!
+    Keyboard *pK = Machine::instance().getKeyboard();
+    if (!pK)
+    {
+      WARNING("TUI: No keyboard present!");
+      return 0;
+    }
+    
+    /// \todo Clean this up! Redundancy isn't cool!
+    /// \note This is required so that if a read() call isn't made and keys have
+    ///       been pressed we still find out that keys are available. Then the
+    ///       read() call successfully reads from the queue.
+    if(m_QueueLength == 0)
+    {
+      Keyboard::Character ch;
+      ch = pK->getCharacterNonBlock();
+      if (ch.valid != 0)
+      {
+        if (ch.is_special)
+        {
+          switch (ch.value)
+          {
+            case KB_ARROWLEFT:
+              m_pQueue[m_QueueLength++] = 0x1B;
+              m_pQueue[m_QueueLength++] = '[';
+              m_pQueue[m_QueueLength++] = 'D';
+              break;
+            case KB_ARROWRIGHT:
+              m_pQueue[m_QueueLength++] = '\e';
+              m_pQueue[m_QueueLength++] = '[';
+              m_pQueue[m_QueueLength++] = 'C';
+              break;
+            case KB_ARROWUP:
+              m_pQueue[m_QueueLength++] = '\e';
+              m_pQueue[m_QueueLength++] = '[';
+              m_pQueue[m_QueueLength++] = 'A';
+              break;
+            case KB_ARROWDOWN:
+              m_pQueue[m_QueueLength++] = '\e';
+              m_pQueue[m_QueueLength++] = '[';
+              m_pQueue[m_QueueLength++] = 'B';
+              break;
+          }
+        }
+        else if (ch.ctrl)
+        {
+          switch (ch.value)
+          {
+            case ' ': m_pQueue[m_QueueLength++] = 0;  break;
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+            case 'g':
+            case 'h':
+            case 'i':
+            case 'j':
+            case 'k':
+            case 'l':
+            case 'm':
+            case 'n':
+            case 'o':
+            case 'p':
+            case 'q':
+            case 'r':
+            case 's':
+            case 't':
+            case 'u':
+            case 'v':
+            case 'w':
+            case 'x':
+            case 'y':
+            case 'z':
+              m_pQueue[m_QueueLength++] = ch.value - 'a' + 1;
+              break;
+            default:
+              m_pQueue[m_QueueLength++] = ch.value;
+              break;
+          }
+        }
+        else if (ch.alt)
+        {
+          m_pQueue[m_QueueLength++] = '\e';
+          m_pQueue[m_QueueLength++] = ch.value | 0x80;
+        }
+        else
+          m_pQueue[m_QueueLength++] = ch.value;
+      }
+    }
+    
     return (m_QueueLength > 0);
   }
   return 0;
