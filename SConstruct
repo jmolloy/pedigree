@@ -7,7 +7,11 @@
 ## ! Make a flexible system for build defines
 ####################################
 EnsureSConsVersion(0,98,0)
-#^-- Make sure we are using at least 1.2 
+
+####################################
+# Import various python libraries
+## Do not use anything non-std
+####################################
 import os
 import commands
 import re
@@ -25,19 +29,15 @@ defines = [
     'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH',
     'ADDITIONAL_CHECKS',
     'BITS_32',
-    'LITTLE_ENDIAN',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-    '__UD_STANDALONE__',
-    ## Arch details
-    'X86',                      # Sets the target architecture family
-    'X86_COMMON'                # Sets the machine type
 ]
 
 ####################################
 # Default build flags (Also used to auto-generate help)
 ####################################
 opts = Variables('options.cache')
+#^-- Load saved settings (if they exist)
 opts.AddVariables(
     ('CC','Sets the C compiler to use.'),
     ('CXX','Sets the C++ compiler to use.'),
@@ -54,10 +54,29 @@ opts.AddVariables(
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
 )
 
-env = Environment(options = opts,tools = ['default'],ENV = os.environ) # Create a new environment object passing the options
-
-Help(opts.GenerateHelpText(env)) # Create the scons help text from the options we specified earlier
+env = Environment(options = opts,tools = ['default'],ENV = os.environ)
+#^-- Create a new environment object passing the options
+Help(opts.GenerateHelpText(env))
+#^-- Create the scons help text from the options we specified earlier
 opts.Save('options.cache',env)
+#^-- Save the cache file over the old one
+
+####################################
+# Compiler/Target specific settings
+####################################
+out = commands.getoutput(env['CXX'] + ' -v')
+#^-- The old script used --dumpmachine, which isn't always present
+tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
+
+if re.match('i[3456]86',tmp.group(1)) != None:
+    defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
+    #^-- Should provide overloads for these...like machine=ARM_VOLITILE
+
+####################################
+# Some quirks
+####################################
+defines += ['__UD_STANDALONE__']
+#^-- Required no matter what.
 
 if env['warnings']:
     env['CXXFLAGS'] += ' -Wall'
@@ -69,14 +88,14 @@ if env['verbose_link']:
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    env['CCCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
-    env['CXXCOMSTR'] =      '     Compiling \033[32m$TARGET\033[0m'
-    env['ASCOMSTR'] =    '    Assembling \033[32m$TARGET\033[0m'
+    env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
+    env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
+    env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
     env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
-    env['ARCOMSTR'] =      '     Archiving \033[32m$TARGET\033[0m'
+    env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
     env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
-    env['NMCOMSTR'] =      '  Creating map \033[32m$TARGET\033[0m'
-    env['DOCCOMSTR'] =     '   Documenting \033[32m$TARGET\033[0m'
+    env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
+    env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
 
 ####################################
 # Setup our build options
@@ -141,7 +160,4 @@ file.close()
 ####################################
 # Progress through all our sub-directories
 ####################################
-SConscript('SConscript',
-           exports = ['env'],
-           build_dir = env['BUILDDIR'],
-           duplicate = 0) # duplicate = 0 stops it from copying the sources to the build dir
+SConscript('SConscript', exports = ['env'], build_dir = env['BUILDDIR'], duplicate = 0)
