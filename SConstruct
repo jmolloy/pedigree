@@ -6,6 +6,8 @@
 ## ! Add a check for -fno-stack-protector
 ## ! Make a flexible system for build defines
 ####################################
+EnsureSConsVersion(1,2,0)
+#^-- Make sure we are using at least 1.2 
 import os
 import commands
 import re
