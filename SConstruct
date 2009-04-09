@@ -74,6 +74,8 @@ out = commands.getoutput(env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present
 tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
 
+env['ARCH_TARGET'] = tmp.group(1)
+
 if re.match('i[3456]86',tmp.group(1)) != None:
     defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
     #^-- Should provide overloads for these...like machine=ARM_VOLITILE
@@ -174,6 +176,7 @@ file.writelines(['const char *g_pBuildRevision = "',env['PEDIGREE_REVISION'],'";
 file.writelines(['const char *g_pBuildFlags = "',   env['PEDIGREE_FLAGS'],'";\n'])
 file.writelines(['const char *g_pBuildUser = "',    env['PEDIGREE_USER'],'";\n'])
 file.writelines(['const char *g_pBuildMachine = "', env['PEDIGREE_MACHINE'],'";\n'])
+file.writelines(['const char *g_pBuildTarget = "',  env['ARCH_TARGET'],'";\n'])
 file.close()
 
 ####################################
