@@ -64,6 +64,12 @@ opts.Save('options.cache',env)
 ####################################
 # Compiler/Target specific settings
 ####################################
+# Check to see if the compiler supports --fno-stack-protector
+out = commands.getoutput('echo "int main(void) {return 0;}" | gcc -xc -c - --fno-stack-protector')
+if re.match('.*error:',out) == None:
+    env['CXXFLAGS'] += ' --fno-stack-protector'
+    env['CFLAGS'] += ' --fno-stack-protector'
+
 out = commands.getoutput(env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present
 tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
