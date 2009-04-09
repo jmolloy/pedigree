@@ -71,6 +71,13 @@ tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
 if re.match('i[3456]86',tmp.group(1)) != None:
     defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
     #^-- Should provide overloads for these...like machine=ARM_VOLITILE
+elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
+    defines += ['X64']
+elif re.match('ppc|powerpc',tmp.group(1)) != None:
+    defines += ['PPC']
+elif re.match('arm',tmp.group(1)) != None:
+    defines += ['ARM']
+    
 
 ####################################
 # Some quirks
