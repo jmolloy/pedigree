@@ -124,35 +124,41 @@ if os.path.exists('/bin/date'):
     out = commands.getoutput('/bin/date \"+%k:%M %A %e-%b-%Y\"')
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_BUILDTIME'] = tmp.group()
+else:
+    env['PEDIGREE_BUILDTIME'] = '(Unknown)'
 
 if os.path.exists('/usr/local/bin/svn'):
     #^-- Darwin
     out = commands.getoutput('/usr/local/bin/svn info .')
     tmp = re.match('.*?Revision: ([^\n]+)',out,re.S)
     env['PEDIGREE_REVISION'] = tmp.group(1)
-    
-if os.path.exists('/usr/bin/svn'):
+elif os.path.exists('/usr/bin/svn'):
     #^-- Most *nix
     out = commands.getoutput('/usr/bin/svn info .')
     tmp = re.match('.*?Revision: ([^\n]+)',out,re.S)
     env['PEDIGREE_REVISION'] = tmp.group(1)
+else:
+    env['PEDIGREE_REVISION'] = '(Unknown)'
     
 if os.path.exists('/usr/bin/whoami'):
     out = commands.getoutput('/usr/bin/whoami')
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_USER'] = tmp.group()
+else:
+    env['PEDIGREE_USER'] = '(Unknown)'
     
 if os.path.exists('/usr/bin/uname'):
     #^-- Darwin
     out = commands.getoutput('/usr/bin/uname')
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_MACHINE'] = tmp.group()
-    
-if os.path.exists('/bin/uname'):
+elif os.path.exists('/bin/uname'):
     #^-- Most *nix
     out = commands.getoutput('/bin/uname')
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_MACHINE'] = tmp.group()
+else:
+    env['PEDIGREE_MACHINE'] = '(Unknown)'
     
 env['PEDIGREE_FLAGS'] = string.join(env['CPPDEFINES'],' ')
 # Write the file to disk (We *assume* src/system/kernel/)
