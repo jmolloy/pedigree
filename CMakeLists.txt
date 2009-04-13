@@ -140,10 +140,10 @@ if(EXISTS "/bin/date")
   string(REGEX MATCH "^[^\n]+" PEDIGREE_BUILDTIME ${BUILDTIME})
 endif(EXISTS "/bin/date")
 if(EXISTS "/usr/bin/svn")
-  execute_process(COMMAND "svn" "info" "${PEDIGREE_SOURCE_DIR}"
-                  OUTPUT_VARIABLE REVISION)
-  string(REGEX MATCH "Revision: ([^\n]+)" REVISION ${REVISION})
-  set(PEDIGREE_REVISION ${CMAKE_MATCH_1})
+#  execute_process(COMMAND "svn" "info" "${PEDIGREE_SOURCE_DIR}"
+#                  OUTPUT_VARIABLE REVISION)
+#  string(REGEX MATCH "Revision: ([^\n]+)" REVISION ${REVISION})
+  set(PEDIGREE_REVISION "Now using git")#${CMAKE_MATCH_1})
 endif(EXISTS "/usr/bin/svn")
 
 get_property(FLAGS DIRECTORY PROPERTY COMPILE_DEFINITIONS)

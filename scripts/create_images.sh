@@ -16,7 +16,7 @@
 
 IMG=floppy.img
 OFF=0
-HDIMG=hdd_16h_63spt_100c.img
+HDIMG=hdd_ext2.img
 HDOFF=32256
 SRCDIR=.
 MOUNTPT="/tmp/$$"
@@ -68,7 +68,8 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
@@ -105,7 +106,8 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  sudo cp -a $SRCDIR/../images/i686-elf $MOUNTPT
+#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
@@ -136,16 +138,16 @@ if sudo which losetup >/dev/null 2>&1; then
 
   fini;
 
-  if which qemu-img >/dev/null; then
-    sudo qemu-img convert $SRCDIR/hdd_16h_63spt_100c.img -O vmdk $SRCDIR/hdd_16h_63spt_100c.vmdk
-  fi
+#  if which qemu-img >/dev/null; then
+#    sudo qemu-img convert $SRCDIR/hdd_ext2.img -O vmdk $SRCDIR/hdd_ext2.vmdk
+#  fi
 
-  if which VBoxManage >/dev/null; then
-    if [ -f $SRCDIR/hdd_16h_63_spt_100c.vdi ]; then
-      rm $SRCDIR/hdd_16h_63_spt_100c.vdi
-    fi
-    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_16h_63_spt_100c.vdi
-  fi
+#  if which VBoxManage >/dev/null; then
+#    if [ -f $SRCDIR/hdd_16h_63_spt_100c.vdi ]; then
+#      rm $SRCDIR/hdd_16h_63_spt_100c.vdi
+#    fi
+#    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_ext.vdi
+#  fi
 
 elif which mcopy >/dev/null 2>&1; then
 
