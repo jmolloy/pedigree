@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,9 +16,10 @@
 
 #include <Log.h>
 #include <Debugger.h>
-#include "PageFaultHandler.h"
+#include <processor/PageFaultHandler.h>
 #include <process/Scheduler.h>
 #include <panic.h>
+#include <processor/PhysicalMemoryManager.h>
 
 PageFaultHandler PageFaultHandler::m_Instance;
 
@@ -41,6 +42,53 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   uint32_t cr2, code;
   asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
   code = state.m_Errorcode;
+
+  uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);
+
+  // Check for copy-on-write.
+  VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+  if (va.isMapped(reinterpret_cast<void*>(page)))
+  {
+    physical_uintptr_t phys;
+    size_t flags;
+    va.getMapping(reinterpret_cast<void*>(page), phys, flags);
+    if (flags & VirtualAddressSpace::CopyOnWrite)
+    {
+        FATAL("Copy on write");
+#if 0
+      static uint8_t buffer[/*PhysicalMemoryManager::instance().getPageSize()*/4096];
+      memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
+
+      // Now that we've saved the page content, we can make a new physical page and map it.
+      physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
+      if (!p)
+      {
+        FATAL("PageFaultHandler: Out of memory!");
+        return;
+      }
+      va.unmap(reinterpret_cast<void*>(page));
+      if (!va.map(p, reinterpret_cast<void*>(page), VirtualAddressSpace::Write))
+      {
+        FATAL("PageFaultHandler: map() failed.");
+        return;
+      }
+      memcpy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
+      return;
+#endif
+    }
+  }
+
+  // Check our handler list.
+  for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
+       it != m_Handlers.end();
+       it++)
+  {
+    if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
+    {
+      NOTICE("Page fault at " << Hex << cr2 << " : handled.");
+      return;
+    }
+  }
 
   //  Get PFE location and error code
   static LargeStaticString sError;
@@ -70,7 +118,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   if(code & PFE_INSTRUCTION_FETCH) sCode.append("FETCH |");
 
   // Ensure the log spinlock isn't going to die on us...
-  Log::instance().m_Lock.release();
+//  Log::instance().m_Lock.release();
 
   ERROR(static_cast<const char*>(sError));
   ERROR(static_cast<const char*>(sCode));

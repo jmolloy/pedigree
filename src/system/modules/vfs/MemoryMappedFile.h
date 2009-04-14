@@ -46,6 +46,12 @@ class MemoryMappedFileManager;
 class MemoryMappedFile
 {
 public:
+    /** Constructor - to be called from MemoryMappedFileManager only! */
+    MemoryMappedFile(File *pFile);
+
+    /** Destructor */
+    virtual ~MemoryMappedFile();
+
     /** Loads this file.
         \param address Load at the given address, or if address is 0, finds some free space and returns the start address in address. */
     bool load(uintptr_t &address);
@@ -76,12 +82,6 @@ public:
         {return m_Extent;}
 
 private:
-    /** Constructor - to be called from MemoryMappedFile::create only! */
-    MemoryMappedFile(File *pFile);
-
-    /** Destructor - again should be called by MemoryMappedFile::destroy only! */
-    virtual ~MemoryMappedFile();
-
     MemoryMappedFile(const MemoryMappedFile &);
     MemoryMappedFile &operator = (const MemoryMappedFile &);
 

@@ -16,6 +16,8 @@
 
 #include "MemoryMappedFile.h"
 
+#include <processor/PhysicalMemoryManager.h>
+
 MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
 MemoryMappedFile::MemoryMappedFile(File *pFile) :
@@ -39,12 +41,12 @@ bool MemoryMappedFile::load(uintptr_t &address)
 
     if (address == 0)
     {
-        if (!pProcess->getSpaceAllocator()->allocate(m_Extent, address))
+        if (!pProcess->getSpaceAllocator().allocate(m_Extent, address))
             return false;
     }
     else
     {
-        if (!pProcess->getSpaceAllocator()->allocateSpecific(address, m_Extent))
+        if (!pProcess->getSpaceAllocator().allocateSpecific(address, m_Extent))
             return false;
     }
 
@@ -181,19 +183,107 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
 
 void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
 {
+    LockGuard<Mutex> guard(m_CacheLock);
+
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    MmFileList
+    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
+    if (!pMmFileList) return;
+    
+    for (List<MmFile*>::Iterator it = pMmFileList->begin();
+         it != pMmFileList->end();
+         it++)
+    {
+        if ( (*it)->file == pMmFile )
+        {
+            (*it)->file->decreaseRefCount();
+            delete *it;
+            pMmFileList->erase(it);
+            break;
+        }
+    }
+
+    if (pMmFileList->count() == 0)
+    {
+        delete pMmFileList;
+        m_MmFileLists.remove(&va);
+    }
 }
 
 void MemoryMappedFileManager::clone(Process *pProcess)
 {
+    LockGuard<Mutex> guard(m_CacheLock);
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    VirtualAddressSpace *pOtherVa = pProcess->getAddressSpace();
+
+    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
+    if (!pMmFileList) return;
+    
+    MmFileList *pMmFileList2 = m_MmFileLists.lookup(pOtherVa);
+    if (!pMmFileList2)
+    {
+        pMmFileList2 = new MmFileList();
+        m_MmFileLists.insert(pOtherVa, pMmFileList2);
+    }
+
+    for (List<MmFile*>::Iterator it = pMmFileList->begin();
+         it != pMmFileList->end();
+         it++)
+    {
+        MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->file );
+        pMmFileList2->pushBack(pMmFile);
+
+        (*it)->file->increaseRefCount();
+    }
 }
 
 void MemoryMappedFileManager::unmapAll()
 {
+    LockGuard<Mutex> guard(m_CacheLock);
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
+    if (!pMmFileList) return;
+    
+    for (List<MmFile*>::Iterator it = pMmFileList->begin();
+         it != pMmFileList->end();
+         it = pMmFileList->begin())
+    {
+        (*it)->file->decreaseRefCount();
+        delete *it;
+        pMmFileList->erase(it);
+    }
+
+    delete pMmFileList;
+    m_MmFileLists.remove(&va);
 }
 
 bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
 {
+    LockGuard<Mutex> guard(m_CacheLock);
+
+    /// \todo Handle read-write maps.
+    if (bIsWrite) return false;
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
+    if (!pMmFileList) return false;
+
+    for (List<MmFile*>::Iterator it = pMmFileList->begin();
+         it != pMmFileList->end();
+         it++)
+    {
+        MmFile *pMmFile = *it;
+        if ( (address >= pMmFile->offset) && (address < pMmFile->offset+pMmFile->size) )
+        {
+            pMmFile->file->trap(address, pMmFile->offset);
+            return true;
+        }
+    }
+    
+    return false;
 }
