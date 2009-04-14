@@ -25,18 +25,20 @@
 class MemoryTrapHandler
 {
 public:
-  /** Trap event handler.
-      \param address The address of the trap.
-      \param bIsWrite True if the trap was caused by a write, false if by a read.
-      \return True if the trap was handled successfully (and the handler can
-              return), or false if another handler needs to be tried. */
-  virtual bool trap(uintptr_t address, bool bIsWrite) = 0;
+    virtual ~MemoryTrapHandler() {}
+
+    /** Trap event handler.
+        \param address The address of the trap.
+        \param bIsWrite True if the trap was caused by a write, false if by a read.
+        \return True if the trap was handled successfully (and the handler can
+                return), or false if another handler needs to be tried. */
+    virtual bool trap(uintptr_t address, bool bIsWrite) = 0;
 };
 
 /** The x86 Page Fault Exception handler. */
 class PageFaultHandler : private InterruptHandler
 {
-  public:
+public:
     /** Get the PageFaultHandler instance
      *  \return the PageFaultHandler instance.  */
     inline static PageFaultHandler& instance()  {return m_Instance;}
@@ -53,7 +55,7 @@ class PageFaultHandler : private InterruptHandler
     // InterruptHandler interface.
     //
     virtual void interrupt(size_t interruptNumber, InterruptState &state);
-  private:
+private:
     /** The default constructor.  */
     PageFaultHandler() INITIALISATION_ONLY;
 
