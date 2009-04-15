@@ -24,35 +24,38 @@
 class Db1500 : public Machine
 {
 public:
-  inline static Db1500 &instande(){return m_Instance;}
+    inline static Db1500 &instande()
+    {
+        return m_Instance;
+    }
 
-  virtual void initialise();
-  virtual Serial *getSerial(size_t n);
-  virtual size_t getNumSerial();
-  virtual Vga *getVga(size_t n);
-  virtual size_t getNumVga();
-  virtual IrqManager *getIrqManager();
-  virtual SchedulerTimer *getSchedulerTimer();
-  virtual Timer *getTimer();
+    virtual void initialise();
+    virtual Serial *getSerial(size_t n);
+    virtual size_t getNumSerial();
+    virtual Vga *getVga(size_t n);
+    virtual size_t getNumVga();
+    virtual IrqManager *getIrqManager();
+    virtual SchedulerTimer *getSchedulerTimer();
+    virtual Timer *getTimer();
 
 private:
-  /**
-   * Default constructor, does nothing.
-   */
-  Db1500();
-  Db1500(const Db1500 &);
-  Db1500 &operator = (const Db1500);
-  /**
-   * Virtual destructor, does nothing.
-   */
-  virtual ~Db1500();
+    /**
+     * Default constructor, does nothing.
+     */
+    Db1500();
+    Db1500(const Db1500 &);
+    Db1500 &operator =(const Db1500);
+    /**
+     * Virtual destructor, does nothing.
+     */
+    virtual ~Db1500();
 
-  Au1500Serial m_Serial[2];
-  // SchedulerTimer m_SchedulerTimer;
-  // Timer m_Timer;
-  Au1500Vga m_Vga;
+    Au1500Serial m_Serial[2];
+    // SchedulerTimer m_SchedulerTimer;
+    // Timer m_Timer;
+    Au1500Vga m_Vga;
 
-  static Db1500 m_Instance;
+    static Db1500 m_Instance;
 };
 
 #endif

@@ -34,7 +34,7 @@
 Ip Ip::ipInstance;
 
 Ip::Ip() :
-  m_IpId(0)
+    m_IpId(0)
 {
 }
 
@@ -42,120 +42,120 @@ Ip::~Ip()
 {
 }
 
-bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
-{  
-  // allocate space for the new packet with an IP header
-  size_t newSize = nBytes + sizeof(ipHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
-  
-  // grab a pointer for the ip header
-  ipHeader* header = reinterpret_cast<ipHeader*>(newPacket);
-  memset(header, 0, sizeof(ipHeader));
-  
-  // send the packet
-  
-  StationInfo me = pCard->getStationInfo();
-  
-  header->id = Ip::instance().getNextId();
-  
-  header->ipDest = dest.getIp(); /// \todo IPv6
-  header->ipSrc = from.getIp(); //me.ipv4.getIp();
-  
-  header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
-  
-  header->type = type;
-  
-  header->ttl = 64; /// \note Perhaps this could be customisable one day?
-  
-  header->verlen = (5 << 0) | (4 << 4); // IPv4, offset is 5 DWORDs
-  
-  header->checksum = 0;
-  header->checksum = Network::calculateChecksum(packAddr, sizeof(ipHeader));
-  
-  // copy the payload into the packet
-  memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
-    
-  // send to the gateway if it's outside our subnet, but only if we have a subnet mask
-  if(me.subnetMask.getIp())
-  {
-    if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
+bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
+{
+    // allocate space for the new packet with an IP header
+    size_t newSize = nBytes + sizeof(ipHeader);
+    uint8_t *newPacket = new uint8_t[newSize];
+    uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+
+    // grab a pointer for the ip header
+    ipHeader *header = reinterpret_cast<ipHeader *>(newPacket);
+    memset(header, 0, sizeof(ipHeader));
+
+    // send the packet
+
+    StationInfo me = pCard->getStationInfo();
+
+    header->id = Ip::instance().getNextId();
+
+    header->ipDest = dest.getIp(); /// \todo IPv6
+    header->ipSrc = from.getIp(); //me.ipv4.getIp();
+
+    header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
+
+    header->type = type;
+
+    header->ttl = 64; /// \note Perhaps this could be customisable one day?
+
+    header->verlen = (5 << 0) | (4 << 4); // IPv4, offset is 5 DWORDs
+
+    header->checksum = 0;
+    header->checksum = Network::calculateChecksum(packAddr, sizeof(ipHeader));
+
+    // copy the payload into the packet
+    memcpy(reinterpret_cast<void *>(packAddr + sizeof(ipHeader)), reinterpret_cast<void *>(packet), nBytes);
+
+    // send to the gateway if it's outside our subnet, but only if we have a subnet mask
+    if(me.subnetMask.getIp())
     {
-      if(me.gateway.getIp())
-        dest = me.gateway;
-      else
-        return false;
+        if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
+        {
+            if(me.gateway.getIp())
+                dest = me.gateway;
+            else
+                return false;
+        }
     }
-  }
-    
-  // get the address to send to
-  /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
-  ///       it doesn't happen?
-  MacAddress destMac;
-  bool macValid = true;
-  if(dest == 0xffffffff)
-    destMac.setMac(0xff);
-  else
-    macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
-  if(macValid)
-    Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
-  
-  delete newPacket;
-  return macValid;
+
+    // get the address to send to
+    /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
+    ///       it doesn't happen?
+    MacAddress destMac;
+    bool macValid = true;
+    if(dest == 0xffffffff)
+        destMac.setMac(0xff);
+    else
+        macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
+    if(macValid)
+        Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
+
+    delete newPacket;
+    return macValid;
 }
 
-void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
-{  
-  // grab the header
-  ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
-  
-  /// \todo Handle fragmentation!
-  
-  // check the checksum :D
-  uint16_t checksum = header->checksum;
-  header->checksum = 0;
-  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), sizeof(ipHeader));
-  header->checksum = checksum;
-  if(checksum == calcChecksum)
-  {
-    IpAddress from(header->ipSrc);
-    Endpoint::RemoteEndpoint remoteHost;
-    remoteHost.ip = from;
-    
-    switch(header->type)
+void Ip::receive(size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset)
+{
+    // grab the header
+    ipHeader *header = reinterpret_cast<ipHeader *>(packet + offset);
+
+    /// \todo Handle fragmentation!
+
+    // check the checksum :D
+    uint16_t checksum = header->checksum;
+    header->checksum = 0;
+    uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), sizeof(ipHeader));
+    header->checksum = checksum;
+    if(checksum == calcChecksum)
     {
-      case IP_ICMP:
-        //NOTICE("IP: ICMP packet");
+        IpAddress from(header->ipSrc);
+        Endpoint::RemoteEndpoint remoteHost;
+        remoteHost.ip = from;
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
-        
-        // icmp needs the ip header as well
-        Icmp::instance().receive(from, nBytes, packet, pCard, offset);
-        break;
-        
-      case IP_UDP:
-        //NOTICE("IP: UDP packet");
+        switch(header->type)
+        {
+            case IP_ICMP:
+                //NOTICE("IP: ICMP packet");
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
-        
-        // udp needs the ip header as well
-        Udp::instance().receive(from, nBytes, packet, pCard, offset);
-        break;
-        
-      case IP_TCP:
-        //NOTICE("IP: TCP packet");
+                RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
-        
-        // tcp needs the ip header as well
-        Tcp::instance().receive(from, nBytes, packet, pCard, offset);
-        break;
-      
-      default:
-        NOTICE("IP: Unknown packet type");
-        break;
+                // icmp needs the ip header as well
+                Icmp::instance().receive(from, nBytes, packet, pCard, offset);
+                break;
+
+            case IP_UDP:
+                //NOTICE("IP: UDP packet");
+
+                RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
+
+                // udp needs the ip header as well
+                Udp::instance().receive(from, nBytes, packet, pCard, offset);
+                break;
+
+            case IP_TCP:
+                //NOTICE("IP: TCP packet");
+
+                RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
+
+                // tcp needs the ip header as well
+                Tcp::instance().receive(from, nBytes, packet, pCard, offset);
+                break;
+
+            default:
+                NOTICE("IP: Unknown packet type");
+                break;
+        }
     }
-  }
-  else
-    NOTICE("IP: Checksum invalid!");
+    else
+        NOTICE("IP: Checksum invalid!");
 }

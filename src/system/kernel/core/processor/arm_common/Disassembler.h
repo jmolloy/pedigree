@@ -25,42 +25,42 @@
 class Arm926EDisassembler : public DisassemblerBase
 {
 public:
-  Arm926EDisassembler();
-  ~Arm926EDisassembler();
+    Arm926EDisassembler();
+    ~Arm926EDisassembler();
 
-  /**
-   * Sets the location of the next instruction to be disassembled.
-   */
-  void setLocation(uintptr_t nLocation);
+    /**
+     * Sets the location of the next instruction to be disassembled.
+     */
+    void setLocation(uintptr_t nLocation);
 
-  /**
-   * Gets the location of the next instruction to be disassembled.
-   */
-  uintptr_t getLocation();
+    /**
+     * Gets the location of the next instruction to be disassembled.
+     */
+    uintptr_t getLocation();
 
-  /**
-   * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
-   * If a disassembler doesn't support a requested mode, it should
-   * return without changing anything.
-   * \param nMode Mode - 16, 32 or 64.
-   */
-  void setMode(size_t nMode);
-  
-  /**
-   * Disassembles one instruction and populates the given StaticString
-   * with a textual representation.
-   */
-  void disassemble(LargeStaticString &text);
+    /**
+     * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
+     * If a disassembler doesn't support a requested mode, it should
+     * return without changing anything.
+     * \param nMode Mode - 16, 32 or 64.
+     */
+    void setMode(size_t nMode);
+
+    /**
+     * Disassembles one instruction and populates the given StaticString
+     * with a textual representation.
+     */
+    void disassemble(LargeStaticString &text);
 
 private:
-  /**
-   * Current disassembling location in memory.
-   */
-  uintptr_t m_nLocation;
+    /**
+     * Current disassembling location in memory.
+     */
+    uintptr_t m_nLocation;
 
-  void disassembleSpecial(uint32_t nInstruction, LargeStaticString &text);
-  void disassembleRegImm(uint32_t nInstruction, LargeStaticString &text);
-  void disassembleOpcode(uint32_t nInstruction, LargeStaticString &text);
+    void disassembleSpecial(uint32_t nInstruction, LargeStaticString &text);
+    void disassembleRegImm(uint32_t nInstruction, LargeStaticString &text);
+    void disassembleOpcode(uint32_t nInstruction, LargeStaticString &text);
 };
 
 typedef Arm926EDisassembler Disassembler;

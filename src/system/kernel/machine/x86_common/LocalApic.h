@@ -39,12 +39,16 @@
 class LocalApic : public SchedulerTimer,
                   private InterruptHandler
 {
-  public:
+public:
     /** The default constructor */
     inline LocalApic()
-      : m_IoSpace("Local APIC"), m_Handler(0) {}
+        : m_IoSpace("Local APIC"), m_Handler(0)
+    {
+    }
     /** The destructor */
-    inline virtual ~LocalApic(){}
+    inline virtual ~LocalApic()
+    {
+    }
 
     /** Initialise the local APIC class. This includes allocating the I/O space.
      *\param[in] physicalAddress the physical address of the Local APIC (taken from the SMP/ACPI tables)
@@ -60,13 +64,13 @@ class LocalApic : public SchedulerTimer,
     /** Local APIC delivery modes */
     enum
     {
-      deliveryModeFixed           = 0,
-      deliveryModeLowestPriority  = 1,
-      deliveryModeSmi             = 2,
-      deliveryModeNmi             = 4,
-      deliveryModeInit            = 5,
-      deliveryModeStartup         = 6,
-      deliveryModeExtInt          = 7
+        deliveryModeFixed           = 0,
+        deliveryModeLowestPriority  = 1,
+        deliveryModeSmi             = 2,
+        deliveryModeNmi             = 4,
+        deliveryModeInit            = 5,
+        deliveryModeStartup         = 6,
+        deliveryModeExtInt          = 7
     };
 
     /** Issue an IPI (= Interprocessor Interrupt)
@@ -96,17 +100,19 @@ class LocalApic : public SchedulerTimer,
     // SchedulerTimer interface
     //
     virtual bool registerHandler(TimerHandler *handler)
-      {m_Handler = handler; return false;}
+    {
+        m_Handler = handler; return false;
+    }
 
     void ack();
 
-  private:
+private:
     /** The copy-constructor
      *\note NOT implemented */
     LocalApic(const LocalApic &);
     /** The assignment operator
      *\note NOT implemented */
-    LocalApic &operator = (const LocalApic &);
+    LocalApic &operator =(const LocalApic &);
 
     /** Check whether the local APIC is enabled and at the desired address
      *\param[in] physicalAddress the desired physical address

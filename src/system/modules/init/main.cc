@@ -41,175 +41,175 @@ extern BootIO bootIO;
 
 static bool probeDisk(Disk *pDisk)
 {
-  String alias; // Null - gets assigned by the filesystem.
-  if (VFS::instance().mount(pDisk, alias))
-  {
-    // search for the root specifier
-    NormalStaticString s;
-    s += alias;
-    s += ":/.pedigree-root";
+    String alias; // Null - gets assigned by the filesystem.
+    if(VFS::instance().mount(pDisk, alias))
+    {
+        // search for the root specifier
+        NormalStaticString s;
+        s += alias;
+        s += ":/.pedigree-root";
 
-    File* f = VFS::instance().find(String(static_cast<const char*>(s)));
-    if(f)
-    {
-      NOTICE("Mounted " << alias << " successfully as root.");
-      VFS::instance().addAlias(alias, String("root"));
-    }
-    else
-    {
-      NOTICE("Mounted " << alias << ".");
+        File *f = VFS::instance().find(String(static_cast<const char *>(s)));
+        if(f)
+        {
+            NOTICE("Mounted " << alias << " successfully as root.");
+            VFS::instance().addAlias(alias, String("root"));
+        }
+        else
+        {
+            NOTICE("Mounted " << alias << ".");
+        }
+        return false;
     }
     return false;
-  }
-  return false;
 }
 
 static bool findDisks(Device *pDev)
 {
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
-        pChild->getType() == Device::Disk)
+    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
-      if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
+        Device *pChild = pDev->getChild(i);
+        if(pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
+           pChild->getType() == Device::Disk)
+        {
+            if(probeDisk(static_cast<Disk *> (pChild))) return true;
+        }
+        else
+        {
+            // Recurse.
+            if(findDisks(pChild)) return true;
+        }
     }
-    else
-    {
-      // Recurse.
-      if (findDisks(pChild)) return true;
-    }
-  }
-  return false;
+    return false;
 }
 
 void init()
 {
-  static HugeStaticString str;
+    static HugeStaticString str;
 
-  // Mount all available filesystems.
-  if (!findDisks(&Device::root()))
-  {
+    // Mount all available filesystems.
+    if(!findDisks(&Device::root()))
+    {
 //     FATAL("No disks found!");
-  }
-
-  // Initialise user/group configuration.
-  UserManager::instance().initialise();
-
-  // Build routing tables
-  File* routeConfig = VFS::instance().find(String("root:/config/routes"));
-  if(routeConfig)
-  {
-    NOTICE("Loading route table from file");
-    /// \todo Write this...
-  }
-  else
-  {
-    // try to find a default configuration that can connect to the outside world
-    bool bRouteFound = false;
-    for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-    {
-      /// \todo Perhaps try and ping a remote host?
-      Network* card = NetworkStack::instance().getDevice(i);
-      StationInfo info = card->getStationInfo();
-      if(!(info.gateway == 0)) /// \todo write operator !=
-      {
-        RoutingTable::instance().AddNamed(String("default"), card);
-        bRouteFound = true;
-        break;
-      }
     }
 
-    // otherwise, just assume the default is interface zero
-    if(!bRouteFound)
-      RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
-  }
+    // Initialise user/group configuration.
+    UserManager::instance().initialise();
 
-  str += "Loading init program (root:/applications/bash)\n";
-  bootIO.write(str, BootIO::White, BootIO::Black);
-  str.clear();
-
-  // Load initial program.
-  File* initProg = VFS::instance().find(String("root:/applications/login"));
-  if (!initProg)
-  {
-    FATAL("Unable to load init program!");
-    return;
-  }
-
-  uint8_t *buffer = new uint8_t[initProg->getSize()];
-  initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
-
-  Machine::instance().getKeyboard()->setDebugState(false);
-
-  // At this point we're uninterruptible, as we're forking.
-  Spinlock lock;
-  lock.acquire();
-
-  // Create a new process for the init process.
-  Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
-  pProcess->setUser(UserManager::instance().getUser(0));
-  pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
-
-  pProcess->description().clear();
-  pProcess->description().append("init");
-
-  pProcess->setCwd(VFS::instance().find(String("root:/")));
-
-  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
-
-  // Switch to the init process' address space.
-  Processor::switchAddressSpace(*pProcess->getAddressSpace());
-
-  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
-  // in the kernel address space so we have a clean slate.
-  pProcess->getAddressSpace()->revertToKernelAddressSpace();
-
-  static Elf initElf;
-  uintptr_t loadBase;
-
-  initElf.create(buffer, initProg->getSize());
-  initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
-
-  DynamicLinker::instance().setInitProcess(pProcess);
-  DynamicLinker::instance().registerElf(&initElf);
-
-  uintptr_t iter = 0;
-  List<char*> neededLibraries = initElf.neededLibraries();
-  for (List<char*>::Iterator it = neededLibraries.begin();
-       it != neededLibraries.end();
-       it++)
-  {
-    if (!DynamicLinker::instance().load(*it, pProcess))
+    // Build routing tables
+    File *routeConfig = VFS::instance().find(String("root:/config/routes"));
+    if(routeConfig)
     {
-      ERROR("Couldn't open needed file '" << *it << "'");
-      FATAL("Init program failed to load!");
-      return;
+        NOTICE("Loading route table from file");
+        /// \todo Write this...
     }
-  }
-  initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
-  DynamicLinker::instance().initialiseElf(&initElf);
-  DynamicLinker::instance().setInitProcess(0);
+    else
+    {
+        // try to find a default configuration that can connect to the outside world
+        bool bRouteFound = false;
+        for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
+        {
+            /// \todo Perhaps try and ping a remote host?
+            Network *card = NetworkStack::instance().getDevice(i);
+            StationInfo info = card->getStationInfo();
+            if(!(info.gateway == 0)) /// \todo write operator !=
+            {
+                RoutingTable::instance().AddNamed(String("default"), card);
+                bRouteFound = true;
+                break;
+            }
+        }
 
-  for (int j = 0; j < 0x20000; j += 0x1000)
-  {
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x20000000),
-                                                                   VirtualAddressSpace::Write);
-    if (!b)
-      WARNING("map() failed in init");
-  }
+        // otherwise, just assume the default is interface zero
+        if(!bRouteFound)
+            RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
+    }
 
-  // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+    str += "Loading init program (root:/applications/bash)\n";
+    bootIO.write(str, BootIO::White, BootIO::Black);
+    str.clear();
 
-  // Switch back to the old address space.
-  Processor::switchAddressSpace(oldAS);
-  
-  delete [] buffer;
-  
-  lock.release();
+    // Load initial program.
+    File *initProg = VFS::instance().find(String("root:/applications/login"));
+    if(!initProg)
+    {
+        FATAL("Unable to load init program!");
+        return;
+    }
+
+    uint8_t *buffer = new uint8_t[initProg->getSize()];
+    initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
+
+    Machine::instance().getKeyboard()->setDebugState(false);
+
+    // At this point we're uninterruptible, as we're forking.
+    Spinlock lock;
+    lock.acquire();
+
+    // Create a new process for the init process.
+    Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+    pProcess->setUser(UserManager::instance().getUser(0));
+    pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
+
+    pProcess->description().clear();
+    pProcess->description().append("init");
+
+    pProcess->setCwd(VFS::instance().find(String("root:/")));
+
+    VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
+
+    // Switch to the init process' address space.
+    Processor::switchAddressSpace(*pProcess->getAddressSpace());
+
+    // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
+    // in the kernel address space so we have a clean slate.
+    pProcess->getAddressSpace()->revertToKernelAddressSpace();
+
+    static Elf initElf;
+    uintptr_t loadBase;
+
+    initElf.create(buffer, initProg->getSize());
+    initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
+
+    DynamicLinker::instance().setInitProcess(pProcess);
+    DynamicLinker::instance().registerElf(&initElf);
+
+    uintptr_t iter = 0;
+    List<char *> neededLibraries = initElf.neededLibraries();
+    for(List<char *>::Iterator it = neededLibraries.begin();
+        it != neededLibraries.end();
+        it++)
+    {
+        if(!DynamicLinker::instance().load(*it, pProcess))
+        {
+            ERROR("Couldn't open needed file '" << *it << "'");
+            FATAL("Init program failed to load!");
+            return;
+        }
+    }
+    initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
+    DynamicLinker::instance().initialiseElf(&initElf);
+    DynamicLinker::instance().setInitProcess(0);
+
+    for(int j = 0; j < 0x20000; j += 0x1000)
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                       reinterpret_cast<void *> (j + 0x20000000),
+                                                                       VirtualAddressSpace::Write);
+        if(!b)
+            WARNING("map() failed in init");
+    }
+
+    // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
+    Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void *>(0x20020000 - 8) /* Stack */);
+
+    // Switch back to the old address space.
+    Processor::switchAddressSpace(oldAS);
+
+    delete[] buffer;
+
+    lock.release();
 
 }
 

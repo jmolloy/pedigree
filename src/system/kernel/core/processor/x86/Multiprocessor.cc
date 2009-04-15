@@ -13,9 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- 
+
 #ifdef MULTIPROCESSOR
- 
+
 #include <processor/Processor.h>
 #include "gdt.h"
 #include "InterruptManager.h"
@@ -26,35 +26,35 @@
 
 void Multiprocessor::applicationProcessorStartup()
 {
-  // Initialise this processor's interrupt handling
-  X86InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    X86InterruptManager::initialiseProcessor();
 
-  // Signal the Bootstrap processor that this processor is started and the BSP can continue
-  // to boot up other processors
-  m_ProcessorLock1.release();
+    // Signal the Bootstrap processor that this processor is started and the BSP can continue
+    // to boot up other processors
+    m_ProcessorLock1.release();
 
-  // Wait until the GDT is initialised and the first 4MB identity mapping removed
-  m_ProcessorLock2.acquire();
-  m_ProcessorLock2.release();
+    // Wait until the GDT is initialised and the first 4MB identity mapping removed
+    m_ProcessorLock2.acquire();
+    m_ProcessorLock2.release();
 
-  // Load the GDT
-  X86GdtManager::initialiseProcessor();
+    // Load the GDT
+    X86GdtManager::initialiseProcessor();
 
-  // Invalidate the first 4MB identity mapping
-  Processor::invalidate(0);
+    // Invalidate the first 4MB identity mapping
+    Processor::invalidate(0);
 
-  // Initialise the machine-specific interface
-  Pc::instance().initialiseProcessor();
+    // Initialise the machine-specific interface
+    Pc::instance().initialiseProcessor();
 
-  // We need to synchronize the -init section invalidation
-  Processor::invalidate(0);
+    // We need to synchronize the -init section invalidation
+    Processor::invalidate(0);
 
-  // Start multitasking and ensure there is a spare idle thread for this CPU.
-  initialiseMultitaskingPerProcessor();
+    // Start multitasking and ensure there is a spare idle thread for this CPU.
+    initialiseMultitaskingPerProcessor();
 
-  // Call the per-processor code in main.cc
-  extern void apMain();
-  apMain();
+    // Call the per-processor code in main.cc
+    extern void apMain();
+    apMain();
 }
 
 #endif

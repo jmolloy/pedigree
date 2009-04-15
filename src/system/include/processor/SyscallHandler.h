@@ -26,14 +26,16 @@
  * derived from this class */
 class SyscallHandler
 {
-  public:
+public:
     /** Called when the handler is registered with the syscall manager and a syscall occurred
      *\param[in] State reference to the state before the syscall */
     virtual uintptr_t syscall(SyscallState &State) = 0;
 
-  protected:
+protected:
     /** Virtual destructor */
-    inline virtual ~SyscallHandler(){}
+    inline virtual ~SyscallHandler()
+    {
+    }
 };
 
 /** @} */

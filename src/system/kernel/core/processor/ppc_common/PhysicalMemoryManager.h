@@ -39,87 +39,92 @@
 class PpcCommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
 public:
-  /** Get the PpcCommonPhysicalMemoryManager instance
-   *\return instance of the PpcCommonPhysicalMemoryManager */
-  inline static PpcCommonPhysicalMemoryManager &instance(){return m_Instance;}
+    /** Get the PpcCommonPhysicalMemoryManager instance
+     *\return instance of the PpcCommonPhysicalMemoryManager */
+    inline static PpcCommonPhysicalMemoryManager &instance()
+    {
+        return m_Instance;
+    }
 
-  //
-  // PhysicalMemoryManager Interface
-  //
-  virtual physical_uintptr_t allocatePage();
-  virtual void freePage(physical_uintptr_t page);
-  virtual bool allocateRegion(MemoryRegion &Region,
-                              size_t cPages,
-                              size_t pageConstraints,
-                              size_t Flags,
-                              physical_uintptr_t start = -1);
+    //
+    // PhysicalMemoryManager Interface
+    //
+    virtual physical_uintptr_t allocatePage();
+    virtual void freePage(physical_uintptr_t page);
+    virtual bool allocateRegion(MemoryRegion &Region,
+                                size_t cPages,
+                                size_t pageConstraints,
+                                size_t Flags,
+                                physical_uintptr_t start = -1);
 
-  void initialise(Translations &translations, uintptr_t ramMax);
+    void initialise(Translations &translations, uintptr_t ramMax);
 
-  void unmapRegion(MemoryRegion *pRegion);
+    void unmapRegion(MemoryRegion *pRegion);
 
 protected:
-  /** The constructor */
-  PpcCommonPhysicalMemoryManager();
-  /** The destructor */
-  virtual ~PpcCommonPhysicalMemoryManager();
+    /** The constructor */
+    PpcCommonPhysicalMemoryManager();
+    /** The destructor */
+    virtual ~PpcCommonPhysicalMemoryManager();
 
 private:
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  PpcCommonPhysicalMemoryManager(const PpcCommonPhysicalMemoryManager &);
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  PpcCommonPhysicalMemoryManager &operator = (const PpcCommonPhysicalMemoryManager &);
-
-  /** The stack of available pages. */
-  class PageStack
-  {
-  public:
-    /** Default constructor does nothing */
-    PageStack() INITIALISATION_ONLY;
-    /** Allocate a page with certain constraints
-     *\return The physical address of the allocated page or 0 */
-    physical_uintptr_t allocate();
-    /** Free a physical page
-     *\param[in] physicalAddress physical address of the page */
-    void free(uintptr_t physicalAddress);
-    /** The destructor does nothing */
-    inline ~PageStack(){}
-
-  private:
     /** The copy-constructor
-     *\note Not implemented */
-    PageStack(const PageStack &);
+     *\note Not implemented (singleton) */
+    PpcCommonPhysicalMemoryManager(const PpcCommonPhysicalMemoryManager &);
     /** The copy-constructor
-     *\note Not implemented */
-    PageStack &operator = (const PageStack &);
+     *\note Not implemented (singleton) */
+    PpcCommonPhysicalMemoryManager &operator =(const PpcCommonPhysicalMemoryManager &);
 
-    /** Pointer to the base address of the stack. The stack grows upwards. */
-    physical_uintptr_t *m_Stack;
-    /** Size of the currently mapped stack */
-    size_t m_StackMax;
-    /** Currently used size of the stack */
-    size_t m_StackSize;
-  };
+    /** The stack of available pages. */
+    class PageStack
+    {
+public:
+        /** Default constructor does nothing */
+        PageStack() INITIALISATION_ONLY;
+        /** Allocate a page with certain constraints
+         *\return The physical address of the allocated page or 0 */
+        physical_uintptr_t allocate();
+        /** Free a physical page
+         *\param[in] physicalAddress physical address of the page */
+        void free(uintptr_t physicalAddress);
+        /** The destructor does nothing */
+        inline ~PageStack()
+        {
+        }
 
-  /** The page stack */
-  PageStack m_PageStack;
+private:
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack(const PageStack &);
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack &operator =(const PageStack &);
 
-  /** The current operating mode. True for 'initial', false for 'normal'. */
-  bool m_InitialMode;  
+        /** Pointer to the base address of the stack. The stack grows upwards. */
+        physical_uintptr_t *m_Stack;
+        /** Size of the currently mapped stack */
+        size_t m_StackMax;
+        /** Currently used size of the stack */
+        size_t m_StackSize;
+    };
 
-  /** Variable used in initial mode to keep track of where the next page to allocate is. */
-  physical_uintptr_t m_NextPage;
+    /** The page stack */
+    PageStack m_PageStack;
 
-  /** RangeList of free physical memory */
-  RangeList<uint64_t> m_PhysicalRanges;
+    /** The current operating mode. True for 'initial', false for 'normal'. */
+    bool m_InitialMode;
 
-  /** Virtual memory available for MemoryRegions */
-  RangeList<uintptr_t> m_MemoryRegions;
+    /** Variable used in initial mode to keep track of where the next page to allocate is. */
+    physical_uintptr_t m_NextPage;
 
-  /** The PpcCommonPhysicalMemoryManager class instance */
-  static PpcCommonPhysicalMemoryManager m_Instance;
+    /** RangeList of free physical memory */
+    RangeList<uint64_t> m_PhysicalRanges;
+
+    /** Virtual memory available for MemoryRegions */
+    RangeList<uintptr_t> m_MemoryRegions;
+
+    /** The PpcCommonPhysicalMemoryManager class instance */
+    static PpcCommonPhysicalMemoryManager m_Instance;
 };
 
 //

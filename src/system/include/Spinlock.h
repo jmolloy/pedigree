@@ -21,14 +21,16 @@
 
 class Spinlock
 {
-  public:
+public:
     inline Spinlock(bool bLocked = false)
-      : m_bInterrupts(), m_Atom(!bLocked){}
+        : m_bInterrupts(), m_Atom(!bLocked)
+    {
+    }
 
     void acquire();
     void release();
 
-  private:
+private:
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
 };

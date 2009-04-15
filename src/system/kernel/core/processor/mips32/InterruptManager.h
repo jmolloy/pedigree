@@ -29,16 +29,19 @@
 class MIPS32InterruptManager : public ::InterruptManager,
                                public ::SyscallManager
 {
-  public:
+public:
     /** Get the MIPS32InterruptManager class instance
      *\return instance of the MIPS32InterruptManager class */
-    inline static MIPS32InterruptManager &instance(){return m_Instance;}
+    inline static MIPS32InterruptManager &instance()
+    {
+        return m_Instance;
+    }
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
     // Specific to MIPS, all external interrupts are vectored differently. IRQs are vectored in a different manner too.
     virtual bool registerExternalInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
-  
+
 
 #ifdef DEBUGGER
     virtual bool registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler);
@@ -54,7 +57,7 @@ class MIPS32InterruptManager : public ::InterruptManager,
      *\todo and some smp/acpi function */
     static void initialiseProcessor();
 
-  private:
+private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
@@ -65,7 +68,7 @@ class MIPS32InterruptManager : public ::InterruptManager,
     MIPS32InterruptManager(const MIPS32InterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    MIPS32InterruptManager &operator = (const MIPS32InterruptManager &);
+    MIPS32InterruptManager &operator =(const MIPS32InterruptManager &);
     /** The destructor */
     virtual ~MIPS32InterruptManager();
 

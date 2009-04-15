@@ -31,8 +31,11 @@
 class Rtc : public Timer,
             private IrqHandler
 {
-  public:
-    inline static Rtc &instance(){return m_Instance;}
+public:
+    inline static Rtc &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // Timer interface
@@ -57,19 +60,21 @@ class Rtc : public Timer,
     /** Uninitialises the class */
     void uninitialise();
 
-  protected:
+protected:
     /** The default constructor */
     Rtc() INITIALISATION_ONLY;
     /** The destructor */
-    inline virtual ~Rtc(){}
+    inline virtual ~Rtc()
+    {
+    }
 
-  private:
+private:
     /** The copy-constructor
      *\note NOT implemented */
     Rtc(const Rtc &);
     /** The assignment operator
      *\note NOT implemented */
-    Rtc &operator = (const Rtc &);
+    Rtc &operator =(const Rtc &);
 
     //
     // IrqHandler interface
@@ -129,12 +134,12 @@ class Rtc : public Timer,
     /** Holds information about the RTC periodic irq */
     struct periodicIrqInfo_t
     {
-      /** The frequency */
-      size_t Hz;
-      /** Value that needs to be written to the CMOS register */
-      uint8_t rateBits;
-      /** Nanoseconds between two ticks */
-      uint64_t ns[2];
+        /** The frequency */
+        size_t Hz;
+        /** Value that needs to be written to the CMOS register */
+        uint8_t rateBits;
+        /** Nanoseconds between two ticks */
+        uint64_t ns[2];
     };
 
     /** Information about the RTC's periodic irq */
@@ -142,9 +147,9 @@ class Rtc : public Timer,
 
     /** The Rtc class instance */
     static Rtc m_Instance;
-    
+
     /** All timer handlers installed */
-    TimerHandler* m_Handlers[MAX_TIMER_HANDLERS];
+    TimerHandler *m_Handlers[MAX_TIMER_HANDLERS];
 };
 
 /** @} */

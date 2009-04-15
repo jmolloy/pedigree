@@ -32,31 +32,31 @@
 class Ethernet
 {
 public:
-  Ethernet();
-  virtual ~Ethernet();
-  
-  /** For access to the stack without declaring an instance of it */
-  static Ethernet& instance()
-  {
-    return ethernetInstance;
-  }
-  
-  /** Packet arrival callback */
-  void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
-  /** Sends an ethernet packet */
-  static void send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress dest, uint16_t type);
+    Ethernet();
+    virtual ~Ethernet();
+
+    /** For access to the stack without declaring an instance of it */
+    static Ethernet &instance()
+    {
+        return ethernetInstance;
+    }
+
+    /** Packet arrival callback */
+    void receive(size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset);
+
+    /** Sends an ethernet packet */
+    static void send(size_t nBytes, uintptr_t packet, Network *pCard, MacAddress dest, uint16_t type);
 
 private:
 
-  static Ethernet ethernetInstance;
+    static Ethernet ethernetInstance;
 
-  struct ethernetHeader
-  {
-    uint8_t   destMac[6];
-    uint8_t   sourceMac[6];
-    uint16_t  type;
-  } __attribute__ ((packed));
+    struct ethernetHeader
+    {
+        uint8_t   destMac[6];
+        uint8_t   sourceMac[6];
+        uint16_t  type;
+    } __attribute__ ((packed));
 
 };
 

@@ -31,71 +31,71 @@ PageFaultHandler PageFaultHandler::m_Instance;
 
 bool PageFaultHandler::initialise()
 {
-  InterruptManager &IntManager = InterruptManager::instance();
+    InterruptManager &IntManager = InterruptManager::instance();
 
-  return(IntManager.registerInterruptHandler(PAGE_FAULT_EXCEPTION, this));
+    return(IntManager.registerInterruptHandler(PAGE_FAULT_EXCEPTION, this));
 }
 
 void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  uint32_t cr2, code;
-  asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
-  code = state.m_Errorcode;
+    uint32_t cr2, code;
+    asm volatile ("mov %%cr2, %%eax" : "=a" (cr2));
+    code = state.m_Errorcode;
 
-  //  Get PFE location and error code
-  static LargeStaticString sError;
-  sError.clear();
-  sError.append("Page Fault Exception at 0x");
-  sError.append(cr2, 16, 8, '0');
-  sError.append(", error code 0x");
-  sError.append(code, 16, 8, '0');
+    //  Get PFE location and error code
+    static LargeStaticString sError;
+    sError.clear();
+    sError.append("Page Fault Exception at 0x");
+    sError.append(cr2, 16, 8, '0');
+    sError.append(", error code 0x");
+    sError.append(code, 16, 8, '0');
 
-  //  Extract error code information
-  static LargeStaticString sCode;
-  sCode.clear();
-  sCode.append("Details: ");
+    //  Extract error code information
+    static LargeStaticString sCode;
+    sCode.clear();
+    sCode.append("Details: ");
 
-  if(!(code & PFE_PAGE_PRESENT)) sCode.append("NOT ");
-  sCode.append("PRESENT | ");
+    if(!(code & PFE_PAGE_PRESENT)) sCode.append("NOT ");
+    sCode.append("PRESENT | ");
 
-  if(code & PFE_ATTEMPTED_WRITE)
-    sCode.append("WRITE | ");
-  else
-    sCode.append("READ | ");
+    if(code & PFE_ATTEMPTED_WRITE)
+        sCode.append("WRITE | ");
+    else
+        sCode.append("READ | ");
 
-  if(code & PFE_USER_MODE) sCode.append("USER "); else sCode.append("KERNEL ");
-  sCode.append("MODE | ");
+    if(code & PFE_USER_MODE) sCode.append("USER ");else sCode.append("KERNEL ");
+    sCode.append("MODE | ");
 
-  if(code & PFE_RESERVED_BIT) sCode.append("RESERVED BIT SET | ");
-  if(code & PFE_INSTRUCTION_FETCH) sCode.append("FETCH |");
+    if(code & PFE_RESERVED_BIT) sCode.append("RESERVED BIT SET | ");
+    if(code & PFE_INSTRUCTION_FETCH) sCode.append("FETCH |");
 
-  // Ensure the log spinlock isn't going to die on us...
-  Log::instance().m_Lock.release();
+    // Ensure the log spinlock isn't going to die on us...
+    Log::instance().m_Lock.release();
 
-  ERROR(static_cast<const char*>(sError));
-  ERROR(static_cast<const char*>(sCode));
+    ERROR(static_cast<const char *>(sError));
+    ERROR(static_cast<const char *>(sCode));
 
-  //static LargeStaticString eCode;
+    //static LargeStaticString eCode;
   #ifdef DEBUGGER
     Debugger::instance().start(state, sError);
   #endif
 
-  Scheduler &scheduler = Scheduler::instance();
-  if(UNLIKELY(scheduler.getNumProcesses() == 0))
-  {
-    //  We are in the early stages of the boot process (no processes started)
-    panic(sError);
-  }
-  else
-  {
-    //  Unrecoverable PFE in a process - Kill the process and yield
-    Processor::information().getCurrentThread()->getParent()->kill();
+    Scheduler &scheduler = Scheduler::instance();
+    if(UNLIKELY(scheduler.getNumProcesses() == 0))
+    {
+        //  We are in the early stages of the boot process (no processes started)
+        panic(sError);
+    }
+    else
+    {
+        //  Unrecoverable PFE in a process - Kill the process and yield
+        Processor::information().getCurrentThread()->getParent()->kill();
 
-    //  kill member function also calls yield(), so shouldn't get here.
-    for(;;) ;
-  }
+        //  kill member function also calls yield(), so shouldn't get here.
+        for(;;) ;
+    }
 
-  //  Currently, no code paths return from a PFE.
+    //  Currently, no code paths return from a PFE.
 }
 
 PageFaultHandler::PageFaultHandler()

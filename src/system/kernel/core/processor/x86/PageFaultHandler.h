@@ -25,10 +25,13 @@
 /** The x86 Page Fault Exception handler. */
 class PageFaultHandler : private InterruptHandler
 {
-  public:
+public:
     /** Get the PageFaultHandler instance
      *  \return the PageFaultHandler instance.  */
-    inline static PageFaultHandler& instance()  { return(m_Instance); }
+    inline static PageFaultHandler &instance()
+    {
+        return(m_Instance);
+    }
 
     /** Register the PageFaultHandler with the InterruptManager.
      * \return true if sucessful, false otherwise.  */
@@ -38,13 +41,13 @@ class PageFaultHandler : private InterruptHandler
     // InterruptHandler interface.
     //
     virtual void interrupt(size_t interruptNumber, InterruptState &state);
-  private:
+private:
     /** The default constructor.  */
     PageFaultHandler() INITIALISATION_ONLY;
 
     /**The copy constructor.
      * Note not implemented.  */
-    PageFaultHandler(const PageFaultHandler&);
+    PageFaultHandler(const PageFaultHandler &);
 
     /** The PageFaultHandler instance */
     static PageFaultHandler m_Instance;

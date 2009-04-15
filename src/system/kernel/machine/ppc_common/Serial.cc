@@ -21,7 +21,7 @@
 #include <utilities/StaticString.h>
 
 PPCSerial::PPCSerial() :
-  m_pBuffer(0)
+    m_pBuffer(0)
 {
 }
 
@@ -39,15 +39,15 @@ void PPCSerial::write(char c)
 
 char PPCSerial::read()
 {
-  return '\0';
+    return '\0';
 }
 
 char PPCSerial::readNonBlock()
 {
-  return '\0';
+    return '\0';
 }
 
 bool PPCSerial::isConnected()
 {
-  return true;
+    return true;
 }

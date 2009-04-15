@@ -33,29 +33,35 @@ class Atomic;
 template<typename T>
 class Atomic<T, true>
 {
-  public:
+public:
     /** The constructor
      *\param[in] value initial value */
     inline Atomic(T value = T())
-      : m_Atom(value){}
+        : m_Atom(value)
+    {
+    }
     /** The copy-constructor
      *\param[in] x reference object */
     inline Atomic(const Atomic &x)
-      : m_Atom(x.m_Atom){}
+        : m_Atom(x.m_Atom)
+    {
+    }
     /** The assignment operator
      *\param[in] x reference object */
-    inline Atomic &operator = (const Atomic &x)
+    inline Atomic &operator =(const Atomic &x)
     {
-      m_Atom = x.m_Atom;
-      return *this;
+        m_Atom = x.m_Atom;
+        return *this;
     }
     /** The destructor does nothing */
-    inline virtual ~Atomic(){}
+    inline virtual ~Atomic()
+    {
+    }
 
     /** Addition
      *\param[in] x value to add
      *\return the value after the addition */
-    inline T operator += (T x)
+    inline T operator +=(T x)
     {
       #if !defined(ARM_COMMON)
         return __sync_add_and_fetch(&m_Atom, x);
@@ -67,7 +73,7 @@ class Atomic<T, true>
     /** Subtraction
      *\param[in] x value to subtract
      *\return the value after the subtraction */
-    inline T operator -= (T x)
+    inline T operator -=(T x)
     {
       #if !defined(ARM_COMMON)
         return __sync_sub_and_fetch(&m_Atom, x);
@@ -79,7 +85,7 @@ class Atomic<T, true>
     /** Bitwise or
      *\param[in] x the operand
      *\return the value after the bitwise or */
-    inline T operator |= (T x)
+    inline T operator |=(T x)
     {
       #if !defined(ARM_COMMON)
         return __sync_or_and_fetch(&m_Atom, x);
@@ -91,7 +97,7 @@ class Atomic<T, true>
     /** Bitwise and
      *\param[in] x the operand
      *\return the value after the bitwise and */
-    inline T operator &= (T x)
+    inline T operator &=(T x)
     {
       #if !defined(ARM_COMMON)
         return __sync_and_and_fetch(&m_Atom, x);
@@ -103,7 +109,7 @@ class Atomic<T, true>
     /** Bitwise xor
      *\param[in] x the operand
      *\return the value after the bitwise xor */
-    inline T operator ^= (T x)
+    inline T operator ^=(T x)
     {
       #if !defined(ARM_COMMON)
         return __sync_xor_and_fetch(&m_Atom, x);
@@ -121,22 +127,22 @@ class Atomic<T, true>
       #if !defined(ARM_COMMON)
         return __sync_bool_compare_and_swap(&m_Atom, oldVal, newVal);
       #else
-        if (m_Atom == oldVal)
+        if(m_Atom == oldVal)
         {
-          m_Atom = newVal;
-          return true;
+            m_Atom = newVal;
+            return true;
         }
         return false;
       #endif
     }
     /** Get the value
      *\return the value of the Atomic */
-    inline operator T () const
+    inline operator T() const
     {
-      return m_Atom;
+        return m_Atom;
     }
 
-  private:
+private:
     /** The atomic value */
     volatile T m_Atom;
 };
@@ -145,45 +151,51 @@ class Atomic<T, true>
 template<>
 class Atomic<bool, true> : public Atomic<size_t>
 {
-  public:
+public:
     /** The constructor
      *\param[in] value initial value */
     inline Atomic(bool value = false)
-      : Atomic<size_t>((value)?1:0){}
+        : Atomic<size_t>((value) ? 1 : 0)
+    {
+    }
     /** The copy-constructor
      *\param[in] x reference object */
     inline Atomic(const Atomic &x)
-      : Atomic<size_t>(x){}
+        : Atomic<size_t>(x)
+    {
+    }
     /** The assignment operator
      *\param[in] x reference object */
-    inline Atomic &operator = (const Atomic &x)
+    inline Atomic &operator =(const Atomic &x)
     {
-      Atomic<size_t>::operator = (x);
-      return *this;
+        Atomic<size_t>::operator =(x);
+        return *this;
     }
     /** The destructor does nothing */
-    inline ~Atomic(){}
+    inline ~Atomic()
+    {
+    }
 
     /** Bitwise or
      *\param[in] x the operand
      *\return the value after the bitwise or */
-    inline bool operator |= (bool x)
+    inline bool operator |=(bool x)
     {
-      return Atomic<size_t>::operator |= (x);
+        return Atomic<size_t>::operator |=(x);
     }
     /** Bitwise and
      *\param[in] x the operand
      *\return the value after the bitwise and */
-    inline bool operator &= (bool x)
+    inline bool operator &=(bool x)
     {
-      return Atomic<size_t>::operator &= (x);
+        return Atomic<size_t>::operator &=(x);
     }
     /** Bitwise xor
      *\param[in] x the operand
      *\return the value after the bitwise xor */
-    inline bool operator ^= (bool x)
+    inline bool operator ^=(bool x)
     {
-      return Atomic<size_t>::operator ^= (x);
+        return Atomic<size_t>::operator ^=(x);
     }
     /** Compare and swap
      *\param[in] oldVal the comparision value
@@ -191,13 +203,13 @@ class Atomic<bool, true> : public Atomic<size_t>
      *\return true, if the Atomic had the value oldVal and the value was changed to newVal, false otherwise */
     inline bool compareAndSwap(bool oldVal, bool newVal)
     {
-      return Atomic<size_t>::compareAndSwap((oldVal)?1:0, (newVal)?1:0);
+        return Atomic<size_t>::compareAndSwap((oldVal) ? 1 : 0, (newVal) ? 1 : 0);
     }
     /** Get the value
      *\return the value of the Atomic */
-    inline operator bool () const
+    inline operator bool() const
     {
-      return (Atomic<size_t>::operator size_t() == 1)?true:false;
+        return (Atomic<size_t>::operator size_t() == 1) ? true : false;
     }
 };
 

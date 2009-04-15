@@ -35,23 +35,23 @@ Pc Pc::m_Instance;
 
 void Pc::initialise()
 {
-  // Initialise Vga
-  if (m_Vga.initialise() == false)
-    panic("Pc: Vga initialisation failed");
-  
-  // Initialise ACPI
+    // Initialise Vga
+    if(m_Vga.initialise() == false)
+        panic("Pc: Vga initialisation failed");
+
+    // Initialise ACPI
   #if defined(ACPI)
     Acpi &acpi = Acpi::instance();
     acpi.initialise();
   #endif
 
-  // Initialise SMP
+    // Initialise SMP
   #if defined(SMP)
     Smp &smp = Smp::instance();
     smp.initialise();
   #endif
 
-  // Check for a local APIC
+    // Check for a local APIC
   #if defined(APIC)
 
     // Physical address of the local APIC
@@ -60,32 +60,32 @@ void Pc::initialise()
     // Get the Local APIC address & I/O APIC list from either the ACPI or the SMP tables
     bool bLocalApicValid = false;
     #if defined(ACPI)
-      if ((bLocalApicValid = acpi.validApicInfo()) == true)
+    if((bLocalApicValid = acpi.validApicInfo()) == true)
         localApicAddress = acpi.getLocalApicAddress();
     #endif
     #if defined(SMP)
-      if (bLocalApicValid == false && (bLocalApicValid = smp.valid()) == true)
+    if(bLocalApicValid == false && (bLocalApicValid = smp.valid()) == true)
         localApicAddress = smp.getLocalApicAddress();
     #endif
 
     // Initialise the local APIC, if we have gotten valid data from
     // the ACPI/SMP structures
-    if (bLocalApicValid == true && 
-        m_LocalApic.initialise(localApicAddress))
+    if(bLocalApicValid == true &&
+       m_LocalApic.initialise(localApicAddress))
     {
-      NOTICE("Local APIC initialised");
+        NOTICE("Local APIC initialised");
     }
 
   #endif
 
-  // Check for an I/O APIC
+    // Check for an I/O APIC
   #if defined(APIC)
 
     // TODO: Check for I/O Apic
     // TODO: Initialise the I/O Apic
     // TODO: IMCR?
     // TODO: Mask the PICs?
-    if (false)
+    if(false)
     {
     }
 
@@ -94,140 +94,140 @@ void Pc::initialise()
     {
   #endif
 
-      NOTICE("Falling back to dual 8259 PIC Mode");
+    NOTICE("Falling back to dual 8259 PIC Mode");
 
-      // Initialise PIC
-      Pic &pic = Pic::instance();
-      if (pic.initialise() == false)
+    // Initialise PIC
+    Pic &pic = Pic::instance();
+    if(pic.initialise() == false)
         panic("Pc: Pic initialisation failed");
 
   #if defined(APIC)
-    }
+}
   #endif
 
-  // Initialise serial ports.
-  m_pSerial[0].setBase(0x3F8);
-  m_pSerial[1].setBase(0x2F8);
+    // Initialise serial ports.
+    m_pSerial[0].setBase(0x3F8);
+    m_pSerial[1].setBase(0x2F8);
 
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-    panic("Pc: Rtc initialisation failed");
+    // Initialse the Real-time Clock / CMOS
+    Rtc &rtc = Rtc::instance();
+    if(rtc.initialise() == false)
+        panic("Pc: Rtc initialisation failed");
 
-  // Initialise the PIT
-  Pit &pit = Pit::instance();
-  if (pit.initialise() == false)
-    panic("Pc: Pit initialisation failed");
+    // Initialise the PIT
+    Pit &pit = Pit::instance();
+    if(pit.initialise() == false)
+        panic("Pc: Pit initialisation failed");
 
-  m_Keyboard.initialise();
+    m_Keyboard.initialise();
 
-  // Find and parse the SMBIOS tables
+    // Find and parse the SMBIOS tables
   #if defined(SMBIOS)
     m_SMBios.initialise();
   #endif
 
-  m_bInitialised = true;
+    m_bInitialised = true;
 }
 #if defined(MULTIPROCESSOR)
-  void Pc::initialiseProcessor()
-  {
+void Pc::initialiseProcessor()
+{
     // TODO: we might need to initialise per-processor ACPI shit, no idea atm
 
     // Initialise the local APIC
-    if (m_LocalApic.initialiseProcessor() == false)
-      panic("Pc::initialiseProcessor(): Failed to initialise the local APIC");
-  }
+    if(m_LocalApic.initialiseProcessor() == false)
+        panic("Pc::initialiseProcessor(): Failed to initialise the local APIC");
+}
 #endif
 
 void Pc::initialiseDeviceTree()
 {
-  // Firstly add the ISA bus.
-  Bus *pIsa = new Bus("ISA");
-  pIsa->setSpecificType(String("isa"));
+    // Firstly add the ISA bus.
+    Bus *pIsa = new Bus("ISA");
+    pIsa->setSpecificType(String("isa"));
 
-  // ATA controllers.
-  Controller *pAtaMaster = new Controller();
-  pAtaMaster->setSpecificType(String("ata"));
-  pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8, true));
-  pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8, true));
-  pAtaMaster->setInterruptNumber(14);
-  pIsa->addChild(pAtaMaster);
-  pAtaMaster->setParent(pIsa);
+    // ATA controllers.
+    Controller *pAtaMaster = new Controller();
+    pAtaMaster->setSpecificType(String("ata"));
+    pAtaMaster->addresses().pushBack(new Device::Address(String("command"), 0x1F0, 8, true));
+    pAtaMaster->addresses().pushBack(new Device::Address(String("control"), 0x3F0, 8, true));
+    pAtaMaster->setInterruptNumber(14);
+    pIsa->addChild(pAtaMaster);
+    pAtaMaster->setParent(pIsa);
 
-  Controller *pAtaSlave = new Controller();
-  pAtaMaster->setSpecificType(String("ata"));
-  pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8, true));
-  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8, true));
-  pAtaSlave->setInterruptNumber(15);
-  pIsa->addChild(pAtaSlave);
-  pAtaSlave->setParent(pIsa);
+    Controller *pAtaSlave = new Controller();
+    pAtaMaster->setSpecificType(String("ata"));
+    pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8, true));
+    pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8, true));
+    pAtaSlave->setInterruptNumber(15);
+    pIsa->addChild(pAtaSlave);
+    pAtaSlave->setParent(pIsa);
 
-  Device::root().addChild(pIsa);
-  pIsa->setParent(&Device::root());
+    Device::root().addChild(pIsa);
+    pIsa->setParent(&Device::root());
 
-  // TODO:: probe PCI devices.
-  
+    // TODO:: probe PCI devices.
+
 }
 
 Serial *Pc::getSerial(size_t n)
 {
-  return &m_pSerial[n];
+    return &m_pSerial[n];
 }
 
 size_t Pc::getNumSerial()
 {
-  return 2;
+    return 2;
 }
 
 Vga *Pc::getVga(size_t n)
 {
-  return &m_Vga;
+    return &m_Vga;
 }
 
 size_t Pc::getNumVga()
 {
-  return 1;
+    return 1;
 }
 
 IrqManager *Pc::getIrqManager()
 {
-  return &Pic::instance();
+    return &Pic::instance();
 }
 
 SchedulerTimer *Pc::getSchedulerTimer()
 {
 #ifdef MULTIPROCESSOR
-  return &m_LocalApic;
+    return &m_LocalApic;
 #else
-  return &Pit::instance();
+    return &Pit::instance();
 #endif
 }
 
 Timer *Pc::getTimer()
 {
-  return &Rtc::instance();
+    return &Rtc::instance();
 }
 
 Keyboard *Pc::getKeyboard()
 {
-  return &m_Keyboard;
+    return &m_Keyboard;
 }
 
 #ifdef MULTIPROCESSOR
-  void Pc::stopAllOtherProcessors()
-  {
+void Pc::stopAllOtherProcessors()
+{
     m_LocalApic.interProcessorInterruptAllExcludingThis(IPI_HALT_VECTOR,
                                                         0 /* Fixed delivery mode */);
-  }
+}
 #endif
 
 Pc::Pc()
-  : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)
+    : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)
   #if defined(SMBIOS)
-    , m_SMBios()
+      , m_SMBios()
   #endif
   #if defined(APIC)
-    , m_LocalApic()
+      , m_LocalApic()
   #endif
 {
 }

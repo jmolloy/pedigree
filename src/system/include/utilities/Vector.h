@@ -30,13 +30,13 @@ class Vector;
 /** Vector template specialisation for void*
  *\brief A vector / dynamic array for void* */
 template<>
-class Vector<void*>
+class Vector<void *>
 {
-  public:
+public:
     /** Random-access iterator for the Vector */
-    typedef void**        Iterator;
+    typedef void **Iterator;
     /** Contant random-access iterator for the Vector */
-    typedef void* const*  ConstIterator;
+    typedef void *const *ConstIterator;
 
     /** The default constructor, does nothing */
     Vector();
@@ -51,7 +51,7 @@ class Vector<void*>
 
     /** The assignment operator
      *\param[in] x the object that should be copied */
-    Vector &operator = (const Vector &x);
+    Vector &operator =(const Vector &x);
     /** The [] operator
      *\param[in] index the index of the element that should be returned
      *\return the element at index index */
@@ -79,25 +79,25 @@ class Vector<void*>
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return m_Data;
+        return m_Data;
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
     inline ConstIterator begin() const
     {
-      return m_Data;
+        return m_Data;
     }
     /** Get an iterator pointing to the last element + 1
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return m_Data + m_Count;
+        return m_Data + m_Count;
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
     inline ConstIterator end() const
     {
-      return m_Data + m_Count;
+        return m_Data + m_Count;
     }
     /** Copy the content of a Vector into this Vector
      *\param[in] x the reference Vector */
@@ -107,7 +107,7 @@ class Vector<void*>
      *\param[in] copy Should we copy the old contents over? */
     void reserve(size_t size, bool copy);
 
-  private:
+private:
     /** The number of elements we have reserved space for */
     size_t m_Size;
     /** The number of elements in the Vector */
@@ -120,97 +120,122 @@ class Vector<void*>
  * void* template specialisation of Vector.
  *\brief A vector / dynamic array for pointer types */
 template<class T>
-class Vector<T*>
+class Vector<T *>
 {
-  public:
+public:
     /** Random-access iterator for the Vector */
-    typedef T**        Iterator;
+    typedef T **Iterator;
     /** Contant random-access iterator for the Vector */
-    typedef T* const*  ConstIterator;
+    typedef T *const *ConstIterator;
 
     /** The default constructor, does nothing */
     inline Vector()
-      : m_VoidVector(){};
+        : m_VoidVector()
+    {
+    };
     /** Reserves space for size elements
      *\param[in] size the number of elements */
     inline explicit Vector(size_t size)
-      : m_VoidVector(size){}
+        : m_VoidVector(size)
+    {
+    }
     /** The copy-constructor
      *\param[in] x the reference object */
     inline Vector(const Vector &x)
-      : m_VoidVector(x.m_VoidVector){}
+        : m_VoidVector(x.m_VoidVector)
+    {
+    }
     /** The destructor, deallocates memory */
     inline ~Vector()
-      {}
+    {
+    }
 
     /** The assignment operator
      *\param[in] x the object that should be copied */
-    inline Vector &operator = (const Vector &x)
-      {m_VoidVector = x.m_VoidVector;return *this;}
+    inline Vector &operator =(const Vector &x)
+    {
+        m_VoidVector = x.m_VoidVector; return *this;
+    }
     /** The [] operator
      *\param[in] index the index of the element that should be returned
      *\return the element at index index */
     inline T *operator [](size_t index) const
-      {return reinterpret_cast<T*>(m_VoidVector[index]);}
+    {
+        return reinterpret_cast<T *>(m_VoidVector[index]);
+    }
 
     /** Get the number of elements that we have reserved space for
      *\return the number of elements that we have reserved space for */
     inline size_t size() const
-      {return m_VoidVector.size();}
+    {
+        return m_VoidVector.size();
+    }
     /** Get the number of elements in the Vector
      *\return the number of elements in the Vector */
     inline size_t count() const
-      {return m_VoidVector.count();}
+    {
+        return m_VoidVector.count();
+    }
     /** Add an element to the end of the Vector
      *\param[in] value the element */
     inline void pushBack(T *value)
-      {m_VoidVector.pushBack(reinterpret_cast<void*>(value));}
+    {
+        m_VoidVector.pushBack(reinterpret_cast<void *>(value));
+    }
     /** Remove the element from the back and return it
      *\return the removed element */
     inline T *popBack()
-      {return reinterpret_cast<T*>(m_VoidVector.popBack());}
+    {
+        return reinterpret_cast<T *>(m_VoidVector.popBack());
+    }
 
     /** Clear the Vector */
     inline void clear()
-      {m_VoidVector.clear();}
+    {
+        m_VoidVector.clear();
+    }
     /** Erase one Element */
     Iterator erase(Iterator iter)
-      {return reinterpret_cast<Iterator>(m_VoidVector.erase(reinterpret_cast<typename Vector<void*>::Iterator>(iter)));}
+    {
+        return reinterpret_cast<Iterator>(m_VoidVector.erase(reinterpret_cast<typename Vector<void *>::Iterator>(iter)));
+    }
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return reinterpret_cast<Iterator>(m_VoidVector.begin());
+        return reinterpret_cast<Iterator>(m_VoidVector.begin());
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
     inline ConstIterator begin() const
     {
-      return reinterpret_cast<ConstIterator>(m_VoidVector.begin());
+        return reinterpret_cast<ConstIterator>(m_VoidVector.begin());
     }
     /** Get an iterator pointing to the last element + 1
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return reinterpret_cast<Iterator>(m_VoidVector.end());
+        return reinterpret_cast<Iterator>(m_VoidVector.end());
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
     inline ConstIterator end() const
     {
-      return reinterpret_cast<ConstIterator>(m_VoidVector.end());
+        return reinterpret_cast<ConstIterator>(m_VoidVector.end());
     }
 
     /** Reserve space for size elements
      *\param[in] size the number of elements to reserve space for
      *\param[in] copy Should we copy the old contents over? */
     inline void reserve(size_t size, bool copy)
-      {m_VoidVector.reserve(size, copy);}
+    {
+        m_VoidVector.reserve(size, copy);
+    }
 
-  private:
+private:
     /** The actual container */
-    Vector<void*> m_VoidVector;
+    Vector<void *> m_VoidVector;
 };
 
 /** @} */

@@ -26,15 +26,15 @@
 /** The long-mode task-state segment */
 struct X64TaskStateSegment
 {
-  uint32_t res0;
-  uint64_t rsp0;
-  uint64_t rsp1;
-  uint64_t rsp2;
-  uint64_t res1;
-  uint64_t ist[7];
-  uint64_t res2;
-  uint16_t res3;
-  uint16_t ioPermBitmap;
+    uint32_t res0;
+    uint64_t rsp0;
+    uint64_t rsp1;
+    uint64_t rsp2;
+    uint64_t res1;
+    uint64_t ist[7];
+    uint64_t res2;
+    uint16_t res3;
+    uint16_t ioPermBitmap;
 } PACKED;
 
 /** @} */

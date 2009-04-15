@@ -24,7 +24,7 @@
 
 class SMBios
 {
-  public:
+public:
     /** The default constructor does nothing */
     SMBios() INITIALISATION_ONLY;
     /** The destructor does nothing */
@@ -33,47 +33,47 @@ class SMBios
     /** Find and parse the SMBios tables */
     void initialise() INITIALISATION_ONLY;
 
-  private:
+private:
     /** Copy-constructor
      *\note NOT implemented */
     SMBios(const SMBios &);
     /** Assignment operator
      *\note NOT implemented */
-    SMBios &operator = (const SMBios &);
+    SMBios &operator =(const SMBios &);
 
     struct EntryPoint
     {
-      uint32_t signature;
-      uint8_t checksum;
-      uint8_t length;
-      uint8_t majorVersion;
-      uint8_t minorVersion;
-      uint16_t maxStructureSize;
-      uint8_t revision;
-      uint8_t reserved[5];
-      uint8_t signature2[5];
-      uint8_t checksum2;
-      uint16_t tableLength;
-      uint32_t tableAddress;
-      uint16_t structureCount;
-      uint8_t bcdRevision;
+        uint32_t signature;
+        uint8_t checksum;
+        uint8_t length;
+        uint8_t majorVersion;
+        uint8_t minorVersion;
+        uint16_t maxStructureSize;
+        uint8_t revision;
+        uint8_t reserved[5];
+        uint8_t signature2[5];
+        uint8_t checksum2;
+        uint16_t tableLength;
+        uint32_t tableAddress;
+        uint16_t structureCount;
+        uint8_t bcdRevision;
     } PACKED;
 
     struct Header
     {
-      uint8_t type;
-      uint8_t length;
-      uint16_t handle;
+        uint8_t type;
+        uint8_t length;
+        uint16_t handle;
     } PACKED;
 
     struct BiosInformation
     {
-      uint8_t vendorIndex;
-      uint8_t biosVersionIndex;
-      uint16_t biosStartSegment;
-      uint8_t biosReleaseDateIndex;
-      uint8_t biosRomSize;
-      uint32_t biosCharacteristics;
+        uint8_t vendorIndex;
+        uint8_t biosVersionIndex;
+        uint16_t biosStartSegment;
+        uint8_t biosReleaseDateIndex;
+        uint8_t biosRomSize;
+        uint32_t biosCharacteristics;
     } PACKED;
 
     Header *next(Header *pHeader) INITIALISATION_ONLY;

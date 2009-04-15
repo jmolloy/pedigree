@@ -7,16 +7,16 @@ extern BootIO bootIO;
 
 void entry()
 {
- HugeStaticString str;
- str += "Module is teh loadzor!";
- bootIO.write(str, BootIO::Blue, BootIO::White);
+    HugeStaticString str;
+    str += "Module is teh loadzor!";
+    bootIO.write(str, BootIO::Blue, BootIO::White);
 }
 
 void ex()
 {
- HugeStaticString str;
- str += "Module is teh exit0r!";
- bootIO.write(str, BootIO::Blue, BootIO::White);
+    HugeStaticString str;
+    str += "Module is teh exit0r!";
+    bootIO.write(str, BootIO::Blue, BootIO::White);
 }
 
 const char *g_pModuleName = "test";

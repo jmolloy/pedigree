@@ -38,50 +38,50 @@
 class Debugger : public InterruptHandler
 {
 public:
-  /**
-   * Get the instance of the Debugger
-   */
-  inline static Debugger &instance()
-  {
-    return m_Instance;
-  }
-  
-  /**
-   * Initialise the debugger - register interrupt handlers etc.
-   */
-  void initialise();
-  
-  /**
-   * Causes the debugger to take control.
-   */
-  void start(InterruptState &state, LargeStaticString &description);
-   
-  /** Called when the handler is registered with the interrupt manager and the interrupt occurred
-   * \param interruptNumber the interrupt number
-   * \param state reference to the state before the interrupt
-   */
-  virtual void interrupt(size_t interruptNumber, InterruptState &state);
+    /**
+     * Get the instance of the Debugger
+     */
+    inline static Debugger &instance()
+    {
+        return m_Instance;
+    }
 
-  InterruptState *m_pTempState;
+    /**
+     * Initialise the debugger - register interrupt handlers etc.
+     */
+    void initialise();
+
+    /**
+     * Causes the debugger to take control.
+     */
+    void start(InterruptState &state, LargeStaticString &description);
+
+    /** Called when the handler is registered with the interrupt manager and the interrupt occurred
+     * \param interruptNumber the interrupt number
+     * \param state reference to the state before the interrupt
+     */
+    virtual void interrupt(size_t interruptNumber, InterruptState &state);
+
+    InterruptState *m_pTempState;
 
 private:
-  /**
-   * Default constructor - does nothing.
-   */
-  Debugger();
-  Debugger(const Debugger &);
-  Debugger &operator = (const Debugger &);
-  ~Debugger();
+    /**
+     * Default constructor - does nothing.
+     */
+    Debugger();
+    Debugger(const Debugger &);
+    Debugger &operator =(const Debugger &);
+    ~Debugger();
 
-  /**
-   * The current DebuggerIO type.
-   */
-  int m_nIoType;
+    /**
+     * The current DebuggerIO type.
+     */
+    int m_nIoType;
 
-  /**
-   * The Debugger instance (singleton class)
-   */
-  static Debugger m_Instance;
+    /**
+     * The Debugger instance (singleton class)
+     */
+    static Debugger m_Instance;
 };
 
 /** @} */

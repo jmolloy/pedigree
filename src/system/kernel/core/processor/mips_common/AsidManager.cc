@@ -22,7 +22,7 @@ AsidManager AsidManager::m_Instance;
 
 AsidManager &AsidManager::instance()
 {
-  return m_Instance;
+    return m_Instance;
 }
 
 AsidManager::AsidManager()
@@ -35,53 +35,53 @@ AsidManager::~AsidManager()
 
 AsidManager::Asid AsidManager::obtainAsid()
 {
-  // Our algorithm is a linear search of multiple levels.
-  // Firstly we search for an ASID with a contention of zero.
-  // if that's not found, we search for one with <= 1,
-  // etc. The reason for the less than is that an asid could be given back
-  // while we are searching, and this covers all eventualities.
+    // Our algorithm is a linear search of multiple levels.
+    // Firstly we search for an ASID with a contention of zero.
+    // if that's not found, we search for one with <= 1,
+    // etc. The reason for the less than is that an asid could be given back
+    // while we are searching, and this covers all eventualities.
 
-  for (int i = 0; i < 10; i++)
-  {
-    for (int j = 0; j < NUM_ASID; j++)
+    for(int i = 0; i < 10; i++)
     {
-      if (m_Asids[j] <= i)
-      {
-        // Lock it.
-        m_Mutex.acquire();
-        // Is it still valid?
-        if (m_Asids[j] <= 1)
+        for(int j = 0; j < NUM_ASID; j++)
         {
-          // Success! If this ASID is contended, clear the TLB.
-          if (m_Asids[j] > 0)
-            bulldoze(j);
-          m_Asids[j] ++;
-          m_Mutex.release();
-          return j;
+            if(m_Asids[j] <= i)
+            {
+                // Lock it.
+                m_Mutex.acquire();
+                // Is it still valid?
+                if(m_Asids[j] <= 1)
+                {
+                    // Success! If this ASID is contended, clear the TLB.
+                    if(m_Asids[j] > 0)
+                        bulldoze(j);
+                    m_Asids[j]++;
+                    m_Mutex.release();
+                    return j;
+                }
+                // No? Then release the lock and keep searching.
+                m_Mutex.release();
+            }
         }
-        // No? Then release the lock and keep searching.
-        m_Mutex.release();
-      }
     }
-  }
-  // If we got here then we didn't find any asid with less than a contention
-  // of 10. This is really really bad. Panic here.
-  panic("Too many processes running, not enough ASIDs!");
+    // If we got here then we didn't find any asid with less than a contention
+    // of 10. This is really really bad. Panic here.
+    panic("Too many processes running, not enough ASIDs!");
 }
 
 void AsidManager::returnAsid(AsidManager::Asid asid)
 {
-  // Grab the lock.
-  m_Mutex.acquire();
-  // Sanity check...
-  if (m_Asids[asid] == 0)
-    ERROR("returnAsid called on an ASID that hasn't been allocated!");
-  m_Asids[asid] --;
-  // Release the lock.
-  m_Mutex.release();
+    // Grab the lock.
+    m_Mutex.acquire();
+    // Sanity check...
+    if(m_Asids[asid] == 0)
+        ERROR("returnAsid called on an ASID that hasn't been allocated!");
+    m_Asids[asid]--;
+    // Release the lock.
+    m_Mutex.release();
 }
 
 void AsidManager::bulldoze(AsidManager::Asid asid)
 {
-  // TODO:: implement
+    // TODO:: implement
 }

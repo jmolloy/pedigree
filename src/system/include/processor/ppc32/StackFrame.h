@@ -27,21 +27,25 @@
 /** mips32 StackFrame */
 class PPC32StackFrame : public StackFrameBase
 {
-  public:
+public:
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
     inline PPC32StackFrame(const ProcessorState &State, uintptr_t basePointer,
-                            LargeStaticString mangledSymbol)
-      : StackFrameBase(State, basePointer, mangledSymbol){}
+                           LargeStaticString mangledSymbol)
+        : StackFrameBase(State, basePointer, mangledSymbol)
+    {
+    }
     /** The destructor does nothing */
-    inline ~PPC32StackFrame(){}
+    inline ~PPC32StackFrame()
+    {
+    }
 
     static void construct(ProcessorState &state,
                           uintptr_t returnAddress,
                           unsigned int nParams,
                           ...);
 
-  private:
+private:
     /** Returns the n'th 64-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n);
 };

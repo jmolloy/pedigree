@@ -21,16 +21,16 @@
 #ifdef DEBUGGER
 uintptr_t X86StackFrame::getParameter(size_t n)
 {
-  /// Check for borked-ness.
-  /// \todo better way to do this.
-  if (m_BasePointer < 0x2000)
-    return 0;
+    /// Check for borked-ness.
+    /// \todo better way to do this.
+    if(m_BasePointer < 0x2000)
+        return 0;
   #if defined(OMIT_FRAMEPOINTER)
-    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_BasePointer + (n - 1) * sizeof(uint32_t));
+    uint32_t *pPtr = reinterpret_cast<uint32_t *>(m_BasePointer + (n - 1) * sizeof(uint32_t));
   #else
-    uint32_t *pPtr = reinterpret_cast<uint32_t*>(m_BasePointer + n * sizeof(uint32_t));
+    uint32_t *pPtr = reinterpret_cast<uint32_t *>(m_BasePointer + n * sizeof(uint32_t));
   #endif
-  return *pPtr;
+    return *pPtr;
 }
 #endif
 
@@ -39,28 +39,28 @@ void X86StackFrame::construct(ProcessorState &state,
                               unsigned int nParams,
                               ...)
 {
-  // Obtain the stack pointer.
-  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
-  
-  // How many parameters do we need to push?
-  // We push in reverse order but must iterate through the va_list in forward order,
-  // so we decrement the stack pointer here.
-  pStack -= nParams+1; // +1 for return address.
-  uintptr_t *pStackLowWaterMark = pStack;
-  
-  *pStack++ = returnAddress;
-  
-  va_list list;
-  va_start(list, nParams);
-  
-  for(int i = nParams-1; i >= 0; i--)
-  {
-    *pStack++ = va_arg(list, uintptr_t);
-  }
-  
-  va_end(list);
-  
-  // Write the new stack pointer back.
-  state.setStackPointer(reinterpret_cast<uintptr_t> (pStackLowWaterMark));
+    // Obtain the stack pointer.
+    uintptr_t *pStack = reinterpret_cast<uintptr_t *> (state.getStackPointer());
+
+    // How many parameters do we need to push?
+    // We push in reverse order but must iterate through the va_list in forward order,
+    // so we decrement the stack pointer here.
+    pStack -= nParams + 1; // +1 for return address.
+    uintptr_t *pStackLowWaterMark = pStack;
+
+    *pStack++ = returnAddress;
+
+    va_list list;
+    va_start(list, nParams);
+
+    for(int i = nParams - 1; i >= 0; i--)
+    {
+        *pStack++ = va_arg(list, uintptr_t);
+    }
+
+    va_end(list);
+
+    // Write the new stack pointer back.
+    state.setStackPointer(reinterpret_cast<uintptr_t> (pStackLowWaterMark));
 }
 

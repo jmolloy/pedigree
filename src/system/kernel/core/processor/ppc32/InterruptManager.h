@@ -31,10 +31,13 @@
 class PPC32InterruptManager : public ::InterruptManager,
                               public ::SyscallManager
 {
-  public:
+public:
     /** Get the PPC32InterruptManager class instance
      *\return instance of the PPC32InterruptManager class */
-    inline static PPC32InterruptManager &instance(){return m_Instance;}
+    inline static PPC32InterruptManager &instance()
+    {
+        return m_Instance;
+    }
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
@@ -47,16 +50,16 @@ class PPC32InterruptManager : public ::InterruptManager,
 
     // SyscallManager Interface
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *handler);
-    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0,
-                              uintptr_t p5=0);
-  
+    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1 = 0, uintptr_t p2 = 0, uintptr_t p3 = 0, uintptr_t p4 = 0,
+                              uintptr_t p5 = 0);
+
 
     /** Initialises this processors IDTR
      *\note This should only be called from initialiseProcessor()
      *\todo and some smp/acpi function */
     static void initialiseProcessor();
 
-  private:
+private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
@@ -67,7 +70,7 @@ class PPC32InterruptManager : public ::InterruptManager,
     PPC32InterruptManager(const PPC32InterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    PPC32InterruptManager &operator = (const PPC32InterruptManager &);
+    PPC32InterruptManager &operator =(const PPC32InterruptManager &);
     /** The destructor */
     virtual ~PPC32InterruptManager();
 

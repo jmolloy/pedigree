@@ -30,10 +30,13 @@
 class X86InterruptManager : public ::InterruptManager,
                             public ::SyscallManager
 {
-  public:
+public:
     /** Get the X86InterruptManager class instance
      *\return instance of the X86InterruptManager class */
-    inline static X86InterruptManager &instance(){return m_Instance;}
+    inline static X86InterruptManager &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // InterruptManager Interface
@@ -42,10 +45,10 @@ class X86InterruptManager : public ::InterruptManager,
                                           InterruptHandler *pHandler);
 
     #ifdef DEBUGGER
-      virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
-                                                    InterruptHandler *pHandler);
-      virtual size_t getBreakpointInterruptNumber() PURE;
-      virtual size_t getDebugInterruptNumber() PURE;
+    virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                  InterruptHandler *pHandler);
+    virtual size_t getBreakpointInterruptNumber() PURE;
+    virtual size_t getDebugInterruptNumber() PURE;
     #endif
 
     //
@@ -54,15 +57,15 @@ class X86InterruptManager : public ::InterruptManager,
     virtual bool registerSyscallHandler(Service_t Service,
                                         SyscallHandler *pHandler);
 
-    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0,
-                              uintptr_t p5=0);
+    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1 = 0, uintptr_t p2 = 0, uintptr_t p3 = 0, uintptr_t p4 = 0,
+                              uintptr_t p5 = 0);
 
     /** Initialises this processor's IDTR
      *\note This should only be called from Processor::initialise1() and
      *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
-  private:
+private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
@@ -81,23 +84,23 @@ class X86InterruptManager : public ::InterruptManager,
     X86InterruptManager(const X86InterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    X86InterruptManager &operator = (const X86InterruptManager &);
+    X86InterruptManager &operator =(const X86InterruptManager &);
     /** The destructor */
     virtual ~X86InterruptManager();
 
     /** Structure of a x86 protected-mode gate descriptor */
     struct GateDescriptor
     {
-      /** Bits 0-15 of the offset */
-      uint16_t offset0;
-      /** The segment selector */
-      uint16_t selector;
-      /** Reserved, must be 0 */
-      uint8_t res;
-      /** Flags */
-      uint8_t flags;
-      /** Bits 16-31 of the offset */
-      uint16_t offset1;
+        /** Bits 0-15 of the offset */
+        uint16_t offset0;
+        /** The segment selector */
+        uint16_t selector;
+        /** Reserved, must be 0 */
+        uint8_t res;
+        /** Flags */
+        uint8_t flags;
+        /** Bits 16-31 of the offset */
+        uint16_t offset1;
     } PACKED;
 
     /** The interrupt descriptor table (IDT) */
@@ -105,8 +108,8 @@ class X86InterruptManager : public ::InterruptManager,
     /** The normal interrupt handlers */
     InterruptHandler *m_pHandler[256];
     #ifdef DEBUGGER
-      /** The debugger interrupt handlers */
-      InterruptHandler *m_pDbgHandler[256];
+    /** The debugger interrupt handlers */
+    InterruptHandler *m_pDbgHandler[256];
     #endif
     /** The syscall handlers */
     SyscallHandler *m_pSyscallHandler[serviceEnd];

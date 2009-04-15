@@ -21,7 +21,7 @@
 
 /**
  * Implements a driver for the Serial connection of the Versatile's UART (A PL011).
- * 
+ *
  * Base for UART registers: 0x101f1000
  * Register offsets:
  * UARTDR:   0x00  Read/write chars
@@ -29,20 +29,20 @@
  */
 class ArmVersatileSerial : public Serial
 {
-  public:
+public:
     ArmVersatileSerial();
     virtual ~ArmVersatileSerial();
-  
+
     virtual void setBase(uintptr_t nBaseAddr);
     virtual char read();
     virtual char readNonBlock();
     virtual void write(char c);
-    
+
     struct serial
     {
-      uint32_t dr;
+        uint32_t dr;
     } PACKED;
-    
+
     /**
      * The serial device's registers.
      */

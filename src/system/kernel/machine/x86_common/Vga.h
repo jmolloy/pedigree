@@ -44,139 +44,139 @@
 #define VGA_NUM_GC_REGS         9
 #define VGA_NUM_AC_REGS         21
 #define VGA_NUM_REGS            (1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS + \
-                                VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
+                                 VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
 
 /**
  * Vga device abstraction.
  */
 class X86Vga : public Vga
 {
-  public:
+public:
     X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase);
     virtual ~X86Vga();
 
-  virtual bool setMode (int mode);
+    virtual bool setMode(int mode);
 
-  /**
-   * Sets the largest possible text mode.
-   * \return True on success, false on failure.
-   */
-  virtual bool setLargestTextMode ();
+    /**
+     * Sets the largest possible text mode.
+     * \return True on success, false on failure.
+     */
+    virtual bool setLargestTextMode();
 
-  /**
-   * Tests the current video mode.
-   * \return True if the current mode matches the given arguments.
-   */
-  virtual bool isMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0);
+    /**
+     * Tests the current video mode.
+     * \return True if the current mode matches the given arguments.
+     */
+    virtual bool isMode(size_t nCols, size_t nRows, bool bIsText, size_t nBpp = 0);
 
-  /**
-   * Tests if the current video mode is the largest text mode.
-   * \return True if the current video mode is equal to the largest text mode.
-   */
-  virtual bool isLargestTextMode ();
+    /**
+     * Tests if the current video mode is the largest text mode.
+     * \return True if the current video mode is equal to the largest text mode.
+     */
+    virtual bool isLargestTextMode();
 
-  /**
-   * \return The number of columns in the current mode.
-   */
-  virtual size_t getNumCols ()
-  {
-    return m_nWidth;
-  }
+    /**
+     * \return The number of columns in the current mode.
+     */
+    virtual size_t getNumCols()
+    {
+        return m_nWidth;
+    }
 
-  /**
-   * \return The number of rows in the current mode.
-   */
-  virtual size_t getNumRows ()
-  {
-    return m_nHeight;
-  }
+    /**
+     * \return The number of rows in the current mode.
+     */
+    virtual size_t getNumRows()
+    {
+        return m_nHeight;
+    }
 
-  /**
-   * Stores the current video mode.
-   */
-  virtual void rememberMode();
+    /**
+     * Stores the current video mode.
+     */
+    virtual void rememberMode();
 
-  /**
-   * Restores the saved video mode from a rememberMode() call.
-   */
-  virtual void restoreMode();
+    /**
+     * Restores the saved video mode from a rememberMode() call.
+     */
+    virtual void restoreMode();
 
-  /**
-   * Copies the given buffer into video memory, replacing the current framebuffer.
-   *
-   * The buffer is assumed to be in the correct format for directly copying into video memory.
-   * This will obviously depend on the current mode (text/graphical) as well as resolution and
-   * bits per pixel (graphics mode only).
-   * \param pBuffer A pointer to the buffer to swap into video memory.
-   * \param nBufLen The length of pBuffer.
-   */
-  virtual void pokeBuffer (uint8_t *pBuffer, size_t nBufLen);
+    /**
+     * Copies the given buffer into video memory, replacing the current framebuffer.
+     *
+     * The buffer is assumed to be in the correct format for directly copying into video memory.
+     * This will obviously depend on the current mode (text/graphical) as well as resolution and
+     * bits per pixel (graphics mode only).
+     * \param pBuffer A pointer to the buffer to swap into video memory.
+     * \param nBufLen The length of pBuffer.
+     */
+    virtual void pokeBuffer(uint8_t *pBuffer, size_t nBufLen);
 
-  /**
-   * Copies the current framebuffer into the given buffer.
-   *
-   * The buffer is assumed to be in the correct format for directly copying from video memory.
-   * This will obviously depend on the current mode (text/graphical) as well as resolution and
-   * bits per pixel (graphics mode only).
-   * \param pBuffer A pointer to the buffer.
-   * \param nBufLen The length of pBuffer.
-   */
-  virtual void peekBuffer (uint8_t *pBuffer, size_t nBufLen);
+    /**
+     * Copies the current framebuffer into the given buffer.
+     *
+     * The buffer is assumed to be in the correct format for directly copying from video memory.
+     * This will obviously depend on the current mode (text/graphical) as well as resolution and
+     * bits per pixel (graphics mode only).
+     * \param pBuffer A pointer to the buffer.
+     * \param nBufLen The length of pBuffer.
+     */
+    virtual void peekBuffer(uint8_t *pBuffer, size_t nBufLen);
 
-  /**
-   * Moves the cursor to the position specified by the parameters.
-   * \param nX The column to move to.
-   * \param nY The row to move to.
-   */
-  virtual void moveCursor (size_t nX, size_t nY);
+    /**
+     * Moves the cursor to the position specified by the parameters.
+     * \param nX The column to move to.
+     * \param nY The row to move to.
+     */
+    virtual void moveCursor(size_t nX, size_t nY);
 
-  bool initialise();
+    bool initialise();
 
-  operator uint16_t*() const
-  {
-    if (m_Framebuffer == true)
-      return reinterpret_cast<uint16_t*> (m_Framebuffer.virtualAddress());
-    else
-      return reinterpret_cast<uint16_t*> (m_pFramebuffer);
-  }
+    operator uint16_t*() const
+    {
+        if(m_Framebuffer == true)
+            return reinterpret_cast<uint16_t *> (m_Framebuffer.virtualAddress());
+        else
+            return reinterpret_cast<uint16_t *> (m_pFramebuffer);
+    }
 
 private:
-  X86Vga(const X86Vga &);
-  X86Vga &operator = (const X86Vga &);
+    X86Vga(const X86Vga &);
+    X86Vga &operator =(const X86Vga &);
 
-  /**
-   * The IoPort to access control registers.
-   */
-  IoPort m_RegisterPort;
+    /**
+     * The IoPort to access control registers.
+     */
+    IoPort m_RegisterPort;
 
-  MemoryMappedIo m_Framebuffer;
+    MemoryMappedIo m_Framebuffer;
 
-  /**
-   * The framebuffer.
-   */
-  uint8_t *m_pFramebuffer;
+    /**
+     * The framebuffer.
+     */
+    uint8_t *m_pFramebuffer;
 
-  /**
-   * The width of the current mode.
-   */
-  size_t m_nWidth;
+    /**
+     * The width of the current mode.
+     */
+    size_t m_nWidth;
 
-  /**
-   * The height of the current mode.
-   */
-  size_t m_nHeight;
+    /**
+     * The height of the current mode.
+     */
+    size_t m_nHeight;
 
-  /**
-   * We keep a count of the number of times we've entered the debugger without leaving it - when we enter the debugger,
-   * we increment this. When we leave, we decrement. If we leave and it reaches zero, we change out of mode 0x3 into
-   * the current video mode.
-   */
-  int m_ModeStack;
+    /**
+     * We keep a count of the number of times we've entered the debugger without leaving it - when we enter the debugger,
+     * we increment this. When we leave, we decrement. If we leave and it reaches zero, we change out of mode 0x3 into
+     * the current video mode.
+     */
+    int m_ModeStack;
 
-  /**
-   * Current video mode.
-   */
-  int m_nMode;
+    /**
+     * Current video mode.
+     */
+    int m_nMode;
 };
 
 #endif

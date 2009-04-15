@@ -18,9 +18,9 @@
 class SyscallTracer
 {
 public:
-  /**
-   * Creates a new SyscallTracer object.
-   */
-  SyscallTracer(const char* pfileName, const char* pFnName, int line);
-  ~SyscallTracer();
+    /**
+     * Creates a new SyscallTracer object.
+     */
+    SyscallTracer(const char *pfileName, const char *pFnName, int line);
+    ~SyscallTracer();
 };

@@ -24,14 +24,14 @@
 
 namespace serial
 {
-  const int rxtx    =0;
-  const int inten   =1;
-  const int iififo  =2;
-  const int lctrl   =3;
-  const int mctrl   =4;
-  const int lstat   =5;
-  const int mstat   =6;
-  const int scratch =7;
+const int rxtx    = 0;
+const int inten   = 1;
+const int iififo  = 2;
+const int lctrl   = 3;
+const int mctrl   = 4;
+const int lstat   = 5;
+const int mstat   = 6;
+const int scratch = 7;
 }
 
 /**
@@ -39,15 +39,15 @@ namespace serial
  */
 class X86Serial : public Serial
 {
-  public:
+public:
     X86Serial();
     virtual void setBase(uintptr_t nBaseAddr);
     virtual ~X86Serial();
-  
+
     virtual char read();
     virtual char readNonBlock();
     virtual void write(char c);
-  private:
+private:
     bool isConnected();
     IoPort m_Port;
 };

@@ -34,16 +34,16 @@
 /** An MS-DOS partition table entry. */
 typedef struct
 {
-  uint8_t active;
-  uint8_t start_head;
-  uint8_t start_cylinder_low;
-  uint8_t start_cylinder_high;
-  uint8_t type;
-  uint8_t end_head;
-  uint8_t end_cylinder_low;
-  uint8_t end_cylinder_high;
-  uint32_t start_lba;
-  uint32_t size;
+    uint8_t active;
+    uint8_t start_head;
+    uint8_t start_cylinder_low;
+    uint8_t start_cylinder_high;
+    uint8_t type;
+    uint8_t end_head;
+    uint8_t end_cylinder_low;
+    uint8_t end_cylinder_high;
+    uint32_t start_lba;
+    uint32_t size;
 } __attribute__((packed)) MsdosPartitionInfo;
 
 /** Attempts to find a MS-DOS partition table on pDisk. If found, new Partition objects are created

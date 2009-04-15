@@ -22,45 +22,45 @@ X64GdtManager X64GdtManager::m_Instance;
 
 void X64GdtManager::initialise(size_t processorCount)
 {
-  // Calculate the number of entries
-  m_DescriptorCount = 5 + 2 * processorCount;
+    // Calculate the number of entries
+    m_DescriptorCount = 5 + 2 * processorCount;
 
-  // Allocate the GDT
-  m_Gdt = new segment_descriptor[m_DescriptorCount];
+    // Allocate the GDT
+    m_Gdt = new segment_descriptor[m_DescriptorCount];
 
-  // Fill the GDT
-  setSegmentDescriptor(0, 0, 0, 0, 0);
-  setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
-  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
-  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code
-  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data
-  for (size_t i = 0;i < processorCount;i++)
-  {
-    X64TaskStateSegment *Tss = new X64TaskStateSegment;
-    initialiseTss(Tss);
-    setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
+    // Fill the GDT
+    setSegmentDescriptor(0, 0, 0, 0, 0);
+    setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
+    setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
+    setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code
+    setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data
+    for(size_t i = 0; i < processorCount; i++)
+    {
+        X64TaskStateSegment *Tss = new X64TaskStateSegment;
+        initialiseTss(Tss);
+        setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
 
-    ProcessorInformation &processorInfo = Processor::information();
-    processorInfo.setTss(Tss);
-    processorInfo.setTssSelector((2 * i + 5) << 3);
-  }
+        ProcessorInformation &processorInfo = Processor::information();
+        processorInfo.setTss(Tss);
+        processorInfo.setTssSelector((2 * i + 5) << 3);
+    }
 }
 void X64GdtManager::initialiseProcessor()
 {
-  struct
-  {
-    uint16_t size;
-    uint64_t gdt;
-  } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
+    struct
+    {
+        uint16_t size;
+        uint64_t gdt;
+    } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
 
-  asm volatile("lgdt %0" :: "m"(gdtr));
-  asm volatile("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
+    asm volatile ("lgdt %0" :: "m" (gdtr));
+    asm volatile ("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
 
-  loadSegmentRegisters();
+    loadSegmentRegisters();
 }
 
 X64GdtManager::X64GdtManager()
-  : m_Gdt(0), m_DescriptorCount(0)
+    : m_Gdt(0), m_DescriptorCount(0)
 {
 }
 X64GdtManager::~X64GdtManager()
@@ -69,21 +69,21 @@ X64GdtManager::~X64GdtManager()
 
 void X64GdtManager::setSegmentDescriptor(size_t index, uint64_t base, uint32_t limit, uint8_t flags, uint8_t flags2)
 {
-  m_Gdt[index].limit0 = limit & 0xFFFF;
-  m_Gdt[index].base0 = base & 0xFFFF;
-  m_Gdt[index].base1 = (base >> 16) & 0xFF;
-  m_Gdt[index].flags = flags;
-  m_Gdt[index].flags_limit1 = ((flags2 & 0x0F) << 4) | ((limit >> 16) & 0x0F);
-  m_Gdt[index].base2 = (base >> 24) & 0xFF;
+    m_Gdt[index].limit0 = limit & 0xFFFF;
+    m_Gdt[index].base0 = base & 0xFFFF;
+    m_Gdt[index].base1 = (base >> 16) & 0xFF;
+    m_Gdt[index].flags = flags;
+    m_Gdt[index].flags_limit1 = ((flags2 & 0x0F) << 4) | ((limit >> 16) & 0x0F);
+    m_Gdt[index].base2 = (base >> 24) & 0xFF;
 }
 void X64GdtManager::setTssDescriptor(size_t index, uint64_t base)
 {
-  setSegmentDescriptor(index, base & 0xFFFFFFFF, sizeof(X64TaskStateSegment), 0x89, 0x00);
-  tss_descriptor *Tss = reinterpret_cast<tss_descriptor*>(&m_Gdt[index + 1]);
-  Tss->base3 = (base >> 32) & 0xFFFFFFFF;
-  Tss->res = 0;
+    setSegmentDescriptor(index, base & 0xFFFFFFFF, sizeof(X64TaskStateSegment), 0x89, 0x00);
+    tss_descriptor *Tss = reinterpret_cast<tss_descriptor *>(&m_Gdt[index + 1]);
+    Tss->base3 = (base >> 32) & 0xFFFFFFFF;
+    Tss->res = 0;
 }
 void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
 {
-  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
+    memset(reinterpret_cast<void *> (pTss), 0, sizeof(X64TaskStateSegment));
 }

@@ -22,48 +22,48 @@
 NetworkStack NetworkStack::stack;
 
 NetworkStack::NetworkStack() :
-  m_Children()
+    m_Children()
 {
-  //
+    //
 }
 
 NetworkStack::~NetworkStack()
 {
-  //
+    //
 }
 
-void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset)
 {
-  // pass onto the ethernet layer
-  Ethernet::instance().receive(nBytes, packet, pCard, offset);
+    // pass onto the ethernet layer
+    Ethernet::instance().receive(nBytes, packet, pCard, offset);
 }
 
 void NetworkStack::registerDevice(Network *pDevice)
 {
-  m_Children.pushBack(pDevice);
+    m_Children.pushBack(pDevice);
 }
 
 Network *NetworkStack::getDevice(size_t n)
 {
-  return m_Children[n];
+    return m_Children[n];
 }
 
 size_t NetworkStack::getNumDevices()
 {
-  return m_Children.count();
+    return m_Children.count();
 }
 
 void NetworkStack::deRegisterDevice(Network *pDevice)
 {
-  int i = 0;
-  for(Vector<Network*>::Iterator it = m_Children.begin();
-      it != m_Children.end();
-      it++, i++)
-  if (*it == pDevice)
-  {
-    m_Children.erase(it);
-    break;
-  }
+    int i = 0;
+    for(Vector<Network *>::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        it++, i++)
+        if(*it == pDevice)
+        {
+            m_Children.erase(it);
+            break;
+        }
 }
 
 void entry()

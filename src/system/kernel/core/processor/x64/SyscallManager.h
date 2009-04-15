@@ -27,10 +27,13 @@
 /** The syscall manager on x64 processors */
 class X64SyscallManager : public ::SyscallManager
 {
-  public:
+public:
     /** Get the X64SyscallManager class instance
      *\return instance of the X64SyscallManager class */
-    inline static X64SyscallManager &instance(){return m_Instance;}
+    inline static X64SyscallManager &instance()
+    {
+        return m_Instance;
+    }
 
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *pHandler);
 
@@ -39,7 +42,7 @@ class X64SyscallManager : public ::SyscallManager
      *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
-  private:
+private:
     /** Called when a syscall was called
      *\param[in] syscallState reference to the usermode state before the syscall */
     static void syscall(SyscallState &syscallState);
@@ -51,7 +54,7 @@ class X64SyscallManager : public ::SyscallManager
     X64SyscallManager(const X64SyscallManager &);
     /** Assignment operator
      *\note NOT implemented */
-    X64SyscallManager &operator = (const X64SyscallManager &);
+    X64SyscallManager &operator =(const X64SyscallManager &);
     /** The destructor */
     virtual ~X64SyscallManager();
 

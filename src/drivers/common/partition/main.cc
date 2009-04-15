@@ -25,55 +25,55 @@
 
 bool probeDevice(Disk *pDev)
 {
-  // Does the disk have an MS-DOS partition table?
-  if (msdosProbeDisk(pDev))
-    return true;
+    // Does the disk have an MS-DOS partition table?
+    if(msdosProbeDisk(pDev))
+        return true;
 
-  // No? how about an Apple_Map?
-  if (appleProbeDisk(pDev))
-    return true;
+    // No? how about an Apple_Map?
+    if(appleProbeDisk(pDev))
+        return true;
 
-  // Oh well, better luck next time.
-  return false;
+    // Oh well, better luck next time.
+    return false;
 }
 
 void searchNode(Device *pDev)
 {
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    // Is this a disk?
-    String mname;
-    pChild->getName(mname);
-
-    bool hasPartitions = false;
-    if (pChild->getType() == Device::Disk)
+    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
-      // Check that none of its children are Partitions (in which case we've probed this before!)
-      for (unsigned int i = 0; i < pChild->getNumChildren(); i++)
-      {
-        String name;
-        pDev->getChild(i)->getName(name);
-        if (!strcmp(name, "msdos-partition") || !strcmp(name, "apple-partition"))
+        Device *pChild = pDev->getChild(i);
+        // Is this a disk?
+        String mname;
+        pChild->getName(mname);
+
+        bool hasPartitions = false;
+        if(pChild->getType() == Device::Disk)
         {
-          hasPartitions = true;
-          break;
+            // Check that none of its children are Partitions (in which case we've probed this before!)
+            for(unsigned int i = 0; i < pChild->getNumChildren(); i++)
+            {
+                String name;
+                pDev->getChild(i)->getName(name);
+                if(!strcmp(name, "msdos-partition") || !strcmp(name, "apple-partition"))
+                {
+                    hasPartitions = true;
+                    break;
+                }
+            }
+            if(!hasPartitions)
+                hasPartitions = probeDevice(reinterpret_cast<Disk *> (pChild));
         }
-      }
-      if (!hasPartitions)
-        hasPartitions = probeDevice(reinterpret_cast<Disk*> (pChild));
+        // Recurse, if we didn't find any partitions.
+        if(!hasPartitions)
+            searchNode(pChild);
     }
-    // Recurse, if we didn't find any partitions.
-    if (!hasPartitions)
-      searchNode(pChild);
-  }
 }
 
 void entry()
 {
-  // Walk the device tree looking for disks that don't have "partition" children.
-  Device *pDev = &Device::root();
-  searchNode(pDev);
+    // Walk the device tree looking for disks that don't have "partition" children.
+    Device *pDev = &Device::root();
+    searchNode(pDev);
 }
 
 void exit()

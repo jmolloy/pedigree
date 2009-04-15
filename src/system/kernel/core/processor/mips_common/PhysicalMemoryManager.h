@@ -22,7 +22,7 @@
 /** @addtogroup kernelprocessormipscommon
  * @{ */
 
-/** \warning The implementation of this module has been seriously hacked 
+/** \warning The implementation of this module has been seriously hacked
  *  together. It needs changing, currently it doesn't even support freeing
  *  of pages! */
 
@@ -31,39 +31,42 @@
 class MipsCommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
 public:
-  /** Get the MipsCommonPhysicalMemoryManager instance
-   *\return instance of the MipsCommonPhysicalMemoryManager */
-  inline static MipsCommonPhysicalMemoryManager &instance(){return m_Instance;}
+    /** Get the MipsCommonPhysicalMemoryManager instance
+     *\return instance of the MipsCommonPhysicalMemoryManager */
+    inline static MipsCommonPhysicalMemoryManager &instance()
+    {
+        return m_Instance;
+    }
 
-  //
-  // PhysicalMemoryManager Interface
-  //
-  virtual physical_uintptr_t allocatePage();
-  virtual void freePage(physical_uintptr_t page);
-  virtual bool allocateRegion(MemoryRegion &Region,
-                              size_t cPages,
-                              size_t pageConstraints,
-                              size_t Flags,
-                              physical_uintptr_t start = -1);
+    //
+    // PhysicalMemoryManager Interface
+    //
+    virtual physical_uintptr_t allocatePage();
+    virtual void freePage(physical_uintptr_t page);
+    virtual bool allocateRegion(MemoryRegion &Region,
+                                size_t cPages,
+                                size_t pageConstraints,
+                                size_t Flags,
+                                physical_uintptr_t start = -1);
 
 protected:
-  /** The constructor */
-  MipsCommonPhysicalMemoryManager();
-  /** The destructor */
-  virtual ~MipsCommonPhysicalMemoryManager();
+    /** The constructor */
+    MipsCommonPhysicalMemoryManager();
+    /** The destructor */
+    virtual ~MipsCommonPhysicalMemoryManager();
 
 private:
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  MipsCommonPhysicalMemoryManager(const MipsCommonPhysicalMemoryManager &);
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  MipsCommonPhysicalMemoryManager &operator = (const MipsCommonPhysicalMemoryManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    MipsCommonPhysicalMemoryManager(const MipsCommonPhysicalMemoryManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    MipsCommonPhysicalMemoryManager &operator =(const MipsCommonPhysicalMemoryManager &);
 
-  uintptr_t m_NextPage;
+    uintptr_t m_NextPage;
 
-  /** The MipsCommonPhysicalMemoryManager class instance */
-  static MipsCommonPhysicalMemoryManager m_Instance;
+    /** The MipsCommonPhysicalMemoryManager class instance */
+    static MipsCommonPhysicalMemoryManager m_Instance;
 };
 
 /** @} */

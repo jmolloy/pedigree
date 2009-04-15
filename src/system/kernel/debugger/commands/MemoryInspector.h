@@ -30,47 +30,47 @@ class MemoryInspector : public DebuggerCommand,
                         public Scrollable
 {
 public:
-  /**
-   * Default constructor - zero's stuff.
-   */
-  MemoryInspector();
+    /**
+     * Default constructor - zero's stuff.
+     */
+    MemoryInspector();
 
-  /**
-   * Default destructor - does nothing.
-   */
-  ~MemoryInspector();
+    /**
+     * Default destructor - does nothing.
+     */
+    ~MemoryInspector();
 
-  /**
-   * Return an autocomplete string, given an input string.
-   */
-  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
+    /**
+     * Return an autocomplete string, given an input string.
+     */
+    void autocomplete(const HugeStaticString &input, HugeStaticString &output);
 
-  /**
-   * Execute the command with the given screen.
-   */
-  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
-  
-  /**
-   * Returns the string representation of this command.
-   */
-  const NormalStaticString getString()
-  {
-    return NormalStaticString("memory");
-  }
+    /**
+     * Execute the command with the given screen.
+     */
+    bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
 
-  //
-  // Scrollable interface
-  //
-  virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual size_t getLineCount();
+    /**
+     * Returns the string representation of this command.
+     */
+    const NormalStaticString getString()
+    {
+        return NormalStaticString("memory");
+    }
+
+    //
+    // Scrollable interface
+    //
+    virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual size_t getLineCount();
 
 private:
-  void resetStatusLine(DebuggerIO *pScreen);
-  void doGoto(DebuggerIO *pScreen, InterruptState &state);
-  void doSearch(bool bForward, DebuggerIO *pScreen, InterruptState &state);
-  bool tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state);
-  size_t m_nCharsPerLine;
+    void resetStatusLine(DebuggerIO *pScreen);
+    void doGoto(DebuggerIO *pScreen, InterruptState &state);
+    void doSearch(bool bForward, DebuggerIO *pScreen, InterruptState &state);
+    bool tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state);
+    size_t m_nCharsPerLine;
 };
 
 /** @} */

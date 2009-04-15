@@ -40,24 +40,24 @@
 #define FOOTERS 1
 
 #ifdef __cplusplus
-  extern "C"
-  {
+extern "C"
+{
 #endif
 
-    //
-    // Functions exported from dlmalloc
-    //
-    void *malloc(size_t);
-    void free(void *);
+//
+// Functions exported from dlmalloc
+//
+void *malloc(size_t);
+void free(void *);
 
-    //
-    // Functions needed for dlmalloc
-    //
-    void dlmallocAbort(void);
-    void *dlmallocSbrk(ssize_t incr);
+//
+// Functions needed for dlmalloc
+//
+void dlmallocAbort(void);
+void *dlmallocSbrk(ssize_t incr);
 
 #ifdef __cplusplus
-  }
+}
 #endif
 
 #endif

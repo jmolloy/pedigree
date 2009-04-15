@@ -26,21 +26,25 @@
 /** Timer for scheduling */
 class SchedulerTimer
 {
-  public:
+public:
     virtual bool registerHandler(TimerHandler *handler) = 0;
 
-  protected:
+protected:
     /** The default constructor */
-    inline SchedulerTimer(){}
+    inline SchedulerTimer()
+    {
+    }
     /** The destructor */
-    inline virtual ~SchedulerTimer(){}
-  private:
+    inline virtual ~SchedulerTimer()
+    {
+    }
+private:
     /** The copy-constructor
      *\note NOT implemented */
     SchedulerTimer(const SchedulerTimer &);
     /** The assignment operator
      *\note NOT implemented */
-    SchedulerTimer &operator = (const SchedulerTimer &);
+    SchedulerTimer &operator =(const SchedulerTimer &);
 };
 
 /** @} */

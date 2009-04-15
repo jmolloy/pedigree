@@ -19,13 +19,13 @@
 
 void Processor::halt()
 {
-  asm volatile( "_halting:\r\nb _halting" );
-  for( ;; );
+    asm volatile ("_halting:\r\nb _halting");
+    for( ;;) ;
 }
 
 void Processor::breakpoint()
 {
-  //
+    //
 }
 
 #endif

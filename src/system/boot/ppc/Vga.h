@@ -40,7 +40,7 @@
 #define VGA_NUM_GC_REGS         9
 #define VGA_NUM_AC_REGS         21
 #define VGA_NUM_REGS            (1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS + \
-                                VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
+                                 VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
 
 void vga_init();
 

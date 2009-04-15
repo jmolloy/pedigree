@@ -28,20 +28,20 @@
  *\todo provide documentation */
 class String
 {
-  public:
+public:
     /** The default constructor does nothing */
     inline String();
     inline explicit String(const char *s);
     inline String(const String &x);
     inline ~String();
 
-    inline String &operator = (const String &x);
-    inline String &operator = (const char *s);
-    inline operator const char *() const;
-    inline String &operator += (const String &x);
-    inline String &operator += (const char *s);
+    inline String &operator =(const String &x);
+    inline String &operator =(const char *s);
+    inline operator const char*() const;
+    inline String &operator +=(const String &x);
+    inline String &operator +=(const char *s);
 
-    inline bool operator == (const String &s);
+    inline bool operator ==(const String &s);
 
     inline size_t length() const;
     inline size_t size() const;
@@ -57,14 +57,14 @@ class String
      *  the back portion (including the character at 'offset' will be returned in a new string. */
     String split(size_t offset);
 
-    List<String*> tokenise(char token);
+    List<String *> tokenise(char token);
 
     void assign(const String &x);
     void assign(const char *s);
     void reserve(size_t size);
     void free();
 
-  private:
+private:
     /** Pointer to the zero-terminated ASCII string */
     char *m_Data;
     /** The string's length */
@@ -79,80 +79,80 @@ class String
 // Part of the implementation
 //
 String::String()
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
 }
 String::String(const char *s)
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
-  assign(s);
+    assign(s);
 }
 String::String(const String &x)
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
-  assign(x);
+    assign(x);
 }
 String::~String()
 {
-  free();
+    free();
 }
 
-String &String::operator = (const String &x)
+String &String::operator =(const String &x)
 {
-  assign(x);
-  return *this;
+    assign(x);
+    return *this;
 }
-String &String::operator = (const char *s)
+String &String::operator =(const char *s)
 {
-  assign(s);
-  return *this;
+    assign(s);
+    return *this;
 }
-String::operator const char *() const
+String::operator const char*() const
 {
-  if (m_Data == 0)
-    return "";
-  else
-    return m_Data;
-}
-
-String &String::operator += (const String &x)
-{
-  reserve(x.length()+m_Length+1);
-  memcpy(&m_Data[m_Length], x.m_Data, x.length()+1);
-  m_Length += x.length();
-  return *this;
-}
-String &String::operator += (const char *s)
-{
-  reserve(strlen(s)+m_Length+1);
-  memcpy(&m_Data[m_Length], s, strlen(s)+1);
-  m_Length += strlen(s);
-  return *this;
+    if(m_Data == 0)
+        return "";
+    else
+        return m_Data;
 }
 
-bool String::operator == (const String &s)
+String &String::operator +=(const String &x)
 {
-  if (m_Data == 0 && s.m_Data == 0)
-    return true;
-  else if (m_Data == 0 || s.m_Data == 0)
-    return false;
-  else
-    return !strcmp(m_Data, s.m_Data);
+    reserve(x.length() + m_Length + 1);
+    memcpy(&m_Data[m_Length], x.m_Data, x.length() + 1);
+    m_Length += x.length();
+    return *this;
+}
+String &String::operator +=(const char *s)
+{
+    reserve(strlen(s) + m_Length + 1);
+    memcpy(&m_Data[m_Length], s, strlen(s) + 1);
+    m_Length += strlen(s);
+    return *this;
+}
+
+bool String::operator ==(const String &s)
+{
+    if(m_Data == 0 && s.m_Data == 0)
+        return true;
+    else if(m_Data == 0 || s.m_Data == 0)
+        return false;
+    else
+        return !strcmp(m_Data, s.m_Data);
 }
 
 size_t String::length() const
 {
-  return m_Length;
+    return m_Length;
 }
 size_t String::size() const
 {
-  return m_Size;
+    return m_Size;
 }
 
 size_t String::nextCharacter(size_t c)
 {
-  // TODO handle multibyte chars.
-  return c+1;
+    // TODO handle multibyte chars.
+    return c + 1;
 }
 
 #endif

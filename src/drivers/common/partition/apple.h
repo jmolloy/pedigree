@@ -26,14 +26,14 @@
 
 typedef struct
 {
-  uint16_t pmSig;       // Partition signature: "PM"
-  uint16_t pmSigPad;    // Reserved - signature padding.
-  uint32_t pmMapBlkCnt; // Number of (512 byte) blocks in the partition map.
-  uint32_t pmPyPartStart; // First physical block of partition.
-  uint32_t pmPartBlkCnt; // Number of blocks in partition.
-  char pmPartName[32];  // Partition name.
-  char pmParType[32];   // Partition type.
-  // We don't care about the rest of the partition map entry.
+    uint16_t pmSig;     // Partition signature: "PM"
+    uint16_t pmSigPad;  // Reserved - signature padding.
+    uint32_t pmMapBlkCnt; // Number of (512 byte) blocks in the partition map.
+    uint32_t pmPyPartStart; // First physical block of partition.
+    uint32_t pmPartBlkCnt; // Number of blocks in partition.
+    char pmPartName[32]; // Partition name.
+    char pmParType[32]; // Partition type.
+    // We don't care about the rest of the partition map entry.
 } ApplePartitionMap;
 
 /** Attempts to find a MS-DOS partition table on pDisk. If found, new Partition objects are created

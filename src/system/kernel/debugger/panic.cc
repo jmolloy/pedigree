@@ -32,98 +32,98 @@
 
 static size_t newlineCount(const char *pString)
 {
-  size_t nNewlines = 0;
-  while (*pString != '\0')
-    if (*pString++ == '\n')
-      ++nNewlines;
+    size_t nNewlines = 0;
+    while(*pString != '\0')
+        if(*pString++ == '\n')
+            ++nNewlines;
 
-  return nNewlines;
+    return nNewlines;
 }
 
 // TODO: We might want a separate parameter for a stacktrace/register dump
-void _panic( const char* msg, DebuggerIO* pScreen )
+void _panic(const char *msg, DebuggerIO *pScreen)
 {
-  static HugeStaticString panic_output;
-  panic_output.clear();
+    static HugeStaticString panic_output;
+    panic_output.clear();
 
-  panic_output.append( "PANIC: " );
-  panic_output.append( msg );
+    panic_output.append("PANIC: ");
+    panic_output.append(msg);
 
-  // write the final string to the screen
-  pScreen->drawString( panic_output, 0, 0, DebuggerIO::Red, DebuggerIO::Black );
+    // write the final string to the screen
+    pScreen->drawString(panic_output, 0, 0, DebuggerIO::Red, DebuggerIO::Black);
 
-  size_t nLines = newlineCount(panic_output) + 2;
+    size_t nLines = newlineCount(panic_output) + 2;
 
-  Log &log = Log::instance();
-  Log::SeverityLevel level;
-  static NormalStaticString Line;
+    Log &log = Log::instance();
+    Log::SeverityLevel level;
+    static NormalStaticString Line;
 
-  size_t iEntry = 0, iUsedEntries = 0;
-  if ((pScreen->getHeight() - nLines) < (log.getStaticEntryCount() + log.getDynamicEntryCount()))
-    iEntry = log.getStaticEntryCount() + log.getDynamicEntryCount() - (pScreen->getHeight() - nLines) + 1;
-  bool bPrintThisLine = false;
-  for( ; iEntry < (log.getStaticEntryCount() + log.getDynamicEntryCount()); iEntry++ )
-  {
-    if( iEntry < log.getStaticEntryCount() )
+    size_t iEntry = 0, iUsedEntries = 0;
+    if((pScreen->getHeight() - nLines) < (log.getStaticEntryCount() + log.getDynamicEntryCount()))
+        iEntry = log.getStaticEntryCount() + log.getDynamicEntryCount() - (pScreen->getHeight() - nLines) + 1;
+    bool bPrintThisLine = false;
+    for( ; iEntry < (log.getStaticEntryCount() + log.getDynamicEntryCount()); iEntry++)
     {
-      const Log::StaticLogEntry &entry = log.getStaticEntry(iEntry);
-      level = entry.type;
+        if(iEntry < log.getStaticEntryCount())
+        {
+            const Log::StaticLogEntry &entry = log.getStaticEntry(iEntry);
+            level = entry.type;
 
 //      if( level == Log::Fatal || level == Log::Error )
 //      {
-        Line.clear();
-        Line.append("[");
-        Line.append(entry.timestamp, 10, 8, '0');
-        Line.append("] ");
-        Line.append(entry.str);
-        Line.append( "\n" );
+            Line.clear();
+            Line.append("[");
+            Line.append(entry.timestamp, 10, 8, '0');
+            Line.append("] ");
+            Line.append(entry.str);
+            Line.append("\n");
 
-        bPrintThisLine = true;
+            bPrintThisLine = true;
 //      }
-    }
-    else
-    {
-      const Log::DynamicLogEntry &entry = log.getDynamicEntry(iEntry);
-      level = entry.type;
+        }
+        else
+        {
+            const Log::DynamicLogEntry &entry = log.getDynamicEntry(iEntry);
+            level = entry.type;
 
 //      if( level == Log::Fatal || level == Log::Error )
 //      {
-        Line.clear();
-        Line.append("[");
-        Line.append(entry.timestamp, 10, 8, '0');
-        Line.append("] ");
-        Line.append(entry.str);
-        Line.append( "\n" );
+            Line.clear();
+            Line.append("[");
+            Line.append(entry.timestamp, 10, 8, '0');
+            Line.append("] ");
+            Line.append(entry.str);
+            Line.append("\n");
 
-        bPrintThisLine = true;
+            bPrintThisLine = true;
 //      }
-    }
+        }
 
-    // print the line
-    if( bPrintThisLine == true )
-    {
-      ++iUsedEntries;
-      pScreen->drawString( Line, nLines + iUsedEntries, 0, DebuggerIO::White, DebuggerIO::Black );
-      bPrintThisLine = false;
+        // print the line
+        if(bPrintThisLine == true)
+        {
+            ++iUsedEntries;
+            pScreen->drawString(Line, nLines + iUsedEntries, 0, DebuggerIO::White, DebuggerIO::Black);
+            bPrintThisLine = false;
+        }
     }
-  }
 }
 
-void panic( const char* msg )
+void panic(const char *msg)
 {
-  /*
-   * I/O implementations.
-   */
-  LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-  SerialIO serialIO(Machine::instance().getSerial(0));
-  SerialIO serialIO2(Machine::instance().getSerial(1));
+    /*
+     * I/O implementations.
+     */
+    LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
+    SerialIO serialIO(Machine::instance().getSerial(0));
+    SerialIO serialIO2(Machine::instance().getSerial(1));
 
-  DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
-  int nInterfaces = 3;
+    DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
+    int nInterfaces = 3;
 
-  for( int nIFace = 0; nIFace < nInterfaces; nIFace++ )
-    _panic( msg, pInterfaces[nIFace] );
+    for(int nIFace = 0; nIFace < nInterfaces; nIFace++)
+        _panic(msg, pInterfaces[nIFace]);
 
-  // Halt the processor
-  Processor::halt();
+    // Halt the processor
+    Processor::halt();
 }

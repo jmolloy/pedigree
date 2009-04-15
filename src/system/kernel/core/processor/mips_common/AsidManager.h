@@ -40,34 +40,34 @@
 class AsidManager
 {
 public:
-  /** ASID typedef */
-  typedef uint8_t Asid;
+    /** ASID typedef */
+    typedef uint8_t Asid;
 
-  /** Gets the instance of the AsidManager */
-  static AsidManager &instance();
+    /** Gets the instance of the AsidManager */
+    static AsidManager &instance();
 
-  /** Returns an ASID. The TLB is flushed of all references to that ASID. */
-  Asid obtainAsid();
-  /** Takes an ASID. The given ASID is returned to the pool of usable ASIDs. */
-  void returnAsid(Asid asid);
+    /** Returns an ASID. The TLB is flushed of all references to that ASID. */
+    Asid obtainAsid();
+    /** Takes an ASID. The given ASID is returned to the pool of usable ASIDs. */
+    void returnAsid(Asid asid);
 
-  /** If the ASID given is contended, flush the TLB of all references to it. */
-  void bulldoze(Asid asid);
+    /** If the ASID given is contended, flush the TLB of all references to it. */
+    void bulldoze(Asid asid);
 
 private:
-  /** Default constructor */
-  AsidManager();
-  /** Destructor - not implemented. */
-  ~AsidManager();
+    /** Default constructor */
+    AsidManager();
+    /** Destructor - not implemented. */
+    ~AsidManager();
 
-  /** The array of ASID to instance count. */
-  uint32_t m_Asids[NUM_ASID];
+    /** The array of ASID to instance count. */
+    uint32_t m_Asids[NUM_ASID];
 
-  /** Our lock, to protect the integrity of our data. */
-  Mutex m_Mutex;
+    /** Our lock, to protect the integrity of our data. */
+    Mutex m_Mutex;
 
-  /** The static AsidManager instance - singleton class. */
-  static AsidManager m_Instance;
+    /** The static AsidManager instance - singleton class. */
+    static AsidManager m_Instance;
 };
 /** @} */
 

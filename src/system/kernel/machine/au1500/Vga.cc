@@ -24,7 +24,7 @@ Au1500Vga::~Au1500Vga()
 }
 char Au1500Vga::read()
 {
-  return 0;
+    return 0;
 }
 void Au1500Vga::write(char c)
 {

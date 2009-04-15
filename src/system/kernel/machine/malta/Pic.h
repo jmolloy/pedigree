@@ -28,10 +28,13 @@
 class Pic : public IrqManager,
             private InterruptHandler
 {
-  public:
+public:
     /** Get the Pic class instance
      *\return the Pic class instance */
-    inline static Pic &instance(){return m_Instance;}
+    inline static Pic &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // IrqManager interface
@@ -46,17 +49,19 @@ class Pic : public IrqManager,
      *\return true, if successfull, false otherwise */
     bool initialise() INITIALISATION_ONLY;
 
-  private:
+private:
     /** The default constructor */
     Pic() INITIALISATION_ONLY;
     /** The destructor */
-    inline virtual ~Pic(){}
+    inline virtual ~Pic()
+    {
+    }
     /** The copy-constructor
      *\note NOT implemented */
     Pic(const Pic &);
     /** The assignment operator
      *\note NOT implemented */
-    Pic &operator = (const Pic &);
+    Pic &operator =(const Pic &);
 
     //
     // InterruptHandler interface

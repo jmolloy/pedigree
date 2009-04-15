@@ -21,22 +21,22 @@
 
 #if defined(X86)
   #include <processor/x86/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) X86##x
+  #define PROCESSOR_SPECIFIC_NAME(x) X86 ## x
 #elif defined(X64)
   #include <processor/x64/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) X64##x
+  #define PROCESSOR_SPECIFIC_NAME(x) X64 ## x
 #elif defined(MIPS32)
   #include <processor/mips32/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS32 ## x
 #elif defined(MIPS64)
   #include <processor/mips64/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS64 ## x
 #elif defined(ARM926E)
   #include <processor/arm_926e/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) ARM926E##x
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM926E ## x
 #elif defined(PPC32)
   #include <processor/ppc32/StackFrame.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
+  #define PROCESSOR_SPECIFIC_NAME(x) PPC32 ## x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
@@ -52,7 +52,7 @@
 //       needed types, you will get an error here
 
 /** Lift the processor-specifc StackFrame class into the global namespace */
-typedef PROCESSOR_SPECIFIC_NAME(StackFrame) StackFrame;
+typedef PROCESSOR_SPECIFIC_NAME (StackFrame) StackFrame;
 
 /** @} */
 

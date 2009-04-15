@@ -21,7 +21,7 @@
 ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleManager::ConsoleManager() :
-  m_Consoles()
+    m_Consoles()
 {
 }
 
@@ -31,89 +31,89 @@ ConsoleManager::~ConsoleManager()
 
 ConsoleManager &ConsoleManager::instance()
 {
-  return m_Instance;
+    return m_Instance;
 }
 
 bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param)
 {
-  Console *pConsole = new Console;
+    Console *pConsole = new Console;
 
-  pConsole->name = consoleName;
-  pConsole->backEnd = backEnd;
-  pConsole->param = param;
+    pConsole->name = consoleName;
+    pConsole->backEnd = backEnd;
+    pConsole->param = param;
 
-  m_Consoles.pushBack(pConsole);
+    m_Consoles.pushBack(pConsole);
 
-  return true;
+    return true;
 }
 
-File* ConsoleManager::getConsole(String consoleName)
+File *ConsoleManager::getConsole(String consoleName)
 {
-  /// \todo Thread safety.
-  for (int i = 0; i < m_Consoles.count(); i++)
-  {
-    Console *pC = m_Consoles[i];
-    if (!strcmp(static_cast<const char*>(pC->name), static_cast<const char*>(consoleName)))
+    /// \todo Thread safety.
+    for(int i = 0; i < m_Consoles.count(); i++)
     {
-      return new File(pC->name, 0, 0, 0, i+0xdeadbe00, this, 0, 0);
+        Console *pC = m_Consoles[i];
+        if(!strcmp(static_cast<const char *>(pC->name), static_cast<const char *>(consoleName)))
+        {
+            return new File(pC->name, 0, 0, 0, i + 0xdeadbe00, this, 0, 0);
+        }
     }
-  }
-  // Error - not found.
-  return 0;
+    // Error - not found.
+    return 0;
 }
 
-bool ConsoleManager::isConsole(File* file)
+bool ConsoleManager::isConsole(File *file)
 {
-  return ((file->getInode()&0xFFFFFF00) == 0xdeadbe00);
+    return ((file->getInode() & 0xFFFFFF00) == 0xdeadbe00);
 }
 
-void ConsoleManager::setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn)
+void ConsoleManager::setAttributes(File *file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn)
 {
-  // \todo Sanity checking.
-  Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  pC->backEnd->addRequest(CONSOLE_SETATTR, pC->param, echo, echoNewlines, echoBackspace, nlCausesCr, mapNlToCrIn, mapCrToNlIn);
+    // \todo Sanity checking.
+    Console *pC = m_Consoles[file->getInode() - 0xdeadbe00];
+    pC->backEnd->addRequest(CONSOLE_SETATTR, pC->param, echo, echoNewlines, echoBackspace, nlCausesCr, mapNlToCrIn, mapCrToNlIn);
 }
 
-void ConsoleManager::getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn)
+void ConsoleManager::getAttributes(File *file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn)
 {
-  // \todo Sanity checking.
-  Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  pC->backEnd->addRequest(CONSOLE_GETATTR, pC->param, reinterpret_cast<uint64_t>(echo), reinterpret_cast<uint64_t>(echoNewlines), reinterpret_cast<uint64_t>(echoBackspace), reinterpret_cast<uint64_t>(nlCausesCr), reinterpret_cast<uint64_t>(mapNlToCrIn), reinterpret_cast<uint64_t>(mapCrToNlIn));
+    // \todo Sanity checking.
+    Console *pC = m_Consoles[file->getInode() - 0xdeadbe00];
+    pC->backEnd->addRequest(CONSOLE_GETATTR, pC->param, reinterpret_cast<uint64_t>(echo), reinterpret_cast<uint64_t>(echoNewlines), reinterpret_cast<uint64_t>(echoBackspace), reinterpret_cast<uint64_t>(nlCausesCr), reinterpret_cast<uint64_t>(mapNlToCrIn), reinterpret_cast<uint64_t>(mapCrToNlIn));
 }
 
 uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  /// \todo Sanity checking.
-  Console *pC = m_Consoles[pFile->getInode()-0xdeadbe00];
-  return pC->backEnd->addRequest(CONSOLE_READ, pC->param, size, buffer);
+    /// \todo Sanity checking.
+    Console *pC = m_Consoles[pFile->getInode() - 0xdeadbe00];
+    return pC->backEnd->addRequest(CONSOLE_READ, pC->param, size, buffer);
 }
 
 uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  /// \todo Sanity checking.
-  Console *pC = m_Consoles[pFile->getInode()-0xdeadbe00];
-  uint64_t ret = pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
+    /// \todo Sanity checking.
+    Console *pC = m_Consoles[pFile->getInode() - 0xdeadbe00];
+    uint64_t ret = pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
 }
 
-int ConsoleManager::getCols(File* file)
+int ConsoleManager::getCols(File *file)
 {
-  /// \todo Sanity checking.
-  Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  return static_cast<int>(pC->backEnd->addRequest(CONSOLE_GETCOLS));
+    /// \todo Sanity checking.
+    Console *pC = m_Consoles[file->getInode() - 0xdeadbe00];
+    return static_cast<int>(pC->backEnd->addRequest(CONSOLE_GETCOLS));
 }
 
-int ConsoleManager::getRows(File* file)
+int ConsoleManager::getRows(File *file)
 {
-  /// \todo Sanity checking.
-  Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  return static_cast<int>(pC->backEnd->addRequest(CONSOLE_GETROWS));
+    /// \todo Sanity checking.
+    Console *pC = m_Consoles[file->getInode() - 0xdeadbe00];
+    return static_cast<int>(pC->backEnd->addRequest(CONSOLE_GETROWS));
 }
 
-bool ConsoleManager::hasDataAvailable(File* file)
+bool ConsoleManager::hasDataAvailable(File *file)
 {
-  /// \todo Sanity checking.
-  Console *pC = m_Consoles[file->getInode()-0xdeadbe00];
-  return static_cast<bool>(pC->backEnd->addRequest(CONSOLE_DATA_AVAILABLE));
+    /// \todo Sanity checking.
+    Console *pC = m_Consoles[file->getInode() - 0xdeadbe00];
+    return static_cast<bool>(pC->backEnd->addRequest(CONSOLE_DATA_AVAILABLE));
 }
 void initConsole()
 {

@@ -34,13 +34,16 @@
  */
 class Pc : public Machine
 {
-  public:
-    inline static Pc &instance(){return m_Instance;}
+public:
+    inline static Pc &instance()
+    {
+        return m_Instance;
+    }
 
     virtual void initialise() INITIALISATION_ONLY;
 
     #if defined(MULTIPROCESSOR)
-      void initialiseProcessor() INITIALISATION_ONLY;
+    void initialiseProcessor() INITIALISATION_ONLY;
     #endif
 
     virtual void initialiseDeviceTree();
@@ -55,24 +58,26 @@ class Pc : public Machine
     virtual Keyboard *getKeyboard();
 
     #if defined(APIC)
-      /** Get the Local APIC class instance
-       *\return reference to the Local APIC class instance */
-      inline LocalApic &getLocalApic()
-        {return m_LocalApic;}
+    /** Get the Local APIC class instance
+     *\return reference to the Local APIC class instance */
+    inline LocalApic &getLocalApic()
+    {
+        return m_LocalApic;
+    }
     #endif
 
     #ifdef MULTIPROCESSOR
-      virtual void stopAllOtherProcessors();
+    virtual void stopAllOtherProcessors();
     #endif
 
 
-  private:
+private:
     /**
     * Default constructor, does nothing.
     */
     Pc() INITIALISATION_ONLY;
     Pc(const Pc &);
-    Pc &operator = (const Pc &);
+    Pc &operator =(const Pc &);
     /**
     * Virtual destructor, does nothing.
     */
@@ -83,11 +88,11 @@ class Pc : public Machine
     X86Keyboard m_Keyboard;
 
     #if defined(SMBIOS)
-      SMBios m_SMBios;
+    SMBios m_SMBios;
     #endif
 
     #if defined(APIC)
-      LocalApic m_LocalApic;
+    LocalApic m_LocalApic;
     #endif
 
     static Pc m_Instance;

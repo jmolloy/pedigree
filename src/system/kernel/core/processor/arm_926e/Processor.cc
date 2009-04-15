@@ -20,32 +20,32 @@
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  // Initialise this processor's interrupt handling
-   //MIPS32InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    //MIPS32InterruptManager::initialiseProcessor();
 
-  // TODO: Initialise the physical memory-management
+    // TODO: Initialise the physical memory-management
 
-  // TODO
+    // TODO
 
 //   m_Initialised = 1;
 }
 
 void Processor::initialise2()
 {
-  // TODO
+    // TODO
 
 //   m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)
 {
-  // TODO: this is kinda boring, i want inline assembly
-  str += "Arm926E";
+    // TODO: this is kinda boring, i want inline assembly
+    str += "Arm926E";
 }
 
 size_t Processor::getDebugBreakpointCount()
 {
-  return 0;
+    return 0;
 }
 
 uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
@@ -53,8 +53,8 @@ uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
                                         size_t &nLength,
                                         bool &bEnabled)
 {
-  /// \todo Implement.
-  return 0;
+    /// \todo Implement.
+    return 0;
 }
 
 void Processor::enableDebugBreakpoint(size_t nBpNumber,
@@ -62,27 +62,27 @@ void Processor::enableDebugBreakpoint(size_t nBpNumber,
                                       DebugFlags::FaultType nFaultType,
                                       size_t nLength)
 {
-  /// \todo Implement.
+    /// \todo Implement.
 }
 
 void Processor::disableDebugBreakpoint(size_t nBpNumber)
 {
-  /// \todo Implement.
+    /// \todo Implement.
 }
 
 void Processor::setInterrupts(bool bEnable)
 {
-  /// \todo Implement.
+    /// \todo Implement.
 }
 
 bool Processor::getInterrupts()
 {
-  return false;
+    return false;
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
-  /// \todo Implement
-  ERROR("Single step unavailable on ARM.");
+    /// \todo Implement
+    ERROR("Single step unavailable on ARM.");
 }
 

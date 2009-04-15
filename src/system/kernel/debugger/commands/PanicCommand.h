@@ -28,34 +28,34 @@
 class PanicCommand : public DebuggerCommand
 {
 public:
-  /**
-   * Default constructor - zero's stuff.
-   */
-  PanicCommand();
+    /**
+     * Default constructor - zero's stuff.
+     */
+    PanicCommand();
 
-  /**
-   * Default destructor - does nothing.
-   */
-  ~PanicCommand();
+    /**
+     * Default destructor - does nothing.
+     */
+    ~PanicCommand();
 
-  /**
-   * Return an autocomplete string, given an input string.
-   */
-  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
+    /**
+     * Return an autocomplete string, given an input string.
+     */
+    void autocomplete(const HugeStaticString &input, HugeStaticString &output);
 
-  /**
-   * Execute the command with the given screen.
-   */
-  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
-  
-  /**
-   * Returns the string representation of this command.
-   */
-  const NormalStaticString getString()
-  {
-    return NormalStaticString("panic");
-  }
-  
+    /**
+     * Execute the command with the given screen.
+     */
+    bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
+
+    /**
+     * Returns the string representation of this command.
+     */
+    const NormalStaticString getString()
+    {
+        return NormalStaticString("panic");
+    }
+
 };
 
 /** @} */

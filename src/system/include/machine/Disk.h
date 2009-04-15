@@ -24,50 +24,50 @@
 class Disk : public Device
 {
 public:
-  Disk()
-  {
-    m_SpecificType = "Generic Disk";
-  }
-  Disk(Device *p) :
-    Device(p)
-  {
-  }
-  virtual ~Disk()
-  {
-  }
+    Disk()
+    {
+        m_SpecificType = "Generic Disk";
+    }
+    Disk(Device *p) :
+        Device(p)
+    {
+    }
+    virtual ~Disk()
+    {
+    }
 
-  virtual Type getType()
-  {
-    return Device::Disk;
-  }
+    virtual Type getType()
+    {
+        return Device::Disk;
+    }
 
-  virtual void getName(String &str)
-  {
-    str = "Generic disk";
-  }
+    virtual void getName(String &str)
+    {
+        str = "Generic disk";
+    }
 
-  virtual void dump(String &str)
-  {
-    str = "Generic disk";
-  }
+    virtual void dump(String &str)
+    {
+        str = "Generic disk";
+    }
 
-  /** Read nBytes from location on disk and store in 'buffer'.
-   * \param location The offset from the start of the device, in bytes, to start the read.
-   * \param nBytes The number of bytes to read, should be a multiple of 512.
-   * \param buffer The buffer into which to place the read data. */
-  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-  {
-    return ~0;
-  }
+    /** Read nBytes from location on disk and store in 'buffer'.
+     * \param location The offset from the start of the device, in bytes, to start the read.
+     * \param nBytes The number of bytes to read, should be a multiple of 512.
+     * \param buffer The buffer into which to place the read data. */
+    virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+    {
+        return ~0;
+    }
 
-  /** Write nBytes from buffer in memory and store at 'location'.
-   * \param location The offset from the start of the device, in bytes, to start the write.
-   * \param nBytes The number of bytes to write, should be a multiple of 512.
-   * \param buffer The buffer from which to read data. */
-  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-  {
-    return ~0;
-  }
+    /** Write nBytes from buffer in memory and store at 'location'.
+     * \param location The offset from the start of the device, in bytes, to start the write.
+     * \param nBytes The number of bytes to write, should be a multiple of 512.
+     * \param buffer The buffer from which to read data. */
+    virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+    {
+        return ~0;
+    }
 };
 
 #endif

@@ -28,37 +28,40 @@
 class Bonito64 : public Machine
 {
 public:
-  inline static Bonito64 &instance() {return m_Instance;}
+    inline static Bonito64 &instance()
+    {
+        return m_Instance;
+    }
 
-  virtual void initialise();
-  virtual Serial *getSerial(size_t n);
-  virtual size_t getNumSerial();
-  virtual Vga *getVga(size_t n);
-  virtual size_t getNumVga();
-  virtual IrqManager *getIrqManager();
-  virtual SchedulerTimer *getSchedulerTimer();
-  virtual Timer *getTimer();
-  virtual Keyboard *getKeyboard();
+    virtual void initialise();
+    virtual Serial *getSerial(size_t n);
+    virtual size_t getNumSerial();
+    virtual Vga *getVga(size_t n);
+    virtual size_t getNumVga();
+    virtual IrqManager *getIrqManager();
+    virtual SchedulerTimer *getSchedulerTimer();
+    virtual Timer *getTimer();
+    virtual Keyboard *getKeyboard();
 
 private:
-  /**
-   * Default constructor, does nothing.
-   */
-  Bonito64();
-  Bonito64(const Bonito64 &);
-  Bonito64 &operator = (const Bonito64 &);
-  /**
-   * Virtual destructor, does nothing.
-   */
-  virtual ~Bonito64();
+    /**
+     * Default constructor, does nothing.
+     */
+    Bonito64();
+    Bonito64(const Bonito64 &);
+    Bonito64 &operator =(const Bonito64 &);
+    /**
+     * Virtual destructor, does nothing.
+     */
+    virtual ~Bonito64();
 
-  MaltaSerial m_Serial[2];
-  //SchedulerTimer m_SchedulerTimer;
-  //Timer m_Timer;
-  MaltaVga m_Vga;
-  MaltaKeyboard m_Keyboard;
+    MaltaSerial m_Serial[2];
+    //SchedulerTimer m_SchedulerTimer;
+    //Timer m_Timer;
+    MaltaVga m_Vga;
+    MaltaKeyboard m_Keyboard;
 
-  static Bonito64 m_Instance;
+    static Bonito64 m_Instance;
 };
 
 #endif

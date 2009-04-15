@@ -19,7 +19,7 @@
 
 size_t Processor::getDebugBreakpointCount()
 {
-  return 1;
+    return 1;
 }
 
 uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
@@ -27,7 +27,7 @@ uintptr_t Processor::getDebugBreakpoint(size_t nBpNumber,
                                         size_t &nLength,
                                         bool &bEnabled)
 {
-  return 0;
+    return 0;
 }
 
 void Processor::enableDebugBreakpoint(size_t nBpNumber,
@@ -43,50 +43,50 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
-  asm volatile("sync; isync;");
-  uint32_t msr;
-  asm volatile("mfmsr %0" : "=r" (msr));
-  if (bEnable)
-    msr |= MSR_EE;
-  else
-    msr &= ~MSR_EE;
-  asm volatile("mtmsr %0" : : "r" (msr));
-  asm volatile("sync; isync;");
+    asm volatile ("sync; isync;");
+    uint32_t msr;
+    asm volatile ("mfmsr %0" : "=r" (msr));
+    if(bEnable)
+        msr |= MSR_EE;
+    else
+        msr &= ~MSR_EE;
+    asm volatile ("mtmsr %0" : : "r" (msr));
+    asm volatile ("sync; isync;");
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)
 {
-  if (bEnable)
-    state.m_Srr1 |= MSR_SE;
-  else
-    state.m_Srr1 &= ~MSR_SE;
+    if(bEnable)
+        state.m_Srr1 |= MSR_SE;
+    else
+        state.m_Srr1 &= ~MSR_SE;
 }
 
 void Processor::invalidateICache(uintptr_t nAddr)
 {
-  asm volatile("icbi 0, %0" : : "r"(nAddr));
+    asm volatile ("icbi 0, %0" : : "r" (nAddr));
 }
 
 void Processor::invalidateDCache(uintptr_t nAddr)
 {
-  asm volatile("dcbi 0, %0" : : "r"(nAddr));
+    asm volatile ("dcbi 0, %0" : : "r" (nAddr));
 }
 
 void Processor::flushDCache(uintptr_t nAddr)
 {
-  asm volatile("dcbst 0, %0" : : "r"(nAddr));
+    asm volatile ("dcbst 0, %0" : : "r" (nAddr));
 }
 
 void Processor::flushDCacheAndInvalidateICache(uintptr_t startAddr, uintptr_t endAddr)
 {
-  for (uintptr_t i = startAddr; i < endAddr; i += 4)
-    flushDCache(i);
+    for(uintptr_t i = startAddr; i < endAddr; i += 4)
+        flushDCache(i);
 
-  asm volatile("sync");
+    asm volatile ("sync");
 
-  for (uintptr_t i = startAddr; i < endAddr; i += 4)
-    invalidateICache(i);
-  
-  asm volatile("sync");
-  asm volatile("isync");
+    for(uintptr_t i = startAddr; i < endAddr; i += 4)
+        invalidateICache(i);
+
+    asm volatile ("sync");
+    asm volatile ("isync");
 }

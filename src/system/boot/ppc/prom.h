@@ -3,18 +3,18 @@
 
 struct prom_args
 {
-  const char *service;
-  int nargs;
-  int nret;
-  void *args[10];
+    const char *service;
+    int nargs;
+    int nret;
+    void *args[10];
 };
 
 typedef void *prom_handle;
 
-typedef int (*prom_entry) (prom_args *);
+typedef int (*prom_entry)(prom_args *);
 void prom_init(prom_entry pe);
 
-void *call_prom(const char *service, int nargs, int nret, void *a1=0, void *a2=0, void *a3=0, void *a4=0, void *a5=0, void *a6=0);
+void *call_prom(const char *service, int nargs, int nret, void *a1 = 0, void *a2 = 0, void *a3 = 0, void *a4 = 0, void *a5 = 0, void *a6 = 0);
 
 void *prom_finddevice(const char *dev);
 int prom_exit();

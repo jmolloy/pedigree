@@ -24,31 +24,31 @@
 class Controller : public Device
 {
 public:
-  Controller()
-  {
-  }
-  Controller(Controller *pDev) :
-    Device(pDev)
-  {
-  }
-  virtual ~Controller()
-  {
-  }
+    Controller()
+    {
+    }
+    Controller(Controller *pDev) :
+        Device(pDev)
+    {
+    }
+    virtual ~Controller()
+    {
+    }
 
-  virtual Type getType()
-  {
-    return Device::Controller;
-  }
+    virtual Type getType()
+    {
+        return Device::Controller;
+    }
 
-  virtual void getName(String &str)
-  {
-    str = "Generic controller";
-  }
+    virtual void getName(String &str)
+    {
+        str = "Generic controller";
+    }
 
-  virtual void dump(String &str)
-  {
-    str = "Generic controller";
-  }
+    virtual void dump(String &str)
+    {
+        str = "Generic controller";
+    }
 };
 
 #endif

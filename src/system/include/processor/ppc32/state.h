@@ -30,7 +30,7 @@ typedef class PPC32InterruptState PPC32ProcessorState;
 /** PPC32 Interrupt State */
 class PPC32InterruptState
 {
-  public:
+public:
     //
     // General Interface (both InterruptState and SyscallState)
     //
@@ -78,7 +78,7 @@ class PPC32InterruptState
     /** Get the interrupt number
      *\return the interrupt number */
     inline size_t getInterruptNumber() const;
-    
+
     //
     // SyscallState Interface
     //
@@ -91,14 +91,14 @@ class PPC32InterruptState
     inline uintptr_t getSyscallParameter(size_t n) const;
     inline void setSyscallReturnValue(uintptr_t val);
 
-    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will 
+    /** Construct a dummy interruptstate on the stack given in 'state', which when executed will
      *  set the processor to 'state'. */
     static PPC32InterruptState *construct(PPC32ProcessorState &state, bool userMode);
 
-  private:
+private:
     /** The default constructor
      *\note NOT implemented */
-  public:
+public:
     PPC32InterruptState();
 
     /** The copy-constructor
@@ -106,10 +106,12 @@ class PPC32InterruptState
     PPC32InterruptState(const PPC32InterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    PPC32InterruptState &operator = (const PPC32InterruptState &);
+    PPC32InterruptState &operator =(const PPC32InterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~PPC32InterruptState() {}
+    ~PPC32InterruptState()
+    {
+    }
 
     /** The interrupt/exception number. */
     uint32_t m_IntNumber;
@@ -203,66 +205,66 @@ class PPC32InterruptState
 
 uintptr_t PPC32InterruptState::getStackPointer() const
 {
-  return m_R1;
+    return m_R1;
 }
 void PPC32InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  m_R1 = stackPointer;
+    m_R1 = stackPointer;
 }
 uintptr_t PPC32InterruptState::getInstructionPointer() const
 {
-  return m_Srr0;
+    return m_Srr0;
 }
 void PPC32InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  m_Srr0 = instructionPointer;
+    m_Srr0 = instructionPointer;
 }
 uintptr_t PPC32InterruptState::getBasePointer() const
 {
-  return 0xdeadbaba;
+    return 0xdeadbaba;
 }
 void PPC32InterruptState::setBasePointer(uintptr_t basePointer)
 {
 }
 size_t PPC32InterruptState::getRegisterSize(size_t index) const
 {
-  return 4;
+    return 4;
 }
 
 bool PPC32InterruptState::kernelMode() const
 {
-  return m_Srr1 & (1<<15);
+    return m_Srr1 & (1 << 15);
 }
 size_t PPC32InterruptState::getInterruptNumber() const
 {
-  return m_IntNumber;
+    return m_IntNumber;
 }
 
 size_t PPC32InterruptState::getSyscallService() const
 {
-  return ((m_R3 >> 16) & 0xFFFF);
+    return ((m_R3 >> 16) & 0xFFFF);
 }
 size_t PPC32InterruptState::getSyscallNumber() const
 {
-  return (m_R3 & 0xFFFF);
+    return (m_R3 & 0xFFFF);
 }
 uintptr_t PPC32InterruptState::getSyscallParameter(size_t n) const
 {
-  switch (n)
-  {
-    case 0: return m_R6;
-    case 1: return m_R7;
-    case 2: return m_R8;
-    case 3: return m_R9;
-    case 4: return m_R10;
-    default:
-      WARNING("Bad syscall parameter requested: " << Dec << n);
-      return 0;
-  }
+    switch(n)
+    {
+        case 0: return m_R6;
+        case 1: return m_R7;
+        case 2: return m_R8;
+        case 3: return m_R9;
+        case 4: return m_R10;
+        default:
+            WARNING("Bad syscall parameter requested: " << Dec << n);
+            return 0;
+    }
 }
 void PPC32InterruptState::setSyscallReturnValue(uintptr_t val)
 {
-  m_R3 = val;
+    m_R3 = val;
 }
 
 #endif

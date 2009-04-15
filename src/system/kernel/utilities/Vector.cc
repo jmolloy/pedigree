@@ -21,91 +21,91 @@
 // Vector<void*> implementation
 //
 
-Vector<void*>::Vector()
- : m_Size(0), m_Count(0), m_Data(0)
+Vector<void *>::Vector()
+    : m_Size(0), m_Count(0), m_Data(0)
 {
 }
-Vector<void*>::Vector(size_t size)
- : m_Size(0), m_Count(0), m_Data(0)
+Vector<void *>::Vector(size_t size)
+    : m_Size(0), m_Count(0), m_Data(0)
 {
-  reserve(size, false);
+    reserve(size, false);
 }
-Vector<void*>::Vector(const Vector &x)
- : m_Size(0), m_Count(0), m_Data(0)
+Vector<void *>::Vector(const Vector &x)
+    : m_Size(0), m_Count(0), m_Data(0)
 {
-  assign(x);
+    assign(x);
 }
-Vector<void*>::~Vector()
+Vector<void *>::~Vector()
 {
-  if (m_Data != 0)
-    delete []m_Data;
-}
-
-Vector<void*> &Vector<void*>::operator = (const Vector &x)
-{
-  assign(x);
-  return *this;
-}
-void *Vector<void*>::operator [](size_t index) const
-{
-  return m_Data[index];
+    if(m_Data != 0)
+        delete[] m_Data;
 }
 
-size_t Vector<void*>::size() const
+Vector<void *> &Vector<void *>::operator =(const Vector &x)
 {
-  return m_Size;
+    assign(x);
+    return *this;
 }
-size_t Vector<void*>::count() const
+void *Vector<void *>::operator [](size_t index) const
 {
-  return m_Count;
+    return m_Data[index];
 }
-void Vector<void*>::pushBack(void *value)
-{
-  reserve(m_Count + 1, true);
 
-  m_Data[m_Count++] = value;
-}
-void *Vector<void*>::popBack()
+size_t Vector<void *>::size() const
 {
-  m_Count--;
-  return m_Data[m_Count];
+    return m_Size;
 }
-void Vector<void*>::clear()
+size_t Vector<void *>::count() const
 {
-  m_Count = 0;
+    return m_Count;
 }
-Vector<void*>::Iterator Vector<void*>::erase(Iterator iter)
+void Vector<void *>::pushBack(void *value)
 {
-  memmove(iter,
-          iter+1,
-          reinterpret_cast<uintptr_t>(m_Data) + (m_Count-1)*sizeof(void*) - reinterpret_cast<uintptr_t>(iter));
-  m_Count--;
-  return iter;
-}
-void Vector<void*>::assign(const Vector &x)
-{
-  reserve(x.count(), false);
+    reserve(m_Count + 1, true);
 
-  memcpy(m_Data, x.m_Data, x.count() * sizeof(void*));
-  m_Count = x.count();
+    m_Data[m_Count++] = value;
 }
-void Vector<void*>::reserve(size_t size, bool copy)
+void *Vector<void *>::popBack()
 {
-  if (size <= m_Size)
-    return;
+    m_Count--;
+    return m_Data[m_Count];
+}
+void Vector<void *>::clear()
+{
+    m_Count = 0;
+}
+Vector<void *>::Iterator Vector<void *>::erase(Iterator iter)
+{
+    memmove(iter,
+            iter + 1,
+            reinterpret_cast<uintptr_t>(m_Data) + (m_Count - 1) * sizeof(void *) - reinterpret_cast<uintptr_t>(iter));
+    m_Count--;
+    return iter;
+}
+void Vector<void *>::assign(const Vector &x)
+{
+    reserve(x.count(), false);
 
-  void **tmp = m_Data;
-  m_Data = new void*[size];
-  if (tmp != 0)
-  {
-    if (copy == true)
-      memcpy(m_Data, tmp, m_Size * sizeof(void*));
-    delete []tmp;
-  }
-  m_Size = size;
+    memcpy(m_Data, x.m_Data, x.count() * sizeof(void *));
+    m_Count = x.count();
+}
+void Vector<void *>::reserve(size_t size, bool copy)
+{
+    if(size <= m_Size)
+        return;
+
+    void **tmp = m_Data;
+    m_Data = new void *[size];
+    if(tmp != 0)
+    {
+        if(copy == true)
+            memcpy(m_Data, tmp, m_Size * sizeof(void *));
+        delete[] tmp;
+    }
+    m_Size = size;
 }
 
 //
 // Explicitly instantiate Vector<void*>
 //
-template class Vector<void*>;
+template class Vector<void *>;

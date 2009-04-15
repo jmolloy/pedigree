@@ -16,7 +16,7 @@
 #ifndef MACHINE_OF_TYPES_H
 #define MACHINE_OF_TYPES_H
 
-typedef void* OFHandle;
-typedef void* OFParam;
+typedef void *OFHandle;
+typedef void *OFParam;
 
 #endif

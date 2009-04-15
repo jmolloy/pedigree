@@ -20,7 +20,7 @@
 #include <DebuggerIO.h>
 
 QuitCommand::QuitCommand()
- : DebuggerCommand()
+    : DebuggerCommand()
 {
 }
 
@@ -34,6 +34,6 @@ void QuitCommand::autocomplete(const HugeStaticString &input, HugeStaticString &
 
 bool QuitCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  return false; // Return control to the kernel.
+    return false; // Return control to the kernel.
 }
 

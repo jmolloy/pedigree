@@ -26,26 +26,34 @@
 /** Common arm processor information structure */
 class ARMProcessorInformation
 {
-  friend class Processor;
-  public:
+    friend class Processor;
+public:
     /** Get the current processor's VirtualAddressSpace
      *\return reference to the current processor's VirtualAddressSpace */
     inline VirtualAddressSpace &getVirtualAddressSpace() const
-      {return *m_VirtualAddressSpace;}
+    {
+        return *m_VirtualAddressSpace;
+    }
     /** Set the current processor's VirtualAddressSpace
      *\param[in] virtualAddressSpace reference to the new VirtualAddressSpace */
     inline void setVirtualAddressSpace(VirtualAddressSpace &virtualAddressSpace)
-      {m_VirtualAddressSpace = &virtualAddressSpace;}
+    {
+        m_VirtualAddressSpace = &virtualAddressSpace;
+    }
 
-  protected:
+protected:
     /** Construct a ARMProcessorInformation object
      *\param[in] processorId Identifier of the processor */
     inline ARMProcessorInformation(ProcessorId processorId)
-      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()){}
+        : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace())
+    {
+    }
     /** The destructor does nothing */
-    inline virtual ~ARMProcessorInformation(){}
+    inline virtual ~ARMProcessorInformation()
+    {
+    }
 
-  private:
+private:
     /** Default constructor
      *\note NOT implemented */
     ARMProcessorInformation();
@@ -54,7 +62,7 @@ class ARMProcessorInformation
     ARMProcessorInformation(const ARMProcessorInformation &);
     /** Assignment operator
      *\note NOT implemented */
-    ARMProcessorInformation &operator = (const ARMProcessorInformation &);
+    ARMProcessorInformation &operator =(const ARMProcessorInformation &);
 
     /** Identifier of that processor */
     ProcessorId m_ProcessorId;

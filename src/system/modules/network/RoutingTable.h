@@ -32,11 +32,13 @@
 /** A specific route */
 class Route
 {
-  public:
+public:
     Route() : m_Type(SUBNET)
-    {};
+    {
+    };
     virtual ~Route()
-    {};
+    {
+    };
 
     /** Defines the type of a route.
       * SUBNET means this uses the subnet mask to determine destination
@@ -45,91 +47,93 @@ class Route
       */
     enum RouteType
     {
-      SUBNET = 0,
-      IP
+        SUBNET = 0,
+        IP
     };
 
     /** Gets this route's card */
-    Network* getCard(IpAddress incoming)
+    Network *getCard(IpAddress incoming)
     {
-      switch(m_Type)
-      {
-        case SUBNET:
-          if(incoming.getIp() & 
-      return 0;
-    }
+        switch(m_Type)
+        {
+            case SUBNET:
+                if(incoming.getIp() &
+                   return 0;
+                   }
 
-  private:
+private:
 
-    RouteType m_Type;
+                   RouteType m_Type;
 
-    Network* m_Card;
+                   Network *m_Card;
 
-    IpAddress m_Subnet;
-    IpAddress m_Ip;
-};
+                   IpAddress m_Subnet;
+                   IpAddress m_Ip;
+                   };
 
 #endif
 
 /** Routing table implementation */
 class RoutingTable
 {
-  public:
+public:
     RoutingTable() :
-      m_Table()
-    {};
-    virtual ~RoutingTable()
-    {};
-
-    static RoutingTable& instance()
+        m_Table()
     {
-      return m_Instance;
+    };
+    virtual ~RoutingTable()
+    {
+    };
+
+    static RoutingTable &instance()
+    {
+        return m_Instance;
     }
 
     /** Adds a route to the table */
-    void Add(IpAddress dest, Network* card)
+    void Add(IpAddress dest, Network *card)
     {
-      m_Table.insert(dest.toString(), card);
+        m_Table.insert(dest.toString(), card);
     }
 
     /** Adds a named route to the table */
-    void AddNamed(String route, Network* card)
+    void AddNamed(String route, Network *card)
     {
-      m_Table.insert(route, card);
+        m_Table.insert(route, card);
     }
 
     /** Removes a route from the table */
     void Remove(IpAddress routeip)
     {
-      m_Table.remove(routeip.toString());
+        m_Table.remove(routeip.toString());
     }
 
     /** Determines the routing for a specific IP */
-    Network* DetermineRoute(IpAddress dest, bool bGiveDefault = true)
+    Network *DetermineRoute(IpAddress dest, bool bGiveDefault = true)
     {
-      // look up the IP
-      Network* ret = 0;
-      if((ret = m_Table.lookup(dest.toString())))
-        return ret;
+        // look up the IP
+        Network *ret = 0;
+        if((ret = m_Table.lookup(dest.toString())))
+            return ret;
 
-      // none found so try the default route if needed
-      if(bGiveDefault)
-        return m_Table.lookup(String("default"));
-      else
-        return 0;
+        // none found so try the default route if needed
+        if(bGiveDefault)
+            return m_Table.lookup(String("default"));
+        else
+            return 0;
     }
 
     /** Gets the default route */
-    Network* DefaultRoute()
+    Network *DefaultRoute()
     {
-      return m_Table.lookup(String("default"));
+        return m_Table.lookup(String("default"));
     }
-  
-  private:
+
+private:
 
     static RoutingTable m_Instance;
 
-    RadixTree<Network*> m_Table;
+    RadixTree<Network *> m_Table;
 };
 
 #endif

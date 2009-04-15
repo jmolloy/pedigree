@@ -20,80 +20,80 @@
 
 void String::assign(const String &x)
 {
-  m_Length = x.length();
-  reserve(m_Length + 1);
-  if (m_Length)
-    memcpy(m_Data, x.m_Data, m_Length + 1);
+    m_Length = x.length();
+    reserve(m_Length + 1);
+    if(m_Length)
+        memcpy(m_Data, x.m_Data, m_Length + 1);
 }
 void String::assign(const char *s)
 {
-  m_Length = strlen(s);
-  reserve(m_Length + 1);
-  if (m_Length)
-    memcpy(m_Data, s, m_Length + 1);
+    m_Length = strlen(s);
+    reserve(m_Length + 1);
+    if(m_Length)
+        memcpy(m_Data, s, m_Length + 1);
 }
 void String::reserve(size_t size)
 {
-  if (size > m_Size)
-  {
-    char *tmp = m_Data;
-    m_Data = new char [size];
-    if (tmp != 0 && m_Size != 0)
-      memcpy(m_Data, tmp, m_Size);
-    delete []tmp;
-    m_Size = size;
-  }
+    if(size > m_Size)
+    {
+        char *tmp = m_Data;
+        m_Data = new char[size];
+        if(tmp != 0 && m_Size != 0)
+            memcpy(m_Data, tmp, m_Size);
+        delete[] tmp;
+        m_Size = size;
+    }
 }
 void String::free()
 {
-  delete [] m_Data;
-  m_Data = 0;
-  m_Length = 0;
-  m_Size = 0;
+    delete[] m_Data;
+    m_Data = 0;
+    m_Length = 0;
+    m_Size = 0;
 }
 
 String String::split(size_t offset)
 {
-  String s(&m_Data[offset]);
-  m_Data[offset] = '\0';
-  m_Length = offset;
+    String s(&m_Data[offset]);
+    m_Data[offset] = '\0';
+    m_Length = offset;
 
-  return s;
+    return s;
 }
 
-List<String*> String::tokenise(char token)
+List<String *> String::tokenise(char token)
 {
-  String copy = *this;
-  List<String*> list;
+    String copy = *this;
+    List<String *> list;
 
-  size_t idx = 0;
-  while (idx < copy.m_Length)
-  {
-    if (copy.m_Data[idx] == token)
+    size_t idx = 0;
+    while(idx < copy.m_Length)
     {
-      String tmp = copy.split(idx+1);
+        if(copy.m_Data[idx] == token)
+        {
+            String tmp = copy.split(idx + 1);
 
-      String *pStr = new String(copy);
-      copy = tmp;
+            String *pStr = new String(copy);
+            copy = tmp;
 
-      // pStr will include token, so remove the last character from it.
-      pStr->m_Length --;
-      pStr->m_Data[pStr->length()] = '\0';
+            // pStr will include token, so remove the last character from it.
+            pStr->m_Length--;
+            pStr->m_Data[pStr->length()] = '\0';
 
-      list.pushBack(pStr);
-      idx = 0;
+            list.pushBack(pStr);
+            idx = 0;
+        }
+        else
+            idx = copy.nextCharacter(idx);
     }
-    else
-      idx = copy.nextCharacter(idx);
-  }
 
-  list.pushBack(new String(copy));
+    list.pushBack(new String(copy));
 
-  return list;
+    return list;
 }
 
 void String::chomp()
 {
-  m_Length --;
-  m_Data[m_Length] = '\0';
+    m_Length--;
+    m_Data[m_Length] = '\0';
 }

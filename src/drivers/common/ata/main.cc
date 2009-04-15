@@ -25,58 +25,58 @@
 
 void probeDevice(Controller *pDev)
 {
-  // Create a new AtaController device node.
-  AtaController *pController = new AtaController(pDev);
+    // Create a new AtaController device node.
+    AtaController *pController = new AtaController(pDev);
 
-  // Replace pDev with pController.
-  pController->setParent(pDev->getParent());
-  pDev->getParent()->replaceChild(pDev, pController);
-  
-  
-  // And delete pDev for good measure.
-  //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
-  //delete pDev;
+    // Replace pDev with pController.
+    pController->setParent(pDev->getParent());
+    pDev->getParent()->replaceChild(pDev, pController);
+
+
+    // And delete pDev for good measure.
+    //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
+    //delete pDev;
 }
 
 void searchNode(Device *pDev)
 {
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    // Is this a controller?
+    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    {
+        Device *pChild = pDev->getChild(i);
+        // Is this a controller?
 //    if (pChild->getType() == Device::Controller)
 //    {
-      // Check it's not an ATA controller already.
-      String name;
-      pChild->getName(name);
+        // Check it's not an ATA controller already.
+        String name;
+        pChild->getName(name);
 
-      // Get its addresses, and search for "command" and "control".
-      bool foundCommand = false;
-      bool foundControl = false;
-      for (unsigned int j = 0; j < pChild->addresses().count(); j++)
-      {
-        /// \todo Problem with String::operator== - fix.
-        if (!strcmp(pChild->addresses()[j]->m_Name, "command"))
+        // Get its addresses, and search for "command" and "control".
+        bool foundCommand = false;
+        bool foundControl = false;
+        for(unsigned int j = 0; j < pChild->addresses().count(); j++)
         {
-          foundCommand = true;
+            /// \todo Problem with String::operator== - fix.
+            if(!strcmp(pChild->addresses()[j]->m_Name, "command"))
+            {
+                foundCommand = true;
+            }
+            if(!strcmp(pChild->addresses()[j]->m_Name, "control"))
+                foundControl = true;
         }
-        if (!strcmp(pChild->addresses()[j]->m_Name, "control"))
-          foundControl = true;
-      }        
-      if (foundCommand && foundControl)
-        probeDevice(reinterpret_cast<Controller*> (pChild));
+        if(foundCommand && foundControl)
+            probeDevice(reinterpret_cast<Controller *> (pChild));
 //    }
-    // Recurse.
-    searchNode(pChild);
-  }
+        // Recurse.
+        searchNode(pChild);
+    }
 }
 
 void entry()
 {
-  // Walk the device tree looking for controllers that have 
-  // "control" and "command" addresses.
-  Device *pDev = &Device::root();  
-  searchNode(pDev);
+    // Walk the device tree looking for controllers that have
+    // "control" and "command" addresses.
+    Device *pDev = &Device::root();
+    searchNode(pDev);
 }
 
 void exit()

@@ -26,7 +26,7 @@
 /** Timer for the time-keeping */
 class Timer
 {
-  public:
+public:
     /** Get the current year
      *\return the current year */
     virtual size_t getYear() = 0;
@@ -58,30 +58,34 @@ class Timer
               That may require FP (*365.25 instead of 365) */
     virtual uint32_t getUnixTimestamp()
     {
-      return
-        (getYear()-1970) * (60*60*24*365) +
-        getMonth() * (60*60*24*30) +
-        getDayOfMonth() * (60*60*24) +
-        getHour() * (60*60) +
-        getMinute() * 60 +
-        getSecond();
+        return
+            (getYear() - 1970) * (60 * 60 * 24 * 365) +
+            getMonth() * (60 * 60 * 24 * 30) +
+            getDayOfMonth() * (60 * 60 * 24) +
+            getHour() * (60 * 60) +
+            getMinute() * 60 +
+            getSecond();
     }
 
     virtual bool registerHandler(TimerHandler *handler) = 0;
     virtual bool unregisterHandler(TimerHandler *handler) = 0;
 
-  protected:
+protected:
     /** The default constructor */
-    inline Timer(){}
+    inline Timer()
+    {
+    }
     /** The destructor */
-    inline virtual ~Timer(){}
-  private:
+    inline virtual ~Timer()
+    {
+    }
+private:
     /** The copy-constructor
      *\note NOT implemented */
     Timer(const Timer &);
     /** The assignment operator
      *\note NOT implemented */
-    Timer &operator = (const Timer &);
+    Timer &operator =(const Timer &);
 };
 
 /**@}*/

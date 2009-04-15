@@ -17,7 +17,7 @@
 #include "Serial.h"
 
 ArmVersatileSerial::ArmVersatileSerial() :
-  m_pRegs(0)
+    m_pRegs(0)
 {
 }
 ArmVersatileSerial::~ArmVersatileSerial()
@@ -25,21 +25,21 @@ ArmVersatileSerial::~ArmVersatileSerial()
 }
 void ArmVersatileSerial::setBase(uintptr_t nBaseAddr)
 {
-  m_pRegs = reinterpret_cast<serial*> (nBaseAddr);
+    m_pRegs = reinterpret_cast<serial *> (nBaseAddr);
 }
 char ArmVersatileSerial::read()
 {
-  uint32_t c = 0;
-  while ( c == 0 ) c = m_pRegs->dr;
-  return static_cast<char>(c);
+    uint32_t c = 0;
+    while(c == 0) c = m_pRegs->dr;
+    return static_cast<char>(c);
 }
 char ArmVersatileSerial::readNonBlock()
 {
-  return static_cast<char>(m_pRegs->dr);
+    return static_cast<char>(m_pRegs->dr);
 }
 void ArmVersatileSerial::write(char c)
 {
-  if( c == '\n' )
-    write( '\r' );
-  m_pRegs->dr = static_cast<uint32_t>(c);
+    if(c == '\n')
+        write('\r');
+    m_pRegs->dr = static_cast<uint32_t>(c);
 }

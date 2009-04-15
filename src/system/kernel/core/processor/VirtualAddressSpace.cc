@@ -22,72 +22,72 @@
 
 void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
 {
-  void *Heap = m_HeapEnd;
-  PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
+    void *Heap = m_HeapEnd;
+    PhysicalMemoryManager &PMemoryManager = PhysicalMemoryManager::instance();
 
-  void *newHeapEnd = adjust_pointer(m_HeapEnd, incr);
-  
-  m_HeapEnd = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(m_HeapEnd)&0xFFFFF000);
+    void *newHeapEnd = adjust_pointer(m_HeapEnd, incr);
 
-  int i = 0;
-  while (reinterpret_cast<uintptr_t>(newHeapEnd) > reinterpret_cast<uintptr_t>(m_HeapEnd))
-  {
-    // Allocate a page
-    physical_uintptr_t page = PMemoryManager.allocatePage();
+    m_HeapEnd = reinterpret_cast<void *> (reinterpret_cast<uintptr_t>(m_HeapEnd) & 0xFFFFF000);
 
-    if (page == 0)
+    int i = 0;
+    while(reinterpret_cast<uintptr_t>(newHeapEnd) > reinterpret_cast<uintptr_t>(m_HeapEnd))
     {
-      ERROR("Out of physical memory!");
-      
-      // Reset the heap pointer
-      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
+        // Allocate a page
+        physical_uintptr_t page = PMemoryManager.allocatePage();
 
-      // Free the pages that were already allocated
-      rollbackHeapExpansion(m_HeapEnd, i);
-      return 0;
-    }
+        if(page == 0)
+        {
+            ERROR("Out of physical memory!");
 
-    // Map the page
-    if (map(page, m_HeapEnd, flags) == false)
-    {
-      // Map failed - probable double mapping. Go to the next page.
-      // Free the page
-      PMemoryManager.freePage(page);
+            // Reset the heap pointer
+            m_HeapEnd = adjust_pointer(m_HeapEnd, -i * PhysicalMemoryManager::getPageSize());
 
-      // Reset the heap pointer
+            // Free the pages that were already allocated
+            rollbackHeapExpansion(m_HeapEnd, i);
+            return 0;
+        }
+
+        // Map the page
+        if(map(page, m_HeapEnd, flags) == false)
+        {
+            // Map failed - probable double mapping. Go to the next page.
+            // Free the page
+            PMemoryManager.freePage(page);
+
+            // Reset the heap pointer
 //      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
 
-      // Free the pages that were already allocated
+            // Free the pages that were already allocated
 //      rollbackHeapExpansion(m_HeapEnd, i);
 //    return 0;
-    }
+        }
 
-    // Go to the next address
-    m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
-    i++;
-  }
-  m_HeapEnd = newHeapEnd;
-  return Heap;
+        // Go to the next address
+        m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
+        i++;
+    }
+    m_HeapEnd = newHeapEnd;
+    return Heap;
 }
 
 void VirtualAddressSpace::rollbackHeapExpansion(void *virtualAddress, size_t pageCount)
 {
-  for (size_t i = 0;i < pageCount;i++)
-  {
-    // Get the mapping for the current page
-    size_t flags;
-    physical_uintptr_t physicalAddress;
-    getMapping(virtualAddress,
-               physicalAddress,
-               flags);
+    for(size_t i = 0; i < pageCount; i++)
+    {
+        // Get the mapping for the current page
+        size_t flags;
+        physical_uintptr_t physicalAddress;
+        getMapping(virtualAddress,
+                   physicalAddress,
+                   flags);
 
-    // Free the physical page
-    PhysicalMemoryManager::instance().freePage(physicalAddress);
+        // Free the physical page
+        PhysicalMemoryManager::instance().freePage(physicalAddress);
 
-    // Unmap the page from the virtual address space
-    unmap(virtualAddress);
+        // Unmap the page from the virtual address space
+        unmap(virtualAddress);
 
-    // Go to the next virtual page
-    virtualAddress = adjust_pointer(virtualAddress, PhysicalMemoryManager::getPageSize());
-  }
+        // Go to the next virtual page
+        virtualAddress = adjust_pointer(virtualAddress, PhysicalMemoryManager::getPageSize());
+    }
 }

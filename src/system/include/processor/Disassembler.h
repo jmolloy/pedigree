@@ -29,37 +29,41 @@
 class DisassemblerBase
 {
 public:
-  /**
-   * Destructor does nothing.
-   */
-  virtual ~DisassemblerBase() {};
-  
-  /**
-   * Sets the location of the next instruction to be disassembled.
-   */
-  virtual void setLocation(uintptr_t nLocation) =0;
+    /**
+     * Destructor does nothing.
+     */
+    virtual ~DisassemblerBase()
+    {
+    };
 
-  /**
-   * Gets the location of the next instruction to be disassembled.
-   */
-  virtual uintptr_t getLocation() =0;
+    /**
+     * Sets the location of the next instruction to be disassembled.
+     */
+    virtual void setLocation(uintptr_t nLocation) = 0;
 
-  /**
-   * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
-   * If a disassembler doesn't support a requested mode, it should
-   * return without changing anything.
-   * \param nMode Mode - 16, 32 or 64.
-   */
-  virtual void setMode(size_t nMode) =0;
-  
-  /**
-   * Disassembles one instruction and populates the given StaticString
-   * with a textual representation.
-   */
-  virtual void disassemble(LargeStaticString &text) =0;
-  
+    /**
+     * Gets the location of the next instruction to be disassembled.
+     */
+    virtual uintptr_t getLocation() = 0;
+
+    /**
+     * Sets the mode of disassembly - 16-bit, 32-bit or 64-bit
+     * If a disassembler doesn't support a requested mode, it should
+     * return without changing anything.
+     * \param nMode Mode - 16, 32 or 64.
+     */
+    virtual void setMode(size_t nMode) = 0;
+
+    /**
+     * Disassembles one instruction and populates the given StaticString
+     * with a textual representation.
+     */
+    virtual void disassemble(LargeStaticString &text) = 0;
+
 protected:
-  DisassemblerBase() {};
+    DisassemblerBase()
+    {
+    };
 };
 
 /** @} */

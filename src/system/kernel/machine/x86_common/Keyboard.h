@@ -32,113 +32,113 @@ class X86Keyboard : public Keyboard,
                     private IrqHandler
 {
 public:
-  X86Keyboard (uint32_t portBase);
-  virtual ~X86Keyboard();
-  
-  /**
-   * Initialises the device.
-   */
-  virtual void initialise();
+    X86Keyboard (uint32_t portBase);
+    virtual ~X86Keyboard();
 
-  virtual void setDebugState(bool enableDebugState);
-  virtual bool getDebugState();
-  
-  /**
-   * Retrieves a character from the keyboard. Blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation.
-   */
-  virtual char getChar();
-  
-  /**
-   * Retrieves a character from the keyboard. Non blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation, or zero also if no
-   *         character was present.
-   */
-  virtual char getCharNonBlock();
+    /**
+     * Initialises the device.
+     */
+    virtual void initialise();
 
-  virtual Character getCharacter();
-  virtual Character getCharacterNonBlock();
-  
-  /**
-   * \return True if shift is currently held.
-   */
-  virtual bool shift();
-  
-  /**
-   * \return True if ctrl is currently held.
-   */
-  virtual bool ctrl();
-  
-  /**
-   * \return True if alt is currently held.
-   */
-  virtual bool alt();
-  
-  /**
-   * \return True if caps lock is currently on.
-   */
-  virtual bool capsLock();
+    virtual void setDebugState(bool enableDebugState);
+    virtual bool getDebugState();
 
-  //
-  // IrqHandler interface
-  //
-  virtual bool irq(irq_id_t number, InterruptState &state);
+    /**
+     * Retrieves a character from the keyboard. Blocking I/O.
+     * \return The character recieved or zero if it is a character
+     *         without an ascii representation.
+     */
+    virtual char getChar();
+
+    /**
+     * Retrieves a character from the keyboard. Non blocking I/O.
+     * \return The character recieved or zero if it is a character
+     *         without an ascii representation, or zero also if no
+     *         character was present.
+     */
+    virtual char getCharNonBlock();
+
+    virtual Character getCharacter();
+    virtual Character getCharacterNonBlock();
+
+    /**
+     * \return True if shift is currently held.
+     */
+    virtual bool shift();
+
+    /**
+     * \return True if ctrl is currently held.
+     */
+    virtual bool ctrl();
+
+    /**
+     * \return True if alt is currently held.
+     */
+    virtual bool alt();
+
+    /**
+     * \return True if caps lock is currently on.
+     */
+    virtual bool capsLock();
+
+    //
+    // IrqHandler interface
+    //
+    virtual bool irq(irq_id_t number, InterruptState &state);
 
 private:
-  /**
-   * Converts a scancode into a "real" character.
-   */
-  char scancodeToChar(uint8_t scancode);
+    /**
+     * Converts a scancode into a "real" character.
+     */
+    char scancodeToChar(uint8_t scancode);
 
-  Character scancodeToCharacter(uint8_t scancode);
+    Character scancodeToCharacter(uint8_t scancode);
 
-  /**
-   * True if we're in debug state.
-   */
-  bool m_bDebugState;
+    /**
+     * True if we're in debug state.
+     */
+    bool m_bDebugState;
 
-  /**
-   * True if shift is held.
-   */
-  bool m_bShift;
-  
-  /**
-   * True if ctrl is held.
-   */
-  bool m_bCtrl;
-  
-  /**
-   * True if alt is held.
-   */
-  bool m_bAlt;
-  
-  /**
-   * True if caps lock is on.
-   */
-  bool m_bCapsLock;
-  
-  /**
-   * The IO port through which to access the keyboard.
-   */
-  IoPort m_Port;
+    /**
+     * True if shift is held.
+     */
+    bool m_bShift;
 
-  /**
-   * Circular input buffer.
-   */
-  Character m_Buffer[BUFLEN];
-  int m_BufStart, m_BufEnd;
+    /**
+     * True if ctrl is held.
+     */
+    bool m_bCtrl;
 
-  /**
-   * Semaphore for how many items are in the buffer.
-   */
-  Semaphore m_BufLength;
+    /**
+     * True if alt is held.
+     */
+    bool m_bAlt;
 
-  /**
-   * IRQ id.
-   */
-  irq_id_t m_IrqId;
+    /**
+     * True if caps lock is on.
+     */
+    bool m_bCapsLock;
+
+    /**
+     * The IO port through which to access the keyboard.
+     */
+    IoPort m_Port;
+
+    /**
+     * Circular input buffer.
+     */
+    Character m_Buffer[BUFLEN];
+    int m_BufStart, m_BufEnd;
+
+    /**
+     * Semaphore for how many items are in the buffer.
+     */
+    Semaphore m_BufLength;
+
+    /**
+     * IRQ id.
+     */
+    irq_id_t m_IrqId;
 };
 
 #endif

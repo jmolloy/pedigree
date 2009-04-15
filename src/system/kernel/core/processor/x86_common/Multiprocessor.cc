@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- 
+
 #ifdef SMP
 
 #include <Log.h>
@@ -46,102 +46,102 @@ Spinlock Multiprocessor::m_ProcessorLock2(true);
 
 size_t Multiprocessor::initialise1()
 {
-  // Did we find a processor list?
-  bool bMPInfoFound = false;
-  // List of information about each usable processor
-  const Vector<ProcessorInformation*> *Processors;
+    // Did we find a processor list?
+    bool bMPInfoFound = false;
+    // List of information about each usable processor
+    const Vector<ProcessorInformation *> *Processors;
 
   #if defined(ACPI)
     // Search through the ACPI tables
     Acpi &acpi = Acpi::instance();
-    if ((bMPInfoFound = acpi.validProcessorInfo()) == true)
-      Processors = &acpi.getProcessorList();
+    if((bMPInfoFound = acpi.validProcessorInfo()) == true)
+        Processors = &acpi.getProcessorList();
   #endif
 
   #if defined(SMP)
     // Search through the SMP tables
     Smp &smp = Smp::instance();
-    if (bMPInfoFound == false &&
-        (bMPInfoFound = smp.valid()) == true)
-      Processors = &smp.getProcessorList();
+    if(bMPInfoFound == false &&
+       (bMPInfoFound = smp.valid()) == true)
+        Processors = &smp.getProcessorList();
   #endif
 
-  // No processor list found
-  if (bMPInfoFound == false)
-    return 1;
+    // No processor list found
+    if(bMPInfoFound == false)
+        return 1;
 
-  NOTICE("Multiprocessor: Found " << Dec << Processors->count() << " processors");
+    NOTICE("Multiprocessor: Found " << Dec << Processors->count() << " processors");
 
-  // Copy the trampoline code to 0x7000
-  extern void *trampoline;
-  extern void *trampoline_end;
-  memcpy(reinterpret_cast<void*>(0x7000),
-         &trampoline,
-         reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
+    // Copy the trampoline code to 0x7000
+    extern void *trampoline;
+    extern void *trampoline_end;
+    memcpy(reinterpret_cast<void *>(0x7000),
+           &trampoline,
+           reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
 
-  // Parameters for the trampoline code
+    // Parameters for the trampoline code
   #if defined(X86)
-    volatile uint32_t *trampolineStack = reinterpret_cast<volatile uint32_t*>(0x7FF8);
-    volatile uint32_t *trampolineKernelEntry = reinterpret_cast<volatile uint32_t*>(0x7FF4);
+    volatile uint32_t *trampolineStack = reinterpret_cast<volatile uint32_t *>(0x7FF8);
+    volatile uint32_t *trampolineKernelEntry = reinterpret_cast<volatile uint32_t *>(0x7FF4);
 
     // Set the virtual address space
-    *reinterpret_cast<volatile uint32_t*>(0x7FFC) = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPageDirectory;
+    *reinterpret_cast<volatile uint32_t *>(0x7FFC) = static_cast<X86VirtualAddressSpace &>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPageDirectory;
   #elif defined(X64)
-    volatile uint64_t *trampolineStack = reinterpret_cast<volatile uint64_t*>(0x7FF0);
-    volatile uint64_t *trampolineKernelEntry = reinterpret_cast<volatile uint64_t*>(0x7FE8);
+    volatile uint64_t *trampolineStack = reinterpret_cast<volatile uint64_t *>(0x7FF0);
+    volatile uint64_t *trampolineKernelEntry = reinterpret_cast<volatile uint64_t *>(0x7FE8);
 
     // Set the virtual address space
-    *reinterpret_cast<volatile uint64_t*>(0x7FF8) = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPML4;
+    *reinterpret_cast<volatile uint64_t *>(0x7FF8) = static_cast<X64VirtualAddressSpace &>(VirtualAddressSpace::getKernelAddressSpace()).m_PhysicalPML4;
   #endif
 
-  // Set the entry point
-  *trampolineKernelEntry = reinterpret_cast<uintptr_t>(&applicationProcessorStartup);
+    // Set the entry point
+    *trampolineKernelEntry = reinterpret_cast<uintptr_t>(&applicationProcessorStartup);
 
-  LocalApic &localApic = Pc::instance().getLocalApic();
-  VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
-  // Startup the application processors through startup interprocessor interrupt
-  for (size_t i = 0; i < Processors->count(); i++)
-  {
-    // Allocate kernel stack
-    void *pStack = kernelSpace.allocateStack();
-
-    // Set trampoline stack
-    *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
-
-    // Add a ProcessorInformation object
-    ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
-                                                                        (*Processors)[i]->apicId);
-    Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
-
-    // Startup the processor
-    if (localApic.getId() != (*Processors)[i]->apicId)
+    LocalApic &localApic = Pc::instance().getLocalApic();
+    VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
+    // Startup the application processors through startup interprocessor interrupt
+    for(size_t i = 0; i < Processors->count(); i++)
     {
-      NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
+        // Allocate kernel stack
+        void *pStack = kernelSpace.allocateStack();
 
-      // TODO: We need a timer and send Init IPIs (assert and deassert)
+        // Set trampoline stack
+        *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
 
-      // Send the Startup IPI to the processor
-      localApic.interProcessorInterrupt((*Processors)[i]->apicId,
-                                        0x07,
-                                        LocalApic::deliveryModeStartup,
-                                        true,
-                                        false);
+        // Add a ProcessorInformation object
+        ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
+                                                                            (*Processors)[i]->apicId);
+        Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
 
-      // Acquire the lock
-      m_ProcessorLock1.acquire();
+        // Startup the processor
+        if(localApic.getId() != (*Processors)[i]->apicId)
+        {
+            NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
-      // Wait until the processor is started and has unlocked the lock
-      m_ProcessorLock1.acquire();
-      m_ProcessorLock1.release();
+            // TODO: We need a timer and send Init IPIs (assert and deassert)
+
+            // Send the Startup IPI to the processor
+            localApic.interProcessorInterrupt((*Processors)[i]->apicId,
+                                              0x07,
+                                              LocalApic::deliveryModeStartup,
+                                              true,
+                                              false);
+
+            // Acquire the lock
+            m_ProcessorLock1.acquire();
+
+            // Wait until the processor is started and has unlocked the lock
+            m_ProcessorLock1.acquire();
+            m_ProcessorLock1.release();
+        }
     }
-  }
 
-  return Processors->count();
+    return Processors->count();
 }
 
 void Multiprocessor::initialise2()
 {
-  m_ProcessorLock2.release();
+    m_ProcessorLock2.release();
 }
 
 #endif

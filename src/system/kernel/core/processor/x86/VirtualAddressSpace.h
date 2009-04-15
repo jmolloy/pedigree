@@ -28,13 +28,13 @@
  *  architecture, that means it wraps around the processor's paging functionality. */
 class X86VirtualAddressSpace : public VirtualAddressSpace
 {
-  /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
-  friend class Processor;
-  /** Multiprocessor::initialise() needs access to m_PhysicalPageDirectory */
-  friend class Multiprocessor;
-  /** VirtualAddressSpace::create needs access to the constructor */
-  friend VirtualAddressSpace *VirtualAddressSpace::create();
-  public:
+    /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
+    friend class Processor;
+    /** Multiprocessor::initialise() needs access to m_PhysicalPageDirectory */
+    friend class Multiprocessor;
+    /** VirtualAddressSpace::create needs access to the constructor */
+    friend VirtualAddressSpace *VirtualAddressSpace::create();
+public:
     //
     // VirtualAddressSpace Interface
     //
@@ -76,7 +76,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     /** The destructor cleans up the address space */
     virtual ~X86VirtualAddressSpace();
 
-  protected:
+protected:
     /** The constructor for already present paging structures
      *\param[in] Heap virtual address of the beginning of the heap
      *\param[in] PhysicalPageDirectory physical address of the page directory
@@ -101,7 +101,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     void doUnmap(void *virtualAddress);
     void *doAllocateStack(size_t sSize);
 
-  private:
+private:
     /** The default constructor */
     X86VirtualAddressSpace();
 
@@ -110,7 +110,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     X86VirtualAddressSpace(const X86VirtualAddressSpace &);
     /** The copy-constructor
      *\note Not implemented */
-    X86VirtualAddressSpace &operator = (const X86VirtualAddressSpace &);
+    X86VirtualAddressSpace &operator =(const X86VirtualAddressSpace &);
 
     /** Get the page table entry, if it exists and check whether a page is mapped or marked as
      *  swapped out.
@@ -119,7 +119,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
      *\return true, if the page table is present and the page mapped or marked swapped out, false
      *        otherwise */
     bool getPageTableEntry(void *virtualAddress,
-                           uint32_t *&pageTableEntry);
+                           uint32_t * &pageTableEntry);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
      *\return the proessor specific flag representation */
@@ -138,7 +138,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     /** Current top of the stacks */
     void *m_pStackTop;
     /** List of free stacks */
-    Vector<void*> m_freeStacks;
+    Vector<void *> m_freeStacks;
     /** Lock to guard against multiprocessor reentrancy. */
     Spinlock m_Lock;
 };
@@ -146,11 +146,11 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
 /** The kernel's VirtualAddressSpace on x86 */
 class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 {
-  /** X86VirtualAddressSpace needs access to m_Instance */
-  friend class X86VirtualAddressSpace;
-  /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_Instance */
-  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
-  public:
+    /** X86VirtualAddressSpace needs access to m_Instance */
+    friend class X86VirtualAddressSpace;
+    /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_Instance */
+    friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+public:
     //
     // VirtualAddressSpace Interface
     //
@@ -165,7 +165,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
     virtual void unmap(void *virtualAddress);
     virtual void *allocateStack();
 
-  private:
+private:
     /** The constructor */
     X86KernelVirtualAddressSpace();
     /** The destructor */
@@ -175,7 +175,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
     X86KernelVirtualAddressSpace(const X86KernelVirtualAddressSpace &);
     /** The assignment operator
      *\note NOT implemented (Singleton) */
-    X86KernelVirtualAddressSpace &operator = (const X86KernelVirtualAddressSpace &);
+    X86KernelVirtualAddressSpace &operator =(const X86KernelVirtualAddressSpace &);
 
     /** The kernel virtual address space */
     static X86KernelVirtualAddressSpace m_Instance;
@@ -186,19 +186,19 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
-#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void *>(0x10000000)
+#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void *>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
-#define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)
-#define VIRTUAL_PAGE_TABLES reinterpret_cast<void*>(0xFFC00000)
-#define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void*>(0xFFBFD000)
-#define KERNEL_VIRTUAL_TEMP2 reinterpret_cast<void*>(0xFFBFE000)
-#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xC0000000)
-#define KERNEL_VIRUTAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFF7FF000)
-#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFF400000 - 0x100000)
-#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xF0000000)
-#define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(0xFF3F6000)
+#define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void *>(0xFFBFF000)
+#define VIRTUAL_PAGE_TABLES reinterpret_cast<void *>(0xFFC00000)
+#define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void *>(0xFFBFD000)
+#define KERNEL_VIRTUAL_TEMP2 reinterpret_cast<void *>(0xFFBFE000)
+#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void *>(0xC0000000)
+#define KERNEL_VIRUTAL_PAGE_DIRECTORY reinterpret_cast<void *>(0xFF7FF000)
+#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void *>(0xFF400000 - 0x100000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void *>(0xD0000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void *>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK reinterpret_cast<void *>(0xFF3F6000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x20000000
 #define KERNEL_STACK_SIZE 0x8000
 

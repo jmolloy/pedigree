@@ -28,39 +28,44 @@
 class ArmVersatile : public Machine
 {
 public:
-  inline static Machine &instance(){return m_Instance;}
+    inline static Machine &instance()
+    {
+        return m_Instance;
+    }
 
-  virtual void initialise();
-  virtual Serial *getSerial(size_t n);
-  virtual size_t getNumSerial();
-  virtual Vga *getVga(size_t n);
-  virtual size_t getNumVga();
-  virtual IrqManager *getIrqManager();
-  virtual SchedulerTimer *getSchedulerTimer();
-  virtual Timer *getTimer();
-  virtual Keyboard *getKeyboard();
+    virtual void initialise();
+    virtual Serial *getSerial(size_t n);
+    virtual size_t getNumSerial();
+    virtual Vga *getVga(size_t n);
+    virtual size_t getNumVga();
+    virtual IrqManager *getIrqManager();
+    virtual SchedulerTimer *getSchedulerTimer();
+    virtual Timer *getTimer();
+    virtual Keyboard *getKeyboard();
 
-  virtual void initialiseDeviceTree(){};
+    virtual void initialiseDeviceTree()
+    {
+    };
 
 private:
-  /**
-   * Default constructor, does nothing.
-   */
-  ArmVersatile();
-  ArmVersatile(const ArmVersatile &);
-  ArmVersatile &operator = (const ArmVersatile &);
-  /**
-   * Virtual destructor, does nothing.
-   */
-  virtual ~ArmVersatile();
+    /**
+     * Default constructor, does nothing.
+     */
+    ArmVersatile();
+    ArmVersatile(const ArmVersatile &);
+    ArmVersatile &operator =(const ArmVersatile &);
+    /**
+     * Virtual destructor, does nothing.
+     */
+    virtual ~ArmVersatile();
 
-  ArmVersatileSerial m_Serial[2];
-  //SchedulerTimer m_SchedulerTimer;
-  //Timer m_Timers;
-  ArmVersatileVga m_Vga;
-  ArmVersatileKeyboard m_Keyboard;
+    ArmVersatileSerial m_Serial[2];
+    //SchedulerTimer m_SchedulerTimer;
+    //Timer m_Timers;
+    ArmVersatileVga m_Vga;
+    ArmVersatileKeyboard m_Keyboard;
 
-  static ArmVersatile m_Instance;
+    static ArmVersatile m_Instance;
 };
 
 #endif

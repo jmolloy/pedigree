@@ -27,12 +27,15 @@
 
 /** The interrupt handler on mips32 processors */
 class ARM926EInterruptManager : public ::InterruptManager,
-                               public ::SyscallManager
+                                public ::SyscallManager
 {
-  public:
+public:
     /** Get the ARM926EInterruptManager class instance
      *\return instance of the ARM926EInterruptManager class */
-    inline static ARM926EInterruptManager &instance(){return m_Instance;}
+    inline static ARM926EInterruptManager &instance()
+    {
+        return m_Instance;
+    }
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
@@ -51,7 +54,7 @@ class ARM926EInterruptManager : public ::InterruptManager,
      *\todo and some smp/acpi function */
     static void initialiseProcessor();
 
-  private:
+private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
@@ -62,7 +65,7 @@ class ARM926EInterruptManager : public ::InterruptManager,
     ARM926EInterruptManager(const ARM926EInterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    ARM926EInterruptManager &operator = (const ARM926EInterruptManager &);
+    ARM926EInterruptManager &operator =(const ARM926EInterruptManager &);
     /** The destructor */
     virtual ~ARM926EInterruptManager();
 
@@ -72,7 +75,7 @@ class ARM926EInterruptManager : public ::InterruptManager,
     InterruptHandler *m_DbgHandler[256];
 #endif
     /** The syscall handlers */
-    SyscallHandler *m_SyscallHandler[/*SyscallManager::*/serviceEnd];
+    SyscallHandler *m_SyscallHandler[/*SyscallManager::*/ serviceEnd];
 
     /** The instance of the interrupt manager  */
     static ARM926EInterruptManager m_Instance;

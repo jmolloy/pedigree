@@ -19,150 +19,150 @@
 
 UdpManager UdpManager::manager;
 
-int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
+int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard)
 {
-  bool success = Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
-  return success ? 0 : -1;
+    bool success = Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
+    return success ? 0 : -1;
 };
 
-int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint *remoteHost)
 {
-  if(m_DataQueue.count())
-  {
-    DataBlock* ptr = m_DataQueue.popFront();
-    
-    size_t nBytes = maxSize;
-    bool allRead = false;
-    
-    // only read in this block
-    if(nBytes >= ptr->size)
+    if(m_DataQueue.count())
     {
-      nBytes = ptr->size;
-      allRead = true;
+        DataBlock *ptr = m_DataQueue.popFront();
+
+        size_t nBytes = maxSize;
+        bool allRead = false;
+
+        // only read in this block
+        if(nBytes >= ptr->size)
+        {
+            nBytes = ptr->size;
+            allRead = true;
+        }
+
+        // and only past the offset
+        nBytes -= ptr->offset;
+
+        memcpy(reinterpret_cast<void *>(buffer), reinterpret_cast<void *>(ptr->ptr + ptr->offset), nBytes);
+
+        *remoteHost = ptr->remoteHost;
+
+        if(!allRead)
+        {
+            ptr->offset = nBytes;
+            m_DataQueue.pushFront(ptr);
+            return nBytes;
+        }
+        else
+        {
+            delete reinterpret_cast<uint8_t *>(ptr->ptr);
+            delete ptr;
+            return nBytes;
+        }
     }
-    
-    // and only past the offset
-    nBytes -= ptr->offset;
-    
-    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr + ptr->offset), nBytes);
-    
-    *remoteHost = ptr->remoteHost;
-    
-    if(!allRead)
-    {
-      ptr->offset = nBytes;
-      m_DataQueue.pushFront(ptr);
-      return nBytes;
-    }
-    else
-    {
-      delete reinterpret_cast<uint8_t*>(ptr->ptr);
-      delete ptr;
-      return nBytes;
-    }
-  }
-  return 0;
+    return 0;
 };
 
 void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
 {
-  /// \note Perhaps nBytes should also have an upper limit check?
-  if(!nBytes || !payload)
-    return;
-  uint8_t* data = new uint8_t[nBytes];
-  memcpy(data, reinterpret_cast<void*>(payload), nBytes);
-  
-  DataBlock* newBlock = new DataBlock;
-  newBlock->ptr = reinterpret_cast<uintptr_t>(data);
-  newBlock->offset = 0;
-  newBlock->size = nBytes;
-  newBlock->remoteHost = remoteHost;
-  
-  m_DataQueue.pushBack(newBlock);
-  m_DataQueueSize.release();
+    /// \note Perhaps nBytes should also have an upper limit check?
+    if(!nBytes || !payload)
+        return;
+    uint8_t *data = new uint8_t[nBytes];
+    memcpy(data, reinterpret_cast<void *>(payload), nBytes);
+
+    DataBlock *newBlock = new DataBlock;
+    newBlock->ptr = reinterpret_cast<uintptr_t>(data);
+    newBlock->offset = 0;
+    newBlock->size = nBytes;
+    newBlock->remoteHost = remoteHost;
+
+    m_DataQueue.pushBack(newBlock);
+    m_DataQueueSize.release();
 }
 
 bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 {
-  bool timedOut = false;
-  if(block)
-  {
-    Timer* t = Machine::instance().getTimer();
-    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-    timeout->setTimeout(tmout);
-    timeout->setSemaphore(&m_DataQueueSize);
-    timeout->setTimedOut(&timedOut);
-    if(t)
-      t->registerHandler(timeout);
-    m_DataQueueSize.acquire();
-    if(t)
-      t->unregisterHandler(timeout);
-    delete timeout;
-  }
-  else
-    return m_DataQueueSize.tryAcquire();
-  return !timedOut;
+    bool timedOut = false;
+    if(block)
+    {
+        Timer *t = Machine::instance().getTimer();
+        NetworkBlockTimeout *timeout = new NetworkBlockTimeout;
+        timeout->setTimeout(tmout);
+        timeout->setSemaphore(&m_DataQueueSize);
+        timeout->setTimedOut(&timedOut);
+        if(t)
+            t->registerHandler(timeout);
+        m_DataQueueSize.acquire();
+        if(t)
+            t->unregisterHandler(timeout);
+        delete timeout;
+    }
+    else
+        return m_DataQueueSize.tryAcquire();
+    return !timedOut;
 };
 
-void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
-{  
-  // is there an endpoint for this port?
-  Endpoint* e;
-  StationInfo cardInfo = pCard->getStationInfo();
-  if((e = m_Endpoints.lookup(destPort)) != 0)
-  {
-    // check if we should pass on the packet
-    bool passOn = false;
-    if(to.getIp() == 0xffffffff)
-      passOn = e->acceptAnyAddress();
-    if(to.getIp() != cardInfo.ipv4.getIp())
-      passOn = e->acceptAnyAddress();
-    else
-      passOn = true;
-      
-    if(!passOn)
-      return;
-    
-    // e->setRemotePort(sourcePort);
-    Endpoint::RemoteEndpoint host;
-    host.ip = from;
-    if(sourcePort)
-      host.remotePort = sourcePort;
-    else
-      host.remotePort = destPort;
-    e->depositPayload(payloadSize, payload, host);
-  }
+void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network *pCard)
+{
+    // is there an endpoint for this port?
+    Endpoint *e;
+    StationInfo cardInfo = pCard->getStationInfo();
+    if((e = m_Endpoints.lookup(destPort)) != 0)
+    {
+        // check if we should pass on the packet
+        bool passOn = false;
+        if(to.getIp() == 0xffffffff)
+            passOn = e->acceptAnyAddress();
+        if(to.getIp() != cardInfo.ipv4.getIp())
+            passOn = e->acceptAnyAddress();
+        else
+            passOn = true;
+
+        if(!passOn)
+            return;
+
+        // e->setRemotePort(sourcePort);
+        Endpoint::RemoteEndpoint host;
+        host.ip = from;
+        if(sourcePort)
+            host.remotePort = sourcePort;
+        else
+            host.remotePort = destPort;
+        e->depositPayload(payloadSize, payload, host);
+    }
 }
 
-void UdpManager::returnEndpoint(Endpoint* e)
+void UdpManager::returnEndpoint(Endpoint *e)
 {
-  if(e)
-  {
-    m_Endpoints.remove(e->getLocalPort());
-    delete e;
-  }
+    if(e)
+    {
+        m_Endpoints.remove(e->getLocalPort());
+        delete e;
+    }
 }
 
-Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
+Endpoint *UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
 {
-  // try to find a unique port
-  if(localPort == 0)
-  {
-    uint16_t base = 32768;
-    while(base < 0xFFFF)
-      if(m_Endpoints.lookup(localPort) == 0)
-        break;
-    if(base == 0xFFFF)
-      return 0; // no local port available
-    localPort = base;
-  }
-  
-  // is there an endpoint for this port?
-  Endpoint* e;
-  if((e = m_Endpoints.lookup(localPort)) == 0)
-  {
-    e = new UdpEndpoint(remoteHost, localPort, remotePort);
-    m_Endpoints.insert(localPort, e);
-  }
-  return e;
+    // try to find a unique port
+    if(localPort == 0)
+    {
+        uint16_t base = 32768;
+        while(base < 0xFFFF)
+            if(m_Endpoints.lookup(localPort) == 0)
+                break;
+        if(base == 0xFFFF)
+            return 0; // no local port available
+        localPort = base;
+    }
+
+    // is there an endpoint for this port?
+    Endpoint *e;
+    if((e = m_Endpoints.lookup(localPort)) == 0)
+    {
+        e = new UdpEndpoint(remoteHost, localPort, remotePort);
+        m_Endpoints.insert(localPort, e);
+    }
+    return e;
 }

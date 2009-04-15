@@ -21,11 +21,11 @@ VsidManager VsidManager::m_Instance;
 
 VsidManager &VsidManager::instance()
 {
-  return m_Instance;
+    return m_Instance;
 }
 
 VsidManager::VsidManager() :
-  m_HighWaterMark(2), m_pStack(0), m_Mutex()
+    m_HighWaterMark(2), m_pStack(0), m_Mutex()
 {
 }
 
@@ -35,15 +35,15 @@ VsidManager::~VsidManager()
 
 VsidManager::Vsid VsidManager::obtainVsid()
 {
-  /// \todo Locking
-  NOTICE("pStack: " << (uintptr_t)m_pStack << ", hwm: " << m_HighWaterMark);
-  
-  // Is the stack NULL?
+    /// \todo Locking
+    NOTICE("pStack: " << (uintptr_t)m_pStack << ", hwm: " << m_HighWaterMark);
+
+    // Is the stack NULL?
 //  if (m_pStack == 0)
     // Return the high water mark and increment.
     return m_HighWaterMark++;
 
-  // Pop the stack.
+    // Pop the stack.
 //  VsidStack *pPopped = m_pStack;
 //  m_pStack = m_pStack->next;
 
@@ -55,9 +55,9 @@ VsidManager::Vsid VsidManager::obtainVsid()
 
 void VsidManager::returnVsid(VsidManager::Vsid vsid)
 {
-  /// \todo Locking
-  /// \todo decrement high water mark if possible
-  
+    /// \todo Locking
+    /// \todo decrement high water mark if possible
+
 //  VsidStack *pPushed = new VsidStack;
 //  pPushed->vsid = vsid;
 //  pPushed->next = m_pStack;

@@ -30,16 +30,16 @@ uintptr_t end_ctors;
 /// Call this before using any global objects.
 void initialiseConstructors()
 {
-  // Constructor list is defined in the linker script.
-  // The .ctors section is just an array of function pointers.
-  // iterate through, calling each in turn.
-  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
-  while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
-  {
-    void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
-    fp();
-    iterator++;
-  }
+    // Constructor list is defined in the linker script.
+    // The .ctors section is just an array of function pointers.
+    // iterate through, calling each in turn.
+    uintptr_t *iterator = reinterpret_cast<uintptr_t *>(&start_ctors);
+    while(iterator < reinterpret_cast<uintptr_t *>(&end_ctors))
+    {
+        void (*fp)(void) = reinterpret_cast<void(*) (void)>(*iterator);
+        fp();
+        iterator++;
+    }
 }
 
 /// Required for G++ to compile code.
@@ -55,69 +55,69 @@ extern "C" void __cxa_pure_virtual()
 /// Called by G++ if function local statics are initialised for the first time
 extern "C" int __cxa_guard_acquire()
 {
-  return 1;
+    return 1;
 }
 extern "C" void __cxa_guard_release()
 {
-  // TODO
+    // TODO
 }
 
 Spinlock g_MallocLock(false);
 
 #include "dlmalloc.h"
-void *operator new (size_t size) throw()
+void *operator new(size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  void *ret = malloc(size);
-  g_MallocLock.release();
-  return ret;
+    g_MallocLock.acquire();
+    void *ret = malloc(size);
+    g_MallocLock.release();
+    return ret;
 #else
-  return 0;
+    return 0;
 #endif
 }
 void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  void *ret = malloc(size);
-  g_MallocLock.release();
-  return ret;
+    g_MallocLock.acquire();
+    void *ret = malloc(size);
+    g_MallocLock.release();
+    return ret;
 #else
-  return 0;
+    return 0;
 #endif
 }
-void *operator new (size_t size, void* memory) throw()
+void *operator new(size_t size, void *memory) throw()
 {
-  return memory;
+    return memory;
 }
-void *operator new[] (size_t size, void* memory) throw()
+void *operator new[] (size_t size, void *memory) throw()
 {
-  return memory;
+    return memory;
 }
-void operator delete (void * p)
+void operator delete(void *p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  free(p);
-  g_MallocLock.release();
+    g_MallocLock.acquire();
+    free(p);
+    g_MallocLock.release();
 #endif
 }
-void operator delete[] (void * p)
+void operator delete[] (void *p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  free(p);
-  g_MallocLock.release();
+    g_MallocLock.acquire();
+    free(p);
+    g_MallocLock.release();
 #endif
 }
-void operator delete (void *p, void *q)
+void operator delete(void *p, void *q)
 {
-  // TODO
-  panic("Operator delete -implement");
+    // TODO
+    panic("Operator delete -implement");
 }
 void operator delete[] (void *p, void *q)
 {
-  // TODO
-  panic("Operator delete[] -implement");
+    // TODO
+    panic("Operator delete[] -implement");
 }

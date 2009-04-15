@@ -28,7 +28,7 @@
  *\return the virtual address */
 inline uintptr_t physicalAddress(physical_uintptr_t address)
 {
-  return static_cast<uintptr_t>(address + 0xFFFF800000000000);
+    return static_cast<uintptr_t>(address + 0xFFFF800000000000);
 }
 
 /** Get the virtual address from the physical address. This is possible on x64
@@ -38,7 +38,7 @@ inline uintptr_t physicalAddress(physical_uintptr_t address)
 template<typename T>
 inline T *physicalAddress(T *pAddress)
 {
-  return reinterpret_cast<T*>(reinterpret_cast<uint64_t>(pAddress) + 0xFFFF800000000000);
+    return reinterpret_cast<T *>(reinterpret_cast<uint64_t>(pAddress) + 0xFFFF800000000000);
 }
 
 /** @} */

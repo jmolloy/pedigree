@@ -22,34 +22,34 @@
 
 void Multiprocessor::applicationProcessorStartup()
 {
-  // Initialise this processor's interrupt handling
-  X64InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    X64InterruptManager::initialiseProcessor();
 
-  // Initialise this processor's syscall handling
-  X64SyscallManager::initialiseProcessor();
+    // Initialise this processor's syscall handling
+    X64SyscallManager::initialiseProcessor();
 
-  // Signal the Bootstrap processor that this processor is started and the BSP can continue
-  // to boot up other processors
-  m_ProcessorLock1.release();
+    // Signal the Bootstrap processor that this processor is started and the BSP can continue
+    // to boot up other processors
+    m_ProcessorLock1.release();
 
-  // Wait until the GDT is initialised and the first 4MB identity mapping removed
-  m_ProcessorLock2.acquire();
-  m_ProcessorLock2.release();
+    // Wait until the GDT is initialised and the first 4MB identity mapping removed
+    m_ProcessorLock2.acquire();
+    m_ProcessorLock2.release();
 
-  // Load the GDT
-  X64GdtManager::initialiseProcessor();
+    // Load the GDT
+    X64GdtManager::initialiseProcessor();
 
-  // Invalidate the first 4MB identity mapping
-  Processor::invalidate(0);
+    // Invalidate the first 4MB identity mapping
+    Processor::invalidate(0);
 
-  // Initialise the machine-specific interface
-  Pc::instance().initialiseProcessor();
+    // Initialise the machine-specific interface
+    Pc::instance().initialiseProcessor();
 
-  // We need to synchronize the -init section invalidation
-  Processor::invalidate(0);
-  Processor::invalidate(reinterpret_cast<void*>(0x200000));
+    // We need to synchronize the -init section invalidation
+    Processor::invalidate(0);
+    Processor::invalidate(reinterpret_cast<void *>(0x200000));
 
-  // Call the per-processor code in main.cc
-  extern void apMain();
-  apMain();
+    // Call the per-processor code in main.cc
+    extern void apMain();
+    apMain();
 }

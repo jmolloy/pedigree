@@ -17,7 +17,7 @@
 #include "Partition.h"
 
 Partition::Partition(String type, uint64_t start, uint64_t length) :
-  m_Type(type), m_Start(start), m_Length(length)
+    m_Type(type), m_Start(start), m_Length(length)
 {
 }
 
@@ -27,5 +27,5 @@ Partition::~Partition()
 
 uint64_t Partition::getStart()
 {
-  return m_Start;
+    return m_Start;
 }

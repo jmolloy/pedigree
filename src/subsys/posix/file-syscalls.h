@@ -36,17 +36,17 @@
 class FileDescriptor
 {
 public:
-  FileDescriptor () :
-    file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
-  {
-  }
-  File* file;
-  uint64_t offset;
-  size_t fd;
+    FileDescriptor () :
+        file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
+    {
+    }
+    File *file;
+    uint64_t offset;
+    size_t fd;
 
-  /// \todo What are these? Can they be documented please?
-  int fdflags;
-  int flflags;
+    /// \todo What are these? Can they be documented please?
+    int fdflags;
+    int flflags;
 };
 
 int posix_close(int fd);
@@ -74,10 +74,10 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 int posix_dup(int fd);
 int posix_dup2(int fd1, int fd2);
 
-int posix_fcntl(int fd, int cmd, int num, int* args);
+int posix_fcntl(int fd, int cmd, int num, int *args);
 
-int posix_mkdir(const char* name, int mode);
+int posix_mkdir(const char *name, int mode);
 
-int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout);
+int posix_poll(struct pollfd *fds, unsigned int nfds, int timeout);
 
 #endif

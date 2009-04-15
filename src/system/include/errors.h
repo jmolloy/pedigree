@@ -19,8 +19,8 @@
 // This namespace is mapped to posix errno's where possible. Keep it that way!
 namespace Error
 {
-  enum Error
-  {
+enum Error
+{
     NotEnoughPermissions =1,
     DoesNotExist         =2,
     NoSuchProcess        =3,
@@ -52,7 +52,7 @@ namespace Error
     Already              =120,
     IsConnected          =127,
     Unimplemented        =88
-  };
+};
 }
 
 #endif

@@ -30,69 +30,69 @@
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
-  const X86VirtualAddressSpace &x86AddressSpace = static_cast<const X86VirtualAddressSpace&>(AddressSpace);
+    const X86VirtualAddressSpace &x86AddressSpace = static_cast<const X86VirtualAddressSpace &>(AddressSpace);
 
-  // Do we need to set a new page directory?
-  if (readCr3() != x86AddressSpace.m_PhysicalPageDirectory)
-  {
-    // Set the new page directory
-    asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
+    // Do we need to set a new page directory?
+    if(readCr3() != x86AddressSpace.m_PhysicalPageDirectory)
+    {
+        // Set the new page directory
+        asm volatile ("mov %0, %%cr3" :: "r" (x86AddressSpace.m_PhysicalPageDirectory));
 
-    // Update the information in the ProcessorInformation structure
-    ProcessorInformation &processorInformation = Processor::information();
-    processorInformation.setVirtualAddressSpace(AddressSpace);
-  }
+        // Update the information in the ProcessorInformation structure
+        ProcessorInformation &processorInformation = Processor::information();
+        processorInformation.setVirtualAddressSpace(AddressSpace);
+    }
 }
 
 physical_uintptr_t Processor::readCr3()
 {
-  physical_uintptr_t cr3;
-  asm volatile ("mov %%cr3, %0" : "=r" (cr3));
-  return cr3;
+    physical_uintptr_t cr3;
+    asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+    return cr3;
 }
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
 
-  // Initialise this processor's interrupt handling
-  X86InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    X86InterruptManager::initialiseProcessor();
 
-  PageFaultHandler::instance().initialise();
+    PageFaultHandler::instance().initialise();
 
-  // Initialise the physical memory-management
-  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
-  physicalMemoryManager.initialise(Info);
+    // Initialise the physical memory-management
+    X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
+    physicalMemoryManager.initialise(Info);
 
-  // Initialise the I/O Manager
-  IoPortManager &ioPortManager = IoPortManager::instance();
-  ioPortManager.initialise(0, 0x10000);
+    // Initialise the I/O Manager
+    IoPortManager &ioPortManager = IoPortManager::instance();
+    ioPortManager.initialise(0, 0x10000);
 
-  m_Initialised = 1;
+    m_Initialised = 1;
 }
 
 void Processor::initialise2()
 {
-  size_t nProcessors = 1;
+    size_t nProcessors = 1;
 
   #if defined(MULTIPROCESSOR)
     nProcessors = Multiprocessor::initialise1();
   #endif
 
-  // Initialise the GDT
-  X86GdtManager::instance().initialise(nProcessors);
-  X86GdtManager::initialiseProcessor();
+    // Initialise the GDT
+    X86GdtManager::instance().initialise(nProcessors);
+    X86GdtManager::initialiseProcessor();
 
-  initialiseMultitasking();
+    initialiseMultitasking();
 
   #if defined(MULTIPROCESSOR)
-    if (nProcessors != 1)
-      Multiprocessor::initialise2();
+    if(nProcessors != 1)
+        Multiprocessor::initialise2();
   #endif
 
-  m_Initialised = 2;
+    m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)
 {
-  str = "Rarcaken!!";
+    str = "Rarcaken!!";
 }

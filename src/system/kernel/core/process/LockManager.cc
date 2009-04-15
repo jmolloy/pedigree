@@ -19,26 +19,26 @@
 #include <Log.h>
 
 LockManager::LockManager() :
-  m_Stack(32)
+    m_Stack(32)
 {
-  m_Stack.clear();
+    m_Stack.clear();
 }
 
 LockManager::~LockManager()
 {
 }
 
-void LockManager::acquired(Semaphore& sem)
+void LockManager::acquired(Semaphore &sem)
 {
-  m_Stack.pushBack(&sem);
+    m_Stack.pushBack(&sem);
 }
 
-void LockManager::released(Semaphore& sem)
+void LockManager::released(Semaphore &sem)
 {
-  Semaphore *pPopped = m_Stack.popBack();
-  if (pPopped != &sem)
-  {
-    m_Stack.pushBack(pPopped);
-    FATAL("Lock release out of order.");
-  }
+    Semaphore *pPopped = m_Stack.popBack();
+    if(pPopped != &sem)
+    {
+        m_Stack.pushBack(pPopped);
+        FATAL("Lock release out of order.");
+    }
 }

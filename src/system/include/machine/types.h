@@ -19,19 +19,19 @@
 
 #ifdef X86_COMMON
   #include <machine/x86_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) X86Common##x
+  #define MACHINE_SPECIFIC_NAME(x) X86Common ## x
 #endif
 #ifdef MIPS_COMMON
   #include <machine/mips_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) MIPSCommon##x
+  #define MACHINE_SPECIFIC_NAME(x) MIPSCommon ## x
 #endif
 #ifdef ARM_COMMON
   #include <machine/arm_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) ARMCommon##x
+  #define MACHINE_SPECIFIC_NAME(x) ARMCommon ## x
 #endif
 #ifdef PPC_COMMON
   #include <machine/ppc_common/types.h>
-  #define MACHINE_SPECIFIC_NAME(x) PPCCommon##x
+  #define MACHINE_SPECIFIC_NAME(x) PPCCommon ## x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
@@ -47,7 +47,7 @@
 //       needed types, you will get an error here
 
 /** Define a type for IRQ identifications */
-typedef MACHINE_SPECIFIC_NAME(irq_id_t) irq_id_t;
+typedef MACHINE_SPECIFIC_NAME (irq_id_t) irq_id_t;
 
 /** @} */
 

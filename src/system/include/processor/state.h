@@ -19,22 +19,22 @@
 
 #if defined(X86)
   #include <processor/x86/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) X86##x
+  #define PROCESSOR_SPECIFIC_NAME(x) X86 ## x
 #elif defined(X64)
   #include <processor/x64/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) X64##x
+  #define PROCESSOR_SPECIFIC_NAME(x) X64 ## x
 #elif defined(MIPS32)
   #include <processor/mips32/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS32 ## x
 #elif defined(MIPS64)
   #include <processor/mips64/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPS64 ## x
 #elif defined(ARM926E)
   #include <processor/arm_926e/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) ARM926E##x
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM926E ## x
 #elif defined(PPC32)
   #include <processor/ppc32/state.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
+  #define PROCESSOR_SPECIFIC_NAME(x) PPC32 ## x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
@@ -50,11 +50,11 @@
 //       needed types, you will get an error here
 
 /** Lift the processor-specifc InterruptState class into the global namespace */
-typedef PROCESSOR_SPECIFIC_NAME(InterruptState) InterruptState;
+typedef PROCESSOR_SPECIFIC_NAME (InterruptState) InterruptState;
 /** Lift the processor-specifc SyscallState class into the global namespace */
-typedef PROCESSOR_SPECIFIC_NAME(SyscallState) SyscallState;
+typedef PROCESSOR_SPECIFIC_NAME (SyscallState) SyscallState;
 /** Lift the processor-specific ProcessorState class into the global namespace */
-typedef PROCESSOR_SPECIFIC_NAME(ProcessorState) ProcessorState;
+typedef PROCESSOR_SPECIFIC_NAME (ProcessorState) ProcessorState;
 
 /** @} */
 

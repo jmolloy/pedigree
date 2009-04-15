@@ -36,12 +36,12 @@ void CpuInfoCommand::autocomplete(const HugeStaticString &input, HugeStaticStrin
 
 bool CpuInfoCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
 {
-  Processor::identify (output);
-  output += '\n';
-  return true;
+    Processor::identify(output);
+    output += '\n';
+    return true;
 }
 
 const NormalStaticString CpuInfoCommand::getString()
 {
-  return NormalStaticString("cpuinfo");
+    return NormalStaticString("cpuinfo");
 }

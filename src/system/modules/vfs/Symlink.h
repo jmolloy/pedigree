@@ -25,39 +25,41 @@
 /** A symbolic link node. */
 class Symlink : public File
 {
-  friend class Filesystem;
+    friend class Filesystem;
 
 public:
-  /** Eases the pain of casting, and performs a sanity check. */
-  static Symlink *fromFile(File *pF)
-  {
-    if (!pF->isSymlink()) FATAL("Casting non-symlink File to Symlink!");
-    return reinterpret_cast<Symlink*> (pF);
-  }
+    /** Eases the pain of casting, and performs a sanity check. */
+    static Symlink *fromFile(File *pF)
+    {
+        if(!pF->isSymlink()) FATAL("Casting non-symlink File to Symlink!");
+        return reinterpret_cast<Symlink *> (pF);
+    }
 
-  /** Constructor, creates an invalid file. */
-  Symlink();
+    /** Constructor, creates an invalid file. */
+    Symlink();
 
-  /** Copy constructors are hidden - unused! */
-  Symlink(const Symlink &file);
+    /** Copy constructors are hidden - unused! */
+    Symlink(const Symlink &file);
 private:
-  Symlink& operator =(const Symlink&);
+    Symlink &operator =(const Symlink &);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  Symlink(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-          uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
-  /** Destructor - doesn't do anything. */
-  virtual ~Symlink();
+    /** Constructor, should be called only by a Filesystem. */
+    Symlink(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+            uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
+    /** Destructor - doesn't do anything. */
+    virtual ~Symlink();
 
-  /** Returns true if the File is actually a symlink. */
-  virtual bool isSymlink()
-  {return true;}
+    /** Returns true if the File is actually a symlink. */
+    virtual bool isSymlink()
+    {
+        return true;
+    }
 
-  /** Reads the contents of the file as a symbolic link. */
-  File *followLink();
+    /** Reads the contents of the file as a symbolic link. */
+    File *followLink();
 
 protected:
-  File *m_pCachedSymlink;
+    File *m_pCachedSymlink;
 };
 
 #endif

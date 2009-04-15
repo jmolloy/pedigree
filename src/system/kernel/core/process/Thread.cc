@@ -22,121 +22,121 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
-Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack) :
-  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
-  if (pParent == 0)
-  {
-    FATAL("Thread::Thread(): Parent process was NULL!");
-  }
+    if(pParent == 0)
+    {
+        FATAL("Thread::Thread(): Parent process was NULL!");
+    }
 
-  // Initialise our kernel stack.
-  m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+    // Initialise our kernel stack.
+    m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 
-  // If we've been given a user stack pointer, we are a user mode thread.
-  bool bUserMode = true;
-  if (pStack == 0)
-  {
-    bUserMode = false;
-    pStack = m_pKernelStack;
-    m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
-  }
-  
-  // Start initialising our ProcessorState.
-  m_State.setStackPointer (reinterpret_cast<processor_register_t> (pStack));
-  m_State.setInstructionPointer (reinterpret_cast<processor_register_t>
-                                   (pStartFunction));
-  
-  // Construct a stack frame in our ProcessorState for the call to the thread starting function.
-  StackFrame::construct (m_State, // Store the frame in this state.
-                         reinterpret_cast<uintptr_t> (&threadExited), // Return to threadExited.
-                         1,       // There is one parameter.
-                         pParam); // Parameter
+    // If we've been given a user stack pointer, we are a user mode thread.
+    bool bUserMode = true;
+    if(pStack == 0)
+    {
+        bUserMode = false;
+        pStack = m_pKernelStack;
+        m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
+    }
 
-  // Construct an interrupt state on the stack too.
-  m_pInterruptState = InterruptState::construct (m_State, bUserMode);
+    // Start initialising our ProcessorState.
+    m_State.setStackPointer(reinterpret_cast<processor_register_t> (pStack));
+    m_State.setInstructionPointer(reinterpret_cast<processor_register_t>
+                                  (pStartFunction));
 
-  m_Id = m_pParent->addThread(this);
-  
-  // Now we are ready to go into the scheduler.
-  Scheduler::instance().addThread(this);
+    // Construct a stack frame in our ProcessorState for the call to the thread starting function.
+    StackFrame::construct(m_State, // Store the frame in this state.
+                          reinterpret_cast<uintptr_t> (&threadExited), // Return to threadExited.
+                          1,      // There is one parameter.
+                          pParam); // Parameter
+
+    // Construct an interrupt state on the stack too.
+    m_pInterruptState = InterruptState::construct(m_State, bUserMode);
+
+    m_Id = m_pParent->addThread(this);
+
+    // Now we are ready to go into the scheduler.
+    Scheduler::instance().addThread(this);
 }
 
 Thread::Thread(Process *pParent) :
-  m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+    m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
-  if (pParent == 0)
-  {
-    FATAL("Thread::Thread(): Parent process was NULL!");
-  }
-  m_Id = m_pParent->addThread(this);
+    if(pParent == 0)
+    {
+        FATAL("Thread::Thread(): Parent process was NULL!");
+    }
+    m_Id = m_pParent->addThread(this);
 
-  // Initialise our kernel stack.
-  // NO! No kernel stack for kernel-mode threads. On PPC, causes bug!
-  //m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+    // Initialise our kernel stack.
+    // NO! No kernel stack for kernel-mode threads. On PPC, causes bug!
+    //m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 }
 
 Thread::Thread(Process *pParent, ProcessorState state) :
-  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+    m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
 {
-  if (pParent == 0)
-  {
-    FATAL("Thread::Thread(): Parent process was NULL!");
-  }
+    if(pParent == 0)
+    {
+        FATAL("Thread::Thread(): Parent process was NULL!");
+    }
 
-  static Spinlock spinlock;
-  spinlock.acquire();
+    static Spinlock spinlock;
+    spinlock.acquire();
 
-  // Initialise our kernel stack.
-  m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+    // Initialise our kernel stack.
+    m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 
-  VirtualAddressSpace &as = Processor::information().getVirtualAddressSpace();
-  Processor::switchAddressSpace(*pParent->getAddressSpace());
-  
-  // Construct an interrupt state on the stack.
-  m_pInterruptState = InterruptState::construct (state, /* Back to user mode */ true);
+    VirtualAddressSpace &as = Processor::information().getVirtualAddressSpace();
+    Processor::switchAddressSpace(*pParent->getAddressSpace());
 
-  Processor::switchAddressSpace(as);
+    // Construct an interrupt state on the stack.
+    m_pInterruptState = InterruptState::construct(state, /* Back to user mode */ true);
 
-  m_Id = m_pParent->addThread(this);
-  
-  // Now we are ready to go into the scheduler.
-  Scheduler::instance().addThread(this);
+    Processor::switchAddressSpace(as);
 
-  spinlock.release();
+    m_Id = m_pParent->addThread(this);
+
+    // Now we are ready to go into the scheduler.
+    Scheduler::instance().addThread(this);
+
+    spinlock.release();
 }
 
 Thread::~Thread()
 {
-  // Remove us from the scheduler.
-  Scheduler::instance().removeThread(this);
+    // Remove us from the scheduler.
+    Scheduler::instance().removeThread(this);
 
-  m_pParent->removeThread(this);
-  
-  // TODO delete any pointer data.
+    m_pParent->removeThread(this);
 
-  if (m_pKernelStack)
-    VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pKernelStack);
+    // TODO delete any pointer data.
+
+    if(m_pKernelStack)
+        VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pKernelStack);
 }
 
 void Thread::setStatus(Thread::Status s)
 {
-  m_Status = s;
-  Scheduler::instance().threadStatusChanged(this);
+    m_Status = s;
+    Scheduler::instance().threadStatusChanged(this);
 }
 
 void Thread::threadExited(int code)
 {
-  NOTICE("Thread exited");
-  // TODO apply these to the current thread - we don't have a this pointer.
+    NOTICE("Thread exited");
+    // TODO apply these to the current thread - we don't have a this pointer.
 //  m_Status = Zombie;
 //  delete this;
-  for(;;);
-  Processor::halt();
+    for(;;) ;
+    Processor::halt();
 }
 
 #endif

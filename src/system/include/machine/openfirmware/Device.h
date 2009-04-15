@@ -26,12 +26,12 @@
  */
 class OFDevice
 {
-  /** OpenFirmware can access our m_Handle variable. */
-  friend class OpenFirmware;
-  public:
+    /** OpenFirmware can access our m_Handle variable. */
+    friend class OpenFirmware;
+public:
     OFDevice(OFHandle handle);
     virtual ~OFDevice();
-  
+
     virtual void getProperty(const char *pProperty, NormalStaticString &buf);
     virtual OFHandle getProperty(const char *pProperty);
     virtual int getProperty(const char *pProperty, void *buf, size_t bufLen);
@@ -40,16 +40,16 @@ class OFDevice
     virtual int getPropertyLength(const char *pProperty);
     virtual int getNextProperty(const char *pPrevious, const char *pNext);
     virtual void setProperty(const char *pProperty, NormalStaticString &val);
-    
-    virtual OFHandle executeMethod(const char *method, size_t nArgs, OFParam p1=0,
-                                                                     OFParam p2=0,
-                                                                     OFParam p3=0,
-                                                                     OFParam p4=0,
-                                                                     OFParam p5=0,
-                                                                     OFParam p6=0);
-  protected:
+
+    virtual OFHandle executeMethod(const char *method, size_t nArgs, OFParam p1 = 0,
+                                   OFParam p2 = 0,
+                                   OFParam p3 = 0,
+                                   OFParam p4 = 0,
+                                   OFParam p5 = 0,
+                                   OFParam p6 = 0);
+protected:
     OFDevice(const OFDevice &);
-    OFDevice &operator = (const OFDevice &);
+    OFDevice &operator =(const OFDevice &);
     OFHandle m_Handle;
 };
 

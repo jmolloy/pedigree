@@ -27,22 +27,26 @@
 /** x86 StackFrame */
 class X86StackFrame : public StackFrameBase
 {
-  public:
+public:
 #if defined(DEBUGGER)
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
     inline X86StackFrame(const ProcessorState &State, uintptr_t basePointer,
                          LargeStaticString mangledSymbol)
-      : StackFrameBase(State, basePointer, mangledSymbol){}
+        : StackFrameBase(State, basePointer, mangledSymbol)
+    {
+    }
     /** The destructor does nothing */
-    inline ~X86StackFrame(){}
+    inline ~X86StackFrame()
+    {
+    }
 #endif
     static void construct(ProcessorState &state,
                           uintptr_t returnAddress,
                           unsigned int nParams,
                           ...);
-    
-  private:
+
+private:
 #if defined(DEBUGGER)
     /** Returns the n'th 32-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n);

@@ -26,10 +26,13 @@
  *\brief Implementation of the PhysicalMemoryManager for common arm */
 class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
-  public:
+public:
     /** Get the ArmCommonPhysicalMemoryManager instance
      *\return instance of the ArmCommonPhysicalMemoryManager */
-    inline static ArmCommonPhysicalMemoryManager &instance(){return m_Instance;}
+    inline static ArmCommonPhysicalMemoryManager &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // PhysicalMemoryManager Interface
@@ -42,19 +45,19 @@ class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
                                 size_t Flags,
                                 physical_uintptr_t start = -1);
 
-  protected:
+protected:
     /** The constructor */
     ArmCommonPhysicalMemoryManager();
     /** The destructor */
     virtual ~ArmCommonPhysicalMemoryManager();
 
-  private:
+private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
     ArmCommonPhysicalMemoryManager(const ArmCommonPhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    ArmCommonPhysicalMemoryManager &operator = (const ArmCommonPhysicalMemoryManager &);
+    ArmCommonPhysicalMemoryManager &operator =(const ArmCommonPhysicalMemoryManager &);
 
     /** The ArmCommonPhysicalMemoryManager class instance */
     static ArmCommonPhysicalMemoryManager m_Instance;

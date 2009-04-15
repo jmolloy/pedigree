@@ -20,64 +20,67 @@
 #include <processor/types.h>
 
 /**
- * Interface to OpenFirmware. 
+ * Interface to OpenFirmware.
  */
 class OpenFirmware
 {
 private:
-  /** Argument structure for PROM call. */
-  struct PromArgs
-  {
-    const char *service;
-    int nargs;
-    int nret;
-    void *args[10];
-  };
+    /** Argument structure for PROM call. */
+    struct PromArgs
+    {
+        const char *service;
+        int nargs;
+        int nret;
+        void *args[10];
+    };
 public:
-  typedef int (*OFInterface)(PromArgs *);
-  
-  /** Retrieves the singleton instance of the OpenFirmware class. */
-  static OpenFirmware &instance() {return m_Instance;}
-  
-  /** Initialises the OF interface. */
-  void initialise(OFInterface interface);
-  
-  /** Finds a device in the tree by name. */
-  OFHandle findDevice(const char *pName);
-  
-  /** Returns the given Device's sibling, or NULL if none. */
-  OFHandle getSibling(class OFDevice *pDev);
-  
-  /** Returns the given Device's first child, or NULL if none. */
-  OFHandle getFirstChild(class OFDevice *pDev);
-  
-  /** Calls OpenFirmware with the given arguments, returning one argument. */
-  OFParam call(const char *pService, int nArgs, OFParam p1=0,
-                                                OFParam p2=0,
-                                                OFParam p3=0,
-                                                OFParam p4=0,
-                                                OFParam p5=0,
-                                                OFParam p6=0,
-                                                OFParam p7=0,
-                                                OFParam p8=0);
-private:
-  /** Default constructor is private. */
-  OpenFirmware();
-  ~OpenFirmware();
-  
-  /** The PROM callback. */
-  OFInterface m_Interface;
-  
-  /** The singleton instance */
-  static OpenFirmware m_Instance;
+    typedef int (*OFInterface)(PromArgs *);
 
-  /** OpenFirmware requires the saving of these registers. It shouldn't, but it
-      does. */
-  processor_register_t m_Sprg0;
-  processor_register_t m_Sprg1;
-  processor_register_t m_Sprg2;
-  processor_register_t m_Sprg3;
-  
+    /** Retrieves the singleton instance of the OpenFirmware class. */
+    static OpenFirmware &instance()
+    {
+        return m_Instance;
+    }
+
+    /** Initialises the OF interface. */
+    void initialise(OFInterface interface);
+
+    /** Finds a device in the tree by name. */
+    OFHandle findDevice(const char *pName);
+
+    /** Returns the given Device's sibling, or NULL if none. */
+    OFHandle getSibling(class OFDevice * pDev);
+
+    /** Returns the given Device's first child, or NULL if none. */
+    OFHandle getFirstChild(class OFDevice * pDev);
+
+    /** Calls OpenFirmware with the given arguments, returning one argument. */
+    OFParam call(const char *pService, int nArgs, OFParam p1 = 0,
+                 OFParam p2 = 0,
+                 OFParam p3 = 0,
+                 OFParam p4 = 0,
+                 OFParam p5 = 0,
+                 OFParam p6 = 0,
+                 OFParam p7 = 0,
+                 OFParam p8 = 0);
+private:
+    /** Default constructor is private. */
+    OpenFirmware();
+    ~OpenFirmware();
+
+    /** The PROM callback. */
+    OFInterface m_Interface;
+
+    /** The singleton instance */
+    static OpenFirmware m_Instance;
+
+    /** OpenFirmware requires the saving of these registers. It shouldn't, but it
+        does. */
+    processor_register_t m_Sprg0;
+    processor_register_t m_Sprg1;
+    processor_register_t m_Sprg2;
+    processor_register_t m_Sprg3;
+
 };
 
 #endif

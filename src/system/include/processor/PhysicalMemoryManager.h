@@ -30,7 +30,7 @@ class MemoryRegion;
  *  functions to allocate and free pages. */
 class PhysicalMemoryManager
 {
-  public:
+public:
     /** MemoryRegion can access our unmapRegion function. */
     friend class MemoryRegion;
 
@@ -44,17 +44,17 @@ class PhysicalMemoryManager
 
     // x86/x64 specific flags
     #if defined(X86_COMMON)
-      /** The allocated pages should be below the 1MB mark */
-      static const size_t below1MB   = 1 << 3;
-      /** The allocated pages should be below the 16MB mark */
-      static const size_t below16MB  = 2 << 3;
-      /** The allocated pages should be below the 4GB mark */
-      static const size_t below4GB   = 3 << 3;
-      /** The allocated pages should be below the 64GB mark */
-      static const size_t below64GB  = 4 << 3;
+    /** The allocated pages should be below the 1MB mark */
+    static const size_t below1MB   = 1 << 3;
+    /** The allocated pages should be below the 16MB mark */
+    static const size_t below16MB  = 2 << 3;
+    /** The allocated pages should be below the 4GB mark */
+    static const size_t below4GB   = 3 << 3;
+    /** The allocated pages should be below the 64GB mark */
+    static const size_t below64GB  = 4 << 3;
 
-      /** All address size constraints */
-      static const size_t addressConstraints = below1MB | below16MB | below4GB | below64GB;
+    /** All address size constraints */
+    static const size_t addressConstraints = below1MB | below16MB | below4GB | below64GB;
     #endif
 
     /** Get the PhysicalMemoryManager instance
@@ -64,7 +64,9 @@ class PhysicalMemoryManager
     /** Get the size of one page
      *\return size of one page in bytes */
     inline static size_t getPageSize()
-      {return PAGE_SIZE;}
+    {
+        return PAGE_SIZE;
+    }
     /** Allocate a 'normal' page. Normal means that the page does not need to fullfill any
      *  constraints. These kinds of pages can be used to map normal memory into a virtual
      *  address space.
@@ -90,51 +92,57 @@ class PhysicalMemoryManager
     /** Structure containing information about one memory region. */
     struct MemoryRegionInfo
     {
-      /** Constructor initialises all structure members
-       *\param[in] pVirtualAddress virtual address of the beginning of the memory region
-       *\param[in] PhysicalAddress physical address of the beginning of the memory region (or 0)
-       *\param[in] sAddress size (in bytes) of the memory region
-       *\param[in] Name user-visible name of the memory region */
-      inline MemoryRegionInfo(void *VirtualAddress,
-                              physical_uintptr_t PhysicalAddress,
-                              size_t size,
-                              const char *name)
-        : pVirtualAddress(VirtualAddress), physicalAddress(PhysicalAddress), sVirtualAddress(size), pName(name){}
+        /** Constructor initialises all structure members
+         *\param[in] pVirtualAddress virtual address of the beginning of the memory region
+         *\param[in] PhysicalAddress physical address of the beginning of the memory region (or 0)
+         *\param[in] sAddress size (in bytes) of the memory region
+         *\param[in] Name user-visible name of the memory region */
+        inline MemoryRegionInfo(void *VirtualAddress,
+                                physical_uintptr_t PhysicalAddress,
+                                size_t size,
+                                const char *name)
+            : pVirtualAddress(VirtualAddress), physicalAddress(PhysicalAddress), sVirtualAddress(size), pName(name)
+        {
+        }
 
-      /** Virtual address of the memory region */
-      void *pVirtualAddress;
-      /** Physical address of the memory region (or 0) */
-      physical_uintptr_t physicalAddress;
-      /** Size (in bytes) of the memory region */
-      size_t sVirtualAddress;
-      /** Pointer to the user-visible name of the memory region */
-      const char *pName;
+        /** Virtual address of the memory region */
+        void *pVirtualAddress;
+        /** Physical address of the memory region (or 0) */
+        physical_uintptr_t physicalAddress;
+        /** Size (in bytes) of the memory region */
+        size_t sVirtualAddress;
+        /** Pointer to the user-visible name of the memory region */
+        const char *pName;
     };
 
     /** Copy the memory region list
      *\param[in,out] MemoryRegions container for the copy of the memory regions */
-    void allocateMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
-      /** Free the memory region list created with allocateMemoryRegionList.
-       *\param[in,out] MemoryRegions container of the copy of the memory regions */
-    void freeMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
+    void allocateMemoryRegionList(Vector<MemoryRegionInfo *> &MemoryRegions);
+    /** Free the memory region list created with allocateMemoryRegionList.
+     *\param[in,out] MemoryRegions container of the copy of the memory regions */
+    void freeMemoryRegionList(Vector<MemoryRegionInfo *> &MemoryRegions);
 
-  protected:
+protected:
     /** The constructor */
     inline PhysicalMemoryManager()
-      : m_MemoryRegions(){}
+        : m_MemoryRegions()
+    {
+    }
     /** The destructor */
-    inline virtual ~PhysicalMemoryManager(){}
+    inline virtual ~PhysicalMemoryManager()
+    {
+    }
 
     /** List of memory-regions */
-    Vector<MemoryRegion*> m_MemoryRegions;
+    Vector<MemoryRegion *> m_MemoryRegions;
 
-  private:
+private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
     PhysicalMemoryManager(const PhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    PhysicalMemoryManager &operator = (const PhysicalMemoryManager &);
+    PhysicalMemoryManager &operator =(const PhysicalMemoryManager &);
 
     /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
     virtual void unmapRegion(MemoryRegion *pRegion) = 0;

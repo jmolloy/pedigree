@@ -21,7 +21,7 @@
 #include <panic.h>
 
 PanicCommand::PanicCommand()
- : DebuggerCommand()
+    : DebuggerCommand()
 {
 }
 
@@ -35,7 +35,7 @@ void PanicCommand::autocomplete(const HugeStaticString &input, HugeStaticString 
 
 bool PanicCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-  panic( "uh oh!" );
-  return false; // Return control to the kernel.
+    panic("uh oh!");
+    return false; // Return control to the kernel.
 }
 

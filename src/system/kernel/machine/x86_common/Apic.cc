@@ -21,30 +21,30 @@
 
 irq_id_t Apic::registerIsaIrqHandler(uint8_t, IrqHandler *handler)
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 irq_id_t Apic::registerPciIrqHandler(IrqHandler *handler)
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 void Apic::acknowledgeIrq(irq_id_t Id)
 {
-  // TODO
+    // TODO
 }
 void Apic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
-  // TODO
+    // TODO
 }
 void Apic::enable(irq_id_t Id, bool bEnable)
 {
-  // TODO
+    // TODO
 }
 bool Apic::initialise()
 {
-  // TODO
-  return false;
+    // TODO
+    return false;
 /*
   if (m_LocalApic.initialise(localApic) == false)
   {

@@ -30,34 +30,34 @@
 class Loopback : public Network
 {
 public:
-  Loopback();
-  Loopback(Network* pDev);
-  ~Loopback();
-  
-  Loopback& instance()
-  {
-    return m_Instance;
-  }
+    Loopback();
+    Loopback(Network *pDev);
+    ~Loopback();
 
-  virtual void getName(String &str)
-  {
-    str = "Loopback";
-  }
-  
-  virtual bool send(size_t nBytes, uintptr_t buffer);
-  
-  virtual bool setStationInfo(StationInfo info);
-  
-  virtual StationInfo getStationInfo();
-  
+    Loopback &instance()
+    {
+        return m_Instance;
+    }
+
+    virtual void getName(String &str)
+    {
+        str = "Loopback";
+    }
+
+    virtual bool send(size_t nBytes, uintptr_t buffer);
+
+    virtual bool setStationInfo(StationInfo info);
+
+    virtual StationInfo getStationInfo();
+
 private:
-  
-  static Loopback m_Instance;
 
-  StationInfo m_StationInfo;
-  
-  Loopback(const Loopback&);
-  void operator =(const Loopback&);
+    static Loopback m_Instance;
+
+    StationInfo m_StationInfo;
+
+    Loopback(const Loopback &);
+    void operator =(const Loopback &);
 };
 
 #endif

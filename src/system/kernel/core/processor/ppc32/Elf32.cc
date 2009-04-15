@@ -53,150 +53,150 @@
 
 #define HA(x) (((x >> 16) + ((x & 0x8000) ? 1 : 0)) & 0xFFFF)
 #define WORD32(r, x) (x)
-#define LOW24(r, x) (r | ((x<<2)&0x03FFFFFC))
-#define HALF16(r, x) ((x<<16)|(r&0xFFFF))  // We deal with 32bit numbers, so we must keep the lower 16 bits.
-#define LOW14(r, x) (r | ((x<<2)&0x0000FFFC))
-#define WORD30(r, x) (r | ((x<<2)&0xFFFFFFFC))
+#define LOW24(r, x) (r | ((x << 2) & 0x03FFFFFC))
+#define HALF16(r, x) ((x << 16) | (r & 0xFFFF))  // We deal with 32bit numbers, so we must keep the lower 16 bits.
+#define LOW14(r, x) (r | ((x << 2) & 0x0000FFFC))
+#define WORD30(r, x) (r | ((x << 2) & 0xFFFFFFFC))
 
 bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
-  // Section not loaded?
-  if (pSh && pSh->addr == 0)
-    return true; // Not a fatal error.
+    // Section not loaded?
+    if(pSh && pSh->addr == 0)
+        return true; // Not a fatal error.
 
-  // Get the address of the unit to be relocated.
-  uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
+    // Get the address of the unit to be relocated.
+    uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
-  // Addend is explicitly given.
-  uint32_t A = rel.addend;
+    // Addend is explicitly given.
+    uint32_t A = rel.addend;
 
-  // 'Place' is the address.
-  uint32_t P = address;
+    // 'Place' is the address.
+    uint32_t P = address;
 
-  // Symbol location.
-  uint32_t S = 0;
-  ElfSymbol_t *pSymbols = 0;
-  if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
-  else
-    pSymbols = m_pDynamicSymbolTable;
+    // Symbol location.
+    uint32_t S = 0;
+    ElfSymbol_t *pSymbols = 0;
+    if(!m_pDynamicSymbolTable)
+        pSymbols = reinterpret_cast<ElfSymbol_t *> (m_pSymbolTable);
+    else
+        pSymbols = m_pDynamicSymbolTable;
 
-  const char *pStringTable = 0;
-  if (!m_pDynamicStringTable)
-    pStringTable = reinterpret_cast<const char *> (m_pStringTable);
-  else
-    pStringTable = m_pDynamicStringTable;
+    const char *pStringTable = 0;
+    if(!m_pDynamicStringTable)
+        pStringTable = reinterpret_cast<const char *> (m_pStringTable);
+    else
+        pStringTable = m_pDynamicStringTable;
 
-  // If this is a section header, patch straight to it.
-  if (pSymbols && ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
-  {
-    // Section type - the name will be the name of the section header it refers to.
-    int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
-    ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
-    S = pSh->addr;
-  }
-  else if (ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE) // Relative doesn't need a symbol!
-  {
-    const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
-    
-    if (pSymtab == 0)
-      pSymtab = KernelElf::instance().getSymbolTable();
-    
-    if (ELF32_R_TYPE(rel.info) == R_PPC_COPY)
-      policy = SymbolTable::NotOriginatingElf;
-    S = pSymtab->lookup(String(pStr), this, policy);
-    
-    if (S == 0)
-      WARNING("Relocation failed for symbol \"" << pStr << "\"");
-  }
+    // If this is a section header, patch straight to it.
+    if(pSymbols && ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
+    {
+        // Section type - the name will be the name of the section header it refers to.
+        int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
+        ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
+        S = pSh->addr;
+    }
+    else if(ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE) // Relative doesn't need a symbol!
+    {
+        const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
 
-  if (S == 0 && (ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE))
-    return false;
+        if(pSymtab == 0)
+            pSymtab = KernelElf::instance().getSymbolTable();
 
-  // Base address
-  uint32_t B = loadBase;
+        if(ELF32_R_TYPE(rel.info) == R_PPC_COPY)
+            policy = SymbolTable::NotOriginatingElf;
+        S = pSymtab->lookup(String(pStr), this, policy);
 
-  uint32_t *pResult = reinterpret_cast<uint32_t*> (address);
-  uint32_t result = *pResult;
+        if(S == 0)
+            WARNING("Relocation failed for symbol \"" << pStr << "\"");
+    }
 
-  switch (ELF32_R_TYPE(rel.info))
-  {
-    case R_PPC_NONE:
-      break;
-    case R_PPC_ADDR32:
-    case R_PPC_UADDR32:
-      result = WORD32(result, S + A);
-      break;
-    case R_PPC_ADDR24:
-      result = LOW24(result, (S+A)>>2 );
-      break;
-    case R_PPC_ADDR16:
-    case R_PPC_UADDR16:
-      result = HALF16(result, (S + A));
-      break;
-    case R_PPC_ADDR16_LO:
-      result = HALF16(result, ((S+A) & 0xFFFF) );
-      break;
-    case R_PPC_ADDR16_HI:
-      result = HALF16(result,  ((S+A) >> 16)&0xFFFF );
-      break;
-    case R_PPC_ADDR16_HA:
-      result = HALF16(result,  HA((S+A)) );
-      break;
-    case R_PPC_ADDR14:
-      result = LOW14(result,  (S+A)>>2 );
-      result &= ~(1>>10); // Branch predict 0
-      break;
-    case R_PPC_ADDR14_BRTAKEN:
-      result = LOW14(result,  (S+A)>>2 );
-      result |= (1>>10); // Branch predict 1
-      break;
-    case R_PPC_ADDR14_BRNTAKEN:
-      result = LOW14(result,  (S+A)>>2 );
-      result &= ~(1>>10); // Branch predict 0
-      break;
-    case R_PPC_RELATIVE:
-      result = *pResult + B; /// \todo Should be A + B?
-      break;
-    case R_PPC_REL24:
-      result = LOW24(result,  (S+A-P)>>2 );
-      break;
-    case R_PPC_REL14:
-      result = LOW14(result,  (S+A-P)>>2 );
-      result &= ~(1>>10); // Branch predict 0
-      break;
-    case R_PPC_REL14_BRTAKEN:
-      result = LOW14(result,  (S+A-P)>>2 );
-      result |= (1>>10); // Branch predict 1
-      break;
-    case R_PPC_REL14_BRNTAKEN:
-      result = LOW14(result,  (S+A-P)>>2 );
-      result &= ~(1>>10); // Branch predict 0
-      break;
-    case R_PPC_REL32:
-      result = WORD32(result, S + A - P);
-      break;
-    case R_PPC_ADDR30:
-      result = WORD30(result,  (S+A-P) >> 2 );
-      break;
-    case R_PPC_COPY:
-      result = * reinterpret_cast<uintptr_t*> (S);
-      break;
-    default:
-      ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
-  }
+    if(S == 0 && (ELF32_R_TYPE(rel.info) != R_PPC_RELATIVE))
+        return false;
 
-  // Write back the result.
-  *pResult = result;
+    // Base address
+    uint32_t B = loadBase;
 
-  // Flush all caches.
-  Processor::flushDCacheAndInvalidateICache(reinterpret_cast<uintptr_t>(pResult), reinterpret_cast<uintptr_t>(pResult)+4);
-  
-  return true;
+    uint32_t *pResult = reinterpret_cast<uint32_t *> (address);
+    uint32_t result = *pResult;
+
+    switch(ELF32_R_TYPE(rel.info))
+    {
+        case R_PPC_NONE:
+            break;
+        case R_PPC_ADDR32:
+        case R_PPC_UADDR32:
+            result = WORD32(result, S + A);
+            break;
+        case R_PPC_ADDR24:
+            result = LOW24(result, (S + A) >> 2);
+            break;
+        case R_PPC_ADDR16:
+        case R_PPC_UADDR16:
+            result = HALF16(result, (S + A));
+            break;
+        case R_PPC_ADDR16_LO:
+            result = HALF16(result, ((S + A) & 0xFFFF));
+            break;
+        case R_PPC_ADDR16_HI:
+            result = HALF16(result,  ((S + A) >> 16) & 0xFFFF);
+            break;
+        case R_PPC_ADDR16_HA:
+            result = HALF16(result,  HA((S + A)));
+            break;
+        case R_PPC_ADDR14:
+            result = LOW14(result,  (S + A) >> 2);
+            result &= ~(1 >> 10); // Branch predict 0
+            break;
+        case R_PPC_ADDR14_BRTAKEN:
+            result = LOW14(result,  (S + A) >> 2);
+            result |= (1 >> 10); // Branch predict 1
+            break;
+        case R_PPC_ADDR14_BRNTAKEN:
+            result = LOW14(result,  (S + A) >> 2);
+            result &= ~(1 >> 10); // Branch predict 0
+            break;
+        case R_PPC_RELATIVE:
+            result = *pResult + B; /// \todo Should be A + B?
+            break;
+        case R_PPC_REL24:
+            result = LOW24(result,  (S + A - P) >> 2);
+            break;
+        case R_PPC_REL14:
+            result = LOW14(result,  (S + A - P) >> 2);
+            result &= ~(1 >> 10); // Branch predict 0
+            break;
+        case R_PPC_REL14_BRTAKEN:
+            result = LOW14(result,  (S + A - P) >> 2);
+            result |= (1 >> 10); // Branch predict 1
+            break;
+        case R_PPC_REL14_BRNTAKEN:
+            result = LOW14(result,  (S + A - P) >> 2);
+            result &= ~(1 >> 10); // Branch predict 0
+            break;
+        case R_PPC_REL32:
+            result = WORD32(result, S + A - P);
+            break;
+        case R_PPC_ADDR30:
+            result = WORD30(result,  (S + A - P) >> 2);
+            break;
+        case R_PPC_COPY:
+            result = *reinterpret_cast<uintptr_t *> (S);
+            break;
+        default:
+            ERROR("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
+    }
+
+    // Write back the result.
+    *pResult = result;
+
+    // Flush all caches.
+    Processor::flushDCacheAndInvalidateICache(reinterpret_cast<uintptr_t>(pResult), reinterpret_cast<uintptr_t>(pResult) + 4);
+
+    return true;
 }
 
 bool Elf::applyRelocation(ElfRel_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
-  ERROR("The PPC architecture does not use REL entries!");
-  return false;
+    ERROR("The PPC architecture does not use REL entries!");
+    return false;
 }

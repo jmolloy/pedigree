@@ -28,7 +28,7 @@
 /** Base class for all processor-specific StackFrame classes */
 class StackFrameBase
 {
-  public:
+public:
 #if defined(DEBUGGER)
     /** Returns a pretty printed string containing the function name and each parameter with
      *  its value (hopefully). */
@@ -39,7 +39,9 @@ class StackFrameBase
      *  symbol name (mangled). */
     StackFrameBase(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol);
     /** The destructor does nothing */
-    inline virtual ~StackFrameBase(){}
+    inline virtual ~StackFrameBase()
+    {
+    }
 
     /** Construct a stack frame, given a ProcessorState. The stack frame should be constructed
      *  to comply with the default ABI for the current architecture - that implies the stack
@@ -52,8 +54,8 @@ class StackFrameBase
                           uintptr_t returnAddress,
                           unsigned int nParams,
                           ...);
-#if defined(DEBUGGER)    
-  protected:
+#if defined(DEBUGGER)
+protected:
     /** The symbol */
     symbol_t m_Symbol;
     /** The processor state */
@@ -61,7 +63,7 @@ class StackFrameBase
     /** The base pointer for this frame. */
     uintptr_t m_BasePointer;
 
-  private:
+private:
     /** Returns the n'th 32/64-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n) = 0;
 

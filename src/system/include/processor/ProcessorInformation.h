@@ -27,16 +27,16 @@ typedef size_t ProcessorId;
 
 #if defined(X86_COMMON)
   #include <processor/x86_common/ProcessorInformation.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) X86Common##x
+  #define PROCESSOR_SPECIFIC_NAME(x) X86Common ## x
 #elif defined(MIPS_COMMON)
   #include <processor/mips_common/ProcessorInformation.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) MIPSCommon##x
+  #define PROCESSOR_SPECIFIC_NAME(x) MIPSCommon ## x
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/ProcessorInformation.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM ## x
 #elif defined(PPC_COMMON)
   #include <processor/ppc_common/ProcessorInformation.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) PPCCommon##x
+  #define PROCESSOR_SPECIFIC_NAME(x) PPCCommon ## x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
@@ -52,7 +52,7 @@ typedef size_t ProcessorId;
 //       needed types, you will get an error here
 
 /** Define ProcessorInformation */
-typedef PROCESSOR_SPECIFIC_NAME(ProcessorInformation) ProcessorInformation;
+typedef PROCESSOR_SPECIFIC_NAME (ProcessorInformation) ProcessorInformation;
 
 /** @} */
 

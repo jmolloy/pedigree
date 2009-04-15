@@ -33,47 +33,47 @@
 class Ne2k : public Network, public IrqHandler
 {
 public:
-  Ne2k(Network* pDev);
-  ~Ne2k();
+    Ne2k(Network *pDev);
+    ~Ne2k();
 
-  virtual void getName(String &str)
-  {
-    str = "ne2k";
-  }
-  
-  virtual bool send(size_t nBytes, uintptr_t buffer);
-  
-  virtual bool setStationInfo(StationInfo info);
-  
-  virtual StationInfo getStationInfo();
-  
-  // IRQ handler callback.
-  virtual bool irq(irq_id_t number, InterruptState &state);
+    virtual void getName(String &str)
+    {
+        str = "ne2k";
+    }
 
-  IoBase *m_pBase;
-  
+    virtual bool send(size_t nBytes, uintptr_t buffer);
+
+    virtual bool setStationInfo(StationInfo info);
+
+    virtual StationInfo getStationInfo();
+
+    // IRQ handler callback.
+    virtual bool irq(irq_id_t number, InterruptState &state);
+
+    IoBase *m_pBase;
+
 private:
 
-  void recv();
-  
-  static int trampoline(void* p);
-  
-  void receiveThread();
-  
-  struct packet
-  {
-    uintptr_t ptr;
-    size_t len;
-  };
+    void recv();
 
-  StationInfo m_StationInfo;
-  uint8_t m_NextPacket;
-  
-  Semaphore m_PacketQueueSize;
-  List<packet*> m_PacketQueue;
-  
-  Ne2k(const Ne2k&);
-  void operator =(const Ne2k&);
+    static int trampoline(void *p);
+
+    void receiveThread();
+
+    struct packet
+    {
+        uintptr_t ptr;
+        size_t len;
+    };
+
+    StationInfo m_StationInfo;
+    uint8_t m_NextPacket;
+
+    Semaphore m_PacketQueueSize;
+    List<packet *> m_PacketQueue;
+
+    Ne2k(const Ne2k &);
+    void operator =(const Ne2k &);
 };
 
 #endif

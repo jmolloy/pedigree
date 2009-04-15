@@ -23,7 +23,7 @@ PosixSyscallManager g_PosixSyscallManager;
 
 void init()
 {
-  g_PosixSyscallManager.initialise();
+    g_PosixSyscallManager.initialise();
 }
 
 void destroy()

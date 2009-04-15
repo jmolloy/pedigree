@@ -23,21 +23,21 @@
 template<class T>
 class LockGuard
 {
-  public:
+public:
     inline LockGuard(T &Lock)
-      : m_Lock(Lock)
+        : m_Lock(Lock)
     {
-      m_Lock.acquire();
+        m_Lock.acquire();
     }
     inline ~LockGuard()
     {
-      m_Lock.release();
+        m_Lock.release();
     }
 
-  private:
+private:
     LockGuard();
     LockGuard(const LockGuard &);
-    LockGuard &operator = (const LockGuard &);
+    LockGuard &operator =(const LockGuard &);
 
     T &m_Lock;
 };

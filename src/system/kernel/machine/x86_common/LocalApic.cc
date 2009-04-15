@@ -53,77 +53,77 @@
 
 /** Assume 1GHz bus speed, 128 divisor, gives 7812500 for one second delay.
     For 10ms delay, divide that by 100... */
-#define INITIAL_COUNT_VALUE (78125*40)
+#define INITIAL_COUNT_VALUE (78125 * 40)
 
 bool LocalApic::initialise(uint64_t physicalAddress)
 {
-  // Detect local APIC presence
-  uint32_t eax, ebx, ecx, edx;
-  Processor::cpuid(1, 0, eax, ebx, ecx, edx);
-  if (((edx >> 9) & 0x01) != 0x01)
-  {
-    ERROR("Local APIC: No local APIC present");
-    return false;
-  }
+    // Detect local APIC presence
+    uint32_t eax, ebx, ecx, edx;
+    Processor::cpuid(1, 0, eax, ebx, ecx, edx);
+    if(((edx >> 9) & 0x01) != 0x01)
+    {
+        ERROR("Local APIC: No local APIC present");
+        return false;
+    }
 
-  // Some checks
-  if (check(physicalAddress) == false)
-    return false;
+    // Some checks
+    if(check(physicalAddress) == false)
+        return false;
 
-  // Allocate the local APIC memory-mapped I/O space
-  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  if (physicalMemoryManager.allocateRegion(m_IoSpace,
-                                           1,
-                                           PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force,
-                                           VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::CacheDisable,
-                                           physicalAddress)
-      == false)
-  {
-    ERROR("Local APIC: Could not allocate the memory region");
-    return false;
-  }
+    // Allocate the local APIC memory-mapped I/O space
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    if(physicalMemoryManager.allocateRegion(m_IoSpace,
+                                            1,
+                                            PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force,
+                                            VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::CacheDisable,
+                                            physicalAddress)
+       == false)
+    {
+        ERROR("Local APIC: Could not allocate the memory region");
+        return false;
+    }
 
-  // Register the timer vector.
-  if (!InterruptManager::instance().registerInterruptHandler(TIMER_VECTOR, this))
-    return false;
+    // Register the timer vector.
+    if(!InterruptManager::instance().registerInterruptHandler(TIMER_VECTOR, this))
+        return false;
 
-  // Register the IPI halt vector.
-  if (!InterruptManager::instance().registerInterruptHandler(IPI_HALT_VECTOR, this))
-    return false;
+    // Register the IPI halt vector.
+    if(!InterruptManager::instance().registerInterruptHandler(IPI_HALT_VECTOR, this))
+        return false;
 
-  return initialiseProcessor();
+    return initialiseProcessor();
 }
 
 bool LocalApic::initialiseProcessor()
 {
-  // Some checks
-  if (check(m_IoSpace.physicalAddress()) == false)
-    return false;
+    // Some checks
+    if(check(m_IoSpace.physicalAddress()) == false)
+        return false;
 
-  // Enable the Local APIC and set the spurious interrupt vector
-  uint32_t tmp = m_IoSpace.read32(LAPIC_REG_SPURIOUS_INT);
-  m_IoSpace.write32((tmp & 0xFFFFFE00) | 0x100 | SPURIOUS_VECTOR, LAPIC_REG_SPURIOUS_INT);
+    // Enable the Local APIC and set the spurious interrupt vector
+    uint32_t tmp = m_IoSpace.read32(LAPIC_REG_SPURIOUS_INT);
+    m_IoSpace.write32((tmp & 0xFFFFFE00) | 0x100 | SPURIOUS_VECTOR, LAPIC_REG_SPURIOUS_INT);
 
-  // Set the task priority to 0
-  tmp = m_IoSpace.read32(LAPIC_REG_TASK_PRIORITY);
-  m_IoSpace.write32(tmp & 0xFFFFFF00, LAPIC_REG_TASK_PRIORITY);
+    // Set the task priority to 0
+    tmp = m_IoSpace.read32(LAPIC_REG_TASK_PRIORITY);
+    m_IoSpace.write32(tmp & 0xFFFFFF00, LAPIC_REG_TASK_PRIORITY);
 
-  // Set the LVT error register
-  tmp = m_IoSpace.read32(LAPIC_REG_LVT_ERROR);
-  m_IoSpace.write32((tmp & 0xFFFEEF00) | ERROR_VECTOR, LAPIC_REG_LVT_ERROR);
+    // Set the LVT error register
+    tmp = m_IoSpace.read32(LAPIC_REG_LVT_ERROR);
+    m_IoSpace.write32((tmp & 0xFFFEEF00) | ERROR_VECTOR, LAPIC_REG_LVT_ERROR);
 
-  // Set the LVT timer register.
-  m_IoSpace.write32(LAPIC_TIMER_PERIODIC | TIMER_VECTOR, LAPIC_REG_LVT_TIMER);
+    // Set the LVT timer register.
+    m_IoSpace.write32(LAPIC_TIMER_PERIODIC | TIMER_VECTOR, LAPIC_REG_LVT_TIMER);
 
-  // Initialise the intial-count register
-  m_IoSpace.write32(INITIAL_COUNT_VALUE, LAPIC_REG_INITIAL_COUNT);
+    // Initialise the intial-count register
+    m_IoSpace.write32(INITIAL_COUNT_VALUE, LAPIC_REG_INITIAL_COUNT);
 
-  // Initialise the divisor register. (Divide by 128)
-  m_IoSpace.write32(0xA, LAPIC_REG_DIVIDE_CONFIG);
+    // Initialise the divisor register. (Divide by 128)
+    m_IoSpace.write32(0xA, LAPIC_REG_DIVIDE_CONFIG);
 
-  // TODO
+    // TODO
 
-  return true;
+    return true;
 }
 
 void LocalApic::interProcessorInterrupt(uint8_t destinationApicId,
@@ -132,70 +132,70 @@ void LocalApic::interProcessorInterrupt(uint8_t destinationApicId,
                                         bool bAssert,
                                         bool bLevelTriggered)
 {
-  while ((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0);
+    while((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0) ;
 
-  m_IoSpace.write32(destinationApicId << 24, LAPIC_REG_INT_CMD_HIGH);
-  m_IoSpace.write32(vector | (deliveryMode << 8) | (bAssert ? (1 << 14) : 0) | (bLevelTriggered ? (1 << 15) : 0), LAPIC_REG_INT_CMD_LOW);
+    m_IoSpace.write32(destinationApicId << 24, LAPIC_REG_INT_CMD_HIGH);
+    m_IoSpace.write32(vector | (deliveryMode << 8) | (bAssert ? (1 << 14) : 0) | (bLevelTriggered ? (1 << 15) : 0), LAPIC_REG_INT_CMD_LOW);
 }
 
 void LocalApic::interProcessorInterruptAllExcludingThis(uint8_t vector,
                                                         size_t deliveryMode)
 {
-  while ((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0);
+    while((m_IoSpace.read32(LAPIC_REG_INT_CMD_LOW) & 0x1000) != 0) ;
 
-  m_IoSpace.write32(vector | (deliveryMode << 8) | (1 << 14) | (0x3 << 18), LAPIC_REG_INT_CMD_LOW);
+    m_IoSpace.write32(vector | (deliveryMode << 8) | (1 << 14) | (0x3 << 18), LAPIC_REG_INT_CMD_LOW);
 }
 
 
 uint8_t LocalApic::getId()
 {
-  return ((m_IoSpace.read32(LAPIC_REG_ID) >> 24) & 0xFF);
+    return ((m_IoSpace.read32(LAPIC_REG_ID) >> 24) & 0xFF);
 }
 
 bool LocalApic::check(uint64_t physicalAddress)
 {
-  // Check whether the Local APIC is enabled or not
-  if ((Processor::readMachineSpecificRegister(0x1B) & 0x800) == 0)
-  {
-    ERROR("Local APIC: Disabled");
-    return false;
-  }
+    // Check whether the Local APIC is enabled or not
+    if((Processor::readMachineSpecificRegister(0x1B) & 0x800) == 0)
+    {
+        ERROR("Local APIC: Disabled");
+        return false;
+    }
 
-  // Check Local APIC base address
-  if ((Processor::readMachineSpecificRegister(0x1B) & 0xFFFFFF000ULL) != physicalAddress)
-  {
-    ERROR("Local APIC: Wrong physical address");
-    return false;
-  }
+    // Check Local APIC base address
+    if((Processor::readMachineSpecificRegister(0x1B) & 0xFFFFFF000ULL) != physicalAddress)
+    {
+        ERROR("Local APIC: Wrong physical address");
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 void LocalApic::interrupt(size_t nInterruptNumber, InterruptState &state)
 {
-  if (nInterruptNumber == TIMER_VECTOR)
-  {
-    // TODO: Delta is wrong.
-    if (LIKELY(m_Handler != 0))
+    if(nInterruptNumber == TIMER_VECTOR)
     {
-      NOTICE("Timer " << Processor::id());
-      m_Handler->timer (0, state);
+        // TODO: Delta is wrong.
+        if(LIKELY(m_Handler != 0))
+        {
+            NOTICE("Timer " << Processor::id());
+            m_Handler->timer(0, state);
+        }
+        ack();
     }
-    ack();
-  }
 
-  // The halt IPI is used in the debugger to stop all other cores.
-  if (nInterruptNumber == IPI_HALT_VECTOR)
-  {
-    NOTICE("Halting processor #" << Dec << Processor::id());
-    Processor::halt();
-  }
+    // The halt IPI is used in the debugger to stop all other cores.
+    if(nInterruptNumber == IPI_HALT_VECTOR)
+    {
+        NOTICE("Halting processor #" << Dec << Processor::id());
+        Processor::halt();
+    }
 }
 
 void LocalApic::ack()
 {
-  // Send EOI.
-  m_IoSpace.write32(0x00000000, LAPIC_REG_EOI);
+    // Send EOI.
+    m_IoSpace.write32(0x00000000, LAPIC_REG_EOI);
 }
 
 #endif

@@ -21,52 +21,52 @@ Malta Malta::m_Instance;
 
 Machine &Machine::instance()
 {
-  return Malta::instance();
+    return Malta::instance();
 }
 
 void Malta::initialise()
 {
-  
-  m_Serial[0].setBase(0x180003f8);
-  m_Serial[1].setBase(0x180002f8);
-  CountCompareTimer::instance().initialise();
-  
-  m_bInitialised = true;
+
+    m_Serial[0].setBase(0x180003f8);
+    m_Serial[1].setBase(0x180002f8);
+    CountCompareTimer::instance().initialise();
+
+    m_bInitialised = true;
 }
 Serial *Malta::getSerial(size_t n)
 {
-  return &m_Serial[n];
+    return &m_Serial[n];
 }
 size_t Malta::getNumSerial()
 {
-  return 2;
+    return 2;
 }
 Vga *Malta::getVga(size_t n)
 {
-  return &m_Vga;
+    return &m_Vga;
 }
 size_t Malta::getNumVga()
 {
-  return 1;
+    return 1;
 }
 IrqManager *Malta::getIrqManager()
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 SchedulerTimer *Malta::getSchedulerTimer()
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 Timer *Malta::getTimer()
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 Keyboard *Malta::getKeyboard()
 {
-  return &m_Keyboard;
+    return &m_Keyboard;
 }
 
 Malta::Malta()

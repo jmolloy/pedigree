@@ -36,92 +36,95 @@ class Processor;
 class Scheduler : public TimerHandler
 {
 public:
-  /** Get the instance of the scheduler */
-  inline static Scheduler &instance() {return m_Instance;}
+    /** Get the instance of the scheduler */
+    inline static Scheduler &instance()
+    {
+        return m_Instance;
+    }
 
-  /** Initialises the scheduler. */
-  bool initialise(Thread *pInitialThread);
+    /** Initialises the scheduler. */
+    bool initialise(Thread *pInitialThread);
 
 #ifdef MULTIPROCESSOR
     /** Initialises the scheduler for the current processor */
     void initialiseProcessor(Thread *pInitialThread);
 #endif
 
-  /** Retrieves the current SchedulingAlgorithm */
-  SchedulingAlgorithm *getAlgorithm();
-  /** Sets the current SchedulingAlgorithm */
-  void setAlgorithm(SchedulingAlgorithm *pAlgorithm);
+    /** Retrieves the current SchedulingAlgorithm */
+    SchedulingAlgorithm *getAlgorithm();
+    /** Sets the current SchedulingAlgorithm */
+    void setAlgorithm(SchedulingAlgorithm *pAlgorithm);
 
-  /** Adds a thread to be scheduled. */
-  void addThread(Thread *pThread);
-  /** Removes a thread from being scheduled. */
-  void removeThread(Thread *pThread);
-  
-  /** Adds a process.
-   *  \note This is purely for enumeration purposes.
-   *  \return The ID that should be applied to this Process. */
-  size_t addProcess(Process *pProcess);
-  /** Removes a process.
-   *  \note This is purely for enumeration purposes. */
-  void removeProcess(Process *pProcess);
+    /** Adds a thread to be scheduled. */
+    void addThread(Thread *pThread);
+    /** Removes a thread from being scheduled. */
+    void removeThread(Thread *pThread);
 
-  /** Called by a thread when its status changes. Should be propagated directly to the
-   *  SchedulingAlgorithm. */
-  void threadStatusChanged(Thread *pThread);
-  
-  /** The main schedule function - picks another thread and switches to it.
-      \param pProcessor The current processor, in case the SchedulingAlgorithm wants
-                        it for heuristics such as core affinity.
-      \param pThread    The thread to schedule. This is only designed to be used by
-                        the debugger. */
-  void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread=0);
+    /** Adds a process.
+     *  \note This is purely for enumeration purposes.
+     *  \return The ID that should be applied to this Process. */
+    size_t addProcess(Process *pProcess);
+    /** Removes a process.
+     *  \note This is purely for enumeration purposes. */
+    void removeProcess(Process *pProcess);
 
-  /** Causes a syscall to yield the processor to a given thread
-      If pThread is 0, the next available thread is chosen. */
-  void yield(Thread *pThread=0);
+    /** Called by a thread when its status changes. Should be propagated directly to the
+     *  SchedulingAlgorithm. */
+    void threadStatusChanged(Thread *pThread);
+
+    /** The main schedule function - picks another thread and switches to it.
+        \param pProcessor The current processor, in case the SchedulingAlgorithm wants
+                          it for heuristics such as core affinity.
+        \param pThread    The thread to schedule. This is only designed to be used by
+                          the debugger. */
+    void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread = 0);
+
+    /** Causes a syscall to yield the processor to a given thread
+        If pThread is 0, the next available thread is chosen. */
+    void yield(Thread *pThread = 0);
 
 #ifdef DEBUGGER
-  void switchToAndDebug(InterruptState &state, Thread *pThread);
+    void switchToAndDebug(InterruptState &state, Thread *pThread);
 #endif
 
-  /** Returns the number of processes currently in operation. */
-  size_t getNumProcesses();
-  
-  /** Returns the n'th process currently in operation. */
-  Process *getProcess(size_t n);
-  
-  /** TimerHandler callback. */
-  void timer(uint64_t delta, InterruptState &state);
+    /** Returns the number of processes currently in operation. */
+    size_t getNumProcesses();
 
-  /** Our "unsafe to reschedule" mutex.
-   *  \note This is public so it can be accessed by the thread start trampoline. */
-  Spinlock m_Mutex;
+    /** Returns the n'th process currently in operation. */
+    Process *getProcess(size_t n);
+
+    /** TimerHandler callback. */
+    void timer(uint64_t delta, InterruptState &state);
+
+    /** Our "unsafe to reschedule" mutex.
+     *  \note This is public so it can be accessed by the thread start trampoline. */
+    Spinlock m_Mutex;
 
 private:
-  /** Default constructor
-   *  \note Private - singleton class. */
-  Scheduler();
-  /** Copy-constructor
-   *  \note Not implemented - singleton class. */
-  Scheduler(const Scheduler &);
-  /** Destructor
-   *  \note Private - singleton class. */
-  ~Scheduler();
-  /** Assignment operator
-   *  \note Not implemented - singleton class */
-  Scheduler &operator = (const Scheduler &);
+    /** Default constructor
+     *  \note Private - singleton class. */
+    Scheduler();
+    /** Copy-constructor
+     *  \note Not implemented - singleton class. */
+    Scheduler(const Scheduler &);
+    /** Destructor
+     *  \note Private - singleton class. */
+    ~Scheduler();
+    /** Assignment operator
+     *  \note Not implemented - singleton class */
+    Scheduler &operator =(const Scheduler &);
 
-  /** The current SchedulingAlgorithm */
-  SchedulingAlgorithm *m_pSchedulingAlgorithm;
-  
-  /** The Scheduler instance. */
-  static Scheduler m_Instance;
-  
-  /** All the processes currently in operation, for enumeration purposes. */
-  List<Process*> m_Processes;
+    /** The current SchedulingAlgorithm */
+    SchedulingAlgorithm *m_pSchedulingAlgorithm;
 
-  /** The next available process ID. */
-  Atomic<size_t> m_NextPid;
+    /** The Scheduler instance. */
+    static Scheduler m_Instance;
+
+    /** All the processes currently in operation, for enumeration purposes. */
+    List<Process *> m_Processes;
+
+    /** The next available process ID. */
+    Atomic<size_t> m_NextPid;
 
 };
 

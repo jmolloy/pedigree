@@ -24,7 +24,7 @@ ArmVersatileVga::~ArmVersatileVga()
 }
 char ArmVersatileVga::read()
 {
-  return 0;
+    return 0;
 }
 void ArmVersatileVga::write(char c)
 {

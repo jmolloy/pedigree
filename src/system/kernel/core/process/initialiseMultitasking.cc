@@ -25,36 +25,36 @@
 
 void initialiseMultitasking()
 {
-  // Create the kernel idle process.
-  Process *pProcess = new Process();
-  pProcess->description() += "Kernel idle process";
+    // Create the kernel idle process.
+    Process *pProcess = new Process();
+    pProcess->description() += "Kernel idle process";
 
 #ifdef MULTIPROCESSOR
-  pProcess->description() += " - Processor #";
-  pProcess->description() += Processor::id();
+    pProcess->description() += " - Processor #";
+    pProcess->description() += Processor::id();
 #endif
-  
-  // Create the kernel idle thread.
-  Thread *pThread = new Thread(pProcess);
-  
-  // Initialise the scheduler.
-  Scheduler::instance().initialise(pThread);
+
+    // Create the kernel idle thread.
+    Thread *pThread = new Thread(pProcess);
+
+    // Initialise the scheduler.
+    Scheduler::instance().initialise(pThread);
 }
 
 #ifdef MULTIPROCESSOR
-  void initialiseMultitaskingPerProcessor()
-  {
+void initialiseMultitaskingPerProcessor()
+{
     // Create the kernel idle process.
     Process *pProcess = new Process();
     pProcess->description() += "Kernel idle process";
 
     pProcess->description() += " - Processor #";
     pProcess->description() += Processor::id();
-  
+
     // Create the kernel idle thread.
-    Thread *pThread = new Thread(pProcess);  
+    Thread *pThread = new Thread(pProcess);
     Scheduler::instance().initialiseProcessor(pThread);
-  }
+}
 #endif
 
 #endif

@@ -25,12 +25,12 @@
 /** Define a type for IRQ identifications */
 typedef uint8_t MIPSCommonirq_id_t;
 
-#define KSEG0(addr) (addr|0x80000000)
-#define KSEG1(addr) (addr|0xa0000000)
-#define IS_KUSEG(addr) (addr<0x80000000)
-#define IS_KSEG0(addr) (addr>=0x80000000 && addr<0xa0000000)
-#define IS_KSEG1(addr) (addr>=0xa0000000 && addr<0xc0000000)
-#define IS_KSEG2(addr) (addr>=0xc0000000)
+#define KSEG0(addr) (addr | 0x80000000)
+#define KSEG1(addr) (addr | 0xa0000000)
+#define IS_KUSEG(addr) (addr < 0x80000000)
+#define IS_KSEG0(addr) (addr >= 0x80000000 && addr < 0xa0000000)
+#define IS_KSEG1(addr) (addr >= 0xa0000000 && addr < 0xc0000000)
+#define IS_KSEG2(addr) (addr >= 0xc0000000)
 
 /** @} */
 

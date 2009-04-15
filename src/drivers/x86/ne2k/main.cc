@@ -24,47 +24,47 @@
 
 void probeDevice(Network *pDev)
 {
-  // Create a new NE2K node
-  Ne2k *pNe2k = new Ne2k(pDev);
+    // Create a new NE2K node
+    Ne2k *pNe2k = new Ne2k(pDev);
 
-  // Replace pDev with pNe2k.
-  pNe2k->setParent(pDev->getParent());
-  pDev->getParent()->replaceChild(pDev, pNe2k);
-  
-  
-  // And delete pDev for good measure.
-  //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
-  //delete pDev;
+    // Replace pDev with pNe2k.
+    pNe2k->setParent(pDev->getParent());
+    pDev->getParent()->replaceChild(pDev, pNe2k);
+
+
+    // And delete pDev for good measure.
+    //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
+    //delete pDev;
 }
 
 void searchNode(Device *pDev)
-{  
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    
-    if((pChild->getPciVendorId() == NE2K_VENDOR_ID) && (pChild->getPciDeviceId() == NE2K_DEVICE_ID))
+{
+    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
-      uintptr_t irq = pChild->getInterruptNumber();
-      WARNING("NE2K found, IRQ = " << irq << ".");
-      
-      if(pChild->addresses()[0]->m_IsIoSpace)
-        probeDevice(reinterpret_cast<Network*>(pChild));
-    }
+        Device *pChild = pDev->getChild(i);
 
-    // Recurse.
-    searchNode(pChild);
-  }
+        if((pChild->getPciVendorId() == NE2K_VENDOR_ID) && (pChild->getPciDeviceId() == NE2K_DEVICE_ID))
+        {
+            uintptr_t irq = pChild->getInterruptNumber();
+            WARNING("NE2K found, IRQ = " << irq << ".");
+
+            if(pChild->addresses()[0]->m_IsIoSpace)
+                probeDevice(reinterpret_cast<Network *>(pChild));
+        }
+
+        // Recurse.
+        searchNode(pChild);
+    }
 }
 
 void entry()
-{  
-  // Walk the device tree looking for controllers that have 
-  // "control" and "command" addresses.
-  Device *pDev = &Device::root();  
-  searchNode(pDev);
-  
-  /// \todo ISA probe for devices
+{
+    // Walk the device tree looking for controllers that have
+    // "control" and "command" addresses.
+    Device *pDev = &Device::root();
+    searchNode(pDev);
+
+    /// \todo ISA probe for devices
 }
 
 void exit()

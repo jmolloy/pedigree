@@ -28,20 +28,24 @@
 /** The x86/x64 I/O APIC */
 class IoApic
 {
-  public:
+public:
     /** The default constructor */
     inline IoApic()
-      : m_IoSpace("I/O APIC"){}
+        : m_IoSpace("I/O APIC")
+    {
+    }
     /** The destructor */
-    inline virtual ~IoApic(){}
+    inline virtual ~IoApic()
+    {
+    }
 
-  private:
+private:
     /** The copy-constructor
      *\note NOT implemented */
     IoApic(const IoApic &);
     /** The assignment operator
      *\note NOT implemented */
-    IoApic &operator = (const IoApic &);
+    IoApic &operator =(const IoApic &);
 
     /** The I/O APIC memory-mapped I/O space */
     MemoryMappedIo m_IoSpace;

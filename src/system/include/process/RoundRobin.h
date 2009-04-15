@@ -24,25 +24,25 @@
 class RoundRobin : public SchedulingAlgorithm
 {
 public:
-  /** Constructor. */
-  RoundRobin();
-  
-  /** Destructor. */
-  virtual ~RoundRobin();
-  
-  virtual void addThread(Thread *pThread);
-  
-  virtual void removeThread(Thread *pThread);
+    /** Constructor. */
+    RoundRobin();
 
-  virtual Thread *getNext(Processor *pProcessor);
-  
-  virtual void threadStatusChanged(Thread *pThread);
-  
+    /** Destructor. */
+    virtual ~RoundRobin();
+
+    virtual void addThread(Thread *pThread);
+
+    virtual void removeThread(Thread *pThread);
+
+    virtual Thread *getNext(Processor *pProcessor);
+
+    virtual void threadStatusChanged(Thread *pThread);
+
 private:
-  typedef List<Thread*> ThreadList;
-  ThreadList m_List;
+    typedef List<Thread *> ThreadList;
+    ThreadList m_List;
 
-  Spinlock m_Lock;
+    Spinlock m_Lock;
 };
 
 #endif

@@ -18,8 +18,8 @@
 
 FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
                  uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2, File *pParent, bool bShouldDelete) :
-  File(name,accessedTime,modifiedTime,creationTime,inode,isSymlink,isDirectory,pFs,
-       size,pParent,bShouldDelete), m_CustomField1(custom1), m_CustomField2(custom2)
+    File(name, accessedTime, modifiedTime, creationTime, inode, isSymlink, isDirectory, pFs,
+         size, pParent, bShouldDelete), m_CustomField1(custom1), m_CustomField2(custom2)
 {
 }
 

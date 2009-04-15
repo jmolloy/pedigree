@@ -20,18 +20,18 @@
 #include <vfs/File.h>
 
 int posix_socket(int domain, int type, int protocol);
-int posix_connect(int sock, struct sockaddr* address, size_t addrlen);
+int posix_connect(int sock, struct sockaddr *address, size_t addrlen);
 
-ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags);
-ssize_t posix_sendto(void* callInfo);
-ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags);
-ssize_t posix_recvfrom(void* callInfo);
+ssize_t posix_send(int sock, const void *buff, size_t bufflen, int flags);
+ssize_t posix_sendto(void *callInfo);
+ssize_t posix_recv(int sock, void *buff, size_t bufflen, int flags);
+ssize_t posix_recvfrom(void *callInfo);
 
 int posix_listen(int sock, int backlog);
 int posix_bind(int sock, const struct sockaddr *address, size_t addrlen);
-int posix_accept(int sock, struct sockaddr* address, size_t* addrlen);
+int posix_accept(int sock, struct sockaddr *address, size_t *addrlen);
 
-int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent);
-int posix_gethostbyname(const char* name, void* hostinfo, int offset);
+int posix_gethostbyaddr(const void *addr, size_t len, int type, void *ent);
+int posix_gethostbyname(const char *name, void *hostinfo, int offset);
 
 #endif

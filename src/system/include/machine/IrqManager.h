@@ -26,7 +26,7 @@
 /** This class handles IRQ (un)registration */
 class IrqManager
 {
-  public:
+public:
     /** Register an ISA irq
      *\param[in] irq the ISA irq number (from 0 to 15)
      *\param[in] handler pointer to the IrqHandler class
@@ -45,18 +45,22 @@ class IrqManager
 
     virtual void enable(uint8_t irq, bool enable) = 0;
 
-  protected:
+protected:
     /** The default constructor */
-    inline IrqManager(){}
+    inline IrqManager()
+    {
+    }
     /** The destructor */
-    inline virtual ~IrqManager(){}
-  private:
+    inline virtual ~IrqManager()
+    {
+    }
+private:
     /** The copy-constructor
      *\note NOT implemented */
     IrqManager(const IrqManager &);
     /** The assignment operator
      *\note NOT implemented */
-    IrqManager &operator = (const IrqManager &);
+    IrqManager &operator =(const IrqManager &);
 };
 
 /** @} */

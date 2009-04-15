@@ -29,8 +29,8 @@ extern "C" {
 
 // Endianness shizzle.
 #define BS8(x) (x)
-#define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
-#define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
+#define BS16(x) (((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8))
+#define BS32(x) (((x & 0xFF000000) >> 24) | ((x & 0x00FF0000) >> 8) | ((x & 0x0000FF00) << 8) | ((x & 0x000000FF) << 24))
 #define BS64(x) (x)
 
 #ifdef LITTLE_ENDIAN
@@ -107,51 +107,51 @@ unsigned long strtoul(const char *nptr, char **endptr, int base);
 #define MAX_PARAM_LENGTH 64
 
 #ifdef __cplusplus
-  /** Add a offset (in bytes) to the pointer and return the result
-   *\brief Adjust a pointer
-   *\return new pointer pointing to 'pointer + offset' (NOT pointer arithmetic!) */
-  template<typename T>
-  inline T *adjust_pointer(T *pointer, size_t offset)
-  {
-    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
-  }
+/** Add a offset (in bytes) to the pointer and return the result
+ *\brief Adjust a pointer
+ *\return new pointer pointing to 'pointer + offset' (NOT pointer arithmetic!) */
+template<typename T>
+inline T *adjust_pointer(T *pointer, size_t offset)
+{
+    return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(pointer) + offset);
+}
 
-  inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
-  {
+inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
+{
     uint8_t sum = 0;
-    for (size_t i = 0;i < sMemory;i++)
-      sum += reinterpret_cast<const uint8_t*>(pMemory)[i];
+    for(size_t i = 0; i < sMemory; i++)
+        sum += reinterpret_cast<const uint8_t *>(pMemory)[i];
     return (sum == 0);
-  }
+}
 
-  template<typename T>
-  struct is_integral
-  {
+template<typename T>
+struct is_integral
+{
     static const bool value = false;
-  };
-  template<>struct is_integral<bool>{static const bool value = true;};
-  template<>struct is_integral<char>{static const bool value = true;};
-  template<>struct is_integral<unsigned char>{static const bool value = true;};
-  template<>struct is_integral<signed char>{static const bool value = true;};
-  template<>struct is_integral<short>{static const bool value = true;};
-  template<>struct is_integral<unsigned short>{static const bool value = true;};
-  template<>struct is_integral<int>{static const bool value = true;};
-  template<>struct is_integral<unsigned int>{static const bool value = true;};
-  template<>struct is_integral<long>{static const bool value = true;};
-  template<>struct is_integral<unsigned long>{static const bool value = true;};
-  template<>struct is_integral<long long>{static const bool value = true;};
-  template<>struct is_integral<unsigned long long>{static const bool value = true;};
+};
+template<>struct is_integral<bool>{static const bool value = true;};
+template<>struct is_integral<char>{static const bool value = true;};
+template<>struct is_integral<unsigned char>{static const bool value = true;};
+template<>struct is_integral<signed char>{static const bool value = true;};
+template<>struct is_integral<short>{static const bool value = true;};
+template<>struct is_integral<unsigned short>{static const bool value = true;};
+template<>struct is_integral<int>{static const bool value = true;};
+template<>struct is_integral<unsigned int>{static const bool value = true;};
+template<>struct is_integral<long>{static const bool value = true;};
+template<>struct is_integral<unsigned long>{static const bool value = true;};
+template<>struct is_integral<long long>{static const bool value = true;};
+template<>struct is_integral<unsigned long long>{static const bool value = true;};
 
-  template<typename T>
-  struct is_pointer
-  {
+template<typename T>
+struct is_pointer
+{
     static const bool value = false;
-  };
-  template<typename T>
-  struct is_pointer<T*>
-  {
+};
+template<typename T>
+struct is_pointer<T *>
+{
     static const bool value = true;
-  };
+};
 #endif
 
 /** @} */

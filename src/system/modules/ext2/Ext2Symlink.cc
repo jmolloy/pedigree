@@ -20,30 +20,30 @@
 
 Ext2Symlink::Ext2Symlink(String name, uintptr_t inode_num, Inode inode,
                          Ext2Filesystem *pFs, File *pParent) :
-  Symlink(name, LITTLE_TO_HOST32(inode.i_atime),
-          LITTLE_TO_HOST32(inode.i_mtime),
-          LITTLE_TO_HOST32(inode.i_ctime),
-          inode_num,
-          static_cast<Filesystem*>(pFs),
-          LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
-          pParent),
-  Ext2Node(inode_num, inode, pFs)
+    Symlink(name, LITTLE_TO_HOST32(inode.i_atime),
+            LITTLE_TO_HOST32(inode.i_mtime),
+            LITTLE_TO_HOST32(inode.i_ctime),
+            inode_num,
+            static_cast<Filesystem *>(pFs),
+            LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
+            pParent),
+    Ext2Node(inode_num, inode, pFs)
 {
-  uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
-  uint32_t permissions;
-  if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
-  if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
-  if (mode & EXT2_S_IXUSR) permissions |= FILE_UX;
-  if (mode & EXT2_S_IRGRP) permissions |= FILE_GR;
-  if (mode & EXT2_S_IWGRP) permissions |= FILE_GW;
-  if (mode & EXT2_S_IXGRP) permissions |= FILE_GX;
-  if (mode & EXT2_S_IROTH) permissions |= FILE_OR;
-  if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
-  if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
+    uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
+    uint32_t permissions;
+    if(mode & EXT2_S_IRUSR) permissions |= FILE_UR;
+    if(mode & EXT2_S_IWUSR) permissions |= FILE_UW;
+    if(mode & EXT2_S_IXUSR) permissions |= FILE_UX;
+    if(mode & EXT2_S_IRGRP) permissions |= FILE_GR;
+    if(mode & EXT2_S_IWGRP) permissions |= FILE_GW;
+    if(mode & EXT2_S_IXGRP) permissions |= FILE_GX;
+    if(mode & EXT2_S_IROTH) permissions |= FILE_OR;
+    if(mode & EXT2_S_IWOTH) permissions |= FILE_OW;
+    if(mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
-  setPermissions(permissions);
-  setUid(LITTLE_TO_HOST16(inode.i_uid));
-  setGid(LITTLE_TO_HOST16(inode.i_gid));
+    setPermissions(permissions);
+    setUid(LITTLE_TO_HOST16(inode.i_uid));
+    setGid(LITTLE_TO_HOST16(inode.i_gid));
 }
 
 Ext2Symlink::~Ext2Symlink()
@@ -52,23 +52,23 @@ Ext2Symlink::~Ext2Symlink()
 
 uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  return static_cast<Ext2Node*>(this)->read(location, size, buffer);
-  m_Size = m_nSize;
+    return static_cast<Ext2Node *>(this)->read(location, size, buffer);
+    m_Size = m_nSize;
 }
 
 uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  return static_cast<Ext2Node*>(this)->write(location, size, buffer);
-  m_Size = m_nSize;
+    return static_cast<Ext2Node *>(this)->write(location, size, buffer);
+    m_Size = m_nSize;
 }
 
 void Ext2Symlink::truncate()
 {
-  static_cast<Ext2Node*>(this)->truncate();
-  m_Size = m_nSize;
+    static_cast<Ext2Node *>(this)->truncate();
+    m_Size = m_nSize;
 }
 
 void Ext2Symlink::fileAttributeChanged()
 {
-  static_cast<Ext2Node*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+    static_cast<Ext2Node *>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
 }

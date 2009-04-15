@@ -23,44 +23,44 @@ X64SyscallManager X64SyscallManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
 {
-  return X64SyscallManager::instance();
+    return X64SyscallManager::instance();
 }
 
 bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler *pHandler)
 {
-  // Lock the class until the end of the function
-  LockGuard<Spinlock> lock(m_Lock);
+    // Lock the class until the end of the function
+    LockGuard<Spinlock> lock(m_Lock);
 
-  if (UNLIKELY(Service >= SyscallManager::serviceEnd))
-    return false;
-  if (UNLIKELY(pHandler != 0 && m_pHandler[Service] != 0))
-    return false;
-  if (UNLIKELY(pHandler == 0 && m_pHandler[Service] == 0))
-    return false;
+    if(UNLIKELY(Service >= SyscallManager::serviceEnd))
+        return false;
+    if(UNLIKELY(pHandler != 0 && m_pHandler[Service] != 0))
+        return false;
+    if(UNLIKELY(pHandler == 0 && m_pHandler[Service] == 0))
+        return false;
 
-  m_pHandler[Service] = pHandler;
-  return true;
+    m_pHandler[Service] = pHandler;
+    return true;
 }
 
 void X64SyscallManager::syscall(SyscallState &syscallState)
 {
-  SyscallHandler *pHandler;
-  size_t serviceNumber = syscallState.getSyscallService();
+    SyscallHandler *pHandler;
+    size_t serviceNumber = syscallState.getSyscallService();
 
-  if (UNLIKELY(serviceNumber >= serviceEnd))
-  {
-    // TODO: We should return an error here
-    return;
-  }
+    if(UNLIKELY(serviceNumber >= serviceEnd))
+    {
+        // TODO: We should return an error here
+        return;
+    }
 
-  // Get the syscall handler
-  {
-    LockGuard<Spinlock> lock(m_Instance.m_Lock);
-    pHandler = m_Instance.m_pHandler[serviceNumber];
-  }
+    // Get the syscall handler
+    {
+        LockGuard<Spinlock> lock(m_Instance.m_Lock);
+        pHandler = m_Instance.m_pHandler[serviceNumber];
+    }
 
-  if (LIKELY(pHandler != 0))
-    pHandler->syscall(syscallState);
+    if(LIKELY(pHandler != 0))
+        pHandler->syscall(syscallState);
 }
 
 //
@@ -70,25 +70,25 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
 extern "C" void syscall_handler();
 void X64SyscallManager::initialiseProcessor()
 {
-  // Enable SCE (= System Call Extensions)
-  // Set IA32_EFER/EFER.SCE
-  Processor::writeMachineSpecificRegister(0xC0000080, Processor::readMachineSpecificRegister(0xC0000080) | 0x0000000000000001);
+    // Enable SCE (= System Call Extensions)
+    // Set IA32_EFER/EFER.SCE
+    Processor::writeMachineSpecificRegister(0xC0000080, Processor::readMachineSpecificRegister(0xC0000080) | 0x0000000000000001);
 
-  // Setup SYSCALL/SYSRET
-  // Set the IA32_STAR/STAR (CS/SS segment selectors)
-  Processor::writeMachineSpecificRegister(0xC0000081, 0x001B000800000000LL);
-  // Set the IA32_LSTAR/LSTAR (RIP)
-  Processor::writeMachineSpecificRegister(0xC0000082, reinterpret_cast<uint64_t>(syscall_handler));
-  // Set the IA32_FMASK/SF_MASK (RFLAGS mask, RFLAGS.IF cleared after syscall)
-  Processor::writeMachineSpecificRegister(0xC0000084,  0x0000000000000200LL);
+    // Setup SYSCALL/SYSRET
+    // Set the IA32_STAR/STAR (CS/SS segment selectors)
+    Processor::writeMachineSpecificRegister(0xC0000081, 0x001B000800000000LL);
+    // Set the IA32_LSTAR/LSTAR (RIP)
+    Processor::writeMachineSpecificRegister(0xC0000082, reinterpret_cast<uint64_t>(syscall_handler));
+    // Set the IA32_FMASK/SF_MASK (RFLAGS mask, RFLAGS.IF cleared after syscall)
+    Processor::writeMachineSpecificRegister(0xC0000084,  0x0000000000000200LL);
 }
 
 X64SyscallManager::X64SyscallManager()
-  : m_Lock()
+    : m_Lock()
 {
-  // Initialise the pointers to the handler
-  for (size_t i = 0;i < SyscallManager::serviceEnd;i++)
-    m_pHandler[i] = 0;
+    // Initialise the pointers to the handler
+    for(size_t i = 0; i < SyscallManager::serviceEnd; i++)
+        m_pHandler[i] = 0;
 }
 X64SyscallManager::~X64SyscallManager()
 {

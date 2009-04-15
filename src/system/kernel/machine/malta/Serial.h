@@ -23,7 +23,7 @@
 
 /**
  * Implements a driver for the Serial connection of the malta's UART.
- * 
+ *
  * Base for UART registers: 0x1F000900
  * Register offsets:
  * RXTX:    0x00  Receive/Transmit char register.
@@ -38,59 +38,59 @@
 class MaltaSerial : public Serial
 {
 public:
-  /**
-   * Default constructor, does nothing.
-   */
-  MaltaSerial();
-  /**
-   * Destructor.
-   */
-  ~MaltaSerial();
+    /**
+     * Default constructor, does nothing.
+     */
+    MaltaSerial();
+    /**
+     * Destructor.
+     */
+    ~MaltaSerial();
 
-  virtual void setBase(uintptr_t nBaseAddr);
-  
-  /**
-   * Writes a character out to the serial port.
-   * \note Blocking I/O.
-   */
-  virtual void write(char c);
-  
-  /**
-   * Reads a character in from the serial port.
-   * \note Blocking I/O.
-   * \return Zero on a non-printable character without a hardcoded VT100 string,
-   *         the next character in the buffer otherwise.
-   */
-  virtual char read();
-  virtual char readNonBlock();
+    virtual void setBase(uintptr_t nBaseAddr);
+
+    /**
+     * Writes a character out to the serial port.
+     * \note Blocking I/O.
+     */
+    virtual void write(char c);
+
+    /**
+     * Reads a character in from the serial port.
+     * \note Blocking I/O.
+     * \return Zero on a non-printable character without a hardcoded VT100 string,
+     *         the next character in the buffer otherwise.
+     */
+    virtual char read();
+    virtual char readNonBlock();
 private:
-  MaltaSerial(const MaltaSerial &);
-  MaltaSerial &operator = (const MaltaSerial &);
-  
-  struct serial
-  {
-    uint8_t rxtx;
-    uint8_t inten;
-    uint8_t iififo;
-    uint8_t lctrl;
-    uint8_t mctrl;
-    uint8_t lstat;
-    uint8_t mstat;
-    uint8_t scratch;
-  } PACKED;
-  /**
-   * If we're returning a VT100 string (more than one char), this buffer pointer can be
-   * set to the current location in the string. If it is NULL, the next character is pulled from
-   * the port.
-   */
-  const char *m_pBuffer;
-  
-  /**
-   * The serial device's registers.
-   */
-  volatile serial *m_pRegs;
-  
-  bool isConnected();
+    MaltaSerial(const MaltaSerial &);
+    MaltaSerial &operator =(const MaltaSerial &);
+
+    struct serial
+    {
+        uint8_t rxtx;
+        uint8_t inten;
+        uint8_t iififo;
+        uint8_t lctrl;
+        uint8_t mctrl;
+        uint8_t lstat;
+        uint8_t mstat;
+        uint8_t scratch;
+    } PACKED;
+    /**
+     * If we're returning a VT100 string (more than one char), this buffer pointer can be
+     * set to the current location in the string. If it is NULL, the next character is pulled from
+     * the port.
+     */
+    const char *m_pBuffer;
+
+    /**
+     * The serial device's registers.
+     */
+    volatile serial *m_pRegs;
+
+    bool isConnected();
 };
 
 #endif

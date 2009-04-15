@@ -16,7 +16,8 @@
 #ifndef NE2K_CONSTANTS_H
 #define NE2K_CONSTANTS_H
 
-enum Ne2kConstants {
+enum Ne2kConstants
+{
     NE_CMD    = 0x0,
     NE_PSTART = 0x1, // write
     NE_PSTOP  = 0x2, // write
@@ -49,8 +50,8 @@ enum Ne2kConstants {
 #define PAGE_RX           0x50
 #define PAGE_STOP         0x80
 
-#define NE_RESET				  0x1f
-#define NE_DATA					  0x10
+#define NE_RESET                                  0x1f
+#define NE_DATA                                   0x10
 
 // E8390 chip constants
 #define E8390_TX_IRQ_MASK 0xa   /* For register EN0_ISR */

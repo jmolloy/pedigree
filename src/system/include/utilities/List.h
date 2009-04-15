@@ -31,21 +31,25 @@
 template<typename T>
 struct _ListNode_t
 {
-  /** Get the next data structure in the list
-   *\return pointer to the next data structure in the list */
-  _ListNode_t *next()
-    {return m_Next;}
-  /** Get the previous data structure in the list
-   *\return pointer to the previous data structure in the list */
-  _ListNode_t *previous()
-    {return m_Previous;}
+    /** Get the next data structure in the list
+     *\return pointer to the next data structure in the list */
+    _ListNode_t *next()
+    {
+        return m_Next;
+    }
+    /** Get the previous data structure in the list
+     *\return pointer to the previous data structure in the list */
+    _ListNode_t *previous()
+    {
+        return m_Previous;
+    }
 
-  /** Pointer to the next node */
-  _ListNode_t *m_Next;
-  /** Pointer to the previous node */
-  _ListNode_t *m_Previous;
-  /** The value of the node */
-  T value;
+    /** Pointer to the next node */
+    _ListNode_t *m_Next;
+    /** Pointer to the previous node */
+    _ListNode_t *m_Previous;
+    /** The value of the node */
+    T value;
 };
 
 template<class T>
@@ -54,13 +58,13 @@ class List;
 /** List template specialisation for void*
  *\brief List template specialisation for void* */
 template<>
-class List<void*>
+class List<void *>
 {
-  /** The data structure of the list's nodes */
-  typedef _ListNode_t<void*> node_t;
-  public:
+    /** The data structure of the list's nodes */
+    typedef _ListNode_t<void *> node_t;
+public:
     /** Type of the bidirectional iterator */
-    typedef ::Iterator<void*, node_t>     Iterator;
+    typedef ::Iterator<void *, node_t>     Iterator;
     /** Type of the constant bidirectional iterator */
     typedef Iterator::Const               ConstIterator;
     /** Type of the reverse iterator */
@@ -78,7 +82,7 @@ class List<void*>
 
     /** Assignment operator
      *\param[in] x the object that should be copied */
-    List &operator = (const List &x);
+    List &operator =(const List &x);
 
     /** Get the number of elements we reserved space for
      *\return number of elements we reserved space for */
@@ -105,49 +109,49 @@ class List<void*>
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
     {
-      return Iterator(m_First);
+        return Iterator(m_First);
     }
     /** Get a constant iterator pointing to the beginning of the List
      *\return constant iterator pointing to the beginning of the List */
     inline ConstIterator begin() const
     {
-      return ConstIterator(m_First);
+        return ConstIterator(m_First);
     }
     /** Get an iterator pointing to the end of the List + 1
      *\return iterator pointing to the end of the List + 1 */
     inline Iterator end()
     {
-      return Iterator();
+        return Iterator();
     }
     /** Get a constant iterator pointing to the end of the List + 1
      *\return constant iterator pointing to the end of the List + 1 */
     inline ConstIterator end() const
     {
-      return ConstIterator();
+        return ConstIterator();
     }
     /** Get an iterator pointing to the reverse beginning of the List
      *\return iterator pointing to the reverse beginning of the List */
     inline ReverseIterator rbegin()
     {
-      return ReverseIterator(m_Last);
+        return ReverseIterator(m_Last);
     }
     /** Get a constant iterator pointing to the reverse beginning of the List
      *\return constant iterator pointing to the reverse beginning of the List */
     inline ConstReverseIterator rbegin() const
     {
-      return ConstReverseIterator(m_Last);
+        return ConstReverseIterator(m_Last);
     }
     /** Get an iterator pointing to the reverse end of the List + 1
      *\return iterator pointing to the reverse end of the List + 1 */
     inline ReverseIterator rend()
     {
-      return ReverseIterator();
+        return ReverseIterator();
     }
     /** Get a constant iterator pointing to the reverse end of the List + 1
      *\return constant iterator pointing to the reverse end of the List + 1 */
     inline ConstReverseIterator rend() const
     {
-      return ConstReverseIterator();
+        return ConstReverseIterator();
     }
 
     /** Remove all elements from the List */
@@ -156,7 +160,7 @@ class List<void*>
      *\param[in] x the reference List */
     void assign(const List &x);
 
-  private:
+private:
     /** The number of Nodes/Elements in the List */
     size_t m_Count;
     /** Pointer to the first Node in the List */
@@ -169,143 +173,148 @@ class List<void*>
  * void* template specialisation of List.
  *\brief List template specialisation for pointers */
 template<class T>
-class List<T*>
+class List<T *>
 {
-  public:
+public:
     /** Iterator */
-    typedef IteratorAdapter<T*, List<void*>::Iterator>                    Iterator;
+    typedef IteratorAdapter<T *, List<void *>::Iterator>                    Iterator;
     /** ConstIterator */
-    typedef IteratorAdapter<T* const, List<void*>::ConstIterator>         ConstIterator;
+    typedef IteratorAdapter<T *const, List<void *>::ConstIterator>         ConstIterator;
     /** ReverseIterator */
-    typedef IteratorAdapter<T*, List<void*>::ReverseIterator>             ReverseIterator;
+    typedef IteratorAdapter<T *, List<void *>::ReverseIterator>             ReverseIterator;
     /** ConstReverseIterator */
-    typedef IteratorAdapter<T* const, List<void*>::ConstReverseIterator>  ConstReverseIterator;
+    typedef IteratorAdapter<T *const, List<void *>::ConstReverseIterator>  ConstReverseIterator;
 
     /** Default constructor, does nothing */
     inline List()
-      : m_VoidList(){}
+        : m_VoidList()
+    {
+    }
     /** Copy-constructor
      *\param[in] x reference object */
     inline List(const List &x)
-      : m_VoidList(x.m_VoidList){}
+        : m_VoidList(x.m_VoidList)
+    {
+    }
     /** Destructor, deallocates memory */
     inline ~List()
-      {}
+    {
+    }
 
     /** Assignment operator
      *\param[in] x the object that should be copied */
-    inline List &operator = (const List &x)
+    inline List &operator =(const List &x)
     {
-      m_VoidList = x.m_VoidList;
-      return *this;
+        m_VoidList = x.m_VoidList;
+        return *this;
     }
 
     /** Get the number of elements we reserved space for
      *\return number of elements we reserved space for */
     inline size_t size() const
     {
-      return m_VoidList.size();
+        return m_VoidList.size();
     }
     /** Get the number of elements in the List */
     inline size_t count() const
     {
-      return m_VoidList.count();
+        return m_VoidList.count();
     }
     /** Add a value to the end of the List
      *\param[in] value the value that should be added */
     inline void pushBack(T *value)
     {
-      m_VoidList.pushBack(reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
+        m_VoidList.pushBack(reinterpret_cast<void *>(const_cast<typename nonconst_type<T>::type *>(value)));
     }
     /** Remove the last element from the List
      *\return the previously last element */
     inline T *popBack()
     {
-      return reinterpret_cast<T*>(m_VoidList.popBack());
+        return reinterpret_cast<T *>(m_VoidList.popBack());
     }
     /** Add a value to the front of the List
      *\param[in] value the value that should be added */
     inline void pushFront(T *value)
     {
-      m_VoidList.pushFront(reinterpret_cast<void*>(value));
+        m_VoidList.pushFront(reinterpret_cast<void *>(value));
     }
     /** Remove the first element in the List
      *\return the previously first element */
     inline T *popFront()
     {
-      return reinterpret_cast<T*>(m_VoidList.popFront());
+        return reinterpret_cast<T *>(m_VoidList.popFront());
     }
     /** Erase an element
      *\param[in] iterator the iterator that points to the element */
     inline Iterator erase(Iterator &Iter)
     {
-      return Iterator(m_VoidList.erase(Iter.__getIterator()));
+        return Iterator(m_VoidList.erase(Iter.__getIterator()));
     }
 
     /** Get an iterator pointing to the beginning of the List
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
     {
-      return Iterator(m_VoidList.begin());
+        return Iterator(m_VoidList.begin());
     }
     /** Get a constant iterator pointing to the beginning of the List
      *\return constant iterator pointing to the beginning of the List */
     inline ConstIterator begin() const
     {
-      return ConstIterator(m_VoidList.begin());
+        return ConstIterator(m_VoidList.begin());
     }
     /** Get an iterator pointing to the end of the List + 1
      *\return iterator pointing to the end of the List + 1 */
     inline Iterator end()
     {
-      return Iterator(m_VoidList.end());
+        return Iterator(m_VoidList.end());
     }
     /** Get a constant iterator pointing to the end of the List + 1
      *\return constant iterator pointing to the end of the List + 1 */
     inline ConstIterator end() const
     {
-      return ConstIterator(m_VoidList.end());
+        return ConstIterator(m_VoidList.end());
     }
     /** Get an iterator pointing to the reverse beginning of the List
      *\return iterator pointing to the reverse beginning of the List */
     inline ReverseIterator rbegin()
     {
-      return ReverseIterator(m_VoidList.rbegin());
+        return ReverseIterator(m_VoidList.rbegin());
     }
     /** Get a constant iterator pointing to the reverse beginning of the List
      *\return constant iterator pointing to the reverse beginning of the List */
     inline ConstReverseIterator rbegin() const
     {
-      return ConstReverseIterator(m_VoidList.rbegin());
+        return ConstReverseIterator(m_VoidList.rbegin());
     }
     /** Get an iterator pointing to the reverse end of the List + 1
      *\return iterator pointing to the reverse end of the List + 1 */
     inline ReverseIterator rend()
     {
-      return ReverseIterator(m_VoidList.rend());
+        return ReverseIterator(m_VoidList.rend());
     }
     /** Get a constant iterator pointing to the reverse end of the List + 1
      *\return constant iterator pointing to the reverse end of the List + 1 */
     inline ConstReverseIterator rend() const
     {
-      return ConstReverseIterator(m_VoidList.rend());
+        return ConstReverseIterator(m_VoidList.rend());
     }
 
     /** Remove all elements from the List */
     inline void clear()
     {
-      m_VoidList.clear();
+        m_VoidList.clear();
     }
     /** Copy the content of a List into this List
      *\param[in] x the reference List */
     inline void assign(const List &x)
     {
-      m_VoidList.assign(x.m_VoidList);
+        m_VoidList.assign(x.m_VoidList);
     }
 
-  private:
+private:
     /** The actual container */
-    List<void*> m_VoidList;
+    List<void *> m_VoidList;
 };
 
 /** @} */

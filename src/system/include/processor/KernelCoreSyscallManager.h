@@ -22,58 +22,61 @@
 class KernelCoreSyscallManager : public SyscallHandler
 {
 public:
-  /** Get the syscall manager instance.
-   *\return instance of the syscall manager */
-  static KernelCoreSyscallManager &instance() {return m_Instance;}
+    /** Get the syscall manager instance.
+     *\return instance of the syscall manager */
+    static KernelCoreSyscallManager &instance()
+    {
+        return m_Instance;
+    }
 
-  enum Function_t
-  {
-    /** Yields the processor to another thread. */
-    yield = 0,
+    enum Function_t
+    {
+        /** Yields the processor to another thread. */
+        yield = 0,
 
-    /** Dynamic linking request.
-     *  \note If you change this, update
-     *        system/modules/linker/asm-*.s ! */
-    link = 1,
+        /** Dynamic linking request.
+         *  \note If you change this, update
+         *        system/modules/linker/asm-*.s ! */
+        link = 1,
 
-    sleep = 2,
+        sleep = 2,
 
-    /** The last function, for error checking. */
-    functionEnd
-  };
+        /** The last function, for error checking. */
+        functionEnd
+    };
 
-  void initialise();
+    void initialise();
 
-  /** Calls a syscall. */
-  uintptr_t call(Function_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0);
+    /** Calls a syscall. */
+    uintptr_t call(Function_t function, uintptr_t p1 = 0, uintptr_t p2 = 0, uintptr_t p3 = 0, uintptr_t p4 = 0, uintptr_t p5 = 0);
 
-  /** Called when a syscall arrives. */
-  virtual uintptr_t syscall(SyscallState &state);
+    /** Called when a syscall arrives. */
+    virtual uintptr_t syscall(SyscallState &state);
 
-  typedef uintptr_t (*SyscallCallback)(SyscallState &);
+    typedef uintptr_t (*SyscallCallback)(SyscallState &);
 
-  /** Register a syscall with a callback. */
-  uintptr_t registerSyscall(Function_t function, SyscallCallback func);
+    /** Register a syscall with a callback. */
+    uintptr_t registerSyscall(Function_t function, SyscallCallback func);
 
 protected:
-  /** The constructor */
-  inline KernelCoreSyscallManager();
-  /** The destructor */
-  inline virtual ~KernelCoreSyscallManager();
+    /** The constructor */
+    inline KernelCoreSyscallManager();
+    /** The destructor */
+    inline virtual ~KernelCoreSyscallManager();
 
 private:
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  KernelCoreSyscallManager(const KernelCoreSyscallManager &);
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  KernelCoreSyscallManager &operator = (const KernelCoreSyscallManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    KernelCoreSyscallManager(const KernelCoreSyscallManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    KernelCoreSyscallManager &operator =(const KernelCoreSyscallManager &);
 
-  /** The static singleton instance. */
-  static KernelCoreSyscallManager m_Instance;
-  
-  /** Syscall lookup table for registerable syscalls. */
-  SyscallCallback m_Functions[16];
+    /** The static singleton instance. */
+    static KernelCoreSyscallManager m_Instance;
+
+    /** Syscall lookup table for registerable syscalls. */
+    SyscallCallback m_Functions[16];
 };
 
 #endif

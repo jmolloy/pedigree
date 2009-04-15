@@ -31,98 +31,104 @@
 class TraceCommand : public DebuggerCommand
 {
 public:
-  /**
-   * Default constructor - zero's stuff.
-   */
-  TraceCommand();
-
-  /**
-   * Default destructor - does nothing.
-   */
-  ~TraceCommand();
-
-  /**
-   * Return an autocomplete string, given an input string.
-   */
-  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
-
-  void setInterface(int nInterface);
-  
-  /**
-   * Execute the command with the given screen.
-   */
-  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
-  
-  /**
-   * Returns the string representation of this command.
-   */
-  const NormalStaticString getString()
-  {
-    return NormalStaticString("trace");
-  }
-  
-  /**
-   * Returns >=0 if the debugger should immediately call us. Returns the interface index to use.
-   */
-  int execTrace()
-  {
-    return m_nExec;
-  }
-  
-private:
-  class Disassembly : public Scrollable
-  {
-  public:
-    Disassembly(InterruptState &state);
-    ~Disassembly() {}
-    const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-    const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-    size_t getLineCount();
-  private:
-    size_t m_nInstructions;
-    uintptr_t m_nFirstInstruction;
-    uintptr_t m_nIp;
     /**
-     * These provide a useful speedup for the disassembly tracer. Because we have to essentially
-     * trawl a singly linked list from a known position (symbol start point) to get to any specific
-     * instruction, we keep this counter as the last line that was executed, and what the
-     * instruction location was for that line.
+     * Default constructor - zero's stuff.
      */
-    size_t m_LastLine;
-    uintptr_t m_LastInstructionLocation;
-  };
-  
-  class Registers : public Scrollable
-  {
-    public:
-      Registers(InterruptState &state);
-      ~Registers() {}
-      const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-      const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-      size_t getLineCount();
-    private:
-      InterruptState &m_State;
-  };
-  
-  class Stacktrace : public Scrollable
-  {
-    public:
-      Stacktrace(InterruptState &state);
-      ~Stacktrace() {}
-      const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-      const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-      size_t getLineCount();
-    private:
-      Backtrace m_Bt;
-  };
-  
-  void drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScreen);
-  
-  /**
-   * Should the debugger immediately call our execute function? and what interface should it use?
-   */
-  int m_nExec;
-  int m_nInterface;
+    TraceCommand();
+
+    /**
+     * Default destructor - does nothing.
+     */
+    ~TraceCommand();
+
+    /**
+     * Return an autocomplete string, given an input string.
+     */
+    void autocomplete(const HugeStaticString &input, HugeStaticString &output);
+
+    void setInterface(int nInterface);
+
+    /**
+     * Execute the command with the given screen.
+     */
+    bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
+
+    /**
+     * Returns the string representation of this command.
+     */
+    const NormalStaticString getString()
+    {
+        return NormalStaticString("trace");
+    }
+
+    /**
+     * Returns >=0 if the debugger should immediately call us. Returns the interface index to use.
+     */
+    int execTrace()
+    {
+        return m_nExec;
+    }
+
+private:
+    class Disassembly : public Scrollable
+    {
+public:
+        Disassembly(InterruptState &state);
+        ~Disassembly()
+        {
+        }
+        const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        size_t getLineCount();
+private:
+        size_t m_nInstructions;
+        uintptr_t m_nFirstInstruction;
+        uintptr_t m_nIp;
+        /**
+         * These provide a useful speedup for the disassembly tracer. Because we have to essentially
+         * trawl a singly linked list from a known position (symbol start point) to get to any specific
+         * instruction, we keep this counter as the last line that was executed, and what the
+         * instruction location was for that line.
+         */
+        size_t m_LastLine;
+        uintptr_t m_LastInstructionLocation;
+    };
+
+    class Registers : public Scrollable
+    {
+public:
+        Registers(InterruptState &state);
+        ~Registers()
+        {
+        }
+        const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        size_t getLineCount();
+private:
+        InterruptState &m_State;
+    };
+
+    class Stacktrace : public Scrollable
+    {
+public:
+        Stacktrace(InterruptState &state);
+        ~Stacktrace()
+        {
+        }
+        const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+        size_t getLineCount();
+private:
+        Backtrace m_Bt;
+    };
+
+    void drawBackground(size_t nCols, size_t nLines, DebuggerIO *pScreen);
+
+    /**
+     * Should the debugger immediately call our execute function? and what interface should it use?
+     */
+    int m_nExec;
+    int m_nInterface;
 };
 
 /** @} */

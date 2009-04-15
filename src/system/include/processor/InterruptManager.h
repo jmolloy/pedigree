@@ -28,7 +28,7 @@
  *\brief Handles interrupts and interrupt registrations from kernel components */
 class InterruptManager
 {
-  public:
+public:
     /** Get the interrupt manager instance
      *\return instance of the interrupt manager */
     static InterruptManager &instance();
@@ -40,33 +40,33 @@ class InterruptManager
                                           InterruptHandler *pHandler) = 0;
 
     #if defined(DEBUGGER)
-      /** Register an interrupt handler (for the kernel debugger)
-       *\param[in] nInterruptNumber the interrupt's number
-       *\param[in] pHandler the interrupt handler
-       *\return true, if successfully registered, false otherwise */
-      virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
-                                                    InterruptHandler *pHandler) = 0;
-      /** Get the interrupt number of the breakpoint exception
-       *\return the interrupt number of the breakpoint exception */
-      virtual size_t getBreakpointInterruptNumber() PURE = 0;
-      /** Get the interrupt number of the debug exception
-       *\return the interrupt number of the debug exception */
-      virtual size_t getDebugInterruptNumber() PURE = 0;
+    /** Register an interrupt handler (for the kernel debugger)
+     *\param[in] nInterruptNumber the interrupt's number
+     *\param[in] pHandler the interrupt handler
+     *\return true, if successfully registered, false otherwise */
+    virtual bool registerInterruptHandlerDebugger(size_t nInterruptNumber,
+                                                  InterruptHandler *pHandler) = 0;
+    /** Get the interrupt number of the breakpoint exception
+     *\return the interrupt number of the breakpoint exception */
+    virtual size_t getBreakpointInterruptNumber() PURE = 0;
+    /** Get the interrupt number of the debug exception
+     *\return the interrupt number of the debug exception */
+    virtual size_t getDebugInterruptNumber() PURE = 0;
     #endif
 
-  protected:
+protected:
     /** The constructor */
     inline InterruptManager();
     /** The destructor */
     inline virtual ~InterruptManager();
 
-  private:
+private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
     InterruptManager(const InterruptManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    InterruptManager &operator = (const InterruptManager &);
+    InterruptManager &operator =(const InterruptManager &);
 };
 
 /** @} */

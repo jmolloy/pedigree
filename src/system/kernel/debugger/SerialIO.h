@@ -31,122 +31,128 @@ class DebuggerCommand;
 class SerialIO : public DebuggerIO
 {
 public:
-  /**
-   * Default constructor and destructor.
-   */
-  SerialIO(Serial *pSerial);
-  ~SerialIO();
+    /**
+     * Default constructor and destructor.
+     */
+    SerialIO(Serial *pSerial);
+    ~SerialIO();
 
-  /**
-   * Forces the command line interface not to use the specified number of lines
-   * from either the top or bottom of the screen, respectively. Can be used to 
-   * create status lines that aren't destroyed by screen scrolling.
-   */
-  void setCliUpperLimit(size_t nlines);
-  void setCliLowerLimit(size_t nlines);
+    /**
+     * Forces the command line interface not to use the specified number of lines
+     * from either the top or bottom of the screen, respectively. Can be used to
+     * create status lines that aren't destroyed by screen scrolling.
+     */
+    void setCliUpperLimit(size_t nlines);
+    void setCliLowerLimit(size_t nlines);
 
-  /**
-   * Enables or disables the command line interface, allowing full access to the display.
-   * disableCli blanks the screen, enableCli blanks it and puts a prompt up.
-   */
-  void enableCli();
-  void disableCli();
+    /**
+     * Enables or disables the command line interface, allowing full access to the display.
+     * disableCli blanks the screen, enableCli blanks it and puts a prompt up.
+     */
+    void enableCli();
+    void disableCli();
 
-  void cls();
-  char getCharNonBlock();
+    void cls();
+    char getCharNonBlock();
 
-  void readDimensions();
-  
-  /**
-   * Draw a line of characters in the given fore and back colours, in the 
-   * horizontal or vertical direction. Note that if the CLI is enabled,
-   * anything drawn across the CLI area can be wiped without warning.
-   */
-  void drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
-  void drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+    void readDimensions();
 
-  /**
-   * Draws a string of text at the given location in the given colour.
-   * note that wrapping is not performed, the string will be clipped.
-   */
-  void drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+    /**
+     * Draw a line of characters in the given fore and back colours, in the
+     * horizontal or vertical direction. Note that if the CLI is enabled,
+     * anything drawn across the CLI area can be wiped without warning.
+     */
+    void drawHorizontalLine(char c, size_t row, size_t colStart, size_t colEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+    void drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEnd, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
-  /**
-   * Returns the width and height respectively of the console.
-   */
-  size_t getWidth() {return m_nWidth;}
-  size_t getHeight() {return m_nHeight;}
+    /**
+     * Draws a string of text at the given location in the given colour.
+     * note that wrapping is not performed, the string will be clipped.
+     */
+    void drawString(const char *str, size_t row, size_t col, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
 
-  /**
-   * Allows disabling of refreshes, for example when deleting something then writing it back.
-   */
-  void enableRefreshes();
-  void disableRefreshes();
-  void forceRefresh();
+    /**
+     * Returns the width and height respectively of the console.
+     */
+    size_t getWidth()
+    {
+        return m_nWidth;
+    }
+    size_t getHeight()
+    {
+        return m_nHeight;
+    }
 
-  /**
-   * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
-   */
-  char getChar();
-  
-  void initialise();
-  void destroy();
-  
+    /**
+     * Allows disabling of refreshes, for example when deleting something then writing it back.
+     */
+    void enableRefreshes();
+    void disableRefreshes();
+    void forceRefresh();
+
+    /**
+     * Gets a character from the keyboard. Blocking. Returns 0 for a nonprintable character.
+     */
+    char getChar();
+
+    void initialise();
+    void destroy();
+
 protected:
- 
-  /**
-   * Scrolls the CLI screen down a line, if needed.
-   */
-  void scroll();
 
-  /**
-   * Updates the hardware cursor position.
-   */
-  void moveCursor();
+    /**
+     * Scrolls the CLI screen down a line, if needed.
+     */
+    void scroll();
 
-  void putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+    /**
+     * Updates the hardware cursor position.
+     */
+    void moveCursor();
 
-  void startColour(DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
-  void endColour();
-  
-  void readCursor();
-  void setCursor();
-  void saveCursor();
-  void unsaveCursor();
-  
-  /**
-   * Current upper and lower CLI limits.
-   */
-  size_t m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
-  size_t m_LowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
-  
-  /**
-   * Width and height.
-   */
-  size_t m_nWidth;
-  size_t m_nHeight;
-  
-  /**
-   * Cursor position, temporary.
-   */
-  size_t m_nCursorX;
-  size_t m_nCursorY;
-  size_t m_nOldCursorX;
-  size_t m_nOldCursorY;
-  
-  DebuggerIO::Colour m_ForeColour;
-  DebuggerIO::Colour m_BackColour;
-  
-  /**
-   * Serial device.
-   */
-  Serial *m_pSerial;
-  
-  bool m_bCli;
+    void putChar(char c, DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+
+    void startColour(DebuggerIO::Colour foreColour, DebuggerIO::Colour backColour);
+    void endColour();
+
+    void readCursor();
+    void setCursor();
+    void saveCursor();
+    void unsaveCursor();
+
+    /**
+     * Current upper and lower CLI limits.
+     */
+    size_t m_UpperCliLimit; /// How many lines from the top of the screen the top of our CLI area is.
+    size_t m_LowerCliLimit; /// How many lines from the bottom of the screen the bottom of our CLI area is.
+
+    /**
+     * Width and height.
+     */
+    size_t m_nWidth;
+    size_t m_nHeight;
+
+    /**
+     * Cursor position, temporary.
+     */
+    size_t m_nCursorX;
+    size_t m_nCursorY;
+    size_t m_nOldCursorX;
+    size_t m_nOldCursorY;
+
+    DebuggerIO::Colour m_ForeColour;
+    DebuggerIO::Colour m_BackColour;
+
+    /**
+     * Serial device.
+     */
+    Serial *m_pSerial;
+
+    bool m_bCli;
 
 private:
-  SerialIO(const SerialIO &);
-  SerialIO &operator = (const SerialIO &);
+    SerialIO(const SerialIO &);
+    SerialIO &operator =(const SerialIO &);
 };
 
 /** @} */

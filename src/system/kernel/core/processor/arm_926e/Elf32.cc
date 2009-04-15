@@ -34,74 +34,74 @@
 
 bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh)
 {
-  // Section not loaded?
-  if (pSh->addr == 0)
-    return true; // Not a fatal error.
-  
-  // Get the address of the unit to be relocated.
-  uint32_t address = pSh->addr + rel.offset;
+    // Section not loaded?
+    if(pSh->addr == 0)
+        return true; // Not a fatal error.
 
-  // Addend is the value currently at the given address.
-  uint32_t A = * reinterpret_cast<uint32_t*> (address);
-  
-  // 'Place' is the address.
-  uint32_t P = address;
-  // Symbol location.
-  uint32_t S = 0;
-  ElfSymbol_t *pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable->addr);
+    // Get the address of the unit to be relocated.
+    uint32_t address = pSh->addr + rel.offset;
 
-  // If this is a section header, patch straight to it.
-  if (ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
-  {
-    // Section type - the name will be the name of the section header it refers to.
-    int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
-    ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
-    S = pSh->addr;
-  }
-  else
-  {
-    const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
-                         pSymbols[ELF32_R_SYM(rel.info)].name;
-    NOTICE("Relocating symbol \"" << pStr << "\"");
-    S = KernelElf::instance().globalLookupSymbol(pStr);
-    if (S == 0)
+    // Addend is the value currently at the given address.
+    uint32_t A = *reinterpret_cast<uint32_t *> (address);
+
+    // 'Place' is the address.
+    uint32_t P = address;
+    // Symbol location.
+    uint32_t S = 0;
+    ElfSymbol_t *pSymbols = reinterpret_cast<ElfSymbol_t *> (m_pSymbolTable->addr);
+
+    // If this is a section header, patch straight to it.
+    if(ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
     {
-      // Maybe we couldn't find the symbol because it's a symbol in this file.
-      // This is the case when f.x. a constant in .rodata wants to point to a symbol
-      // in .text - like a function pointer.
-      S = lookupSymbol(pStr);
+        // Section type - the name will be the name of the section header it refers to.
+        int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
+        ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
+        S = pSh->addr;
     }
-  }
-  
-  if (S == 0)
-    return false;
-  
-  // Base address
-  uint32_t B = m_LoadBase;
-  
-  uint32_t result = A; // Currently the result is the addend.
-  switch (ELF32_R_TYPE(rel.info))
-  {
-    case R_386_NONE:
-      break;
-    case R_386_32:
-      result = S + A;
-      break;
-    case R_386_PC32:
-      result = S + A - P;
-      break;
-    default:
-      ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
-  }
+    else
+    {
+        const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
+                           pSymbols[ELF32_R_SYM(rel.info)].name;
+        NOTICE("Relocating symbol \"" << pStr << "\"");
+        S = KernelElf::instance().globalLookupSymbol(pStr);
+        if(S == 0)
+        {
+            // Maybe we couldn't find the symbol because it's a symbol in this file.
+            // This is the case when f.x. a constant in .rodata wants to point to a symbol
+            // in .text - like a function pointer.
+            S = lookupSymbol(pStr);
+        }
+    }
 
-  // Write back the result.
-  uint32_t *pResult = reinterpret_cast<uint32_t*> (address);
-  *pResult = result;
-  return true;
+    if(S == 0)
+        return false;
+
+    // Base address
+    uint32_t B = m_LoadBase;
+
+    uint32_t result = A; // Currently the result is the addend.
+    switch(ELF32_R_TYPE(rel.info))
+    {
+        case R_386_NONE:
+            break;
+        case R_386_32:
+            result = S + A;
+            break;
+        case R_386_PC32:
+            result = S + A - P;
+            break;
+        default:
+            ERROR("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
+    }
+
+    // Write back the result.
+    uint32_t *pResult = reinterpret_cast<uint32_t *> (address);
+    *pResult = result;
+    return true;
 }
 
 bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh)
 {
-  ERROR("The ARM architecture does not use RELA entries!");
-  return false;
+    ERROR("The ARM architecture does not use RELA entries!");
+    return false;
 }

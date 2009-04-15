@@ -31,52 +31,52 @@ class ThreadsCommand : public DebuggerCommand,
                        public Scrollable
 {
 public:
-  /**
-   * Default constructor - zero's stuff.
-   */
-  ThreadsCommand();
+    /**
+     * Default constructor - zero's stuff.
+     */
+    ThreadsCommand();
 
-  /**
-     * Default destructor - does nothing.
-   */
-  ~ThreadsCommand();
+    /**
+       * Default destructor - does nothing.
+     */
+    ~ThreadsCommand();
 
-  /**
-   * Return an autocomplete string, given an input string.
-   */
-  void autocomplete(const HugeStaticString &input, HugeStaticString &output);
+    /**
+     * Return an autocomplete string, given an input string.
+     */
+    void autocomplete(const HugeStaticString &input, HugeStaticString &output);
 
-  /**
-   * Execute the command with the given screen.
-   */
-  bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
-  
-  /**
-   * Returns the string representation of this command.
-   */
-  const NormalStaticString getString()
-  {
-    return NormalStaticString("threads");
-  }
-  
-  /** Sets the pointers to use to change the thread the debugger debugs. */
-  void setPointers(Thread **ppThread, InterruptState *pState)
-  {
-    //m_ppThread = ppThread;
-    //m_pState = pState;
-  }
+    /**
+     * Execute the command with the given screen.
+     */
+    bool execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen);
 
-  //
-  // Scrollable interface
-  //
-  virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
-  virtual size_t getLineCount();
-  
+    /**
+     * Returns the string representation of this command.
+     */
+    const NormalStaticString getString()
+    {
+        return NormalStaticString("threads");
+    }
+
+    /** Sets the pointers to use to change the thread the debugger debugs. */
+    void setPointers(Thread **ppThread, InterruptState *pState)
+    {
+        //m_ppThread = ppThread;
+        //m_pState = pState;
+    }
+
+    //
+    // Scrollable interface
+    //
+    virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual size_t getLineCount();
+
 private:
-  bool swapThread(InterruptState &state, DebuggerIO *pScreen);
-  size_t m_SelectedLine;
-  size_t m_nLines;
+    bool swapThread(InterruptState &state, DebuggerIO *pScreen);
+    size_t m_SelectedLine;
+    size_t m_nLines;
 };
 
 /** @} */

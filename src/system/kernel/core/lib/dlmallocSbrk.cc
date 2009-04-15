@@ -21,24 +21,24 @@
 
 void *dlmallocSbrk(ssize_t incr)
 {
-  // NOTE: incr is already page aligned
+    // NOTE: incr is already page aligned
 
-  Spinlock lock;
-  lock.acquire();
+    Spinlock lock;
+    lock.acquire();
 
-  // Get the current address space
-  VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
-  if (Processor::m_Initialised == 2)
-    Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+    // Get the current address space
+    VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
+    if(Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
 
-  // Expand the heap
-  void *pHeap = VirtualAddressSpace::getKernelAddressSpace().expandHeap(incr,
-                                                                        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-  
-  if (Processor::m_Initialised == 2)
-    Processor::switchAddressSpace(VAddressSpace);
+    // Expand the heap
+    void *pHeap = VirtualAddressSpace::getKernelAddressSpace().expandHeap(incr,
+                                                                          VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
 
-  lock.release();
+    if(Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(VAddressSpace);
 
-  return pHeap;
+    lock.release();
+
+    return pHeap;
 }

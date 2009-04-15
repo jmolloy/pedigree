@@ -30,10 +30,13 @@
  *\brief Implementation of the PhysicalMemoryManager for common x86 */
 class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
-  public:
+public:
     /** Get the X86CommonPhysicalMemoryManager instance
      *\return instance of the X86CommonPhysicalMemoryManager */
-    inline static X86CommonPhysicalMemoryManager &instance(){return m_Instance;}
+    inline static X86CommonPhysicalMemoryManager &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // PhysicalMemoryManager Interface
@@ -54,23 +57,25 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     void initialisationDone();
 
     #if defined(ACPI)
-      inline const RangeList<uint64_t> &getAcpiRanges() const
-          {return m_AcpiRanges;}
+    inline const RangeList<uint64_t> &getAcpiRanges() const
+    {
+        return m_AcpiRanges;
+    }
     #endif
 
-  protected:
+protected:
     /** The constructor */
     X86CommonPhysicalMemoryManager() INITIALISATION_ONLY;
     /** The destructor */
     virtual ~X86CommonPhysicalMemoryManager();
 
-  private:
+private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
     X86CommonPhysicalMemoryManager(const X86CommonPhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    X86CommonPhysicalMemoryManager &operator = (const X86CommonPhysicalMemoryManager &);
+    X86CommonPhysicalMemoryManager &operator =(const X86CommonPhysicalMemoryManager &);
 
     void unmapRegion(MemoryRegion *pRegion);
 
@@ -79,7 +84,7 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
      *\brief The Stack of pages (below4GB, below64GB, no constraint). */
     class PageStack
     {
-      public:
+public:
         /** Default constructor does nothing */
         PageStack() INITIALISATION_ONLY;
         /** Allocate a page with certain constraints
@@ -90,21 +95,23 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
          *\param[in] physicalAddress physical address of the page */
         void free(uint64_t physicalAddress);
         /** The destructor does nothing */
-        inline ~PageStack(){}
+        inline ~PageStack()
+        {
+        }
 
-      private:
+private:
         /** The copy-constructor
          *\note Not implemented */
         PageStack(const PageStack &);
         /** The copy-constructor
          *\note Not implemented */
-        PageStack &operator = (const PageStack &);
+        PageStack &operator =(const PageStack &);
 
         /** The number of Stacks */
         #if defined(X86)
-          static const size_t StackCount = 1;
+        static const size_t StackCount = 1;
         #elif defined(X64)
-          static const size_t StackCount = 3;
+        static const size_t StackCount = 3;
         #endif
 
         /** Pointer to the base address of the stack. The stack grows upwards. */
@@ -127,8 +134,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     RangeList<uint64_t> m_PhysicalRanges;
 
     #if defined(ACPI)
-      /** RangeList of ACPI memory */
-      RangeList<uint64_t> m_AcpiRanges;
+    /** RangeList of ACPI memory */
+    RangeList<uint64_t> m_AcpiRanges;
     #endif
 
     /** Virtual-memory available for MemoryRegions

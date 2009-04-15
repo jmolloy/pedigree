@@ -31,13 +31,13 @@
 
 namespace DebugFlags
 {
-  enum FaultType
-  {
+enum FaultType
+{
     InstructionFetch = 0,
     DataWrite        = 1,
     IOReadWrite      = 2,
     DataReadWrite    = 3
-  };
+};
 }
 
 /// Defines for debug status flags.
@@ -54,9 +54,9 @@ namespace DebugFlags
  *      data on the processor that is executing this code. */
 class Processor
 {
-  friend class Multiprocessor;
-  friend class X86GdtManager;
-  public:
+    friend class Multiprocessor;
+    friend class X86GdtManager;
+public:
     /** Initialises the processor specific interface. After this function call the whole
      *  processor-specific interface is initialised. Note though, that only the
      *  bootstrap processor is started. Multiprocessor/-core facilities are available after
@@ -77,7 +77,10 @@ class Processor
     /** Is the processor-specific interface initialised?
      *\return 0, if nothing has been initialised, 1, if initialise1() has been executed
      *        successfully, 2, if initialise2() has been executed successfully */
-    inline static size_t isInitialised(){return m_Initialised;}
+    inline static size_t isInitialised()
+    {
+        return m_Initialised;
+    }
 
     /** Get the base-pointer of the calling function
      *\return base-pointer of the calling function */
@@ -97,10 +100,10 @@ class Processor
      *\param[in] pc The position to jump to.
      *\param[in] param The parameter to give. */
     static void switchToUserMode(uintptr_t pc, uintptr_t param);
-    
+
     /** Do a context switch. */
     static void contextSwitch(InterruptState *state);
-    
+
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
     /** Halt this processor */
@@ -147,27 +150,27 @@ class Processor
     static void setSingleStep(bool bEnable, InterruptState &state);
 
     #if defined(X86_COMMON)
-      /** Read a Machine/Model-specific register
-       *\param[in] index the register index
-       *\return the value of the register */
-      static uint64_t readMachineSpecificRegister(uint32_t index);
-      /** Write a Machine/Model-specific register
-       *\param[in] index the register index
-       *\param[in] value the new value of the register */
-      static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
-      /** Executes the CPUID machine instruction
-       *\param[in] inEax eax before the CPUID instruction
-       *\param[in] inEcx ecx before the CPUID instruction
-       *\param[out] eax eax afterwards
-       *\param[out] ebx ebx afterwards
-       *\param[out] ecx ecx afterwards
-       *\param[out] edx edx afterwards */
-      static void cpuid(uint32_t inEax,
-                        uint32_t inEcx,
-                        uint32_t &eax,
-                        uint32_t &ebx,
-                        uint32_t &ecx,
-                        uint32_t &edx);
+    /** Read a Machine/Model-specific register
+     *\param[in] index the register index
+     *\return the value of the register */
+    static uint64_t readMachineSpecificRegister(uint32_t index);
+    /** Write a Machine/Model-specific register
+     *\param[in] index the register index
+     *\param[in] value the new value of the register */
+    static void writeMachineSpecificRegister(uint32_t index, uint64_t value);
+    /** Executes the CPUID machine instruction
+     *\param[in] inEax eax before the CPUID instruction
+     *\param[in] inEcx ecx before the CPUID instruction
+     *\param[out] eax eax afterwards
+     *\param[out] ebx ebx afterwards
+     *\param[out] ecx ecx afterwards
+     *\param[out] edx edx afterwards */
+    static void cpuid(uint32_t inEax,
+                      uint32_t inEcx,
+                      uint32_t &eax,
+                      uint32_t &ebx,
+                      uint32_t &ecx,
+                      uint32_t &edx);
     #endif
     /** Invalidate the TLB entry containing a specific virtual address
      *\param[in] pAddress the specific virtual address
@@ -179,24 +182,24 @@ class Processor
     static void invalidate(void *pAddress);
 
     #if defined(X86)
-      static physical_uintptr_t readCr3();
+    static physical_uintptr_t readCr3();
     #endif
 
     #if defined(MIPS_COMMON) || defined(PPC_COMMON)
-      /** Invalidate a line in the instruction cache.
-       *\param[in] nAddr The address of a memory location to invalidate from the Icache. */
-      static void invalidateICache(uintptr_t nAddr);
-      /** Invalidate a line in the data cache.
-       *\param[in] nAddr The address of a memory location to invalidate from the Dcache. */
-      static void invalidateDCache(uintptr_t nAddr);
-      /** Flush a line in the data cache.
-       *\param[in] nAddr The address of a memory location to flush from the Dcache. */
-      static void flushDCache(uintptr_t nAddr);
-      /** Flush from the data cache and invalidate into the instruction cache.
-       * This must be used whenever code is written to memory and needs to be executed.
-       *\param startAddr The first address to be flushed and invalidated.
-       *\param endAddr The last address to be flushed and invalidated. */
-      static void flushDCacheAndInvalidateICache(uintptr_t startAddr, uintptr_t endAddr);
+    /** Invalidate a line in the instruction cache.
+     *\param[in] nAddr The address of a memory location to invalidate from the Icache. */
+    static void invalidateICache(uintptr_t nAddr);
+    /** Invalidate a line in the data cache.
+     *\param[in] nAddr The address of a memory location to invalidate from the Dcache. */
+    static void invalidateDCache(uintptr_t nAddr);
+    /** Flush a line in the data cache.
+     *\param[in] nAddr The address of a memory location to flush from the Dcache. */
+    static void flushDCache(uintptr_t nAddr);
+    /** Flush from the data cache and invalidate into the instruction cache.
+     * This must be used whenever code is written to memory and needs to be executed.
+     *\param startAddr The first address to be flushed and invalidated.
+     *\param endAddr The last address to be flushed and invalidated. */
+    static void flushDCacheAndInvalidateICache(uintptr_t startAddr, uintptr_t endAddr);
     #endif
 
     /** Populate 'str' with a string describing the characteristics of this processor. */
@@ -205,32 +208,32 @@ class Processor
     /** Get the ProcessorId of this processor
      *\return the ProcessorId of this processor */
     #if !defined(MULTIPROCESSOR)
-      inline static ProcessorId id();
+    inline static ProcessorId id();
     #else
-      static ProcessorId id();
+    static ProcessorId id();
     #endif
     /** Get the ProcessorInformation structure of this processor
      *\return the ProcessorInformation structure of this processor */
     #if !defined(MULTIPROCESSOR)
-      static inline ProcessorInformation &information();
+    static inline ProcessorInformation &information();
     #else
-      static ProcessorInformation &information();
+    static ProcessorInformation &information();
     #endif
 
     #ifdef PPC_COMMON
-      inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
- userKey);
+    inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
+                                           userKey);
     #endif
 
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
-  private:
+private:
     /** If we have only one processor, we define the ProcessorInformation class here
      *  otherwise we use an array of ProcessorInformation structures */
     #if !defined(MULTIPROCESSOR)
-      static ProcessorInformation m_ProcessorInformation;
+    static ProcessorInformation m_ProcessorInformation;
     #else
-      static Vector<ProcessorInformation*> m_ProcessorInformation;
+    static Vector<ProcessorInformation *> m_ProcessorInformation;
     #endif
 };
 
@@ -258,14 +261,14 @@ class Processor
 //
 
 #if !defined(MULTIPROCESSOR)
-  ProcessorId Processor::id()
-  {
+ProcessorId Processor::id()
+{
     return 0;
-  }
-  ProcessorInformation &Processor::information()
-  {
+}
+ProcessorInformation &Processor::information()
+{
     return m_ProcessorInformation;
-  }
+}
 #endif
 
 #endif

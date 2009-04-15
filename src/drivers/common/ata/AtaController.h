@@ -34,25 +34,25 @@
 class AtaController : public Controller, public RequestQueue, public IrqHandler
 {
 public:
-  AtaController(Controller *pDev);
-  ~AtaController();
+    AtaController(Controller *pDev);
+    ~AtaController();
 
-  virtual void getName(String &str)
-  {
-    str = "ata";
-  }
+    virtual void getName(String &str)
+    {
+        str = "ata";
+    }
 
-  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
-                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                    uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
 
-  // IRQ handler callback.
-  virtual bool irq(irq_id_t number, InterruptState &state);
+    // IRQ handler callback.
+    virtual bool irq(irq_id_t number, InterruptState &state);
 
-  IoBase *m_pCommandRegs;
-  IoBase *m_pControlRegs;
+    IoBase *m_pCommandRegs;
+    IoBase *m_pControlRegs;
 private:
-  AtaController(const AtaController&);
-  void operator =(const AtaController&);
+    AtaController(const AtaController &);
+    void operator =(const AtaController &);
 };
 
 #endif

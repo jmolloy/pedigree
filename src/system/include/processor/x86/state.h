@@ -27,10 +27,10 @@
 /** x86 Interrupt State */
 class X86InterruptState
 {
-  friend class X86ProcessorState;
-  friend class X86InterruptManager;
-  friend class PageFaultHandler;
-  public:
+    friend class X86ProcessorState;
+    friend class X86InterruptManager;
+    friend class PageFaultHandler;
+public:
     //
     // General Interface (InterruptState, SyscallState & ProcessorState)
     //
@@ -105,7 +105,7 @@ class X86InterruptState
 
     /** Construct a dummy interruptstate on the stack given in 'state', which when executed will
      *  set the processor to 'state'. */
-    static X86InterruptState *construct(class X86ProcessorState &state, bool userMode);
+    static X86InterruptState *construct(class X86ProcessorState & state, bool userMode);
 
 //  private:
     /** The default constructor
@@ -116,7 +116,7 @@ class X86InterruptState
     X86InterruptState(const X86InterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    X86InterruptState &operator = (const X86InterruptState &);
+    X86InterruptState &operator =(const X86InterruptState &);
     /** The destructor
      *\note NOT implemented */
     ~X86InterruptState();
@@ -161,7 +161,7 @@ typedef X86InterruptState X86SyscallState;
 /** x86 ProcessorState */
 class X86ProcessorState
 {
-  public:
+public:
     /** Default constructor initializes everything with 0 */
     inline X86ProcessorState();
     /** Copy-constructor */
@@ -170,10 +170,10 @@ class X86ProcessorState
      *\param[in] x reference to the InterruptState object */
     inline X86ProcessorState(const X86InterruptState &x);
     /** Assignment operator */
-    inline X86ProcessorState &operator = (const X86ProcessorState &x);
+    inline X86ProcessorState &operator =(const X86ProcessorState &x);
     /** Assignment from InterruptState
      *\param[in] reference to the InterruptState */
-    inline X86ProcessorState &operator = (const X86InterruptState &x);
+    inline X86ProcessorState &operator =(const X86InterruptState &x);
     /** Destructor does nothing */
     inline ~X86ProcessorState();
 
@@ -231,122 +231,122 @@ class X86ProcessorState
 //
 uintptr_t X86InterruptState::getStackPointer() const
 {
-  if (kernelMode())
-    return (m_Res + 20);
-  return m_Esp;
+    if(kernelMode())
+        return (m_Res + 20);
+    return m_Esp;
 }
 void X86InterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  if (!kernelMode())
-    m_Esp = stackPointer;
+    if(!kernelMode())
+        m_Esp = stackPointer;
 }
 uintptr_t X86InterruptState::getInstructionPointer() const
 {
-  return m_Eip;
+    return m_Eip;
 }
 void X86InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  m_Eip = instructionPointer;
+    m_Eip = instructionPointer;
 }
 uintptr_t X86InterruptState::getBasePointer() const
 {
-  return m_Ebp;
+    return m_Ebp;
 }
 void X86InterruptState::setBasePointer(uintptr_t basePointer)
 {
-  m_Ebp = basePointer;
+    m_Ebp = basePointer;
 }
 size_t X86InterruptState::getRegisterSize(size_t index) const
 {
-  return 4;
+    return 4;
 }
 
 bool X86InterruptState::kernelMode() const
 {
-  return (m_Cs == 0x08);
+    return (m_Cs == 0x08);
 }
 size_t X86InterruptState::getInterruptNumber() const
 {
-  return m_IntNumber;
+    return m_IntNumber;
 }
 
 size_t X86InterruptState::getSyscallService() const
 {
-  return ((m_Eax >> 16) & 0xFFFF);
+    return ((m_Eax >> 16) & 0xFFFF);
 }
 size_t X86InterruptState::getSyscallNumber() const
 {
-  return (m_Eax & 0xFFFF);
+    return (m_Eax & 0xFFFF);
 }
 uintptr_t X86InterruptState::getSyscallParameter(size_t n) const
 {
-  switch (n)
-  {
-    case 0: return m_Ebx;
-    case 1: return m_Ecx;
-    case 2: return m_Edx;
-    case 3: return m_Esi;
-    case 4: return m_Edi;
-    default:
-      WARNING("Bad syscall parameter requested: " << Dec << n);
-      return 0;
-  }
+    switch(n)
+    {
+        case 0: return m_Ebx;
+        case 1: return m_Ecx;
+        case 2: return m_Edx;
+        case 3: return m_Esi;
+        case 4: return m_Edi;
+        default:
+            WARNING("Bad syscall parameter requested: " << Dec << n);
+            return 0;
+    }
 }
 void X86InterruptState::setSyscallReturnValue(uintptr_t val)
 {
-  m_Eax = val;
+    m_Eax = val;
 }
 
 uint32_t X86InterruptState::getFlags() const
 {
-  return m_Eflags;
+    return m_Eflags;
 }
 void X86InterruptState::setFlags(uint32_t flags)
 {
-  m_Eflags = flags;
+    m_Eflags = flags;
 }
 
 X86ProcessorState::X86ProcessorState()
-  : edi(), esi(), ebp(), ebx(), edx(), ecx(), eax(), eip(), eflags(), esp()
+    : edi(), esi(), ebp(), ebx(), edx(), ecx(), eax(), eip(), eflags(), esp()
 {
 }
 X86ProcessorState::X86ProcessorState(const X86ProcessorState &x)
-  : edi(x.edi), esi(x.esi), ebp(x.ebp), ebx(x.ebx), edx(x.edx), ecx(x.ecx), eax(x.eax),
-    eip(x.eip), eflags(x.eflags), esp(x.esp)
+    : edi(x.edi), esi(x.esi), ebp(x.ebp), ebx(x.ebx), edx(x.edx), ecx(x.ecx), eax(x.eax),
+      eip(x.eip), eflags(x.eflags), esp(x.esp)
 {
 }
 X86ProcessorState::X86ProcessorState(const X86InterruptState &x)
-  : edi(x.m_Edi), esi(x.m_Esi), ebp(x.m_Ebp), ebx(x.m_Ebx), edx(x.m_Edx), ecx(x.m_Ecx), eax(x.m_Eax),
-    eip(x.m_Eip), eflags(x.m_Eflags), esp(x.getStackPointer())
+    : edi(x.m_Edi), esi(x.m_Esi), ebp(x.m_Ebp), ebx(x.m_Ebx), edx(x.m_Edx), ecx(x.m_Ecx), eax(x.m_Eax),
+      eip(x.m_Eip), eflags(x.m_Eflags), esp(x.getStackPointer())
 {
 }
-X86ProcessorState &X86ProcessorState::operator = (const X86ProcessorState &x)
+X86ProcessorState &X86ProcessorState::operator =(const X86ProcessorState &x)
 {
-  edi = x.edi;
-  esi = x.esi;
-  ebp = x.ebp;
-  ebx = x.ebx;
-  edx = x.edx;
-  ecx = x.ecx;
-  eax = x.eax;
-  eip = x.eip;
-  eflags = x.eflags;
-  esp = x.esp;
-  return *this;
+    edi = x.edi;
+    esi = x.esi;
+    ebp = x.ebp;
+    ebx = x.ebx;
+    edx = x.edx;
+    ecx = x.ecx;
+    eax = x.eax;
+    eip = x.eip;
+    eflags = x.eflags;
+    esp = x.esp;
+    return *this;
 }
-X86ProcessorState &X86ProcessorState::operator = (const X86InterruptState &x)
+X86ProcessorState &X86ProcessorState::operator =(const X86InterruptState &x)
 {
-  edi = x.m_Edi;
-  esi = x.m_Esi;
-  ebp = x.m_Ebp;
-  ebx = x.m_Ebx;
-  edx = x.m_Edx;
-  ecx = x.m_Ecx;
-  eax = x.m_Eax;
-  eip = x.m_Eip;
-  eflags = x.m_Eflags;
-  esp = x.getStackPointer();
-  return *this;
+    edi = x.m_Edi;
+    esi = x.m_Esi;
+    ebp = x.m_Ebp;
+    ebx = x.m_Ebx;
+    edx = x.m_Edx;
+    ecx = x.m_Ecx;
+    eax = x.m_Eax;
+    eip = x.m_Eip;
+    eflags = x.m_Eflags;
+    esp = x.getStackPointer();
+    return *this;
 }
 X86ProcessorState::~X86ProcessorState()
 {
@@ -354,31 +354,31 @@ X86ProcessorState::~X86ProcessorState()
 
 uintptr_t X86ProcessorState::getStackPointer() const
 {
-  return esp;
+    return esp;
 }
 void X86ProcessorState::setStackPointer(uintptr_t stackPointer)
 {
-  esp = stackPointer;
+    esp = stackPointer;
 }
 uintptr_t X86ProcessorState::getInstructionPointer() const
 {
-  return eip;
+    return eip;
 }
 void X86ProcessorState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  eip = instructionPointer;
+    eip = instructionPointer;
 }
 uintptr_t X86ProcessorState::getBasePointer() const
 {
-  return ebp;
+    return ebp;
 }
 void X86ProcessorState::setBasePointer(uintptr_t basePointer)
 {
-  ebp = basePointer;
+    ebp = basePointer;
 }
 void X86ProcessorState::setSyscallReturnValue(uintptr_t val)
 {
-  eax = val;
+    eax = val;
 }
 
 

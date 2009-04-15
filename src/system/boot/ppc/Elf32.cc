@@ -20,62 +20,62 @@
 extern void writeStr(const char *str);
 int strncpy(char *dest, const char *src, int len)
 {
-  while (*src && len)
-  {
-    *dest++ = *src++;
-    len--;
-  }
-  *dest = '\0';
-  return 0;
+    while(*src && len)
+    {
+        *dest++ = *src++;
+        len--;
+    }
+    *dest = '\0';
+    return 0;
 }
 int memset(void *buf, int c, size_t len)
 {
-  unsigned char *tmp = reinterpret_cast<unsigned char *> (buf);
-  while(len--)
-  {
-    *tmp++ = c;
-  }
-  return 0;
+    unsigned char *tmp = reinterpret_cast<unsigned char *> (buf);
+    while(len--)
+    {
+        *tmp++ = c;
+    }
+    return 0;
 }
 
 void memcpy(void *dest, const void *src, size_t len)
 {
-  const unsigned char *sp = reinterpret_cast<const unsigned char *> (src);
-  unsigned char *dp = reinterpret_cast<unsigned char *>(dest);
-  for (; len != 0; len--) *dp++ = *sp++;
+    const unsigned char *sp = reinterpret_cast<const unsigned char *> (src);
+    unsigned char *dp = reinterpret_cast<unsigned char *>(dest);
+    for(; len != 0; len--) *dp++ = *sp++;
 }
 
 int strcmp(const char *p1, const char *p2)
 {
-  int i = 0;
-  int failed = 0;
-  while(p1[i] != '\0' && p2[i] != '\0')
-  {
-    if(p1[i] != p2[i])
+    int i = 0;
+    int failed = 0;
+    while(p1[i] != '\0' && p2[i] != '\0')
     {
-      failed = 1;
-      break;
+        if(p1[i] != p2[i])
+        {
+            failed = 1;
+            break;
+        }
+        i++;
     }
-    i++;
-  }
-  // why did the loop exit?
-  if( (p1[i] == '\0' && p2[i] != '\0') || (p1[i] != '\0' && p2[i] == '\0') )
-    failed = 1;
+    // why did the loop exit?
+    if((p1[i] == '\0' && p2[i] != '\0') || (p1[i] != '\0' && p2[i] == '\0'))
+        failed = 1;
 
-  return failed;
+    return failed;
 }
 
 Elf32::Elf32(const char *name) :
-  m_pHeader(0),
-  m_pSymbolTable(0),
-  m_pStringTable(0),
-  m_pShstrtab(0),
-  m_pGotTable(0),
-  m_pRelTable(0),
-  m_pSectionHeaders(0),
-  m_pBuffer(0)
+    m_pHeader(0),
+    m_pSymbolTable(0),
+    m_pStringTable(0),
+    m_pShstrtab(0),
+    m_pGotTable(0),
+    m_pRelTable(0),
+    m_pSectionHeaders(0),
+    m_pBuffer(0)
 {
-  strncpy(m_pId, name, 127);
+    strncpy(m_pId, name, 127);
 }
 
 Elf32::~Elf32()
@@ -84,45 +84,45 @@ Elf32::~Elf32()
 
 bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 {
-  // The main header will be at pBuffer[0].
-  m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
-  
-  // Check the ident.
-  if ( (m_pHeader->ident[1] != 'E') ||
+    // The main header will be at pBuffer[0].
+    m_pHeader = reinterpret_cast<Elf32Header_t *>(pBuffer);
+
+    // Check the ident.
+    if((m_pHeader->ident[1] != 'E') ||
        (m_pHeader->ident[2] != 'L') ||
        (m_pHeader->ident[3] != 'F') ||
-       (m_pHeader->ident[0] != 127) )
-  {
-    m_pHeader = 0;
-    return false;
-  }
-  
-  // Load in the section headers.
-  m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(&pBuffer[m_pHeader->shoff]);
-  
-  // Find the string tab&pBuffer[m_pStringTable->offset];le.
-  m_pStringTable = &m_pSectionHeaders[m_pHeader->shstrndx];
-  
-  // Temporarily load the string table.
-  const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pStringTable->offset]);
-  
-  // Go through each section header, trying to find .symtab.
-  for (int i = 0; i < m_pHeader->shnum; i++)
-  {
-    const char *pStr = pStrtab + m_pSectionHeaders[i].name;
-    if (!strcmp(pStr, ".symtab"))
+       (m_pHeader->ident[0] != 127))
     {
-      m_pSymbolTable = &m_pSectionHeaders[i];
+        m_pHeader = 0;
+        return false;
     }
-    if (!strcmp(pStr, ".strtab"))
-      m_pStringTable = &m_pSectionHeaders[i];
-  }
-  
-  
-  m_pBuffer = pBuffer;
-  
-  // Success.
-  return true;
+
+    // Load in the section headers.
+    m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(&pBuffer[m_pHeader->shoff]);
+
+    // Find the string tab&pBuffer[m_pStringTable->offset];le.
+    m_pStringTable = &m_pSectionHeaders[m_pHeader->shstrndx];
+
+    // Temporarily load the string table.
+    const char *pStrtab = reinterpret_cast<const char *>(&pBuffer[m_pStringTable->offset]);
+
+    // Go through each section header, trying to find .symtab.
+    for(int i = 0; i < m_pHeader->shnum; i++)
+    {
+        const char *pStr = pStrtab + m_pSectionHeaders[i].name;
+        if(!strcmp(pStr, ".symtab"))
+        {
+            m_pSymbolTable = &m_pSectionHeaders[i];
+        }
+        if(!strcmp(pStr, ".strtab"))
+            m_pStringTable = &m_pSectionHeaders[i];
+    }
+
+
+    m_pBuffer = pBuffer;
+
+    // Success.
+    return true;
 }
 
 // bool Elf32::load(BootstrapInfo *pBootstrap)
@@ -130,21 +130,21 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 //   // Firstly get the section header string table.
 //   m_pShstrtab = reinterpret_cast<Elf32SectionHeader_t *>( pBootstrap->getSectionHeader(
 //                                                           pBootstrap->getStringTable() ));
-//   
+//
 //   // Normally we will try to use the sectionHeader->offset member to access data, so an
 //   // Elf section's data can be accessed without being mapped into virtual memory. However,
 //   // when GRUB loads us, it doesn't tell us where exactly ->offset is with respect to, so here
 //   // we fix offset = addr, then we work w.r.t 0x00.
-//   
+//
 //   // Temporarily load the string table.
 //   const char *pStrtab = reinterpret_cast<const char *>(m_pShstrtab->addr);
-// 
+//
 //   // Now search for the symbol table.
 //   for (int i = 0; i < pBootstrap->getSectionHeaderCount(); i++)
 //   {
 //     Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t *>(pBootstrap->getSectionHeader(i));
 //     const char *pStr = pStrtab + pSh->name;
-// 
+//
 //     if (pSh->type == SHT_SYMTAB)
 //     {
 //       m_pSymbolTable = pSh;
@@ -156,108 +156,108 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 //       m_pStringTable->offset = m_pStringTable->addr;
 //     }
 //   }
-// 
+//
 //   return true;
 // }
 
 bool Elf32::writeSections()
 {
-  unsigned int physAddress = 0x1000000;
-  for (int i = 0; i < m_pHeader->shnum; i++)
-  {
-    if (m_pSectionHeaders[i].flags & SHF_ALLOC)
+    unsigned int physAddress = 0x1000000;
+    for(int i = 0; i < m_pHeader->shnum; i++)
     {
-      if (m_pSectionHeaders[i].type != SHT_NOBITS)
-      {
-        prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
-        physAddress += m_pSectionHeaders[i].size+0x1000;
-        // Copy section data from the file.
-        memcpy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
-                        &m_pBuffer[m_pSectionHeaders[i].offset],
-                        m_pSectionHeaders[i].size);
-      }
-      else
-      {
-        prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
-        physAddress += m_pSectionHeaders[i].size+0x1000;
-        memset(reinterpret_cast<uint8_t*>(m_pSectionHeaders[i].addr),
-                        0,
-                        m_pSectionHeaders[i].size);
-      }
-      for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size; j += 4) 
-      {
-        asm volatile("dcbst 0, %0" :: "r" (j));
-      }
-  
-      asm volatile("sync");
-      for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size; j += 4) 
-      {
-        asm volatile("icbi 0, %0" :: "r"(j));
-      }
-      asm volatile("sync;isync;");
+        if(m_pSectionHeaders[i].flags & SHF_ALLOC)
+        {
+            if(m_pSectionHeaders[i].type != SHT_NOBITS)
+            {
+                prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size + 0x1000);
+                physAddress += m_pSectionHeaders[i].size + 0x1000;
+                // Copy section data from the file.
+                memcpy(reinterpret_cast<uint8_t *> (m_pSectionHeaders[i].addr),
+                       &m_pBuffer[m_pSectionHeaders[i].offset],
+                       m_pSectionHeaders[i].size);
+            }
+            else
+            {
+                prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size + 0x1000);
+                physAddress += m_pSectionHeaders[i].size + 0x1000;
+                memset(reinterpret_cast<uint8_t *>(m_pSectionHeaders[i].addr),
+                       0,
+                       m_pSectionHeaders[i].size);
+            }
+            for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr + m_pSectionHeaders[i].size; j += 4)
+            {
+                asm volatile ("dcbst 0, %0" :: "r" (j));
+            }
+
+            asm volatile ("sync");
+            for(unsigned int j = m_pSectionHeaders[i].addr; j < m_pSectionHeaders[i].addr + m_pSectionHeaders[i].size; j += 4)
+            {
+                asm volatile ("icbi 0, %0" :: "r" (j));
+            }
+            asm volatile ("sync;isync;");
+        }
     }
-  } 
-  return true;
+    return true;
 }
 
 unsigned int Elf32::getLastAddress()
 {
-  return 0;
+    return 0;
 }
 
 const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 {
-  if (!m_pSymbolTable || !m_pStringTable)
-    return 0; // Just return null if we haven't got a symbol table.
-  
-  Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(&m_pBuffer[m_pSymbolTable->offset]);
-  const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
+    if(!m_pSymbolTable || !m_pStringTable)
+        return 0; // Just return null if we haven't got a symbol table.
 
-  for (size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
-  {
-    // Make sure we're looking at an object or function.
-    if (ELF32_ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
-        ELF32_ST_TYPE(pSymbol->info) != 0x0 /* notype (asm functions) */)
+    Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(&m_pBuffer[m_pSymbolTable->offset]);
+    const char *pStrtab = reinterpret_cast<const char *>(&m_pBuffer[m_pStringTable->offset]);
+
+    for(size_t i = 0; i < m_pSymbolTable->size / sizeof(Elf32Symbol_t); i++)
     {
-      pSymbol++;
-      continue;
+        // Make sure we're looking at an object or function.
+        if(ELF32_ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
+           ELF32_ST_TYPE(pSymbol->info) != 0x0 /* notype (asm functions) */)
+        {
+            pSymbol++;
+            continue;
+        }
+
+        // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
+        // count it!
+        uint32_t size = pSymbol->size;
+        if(size == 0)
+            size = 1;
+        if((addr >= pSymbol->value) &&
+           (addr < (pSymbol->value + size)))
+        {
+            const char *pStr = pStrtab + pSymbol->name;
+            if(startAddr)
+                *startAddr = pSymbol->value;
+            return pStr;
+        }
+        pSymbol++;
     }
-    
-    // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
-    // count it!
-    uint32_t size = pSymbol->size;
-    if (size == 0)
-      size = 1;
-    if ( (addr >= pSymbol->value) &&
-         (addr < (pSymbol->value + size)) )
-    {
-      const char *pStr = pStrtab + pSymbol->name;
-      if (startAddr)
-        *startAddr = pSymbol->value;
-      return pStr;
-    }
-    pSymbol ++;
-  }
-  return 0;
-  
+    return 0;
+
 }
 
 uint32_t Elf32::lookupDynamicSymbolAddress(uint32_t off)
 {
-  return 0;
+    return 0;
 }
 
 char *Elf32::lookupDynamicSymbolName(uint32_t off)
 {
-  return 0;
+    return 0;
 }
 
 uint32_t Elf32::getGlobalOffsetTable()
 {
-  return 0;
+    return 0;
 }
 
 uint32_t Elf32::getEntryPoint()
 {
-  return m_pHeader->entry;
+    return m_pHeader->entry;
 }

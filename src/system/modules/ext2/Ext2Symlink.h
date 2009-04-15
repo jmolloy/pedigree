@@ -26,23 +26,23 @@
 class Ext2Symlink : public Symlink, public Ext2Node
 {
 private:
-  /** Copy constructors are hidden - unused! */
-  Ext2Symlink(const Ext2Symlink &file);
-  Ext2Symlink& operator =(const Ext2Symlink&);
+    /** Copy constructors are hidden - unused! */
+    Ext2Symlink(const Ext2Symlink &file);
+    Ext2Symlink &operator =(const Ext2Symlink &);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  Ext2Symlink(String name, uintptr_t inode_num, Inode inode,
-           class Ext2Filesystem *pFs, File *pParent = 0);
-  /** Destructor */
-  virtual ~Ext2Symlink();
+    /** Constructor, should be called only by a Filesystem. */
+    Ext2Symlink(String name, uintptr_t inode_num, Inode inode,
+                class Ext2Filesystem *pFs, File *pParent = 0);
+    /** Destructor */
+    virtual ~Ext2Symlink();
 
-  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
-  void truncate();
+    void truncate();
 
-  /** Updates inode attributes. */
-  void fileAttributeChanged();
+    /** Updates inode attributes. */
+    void fileAttributeChanged();
 };
 
 #endif

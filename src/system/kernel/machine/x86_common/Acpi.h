@@ -31,32 +31,44 @@
 /** Implementation of the ACPI 1.0+ Specification */
 class Acpi
 {
-  public:
+public:
     /** Get the instance of the Acpi class */
     inline static Acpi &instance()
-      {return m_Instance;}
+    {
+        return m_Instance;
+    }
 
     /** Search for the tables and initialise internal data structures
      *\note the first MB of RAM must be identity mapped */
     void initialise() INITIALISATION_ONLY;
 
     #if defined(APIC)
-      inline bool validApicInfo() const
-        {return m_bValidApicInfo;}
-      inline uint64_t getLocalApicAddress() const
-        {return m_LocalApicAddress;}
-      inline const Vector<Multiprocessor::IoApicInformation*> &getIoApicList() const
-        {return m_IoApics;}
+    inline bool validApicInfo() const
+    {
+        return m_bValidApicInfo;
+    }
+    inline uint64_t getLocalApicAddress() const
+    {
+        return m_LocalApicAddress;
+    }
+    inline const Vector<Multiprocessor::IoApicInformation *> &getIoApicList() const
+    {
+        return m_IoApics;
+    }
 
       #if defined(MULTIPROCESSOR)
-        inline bool validProcessorInfo() const
-          {return m_bValidProcessorInfo;}
-        inline const Vector<Multiprocessor::ProcessorInformation*> &getProcessorList() const
-          {return m_Processors;}
+    inline bool validProcessorInfo() const
+    {
+        return m_bValidProcessorInfo;
+    }
+    inline const Vector<Multiprocessor::ProcessorInformation *> &getProcessorList() const
+    {
+        return m_Processors;
+    }
       #endif
     #endif
 
-  private:
+private:
     /** The constructor does nothing */
     Acpi() INITIALISATION_ONLY;
     /** Copy-constructor
@@ -64,108 +76,110 @@ class Acpi
     Acpi(const Acpi &);
     /** Assignment opterator
      *\note NOT implemented (singleton class) */
-    Acpi &operator = (const Acpi &);
+    Acpi &operator =(const Acpi &);
     /** The destructor does nothing */
-    inline ~Acpi(){}
+    inline ~Acpi()
+    {
+    }
 
     struct RsdtPointer
     {
-      // ACPI 1.0+
-      uint64_t signature;
-      uint8_t checksum;
-      char oemId[6];
-      uint8_t revision;
-      uint32_t rsdtAddress;
+        // ACPI 1.0+
+        uint64_t signature;
+        uint8_t checksum;
+        char oemId[6];
+        uint8_t revision;
+        uint32_t rsdtAddress;
 
-      // ACPI 2.0+
-      uint32_t length;
-      uint64_t xsdtAddress;
-      uint8_t extendedChecksum;
-      uint8_t reserved[3];
+        // ACPI 2.0+
+        uint32_t length;
+        uint64_t xsdtAddress;
+        uint8_t extendedChecksum;
+        uint8_t reserved[3];
     } PACKED;
 
     struct SystemDescriptionTableHeader
     {
-      uint32_t signature;
-      uint32_t length;
-      uint8_t revision;
-      uint8_t checksum;
-      char oemId[6];
-      char oemTableId[8];
-      uint32_t oemRevision;
-      uint32_t creatorId;
-      uint32_t creatorRevision;
+        uint32_t signature;
+        uint32_t length;
+        uint8_t revision;
+        uint8_t checksum;
+        char oemId[6];
+        char oemTableId[8];
+        uint32_t oemRevision;
+        uint32_t creatorId;
+        uint32_t creatorRevision;
     } PACKED;
 
     struct FixedACPIDescriptionTable
     {
-      SystemDescriptionTableHeader header;
+        SystemDescriptionTableHeader header;
 
-      uint32_t firmwareControl;
-      uint32_t dsdt;
-      uint8_t interruptModel;
-      uint8_t reserved0;
-      uint16_t sciInterrupt;
-      uint32_t smiCommandPort;
-      uint8_t acpiEnableCommand;
-      uint8_t acpiDisableCommand;
-      uint8_t s4BiosCommand;
-      uint8_t reserved1;
-      uint32_t pm1aEventBlock;
-      uint32_t pm1bEventBlock;
-      uint32_t pm1aControlBlock;
-      uint32_t pm1bControlBlock;
-      uint32_t pm2ControlBlock;
-      uint32_t pmTimerBlock;
-      uint32_t gpe0Block;
-      uint32_t gpe1Block;
-      uint8_t pm1EventLength;
-      uint8_t pm1ControlLength;
-      uint8_t pm2ControlLength;
-      uint8_t pmTimerLength;
-      uint8_t gpe0BlockLength;
-      uint8_t gpe1BlockLength;
-      uint8_t gpe1Base;
-      uint8_t reserved2;
-      uint16_t pmLevel2Latency;
-      uint16_t pmLevel3Latency;
-      uint16_t flushSize;
-      uint16_t flushStride;
-      uint8_t dutyOffset;
-      uint8_t dutyWidth;
-      uint8_t cmosDayAlarmIndex;
-      uint8_t cmosMonthAlarmIndex;
-      uint8_t cmosCenturyIndex;
-      uint8_t reserved3[3];
-      uint32_t flags;
+        uint32_t firmwareControl;
+        uint32_t dsdt;
+        uint8_t interruptModel;
+        uint8_t reserved0;
+        uint16_t sciInterrupt;
+        uint32_t smiCommandPort;
+        uint8_t acpiEnableCommand;
+        uint8_t acpiDisableCommand;
+        uint8_t s4BiosCommand;
+        uint8_t reserved1;
+        uint32_t pm1aEventBlock;
+        uint32_t pm1bEventBlock;
+        uint32_t pm1aControlBlock;
+        uint32_t pm1bControlBlock;
+        uint32_t pm2ControlBlock;
+        uint32_t pmTimerBlock;
+        uint32_t gpe0Block;
+        uint32_t gpe1Block;
+        uint8_t pm1EventLength;
+        uint8_t pm1ControlLength;
+        uint8_t pm2ControlLength;
+        uint8_t pmTimerLength;
+        uint8_t gpe0BlockLength;
+        uint8_t gpe1BlockLength;
+        uint8_t gpe1Base;
+        uint8_t reserved2;
+        uint16_t pmLevel2Latency;
+        uint16_t pmLevel3Latency;
+        uint16_t flushSize;
+        uint16_t flushStride;
+        uint8_t dutyOffset;
+        uint8_t dutyWidth;
+        uint8_t cmosDayAlarmIndex;
+        uint8_t cmosMonthAlarmIndex;
+        uint8_t cmosCenturyIndex;
+        uint8_t reserved3[3];
+        uint32_t flags;
     } PACKED;
 
     struct ProcessorLocalApic
     {
-      uint8_t processorId;
-      uint8_t apicId;
-      uint32_t flags;
+        uint8_t processorId;
+        uint8_t apicId;
+        uint32_t flags;
     } PACKED;
 
     struct IoApic
     {
-      uint8_t apicId;
-      uint8_t reserved;
-      uint32_t address;
-      uint32_t globalSystemInterruptBase;
+        uint8_t apicId;
+        uint8_t reserved;
+        uint32_t address;
+        uint32_t globalSystemInterruptBase;
     } PACKED;
 
     struct InterruptSourceOverride
     {
-      uint8_t bus;
-      uint8_t source;
-      uint8_t globalSystemInterrupt;
-      uint16_t flags;
+        uint8_t bus;
+        uint8_t source;
+        uint8_t globalSystemInterrupt;
+        uint16_t flags;
     } PACKED;
 
     void parseFixedACPIDescriptionTable() INITIALISATION_ONLY;
     #if defined(APIC)
-      void parseMultipleApicDescriptionTable() INITIALISATION_ONLY;
+    void parseMultipleApicDescriptionTable() INITIALISATION_ONLY;
     #endif
     bool find() INITIALISATION_ONLY;
     RsdtPointer *find(void *pMemory, size_t sMemory) INITIALISATION_ONLY;
@@ -179,16 +193,16 @@ class Acpi
     FixedACPIDescriptionTable *m_pFacp;
 
     #if defined(APIC)
-      SystemDescriptionTableHeader *m_pApic;
+    SystemDescriptionTableHeader *m_pApic;
 
-      bool m_bValidApicInfo;
-      bool m_bHasPICs;
-      uint64_t m_LocalApicAddress;
-      Vector<Multiprocessor::IoApicInformation*> m_IoApics;
+    bool m_bValidApicInfo;
+    bool m_bHasPICs;
+    uint64_t m_LocalApicAddress;
+    Vector<Multiprocessor::IoApicInformation *> m_IoApics;
 
       #if defined(MULTIPROCESSOR)
-        bool m_bValidProcessorInfo;
-        Vector<Multiprocessor::ProcessorInformation*> m_Processors;
+    bool m_bValidProcessorInfo;
+    Vector<Multiprocessor::ProcessorInformation *> m_Processors;
       #endif
     #endif
 

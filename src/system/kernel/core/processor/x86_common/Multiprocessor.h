@@ -26,31 +26,35 @@
 
 class Multiprocessor
 {
-  public:
+public:
     /** Information about one processor. This information is provided by the
      *  SMP or the ACPI tables. */
     struct ProcessorInformation
     {
-      inline ProcessorInformation(uint8_t processorid, uint8_t apicid)
-        : processorId(processorid), apicId(apicid){}
-    
-      /** The id of the processor */
-      uint8_t processorId;
-      /** The id of the processor's local APIC */
-      uint8_t apicId;
+        inline ProcessorInformation(uint8_t processorid, uint8_t apicid)
+            : processorId(processorid), apicId(apicid)
+        {
+        }
+
+        /** The id of the processor */
+        uint8_t processorId;
+        /** The id of the processor's local APIC */
+        uint8_t apicId;
     };
 
     /** Information about one I/O APIC. This information is provided by the
      *  SMP or the ACPI tables. */
     struct IoApicInformation
     {
-      inline IoApicInformation(uint8_t apicid, physical_uintptr_t Address)
-        : apicId(apicid), address(Address){}
-    
-      /** The id of the I/O APIC */
-      uint8_t apicId;
-      /** The physical address of the I/O APIC register set */
-      physical_uintptr_t address;
+        inline IoApicInformation(uint8_t apicid, physical_uintptr_t Address)
+            : apicId(apicid), address(Address)
+        {
+        }
+
+        /** The id of the I/O APIC */
+        uint8_t apicId;
+        /** The physical address of the I/O APIC register set */
+        physical_uintptr_t address;
     };
 
     /** Startup and initialise all processors
@@ -59,7 +63,7 @@ class Multiprocessor
     /** Initialise the GDT on the other processors */
     static void initialise2() INITIALISATION_ONLY;
 
-  private:
+private:
     static void applicationProcessorStartup();
 
     static Spinlock m_ProcessorLock1 INITIALISATION_ONLY_DATA;

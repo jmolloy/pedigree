@@ -49,10 +49,13 @@
 class OpenPic : public IrqManager,
                 private InterruptHandler
 {
-  public:
+public:
     /** Get the Pic class instance
      *\return the Pic class instance */
-    inline static OpenPic &instance(){return m_Instance;}
+    inline static OpenPic &instance()
+    {
+        return m_Instance;
+    }
 
     //
     // IrqManager interface
@@ -67,19 +70,21 @@ class OpenPic : public IrqManager,
      *\return true, if successfull, false otherwise */
     bool initialise() INITIALISATION_ONLY;
 
-  private:
+private:
     /** The default constructor */
     OpenPic() INITIALISATION_ONLY;
     /** The destructor */
-    inline virtual ~OpenPic(){}
+    inline virtual ~OpenPic()
+    {
+    }
     /** The copy-constructor
      *\note NOT implemented */
     OpenPic(const OpenPic &);
     /** The assignment operator
      *\note NOT implemented */
-    OpenPic &operator = (const OpenPic &);
+    OpenPic &operator =(const OpenPic &);
 
-    void searchNode(class Device *pDev);
+    void searchNode(class Device * pDev);
 
     //
     // InterruptHandler interface
@@ -104,11 +109,11 @@ class OpenPic : public IrqManager,
 
     struct Feature
     {
-      uint32_t reserved0 : 5;
-      uint32_t num_irq : 11;
-      uint32_t reserved1 : 3;
-      uint32_t num_cpu : 5;
-      uint32_t version : 8;
+        uint32_t reserved0 : 5;
+        uint32_t num_irq : 11;
+        uint32_t reserved1 : 3;
+        uint32_t num_cpu : 5;
+        uint32_t version : 8;
     };
 };
 

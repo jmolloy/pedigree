@@ -32,33 +32,33 @@
 class Icmp
 {
 public:
-  Icmp();
-  virtual ~Icmp();
-  
-  /** For access to the stack without declaring an instance of it */
-  static Icmp& instance()
-  {
-    return icmpInstance;
-  }
-  
-  /** Packet arrival callback */
-  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
-  /** Sends an ICMP packet */
-  static void send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network* pCard = 0);
-  
+    Icmp();
+    virtual ~Icmp();
+
+    /** For access to the stack without declaring an instance of it */
+    static Icmp &instance()
+    {
+        return icmpInstance;
+    }
+
+    /** Packet arrival callback */
+    void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset);
+
+    /** Sends an ICMP packet */
+    static void send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network *pCard = 0);
+
 private:
 
-  static Icmp icmpInstance;
+    static Icmp icmpInstance;
 
-  struct icmpHeader
-  {
-    uint8_t   type;
-    uint8_t   code;
-    uint16_t  checksum;
-    uint16_t  id;
-    uint16_t  seq;
-  } __attribute__ ((packed));
+    struct icmpHeader
+    {
+        uint8_t   type;
+        uint8_t   code;
+        uint16_t  checksum;
+        uint16_t  id;
+        uint16_t  seq;
+    } __attribute__ ((packed));
 
 };
 

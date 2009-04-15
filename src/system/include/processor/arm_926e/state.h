@@ -26,7 +26,7 @@
 /** ARM926E Interrupt State */
 class ARM926EInterruptState
 {
-  public:
+public:
     //
     // General Interface (both InterruptState and SyscallState)
     //
@@ -74,7 +74,7 @@ class ARM926EInterruptState
     /** Get the interrupt number
      *\return the interrupt number */
     inline size_t getInterruptNumber() const;
-    
+
     //
     // SyscallState Interface
     //
@@ -85,10 +85,10 @@ class ARM926EInterruptState
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
 
-  private:
+private:
     /** The default constructor
      *\note NOT implemented */
-  public:
+public:
     ARM926EInterruptState();
 
     /** The copy-constructor
@@ -96,11 +96,13 @@ class ARM926EInterruptState
     ARM926EInterruptState(const ARM926EInterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    ARM926EInterruptState &operator = (const ARM926EInterruptState &);
+    ARM926EInterruptState &operator =(const ARM926EInterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~ARM926EInterruptState() {}
-    
+    ~ARM926EInterruptState()
+    {
+    }
+
     /** ARM926E Registers and State **/
     uint32_t m_r0;
     uint32_t m_r1;
@@ -132,58 +134,58 @@ typedef ARM926EInterruptState ARM926EProcessorState;
 
 uintptr_t ARM926EInterruptState::getStackPointer() const
 {
-  return m_Sp;
+    return m_Sp;
 }
 void ARM926EInterruptState::setStackPointer(uintptr_t stackPointer)
 {
 }
 uintptr_t ARM926EInterruptState::getInstructionPointer() const
 {
-  return m_Pc;
+    return m_Pc;
 }
 void ARM926EInterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
 uintptr_t ARM926EInterruptState::getBasePointer() const
 {
-  return m_Fp; // assume frame pointer = base pointer
+    return m_Fp; // assume frame pointer = base pointer
 }
 void ARM926EInterruptState::setBasePointer(uintptr_t basePointer)
 {
-  m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
+    m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
 }
 size_t ARM926EInterruptState::getRegisterSize(size_t index) const
 {
 #if defined(BITS_32)
-  return 4;
+    return 4;
 #else
-  return 4; // TODO: handle other bits sizes (this is mainly here)
-            // in order to help future development if ARM ends up
-            // requiring 64-bit or something
+    return 4; // TODO: handle other bits sizes (this is mainly here)
+              // in order to help future development if ARM ends up
+              // requiring 64-bit or something
 #endif
 }
 
 bool ARM926EInterruptState::kernelMode() const
 {
-  // TODO: the ARM926E is NOT always in kernel mode, handle this properly
-  // This'll require some reading up on the CPSR mode bits
-  return true;
+    // TODO: the ARM926E is NOT always in kernel mode, handle this properly
+    // This'll require some reading up on the CPSR mode bits
+    return true;
 }
 size_t ARM926EInterruptState::getInterruptNumber() const
 {
-  // TODO: implement
-  return 0;
+    // TODO: implement
+    return 0;
 }
 
 size_t ARM926EInterruptState::getSyscallService() const
 {
-  // TODO: implement
-  return 0;
+    // TODO: implement
+    return 0;
 }
 size_t ARM926EInterruptState::getSyscallNumber() const
 {
-  // TODO: implement
-  return 0;
+    // TODO: implement
+    return 0;
 }
 
 #endif

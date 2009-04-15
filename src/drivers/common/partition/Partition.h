@@ -25,60 +25,60 @@
 class Partition : public Disk
 {
 public:
-  Partition(String type, uint64_t start, uint64_t length);
-  virtual ~Partition();
-  
-  virtual void getName(String &str)
-  {
-    NormalStaticString str2;
-    str2 += m_Type;
-    str2 += " partition";
-    str = str2;
-  }
+    Partition(String type, uint64_t start, uint64_t length);
+    virtual ~Partition();
 
-  virtual void dump(String &str)
-  {
-    LargeStaticString str2;
-    str2 += m_Type;
-    str2 += " partition at 0x";
-    str2.append(m_Start, 16);
-    str2 += "-";
-    str2.append(m_Start+m_Length, 16);
-    str = str2;
-  }
+    virtual void getName(String &str)
+    {
+        NormalStaticString str2;
+        str2 += m_Type;
+        str2 += " partition";
+        str = str2;
+    }
 
-  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-  {
-    /// \todo bounds checking.
-    Disk *pParent = static_cast<Disk*> (getParent());
-    return pParent->read(location+m_Start, nBytes, buffer);
-  }
+    virtual void dump(String &str)
+    {
+        LargeStaticString str2;
+        str2 += m_Type;
+        str2 += " partition at 0x";
+        str2.append(m_Start, 16);
+        str2 += "-";
+        str2.append(m_Start + m_Length, 16);
+        str = str2;
+    }
 
-  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-  {
-    Disk *pParent = static_cast<Disk*> (getParent());
-    return pParent->write(location+m_Start, nBytes, buffer);
-  }
+    virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+    {
+        /// \todo bounds checking.
+        Disk *pParent = static_cast<Disk *> (getParent());
+        return pParent->read(location + m_Start, nBytes, buffer);
+    }
 
-  /** Returns the first byte of the parent disk that is in this partition. */
-  uint64_t getStart();
+    virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+    {
+        Disk *pParent = static_cast<Disk *> (getParent());
+        return pParent->write(location + m_Start, nBytes, buffer);
+    }
 
-  /** Returns the length of this partition. */
-  uint64_t getLength()
-  {
-    return m_Length;
-  }
+    /** Returns the first byte of the parent disk that is in this partition. */
+    uint64_t getStart();
 
-  /** Returns a string giving the type of the partition. */
-  String getPartitionType()
-  {
-    return m_Type;
-  }
+    /** Returns the length of this partition. */
+    uint64_t getLength()
+    {
+        return m_Length;
+    }
+
+    /** Returns a string giving the type of the partition. */
+    String getPartitionType()
+    {
+        return m_Type;
+    }
 
 private:
-  String m_Type;
-  uint64_t m_Start;
-  uint64_t m_Length;
+    String m_Type;
+    uint64_t m_Start;
+    uint64_t m_Length;
 };
 
 #endif

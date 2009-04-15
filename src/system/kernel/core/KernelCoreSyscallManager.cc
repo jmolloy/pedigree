@@ -32,46 +32,46 @@ KernelCoreSyscallManager::~KernelCoreSyscallManager()
 
 void KernelCoreSyscallManager::initialise()
 {
-  for (int i = 0; i < 16; i++)
-  {
-    m_Functions[i] = 0;
-  }
-  SyscallManager::instance().registerSyscallHandler(kernelCore, this);
+    for(int i = 0; i < 16; i++)
+    {
+        m_Functions[i] = 0;
+    }
+    SyscallManager::instance().registerSyscallHandler(kernelCore, this);
 }
 
 uintptr_t KernelCoreSyscallManager::call(Function_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
 {
-  // if (function >= serviceEnd)
-  // {
-  //   ERROR("KernelCoreSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
-  //   return 0;
-  // }
-  return SyscallManager::instance().syscall(kernelCore, function, p1, p2, p3, p4, p5);
+    // if (function >= serviceEnd)
+    // {
+    //   ERROR("KernelCoreSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
+    //   return 0;
+    // }
+    return SyscallManager::instance().syscall(kernelCore, function, p1, p2, p3, p4, p5);
 }
 
 uintptr_t KernelCoreSyscallManager::syscall(SyscallState &state)
 {
-  switch (state.getSyscallNumber())
-  {
-    case yield: Scheduler::instance().schedule(0, state, reinterpret_cast<Thread*> (state.getSyscallParameter(0)));
-      return 0;
-    default:
+    switch(state.getSyscallNumber())
     {
-      if (m_Functions[state.getSyscallNumber()] == 0)
-      {
-        ERROR ("KernelCoreSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber());
-        return 0;
-      }
-      else
-      {
-        return m_Functions[state.getSyscallNumber()](state);
-      }
+        case yield: Scheduler::instance().schedule(0, state, reinterpret_cast<Thread *> (state.getSyscallParameter(0)));
+            return 0;
+        default:
+        {
+            if(m_Functions[state.getSyscallNumber()] == 0)
+            {
+                ERROR("KernelCoreSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber());
+                return 0;
+            }
+            else
+            {
+                return m_Functions[state.getSyscallNumber()](state);
+            }
+        }
     }
-  }
 }
 
 uintptr_t KernelCoreSyscallManager::registerSyscall(Function_t function, SyscallCallback func)
 {
-  m_Functions[function] = func;
-  return 0;
+    m_Functions[function] = func;
+    return 0;
 }

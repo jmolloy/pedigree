@@ -27,11 +27,11 @@ MIPS32TlbManager MIPS32TlbManager::m_Instance;
 
 MIPS32TlbManager &MIPS32TlbManager::instance()
 {
-  return m_Instance;
+    return m_Instance;
 }
 
 MIPS32TlbManager::MIPS32TlbManager() :
-  m_nEntries(0)
+    m_nEntries(0)
 {
 }
 
@@ -41,108 +41,108 @@ MIPS32TlbManager::~MIPS32TlbManager()
 
 void MIPS32TlbManager::initialise()
 {
-  // Firstly get the size of the TLB. This function trashes all the TLB entries
-  // so is done first.
-  m_nEntries = getNumEntries();
-  
-  // Now flush the entire TLB. This writes values in KSEG1 into all of them,
-  // so that there is no possible way any could trigger.
-  flush(m_nEntries);
+    // Firstly get the size of the TLB. This function trashes all the TLB entries
+    // so is done first.
+    m_nEntries = getNumEntries();
 
-  // Write the address of our page table into the Context register.
-  writeContext(VIRTUAL_PAGE_DIRECTORY);
+    // Now flush the entire TLB. This writes values in KSEG1 into all of them,
+    // so that there is no possible way any could trigger.
+    flush(m_nEntries);
 
-  // We need 1 fixed TLB entry for the VirtualAddressSpace.
-  writeWired(1);
+    // Write the address of our page table into the Context register.
+    writeContext(VIRTUAL_PAGE_DIRECTORY);
 
-  // We use 4K pages always.
-  writePageMask(0);
+    // We need 1 fixed TLB entry for the VirtualAddressSpace.
+    writeWired(1);
 
-  // We handle the "TLB Exception (load/instruction fetch)" (2)
-  //           and "TLB Exception (store)" (3)
-  // exceptions.
-  InterruptManager::instance().registerInterruptHandler(2, this);
-  InterruptManager::instance().registerInterruptHandler(3, this);
+    // We use 4K pages always.
+    writePageMask(0);
+
+    // We handle the "TLB Exception (load/instruction fetch)" (2)
+    //           and "TLB Exception (store)" (3)
+    // exceptions.
+    InterruptManager::instance().registerInterruptHandler(2, this);
+    InterruptManager::instance().registerInterruptHandler(3, this);
 }
 
 void MIPS32TlbManager::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  // The BadVAddr register will have the address that we couldn't access.
-  // To make that into a 'chunk' index, we need to shift right by 12 bits
-  // (to remove the page offset) and mask to only the bottom 11 bits 
-  // (2048 == 0x800).
-  uintptr_t badvaddr = state.m_BadVAddr;
-  uintptr_t chunkIdx = (badvaddr >> 12) & 0x7FF;
-  
-  // Sanity check - was this TLB miss for the page table? or for elsewhere?
-  if ( (badvaddr < 0xC0000000) || (badvaddr >= 0xC0800000) )
-  {
-    // Page fault.
-    static LargeStaticString str;
-    str.clear();
-    str += "Page fault (";
-    str.append(badvaddr, 16);
-    str += ")";
-    Debugger::instance().start(state, str);
-    panic("Page fault");
-  }
+    // The BadVAddr register will have the address that we couldn't access.
+    // To make that into a 'chunk' index, we need to shift right by 12 bits
+    // (to remove the page offset) and mask to only the bottom 11 bits
+    // (2048 == 0x800).
+    uintptr_t badvaddr = state.m_BadVAddr;
+    uintptr_t chunkIdx = (badvaddr >> 12) & 0x7FF;
 
-  // As the R4000 maps one virtual page to two consecutive physical frames,
-  // we need to ensure that the first chunk we ask for is aligned properly.
-  uintptr_t chunkSelect = chunkIdx & 0x1; // Which chunk were we accessing?
-  chunkIdx &= ~0x1;
+    // Sanity check - was this TLB miss for the page table? or for elsewhere?
+    if((badvaddr < 0xC0000000) || (badvaddr >= 0xC0800000))
+    {
+        // Page fault.
+        static LargeStaticString str;
+        str.clear();
+        str += "Page fault (";
+        str.append(badvaddr, 16);
+        str += ")";
+        Debugger::instance().start(state, str);
+        panic("Page fault");
+    }
 
-  // TODO: get the current virtual address space!
-  MIPS32VirtualAddressSpace &addressSpace = static_cast<MIPS32VirtualAddressSpace&> (VirtualAddressSpace::getKernelAddressSpace());
-  uintptr_t phys1 = addressSpace.getPageTableChunk(chunkIdx);
-  uintptr_t phys2 = addressSpace.getPageTableChunk(chunkIdx+1);
+    // As the R4000 maps one virtual page to two consecutive physical frames,
+    // we need to ensure that the first chunk we ask for is aligned properly.
+    uintptr_t chunkSelect = chunkIdx & 0x1; // Which chunk were we accessing?
+    chunkIdx &= ~0x1;
 
-  NOTICE("BadVaddr: " << Hex << badvaddr << ", chunkIdx: "<< chunkIdx << ", phys1: " << phys1 << ", phys2: " << phys2);
+    // TODO: get the current virtual address space!
+    MIPS32VirtualAddressSpace &addressSpace = static_cast<MIPS32VirtualAddressSpace &> (VirtualAddressSpace::getKernelAddressSpace());
+    uintptr_t phys1 = addressSpace.getPageTableChunk(chunkIdx);
+    uintptr_t phys2 = addressSpace.getPageTableChunk(chunkIdx + 1);
 
-  if ((phys1 == 0 && chunkSelect == 0) ||
-      (phys2 == 0 && chunkSelect == 1))
-  {
-    // Page fault.
-    static LargeStaticString str;
-    str.clear();
-    str += "Page fault";
-    Debugger::instance().start(state, str);
-    panic("Page fault");
-  }
+    NOTICE("BadVaddr: " << Hex << badvaddr << ", chunkIdx: " << chunkIdx << ", phys1: " << phys1 << ", phys2: " << phys2);
 
-  // Current EntryHi
-  uintptr_t curEntryHi;
-  CP0_READ_ENTRYHI(curEntryHi);
+    if((phys1 == 0 && chunkSelect == 0) ||
+       (phys2 == 0 && chunkSelect == 1))
+    {
+        // Page fault.
+        static LargeStaticString str;
+        str.clear();
+        str += "Page fault";
+        Debugger::instance().start(state, str);
+        panic("Page fault");
+    }
 
-  NOTICE("CurEntryHi: " << Hex << curEntryHi);
-  
-  // Get the current ASID.
-  AsidManager::Asid asid = 0; // TODO
+    // Current EntryHi
+    uintptr_t curEntryHi;
+    CP0_READ_ENTRYHI(curEntryHi);
 
-  // Generate an EntryHi value.
-  uintptr_t entryHi = (badvaddr & ~0x1FFF) | (curEntryHi & 0xFF);
+    NOTICE("CurEntryHi: " << Hex << curEntryHi);
 
-  // Generate an EntryLo0 value.
-  uintptr_t entryLo0 = phys1;
-  if (entryLo0 != 0)
-  {
-    entryLo0 >>= 6;
-    entryLo0 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
-  }
+    // Get the current ASID.
+    AsidManager::Asid asid = 0; // TODO
 
-  // Generate an EntryLo1 value.
-  uintptr_t entryLo1 = phys2;
-  if (entryLo1 != 0)
-  {
-    entryLo1 >>= 6;
-    entryLo1 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
-  }
+    // Generate an EntryHi value.
+    uintptr_t entryHi = (badvaddr & ~0x1FFF) | (curEntryHi & 0xFF);
 
-  // Write into the TLB.
-  writeTlb(entryHi, entryLo0, entryLo1);
+    // Generate an EntryLo0 value.
+    uintptr_t entryLo0 = phys1;
+    if(entryLo0 != 0)
+    {
+        entryLo0 >>= 6;
+        entryLo0 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
+    }
 
-  // Now that the chunk is in the TLB, we can read the bad virtual address
-  // and check if it is NULL. If so, this is a page fault.
+    // Generate an EntryLo1 value.
+    uintptr_t entryLo1 = phys2;
+    if(entryLo1 != 0)
+    {
+        entryLo1 >>= 6;
+        entryLo1 |= MIPS32_PTE_VALID | MIPS32_PTE_CACHED | MIPS32_PTE_DIRTY;
+    }
+
+    // Write into the TLB.
+    writeTlb(entryHi, entryLo0, entryLo1);
+
+    // Now that the chunk is in the TLB, we can read the bad virtual address
+    // and check if it is NULL. If so, this is a page fault.
 //  uintptr_t *pBadvaddr = reinterpret_cast<uintptr_t*> (badvaddr);
 //  if (*pBadvaddr == 0)
 //  {
@@ -154,5 +154,5 @@ void MIPS32TlbManager::interrupt(size_t interruptNumber, InterruptState &state)
 //    panic("Page fault");
 //  }
 
-  // Success.
+    // Success.
 }

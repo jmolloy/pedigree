@@ -20,8 +20,8 @@
 
 uintptr_t ARM926EStackFrame::getParameter(size_t n)
 {
-  // TODO: Implement
-  return 0;
+    // TODO: Implement
+    return 0;
 }
 
 #endif

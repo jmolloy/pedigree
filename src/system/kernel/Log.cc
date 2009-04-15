@@ -24,11 +24,11 @@
 Log Log::m_Instance;
 
 Log::Log () :
-  m_Lock(),
-  m_DynamicLog(),
-  m_StaticEntries(0),
-  m_Buffer(),
-  m_NumberType(Dec)
+    m_Lock(),
+    m_DynamicLog(),
+    m_StaticEntries(0),
+    m_Buffer(),
+    m_NumberType(Dec)
 {
 }
 
@@ -36,123 +36,123 @@ Log::~Log ()
 {
 }
 
-Log &Log::operator<< (const char *str)
+Log &Log::operator <<(const char *str)
 {
-  m_Buffer.str.append(str);
-  return *this;
+    m_Buffer.str.append(str);
+    return *this;
 }
 
-Log &Log::operator<< (String str)
+Log &Log::operator <<(String str)
 {
-  m_Buffer.str.append(str);
-  return *this;
+    m_Buffer.str.append(str);
+    return *this;
 }
 
-Log &Log::operator<< (bool b)
+Log &Log::operator <<(bool b)
 {
-  if (b)
-    return *this << "true";
+    if(b)
+        return *this << "true";
 
-  return *this << "false";
+    return *this << "false";
 }
 
 template<class T>
-Log &Log::operator << (T n)
+Log & Log::operator <<(T n)
 {
-  size_t radix = 10;
-  if (m_NumberType == Hex)
-  {
-    radix = 16;
-    m_Buffer.str.append("0x");
-  }
-  m_Buffer.str.append(n, radix);
-  return *this;
+    size_t radix = 10;
+    if(m_NumberType == Hex)
+    {
+        radix = 16;
+        m_Buffer.str.append("0x");
+    }
+    m_Buffer.str.append(n, radix);
+    return *this;
 }
 
 // NOTE: Make sure that the templated << operator gets only instantiated for
 //       integer types.
-template Log &Log::operator << (char);
-template Log &Log::operator << (unsigned char);
-template Log &Log::operator << (short);
-template Log &Log::operator << (unsigned short);
-template Log &Log::operator << (int);
-template Log &Log::operator << (unsigned int);
-template Log &Log::operator << (long);
-template Log &Log::operator << (unsigned long);
+template Log & Log::operator <<(char);
+template Log & Log::operator <<(unsigned char);
+template Log & Log::operator <<(short);
+template Log & Log::operator <<(unsigned short);
+template Log & Log::operator <<(int);
+template Log & Log::operator <<(unsigned int);
+template Log & Log::operator <<(long);
+template Log & Log::operator <<(unsigned long);
 // NOTE: Instantiating these for MIPS32 requires __udiv3di, but we only have
 //       __udiv3ti (??) in libgcc.a for mips.
 #ifndef MIPS32
-template Log &Log::operator << (long long);
-template Log &Log::operator << (unsigned long long);
+template Log & Log::operator <<(long long);
+template Log & Log::operator <<(unsigned long long);
 #endif
 
-Log &Log::operator<< (Modifier type)
+Log &Log::operator <<(Modifier type)
 {
-  // Flush the buffer.
-  if (type == Flush)
-  {
-    if (m_StaticEntries >= LOG_ENTRIES)
+    // Flush the buffer.
+    if(type == Flush)
     {
-      if (Processor::isInitialised() == 0)
-        panic("Log: Not enough static log entries");
+        if(m_StaticEntries >= LOG_ENTRIES)
+        {
+            if(Processor::isInitialised() == 0)
+                panic("Log: Not enough static log entries");
 
-      DynamicLogEntry *entry = new DynamicLogEntry;
-      entry->type = m_Buffer.type;
-      entry->timestamp = m_Buffer.timestamp;
-      entry->str = m_Buffer.str;
-      m_DynamicLog.pushBack(entry);
-    }
-    else
-      m_StaticLog[m_StaticEntries++] = m_Buffer;
+            DynamicLogEntry *entry = new DynamicLogEntry;
+            entry->type = m_Buffer.type;
+            entry->timestamp = m_Buffer.timestamp;
+            entry->str = m_Buffer.str;
+            m_DynamicLog.pushBack(entry);
+        }
+        else
+            m_StaticLog[m_StaticEntries++] = m_Buffer;
 
 #ifdef ECHO_CONSOLE_TO_SERIAL
-    if (Machine::instance().isInitialised() == true)
-    {
-    switch (m_Buffer.type)
-    {
-    case Notice:
-      Machine::instance().getSerial(0)->write("(NN) ");
-      break;
-    case Warning:
-      Machine::instance().getSerial(0)->write("(WW) ");
-      break;
-    case Error:
-      Machine::instance().getSerial(0)->write("(EE) ");
-      break;
-    case Fatal:
-      Machine::instance().getSerial(0)->write("(FF) ");
-      break;
-    }
-    Machine::instance().getSerial(0)->write ( static_cast<const char *> (m_Buffer.str) );
-    Machine::instance().getSerial(0)->write ("\n");
-    }
+        if(Machine::instance().isInitialised() == true)
+        {
+            switch(m_Buffer.type)
+            {
+                case Notice:
+                    Machine::instance().getSerial(0)->write("(NN) ");
+                    break;
+                case Warning:
+                    Machine::instance().getSerial(0)->write("(WW) ");
+                    break;
+                case Error:
+                    Machine::instance().getSerial(0)->write("(EE) ");
+                    break;
+                case Fatal:
+                    Machine::instance().getSerial(0)->write("(FF) ");
+                    break;
+            }
+            Machine::instance().getSerial(0)->write(static_cast<const char *> (m_Buffer.str));
+            Machine::instance().getSerial(0)->write("\n");
+        }
 #endif
-  }
+    }
 
-  return *this;
+    return *this;
 }
 
-Log &Log::operator<< (NumberType type)
+Log &Log::operator <<(NumberType type)
 {
-  m_NumberType = type;
-  return *this;
+    m_NumberType = type;
+    return *this;
 }
 
-Log &Log::operator<< (SeverityLevel level)
+Log &Log::operator <<(SeverityLevel level)
 {
-  // Zero the buffer.
-  m_Buffer.str.clear();
-  m_Buffer.type = level;
+    // Zero the buffer.
+    m_Buffer.str.clear();
+    m_Buffer.type = level;
 
-  Machine &machine = Machine::instance();
-  if (machine.isInitialised() == true &&
-      machine.getTimer() != 0)
-  {
-    Timer &timer = *machine.getTimer();
-    m_Buffer.timestamp = timer.getTickCount();
-  }
-  else
-    m_Buffer.timestamp = 0;
+    Machine &machine = Machine::instance();
+    if(machine.isInitialised() == true &&
+       machine.getTimer() != 0)
+    {
+        Timer &timer = *machine.getTimer();
+        m_Buffer.timestamp = timer.getTickCount();
+    }
+    else
+        m_Buffer.timestamp = 0;
 
-  return *this;
+    return *this;
 }

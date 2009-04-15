@@ -32,34 +32,44 @@
  *  Specification */
 class Smp
 {
-  public:
+public:
     /** Get the instance of the Smp class */
     inline static Smp &instance()
-      {return m_Instance;}
+    {
+        return m_Instance;
+    }
 
     /** Search for the tables and initialise internal data structures
      *\note the first MB of RAM must be identity mapped */
     void initialise() INITIALISATION_ONLY;
     /** Were valid tables found? */
     inline bool valid() const
-      {return m_bValid;}
+    {
+        return m_bValid;
+    }
 
     #if defined(APIC)
-      /** Get the physical address of all local APICs
-       *\return physical address of all local APICs */
-      inline uint64_t getLocalApicAddress() const
-        {return m_LocalApicAddress;}
-      /** Get a list of I/O APICs
-       *\return list of I/O APICs */ 
-      inline const Vector<Multiprocessor::IoApicInformation*> &getIoApicList() const
-        {return m_IoApics;}
+    /** Get the physical address of all local APICs
+     *\return physical address of all local APICs */
+    inline uint64_t getLocalApicAddress() const
+    {
+        return m_LocalApicAddress;
+    }
+    /** Get a list of I/O APICs
+     *\return list of I/O APICs */
+    inline const Vector<Multiprocessor::IoApicInformation *> &getIoApicList() const
+    {
+        return m_IoApics;
+    }
       #if defined(MULTIPROCESSOR)
-        inline const Vector<Multiprocessor::ProcessorInformation*> &getProcessorList() const
-          {return m_Processors;}
+    inline const Vector<Multiprocessor::ProcessorInformation *> &getProcessorList() const
+    {
+        return m_Processors;
+    }
       #endif
     #endif
 
-  private:
+private:
     /** The constructor does nothing */
     Smp() INITIALISATION_ONLY;
     /** Copy-constructor
@@ -67,92 +77,94 @@ class Smp
     Smp(const Smp &);
     /** Assignment operator
      *\note NOT implemented (singleton class) */
-    Smp &operator = (const Smp &);
+    Smp &operator =(const Smp &);
     /** The destructor does nothing */
-    inline ~Smp(){}
+    inline ~Smp()
+    {
+    }
 
     /** The floating pointer structure according to the Intel Multiprocessor
      *  Specification */
     struct FloatingPointer
     {
-      uint32_t signature;
-      uint32_t physicalAddress;
-      uint8_t length;
-      uint8_t revision;
-      uint8_t checksum;
-      uint8_t features[5];
+        uint32_t signature;
+        uint32_t physicalAddress;
+        uint8_t length;
+        uint8_t revision;
+        uint8_t checksum;
+        uint8_t features[5];
     } PACKED;
 
     /** The configuration table header according to the Intel Multiprocessor
      *  Specification */
     struct ConfigTableHeader
     {
-      uint32_t signature;
-      uint16_t baseTableLength;
-      uint8_t revision;
-      uint8_t checksum;
-      char oem[8];
-      char product[12];
-      uint32_t oemTable;
-      uint16_t oemTableSize;
-      uint16_t entryCount;
-      uint32_t localApicAddress;
-      uint16_t extendedTableLength;
-      uint8_t extendedChecksum;
-      uint8_t reserved;
+        uint32_t signature;
+        uint16_t baseTableLength;
+        uint8_t revision;
+        uint8_t checksum;
+        char oem[8];
+        char product[12];
+        uint32_t oemTable;
+        uint16_t oemTableSize;
+        uint16_t entryCount;
+        uint32_t localApicAddress;
+        uint16_t extendedTableLength;
+        uint8_t extendedChecksum;
+        uint8_t reserved;
     } PACKED;
 
     /** Entry for a processor within the configuration table */
     struct Processor
     {
-      uint8_t entryType;
-      uint8_t localApicId;
-      uint8_t localApicVersion;
-      uint8_t flags;
-      uint32_t signature;
-      uint32_t featureFlags;
-      uint32_t res0;
-      uint32_t res1;
+        uint8_t entryType;
+        uint8_t localApicId;
+        uint8_t localApicVersion;
+        uint8_t flags;
+        uint32_t signature;
+        uint32_t featureFlags;
+        uint32_t res0;
+        uint32_t res1;
     } PACKED;
 
     /** Entry for a bus within the configuration table */
     struct Bus
     {
-      uint8_t entryType;
-      uint8_t busId;
-      char name[6];
+        uint8_t entryType;
+        uint8_t busId;
+        char name[6];
     } PACKED;
 
     /** Entry for an I/O APIC within the configuration table */
     struct IoApic
     {
-      uint8_t entryType;
-      uint8_t id;
-      uint8_t version;
-      uint8_t flags;
-      uint32_t address;
+        uint8_t entryType;
+        uint8_t id;
+        uint8_t version;
+        uint8_t flags;
+        uint32_t address;
     } PACKED;
 
     struct IoInterruptAssignment
     {
-      uint8_t entryType;
-      uint8_t type;
-      uint16_t flags;
-      uint8_t busId;
-      uint8_t busIrq;
-      uint8_t ioApicId;
-      uint8_t ioApicIntn;
+        uint8_t entryType;
+        uint8_t type;
+        uint16_t flags;
+        uint8_t busId;
+        uint8_t busIrq;
+        uint8_t ioApicId;
+        uint8_t ioApicIntn;
     } PACKED;
 
     struct LocalInterruptAssignment
     {
-      uint8_t entryType;
-      uint8_t type;
-      uint16_t flags;
-      uint8_t busId;
-      uint8_t busIrq;
-      uint8_t localApicId;
-      uint8_t localApicIntn;
+        uint8_t entryType;
+        uint8_t type;
+        uint16_t flags;
+        uint8_t busId;
+        uint8_t busIrq;
+        uint8_t localApicId;
+        uint8_t localApicIntn;
     } PACKED;
 
     /** Find the floating pointer structure
@@ -180,16 +192,16 @@ class Smp
     ConfigTableHeader *m_pConfigTable;
 
     #if defined(APIC)
-      /** Is PIC Mode implemented? Otherwise Virtual-Wire Mode is implemented */
-      bool m_bPICMode;
-      /** Physical address of all local APICs */
-      uint64_t m_LocalApicAddress;
-      /** List of I/O APICs */
-      Vector<Multiprocessor::IoApicInformation*> m_IoApics;
+    /** Is PIC Mode implemented? Otherwise Virtual-Wire Mode is implemented */
+    bool m_bPICMode;
+    /** Physical address of all local APICs */
+    uint64_t m_LocalApicAddress;
+    /** List of I/O APICs */
+    Vector<Multiprocessor::IoApicInformation *> m_IoApics;
 
       #if defined(MULTIPROCESSOR)
-        /** List of processors */
-        Vector<Multiprocessor::ProcessorInformation*> m_Processors;
+    /** List of processors */
+    Vector<Multiprocessor::ProcessorInformation *> m_Processors;
       #endif
     #endif
 

@@ -25,7 +25,7 @@
 #include "NetworkStack.h"
 #include "Ethernet.h"
 
-#define IP_ICMP  0x01 
+#define IP_ICMP  0x01
 #define IP_UDP   0x11
 #define IP_TCP   0x06
 
@@ -36,47 +36,47 @@
 class Ip
 {
 public:
-  Ip();
-  virtual ~Ip();
-  
-  /** For access to the stack without declaring an instance of it */
-  static Ip& instance()
-  {
-    return ipInstance;
-  }
-  
-  /** Packet arrival callback */
-  void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
-  /** Sends an IP packet */
-  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard = 0);
+    Ip();
+    virtual ~Ip();
 
-  /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
-  struct ipHeader
-  {
-    uint8_t   verlen;
-    uint8_t   tos;
-    uint16_t  len;
-    uint16_t  id;
-    uint16_t  frag;
-    uint8_t   ttl;
-    uint8_t   type;
-    uint16_t  checksum;
-    uint32_t  ipSrc;
-    uint32_t  ipDest;
-  } __attribute__ ((packed));
+    /** For access to the stack without declaring an instance of it */
+    static Ip &instance()
+    {
+        return ipInstance;
+    }
 
-  /** Gets the next IP Packet ID */
-  uint16_t getNextId()
-  {
-    return m_IpId++;
-  }
-  
+    /** Packet arrival callback */
+    void receive(size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset);
+
+    /** Sends an IP packet */
+    static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
+
+    /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
+    struct ipHeader
+    {
+        uint8_t   verlen;
+        uint8_t   tos;
+        uint16_t  len;
+        uint16_t  id;
+        uint16_t  frag;
+        uint8_t   ttl;
+        uint8_t   type;
+        uint16_t  checksum;
+        uint32_t  ipSrc;
+        uint32_t  ipDest;
+    } __attribute__ ((packed));
+
+    /** Gets the next IP Packet ID */
+    uint16_t getNextId()
+    {
+        return m_IpId++;
+    }
+
 private:
 
-  static Ip ipInstance;
-  
-  uint16_t m_IpId;
+    static Ip ipInstance;
+
+    uint16_t m_IpId;
 
 };
 

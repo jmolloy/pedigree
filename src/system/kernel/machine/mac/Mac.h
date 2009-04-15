@@ -30,40 +30,43 @@
 class Mac : public Machine
 {
 public:
-  inline static Machine &instance(){return m_Instance;}
+    inline static Machine &instance()
+    {
+        return m_Instance;
+    }
 
-  virtual void initialise();
-  virtual Serial *getSerial(size_t n);
-  virtual size_t getNumSerial();
-  virtual Vga *getVga(size_t n);
-  virtual size_t getNumVga();
-  virtual IrqManager *getIrqManager();
-  virtual SchedulerTimer *getSchedulerTimer();
-  virtual Timer *getTimer();
-  virtual Keyboard *getKeyboard();
+    virtual void initialise();
+    virtual Serial *getSerial(size_t n);
+    virtual size_t getNumSerial();
+    virtual Vga *getVga(size_t n);
+    virtual size_t getNumVga();
+    virtual IrqManager *getIrqManager();
+    virtual SchedulerTimer *getSchedulerTimer();
+    virtual Timer *getTimer();
+    virtual Keyboard *getKeyboard();
 
-  virtual void initialiseDeviceTree();
+    virtual void initialiseDeviceTree();
 
 private:
-  /**
-   * Default constructor, does nothing.
-   */
-  Mac();
-  Mac(const Mac &);
-  Mac &operator = (const Mac &);
-  /**
-   * Virtual destructor, does nothing.
-   */
-  virtual ~Mac();
+    /**
+     * Default constructor, does nothing.
+     */
+    Mac();
+    Mac(const Mac &);
+    Mac &operator =(const Mac &);
+    /**
+     * Virtual destructor, does nothing.
+     */
+    virtual ~Mac();
 
-  PPCSerial m_Serial[2];
-  Decrementer m_Decrementer;
-  //Timer m_Timers;
-  PPCVga m_Vga;
-  PPCKeyboard m_Keyboard;
-  IrqManager *m_pIrqManager;
+    PPCSerial m_Serial[2];
+    Decrementer m_Decrementer;
+    //Timer m_Timers;
+    PPCVga m_Vga;
+    PPCKeyboard m_Keyboard;
+    IrqManager *m_pIrqManager;
 
-  static Mac m_Instance;
+    static Mac m_Instance;
 };
 
 #endif

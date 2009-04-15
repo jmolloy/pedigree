@@ -22,26 +22,26 @@
 class PosixSyscallManager : public SyscallHandler
 {
 public:
-  void initialise();
+    void initialise();
 
-  /** Calls a syscall. */
-  uintptr_t call(uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0);
+    /** Calls a syscall. */
+    uintptr_t call(uintptr_t function, uintptr_t p1 = 0, uintptr_t p2 = 0, uintptr_t p3 = 0, uintptr_t p4 = 0, uintptr_t p5 = 0);
 
-  /** Called when a syscall arrives. */
-  virtual uintptr_t syscall(SyscallState &state);
+    /** Called when a syscall arrives. */
+    virtual uintptr_t syscall(SyscallState &state);
 
-  /** The constructor */
-  PosixSyscallManager();
-  /** The destructor */
-  virtual ~PosixSyscallManager();
+    /** The constructor */
+    PosixSyscallManager();
+    /** The destructor */
+    virtual ~PosixSyscallManager();
 
 private:
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  PosixSyscallManager(const PosixSyscallManager &);
-  /** The copy-constructor
-   *\note Not implemented (singleton) */
-  PosixSyscallManager &operator = (const PosixSyscallManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    PosixSyscallManager(const PosixSyscallManager &);
+    /** The copy-constructor
+     *\note Not implemented (singleton) */
+    PosixSyscallManager &operator =(const PosixSyscallManager &);
 };
 
 #endif

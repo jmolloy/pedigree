@@ -20,15 +20,15 @@
 /** Standard syscall service numbers */
 enum Service_t
 {
-  /** Syscall service number of the kernel core */
-  kernelCore = 0,
+    /** Syscall service number of the kernel core */
+    kernelCore = 0,
 
-  /** Service number for the POSIX subsystem
-   * \note If you change this, ensure you change src/subsys/posix/syscall.h ! */
-  posix = 1,
+    /** Service number for the POSIX subsystem
+     * \note If you change this, ensure you change src/subsys/posix/syscall.h ! */
+    posix = 1,
 
-  /** The number of syscall service numbers */
-  serviceEnd
+    /** The number of syscall service numbers */
+    serviceEnd
 };
 
 #endif

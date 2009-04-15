@@ -27,7 +27,7 @@
 /** The syscall manager allows syscall handler registrations and handles syscalls */
 class SyscallManager
 {
-  public:
+public:
     /** Get the syscall manager instance
      *\return instance of the syscall manager */
     static SyscallManager &instance();
@@ -37,22 +37,22 @@ class SyscallManager
      *\return true, if successfully registered, false otherwise */
     virtual bool registerSyscallHandler(Service_t Service, SyscallHandler *pHandler) = 0;
     /** Calls a syscall. */
-    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0,
-                              uintptr_t p5=0) = 0;
+    virtual uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1 = 0, uintptr_t p2 = 0, uintptr_t p3 = 0, uintptr_t p4 = 0,
+                              uintptr_t p5 = 0) = 0;
 
-  protected:
+protected:
     /** The constructor */
     inline SyscallManager();
     /** The destructor */
     inline virtual ~SyscallManager();
 
-  private:
+private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
     SyscallManager(const SyscallManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    SyscallManager &operator = (const SyscallManager &);
+    SyscallManager &operator =(const SyscallManager &);
 };
 
 /** @} */

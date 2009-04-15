@@ -40,66 +40,83 @@
 class ConsoleManager : public Filesystem
 {
 public:
-  ConsoleManager();
+    ConsoleManager();
 
-  virtual ~ConsoleManager();
+    virtual ~ConsoleManager();
 
-  static ConsoleManager &instance();
+    static ConsoleManager &instance();
 
-  //
-  // ConsoleManager interface.
-  //
-  bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
+    //
+    // ConsoleManager interface.
+    //
+    bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
 
-  File* getConsole(String consoleName);
+    File *getConsole(String consoleName);
 
-  bool isConsole(File* file);
+    bool isConsole(File *file);
 
-  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn);
-  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn);
-  int  getCols(File* file);
-  int  getRows(File* file);
-  bool hasDataAvailable(File* file);
+    void setAttributes(File *file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn);
+    void getAttributes(File *file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn);
+    int  getCols(File *file);
+    int  getRows(File *file);
+    bool hasDataAvailable(File *file);
 
-  //
-  // Filesystem interface.
-  //
+    //
+    // Filesystem interface.
+    //
 
-  virtual bool initialise(Disk *pDisk)
-    {return false;}
-  virtual File* getRoot()
-  {return 0;}
-  virtual String getVolumeLabel()
-  {return String("consolemanager");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
+    virtual bool initialise(Disk *pDisk)
+    {
+        return false;
+    }
+    virtual File *getRoot()
+    {
+        return 0;
+    }
+    virtual String getVolumeLabel()
+    {
+        return String("consolemanager");
+    }
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual void truncate(File *pFile)
+    {
+    }
+    virtual void fileAttributeChanged(File *pFile)
+    {
+    }
+    virtual void cacheDirectoryContents(File *pFile)
+    {
+    }
 
 protected:
-  virtual bool createFile(File* parent, String filename, uint32_t mask)
-  {return false;}
-  virtual bool createDirectory(File* parent, String filename)
-  {return false;}
-  virtual bool createSymlink(File* parent, String filename, String value)
-  {return false;}
-  virtual bool remove(File* parent, File* file)
-  {return false;}
+    virtual bool createFile(File *parent, String filename, uint32_t mask)
+    {
+        return false;
+    }
+    virtual bool createDirectory(File *parent, String filename)
+    {
+        return false;
+    }
+    virtual bool createSymlink(File *parent, String filename, String value)
+    {
+        return false;
+    }
+    virtual bool remove(File *parent, File *file)
+    {
+        return false;
+    }
 
 private:
-  struct Console
-  {
-    String name;
-    RequestQueue *backEnd;
-    uintptr_t param;
-  };
+    struct Console
+    {
+        String name;
+        RequestQueue *backEnd;
+        uintptr_t param;
+    };
 
-  Vector<Console*> m_Consoles;
-  static ConsoleManager m_Instance;
+    Vector<Console *> m_Consoles;
+    static ConsoleManager m_Instance;
 };
 
 #endif

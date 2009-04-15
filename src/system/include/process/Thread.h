@@ -29,227 +29,231 @@ class Process;
 class Thread
 {
 public:
-  enum Status
-  {
-    Ready,
-    Running,
-    Sleeping,
-    Zombie,
-    PreSleep
-  };
-  
-  typedef int (*ThreadStartFunc)(void*);
-  
-  /**
-   * Creates a new Thread belonging to the given Process. It shares the Process'
-   * virtual address space.
-   *
-   * The constructor registers itself with the Scheduler and parent process - this
-   * does not need to be done manually.
-   * 
-   * If kernelMode is true, and pStack is NULL, no stack space is assigned 
-   * \param pParent The parent process. Can never be NULL.
-   * \param kernelMode Is the thread going to be operating in kernel space only?
-   * \param pStartFunction The function to be run when the thread starts.
-   * \param pParam A parameter to give the startFunction.
-   * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
-   *               only.
-   */
-  Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
-         void *pStack=0);
-  
-  /**
-   * Alternative constructor - this should be used only by initialiseMultitasking() to
-   * define the first kernel thread.
-   */
-  Thread(Process *pParent);
+    enum Status
+    {
+        Ready,
+        Running,
+        Sleeping,
+        Zombie,
+        PreSleep
+    };
 
-  /**
-   * Constructor for when forking a process. Assumes pParent has already been set up with a clone
-   * of the current address space and sets up the new thread to return to the caller in that address space.
-   */
-  Thread(Process *pParent, ProcessorState state);
+    typedef int (*ThreadStartFunc)(void *);
 
-  /**
-   * Destroys the Thread.
-   *
-   * The destructor unregisters itself with the Scheduler and parent process - this
-   * does not need to be done manually.
-   */
-  virtual ~Thread();
+    /**
+     * Creates a new Thread belonging to the given Process. It shares the Process'
+     * virtual address space.
+     *
+     * The constructor registers itself with the Scheduler and parent process - this
+     * does not need to be done manually.
+     *
+     * If kernelMode is true, and pStack is NULL, no stack space is assigned
+     * \param pParent The parent process. Can never be NULL.
+     * \param kernelMode Is the thread going to be operating in kernel space only?
+     * \param pStartFunction The function to be run when the thread starts.
+     * \param pParam A parameter to give the startFunction.
+     * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
+     *               only.
+     */
+    Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
+           void *pStack = 0);
 
-  /**
-   * Returns a reference to the Thread's saved context. This function is intended only
-   * for use by the Scheduler.
-   */
-  ProcessorState &state()
-  {
-    return m_State;
-  }
+    /**
+     * Alternative constructor - this should be used only by initialiseMultitasking() to
+     * define the first kernel thread.
+     */
+    Thread(Process *pParent);
 
-  InterruptState *getInterruptState()
-  {
-    return m_pInterruptState;
-  }
-  void setInterruptState(InterruptState *p)
-  {
-    m_pInterruptState = p;
-  }
+    /**
+     * Constructor for when forking a process. Assumes pParent has already been set up with a clone
+     * of the current address space and sets up the new thread to return to the caller in that address space.
+     */
+    Thread(Process *pParent, ProcessorState state);
 
-  InterruptState *getSavedInterruptState()
-  {
-    return m_pSavedInterruptState;
-  }
-  void setSavedInterruptState(InterruptState *p)
-  {
-    m_pSavedInterruptState = p;
-  }
+    /**
+     * Destroys the Thread.
+     *
+     * The destructor unregisters itself with the Scheduler and parent process - this
+     * does not need to be done manually.
+     */
+    virtual ~Thread();
 
-  /**
-   * Retrieves a pointer to this Thread's parent process.
-   */
-  Process *getParent() const
-  {
-    return m_pParent;
-  }
+    /**
+     * Returns a reference to the Thread's saved context. This function is intended only
+     * for use by the Scheduler.
+     */
+    ProcessorState &state()
+    {
+        return m_State;
+    }
 
-  /**
-   * Retrieves our current status.
-   */
-  Status getStatus() const
-  {
-    return m_Status;
-  }
-  /**
-   * Sets our current status.
-   */
-  void setStatus(Status s);
-  
-  /**
-   * Retrieves the exit status of the Thread.
-   * \note Valid only if the Thread is in the Zombie state.
-   */
-  int getExitCode()
-  {
-    return m_ExitCode;
-  }
+    InterruptState *getInterruptState()
+    {
+        return m_pInterruptState;
+    }
+    void setInterruptState(InterruptState *p)
+    {
+        m_pInterruptState = p;
+    }
 
-  /**
-   * Retrieves a pointer to the top of the Thread's kernel stack.
-   */
-  void *getKernelStack()
-  {
-    return m_pKernelStack;
-  }
-  
-  /** Returns the Thread's ID. */
-  size_t getId()
-  {
-    return m_Id;
-  }
+    InterruptState *getSavedInterruptState()
+    {
+        return m_pSavedInterruptState;
+    }
+    void setSavedInterruptState(InterruptState *p)
+    {
+        m_pSavedInterruptState = p;
+    }
 
-  /** Returns the last error that occurred (errno). */
-  size_t getErrno()
-  {
-    return m_Errno;
-  }
+    /**
+     * Retrieves a pointer to this Thread's parent process.
+     */
+    Process *getParent() const
+    {
+        return m_pParent;
+    }
 
-  /** Sets the last error - errno. */
-  void setErrno(size_t errno)
-  {
-    m_Errno = errno;
-  }
+    /**
+     * Retrieves our current status.
+     */
+    Status getStatus() const
+    {
+        return m_Status;
+    }
+    /**
+     * Sets our current status.
+     */
+    void setStatus(Status s);
 
-  bool shouldUseSaved()
-  {
-    return m_bUseSavedState;
-  }
+    /**
+     * Retrieves the exit status of the Thread.
+     * \note Valid only if the Thread is in the Zombie state.
+     */
+    int getExitCode()
+    {
+        return m_ExitCode;
+    }
 
-  void useSaved(bool b)
-  {
-    m_bUseSavedState = b;
-  }
+    /**
+     * Retrieves a pointer to the top of the Thread's kernel stack.
+     */
+    void *getKernelStack()
+    {
+        return m_pKernelStack;
+    }
 
-  /** Information about the currently running signal; if there is one */
-  struct CurrentSignal
-  {
-    CurrentSignal() : bRunning(false), loc(0), oldMask(0), currMask(0) {};
-    virtual ~CurrentSignal() {};
+    /** Returns the Thread's ID. */
+    size_t getId()
+    {
+        return m_Id;
+    }
 
-    bool bRunning;
-    uintptr_t loc;
-    uint32_t oldMask;
-    uint32_t currMask;
-  };
+    /** Returns the last error that occurred (errno). */
+    size_t getErrno()
+    {
+        return m_Errno;
+    }
 
-  CurrentSignal getCurrentSignal()
-  {
-    return m_CurrentSignal;
-  }
+    /** Sets the last error - errno. */
+    void setErrno(size_t errno)
+    {
+        m_Errno = errno;
+    }
 
-  void setCurrentSignal(CurrentSignal sig)
-  {
-    m_CurrentSignal = sig;
-  }
+    bool shouldUseSaved()
+    {
+        return m_bUseSavedState;
+    }
 
-  /**
-   * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
-   * if it is not being waited on the Thread is destroyed.
-   * \note This is meant to be called only by the thread trampoline - this is the only reason it
-   *       is public. It should NOT be called by anyone else!
-   */
-  static void threadExited(int code);
+    void useSaved(bool b)
+    {
+        m_bUseSavedState = b;
+    }
+
+    /** Information about the currently running signal; if there is one */
+    struct CurrentSignal
+    {
+        CurrentSignal() : bRunning(false), loc(0), oldMask(0), currMask(0)
+        {
+        };
+        virtual ~CurrentSignal()
+        {
+        };
+
+        bool bRunning;
+        uintptr_t loc;
+        uint32_t oldMask;
+        uint32_t currMask;
+    };
+
+    CurrentSignal getCurrentSignal()
+    {
+        return m_CurrentSignal;
+    }
+
+    void setCurrentSignal(CurrentSignal sig)
+    {
+        m_CurrentSignal = sig;
+    }
+
+    /**
+     * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
+     * if it is not being waited on the Thread is destroyed.
+     * \note This is meant to be called only by the thread trampoline - this is the only reason it
+     *       is public. It should NOT be called by anyone else!
+     */
+    static void threadExited(int code);
 private:
-  /** Copy-constructor */
-  Thread(const Thread &);
-  /** Assignment operator */
-  Thread &operator = (const Thread &);
+    /** Copy-constructor */
+    Thread(const Thread &);
+    /** Assignment operator */
+    Thread &operator =(const Thread &);
 
-  /**
-   * The state of the processor when we were unscheduled.
-   */
-  ProcessorState m_State;
+    /**
+     * The state of the processor when we were unscheduled.
+     */
+    ProcessorState m_State;
 
-  /**
-   * Our parent process.
-   */
-  Process *m_pParent;
+    /**
+     * Our parent process.
+     */
+    Process *m_pParent;
 
-  /**
-   * Our current status.
-   */
-  volatile Status m_Status;
-  
-  /**
-   * Our exit code
-   */
-  int m_ExitCode;
-  
-  /**
-   * Our kernel stack.
-   */
-  void *m_pKernelStack;
+    /**
+     * Our current status.
+     */
+    volatile Status m_Status;
 
-  /**
-   * Our thread ID.
-   */
-  size_t m_Id;
+    /**
+     * Our exit code
+     */
+    int m_ExitCode;
 
-  /**
-   * The number of the last error to occur.
-   */
-  size_t m_Errno;
+    /**
+     * Our kernel stack.
+     */
+    void *m_pKernelStack;
 
-  InterruptState *m_pInterruptState;
+    /**
+     * Our thread ID.
+     */
+    size_t m_Id;
 
-  /** Signals interrupt threads, so we save the old state when we jump to a signal handler.
-    * When it returns, this state is loaded.
-    */
-  InterruptState *m_pSavedInterruptState;
+    /**
+     * The number of the last error to occur.
+     */
+    size_t m_Errno;
 
-  bool m_bUseSavedState;
+    InterruptState *m_pInterruptState;
 
-  CurrentSignal m_CurrentSignal;
+    /** Signals interrupt threads, so we save the old state when we jump to a signal handler.
+      * When it returns, this state is loaded.
+      */
+    InterruptState *m_pSavedInterruptState;
+
+    bool m_bUseSavedState;
+
+    CurrentSignal m_CurrentSignal;
 };
 
 #endif

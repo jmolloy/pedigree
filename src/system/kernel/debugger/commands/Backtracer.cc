@@ -32,25 +32,25 @@ Backtracer::~Backtracer()
 
 void Backtracer::autocomplete(const HugeStaticString &input, HugeStaticString &output)
 {
-  // TODO: add symbols.
-  output = "<address> (optional)";
+    // TODO: add symbols.
+    output = "<address> (optional)";
 }
 
 bool Backtracer::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *screen)
 {
-  Backtrace bt;
-  bt.performBacktrace(state);
+    Backtrace bt;
+    bt.performBacktrace(state);
 
-  bt.prettyPrint(output);
-  
+    bt.prettyPrint(output);
+
 //   DwarfUnwinder du(elf.debugFrameTable(), elf.debugFrameTableLength());
 //   ProcessorState initial(state);
 //   ProcessorState next;
 //   du.unwind(initial, next);
-  return true;
+    return true;
 }
 
 const NormalStaticString Backtracer::getString()
 {
-  return NormalStaticString("backtrace");
+    return NormalStaticString("backtrace");
 }

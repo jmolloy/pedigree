@@ -20,26 +20,26 @@
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  // Initialise this processor's interrupt handling
-  MIPS32InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    MIPS32InterruptManager::initialiseProcessor();
 
-  // TODO: Initialise the physical memory-management
-  TlbManager::instance().initialise();
+    // TODO: Initialise the physical memory-management
+    TlbManager::instance().initialise();
 
 //   m_Initialised = 1;
 }
 
 void Processor::initialise2()
 {
-  // TODO
+    // TODO
 
 //   m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)
 {
-  // Get the processor ID register.
-  uint32_t prId = 0;
-  asm volatile("mfc0 %0, $15; nop" : "=r" (prId));
-  str += prId;
+    // Get the processor ID register.
+    uint32_t prId = 0;
+    asm volatile ("mfc0 %0, $15; nop" : "=r" (prId));
+    str += prId;
 }

@@ -24,35 +24,35 @@
 #include <processor/Processor.h>
 #include <process/Process.h>
 
-typedef Tree<size_t,FileDescriptor*> FdMap;
+typedef Tree<size_t, FileDescriptor *> FdMap;
 
 int posix_pipe(int filedes[2])
 {
-  NOTICE("pipe");
+    NOTICE("pipe");
 
-  FdMap& fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+    FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
-  size_t readFd = Processor::information().getCurrentThread()->getParent()->nextFd();
-  size_t writeFd = Processor::information().getCurrentThread()->getParent()->nextFd();
+    size_t readFd = Processor::information().getCurrentThread()->getParent()->nextFd();
+    size_t writeFd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
-  filedes[0] = readFd;
-  filedes[1] = writeFd;
+    filedes[0] = readFd;
+    filedes[1] = writeFd;
 
-  File* p = new Pipe(String("Anonymous pipe"), 0, 0, 0, 0, 0, 0, 0, true);
+    File *p = new Pipe(String("Anonymous pipe"), 0, 0, 0, 0, 0, 0, 0, true);
 
-  // create the file descriptor for both
-  FileDescriptor* read = new FileDescriptor;
-  read->file = p;
-  read->offset = 0;
-  fdMap.insert(readFd, read);
-  p->increaseRefCount(false);
+    // create the file descriptor for both
+    FileDescriptor *read = new FileDescriptor;
+    read->file = p;
+    read->offset = 0;
+    fdMap.insert(readFd, read);
+    p->increaseRefCount(false);
 
-  FileDescriptor* write = new FileDescriptor;
-  write->file = p;
-  write->offset = 0;
-  write->flflags = O_WRONLY;
-  fdMap.insert(writeFd, write);
-  p->increaseRefCount(true);
+    FileDescriptor *write = new FileDescriptor;
+    write->file = p;
+    write->offset = 0;
+    write->flflags = O_WRONLY;
+    fdMap.insert(writeFd, write);
+    p->increaseRefCount(true);
 
-  return 0;
+    return 0;
 }

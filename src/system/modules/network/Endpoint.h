@@ -26,134 +26,145 @@
  */
 class Endpoint
 {
-  public:
-  
+public:
+
     /** Constructors and destructors */
     Endpoint() :
-      m_LocalPort(0), m_RemotePort(0), m_RemoteIp()
-    {};
+        m_LocalPort(0), m_RemotePort(0), m_RemoteIp()
+    {
+    };
     Endpoint(uint16_t local, uint16_t remote) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp()
-    {};
+        m_LocalPort(local), m_RemotePort(remote), m_RemoteIp()
+    {
+    };
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp)
-    {};
-    virtual ~Endpoint() {};
-    
+        m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp)
+    {
+    };
+    virtual ~Endpoint()
+    {
+    };
+
     /** Access to internal information */
     uint16_t getLocalPort()
     {
-      return m_LocalPort;
+        return m_LocalPort;
     }
     uint16_t getRemotePort()
     {
-      return m_RemotePort;
+        return m_RemotePort;
     }
     IpAddress getRemoteIp()
     {
-      return m_RemoteIp;
+        return m_RemoteIp;
     }
-    
+
     void setLocalPort(uint16_t port)
     {
-      m_LocalPort = port;
+        m_LocalPort = port;
     }
     void setRemotePort(uint16_t port)
     {
-      m_RemotePort = port;
+        m_RemotePort = port;
     }
     void setRemoteIp(IpAddress remote)
     {
-      m_RemoteIp = remote;
+        m_RemoteIp = remote;
     }
-    
+
     /** Special address type, like stationInfo but with port info too */
     struct RemoteEndpoint
     {
-      RemoteEndpoint() :
-        ip(), remotePort(0)
-      {};
-      
-      IpAddress ip; // either IPv4 or IPv6
-      uint16_t remotePort;
+        RemoteEndpoint() :
+            ip(), remotePort(0)
+        {
+        };
+
+        IpAddress ip; // either IPv4 or IPv6
+        uint16_t remotePort;
     };
 
     /** What state is the endpoint in? Only really relevant for connection-based sockets I guess */
     virtual int state()
     {
-      return 0xff; // defaults to the standard state for non-connectable sockets
+        return 0xff; // defaults to the standard state for non-connectable sockets
     }
-    
+
     /** Is data ready to recv yet? */
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
-      return false;
+        return false;
     };
-    
+
     /** <Protocol>Manager functionality */
     virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
     {
     }
-    
+
     /** Connectionless endpoints */
-    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
+    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard)
     {
-      return -1;
+        return -1;
     };
-    virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+    virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint *remoteHost)
     {
-      return -1;
+        return -1;
     };
-    virtual inline bool acceptAnyAddress() { return false; };
-    virtual inline void acceptAnyAddress(bool accept) {};
-    
+    virtual inline bool acceptAnyAddress()
+    {
+        return false;
+    };
+    virtual inline void acceptAnyAddress(bool accept)
+    {
+    };
+
     /** Connection-based endpoints */
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true)
     {
-      return false;
+        return false;
     };
     virtual void close()
     {
     };
-    
+
     virtual void listen()
     {
     };
-    virtual Endpoint* accept()
+    virtual Endpoint *accept()
     {
-      return 0;
+        return 0;
     };
-    
+
     virtual int send(size_t nBytes, uintptr_t buffer)
     {
-      return -1;
+        return -1;
     };
     virtual int recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
     {
-      return -1;
+        return -1;
     };
-    
+
     virtual inline uint32_t getConnId()
     {
-      return 0;
+        return 0;
     }
-    
+
     virtual void setRemoteHost(RemoteEndpoint host)
     {
     };
-    
-    virtual void setCard(Network* pCard)
+
+    virtual void setCard(Network *pCard)
     {
     };
-  
-  private:
-  
+
+private:
+
     /** Our local port (sourcePort in the UDP header) */
     uint16_t m_LocalPort;
-    
+
     /** Our destination port */
     uint16_t m_RemotePort;
-    
+
     /** Remote IP */
     IpAddress m_RemoteIp;
 };

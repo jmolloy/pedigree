@@ -31,39 +31,43 @@
  */
 class RawEndpoint : public Endpoint
 {
-  public:
+public:
 
     /** What type is this Raw Endpoint? */
     enum Type
     {
-      RAW_WIRE = 0, // wire-level
-      RAW_ICMP, // IP levels
-      RAW_UDP,
-      RAW_TCP
+        RAW_WIRE = 0, // wire-level
+        RAW_ICMP, // IP levels
+        RAW_UDP,
+        RAW_TCP
     };
-  
+
     /** Constructors and destructors */
     RawEndpoint() :
-      Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+        Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+    {
+    };
 
     /** These shouldn't be used - totally pointless */
     RawEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+        Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+    {
+    };
     RawEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+        Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+    {
+    };
     RawEndpoint(Type type) :
-      Endpoint(0, 0), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(type)
-    {};
+        Endpoint(0, 0), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(type)
+    {
+    };
     virtual ~RawEndpoint();
-    
+
     /** Injects the given buffer into the network stack */
-    virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
+    virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network *pCard);
 
     /** Reads from the front of the packet queue. Will return truncated packets if maxSize < packet size. */
-    virtual int recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint* remoteHost);
+    virtual int recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint *remoteHost);
 
     /** Are there packets to read? */
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
@@ -71,32 +75,36 @@ class RawEndpoint : public Endpoint
     /** Not relevant in this context
     virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
     virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; }; */
-    
+
     /** Deposits a packet into this endpoint */
-    virtual void depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost);
+    virtual void depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint *remoteHost);
 
     /** What type is this endpoint? */
-    inline Type getType() {return m_Type;};
-  
-  private:
-  
+    inline Type getType()
+    {
+        return m_Type;
+    };
+
+private:
+
     struct DataBlock
     {
-      DataBlock() :
-        size(0), ptr(0), remoteHost()
-      {};
-      
-      size_t size;
-      uintptr_t ptr;
-      Endpoint::RemoteEndpoint remoteHost;
+        DataBlock() :
+            size(0), ptr(0), remoteHost()
+        {
+        };
+
+        size_t size;
+        uintptr_t ptr;
+        Endpoint::RemoteEndpoint remoteHost;
     };
-  
+
     /** Incoming data queue */
-    List<DataBlock*> m_DataQueue;
-    
+    List<DataBlock *> m_DataQueue;
+
     /** Data queue size */
     Semaphore m_DataQueueSize;
-    
+
     /** Accept any address? */
     bool m_bAcceptAll;
 
@@ -110,33 +118,35 @@ class RawEndpoint : public Endpoint
 class RawManager
 {
 public:
-  RawManager() :
-    m_Endpoints()
-  {};
-  virtual ~RawManager()
-  {};
-  
-  /** For access to the manager without declaring an instance of it */
-  static RawManager& instance()
-  {
-    return manager;
-  }
-  
-  /** Gets a new Endpoint */
-  Endpoint* getEndpoint(int proto); //IpAddress remoteHost, uint16_t localPort, uint16_t remotePort);
-  
-  /** Returns an Endpoint */
-  void returnEndpoint(Endpoint* e);
-  
-  /** A new packet has arrived! */
-  void receive(uintptr_t payload, size_t payloadSize, Endpoint::RemoteEndpoint* remoteHost, int proto, Network* pCard);
+    RawManager() :
+        m_Endpoints()
+    {
+    };
+    virtual ~RawManager()
+    {
+    };
+
+    /** For access to the manager without declaring an instance of it */
+    static RawManager &instance()
+    {
+        return manager;
+    }
+
+    /** Gets a new Endpoint */
+    Endpoint *getEndpoint(int proto); //IpAddress remoteHost, uint16_t localPort, uint16_t remotePort);
+
+    /** Returns an Endpoint */
+    void returnEndpoint(Endpoint *e);
+
+    /** A new packet has arrived! */
+    void receive(uintptr_t payload, size_t payloadSize, Endpoint::RemoteEndpoint *remoteHost, int proto, Network *pCard);
 
 private:
 
-  static RawManager manager;
+    static RawManager manager;
 
-  /** Currently known endpoints (all actually RawEndpoints - each one is passed incoming packets). */
-  List<Endpoint*> m_Endpoints;
+    /** Currently known endpoints (all actually RawEndpoints - each one is passed incoming packets). */
+    List<Endpoint *> m_Endpoints;
 };
 
 #endif

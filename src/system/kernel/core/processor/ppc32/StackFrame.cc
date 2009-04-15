@@ -19,24 +19,24 @@
 
 #if defined(DEBUGGER)
 
-  uintptr_t PPC32StackFrame::getParameter(size_t n)
-  {
-    if (n == 0)return m_State.m_R3;
-    if (n == 1)return m_State.m_R4;
-    if (n == 2)return m_State.m_R5;
-    if (n == 3)return m_State.m_R6;
-    if (n == 4)return m_State.m_R7;
-    if (n == 5)return m_State.m_R8;
-    if (n == 6)return m_State.m_R9;
-    if (n == 7)return m_State.m_R10;
-  
-    // Slightly difficult - have to follow the back chain pointer then 
+uintptr_t PPC32StackFrame::getParameter(size_t n)
+{
+    if(n == 0) return m_State.m_R3;
+    if(n == 1) return m_State.m_R4;
+    if(n == 2) return m_State.m_R5;
+    if(n == 3) return m_State.m_R6;
+    if(n == 4) return m_State.m_R7;
+    if(n == 5) return m_State.m_R8;
+    if(n == 6) return m_State.m_R9;
+    if(n == 7) return m_State.m_R10;
+
+    // Slightly difficult - have to follow the back chain pointer then
     // go up 2 words to skip the next back chain and the saved LR.
     WARNING("PPC32StackFrame: More than 8 parameters not implemented yet.");
 //    uint64_t *pPtr = reinterpret_cast<uint64_t*>(m_State.m_R1 + (n - 8) * sizeof(uint64_t));
 //    return *pPtr;
     return 0;
-  }
+}
 
 #endif
 
@@ -45,26 +45,26 @@ void PPC32StackFrame::construct(ProcessorState &state,
                                 unsigned int nParams,
                                 ...)
 {
-  state.m_Lr = returnAddress;
-  
-  va_list list;
-  va_start(list, nParams);
-  
-  for(unsigned int i = 0; i < nParams; i++)
-  {
-    uintptr_t arg = va_arg(list, uintptr_t);
-    NOTICE("Setting " << Hex << i << ", " << arg);
-    switch (i)
+    state.m_Lr = returnAddress;
+
+    va_list list;
+    va_start(list, nParams);
+
+    for(unsigned int i = 0; i < nParams; i++)
     {
-      case 0: state.m_R3 = arg; break;
-      case 1: state.m_R4 = arg; break;
-      case 2: state.m_R5 = arg; break;
-      case 3: state.m_R6 = arg; break;
-      case 4: state.m_R7 = arg; break;
-      case 5: state.m_R8 = arg; break;
-      default: ERROR("StackFrame: Too many parameters");
+        uintptr_t arg = va_arg(list, uintptr_t);
+        NOTICE("Setting " << Hex << i << ", " << arg);
+        switch(i)
+        {
+            case 0: state.m_R3 = arg; break;
+            case 1: state.m_R4 = arg; break;
+            case 2: state.m_R5 = arg; break;
+            case 3: state.m_R6 = arg; break;
+            case 4: state.m_R7 = arg; break;
+            case 5: state.m_R8 = arg; break;
+            default: ERROR("StackFrame: Too many parameters");
+        }
     }
-  }
-  
-  va_end(list);
+
+    va_end(list);
 }

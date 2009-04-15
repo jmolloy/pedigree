@@ -29,36 +29,36 @@
 class NetworkStack
 {
 public:
-  NetworkStack();
-  virtual ~NetworkStack();
-  
-  /** For access to the stack without declaring an instance of it */
-  static NetworkStack& instance()
-  {
-    return stack;
-  }
-  
-  /** Called when a packet arrives */
-  void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+    NetworkStack();
+    virtual ~NetworkStack();
 
-  /** Registers a given network device with the stack */
-  void registerDevice(Network *pDevice);
+    /** For access to the stack without declaring an instance of it */
+    static NetworkStack &instance()
+    {
+        return stack;
+    }
 
-  /** Returns the n'th registered network device */
-  Network *getDevice(size_t n);
+    /** Called when a packet arrives */
+    void receive(size_t nBytes, uintptr_t packet, Network *pCard, uint32_t offset);
 
-  /** Returns the number of devices registered with the stack */
-  size_t getNumDevices();
-  
-  /** Unregisters a given network device from the stack */
-  void deRegisterDevice(Network *pDevice);
+    /** Registers a given network device with the stack */
+    void registerDevice(Network *pDevice);
+
+    /** Returns the n'th registered network device */
+    Network *getDevice(size_t n);
+
+    /** Returns the number of devices registered with the stack */
+    size_t getNumDevices();
+
+    /** Unregisters a given network device from the stack */
+    void deRegisterDevice(Network *pDevice);
 
 private:
 
-  static NetworkStack stack;
+    static NetworkStack stack;
 
-  /** Network devices registered with the stack. */
-  Vector<Network*> m_Children;
+    /** Network devices registered with the stack. */
+    Vector<Network *> m_Children;
 };
 
 #endif

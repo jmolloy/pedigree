@@ -30,7 +30,7 @@
 class Decrementer : public SchedulerTimer,
                     private InterruptHandler
 {
-  public:
+public:
     //
     // SchedulerTimer interface
     //
@@ -39,21 +39,23 @@ class Decrementer : public SchedulerTimer,
     /** Initialises the class
      *\return true, if successful, false otherwise */
     bool initialise() INITIALISATION_ONLY;
-     /** Uninitialises the class */
+    /** Uninitialises the class */
     void uninitialise();
 
     /** The default constructor */
     Decrementer() INITIALISATION_ONLY;
     /** The destructor */
-    inline virtual ~Decrementer(){}
+    inline virtual ~Decrementer()
+    {
+    }
 
-  private:
+private:
     /** The copy-constructor
      *\note NOT implemented */
     Decrementer(const Decrementer &);
     /** The assignment operator
      *\note NOT implemented */
-    Decrementer &operator = (const Decrementer &);
+    Decrementer &operator =(const Decrementer &);
 
     //
     // InterruptHandler interface

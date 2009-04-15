@@ -31,10 +31,10 @@
  *      functions: expandHeap, isMapped, map, getMapping, setFlags, unmap */
 class VirtualAddressSpace
 {
-  public:
+public:
     /** Debugger can access our private members for statistics reporting. */
     friend class Debugger;
-  
+
     /** The page is only accessible from kernel-mode. If this flag is not set the
      *  page is also accessible from user-mode. */
     static const size_t KernelMode    = 0x01;
@@ -51,7 +51,7 @@ class VirtualAddressSpace
     /** If this flag is set, the page is swapped out */
     static const size_t Swapped       = 0x40;
     /** If this flag is set, the page is memory coherent - only applicable to PPC */
-    static const size_t MemoryCoherent= 0x80;
+    static const size_t MemoryCoherent = 0x80;
     /** If this flag is set, the page is guarded - only applicable to PPC */
     static const size_t Guarded       = 0x100;
 
@@ -123,21 +123,25 @@ class VirtualAddressSpace
 
     /** Clone this VirtualAddressSpace. That means that we copy-on-write-map the application
      *  image. */
-    virtual VirtualAddressSpace *clone() =0;
+    virtual VirtualAddressSpace *clone() = 0;
 
     /** Undo a clone() - this happens when an application is Exec()'d - we destroy all mappings
         not in the kernel address space so the space is 'clean'.*/
-    virtual void revertToKernelAddressSpace() =0;
+    virtual void revertToKernelAddressSpace() = 0;
 
     /** The destructor does nothing */
-    inline virtual ~VirtualAddressSpace(){}
+    inline virtual ~VirtualAddressSpace()
+    {
+    }
 
-  protected:
+protected:
     /** The constructor does nothing */
     inline VirtualAddressSpace(void *Heap)
-      : m_Heap(Heap), m_HeapEnd(Heap){}
+        : m_Heap(Heap), m_HeapEnd(Heap)
+    {
+    }
 
-  private:
+private:
     /** The default constructor */
     VirtualAddressSpace();
     /** The copy-constructor
@@ -145,7 +149,7 @@ class VirtualAddressSpace
     VirtualAddressSpace(const VirtualAddressSpace &);
     /** The copy-constructor
      *\note Not implemented */
-    VirtualAddressSpace &operator = (const VirtualAddressSpace &);
+    VirtualAddressSpace &operator =(const VirtualAddressSpace &);
 
     /** Reverts the heap expansion, that was begun with expandHeap
      *\param[in] virtualAddress current heap address

@@ -19,44 +19,44 @@
 #include <processor/Processor.h>
 
 AtaController::AtaController(Controller *pDev) :
-  Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0)
+    Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0)
 {
-  setSpecificType(String("ata-controller"));
+    setSpecificType(String("ata-controller"));
 
-  // Ensure we have no stupid children lying around.
-  m_Children.clear();
+    // Ensure we have no stupid children lying around.
+    m_Children.clear();
 
-  // Initialise our ports.
-  for (unsigned int i = 0; i < m_Addresses.count(); i++)
-  {
-    /// \todo String operator== problem here.
-    if (!strcmp(m_Addresses[i]->m_Name, "command") || !strcmp(m_Addresses[i]->m_Name, "bar0"))
-      m_pCommandRegs = m_Addresses[i]->m_Io;
-    if (!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
-      m_pControlRegs = m_Addresses[i]->m_Io;
-  }
-  
-  // Create two disks - master and slave.
-  AtaDisk *pMaster = new AtaDisk(this, true);
-  AtaDisk *pSlave = new AtaDisk(this, false);
+    // Initialise our ports.
+    for(unsigned int i = 0; i < m_Addresses.count(); i++)
+    {
+        /// \todo String operator== problem here.
+        if(!strcmp(m_Addresses[i]->m_Name, "command") || !strcmp(m_Addresses[i]->m_Name, "bar0"))
+            m_pCommandRegs = m_Addresses[i]->m_Io;
+        if(!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
+            m_pControlRegs = m_Addresses[i]->m_Io;
+    }
 
-  // Try and initialise the disks.  
-  bool masterInitialised = pMaster->initialise();
-  bool slaveInitialised = pSlave->initialise();
+    // Create two disks - master and slave.
+    AtaDisk *pMaster = new AtaDisk(this, true);
+    AtaDisk *pSlave = new AtaDisk(this, false);
 
-  // Only add a child disk if it initialised properly.
-  if (masterInitialised)
-    addChild(pMaster);
-  else
-    delete pMaster;
+    // Try and initialise the disks.
+    bool masterInitialised = pMaster->initialise();
+    bool slaveInitialised = pSlave->initialise();
 
-  if (slaveInitialised)
-    addChild(pSlave);
-  else
-    delete pSlave;
+    // Only add a child disk if it initialised properly.
+    if(masterInitialised)
+        addChild(pMaster);
+    else
+        delete pMaster;
 
-  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
-  initialise();
+    if(slaveInitialised)
+        addChild(pSlave);
+    else
+        delete pSlave;
+
+    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler *> (this));
+    initialise();
 
 }
 
@@ -67,19 +67,19 @@ AtaController::~AtaController()
 uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
-  AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
-  if (p1 == ATA_CMD_READ)
-    return pDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
-  else
-    return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
+    AtaDisk *pDisk = reinterpret_cast<AtaDisk *> (p2);
+    if(p1 == ATA_CMD_READ)
+        return pDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
+    else
+        return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
 }
 
 bool AtaController::irq(irq_id_t number, InterruptState &state)
 {
-  for (unsigned int i = 0; i < getNumChildren(); i++)
-  {
-    AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
-    pDisk->irqReceived();
-  }
-  return false; // Keep the IRQ disabled - level triggered.
+    for(unsigned int i = 0; i < getNumChildren(); i++)
+    {
+        AtaDisk *pDisk = static_cast<AtaDisk *> (getChild(i));
+        pDisk->irqReceived();
+    }
+    return false; // Keep the IRQ disabled - level triggered.
 }

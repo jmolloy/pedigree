@@ -18,14 +18,14 @@
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  // TODO
+    // TODO
 
-  m_Initialised = 1;
+    m_Initialised = 1;
 }
 
 void Processor::initialise2()
 {
-  // TODO
+    // TODO
 
-  m_Initialised = 2;
+    m_Initialised = 2;
 }

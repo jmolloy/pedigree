@@ -25,25 +25,25 @@
 class Framebuffer : public Display
 {
 public:
-  Framebuffer();
+    Framebuffer();
 
-  virtual ~Framebuffer();
+    virtual ~Framebuffer();
 
-  virtual void *getFramebuffer();
+    virtual void *getFramebuffer();
 
-  virtual bool getPixelFormat(Display::PixelFormat *pPf);
+    virtual bool getPixelFormat(Display::PixelFormat *pPf);
 
-  virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
+    virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
 
-  virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
+    virtual bool getScreenModes(List<Display::ScreenMode *> &sms);
 
-  virtual bool setScreenMode(Display::ScreenMode sm);
+    virtual bool setScreenMode(Display::ScreenMode sm);
 
 private:
-  /** Copy constructor is private. */
+    /** Copy constructor is private. */
 
-  /** Current mode. */
-  Display::ScreenMode m_Mode;
+    /** Current mode. */
+    Display::ScreenMode m_Mode;
 };
 
 #endif

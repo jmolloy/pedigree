@@ -20,7 +20,7 @@
 #include <processor/PhysicalMemoryManager.h>
 
 IoCommand::IoCommand()
- : DebuggerCommand()
+    : DebuggerCommand()
 {
 }
 
@@ -35,76 +35,76 @@ void IoCommand::autocomplete(const HugeStaticString &input, HugeStaticString &ou
 bool IoCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
   #if !defined(KERNEL_PROCESSOR_NO_PORT_IO)
-    Vector<IoPortManager::IoPortInfo*> IoPorts;
-  
+    Vector<IoPortManager::IoPortInfo *> IoPorts;
+
     // Copy the list of used I/O ports
     IoPortManager &ioPortManager = IoPortManager::instance();
     ioPortManager.allocateIoPortList(IoPorts);
-  
+
     output += "I/O ports:\n";
-  
+
     {
-      Vector<IoPortManager::IoPortInfo*>::ConstIterator i = IoPorts.begin();
-      Vector<IoPortManager::IoPortInfo*>::ConstIterator end = IoPorts.end();
-      for (;i != end;i++)
-      {
-        output += ' ';
-        output += (*i)->name;
-        output += ": 0x";
-        output.append((*i)->ioPort, 16);
-        output += " - 0x";
-        output.append((*i)->ioPort + (*i)->sIoPort - 1, 16);
-        output += "\n";
-      }
+        Vector<IoPortManager::IoPortInfo *>::ConstIterator i = IoPorts.begin();
+        Vector<IoPortManager::IoPortInfo *>::ConstIterator end = IoPorts.end();
+        for(; i != end; i++)
+        {
+            output += ' ';
+            output += (*i)->name;
+            output += ": 0x";
+            output.append((*i)->ioPort, 16);
+            output += " - 0x";
+            output.append((*i)->ioPort + (*i)->sIoPort - 1, 16);
+            output += "\n";
+        }
     }
-  
+
     // Free the list of I/O ports
     ioPortManager.freeIoPortList(IoPorts);
   #endif
 
-  Vector<PhysicalMemoryManager::MemoryRegionInfo*> MemoryRegions;
+    Vector<PhysicalMemoryManager::MemoryRegionInfo *> MemoryRegions;
 
-  // Copy the list of memory-regions
-  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  physicalMemoryManager.allocateMemoryRegionList(MemoryRegions);
+    // Copy the list of memory-regions
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    physicalMemoryManager.allocateMemoryRegionList(MemoryRegions);
 
-  output += "Memory regions:\n";
+    output += "Memory regions:\n";
 
-  {
-    Vector<PhysicalMemoryManager::MemoryRegionInfo*>::ConstIterator i = MemoryRegions.begin();
-    Vector<PhysicalMemoryManager::MemoryRegionInfo*>::ConstIterator end = MemoryRegions.end();
-    for (;i != end;i++)
     {
-      output += ' ';
-      output += (*i)->pName;
-      output += ": virtual 0x";
-      output.append(reinterpret_cast<uintptr_t>((*i)->pVirtualAddress),
-                    16,
-                    sizeof(processor_register_t) * 2,
-                    '0');
-      output += " - 0x";
-      output.append(reinterpret_cast<uintptr_t>((*i)->pVirtualAddress) + (*i)->sVirtualAddress,
-                    16,
-                    sizeof(processor_register_t) * 2,
-                    '0');
-      if ((*i)->physicalAddress != 0)
-      {
-        output += '\n';
-        output.append(' ', strlen((*i)->pName) + 3, ' ');
-        output += "physical 0x";
-        output.append((*i)->physicalAddress,
-                      16,
-                      sizeof(physical_uintptr_t) * 2,
-                      '0');
-        output += " - 0x";
-        output.append((*i)->physicalAddress + (*i)->sVirtualAddress,
-                      16,
-                      sizeof(physical_uintptr_t) * 2,
-                      '0');
-      }
-      output += '\n';
+        Vector<PhysicalMemoryManager::MemoryRegionInfo *>::ConstIterator i = MemoryRegions.begin();
+        Vector<PhysicalMemoryManager::MemoryRegionInfo *>::ConstIterator end = MemoryRegions.end();
+        for(; i != end; i++)
+        {
+            output += ' ';
+            output += (*i)->pName;
+            output += ": virtual 0x";
+            output.append(reinterpret_cast<uintptr_t>((*i)->pVirtualAddress),
+                          16,
+                          sizeof(processor_register_t) * 2,
+                          '0');
+            output += " - 0x";
+            output.append(reinterpret_cast<uintptr_t>((*i)->pVirtualAddress) + (*i)->sVirtualAddress,
+                          16,
+                          sizeof(processor_register_t) * 2,
+                          '0');
+            if((*i)->physicalAddress != 0)
+            {
+                output += '\n';
+                output.append(' ', strlen((*i)->pName) + 3, ' ');
+                output += "physical 0x";
+                output.append((*i)->physicalAddress,
+                              16,
+                              sizeof(physical_uintptr_t) * 2,
+                              '0');
+                output += " - 0x";
+                output.append((*i)->physicalAddress + (*i)->sVirtualAddress,
+                              16,
+                              sizeof(physical_uintptr_t) * 2,
+                              '0');
+            }
+            output += '\n';
+        }
     }
-  }
 
-  return true;
+    return true;
 }

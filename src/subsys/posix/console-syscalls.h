@@ -23,6 +23,6 @@
 
 int posix_tcgetattr(int fd, struct termios *p);
 int posix_tcsetattr(int fd, int optional_actions, struct termios *p);
-int console_getwinsize(File* file, winsize_t *buf);
+int console_getwinsize(File *file, winsize_t *buf);
 
 #endif

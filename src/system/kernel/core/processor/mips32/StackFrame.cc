@@ -20,8 +20,8 @@
 
 uintptr_t MIPS32StackFrame::getParameter(size_t n)
 {
-  // TODO: Implement
-  return 0;
+    // TODO: Implement
+    return 0;
 }
 
 #endif

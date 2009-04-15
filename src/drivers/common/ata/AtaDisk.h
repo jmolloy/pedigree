@@ -28,58 +28,58 @@
 class AtaDisk : public Disk
 {
 public:
-  AtaDisk(class AtaController *pDev, bool isMaster);
-  ~AtaDisk();
+    AtaDisk(class AtaController *pDev, bool isMaster);
+    ~AtaDisk();
 
-  virtual void getName(String &str)
-  {
-    str = m_pName;
-  }
+    virtual void getName(String &str)
+    {
+        str = m_pName;
+    }
 
-  /** Tries to detect if this device is present.
-   * \return True if the device is present and was successfully initialised. */
-  bool initialise();
+    /** Tries to detect if this device is present.
+     * \return True if the device is present and was successfully initialised. */
+    bool initialise();
 
-  // These are the functions that others call - they add a request to the parent controller's queue.
-  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    // These are the functions that others call - they add a request to the parent controller's queue.
+    virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
 
-  // These are the internal functions that the controller calls when it is ready to process our request.
-  uint64_t doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-  uint64_t doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    // These are the internal functions that the controller calls when it is ready to process our request.
+    uint64_t doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    uint64_t doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
 
-  // Called by our controller when an IRQ has been received.
-  // It may not actually apply to us!
-  void irqReceived();
+    // Called by our controller when an IRQ has been received.
+    // It may not actually apply to us!
+    void irqReceived();
 
 private:
-  /** Sets the drive up for reading from address 'n' in LBA28 mode. */
-  void setupLBA28(uint64_t n, uint32_t nSectors);
-  /** Sets the drive up for reading from address 'n' in LBA48 mode. */
-  void setupLBA48(uint64_t n, uint32_t nSectors);
+    /** Sets the drive up for reading from address 'n' in LBA28 mode. */
+    void setupLBA28(uint64_t n, uint32_t nSectors);
+    /** Sets the drive up for reading from address 'n' in LBA48 mode. */
+    void setupLBA48(uint64_t n, uint32_t nSectors);
 
-  /** Is this the master device on the bus? */
-  bool m_IsMaster;
-  
-  /** The result of the IDENTIFY command. */
-  uint16_t m_pIdent[256];
-  /** The model name of the device. */
-  char m_pName[64];
-  /** The serial number of the device. */
-  char m_pSerialNumber[64];
-  /** The firmware revision */
-  char m_pFirmwareRevision[64];
-  /** Does the device support LBA28? */
-  bool m_SupportsLBA28;
-  /** Does the device support LBA48? */
-  bool m_SupportsLBA48;
-  
-  /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
-   * \todo A condvar would really be better here. */
-  Mutex m_IrqReceived;
+    /** Is this the master device on the bus? */
+    bool m_IsMaster;
 
-  /** Sector cache. */
-  Cache<uint8_t*, 512> m_SectorCache;
+    /** The result of the IDENTIFY command. */
+    uint16_t m_pIdent[256];
+    /** The model name of the device. */
+    char m_pName[64];
+    /** The serial number of the device. */
+    char m_pSerialNumber[64];
+    /** The firmware revision */
+    char m_pFirmwareRevision[64];
+    /** Does the device support LBA28? */
+    bool m_SupportsLBA28;
+    /** Does the device support LBA48? */
+    bool m_SupportsLBA48;
+
+    /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
+     * \todo A condvar would really be better here. */
+    Mutex m_IrqReceived;
+
+    /** Sector cache. */
+    Cache<uint8_t *, 512> m_SectorCache;
 };
 
 #endif

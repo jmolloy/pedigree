@@ -27,34 +27,46 @@
 /** Common mips processor information structure */
 class PPCCommonProcessorInformation
 {
-  friend class Processor;
-  public:
+    friend class Processor;
+public:
     /** Get the current processor's VirtualAddressSpace
      *\return reference to the current processor's VirtualAddressSpace */
     inline VirtualAddressSpace &getVirtualAddressSpace() const
-      {return *m_VirtualAddressSpace;}
+    {
+        return *m_VirtualAddressSpace;
+    }
     /** Set the current processor's VirtualAddressSpace
      *\param[in] virtualAddressSpace reference to the new VirtualAddressSpace */
     inline void setVirtualAddressSpace(VirtualAddressSpace &virtualAddressSpace)
-      {m_VirtualAddressSpace = &virtualAddressSpace;}
+    {
+        m_VirtualAddressSpace = &virtualAddressSpace;
+    }
 
     inline uintptr_t getKernelStack() const;
     inline void setKernelStack(uintptr_t stack);
     inline Thread *getCurrentThread() const
-      {return m_pCurrentThread;}
+    {
+        return m_pCurrentThread;
+    }
     inline void setCurrentThread(Thread *pThread)
-      {m_pCurrentThread = pThread;}
+    {
+        m_pCurrentThread = pThread;
+    }
 
-  protected:
+protected:
     /** Construct a PPCCommonProcessorInformation object
      *\param[in] processorId Identifier of the processor */
     inline PPCCommonProcessorInformation(ProcessorId processorId)
-      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-        m_pCurrentThread(0) {}
+        : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
+          m_pCurrentThread(0)
+    {
+    }
     /** The destructor does nothing */
-    inline virtual ~PPCCommonProcessorInformation(){}
+    inline virtual ~PPCCommonProcessorInformation()
+    {
+    }
 
-  private:
+private:
     /** Default constructor
      *\note NOT implemented */
     PPCCommonProcessorInformation();
@@ -63,7 +75,7 @@ class PPCCommonProcessorInformation
     PPCCommonProcessorInformation(const PPCCommonProcessorInformation &);
     /** Assignment operator
      *\note NOT implemented */
-    PPCCommonProcessorInformation &operator = (const PPCCommonProcessorInformation &);
+    PPCCommonProcessorInformation &operator =(const PPCCommonProcessorInformation &);
 
     /** Identifier of that processor */
     ProcessorId m_ProcessorId;
@@ -81,11 +93,11 @@ extern "C" uint32_t kernel_stack;
 //
 uintptr_t PPCCommonProcessorInformation::getKernelStack() const
 {
-  return kernel_stack;
+    return kernel_stack;
 }
 void PPCCommonProcessorInformation::setKernelStack(uintptr_t stack)
 {
-  kernel_stack = stack;
+    kernel_stack = stack;
 }
 
 

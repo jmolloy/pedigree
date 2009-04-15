@@ -33,80 +33,97 @@
 #define IN_PROTOCOLS_DEFINED
 enum Protocols
 {
-  IPPROTO_IP = 0,
-  IPPROTO_IPV6,
-  IPPROTO_ICMP,
-  IPPROTO_RAW,
-  IPPROTO_TCP,
-  IPPROTO_UDP
+    IPPROTO_IP = 0,
+    IPPROTO_IPV6,
+    IPPROTO_ICMP,
+    IPPROTO_RAW,
+    IPPROTO_TCP,
+    IPPROTO_UDP
 };
 
 /** Provides an interface to Endpoints for applications */
 class NetManager : public Filesystem
 {
 public:
-  NetManager() : m_Endpoints()
-  {
-    m_Endpoints.clear();
-  };
+    NetManager() : m_Endpoints()
+    {
+        m_Endpoints.clear();
+    };
 
-  virtual ~NetManager()
-  {
-  };
+    virtual ~NetManager()
+    {
+    };
 
-  static NetManager &instance()
-  {
-    return m_Instance;
-  };
+    static NetManager &instance()
+    {
+        return m_Instance;
+    };
 
-  //
-  // NetManager interface.
-  //
-  
-  File* newEndpoint(int type, int protocol);
-  
-  bool isEndpoint(File* f);
-  
-  Endpoint* getEndpoint(File* f);
-  
-  void removeEndpoint(File* f);
-  
-  File* accept(File* f);
-  
-  uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    //
+    // NetManager interface.
+    //
 
-  //
-  // Filesystem interface.
-  //
+    File *newEndpoint(int type, int protocol);
 
-  virtual bool initialise(Disk *pDisk)
-    {return false;}
-  virtual File* getRoot()
-  {return 0;}
-  virtual String getVolumeLabel()
-  {return String("netman");}
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
+    bool isEndpoint(File *f);
+
+    Endpoint *getEndpoint(File *f);
+
+    void removeEndpoint(File *f);
+
+    File *accept(File *f);
+
+    uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+
+    //
+    // Filesystem interface.
+    //
+
+    virtual bool initialise(Disk *pDisk)
+    {
+        return false;
+    }
+    virtual File *getRoot()
+    {
+        return 0;
+    }
+    virtual String getVolumeLabel()
+    {
+        return String("netman");
+    }
+    virtual void truncate(File *pFile)
+    {
+    }
+    virtual void fileAttributeChanged(File *pFile)
+    {
+    }
+    virtual void cacheDirectoryContents(File *pFile)
+    {
+    }
 
 protected:
-  virtual bool createFile(File* parent, String filename, uint32_t mask)
-  {return false;}
-  virtual bool createDirectory(File* parent, String filename)
-  {return false;}
-  virtual bool createSymlink(File* parent, String filename, String value)
-  {return false;}
-  virtual bool remove(File* parent, File* file)
-  {return false;}
+    virtual bool createFile(File *parent, String filename, uint32_t mask)
+    {
+        return false;
+    }
+    virtual bool createDirectory(File *parent, String filename)
+    {
+        return false;
+    }
+    virtual bool createSymlink(File *parent, String filename, String value)
+    {
+        return false;
+    }
+    virtual bool remove(File *parent, File *file)
+    {
+        return false;
+    }
 
 private:
 
-  Vector<Endpoint*> m_Endpoints;
-  static NetManager m_Instance;
+    Vector<Endpoint *> m_Endpoints;
+    static NetManager m_Instance;
 };
 
 #endif

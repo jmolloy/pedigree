@@ -20,17 +20,17 @@ ArmCommonPhysicalMemoryManager ArmCommonPhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
-  return ArmCommonPhysicalMemoryManager::instance();
+    return ArmCommonPhysicalMemoryManager::instance();
 }
 
 physical_uintptr_t ArmCommonPhysicalMemoryManager::allocatePage()
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 void ArmCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
-  // TODO
+    // TODO
 }
 bool ArmCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,
@@ -38,8 +38,8 @@ bool ArmCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t Flags,
                                                     physical_uintptr_t start)
 {
-  // TODO
-  return false;
+    // TODO
+    return false;
 }
 
 ArmCommonPhysicalMemoryManager::ArmCommonPhysicalMemoryManager()

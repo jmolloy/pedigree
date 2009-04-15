@@ -19,12 +19,12 @@
 
 void Processor::breakpoint()
 {
-  asm volatile ("int $3");
+    asm volatile ("int $3");
 }
 
 void Processor::halt()
 {
-  asm volatile("hlt");
+    asm volatile ("hlt");
 }
 
 #endif

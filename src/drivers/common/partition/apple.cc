@@ -22,51 +22,51 @@
 
 bool appleProbeDisk(Disk *pDisk)
 {
-  // Read the second sector (512 bytes) of the disk into a buffer.
-  uint8_t buffer[512];
-  if (pDisk->read(512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
-  {
-    WARNING("Disk read failure during partition table search.");
-    return false;
-  }
-
-  ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
-
-  String diskName;
-  pDisk->getName(diskName);
-
-  // Check for the magic signature.
-  if (pMap->pmSig != APPLE_PM_SIG)
-  {
-    NOTICE("Apple partition map not found on disk " << diskName);
-    return false;
-  }
-  
-  NOTICE("Apple partition map found on disk " << diskName);
-
-  // Cache the number of partition table entries.
-  size_t nEntries = pMap->pmMapBlkCnt;
-  for (int i = 0; i < nEntries; i++)
-  {
-    if (i > 0) // We don't need to load anything in for the first pmap - already done!
+    // Read the second sector (512 bytes) of the disk into a buffer.
+    uint8_t buffer[512];
+    if(pDisk->read(512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
     {
-      if (pDisk->read(512ULL+i*512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
-      {
-        WARNING("Disk read failure during partition table recognition.");
+        WARNING("Disk read failure during partition table search.");
         return false;
-      }
-      pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
     }
 
-    NOTICE("Detected partition '" << pMap->pmPartName << "', type '" << pMap->pmParType << "'");
+    ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap *> (buffer);
 
-    // Create a partition object.
-    Partition *pObj = new Partition(String(pMap->pmParType),
-                                    static_cast<uint64_t>(pMap->pmPyPartStart)*512ULL,
-                                    static_cast<uint64_t>(pMap->pmPartBlkCnt)*512ULL);
-    pObj->setParent(static_cast<Device*> (pDisk));
-    pDisk->addChild(static_cast<Device*> (pObj));
-    
-  }
-  return true;
+    String diskName;
+    pDisk->getName(diskName);
+
+    // Check for the magic signature.
+    if(pMap->pmSig != APPLE_PM_SIG)
+    {
+        NOTICE("Apple partition map not found on disk " << diskName);
+        return false;
+    }
+
+    NOTICE("Apple partition map found on disk " << diskName);
+
+    // Cache the number of partition table entries.
+    size_t nEntries = pMap->pmMapBlkCnt;
+    for(int i = 0; i < nEntries; i++)
+    {
+        if(i > 0) // We don't need to load anything in for the first pmap - already done!
+        {
+            if(pDisk->read(512ULL + i * 512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
+            {
+                WARNING("Disk read failure during partition table recognition.");
+                return false;
+            }
+            pMap = reinterpret_cast<ApplePartitionMap *> (buffer);
+        }
+
+        NOTICE("Detected partition '" << pMap->pmPartName << "', type '" << pMap->pmParType << "'");
+
+        // Create a partition object.
+        Partition *pObj = new Partition(String(pMap->pmParType),
+                                        static_cast<uint64_t>(pMap->pmPyPartStart) * 512ULL,
+                                        static_cast<uint64_t>(pMap->pmPartBlkCnt) * 512ULL);
+        pObj->setParent(static_cast<Device *> (pDisk));
+        pDisk->addChild(static_cast<Device *> (pObj));
+
+    }
+    return true;
 }

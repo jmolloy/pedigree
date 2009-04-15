@@ -25,57 +25,57 @@
 class MIPS32TlbManager : public InterruptHandler
 {
 public:
-  /** Retrieves the singleton instance of this Tlb manager. */
-  static MIPS32TlbManager &instance();
+    /** Retrieves the singleton instance of this Tlb manager. */
+    static MIPS32TlbManager &instance();
 
-  /** Initialises the TLB */
-  void initialise();
+    /** Initialises the TLB */
+    void initialise();
 
-  /** The assembler code for handling a TLB refill.
-   * \note Defined in asm/Tlb.s */
-  static void interruptAsm();
+    /** The assembler code for handling a TLB refill.
+     * \note Defined in asm/Tlb.s */
+    static void interruptAsm();
 
-  /** Writes a random TLB entry
-   * \note Defined in asm/Tlb.s */
-  static void writeTlb(uintptr_t entryHi, uintptr_t entryLo0, uintptr_t entryLo1);
-  /** Writes a specific TLB entry
-   * \note Defined in asm/Tlb.s */
-  static void writeTlbWired(uintptr_t tlbEntry, uintptr_t entryHi, uintptr_t entryLo0, uintptr_t entryLo1);
-  /** Flushes the entire TLB
-   * \note Defined in asm/Tlb.s */
-  static void flush(uintptr_t numEntries);
-  /** Flushes the TLB of any entries with the given ASID.
-   * \note Defined in asm/Tlb.s */
-  static void flushAsid(uintptr_t numEntries, uintptr_t asid);
-  /** Writes the given value into the Context register.
-   * \note Defined in asm/Tlb.s */
-  static void writeContext(uintptr_t context);
-  /** Writes the given value into the Wired register.
-   * \note Defined in asm/Tlb.s */
-  static void writeWired(uintptr_t wired);
-  /** Writes the given value into the PageMask register.
-   * \note Defined in asm/Tlb.s */
-  static void writePageMask(uintptr_t pageMask);
-  /** Returns the number of TLB entries.
-   * \note Defined in asm/Tlb.s */
-  static uintptr_t getNumEntries();
+    /** Writes a random TLB entry
+     * \note Defined in asm/Tlb.s */
+    static void writeTlb(uintptr_t entryHi, uintptr_t entryLo0, uintptr_t entryLo1);
+    /** Writes a specific TLB entry
+     * \note Defined in asm/Tlb.s */
+    static void writeTlbWired(uintptr_t tlbEntry, uintptr_t entryHi, uintptr_t entryLo0, uintptr_t entryLo1);
+    /** Flushes the entire TLB
+     * \note Defined in asm/Tlb.s */
+    static void flush(uintptr_t numEntries);
+    /** Flushes the TLB of any entries with the given ASID.
+     * \note Defined in asm/Tlb.s */
+    static void flushAsid(uintptr_t numEntries, uintptr_t asid);
+    /** Writes the given value into the Context register.
+     * \note Defined in asm/Tlb.s */
+    static void writeContext(uintptr_t context);
+    /** Writes the given value into the Wired register.
+     * \note Defined in asm/Tlb.s */
+    static void writeWired(uintptr_t wired);
+    /** Writes the given value into the PageMask register.
+     * \note Defined in asm/Tlb.s */
+    static void writePageMask(uintptr_t pageMask);
+    /** Returns the number of TLB entries.
+     * \note Defined in asm/Tlb.s */
+    static uintptr_t getNumEntries();
 
-  //
-  // InterruptHandler interface.
-  //
-  void interrupt(size_t interruptNumber, InterruptState &state);
+    //
+    // InterruptHandler interface.
+    //
+    void interrupt(size_t interruptNumber, InterruptState &state);
 
 private:
-  /** Default constructor. */
-  MIPS32TlbManager();
-  /** Destructor. */
-  ~MIPS32TlbManager();
+    /** Default constructor. */
+    MIPS32TlbManager();
+    /** Destructor. */
+    ~MIPS32TlbManager();
 
-  /** The singleton instance of this class. */
-  static MIPS32TlbManager m_Instance;
+    /** The singleton instance of this class. */
+    static MIPS32TlbManager m_Instance;
 
-  /** The number of entries in the TLB. */
-  uint32_t m_nEntries;
+    /** The number of entries in the TLB. */
+    uint32_t m_nEntries;
 };
 
 #endif

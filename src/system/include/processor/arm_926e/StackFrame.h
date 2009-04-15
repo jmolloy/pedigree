@@ -27,15 +27,19 @@
 /** mips32 StackFrame */
 class ARM926EStackFrame : public StackFrameBase
 {
-  public:
+public:
     /** Creates a stack frame based on the given processor state and also the given
      *  symbol name (mangled). */
     inline ARM926EStackFrame(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol)
-      : StackFrameBase(State, basePointer, mangledSymbol){}
+        : StackFrameBase(State, basePointer, mangledSymbol)
+    {
+    }
     /** The destructor does nothing */
-    inline ~ARM926EStackFrame(){}
+    inline ~ARM926EStackFrame()
+    {
+    }
 
-  private:
+private:
     /** Returns the n'th 64-bit parameter in the stack frame. */
     virtual uintptr_t getParameter(size_t n);
 };

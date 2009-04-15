@@ -29,18 +29,20 @@
 template<typename T>
 class RangeList
 {
-  public:
+public:
     /** Default constructor does nothing */
     inline RangeList()
-      : m_List(){}
+        : m_List()
+    {
+    }
     /** Construct with a preexisting range
      *\param[in] Address beginning of the range
      *\param[in] Length length of the range */
     RangeList(T Address, T Length)
-      : m_List()
+        : m_List()
     {
-      Range *range = new Range(Address, Length);
-      m_List.pushBack(range);
+        Range *range = new Range(Address, Length);
+        m_List.pushBack(range);
     }
     /** Destructor frees the list */
     ~RangeList();
@@ -48,14 +50,16 @@ class RangeList
     /** Structure of one range */
     struct Range
     {
-      /** Construct a Range */
-      inline Range(T Address, T Length)
-        : address(Address), length(Length){}
+        /** Construct a Range */
+        inline Range(T Address, T Length)
+            : address(Address), length(Length)
+        {
+        }
 
-      /** Beginning address of the range */
-      T address;
-      /** Length of the range  */
-      T length;
+        /** Beginning address of the range */
+        T address;
+        /** Length of the range  */
+        T length;
     };
 
     /** Free a range
@@ -75,19 +79,22 @@ class RangeList
 
     /** Get the number of ranges in the list
      *\return the number of ranges in the list */
-    inline size_t size() const{return m_List.size();}
+    inline size_t size() const
+    {
+        return m_List.size();
+    }
     /** Get a range at a specific index */
     Range getRange(size_t index) const;
 
-  private:
+private:
     RangeList(const RangeList &);
-    RangeList &operator = (const RangeList &);
+    RangeList &operator =(const RangeList &);
 
     /** List of ranges */
-    List<Range*> m_List;
+    List<Range *> m_List;
 
-    typedef typename List<Range*>::Iterator Iterator;
-    typedef typename List<Range*>::ConstIterator ConstIterator;
+    typedef typename List<Range *>::Iterator Iterator;
+    typedef typename List<Range *>::ConstIterator ConstIterator;
 };
 
 /** @} */
@@ -98,104 +105,104 @@ class RangeList
 template<typename T>
 void RangeList<T>::free(T address, T length)
 {
-  Iterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    if (((*cur)->address + (*cur)->length) == address)
-    {
-      address = (*cur)->address;
-      length += (*cur)->length;
-      delete *cur;
-      m_List.erase(cur);
-      break;
-    }
+    Iterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for(; cur != end; ++cur)
+        if(((*cur)->address + (*cur)->length) == address)
+        {
+            address = (*cur)->address;
+            length += (*cur)->length;
+            delete *cur;
+            m_List.erase(cur);
+            break;
+        }
 
-  cur = m_List.begin();
-  end = m_List.end();
-  for (;cur != end;++cur)
-    if ((*cur)->address == (address + length))
-    {
-      length += (*cur)->length;
-      delete *cur;
-      m_List.erase(cur);
-      break;
-    }
+    cur = m_List.begin();
+    end = m_List.end();
+    for(; cur != end; ++cur)
+        if((*cur)->address == (address + length))
+        {
+            length += (*cur)->length;
+            delete *cur;
+            m_List.erase(cur);
+            break;
+        }
 
-  Range *range = new Range(address, length);
-  m_List.pushBack(range);
+    Range *range = new Range(address, length);
+    m_List.pushBack(range);
 }
 template<typename T>
 bool RangeList<T>::allocate(T length, T &address)
 {
-  Iterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    if ((*cur)->length >= length)
-    {
-      address = (*cur)->address;
-      (*cur)->address += length;
-      (*cur)->length -= length;
-      if ((*cur)->length == 0)
-      {
-        delete *cur;
-        m_List.erase(cur);
-      }
-      return true;
-    }
-  return false;
+    Iterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for(; cur != end; ++cur)
+        if((*cur)->length >= length)
+        {
+            address = (*cur)->address;
+            (*cur)->address += length;
+            (*cur)->length -= length;
+            if((*cur)->length == 0)
+            {
+                delete *cur;
+                m_List.erase(cur);
+            }
+            return true;
+        }
+    return false;
 }
 template<typename T>
 bool RangeList<T>::allocateSpecific(T address, T length)
 {
-  Iterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    if ((*cur)->address == address &&
-        (*cur)->length == length)
-    {
-      delete *cur;
-      m_List.erase(cur);
-      return true;
-    }
-    else if ((*cur)->address == address &&
-             (*cur)->length > length)
-    {
-      (*cur)->address += length;
-      (*cur)->length -= length;
-      return true;
-    }
-    else if ((*cur)->address < address &&
-             ((*cur)->address + (*cur)->length) == (address + length))
-    {
-      (*cur)->length -= length;
-      return true;
-    }
-    else if ((*cur)->address < address &&
-             ((*cur)->address + (*cur)->length) > (address + length))
-    {
-      Range *newRange = new Range(address + length, (*cur)->address + (*cur)->length - address - length);
-      m_List.pushBack(newRange);
-      (*cur)->length = address - (*cur)->address;
-      return true;
-    }
-  return false;
+    Iterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for(; cur != end; ++cur)
+        if((*cur)->address == address &&
+           (*cur)->length == length)
+        {
+            delete *cur;
+            m_List.erase(cur);
+            return true;
+        }
+        else if((*cur)->address == address &&
+                (*cur)->length > length)
+        {
+            (*cur)->address += length;
+            (*cur)->length -= length;
+            return true;
+        }
+        else if((*cur)->address < address &&
+                ((*cur)->address + (*cur)->length) == (address + length))
+        {
+            (*cur)->length -= length;
+            return true;
+        }
+        else if((*cur)->address < address &&
+                ((*cur)->address + (*cur)->length) > (address + length))
+        {
+            Range *newRange = new Range(address + length, (*cur)->address + (*cur)->length - address - length);
+            m_List.pushBack(newRange);
+            (*cur)->length = address - (*cur)->address;
+            return true;
+        }
+    return false;
 }
 template<typename T>
 typename RangeList<T>::Range RangeList<T>::getRange(size_t index) const
 {
-  if (index >= m_List.size())return Range(0, 0);
+    if(index >= m_List.size()) return Range(0, 0);
 
-  ConstIterator cur(m_List.begin());
-  for (size_t i = 0;i < index;++i)++cur;
-  return Range(**cur);
+    ConstIterator cur(m_List.begin());
+    for(size_t i = 0; i < index; ++i) ++cur;
+    return Range(**cur);
 }
 template<typename T>
 RangeList<T>::~RangeList()
 {
-  ConstIterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    delete *cur;
+    ConstIterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for(; cur != end; ++cur)
+        delete *cur;
 }
 
 #endif

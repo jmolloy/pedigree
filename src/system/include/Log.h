@@ -28,44 +28,44 @@
 
 /** Add a notice to the log */
 #define NOTICE(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Notice << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
+    do \
+    { \
+        Log::instance().m_Lock.acquire(); \
+        Log::instance() << Log::Notice << text << Flush; \
+        Log::instance().m_Lock.release(); \
+    } \
+    while(0)
 
 /** Add a warning message to the log */
 #define WARNING(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Warning << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
+    do \
+    { \
+        Log::instance().m_Lock.acquire(); \
+        Log::instance() << Log::Warning << text << Flush; \
+        Log::instance().m_Lock.release(); \
+    } \
+    while(0)
 
 /** Add a error message to the log */
 #define ERROR(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Error << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
+    do \
+    { \
+        Log::instance().m_Lock.acquire(); \
+        Log::instance() << Log::Error << text << Flush; \
+        Log::instance().m_Lock.release(); \
+    } \
+    while(0)
 
 /** Add a fatal message to the log */
 #define FATAL(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Fatal << text << Flush; \
-    Log::instance().m_Lock.release(); \
-    Processor::breakpoint(); \
-  } \
-  while (0)
+    do \
+    { \
+        Log::instance().m_Lock.acquire(); \
+        Log::instance() << Log::Fatal << text << Flush; \
+        Log::instance().m_Lock.release(); \
+        Processor::breakpoint(); \
+    } \
+    while(0)
 
 /** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
@@ -75,17 +75,17 @@
 /** Radix for Log's integer output */
 enum NumberType
 {
-  /** Hexadecimal */
-  Hex,
-  /** Decimal */
-  Dec
+    /** Hexadecimal */
+    Hex,
+    /** Decimal */
+    Dec
 };
 
 /** Modifiers for Log */
 enum Modifier
 {
-  /** Flush this log entry */
-  Flush
+    /** Flush this log entry */
+    Flush
 };
 
 /** Implements a kernel log that can be used to debug problems.
@@ -96,113 +96,127 @@ enum Modifier
 class Log
 {
 public:
-  /** Severity level of the log entry */
-  enum SeverityLevel
-  {
-    Notice,
-    Warning,
-    Error,
-    Fatal
-  };
+    /** Severity level of the log entry */
+    enum SeverityLevel
+    {
+        Notice,
+        Warning,
+        Error,
+        Fatal
+    };
 
-  /** The lock
-   *\note this should only be acquired by the NOTICE, WARNING, ERROR and FATAL macros */
-  Spinlock m_Lock;
+    /** The lock
+     *\note this should only be acquired by the NOTICE, WARNING, ERROR and FATAL macros */
+    Spinlock m_Lock;
 
-  /** Retrieves the static Log instance.
-   *\return instance of the log class */
-  inline static Log &instance()
-    {return m_Instance;}
+    /** Retrieves the static Log instance.
+     *\return instance of the log class */
+    inline static Log &instance()
+    {
+        return m_Instance;
+    }
 
-  /** Adds an entry to the log.
-   *\param[in] str the null-terminated ASCII string that should be added */
-  Log &operator<< (const char *str);
-  Log &operator<< (String str);
-  /** Adds an entry to the log
-   *\param[in] str the null-terminated ASCII string that should be added */
-  inline Log &operator<< (char *str)
-    {return (*this) << (reinterpret_cast<const char*>(str));}
-  /** Adds an entry to the log
-   *\param[in] b boolean value */
-  Log &operator<< (bool b);
-  /** Adds an entry to the log (integer type)
-   *\param[in] n the number */
-  template<class T>
-  Log &operator << (T n);
+    /** Adds an entry to the log.
+     *\param[in] str the null-terminated ASCII string that should be added */
+    Log &operator <<(const char *str);
+    Log &operator <<(String str);
+    /** Adds an entry to the log
+     *\param[in] str the null-terminated ASCII string that should be added */
+    inline Log &operator <<(char *str)
+    {
+        return (*this) << (reinterpret_cast<const char *>(str));
+    }
+    /** Adds an entry to the log
+     *\param[in] b boolean value */
+    Log &operator <<(bool b);
+    /** Adds an entry to the log (integer type)
+     *\param[in] n the number */
+    template<class T>
+    Log &operator <<(T n);
 
-  /** Starts an entry in the log.
-   *\todo This function should gain and release spinlocks, depending on level. */
-  Log &operator<< (SeverityLevel level);
-  /** Changes the number type between hex and decimal. */
-  Log &operator<< (NumberType type);
-  /** Modifier */
-  Log &operator<< (Modifier type);
+    /** Starts an entry in the log.
+     *\todo This function should gain and release spinlocks, depending on level. */
+    Log &operator <<(SeverityLevel level);
+    /** Changes the number type between hex and decimal. */
+    Log &operator <<(NumberType type);
+    /** Modifier */
+    Log &operator <<(Modifier type);
 
-  /** Get the number of static entries in the log.
-   *\return the number of static entries in the log */
-  inline size_t getStaticEntryCount() const
-    {return m_StaticEntries;}
-  /** Get the number of dynamic entries in the log
-   *\return the number of dynamic entries in the log */
-  inline size_t getDynamicEntryCount() const
-    {return m_DynamicLog.count();}
+    /** Get the number of static entries in the log.
+     *\return the number of static entries in the log */
+    inline size_t getStaticEntryCount() const
+    {
+        return m_StaticEntries;
+    }
+    /** Get the number of dynamic entries in the log
+     *\return the number of dynamic entries in the log */
+    inline size_t getDynamicEntryCount() const
+    {
+        return m_DynamicLog.count();
+    }
 
-  /** Stores an entry in the log.
-   *\param[in] T type of the log's text */
-  template<class T>
-  struct LogEntry
-  {
-    /** Constructor does nothing */
-    inline LogEntry()
-     : timestamp(), type(), str(){}
+    /** Stores an entry in the log.
+     *\param[in] T type of the log's text */
+    template<class T>
+    struct LogEntry
+    {
+        /** Constructor does nothing */
+        inline LogEntry()
+            : timestamp(), type(), str()
+        {
+        }
 
-    /** The time (since boot) that this log entry was added, in ticks. */
-    unsigned int timestamp;
-    /** The severity level of this entry. */
-    SeverityLevel type;
-    /** The actual entry text. */
-    T str;   
-  };
+        /** The time (since boot) that this log entry was added, in ticks. */
+        unsigned int timestamp;
+        /** The severity level of this entry. */
+        SeverityLevel type;
+        /** The actual entry text. */
+        T str;
+    };
 
-  /** Type of a static log entry (no memory-management involved) */
-  typedef LogEntry<StaticString<LOG_LENGTH> > StaticLogEntry;
-  /** Type of a dynamic log entry (memory-management involved) */
-  typedef LogEntry<String> DynamicLogEntry;
+    /** Type of a static log entry (no memory-management involved) */
+    typedef LogEntry<StaticString<LOG_LENGTH> > StaticLogEntry;
+    /** Type of a dynamic log entry (memory-management involved) */
+    typedef LogEntry<String> DynamicLogEntry;
 
-  /** Returns the n'th static log entry, counting from the start. */
-  inline const StaticLogEntry &getStaticEntry(size_t n) const
-    {return m_StaticLog[n];}
-  /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
-  inline const DynamicLogEntry &getDynamicEntry(size_t n) const
-    {return *m_DynamicLog[n - m_StaticEntries];}
+    /** Returns the n'th static log entry, counting from the start. */
+    inline const StaticLogEntry &getStaticEntry(size_t n) const
+    {
+        return m_StaticLog[n];
+    }
+    /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
+    inline const DynamicLogEntry &getDynamicEntry(size_t n) const
+    {
+        return *m_DynamicLog[n - m_StaticEntries];
+    }
 
 private:
-  /** Default constructor - does nothing. */
-  Log();
-  /** Default destructor - does nothing */
-  ~Log();
-  /** Copy-constructor
-   *\note NOT implemented */
-  Log(const Log &);
-  /** Assignment operator
-   *\note NOT implemented */
-  Log &operator = (const Log &);
+    /** Default constructor - does nothing. */
+    Log();
+    /** Default destructor - does nothing */
+    ~Log();
+    /** Copy-constructor
+     *\note NOT implemented */
+    Log(const Log &);
+    /** Assignment operator
+     *\note NOT implemented */
+    Log &operator =(const Log &);
 
-  /** Static buffer of log messages. */
-  StaticLogEntry m_StaticLog[LOG_ENTRIES];
-  /** Dynamic buffer of log messages */
-  Vector<DynamicLogEntry*> m_DynamicLog;
-  /** Number of entries in the static log */
-  size_t m_StaticEntries;
+    /** Static buffer of log messages. */
+    StaticLogEntry m_StaticLog[LOG_ENTRIES];
+    /** Dynamic buffer of log messages */
+    Vector<DynamicLogEntry *> m_DynamicLog;
+    /** Number of entries in the static log */
+    size_t m_StaticEntries;
 
-  /** Temporary buffer which gets filled by calls to operator<<, and flushed by << Flush. */
-  StaticLogEntry m_Buffer;
+    /** Temporary buffer which gets filled by calls to operator<<, and flushed by << Flush. */
+    StaticLogEntry m_Buffer;
 
-  /** The number type mode that we are in. */
-  NumberType m_NumberType;
+    /** The number type mode that we are in. */
+    NumberType m_NumberType;
 
-  /** The Log instance (singleton class) */
-  static Log m_Instance;
+    /** The Log instance (singleton class) */
+    static Log m_Instance;
 };
 
 /** @} */

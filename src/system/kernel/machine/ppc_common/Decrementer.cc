@@ -28,41 +28,41 @@ Decrementer Decrementer::m_Instance;
 
 bool Decrementer::registerHandler(TimerHandler *handler)
 {
-  if (UNLIKELY(handler == 0 && m_Handler != 0))
-    return false;
-  
-  m_Handler = handler;
-  return true;
+    if(UNLIKELY(handler == 0 && m_Handler != 0))
+        return false;
+
+    m_Handler = handler;
+    return true;
 }
 
 bool Decrementer::initialise()
 {
-  // Allocate the Interrupt.
-  if (InterruptManager::instance().registerInterruptHandler(8, this) == false)
-    return false;
+    // Allocate the Interrupt.
+    if(InterruptManager::instance().registerInterruptHandler(8, this) == false)
+        return false;
 
-  // Find the frequency of the decrementer.
-  OFDevice chosen (OpenFirmware::instance().findDevice("/chosen"));
-  OFDevice cpu (chosen.getProperty("cpu"));
-  m_Frequency = reinterpret_cast<uint32_t> (cpu.getProperty("timebase-frequency"));
-  if (static_cast<int32_t> (m_Frequency) <= 0)
-  {
-    WARNING("Cpu::timebase-frequency property not available!");
-    m_Frequency = 0x100000; 
-  }
+    // Find the frequency of the decrementer.
+    OFDevice chosen(OpenFirmware::instance().findDevice("/chosen"));
+    OFDevice cpu(chosen.getProperty("cpu"));
+    m_Frequency = reinterpret_cast<uint32_t> (cpu.getProperty("timebase-frequency"));
+    if(static_cast<int32_t> (m_Frequency) <= 0)
+    {
+        WARNING("Cpu::timebase-frequency property not available!");
+        m_Frequency = 0x100000;
+    }
 
-  // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
-  uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
-  asm volatile("mtdec %0" : : "r" (n));
+    // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
+    uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
+    asm volatile ("mtdec %0" : : "r" (n));
 
-  return true;
+    return true;
 }
 void Decrementer::uninitialise()
 {
 }
 
 Decrementer::Decrementer()
-  : m_Handler(0), m_Frequency(0)
+    : m_Handler(0), m_Frequency(0)
 {
 }
 
@@ -70,9 +70,9 @@ uint32_t numFired = 0;
 
 void Decrementer::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
-  uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
-  asm volatile("mtdec %0" : : "r" (n));
+    // Set up the decrementer to fire in DECREMENTER_PERIOD milliseconds.
+    uint32_t n = (DECREMENTER_PERIOD * m_Frequency) / 1000;
+    asm volatile ("mtdec %0" : : "r" (n));
 
 //   numFired++;
 //   if (numFired == 300)
@@ -80,8 +80,8 @@ void Decrementer::interrupt(size_t interruptNumber, InterruptState &state)
 //     Processor::breakpoint();
 //   }
 
-  // TODO: Delta is wrong
-  if (LIKELY(m_Handler != 0))
-    m_Handler->timer(DECREMENTER_PERIOD, state);
+    // TODO: Delta is wrong
+    if(LIKELY(m_Handler != 0))
+        m_Handler->timer(DECREMENTER_PERIOD, state);
 
 }

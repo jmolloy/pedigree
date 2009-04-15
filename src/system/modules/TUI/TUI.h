@@ -26,33 +26,33 @@
 class TUI : public RequestQueue
 {
 public:
-  TUI();
-  ~TUI();
+    TUI();
+    ~TUI();
 
-  // Called by video drivers to inform us that a mode change has taken place.
-  void modeChanged(Display::ScreenMode mode, void *pFramebuffer);
+    // Called by video drivers to inform us that a mode change has taken place.
+    void modeChanged(Display::ScreenMode mode, void *pFramebuffer);
 
 protected:
-  //
-  // RequestQueue interface.
-  //
-  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                  uint64_t p6, uint64_t p7, uint64_t p8);
+    //
+    // RequestQueue interface.
+    //
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                    uint64_t p6, uint64_t p7, uint64_t p8);
 
 
-  bool m_Echo;
-  bool m_EchoNewlines;
-  bool m_EchoBackspace;
-  bool m_MapCrToNlIn;
-  bool m_MapNlToCrIn;
-  
-  bool m_NlCausesCr;
+    bool m_Echo;
+    bool m_EchoNewlines;
+    bool m_EchoBackspace;
+    bool m_MapCrToNlIn;
+    bool m_MapNlToCrIn;
 
-  bool m_bIsTextMode;
-  Display::ScreenMode m_Mode;
+    bool m_NlCausesCr;
 
-  char m_pQueue[32];
-  size_t m_QueueLength;
+    bool m_bIsTextMode;
+    Display::ScreenMode m_Mode;
+
+    char m_pQueue[32];
+    size_t m_QueueLength;
 };
 
 #endif

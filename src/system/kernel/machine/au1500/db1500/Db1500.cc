@@ -20,45 +20,45 @@ Db1500 Db1500::m_Instance;
 
 Machine &Machine::instance()
 {
-  return Db1500::instance();
+    return Db1500::instance();
 }
 
 void Db1500::initialise()
 {
-  // NOTE: Needs to set bInitialised to true
+    // NOTE: Needs to set bInitialised to true
 }
 Serial *Db1500::getSerial(size_t n)
 {
-  return &m_Serial[n];
+    return &m_Serial[n];
 }
 size_t Db1500::getNumSerial()
 {
-  return 2;
+    return 2;
 }
 Vga *Db1500::getVga(size_t n)
 {
-  return &m_Vga;
+    return &m_Vga;
 }
 size_t Db1500::getNumVga()
 {
-  return 1;
+    return 1;
 }
 IrqManager *Db1500::getIrqManager()
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 SchedulerTimer *Db1500::getSchedulerTimer()
 {
-  // TODO return m_SchedulerTimer;
+    // TODO return m_SchedulerTimer;
 }
 Timer *Db1500::getTimer()
 {
-  // TODO return m_Timer;
+    // TODO return m_Timer;
 }
 
 Db1500::Db1500()
-  : m_Vga()
+    : m_Vga()
 {
 }
 Db1500::~Db1500()

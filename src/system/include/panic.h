@@ -29,7 +29,7 @@
  *      ressources, e.g. no I/O port & memory-region allocations and even no 'normal'
  *      memory allocations.
  *\param[in] msg the message to print to the screen */
-void panic( const char* msg );
+void panic(const char *msg);
 
 /** @} */
 

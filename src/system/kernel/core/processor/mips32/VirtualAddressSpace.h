@@ -42,7 +42,7 @@
  *  Virtual addressing on MIPS is a little complex. There are two paged areas - KUSEG and KSEG2.
  *  The former is intended for user applications and is located in the lower 2GB of the address space.
  *  The latter is intended for kernel use and is located in the highest 1GB of the address space.
- *  It is normal practice to store the current page table in KSEG2, so that a full 2MB of physical 
+ *  It is normal practice to store the current page table in KSEG2, so that a full 2MB of physical
  *  RAM doesn't have to be assigned per address space. However, this causes problems, as the MIPS TLB
  *  is rather small and it is possible that an entry for the page table doesn't exist, so a TLB refill
  *  will fault.
@@ -57,10 +57,10 @@
  *  gives us more bits to play with (in the 32-bit version), but doubles the size of the page table.
  *
  *  So the page table covers 4GB / 4KB = 1M pages, each entry being 2 words in size (64-bits) = 2M words.
- *  
+ *
  *  But to map the page table into KSEG2, we split the page table down again into 4KB chunks, which means we
  *  have 2M / 1K (1K being 4KB / 4bytes per word) = 2048 words.
- *  
+ *
  *  Here however, we have a problem. VirtualAddressSpace objects are part of Process objects, which are stored
  *  on the kernel heap (which is in KSEG2). So in order to fix up the page table which maps KSEG2, we need to do
  *  a lookup... in KSEG2!
@@ -68,9 +68,9 @@
  *  Obviously this wouldn't work, so we set the page table entr(ies) containing this VirtualAddressSpace as a
  *  permanent (or 'wired') TLB entry. That way we can be certain that it will always be present.
  *
- *  One further optimisation is that while the KUSEG mappings will be different through each address space, the 
+ *  One further optimisation is that while the KUSEG mappings will be different through each address space, the
  *  KSEG2 mappings will all be the same - we want the kernel heap to look the same from every address space!
- *  Thus, we can split our page table 'directory' into two chunks - the KUSEG chunk and the KSEG2 chunk (which 
+ *  Thus, we can split our page table 'directory' into two chunks - the KUSEG chunk and the KSEG2 chunk (which
  *  will be static across all VirtualAddressSpace objects). This has the added advantage that we can get rid of
  *  mappings for the 1GB of KSEG0 and KSEG1 mappings in between KUSEG and KSEG2, as these areas aren't paged.
  *
@@ -78,57 +78,57 @@
  */
 class MIPS32VirtualAddressSpace : public VirtualAddressSpace
 {
-  /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
-  friend class Processor;
-  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+    /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
+    friend class Processor;
+    friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
 public:
-  //
-  // VirtualAddressSpace Interface
-  //
-  virtual bool isAddressValid(void *virtualAddress);
-  virtual bool isMapped(void *virtualAddress);
+    //
+    // VirtualAddressSpace Interface
+    //
+    virtual bool isAddressValid(void *virtualAddress);
+    virtual bool isMapped(void *virtualAddress);
 
-  virtual bool map(physical_uintptr_t physicalAddress,
-                   void *virtualAddress,
-                   size_t flags);
-  virtual void getMapping(void *virtualAddress,
-                          physical_uintptr_t &physicalAddress,
-                          size_t &flags);
-  virtual void setFlags(void *virtualAddress, size_t newFlags);
-  virtual void unmap(void *virtualAddress);
-  virtual void *allocateStack();
-  virtual void freeStack(void *pStack);
+    virtual bool map(physical_uintptr_t physicalAddress,
+                     void *virtualAddress,
+                     size_t flags);
+    virtual void getMapping(void *virtualAddress,
+                            physical_uintptr_t &physicalAddress,
+                            size_t &flags);
+    virtual void setFlags(void *virtualAddress, size_t newFlags);
+    virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
+    virtual void freeStack(void *pStack);
 
-  /** Intended to be called solely by MIPS32TlbManager. Returns the physical address of the
-   *  chunkIdx'th 4KB chunk of the page table. */
-  uintptr_t getPageTableChunk(uintptr_t chunkIdx);
+    /** Intended to be called solely by MIPS32TlbManager. Returns the physical address of the
+     *  chunkIdx'th 4KB chunk of the page table. */
+    uintptr_t getPageTableChunk(uintptr_t chunkIdx);
 
 protected:
-  /** The destructor does nothing */
-  virtual ~MIPS32VirtualAddressSpace();
+    /** The destructor does nothing */
+    virtual ~MIPS32VirtualAddressSpace();
 
 private:
-  /** The constructor for already present paging structures */
-  MIPS32VirtualAddressSpace();
-  /** The copy-constructor
-   *\note NOT implemented */
-  MIPS32VirtualAddressSpace(const MIPS32VirtualAddressSpace &);
-  /** The copy-constructor
-   *\note Not implemented */
-  MIPS32VirtualAddressSpace &operator = (const MIPS32VirtualAddressSpace &);
+    /** The constructor for already present paging structures */
+    MIPS32VirtualAddressSpace();
+    /** The copy-constructor
+     *\note NOT implemented */
+    MIPS32VirtualAddressSpace(const MIPS32VirtualAddressSpace &);
+    /** The copy-constructor
+     *\note Not implemented */
+    MIPS32VirtualAddressSpace &operator =(const MIPS32VirtualAddressSpace &);
 
-  void setPageTableChunk(uintptr_t chunkIdx, uintptr_t chunkAddr);
+    void setPageTableChunk(uintptr_t chunkIdx, uintptr_t chunkAddr);
 
-  /** Obtains a new physical frame and generates 'null' entries throughout. */
-  uintptr_t generateNullChunk();
+    /** Obtains a new physical frame and generates 'null' entries throughout. */
+    uintptr_t generateNullChunk();
 
-  /** Our 'directory' - contains the physical address of each page table 'chunk' for KUSEG. */
-  uintptr_t m_pKusegDirectory[1024];
-  /** Our 'directory' for KSEG2. Shared across all address spaces. */
-  static uintptr_t m_pKseg2Directory[512];
+    /** Our 'directory' - contains the physical address of each page table 'chunk' for KUSEG. */
+    uintptr_t m_pKusegDirectory[1024];
+    /** Our 'directory' for KSEG2. Shared across all address spaces. */
+    static uintptr_t m_pKseg2Directory[512];
 
-  /** The kernel virtual address space */
-  static MIPS32VirtualAddressSpace m_KernelSpace;
+    /** The kernel virtual address space */
+    static MIPS32VirtualAddressSpace m_KernelSpace;
 };
 
 /** @} */

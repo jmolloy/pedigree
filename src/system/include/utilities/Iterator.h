@@ -39,25 +39,25 @@ template<typename originalT,
          typename T = originalT>
 class Iterator
 {
-  /** All iterators must be friend in order to allow casts between some iterator types */
-  template<typename _originalT,
-           class _Struct,
-           _Struct *(_Struct::*_FunctionPrev)(),
-           _Struct *(_Struct::*_FunctionNext)(),
-           typename _T>
-  friend class Iterator;
+    /** All iterators must be friend in order to allow casts between some iterator types */
+    template<typename _originalT,
+             class _Struct,
+             _Struct *(_Struct::*_FunctionPrev)(),
+             _Struct *(_Struct::*_FunctionNext)(),
+             typename _T>
+    friend class Iterator;
 
-  /** The assignment operator is extern */
-  template<typename _originalT,
-          class _Struct,
-          _Struct *(_Struct::*_FunctionPrev)(),
-          _Struct *(_Struct::*_FunctionNext)(),
-          typename _T1,
-          typename _T2>
-  friend bool operator == (const Iterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T1> &x1,
-                           const Iterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T2> &x2);
+    /** The assignment operator is extern */
+    template<typename _originalT,
+             class _Struct,
+             _Struct *(_Struct::*_FunctionPrev)(),
+             _Struct *(_Struct::*_FunctionNext)(),
+             typename _T1,
+             typename _T2>
+    friend bool operator ==(const Iterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T1> &x1,
+                            const Iterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T2> &x2);
 
-  public:
+public:
     /** Type of the constant bidirectional iterator */
     typedef Iterator<originalT, Struct, FunctionPrev, FunctionNext, T const>     Const;
     /** Type of the reverse iterator */
@@ -67,66 +67,76 @@ class Iterator
 
     /** The default constructor constructs an invalid/unusable iterator */
     Iterator()
-      : m_Node(){}
+        : m_Node()
+    {
+    }
     /** The copy-constructor
      *\param[in] Iterator the reference object */
     Iterator(const Iterator &x)
-      : m_Node(x.m_Node){}
+        : m_Node(x.m_Node)
+    {
+    }
     /** The constructor
      *\param[in] Iterator the reference object */
     template<typename T2>
     Iterator(const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x)
-      : m_Node(x.m_Node){}
+        : m_Node(x.m_Node)
+    {
+    }
     /** Constructor from a pointer to an instance of the data structure
      *\param[in] Node pointer to an instance of the data structure */
     Iterator(Struct *Node)
-      : m_Node(Node){}
+        : m_Node(Node)
+    {
+    }
     /** The destructor does nothing */
-    ~Iterator(){}
+    ~Iterator()
+    {
+    }
 
     /** The assignment operator
      *\param[in] Iterator the reference object */
-    Iterator &operator = (const Iterator &x)
+    Iterator &operator =(const Iterator &x)
     {
-      m_Node = x.m_Node;
-      return *this;
+        m_Node = x.m_Node;
+        return *this;
     }
     /** Preincrement operator */
-    Iterator &operator ++ ()
+    Iterator &operator ++()
     {
-      m_Node = (m_Node->*FunctionNext)();
-      return *this;
+        m_Node = (m_Node->*FunctionNext)();
+        return *this;
     }
     /** Predecrement operator */
-    Iterator &operator -- ()
+    Iterator &operator --()
     {
-      m_Node = (m_Node->*FunctionPrev)();
-      return *this;
+        m_Node = (m_Node->*FunctionPrev)();
+        return *this;
     }
     /** Dereference operator yields the element value */
     T &operator *()
     {
-      return m_Node->value;
+        return m_Node->value;
     }
     /** Dereference operator yields the element value */
     T &operator ->()
     {
-      return m_Node->value;
+        return m_Node->value;
     }
 
     /** Conversion Operator to a constant iterator */
-    operator Const ()
+    operator Const()
     {
-      return Const(m_Node);
+        return Const(m_Node);
     }
 
     /** Get the Node */
     Struct *__getNode()
     {
-      return m_Node;
+        return m_Node;
     }
 
-  protected:
+protected:
     /** Pointer to the instance of the data structure or 0 */
     Struct *m_Node;
 };
@@ -149,25 +159,25 @@ template<typename originalT,
          typename T = originalT>
 class TreeIterator
 {
-  /** All iterators must be friend in order to allow casts between some iterator types */
-  template<typename _originalT,
-           class _Struct,
-           _Struct *(_Struct::*_FunctionPrev)(),
-           _Struct *(_Struct::*_FunctionNext)(),
-           typename _T>
-  friend class TreeIterator;
+    /** All iterators must be friend in order to allow casts between some iterator types */
+    template<typename _originalT,
+             class _Struct,
+             _Struct *(_Struct::*_FunctionPrev)(),
+             _Struct *(_Struct::*_FunctionNext)(),
+             typename _T>
+    friend class TreeIterator;
 
-  /** The assignment operator is extern */
-  template<typename _originalT,
-          class _Struct,
-          _Struct *(_Struct::*_FunctionPrev)(),
-          _Struct *(_Struct::*_FunctionNext)(),
-          typename _T1,
-          typename _T2>
-  friend bool operator == (const TreeIterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T1> &x1,
-                           const TreeIterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T2> &x2);
+    /** The assignment operator is extern */
+    template<typename _originalT,
+             class _Struct,
+             _Struct *(_Struct::*_FunctionPrev)(),
+             _Struct *(_Struct::*_FunctionNext)(),
+             typename _T1,
+             typename _T2>
+    friend bool operator ==(const TreeIterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T1> &x1,
+                            const TreeIterator<_originalT, _Struct, _FunctionPrev, _FunctionNext, _T2> &x2);
 
-  public:
+public:
     /** Type of the constant bidirectional iterator */
     typedef TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T const>     Const;
     /** Type of the reverse iterator */
@@ -177,86 +187,96 @@ class TreeIterator
 
     /** The default constructor constructs an invalid/unusable iterator */
     TreeIterator()
-      : m_Node(){}
+        : m_Node()
+    {
+    }
     /** The copy-constructor
      *\param[in] TreeIterator the reference object */
     TreeIterator(const TreeIterator &x)
-      : m_Node(x.m_Node){}
+        : m_Node(x.m_Node)
+    {
+    }
     /** The constructor
      *\param[in] TreeIterator the reference object */
     template<typename T2>
     TreeIterator(const TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x)
-      : m_Node(x.m_Node){}
+        : m_Node(x.m_Node)
+    {
+    }
     /** Constructor from a pointer to an instance of the data structure
      *\param[in] Node pointer to an instance of the data structure */
     TreeIterator(Struct *Node)
-      : m_Node(Node){}
+        : m_Node(Node)
+    {
+    }
     /** The destructor does nothing */
-    ~TreeIterator(){}
+    ~TreeIterator()
+    {
+    }
 
     /** The assignment operator
      *\param[in] TreeIterator the reference object */
-    TreeIterator &operator = (const TreeIterator &x)
+    TreeIterator &operator =(const TreeIterator &x)
     {
-      m_Node = x.m_Node;
-      return *this;
+        m_Node = x.m_Node;
+        return *this;
     }
     /** Preincrement operator */
-    TreeIterator &operator ++ ()
+    TreeIterator &operator ++()
     {
-      m_Node = (m_Node->*FunctionNext)();
-      return *this;
+        m_Node = (m_Node->*FunctionNext)();
+        return *this;
     }
     /** Predecrement operator */
-    TreeIterator &operator -- ()
+    TreeIterator &operator --()
     {
-      m_Node = (m_Node->*FunctionPrev)();
-      return *this;
+        m_Node = (m_Node->*FunctionPrev)();
+        return *this;
     }
     /** Dereference operator yields the element value */
     T operator *()
     {
-      return m_Node->value;
+        return m_Node->value;
     }
     /** Dereference operator yields the element value */
     T operator ->()
     {
-      return m_Node->value;
+        return m_Node->value;
     }
 
     /** Conversion Operator to a constant iterator */
-    operator Const ()
+    operator Const()
     {
-      return Const(m_Node);
+        return Const(m_Node);
     }
 
     /** Get the Node */
     Struct *__getNode()
     {
-      return m_Node;
-    }
-    
-    T key()
-    {
-      if(m_Node)
-      {
-        if(m_Node->value)
-          return m_Node->value->key;
-      }
-      return 0;
-    }
-    
-    T value()
-    {
-      if(m_Node)
-      {
-        if(m_Node->value)
-          return m_Node->value->element;
-      }
-      return 0;
+        return m_Node;
     }
 
-  protected:
+    T key()
+    {
+        if(m_Node)
+        {
+            if(m_Node->value)
+                return m_Node->value->key;
+        }
+        return 0;
+    }
+
+    T value()
+    {
+        if(m_Node)
+        {
+            if(m_Node->value)
+                return m_Node->value->element;
+        }
+        return 0;
+    }
+
+protected:
     /** Pointer to the instance of the data structure or 0 */
     Struct *m_Node;
 };
@@ -271,11 +291,11 @@ template<typename originalT,
          Struct *(Struct::*FunctionNext)(),
          typename T1,
          typename T2>
-bool operator == (const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T1> &x1,
-                  const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x2)
+bool operator ==(const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T1> &x1,
+                 const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x2)
 {
-  if (x1.m_Node != x2.m_Node)return false;
-  return true;
+    if(x1.m_Node != x2.m_Node) return false;
+    return true;
 }
 
 /** Comparison operator for the TreeIterator class
@@ -288,17 +308,17 @@ template<typename originalT,
          Struct *(Struct::*FunctionNext)(),
          typename T1,
          typename T2>
-bool operator == (const TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T1> &x1,
-                  const TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x2)
+bool operator ==(const TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T1> &x1,
+                 const TreeIterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x2)
 {
-  if(!x2.m_Node)
-  {
-    if(x1.m_Node->value)
-      return false;
+    if(!x2.m_Node)
+    {
+        if(x1.m_Node->value)
+            return false;
+        return true;
+    }
+    if(x1.m_Node->value != x2.m_Node->value) return false;
     return true;
-  }
-  if (x1.m_Node->value != x2.m_Node->value)return false;
-  return true;
 }
 
 /** @} */

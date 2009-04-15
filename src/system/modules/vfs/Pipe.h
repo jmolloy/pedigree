@@ -28,57 +28,59 @@
 /** A first-in-first-out buffer node. */
 class Pipe : public File
 {
-  friend class Filesystem;
+    friend class Filesystem;
 
 public:
-  /** Eases the pain of casting, and performs a sanity check. */
-  static Pipe *fromFile(File *pF)
-  {
-    if (!pF->isPipe()) FATAL("Casting non-symlink File to Pipe!");
-    return reinterpret_cast<Pipe*> (pF);
-  }
+    /** Eases the pain of casting, and performs a sanity check. */
+    static Pipe *fromFile(File *pF)
+    {
+        if(!pF->isPipe()) FATAL("Casting non-symlink File to Pipe!");
+        return reinterpret_cast<Pipe *> (pF);
+    }
 
-  /** Constructor, creates an invalid file. */
-  Pipe();
+    /** Constructor, creates an invalid file. */
+    Pipe();
 
-  /** Copy constructors are hidden - unused! */
-  Pipe(const Pipe &file);
+    /** Copy constructors are hidden - unused! */
+    Pipe(const Pipe &file);
 private:
-  Pipe& operator =(const Pipe&);
+    Pipe &operator =(const Pipe &);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  Pipe(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent, bool bIsAnonymous = false);
-  /** Destructor - doesn't do anything. */
-  virtual ~Pipe();
+    /** Constructor, should be called only by a Filesystem. */
+    Pipe(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+         uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent, bool bIsAnonymous = false);
+    /** Destructor - doesn't do anything. */
+    virtual ~Pipe();
 
-  /** Reads from the file. */
-  virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-  /** Writes to the file. */
-  virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    /** Reads from the file. */
+    virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+    /** Writes to the file. */
+    virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
-  /** Returns true if the File is actually a pipe. */
-  virtual bool isPipe()
-  {return true;}
+    /** Returns true if the File is actually a pipe. */
+    virtual bool isPipe()
+    {
+        return true;
+    }
 
-  virtual void increaseRefCount(bool bIsWriter);
+    virtual void increaseRefCount(bool bIsWriter);
 
-  /** Override decreaseRefCount so we can tell when all writers have hung up
-      (and also when all readers have hung up so we can die). */
-  virtual void decreaseRefCount(bool bIsWriter);
+    /** Override decreaseRefCount so we can tell when all writers have hung up
+        (and also when all readers have hung up so we can die). */
+    virtual void decreaseRefCount(bool bIsWriter);
 
 protected:
-  /** If we're an anonymous pipe, we should delete ourselves when all readers/writers have hung up. */
-  bool m_bIsAnonymous;
+    /** If we're an anonymous pipe, we should delete ourselves when all readers/writers have hung up. */
+    bool m_bIsAnonymous;
 
-  /** Have we reached EOF? */
-  volatile bool m_bIsEOF;
+    /** Have we reached EOF? */
+    volatile bool m_bIsEOF;
 
-  /** The implements needed to create a ring buffer. */
-  Semaphore m_BufLen;
-  Semaphore m_BufAvailable;
-  uint8_t m_Buffer[PIPE_BUF_MAX];
-  uintptr_t m_Front, m_Back;
+    /** The implements needed to create a ring buffer. */
+    Semaphore m_BufLen;
+    Semaphore m_BufAvailable;
+    uint8_t m_Buffer[PIPE_BUF_MAX];
+    uintptr_t m_Front, m_Back;
 };
 
 #endif

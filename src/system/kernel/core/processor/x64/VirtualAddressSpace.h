@@ -28,15 +28,15 @@
  *  architecture, that means it wraps around the processor's paging functionality. */
 class X64VirtualAddressSpace : public VirtualAddressSpace
 {
-  /** Processor::switchAddressSpace() needs access to m_PhysicalPML4 */
-  friend class Processor;
-  /** Multiprocessor::initialise() needs access to m_PhysicalPML4 */
-  friend class Multiprocessor;
-  /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_KernelSpace */
-  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
-  /** VirtualAddressSpace::create needs access to the constructor */
-  friend VirtualAddressSpace *VirtualAddressSpace::create();
-  public:
+    /** Processor::switchAddressSpace() needs access to m_PhysicalPML4 */
+    friend class Processor;
+    /** Multiprocessor::initialise() needs access to m_PhysicalPML4 */
+    friend class Multiprocessor;
+    /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_KernelSpace */
+    friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+    /** VirtualAddressSpace::create needs access to the constructor */
+    friend VirtualAddressSpace *VirtualAddressSpace::create();
+public:
     //
     // VirtualAddressSpace Interface
     //
@@ -62,7 +62,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\note This should only be used from the PhysicalMemoryManager
      *\param[in] physAddress the physical page that should be used as page table or page frame
      *\param[in] virtualAddress the virtual address that should be checked for the existance
-     *                          of a page directory pointer table, page directory, page table 
+     *                          of a page directory pointer table, page directory, page table
      *                          or page frame
      *\param[in] flags the flags used for the mapping
      *\return true, if a page table/frame is already mapped for that address, false if the
@@ -75,7 +75,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     /** The destructor cleans up the address space */
     virtual ~X64VirtualAddressSpace();
 
-  private:
+private:
     /** The default constructor */
     X64VirtualAddressSpace();
     /** The constructor for already present paging structures
@@ -92,7 +92,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     X64VirtualAddressSpace(const X64VirtualAddressSpace &);
     /** The copy-constructor
      *\note Not implemented */
-    X64VirtualAddressSpace &operator = (const X64VirtualAddressSpace &);
+    X64VirtualAddressSpace &operator =(const X64VirtualAddressSpace &);
 
     /** Get the page table entry, if it exists and check whether a page is mapped or marked as
      *  swapped out.
@@ -101,7 +101,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\return true, if the page table is present and the page mapped or marked swapped out, false
      *        otherwise */
     bool getPageTableEntry(void *virtualAddress,
-                           uint64_t *&pageTableEntry);
+                           uint64_t * &pageTableEntry);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
      *\return the proessor specific flag representation */
@@ -129,7 +129,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     /** Current top of the stacks */
     void *m_pStackTop;
     /** List of free stacks */
-    Vector<void*> m_freeStacks;
+    Vector<void *> m_freeStacks;
     /** Is this the kernel space? */
     bool m_bKernelSpace;
 
@@ -143,14 +143,14 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
-#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void *>(0x10000000)
+#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void *>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
-#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xFFFFFFFF88000000)
-#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
-#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xFFFFFFFF90000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
-#define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(-0x9000)
+#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void *>(0xFFFFFFFF88000000)
+#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void *>(0xFFFFFFFF7FF00000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void *>(0xFFFFFFFF90000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void *>(0xFFFFFFFF7FC00000)
+#define KERNEL_VIRTUAL_STACK reinterpret_cast<void *>(-0x9000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x50000000
 #define KERNEL_STACK_SIZE 0x8000
 

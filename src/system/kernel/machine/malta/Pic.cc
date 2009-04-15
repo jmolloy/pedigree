@@ -27,50 +27,50 @@ Pic Pic::m_Instance;
 
 irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler)
 {
-  if (UNLIKELY(irq >= 16))
-    return 0;
+    if(UNLIKELY(irq >= 16))
+        return 0;
 
-  // Save the IrqHandler
-  m_Handler[irq] = handler;
+    // Save the IrqHandler
+    m_Handler[irq] = handler;
 
-  // Enable/Unmask the IRQ
-  enable(irq, true);
+    // Enable/Unmask the IRQ
+    enable(irq, true);
 
-  return irq + BASE_INTERRUPT_VECTOR;
+    return irq + BASE_INTERRUPT_VECTOR;
 }
 irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler)
 {
-  // TODO
-  return 0;
+    // TODO
+    return 0;
 }
 void Pic::acknowledgeIrq(irq_id_t Id)
 {
-  uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
+    uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
 
-  // Enable the irq again (the interrupt reason got removed)
-  enable(irq, true);
-  eoi(irq);
+    // Enable the irq again (the interrupt reason got removed)
+    enable(irq, true);
+    eoi(irq);
 }
 void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
-  uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
+    uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
 
-  // Disable the IRQ
-  enable(irq, false);
+    // Disable the IRQ
+    enable(irq, false);
 
-  // Remove the handler
-  m_Handler[irq] = 0;
+    // Remove the handler
+    m_Handler[irq] = 0;
 }
 
 bool Pic::initialise()
 {
-  // Allocate the I/O ports
+    // Allocate the I/O ports
 //  if (m_SlavePort.allocate(0xA0, 4) == false)
 //    return false;
 //  if (m_MasterPort.allocate(0x20, 4) == false)
 //    return false;
 
-  // Initialise the slave and master PIC
+    // Initialise the slave and master PIC
 /*  m_MasterPort.write8(0x11, 0);
   m_SlavePort.write8(0x11, 0);
   m_MasterPort.write8(BASE_INTERRUPT_VECTOR, 1);
@@ -80,72 +80,72 @@ bool Pic::initialise()
   m_MasterPort.write8(0x01, 1);
   m_SlavePort.write8(0x01, 1);
 */
-  // Register the interrupts
-  InterruptManager &IntManager = InterruptManager::instance();
-  if (IntManager.registerInterruptHandler(0, this) == false)
+// Register the interrupts
+    InterruptManager &IntManager = InterruptManager::instance();
+    if(IntManager.registerInterruptHandler(0, this) == false)
 
-  // Disable all IRQ's (exept IRQ2)
-  enableAll(false);
+        // Disable all IRQ's (exept IRQ2)
+        enableAll(false);
 
-  return true;
+    return true;
 }
 
 Pic::Pic()
 //: m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
 {
-  for (size_t i = 0;i < 16;i++)
-    m_Handler[i] = 0;
+    for(size_t i = 0; i < 16; i++)
+        m_Handler[i] = 0;
 }
 
 void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
+    size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
 
-  // Is Spurious IRQ7?
-  if (irq == 7)
-  {
-    m_MasterPort.write8(0x03, 3);
-    if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+    // Is Spurious IRQ7?
+    if(irq == 7)
     {
-      NOTICE("PIC: spurious IRQ7");
-      return;
+        m_MasterPort.write8(0x03, 3);
+        if(UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+        {
+            NOTICE("PIC: spurious IRQ7");
+            return;
+        }
     }
-  }
-  // Is spurious IRQ15?
-  else if (irq == 15)
-  {
-    m_SlavePort.write8(0x03, 3);
-    if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
+    // Is spurious IRQ15?
+    else if(irq == 15)
     {
-      NOTICE("PIC: spurious IRQ15");
-      return;
+        m_SlavePort.write8(0x03, 3);
+        if(UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
+        {
+            NOTICE("PIC: spurious IRQ15");
+            return;
+        }
     }
-  }
 
-  // Call the irq handler, if any
-  if (LIKELY(m_Handler[irq] != 0))
-  {
-    if (m_Handler[irq]->irq(irq, state) == false)
+    // Call the irq handler, if any
+    if(LIKELY(m_Handler[irq] != 0))
     {
-      // Disable/Mask the IRQ line (the handler did not remove
-      // the interrupt reason, yet)
-      enable(irq, false);
+        if(m_Handler[irq]->irq(irq, state) == false)
+        {
+            // Disable/Mask the IRQ line (the handler did not remove
+            // the interrupt reason, yet)
+            enable(irq, false);
+        }
     }
-  }
-  else
-  {
-    NOTICE("PIC: unhandled irq #" << irq << " occurred");
- 
+    else
+    {
+        NOTICE("PIC: unhandled irq #" << irq << " occurred");
+
     #ifdef DEBUGGER
-      LargeStaticString str;
-      str += "Unhandled IRQ: #";
-      str += irq;
-      str += " occurred.";
-      Debugger::instance().start(state, str);
+        LargeStaticString str;
+        str += "Unhandled IRQ: #";
+        str += irq;
+        str += " occurred.";
+        Debugger::instance().start(state, str);
     #endif
-  }
+    }
 
-  eoi(irq);
+    eoi(irq);
 }
 
 void Pic::eoi(uint8_t irq)
@@ -156,33 +156,33 @@ void Pic::eoi(uint8_t irq)
 }
 void Pic::enable(uint8_t irq, bool enable)
 {
-  if (irq <= 7)
-  {
-    uint8_t mask = m_MasterPort.read8(1);
-    if (enable == true)mask = mask & ~(1 << irq);
-    else mask = mask | (1 << irq);
+    if(irq <= 7)
+    {
+        uint8_t mask = m_MasterPort.read8(1);
+        if(enable == true) mask = mask & ~(1 << irq);
+        else mask = mask | (1 << irq);
 
 //    m_MasterPort.write8(mask, 1);
-  }
-  else
-  {
-    uint8_t mask = m_SlavePort.read8(1);
-    if (enable == true)mask = mask & ~(1 << (irq - 8));
-    else mask = mask | (1 << (irq - 8));
+    }
+    else
+    {
+        uint8_t mask = m_SlavePort.read8(1);
+        if(enable == true) mask = mask & ~(1 << (irq - 8));
+        else mask = mask | (1 << (irq - 8));
 
 //    m_SlavePort.write8(mask, 1);
-  }
+    }
 }
 void Pic::enableAll(bool enable)
 {
-  if (enable == false)
-  {
+    if(enable == false)
+    {
 //    m_MasterPort.write8(0xFB, 1);
 //    m_SlavePort.write8(0xFB, 1);
-  }
-  else
-  {
+    }
+    else
+    {
 //    m_MasterPort.write8(0x00, 1);
 //    m_SlavePort.write8(0x00, 1);
-  }
+    }
 }

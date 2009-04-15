@@ -26,36 +26,36 @@
 class FatFile : public File
 {
 private:
-  /** Copy constructors are hidden - unused! */
-  FatFile(const File &file);
-  File& operator =(const File&);
+    /** Copy constructors are hidden - unused! */
+    FatFile(const File &file);
+    File &operator =(const File &);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0, File *pParent = 0, bool bShouldDelete = true);
-  /** Destructor - doesn't do anything. */
-  virtual ~FatFile();
+    /** Constructor, should be called only by a Filesystem. */
+    FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+            uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0, File *pParent = 0, bool bShouldDelete = true);
+    /** Destructor - doesn't do anything. */
+    virtual ~FatFile();
 
-  uint32_t getCustomField1()
-  {
-    return m_CustomField1;
-  }
-  void setCustomField1(uint32_t custom)
-  {
-    m_CustomField1 = custom;
-  }
-  uint32_t getCustomField2()
-  {
-    return m_CustomField2;
-  }
-  void setCustomField2(uint32_t custom)
-  {
-    m_CustomField2 = custom;
-  }
+    uint32_t getCustomField1()
+    {
+        return m_CustomField1;
+    }
+    void setCustomField1(uint32_t custom)
+    {
+        m_CustomField1 = custom;
+    }
+    uint32_t getCustomField2()
+    {
+        return m_CustomField2;
+    }
+    void setCustomField2(uint32_t custom)
+    {
+        m_CustomField2 = custom;
+    }
 
 private:
-  uint32_t m_CustomField1;
-  uint32_t m_CustomField2;
+    uint32_t m_CustomField1;
+    uint32_t m_CustomField2;
 };
 
 #endif
