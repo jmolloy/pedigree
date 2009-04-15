@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -30,6 +30,7 @@
 #include <machine/Machine.h>
 #include <linker/DynamicLinker.h>
 #include <panic.h>
+#include <image/ProcessImage.h>
 #include "../../kernel/core/BootIO.h"
 
 #include <network/NetworkStack.h>
@@ -37,7 +38,11 @@
 
 #include <users/UserManager.h>
 
+#include <image/ProcessImageCacheManager.h>
+
 extern BootIO bootIO;
+
+void init_stage2();
 
 static bool probeDisk(Disk *pDisk)
 {
@@ -125,20 +130,9 @@ void init()
       RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
   }
 
-  str += "Loading init program (root:/applications/bash)\n";
+  str += "Loading init program (root:/applications/login)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
-
-  // Load initial program.
-  File* initProg = VFS::instance().find(String("root:/applications/login"));
-  if (!initProg)
-  {
-    FATAL("Unable to load init program!");
-    return;
-  }
-
-  uint8_t *buffer = new uint8_t[initProg->getSize()];
-  initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   Machine::instance().getKeyboard()->setDebugState(false);
 
@@ -156,65 +150,89 @@ void init()
 
   pProcess->setCwd(VFS::instance().find(String("root:/")));
 
-  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
+  new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);  
+  
+  lock.release();
+}
 
-  // Switch to the init process' address space.
-  Processor::switchAddressSpace(*pProcess->getAddressSpace());
+void destroy()
+{
+}
+
+void init_stage2()
+{
+  NOTICE("Init, stage2");
+  // Load initial program.
+  File* initProg = VFS::instance().find(String("root:/applications/login"));
+  if (!initProg)
+  {
+    FATAL("Unable to load init program!");
+    return;
+  }
+
+//  uint8_t *buffer = new uint8_t[initProg->getSize()];
+//  initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
 
   // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  static Elf initElf;
+  static Elf *initElf;
   uintptr_t loadBase;
 
   initElf.create(buffer, initProg->getSize());
   initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
 
-  DynamicLinker::instance().setInitProcess(pProcess);
+//  static ElfImage image(reinterpret_cast<uintptr_t>(buffer), initProg->getSize(), 0);
+//  initElf = image.getElf();
+//  image.load();
+  NOTICE("Elf created.");
   DynamicLinker::instance().registerElf(&initElf);
-
-  uintptr_t iter = 0;
-  List<char*> neededLibraries = initElf.neededLibraries();
-  for (List<char*>::Iterator it = neededLibraries.begin();
-       it != neededLibraries.end();
-       it++)
-  {
-    if (!DynamicLinker::instance().load(*it, pProcess))
-    {
-      ERROR("Couldn't open needed file '" << *it << "'");
-      FATAL("Init program failed to load!");
-      return;
-    }
-  }
+  NOTICE("Elf registered");
+ uintptr_t iter = 0;
+ List<char*> neededLibraries = initElf.neededLibraries();
+ for (List<char*>::Iterator it = neededLibraries.begin();
+      it != neededLibraries.end();
+      it++)
+ {
+   NOTICE("Loading...");
+   if (!DynamicLinker::instance().load(*it))
+   {
+    ERROR("Couldn't open needed file '" << *it << "'");
+     FATAL("Init program failed to load!");
+     return;
+   }
+ }
+ NOTICE("Fin");
   initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
   DynamicLinker::instance().initialiseElf(&initElf);
-  DynamicLinker::instance().setInitProcess(0);
+  NOTICE("initialised");
+
+//   ProcessImage *pProcessImage = ProcessImageCacheManager::instance().getImage(initProg);
+//   if (!pProcessImage || !pProcessImage->isValid())
+//   {
+//     FATAL("Unable to load init program - load failed.");
+//     return;
+//   }
+//   pProcessImage->load();
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x20000000),
-                                                                   VirtualAddressSpace::Write);
+    bool b = Processor::information().getVirtualAddressSpace().map(phys,                                                                   reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
     if (!b)
       WARNING("map() failed in init");
   }
 
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pProcessImage->getMainElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
-  // Switch back to the old address space.
-  Processor::switchAddressSpace(oldAS);
-  
-  delete [] buffer;
-  
-  lock.release();
+  Processor::setInterrupts(true);
+  Scheduler::instance().yield();
 
-}
-
-void destroy()
-{
+  // Thread exit.
+  while (1) {Scheduler::instance().yield();}
 }
 
 MODULE_NAME("init");

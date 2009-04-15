@@ -17,6 +17,7 @@
 #include "MemoryMappedFile.h"
 
 #include <processor/PhysicalMemoryManager.h>
+#include <Spinlock.h>
 
 MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
@@ -35,9 +36,10 @@ MemoryMappedFile::~MemoryMappedFile()
 {
 }
 
-bool MemoryMappedFile::load(uintptr_t &address)
+bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess=0)
 {
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if (!pProcess)
+        pProcess = Processor::information().getCurrentThread()->getParent();
 
     if (address == 0)
     {
@@ -50,8 +52,17 @@ bool MemoryMappedFile::load(uintptr_t &address)
             return false;
     }
 
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    // Create a spinlock as an easy way of disabling interrupts.
+    Spinlock spinlock;
+    spinlock.acquire();
+
+    VirtualAddressSpace *va = pProcess->getVirtualAddressSpace();
     
+    VirtualAddressSpace &oldva = Processor::information().getVirtualAddressSpace();
+
+    if (&oldva != va)
+        Processor::switchAddressSpace(*va);
+
     // Add all the V->P mappings we currently posess.
     for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
          it != m_Mappings.end();
@@ -60,12 +71,17 @@ bool MemoryMappedFile::load(uintptr_t &address)
         uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
         uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
 
-        if (!va.map(p, reinterpret_cast<void*>(v), 0))
+        if (!va->map(p, reinterpret_cast<void*>(v), 0))
         {
             WARNING("MemoryMappedFile: map() failed!");
             return false;
         }
     }
+
+    if (&oldva != va)
+        Processor::switchAddressSpace(oldva);
+
+    spinlock.release();
 
     return true;
 }
@@ -82,7 +98,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     uintptr_t v = address & ~(PhysicalMemoryManager::getPageSize()-1);
-    
+
     // Allocate a physical page to store the result.
     physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
 
@@ -235,6 +251,7 @@ void MemoryMappedFileManager::clone(Process *pProcess)
         MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->file );
         pMmFileList2->pushBack(pMmFile);
 
+        (*it)->file->load( (*it)->offset, pProcess );
         (*it)->file->increaseRefCount();
     }
 }

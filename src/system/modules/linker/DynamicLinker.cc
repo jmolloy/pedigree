@@ -26,36 +26,11 @@
 #include <process/Scheduler.h>
 #include <panic.h>
 
-DynamicLinker DynamicLinker::m_Instance;
-
-uintptr_t DynamicLinker::resolve(const char *str)
-{
-  Process *pProcess = m_pInitProcess;
-  if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
-
-  Elf* thisElf = m_ProcessElfs.lookup(pProcess);
-  SymbolTable *pSymtab = thisElf->getSymbolTable();
-  
-  uintptr_t ret = pSymtab->lookup(String(str), thisElf);
-  if(ret == ~0)
-    ret = 0;
-  NOTICE("Resolved " << String(str) << " to " << ret << ".");
-  return ret;
-
-//  return DynamicLinker::instance().resolveSymbol(str, useElf);
-}
-
-/*
-uintptr_t DynamicLinker::resolveNoElf(const char *str, bool useElf)
-{
-  return DynamicLinker::instance().resolveSymbol(str, false);
-}
-*/
-
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 {
-  uintptr_t ret= DynamicLinker::instance().resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
-  return ret;
+    Process *pProcess = Processor::information().getCurrentThread()->getProcess();
+
+    return pProcess->getLinker()->resolvePltSymbol(state.getSyscallParameter(0), state.getSyscallParameter(1));
 }
 
 DynamicLinker::DynamicLinker() :
@@ -71,26 +46,11 @@ DynamicLinker::~DynamicLinker()
 {
 }
 
-void DynamicLinker::setInitProcess(Process *pProcess)
+bool DynamicLinker::loadProgram(File *pFile)
 {
-  m_pInitProcess = pProcess;
 }
 
-bool DynamicLinker::load(const char *name, Process *pProcess)
-{
-  if (!pProcess) pProcess = Processor::information().getCurrentThread()->getParent();
-
-  SharedObject *pSo = loadInternal (name);
-
-  if (pSo)
-  {
-    return true;
-  }
-
-  return false;
-}
-
-DynamicLinker::SharedObject *DynamicLinker::loadInternal(const char *name)
+bool DynamicLinker::loadObject(File *pFile)
 {
   // Search the currently loaded objects first.
   for (List<SharedObject*>::Iterator it = m_Objects.begin();
