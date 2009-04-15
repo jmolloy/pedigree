@@ -135,34 +135,21 @@ if os.path.exists('/bin/date'):
 else:
     env['PEDIGREE_BUILDTIME'] = '(Unknown)'
 
-if os.path.exists('/usr/local/bin/svn'):
-    #^-- Darwin
-    out = commands.getoutput('/usr/local/bin/svn info .')
-    tmp = re.match('.*?Revision: ([^\n]+)',out,re.S)
-    env['PEDIGREE_REVISION'] = tmp.group(1)
-elif os.path.exists('/usr/bin/svn'):
-    #^-- Most *nix
-    out = commands.getoutput('/usr/bin/svn info .')
-    tmp = re.match('.*?Revision: ([^\n]+)',out,re.S)
-    env['PEDIGREE_REVISION'] = tmp.group(1)
+if os.path.exists(commands.getoutput("which git")):
+    out = commands.getoutput(commands.getoutput("which git") + 'rev-parse --verify HEAD --short')
+    env['PEDIGREE_REVISION'] = out
 else:
     env['PEDIGREE_REVISION'] = '(Unknown)'
     
-if os.path.exists('/usr/bin/whoami'):
-    out = commands.getoutput('/usr/bin/whoami')
+if os.path.exists(commands.getoutput("which whoami")):
+    out = commands.getoutput(commands.getoutput("which whoami"))
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_USER'] = tmp.group()
 else:
     env['PEDIGREE_USER'] = '(Unknown)'
     
-if os.path.exists('/usr/bin/uname'):
-    #^-- Darwin
-    out = commands.getoutput('/usr/bin/uname')
-    tmp = re.match('^[^\n]+',out)
-    env['PEDIGREE_MACHINE'] = tmp.group()
-elif os.path.exists('/bin/uname'):
-    #^-- Most *nix
-    out = commands.getoutput('/bin/uname')
+if os.path.exists(commands.getoutput("which uname")):
+    out = commands.getoutput(commands.getoutput("which uname"))
     tmp = re.match('^[^\n]+',out)
     env['PEDIGREE_MACHINE'] = tmp.group()
 else:

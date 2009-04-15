@@ -1,3 +1,4 @@
 build
 src/system/kernel/Version.cc
 options.cache
+.sconsign.dblite
