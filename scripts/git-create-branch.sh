@@ -1,0 +1,13 @@
+#!/bin/sh
+# git-create-branch <branch_name>
+ 
+if [ $# -ne 1 ]; then
+         echo 1>&2 Usage: $0 branch_name
+         exit 127
+fi
+ 
+set branch_name = $1
+git push origin origin:${branch_name}
+git fetch origin
+git checkout --track -b ${branch_name} origin/${branch_name}
+git pull

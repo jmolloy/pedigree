@@ -137,7 +137,6 @@ else:
 
 if os.path.exists(commands.getoutput("which git")):
     out = commands.getoutput(commands.getoutput("which git") + ' rev-parse --verify HEAD --short')
-    print out
     env['PEDIGREE_REVISION'] = out
 else:
     env['PEDIGREE_REVISION'] = '(Unknown)'
