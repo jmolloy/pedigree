@@ -15,7 +15,7 @@
  */
 
 // If we're being called standalone, we don't get passed any BootstrapInfo.
-#include "BootstrapInfo.h"
+#include <BootstrapInfo.h>
 
 #ifdef DEBUGGER
   #include <Debugger.h>
@@ -75,34 +75,6 @@ int idle(void *)
     }
 }
 
-int foo(void *p)
-{
-    HugeStaticString str;
-    int j = 0;
-    for(;;)
-    {
-        for(int i = 0; i < 10000000; i++) ;
-        str.clear();
-        str += "b";
-        bootIO.write(str, BootIO::White, BootIO::Green);
-        j++;
-    }
-    return 0;
-}
-
-int bar(void *p)
-{
-    HugeStaticString str;
-    for(;;)
-    {
-        for(int i = 0; i < 10000000; i++) ;
-        str.clear();
-        str += "c";
-        bootIO.write(str, BootIO::White, BootIO::Red);
-    }
-    return 0;
-}
-
 /// Kernel entry point.
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
@@ -113,8 +85,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     Processor::initialise1(bsInf);
 
     // Initialise the machine-specific interface
-    Machine &machine = Machine::instance();
-    machine.initialise();
+    Machine::instance().initialise();
 
     // Initialise the Kernel Elf class
     if(KernelElf::instance().initialise(bsInf) == false)
@@ -229,10 +200,5 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
         // Kernel idle thread.
         Processor::setInterrupts(true);
         Scheduler::instance().yield();
-
-//    for(int i = 0; i < 10000000; i++) ;
-//    str.clear();
-//    str += "a";
-//    bootIO.write(str, BootIO::White, BootIO::Blue);
     }
 }
