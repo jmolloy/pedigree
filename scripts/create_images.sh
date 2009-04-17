@@ -102,11 +102,28 @@ if sudo which losetup >/dev/null 2>&1; then
 
   # Mount HDD (fat16)
   tar -xzf ../images/hdd_fat16.tar.gz
-  IMG=hdd_16h_63spt_100c_fat16.img
+  #IMG=hdd_16h_63spt_100c_fat16.img
+  IMG=hdd_fat16.img
   OFF=$HDOFF
   init
 
-  sudo cp -a $SRCDIR/../images/i686-elf $MOUNTPT
+  sudo touch $MOUNTPT/.pedigree-root
+
+  OLD=$PWD
+  
+  cd $SRCDIR/../images/i686-elf
+  tar -chf tmp.tar *
+  ARCLOC=$PWD
+  cd $MOUNTPT
+  sudo tar -xof $ARCLOC/tmp.tar
+  cd $ARCLOC
+  rm tmp.tar
+  
+  cd $OLD
+  
+  #tar -cf tmp.tar $SRCDIR/../images/i686-elf/*
+  #tar -xf tmp.tar $MOUNTPT
+  #sudo cp -r $SRCDIR/../images/i686-elf $MOUNTPT
 #  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 

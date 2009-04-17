@@ -32,7 +32,7 @@ private:
 public:
   /** Constructor, should be called only by a Filesystem. */
   FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, bool isSymlink, bool isDirectory, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0, File *pParent = 0, bool bShouldDelete = true);
+       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0, File *pParent = 0);
   /** Destructor - doesn't do anything. */
   virtual ~FatFile();
 
