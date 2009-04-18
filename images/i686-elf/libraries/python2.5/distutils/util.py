@@ -4,7 +4,7 @@ Miscellaneous utility functions -- anything that doesn't fit into
 one of the other *util.py modules.
 """
 
-__revision__ = "$Id: util.py 46157 2006-05-23 21:54:23Z tim.peters $"
+__revision__ = "$Id: util.py 59116 2007-11-22 10:14:26Z ronald.oussoren $"
 
 import sys, os, string, re
 from distutils.errors import DistutilsPlatformError
@@ -106,7 +106,7 @@ def get_platform ():
             osname = "macosx"
 
 
-            if (release + '.') < '10.4.' and \
+            if (release + '.') >= '10.4.' and \
                     get_config_vars().get('UNIVERSALSDK', '').strip():
                 # The universal build will build fat binaries, but not on
                 # systems before 10.4

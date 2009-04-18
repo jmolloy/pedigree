@@ -315,7 +315,7 @@ class SMTP:
     def send(self, str):
         """Send `str' to the server."""
         if self.debuglevel > 0: print>>stderr, 'send:', repr(str)
-        if self.sock:
+        if hasattr(self, 'sock') and self.sock:
             try:
                 self.sock.sendall(str)
             except socket.error:
@@ -503,7 +503,7 @@ class SMTP:
     vrfy=verify
 
     def expn(self, address):
-        """SMTP 'verify' command -- checks for address validity."""
+        """SMTP 'expn' command -- expands a mailing list."""
         self.putcmd("expn", quoteaddr(address))
         return self.getreply()
 
@@ -605,6 +605,14 @@ class SMTP:
             sslobj = socket.ssl(self.sock, keyfile, certfile)
             self.sock = SSLFakeSocket(self.sock, sslobj)
             self.file = SSLFakeFile(sslobj)
+            # RFC 3207:
+            # The client MUST discard any knowledge obtained from
+            # the server, such as the list of SMTP service extensions,
+            # which was not obtained from the TLS negotiation itself.
+            self.helo_resp = None
+            self.ehlo_resp = None
+            self.esmtp_features = {}
+            self.does_esmtp = 0
         return (resp, reply)
 
     def sendmail(self, from_addr, to_addrs, msg, mail_options=[],

@@ -55,7 +55,10 @@ import urllib2
 
 # set up authentication info
 authinfo = urllib2.HTTPBasicAuthHandler()
-authinfo.add_password('realm', 'host', 'username', 'password')
+authinfo.add_password(realm='PDQ Application',
+                      uri='https://mahler:8092/site-updates.py',
+                      user='klem',
+                      passwd='geheim$parole')
 
 proxy_support = urllib2.ProxyHandler({"http" : "http://ahad-haam:3128"})
 
@@ -295,6 +298,10 @@ class OpenerDirector:
         self.process_request = {}
 
     def add_handler(self, handler):
+        if not hasattr(handler, "add_parent"):
+            raise TypeError("expected BaseHandler instance, got %r" %
+                            type(handler))
+
         added = False
         for meth in dir(handler):
             if meth in ["redirect_request", "do_open", "proxy_open"]:
@@ -440,14 +447,14 @@ def build_opener(*handlers):
                        FTPHandler, FileHandler, HTTPErrorProcessor]
     if hasattr(httplib, 'HTTPS'):
         default_classes.append(HTTPSHandler)
-    skip = []
+    skip = set()
     for klass in default_classes:
         for check in handlers:
             if isclass(check):
                 if issubclass(check, klass):
-                    skip.append(klass)
+                    skip.add(klass)
             elif isinstance(check, klass):
-                skip.append(klass)
+                skip.add(klass)
     for klass in skip:
         default_classes.remove(klass)
 
@@ -674,7 +681,7 @@ class ProxyHandler(BaseHandler):
             proxy_type = orig_type
         if user and password:
             user_pass = '%s:%s' % (unquote(user), unquote(password))
-            creds = base64.encodestring(user_pass).strip()
+            creds = base64.b64encode(user_pass).strip()
             req.add_header('Proxy-authorization', 'Basic ' + creds)
         hostport = unquote(hostport)
         req.set_proxy(hostport, proxy_type)
@@ -766,11 +773,10 @@ class HTTPPasswordMgrWithDefaultRealm(HTTPPasswordMgr):
 
 class AbstractBasicAuthHandler:
 
-    rx = re.compile('[ \t]*([^ \t]+)[ \t]+realm="([^"]*)"', re.I)
+    # XXX this allows for multiple auth-schemes, but will stupidly pick
+    # the last one with a realm specified.
 
-    # XXX there can actually be multiple auth-schemes in a
-    # www-authenticate header.  should probably be a lot more careful
-    # in parsing them to extract multiple alternatives
+    rx = re.compile('(?:.*,)*[ \t]*([^ \t]+)[ \t]+realm="([^"]*)"', re.I)
 
     # XXX could pre-emptively send auth info already accepted (RFC 2617,
     # end of section 2, and section 1.2 immediately after "credentials"
@@ -798,7 +804,7 @@ class AbstractBasicAuthHandler:
         user, pw = self.passwd.find_user_password(realm, host)
         if pw is not None:
             raw = "%s:%s" % (user, pw)
-            auth = 'Basic %s' % base64.encodestring(raw).strip()
+            auth = 'Basic %s' % base64.b64encode(raw).strip()
             if req.headers.get(self.auth_header, None) == auth:
                 return None
             req.add_header(self.auth_header, auth)
@@ -946,7 +952,7 @@ class AbstractDigestAuthHandler:
             respdig = KD(H(A1), "%s:%s" % (nonce, H(A2)))
         else:
             # XXX handle auth-int.
-            pass
+            raise URLError("qop '%s' is not supported." % qop)
 
         # XXX should the partial digests be encoded too?
 
@@ -1087,7 +1093,7 @@ class AbstractHTTPHandler(BaseHandler):
         # out of socket._fileobject() and into a base class.
 
         r.recv = r.read
-        fp = socket._fileobject(r)
+        fp = socket._fileobject(r, close=True)
 
         resp = addinfourl(fp, r.msg, req.get_full_url())
         resp.code = r.status

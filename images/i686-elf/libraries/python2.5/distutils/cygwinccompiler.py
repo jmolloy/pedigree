@@ -47,7 +47,7 @@ cygwin in no-cygwin mode).
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: cygwinccompiler.py 37828 2004-11-10 22:23:15Z loewis $"
+__revision__ = "$Id: cygwinccompiler.py 65835 2008-08-18 19:33:42Z amaury.forgeotdarc $"
 
 import os,sys,copy
 from distutils.ccompiler import gen_preprocess_options, gen_lib_options
@@ -398,7 +398,7 @@ def get_versions():
     """ Try to find out the versions of gcc, ld and dllwrap.
         If not possible it returns None for it.
     """
-    from distutils.version import StrictVersion
+    from distutils.version import LooseVersion
     from distutils.spawn import find_executable
     import re
 
@@ -409,7 +409,7 @@ def get_versions():
         out.close()
         result = re.search('(\d+\.\d+(\.\d+)*)',out_string)
         if result:
-            gcc_version = StrictVersion(result.group(1))
+            gcc_version = LooseVersion(result.group(1))
         else:
             gcc_version = None
     else:
@@ -421,7 +421,7 @@ def get_versions():
         out.close()
         result = re.search('(\d+\.\d+(\.\d+)*)',out_string)
         if result:
-            ld_version = StrictVersion(result.group(1))
+            ld_version = LooseVersion(result.group(1))
         else:
             ld_version = None
     else:
@@ -433,7 +433,7 @@ def get_versions():
         out.close()
         result = re.search(' (\d+\.\d+(\.\d+)*)',out_string)
         if result:
-            dllwrap_version = StrictVersion(result.group(1))
+            dllwrap_version = LooseVersion(result.group(1))
         else:
             dllwrap_version = None
     else:

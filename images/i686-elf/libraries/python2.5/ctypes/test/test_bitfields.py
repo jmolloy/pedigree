@@ -215,6 +215,22 @@ class BitFieldTest(unittest.TestCase):
                         ("b", c_ubyte, 4)]
         self.failUnlessEqual(sizeof(X), sizeof(c_byte))
 
+    def test_mixed_4(self):
+        class X(Structure):
+            _fields_ = [("a", c_short, 4),
+                        ("b", c_short, 4),
+                        ("c", c_int, 24),
+                        ("d", c_short, 4),
+                        ("e", c_short, 4),
+                        ("f", c_int, 24)]
+        # MSVC does NOT combine c_short and c_int into one field, GCC
+        # does (unless GCC is run with '-mms-bitfields' which
+        # produces code compatible with MSVC).
+        if os.name in ("nt", "ce"):
+            self.failUnlessEqual(sizeof(X), sizeof(c_int) * 4)
+        else:
+            self.failUnlessEqual(sizeof(X), sizeof(c_int) * 2)
+
     def test_anon_bitfields(self):
         # anonymous bit-fields gave a strange error message
         class X(Structure):

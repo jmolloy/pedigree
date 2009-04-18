@@ -302,13 +302,13 @@ class URLopener:
 
         if proxy_passwd:
             import base64
-            proxy_auth = base64.encodestring(proxy_passwd).strip()
+            proxy_auth = base64.b64encode(proxy_passwd).strip()
         else:
             proxy_auth = None
 
         if user_passwd:
             import base64
-            auth = base64.encodestring(user_passwd).strip()
+            auth = base64.b64encode(user_passwd).strip()
         else:
             auth = None
         h = httplib.HTTP(host)
@@ -326,6 +326,10 @@ class URLopener:
         if data is not None:
             h.send(data)
         errcode, errmsg, headers = h.getreply()
+        if errcode == -1:
+            # something went wrong with the HTTP status line
+            raise IOError, ('http protocol error', 0,
+                            'got a bad status line', None)
         fp = h.getfile()
         if errcode == 200:
             return addinfourl(fp, headers, "http:" + url)
@@ -387,12 +391,12 @@ class URLopener:
             if not host: raise IOError, ('https error', 'no host given')
             if proxy_passwd:
                 import base64
-                proxy_auth = base64.encodestring(proxy_passwd).strip()
+                proxy_auth = base64.b64encode(proxy_passwd).strip()
             else:
                 proxy_auth = None
             if user_passwd:
                 import base64
-                auth = base64.encodestring(user_passwd).strip()
+                auth = base64.b64encode(user_passwd).strip()
             else:
                 auth = None
             h = httplib.HTTPS(host, 0,
@@ -405,14 +409,18 @@ class URLopener:
                 h.putheader('Content-Length', '%d' % len(data))
             else:
                 h.putrequest('GET', selector)
-            if proxy_auth: h.putheader('Proxy-Authorization: Basic %s' % proxy_auth)
-            if auth: h.putheader('Authorization: Basic %s' % auth)
+            if proxy_auth: h.putheader('Proxy-Authorization', 'Basic %s' % proxy_auth)
+            if auth: h.putheader('Authorization', 'Basic %s' % auth)
             if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: h.putheader(*args)
             h.endheaders()
             if data is not None:
                 h.send(data)
             errcode, errmsg, headers = h.getreply()
+            if errcode == -1:
+                # something went wrong with the HTTP status line
+                raise IOError, ('http protocol error', 0,
+                                'got a bad status line', None)
             fp = h.getfile()
             if errcode == 200:
                 return addinfourl(fp, headers, "https:" + url)
@@ -1471,7 +1479,7 @@ def test(args=[]):
             '/etc/passwd',
             'file:/etc/passwd',
             'file://localhost/etc/passwd',
-            'ftp://ftp.python.org/pub/python/README',
+            'ftp://ftp.gnu.org/pub/README',
 ##          'gopher://gopher.micro.umn.edu/1/',
             'http://www.python.org/index.html',
             ]

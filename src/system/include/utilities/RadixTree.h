@@ -132,7 +132,7 @@ public:
   inline Iterator begin()
   {
     Iterator it(root);
-    if (root->value == 0)
+    if (root && root->value == 0)
       it++;
     return it;
   }

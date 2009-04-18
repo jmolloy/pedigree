@@ -49,7 +49,7 @@ int posix_getuid();
 int posix_getgid();
 int pedigree_login(int uid, const char *password);
 
-int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact);
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type);
 uintptr_t posix_signal(int sig, void* func);
 int posix_raise(int sig);
 int posix_kill(int pid, int sig);

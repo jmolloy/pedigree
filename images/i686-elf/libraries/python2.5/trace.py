@@ -286,6 +286,8 @@ class CoverageResults:
             # skip some "files" we don't care about...
             if filename == "<string>":
                 continue
+            if filename.startswith("<doctest "):
+                continue
 
             if filename.endswith((".pyc", ".pyo")):
                 filename = filename[:-1]
@@ -587,7 +589,7 @@ class Trace:
         """
         if why == 'call':
             code = frame.f_code
-            filename = code.co_filename
+            filename = frame.f_globals.get('__file__', None)
             if filename:
                 # XXX modname() doesn't work right for packages, so
                 # the ignore support won't work right for packages

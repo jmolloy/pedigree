@@ -2,6 +2,12 @@
 
 """Read/write support for Maildir, mbox, MH, Babyl, and MMDF mailboxes."""
 
+# Notes for authors of new mailbox subclasses:
+#
+# Remember to fsync() changes to disk before closing a modified file
+# or returning from a flush() method.  See functions _sync_flush() and
+# _sync_close().
+
 import sys
 import os
 import time
@@ -238,7 +244,7 @@ class Maildir(Mailbox):
         try:
             self._dump_message(message, tmp_file)
         finally:
-            tmp_file.close()
+            _sync_close(tmp_file)
         if isinstance(message, MaildirMessage):
             subdir = message.get_subdir()
             suffix = self.colon + message.get_info()
@@ -249,7 +255,19 @@ class Maildir(Mailbox):
             suffix = ''
         uniq = os.path.basename(tmp_file.name).split(self.colon)[0]
         dest = os.path.join(self._path, subdir, uniq + suffix)
-        os.rename(tmp_file.name, dest)
+        try:
+            if hasattr(os, 'link'):
+                os.link(tmp_file.name, dest)
+                os.remove(tmp_file.name)
+            else:
+                os.rename(tmp_file.name, dest)
+        except OSError, e:
+            os.remove(tmp_file.name)
+            if e.errno == errno.EEXIST:
+                raise ExternalClashError('Name clash with existing message: %s'
+                                         % dest)
+            else:
+                raise
         if isinstance(message, MaildirMessage):
             os.utime(dest, (os.path.getatime(dest), message.get_date()))
         return uniq
@@ -297,7 +315,10 @@ class Maildir(Mailbox):
         subpath = self._lookup(key)
         f = open(os.path.join(self._path, subpath), 'r')
         try:
-            msg = MaildirMessage(f)
+            if self._factory:
+                msg = self._factory(f)
+            else:
+                msg = MaildirMessage(f)
         finally:
             f.close()
         subdir, name = os.path.split(subpath)
@@ -367,12 +388,14 @@ class Maildir(Mailbox):
 
     def get_folder(self, folder):
         """Return a Maildir instance for the named folder."""
-        return Maildir(os.path.join(self._path, '.' + folder), create=False)
+        return Maildir(os.path.join(self._path, '.' + folder),
+                       factory=self._factory,
+                       create=False)
 
     def add_folder(self, folder):
         """Create a folder and return a Maildir instance representing it."""
         path = os.path.join(self._path, '.' + folder)
-        result = Maildir(path)
+        result = Maildir(path, factory=self._factory)
         maildirfolder_path = os.path.join(path, 'maildirfolder')
         if not os.path.exists(maildirfolder_path):
             os.close(os.open(maildirfolder_path, os.O_CREAT | os.O_WRONLY))
@@ -423,18 +446,27 @@ class Maildir(Mailbox):
         except OSError, e:
             if e.errno == errno.ENOENT:
                 Maildir._count += 1
-                return open(path, 'wb+')
+                try:
+                    return _create_carefully(path)
+                except OSError, e:
+                    if e.errno != errno.EEXIST:
+                        raise
             else:
                 raise
-        else:
-            raise ExternalClashError('Name clash prevented file creation: %s' %
-                                     path)
+
+        # Fall through to here if stat succeeded or open raised EEXIST.
+        raise ExternalClashError('Name clash prevented file creation: %s' %
+                                 path)
 
     def _refresh(self):
         """Update table of contents mapping."""
         self._toc = {}
         for subdir in ('new', 'cur'):
-            for entry in os.listdir(os.path.join(self._path, subdir)):
+            subdir_path = os.path.join(self._path, subdir)
+            for entry in os.listdir(subdir_path):
+                p = os.path.join(subdir_path, entry)
+                if os.path.isdir(p):
+                    continue
                 uniq = entry.split(self.colon)[0]
                 self._toc[uniq] = os.path.join(subdir, entry)
 
@@ -563,7 +595,8 @@ class _singlefileMailbox(Mailbox):
             new_file.close()
             os.remove(new_file.name)
             raise
-        new_file.close()
+        _sync_close(new_file)
+        # self._file is about to get replaced, so no need to sync.
         self._file.close()
         try:
             os.rename(new_file.name, self._path)
@@ -578,7 +611,7 @@ class _singlefileMailbox(Mailbox):
         self._toc = new_toc
         self._pending = False
         if self._locked:
-            _lock_file(new_file, dotlock=False)
+            _lock_file(self._file, dotlock=False)
 
     def _pre_mailbox_hook(self, f):
         """Called before writing the mailbox to file f."""
@@ -597,7 +630,7 @@ class _singlefileMailbox(Mailbox):
         self.flush()
         if self._locked:
             self.unlock()
-        self._file.close()
+        self._file.close()  # Sync has been done by self.flush() above.
 
     def _lookup(self, key=None):
         """Return (start, stop) or raise KeyError."""
@@ -787,7 +820,7 @@ class MH(Mailbox):
                 if self._locked:
                     _unlock_file(f)
         finally:
-            f.close()
+            _sync_close(f)
         return new_key
 
     def remove(self, key):
@@ -834,7 +867,7 @@ class MH(Mailbox):
                 if self._locked:
                     _unlock_file(f)
         finally:
-            f.close()
+            _sync_close(f)
 
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
@@ -921,7 +954,7 @@ class MH(Mailbox):
         """Unlock the mailbox if it is locked."""
         if self._locked:
             _unlock_file(self._file)
-            self._file.close()
+            _sync_close(self._file)
             del self._file
             self._locked = False
 
@@ -944,11 +977,13 @@ class MH(Mailbox):
 
     def get_folder(self, folder):
         """Return an MH instance for the named folder."""
-        return MH(os.path.join(self._path, folder), create=False)
+        return MH(os.path.join(self._path, folder),
+                  factory=self._factory, create=False)
 
     def add_folder(self, folder):
         """Create a folder and return an MH instance representing it."""
-        return MH(os.path.join(self._path, folder))
+        return MH(os.path.join(self._path, folder),
+                  factory=self._factory)
 
     def remove_folder(self, folder):
         """Delete the named folder, which must be empty."""
@@ -1016,7 +1051,7 @@ class MH(Mailbox):
                 else:
                     f.write('\n')
         finally:
-            f.close()
+            _sync_close(f)
 
     def pack(self):
         """Re-name messages to eliminate numbering gaps. Invalidates keys."""
@@ -1026,27 +1061,13 @@ class MH(Mailbox):
         for key in self.iterkeys():
             if key - 1 != prev:
                 changes.append((key, prev + 1))
-                f = open(os.path.join(self._path, str(key)), 'r+')
-                try:
-                    if self._locked:
-                        _lock_file(f)
-                    try:
-                        if hasattr(os, 'link'):
-                            os.link(os.path.join(self._path, str(key)),
-                                    os.path.join(self._path, str(prev + 1)))
-                            if sys.platform == 'os2emx':
-                                # cannot unlink an open file on OS/2
-                                f.close()
-                            os.unlink(os.path.join(self._path, str(key)))
-                        else:
-                            f.close()
-                            os.rename(os.path.join(self._path, str(key)),
-                                      os.path.join(self._path, str(prev + 1)))
-                    finally:
-                        if self._locked:
-                            _unlock_file(f)
-                finally:
-                    f.close()
+                if hasattr(os, 'link'):
+                    os.link(os.path.join(self._path, str(key)),
+                            os.path.join(self._path, str(prev + 1)))
+                    os.unlink(os.path.join(self._path, str(key)))
+                else:
+                    os.rename(os.path.join(self._path, str(key)),
+                              os.path.join(self._path, str(prev + 1)))
             prev += 1
         self._next_key = prev + 1
         if len(changes) == 0:
@@ -1870,6 +1891,16 @@ def _create_temporary(path):
                                               socket.gethostname(),
                                               os.getpid()))
 
+def _sync_flush(f):
+    """Ensure changes to file f are physically on disk."""
+    f.flush()
+    if hasattr(os, 'fsync'):
+        os.fsync(f.fileno())
+
+def _sync_close(f):
+    """Close file f, ensuring all changes are physically on disk."""
+    _sync_flush(f)
+    f.close()
 
 ## Start: classes from the original module (for backward compatibility).
 
@@ -1948,10 +1979,12 @@ class UnixMailbox(_Mailbox):
     # that the two characters preceding "From " are \n\n or the beginning of
     # the file.  Fixing this would require a more extensive rewrite than is
     # necessary.  For convenience, we've added a PortableUnixMailbox class
-    # which uses the more lenient _fromlinepattern regular expression.
+    # which does no checking of the format of the 'From' line.
 
-    _fromlinepattern = r"From \s*[^\s]+\s+\w\w\w\s+\w\w\w\s+\d?\d\s+" \
-                       r"\d?\d:\d\d(:\d\d)?(\s+[^\s]+)?\s+\d\d\d\d\s*$"
+    _fromlinepattern = (r"From \s*[^\s]+\s+\w\w\w\s+\w\w\w\s+\d?\d\s+"
+                        r"\d?\d:\d\d(:\d\d)?(\s+[^\s]+)?\s+\d\d\d\d\s*"
+                        r"[^\s]*\s*"
+                        "$")
     _regexp = None
 
     def _strict_isrealfromline(self, line):

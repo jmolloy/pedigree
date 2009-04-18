@@ -210,4 +210,8 @@
 #endif
 #endif
 
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+
 #endif /* __SYS_CONFIG_H__ */

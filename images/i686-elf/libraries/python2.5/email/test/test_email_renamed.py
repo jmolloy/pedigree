@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2006 Python Software Foundation
+# Copyright (C) 2001-2007 Python Software Foundation
 # Contact: email-sig@python.org
 # email package unit tests
 
@@ -1490,6 +1490,17 @@ counter to RFC 2822, there's no separating newline here
         self.failUnless(isinstance(bad.defects[0],
                                    errors.StartBoundaryNotFoundDefect))
 
+    def test_first_line_is_continuation_header(self):
+        eq = self.assertEqual
+        m = ' Line 1\nLine 2\nLine 3'
+        msg = email.message_from_string(m)
+        eq(msg.keys(), [])
+        eq(msg.get_payload(), 'Line 2\nLine 3')
+        eq(len(msg.defects), 1)
+        self.failUnless(isinstance(msg.defects[0],
+                                   errors.FirstHeaderLineIsContinuationDefect))
+        eq(msg.defects[0].line, ' Line 1\n')
+
 
 
 # Test RFC 2047 header encoding and decoding
@@ -1524,6 +1535,18 @@ class TestRFC2047(unittest.TestCase):
                 ('jumped over the', None), ('lazy dog', 'iso-8859-1')])
         hu = make_header(dh).__unicode__()
         eq(hu, u'The quick brown fox jumped over the lazy dog')
+
+    def test_rfc2047_missing_whitespace(self):
+        s = 'Sm=?ISO-8859-1?B?9g==?=rg=?ISO-8859-1?B?5Q==?=sbord'
+        dh = decode_header(s)
+        self.assertEqual(dh, [(s, None)])
+
+    def test_rfc2047_with_whitespace(self):
+        s = 'Sm =?ISO-8859-1?B?9g==?= rg =?ISO-8859-1?B?5Q==?= sbord'
+        dh = decode_header(s)
+        self.assertEqual(dh, [('Sm', None), ('\xf6', 'iso-8859-1'),
+                              ('rg', None), ('\xe5', 'iso-8859-1'),
+                              ('sbord', None)])
 
 
 
@@ -2170,6 +2193,12 @@ class TestMiscellaneous(TestEmailBase):
         self.assertEqual(utils.parseaddr(y), (a, b))
         # formataddr() quotes the name if there's a dot in it
         self.assertEqual(utils.formataddr((a, b)), y)
+
+    def test_multiline_from_comment(self):
+        x = """\
+Foo
+\tBar <foo@example.com>"""
+        self.assertEqual(utils.parseaddr(x), ('Foo Bar', 'foo@example.com'))
 
     def test_quote_dump(self):
         self.assertEqual(

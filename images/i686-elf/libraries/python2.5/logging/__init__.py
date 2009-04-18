@@ -1,4 +1,4 @@
-# Copyright 2001-2005 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2007 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -21,7 +21,7 @@ comp.lang.python, and influenced by Apache's log4j system.
 Should work under Python versions >= 1.5.2, except that source line
 information is not available unless 'sys._getframe()' is.
 
-Copyright (C) 2001-2004 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2007 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
@@ -41,8 +41,8 @@ except ImportError:
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "production"
-__version__ = "0.4.9.9"
-__date__    = "06 February 2006"
+__version__ = "0.5.0.2"
+__date__    = "16 February 2007"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
@@ -68,7 +68,7 @@ def currentframe():
     except:
         return sys.exc_traceback.tb_frame.f_back
 
-if hasattr(sys, '_getframe'): currentframe = sys._getframe
+if hasattr(sys, '_getframe'): currentframe = lambda: sys._getframe(3)
 # done filching
 
 # _srcfile is only used in conjunction with sys._getframe().
@@ -214,7 +214,7 @@ class LogRecord:
     information to be logged.
     """
     def __init__(self, name, level, pathname, lineno,
-                 msg, args, exc_info, func):
+                 msg, args, exc_info, func=None):
         """
         Initialize a logging record with interesting information.
         """
@@ -398,7 +398,7 @@ class Formatter:
         traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
         s = sio.getvalue()
         sio.close()
-        if s[-1] == "\n":
+        if s[-1:] == "\n":
             s = s[:-1]
         return s
 
@@ -425,7 +425,7 @@ class Formatter:
             if not record.exc_text:
                 record.exc_text = self.formatException(record.exc_info)
         if record.exc_text:
-            if s[-1] != "\n":
+            if s[-1:] != "\n":
                 s = s + "\n"
             s = s + record.exc_text
         return s
@@ -910,9 +910,12 @@ class Manager:
         Ensure that children of the placeholder ph are connected to the
         specified logger.
         """
-        #for c in ph.loggers:
+        name = alogger.name
+        namelen = len(name)
         for c in ph.loggerMap.keys():
-            if string.find(c.parent.name, alogger.name) <> 0:
+            #The if means ... if not c.parent.name.startswith(nm)
+            #if string.find(c.parent.name, nm) <> 0:
+            if c.parent.name[:namelen] != name:
                 alogger.parent = c.parent
                 c.parent = alogger
 
@@ -1244,7 +1247,7 @@ def basicConfig(**kwargs):
         hdlr.setFormatter(fmt)
         root.addHandler(hdlr)
         level = kwargs.get("level")
-        if level:
+        if level is not None:
             root.setLevel(level)
 
 #---------------------------------------------------------------------------

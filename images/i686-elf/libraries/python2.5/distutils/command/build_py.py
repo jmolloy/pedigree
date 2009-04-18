@@ -4,7 +4,7 @@ Implements the Distutils 'build_py' command."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_py.py 37828 2004-11-10 22:23:15Z loewis $"
+__revision__ = "$Id: build_py.py 55747 2007-06-02 18:53:07Z neal.norwitz $"
 
 import sys, string, os
 from types import *
@@ -114,7 +114,9 @@ class build_py (Command):
             build_dir = os.path.join(*([self.build_lib] + package.split('.')))
 
             # Length of path to strip from found files
-            plen = len(src_dir)+1
+            plen = 0
+            if src_dir:
+                plen = len(src_dir)+1
 
             # Strip directory from globbed filenames
             filenames = [

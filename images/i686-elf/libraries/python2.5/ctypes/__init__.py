@@ -5,7 +5,7 @@
 
 import os as _os, sys as _sys
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 
 from _ctypes import Union, Structure, Array
 from _ctypes import _Pointer
@@ -133,6 +133,18 @@ elif _os.name == "posix":
 from _ctypes import sizeof, byref, addressof, alignment, resize
 from _ctypes import _SimpleCData
 
+def _check_size(typ, typecode=None):
+    # Check if sizeof(ctypes_type) against struct.calcsize.  This
+    # should protect somewhat against a misconfigured libffi.
+    from struct import calcsize
+    if typecode is None:
+        # Most _type_ codes are the same as used in struct
+        typecode = typ._type_
+    actual, required = sizeof(typ), calcsize(typecode)
+    if actual != required:
+        raise SystemError("sizeof(%s) wrong: %d instead of %d" % \
+                          (typ, actual, required))
+
 class py_object(_SimpleCData):
     _type_ = "O"
     def __repr__(self):
@@ -140,18 +152,23 @@ class py_object(_SimpleCData):
             return super(py_object, self).__repr__()
         except ValueError:
             return "%s(<NULL>)" % type(self).__name__
+_check_size(py_object, "P")
 
 class c_short(_SimpleCData):
     _type_ = "h"
+_check_size(c_short)
 
 class c_ushort(_SimpleCData):
     _type_ = "H"
+_check_size(c_ushort)
 
 class c_long(_SimpleCData):
     _type_ = "l"
+_check_size(c_long)
 
 class c_ulong(_SimpleCData):
     _type_ = "L"
+_check_size(c_ulong)
 
 if _calcsize("i") == _calcsize("l"):
     # if int and long have the same size, make c_int an alias for c_long
@@ -160,15 +177,19 @@ if _calcsize("i") == _calcsize("l"):
 else:
     class c_int(_SimpleCData):
         _type_ = "i"
+    _check_size(c_int)
 
     class c_uint(_SimpleCData):
         _type_ = "I"
+    _check_size(c_uint)
 
 class c_float(_SimpleCData):
     _type_ = "f"
+_check_size(c_float)
 
 class c_double(_SimpleCData):
     _type_ = "d"
+_check_size(c_double)
 
 if _calcsize("l") == _calcsize("q"):
     # if long and long long have the same size, make c_longlong an alias for c_long
@@ -177,33 +198,48 @@ if _calcsize("l") == _calcsize("q"):
 else:
     class c_longlong(_SimpleCData):
         _type_ = "q"
+    _check_size(c_longlong)
 
     class c_ulonglong(_SimpleCData):
         _type_ = "Q"
     ##    def from_param(cls, val):
     ##        return ('d', float(val), val)
     ##    from_param = classmethod(from_param)
+    _check_size(c_ulonglong)
 
 class c_ubyte(_SimpleCData):
     _type_ = "B"
 c_ubyte.__ctype_le__ = c_ubyte.__ctype_be__ = c_ubyte
 # backward compatibility:
 ##c_uchar = c_ubyte
+_check_size(c_ubyte)
 
 class c_byte(_SimpleCData):
     _type_ = "b"
 c_byte.__ctype_le__ = c_byte.__ctype_be__ = c_byte
+_check_size(c_byte)
 
 class c_char(_SimpleCData):
     _type_ = "c"
 c_char.__ctype_le__ = c_char.__ctype_be__ = c_char
+_check_size(c_char)
 
 class c_char_p(_SimpleCData):
     _type_ = "z"
+    if _os.name == "nt":
+        def __repr__(self):
+            if not windll.kernel32.IsBadStringPtrA(self, -1):
+                return "%s(%r)" % (self.__class__.__name__, self.value)
+            return "%s(%s)" % (self.__class__.__name__, cast(self, c_void_p).value)
+    else:
+        def __repr__(self):
+            return "%s(%s)" % (self.__class__.__name__, cast(self, c_void_p).value)
+_check_size(c_char_p, "P")
 
 class c_void_p(_SimpleCData):
     _type_ = "P"
 c_voidp = c_void_p # backwards compatibility (to a bug)
+_check_size(c_void_p)
 
 # This cache maps types to pointers to them.
 _pointer_type_cache = {}
@@ -449,8 +485,8 @@ _cast = PYFUNCTYPE(py_object, c_void_p, py_object, py_object)(_cast_addr)
 def cast(obj, typ):
     return _cast(obj, obj, typ)
 
-_string_at = CFUNCTYPE(py_object, c_void_p, c_int)(_string_at_addr)
-def string_at(ptr, size=0):
+_string_at = PYFUNCTYPE(py_object, c_void_p, c_int)(_string_at_addr)
+def string_at(ptr, size=-1):
     """string_at(addr[, size]) -> string
 
     Return the string at addr."""
@@ -461,8 +497,8 @@ try:
 except ImportError:
     pass
 else:
-    _wstring_at = CFUNCTYPE(py_object, c_void_p, c_int)(_wstring_at_addr)
-    def wstring_at(ptr, size=0):
+    _wstring_at = PYFUNCTYPE(py_object, c_void_p, c_int)(_wstring_at_addr)
+    def wstring_at(ptr, size=-1):
         """wstring_at(addr[, size]) -> string
 
         Return the string at addr."""

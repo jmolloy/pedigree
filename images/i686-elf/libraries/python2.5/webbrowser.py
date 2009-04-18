@@ -1,7 +1,9 @@
 #! /usr/bin/env python
 """Interfaces for launching and remotely controlling Web browsers."""
+# Maintained by Georg Brandl.
 
 import os
+import shlex
 import sys
 import stat
 import subprocess
@@ -32,7 +34,11 @@ def get(using=None):
     for browser in alternatives:
         if '%s' in browser:
             # User gave us a command line, split it into name and args
-            return GenericBrowser(browser.split())
+            browser = shlex.split(browser)
+            if browser[-1] == '&':
+                return BackgroundBrowser(browser[:-1])
+            else:
+                return GenericBrowser(browser)
         else:
             # User gave us a browser name or path.
             try:
@@ -155,6 +161,7 @@ class GenericBrowser(BaseBrowser):
     def __init__(self, name):
         if isinstance(name, basestring):
             self.name = name
+            self.args = ["%s"]
         else:
             # name should be a list with arguments
             self.name = name[0]
@@ -165,7 +172,10 @@ class GenericBrowser(BaseBrowser):
         cmdline = [self.name] + [arg.replace("%s", url)
                                  for arg in self.args]
         try:
-            p = subprocess.Popen(cmdline, close_fds=True)
+            if sys.platform[:3] == 'win':
+                p = subprocess.Popen(cmdline)
+            else:
+                p = subprocess.Popen(cmdline, close_fds=True)
             return not p.wait()
         except OSError:
             return False
@@ -178,11 +188,14 @@ class BackgroundBrowser(GenericBrowser):
     def open(self, url, new=0, autoraise=1):
         cmdline = [self.name] + [arg.replace("%s", url)
                                  for arg in self.args]
-        setsid = getattr(os, 'setsid', None)
-        if not setsid:
-            setsid = getattr(os, 'setpgrp', None)
         try:
-            p = subprocess.Popen(cmdline, close_fds=True, preexec_fn=setsid)
+            if sys.platform[:3] == 'win':
+                p = subprocess.Popen(cmdline)
+            else:
+                setsid = getattr(os, 'setsid', None)
+                if not setsid:
+                    setsid = getattr(os, 'setpgrp', None)
+                p = subprocess.Popen(cmdline, close_fds=True, preexec_fn=setsid)
             return (p.poll() is None)
         except OSError:
             return False
@@ -441,7 +454,7 @@ def register_X_browsers():
 
         # if successful, register it
         if retncode is None and commd:
-            register("gnome", None, BackgroundBrowser(commd))
+            register("gnome", None, BackgroundBrowser(shlex.split(commd)))
 
     # First, the Mozilla/Netscape browsers
     for browser in ("mozilla-firefox", "firefox",

@@ -474,12 +474,22 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_condition(self, arg):
         # arg is breakpoint number and condition
         args = arg.split(' ', 1)
-        bpnum = int(args[0].strip())
+        try:
+            bpnum = int(args[0].strip())
+        except ValueError:
+            # something went wrong
+            print >>self.stdout, \
+                'Breakpoint index %r is not a number' % args[0]
+            return
         try:
             cond = args[1]
         except:
             cond = None
-        bp = bdb.Breakpoint.bpbynumber[bpnum]
+        try:
+            bp = bdb.Breakpoint.bpbynumber[bpnum]
+        except IndexError:
+            print >>self.stdout, 'Breakpoint index %r is not valid' % args[0]
+            return
         if bp:
             bp.cond = cond
             if not cond:
@@ -489,12 +499,22 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_ignore(self,arg):
         """arg is bp number followed by ignore count."""
         args = arg.split()
-        bpnum = int(args[0].strip())
+        try:
+            bpnum = int(args[0].strip())
+        except ValueError:
+            # something went wrong
+            print >>self.stdout, \
+                'Breakpoint index %r is not a number' % args[0]
+            return
         try:
             count = int(args[1].strip())
         except:
             count = 0
-        bp = bdb.Breakpoint.bpbynumber[bpnum]
+        try:
+            bp = bdb.Breakpoint.bpbynumber[bpnum]
+        except IndexError:
+            print >>self.stdout, 'Breakpoint index %r is not valid' % args[0]
+            return
         if bp:
             bp.ignore = count
             if count > 0:
@@ -621,7 +641,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         sys.settrace(None)
         globals = self.curframe.f_globals
         locals = self.curframe.f_locals
-        p = Pdb()
+        p = Pdb(self.completekey, self.stdin, self.stdout)
         p.prompt = "(%s) " % self.prompt.strip()
         print >>self.stdout, "ENTERING RECURSIVE DEBUGGER"
         sys.call_tracing(p.run, (arg, globals, locals))
@@ -1103,7 +1123,7 @@ see no sign that the breakpoint was reached.
         # Start with fresh empty copy of globals and locals and tell the script
         # that it's being run as __main__ to avoid scripts being able to access
         # the pdb.py namespace.
-        globals_ = {"__name__" : "__main__"}
+        globals_ = {"__name__" : "__main__", "__file__" : filename}
         locals_ = globals_
 
         # When bdb sets tracing, a number of call and line events happens

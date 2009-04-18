@@ -194,6 +194,9 @@ public:
 
     /// Signal handler flags
     uint32_t flags;
+    
+    /// Type - 0 = normal, 1 = SIG_DFL, 2 = SIG_IGN
+    int type;
   };
 
   /** Gets the pending signals list */
@@ -233,7 +236,7 @@ public:
       if((tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig))) != 0)
       {
         m_SignalHandlers.remove(sig);
-        // delete tmp;
+        delete tmp;
       }
 
       handler->sig = sig;

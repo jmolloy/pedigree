@@ -72,7 +72,7 @@ class scheduler:
 
     def empty(self):
         """Check whether the queue is empty."""
-        return not not self.queue
+        return not self.queue
 
     def run(self):
         """Execute events until the queue is empty.
@@ -114,4 +114,4 @@ class scheduler:
                     void = action(*argument)
                     delayfunc(0)   # Let other threads run
                 else:
-                    heapq.heappush(event)
+                    heapq.heappush(q, event)

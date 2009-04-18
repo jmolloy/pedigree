@@ -278,6 +278,59 @@ int posix_link(char *old, char *_new)
   return -1;
 }
 
+int posix_readlink(const char* path, char* buf, unsigned int bufsize)
+{
+  F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
+  
+  File* f = VFS::instance().find(String(path), GET_CWD());
+  if(!f)
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
+  
+  if(!f->isSymlink())
+  {
+    SYSCALL_ERROR(InvalidArgument);
+    return -1;
+  }
+  
+  if(buf == 0)
+    return 0;
+    
+  HugeStaticString str;
+  HugeStaticString tmp;
+  str.clear();
+  tmp.clear();
+  
+  // traverse symlink, if needed
+  while(f->isSymlink())
+    f = Symlink::fromFile(f)->followLink();
+  
+  if(f->getParent() != 0)
+    str = f->getName();
+  
+  while((f = f->getParent()))
+  {
+    // This feels a bit weird considering the while loop's subject...
+    if(f->getParent())
+    {
+      tmp = str;
+      str = f->getName();
+      str += "/";
+      str += tmp;
+    }
+  }
+  
+  tmp = str;
+  str = "/";
+  str += tmp;
+  
+  strcpy(buf, static_cast<const char*>(str));
+  
+  return str.length();
+}
+
 int posix_unlink(char *name)
 {
   F_NOTICE("unlink(" << name << ")");
@@ -286,6 +339,98 @@ int posix_unlink(char *name)
     return 0;
   else
     return -1; /// \todo SYSCALL_ERROR of some sort
+}
+
+int posix_rename(const char* source, const char* dst)
+{
+  F_NOTICE("rename(" << source << ", " << dst << ")");
+  
+  File* src = VFS::instance().find(String(source), GET_CWD());
+  File* dest = VFS::instance().find(String(dst), GET_CWD());
+  
+  if (!src)
+  {
+    SYSCALL_ERROR(DoesNotExist);
+    return -1;
+  }
+  
+  // traverse symlink
+  while(src->isSymlink())
+    src = Symlink::fromFile(src)->followLink();
+  
+  if(dest)
+  {
+    // traverse symlink
+    while(dest->isSymlink())
+      dest = Symlink::fromFile(dest)->followLink();
+    
+    if(dest->isDirectory() && !src->isDirectory())
+    {
+      SYSCALL_ERROR(FileExists);
+      return -1;
+    }
+    else if(!dest->isDirectory() && src->isDirectory())
+    {
+      SYSCALL_ERROR(NotADirectory);
+      return -1;
+    }
+  }
+  else
+  {
+    VFS::instance().createFile(String(dst), 0777, GET_CWD());
+    dest = VFS::instance().find(String(dst), GET_CWD());
+    if(!dest)
+      return -1;
+  }
+  
+  // Gay algorithm.
+  uint8_t* buf = new uint8_t[src->getSize()];
+  src->read(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
+  dest->truncate();
+  dest->write(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
+  VFS::instance().remove(String(source), GET_CWD());
+  
+  return 0;
+}
+
+char* posix_getcwd(char* buf, size_t maxlen)
+{
+  F_NOTICE("getcwd(" << maxlen << ")");
+  
+  if(buf == 0)
+    return 0;
+    
+  HugeStaticString str;
+  HugeStaticString tmp;
+  str.clear();
+  tmp.clear();
+  
+  File* curr = GET_CWD();
+  if(curr->getParent() != 0)
+    str = curr->getName();
+  
+  File* f = curr;
+  while((f = f->getParent()))
+  {
+    // This feels a bit weird considering the while loop's subject...
+    if(f->getParent())
+    {
+      tmp = str;
+      str = f->getName();
+      str += "/";
+      str += tmp;
+    }
+  }
+  
+  tmp = str;
+  str = "/";
+  str += tmp;
+  
+  NOTICE("cwd = " << static_cast<const char*>(str) << ", length = " << str.length() << ".");
+  
+  strcpy(buf, static_cast<const char*>(str));
+  
+  return buf;
 }
 
 int posix_stat(const char *name, struct stat *st)
@@ -330,6 +475,8 @@ int posix_stat(const char *name, struct stat *st)
   {
     mode = S_IFREG;
   }
+  
+  NOTICE("valid");
 
   uint32_t permissions = file->getPermissions();
   if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -499,11 +646,19 @@ int posix_opendir(const char *dir, dirent *ent)
   f->file = file;
   f->offset = 0;
   f->fd = fd;
-  fdMap.insert(fd, f);
 
 
   file = Directory::fromFile(file)->getChild(0);
-  ent->d_ino = file->getInode();
+  if(file)
+    ent->d_ino = file->getInode();
+  else
+  {
+    // fail! no children!
+    delete f;
+    return -1;
+  }
+  
+  fdMap.insert(fd, f);
 
   return static_cast<int>(fd);
 }
@@ -594,6 +749,11 @@ int posix_chdir(const char *path)
   if (dir)
   {
     Processor::information().getCurrentThread()->getParent()->setCwd(dir);
+    
+    char tmp[1024];
+    posix_getcwd(tmp, 1024);
+    NOTICE("new directory is " << tmp << ".");
+    
     return 0;
   }
   else

@@ -123,8 +123,6 @@ int posix_fork(ProcessorState state)
   // Register with the dynamic linker.
   DynamicLinker::instance().registerProcess(pProcess);
 
-  /// \todo All open descriptors need to be copied, not just stdin, stdout & stderr
-
   typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
   FdMap childFdMap = pProcess->getFdMap();
@@ -182,6 +180,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
 
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  pProcess->getSpaceAllocator() = MemoryAllocator();
+  pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
 
   // Ensure we only have one thread running (us).
   if (pProcess->getNumThreads() > 1)
@@ -595,7 +595,7 @@ int pedigree_login(int uid, const char *password)
 #define sigfillset(what)    (*(what) = ~(0), 0)
 #define sigismember(what,sig) (((*(what)) & (1<<(sig))) != 0)
 
-int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type)
 {
   NOTICE("sigaction(" << Dec << sig << Hex << ")");
 
@@ -610,7 +610,12 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     {
       oact->sa_flags = oldSignalHandler->flags;
       oact->sa_mask = oldSignalHandler->sigMask;
-      oact->sa_handler = reinterpret_cast<void (*)(int)>(oldSignalHandler->handlerLocation);
+      if(oldSignalHandler->type == 0)
+        oact->sa_handler = reinterpret_cast<void (*)(int)>(oldSignalHandler->handlerLocation);
+      else if(oldSignalHandler->type == 1)
+        oact->sa_handler = reinterpret_cast<void (*)(int)>(0);
+      else if(oldSignalHandler->type == 2)
+        oact->sa_handler = reinterpret_cast<void (*)(int)>(1);
     }
     else
       memset(oact, 0, sizeof(struct sigaction));
@@ -622,6 +627,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     sigHandler->handlerLocation = reinterpret_cast<uintptr_t>(act->sa_handler);
     sigHandler->sigMask = act->sa_mask;
     sigHandler->flags = act->sa_flags;
+    sigHandler->type = type;
     pProcess->setSignalHandler(sig, sigHandler);
   }
   else if(!oact)
@@ -630,7 +636,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     return -1;
   }
 
-  return -1;
+  return 0;
 }
 
 uintptr_t posix_signal(int sig, void* func)

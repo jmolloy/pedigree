@@ -59,6 +59,10 @@ int posix_unlink(char *name);
 int posix_stat(const char *file, struct stat *st);
 int posix_fstat(int fd, struct stat *st);
 int posix_lstat(char *file, struct stat *st);
+int posix_rename(const char* src, const char* dst);
+
+char* posix_getcwd(char* buf, size_t maxlen);
+int posix_readlink(const char* path, char* buf, unsigned int bufsize);
 
 // Returns DIR->fd, takes &dir->ent.
 int posix_opendir(const char *dir, dirent *ent);

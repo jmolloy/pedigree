@@ -5,7 +5,7 @@ Implements the Distutils 'register' command (register with the repository).
 
 # created 2002/10/21, Richard Jones
 
-__revision__ = "$Id: register.py 38752 2005-03-31 13:57:38Z doerwalter $"
+__revision__ = "$Id: register.py 56542 2007-07-25 16:24:08Z martin.v.loewis $"
 
 import sys, os, string, urllib2, getpass, urlparse
 import StringIO, ConfigParser
@@ -17,7 +17,7 @@ class register(Command):
 
     description = ("register the distribution with the Python package index")
 
-    DEFAULT_REPOSITORY = 'http://www.python.org/pypi'
+    DEFAULT_REPOSITORY = 'http://pypi.python.org/pypi'
 
     user_options = [
         ('repository=', 'r',
@@ -251,7 +251,7 @@ Your selection [default 1]: ''',
         body = StringIO.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
-            if type(value) != type([]):
+            if type(value) not in (type([]), type( () )):
                 value = [value]
             for value in value:
                 value = unicode(value).encode("utf-8")

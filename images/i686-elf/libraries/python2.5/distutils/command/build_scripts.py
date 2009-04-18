@@ -4,7 +4,7 @@ Implements the Distutils 'build_scripts' command."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_scripts.py 37828 2004-11-10 22:23:15Z loewis $"
+__revision__ = "$Id: build_scripts.py 59668 2008-01-02 18:59:36Z guido.van.rossum $"
 
 import sys, os, re
 from stat import ST_MODE
@@ -111,7 +111,8 @@ class build_scripts (Command):
                 if f:
                     f.close()
             else:
-                f.close()
+                if f:
+                    f.close()
                 self.copy_file(script, outfile)
 
         if os.name == 'posix':

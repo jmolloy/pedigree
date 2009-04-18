@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/termios.h>
+#include <sys/signal.h>
 
 #include <poll.h>
 

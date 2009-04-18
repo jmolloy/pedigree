@@ -23,7 +23,7 @@ and opendir), and leave all pathname manipulation to os.path
 
 #'
 
-import sys
+import sys, errno
 
 _names = sys.builtin_module_names
 
@@ -160,7 +160,12 @@ def makedirs(name, mode=0777):
     if not tail:
         head, tail = path.split(head)
     if head and tail and not path.exists(head):
-        makedirs(head, mode)
+        try:
+            makedirs(head, mode)
+        except OSError, e:
+            # be happy if someone already created the path
+            if e.errno != errno.EEXIST:
+                raise
         if tail == curdir:           # xxx/newdir/. exists if xxx/newdir exists
             return
     mkdir(name, mode)
@@ -258,8 +263,9 @@ def walk(top, topdown=True, onerror=None):
 
     Example:
 
+    import os
     from os.path import join, getsize
-    for root, dirs, files in walk('python/Lib/email'):
+    for root, dirs, files in os.walk('python/Lib/email'):
         print root, "consumes",
         print sum([getsize(join(root, name)) for name in files]),
         print "bytes in", len(files), "non-directory files"
@@ -359,8 +365,6 @@ def execvpe(file, args, env):
 __all__.extend(["execl","execle","execlp","execlpe","execvp","execvpe"])
 
 def _execvpe(file, args, env=None):
-    from errno import ENOENT, ENOTDIR
-
     if env is not None:
         func = execve
         argrest = (args, env)
@@ -386,7 +390,7 @@ def _execvpe(file, args, env=None):
             func(fullname, *argrest)
         except error, e:
             tb = sys.exc_info()[2]
-            if (e.errno != ENOENT and e.errno != ENOTDIR
+            if (e.errno != errno.ENOENT and e.errno != errno.ENOTDIR
                 and saved_exc is None):
                 saved_exc = e
                 saved_tb = tb

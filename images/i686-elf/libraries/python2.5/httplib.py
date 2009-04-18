@@ -571,6 +571,10 @@ class HTTPResponse:
         ### note: we shouldn't have any trailers!
         while True:
             line = self.fp.readline()
+            if not line:
+                # a vanishingly small number of sites EOF without
+                # sending the trailer
+                break
             if line == '\r\n':
                 break
 
@@ -926,8 +930,8 @@ class HTTPConnection:
         self.__state = _CS_IDLE
 
         if response.will_close:
-            # Pass the socket to the response
-            self.sock = None
+            # this effectively passes the connection to the response
+            self.close()
         else:
             # remember this, so we can tell when it is complete
             self.__response = response

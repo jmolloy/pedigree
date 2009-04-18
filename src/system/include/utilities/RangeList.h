@@ -79,9 +79,10 @@ class RangeList
     /** Get a range at a specific index */
     Range getRange(size_t index) const;
 
+    RangeList(const RangeList & l) : m_List(l.m_List) {};
+    RangeList &operator = (const RangeList & l) {m_List = l.m_List;};
+    
   private:
-    RangeList(const RangeList &);
-    RangeList &operator = (const RangeList &);
 
     /** List of ranges */
     List<Range*> m_List;

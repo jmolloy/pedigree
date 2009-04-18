@@ -27,7 +27,7 @@ to a file named "<name>.html".
 
 Module docs for core modules are assumed to be in
 
-    http://www.python.org/doc/current/lib/
+    http://www.python.org/doc/<version>/lib/
 
 This can be overridden by setting the PYTHONDOCS environment variable
 to a different URL or to a local directory containing the Library
@@ -37,7 +37,7 @@ Reference Manual pages.
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
 __date__ = "26 February 2001"
 
-__version__ = "$Revision: 50881 $"
+__version__ = "$Revision: 67693 $"
 __credits__ = """Guido van Rossum, for an excellent programming language.
 Tommy Burnette, the original creator of manpy.
 Paul Prescod, for all his work on onlinehelp.
@@ -345,8 +345,9 @@ class Doc:
         except TypeError:
             file = '(built-in)'
 
+        version = '.'.join(str(v) for v in sys.version_info[:3])
         docloc = os.environ.get("PYTHONDOCS",
-                                "http://www.python.org/doc/current/lib")
+                                "http://www.python.org/doc/%s/lib" % version)
         basedir = os.path.join(sys.exec_prefix, "lib",
                                "python"+sys.version[0:3])
         if (isinstance(object, type(os)) and
@@ -855,7 +856,7 @@ class HTMLDoc(Doc):
                 if imclass is not cl:
                     note = ' from ' + self.classlink(imclass, mod)
             else:
-                if object.im_self:
+                if object.im_self is not None:
                     note = ' method of %s instance' % self.classlink(
                         object.im_self.__class__, mod)
                 else:
@@ -1226,7 +1227,7 @@ class TextDoc(Doc):
                 if imclass is not cl:
                     note = ' from ' + classname(imclass, mod)
             else:
-                if object.im_self:
+                if object.im_self is not None:
                     note = ' method of %s instance' % classname(
                         object.im_self.__class__, mod)
                 else:
@@ -1504,6 +1505,7 @@ def writedocs(dir, pkgpath='', done=None):
 class Helper:
     keywords = {
         'and': 'BOOLEAN',
+        'as': 'with',
         'assert': ('ref/assert', ''),
         'break': ('ref/break', 'while for'),
         'class': ('ref/class', 'CLASSES SPECIALMETHODS'),
@@ -1531,6 +1533,7 @@ class Helper:
         'return': ('ref/return', 'FUNCTIONS'),
         'try': ('ref/try', 'EXCEPTIONS'),
         'while': ('ref/while', 'break continue if TRUTHVALUE'),
+        'with': ('ref/with', 'CONTEXTMANAGERS EXCEPTIONS yield'),
         'yield': ('ref/yield', ''),
     }
 
@@ -1612,6 +1615,7 @@ class Helper:
         'LOOPING': ('ref/compound', 'for while break continue'),
         'TRUTHVALUE': ('lib/truth', 'if while and or not BASICMETHODS'),
         'DEBUGGING': ('lib/module-pdb', 'pdb'),
+        'CONTEXTMANAGERS': ('ref/context-managers', 'with'),
     }
 
     def __init__(self, input, output):
@@ -1737,6 +1741,9 @@ Here is a list of available topics.  Enter any topic name to get more help.
 Sorry, topic and keyword documentation is not available because the Python
 HTML documentation files could not be found.  If you have installed them,
 please set the environment variable PYTHONDOCS to indicate their location.
+
+On the Microsoft Windows operating system, the files can be built by
+running "hh -decompile . PythonNN.chm" in the C:\PythonNN\Doc> directory.
 ''')
             return
         target = self.topics.get(topic, self.keywords.get(topic))

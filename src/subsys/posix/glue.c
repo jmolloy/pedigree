@@ -63,7 +63,7 @@ struct timeval {
   unsigned int tv_usec;
 };
 
-struct timezone {
+struct timezone_type {
   int tz_minuteswest;
   int tz_dsttime;
 };
@@ -116,15 +116,25 @@ struct in_addr
 
 struct sigaction 
 {
-	void (*sa_handler)(int);
-	unsigned long sa_mask;
-	int sa_flags;
+  int sa_flags;
+  unsigned long sa_mask;
+  _sig_func_ptr sa_handler;
 };
+
+char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
+int daylight = 0;
+long timezone = 0;
+int altzone = 0;
 
 int ftruncate(int a, int b)
 {
   STUBBED("ftruncate");
   return -1;
+}
+
+char* getcwd(char *buf, unsigned long size)
+{
+  return syscall2(POSIX_GETCWD, (int) buf, (int) size);
 }
 
 int mkdir(const char *p, int mode)
@@ -152,6 +162,11 @@ int fork()
   return syscall0(POSIX_FORK);
 }
 
+int vfork()
+{
+  return fork();
+}
+
 int fstat(int file, struct stat *st)
 {
   return syscall2(POSIX_FSTAT, file, st);
@@ -166,11 +181,6 @@ int _isatty(int file)
 {
   STUBBED("_isatty");
   return 1;
-}
-
-int kill(int pid, int sig)
-{
-  return syscall2(POSIX_KILL, pid, sig);
 }
 
 int link(char *old, char *_new)
@@ -286,6 +296,11 @@ int closedir(DIR *dir)
   return 0;
 }
 
+int rename(const char *old, const char *new)
+{
+  return syscall2(POSIX_RENAME, (int) old, (int) new);
+}
+
 int tcgetattr(int fd, void *p)
 {
   return syscall2(POSIX_TCGETATTR, fd, p);
@@ -332,7 +347,7 @@ int tcdrain(int fd)
   return -1;
 }
 
-int gettimeofday(struct timeval *tv, struct timezone *tz)
+int gettimeofday(struct timeval *tv, struct timezone_type *tz)
 {
   syscall2(POSIX_GETTIMEOFDAY, (int)tv, (int)tz);
 
@@ -943,6 +958,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
   return 0;
 }
 
+/*
 void* popen(const char *command, const char *mode)
 {
   STUBBED("popen");
@@ -954,11 +970,11 @@ int pclose(void* stream)
   STUBBED("pclose");
   return 0;
 }
+*/
 
 int readlink(const char* path, char* buf, unsigned int bufsize)
 {
-  STUBBED("readlink");
-  return -1;
+  return syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
 }
 
 int ftime(struct timeb *tp)
@@ -1054,8 +1070,22 @@ _sig_func_ptr sigs[] = {
                           sigusr2
                          };
 
+static int bTablesInit = 0;
+
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
+  // setup the default signal handlers, if needed
+  if(bTablesInit == 0)
+  {
+    bTablesInit = 1;
+    struct sigaction in, out;
+    in.sa_handler = (_sig_func_ptr) 0;
+    
+    int z;
+    for(z = 0; z < 32; z++)
+      sigaction(z, &in, &out);
+  }
+  
   if(sig > 32)
   {
     errno = EINVAL;
@@ -1070,6 +1100,8 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
     errno = EINVAL;
     return (_sig_func_ptr) -1;
   }
+  
+  int type = 0;
 
   struct sigaction* tmpAct = 0;
   if(act)
@@ -1082,11 +1114,13 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
     {
       // SIG_DFL: set the default handler
       tmpAct->sa_handler = sigs[sig];
+      type = 1;
     }
     else if(funcAddr == 1)
     {
       // SIG_IGN: set the ignore handler
       tmpAct->sa_handler = sigign;
+      type = 2;
     }
     else if(funcAddr == -1)
     {
@@ -1095,7 +1129,7 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
     }
   }
 
-  int ret = syscall3(POSIX_SIGACTION, sig, (int) tmpAct, (int) oact);
+  int ret = syscall4(POSIX_SIGACTION, sig, (int) tmpAct, (int) oact, type);
 
   if(act)
     free(tmpAct);
@@ -1126,6 +1160,18 @@ _sig_func_ptr signal(int s, _sig_func_ptr func)
 
 int raise(int sig)
 {
+  // setup the default signal handlers, if needed
+  if(bTablesInit == 0)
+  {
+    bTablesInit = 1;
+    struct sigaction in, out;
+    in.sa_handler = (_sig_func_ptr) 0;
+    
+    int z;
+    for(z = 0; z < 32; z++)
+      sigaction(z, &in, &out);
+  }
+  
   return syscall1(POSIX_RAISE, sig);
 }
 
@@ -1138,6 +1184,23 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 }
 
 #endif
+
+int kill(int pid, int sig)
+{
+  // setup the default signal handlers, if needed
+  if(bTablesInit == 0)
+  {
+    bTablesInit = 1;
+    struct sigaction in, out;
+    in.sa_handler = (_sig_func_ptr) 0;
+    
+    int z;
+    for(z = 0; z < 32; z++)
+      sigaction(z, &in, &out);
+  }
+  
+  return syscall2(POSIX_KILL, pid, sig);
+}
 
 int sigpending(long* set)
 {
