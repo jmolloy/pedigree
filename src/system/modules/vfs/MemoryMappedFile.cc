@@ -36,7 +36,7 @@ MemoryMappedFile::~MemoryMappedFile()
 {
 }
 
-bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess=0)
+bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 {
     if (!pProcess)
         pProcess = Processor::information().getCurrentThread()->getParent();
@@ -56,7 +56,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess=0)
     Spinlock spinlock;
     spinlock.acquire();
 
-    VirtualAddressSpace *va = pProcess->getVirtualAddressSpace();
+    VirtualAddressSpace *va = pProcess->getAddressSpace();
     
     VirtualAddressSpace &oldva = Processor::information().getVirtualAddressSpace();
 
@@ -84,6 +84,28 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess=0)
     spinlock.release();
 
     return true;
+}
+
+void MemoryMappedFile::unload(uintptr_t address)
+{
+    // Create a spinlock as an easy way of disabling interrupts.
+    Spinlock spinlock;
+    spinlock.acquire();
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    
+    // Remove all the V->P mappings we currently posess.
+    for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
+         it != m_Mappings.end();
+         it++)
+    {
+        uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
+
+        if (va.isMapped(reinterpret_cast<void*>(v)))
+            va.unmap(reinterpret_cast<void*>(v));
+    }
+
+    spinlock.release();
 }
 
 void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
@@ -137,6 +159,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
 MemoryMappedFileManager::MemoryMappedFileManager() :
     m_MmFileLists(), m_Cache(), m_CacheLock()
 {
+    PageFaultHandler::instance().registerHandler(this);
 }
 
 MemoryMappedFileManager::~MemoryMappedFileManager()
@@ -212,6 +235,7 @@ void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
     {
         if ( (*it)->file == pMmFile )
         {
+            (*it)->file->unload( (*it)->offset );
             (*it)->file->decreaseRefCount();
             delete *it;
             pMmFileList->erase(it);
@@ -269,6 +293,7 @@ void MemoryMappedFileManager::unmapAll()
          it != pMmFileList->end();
          it = pMmFileList->begin())
     {
+        (*it)->file->unload( (*it)->offset );
         (*it)->file->decreaseRefCount();
         delete *it;
         pMmFileList->erase(it);

@@ -30,15 +30,13 @@
 #include <machine/Machine.h>
 #include <linker/DynamicLinker.h>
 #include <panic.h>
-#include <image/ProcessImage.h>
+
 #include "../../kernel/core/BootIO.h"
 
 #include <network/NetworkStack.h>
 #include <network/RoutingTable.h>
 
 #include <users/UserManager.h>
-
-#include <image/ProcessImageCacheManager.h>
 
 extern BootIO bootIO;
 
@@ -178,19 +176,19 @@ void init_stage2()
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  static Elf *initElf;
-  uintptr_t loadBase;
+//  static Elf *initElf;
+//  uintptr_t loadBase;
 
-  initElf.create(buffer, initProg->getSize());
-  initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
+//  initElf.create(buffer, initProg->getSize());
+//  initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
 
 //  static ElfImage image(reinterpret_cast<uintptr_t>(buffer), initProg->getSize(), 0);
 //  initElf = image.getElf();
 //  image.load();
-  NOTICE("Elf created.");
-  DynamicLinker::instance().registerElf(&initElf);
-  NOTICE("Elf registered");
- uintptr_t iter = 0;
+//  NOTICE("Elf created.");
+//  DynamicLinker::instance().registerElf(&initElf);
+//  NOTICE("Elf registered");
+/* uintptr_t iter = 0;
  List<char*> neededLibraries = initElf.neededLibraries();
  for (List<char*>::Iterator it = neededLibraries.begin();
       it != neededLibraries.end();
@@ -203,10 +201,21 @@ void init_stage2()
      FATAL("Init program failed to load!");
      return;
    }
- }
- NOTICE("Fin");
-  initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
-  DynamicLinker::instance().initialiseElf(&initElf);
+   }*/
+  //NOTICE("Fin");
+  //initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
+  //DynamicLinker::instance().initialiseElf(&initElf);
+
+  NOTICE("Making dynamic linker");
+  DynamicLinker *pLinker = new DynamicLinker();
+  NOTICE("Setting dynamic linker");
+  pProcess->setLinker(pLinker);
+  NOTICE("Loading progrm");
+  if (!pLinker->loadProgram(initProg))
+  {
+      FATAL("Init program failed to load!");
+  }
+
   NOTICE("initialised");
 
 //   ProcessImage *pProcessImage = ProcessImageCacheManager::instance().getImage(initProg);
@@ -226,7 +235,7 @@ void init_stage2()
   }
 
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pProcessImage->getMainElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+  Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
   Processor::setInterrupts(true);
   Scheduler::instance().yield();

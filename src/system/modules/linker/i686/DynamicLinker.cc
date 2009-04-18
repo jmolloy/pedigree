@@ -31,14 +31,14 @@ extern "C" void resolveSymbol(void);
 void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 {
   // Value == loadBase. If this changes, add an extra parameter to get loadBase here!
-
+    NOTICE("Value: " << value);
   uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable()+value);
   if (reinterpret_cast<uintptr_t>(got) == value)
   {
     WARNING("DynamicLinker: Global offset table not found!");
     return;
   }
-
+  NOTICE("got: " << (uintptr_t)got);
   got++;                     // Go to GOT+4
   *got = value&0xFFFFFFFF;   // Library ID
   got++;                     // Got to GOT+8
@@ -81,7 +81,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
     }
 
     // Memcpy over the resolve function into the user address space.
-    // resolveSymbol is an ASM function, defined in ./asm-$ARCH.s
+    // resolveSymbol is an ASM function, defined in ./asm-i686.s
     memcpy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
 
     *got = resolveLocation;
@@ -91,34 +91,27 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 
 uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
-  // Find the correct ELF to patch.
-  Elf *pElf = 0;
-  Elf *pOrigElf = 0;
-  uintptr_t loadBase = 0;
+    // Find the correct ELF to patch.
+    Elf *pElf = 0;
+    uintptr_t loadBase = libraryId;
 
-  pOrigElf = m_ProcessElfs.lookup(Processor::information().getCurrentThread()->getParent());
-
-  if (libraryId == 0)
-    pElf = pOrigElf;
-  else
-  {
-    // Library search.
-    // Grab the list of loaded shared objects for this process.
-    List<SharedObject*> *pList = m_ProcessObjects.lookup(Processor::information().getCurrentThread()->getParent());
-
-    // Look through the shared object list.
-    for (List<SharedObject*>::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
+    if (libraryId == 0)
+        pElf = m_pProgramElf;
+    else
     {
-      pElf = findElf(libraryId, *it, loadBase);
-      if (pElf != 0) break;
+        SharedObject *pSo = m_Objects.lookup(libraryId);
+        if (pSo) pElf = pSo->elf;
     }
-  }
 
-  uintptr_t result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase);
-  if(result == 0)
-    result = pElf->applySpecificRelocation(symIdx, pOrigElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
+    if (!pElf)
+    {
+        ERROR("DynamicLinker::resolvePltSymbol: No library found for id `" << Hex << libraryId << "'");
+        return 0;
+    }
 
-  return result;
+    uintptr_t result = pElf->applySpecificRelocation(symIdx, m_pProgramElf->getSymbolTable(), loadBase);
+    if(result == 0)
+        result = pElf->applySpecificRelocation(symIdx, m_pProgramElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
+
+    return result;
 }

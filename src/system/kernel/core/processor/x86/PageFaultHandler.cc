@@ -85,7 +85,6 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   {
     if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
     {
-      NOTICE("Page fault at " << Hex << cr2 << " : handled.");
       return;
     }
   }

@@ -18,6 +18,7 @@
 #include <panic.h>
 #include <utilities/utility.h>
 #include <processor/MemoryRegion.h>
+#include <processor/Processor.h>
 #include "PhysicalMemoryManager.h"
 #include <LockGuard.h>
 

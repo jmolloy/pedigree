@@ -53,7 +53,7 @@ Tree<void*,void*>::Tree(const Tree &x) :
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
   
-  m_Begin = new IteratorNode(root, 0);
+  m_Begin = new IteratorNode(root, 0, nItems);
 }
 
 Tree<void*,void*> &Tree<void*,void*>::operator =(const Tree &x)
@@ -62,7 +62,7 @@ Tree<void*,void*> &Tree<void*,void*>::operator =(const Tree &x)
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
   
-  m_Begin = new IteratorNode(root, 0);
+  m_Begin = new IteratorNode(root, 0, nItems);
   
   return *this;
 }
@@ -90,7 +90,7 @@ void Tree<void*,void*>::insert(void *key, void *value)
   {
     root = n; // We are the root node.
     
-    m_Begin = new IteratorNode(root, 0);
+    m_Begin = new IteratorNode(root, 0, nItems);
   }
   else
   {

@@ -54,7 +54,11 @@ public:
 
     /** Loads this file.
         \param address Load at the given address, or if address is 0, finds some free space and returns the start address in address. */
-    bool load(uintptr_t &address);
+    bool load(uintptr_t &address, Process *pProcess=0);
+
+    /** Unloads this file.
+        \note Should ONLY be called from MemoryMappedFileManager! */
+    void unload(uintptr_t address);
 
     /** Trap occurred. Should be called only from MemoryMappedFileManager!
         \param address The address of the fault.

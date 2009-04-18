@@ -24,6 +24,7 @@
 #include <utilities/List.h>
 #include <processor/state.h>
 #include <vfs/File.h>
+#include <vfs/MemoryMappedFile.h>
 
 /** The dynamic linker tracks instances of shared objects through
     an address space. */
@@ -35,8 +36,8 @@ public:
 
     ~DynamicLinker();
 
-    /** Creates a new DynamicLinker from another. Copies  */
-    DynamicLinker(DynamicLinker &);
+    /** Creates a new DynamicLinker from another. Copies all mappings. */
+    DynamicLinker(DynamicLinker &other);
 
     /** Loads the main program. This must be an ELF file, and the
         linker will also load all library dependencies. If any of
@@ -53,30 +54,42 @@ public:
     /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
     static uintptr_t resolvePlt(SyscallState &state);
 
+    /** Called when a trap is handled by the DLTrapHandler.
+        \param address Address of the trap.
+        \return True if the trap was handled successfully. */
+    bool trap(uintptr_t address);
+
+    /** Returns the program ELF. */
+    Elf *getProgramElf()
+        {return m_pProgramElf;}
+
 private:
-    /** As is operator= */
+    /** Operator= is unused and is therefore private. */
     DynamicLinker &operator=(const DynamicLinker&);
 
     /** A shared object/library. */
     struct SharedObject
     {
-        SharedObject(Elf *e, MemoryMappedFile *f, uintptr_t a) :
-            elf(e), file(f), address(a)
+        SharedObject(Elf *e, MemoryMappedFile *f, uintptr_t b, uintptr_t a, size_t s) :
+            elf(e), file(f), buffer(b), address(a), size(s)
         {}
         Elf                 *elf;
         MemoryMappedFile    *file;
+        uintptr_t           buffer;
         uintptr_t           address;
+        size_t              size;
     };
 
-    uintptr_t resolveInLibrary(const char *sym, SharedObject *obj);
-
     uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
-    Elf *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);
 
     void initPlt(Elf *pElf, uintptr_t value);
 
     Elf *m_pProgramElf;
-    List<SharedObject*> m_Objects;
+    uintptr_t m_ProgramStart;
+    size_t m_ProgramSize;
+    uintptr_t m_ProgramBuffer;
+
+    Tree<uintptr_t, SharedObject*> m_Objects;
 };
 
 /** Tiny class for dispatching MemoryTrap events to DynamicLinkers.
@@ -88,7 +101,18 @@ public:
     /** Retrieve the singleton DLTrapHandler instance. */
     static DLTrapHandler &instance() {return m_Instance;}
 
-    
+    //
+    // MemoryTrapHandler interface.
+    //
+    virtual bool trap(uintptr_t address, bool bIsWrite);
+
+private:
+    /** Private constructor - does nothing. */
+    DLTrapHandler();
+    /** Private destructor - does nothing, not expected to be called. */
+    ~DLTrapHandler();
+
+    static DLTrapHandler m_Instance;
 };
 
 #endif
