@@ -161,7 +161,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_GETGID:
       return posix_getgid();
     case POSIX_SIGACTION:
-      return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3));
+      return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3), static_cast<int>(p4));
     case POSIX_SIGNAL:
       return posix_signal(static_cast<int>(p1), reinterpret_cast<void*>(p2));
     case POSIX_RAISE:
@@ -182,6 +182,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_dlclose(reinterpret_cast<void*>(p1));
     case POSIX_POLL:
       return posix_poll(reinterpret_cast<pollfd*>(p1), static_cast<unsigned int>(p2), static_cast<int>(p3));
+    case POSIX_RENAME:
+      return posix_rename(reinterpret_cast<const char*>(p1), reinterpret_cast<const char*>(p2));
+    case POSIX_GETCWD:
+      return reinterpret_cast<uintptr_t>(posix_getcwd(reinterpret_cast<char*>(p1), static_cast<size_t>(p2)));
+    case POSIX_READLINK:
+      return posix_readlink(reinterpret_cast<const char*>(p1), reinterpret_cast<char*>(p2), static_cast<unsigned int>(p3));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;

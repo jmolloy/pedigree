@@ -35,9 +35,11 @@ my $libgcc = shift @ARGV;
 `cd /tmp/pedigree-tmp; ar cru libc.a *.o`;
 `cp /tmp/pedigree-tmp/libc.a ./libc.a`;
 `rm /tmp/pedigree-tmp/lib_a-init.o`; # We don't want this in the .so - it contains shite that references hidden symbols that is never used.
-`rm /tmp/pedigree-tmp/lib_a-popen.o`; # TMP - implement the functions this requires!
+`rm /tmp/pedigree-tmp/lib_a-popen.o`;
 `rm /tmp/pedigree-tmp/lib_a-getpwent.o`; # We implement this functionality.
 `rm /tmp/pedigree-tmp/lib_a-signal.o`; # We implement signals
+`rm /tmp/pedigree-tmp/lib_a-getcwd.o`;
+`rm /tmp/pedigree-tmp/lib_a-rename.o`;
 `$ld -nostdlib -shared  -Wl,-shared -Wl,-soname,libc.so -L$libgcc -o libc.so /tmp/pedigree-tmp/*.o -lgcc`;
 `rm -rf /tmp/pedigree-tmp/*`;
 `cp $libm /tmp/pedigree-tmp/libm.a`;

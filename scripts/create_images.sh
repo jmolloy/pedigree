@@ -107,7 +107,7 @@ if sudo which losetup >/dev/null 2>&1; then
   OFF=$HDOFF
   init
 
-  sudo touch $MOUNTPT/.pedigree-root
+  # sudo touch $MOUNTPT/.pedigree-root
 
   OLD=$PWD
   

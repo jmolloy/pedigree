@@ -161,6 +161,11 @@ public:
   {
     return m_Gid;
   }
+  
+  File *getParent()
+  {
+    return m_pParent;
+  }
 
 protected:
   String m_Name;

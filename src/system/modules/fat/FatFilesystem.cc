@@ -629,22 +629,16 @@ void* FatFilesystem::readDirectoryPortion(uint32_t clus)
       uint32_t sec = m_RootDir.sector;
       uint32_t sz = m_RootDirCount * m_Superblock.BPB_BytsPerSec;
 
-      NOTICE("#------------------------------------------------#");
+      /// \note This is a check that shouldn't be required - yet somehow this does not work...
 
       dirBuffer = new uint8_t[sz];
-      NOTICE("Reading sector " << sec << ".");
       readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
-      NOTICE("First byte is " << dirBuffer[0] << ".");
       char c = dirBuffer[0];
-      
-      NOTICE("Reading sector " << sec << ".");
       readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
-      NOTICE("First byte is " << dirBuffer[0] << ".");
-      
-      NOTICE("!------------------------------------------------!");
       
       if(dirBuffer[0] != c)
-        FATAL("Cache dead");
+        ERROR("Cache dead");
+//        FATAL("Cache dead");
       
       secMethod = true;
     }

@@ -60,7 +60,7 @@ Process::Process(Process *pParent) :
     size_t key = reinterpret_cast<size_t>(it.key());
     void *value = it.value();
     
-    SignalHandler *newSig = new SignalHandler(reinterpret_cast<SignalHandler *>(value));
+    SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
     myHandlers.insert(key, reinterpret_cast<void *>(newSig));
   }
 }

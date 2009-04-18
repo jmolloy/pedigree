@@ -83,6 +83,12 @@
 
 #define POSIX_POLL       56
 
+#define POSIX_RENAME     57
+
+#define POSIX_GETCWD     58
+
+#define POSIX_READLINK   59
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101
