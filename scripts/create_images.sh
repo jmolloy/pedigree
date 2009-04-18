@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, Jšrg PfŠhler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -19,54 +19,41 @@ OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
 SRCDIR=.
-MOUNTPT="/tmp/$$"
 HDFILES=$@
 
 init() {
-    DEV=`sudo losetup -j $IMG | cut -f1 -d:`
-    if test "x$DEV" = x ; then
-        DEV=`sudo losetup --verbose -f -o $OFF $IMG | \
-             awk '/\/dev\/loop/{print $4}'`
-    fi
-    mount | grep $DEV > /dev/null || {
-        sudo mount $DEV $MOUNTPT
-    }
+    mkdir -p $MOUNTPT
+    sudo mount -o loop,offset=$OFF $IMG $MOUNTPT
 }
 
 fini() {
-  if which losetup >/dev/null 2>&1; then
-    DEV=`sudo losetup -j $IMG | cut -f1 -d:`
-    if test "x$DEV" = x ; then
-        return 0
-    fi
-    mount | grep $DEV > /dev/null && {
-        sudo umount $DEV
-    }
-    sudo losetup -d $DEV
-  fi
+    sudo umount $MOUNTPT
+    rm -rf $MOUNTPT
 }
 
-trap fini EXIT
 
 if sudo which losetup >/dev/null 2>&1; then
-  mkdir -p $MOUNTPT
-
+  MOUNTPT=floppytmp
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
 
-  init
+  init;
 
   # Floppy mounted - transfer files.
   sudo cp $SRCDIR/src/system/kernel/kernel $MOUNTPT/kernel
   sudo cp $SRCDIR/initrd.tar $MOUNTPT/initrd.tar
 
   # Unmount floppy.
-  fini
+  fini;
+
+  # ----------------
 
   # Mount HDD (ext2)
   tar -xzf ../images/hdd_ext2.tar.gz
   IMG=$HDIMG
   OFF=$HDOFF
-  init
+  MOUNTPT=hddtmp
+  
+  init;
 
   sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
@@ -100,12 +87,15 @@ if sudo which losetup >/dev/null 2>&1; then
 
   fini;
 
+  # ----------------
+
   # Mount HDD (fat16)
   tar -xzf ../images/hdd_fat16.tar.gz
   #IMG=hdd_16h_63spt_100c_fat16.img
   IMG=hdd_fat16.img
   OFF=$HDOFF
-  init
+  MOUNTPT=hddtmp2
+  init;
 
   # sudo touch $MOUNTPT/.pedigree-root
 
@@ -114,7 +104,7 @@ if sudo which losetup >/dev/null 2>&1; then
   cd $SRCDIR/../images/i686-elf
   tar -chf tmp.tar *
   ARCLOC=$PWD
-  cd $MOUNTPT
+  cd $OLD/$MOUNTPT
   sudo tar -xof $ARCLOC/tmp.tar
   cd $ARCLOC
   rm tmp.tar
