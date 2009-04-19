@@ -43,8 +43,13 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 
     if (address == 0)
     {
-        if (!pProcess->getSpaceAllocator().allocate(m_Extent, address))
+        if (!pProcess->getSpaceAllocator().allocate(m_Extent+PhysicalMemoryManager::getPageSize(), address))
             return false;
+        if (address & ~(PhysicalMemoryManager::getPageSize()-1))
+        {
+            address = (address + PhysicalMemoryManager::getPageSize()) &
+                ~(PhysicalMemoryManager::getPageSize()-1);
+        }
     }
     else
     {
@@ -73,7 +78,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 
         if (!va->map(p, reinterpret_cast<void*>(v), 0))
         {
-            WARNING("MemoryMappedFile: map() failed!");
+            WARNING("MemoryMappedFile: map() failed at " << v);
             return false;
         }
     }
@@ -102,7 +107,18 @@ void MemoryMappedFile::unload(uintptr_t address)
         uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
 
         if (va.isMapped(reinterpret_cast<void*>(v)))
+        {
+            uintptr_t p;
+            size_t flags;
+            va.getMapping(reinterpret_cast<void*>(v), p, flags);
+
             va.unmap(reinterpret_cast<void*>(v));
+
+            // If we forked and copied this page, we want to delete the second copy.
+            // So, if the physical mapping is not what we have on record, free it.
+            if (p != reinterpret_cast<uintptr_t>(it.value()))
+                PhysicalMemoryManager::instance().freePage(p);
+        }
     }
 
     spinlock.release();
@@ -275,7 +291,7 @@ void MemoryMappedFileManager::clone(Process *pProcess)
         MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->file );
         pMmFileList2->pushBack(pMmFile);
 
-        (*it)->file->load( (*it)->offset, pProcess );
+//        (*it)->file->load( (*it)->offset, pProcess );
         (*it)->file->increaseRefCount();
     }
 }

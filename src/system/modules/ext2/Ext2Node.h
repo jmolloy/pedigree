@@ -53,10 +53,11 @@ protected:
 
   bool addBlock(uint32_t blockValue);
 
-  bool getBlockNumbers();
-  bool getBlockNumbersIndirect(uint32_t inode_block, size_t &nBlocks);
-  bool getBlockNumbersBiindirect(uint32_t inode_block, size_t &nBlocks);
-  bool getBlockNumbersTriindirect(uint32_t inode_block, size_t &nBlocks);
+  bool ensureBlockLoaded(size_t nBlock);
+  bool getBlockNumber(size_t nBlock);
+  bool getBlockNumberIndirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
+  bool getBlockNumberBiindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
+  bool getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
 
   bool setBlockNumber(size_t blockNum, uint32_t blockValue);
 
@@ -64,8 +65,7 @@ protected:
   uint32_t m_InodeNumber;
   class Ext2Filesystem *m_pExt2Fs;
 
-  Vector<uint32_t*> m_Blocks;
-
+  uint32_t *m_pBlocks;
   uint32_t m_nBlocks;
 
   size_t m_nSize;

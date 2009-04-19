@@ -19,9 +19,18 @@
 #include <syscallError.h>
 
 Ext2Node::Ext2Node(uintptr_t inode_num, Inode inode, Ext2Filesystem *pFs) :
-  m_Inode(inode), m_InodeNumber(inode_num), m_pExt2Fs(pFs), m_Blocks(0),
+  m_Inode(inode), m_InodeNumber(inode_num), m_pExt2Fs(pFs), m_pBlocks(0),
   m_nBlocks(LITTLE_TO_HOST32(inode.i_blocks)), m_nSize(LITTLE_TO_HOST32(inode.i_size))
 {
+  m_pBlocks = new uint32_t[m_nBlocks];
+  memset(m_pBlocks, ~0, 4*m_nBlocks);
+
+  for (size_t i = 0; i < 12 && i < m_nBlocks; i++)
+  {
+    m_pBlocks[i] = LITTLE_TO_HOST32(m_Inode.i_block[i]);
+  }
+
+
 }
 
 Ext2Node::~Ext2Node()
@@ -30,15 +39,6 @@ Ext2Node::~Ext2Node()
 
 uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  // Make sure we know what blocks we're using.
-  if (m_Blocks.count() != m_nBlocks)
-  {
-    if (!getBlockNumbers())
-    {
-      FATAL("EXT2: Unable to get block numbers!");
-    }
-  }
-
   // Reads get clamped to the filesize.
   if (location >= m_nSize) return 0;
   if ( (location+size) >= m_nSize) size = m_nSize - location;
@@ -65,7 +65,8 @@ uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
     // block in, we can read directly to the buffer.
     if ( (location % nBs) == 0 && nBytes >= nBs )
     {
-      m_pExt2Fs->readBlock(reinterpret_cast<uint32_t>(m_Blocks[nBlock]), buffer);
+      ensureBlockLoaded(nBlock);
+      m_pExt2Fs->readBlock(m_pBlocks[nBlock], buffer);
       buffer += nBs;
       location += nBs;
       nBytes -= nBs;
@@ -76,7 +77,8 @@ uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
     {
       // Create a buffer for the block.
       uint8_t *pBuf = new uint8_t[nBs];
-      m_pExt2Fs->readBlock(reinterpret_cast<uint32_t>(m_Blocks[nBlock]),
+      ensureBlockLoaded(nBlock);
+      m_pExt2Fs->readBlock(m_pBlocks[nBlock],
                            reinterpret_cast<uintptr_t>(pBuf));
       // memcpy the relevant block area.
       uintptr_t start = location % nBs;
@@ -95,15 +97,6 @@ uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
 
 uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  // Make sure we know what blocks we're using.
-  if (m_Blocks.count() != m_nBlocks)
-  {
-    if (!getBlockNumbers())
-    {
-      FATAL("EXT2: Unable to get block numbers!");
-    }
-  }
-
   ensureLargeEnough(location+size);
 
   size_t nBs = m_pExt2Fs->m_BlockSize;
@@ -116,7 +109,8 @@ uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
     // block out, we can write directly to the buffer.
     if ( (location % nBs) == 0 && nBytes >= nBs )
     {
-      m_pExt2Fs->writeBlock(reinterpret_cast<uint32_t>(m_Blocks[nBlock]), buffer);
+      ensureBlockLoaded(nBlock);
+      m_pExt2Fs->writeBlock(m_pBlocks[nBlock], buffer);
       buffer += nBs;
       location += nBs;
       nBytes -= nBs;
@@ -127,13 +121,14 @@ uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
     {
       // Create a buffer for the block.
       uint8_t *pBuf = new uint8_t[nBs];
-      m_pExt2Fs->readBlock(reinterpret_cast<uint32_t>(m_Blocks[nBlock]),
+      ensureBlockLoaded(nBlock);
+      m_pExt2Fs->readBlock(m_pBlocks[nBlock],
                            reinterpret_cast<uintptr_t>(pBuf));
       // memcpy the relevant block area.
       uintptr_t start = location % nBs;
       uintptr_t size = (start+nBytes >= nBs) ? nBs-start : nBytes;
       memcpy(&pBuf[start], reinterpret_cast<uint8_t*>(buffer), size);
-      m_pExt2Fs->writeBlock(reinterpret_cast<uint32_t>(m_Blocks[nBlock]),
+      m_pExt2Fs->writeBlock(m_pBlocks[nBlock],
                             reinterpret_cast<uintptr_t>(pBuf));
       delete [] pBuf;
       buffer += size;
@@ -148,26 +143,15 @@ uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
 
 void Ext2Node::truncate()
 {
-  // Make sure we know what blocks we're using.
-  if (m_Blocks.count() != m_nBlocks)
+  for (size_t i = 0; i < m_nBlocks; i++)
   {
-    if (!getBlockNumbers())
-    {
-      FATAL("EXT2: Unable to get block numbers!");
-    }
-  }
-
-  // Truncation is just setting the size to 0 and removing all blocks.
-  for (Vector<uint32_t*>::Iterator it = m_Blocks.begin();
-       it != m_Blocks.end();
-       it++)
-  {
-    m_pExt2Fs->releaseBlock(reinterpret_cast<uintptr_t>(*it));
+    ensureBlockLoaded(i);
+    m_pExt2Fs->releaseBlock(m_pBlocks[i]);
   }
 
   m_nSize = 0;
   m_nBlocks = 0;
-  m_Blocks.clear();
+  
   m_Inode.i_size = 0;
   m_Inode.i_blocks = 0;
 }
@@ -202,68 +186,95 @@ bool Ext2Node::ensureLargeEnough(size_t size)
   return true;
 }
 
-bool Ext2Node::getBlockNumbers()
+bool Ext2Node::ensureBlockLoaded(size_t nBlock)
 {
-  // Add the first twelve blocks...
-  size_t i;
-  for (i = 0; i < 12 && i < m_nBlocks; i++)
+  if (nBlock >= m_nBlocks)
   {
-    m_Blocks.pushBack(reinterpret_cast<uint32_t*>(LITTLE_TO_HOST32(m_Inode.i_block[i])));
+    FATAL("EXT2: ensureBlockLoaded: Algorithmic error.");
   }
-  if (i >= m_nBlocks) return true;
+  if (m_pBlocks[nBlock] == ~0)
+    getBlockNumber(nBlock);
 
-  getBlockNumbersIndirect(LITTLE_TO_HOST32(m_Inode.i_block[12]), i);
-  if (i >= m_nBlocks) return true;
-
-  getBlockNumbersBiindirect(LITTLE_TO_HOST32(m_Inode.i_block[13]), i);
-  if (i >= m_nBlocks) return true;
-
-  getBlockNumbersTriindirect(LITTLE_TO_HOST32(m_Inode.i_block[14]), i);
-  if (i >= m_nBlocks) return true;
-
-  // If we haven't reached m_nBlocks by now, we've gone seriously wrong somewhere.
-  FATAL("EXT2: m_nBlocks far too massive (" << m_nBlocks << ") - something is wrong.");
-  return false;
+  return true;
 }
 
-bool Ext2Node::getBlockNumbersIndirect(uint32_t inode_block, size_t &nBlocks)
+bool Ext2Node::getBlockNumber(size_t nBlock)
+{
+  size_t nPerBlock = m_pExt2Fs->m_BlockSize/4;
+
+  if (nBlock < 12)
+  {
+    FATAL("EXT2: Algorithmic error.");
+    return false;
+  }
+
+  if (nBlock < nPerBlock+12)
+  {
+    getBlockNumberIndirect(LITTLE_TO_HOST32(m_Inode.i_block[12]), 12, nBlock);
+    return true;
+  }
+
+  if (nBlock < (nPerBlock*nPerBlock)+nPerBlock+12)
+  {
+    getBlockNumberBiindirect(LITTLE_TO_HOST32(m_Inode.i_block[13]), nPerBlock+12, nBlock);
+    return true;
+  }
+
+  getBlockNumberTriindirect(LITTLE_TO_HOST32(m_Inode.i_block[14]),
+                            (nPerBlock*nPerBlock)+nPerBlock+12, nBlock);
+
+  return true;
+}
+
+bool Ext2Node::getBlockNumberIndirect(uint32_t inode_block, size_t nBlocks, size_t nBlock)
 {
   uint32_t *buffer = new uint32_t[m_pExt2Fs->m_BlockSize/4];
   m_pExt2Fs->readBlock(inode_block, reinterpret_cast<uintptr_t>(buffer));
 
   for (size_t i = 0; i < m_pExt2Fs->m_BlockSize/4 && nBlocks < m_nBlocks; i++)
   {
-    m_Blocks.pushBack(reinterpret_cast<uint32_t*>(LITTLE_TO_HOST32(buffer[i])));
-    nBlocks++;
+    m_pBlocks[nBlocks++] = LITTLE_TO_HOST32(buffer[i]);
   }
 
   delete [] buffer;
+
+  return true;
 }
 
-bool Ext2Node::getBlockNumbersBiindirect(uint32_t inode_block, size_t &nBlocks)
+bool Ext2Node::getBlockNumberBiindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock)
 {
-  uint32_t *buffer = new uint32_t[m_pExt2Fs->m_BlockSize/4];
+  size_t nPerBlock = m_pExt2Fs->m_BlockSize/4;
+
+  uint32_t *buffer = new uint32_t[nPerBlock];
   m_pExt2Fs->readBlock(inode_block, reinterpret_cast<uintptr_t>(buffer));
 
-  for (size_t i = 0; i < m_pExt2Fs->m_BlockSize/4 && nBlocks < m_nBlocks; i++)
-  {
-    getBlockNumbersIndirect(LITTLE_TO_HOST32(buffer[i]), nBlocks);
-  }
+  // What indirect block does nBlock exist on?
+  size_t nIndirectBlock = (nBlock-nBlocks) / nPerBlock;
+
+  getBlockNumberIndirect(LITTLE_TO_HOST32(buffer[nIndirectBlock]),
+                          nBlocks+nIndirectBlock*nPerBlock, nBlock);
 
   delete [] buffer;
+
+  return true;
 }
 
-bool Ext2Node::getBlockNumbersTriindirect(uint32_t inode_block, size_t &nBlocks)
+bool Ext2Node::getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock)
 {
-  uint32_t *buffer = new uint32_t[m_pExt2Fs->m_BlockSize/4];
+  size_t nPerBlock = m_pExt2Fs->m_BlockSize/4;
+
+  uint32_t *buffer = new uint32_t[nPerBlock];
   m_pExt2Fs->readBlock(inode_block, reinterpret_cast<uintptr_t>(buffer));
 
-  for (size_t i = 0; i < m_pExt2Fs->m_BlockSize/4 && nBlocks < m_nBlocks; i++)
-  {
-    getBlockNumbersBiindirect(LITTLE_TO_HOST32(buffer[i]), nBlocks);
-  }
+  // What biindirect block does nBlock exist on?
+  size_t nBiBlock = (nBlock-nBlocks) / (nPerBlock*nPerBlock);
+
+  getBlockNumberBiindirect(LITTLE_TO_HOST32(buffer[nBiBlock]),
+                           nBlocks+nBiBlock*nPerBlock*nPerBlock, nBlock);
 
   delete [] buffer;
+
+  return true;
 }
 
 bool Ext2Node::addBlock(uint32_t blockValue)
@@ -367,7 +378,12 @@ bool Ext2Node::addBlock(uint32_t blockValue)
     return false;
   }
 
-  m_Blocks.pushBack(reinterpret_cast<uint32_t*>(blockValue));
+  uint32_t *pTmp = new uint32_t[m_nBlocks+1];
+  memcpy(pTmp, m_pBlocks, m_nBlocks*4);
+  delete [] m_pBlocks;
+  m_pBlocks = pTmp;
+  m_pBlocks[m_nBlocks] = blockValue;
+
   m_nBlocks++;
   m_Inode.i_blocks = HOST_TO_LITTLE32(m_nBlocks);
   m_pExt2Fs->setInode(m_InodeNumber, m_Inode);

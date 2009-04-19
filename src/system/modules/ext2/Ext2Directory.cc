@@ -54,15 +54,6 @@ Ext2Directory::~Ext2Directory()
 
 bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
 {
-  // Make sure we know what blocks we're using.
-  if (m_Blocks.count() != m_nBlocks)
-  {
-    if (!getBlockNumbers())
-    {
-      FATAL("EXT2: Unable to get block numbers!");
-    }
-  }
-
   // Calculate the size of our Dir* entry.
   size_t length = 4 + /* 32-bit inode number */
     2 + /* 16-bit record length */
@@ -79,7 +70,8 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
   Dir *pDir;
   for (i = 0; i < m_nBlocks; i++)
   {
-    m_pExt2Fs->readBlock(reinterpret_cast<uint32_t>(m_Blocks[i]), reinterpret_cast<uintptr_t>(pBuffer));
+    ensureBlockLoaded(i);
+    m_pExt2Fs->readBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
     pDir = reinterpret_cast<Dir*>(pBuffer);
     while (pDir->d_inode != 0 &&
            reinterpret_cast<uintptr_t>(pDir) < reinterpret_cast<uintptr_t>(pBuffer)+m_pExt2Fs->m_BlockSize)
@@ -151,7 +143,8 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
   memcpy(pDir->d_name, filename, filename.length());
 
   // Write the block back to disk.
-  m_pExt2Fs->writeBlock(reinterpret_cast<uintptr_t>(m_Blocks[i]), reinterpret_cast<uintptr_t>(pBuffer));
+  ensureBlockLoaded(i);
+  m_pExt2Fs->writeBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
 
   delete [] pBuffer;
 
@@ -171,15 +164,6 @@ bool Ext2Directory::removeEntry(Ext2Node *pFile)
 
 void Ext2Directory::cacheDirectoryContents()
 {
-  // Make sure we know what blocks we're using.
-  if (m_Blocks.count() != m_nBlocks)
-  {
-    if (!getBlockNumbers())
-    {
-      FATAL("EXT2: Unable to get block numbers!");
-    }
-  }
-
   // Load in and scan the directory.
   uint8_t *pBuffer = new uint8_t[m_pExt2Fs->m_BlockSize];
 
@@ -187,7 +171,8 @@ void Ext2Directory::cacheDirectoryContents()
   Dir *pDir;
   for (i = 0; i < m_nBlocks; i++)
   {
-    m_pExt2Fs->readBlock(reinterpret_cast<uint32_t>(m_Blocks[i]), reinterpret_cast<uintptr_t>(pBuffer));
+    ensureBlockLoaded(i);
+    m_pExt2Fs->readBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
     pDir = reinterpret_cast<Dir*>(pBuffer);
 
     while (pDir->d_inode != 0 &&

@@ -107,7 +107,7 @@ int posix_sbrk(int delta)
 
 int posix_fork(ProcessorState state)
 {
-  NOTICE("fork()");
+  SC_NOTICE("fork()");
 
   Processor::setInterrupts(false);
 
@@ -124,7 +124,7 @@ int posix_fork(ProcessorState state)
 //  DynamicLinker::instance().registerProcess(pProcess);
   pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
 
-  /// \todo All open descriptors need to be copied, not just stdin, stdout & stderr
+  MemoryMappedFileManager::instance().clone(pProcess);
 
   typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();

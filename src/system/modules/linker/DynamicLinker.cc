@@ -74,7 +74,7 @@ bool DynamicLinker::loadProgram(File *pFile)
     m_pProgramElf = new Elf();
     if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
     {
-        ERROR("DynamicLinker: Main program ELF failed to create: `" << pFile->getName() << "'");
+        FATAL("DynamicLinker: Main program ELF failed to create: `" << pFile->getName() << "' at " << buffer);
         MemoryMappedFileManager::instance().unmap(pMmFile);
         return false;
     }
