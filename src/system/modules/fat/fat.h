@@ -18,6 +18,12 @@
 
 #include <processor/types.h>
 
+/** FAT type */
+enum FatType
+{
+  FAT12 = 0, FAT16, FAT32
+};
+
 /** The Fat 'superblock', or boot parameter block as we call it normally
     Note that this is from the FAT whitepaper, so the names are as specified
       there (in order to avoid confusion)

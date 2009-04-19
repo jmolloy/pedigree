@@ -29,9 +29,8 @@ FatDirectory::FatDirectory(String name, uintptr_t inode_num,
             inode_num,
             static_cast<Filesystem*>(pFs),
             LITTLE_TO_HOST32(0), /// \todo Hmm...
-            pParent)
-  //          ,
-  //FatNode(inode_num, inode, pFs)
+            pParent),
+  m_Type(FAT16), m_BlockSize(0), m_bRootDir(false), m_DirBlockSize(0)
 {
   /*uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
   uint32_t permissions;
@@ -58,13 +57,13 @@ FatDirectory::FatDirectory(String name, uintptr_t inode_num,
   m_DirBlockSize = m_BlockSize;
   
   m_bRootDir = false;
-  if(clus == 0 && m_Type != FatFilesystem::FAT32)
+  if(clus == 0 && m_Type != FAT32)
   {
     m_DirBlockSize = pFs->m_RootDirCount * pFs->m_Superblock.BPB_BytsPerSec;
     m_bRootDir = true;
   }
   else
-    if(pFs->m_Type == FatFilesystem::FAT32)
+    if(pFs->m_Type == FAT32)
       if(clus == pFs->m_Superblock32.BPB_RootClus)
         m_bRootDir = true;
 }
@@ -113,8 +112,6 @@ void FatDirectory::cacheDirectoryContents()
   int32_t longFileNameIndex = 0;
   bool nextIsEnd = false; // next entry is the short filename entry for this long filename
 
-  // was initially separated for FAT12/16 and FAT32, but I hate redundancy (if I can figure out how to make
-  // this code work for the Volume Label as well, I'll be a very happy man)
   size_t i, j = 0;
   bool endOfDir = false;
   while(true)
@@ -221,7 +218,7 @@ void FatDirectory::cacheDirectoryContents()
     if(endOfDir)
       break;
 
-    if(clus == 0 && m_Type != FatFilesystem::FAT32)
+    if(clus == 0 && m_Type != FAT32)
       break; // not found
 
     // find the next cluster in the chain, if this is the end, break, if not, continue

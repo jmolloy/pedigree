@@ -25,6 +25,8 @@
 #include "FatFile.h"
 
 #include "fat.h"
+#include "FatDirectory.h"
+#include "FatFile.h"
 
 // FAT Attributes
 #define ATTR_READONLY   0x01
@@ -47,14 +49,6 @@ public:
   FatFilesystem();
 
   virtual ~FatFilesystem();
-  
-    
-  /** FAT type */
-  enum FatType
-  {
-    FAT12 = 0, FAT16, FAT32
-  };
-
 
   //
   // Filesystem interface.
@@ -127,7 +121,7 @@ protected:
   void writeDirectoryPortion(uint32_t clus, void* p);
   
   /** Creates a file - actual doer for the public createFile */
-  File* createFile(File* parent, String filename, uint32_t mask, bool bDirectory);
+  File *createFile(File *parentDir, String filename, uint32_t mask, bool bDirectory);
   
   /** Reads a directory entry from disk */
   Dir* getDirectoryEntry(uint32_t clus, uint32_t offset);
@@ -222,12 +216,15 @@ protected:
   
   /** FAT lock */
   Mutex m_FatLock;
-  
-  /** Disk lock */
-  Mutex m_DiskLock;
 
   /** Root filesystem node. */
   File *m_pRoot;
+  
+  /** Disk lock
+    * \note Will slow down access as it'll ensure only one disk operation occurs at once.
+    * \todo #ifdef this behaviour out, or remove it altogether
+    */
+  Mutex m_DiskLock;
 };
 
 #endif

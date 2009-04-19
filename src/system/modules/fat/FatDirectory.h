@@ -20,6 +20,8 @@
 #include <vfs/Directory.h>
 #include <utilities/Vector.h>
 
+#include "fat.h"
+
 /** A File is a file, a directory or a symlink. */
 class FatDirectory : public Directory
 {
@@ -55,7 +57,7 @@ public:
 
 private:
   
-  FatFilesystem::FatType m_Type;
+  FatType m_Type;
   uintptr_t m_BlockSize;
   bool m_bRootDir;
   

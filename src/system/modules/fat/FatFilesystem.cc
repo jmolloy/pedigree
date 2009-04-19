@@ -160,7 +160,6 @@ bool FatFilesystem::initialise(Disk *pDisk)
   // fill the filesystem data
   m_DataAreaStart = firstDataSector;
   m_RootDirCount = rootDirSectors;
-  NOTICE("FAT root directory count [sectors] = " << m_RootDirCount << ".");
   m_BlockSize = m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec;
 
   // read in the FAT32 FSInfo structure
@@ -976,8 +975,6 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
 
 uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool bLock)
 {
-  NOTICE("set");
-  
   if(cluster == 0)
   {
     FATAL("setClusterEntry called with invalid arguments - " << cluster << "/" << value << "!");
@@ -1064,10 +1061,12 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
   if(bLock)
     m_FatLock.release();
   
-  // we're pedantic and as such we check things
+  // we're pedantic and as such we check things, but only if debugging
+#ifdef DEBUGGER
   uint32_t val = getClusterEntry(cluster, false);
   if(val != value)
     FATAL("setClusterEntry has failed on cluster " << cluster << ": " << val << "/" << value << ".");
+#endif
   
   return setEnt;
 }
@@ -1168,10 +1167,13 @@ void FatFilesystem::truncate(File *pFile)
   setCluster(pFile, 0);
 }
 
-File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bool bDirectory = false)
+File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask, bool bDirectory = false)
 {
+  // cast the parent directory from a File into a FatDirectory
+  FatDirectory *parent = static_cast<FatDirectory *>(parentDir);
+  
   // grab the first cluster of the parent directory
-  /*uint32_t clus = parent->getInode();
+  uint32_t clus = parent->getInode();
   uint8_t* buffer = reinterpret_cast<uint8_t*>(readDirectoryPortion(clus));
   if(!buffer)
     return 0;
@@ -1309,32 +1311,47 @@ File* FatFilesystem::createFile(File* parent, String filename, uint32_t mask, bo
       delete [] buffer;
       
       // just make this a stock file.
-      File* ret = new FatFile(filename, 0, 0, 0, 0, false, bDirectory, this, 0, clus, offset, parent, false);
+      File *ret = new FatFile(
+                         filename,
+                         0, /// \todo Proper times
+                         0,
+                         0,
+                         0, // FAT zero cluster for new file without content
+                         this,
+                         0, // no file data yet
+                         clus,
+                         i,
+                         parent
+      );
+      
       NOTICE("Cache: inserting " << filename);
       parent->m_Cache.insert(filename, ret);
       return ret;
     }
-  }*/
+  }
   return 0;
 }
 
-bool FatFilesystem::createFile(File* parent, String filename, uint32_t mask)
+bool FatFilesystem::createFile(File *parent, String filename, uint32_t mask)
 {
-  /*File* f = createFile(parent, filename, mask, false);
-  bool ret = f->isValid();
-  if (parent->m_bCachePopulated)
-    parent->m_Cache.insert(filename, f);
-  else
-    delete f;
-  return ret;*/
+  File *f = createFile(parent, filename, mask, false);
+  if(!f)
+    return false;
   
-  return false;
+  // use the casted directory to gain access to the directory cache
+  /*FatDirectory *dir = static_cast<FatDirectory *>(parent);
+  if (dir->m_bCachePopulated)
+    dir->m_Cache.insert(filename, f);
+  else
+    delete f;*/
+  
+  return true;
 }
 
 bool FatFilesystem::createDirectory(File* parent, String filename)
 {
-  /*File* f = createFile(parent, filename, 0, true);
-  if(!f->isValid())
+  File* f = createFile(parent, filename, 0, true);
+  if(!f)
     return false;
   
   // allocate a cluster for the directory itself
@@ -1356,7 +1373,7 @@ bool FatFilesystem::createDirectory(File* parent, String filename)
   File* dotdot = createFile(f, tmp, 0, true);
   
   // if either is invalid, fail
-  if(!dot->isValid() || !dotdot->isValid())
+  /*if(!dot->isValid() || !dotdot->isValid())
   {
     if (parent->m_bCachePopulated)
     {
@@ -1366,7 +1383,9 @@ bool FatFilesystem::createDirectory(File* parent, String filename)
     else
       delete f;
     return false; /// \todo Clean up
-  }
+  }*/
+  if(!dot || !dotdot)
+    return false; /// \todo Really should clean up, because directory creation failed
   
   // set the clusters for both
   dot->setInode(clus);
@@ -1375,20 +1394,18 @@ bool FatFilesystem::createDirectory(File* parent, String filename)
   setCluster(dot, dot->getInode());
   setCluster(dotdot, dotdot->getInode());
   
-  delete dot;
-  delete dotdot;
+  // delete dot;
+  // delete dotdot;
   
-  if (parent->m_bCachePopulated)
+  /*if (parent->m_bCachePopulated)
   {
     parent->m_Cache.insert(filename, f);
     f->setShouldDelete(false);
   }
   else
-    delete f;
+    delete f;*/
   
-  return true;*/
-  
-  return false;
+  return true;
 }
 
 bool FatFilesystem::createSymlink(File* parent, String filename, String value)
@@ -1401,7 +1418,7 @@ bool FatFilesystem::remove(File* parent, File* file)
   /// \todo !!!!
   return true;
   
-  /*File* pFile = file;
+  File* pFile = file;
   
   LockGuard<Mutex> guard(m_FatLock);
 
@@ -1423,7 +1440,7 @@ bool FatFilesystem::remove(File* parent, File* file)
       if(isEof(clus))
         break;
     }
-  }*
+  }*/
   
   uint32_t dirClus = static_cast<FatFile*>(pFile)->getCustomField1();
   uint32_t dirOffset = static_cast<FatFile*>(pFile)->getCustomField2();
@@ -1436,10 +1453,11 @@ bool FatFilesystem::remove(File* parent, File* file)
   
   delete p;
 
-  if (parent->m_bCachePopulated)
-    parent->m_Cache.remove(file->getName());
-
-  return true;*/
+  FatDirectory *dir = static_cast<FatDirectory *>(parent);
+  if (dir->m_bCachePopulated)
+    dir->m_Cache.remove(file->getName());
+  
+  return true;
 }
 
 void initFat()

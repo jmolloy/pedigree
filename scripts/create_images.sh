@@ -97,7 +97,7 @@ if sudo which losetup >/dev/null 2>&1; then
   MOUNTPT=hddtmp2
   init;
 
-  # sudo touch $MOUNTPT/.pedigree-root
+  sudo touch $MOUNTPT/.pedigree-root
 
   OLD=$PWD
   
