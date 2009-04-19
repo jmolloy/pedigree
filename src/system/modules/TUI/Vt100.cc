@@ -62,6 +62,7 @@ Vt100::~Vt100()
 
 void Vt100::write(char *str)
 {
+#if 0
    String s(str);
    char *pStr = const_cast<char*>(static_cast<const char*>(s));
    int j = s.length();
@@ -72,7 +73,7 @@ void Vt100::write(char *str)
      if (i == 60) {char a = pStr[i]; pStr[i] = '\0';NOTICE("W: " << pStr); pStr[i] = a; i -= 60; j -= 60; pStr = &pStr[60];}
    }
    NOTICE("W: " << pStr);
-
+#endif
   while (*str)
     write(*str++);
 }

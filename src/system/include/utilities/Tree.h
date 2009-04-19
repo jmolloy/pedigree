@@ -150,10 +150,11 @@ class Tree<void*,void*>
       public:
         IteratorNode() : value(0), pNode(0), pPreviousNode(0)
         {};
-        IteratorNode(Node* node, Node* prev) : value(node), pNode(node), pPreviousNode(prev)
+        IteratorNode(Node* node, Node* prev, size_t n) : value(node), pNode(node), pPreviousNode(prev)
         {
           // skip the root node, get to the lowest node in the tree
-          traverseNext();
+          if (n > 1)
+            traverseNext();
           value = pNode;
         };
         
@@ -247,9 +248,10 @@ class Tree<void*,void*>
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
+        
       if(m_Begin)
         delete m_Begin;
-      m_Begin = new IteratorNode(root, 0);
+      m_Begin = new IteratorNode(root, 0, nItems);
       return Iterator(m_Begin);
     }
     /** Get a constant iterator pointing to the beginning of the Vector
@@ -437,8 +439,8 @@ class Tree<size_t,V*>
     inline Iterator begin()
     {
       //return *reinterpret_cast<Iterator*>(&(m_VoidTree.begin()));
-      //return reinterpret_cast<Iterator>(m_VoidTree.begin());
-      return m_VoidTree.begin();
+      return static_cast<Iterator>(m_VoidTree.begin());
+      //return m_VoidTree.begin();
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
@@ -451,8 +453,8 @@ class Tree<size_t,V*>
     inline Iterator end()
     {
       //return *reinterpret_cast<Iterator*>(&(m_VoidTree.end()));
-      //return reinterpret_cast<Iterator>(m_VoidTree.end());
-      return m_VoidTree.end();
+      return static_cast<Iterator>(m_VoidTree.end());
+      //return m_VoidTree.end();
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */

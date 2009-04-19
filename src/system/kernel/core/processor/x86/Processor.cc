@@ -20,7 +20,7 @@
 #include "InterruptManager.h"
 #include "VirtualAddressSpace.h"
 #include "../x86_common/PhysicalMemoryManager.h"
-#include "PageFaultHandler.h"
+#include <processor/PageFaultHandler.h>
 #include <process/initialiseMultitasking.h>
 
 // Multiprocessor headers

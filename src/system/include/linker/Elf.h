@@ -149,9 +149,6 @@ public:
   /**
    * Constructs an Elf object, and assumes the given pointer to be
    * to a contiguous region of memory containing an ELF object. 
-   * 
-   * All important information in the buffer is cached - the buffer can safely be destroyed after
-   * calling this function.
    */
   bool create(uint8_t *pBuffer, size_t length);
 
@@ -173,8 +170,9 @@ public:
    * Performs the prerequisite allocation for any normal ELF file - library or executable.
    * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
    * filled however.
+   * \note If bAllocate is false, the memory will NOT be allocated.
    */
-  bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab=0, class Process *pProcess=0);
+    bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab=0, bool bAllocate=true, size_t *pSize=0);
   
   /**
    * Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file

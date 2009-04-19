@@ -297,7 +297,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     g_EscrowPages[Processor::id()] = 0;
 
     // Map the page
-    *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+    *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE) | PAGE_WRITE);
 
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),

@@ -44,6 +44,8 @@
 // Syscalls pertaining to system operations.
 //
 
+#define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
+
 extern "C"
 {
   extern void sigret_stub();
@@ -107,7 +109,7 @@ int posix_sbrk(int delta)
 
 int posix_fork(ProcessorState state)
 {
-  NOTICE("fork()");
+  SC_NOTICE("fork()");
 
   Processor::setInterrupts(false);
 
@@ -121,7 +123,9 @@ int posix_fork(ProcessorState state)
   }
 
   // Register with the dynamic linker.
-  DynamicLinker::instance().registerProcess(pProcess);
+  pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
+
+  MemoryMappedFileManager::instance().clone(pProcess);
 
   typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -210,30 +214,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     return -1;
   }
 
-  // Attempt to load the file.
-  uint8_t *buffer = new uint8_t[file->getSize()+1];
-
-  if (buffer == 0)
-  {
-    SYSCALL_ERROR(OutOfMemory);
-  }
-
-  if (file->read(0, file->getSize(), reinterpret_cast<uintptr_t>(buffer)) != file->getSize())
-  {
-    delete [] buffer;
-    SYSCALL_ERROR(TooBig);
-    return -1;
-  }
-
-  Elf *elf = new Elf();
-  if (!elf->create(buffer, file->getSize()))
-  {
-    // Error - bad file.
-    delete [] buffer;
-    SYSCALL_ERROR(ExecFormatError);
-    return -1;
-  }
-
   pProcess->description() = String(name);
 
   // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
@@ -244,37 +224,26 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   // Get rid of all the crap from the last elf image.
   /// \todo Preserve anonymous mmaps etc.
 
+  MemoryMappedFileManager::instance().unmapAll();
+
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-  uintptr_t loadBase;
-  if (!elf->allocate(buffer, file->getSize(), loadBase))
+  DynamicLinker *pOldLinker = pProcess->getLinker();
+  DynamicLinker *pLinker = new DynamicLinker();
+
+  // Set the new linker now before we loadProgram, else we could trap and 
+  // have a linker mismatch.
+  pProcess->setLinker(pLinker);
+
+  if (!pLinker->loadProgram(file))
   {
-    // Error
-    delete [] buffer;
-    // Time to kill the task.
-    ERROR("Could not allocate memory for ELF file.");
-
-    return -1;
-  }
-
-  DynamicLinker::instance().unregisterProcess(pProcess);
-
-  DynamicLinker::instance().registerElf(elf);
-
-  List<char*> neededLibraries = elf->neededLibraries();
-  for (List<char*>::Iterator it = neededLibraries.begin();
-       it != neededLibraries.end();
-       it++)
-  {
-    if (!DynamicLinker::instance().load(*it))
-    {
-      ERROR("Shared dependency '" << *it << "' not found.");
-
+      /// \todo Check for a shebang here.
+      pProcess->setLinker(pOldLinker);
+      delete pLinker;
+      SYSCALL_ERROR(ExecFormatError);
       return -1;
-    }
   }
-
-  elf->load(buffer, file->getSize(), loadBase, elf->getSymbolTable());
+  delete pOldLinker;
 
   // Close all FD_CLOEXEC descriptors. Done here because from this point we're committed to running -
   // there's no further return until the end of the function.
@@ -287,8 +256,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
       if(pFd->fdflags & FD_CLOEXEC)
         posix_close(reinterpret_cast<int>(it.key()));
   }
-
-  DynamicLinker::instance().initialiseElf(elf);
 
   // Create a new stack.
   for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
@@ -316,6 +283,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   uintptr_t location = ARGV_ENV_LOC;
   argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
   env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
+
+  Elf *elf = pProcess->getLinker()->getProgramElf();
 
   ProcessorState pState = state;
   pState.setStackPointer(STACK_START-8);
@@ -465,7 +434,9 @@ int posix_exit(int code)
     delete pFd;
   }
 
-  DynamicLinker::instance().unregisterProcess(pProcess);
+  delete pProcess->getLinker();
+
+  MemoryMappedFileManager::instance().unmapAll();
 
   pProcess->kill();
 
@@ -816,9 +787,29 @@ struct dlHandle
 
 uintptr_t posix_dlopen(const char* file, int mode, void* p)
 {
-  NOTICE("dlopen(" << file << ")");
+  SC_NOTICE("dlopen(" << file << ")");
 
-  if(!DynamicLinker::instance().load(file))
+  File *pFile = VFS::instance().find(String(file), GET_CWD());
+
+  if (!pFile)
+  {
+      SYSCALL_ERROR(DoesNotExist);
+      return 0;
+  }
+
+  while (pFile->isSymlink())
+      pFile = Symlink::fromFile(pFile)->followLink();
+
+  if (pFile->isDirectory())
+  {
+      // Error - is directory.
+      SYSCALL_ERROR(IsADirectory);
+      return 0;
+  }
+
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  
+  if(!pProcess->getLinker()->loadObject(pFile))
   {
     ERROR("dlopen: couldn't load " << String(file) << ".");
     return 0;
@@ -833,17 +824,19 @@ uintptr_t posix_dlopen(const char* file, int mode, void* p)
 
 uintptr_t posix_dlsym(void* handle, const char* name)
 {
-  NOTICE("dlsym(" << name << ")");
+  SC_NOTICE("dlsym(" << name << ")");
   
   if(!handle)
-    return 0;
+      return 0;
   
-  return DynamicLinker::instance().resolve(name);
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+
+  return pProcess->getLinker()->resolve(String(name));
 }
 
 int posix_dlclose(void* handle)
 {
-  NOTICE("dlclose");
+  SC_NOTICE("dlclose");
   
   return 0;
 }

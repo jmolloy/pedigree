@@ -23,97 +23,99 @@
 #include <utilities/Tree.h>
 #include <utilities/List.h>
 #include <processor/state.h>
+#include <vfs/File.h>
+#include <vfs/MemoryMappedFile.h>
 
-/** The dynamic linker tracks instances of shared objects. */
+/** The dynamic linker tracks instances of shared objects through
+    an address space. */
 class DynamicLinker
 {
 public:
-  /** Retrieves the singleton instance. */
-  static DynamicLinker &instance() {return m_Instance;}
+    /** Creates a new DynamicLinker object. */
+    DynamicLinker();
 
-  void setInitProcess(Process *pProcess);
+    ~DynamicLinker();
 
-  /** Loads a shared library into the current process' address space.
+    /** Creates a new DynamicLinker from another. Copies all mappings. */
+    DynamicLinker(DynamicLinker &other);
 
-      If pProcess is non-zero, the linker assumes it is operating in pProcess'
-      address space, not the current process'. This is the case in init, where
-      the first process gets launched.
+    /** Loads the main program. This must be an ELF file, and the
+        linker will also load all library dependencies. If any of
+        these loads fails, false is returned.
+        \param pFile The ELF file. */
+    bool loadProgram(File *pFile);
 
-      The linker will assume this until registerElf is called. */
-  bool load(const char *name, Process *pProcess=0);
+    /** Loads a shared object into this address space (along with
+        any dependencies.
+        \param pFile The ELF object to load.
+        \return True if the ELF and all dependencies was loaded successfully. */
+    bool loadObject(File *pFile);
 
-  /** Registers the given Elf with the current Process, or load()'s pProcess if that was
-      non-zero. */
-  void registerElf(Elf *pElf);
-  
-  /** Initialises the ELF. */
-  void initialiseElf(Elf *pElf);
+    /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
+    static uintptr_t resolvePlt(SyscallState &state);
 
-  /** Registers the Elf belonging to the current Process to pProcess too. Used during fork(). */
-  void registerProcess(Process *pProcess);
+    /** Called when a trap is handled by the DLTrapHandler.
+        \param address Address of the trap.
+        \return True if the trap was handled successfully. */
+    bool trap(uintptr_t address);
 
-  /** Unloads all objects from this Process' address space. */
-  void unregisterProcess(Process *pProcess);
+    /** Returns the program ELF. */
+    Elf *getProgramElf()
+        {return m_pProgramElf;}
 
-  /** Dynamic resolver function, to be given to ElfXX::relocateDynamic. */
-  uintptr_t resolve(const char *sym);
-  //static uintptr_t resolveNoElf(const char *sym, bool useElf);
-
-  /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
-  static uintptr_t resolvePlt(SyscallState &state);
+    /** Manually resolves a given symbol name. */
+    uintptr_t resolve(String name);
 
 private:
-  /** Constructor is private - singleton class. */
-  DynamicLinker();
-  /** Destructor is private - singleton class. */
-  ~DynamicLinker();
-  /** Copy constructor is private. */
-  DynamicLinker(DynamicLinker &);
-  /** As is operator= */
-  DynamicLinker &operator=(const DynamicLinker&);
+    /** Operator= is unused and is therefore private. */
+    DynamicLinker &operator=(const DynamicLinker&);
 
-  /** A shared object/library. */
-  class SharedObject
-  {
-  public:
-    SharedObject() : pFile(0), name(), refCount(1), pDependencies(0), nDependencies(0), addresses(),
-      pBuffer(0), nBuffer(0) {}
-    Elf         *pFile;
-    String         name;
-    int            refCount;
-    SharedObject **pDependencies;
-    int            nDependencies;
-    Tree<Process*,uintptr_t*> addresses; // For each process, the address this object has been relocated to.
-    uint8_t       *pBuffer; // The Elf file itself.
-    size_t         nBuffer; // The size of pBuffer.
-  private:
-    /** Copy constructor - it's private. It can't be used. */
-    SharedObject (SharedObject &);
-    SharedObject &operator=(const DynamicLinker&);
-  };
+    /** A shared object/library. */
+    struct SharedObject
+    {
+        SharedObject(Elf *e, MemoryMappedFile *f, uintptr_t b, uintptr_t a, size_t s) :
+            elf(e), file(f), buffer(b), address(a), size(s)
+        {}
+        Elf                 *elf;
+        MemoryMappedFile    *file;
+        uintptr_t           buffer;
+        uintptr_t           address;
+        size_t              size;
+    };
 
-  SharedObject *loadInternal (const char *name);
-  SharedObject *loadObject (const char *name);
-  SharedObject *mapObject (SharedObject *pSo);
+    uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
 
-  uintptr_t resolveInLibrary(const char *sym, SharedObject *obj);
+    void initPlt(Elf *pElf, uintptr_t value);
 
-  /** Resolves a reference. */
-  uintptr_t resolveSymbol(const char *symbol, bool useElf);
+    Elf *m_pProgramElf;
+    uintptr_t m_ProgramStart;
+    size_t m_ProgramSize;
+    uintptr_t m_ProgramBuffer;
 
-  uintptr_t resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx);
-  Elf *findElf(uintptr_t libraryId, SharedObject *pSo, uintptr_t &_loadBase);
+    Tree<uintptr_t, SharedObject*> m_Objects;
+};
 
-  void initPlt(Elf *pElf, uintptr_t value);
+/** Tiny class for dispatching MemoryTrap events to DynamicLinkers.
+    A MemoryTrap event will occur when a page of an ELF has yet to
+    be loaded. */
+class DLTrapHandler : public MemoryTrapHandler
+{
+public:
+    /** Retrieve the singleton DLTrapHandler instance. */
+    static DLTrapHandler &instance() {return m_Instance;}
 
-  Tree<Process*,List<SharedObject*>*> m_ProcessObjects;
-  List<SharedObject*> m_Objects;
-  Tree<Process*,Elf*> m_ProcessElfs;
+    //
+    // MemoryTrapHandler interface.
+    //
+    virtual bool trap(uintptr_t address, bool bIsWrite);
 
-  /** Non-zero if load() was called with pProcess != 0, in which case it holds the value of pProcess. */
-  Process *m_pInitProcess;
+private:
+    /** Private constructor - does nothing. */
+    DLTrapHandler();
+    /** Private destructor - does nothing, not expected to be called. */
+    ~DLTrapHandler();
 
-  static DynamicLinker m_Instance;
+    static DLTrapHandler m_Instance;
 };
 
 #endif
