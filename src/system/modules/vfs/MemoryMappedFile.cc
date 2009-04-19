@@ -291,7 +291,6 @@ void MemoryMappedFileManager::clone(Process *pProcess)
         MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->file );
         pMmFileList2->pushBack(pMmFile);
 
-//        (*it)->file->load( (*it)->offset, pProcess );
         (*it)->file->increaseRefCount();
     }
 }

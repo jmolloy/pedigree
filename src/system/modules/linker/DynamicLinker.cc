@@ -229,11 +229,16 @@ bool DynamicLinker::trap(uintptr_t address)
     if (pElf->load(reinterpret_cast<uint8_t*>(buffer), size, offset, m_pProgramElf->getSymbolTable(), v,
                      v+PhysicalMemoryManager::getPageSize()) == false)
     {
-        WARNING("IMAGE: load() failed in ElfImage::trap()");
+        WARNING("LINKER: load() failed in DynamicLinker::trap()");
         return false;
     }
 
     return true;
+}
+
+uintptr_t DynamicLinker::resolve(String name)
+{
+    return m_pProgramElf->getSymbolTable()->lookup(name, m_pProgramElf);
 }
 
 DLTrapHandler::DLTrapHandler()

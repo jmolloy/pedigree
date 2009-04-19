@@ -159,7 +159,6 @@ void destroy()
 
 void init_stage2()
 {
-  NOTICE("Init, stage2");
   // Load initial program.
   File* initProg = VFS::instance().find(String("root:/applications/login"));
   if (!initProg)
@@ -168,63 +167,18 @@ void init_stage2()
     return;
   }
 
-//  uint8_t *buffer = new uint8_t[initProg->getSize()];
-//  initProg->read(0, initProg->getSize(), reinterpret_cast<uintptr_t>(buffer));
-
   // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
   // in the kernel address space so we have a clean slate.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-//  static Elf *initElf;
-//  uintptr_t loadBase;
-
-//  initElf.create(buffer, initProg->getSize());
-//  initElf.allocate(buffer, initProg->getSize(), loadBase, 0, pProcess);
-
-//  static ElfImage image(reinterpret_cast<uintptr_t>(buffer), initProg->getSize(), 0);
-//  initElf = image.getElf();
-//  image.load();
-//  NOTICE("Elf created.");
-//  DynamicLinker::instance().registerElf(&initElf);
-//  NOTICE("Elf registered");
-/* uintptr_t iter = 0;
- List<char*> neededLibraries = initElf.neededLibraries();
- for (List<char*>::Iterator it = neededLibraries.begin();
-      it != neededLibraries.end();
-      it++)
- {
-   NOTICE("Loading...");
-   if (!DynamicLinker::instance().load(*it))
-   {
-    ERROR("Couldn't open needed file '" << *it << "'");
-     FATAL("Init program failed to load!");
-     return;
-   }
-   }*/
-  //NOTICE("Fin");
-  //initElf.load(buffer, initProg->getSize(), loadBase, initElf.getSymbolTable());
-  //DynamicLinker::instance().initialiseElf(&initElf);
-
-  NOTICE("Making dynamic linker");
   DynamicLinker *pLinker = new DynamicLinker();
-  NOTICE("Setting dynamic linker");
   pProcess->setLinker(pLinker);
-  NOTICE("Loading progrm");
+
   if (!pLinker->loadProgram(initProg))
   {
       FATAL("Init program failed to load!");
   }
-
-  NOTICE("initialised");
-
-//   ProcessImage *pProcessImage = ProcessImageCacheManager::instance().getImage(initProg);
-//   if (!pProcessImage || !pProcessImage->isValid())
-//   {
-//     FATAL("Unable to load init program - load failed.");
-//     return;
-//   }
-//   pProcessImage->load();
 
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
@@ -238,7 +192,6 @@ void init_stage2()
   Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
   Processor::setInterrupts(true);
-  Scheduler::instance().yield();
 
   // Thread exit.
   while (1) {Scheduler::instance().yield();}

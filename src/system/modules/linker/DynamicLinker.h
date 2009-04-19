@@ -63,6 +63,9 @@ public:
     Elf *getProgramElf()
         {return m_pProgramElf;}
 
+    /** Manually resolves a given symbol name. */
+    uintptr_t resolve(String name);
+
 private:
     /** Operator= is unused and is therefore private. */
     DynamicLinker &operator=(const DynamicLinker&);
