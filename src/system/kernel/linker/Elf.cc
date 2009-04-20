@@ -127,47 +127,47 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     // Look for the dynamic program header.
     for (size_t i = 0; i < m_nProgramHeaders; i++)
     {
-      if (m_pProgramHeaders[i].type == ELF32_PT_DYNAMIC)
+      if (m_pProgramHeaders[i].type == PT_DYNAMIC)
       {
         ElfProgramHeader_t *pDynamic = &m_pProgramHeaders[i];
         ElfDyn_t *pDyn = reinterpret_cast<ElfDyn_t*> (&pBuffer[pDynamic->offset]);
 
         // Cycle through all dynamic entries until the NULL entry.
-        while (pDyn->tag != ELF32_DT_NULL)
+        while (pDyn->tag != DT_NULL)
         {
           switch (pDyn->tag)
           {
-            case ELF32_DT_NEEDED:
+            case DT_NEEDED:
               m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
-            case ELF32_DT_SYMTAB:
+            case DT_SYMTAB:
               m_pDynamicSymbolTable = reinterpret_cast<ElfSymbol_t*> (pDyn->un.ptr);
               break;
-            case ELF32_DT_STRTAB:
+            case DT_STRTAB:
               m_pDynamicStringTable = reinterpret_cast<char*> (pDyn->un.ptr);
               break;
-            case ELF32_DT_SYMENT:
+            case DT_SYMENT:
                  // This gives the size of *each entity*, not the table as a whole.
 //               m_nDynamicSymbolTableSize = pDyn->un.val;
               break;
-            case ELF32_DT_STRSZ:
+            case DT_STRSZ:
               nDynamicStringTableSize = pDyn->un.val;
               break;
-            case ELF32_DT_RELA:
+            case DT_RELA:
               m_pRelaTable = reinterpret_cast<ElfRela_t*> (pDyn->un.ptr);
               break;
-            case ELF32_DT_REL:
+            case DT_REL:
               m_pRelTable = reinterpret_cast<ElfRel_t*> (pDyn->un.ptr);
               break;
-            case ELF32_DT_RELSZ:
+            case DT_RELSZ:
               m_nRelTableSize = pDyn->un.val;
               break;
-            case ELF32_DT_RELASZ:
+            case DT_RELASZ:
               m_nRelaTableSize = pDyn->un.val;
               break;
-            case ELF32_DT_PLTGOT:
+            case DT_PLTGOT:
               m_pGotTable = reinterpret_cast<uintptr_t*> (pDyn->un.ptr);
               break;
-            case ELF32_DT_JMPREL:
+            case DT_JMPREL:
             {
               if (m_bUsesRela)
                 m_pPltRelaTable = reinterpret_cast<ElfRela_t*> (pDyn->un.ptr);
@@ -175,15 +175,15 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                 m_pPltRelTable = reinterpret_cast<ElfRel_t*> (pDyn->un.ptr);
               break;
             }
-            case ELF32_DT_PLTREL:
+            case DT_PLTREL:
             {
-              if (pDyn->un.val == ELF32_DT_RELA)
+              if (pDyn->un.val == DT_RELA)
               {
                 m_bUsesRela = true;
               }
               break;
             }
-            case ELF32_DT_PLTRELSZ:
+            case DT_PLTRELSZ:
               m_nPltSize = pDyn->un.val;
               break;
           }
@@ -360,11 +360,9 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
            j += 0x1000)
       {
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        /*bool b = */Processor::information().getVirtualAddressSpace().map(phys,
-                                            reinterpret_cast<void*> (j&0xFFFFF000),
-                                            VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
-//         if (!b)
-//           WARNING("map() failed for section " << Dec << i << ", address " << Hex << j);
+        Processor::information().getVirtualAddressSpace().map(phys,
+                                                              reinterpret_cast<void*> (j&0xFFFFF000),
+                                                              VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
       }
 
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
@@ -441,7 +439,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
   for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
   {
     // Only relocate functions, variables and notypes.
-    if (ELF32_ST_TYPE(pSymbol->info) < 3 && pSymbol->shndx < m_nSectionHeaders)
+    if (ST_TYPE(pSymbol->info) < 3 && pSymbol->shndx < m_nSectionHeaders)
     {
       ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
       pSymbol->value += pSh->addr;
@@ -459,7 +457,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
     {
       const char *pStr;
 
-      if (ELF32_ST_TYPE(pSymbol->info) == 3)
+      if (ST_TYPE(pSymbol->info) == 3)
       {
         // Section type - the name will be the name of the section header it refers to.
         ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
@@ -477,7 +475,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
 
       // Insert the symbol into the symbol table.
       SymbolTable::Binding binding;
-      switch (ELF32_ST_BIND(pSymbol->info))
+      switch (ST_BIND(pSymbol->info))
       {
         case 0: // STB_LOCAL
           binding = SymbolTable::Local;
@@ -508,7 +506,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
   return true;
 }
 
-bool Elf::finaliseModule(uint8_t *pBuffer, uint32_t length)
+bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
 {
   return relocate(pBuffer, length);
 }
@@ -522,7 +520,7 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
   uintptr_t start = ~0;
   for (size_t i = 0; i < m_nProgramHeaders; i++)
   {
-    if (m_pProgramHeaders[i].type == ELF32_PT_LOAD)
+    if (m_pProgramHeaders[i].type == PT_LOAD)
     {
       size = m_pProgramHeaders[i].vaddr + m_pProgramHeaders[i].memsz;
       if (m_pProgramHeaders[i].vaddr < start) start = m_pProgramHeaders[i].vaddr;
@@ -578,7 +576,7 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
       const char *pStr = pStrtab + pSymbol->name;
     
       SymbolTable::Binding binding;
-      switch (ELF32_ST_BIND(pSymbol->info))
+      switch (ST_BIND(pSymbol->info))
       {
         case 0: // STB_LOCAL
           binding = SymbolTable::Local;
@@ -610,9 +608,9 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
         // weak symbol? set it as undefined
         if(binding == SymbolTable::Weak)
         {
-          //if(ELF32_ST_TYPE(pSymbol->info) == STT_FUNC)
+          //if(ST_TYPE(pSymbol->info) == STT_FUNC)
           //{
-            uint32_t value = pSymbol->value;
+            Elf_Xword value = pSymbol->value;
             if(value == 0)
               value = ~0;
             if (*pStr != 0)
@@ -636,7 +634,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
 {
   for (size_t i = 0; i < m_nProgramHeaders; i++)
   {
-    if (m_pProgramHeaders[i].type == ELF32_PT_LOAD)
+    if (m_pProgramHeaders[i].type == PT_LOAD)
     {
       uintptr_t loadAddr = m_pProgramHeaders[i].vaddr + loadBase;
 
@@ -748,8 +746,8 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
   for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
   {
     // Make sure we're looking at an object or function.
-    if (ELF32_ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
-        ELF32_ST_TYPE(pSymbol->info) != 0x0 /* notype (asm functions) */)
+    if (ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
+        ST_TYPE(pSymbol->info) != 0x0 /* notype (asm functions) */)
     {
       pSymbol++;
       continue;
@@ -757,7 +755,7 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
     // If we're checking for a symbol that is apparently zero-sized, add one so we can actually
     // count it!
-    uint32_t size = pSymbol->size;
+    Elf_Xword size = pSymbol->size;
     if (size == 0)
       size = 0x100;
     if ( (addr >= pSymbol->value) &&
@@ -774,12 +772,12 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 }
 
-uint32_t Elf::lookupSymbol(const char *pName)
+uintptr_t Elf::lookupSymbol(const char *pName)
 {
   return m_SymbolTable.lookup(String(pName), this);
 }
 
-uint32_t Elf::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
+uintptr_t Elf::lookupDynamicSymbolAddress(const char *sym, uintptr_t loadBase)
 {
   uintptr_t value = m_SymbolTable.lookup(String(sym), this);
   if (!value)
@@ -793,12 +791,12 @@ uintptr_t Elf::getGlobalOffsetTable()
   return reinterpret_cast<uintptr_t> (m_pGotTable);
 }
 
-uint32_t Elf::getEntryPoint()
+uintptr_t Elf::getEntryPoint()
 {
   return m_nEntry;
 }
 
-bool Elf::relocate(uint8_t *pBuffer, uint32_t length)
+bool Elf::relocate(uint8_t *pBuffer, uintptr_t length)
 {
   // For every section...
   for (size_t i = 0; i < m_nSectionHeaders; i++)
@@ -846,7 +844,7 @@ bool Elf::relocate(uint8_t *pBuffer, uint32_t length)
   return true;
 }
 
-bool Elf::relocateModinfo(uint8_t *pBuffer, uint32_t length)
+bool Elf::relocateModinfo(uint8_t *pBuffer, uintptr_t length)
 {
   // For every section...
   for (size_t i = 0; i < m_nSectionHeaders; i++)
@@ -892,7 +890,7 @@ bool Elf::relocateModinfo(uint8_t *pBuffer, uint32_t length)
   return true;
 }
 
-uintptr_t Elf::applySpecificRelocation(uint32_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
+uintptr_t Elf::applySpecificRelocation(uintptr_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   // Is it a relocation section?
   if (m_pPltRelTable)
@@ -959,7 +957,7 @@ void Elf::populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase)
       if (pSymbol->shndx != 0)
       {
         SymbolTable::Binding binding;
-        switch (ELF32_ST_BIND(pSymbol->info))
+        switch (ST_BIND(pSymbol->info))
         {
           case 0: // STB_LOCAL
             binding = SymbolTable::Local;

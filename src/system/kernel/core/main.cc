@@ -14,43 +14,45 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// If we're being called standalone, we don't get passed any BootstrapInfo.
 #include "BootstrapInfo.h"
 
 #ifdef DEBUGGER
-  #include <Debugger.h>
+    #include <Debugger.h>
 #endif
 
-#include <Log.h>
-#include <panic.h>
-#include <utilities/StaticString.h>
-#include "cppsupport.h"                   // initialiseConstructors()
-#include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
-#include <machine/Machine.h>              // Machine::initialise()
 #include <KernelElf.h>                    // KernelElf::initialise()
 #include <Version.h>
+#include <Log.h>
+#include <panic.h>
+#include <Archive.h>
+
+#include "cppsupport.h"                   // initialiseConstructors()
+
+#include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/KernelCoreSyscallManager.h>
+
+#include <machine/Machine.h>              // Machine::initialise()
 #include <LocalIO.h>
 #include <SerialIO.h>
 #include <DebuggerIO.h>
 #include "BootIO.h"
-#include <processor/PhysicalMemoryManager.h>
-#ifdef THREADS
+
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
-#include <processor/PhysicalMemoryManager.h>
 #include <process/Scheduler.h>
-#endif
-#include <Archive.h>
 
 #include <machine/Device.h>
 
-#include <machine/openfirmware/Device.h>
+#ifdef OPENFIRMWARE
+    #include <machine/openfirmware/Device.h>
+#endif
 
-#include <processor/KernelCoreSyscallManager.h>
 #include <utilities/List.h>
-#include <linker/SymbolTable.h>
 #include <utilities/RadixTree.h>
+#include <utilities/StaticString.h>
 
+/** Output device for boot-time information. */
 BootIO bootIO;
 
 /** Kernel entry point for application processors (after processor/machine has been initialised
@@ -66,6 +68,7 @@ void apMain()
   }
 }
 
+/** A processor idle function. */
 int idle(void *)
 {
   Processor::setInterrupts(true);
@@ -75,35 +78,7 @@ int idle(void *)
   }
 }
 
-int foo(void *p)
-{
-  HugeStaticString str;
-  int j=0;
-  for (;;)
-  {
-    for(int i = 0; i < 10000000; i++) ;
-    str.clear();
-    str += "b";
-    bootIO.write(str, BootIO::White, BootIO::Green);
-    j++;
-  }
-  return 0;
-}
-
-int bar(void *p)
-{
-  HugeStaticString str;
-  for (;;)
-  {
-    for(int i = 0; i < 10000000; i++) ;
-    str.clear();
-    str += "c";
-    bootIO.write(str, BootIO::White, BootIO::Red);
-  }
-  return 0;
-}
-
-/// Kernel entry point.
+/** Kernel entry point. */
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
   // Firstly call the constructors of all global objects.
@@ -124,21 +99,17 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().initialise();
 #endif
 
-#if !defined(ARM_COMMON)
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
-#endif
 
   KernelCoreSyscallManager::instance().initialise();
 
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
-
-#ifdef THREADS
+  
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
-#endif
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -169,9 +140,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
-  // NOTE We have to do this before we call Processor::initialisationDone() otherwise the
-  //      BootstrapStruct_t might already be unmapped
-#if defined(X86_COMMON) || defined(PPC_COMMON)
+  /// \note We have to do this before we call Processor::initialisationDone() otherwise the
+  ///       BootstrapStruct_t might already be unmapped
   Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
   size_t nFiles = initrd.getNumFiles();
@@ -191,8 +161,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
                                      initrd.getFileSize(i));
   }
 
-#endif
-
   // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
   // mapping of 0-4MB
   // NOTE: BootstrapStruct_t unusable after this point
@@ -205,34 +173,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
   // Try and create a mapping.
-#ifdef MIPS_COMMON
-  physical_uintptr_t stackBase;
-  stackBase = PhysicalMemoryManager::instance().allocatePage();
-  NOTICE("StackBase = " << Hex << stackBase);
-  bool br = VirtualAddressSpace::getKernelAddressSpace().map(stackBase, (void*)(0xC1505000), 0);
-  NOTICE("b :" << br);
-
-  uintptr_t *leh = reinterpret_cast<uintptr_t*> ((stackBase|0xa0000000) + 0x4);
-  *leh = 0x1234567;
-
- Processor::breakpoint();
-
-  volatile uintptr_t *a = (uintptr_t*)0xC1505004;
-  uintptr_t b = *a;
-  NOTICE("b : " << b);
-  b++;
- Processor::breakpoint();
-#endif
-
   for (;;)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
     Scheduler::instance().yield();
-
-//    for(int i = 0; i < 10000000; i++) ;
-//    str.clear();
-//    str += "a";
-//    bootIO.write(str, BootIO::White, BootIO::Blue);
   }
 }
