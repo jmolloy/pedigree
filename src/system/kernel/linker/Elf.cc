@@ -23,6 +23,27 @@
 #include <KernelElf.h>
 #include <process/Process.h>
 
+/** Helper function: iterates through all program headers given to find where pCurrent resides, then copies that data into a new
+    buffer and returns it.*/
+template<typename T>
+T *elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nProgramHeaders, T *pCurrent, size_t size)
+{
+    for (size_t i = 0; i < nProgramHeaders; i++)
+    {
+        Elf::ElfProgramHeader_t ph = pProgramHeaders[i];
+        if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(pCurrent)) &&
+             (reinterpret_cast<uintptr_t>(pCurrent) < ph.vaddr+ph.filesz) )
+        {
+            uintptr_t loc = reinterpret_cast<uintptr_t>(pCurrent) - ph.vaddr;
+            pCurrent = new T[size/sizeof(T)];
+            memcpy (reinterpret_cast<uint8_t*>(pCurrent), &pBuffer[loc],
+                    size);
+            return pCurrent;
+        }
+    }
+    return 0;
+}
+
 Elf::Elf() :
     m_pSymbolTable(0),
     m_nSymbolTableSize(0),
@@ -82,6 +103,18 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         ERROR("ELF file: ident check failed!");
         return false;
+    }
+
+    // Check the bit-length.
+    if (pHeader->ident[4] != 
+#ifdef BITS_32
+        1 /* ELFCLASS32 */
+#else
+        2 /* ELFCLASS64 */
+#endif
+        )
+    {
+        ERROR("ELF file: wrong bit length!");
     }
 
     // Load in the section headers.
@@ -160,7 +193,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                             break;
                         case DT_SYMENT:
                             // This gives the size of *each entity*, not the table as a whole.
-//               m_nDynamicSymbolTableSize = pDyn->un.val;
+                            //m_nDynamicSymbolTableSize = pDyn->un.val;
                             break;
                         case DT_STRSZ:
                             nDynamicStringTableSize = pDyn->un.val;
@@ -212,36 +245,11 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
         // If we found a dynamic symbol table, string table and Rel(a) table, attempt to find the segment they reside in
         // and copy them locally.
         if (m_pDynamicSymbolTable)
-        {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pDynamicSymbolTable) - ph.vaddr;
-                    m_pDynamicSymbolTable = new ElfSymbol_t[m_nDynamicSymbolTableSize/sizeof(ElfSymbol_t)];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pDynamicSymbolTable), &pBuffer[loc],
-                            m_nDynamicSymbolTableSize);
-                    break;
-                }
-            }
-        }
+            m_pDynamicSymbolTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicSymbolTable, m_nDynamicSymbolTableSize);
         if (m_pDynamicStringTable)
         {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pDynamicStringTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pDynamicStringTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pDynamicStringTable) - ph.vaddr;
-                    m_pDynamicStringTable = new char[nDynamicStringTableSize];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pDynamicStringTable), &pBuffer[loc],
-                            nDynamicStringTableSize);
-                    break;
-                }
-            }
+            m_pDynamicStringTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicStringTable, nDynamicStringTableSize);
+
             // Make sure the string references to needed libraries actually work as pointers...
             for (List<char*>::Iterator it = m_NeededLibraries.begin();
                  it != m_NeededLibraries.end();
@@ -251,69 +259,13 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
             }
         }
         if (m_pRelTable)
-        {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pRelTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pRelTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pRelTable) - ph.vaddr;
-                    m_pRelTable = new ElfRel_t[m_nRelTableSize/sizeof(ElfRel_t)];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pRelTable), &pBuffer[loc],
-                            m_nRelTableSize);
-                    break;
-                }
-            }
-        }
+            m_pRelTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pRelTable, m_nRelTableSize);
         if (m_pRelaTable)
-        {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pRelaTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pRelaTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pRelaTable) - ph.vaddr;
-                    m_pRelaTable = new ElfRela_t[m_nRelaTableSize/sizeof(ElfRela_t)];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pRelaTable), &pBuffer[loc],
-                            m_nRelaTableSize);
-                    break;
-                }
-            }
-        }
+            m_pRelaTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pRelaTable, m_nRelaTableSize);
         if (m_pPltRelTable)
-        {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pPltRelTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pPltRelTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pPltRelTable) - ph.vaddr;
-                    m_pPltRelTable = new ElfRel_t[m_nPltSize/sizeof(ElfRel_t)];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pPltRelTable), &pBuffer[loc],
-                            m_nPltSize);
-                    break;
-                }
-            }
-        }
+            m_pPltRelTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pPltRelTable, m_nPltSize);
         if (m_pPltRelaTable)
-        {
-            for (size_t i = 0; i < m_nProgramHeaders; i++)
-            {
-                ElfProgramHeader_t ph = m_pProgramHeaders[i];
-                if ( (ph.vaddr <= reinterpret_cast<uintptr_t>(m_pPltRelaTable)) &&
-                     (reinterpret_cast<uintptr_t>(m_pPltRelaTable) < ph.vaddr+ph.filesz) )
-                {
-                    uintptr_t loc = reinterpret_cast<uintptr_t>(m_pPltRelaTable) - ph.vaddr;
-                    m_pPltRelaTable = new ElfRela_t[m_nPltSize/sizeof(ElfRela_t)];
-                    memcpy (reinterpret_cast<uint8_t*>(m_pPltRelaTable), &pBuffer[loc],
-                            m_nPltSize);
-                    break;
-                }
-            }
-        }
+            m_pPltRelaTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pPltRelaTable, m_nPltSize);
     }
 
     m_nEntry = pHeader->entry;
@@ -391,9 +343,9 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
                         0,
                         m_pSectionHeaders[i].size);
             }
-#if defined(PPC_COMMON) || defined(MIPS_COMMON)                         \
+#if defined(PPC_COMMON) || defined(MIPS_COMMON)
             Processor::flushDCacheAndInvalidateICache(m_pSectionHeaders[i].addr, m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size);
-#endif                                              \
+#endif
             offset += m_pSectionHeaders[i].size;
         }
         else
@@ -680,7 +632,6 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
     }
 
     // Apply relocations for the given area.
-    /// \todo Ensure that this only covers the given area, no more.
 
     // Is it a relocation section?
     if (m_pRelTable)
