@@ -55,12 +55,6 @@ int posix_close(int fd)
     return -1;
   }
 
-  if(NetManager::instance().isEndpoint(f->file))
-  {
-    NOTICE("Closing the endpoint...");
-    NetManager::instance().removeEndpoint(f->file);
-  }
-
   f->file->decreaseRefCount( (f->flflags & O_RDWR) || (f->flflags & O_WRONLY) );
 
   Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
@@ -182,9 +176,6 @@ int posix_read(int fd, char *ptr, int len)
     return -1;
   }
 
-  if(NetManager::instance().isEndpoint(pFd->file))
-    return posix_recv(fd, ptr, len, 0);
-
   uint64_t nRead = 0;
   if(ptr && len)
   {
@@ -222,9 +213,6 @@ int posix_write(int fd, char *ptr, int len)
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
-
-  if(NetManager::instance().isEndpoint(pFd->file))
-    return posix_send(fd, ptr, len, 0);
 
   // Copy to kernel.
   uint64_t nWritten = 0;
@@ -852,6 +840,9 @@ int posix_mkdir(const char* name, int mode)
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
+  /// \todo File will soon get a select() method, which allows different filesystems to provide different
+  ///       functionality for select on a descriptor. That should clean up this code here significantly.
+
   /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
   ///       Just readfds, and no timeout.
   F_NOTICE("select(" << Dec << nfds << Hex << ")");

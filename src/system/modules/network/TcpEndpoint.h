@@ -40,19 +40,27 @@ class TcpEndpoint : public Endpoint
     TcpEndpoint() :
       Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
       nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
-    {};
+    {
+      m_bConnection = true;
+    };
     TcpEndpoint(uint16_t local, uint16_t remote) :
       Endpoint(local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
       nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
-    {};
+    {
+      m_bConnection = true;
+    };
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
       nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
-    {};
+    {
+      m_bConnection = true;
+    };
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(connId), m_RemoteHost(), m_DataStream(),
       nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
-    {};
+    {
+      m_bConnection = true;
+    };
     virtual ~TcpEndpoint() {};
     
     /** Application interface */

@@ -568,7 +568,7 @@ int pedigree_login(int uid, const char *password)
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type)
 {
-  NOTICE("sigaction(" << Dec << sig << Hex << ")");
+  SC_NOTICE("sigaction(" << Dec << sig << Hex << ")");
 
   Thread* pThread = Processor::information().getCurrentThread();
   Process* pProcess = pThread->getParent();
@@ -618,7 +618,7 @@ uintptr_t posix_signal(int sig, void* func)
 
 int posix_raise(int sig)
 {
-  NOTICE("raise");
+  SC_NOTICE("raise");
 
   // create the pending signal and pass it in
   Process* pProcess = Processor::information().getCurrentThread()->getParent();
@@ -641,7 +641,7 @@ int posix_raise(int sig)
 
 int pedigree_sigret()
 {
-  NOTICE("pedigree_sigret");
+  SC_NOTICE("pedigree_sigret");
 
   // we do not want an interrupt until we're waiting for the signal handler to complete
   bool bInterrupts = Processor::getInterrupts();
@@ -675,7 +675,7 @@ int pedigree_sigret()
 
 int posix_kill(int pid, int sig)
 {
-  NOTICE("kill(" << pid << ", " << sig << ")");
+  SC_NOTICE("kill(" << pid << ", " << sig << ")");
 
   Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
   if(p)
@@ -705,7 +705,7 @@ int posix_kill(int pid, int sig)
 
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 {
-  NOTICE("sigprocmask");
+  SC_NOTICE("sigprocmask");
 
   uint32_t currMask = Processor::information().getCurrentThread()->getParent()->getSignalMask();
 
@@ -768,14 +768,14 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 int posix_alarm(uint32_t seconds)
 {
   /// \todo Implement
-  NOTICE("alarm");
+  SC_NOTICE("alarm");
   return 0;
 }
 
 int posix_sleep(uint32_t seconds)
 {
   /// \todo Implement
-  NOTICE("sleep");
+  SC_NOTICE("sleep");
   return 0;
 }
 

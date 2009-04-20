@@ -190,6 +190,9 @@ Endpoint* RawManager::getEndpoint(int proto)
       break;
   }
   if(ret)
+  {
+    ret->setManager(this);
     m_Endpoints.pushBack(ret);
+  }
   return ret;
 }

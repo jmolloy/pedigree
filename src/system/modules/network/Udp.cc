@@ -97,7 +97,7 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 {  
   // grab the IP header to find the size, so we can skip options and get to the UDP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
-  size_t ipHeaderSize = (ip->verlen & 0x0F) * 4; // len is the number of DWORDs
+  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
   
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();

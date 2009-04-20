@@ -94,15 +94,12 @@ int posix_socket(int domain, int type, int protocol)
   }
   else
   {
-    NOTICE("domain = " << domain << " - not known!");
+    WARNING("domain = " << domain << " - not known!");
     valid = false;
   }
 
   if(!valid)
-  {
-    NOTICE("None found");
     return -1;
-  }
 
   FileDescriptor *f = new FileDescriptor;
   f->file = file;
@@ -115,6 +112,9 @@ int posix_socket(int domain, int type, int protocol)
 
 int fileFromSocket(int sock, File* & file)
 {
+  ERROR("Old-style call (fileFromSocket)");
+  return -1;
+  
   /// \todo Race here - fix.
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
 
@@ -136,17 +136,12 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 {
   NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
-  
-  if(!file)
-  {
-    return -1;
-  }
-
-  Endpoint* p = NetManager::instance().getEndpoint(file);
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
+
+  Endpoint* p = s->getEndpoint();
 
   int endpointState = p->state();
   if(endpointState != 0xff)
@@ -174,7 +169,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 
   /// \todo Other protocols
   bool success = false;
-  if(file->getSize() == NETMAN_TYPE_TCP)
+  if(s->getProtocol() == NETMAN_TYPE_TCP)
   {
     struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
     remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
@@ -188,7 +183,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
       return -1;
     }
   }
-  else if(file->getSize() == NETMAN_TYPE_UDP)
+  else if(s->getProtocol() == NETMAN_TYPE_UDP)
   {
     // connect on a UDP socket sets a remote address and port for send/recv
     // to send to multiple addresses and receive from multiple clients
@@ -202,7 +197,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     p->setRemoteIp(remoteHost.ip);
     success = true;
   }
-  else if(file->getSize() == NETMAN_TYPE_RAW)
+  else if(s->getProtocol() == NETMAN_TYPE_RAW)
     success = true; /// \todo If the interface is down, fail
   
   NOTICE("posix_connect returns");
@@ -214,18 +209,19 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_send");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
 
-  Endpoint* p = NetManager::instance().getEndpoint(file);
+  Endpoint* p = s->getEndpoint();
 
   bool success = false;
-  if(file->getSize() == NETMAN_TYPE_TCP)
+  if(s->getProtocol() == NETMAN_TYPE_TCP)
   {
     return p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
   }
-  else if(file->getSize() == NETMAN_TYPE_UDP)
+  else if(s->getProtocol() == NETMAN_TYPE_UDP)
   {
     // special handling - need to check for a remote host
     IpAddress remoteIp = p->getRemoteIp();
@@ -264,13 +260,14 @@ ssize_t posix_sendto(void* callInfo)
   const sockaddr* address = tmp->remote_addr;
   size_t* addrlen = tmp->addrlen;
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
 
-  Endpoint* p = NetManager::instance().getEndpoint(file);
+  Endpoint* p = s->getEndpoint();
 
-  if(file->getSize() == NETMAN_TYPE_TCP)
+  if(s->getProtocol() == NETMAN_TYPE_TCP)
   {
     /// \todo I need to write a sendto for TcpManager and TcpEndpoint
     ///       which probably means UDP gets a free sendto as well.
@@ -278,7 +275,7 @@ ssize_t posix_sendto(void* callInfo)
     ERROR("TCP sendto called, but not implemented properly!");
     return p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
   }
-  else if(file->getSize() == NETMAN_TYPE_UDP || file->getSize() == NETMAN_TYPE_RAW)
+  else if(s->getProtocol() == NETMAN_TYPE_UDP || s->getProtocol() == NETMAN_TYPE_RAW)
   {
     Endpoint::RemoteEndpoint remoteHost;
     const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
@@ -294,20 +291,21 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_recv");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
-
-  Endpoint* p = NetManager::instance().getEndpoint(file);
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
+
+  Endpoint* p = s->getEndpoint();
+  
   bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   int ret = -1;
-  if(file->getSize() == NETMAN_TYPE_TCP)
+  if(s->getProtocol() == NETMAN_TYPE_TCP)
   {
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, flags & MSG_PEEK);
   }
-  else if(file->getSize() == NETMAN_TYPE_UDP)
+  else if(s->getProtocol() == NETMAN_TYPE_UDP)
   {
     /// \todo Actually, we only should read this data if it's from the IP specified
     ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
@@ -333,16 +331,17 @@ ssize_t posix_recvfrom(void* callInfo)
   sockaddr* address = tmp->remote_addr;
   size_t* addrlen = tmp->addrlen;
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
-
-  Endpoint* p = NetManager::instance().getEndpoint(file);
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
+
+  Endpoint* p = s->getEndpoint();
+  
   bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   int ret = -1;
-  if(file->getSize() == NETMAN_TYPE_TCP)
+  if(s->getProtocol() == NETMAN_TYPE_TCP)
   {
     ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, true, flags & MSG_PEEK);
 
@@ -351,9 +350,9 @@ ssize_t posix_recvfrom(void* callInfo)
     sin->sin_addr.s_addr = p->getRemoteIp().getIp();
     *addrlen = sizeof(struct sockaddr_in);
   }
-  else if(file->getSize() == NETMAN_TYPE_UDP || file->getSize() == NETMAN_TYPE_RAW)
+  else if(s->getProtocol() == NETMAN_TYPE_UDP || s->getProtocol() == NETMAN_TYPE_RAW)
   {
-    if(blocking && (file->getSize() != NETMAN_TYPE_RAW))
+    if(blocking && (s->getProtocol() != NETMAN_TYPE_RAW))
       p->dataReady(true);
 
     Endpoint::RemoteEndpoint remoteHost;
@@ -372,15 +371,16 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 {
   NOTICE("posix_bind");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
 
-  Endpoint* p = NetManager::instance().getEndpoint(file);
+  Endpoint* p = s->getEndpoint();
   if(p)
   {
     int ret = -1;
-    if(file->getSize() == NETMAN_TYPE_TCP || file->getSize() == NETMAN_TYPE_UDP)
+    if(s->getProtocol() == NETMAN_TYPE_TCP || s->getProtocol() == NETMAN_TYPE_UDP)
     {
       const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
 
@@ -399,11 +399,12 @@ int posix_listen(int sock, int backlog)
 {
   NOTICE("posix_listen");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
-    return -1;
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s = static_cast<Socket *>(f->file);
+  if(!s)
+    return -1; /// \todo SYSCALL_ERROR of some sort
 
-  Endpoint* p = NetManager::instance().getEndpoint(file);
+  Endpoint* p = s->getEndpoint();
 
   p->listen();
 
@@ -414,24 +415,25 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 {
   NOTICE("posix_accept");
 
-  File* file = 0;
-  if(fileFromSocket(sock, file) == -1)
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Socket *s1 = static_cast<Socket *>(f->file);
+  if(!s1)
     return -1;
 
-  File* f = NetManager::instance().accept(file);
-  if(f->getInode() == 0)
-    return -1; // error!
+  Socket *s = static_cast<Socket *>(NetManager::instance().accept(s1));
+  if(!s)
+    return -1;
 
   // add into the descriptor table
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
 
-  Endpoint* e = NetManager::instance().getEndpoint(f);
+  Endpoint* e = s->getEndpoint(); // NetManager::instance().getEndpoint(f);
 
   if(address && addrlen)
   {
-    if(f->getSize() == NETMAN_TYPE_TCP || f->getSize() == NETMAN_TYPE_UDP)
+    if(s->getProtocol() == NETMAN_TYPE_TCP || s->getProtocol() == NETMAN_TYPE_UDP)
     {
       struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
       sin->sin_port = HOST_TO_BIG16(e->getRemotePort());
@@ -442,7 +444,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
   }
 
   FileDescriptor *desc = new FileDescriptor;
-  desc->file = f;
+  desc->file = s;
   desc->offset = 0;
   fdMap.insert(fd, desc);
 
@@ -531,3 +533,4 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   
   return 0;
 }
+

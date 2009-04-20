@@ -974,9 +974,7 @@ int pclose(void* stream)
 
 int readlink(const char* path, char* buf, unsigned int bufsize)
 {
-  STUBBED("readlink");
-  return -1;
-  //return syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
+  return syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
 }
 
 int ftime(struct timeb *tp)

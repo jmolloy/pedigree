@@ -65,6 +65,20 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   // RFC793, page 65 onwards
   Tcp::TcpState oldState = stateBlock->currentState;
   NOTICE("TCP Packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << Dec << stateBlock->remoteHost.remotePort << Hex << "] [connId = " << stateBlock->connId << "].");
+  
+  // dump some pretty information
+  NOTICE(" + SEQ=" << Dec << stateBlock->seg_seq << " ACK=" << stateBlock->seg_ack << " LEN=" << stateBlock->seg_len << " WND=" << stateBlock->seg_wnd << Hex);
+  NOTICE(" + FLAGS: " <<
+                (header->flags & Tcp::FIN ? "FIN " : "") <<
+                (header->flags & Tcp::SYN ? "SYN " : "") <<
+                (header->flags & Tcp::RST ? "RST " : "") <<
+                (header->flags & Tcp::PSH ? "PSH " : "") <<
+                (header->flags & Tcp::ACK ? "ACK " : "") <<
+                (header->flags & Tcp::URG ? "URG " : "") <<
+                (header->flags & Tcp::ECE ? "ECE " : "") <<
+                (header->flags & Tcp::CWR ? "CWR " : "")
+  );
+  
   switch(stateBlock->currentState)
   {
     /* Incoming segment while the state is CLOSED */
@@ -535,8 +549,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             // if NOT, closing
             if(stateBlock->fin_ack)
             {
-              //stateBlock->currentState = Tcp::TIME_WAIT;
-              stateBlock->currentState = Tcp::CLOSED;
+              stateBlock->currentState = Tcp::TIME_WAIT;
+              //stateBlock->currentState = Tcp::CLOSED;
               
               stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
               stateBlock->waitingForTimeout = true;
@@ -548,10 +562,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           
           case Tcp::FIN_WAIT_2:
           
-            NOTICE("closing! winwinwin!");
-          
-            //stateBlock->currentState = Tcp::TIME_WAIT;
-            stateBlock->currentState = Tcp::CLOSED;
+            stateBlock->currentState = Tcp::TIME_WAIT;
+            //stateBlock->currentState = Tcp::CLOSED;
             
             stateBlock->resetTimer(120); // 2 minute timeout for TIME_WAIT
             stateBlock->waitingForTimeout = true;

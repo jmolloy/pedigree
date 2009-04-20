@@ -21,22 +21,28 @@
 #include <processor/types.h>
 #include <machine/Network.h>
 
+// Forward declaration, because Endpoint is used by ProtocolManager
+class ProtocolManager;
+
 /**
  * The Pedigree network stack - Protocol Endpoint
  */
 class Endpoint
 {
+  private:
+    Endpoint(const Endpoint &e);
+    const Endpoint& operator = (const Endpoint& e);
   public:
   
     /** Constructors and destructors */
     Endpoint() :
-      m_LocalPort(0), m_RemotePort(0), m_RemoteIp()
+      m_LocalPort(0), m_RemotePort(0), m_RemoteIp(), m_Manager(0), m_bConnection(false)
     {};
     Endpoint(uint16_t local, uint16_t remote) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp()
+      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(), m_Manager(0), m_bConnection(false)
     {};
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp)
+      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp), m_Manager(0), m_bConnection(false)
     {};
     virtual ~Endpoint() {};
     
@@ -145,6 +151,23 @@ class Endpoint
     virtual void setCard(Network* pCard)
     {
     };
+    
+    /** Protocol management */
+    ProtocolManager *getManager()
+    {
+      return m_Manager;
+    }
+    
+    void setManager(ProtocolManager *man)
+    {
+      m_Manager = man;
+    }
+    
+    /** Connection type */
+    inline bool isConnectionless()
+    {
+      return !m_bConnection;
+    }
   
   private:
   
@@ -156,6 +179,18 @@ class Endpoint
     
     /** Remote IP */
     IpAddress m_RemoteIp;
+    
+    /** Protocol manager */
+    ProtocolManager *m_Manager;
+    
+  protected:
+    
+    /** Connection-based?
+      * Because the initialisation for any recv/send action on either type
+      * of Endpoint (connected or connectionless) is the same across protocols
+      * this can reduce the amount of repeated code.
+      */
+    bool m_bConnection;
 };
 
 #endif

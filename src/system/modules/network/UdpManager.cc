@@ -146,22 +146,28 @@ void UdpManager::returnEndpoint(Endpoint* e)
 Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
 {
   // try to find a unique port
+  /// \todo Move into a helper function
   if(localPort == 0)
   {
     uint16_t base = 32768;
     while(base < 0xFFFF)
-      if(m_Endpoints.lookup(localPort) == 0)
+    {
+      if(m_Endpoints.lookup(base++) == 0)
         break;
+    }
     if(base == 0xFFFF)
       return 0; // no local port available
     localPort = base;
   }
   
-  // is there an endpoint for this port?
+  // Is there an endpoint for this port?
+  /// \todo Why, if there *is* an Endpoint, is it returned? Couldn't that cause
+  ///       conflicts?
   Endpoint* e;
   if((e = m_Endpoints.lookup(localPort)) == 0)
   {
     e = new UdpEndpoint(remoteHost, localPort, remotePort);
+    e->setManager(this);
     m_Endpoints.insert(localPort, e);
   }
   return e;

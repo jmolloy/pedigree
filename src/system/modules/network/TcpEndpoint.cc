@@ -17,6 +17,7 @@
 #include "TcpManager.h"
 #include <Log.h>
 #include <syscallError.h>
+#include <process/Scheduler.h>
 
 int TcpEndpoint::state()
 {
@@ -25,8 +26,7 @@ int TcpEndpoint::state()
 
 Endpoint* TcpEndpoint::accept()
 {
-  // acquire() will return true when there is at least one release?
-  NOTICE("Endpoint::accept: m_IncomingConnectionCount is at " << reinterpret_cast<uintptr_t>(&m_IncomingConnectionCount) << ".");
+  // acquire() will return true when there is at least one connection waiting
   m_IncomingConnectionCount.acquire();
   Endpoint* e = m_IncomingConnections.popFront();
   return e;
@@ -34,9 +34,8 @@ Endpoint* TcpEndpoint::accept()
 
 void TcpEndpoint::listen()
 {
-  NOTICE("Clearing incoming connections");
+  /// \todo Interface-specific connections
   m_IncomingConnections.clear();
-  NOTICE("Cleared");
   m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
 }
 
@@ -53,7 +52,7 @@ bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
   }
   m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock, m_Card);
   if(m_ConnId == 0)
-    NOTICE("TcpEndpoint::connect: got 0 for the connection id");
+    WARNING("TcpEndpoint::connect: got 0 for the connection id");
   return (m_ConnId != 0); /// \todo Error codes
 }
 
@@ -70,8 +69,6 @@ int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 
 int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 {
-  NOTICE("TcpEndpoint::recv will " << (bBlock ? "" : "not ") << "block");
-  
   if((!buffer || !maxSize) && !bPeek)
     return -1;
 
@@ -118,7 +115,7 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
   /// \note Perhaps nBytes should also have an upper limit check?
   if(!nBytes || !payload)
   {
-    NOTICE("Dud arguments to depositPayload!");
+    WARNING("Dud arguments to depositPayload!");
     return;
   }
   
@@ -172,6 +169,9 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
       {
         break;
       }
+      
+      // yield control otherwise we're using up all the CPU time here
+      Scheduler::instance().yield(0);
     }
     
     if(timeout)
@@ -187,3 +187,4 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
     return (m_DataStream.getSize() != 0);
   }
 };
+
