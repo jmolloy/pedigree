@@ -114,7 +114,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     {
       const char *pStr;
 
-      if (ELF32_ST_TYPE(pSymbol->info) == 3)
+      if (ST_TYPE(pSymbol->info) == 3)
       {
         // Section type - the name will be the name of the section header it refers to.
         ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
@@ -132,7 +132,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
       // Insert the symbol into the symbol table.
       SymbolTable::Binding binding;
-      switch (ELF32_ST_BIND(pSymbol->info))
+      switch (ST_BIND(pSymbol->info))
       {
         case 0: // STB_LOCAL
           binding = SymbolTable::Local;

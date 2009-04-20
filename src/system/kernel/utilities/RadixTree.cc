@@ -21,7 +21,7 @@
 //
 
 RadixTree<void*>::RadixTree() :
-  root(0), nItems(0)
+    nItems(0), root(0)
 {
 }
 
@@ -30,7 +30,7 @@ RadixTree<void*>::~RadixTree()
 }
 
 RadixTree<void*>::RadixTree(const RadixTree &x) :
-  root(0), nItems(0)
+    nItems(0), root(0)
 {
 }
 

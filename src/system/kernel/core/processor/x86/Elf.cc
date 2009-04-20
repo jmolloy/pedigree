@@ -62,43 +62,43 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
     pStringTable = m_pDynamicStringTable;
 
   // If this is a section header, patch straight to it.
-  if (pSymbols && ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
+  if (pSymbols && ST_TYPE(pSymbols[R_SYM(rel.info)].info) == 3)
   {
     // Section type - the name will be the name of the section header it refers to.
-    int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
+    int shndx = pSymbols[R_SYM(rel.info)].shndx;
     ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
-  else if (ELF32_R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
+  else if (R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
-    const char *pStr = pStringTable + pSymbols[ELF32_R_SYM(rel.info)].name;
+    const char *pStr = pStringTable + pSymbols[R_SYM(rel.info)].name;
 
     if (pSymtab == 0)
       pSymtab = KernelElf::instance().getSymbolTable();
 
-    if (ELF32_R_TYPE(rel.info) == R_386_COPY)
+    if (R_TYPE(rel.info) == R_386_COPY)
     {
       policy = SymbolTable::NotOriginatingElf;
     }
     S = pSymtab->lookup(String(pStr), this, policy);
 
     if (S == 0)
-      WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << ELF32_R_TYPE(rel.info) << ")");
+      WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
     // This is a weak relocation, but it was undefined.
-    else if(S == ~0)
+    else if(S == ~0UL)
       WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
   }
 
-  if (S == 0 && (ELF32_R_TYPE(rel.info) != R_386_RELATIVE))
+  if (S == 0 && (R_TYPE(rel.info) != R_386_RELATIVE))
     return false;
-  if (S == ~0)
+  if (S == ~0UL)
     S = 0; // undefined
 
   // Base address
   uint32_t B = loadBase;
 
   uint32_t result = A; // Currently the result is the addend.
-  switch (ELF32_R_TYPE(rel.info))
+  switch (R_TYPE(rel.info))
   {
     case R_386_NONE:
       break;
@@ -119,7 +119,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
       result = B + A;
       break;
     default:
-      ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
+      ERROR ("Relocation not supported: " << Dec << R_TYPE(rel.info));
   }
 
   // Write back the result.
