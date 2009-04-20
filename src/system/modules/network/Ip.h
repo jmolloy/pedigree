@@ -51,10 +51,28 @@ public:
   /** Sends an IP packet */
   static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard = 0);
 
+/*
+#elif _BYTE_ORDER == _LITTLE_ENDIAN
+	uint32_t	ip_hl:4,
+		ip_v:4;
+#elif _BYTE_ORDER == _BIG_ENDIAN
+	uint32_t	ip_v:4,
+		ip_hl:4;
+#else
+*/
+
+
   /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
   struct ipHeader
   {
-    uint8_t   verlen;
+#ifdef LITTLE_ENDIAN
+    uint32_t header_len : 4;
+    uint32_t ipver : 4;
+#else
+    uint32_t ipver : 4;
+    uint32_t header_len : 4;
+#endif
+//    uint8_t   verlen;
     uint8_t   tos;
     uint16_t  len;
     uint16_t  id;

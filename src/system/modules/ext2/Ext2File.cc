@@ -48,6 +48,7 @@ Ext2File::Ext2File(String name, uintptr_t inode_num, Inode inode,
 
 Ext2File::~Ext2File()
 {
+  NOTICE("OMFG EXT2 FILE DESTRUCTOR!");
 }
 
 uint64_t Ext2File::read(uint64_t location, uint64_t size, uintptr_t buffer)

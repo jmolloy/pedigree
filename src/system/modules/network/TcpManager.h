@@ -25,6 +25,8 @@
 
 #include <Log.h>
 
+#include "Manager.h"
+
 #include "NetworkStack.h"
 #include "Tcp.h"
 #include "TcpMisc.h"
@@ -35,7 +37,7 @@
 /**
  * The Pedigree network stack - TCP Protocol Manager
  */
-class TcpManager
+class TcpManager : public ProtocolManager
 {
 public:
   TcpManager() :

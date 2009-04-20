@@ -195,7 +195,7 @@ void TcpManager::Disconnect(size_t connectionId)
   }
   else
   {
-    NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but not valid state!");
+    NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but isn't valid state!");
   }
 }
 
@@ -216,6 +216,8 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
      stateBlock->currentState != Tcp::FIN_WAIT_1 &&
      stateBlock->currentState != Tcp::FIN_WAIT_2)
     return -1; // we can't send data unless we're in a synchronised state
+  
+  NOTICE("Sending segment");
   
   stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
 
@@ -261,6 +263,11 @@ void TcpManager::removeConn(size_t connId)
 
 void TcpManager::returnEndpoint(Endpoint* e)
 {
+  // The connection may be still closing when this is called!
+  // It is well-defined behaviour that the endpoint will be returned
+  // and the connection released once it hits the CLOSED state.
+  return;
+  
   if(e)
   {
     // remove from the endpoint list
@@ -294,6 +301,7 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
       return 0;
     
     tmp->setCard(pCard);
+    tmp->setManager(this);
     
     e = static_cast<Endpoint*>(tmp);
     //m_Endpoints.insert(localPort, e);

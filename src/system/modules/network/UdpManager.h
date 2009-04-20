@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
+#include "Manager.h"
+
 #include "Endpoint.h"
 #include "Udp.h"
 
@@ -86,7 +88,7 @@ class UdpEndpoint : public Endpoint
 /**
  * The Pedigree network stack - UDP Protocol Manager
  */
-class UdpManager
+class UdpManager : public ProtocolManager
 {
 public:
   UdpManager() :

@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
+#include "Manager.h"
+
 #include "Endpoint.h"
 #include "Ethernet.h"
 
@@ -107,7 +109,7 @@ class RawEndpoint : public Endpoint
 /**
  * The Pedigree network stack - RAW Protocol Manager
  */
-class RawManager
+class RawManager : public ProtocolManager
 {
 public:
   RawManager() :

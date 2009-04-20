@@ -31,7 +31,7 @@
 #define NETMAN_TYPE_TCP6   11
 
 #define IN_PROTOCOLS_DEFINED
-enum Protocols
+enum Protocol
 {
   IPPROTO_IP = 0,
   IPPROTO_IPV6,
@@ -39,6 +39,50 @@ enum Protocols
   IPPROTO_RAW,
   IPPROTO_TCP,
   IPPROTO_UDP
+};
+
+/** File subclass for sockets */
+class Socket : public File
+{
+  private:
+    /** Copy constructors are hidden - (mostly) unimplemented (or invalid)! */
+    Socket(const File &file);
+    File& operator =(const File&);
+    
+    // Endpoints are not able to be copied
+    Socket(const Socket &file) : m_Endpoint(0), m_Protocol(0)
+    {
+      ERROR("Socket copy constructor called");
+    };
+    Socket& operator =(const Socket &file)
+    {
+      ERROR("Socket copy constructor called");
+      return *this;
+    }
+    
+  public:
+    Socket(int proto, Endpoint *p, Filesystem *pFs) :
+      File(String("socket"), 0, 0, 0, 0, pFs, 0, 0), m_Endpoint(p), m_Protocol(proto)
+    {};
+    virtual ~Socket()
+    {};
+    
+    inline Endpoint *getEndpoint()
+    {
+      return m_Endpoint;
+    }
+    
+    inline int getProtocol()
+    {
+      return m_Protocol;
+    }
+
+    virtual void decreaseRefCount(bool bIsWriter);
+    
+  private:
+  
+    Endpoint *m_Endpoint;
+    int m_Protocol;
 };
 
 /** Provides an interface to Endpoints for applications */

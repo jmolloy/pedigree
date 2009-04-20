@@ -68,7 +68,8 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   
   header->ttl = 64; /// \note Perhaps this could be customisable one day?
   
-  header->verlen = (5 << 0) | (4 << 4); // IPv4, offset is 5 DWORDs
+  header->ipver = 4; // IPv4, offset is 5 DWORDs
+  header->header_len = 5;
   
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packAddr, sizeof(ipHeader));
