@@ -54,6 +54,19 @@ Elf::Elf() :
 
 Elf::~Elf()
 {
+    delete m_pSymbolTable;
+    delete m_pStringTable;
+    delete m_pShstrtab;
+    delete m_pGotTable;
+    delete m_pRelTable;
+    delete m_pRelaTable;
+    delete m_pPltRelTable;
+    delete m_pPltRelaTable;
+    delete m_pDebugTable;
+    delete m_pDynamicSymbolTable;
+    delete m_pDynamicStringTable;
+    delete m_pSectionHeaders;
+    delete m_pProgramHeaders;    
 }
 
 bool Elf::create(uint8_t *pBuffer, size_t length)
