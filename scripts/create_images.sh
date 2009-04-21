@@ -167,7 +167,7 @@ elif which mcopy >/dev/null 2>&1; then
 
   tar -xzf ../images/hdd_fat16.tar.gz
 
-  sh ../scripts/mtsetup.sh ./hdd_16h_63spt_100c_fat16.img > /dev/null 2>&1
+  sh ../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
   touch ./.pedigree-root
 
@@ -193,7 +193,8 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
-  svn export --force $SRCDIR/../images/i686-elf ./tmp
+  mkdir -p ./tmp
+  cp -ra $SRCDIR/../images/i686-elf/* ./tmp
 
   mcopy -Do -s ./tmp/.bashrc C:/
   mcopy -Do -s ./tmp/* C:/

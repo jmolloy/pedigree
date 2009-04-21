@@ -166,7 +166,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   SC_NOTICE("execve(\"" << name << "\")");
 
   String myArgv;
-  int i;
+  int i = 0;
   while(argv[i])
   {
     myArgv += String(argv[i]);

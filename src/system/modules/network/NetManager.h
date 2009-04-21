@@ -21,8 +21,10 @@
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
+#include <process/Scheduler.h>
 
 #include <network/Endpoint.h>
+#include <network/Tcp.h>
 
 #define NETMAN_TYPE_UDP    1
 #define NETMAN_TYPE_TCP    2
@@ -75,6 +77,58 @@ class Socket : public File
     inline int getProtocol()
     {
       return m_Protocol;
+    }
+    
+    /** Similar to POSIX's select() function */
+    virtual int select(bool bWriting = false, int timeout = 0)
+    {
+        NOTICE("Socket::select");
+        
+        // Basically, this busy waits for data; the last thing you want to do is
+        // cancel execution of dataReady if it's blocking (with a timeout) as it
+        // won't be able to free the resources it uses or unregister the Timer it
+        // uses for the timeout.
+        if(!bWriting)
+        {
+            do
+            {
+                int state = m_Endpoint->state();
+                if(m_Protocol == NETMAN_TYPE_TCP)
+                {
+                    if(state == Tcp::ESTABLISHED)
+                    {
+                        if(m_Endpoint->dataReady(false))
+                            return 1;
+                    }
+                    else
+                        return 1; // not established, allow EOF from recv()
+                }
+                else if(m_Endpoint->dataReady(false))
+                    return 1; // non-TCP sockets just need to check for data
+
+                Scheduler::instance().yield(0);
+            }
+            while(timeout != 0);
+        }
+        else
+        {
+            if(m_Protocol == NETMAN_TYPE_TCP)
+            {
+                do
+                {
+                    int state = m_Endpoint->state();
+                    if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
+                        return 1;
+                    
+                    Scheduler::instance().yield(0);
+                }
+                while(timeout != 0);
+            }
+            else
+                return 1;
+        }
+        
+        return 0;
     }
 
     virtual void decreaseRefCount(bool bIsWriter);

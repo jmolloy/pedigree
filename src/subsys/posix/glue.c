@@ -185,8 +185,7 @@ int _isatty(int file)
 
 int link(char *old, char *_new)
 {
-  STUBBED("link");
-  return -1;
+  return syscall2(POSIX_LINK, (int) old, (int) _new);
 }
 
 int lseek(int file, int ptr, int dir)

@@ -80,7 +80,7 @@ class RangeList
     Range getRange(size_t index) const;
 
     RangeList(const RangeList & l) : m_List(l.m_List) {};
-    RangeList &operator = (const RangeList & l) {m_List = l.m_List;};
+    RangeList &operator = (const RangeList & l) {m_List = l.m_List; return *this;};
     
   private:
 

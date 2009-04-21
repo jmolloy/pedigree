@@ -27,6 +27,7 @@
 #include <network/NetManager.h>
 #include <network/Tcp.h>
 #include <utilities/utility.h>
+#include <utilities/TimedTask.h>
 
 #include "file-syscalls.h"
 #include "console-syscalls.h"
@@ -262,6 +263,9 @@ int posix_lseek(int file, int ptr, int dir)
 
 int posix_link(char *old, char *_new)
 {
+  /// \note To make nethack work, you either have to implement this, or return 0 and pretend
+  ///       it worked (ie, make the files in the tree - which I've already done -- Matt)
+  NOTICE("posix_link(" << old << ", " << _new << ")");
   SYSCALL_ERROR(Unimplemented);
   return -1;
 }
@@ -838,139 +842,168 @@ int posix_mkdir(const char* name, int mode)
   return worked ? 0 : -1;
 }
 
+class SelectTask : public TimedTask
+{
+    public:
+        SelectTask() :
+            TimedTask(), pFile(0), bWriting(false), fd(-1)
+        {};
+        virtual ~SelectTask()
+        {};
+        
+        virtual int task()
+        {
+            // timeout is handled by *this* object, not by the File::select function
+            return pFile->select(bWriting, m_Timeout);
+        }
+        
+        File *pFile;
+        bool bWriting;
+        
+        int fd;
+    private:
+    
+        SelectTask(const SelectTask&);
+        const SelectTask& operator = (const SelectTask&);
+};
+
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
-  /// \todo File will soon get a select() method, which allows different filesystems to provide different
-  ///       functionality for select on a descriptor. That should clean up this code here significantly.
+    F_NOTICE("select(" << Dec << nfds << Hex << ")");
 
-  /// \note This is by no means a full select() implementation! It only implements the functionality required for nano, which is not much.
-  ///       Just readfds, and no timeout.
-  F_NOTICE("select(" << Dec << nfds << Hex << ")");
+    // Lookup this process.
+    FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
-  // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+    List<SelectTask *> tasks;
+    List<Semaphore *> taskSems;
+  
+    uint32_t timeoutSeconds = 0;
+    if(timeout)
+      timeoutSeconds = timeout->tv_sec;
 
-  int num_ready = 0;
-  for (int i = 0; i < nfds; i++)
-  {
-    if(readfds)
+    int num_ready = 0;
+    for (int i = 0; i < nfds; i++)
     {
-      if (FD_ISSET(i, readfds))
-      {
-        // Is the FD a console?
-        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
-        if (!pFd)
+        // valid fd?
+        FileDescriptor *pFd = 0;
+        if((readfds && FD_ISSET(i, readfds)) || (writefds && FD_ISSET(i, writefds)))
         {
-          // Error - no such file descriptor.
-          ERROR("select: no such file descriptor (" << Dec << i << ")");
-          return -1;
-        }
-
-        if (ConsoleManager::instance().isConsole(pFd->file))
-        {
-          if (ConsoleManager::instance().hasDataAvailable(pFd->file))
-            num_ready++;
-          else
-            FD_CLR(i, readfds);
-        }
-        else if (NetManager::instance().isEndpoint(pFd->file))
-        {
-          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-          if(!p)
+          pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+          if (!pFd)
           {
-            continue;
+              // Error - no such file descriptor.
+              ERROR("select: no such file descriptor (" << Dec << i << ")");
+              return -1;
           }
-
-          if(timeout)
-          {
-            if(timeout->tv_sec == 0)
+        }
+    
+        if(readfds)
+        {
+            if (FD_ISSET(i, readfds))
             {
-              NOTICE("state = " << static_cast<int>(p->state()) << ".");
-              if(p->state() == 0xff)
-              {
-                if(p->dataReady(false))
-                  num_ready++;
-                else
-                  FD_CLR(i, readfds);
-              }
-              else
-              {
-                if(p->state() == Tcp::ESTABLISHED)
+                /// \todo Subclass File for consoles, then this whole thing can be simplified further!
+                if (ConsoleManager::instance().isConsole(pFd->file))
                 {
-                  if(p->dataReady(false))
-                    num_ready++;
-                  else
-                    FD_CLR(i, readfds);
+                    if (ConsoleManager::instance().hasDataAvailable(pFd->file))
+                        num_ready++;
+                    else
+                        FD_CLR(i, readfds);
+              
+                    continue;
                 }
-                else
-                {
-                  // regardless of the fact that data is available, the socket is still
-                  // readable - it'll just return 0 for EOF.
-                  num_ready++;
-                }
-              }
+            
+                SelectTask *t = new SelectTask;
+                t->pFile = pFd->file;
+                t->bWriting = false;
+                t->fd = i;
+                t->setTimeout(timeoutSeconds);
+
+                Semaphore *s = new Semaphore(0);
+                t->setSemaphore(s);
+
+                tasks.pushBack(t);
+                taskSems.pushBack(s);
+
+                t->begin();
             }
-            else
-            {
-              if(p->dataReady(true, timeout->tv_sec))
-                num_ready++;
-              else
-                FD_CLR(i, readfds);
-            }
-          }
-          else
-          {
-            // block while waiting for the data to come (and wait forever)
-            if(p->dataReady(true, 0xffffffff))
-              num_ready++;
-            else
-              FD_CLR(i, readfds);
-          }
         }
-        else
-          // Regular file - always available to read.
-          num_ready ++;
-      }
+        if(writefds)
+        {
+            if (FD_ISSET(i, writefds))
+            {
+                SelectTask *t = new SelectTask;
+                t->pFile = pFd->file;
+                t->bWriting = true;
+                t->fd = i;
+                t->setTimeout(timeoutSeconds);
+
+                Semaphore *s = new Semaphore(0);
+                t->setSemaphore(s);
+
+                tasks.pushBack(t);
+                taskSems.pushBack(s);
+
+                t->begin();
+            }
+        }
     }
-    if(writefds)
+  
+    // We've probably got a bunch of tasks now, and a bunch of Semaphores to check for completion of each one.
+    // Let's check those tasks!
+    if(tasks.count())
     {
-      if (FD_ISSET(i, writefds))
-      {
-        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
-        if (!pFd)
+        while(true)
         {
-          // Error - no such file descriptor.
-          ERROR("select: no such file descriptor (" << Dec << i << ")");
-          return -1;
+            bool bOneHasCompleted = false;
+            List<SelectTask *>::Iterator it = tasks.begin();
+            List<Semaphore *>::Iterator it2 = taskSems.begin();
+            for(; it != tasks.end() && it2 != taskSems.end(); it++, it2++)
+            {
+                // check the semaphore for completion
+                if((*it2)->tryAcquire())
+                {
+                    if((*it)->wasSuccessful())
+                    {
+                        int ret = (*it)->getReturnValue();
+                        if(ret == 0)
+                            FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
+                        num_ready += ret;
+                    }
+                    else // timed out or cancelled elsewhere!
+                        FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
+                    
+                    bOneHasCompleted = true;
+                    
+                    // clean up - now that one has completed the function will be returning
+                    delete (*it);
+                    delete (*it2);
+                }
+                else if(bOneHasCompleted)
+                {
+                    // one's already done, this one isn't complete - cancel it & clean up
+                    (*it)->cancel();
+                    delete (*it);
+                    delete (*it2);
+                }
+            }
+
+            if(bOneHasCompleted)
+                break;
+
+            Scheduler::instance().yield(0);
         }
-
-        if (NetManager::instance().isEndpoint(pFd->file))
-        {
-          Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-          if(!p)
-            continue;
-
-          int state = p->state();
-
-          if(state == 0xff)
-            num_ready++;
-          else
-          {
-            // writeable state? (though technically FIN_WAIT_2 isn't writeable)
-            /// \todo Timeout lets this check block, but this code won't block...
-            if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
-              num_ready++;
-            else
-              FD_CLR(i, writefds);
-          }
-        }
-        else
-          num_ready++; // normal files are always ready to write
-      }
     }
-  }
+  
+    // Kill zombie threads created by TimedTask
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    for(size_t i = 0; i < pProcess->getNumThreads(); i++)
+    {
+        Thread *pThread = pProcess->getThread(i);
+        if(pThread->getStatus() == Thread::Zombie)
+          delete pThread;
+    }
 
-  return num_ready;
+    return num_ready;
 }
 
 int posix_fcntl(int fd, int cmd, int num, int* args)

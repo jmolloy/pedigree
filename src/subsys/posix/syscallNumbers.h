@@ -88,6 +88,7 @@
 #define POSIX_GETCWD     58
 
 #define POSIX_READLINK   59
+#define POSIX_LINK       60
 
 #define POSIX_STUBBED    99
 
