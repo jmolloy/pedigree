@@ -189,7 +189,7 @@ X86VirtualAddressSpace::~X86VirtualAddressSpace()
 
 X86VirtualAddressSpace::X86VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(VIRTUAL_PAGE_DIRECTORY),
-    m_VirtualPageTables(VIRTUAL_PAGE_TABLES), m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks()
+    m_VirtualPageTables(VIRTUAL_PAGE_TABLES), m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_Lock()
 {
   // Allocate a new page directory
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
@@ -241,7 +241,7 @@ X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
                                                void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
     m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
-    m_pStackTop(VirtualStack), m_freeStacks()
+    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock()
 {
 }
 
@@ -297,7 +297,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     g_EscrowPages[Processor::id()] = 0;
 
     // Map the page
-    *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE) | PAGE_WRITE);
+    *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),

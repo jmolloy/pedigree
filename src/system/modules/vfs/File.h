@@ -166,6 +166,16 @@ public:
   {
     return m_pParent;
   }
+  
+  /** Similar to POSIX's select() function
+    * \return 1 if ready for reading/writing, 0 otherwise
+    * \note Default implementation says always ready to read/write
+    *       so be sure to override if that's not right
+    */
+  virtual int select(bool bWriting = false, int timeout = 0)
+  {
+    return 1;
+  }
 
 protected:
   String m_Name;
