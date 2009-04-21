@@ -287,6 +287,10 @@
 #define __IEEE_LITTLE_ENDIAN
 #endif
 
+#ifdef X64
+#define __IEEE_LITTLE_ENDIAN
+#endif
+
 #ifndef __IEEE_BIG_ENDIAN
 #ifndef __IEEE_LITTLE_ENDIAN
 #error Endianess not declared!!

@@ -53,6 +53,8 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     virtual void unmap(void *virtualAddress);
     virtual void *allocateStack();
     virtual void freeStack(void *pStack);
+    virtual VirtualAddressSpace *clone();
+    virtual void revertToKernelAddressSpace();
 
     //
     // Needed for the PhysicalMemoryManager

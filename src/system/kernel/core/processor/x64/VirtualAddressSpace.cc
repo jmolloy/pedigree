@@ -20,6 +20,8 @@
 #include "VirtualAddressSpace.h"
 #include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <process/Scheduler.h>
+#include <process/Process.h>
 
 //
 // Page Table/Directory entry flags
@@ -115,9 +117,30 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
 
+  // Check if a page directory pointer table was present *before* the conditional
+  // allocation.
+  bool pdWasPresent = (*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT;
+
   // Is a page directory pointer table present?
   if (conditionalTableEntryAllocation(pml4Entry, Flags) == false)
     return false;
+
+  // If there wasn't a PDPT already present, and the address is in the kernel area
+  // of memory, we need to propagate this change across all address spaces.
+  if (!pdWasPresent &&
+      Processor::m_Initialised == 2 &&
+      virtualAddress >= KERNEL_VIRTUAL_HEAP)
+  {
+      uint64_t thisPml4Entry = *pml4Entry;
+      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+      {
+          Process *p = Scheduler::instance().getProcess(i);
+
+          X64VirtualAddressSpace *x64VAS = reinterpret_cast<X64VirtualAddressSpace*> (p->getAddressSpace());
+          uint64_t *pml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
+          *pml4Entry = thisPml4Entry;  
+      }
+  }
 
   size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
   uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
@@ -199,6 +222,129 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
 
   // Unmap the page
   *pageTableEntry = 0;
+}
+
+VirtualAddressSpace *X64VirtualAddressSpace::clone()
+{
+    // No lock guard in here - we assume that if we're cloning, nothing will be trying
+    // to map/unmap memory.
+    // Also, we need a way of solving this as we use the map/unmap functions, which
+    // themselves try and grab the lock.
+    /// \bug This assumption is false!
+
+    // Create a new virtual address space
+    VirtualAddressSpace *pClone = VirtualAddressSpace::create();
+    if (pClone == 0)
+    {
+        WARNING("X64VirtualAddressSpace: Clone() failed!");
+        return 0;
+    }
+
+    // The userspace area is only the bottom half of the address space - the top 256 PML4 entries are for
+    // the kernel, and these should be mapped anyway.
+    for (uint64_t i = 0; i < 256; i++)
+    {
+        uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, i);
+        if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+            continue;
+
+        for (uint64_t j = 0; j < 512; j++)
+        {
+            uint64_t *pdptEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), j);
+            if ((*pdptEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                continue;
+
+            for (uint64_t k = 0; k < 512; k++)
+            {
+                uint64_t *pdEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdptEntry), k);
+                if ((*pdEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                    continue;
+
+                /// \todo Deal with 2MB pages here.
+
+                for (uint64_t l = 0; l < 512; l++)
+                {
+                    uint64_t *ptEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdEntry), l);
+                    if ((*ptEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                        continue;
+                  
+                    uint64_t flags = PAGE_GET_FLAGS(ptEntry);
+
+                    void *virtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
+                                                                     (i << 39) |
+                                                                     (j << 30) |
+                                                                     (k << 21) |
+                                                                     (l << 12) );
+                  
+                    if (getKernelAddressSpace().isMapped(virtualAddress))
+                        continue;
+
+                    // Page mapped in source address space, but not in kernel.
+                    /// \todo Copy on write.
+                    physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+
+                    // Copy.
+                    memcpy(reinterpret_cast<void*>(physicalAddress(newFrame)), reinterpret_cast<void*>(physicalAddress(PAGE_GET_PHYSICAL_ADDRESS(ptEntry))), 0x1000);
+                  
+                    // Map in.
+                    pClone->map(newFrame, virtualAddress, fromFlags(flags));
+                }
+            }
+        }
+    }
+
+    return pClone;
+}
+
+void X64VirtualAddressSpace::revertToKernelAddressSpace()
+{
+    // The userspace area is only the bottom half of the address space - the top 256 PML4 entries are for
+    // the kernel, and these should be mapped anyway.
+    for (uint64_t i = 0; i < 256; i++)
+    {
+        uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, i);
+        if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+            continue;
+
+        for (uint64_t j = 0; j < 512; j++)
+        {
+            uint64_t *pdptEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), j);
+            if ((*pdptEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                continue;
+
+            for (uint64_t k = 0; k < 512; k++)
+            {
+                uint64_t *pdEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdptEntry), k);
+                if ((*pdEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                    continue;
+
+                /// \todo Deal with 2MB pages here.
+
+                for (uint64_t l = 0; l < 512; l++)
+                {
+                    uint64_t *ptEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdEntry), l);
+                    if ((*ptEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                        continue;
+                  
+                    // Unused variable warning.
+                    //uint64_t flags = PAGE_GET_FLAGS(ptEntry);
+
+                    void *virtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
+                                                                     (i << 39) |
+                                                                     (j << 30) |
+                                                                     (k << 21) |
+                                                                     (l << 12) );
+                  
+                    if (getKernelAddressSpace().isMapped(virtualAddress))
+                        continue;
+
+                    // Free the page.
+                    /// \todo There's going to be a caveat with CoW here...
+                    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(ptEntry));
+                }
+            }
+        }
+    }
 }
 
 bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
@@ -411,8 +557,9 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
     if (page == 0)
       return false;
 
-    // Map the page
-    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+    // Map the page. Add the WRITE and USER flags so that these can be controlled
+    // on a page-granularity level.
+    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE) | PAGE_WRITE | PAGE_USER);
 
     // Zero the page directory pointer table
     memset(physicalAddress(reinterpret_cast<void*>(page)),
