@@ -11,6 +11,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <signal.h>
+
 void rofl(int arg)
 {
   printf("Signal Handler!\n");

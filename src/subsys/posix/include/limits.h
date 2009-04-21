@@ -9,6 +9,11 @@
 #  define MB_LEN_MAX    1
 # endif
 
+/* Maximum number of positional arguments, if _WANT_IO_POS_ARGS.  */
+# ifndef NL_ARGMAX
+#  define NL_ARGMAX 32
+# endif
+
 /* if do not have #include_next support, then we
    have to define the limits here. */
 # if !defined __GNUC__ || __GNUC__ < 2
@@ -124,4 +129,18 @@
 /* `_GCC_LIMITS_H_' is what GCC's file defines.  */
 # include_next <limits.h>
 #endif /* __GNUC__ && !_GCC_LIMITS_H_ */
+
+#ifndef _POSIX2_RE_DUP_MAX
+/* The maximum number of repeated occurrences of a regular expression
+ *    permitted when using the interval notation `\{M,N\}'.  */
+#define _POSIX2_RE_DUP_MAX              255
+#endif /* _POSIX2_RE_DUP_MAX  */
+
+#ifndef ARG_MAX
+#define ARG_MAX		4096
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX	4096
+#endif
 

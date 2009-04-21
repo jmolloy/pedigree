@@ -94,7 +94,7 @@
 #endif
 #endif
 
-#ifdef __mips__
+#if defined(__mips__) && !defined(__rtems__)
 #define __ATTRIBUTE_IMPURE_PTR__ __attribute__((__section__(".sdata")))
 #endif
 
@@ -132,6 +132,7 @@
 
 #ifdef __SPU__
 #define MALLOC_ALIGNMENT 16
+#define __CUSTOM_FILE_IO__
 #endif
 
 /* This block should be kept in sync with GCC's limits.h.  The point
@@ -201,17 +202,12 @@
 #endif
 #endif
 
-#ifndef PAGESIZE
-#ifndef PAGE_SIZE
-#define PAGESIZE 4096
-#define PAGE_SIZE PAGESIZE
-#else
-#define PAGESIZE PAGE_SIZE
+/* See if small reent asked for at configuration time and
+   is not chosen by the platform by default.  */
+#ifdef _WANT_REENT_SMALL
+#ifndef _REENT_SMALL
+#define _REENT_SMALL
 #endif
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX 1024
 #endif
 
 #endif /* __SYS_CONFIG_H__ */
