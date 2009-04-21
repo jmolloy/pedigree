@@ -39,6 +39,9 @@ class X64SyscallManager : public ::SyscallManager
      *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
+    /** Called to execute a syscall. */
+    uintptr_t syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5);
+
   private:
     /** Called when a syscall was called
      *\param[in] syscallState reference to the usermode state before the syscall */
@@ -59,7 +62,7 @@ class X64SyscallManager : public ::SyscallManager
     Spinlock m_Lock;
 
     /** The syscall handlers */
-    SyscallHandler *m_pHandler[SyscallManager::serviceEnd];
+    SyscallHandler *m_pHandler[serviceEnd];
 
     /** The instance of the syscall manager  */
     static X64SyscallManager m_Instance;

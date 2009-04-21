@@ -25,6 +25,11 @@
 #define SYSCALL_TARGET_FOUND
 #endif
 
+#ifdef X64
+#include "syscall-amd64.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
 #ifdef PPC_COMMON
 #include "syscall-ppc.h"
 #define SYSCALL_TARGET_FOUND

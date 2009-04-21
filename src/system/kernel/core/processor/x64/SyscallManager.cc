@@ -31,7 +31,7 @@ bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler
   // Lock the class until the end of the function
   LockGuard<Spinlock> lock(m_Lock);
 
-  if (UNLIKELY(Service >= SyscallManager::serviceEnd))
+  if (UNLIKELY(Service >= serviceEnd))
     return false;
   if (UNLIKELY(pHandler != 0 && m_pHandler[Service] != 0))
     return false;
@@ -63,6 +63,17 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
     pHandler->syscall(syscallState);
 }
 
+uintptr_t X64SyscallManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+{
+    uint64_t rax = (static_cast<uint64_t>(service) << 32) | static_cast<uint64_t>(function);
+    uint64_t ret;
+    asm volatile("mov %6, %%r8; \
+                  syscall" : "=a" (ret)
+                 : "0" (rax), "b" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5)
+                 : "rcx", "r11");
+    return ret;
+}
+
 //
 // Functions only usable in the kernel initialisation phase
 //
@@ -87,7 +98,7 @@ X64SyscallManager::X64SyscallManager()
   : m_Lock()
 {
   // Initialise the pointers to the handler
-  for (size_t i = 0;i < SyscallManager::serviceEnd;i++)
+  for (size_t i = 0;i < serviceEnd;i++)
     m_pHandler[i] = 0;
 }
 X64SyscallManager::~X64SyscallManager()

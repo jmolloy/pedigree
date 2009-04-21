@@ -84,12 +84,6 @@ class KernelElf : public Elf
     bool moduleDependenciesSatisfied(Module *module);
     void executeModule(Module *module);
 
-    #if defined(BITS_64)
-      typedef Elf64SectionHeader_t ElfSectionHeader_t;
-    #elif defined(BITS_32)
-      typedef ElfSectionHeader_t ElfSectionHeader_t;
-    #endif
-
     #if defined(X86_COMMON)
       MemoryRegion m_AdditionalSections;
     #endif

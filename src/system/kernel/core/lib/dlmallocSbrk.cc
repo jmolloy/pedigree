@@ -27,16 +27,20 @@ void *dlmallocSbrk(ssize_t incr)
   lock.acquire();
 
   // Get the current address space
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
   VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
   if (Processor::m_Initialised == 2)
     Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+#endif
 
   // Expand the heap
   void *pHeap = VirtualAddressSpace::getKernelAddressSpace().expandHeap(incr,
                                                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-  
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH  
   if (Processor::m_Initialised == 2)
     Processor::switchAddressSpace(VAddressSpace);
+#endif
 
   lock.release();
 
