@@ -1213,6 +1213,21 @@ int sigsuspend(const long* sigmask)
   return -1;
 }
 
+/** Installs default signal handlers to the kernel */
+void _init_signals()
+{
+    if(bTablesInit == 0)
+    {
+        bTablesInit = 1;
+        struct sigaction in, out;
+        in.sa_handler = (_sig_func_ptr) 0;
+
+        int z;
+        for(z = 0; z < 32; z++)
+            sigaction(z, &in, &out);
+    }
+}
+
 int fdatasync(int fildes)
 {
   STUBBED("fdatasync");

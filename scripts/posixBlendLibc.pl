@@ -40,6 +40,11 @@ my $libgcc = shift @ARGV;
 `rm /tmp/pedigree-tmp/lib_a-signal.o`; # We implement signals
 `rm /tmp/pedigree-tmp/lib_a-getcwd.o`;
 `rm /tmp/pedigree-tmp/lib_a-rename.o`;
+`rm /tmp/pedigree-tmp/lib_a-rewinddir.o`;
+`rm /tmp/pedigree-tmp/lib_a-opendir.o`;
+`rm /tmp/pedigree-tmp/lib_a-readdir.o`;
+`rm /tmp/pedigree-tmp/lib_a-closedir.o`;
+`rm /tmp/pedigree-tmp/lib_a-_isatty.o`;
 `$ld -nostdlib -shared  -Wl,-shared -Wl,-soname,libc.so -L$libgcc -o libc.so /tmp/pedigree-tmp/*.o -lgcc`;
 `rm -rf /tmp/pedigree-tmp/*`;
 `cp $libm /tmp/pedigree-tmp/libm.a`;

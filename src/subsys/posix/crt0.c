@@ -10,7 +10,7 @@ void *__gxx_personality_v0;
 
 void _start(char **argv, char **env)
 {
-  //_init_signal();
+  _init_signals();
 
   if (write(2,0,0) == -1)
   {
