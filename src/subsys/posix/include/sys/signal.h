@@ -74,6 +74,7 @@ typedef struct {
 #define SA_NOCLDSTOP 1   /* Do not generate SIGCHLD when children stop */
 #define SA_SIGINFO   2   /* Invoke the signal catching function with */
                          /*   three arguments instead of one. */
+#define SA_RESETHAND 3   /* Reset to SIG_DFL when entering signal handler */
 
 /* struct sigaction notes from POSIX:
  *
@@ -107,6 +108,7 @@ struct sigaction {
 #include <cygwin/signal.h>
 #else
 #define SA_NOCLDSTOP 1  /* only value supported now for sa_flags */
+#define SA_RESETHAND 2   /* Reset to SIG_DFL when entering signal handler */
 
 typedef void (*_sig_func_ptr)(int);
 
