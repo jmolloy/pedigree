@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__")
+set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__ -nostdlib")
 set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
 add_executable(login login.c ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 include_directories("${PEDIGREE_BINARY_DIR}/include-posix")

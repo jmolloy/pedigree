@@ -40,6 +40,11 @@ execute_process(COMMAND ${CXX_COMPILER} "-dumpmachine"
                 OUTPUT_VARIABLE MACHINE_SPEC)
 string(REGEX MATCH "([^-]+)" ARCH_SPEC "${MACHINE_SPEC}")
 
+# Have the compiler tell us where libgcc.a is.
+execute_process(COMMAND ${C_COMPILER} "-print-libgcc-file-name"
+                OUTPUT_VARIABLE LIBGCC_FILENAME)
+string(REGEX REPLACE "libgcc.a" "" LIBGCC_DIR "${LIBGCC_FILENAME}")
+
 if(ARCH_SPEC MATCHES "i[3456]86")
   set(ARCH "x86")
   get_filename_component(C_COMPILER_DIR ${C_COMPILER} PATH)

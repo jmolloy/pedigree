@@ -194,7 +194,13 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
   mkdir -p ./tmp
-  cp -ra $SRCDIR/../images/i686-elf/* ./tmp
+
+  # This was cp -a, but OS X doesn't have -a. On linux -a is equivalent to:
+  # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.
+  # OS X doesn't have --preserve either, but it is how -P is implemented, so
+  # -a is best replaced with -pPR.
+  cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
+  cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
 
   mcopy -Do -s ./tmp/.bashrc C:/
   mcopy -Do -s ./tmp/* C:/

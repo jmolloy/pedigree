@@ -65,7 +65,7 @@ set_target_properties(pedigree-glue.o PROPERTIES
 
 get_filename_component(COMPILER_DIR ${C_COMPILER} PATH)
 
-add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CMAKE_C_COMPILER}" ${PEDIGREE_BINARY_DIR} "${C_COMPILER}/../lib/gcc/${STUB}/4.3.0/"
+add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CMAKE_C_COMPILER}" "${CMAKE_AR}" "${PEDIGREE_BINARY_DIR}" "${LIBGCC_DIR}"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
 endif(NOT X64)
