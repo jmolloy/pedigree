@@ -23,15 +23,16 @@ struct sockaddr_in
 
 #endif
 
-enum Protocols
-{
-  IPPROTO_IP = 0,
-  IPPROTO_IPV6,
-  IPPROTO_ICMP,
-  IPPROTO_RAW,
-  IPPROTO_TCP,
-  IPPROTO_UDP
-};
+#ifndef IN_PROTOCOLS_DEFINED
+#define IPPROTO_IP    0
+#define IPPROTO_IPV6  1
+#define IPPROTO_ICMP  2
+#define IPPROTO_RAW   3
+#define IPPROTO_TCP   4
+#define IPPROTO_UDP   5
+#endif
+
+#define IN_CLASSA_NSHIFT 24
 
 #define INADDR_ANY        0
 #define INADDR_BROADCAST  0xffffffff

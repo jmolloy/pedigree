@@ -345,11 +345,11 @@ SEND-PR: support             I need help with gcc.
 `[ -n "$MACHINE" ] && echo Machine: $MACHINE`
 	$ENVIRONMENT_C
 host: i686-pc-pedigree
-build: i686-pc-cygwin
+build: i686-pc-linux-gnu
 target: i686-pc-pedigree
 __EOF__
       cat >> $file << \__EOF__
-configured with: ../gcc-4.3.2/configure --host=i686-pedigree --prefix=/pedigree-gcc --bindir=/applications --libdir=/libraries --with-local-prefix=/ --disable-nls --with-newlib --enable-languages=c,c++ --with-gmp=/usr/pedigree --with-mpfr=/usr/pedigree
+configured with: ../gcc-4.3.2/configure --host=i686-pedigree --target=i686-pedigree --bindir=/applications --libdir=/libraries --prefix=/pedigree-gcc --with-local-prefix=/ --disable-nls --enable-languages=c,c++ --with-gmp=/home/matthewi/code/pedigree-cross/ --with-mpfr=/home/matthewi/code/pedigree-cross/
 __EOF__
       cat >> $file << __EOF__
 >Description:

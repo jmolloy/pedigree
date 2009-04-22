@@ -115,8 +115,8 @@ int		_EXFUN(getdate_r, (const char *, struct tm *));
 #endif /* HAVE_GETDATE */
 
 /* defines for the opengroup specifications Derived from Issue 1 of the SVID.  */
-extern __IMPORT long _timezone;
-extern __IMPORT int _daylight;
+extern __IMPORT long timezone;
+extern __IMPORT int daylight;
 extern __IMPORT char *_tzname[2];
 
 /* POSIX defines the external tzname being defined in time.h */
@@ -223,6 +223,16 @@ extern "C" {
     making the function call.  */
 
 #define CLOCK_THREAD_CPUTIME (clockid_t)3
+
+#endif
+
+#if defined(_POSIX_MONOTONIC_CLOCK)
+
+/*  The identifier for the system-wide monotonic clock, which is defined
+ *      as a clock whose value cannot be set via clock_settime() and which 
+ *          cannot have backward clock jumps. */
+
+#define CLOCK_MONOTONIC (clockid_t)4
 
 #endif
 

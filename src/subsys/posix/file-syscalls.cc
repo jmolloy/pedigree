@@ -288,7 +288,7 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
   }
   
   if(buf == 0)
-    return 0;
+    return -1;
     
   HugeStaticString str;
   HugeStaticString tmp;
@@ -317,6 +317,8 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
   tmp = str;
   str = "/";
   str += tmp;
+  
+  NOTICE("readlink comes out with " << static_cast<const char*>(str) << "!");
   
   strcpy(buf, static_cast<const char*>(str));
   

@@ -132,6 +132,8 @@ mode_t	_EXFUN(umask,( mode_t __mask ));
 #if defined (__SPU__) || defined(__rtems__) || defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
 int	_EXFUN(lstat,( const char *__path, struct stat *__buf ));
 int	_EXFUN(mknod,( const char *__path, mode_t __mode, dev_t __dev ));
+#else
+int	_EXFUN(lstat,( const char *__path, struct stat *__buf ));
 #endif
 
 #if defined (__CYGWIN__) && !defined(__INSIDE_CYGWIN__)

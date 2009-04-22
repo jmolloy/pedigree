@@ -202,6 +202,14 @@
 #endif
 #endif
 
+#ifndef PAGESIZE
+#  ifndef PAGE_SIZE
+#    define PAGESIZE 4096
+#  else
+#    define PAGESIZE PAGE_SIZE
+#  endif
+#endif
+
 /* See if small reent asked for at configuration time and
    is not chosen by the platform by default.  */
 #ifdef _WANT_REENT_SMALL

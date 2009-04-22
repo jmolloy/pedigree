@@ -37,7 +37,8 @@ typedef unsigned int tcflag_t;
 # define INLCR	000100
 # define IGNCR	000200
 # define ICRNL	000400
-# define IXON	  002000
+# define IXON	002000
+# define IXANY  004000
 # define IXOFF	010000
 # define PARMRK 020000
 

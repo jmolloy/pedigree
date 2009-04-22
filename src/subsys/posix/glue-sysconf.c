@@ -109,7 +109,11 @@ long sysconf (int name)
 #ifdef PAGESIZE
       return PAGESIZE;
 #else
+#  ifdef PAGE_SIZE
+      return PAGE_SIZE;
+#  else
       return -1;
+#  endif
 #endif
   
     case _SC_RTSIG_MAX:

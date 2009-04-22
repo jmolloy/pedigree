@@ -56,11 +56,12 @@ int	 _EXFUN(ffs,(int));
 char 	*_EXFUN(index,(const char *, int));
 _PTR	 _EXFUN(memccpy,(_PTR, const _PTR, int, size_t));
 _PTR	 _EXFUN(mempcpy,(_PTR, const _PTR, size_t));
-#ifdef __CYGWIN__
-extern void *memmem (__const void *, size_t,  __const void *, size_t);
-#endif
+_PTR	 _EXFUN(memmem, (const _PTR, size_t, const _PTR, size_t));
 char 	*_EXFUN(rindex,(const char *, int));
+char 	*_EXFUN(stpcpy,(char *, const char *));
+char 	*_EXFUN(stpncpy,(char *, const char *, size_t));
 int	 _EXFUN(strcasecmp,(const char *, const char *));
+char	*_EXFUN(strcasestr,(const char *, const char *));
 char 	*_EXFUN(strdup,(const char *));
 char 	*_EXFUN(_strdup_r,(struct _reent *, const char *));
 char 	*_EXFUN(strndup,(const char *, size_t));
@@ -75,7 +76,7 @@ char	*_EXFUN(strlwr,(char *));
 char	*_EXFUN(strupr,(char *));
 #ifdef __CYGWIN__
 #ifndef DEFS_H	/* Kludge to work around problem compiling in gdb */
-const char  *_EXFUN(strsignal, (int __signo));
+char  *_EXFUN(strsignal, (int __signo));
 #endif
 int     _EXFUN(strtosigno, (const char *__name));
 #endif
