@@ -323,6 +323,12 @@ int gethostname(char *name, int len)
   return 0;
 }
 
+int sethostname(char *name, int len)
+{
+  STUBBED("sethostname");
+  return 0;
+}
+
 int ioctl(int fd, int command, void *buf)
 {
   return syscall3(POSIX_IOCTL, fd, command, buf);
@@ -771,6 +777,7 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
 unsigned int inet_addr(const char *cp)
 {
   /// \todo Support formats other than a.b.c.d
+  /// \todo Rewrite!
 
   char* tmp = (char*) malloc(strlen(cp));
   char* tmp_ptr = tmp; // so we can free the memory
@@ -810,6 +817,11 @@ char* inet_ntoa(struct in_addr addr)
   static char buff[16];
   sprintf(buff, "%u.%u.%u.%u", addr.s_addr & 0xff, (addr.s_addr & 0xff00) >> 8, (addr.s_addr & 0xff0000) >> 16, (addr.s_addr & 0xff000000) >> 24);
   return buff;
+}
+
+int inet_aton(const char *cp, struct in_addr *inp)
+{
+  return inet_addr(cp);
 }
 
 struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
@@ -1273,5 +1285,11 @@ char *dlerror()
 int poll(struct pollfd fds[], unsigned int nfds, int timeout)
 {
   return syscall3(POSIX_POLL, fds, nfds, timeout);
+}
+
+void herror(const char *s)
+{
+  char *buff = strerror(h_errno);
+  printf("%s: %s\n", s, buff);
 }
 

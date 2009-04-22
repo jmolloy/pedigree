@@ -5,6 +5,11 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 
+// htons & friends, if needed
+#ifndef htons
+#include <net/hton.h>
+#endif
+
 typedef uint16_t in_port_t;
 typedef uint32_t in_addr_t;
 

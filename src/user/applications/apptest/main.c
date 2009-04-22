@@ -10,8 +10,6 @@
 #define BUFFER_SIZE         255
 #define HOST_NAME_SIZE      255
 
-#define htons(x) ( ((x&0xFF)<<8) | ((x&0xFF00)>>8) )
-
 int  main(int argc, char* argv[])
 {
     int hSocket;                 /* handle to socket */
