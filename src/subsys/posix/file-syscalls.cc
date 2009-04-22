@@ -267,7 +267,7 @@ int posix_link(char *old, char *_new)
   ///       it worked (ie, make the files in the tree - which I've already done -- Matt)
   NOTICE("posix_link(" << old << ", " << _new << ")");
   SYSCALL_ERROR(Unimplemented);
-  return -1;
+  return 0;
 }
 
 int posix_readlink(const char* path, char* buf, unsigned int bufsize)
@@ -713,7 +713,7 @@ int posix_closedir(int fd)
 
 int posix_ioctl(int fd, int command, void *buf)
 {
-  F_NOTICE("ioctl(" << Dec << fd << ", " << Hex << command << ")");
+  F_NOTICE("ioctl(" << Dec << fd << ", " << Hex << command << ", " << reinterpret_cast<uintptr_t>(buf) << ")");
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   if (!f)
   {
@@ -726,6 +726,23 @@ int posix_ioctl(int fd, int command, void *buf)
     case TIOCGWINSZ:
     {
       return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
+    }
+    case FIONBIO:
+    {
+      // set/unset non-blocking
+      if(buf)
+      {
+        int a = *reinterpret_cast<int *>(buf);
+        NOTICE("a = " << a << ".");
+        if(a)
+          f->flflags = O_NONBLOCK;
+        else
+          f->flflags ^= O_NONBLOCK;
+      }
+      else
+        f->flflags = 0;
+      
+      return 0;
     }
     default:
     {
