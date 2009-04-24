@@ -97,10 +97,7 @@ class Processor
      *\param[in] pc The position to jump to.
      *\param[in] param The parameter to give. */
     static void switchToUserMode(uintptr_t pc, uintptr_t param);
-    
-    /** Do a context switch. */
-    static void contextSwitch(InterruptState *state);
-    
+        
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;
     /** Halt this processor */

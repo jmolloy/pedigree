@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jï¿½rg Pfï¿½hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,11 +28,11 @@ uint16_t Dns::m_NextId = 0;
 Dns::Dns() :
   m_DnsCache(), m_DnsRequests(), m_Endpoint(0)
 {
+  m_Endpoint = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
+  m_Endpoint->acceptAnyAddress(true);
   new Thread(Processor::information().getCurrentThread()->getParent(),
              reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
              reinterpret_cast<void*>(this));
-  m_Endpoint = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
-  m_Endpoint->acceptAnyAddress(true);
 }
 
 Dns::Dns(const Dns& ent) :
@@ -59,12 +59,12 @@ void Dns::mainThread()
   uint8_t* buff = new uint8_t[512];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
   memset(buff, 0, 512);
-  
+
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
   Endpoint* e = m_Endpoint; //UdpManager::instance().getEndpoint(addr, 53, 53);
-  
+
   Endpoint::RemoteEndpoint remoteHost;
-  
+
   while(true)
   {
     if(e->dataReady(true))
@@ -73,10 +73,10 @@ void Dns::mainThread()
       int n = e->recv(buffLoc, 512, &remoteHost);
       if(n <= 0)
         continue;
-      
+
       // grab the header
       DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
-      
+
       // look for the ID in our request list
       bool bFound = false;
       DnsRequest* req = 0;
@@ -86,59 +86,59 @@ void Dns::mainThread()
         {
           req = (*it);
           bFound = true;
-          
+
           m_DnsRequests.erase(it);
           break;
         }
       }
-      
+
       if(!bFound)
         continue;
-      
+
       uint16_t ansCount = BIG_TO_HOST16(head->aCount);
       uint16_t nameCount = BIG_TO_HOST16(head->nCount);
       uint16_t addCount = BIG_TO_HOST16(head->dCount);
-      
+
       // read the hostname to find the start of the question and answer structures
       String hostname;
       char* tmp = reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader));
-      
+
       size_t hostLen = 1;
       size_t currOffset = 0;
       size_t secSize = *tmp++;
       while(true)
       {
         hostLen++;
-        
+
         char c = *tmp++;
         if(c == 0)
           break;
-        
+
         char s[2];
         s[0] = c;
         s[1] = 0;
         hostname += s;
-        
+
         if(currOffset++ == secSize)
         {
           hostname += ".";
           secSize = *tmp++;
         }
       }
-        
+
       // null byte
       hostLen++;
       req->entry->hostname = hostname;
 
       NOTICE("Obtained hostname " << hostname << " len " << hostLen << ".");
-      
+
       /// \todo For hosts like GMail, this does not work unless we have a +1 on the end - find out why!
       uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix);
       uintptr_t ansStart = structStart;
-      
+
       req->entry->ip = 0;
       req->entry->numIps = 0;
-      
+
       // http://www.zytrax.com/books/dns/ch15/ for future reference
       for(uint16_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
       {
@@ -176,7 +176,7 @@ void Dns::mainThread()
               }
             }
             break;
-          
+
           /** CNAME */
           case 0x0005:
             {
@@ -184,11 +184,11 @@ void Dns::mainThread()
             }
             break;
         }
-        
+
         ansStart += sizeof(DnsAnswer) + BIG_TO_HOST16(ans->length);
       }
-      
-      
+
+
       m_DnsCache.pushBack(req->entry);
       req->success = true;
       req->waitSem.release();
@@ -207,7 +207,7 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
       return (*it)->ip;
     }
   }
-  
+
   // grab the DNS server to use
   StationInfo info = pCard->getStationInfo();
   if(info.nDnsServers == 0)
@@ -215,25 +215,25 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
     nIps = 0;
     return 0;
   }
-  
+
   // setup for our request
   Endpoint* e = m_Endpoint; //UdpManager::instance().getEndpoint(info.dnsServer, 0, 53);
-  
+
   uint8_t* buff = new uint8_t[512];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
   memset(buff, 0, 512);
-  
+
   // setup the DNS message header
   DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
   head->id = m_NextId++;
   head->opAndParam = HOST_TO_BIG16(DNS_RECUSRION);
   head->qCount = HOST_TO_BIG16(1);
-  
+
   // build the modified hostname
   size_t len = hostname.length() + 1;
   char* host = new char[len];
   memset(host, 0, len);
-  
+
   size_t top = hostname.length();
   size_t prevSize = 0;
   for(ssize_t i = top - 1; i >= 0; i--)
@@ -250,11 +250,11 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
     }
   }
   host[0] = prevSize;
-  
+
   memcpy(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), host, len);
-  
+
   delete [] host;
-  
+
   // requesting the host address
   QuestionSecNameSuffix* q = reinterpret_cast<QuestionSecNameSuffix*>(buffLoc + sizeof(DnsHeader) + len + 1);
   q->type = HOST_TO_BIG16(1);
@@ -263,19 +263,19 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   Endpoint::RemoteEndpoint remoteHost;
   remoteHost.remotePort = 53;
   remoteHost.ip = info.dnsServers[0];
-  
+
   // shove all this into a DnsRequest ready for replies
   DnsRequest* req = new DnsRequest;
   DnsEntry* ent = new DnsEntry;
   req->id = head->id;
   req->entry = ent;
-  
+
   m_DnsRequests.pushBack(req);
-  
+
   e->send(sizeof(DnsHeader) + sizeof(QuestionSecNameSuffix) + len + 1, buffLoc, remoteHost, false, pCard);
-  
+
   req->waitSem.acquire();
-  
+
   if(!req->success)
   {
     delete ent;
@@ -284,10 +284,10 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   else
   {
     delete req;
-    
+
     nIps = ent->numIps;
     return ent->ip;
   }
-  
+
   return 0;
 }

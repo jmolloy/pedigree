@@ -33,6 +33,7 @@ class Atomic;
 template<typename T>
 class Atomic<T, true>
 {
+  friend class PerProcessorScheduler;
   public:
     /** The constructor
      *\param[in] value initial value */

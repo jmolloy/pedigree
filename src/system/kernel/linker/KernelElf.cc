@@ -318,6 +318,8 @@ void KernelElf::executeModule(Module *module)
 
   if (module)
     module->entry();
+
+  NOTICE("KERNELELF: Module " << module->name << " finished executing");
 }
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)

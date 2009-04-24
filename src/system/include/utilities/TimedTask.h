@@ -30,12 +30,12 @@
 class TimedTask : public TimerHandler
 {
     public:
-    
+
         TimedTask() :
             m_Nanoseconds(0), m_Seconds(0), m_Timeout(30), m_Success(false),
             m_Active(false), m_ReturnValue(0), m_Task(0), m_WaitSem(0)
         {};
-        
+
         virtual ~TimedTask()
         {
             if(m_Active)
@@ -49,20 +49,20 @@ class TimedTask : public TimerHandler
                 delete m_Task;
             }
         }
-        
+
         virtual int task() = 0;
-        
+
         void begin()
         {
             if(m_WaitSem)
             {
                 m_Seconds = m_Nanoseconds = 0;
                 m_Active = true;
-                
+
                 if(m_Timeout)
                 {
                     registerMe();
-                    
+
                     Process *pProcess = Processor::information().getCurrentThread()->getParent();
                     m_Task = new Thread(
                                     pProcess,
@@ -81,54 +81,54 @@ class TimedTask : public TimerHandler
             else
                 WARNING("TimedTask::begin() called with no semaphore");
         }
-        
+
         void cancel()
         {
             if(m_Task)
             {
                 m_Active = false;
                 m_Success = false;
-            
+
                 unregisterMe();
-                
+
                 delete m_Task;
                 m_Task = 0;
-                
+
                 m_WaitSem->release();
                 m_WaitSem = 0;
             }
             else
                 ERROR("TimedTask::end() called but no thread is running");
         }
-        
+
         /** Called when the task completes successfully */
         void end(int returnValue)
         {
             m_Active = false;
-            
+
             unregisterMe();
-            
+
             m_Success = true;
             m_ReturnValue = returnValue;
-            
+
             m_WaitSem->release();
             m_WaitSem = 0;
-            
+
             m_Task->setStatus(Thread::Zombie);
-            
+
             while(1)
-                Scheduler::instance().yield(0);
+                Scheduler::instance().yield();
         }
-        
+
         static int taskTrampoline(void *ptr)
         {
             TimedTask *t = reinterpret_cast<TimedTask *>(ptr);
             int ret = t->task();
-            
+
             // We don't actually know if we'll ever reach this point, but if we do,
             // we're done :)
             t->end(ret);
-            
+
             // won't reach here, we get killed by end()
             return 0;
         }
@@ -153,28 +153,28 @@ class TimedTask : public TimerHandler
                 }
             }
         }
-        
+
         void setSemaphore(Semaphore *mySem)
         {
             m_WaitSem = mySem;
         }
-        
+
         bool wasSuccessful()
         {
             return m_Success;
         }
-        
+
         void setTimeout(uint32_t timeout)
         {
             m_Timeout = timeout;
         }
-        
+
         /** Don't use this if wasSuccessful() == false */
         int getReturnValue()
         {
             return m_ReturnValue;
         }
-      
+
     private:
         TimedTask(const TimedTask&);
         const TimedTask& operator = (const TimedTask&);
@@ -190,20 +190,20 @@ class TimedTask : public TimerHandler
                 ERROR("TimedTask::begin() with no machine timer!");
             }
         }
-        
+
         void unregisterMe()
         {
             Timer* t = Machine::instance().getTimer();
             if(t)
                 t->unregisterHandler(this);
         }
-    
+
         uint64_t m_Nanoseconds;
         uint64_t m_Seconds;
 
     protected:
         uint32_t m_Timeout; // defaults to 30 seconds
-        
+
     private:
 
         bool m_Success;

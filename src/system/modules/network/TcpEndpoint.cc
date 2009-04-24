@@ -171,7 +171,7 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
       }
       
       // yield control otherwise we're using up all the CPU time here
-      Scheduler::instance().yield(0);
+      Scheduler::instance().yield();
     }
     
     if(timeout)

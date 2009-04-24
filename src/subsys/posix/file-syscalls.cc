@@ -273,35 +273,35 @@ int posix_link(char *old, char *_new)
 int posix_readlink(const char* path, char* buf, unsigned int bufsize)
 {
   F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
-  
+
   File* f = VFS::instance().find(String(path), GET_CWD());
   if(!f)
   {
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
-  
+
   if(!f->isSymlink())
   {
     SYSCALL_ERROR(InvalidArgument);
     return -1;
   }
-  
+
   if(buf == 0)
     return -1;
-    
+
   HugeStaticString str;
   HugeStaticString tmp;
   str.clear();
   tmp.clear();
-  
+
   // traverse symlink, if needed
   while(f->isSymlink())
     f = Symlink::fromFile(f)->followLink();
-  
+
   if(f->getParent() != 0)
     str = f->getName();
-  
+
   while((f = f->getParent()))
   {
     // This feels a bit weird considering the while loop's subject...
@@ -313,15 +313,15 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
       str += tmp;
     }
   }
-  
+
   tmp = str;
   str = "/";
   str += tmp;
-  
+
   NOTICE("readlink comes out with " << static_cast<const char*>(str) << "!");
-  
+
   strcpy(buf, static_cast<const char*>(str));
-  
+
   return str.length();
 }
 
@@ -338,26 +338,26 @@ int posix_unlink(char *name)
 int posix_rename(const char* source, const char* dst)
 {
   F_NOTICE("rename(" << source << ", " << dst << ")");
-  
+
   File* src = VFS::instance().find(String(source), GET_CWD());
   File* dest = VFS::instance().find(String(dst), GET_CWD());
-  
+
   if (!src)
   {
     SYSCALL_ERROR(DoesNotExist);
     return -1;
   }
-  
+
   // traverse symlink
   while(src->isSymlink())
     src = Symlink::fromFile(src)->followLink();
-  
+
   if(dest)
   {
     // traverse symlink
     while(dest->isSymlink())
       dest = Symlink::fromFile(dest)->followLink();
-    
+
     if(dest->isDirectory() && !src->isDirectory())
     {
       SYSCALL_ERROR(FileExists);
@@ -376,33 +376,33 @@ int posix_rename(const char* source, const char* dst)
     if(!dest)
       return -1;
   }
-  
+
   // Gay algorithm.
   uint8_t* buf = new uint8_t[src->getSize()];
   src->read(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
   dest->truncate();
   dest->write(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
   VFS::instance().remove(String(source), GET_CWD());
-  
+
   return 0;
 }
 
 char* posix_getcwd(char* buf, size_t maxlen)
 {
   F_NOTICE("getcwd(" << maxlen << ")");
-  
+
   if(buf == 0)
     return 0;
-    
+
   HugeStaticString str;
   HugeStaticString tmp;
   str.clear();
   tmp.clear();
-  
+
   File* curr = GET_CWD();
   if(curr->getParent() != 0)
     str = curr->getName();
-  
+
   File* f = curr;
   while((f = f->getParent()))
   {
@@ -415,15 +415,15 @@ char* posix_getcwd(char* buf, size_t maxlen)
       str += tmp;
     }
   }
-  
+
   tmp = str;
   str = "/";
   str += tmp;
-  
+
   NOTICE("cwd = " << static_cast<const char*>(str) << ", length = " << str.length() << ".");
-  
+
   strcpy(buf, static_cast<const char*>(str));
-  
+
   return buf;
 }
 
@@ -469,7 +469,7 @@ int posix_stat(const char *name, struct stat *st)
   {
     mode = S_IFREG;
   }
-  
+
   NOTICE("valid");
 
   uint32_t permissions = file->getPermissions();
@@ -651,7 +651,7 @@ int posix_opendir(const char *dir, dirent *ent)
     delete f;
     return -1;
   }
-  
+
   fdMap.insert(fd, f);
 
   return static_cast<int>(fd);
@@ -741,7 +741,7 @@ int posix_ioctl(int fd, int command, void *buf)
       }
       else
         f->flflags = 0;
-      
+
       return 0;
     }
     default:
@@ -760,11 +760,11 @@ int posix_chdir(const char *path)
   if (dir)
   {
     Processor::information().getCurrentThread()->getParent()->setCwd(dir);
-    
+
     char tmp[1024];
     posix_getcwd(tmp, 1024);
     NOTICE("new directory is " << tmp << ".");
-    
+
     return 0;
   }
   else
@@ -869,19 +869,19 @@ class SelectTask : public TimedTask
         {};
         virtual ~SelectTask()
         {};
-        
+
         virtual int task()
         {
             // timeout is handled by *this* object, not by the File::select function
             return pFile->select(bWriting, m_Timeout);
         }
-        
+
         File *pFile;
         bool bWriting;
-        
+
         int fd;
     private:
-    
+
         SelectTask(const SelectTask&);
         const SelectTask& operator = (const SelectTask&);
 };
@@ -895,7 +895,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 
     List<SelectTask *> tasks;
     List<Semaphore *> taskSems;
-  
+
     uint32_t timeoutSeconds = 0;
     if(timeout)
       timeoutSeconds = timeout->tv_sec;
@@ -915,7 +915,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
               return -1;
           }
         }
-    
+
         if(readfds)
         {
             if (FD_ISSET(i, readfds))
@@ -927,10 +927,10 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                         num_ready++;
                     else
                         FD_CLR(i, readfds);
-              
+
                     continue;
                 }
-            
+
                 SelectTask *t = new SelectTask;
                 t->pFile = pFd->file;
                 t->bWriting = false;
@@ -966,7 +966,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             }
         }
     }
-  
+
     // We've probably got a bunch of tasks now, and a bunch of Semaphores to check for completion of each one.
     // Let's check those tasks!
     if(tasks.count())
@@ -990,9 +990,9 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                     }
                     else // timed out or cancelled elsewhere!
                         FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
-                    
+
                     bOneHasCompleted = true;
-                    
+
                     // clean up - now that one has completed the function will be returning
                     delete (*it);
                     delete (*it2);
@@ -1009,10 +1009,10 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             if(bOneHasCompleted)
                 break;
 
-            Scheduler::instance().yield(0);
+            Scheduler::instance().yield();
         }
     }
-  
+
     // Kill zombie threads created by TimedTask
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     for(size_t i = 0; i < pProcess->getNumThreads(); i++)
@@ -1108,7 +1108,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
 int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
 {
   NOTICE("poll(" << Dec << nfds << Hex << ")");
-  
+
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   unsigned int i;
@@ -1116,7 +1116,7 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
   for(i = 0; i < nfds; i++)
   {
     FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fds[i].fd));
-    
+
     // readable?
     if(fds[i].events & POLLIN)
     {
@@ -1133,7 +1133,7 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
         {
           continue;
         }
-        
+
         if(timeout)
         {
           if(p->dataReady(true, timeout))
@@ -1154,7 +1154,7 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
         // Regular file - always available to read.
         num_ready++;
     }
-    
+
     // writeable?
     if(fds[i].events & POLLOUT)
     {
@@ -1180,7 +1180,7 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
         num_ready++; // normal files are always ready to write
     }
   }
-  
+
   return num_ready;
 }
 

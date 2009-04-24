@@ -34,7 +34,7 @@ public:
   
   virtual void removeThread(Thread *pThread);
 
-  virtual Thread *getNext(Processor *pProcessor);
+  virtual Thread *getNext();
   
   virtual void threadStatusChanged(Thread *pThread);
   

@@ -54,7 +54,7 @@ void RoundRobin::removeThread(Thread *pThread)
           reinterpret_cast<uintptr_t> (pThread));
 }
 
-Thread *RoundRobin::getNext(Processor *pProcessor)
+Thread *RoundRobin::getNext()
 {
   LockGuard<Spinlock> guard(m_Lock);
 

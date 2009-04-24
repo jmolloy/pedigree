@@ -33,7 +33,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-  m_Mutex(), m_pSchedulingAlgorithm(0), m_Processes(), m_NextPid(0)
+    m_Processes(), m_NextPid(0), m_Map()
 {
 }
 
@@ -41,41 +41,17 @@ Scheduler::~Scheduler()
 {
 }
 
-bool Scheduler::initialise(Thread *pThread)
+bool Scheduler::initialise()
 {
-  m_pSchedulingAlgorithm = new RoundRobin();
-
-  pThread->setStatus(Thread::Running);
-  Processor::information().setCurrentThread(pThread);
-
-  m_pSchedulingAlgorithm->addThread(pThread);
-  Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
-
-  Machine::instance().getSchedulerTimer()->registerHandler(this);
-
   return true;
 }
 
-#ifdef MULTIPROCESSOR
-  void Scheduler::initialiseProcessor(Thread *pThread)
-  {
-    pThread->setStatus(Thread::Running);
-    Processor::information().setCurrentThread(pThread);
-
-    m_pSchedulingAlgorithm->addThread(pThread);
-
-    Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
-  }
-#endif
-
-void Scheduler::addThread(Thread *pThread)
+void Scheduler::addThread(Thread *pThread, PerProcessorScheduler &PPSched)
 {
-  m_pSchedulingAlgorithm->addThread(pThread);
 }
 
 void Scheduler::removeThread(Thread *pThread)
 {
-  m_pSchedulingAlgorithm->removeThread(pThread);
 }
 
 size_t Scheduler::addProcess(Process *pProcess)
@@ -86,7 +62,6 @@ size_t Scheduler::addProcess(Process *pProcess)
 
 void Scheduler::removeProcess(Process *pProcess)
 {
-  m_Mutex.acquire();
   for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
@@ -97,14 +72,8 @@ void Scheduler::removeProcess(Process *pProcess)
       break;
     }
   }
-  m_Mutex.release();
 }
-
-void Scheduler::threadStatusChanged(Thread *pThread)
-{
-  if (m_pSchedulingAlgorithm)
-    m_pSchedulingAlgorithm->threadStatusChanged(pThread);
-}
+#if 0
 volatile uint32_t bSafeToDisembark = true;
 void Scheduler::schedule(Processor *pProcessor, InterruptState &state, Thread *pThread)
 {
@@ -252,10 +221,10 @@ void Scheduler::timer(uint64_t delta, InterruptState &state)
   // TODO processor not passed.
   schedule(0, state);
 }
-
-void Scheduler::yield(Thread *pThread)
+#endif
+void Scheduler::yield()
 {
-  KernelCoreSyscallManager::instance().call(KernelCoreSyscallManager::yield, reinterpret_cast<uintptr_t>(pThread));
+  Processor::information().getScheduler().schedule();
 }
 
 size_t Scheduler::getNumProcesses()

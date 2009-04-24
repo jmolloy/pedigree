@@ -17,6 +17,7 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#include <process/PerProcessorScheduler.h>
 #include <processor/types.h>
 #include <processor/state.h>
 #include <machine/TimerHandler.h>
@@ -24,37 +25,31 @@
 #include <process/Process.h>
 #include <Atomic.h>
 
-class SchedulingAlgorithm;
 class Thread;
 class Processor;
 
-/**
- * \brief This class manages how processes and threads are scheduled across processors.
- * It delegates the task of selecting when to run each process to a SchedulingAlgorithm,
- * and attempts to run in a tickless fashion, if the hardware supports it (Local APIC present).
+/** \brief This class manages how processes and threads are scheduled across processors.
+ * 
+ * This is the "long term" scheduler - it load balances between processors and provides
+ * the interface for adding, listing and removing threads.
+ *
+ * The load balancing is "lazy" in that the algorithm only runs on thread addition
+ * and removal.
  */
-class Scheduler : public TimerHandler
+class Scheduler
 {
 public:
   /** Get the instance of the scheduler */
   inline static Scheduler &instance() {return m_Instance;}
 
   /** Initialises the scheduler. */
-  bool initialise(Thread *pInitialThread);
+  bool initialise();
 
-#ifdef MULTIPROCESSOR
-    /** Initialises the scheduler for the current processor */
-    void initialiseProcessor(Thread *pInitialThread);
-#endif
-
-  /** Retrieves the current SchedulingAlgorithm */
-  SchedulingAlgorithm *getAlgorithm();
-  /** Sets the current SchedulingAlgorithm */
-  void setAlgorithm(SchedulingAlgorithm *pAlgorithm);
-
-  /** Adds a thread to be scheduled. */
-  void addThread(Thread *pThread);
-  /** Removes a thread from being scheduled. */
+  /** Adds a thread to be load-balanced and accounted.
+      \param pThread The new thread.
+      \param PPSched The per-processor scheduler the thread will start on. */
+  void addThread(Thread *pThread, PerProcessorScheduler &PPSched);
+  /** Removes a thread from being load-balanced and accounted. */
   void removeThread(Thread *pThread);
   
   /** Adds a process.
@@ -64,38 +59,15 @@ public:
   /** Removes a process.
    *  \note This is purely for enumeration purposes. */
   void removeProcess(Process *pProcess);
-
-  /** Called by a thread when its status changes. Should be propagated directly to the
-   *  SchedulingAlgorithm. */
-  void threadStatusChanged(Thread *pThread);
   
-  /** The main schedule function - picks another thread and switches to it.
-      \param pProcessor The current processor, in case the SchedulingAlgorithm wants
-                        it for heuristics such as core affinity.
-      \param pThread    The thread to schedule. This is only designed to be used by
-                        the debugger. */
-  void schedule(Processor *pProcessor, InterruptState &state, Thread *pThread=0);
-
-  /** Causes a syscall to yield the processor to a given thread
-      If pThread is 0, the next available thread is chosen. */
-  void yield(Thread *pThread=0);
-
-#ifdef DEBUGGER
-  void switchToAndDebug(InterruptState &state, Thread *pThread);
-#endif
+  /** Causes a manual reschedule. */
+  void yield();
 
   /** Returns the number of processes currently in operation. */
   size_t getNumProcesses();
   
   /** Returns the n'th process currently in operation. */
   Process *getProcess(size_t n);
-  
-  /** TimerHandler callback. */
-  void timer(uint64_t delta, InterruptState &state);
-
-  /** Our "unsafe to reschedule" mutex.
-   *  \note This is public so it can be accessed by the thread start trampoline. */
-  Spinlock m_Mutex;
 
 private:
   /** Default constructor
@@ -110,9 +82,6 @@ private:
   /** Assignment operator
    *  \note Not implemented - singleton class */
   Scheduler &operator = (const Scheduler &);
-
-  /** The current SchedulingAlgorithm */
-  SchedulingAlgorithm *m_pSchedulingAlgorithm;
   
   /** The Scheduler instance. */
   static Scheduler m_Instance;
@@ -123,6 +92,8 @@ private:
   /** The next available process ID. */
   Atomic<size_t> m_NextPid;
 
+  /** Map of thread->processor mappings, for load-balance accounting. */
+  Tree<PerProcessorScheduler*, List<Thread*>*> m_Map;
 };
 
 #endif

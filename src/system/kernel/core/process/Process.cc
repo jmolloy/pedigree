@@ -48,7 +48,7 @@ Process::Process(Process *pParent) :
   // Set a temporary description.
   str = m_pParent->str;
   str += "<F>"; // F for forked.
-  
+
   // copy all signal handlers
   typedef Tree<size_t, void*> sigHandlerTree;
   sigHandlerTree &parentHandlers = pParent->m_SignalHandlers;
@@ -57,7 +57,7 @@ Process::Process(Process *pParent) :
   {
     size_t key = reinterpret_cast<size_t>(it.key());
     void *value = it.value();
-    
+
     SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
     myHandlers.insert(key, reinterpret_cast<void *>(newSig));
   }
@@ -147,18 +147,20 @@ void Process::kill()
   while (m_Threads.count() > 1)
   {
     Thread *pThread = m_Threads[0];
-    m_Threads.erase(m_Threads.begin());
-    delete pThread; // Calls Scheduler::remove and this::remove.
+    if (pThread != Processor::information().getCurrentThread())
+    {
+        m_Threads.erase(m_Threads.begin());
+        delete pThread; // Calls Scheduler::remove and this::remove.
+    }
   }
-
-  m_Threads[0]->setStatus(Thread::Zombie);
 
   // Tell any threads that may be waiting for us to die.
   m_pParent->m_DeadThreads.release();
 
-  Processor::setInterrupts(true);
+  m_Threads[0]->setStatus(Thread::Zombie);
+  Processor::information().getScheduler().schedule(Thread::Zombie);
 
-  Scheduler::instance().yield(0);
+  FATAL("Should never get here");
 }
 
 uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)

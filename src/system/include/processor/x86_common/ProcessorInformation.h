@@ -18,6 +18,7 @@
 #define KERNEL_PROCESSOR_X86_COMMON_PROCESSORINFORMATION_H
 
 #include <process/Thread.h>
+#include <process/PerProcessorScheduler.h>
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 #if defined(X86)
@@ -74,13 +75,16 @@ class X86CommonProcessorInformation
     inline void setCurrentThread(Thread *pThread)
       {m_pCurrentThread = pThread;}
 
+    inline PerProcessorScheduler &getScheduler()
+      {return m_Scheduler;}
+
   protected:
     /** Construct a X86CommonProcessor object
      *\param[in] processorId Identifier of the processor */
     inline X86CommonProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
       : m_ProcessorId(processorId), m_TssSelector(0), m_Tss(0),
         m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()), m_LocalApicId(apicId),
-        m_pCurrentThread(0){}
+        m_pCurrentThread(0), m_Scheduler() {}
     /** The destructor does nothing */
     inline virtual ~X86CommonProcessorInformation(){}
 
@@ -107,6 +111,8 @@ class X86CommonProcessorInformation
     uint8_t m_LocalApicId;
     /** The current thread */
     Thread *m_pCurrentThread;
+    /** The processor's scheduler. */
+    PerProcessorScheduler m_Scheduler;
 };
 
 /** @} */

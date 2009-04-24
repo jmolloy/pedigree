@@ -14,24 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_SPINLOCK_H
-#define KERNEL_SPINLOCK_H
+#ifndef SCHEDULER_STATE_H
+#define SCHEDULER_STATE_H
 
-#include <Atomic.h>
-
-class Spinlock
-{
-    friend class PerProcessorScheduler;
-  public:
-    inline Spinlock(bool bLocked = false)
-      : m_bInterrupts(), m_Atom(!bLocked){}
-
-    void acquire();
-    void release();
-
-  private:
-    volatile bool m_bInterrupts;
-    Atomic<bool> m_Atom;
-};
+typedef uintptr_t SchedulerState;
 
 #endif

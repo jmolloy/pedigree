@@ -71,6 +71,7 @@ void apMain()
 /** A processor idle function. */
 int idle(void *)
 {
+  NOTICE("Idle " << Processor::information().getCurrentThread()->getId());
   Processor::setInterrupts(true);
   for (;;)
   {
@@ -107,7 +108,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
-  
+
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 
@@ -157,6 +158,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
     // Load file.
+    NOTICE("Module load by thread " <<  Processor::information().getCurrentThread()->getId());
     KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
   }

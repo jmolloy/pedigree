@@ -15,7 +15,7 @@
 #
 
 add_kernel_src(core/lib
-               cppsupport.cc memory.c string.c vsprintf.c)
+               cppsupport.cc memory.c string.c vsprintf.c instrument.cc)
 
 if(X86_COMMON OR MIPS_COMMON OR PPC_COMMON)
   add_kernel_src(core/lib

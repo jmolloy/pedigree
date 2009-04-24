@@ -40,7 +40,7 @@ public:
    *                   provided for heuristic purposes (core affinity etc).
    * \note It is assumed that this function will set the Thread's TTL and other such values
    *       itself. */
-  virtual Thread *getNext(Processor *pProcessor) =0;
+  virtual Thread *getNext() =0;
   
   /** Notifies us that the status of a thread has changed, and that we may need to take action. */
   virtual void threadStatusChanged(Thread *pThread) =0;

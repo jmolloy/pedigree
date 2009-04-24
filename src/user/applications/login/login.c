@@ -75,7 +75,7 @@ int main(int argc, char **argv)
       {
         // Environment:
         char *newenv[2];
-        newenv[0] = malloc(256);
+        newenv[0] = (char*)malloc(256);
         newenv[1] = 0;
 
         sprintf(newenv[0], "HOME=%s", pw->pw_dir);

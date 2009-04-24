@@ -45,9 +45,12 @@ class RangeList
     /** Destructor frees the list */
     ~RangeList();
 
+    RangeList(const RangeList&);
+
     /** Structure of one range */
-    struct Range
+    class Range
     {
+    public:
       /** Construct a Range */
       inline Range(T Address, T Length)
         : address(Address), length(Length){}
@@ -73,19 +76,20 @@ class RangeList
      *\return true, if successfully allocated, false otherwise */
     bool allocateSpecific(T address, T length);
 
+    void clear();
+
     /** Get the number of ranges in the list
      *\return the number of ranges in the list */
     inline size_t size() const{return m_List.size();}
     /** Get a range at a specific index */
     Range getRange(size_t index) const;
 
-    RangeList(const RangeList & l) : m_List(l.m_List) {};
-    RangeList &operator = (const RangeList & l) {m_List = l.m_List; return *this;};
-    
   private:
 
     /** List of ranges */
     List<Range*> m_List;
+
+    RangeList &operator = (const RangeList & l);
 
     typedef typename List<Range*>::Iterator Iterator;
     typedef typename List<Range*>::ConstIterator ConstIterator;
@@ -96,6 +100,22 @@ class RangeList
 //
 // The implementation
 //
+/** Copy constructor - performs deep copy. */
+template<typename T>
+RangeList<T>::RangeList(const RangeList<T>& other)
+  : m_List()
+{
+    m_List.clear();
+    Iterator it(other.m_List.begin());
+    for (;
+        it != other.m_List.end();
+        it++)
+    {
+        Range *pRange = new Range((*it)->address, (*it)->length);
+        m_List.pushBack(pRange);
+    }
+}
+
 template<typename T>
 void RangeList<T>::free(T address, T length)
 {
@@ -193,10 +213,16 @@ typename RangeList<T>::Range RangeList<T>::getRange(size_t index) const
 template<typename T>
 RangeList<T>::~RangeList()
 {
-  ConstIterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    delete *cur;
+    clear();
+}
+template<typename T>
+void RangeList<T>::clear()
+{
+    ConstIterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for (;cur != end;++cur)
+        delete *cur;
+    m_List.clear();
 }
 
 #endif

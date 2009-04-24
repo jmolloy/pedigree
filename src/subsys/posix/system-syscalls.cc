@@ -97,7 +97,7 @@ int posix_sbrk(int delta)
 {
   int ret = reinterpret_cast<int>(
     Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-
+  SC_NOTICE("sbrk(" << delta << ") -> " << ret);
   if (ret == 0)
   {
     SYSCALL_ERROR(OutOfMemory);
@@ -107,7 +107,7 @@ int posix_sbrk(int delta)
     return ret;
 }
 
-int posix_fork(ProcessorState state)
+int posix_fork(SyscallState &state)
 {
   SC_NOTICE("fork()");
 
@@ -184,7 +184,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
 
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  pProcess->getSpaceAllocator() = MemoryAllocator();
+  pProcess->getSpaceAllocator().clear();
   pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
 
   // Ensure we only have one thread running (us).
@@ -231,7 +231,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   DynamicLinker *pOldLinker = pProcess->getLinker();
   DynamicLinker *pLinker = new DynamicLinker();
 
-  // Set the new linker now before we loadProgram, else we could trap and 
+  // Set the new linker now before we loadProgram, else we could trap and
   // have a linker mismatch.
   pProcess->setLinker(pLinker);
 
@@ -369,6 +369,7 @@ int posix_waitpid(int pid, int *status, int options)
           *status = pProcess->getExitStatus();
 
         // Delete the process; it's been reaped good and proper.
+        NOTICE("Pid " << pid << " reaped");
         delete pProcess;
         return pid;
       }
@@ -391,6 +392,7 @@ int posix_waitpid(int pid, int *status, int options)
             if (status)
               *status = pProcess->getExitStatus();
             pid = pProcess->getId();
+            NOTICE("Pid " << pid << " reaped");
             delete pProcess;
             return pid;
           }
@@ -399,16 +401,20 @@ int posix_waitpid(int pid, int *status, int options)
       if (!hadAnyChildren)
       {
         // Error - no children (ECHILD)
+        NOTICE("no children");
+        SYSCALL_ERROR(NoChildren);
         return -1;
       }
     }
 
     if (options & 1) // WNOHANG set
       return 0;
+
     /// \todo Bugfix - the following line should be deleted, and the line below uncommented.
     //Scheduler::instance().yield(0);
     // Sleep...
     Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
+    SC_NOTICE("deadt");
   }
 
   return -1;
@@ -631,10 +637,10 @@ int posix_raise(int sig)
   pProcess->addPendingSignal(static_cast<size_t>(sig), pendingSignal);
 
   // let another thread be scheduled; we won't come back until after the pending signal is handled
-  Scheduler::instance().yield(0);
+  Scheduler::instance().yield();
 
   // reset the saved state so reschedules work properly
-  Processor::information().getCurrentThread()->setSavedInterruptState(0);
+  //Processor::information().getCurrentThread()->setSavedInterruptState(0);
 
   return 0;
 }
@@ -659,14 +665,14 @@ int pedigree_sigret()
 
   // when we reschedule we will go to the saved state rather than the state picked up
   // when this thread is switched *from*
-  pThread->useSaved(true);
+//  pThread->useSaved(true);
 
   // and now that we're done fiddling with the thread let us be interrupted
   if(bInterrupts)
     Processor::setInterrupts(true);
 
   // reschedule, when we get back to this thread it'll load the old state
-  Scheduler::instance().yield(0);
+  Scheduler::instance().yield();
   while(1)
     Processor::halt();
 
@@ -759,7 +765,7 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
     Processor::information().getCurrentThread()->getParent()->setSignalMask(returnMask);
 
     // now that the new signal mask is set, reschedule so that any (now unblocked) signals may run
-    Scheduler::instance().yield(0);
+    Scheduler::instance().yield();
   }
 
   return 0;
@@ -808,15 +814,15 @@ uintptr_t posix_dlopen(const char* file, int mode, void* p)
   }
 
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  
+
   if(!pProcess->getLinker()->loadObject(pFile))
   {
     ERROR("dlopen: couldn't load " << String(file) << ".");
     return 0;
   }
-  
+
   dlHandle* handle = reinterpret_cast<dlHandle*>(p);
-  
+
   return reinterpret_cast<uintptr_t>(handle);
 }
 
@@ -825,10 +831,10 @@ uintptr_t posix_dlopen(const char* file, int mode, void* p)
 uintptr_t posix_dlsym(void* handle, const char* name)
 {
   SC_NOTICE("dlsym(" << name << ")");
-  
+
   if(!handle)
       return 0;
-  
+
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
   return pProcess->getLinker()->resolve(String(name));
@@ -837,7 +843,7 @@ uintptr_t posix_dlsym(void* handle, const char* name)
 int posix_dlclose(void* handle)
 {
   SC_NOTICE("dlclose");
-  
+
   return 0;
 }
 

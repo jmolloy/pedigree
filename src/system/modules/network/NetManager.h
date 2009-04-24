@@ -106,7 +106,7 @@ class Socket : public File
                 else if(m_Endpoint->dataReady(false))
                     return 1; // non-TCP sockets just need to check for data
 
-                Scheduler::instance().yield(0);
+                Scheduler::instance().yield();
             }
             while(timeout != 0);
         }
@@ -120,7 +120,7 @@ class Socket : public File
                     if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
                         return 1;
                     
-                    Scheduler::instance().yield(0);
+                    Scheduler::instance().yield();
                 }
                 while(timeout != 0);
             }

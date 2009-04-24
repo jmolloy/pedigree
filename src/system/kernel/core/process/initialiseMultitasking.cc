@@ -34,11 +34,14 @@ void initialiseMultitasking()
   pProcess->description() += Processor::id();
 #endif
   
-  // Create the kernel idle thread.
+  // Create the main kernel thread.
   Thread *pThread = new Thread(pProcess);
   
   // Initialise the scheduler.
-  Scheduler::instance().initialise(pThread);
+  Scheduler::instance().initialise();
+
+  // Initialise the per-process scheduler.
+  Processor::information().getScheduler().initialise(pThread);
 }
 
 #ifdef MULTIPROCESSOR
@@ -53,7 +56,7 @@ void initialiseMultitasking()
   
     // Create the kernel idle thread.
     Thread *pThread = new Thread(pProcess);  
-    Scheduler::instance().initialiseProcessor(pThread);
+    Processor::information().getScheduler.initialise(pThread);
   }
 #endif
 

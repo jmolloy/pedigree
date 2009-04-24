@@ -24,8 +24,8 @@
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                void *pStack) :
-  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+    m_State(), m_SigState(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
 {
   if (pParent == 0)
   {
@@ -43,30 +43,24 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
     pStack = m_pKernelStack;
     m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
   }
-  
-  // Start initialising our ProcessorState.
-  m_State.setStackPointer (reinterpret_cast<processor_register_t> (pStack));
-  m_State.setInstructionPointer (reinterpret_cast<processor_register_t>
-                                   (pStartFunction));
-  
-  // Construct a stack frame in our ProcessorState for the call to the thread starting function.
-  StackFrame::construct (m_State, // Store the frame in this state.
-                         reinterpret_cast<uintptr_t> (&threadExited), // Return to threadExited.
-                         1,       // There is one parameter.
-                         pParam); // Parameter
-
-  // Construct an interrupt state on the stack too.
-  m_pInterruptState = InterruptState::construct (m_State, bUserMode);
 
   m_Id = m_pParent->addThread(this);
   
-  // Now we are ready to go into the scheduler.
-  Scheduler::instance().addThread(this);
+  // Firstly, grab our lock so that the scheduler cannot preemptively load balance
+  // us while we're starting.
+  m_Lock.acquire();
+
+  // Add us to the general scheduler.
+  Scheduler::instance().addThread(this, Processor::information().getScheduler());
+  
+  // Add us to the per-processor scheduler.
+  Processor::information().getScheduler().addThread(this, pStartFunction, pParam, 
+                                                    bUserMode, pStack);
 }
 
 Thread::Thread(Process *pParent) :
-  m_State(), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+    m_State(), m_SigState(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
 {
   if (pParent == 0)
   {
@@ -79,35 +73,23 @@ Thread::Thread(Process *pParent) :
   //m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 }
 
-Thread::Thread(Process *pParent, ProcessorState state) :
-  m_State(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-  m_Errno(0), m_pInterruptState(0), m_pSavedInterruptState(0), m_bUseSavedState(false), m_CurrentSignal()
+Thread::Thread(Process *pParent, SyscallState &state) :
+    m_State(), m_SigState(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
 {
   if (pParent == 0)
   {
     FATAL("Thread::Thread(): Parent process was NULL!");
   }
 
-  static Spinlock spinlock;
-  spinlock.acquire();
-
   // Initialise our kernel stack.
   m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-
-  VirtualAddressSpace &as = Processor::information().getVirtualAddressSpace();
-  Processor::switchAddressSpace(*pParent->getAddressSpace());
-  
-  // Construct an interrupt state on the stack.
-  m_pInterruptState = InterruptState::construct (state, /* Back to user mode */ true);
-
-  Processor::switchAddressSpace(as);
 
   m_Id = m_pParent->addThread(this);
   
   // Now we are ready to go into the scheduler.
-  Scheduler::instance().addThread(this);
-
-  spinlock.release();
+  Scheduler::instance().addThread(this, Processor::information().getScheduler());
+  Processor::information().getScheduler().addThread(this, state);
 }
 
 Thread::~Thread()
@@ -126,10 +108,10 @@ Thread::~Thread()
 void Thread::setStatus(Thread::Status s)
 {
   m_Status = s;
-  Scheduler::instance().threadStatusChanged(this);
+//  Scheduler::instance().threadStatusChanged(this);
 }
 
-void Thread::threadExited(int code)
+void Thread::threadExited()
 {
   NOTICE("Thread exited");
   // TODO apply these to the current thread - we don't have a this pointer.

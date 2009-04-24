@@ -247,7 +247,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     {
       case Thread::Running: Line += "r"; break;
       case Thread::Ready:   Line += "R"; break;
-      case Thread::PreSleep:Line += "P"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
     }
@@ -255,11 +254,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line += "[";
     Line += tehThread->getId();
     Line += "] @ ";
-    uintptr_t ip;
-    if (tehThread->getInterruptState())
-      ip = tehThread->getInterruptState()->getInstructionPointer();
-    else
-      ip = tehThread->state().getInstructionPointer();
+    uintptr_t ip = 0;
 
     uintptr_t symStart;
     const char *pSym = KernelElf::instance().lookupSymbol(ip, &symStart);
@@ -280,7 +275,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     {
       case Thread::Running: Line += "r"; break;
       case Thread::Ready:   Line += "R"; break;
-      case Thread::PreSleep:Line += "P"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
     }

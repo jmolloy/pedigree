@@ -19,6 +19,7 @@
 
 #include <processor/state.h>
 #include <processor/types.h>
+#include <process/SchedulerState.h>
 
 class Processor;
 class Process;
@@ -34,8 +35,7 @@ public:
     Ready,
     Running,
     Sleeping,
-    Zombie,
-    PreSleep
+    Zombie
   };
   
   typedef int (*ThreadStartFunc)(void*);
@@ -68,7 +68,7 @@ public:
    * Constructor for when forking a process. Assumes pParent has already been set up with a clone
    * of the current address space and sets up the new thread to return to the caller in that address space.
    */
-  Thread(Process *pParent, ProcessorState state);
+  Thread(Process *pParent, SyscallState &state);
 
   /**
    * Destroys the Thread.
@@ -82,27 +82,18 @@ public:
    * Returns a reference to the Thread's saved context. This function is intended only
    * for use by the Scheduler.
    */
-  ProcessorState &state()
+  SchedulerState &state()
   {
-    return m_State;
+    return (m_bIsInSigHandler) ? m_SigState : m_State;
   }
 
-  InterruptState *getInterruptState()
+  void setIsInSigHandler(bool b)
   {
-    return m_pInterruptState;
+    m_bIsInSigHandler = b;
   }
-  void setInterruptState(InterruptState *p)
+  bool isInSigHandler()
   {
-    m_pInterruptState = p;
-  }
-
-  InterruptState *getSavedInterruptState()
-  {
-    return m_pSavedInterruptState;
-  }
-  void setSavedInterruptState(InterruptState *p)
-  {
-    m_pSavedInterruptState = p;
+    return m_bIsInSigHandler;
   }
 
   /**
@@ -160,16 +151,6 @@ public:
     m_Errno = errno;
   }
 
-  bool shouldUseSaved()
-  {
-    return m_bUseSavedState;
-  }
-
-  void useSaved(bool b)
-  {
-    m_bUseSavedState = b;
-  }
-
   /** Information about the currently running signal; if there is one */
   struct CurrentSignal
   {
@@ -192,13 +173,18 @@ public:
     m_CurrentSignal = sig;
   }
 
+  Spinlock &getLock()
+  {
+    return m_Lock;
+  }
+
   /**
    * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
    * if it is not being waited on the Thread is destroyed.
    * \note This is meant to be called only by the thread trampoline - this is the only reason it
    *       is public. It should NOT be called by anyone else!
    */
-  static void threadExited(int code);
+  static void threadExited();
 private:
   /** Copy-constructor */
   Thread(const Thread &);
@@ -208,7 +194,13 @@ private:
   /**
    * The state of the processor when we were unscheduled.
    */
-  ProcessorState m_State;
+  SchedulerState m_State;
+
+  /**
+   * The state of the processor when we were unscheduled and executing a 
+   * signal handler.
+   */
+  SchedulerState m_SigState;
 
   /**
    * Our parent process.
@@ -240,16 +232,20 @@ private:
    */
   size_t m_Errno;
 
-  InterruptState *m_pInterruptState;
-
-  /** Signals interrupt threads, so we save the old state when we jump to a signal handler.
-    * When it returns, this state is loaded.
-    */
-  InterruptState *m_pSavedInterruptState;
-
-  bool m_bUseSavedState;
-
+  /**
+   * Currently executing signal handler.
+   */
   CurrentSignal m_CurrentSignal;
+
+  /**
+   * Lock for schedulers.
+   */
+  Spinlock m_Lock;
+
+  /**
+   * Is the thread currently executing a signal handler?
+   */
+  bool m_bIsInSigHandler;
 };
 
 #endif
