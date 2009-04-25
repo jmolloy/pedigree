@@ -67,7 +67,7 @@ void apMain()
     Scheduler::instance().yield();
   }
 }
-
+Semaphore sem(1);
 /** A processor idle function. */
 int idle(void *)
 {

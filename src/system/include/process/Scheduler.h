@@ -92,8 +92,11 @@ private:
   /** The next available process ID. */
   Atomic<size_t> m_NextPid;
 
-  /** Map of thread->processor mappings, for load-balance accounting. */
-  Tree<PerProcessorScheduler*, List<Thread*>*> m_Map;
+    /** Map of processor->thread mappings, for load-balance accounting. */
+    Tree<PerProcessorScheduler*, List<Thread*>*> m_PTMap;
+
+    /** Map of thread->processor mappings. */
+    Tree<Thread*, PerProcessorScheduler*> m_TPMap;
 };
 
 #endif

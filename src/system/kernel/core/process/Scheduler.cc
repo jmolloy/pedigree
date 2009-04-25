@@ -33,7 +33,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-    m_Processes(), m_NextPid(0), m_Map()
+    m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap()
 {
 }
 
@@ -48,10 +48,17 @@ bool Scheduler::initialise()
 
 void Scheduler::addThread(Thread *pThread, PerProcessorScheduler &PPSched)
 {
+    m_TPMap.insert(pThread, &PPSched);
 }
 
 void Scheduler::removeThread(Thread *pThread)
 {
+    PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
+    if (pPpSched)
+    {
+        pPpSched->removeThread(pThread);
+        m_TPMap.remove(pThread);
+    }
 }
 
 size_t Scheduler::addProcess(Process *pProcess)

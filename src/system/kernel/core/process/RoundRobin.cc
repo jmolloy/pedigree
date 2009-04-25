@@ -69,7 +69,12 @@ Thread *RoundRobin::getNext()
   } while ((pThread->getStatus() != Thread::Ready) &&
            (i < size));
 
-  return (pThread->getStatus() == Thread::Ready) ? pThread : 0;
+  if (pThread->getStatus() == Thread::Ready)
+  {
+      pThread->getLock().acquire();
+      return pThread;
+  }
+  return 0;
 }
 
 void RoundRobin::threadStatusChanged(Thread *pThread)

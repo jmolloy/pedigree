@@ -157,7 +157,6 @@ void Process::kill()
   // Tell any threads that may be waiting for us to die.
   m_pParent->m_DeadThreads.release();
 
-  m_Threads[0]->setStatus(Thread::Zombie);
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");

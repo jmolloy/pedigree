@@ -51,11 +51,10 @@ void PerProcessorScheduler::initialise(Thread *pThread)
     Machine::instance().getSchedulerTimer()->registerHandler(this);
 }
 
-void PerProcessorScheduler::schedule(Thread::Status nextStatus)
+void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 {
-    // A spinlock with lockguard is the easiest way of disabling interrupts.
-    Spinlock lock;
-    LockGuard<Spinlock> guard(lock);
+    bool bWasInterrupts = Processor::getInterrupts();
+    Processor::setInterrupts(false);
 
     Thread *pCurrentThread = Processor::information().getCurrentThread();
 
@@ -70,6 +69,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus)
     {
         // Nothing to switch to, just return.
         pCurrentThread->getLock().release();
+        Processor::setInterrupts(bWasInterrupts);
         return;
     }
 
@@ -81,12 +81,26 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus)
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
 
+    bool bInterruptsOverride = false;
+    if (pLock)
+    {
+        // We cannot call ->release() here, because that may re-enable interrupts.
+        // And that would be a very bad thing.
+        /// \bug What if interrupts were disabled because of this, then when
+        /// we return to this thread interrupts will still be disabled!!
+        /// they won't get reenabled again
+        if (pLock->m_bInterrupts) bWasInterrupts = true;
+        pLock->m_Atom.m_Atom = 0;
+    }
+
     checkSignalState(pNextThread);
 
     pNextThread->getLock().release();
 
     contextSwitch(pCurrentThread->state(), pNextThread->state(),
                   pCurrentThread->getLock().m_Atom.m_Atom);
+
+    Processor::setInterrupts(bWasInterrupts);
 }
 
 void PerProcessorScheduler::checkSignalState(Thread *pThread)
@@ -101,9 +115,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 {
     NOTICE("PPSched::addThread");
 
-    // A spinlock with lockguard is the easiest way of disabling interrupts.
-    Spinlock lock;
-    LockGuard<Spinlock> guard(lock);
+    bool bWasInterrupts = Processor::getInterrupts();
+    Processor::setInterrupts(false);
 
     // We assume here that pThread's lock is already taken.
 
@@ -123,7 +136,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
 
     // This thread is safe from being moved as its status is now "running".
-    pThread->getLock().release();
+    if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
+    pThread->getLock().m_Atom.m_Atom = 0;
 
     launchThread(pCurrentThread->state(),
                  pCurrentThread->getLock().m_Atom.m_Atom,
@@ -131,6 +145,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
                  reinterpret_cast<uintptr_t>(pStartFunction),
                  reinterpret_cast<uintptr_t>(pParam),
                  (bUsermode) ? 1 : 0);
+
+    if (bWasInterrupts) Processor::setInterrupts(true);
 }
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
@@ -159,7 +175,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
 
     // This thread is safe from being moved as its status is now "running".
-    pThread->getLock().release();
+    pThread->getLock().m_Atom.m_Atom = 0;
 
     // Copy the SyscallState into this thread's kernel stack.
     uintptr_t kStack = reinterpret_cast<uintptr_t>(pThread->getKernelStack());
@@ -210,4 +226,9 @@ void PerProcessorScheduler::deleteThread(Thread *pThread)
 {
     NOTICE("AnuS!");
 //     delete pThread;
+}
+
+void PerProcessorScheduler::removeThread(Thread *pThread)
+{
+    m_pSchedulingAlgorithm->removeThread(pThread);
 }

@@ -59,9 +59,8 @@ void Semaphore::acquire(size_t n)
     }
 
     m_Queue.pushBack(Processor::information().getCurrentThread());
-    m_BeingModified.release();
-// NOTICE("Sleeping");
-    Processor::information().getScheduler().sleep();
+
+    Processor::information().getScheduler().sleep(&m_BeingModified);
   }
 
 }
@@ -87,13 +86,14 @@ void Semaphore::release(size_t n)
 
   m_BeingModified.acquire();
 
-  for (size_t i = 0; i < m_Queue.count(); i++)
+  while(m_Queue.count() != 0)
   {
     // TODO: Check for dead thread.
     Thread *pThread = m_Queue.popFront();
-    /// \bug Possible race here, need a PreSleep state (but this isn't the cause of current bug)
-    while (pThread->getStatus() != Thread::Sleeping) ;
+
+    pThread->getLock().acquire();
     pThread->setStatus(Thread::Ready);
+    pThread->getLock().release();
   }
 
   m_BeingModified.release();

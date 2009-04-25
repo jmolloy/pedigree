@@ -53,10 +53,10 @@ void initialiseMultitasking()
 
     pProcess->description() += " - Processor #";
     pProcess->description() += Processor::id();
-  
+
     // Create the kernel idle thread.
     Thread *pThread = new Thread(pProcess);  
-    Processor::information().getScheduler.initialise(pThread);
+    Processor::information().getScheduler().initialise(pThread);
   }
 #endif
 

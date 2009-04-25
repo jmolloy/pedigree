@@ -40,7 +40,9 @@ _ZN21PerProcessorScheduler13contextSwitchERmS0_RVm:
     push ebp
     mov ebp, esp
     push ebx
-
+    push esi
+    push edi
+	
     ; Save the stack pointer to pCurrentThread->state.
     mov eax, [ebp+8]
     mov [eax], esp
@@ -53,6 +55,8 @@ _ZN21PerProcessorScheduler13contextSwitchERmS0_RVm:
     mov dword [ebp+16], 0
 
     ; Unsave registers and return.
+    pop edi
+    pop esi
     pop ebx
     pop ebp
     ret
@@ -74,6 +78,8 @@ _ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm:
     pop eax
 
     ; Now do the actual task switch.
+    pop edi
+    pop esi
     pop ebx
     pop ebp
     ret
@@ -85,7 +91,12 @@ _ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm:
 ; [esp+12] pCurrentThread->lock
 ; [esp+8]  pCurrentThread->state
 ; [esp+4]  <Return address>
+tmp_1:	dd 0
+tmp_2:	dd 0
 _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
+    cli
+    mov [tmp_1], esi
+    mov [tmp_2], edi
     ; Pop the return address, state, lock, stack and func and save them.
     pop    eax          ; return address
     pop    ecx          ; state
@@ -101,13 +112,17 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
     ; frame.
     push   ebp
     push   ebx
+    mov eax, [tmp_1]
+    push   eax
+    mov eax, [tmp_2]
+    push   eax
 
     ; And set state to be the current stack pointer.
     mov    [ecx], esp
 
     ; Move the remaining two parameters into registers.
-    mov    eax, [esp+12] ; param
-    mov    ecx, [esp+16] ; usermode
+    mov    eax, [esp+20] ; param
+    mov    ecx, [esp+24] ; usermode
 
     ; We don't need the old stack any more - switch.
     mov    esp, esi
@@ -175,6 +190,9 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
 ; [esp+4]  pCurrentThread->state
 ; [esp+0]  <Return address>
 _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
+    cli
+    mov [tmp_1], esi
+    mov [tmp_2], edi
     ; Pop the return address, state, lock, and stack and save them.
     pop    eax          ; return address
     pop    ecx          ; state
@@ -192,7 +210,11 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
     ; frame.
     push   ebp
     push   ebx
-
+    mov eax, [tmp_1]
+    push   eax
+    mov eax, [tmp_2]
+    push   eax
+    
     ; And set state to be the current stack pointer.
     mov    [ecx], esp
 

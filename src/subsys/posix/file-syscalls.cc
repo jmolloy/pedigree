@@ -295,34 +295,7 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
   str.clear();
   tmp.clear();
 
-  // traverse symlink, if needed
-  while(f->isSymlink())
-    f = Symlink::fromFile(f)->followLink();
-
-  if(f->getParent() != 0)
-    str = f->getName();
-
-  while((f = f->getParent()))
-  {
-    // This feels a bit weird considering the while loop's subject...
-    if(f->getParent())
-    {
-      tmp = str;
-      str = f->getName();
-      str += "/";
-      str += tmp;
-    }
-  }
-
-  tmp = str;
-  str = "/";
-  str += tmp;
-
-  NOTICE("readlink comes out with " << static_cast<const char*>(str) << "!");
-
-  strcpy(buf, static_cast<const char*>(str));
-
-  return str.length();
+  return Symlink::fromFile(f)->followLink(buf, bufsize);
 }
 
 int posix_unlink(char *name)

@@ -29,6 +29,7 @@
 class SchedulingAlgorithm;
 class Processor;
 class Thread;
+class Spinlock;
 
 class PerProcessorScheduler : public TimerHandler
 {
@@ -43,8 +44,10 @@ public:
 
     /** Picks another thread to run, if there is one, and switches to it.
         \param nextStatus The thread status to assign the current thread when
-                          it is swapped. */
-    void schedule(Thread::Status nextStatus=Thread::Ready);
+                          it is swapped.
+        \param pLock      Optional lock to release when the thread is safely
+                          locked. */
+    void schedule(Thread::Status nextStatus=Thread::Ready, Spinlock *pLock=0);
 
     /** Assumes this thread has just returned from executing a signal handler,
         and lets it resume normal execution. */
@@ -69,12 +72,14 @@ public:
     void killCurrentThread();
 
     /** Puts a thread to sleep.
+        \param pLock Optional, will release this lock when the thread is successfully 
+                     in the sleep state.
         \note This function is here because it acts on the current thread. Its
               counterpart, wake(), is in Scheduler as it could be called from
               any thread. */
-    void sleep()
+    inline void sleep(Spinlock *pLock=0)
     {
-        schedule(Thread::Sleeping);
+        schedule(Thread::Sleeping, pLock);
     }
 
     /** TimerHandler callback. */
@@ -82,6 +87,8 @@ public:
     {
         schedule();
     }
+
+    void removeThread(Thread *pThread);
 
 private:
     /** Copy-constructor
