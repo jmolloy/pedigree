@@ -91,12 +91,14 @@ _ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm:
 ; [esp+12] pCurrentThread->lock
 ; [esp+8]  pCurrentThread->state
 ; [esp+4]  <Return address>
-tmp_1:	dd 0
-tmp_2:	dd 0
 _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
     cli
-    mov [tmp_1], esi
-    mov [tmp_2], edi
+    
+    ; esi and edi are callee-save registers, but we have nowhere to save them, so save them off
+    ; the bottom of the current stack.
+    mov [esp-4], esi
+    mov [esp-8], edi
+
     ; Pop the return address, state, lock, stack and func and save them.
     pop    eax          ; return address
     pop    ecx          ; state
@@ -112,9 +114,9 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
     ; frame.
     push   ebp
     push   ebx
-    mov eax, [tmp_1]
+    mov eax, [esp-12]
     push   eax
-    mov eax, [tmp_2]
+    mov eax, [esp-12]
     push   eax
 
     ; And set state to be the current stack pointer.
@@ -191,8 +193,11 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
 ; [esp+0]  <Return address>
 _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
     cli
-    mov [tmp_1], esi
-    mov [tmp_2], edi
+    ; esi and edi are callee-save registers, but we have nowhere to save them, so save them off
+    ; the bottom of the current stack.
+    mov [esp-8], esi
+    mov [esp-12], edi
+
     ; Pop the return address, state, lock, and stack and save them.
     pop    eax          ; return address
     pop    ecx          ; state
@@ -210,9 +215,9 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
     ; frame.
     push   ebp
     push   ebx
-    mov eax, [tmp_1]
+    mov eax, [esp-4]
     push   eax
-    mov eax, [tmp_2]
+    mov eax, [esp-4]
     push   eax
     
     ; And set state to be the current stack pointer.

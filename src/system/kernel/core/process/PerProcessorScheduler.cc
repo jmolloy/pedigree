@@ -39,7 +39,6 @@ PerProcessorScheduler::~PerProcessorScheduler()
 
 void PerProcessorScheduler::initialise(Thread *pThread)
 {
-    NOTICE("PPSched::initialise");
     m_pSchedulingAlgorithm = new RoundRobin();
 
     pThread->setStatus(Thread::Running);
@@ -84,12 +83,14 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     bool bInterruptsOverride = false;
     if (pLock)
     {
-        // We cannot call ->release() here, because that may re-enable interrupts.
+        // We cannot call ->release() here, because this lock was grabbed
+        // before we disabled interrupts, so it may re-enable interrupts.
         // And that would be a very bad thing.
-        /// \bug What if interrupts were disabled because of this, then when
-        /// we return to this thread interrupts will still be disabled!!
-        /// they won't get reenabled again
-        if (pLock->m_bInterrupts) bWasInterrupts = true;
+        //
+        // We instead store the interrupt state of the spinlock, and manually
+        // unlock it.
+        if (pLock->m_bInterrupts)
+            bWasInterrupts = true;
         pLock->m_Atom.m_Atom = 0;
     }
 
@@ -100,6 +101,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     contextSwitch(pCurrentThread->state(), pNextThread->state(),
                   pCurrentThread->getLock().m_Atom.m_Atom);
 
+    // Return to previous interrupt state.
     Processor::setInterrupts(bWasInterrupts);
 }
 
