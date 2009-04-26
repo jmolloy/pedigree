@@ -736,8 +736,6 @@ int posix_chdir(const char *path)
 
     char tmp[1024];
     posix_getcwd(tmp, 1024);
-    NOTICE("new directory is " << tmp << ".");
-
     return 0;
   }
   else
@@ -830,6 +828,7 @@ int posix_dup2(int fd1, int fd2)
 
 int posix_mkdir(const char* name, int mode)
 {
+  F_NOTICE("mkdir(" << name << ")");
   bool worked = VFS::instance().createDirectory(String(name), GET_CWD());
   return worked ? 0 : -1;
 }

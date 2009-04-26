@@ -16,7 +16,6 @@
 
 #include <Log.h>
 #include <vfs/VFS.h>
-#include <ext2/Ext2Filesystem.h>
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <Module.h>
@@ -148,8 +147,8 @@ void init()
 
   pProcess->setCwd(VFS::instance().find(String("root:/")));
 
-  new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);  
-  
+  new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
+
   lock.release();
 }
 
