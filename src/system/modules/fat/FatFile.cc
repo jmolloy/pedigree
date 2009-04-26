@@ -17,9 +17,9 @@
 #include "FatFile.h"
 
 FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t custom1, uint32_t custom2, File *pParent) :
+       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus, uint32_t dirOffset, File *pParent) :
   File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
-  m_CustomField1(custom1), m_CustomField2(custom2)
+  m_DirClus(dirClus), m_DirOffset(dirOffset)
 {
 }
 
