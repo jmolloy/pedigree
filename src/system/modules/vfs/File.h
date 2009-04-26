@@ -101,7 +101,7 @@ public:
   {
     return m_Inode;
   }
-  void setInode(uintptr_t inode)
+  virtual void setInode(uintptr_t inode)
   {
     m_Inode = inode;
   }
@@ -161,12 +161,12 @@ public:
   {
     return m_Gid;
   }
-  
+
   File *getParent()
   {
     return m_pParent;
   }
-  
+
   /** Similar to POSIX's select() function
     * \return 1 if ready for reading/writing, 0 otherwise
     * \note Default implementation says always ready to read/write
