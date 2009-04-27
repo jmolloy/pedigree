@@ -93,7 +93,6 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
   // grab the first cluster of the parent directory
   uint32_t clus = m_Inode;
-  NOTICE("Directory cluster = " << clus << ".");
   uint8_t* buffer = reinterpret_cast<uint8_t*>(pFs->readDirectoryPortion(clus));
   PointerGuard<uint8_t> bufferGuard(buffer);
   if(!buffer)
@@ -160,7 +159,6 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
     else
     {
       // long filename entries first
-      NOTICE("Ready to write to " << offset << ".");
       if(numRequired)
       {
         size_t currOffset = offset - ((numRequired - 1) * sizeof(Dir));
