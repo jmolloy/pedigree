@@ -32,7 +32,8 @@ private:
 public:
   /** Constructor, should be called only by a Filesystem. */
   FatDirectory(String name, uintptr_t cluster,
-           class FatFilesystem *pFs, File *pParent, FatFileInfo &info);
+           class FatFilesystem *pFs, File *pParent, FatFileInfo &info,
+           uint32_t dirClus = 0, uint32_t dirOffset = 0);
   /** Destructor */
   virtual ~FatDirectory();
 
@@ -58,7 +59,26 @@ public:
   /** Set the internal cluster (in the case of FAT) */
   virtual void setInode(uintptr_t inode);
 
+  uint32_t getDirCluster()
+  {
+    return m_DirClus;
+  }
+  void setDirCluster(uint32_t custom)
+  {
+    m_DirClus = custom;
+  }
+  uint32_t getDirOffset()
+  {
+    return m_DirOffset;
+  }
+  void setDirOffset(uint32_t custom)
+  {
+    m_DirOffset = custom;
+  }
+
 private:
+  uint32_t m_DirClus;
+  uint32_t m_DirOffset;
 
   FatType m_Type;
   uintptr_t m_BlockSize;

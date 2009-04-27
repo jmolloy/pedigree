@@ -22,7 +22,8 @@
 #include "fat.h"
 
 FatDirectory::FatDirectory(String name, uintptr_t inode_num,
-                             FatFilesystem *pFs, File *pParent, FatFileInfo &info) :
+                            FatFilesystem *pFs, File *pParent, FatFileInfo &info,
+                            uint32_t dirClus, uint32_t dirOffset) :
   Directory(name,
             LITTLE_TO_HOST32(info.accessedTime),
             LITTLE_TO_HOST32(info.modifiedTime),
@@ -31,7 +32,8 @@ FatDirectory::FatDirectory(String name, uintptr_t inode_num,
             static_cast<Filesystem*>(pFs),
             LITTLE_TO_HOST32(0),
             pParent),
-  m_Type(FAT16), m_BlockSize(0), m_bRootDir(false), m_DirBlockSize(0)
+  m_DirClus(dirClus), m_DirOffset(dirOffset), m_Type(FAT16), m_BlockSize(0),
+  m_bRootDir(false), m_DirBlockSize(0)
 {
   /*uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
   uint32_t permissions;
@@ -158,58 +160,62 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
     else
     {
       // long filename entries first
-      size_t currOffset = offset - ((numRequired - 1) * sizeof(Dir));
-      size_t i;
-      for(i = 0; i < (numRequired - 1); i++)
+      NOTICE("Ready to write to " << offset << ".");
+      if(numRequired)
       {
-        // grab a pointer to the data
-        DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
-        memset(lfn, 0, sizeof(DirLongFilename));
-
-        if(i == 0)
-          lfn->LDIR_Ord = 0x40 | (numRequired - 1);
-        else
-          lfn->LDIR_Ord = (numRequired - 1 - i);
-        lfn->LDIR_Attr = ATTR_LONG_NAME;
-
-        // get the next 13 bytes
-        size_t nChars = 13;
-        if(longFilenameOffset >= 13)
-          longFilenameOffset -= nChars;
-        else
+        size_t currOffset = offset - ((numRequired - 1) * sizeof(Dir));
+        size_t i;
+        for(i = 0; i < (numRequired - 1); i++)
         {
-          // longFilenameOffset is not bigger than 13, so it's the number of characters to copy
-          nChars = longFilenameOffset - 1;
-          longFilenameOffset = 0;
-        }
+          // grab a pointer to the data
+          DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
+          memset(lfn, 0, sizeof(DirLongFilename));
 
-        size_t nOffset = longFilenameOffset;
-        size_t nWritten = 0;
-        size_t n;
+          if(i == 0)
+            lfn->LDIR_Ord = 0x40 | (numRequired - 1);
+          else
+            lfn->LDIR_Ord = (numRequired - 1 - i);
+          lfn->LDIR_Attr = ATTR_LONG_NAME;
 
-        for(n = 0; n < 10; n += 2)
-        {
-          if(nWritten > nChars)
-            break;
-          lfn->LDIR_Name1[n] = filename[nOffset++];
-          nWritten++;
-        }
-        for(n = 0; n < 12; n += 2)
-        {
-          if(nWritten > nChars)
-            break;
-          lfn->LDIR_Name2[n] = filename[nOffset++];
-          nWritten++;
-        }
-        for(n = 0; n < 4; n += 2)
-        {
-          if(nWritten > nChars)
-            break;
-          lfn->LDIR_Name3[n] = filename[nOffset++];
-          nWritten++;
-        }
+          // get the next 13 bytes
+          size_t nChars = 13;
+          if(longFilenameOffset >= 13)
+            longFilenameOffset -= nChars;
+          else
+          {
+            // longFilenameOffset is not bigger than 13, so it's the number of characters to copy
+            nChars = longFilenameOffset - 1;
+            longFilenameOffset = 0;
+          }
 
-        currOffset += sizeof(Dir);
+          size_t nOffset = longFilenameOffset;
+          size_t nWritten = 0;
+          size_t n;
+
+          for(n = 0; n < 10; n += 2)
+          {
+            if(nWritten > nChars)
+              break;
+            lfn->LDIR_Name1[n] = filename[nOffset++];
+            nWritten++;
+          }
+          for(n = 0; n < 12; n += 2)
+          {
+            if(nWritten > nChars)
+              break;
+            lfn->LDIR_Name2[n] = filename[nOffset++];
+            nWritten++;
+          }
+          for(n = 0; n < 4; n += 2)
+          {
+            if(nWritten > nChars)
+              break;
+            lfn->LDIR_Name3[n] = filename[nOffset++];
+            nWritten++;
+          }
+
+          currOffset += sizeof(Dir);
+        }
       }
 
       // get a Dir struct for it so we can manipulate the data
@@ -222,10 +228,20 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       pFs->writeDirectoryPortion(clus, buffer);
 
-      FatFile *fatFile = static_cast<FatFile *>(pFile);
+      if(type)
+      {
+        FatDirectory *fatDir = static_cast<FatDirectory *>(pFile);
 
-      fatFile->setDirCluster(clus);
-      fatFile->setDirOffset(offset);
+        fatDir->setDirCluster(clus);
+        fatDir->setDirOffset(offset);
+      }
+      else
+      {
+        FatFile *fatFile = static_cast<FatFile *>(pFile);
+
+        fatFile->setDirCluster(clus);
+        fatFile->setDirOffset(offset);
+      }
 
       // If the cache is *not yet* populated, don't add the entry to the cache. This allows
       // cacheDirectoryContents to build the cache properly.

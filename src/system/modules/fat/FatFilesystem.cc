@@ -1057,7 +1057,7 @@ bool FatFilesystem::createDirectory(File* parent, String filename)
   fatDir->setInode(clus);
   setCluster(f, clus);
 
-  return true;
+  //return true;
 
   File* dot = createFile(f, String("."), 0, true, clus);
   File* dotdot = createFile(f, String(".."), 0, true, parent->getInode());
