@@ -933,32 +933,59 @@ char toLower(char c)
 
 String FatFilesystem::convertFilenameTo(String filename)
 {
-  NormalStaticString ret;
-  size_t i;
-  for(i = 0; i < 11; i++)
+  static NormalStaticString ret;
+  ret.clear();
+
+  // Special dot & dotdot handling. Because periods are eaten by the algorithm, we need to
+  // ensure that the dot and dotdot entries are returned with only padding.
+  if(!strcmp(static_cast<const char*>(filename), ".") || !strcmp(static_cast<const char*>(filename), ".."))
   {
-    if(i >= filename.length())
-      break;
-    if(filename[i] != '.')
-      ret += toUpper(filename[i]);
-    else
+    ret = filename;
+  }
+  else
+  {
+    size_t i;
+    bool bPeriod = false;
+    for(i = 0; i < 11; i++)
     {
-      int j;
-      for(j = i; j < 8; j++)
-        ret += ' ';
-      i++; // skip the period
-      for(j = 0; j < 3; j++)
-          if((i + j) < filename.length())
-            ret += toUpper(filename[i + j]);
-      break;
+      if(i >= filename.length())
+        break;
+      if(filename[i] != '.')
+        ret += toUpper(filename[i]);
+      else
+      {
+        bPeriod = true;
+        i++;
+        break;
+      }
+    }
+
+    if(bPeriod)
+    {
+      ret.pad(8);
+
+      size_t j = 0;
+      size_t nChars = 0;
+      while(((i + j) < filename.length()) && (nChars < 3))
+      {
+        ret += toUpper(filename[i + j]);
+        nChars++;
+        j++;
+      }
     }
   }
+
+  // And finally, pad out whatever we need to to finish off
+  ret.pad(10);
+
+  ret += '\0';
   return String(static_cast<const char*>(ret));
 }
 
 String FatFilesystem::convertFilenameFrom(String filename)
 {
-  NormalStaticString ret;
+  static NormalStaticString ret;
+  ret.clear();
 
   size_t i;
   for(i = 0; i < 8; i++)
@@ -984,6 +1011,8 @@ String FatFilesystem::convertFilenameFrom(String filename)
     else
       break;
   }
+
+  ret += '\0';
 
   return String(static_cast<const char*>(ret));
 }

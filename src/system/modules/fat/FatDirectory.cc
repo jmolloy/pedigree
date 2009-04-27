@@ -414,7 +414,7 @@ void FatDirectory::cacheDirectoryContents()
           filename = static_cast<const char*>(longFileName); // use the long filename rather than the short one
         else
         {
-          //WARNING("FAT: Using short filename rather than long filename");
+          // WARNING("FAT: Using short filename rather than long filename");
           filename = pFs->convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
 
