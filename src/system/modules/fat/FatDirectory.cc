@@ -244,10 +244,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
       // If the cache is *not yet* populated, don't add the entry to the cache. This allows
       // cacheDirectoryContents to build the cache properly.
       if(m_bCachePopulated)
-      {
         m_Cache.insert(filename, pFile);
-        m_bCachePopulated = true;
-      }
 
       return true;
     }
@@ -258,11 +255,21 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 bool FatDirectory::removeEntry(File *pFile)
 {
   FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
+  FatDirectory *fatDir = static_cast<FatDirectory *>(pFile);
   FatFile *fatFile = static_cast<FatFile *>(pFile);
   String filename = pFile->getName();
 
-  uint32_t dirClus = fatFile->getDirCluster();
-  uint32_t dirOffset = fatFile->getDirOffset();
+  uint32_t dirClus, dirOffset;
+  if(pFile->isDirectory())
+  {
+    dirClus = fatDir->getDirCluster();
+    dirOffset = fatDir->getDirOffset();
+  }
+  else
+  {
+    dirClus = fatFile->getDirCluster();
+    dirOffset = fatFile->getDirOffset();
+  }
 
   // First byte = 0xE5 means the file's been deleted.
   Dir *dir = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset));

@@ -20,6 +20,7 @@
 #include <vfs/Directory.h>
 #include <utilities/Vector.h>
 
+#include "FatFile.h"
 #include "fat.h"
 
 /** A File is a file, a directory or a symlink. */
