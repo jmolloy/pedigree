@@ -114,7 +114,7 @@ struct in_addr
 #include "include/netinet/in.h"
 #include "include/poll.h"
 
-struct sigaction 
+struct sigaction
 {
   int sa_flags;
   unsigned long sa_mask;
@@ -717,7 +717,7 @@ long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct soc
   int ret = syscall1(POSIX_RECVFROM, (int) tmp);
 
   free(tmp);
-  
+
   return ret;
 }
 
@@ -746,7 +746,7 @@ long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const 
   int ret = syscall1(POSIX_SENDTO, (int) tmp);
 
   free(tmp);
-  
+
   return ret;
 }
 
@@ -1085,18 +1085,20 @@ static int bTablesInit = 0;
 
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
+  return syscall4(POSIX_SIGACTION, sig, (int) act, (int) oact, 0);
+
   // setup the default signal handlers, if needed
   if(bTablesInit == 0)
   {
     bTablesInit = 1;
     struct sigaction in, out;
     in.sa_handler = (_sig_func_ptr) 0;
-    
+
     int z;
     for(z = 0; z < 32; z++)
       sigaction(z, &in, &out);
   }
-  
+
   if(sig > 32)
   {
     errno = EINVAL;
@@ -1111,7 +1113,7 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
     errno = EINVAL;
     return (_sig_func_ptr) -1;
   }
-  
+
   int type = 0;
 
   struct sigaction* tmpAct = 0;
@@ -1164,7 +1166,7 @@ _sig_func_ptr signal(int s, _sig_func_ptr func)
   {
     return tmp.sa_handler;
   }
-  
+
   // errno set by sigaction
   return (_sig_func_ptr) -1;
 }
@@ -1177,12 +1179,12 @@ int raise(int sig)
     bTablesInit = 1;
     struct sigaction in, out;
     in.sa_handler = (_sig_func_ptr) 0;
-    
+
     int z;
     for(z = 0; z < 32; z++)
       sigaction(z, &in, &out);
   }
-  
+
   return syscall1(POSIX_RAISE, sig);
 }
 
@@ -1204,12 +1206,12 @@ int kill(int pid, int sig)
     bTablesInit = 1;
     struct sigaction in, out;
     in.sa_handler = (_sig_func_ptr) 0;
-    
+
     int z;
     for(z = 0; z < 32; z++)
       sigaction(z, &in, &out);
   }
-  
+
   return syscall2(POSIX_KILL, pid, sig);
 }
 
@@ -1228,6 +1230,7 @@ int sigsuspend(const long* sigmask)
 /** Installs default signal handlers to the kernel */
 void _init_signals()
 {
+  return;
     if(bTablesInit == 0)
     {
         bTablesInit = 1;

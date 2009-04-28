@@ -26,6 +26,7 @@
 #include "console-syscalls.h"
 #include "net-syscalls.h"
 #include "pipe-syscalls.h"
+#include "signal-syscalls.h"
 
 PosixSyscallManager::PosixSyscallManager()
 {

@@ -16,7 +16,7 @@
 void rofl(int arg)
 {
   printf("Signal Handler!\n");
-//  while(1);
+  while(1);
 }
 
 int main(int argc, char **argv) {
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   raise(SIGHUP);
 
   printf("Raise returns\n");
-  
+
   while(1);
 
   return 0;

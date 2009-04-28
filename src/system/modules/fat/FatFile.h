@@ -32,30 +32,30 @@ private:
 public:
   /** Constructor, should be called only by a Filesystem. */
   FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t custom1 = 0, uint32_t custom2 = 0, File *pParent = 0);
+       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus = 0, uint32_t dirOffset = 0, File *pParent = 0);
   /** Destructor - doesn't do anything. */
   virtual ~FatFile();
 
-  uint32_t getCustomField1()
+  uint32_t getDirCluster()
   {
-    return m_CustomField1;
+    return m_DirClus;
   }
-  void setCustomField1(uint32_t custom)
+  void setDirCluster(uint32_t custom)
   {
-    m_CustomField1 = custom;
+    m_DirClus = custom;
   }
-  uint32_t getCustomField2()
+  uint32_t getDirOffset()
   {
-    return m_CustomField2;
+    return m_DirOffset;
   }
-  void setCustomField2(uint32_t custom)
+  void setDirOffset(uint32_t custom)
   {
-    m_CustomField2 = custom;
+    m_DirOffset = custom;
   }
 
 private:
-  uint32_t m_CustomField1;
-  uint32_t m_CustomField2;
+  uint32_t m_DirClus;
+  uint32_t m_DirOffset;
 };
 
 #endif

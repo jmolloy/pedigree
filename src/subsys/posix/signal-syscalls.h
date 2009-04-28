@@ -13,16 +13,21 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef SIGNAL_SYSCALLS_H
+#define SIGNAL_SYSCALLS_H
 
-#include "FatFile.h"
+#include <processor/Processor.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/state.h>
 
-FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus, uint32_t dirOffset, File *pParent) :
-  File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
-  m_DirClus(dirClus), m_DirOffset(dirOffset)
-{
-}
+#include "newlib.h"
 
-FatFile::~FatFile()
-{
-}
+typedef void (*_sig_func_ptr)(int);
+
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type);
+uintptr_t posix_signal(int sig, void* func);
+int posix_raise(int sig);
+int posix_kill(int pid, int sig);
+int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset);
+
+#endif

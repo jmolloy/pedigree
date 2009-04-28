@@ -16,7 +16,19 @@
 #ifndef FAT_H
 #define FAT_H
 
+#include <utilities/PointerGuard.h>
 #include <processor/types.h>
+
+// FAT Attributes
+#define ATTR_READONLY   0x01
+#define ATTR_HIDDEN     0x02
+#define ATTR_SYSTEM     0x04
+#define ATTR_VOLUME_ID  0x08
+#define ATTR_DIRECTORY  0x10
+#define ATTR_ARCHIVE    0x20
+
+#define ATTR_LONG_NAME      ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID )
+#define ATTR_LONG_NAME_MASK ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE )
 
 /** FAT type */
 enum FatType
@@ -133,6 +145,14 @@ struct Date
   uint32_t month : 4;
   uint32_t years : 7; // years from 1980, not 1970
 } __attribute__((packed));
+
+/** Common FAT file information */
+struct FatFileInfo
+{
+  Time accessedTime;
+  Time modifiedTime;
+  Time creationTime;
+};
 
 #endif
 
