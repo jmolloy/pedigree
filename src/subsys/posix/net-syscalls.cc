@@ -256,9 +256,9 @@ ssize_t posix_sendto(void* callInfo)
   int sock = tmp->sock;
   const void* buff = tmp->buff;
   size_t bufflen = tmp->bufflen;
-  int flags = tmp->flags;
+  //int flags = tmp->flags;
   const sockaddr* address = tmp->remote_addr;
-  size_t* addrlen = tmp->addrlen;
+  //size_t* addrlen = tmp->addrlen;
 
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);

@@ -45,7 +45,7 @@ void entry()
   }
 
   IoBase *pRegs = 0;
-  for (int i = 0; i < pDevice->addresses().count(); i++)
+  for (size_t i = 0; i < pDevice->addresses().count(); i++)
   {
     if (!strcmp(pDevice->addresses()[i]->m_Name, "bar0"))
     {
@@ -54,7 +54,7 @@ void entry()
   }
 
   IoBase *pFb = 0;
-  for (int i = 0; i < pDevice->addresses().count(); i++)
+  for (size_t i = 0; i < pDevice->addresses().count(); i++)
   {
     if (!strcmp(pDevice->addresses()[i]->m_Name, "bar1"))
     {

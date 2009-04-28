@@ -48,7 +48,7 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
       bool bEnabled;
       uintptr_t nAddress = Processor::getDebugBreakpoint(i, nFt, nLen, bEnabled);
       
-      const char *pFaultType;
+      const char *pFaultType = 0;
       switch (nFt)
       {
       case DebugFlags::InstructionFetch:

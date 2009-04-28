@@ -53,7 +53,7 @@ Loopback::~Loopback()
 {
 }
 
-bool Loopback::send(uint32_t nBytes, uintptr_t buffer)
+bool Loopback::send(size_t nBytes, uintptr_t buffer)
 {
   if(nBytes > 0xffff)
   {

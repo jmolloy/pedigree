@@ -80,7 +80,6 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
 
-    bool bInterruptsOverride = false;
     if (pLock)
     {
         // We cannot call ->release() here, because this lock was grabbed
@@ -91,7 +90,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
         // unlock it.
         if (pLock->m_bInterrupts)
             bWasInterrupts = true;
-        pLock->m_Atom.m_Atom = 0;
+        pLock->m_Atom.m_Atom = 1;
     }
 
     checkSignalState(pNextThread);
@@ -139,7 +138,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 
     // This thread is safe from being moved as its status is now "running".
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
-    pThread->getLock().m_Atom.m_Atom = 0;
+    pThread->getLock().m_Atom.m_Atom = 1;
 
     launchThread(pCurrentThread->state(),
                  pCurrentThread->getLock().m_Atom.m_Atom,
@@ -177,7 +176,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
 
     // This thread is safe from being moved as its status is now "running".
-    pThread->getLock().m_Atom.m_Atom = 0;
+    pThread->getLock().m_Atom.m_Atom = 1;
 
     // Copy the SyscallState into this thread's kernel stack.
     uintptr_t kStack = reinterpret_cast<uintptr_t>(pThread->getKernelStack());

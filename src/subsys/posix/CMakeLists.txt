@@ -17,8 +17,6 @@
 # The posix subsystem has two targets - the user mode library which should be linked
 # with the libc, and the kernel mode code which should be made into a module.
 
-if(NOT X64)
-
 set(LIBC)
 set(LIBM)
 if(X86)
@@ -28,8 +26,8 @@ if(X86)
   set(SIGRET "i686")
 endif(X86)
 if(X64)
-  set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libc.a")
-  set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-i686-libm.a")
+  set(LIBC "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-amd64-libc.a")
+  set(LIBM "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/newlib-amd64-libm.a")
   set(STUB amd64-elf)
   set(SIGRET "amd64")
 endif(X64)
@@ -61,6 +59,7 @@ install(TARGETS crt0.o
 add_executable(pedigree-glue.o glue.c glue-sysconf.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
+                                      COMPILE_FLAGS "-mcmodel=small -fPIC"
                                       LINK_FLAGS "-r")
 
 get_filename_component(COMPILER_DIR ${C_COMPILER} PATH)
@@ -68,4 +67,3 @@ get_filename_component(COMPILER_DIR ${C_COMPILER} PATH)
 add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CMAKE_C_COMPILER}" "${CMAKE_AR}" "${PEDIGREE_BINARY_DIR}" "${LIBGCC_DIR}"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
-endif(NOT X64)

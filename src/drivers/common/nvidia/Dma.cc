@@ -6,7 +6,7 @@
 #include <processor/PhysicalMemoryManager.h>
 
 Dma::Dma(IoBase *pRegs, IoBase *pFb, NvCard card, NvType type, uintptr_t ramSize) :
-  m_pRegs(pRegs), m_pFramebuffer(pFb), m_Card(card), m_Type(type), m_nRamSize(ramSize), m_DmaBuffer("nVidia DMA Buffer")
+    m_pRegs(pRegs), m_pFramebuffer(pFb), m_Card(card), m_Type(type), m_nRamSize(ramSize), m_nDmaBuffer(0), m_pDmaBuffer(0), m_DmaBuffer("nVidia DMA Buffer"), m_nPut(0), m_nCurrent(0), m_nMax(0), m_nFree(0)
 {
 
   if (!PhysicalMemoryManager::instance().allocateRegion(m_DmaBuffer,
@@ -689,6 +689,8 @@ void Dma::setUpReverseEngineeredMagicRegs()
     m_pRegs->write32(0x00000000, NVACC_NV10_TIL2AD);
     m_pRegs->write32(0xffffffff, NVACC_NV10_TIL0ED);
     break;
+      default: break;
   }
+      
 }
 

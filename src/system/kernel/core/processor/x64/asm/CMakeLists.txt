@@ -22,7 +22,7 @@
 
 # NOTE: The trampoline.s file is handled in the kernel directory
 
-add_kernel_src(core/processor/x64/asm InterruptManager.s Processor.s SyscallManager.s gdt.s boot-standalone.s)
+add_kernel_src(core/processor/x64/asm InterruptManager.s Scheduler.s Processor.s SyscallManager.s gdt.s boot-standalone.s)
 
 if(MULTIPROCESSOR)
   add_kernel_src(core/processor/x64/asm multiprocessor.s)

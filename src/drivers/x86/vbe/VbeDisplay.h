@@ -24,42 +24,40 @@
 class VbeDisplay : public Display
 {
 public:
-  /** VBE versions, in order. */
-  enum VbeVersion
-  {
-    Vbe1_2,
-    Vbe2_0,
-    Vbe3_0
-  };
+    /** VBE versions, in order. */
+    enum VbeVersion
+    {
+        Vbe1_2,
+        Vbe2_0,
+        Vbe3_0
+    };
 
-  VbeDisplay();
-  VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, uintptr_t fbAddr);
+    VbeDisplay();
+    VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, uintptr_t fbAddr);
 
-  virtual ~VbeDisplay();
+    virtual ~VbeDisplay();
 
-  virtual void *getFramebuffer();
-
-  virtual bool getPixelFormat(Display::PixelFormat *pPf);
-
-  virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
-
-  virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
-
-  virtual bool setScreenMode(Display::ScreenMode sm);
+    virtual void *getFramebuffer();
+    virtual bool getPixelFormat(Display::PixelFormat *pPf);
+    virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
+    virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
+    virtual bool setScreenMode(Display::ScreenMode sm);
 
 private:
-  /** Copy constructor is private. */
+    /** Copy constructor is private. */
+    VbeDisplay(const VbeDisplay &);
+    VbeDisplay &operator = (const VbeDisplay &);
 
-  /** VBE version. */
-  VbeVersion m_VbeVersion;
+    /** VBE version. */
+    VbeVersion m_VbeVersion;
 
-  /** Screen modes. */
-  List<Display::ScreenMode*> m_ModeList;
+    /** Screen modes. */
+    List<Display::ScreenMode*> m_ModeList;
 
-  /** Current mode. */
-  Display::ScreenMode m_Mode;
+    /** Current mode. */
+    Display::ScreenMode m_Mode;
 
-  MemoryMappedIo *m_pFramebuffer;
+    MemoryMappedIo *m_pFramebuffer;
 };
 
 #endif

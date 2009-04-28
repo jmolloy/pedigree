@@ -93,9 +93,9 @@ static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uin
   return pMasterArray;
 }
 
-int posix_sbrk(int delta)
+long posix_sbrk(int delta)
 {
-  int ret = reinterpret_cast<int>(
+  long ret = reinterpret_cast<long>(
     Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
   SC_NOTICE("sbrk(" << delta << ") -> " << ret);
   if (ret == 0)
@@ -254,7 +254,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
     if(pFd)
       if(pFd->fdflags & FD_CLOEXEC)
-        posix_close(reinterpret_cast<int>(it.key()));
+        posix_close(reinterpret_cast<uintptr_t>(it.key()));
   }
 
   // Create a new stack.
