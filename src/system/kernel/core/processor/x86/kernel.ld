@@ -45,7 +45,7 @@ SECTIONS
     . = ALIGN(4096);
     bss = .; _bss = .; __bss = .;
     *(.asm.bss)
-    *(.bss)
+    *(.bss*)
     . = ALIGN(4096);
   }
 

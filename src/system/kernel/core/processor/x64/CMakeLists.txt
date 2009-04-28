@@ -23,7 +23,7 @@
 add_subdirectory(asm)
 add_kernel_src(core/processor/x64
                InterruptManager.cc Processor.cc StackFrame.cc state.cc VirtualAddressSpace.cc
-               gdt.cc SyscallManager.cc Elf.cc)
+               gdt.cc SyscallManager.cc Elf.cc PageFaultHandler.cc)
 
 if(MULTIPROCESSOR)
   add_kernel_src(core/processor/x64 Multiprocessor.cc)

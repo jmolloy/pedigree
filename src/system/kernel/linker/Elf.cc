@@ -326,8 +326,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, Symbo
             {
                 physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
                 Processor::information().getVirtualAddressSpace().map(phys,
-                                                                      reinterpret_cast<void*> (j&0xFFFFF000),
-                                                                      VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+                                                                      reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1)),
+                                                                      VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode | VirtualAddressSpace::Execute);
             }
 
             if (m_pSectionHeaders[i].type != SHT_NOBITS)
@@ -521,8 +521,8 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
         {
             physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
             bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                           reinterpret_cast<void*> (j&0xFFFFF000),
-                                                                           VirtualAddressSpace::Write);
+                                                                           reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1)),
+                                                                           VirtualAddressSpace::Write | VirtualAddressSpace::Execute);
             if (!b)
                 WARNING("map() failed for address " << Hex << j);
         }

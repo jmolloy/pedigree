@@ -112,6 +112,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
 
     uint64_t *pResult = reinterpret_cast<uint64_t*> (address);
     uint64_t result = * pResult;
+
     switch (R_TYPE(rel.info))
     {
         case R_X86_64_NONE:
@@ -120,7 +121,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = S + A;
             break;
         case R_X86_64_PC32:
-            result = (result&0xFFFFFFFF00000000) | (S + A - P);
+            result = (result&0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
             break;
         case R_X86_64_COPY:
             result = * reinterpret_cast<uintptr_t*> (S);
@@ -131,6 +132,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             break;
         case R_X86_64_RELATIVE:
             result = B + A;
+            break;
+        case R_X86_64_32:
+        case R_X86_64_32S:
+            result = (result&0xFFFFFFFF00000000) | ((S + A) & 0xFFFFFFFF);
             break;
         default:
             ERROR ("Relocation not supported: " << Dec << R_TYPE(rel.info));

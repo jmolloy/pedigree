@@ -76,7 +76,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
         uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
         uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
 
-        if (!va->map(p, reinterpret_cast<void*>(v), 0))
+        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute))
         {
             WARNING("MemoryMappedFile: map() failed at " << v);
             return false;
@@ -141,7 +141,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
 
     // Map it into the address space.
-    if (!va.map(p, reinterpret_cast<void *>(v), VirtualAddressSpace::Write))
+    if (!va.map(p, reinterpret_cast<void *>(v), VirtualAddressSpace::Write | VirtualAddressSpace::Execute))
     {
         FATAL("MemoryMappedFile: map() failed in trap()");
         return;

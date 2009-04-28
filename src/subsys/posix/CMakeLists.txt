@@ -55,15 +55,22 @@ install(TARGETS crt0.o
 
 # include_directories(./include ../../system/include ../../system/kernel/linker ../../system/modules/ ./)
 
+# TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
+set(GLUE_FLAGS "")
+if(X64)
+  set(GLUE_FLAGS "-mcmodel=small -fPIC ${GLUE_FLAGS}")
+endif(X64)
+
 # Now the glue code - compile to a .o...
 add_executable(pedigree-glue.o glue.c glue-sysconf.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
-                                      COMPILE_FLAGS "-mcmodel=small -fPIC"
+                                      COMPILE_FLAGS "${GLUE_FLAGS}"
                                       LINK_FLAGS "-r")
-
 get_filename_component(COMPILER_DIR ${C_COMPILER} PATH)
 
 add_custom_target(posix-usermode ALL perl ${PEDIGREE_SOURCE_DIR}/scripts/posixBlendLibc.pl ${LIBC} ${LIBM} "${PEDIGREE_BINARY_DIR}/src/subsys/posix/pedigree-glue.o" "${PEDIGREE_SOURCE_DIR}/src/subsys/posix/include" "${CMAKE_C_COMPILER}" "${CMAKE_AR}" "${PEDIGREE_BINARY_DIR}" "${LIBGCC_DIR}"
                   DEPENDS pedigree-glue.o
 		  WORKING_DIRECTORY ${PEDIGREE_BINARY_DIR})
+
+add_dependencies(crt0.o posix-usermode)

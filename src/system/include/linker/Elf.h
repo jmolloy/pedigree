@@ -124,8 +124,8 @@ typedef  int32_t Elf_Sxword;
 #endif
 #ifdef BITS_64
 
-#define R_SYM(val)  ((val) >> 8)
-#define R_TYPE(val) ((val) & 0xff)
+#define R_SYM(val)  ((val) >> 32)
+#define R_TYPE(val) ((val) & 0xffffffffUL)
 
 #define ST_BIND(i)        ((i)>>4)
 #define ST_TYPE(i)        ((i)&0xf)
