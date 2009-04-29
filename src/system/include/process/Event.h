@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+#ifndef EVENT_H
+#define EVENT_H
+
+#define EVENT_LIMIT   4096
+#define EVENT_TID_MAX 255
+
+/** The abstract base class for an asynchronous event. An event can hold any amount of information
+    up to a hard maximum size of EVENT_LIMIT (usually 4096 bytes). An event is serialized using 
+    the virtual serialize() function and sent to a recipient thread in either user or kernel mode,
+    where it is unserialized. */
+class Event
+{
+public:
+    /** Constructs an Event object.
+        \param handlerAddress The address of the handling function.
+        \param isDeletable Can the object be deleted after map()? This is used for creating objects
+                           without worrying about destroying them.
+    
+        \note As can be surmised, handlerAddress is NOT reentrant. If you use this Event in multiple
+              threads concurrently, you CANNOT change the handler address. */
+    Event(uintptr_t handlerAddress, bool isDeletable);
+
+    virtual ~Event();
+
+    /** Returns true if the event is on the heap and can be deleted when handled. This is for creating
+        fire-and-forget messages and not worrying about memory leaks. */
+    virtual bool isDeletable() = 0;
+
+    /** Dispatches this event to the given Thread.
+
+        \note If pThread's thread ID is greater than <b>or equal to</b> EVENT_TID_MAX, the event will
+              be dispatched to pThread's parent process' first thread instead. */
+    void dispatch(Thread *pThread);
+
+    /** Map this event into the current thread's address space at a point defined by the thread's
+        ID (so that multiple threads can execute events in parallel).
+        \return The address that the event was mapped at.
+
+        \note Should <b>only</b> be called by PerProcessorScheduler.
+    */
+    uintptr_t map();
+
+    /** Given a serialized Event in binary form, attempt to unserialize into the given object.
+        If this is impossible, return false.
+
+        \note It is impossible to make static functions virtual, but it is <b>required</b> that 
+              all subclasses of Event implement this function statically. */
+    static Event unserialize(uint8_t *pBuffer, Event &pEvent);
+
+protected:
+    /** Given a buffer EVENT_LIMIT bytes long, take the variables present in this object and
+        convert them to a binary form.
+        \param pBuffer The buffer to serialize to.
+        \return The number of bytes serialized. */
+    virtual size_t serialize(uint8_t *pBuffer) = 0;
+
+    /** Handler address. */
+    uintptr_t m_HandlerAddress;
+
+    /** Can the object be deleted after map? */
+    bool m_bIsDeletable;
+};
+
+#endif
