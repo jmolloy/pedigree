@@ -38,7 +38,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
   
   // do we have an entry for it yet?
   arpEntry* arpEnt;
-  if((arpEnt = m_ArpCache.lookup(ip.getIp())) != 0)
+  if((arpEnt = m_ArpCache.lookup(static_cast<uintptr_t>(ip.getIp()))) != 0)
   {
     *ent = arpEnt->mac;
     return true;
@@ -133,14 +133,13 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       MacAddress myMac = cardInfo.mac;
       
       // add to our local cache, if needed
-      if(m_ArpCache.lookup(header->ipSrc) == 0)
+      if(m_ArpCache.lookup(static_cast<uintptr_t>(header->ipSrc)) == 0)
       {
         arpEntry* ent = new arpEntry;
         ent->valid = true;
         ent->mac = sourceMac;
         ent->ip.setIp(header->ipSrc);
-        m_ArpCache.insert(header->ipSrc, ent);
-        //m_ArpCache.pushBack(ent);
+        m_ArpCache.insert(static_cast<uintptr_t>(header->ipSrc), ent);
       }
       
       // allocate the reply

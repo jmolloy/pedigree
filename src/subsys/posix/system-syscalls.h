@@ -34,7 +34,7 @@
 #define ARGV_ENV_LOC 0x40100000
 #define ARGV_ENV_LEN 0x8000
 
-int posix_sbrk(int delta);
+long posix_sbrk(int delta);
 int posix_fork(SyscallState &state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
 int posix_waitpid(int pid, int *status, int options);

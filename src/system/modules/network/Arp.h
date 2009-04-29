@@ -128,7 +128,7 @@ private:
   };
   
   // ARP Cache
-  Tree<uint32_t, arpEntry*> m_ArpCache;
+  Tree<size_t, arpEntry*> m_ArpCache;
   
   // ARP request list
   Vector<ArpRequest*> m_ArpRequests;

@@ -22,34 +22,35 @@ extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)
   __attribute__((no_instrument_function));
 
-static int profiling = 0;
-
 #define OUT(c) asm volatile ("outb %%al, %%dx" :: "d"(0x2f8), "a"(c))
 
 extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 {
-  register int eflags;
-  asm volatile ("pushf; pop %0; cli" : "=r" (eflags));
-  OUT('E');
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-4))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-8))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-12))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-16))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-20))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-24))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-28))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(func_address)>>(32-32))&0xF));
-  OUT(' ');
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-4))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-8))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-12))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-16))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-20))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-24))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-28))&0xF));
-  OUT('0' + ((reinterpret_cast<uint32_t>(call_site)>>(32-32))&0xF));
-  OUT('\n');
-  asm volatile("push %0; popf" ::"r" (eflags));
+    uint32_t _func_address = reinterpret_cast<uintptr_t>(func_address)&0xFFFFFFFF;
+    uint32_t _call_site = reinterpret_cast<uintptr_t>(call_site)&0xFFFFFFFF;
+
+//    register int eflags;
+//    asm volatile ("pushf; pop %0; cli" : "=r" (eflags));
+    OUT('E');
+    OUT('0' + ((_func_address>>(32-4))&0xF));
+    OUT('0' + ((_func_address>>(32-8))&0xF));
+    OUT('0' + ((_func_address>>(32-12))&0xF));
+    OUT('0' + ((_func_address>>(32-16))&0xF));
+    OUT('0' + ((_func_address>>(32-20))&0xF));
+    OUT('0' + ((_func_address>>(32-24))&0xF));
+    OUT('0' + ((_func_address>>(32-28))&0xF));
+    OUT('0' + ((_func_address>>(32-32))&0xF));
+    OUT(' ');
+    OUT('0' + ((_call_site>>(32-4))&0xF));
+    OUT('0' + ((_call_site>>(32-8))&0xF));
+    OUT('0' + ((_call_site>>(32-12))&0xF));
+    OUT('0' + ((_call_site>>(32-16))&0xF));
+    OUT('0' + ((_call_site>>(32-20))&0xF));
+    OUT('0' + ((_call_site>>(32-24))&0xF));
+    OUT('0' + ((_call_site>>(32-28))&0xF));
+    OUT('0' + ((_call_site>>(32-32))&0xF));
+    OUT('\n');
+//    asm volatile("push %0; popf" ::"r" (eflags));
 }
 
 extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)

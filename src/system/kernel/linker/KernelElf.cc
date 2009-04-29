@@ -173,7 +173,11 @@ KernelElf::~KernelElf()
 #ifdef PPC_COMMON
 #define MOD_START 0xe1000000
 #else
+#ifdef X86
 #define MOD_START 0xfa000000
+#else
+#define MOD_START 0xFFFFFFFFF0000000
+#endif
 #endif
 #define MOD_LEN 0x400000
 
@@ -263,7 +267,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   {
     m_PendingModules.pushBack(module);
   }
-
+  NOTICE("Returning");
   return module;
 }
 
@@ -291,6 +295,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
 
 void KernelElf::executeModule(Module *module)
 {
+    NOTICE("Executing");
   m_LoadedModules.pushBack(const_cast<char*>(module->name));
 
   if (!module->elf.finaliseModule(module->buffer, module->buflen))

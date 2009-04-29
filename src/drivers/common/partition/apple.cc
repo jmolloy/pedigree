@@ -24,7 +24,7 @@ bool appleProbeDisk(Disk *pDisk)
 {
   // Read the second sector (512 bytes) of the disk into a buffer.
   uint8_t buffer[512];
-  if (pDisk->read(512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
+  if (pDisk->read(512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
   {
     WARNING("Disk read failure during partition table search.");
     return false;
@@ -46,11 +46,11 @@ bool appleProbeDisk(Disk *pDisk)
 
   // Cache the number of partition table entries.
   size_t nEntries = pMap->pmMapBlkCnt;
-  for (int i = 0; i < nEntries; i++)
+  for (size_t i = 0; i < nEntries; i++)
   {
     if (i > 0) // We don't need to load anything in for the first pmap - already done!
     {
-      if (pDisk->read(512ULL+i*512ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
+      if (pDisk->read(512ULL+i*512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
       {
         WARNING("Disk read failure during partition table recognition.");
         return false;

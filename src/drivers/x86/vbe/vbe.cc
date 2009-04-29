@@ -87,7 +87,7 @@ void entry()
   strncpy (info->signature, "VBE2", 4);
   Bios::instance().setAx (0x4F00);
   Bios::instance().setEs (0x0000);
-  Bios::instance().setDi (reinterpret_cast<int>(info));
+  Bios::instance().setDi (static_cast<uint16_t>(reinterpret_cast<uintptr_t>(info)&0xFFFF));
 
   Bios::instance().executeInterrupt (0x10);
 
@@ -125,7 +125,7 @@ void entry()
     Bios::instance().setAx(0x4F01);
     Bios::instance().setCx(modes[i]);
     Bios::instance().setEs (0x0000);
-    Bios::instance().setDi (reinterpret_cast<int>(mode));
+    Bios::instance().setDi (static_cast<uint16_t>(reinterpret_cast<uintptr_t>(mode)&0xFFFF));
 
     Bios::instance().executeInterrupt (0x10);
 

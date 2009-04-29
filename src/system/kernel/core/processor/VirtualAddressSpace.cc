@@ -27,7 +27,7 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
 
   void *newHeapEnd = adjust_pointer(m_HeapEnd, incr);
   
-  m_HeapEnd = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(m_HeapEnd)&0xFFFFF000);
+  m_HeapEnd = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(m_HeapEnd) & ~(PhysicalMemoryManager::getPageSize()-1));
 
   int i = 0;
   while (reinterpret_cast<uintptr_t>(newHeapEnd) > reinterpret_cast<uintptr_t>(m_HeapEnd))
@@ -53,19 +53,12 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
       // Map failed - probable double mapping. Go to the next page.
       // Free the page
       PMemoryManager.freePage(page);
-
-      // Reset the heap pointer
-//      m_HeapEnd = adjust_pointer(m_HeapEnd, - i * PhysicalMemoryManager::getPageSize());
-
-      // Free the pages that were already allocated
-//      rollbackHeapExpansion(m_HeapEnd, i);
-//    return 0;
     }
-
     // Go to the next address
     m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
     i++;
   }
+
   m_HeapEnd = newHeapEnd;
   return Heap;
 }

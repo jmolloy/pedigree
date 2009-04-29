@@ -320,7 +320,7 @@ bool msdosProbeDisk(Disk *pDisk)
 {
   // Read the first sector (512 bytes) of the disk into a buffer.
   uint8_t buffer[512];
-  if (pDisk->read(0ULL, 512ULL, reinterpret_cast<uint32_t> (buffer)) != 512)
+  if (pDisk->read(0ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
   {
     WARNING("Disk read failure during partition table search.");
     return false;

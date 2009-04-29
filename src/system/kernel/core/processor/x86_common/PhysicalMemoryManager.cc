@@ -227,6 +227,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     {
       if (MemoryMap->address < 0x100000)
       {
+
         // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
         //       1MB barrier
         if ((MemoryMap->address + MemoryMap->length) >= 0x100000)
@@ -248,6 +249,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
       m_AcpiRanges.free(MemoryMap->address, MemoryMap->length);
     }
   #endif
+
     MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
   }
 
@@ -427,7 +429,7 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
                                        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write)
         == true)
       return;
-
+ 
     m_StackMax[index] += getPageSize();
   }
 

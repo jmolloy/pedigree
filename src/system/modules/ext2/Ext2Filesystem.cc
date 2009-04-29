@@ -246,7 +246,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
   return true;
 }
 
-bool Ext2Filesystem::createFile(File *parent, String filename, size_t mask)
+bool Ext2Filesystem::createFile(File *parent, String filename, uint32_t mask)
 {
   return createNode(parent, filename, mask, String(""), EXT2_S_IFREG);
 }

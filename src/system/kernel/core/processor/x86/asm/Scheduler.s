@@ -52,7 +52,8 @@ _ZN21PerProcessorScheduler13contextSwitchERmS0_RVm:
     mov esp, [eax]
 
     ; Unlock the current thread.
-    mov dword [ebp+16], 0
+    mov eax, [ebp+16]
+    mov dword [eax], 1
 
     ; Unsave registers and return.
     pop edi
@@ -130,7 +131,7 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
     mov    esp, esi
 
     ; Unlock the old thread.
-    mov    dword [edx], 0
+    mov    dword [edx], 1
 
     ; At this point we prepare for the jump to the next task. Register contents:
     ;   eax: param
@@ -227,7 +228,7 @@ _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
     mov    esp, [esi]
 
     ; Unlock the old thread.
-    mov    dword [edx], 0
+    mov    dword [edx], 1
 
     ; At this point we prepare for the jump to the next task.
 

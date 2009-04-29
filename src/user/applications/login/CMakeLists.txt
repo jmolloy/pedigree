@@ -23,4 +23,4 @@ set_target_properties(login PROPERTIES
 target_link_libraries(login c)
 target_link_libraries(login gcc)
 target_link_libraries(login m)
-add_dependencies(login posix-usermode crt0.o)
+add_dependencies(login crt0.o)

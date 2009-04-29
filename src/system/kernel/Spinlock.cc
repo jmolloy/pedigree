@@ -19,7 +19,7 @@
 void Spinlock::acquire()
 {
   // Save the current irq status.
-  static bool b = false;
+
   // This save to local variable prevents a heinous race condition where the thread is
   // preempted between the getInterrupts and setInterrupts, then this same spinlock is called
   // in the new thread with interrupts disabled. It gets back to us, and m_bInterrupts==false.
@@ -36,16 +36,7 @@ void Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
-//    FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
-    if (!b)
-    {
-      b = true;
-      Processor::breakpoint();
-    }
-    else
-    {
-      return;
-    }
+//      FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
 #endif
   }
 
@@ -62,7 +53,7 @@ void Spinlock::release()
 
   bool bInterrupts = m_bInterrupts;
 
-  m_Atom = false;
+  m_Atom = true;
   /*while (m_Atom.compareAndSwap(false, true) == false)
   {
     FATAL("Spinlock: failed to release!");

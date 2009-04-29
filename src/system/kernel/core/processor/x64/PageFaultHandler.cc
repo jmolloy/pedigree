@@ -39,8 +39,8 @@ bool PageFaultHandler::initialise()
 
 void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  uint32_t cr2, code;
-  asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
+  uintptr_t cr2, code;
+  asm volatile("mov %%cr2, %%rax" : "=a" (cr2));
   code = state.m_Errorcode;
 
   uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);

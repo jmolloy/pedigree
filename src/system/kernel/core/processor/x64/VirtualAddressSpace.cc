@@ -559,7 +559,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
 
     // Map the page. Add the WRITE and USER flags so that these can be controlled
     // on a page-granularity level.
-    *tableEntry = page | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE) | PAGE_WRITE | PAGE_USER);
+    *tableEntry = page | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);
 
     // Zero the page directory pointer table
     memset(physicalAddress(reinterpret_cast<void*>(page)),

@@ -16,6 +16,7 @@
 
 #include <processor/Processor.h>
 #include <processor/IoPortManager.h>
+#include <process/initialiseMultitasking.h>
 #include "gdt.h"
 #include "SyscallManager.h"
 #include "InterruptManager.h"
@@ -77,6 +78,8 @@ void Processor::initialise2()
   // Initialise the GDT
   X64GdtManager::instance().initialise(nProcessors);
   X64GdtManager::initialiseProcessor();
+
+  initialiseMultitasking();
 
   #if defined(MULTIPROCESSOR)
     if (nProcessors != 1)

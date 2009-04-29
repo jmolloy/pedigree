@@ -119,7 +119,7 @@ Ne2k::~Ne2k()
 {
 }
 
-bool Ne2k::send(uint32_t nBytes, uintptr_t buffer)
+bool Ne2k::send(size_t nBytes, uintptr_t buffer)
 {
   if(nBytes > 0xffff)
   {

@@ -106,6 +106,8 @@ public:
   void fillRectangle(uint16_t x, uint16_t y, uint16_t h, uint16_t w);
 
 private:
+  Dma(const Dma&);
+  Dma &operator = (const Dma&);
 
   void dmaCmd(uint32_t cmd, uint32_t offset, uint16_t size);
   void writeBuffer(uint32_t arg);
