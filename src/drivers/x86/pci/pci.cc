@@ -82,7 +82,7 @@ uint32_t readConfig (ConfigAddress addr)
   return configSpace.read32(CONFIG_DATA);
 }
 
-uint32_t writeConfig (ConfigAddress addr, uint32_t value)
+void writeConfig (ConfigAddress addr, uint32_t value)
 {
   // Ensure the enable bit is set.
   addr.enable = 1;
@@ -98,7 +98,7 @@ uint32_t writeConfig (ConfigAddress addr, uint32_t value)
 void readConfigSpace (ConfigAddress addr, ConfigSpace *pCs)
 {
   uint32_t *pCs32 = reinterpret_cast<uint32_t*> (pCs);
-  for (int i = 0; i < sizeof(ConfigSpace)/4; i++)
+  for (unsigned int i = 0; i < sizeof(ConfigSpace)/4; i++)
   {
     addr.offset = i;
     pCs32[i] = readConfig(addr);
@@ -107,20 +107,22 @@ void readConfigSpace (ConfigAddress addr, ConfigSpace *pCs)
 
 const char *getVendor (uint16_t vendor)
 {
-  for (int i = 0; i < PCI_VENTABLE_LEN; i++)
+  for (unsigned int i = 0; i < PCI_VENTABLE_LEN; i++)
   {
     if (PciVenTable[i].VenId == vendor)
       return PciVenTable[i].VenShort;
   }
+  return "";
 }
 
 const char *getDevice (uint16_t vendor, uint16_t device)
 {
-  for (int i = 0; i < PCI_DEVTABLE_LEN; i++)
+  for (unsigned int i = 0; i < PCI_DEVTABLE_LEN; i++)
   {
     if (PciDevTable[i].VenId == vendor && PciDevTable[i].DevId == device)
       return PciDevTable[i].ChipDesc;
   }
+  return "";
 }
 
 void entry()
