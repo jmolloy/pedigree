@@ -28,6 +28,9 @@
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { posix_write(2, msg, strlen(msg)); posix_exit(errcode); }
 
+char SSIGILL[] = "Illegal instruction\n";
+char SSIGSEGV[] = "Segmentation fault!\n";
+
 SIGNAL_HANDLER_EXIT     (sigabrt, 1);
 SIGNAL_HANDLER_EXIT     (sigalrm, 1);
 SIGNAL_HANDLER_EXIT     (sigbus, 1);
@@ -35,12 +38,12 @@ SIGNAL_HANDLER_EMPTY    (sigchld);
 SIGNAL_HANDLER_EMPTY    (sigcont); /// \todo Continue & Pause execution
 SIGNAL_HANDLER_EXIT     (sigfpe, 1); // floating point exception signal
 SIGNAL_HANDLER_EXIT     (sighup, 1);
-SIGNAL_HANDLER_EXITMSG  (sigill, 1, "Illegal instruction\n");
+SIGNAL_HANDLER_EXITMSG  (sigill, 1, SSIGILL);
 SIGNAL_HANDLER_EXIT     (sigint, 1);
 SIGNAL_HANDLER_EXIT     (sigkill, 1);
 SIGNAL_HANDLER_EXIT     (sigpipe, 1);
 SIGNAL_HANDLER_EXIT     (sigquit, 1);
-SIGNAL_HANDLER_EXITMSG  (sigsegv, 1, "Segmentation fault!\n");
+SIGNAL_HANDLER_EXITMSG  (sigsegv, 1, SSIGSEGV);
 SIGNAL_HANDLER_EMPTY    (sigstop); /// \todo Continue & Pause execution
 SIGNAL_HANDLER_EXIT     (sigterm, 1);
 SIGNAL_HANDLER_EMPTY    (sigtstp); // terminal stop

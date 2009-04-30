@@ -148,7 +148,9 @@ void PerProcessorScheduler::checkSignalState(Thread *pThread)
 
       // Set the signal handler state (state() returns a reference to the
       // signal state if we're in a signal handler as set above)
-      SchedulerState newState = pThread->state();
+      
+      SchedulerState newState;
+      newState = pThread->state();
 
 /** \note This is the old way of doing things. We need to return to a specific address
           after executing the handler. This is supposed to allow that.
