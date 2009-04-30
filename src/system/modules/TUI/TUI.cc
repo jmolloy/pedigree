@@ -28,9 +28,10 @@ TUI *g_pTui;
 Vt100 *g_pVt100 = 0;
 
 TUI::TUI() :
-  m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true), m_bIsTextMode(true), m_QueueLength(0)
+    m_Echo(true), m_EchoNewlines(true), m_EchoBackspace(true),
+  m_MapCrToNlIn(true), m_MapNlToCrIn(true), m_NlCausesCr(true), m_bIsTextMode(true), 
+  m_Mode(), m_QueueLength(0)
 {
-
 }
 
 TUI::~TUI()
@@ -42,7 +43,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
 {
   // Expect a request from Console.
   uint64_t operation = p1;
-  uint64_t param = p2;
+  //uint64_t param = p2; // Unused variable.
   uint64_t size = p3;
   uint64_t buffer = p4;
 
@@ -85,8 +86,8 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     }
 
     char *buf = reinterpret_cast<char*>(buffer);
-    int i = 0;
-    char c;
+    size_t i = 0;
+    char c = 0;
     Keyboard::Character ch;
 
     while ( i < size )
@@ -96,7 +97,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         c = m_pQueue[0];
         if (c == '\n') c = '\r';
         buf[i++] = c;
-        for (int j = 0; j < m_QueueLength-1; j++)
+        for (size_t j = 0; j < m_QueueLength-1; j++)
         {
           m_pQueue[j] = m_pQueue[j+1];
         }
@@ -252,14 +253,14 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     if (m_bIsTextMode)
       return 80;
     else
-      return g_pVt100->m_nWidth;
+      return g_pVt100->getWidth();
   }
   else if (operation == CONSOLE_GETROWS)
   {
     if (m_bIsTextMode)
       return 25;
     else
-      return g_pVt100->m_nHeight;
+      return g_pVt100->getHeight();
   }
   else if (operation == CONSOLE_DATA_AVAILABLE)
   {

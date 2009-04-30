@@ -192,7 +192,7 @@ bool Ext2Node::ensureBlockLoaded(size_t nBlock)
   {
     FATAL("EXT2: ensureBlockLoaded: Algorithmic error.");
   }
-  if (m_pBlocks[nBlock] == ~0)
+  if (m_pBlocks[nBlock] == ~0UL)
     getBlockNumber(nBlock);
 
   return true;

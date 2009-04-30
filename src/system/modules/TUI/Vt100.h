@@ -38,6 +38,10 @@ public:
   void write(char c);
   void write(char *str);
 
+  /** Returns the width of the screen in characters. */
+  uint32_t getWidth() {return m_nWidth;}
+  /** Returns the height of the screen in characters. */
+  uint32_t getHeight() {return m_nHeight;}
   /** Gets whether a newline is to be printed as a NL/CR pair */
   bool getNewlineNLCR() {return m_bNewlineAlsoCR;}
   /** Sets whether a newline is to be printed as a NL/CR pair */
@@ -48,24 +52,25 @@ private:
   /** Creates a colour integer suitable for inserting into the framebuffer from an R, G and B list. */
   uint32_t compileColour(uint8_t r, uint8_t g, uint8_t b);
 
-public:
   /** Writes a character out to the framebuffer. Takes a preformatted integer for the foreground and background colours.
       x and y are in characters, not pixels. */
   void putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b);
 
-private:
   /** Screen mode, pixel format etc */
   Display::ScreenMode m_Mode;
 
   /** Framebuffer address. */
   uint8_t *m_pFramebuffer;
 
-public:
   /** Colour list. This is the list of precompiled colour values for the current pixel format. */
   uint32_t m_pColours[16];
 
   uint32_t m_nWidth, m_nHeight;
 private:
+  /** Copy constructor is private. */
+  Vt100(const Vt100 &);
+  Vt100 &operator = (const Vt100 &);
+
   class Window
   {
   public:
@@ -118,6 +123,8 @@ private:
     bool getLineDrawingMode();
 
   private:
+    Window(const Window &);
+    Window &operator = (const Window &);
 
     //
     // Cursor position.

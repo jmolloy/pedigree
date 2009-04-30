@@ -108,6 +108,12 @@ struct in_addr
   unsigned int s_addr;
 };
 
+struct utimbuf {};
+struct termios {};
+struct fd_set {};
+struct msghdr {};
+struct timeb {};
+
 #define COMPILING_SUBSYS
 #define SYS_SOCK_CONSTANTS_ONLY
 #include "include/netdb.h"

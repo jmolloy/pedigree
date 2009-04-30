@@ -50,7 +50,7 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
 File* ConsoleManager::getConsole(String consoleName)
 {
   /// \todo Thread safety.
-  for (int i = 0; i < m_Consoles.count(); i++)
+  for (size_t i = 0; i < m_Consoles.count(); i++)
   {
     Console *pC = m_Consoles[i];
     if (!strcmp(static_cast<const char*>(pC->name), static_cast<const char*>(consoleName)))
@@ -92,7 +92,7 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
 {
   /// \todo Sanity checking.
   Console *pC = m_Consoles[pFile->getInode()-0xdeadbe00];
-  uint64_t ret = pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
+  return pC->backEnd->addRequest(CONSOLE_WRITE, pC->param, size, buffer);
 }
 
 int ConsoleManager::getCols(File* file)

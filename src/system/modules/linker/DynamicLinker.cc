@@ -61,7 +61,7 @@ DynamicLinker::DynamicLinker(DynamicLinker &other) :
 
 DynamicLinker::~DynamicLinker()
 {
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+//    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
 //    delete m_pProgramElf;
 }
@@ -142,7 +142,7 @@ bool DynamicLinker::loadObject(File *pFile)
     }
     NOTICE("Size: " << size);
     SharedObject *pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
-    NOTICE("Inserting with base " << loadBase << ", this : " << (uintptr_t)this);
+
     m_Objects.insert(loadBase, pSo);
 
     List<char*> &dependencies = pElf->neededLibraries();

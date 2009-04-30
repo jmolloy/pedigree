@@ -91,11 +91,16 @@ protected:
   {return false;}
 
 private:
-  struct Console
+  class Console
   {
+  public:
+    Console() : name(), backEnd(0), param(0) {}
     String name;
     RequestQueue *backEnd;
     uintptr_t param;
+  private:
+    Console(const Console &);
+    Console &operator = (const Console &);
   };
 
   Vector<Console*> m_Consoles;

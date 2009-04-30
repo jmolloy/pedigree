@@ -38,7 +38,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
     WARNING("DynamicLinker: Global offset table not found!");
     return;
   }
-  NOTICE("got: " << (uintptr_t)got);
+
   got++;                     // Go to GOT+4
   *got = value&0xFFFFFFFF;   // Library ID
   got++;                     // Got to GOT+8

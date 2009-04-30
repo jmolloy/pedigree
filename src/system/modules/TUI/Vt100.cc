@@ -29,7 +29,7 @@ Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
   m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT),
   m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bContainedParen(false), m_bDontRefresh(false),
-  m_SavedX(0), m_SavedY(0)
+  m_SavedX(0), m_SavedY(0), m_bNewlineAlsoCR(true), m_Cmd()
 {
   // Precompile colour list.
   m_pColours[C_BLACK] = compileColour(0x00, 0x00, 0x00);
@@ -478,7 +478,7 @@ Vt100::Window::Window(uint32_t nWidth, uint32_t nHeight, Vt100 *pParent) :
   m_pData(0)
 {
   m_pData = new uint16_t[NUM_PAGES_SCROLLBACK*nHeight*nWidth];
-  for (int i = 0; i < NUM_PAGES_SCROLLBACK*nHeight*nWidth; i++)
+  for (size_t i = 0; i < NUM_PAGES_SCROLLBACK*nHeight*nWidth; i++)
   {
     m_pData[i] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
   }
@@ -556,7 +556,7 @@ void Vt100::Window::setCursorY(uint32_t y)
     size_t base = m_nScrollMax - nLines + 1;
     for(size_t line = 0; line < nLines; line++)
     {
-      for (int i = 0; i < m_nWidth; i++)
+      for (size_t i = 0; i < m_nWidth; i++)
       {
         m_pData[i+(base + line)*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
       }
@@ -575,7 +575,7 @@ void Vt100::Window::setCursorY(uint32_t y)
 
 void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
 {
-  if (start == ~0 && end == ~0)
+  if (start == ~0UL && end == ~0UL)
   {
     m_nScrollMin = 0;
     m_nScrollMax = m_View+m_nHeight-1;
@@ -594,8 +594,8 @@ void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
 
 void Vt100::Window::eraseEOL()
 {
-  int row = m_CursorY;
-  for (int col = m_CursorX; col < m_nWidth; col++)
+  size_t row = m_CursorY;
+  for (size_t col = m_CursorX; col < m_nWidth; col++)
   {
     m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
     if (col == m_CursorX)
@@ -607,8 +607,8 @@ void Vt100::Window::eraseEOL()
 
 void Vt100::Window::eraseSOL()
 {
-  int row = m_CursorY;
-  for (int col = 0; col <= m_CursorX; col++)
+  size_t row = m_CursorY;
+  for (size_t col = 0; col <= m_CursorX; col++)
   {
     m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
     if (col == m_CursorX)
@@ -620,8 +620,8 @@ void Vt100::Window::eraseSOL()
 
 void Vt100::Window::eraseLine()
 {
-  int row = m_CursorY;
-  for (int col = 0; col < m_nWidth; col++)
+  size_t row = m_CursorY;
+  for (size_t col = 0; col < m_nWidth; col++)
   {
     m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
     if (col == m_CursorX)
@@ -633,9 +633,9 @@ void Vt100::Window::eraseLine()
 
 void Vt100::Window::eraseDown()
 {
-  for (int row = m_CursorY; row < m_nHeight+m_View; row++)
+  for (size_t row = m_CursorY; row < m_nHeight+m_View; row++)
   {
-    for (int col = 0; col < m_nWidth; col ++)
+    for (size_t col = 0; col < m_nWidth; col ++)
     {
       m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
       if (col == m_CursorX && row == m_CursorY)
@@ -648,9 +648,9 @@ void Vt100::Window::eraseDown()
 
 void Vt100::Window::eraseUp()
 {
-  for (int row = m_View; row <= m_CursorY; row++)
+  for (size_t row = m_View; row <= m_CursorY; row++)
   {
-    for (int col = 0; col < m_nWidth; col ++)
+    for (size_t col = 0; col < m_nWidth; col ++)
     {
       m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
       if (col == m_CursorX && row == m_CursorY)
@@ -663,9 +663,9 @@ void Vt100::Window::eraseUp()
 
 void Vt100::Window::eraseScreen()
 {
-  for (int row = m_View; row < m_nHeight+m_View; row++)
+  for (size_t row = m_View; row < m_nHeight+m_View; row++)
   {
-    for (int col = 0; col < m_nWidth; col ++)
+    for (size_t col = 0; col < m_nWidth; col ++)
     {
       m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
       if (col == m_CursorX && row == m_CursorY)
@@ -678,9 +678,9 @@ void Vt100::Window::eraseScreen()
 
 void Vt100::Window::refresh()
 {
-  for (int r = m_View; r < m_View+m_nHeight; r++)
+  for (size_t r = m_View; r < m_View+m_nHeight; r++)
   {
-    for (int c = 0; c < m_nWidth; c++)
+    for (size_t c = 0; c < m_nWidth; c++)
     {
       uint16_t data = m_pData[c+r*m_nWidth];
       if (c == m_CursorX && r == m_CursorY)
@@ -698,7 +698,7 @@ void Vt100::Window::scrollDown()
             reinterpret_cast<uint8_t*>(&m_pData[(m_nScrollMin+1)*m_nWidth]),
             (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
   // Zero out the last row.
-  for (int i = 0; i < m_nWidth; i++)
+  for (size_t i = 0; i < m_nWidth; i++)
   {
     m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
   }
@@ -715,7 +715,7 @@ void Vt100::Window::scrollUp()
             (m_nScrollMax-m_nScrollMin)*m_nWidth*2);
 
   // Zero out the first row.
-  for (int i = 0; i < m_nWidth; i++)
+  for (size_t i = 0; i < m_nWidth; i++)
   {
     m_pData[i+m_nScrollMin*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
   }
@@ -759,7 +759,7 @@ void Vt100::Window::deleteCharacters(uint32_t n)
           2 * (m_nWidth - endX));
 
   // Zero out the remainder of the line
-  for (int i = (m_nWidth - n); i < m_nWidth; i++)
+  for (size_t i = (m_nWidth - n); i < m_nWidth; i++)
     m_pData[i+m_CursorY*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
 
 
