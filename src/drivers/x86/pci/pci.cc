@@ -31,15 +31,18 @@
 
 IoPort configSpace("PCI config space");
 
-struct ConfigAddress
-{
-  uint32_t always0  : 2;
-  uint32_t offset   : 6;
-  uint32_t function : 3;
-  uint32_t device   : 5;
-  uint32_t bus      : 8;
-  uint32_t reserved : 7;
-  uint32_t enable   : 1;
+union ConfigAddress {
+  struct
+  {
+    uint32_t always0  : 2;
+    uint32_t offset   : 6;
+    uint32_t function : 3;
+    uint32_t device   : 5;
+    uint32_t bus      : 8;
+    uint32_t reserved : 7;
+    uint32_t enable   : 1;
+  } __attribute__((packed));
+  uint32_t raw;
 };
 
 struct ConfigSpace
@@ -74,10 +77,8 @@ uint32_t readConfig (ConfigAddress addr)
   addr.enable = 1;
   // And that the always0 bits are zero - duh.
   addr.always0 = 0;
-  // Send the address.
-  uint32_t a = *reinterpret_cast<uint32_t*>(&addr);
 
-  configSpace.write32(a, CONFIG_ADDRESS);
+  configSpace.write32(addr.raw, CONFIG_ADDRESS);
   // And read back the result.
   return configSpace.read32(CONFIG_DATA);
 }
@@ -88,10 +89,8 @@ void writeConfig (ConfigAddress addr, uint32_t value)
   addr.enable = 1;
   // And that the always0 bits are zero - duh.
   addr.always0 = 0;
-  // Send the address.
-  uint32_t a = *reinterpret_cast<uint32_t*>(&addr);
 
-  configSpace.write32(a, CONFIG_ADDRESS);
+  configSpace.write32(addr.raw, CONFIG_ADDRESS);
   configSpace.write32(value, CONFIG_DATA);
 }
 
