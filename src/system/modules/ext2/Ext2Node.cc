@@ -192,7 +192,8 @@ bool Ext2Node::ensureBlockLoaded(size_t nBlock)
   {
     FATAL("EXT2: ensureBlockLoaded: Algorithmic error.");
   }
-  if (m_pBlocks[nBlock] == ~0)
+  if (m_pBlocks[nBlock] == 0)
+  #warning "m_pBlocks is unsiged...you had ~0/-1. Will never evaluate to true"
     getBlockNumber(nBlock);
 
   return true;

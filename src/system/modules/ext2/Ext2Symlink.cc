@@ -30,7 +30,7 @@ Ext2Symlink::Ext2Symlink(String name, uintptr_t inode_num, Inode inode,
   Ext2Node(inode_num, inode, pFs)
 {
   uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
-  uint32_t permissions;
+  uint32_t permissions = 0;
   if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
   if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
   if (mode & EXT2_S_IXUSR) permissions |= FILE_UX;

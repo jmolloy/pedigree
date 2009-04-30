@@ -40,7 +40,7 @@ File* Directory::getChild(size_t n)
     m_bCachePopulated = true;
   }
 
-  int i = 0;
+  unsigned int i = 0;
   for (RadixTree<File*>::Iterator it = m_Cache.begin();
        it != m_Cache.end();
        it++)
