@@ -207,13 +207,16 @@ elif which mcopy >/dev/null 2>&1; then
   # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.
   # OS X doesn't have --preserve either, but it is how -P is implemented, so
   # -a is best replaced with -pPR.
-  cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
-  cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
+  #cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
+  #cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
 
-  mcopy -Do -s ./tmp/.bashrc C:/
-  mcopy -Do -s ./tmp/* C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
-  rm -rf ./tmp
+  #mcopy -Do -s ./tmp/.bashrc C:/
+  #mcopy -Do -s ./tmp/* C:/
+
+  #rm -rf ./tmp
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else
