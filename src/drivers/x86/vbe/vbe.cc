@@ -159,7 +159,7 @@ void entry()
   Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
 
   NOTICE("VBE: Detected compatible display modes:");
-  uintptr_t fbAddr;
+  uintptr_t fbAddr = 0;
   for (List<Display::ScreenMode*>::Iterator it = modeList.begin();
        it != modeList.end();
        it++)

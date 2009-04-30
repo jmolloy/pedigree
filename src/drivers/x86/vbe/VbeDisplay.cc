@@ -24,12 +24,13 @@
 
 extern TUI *g_pTui;
 
-VbeDisplay::VbeDisplay()
+VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer()
 {
+ 
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, uintptr_t fbAddr) :
-  Display(p), m_VbeVersion(version), m_ModeList(sms)
+  Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer()
 {
   Display::ScreenMode *pSm = 0;
   // Try to find mode 0x117 (1024x768x16)
