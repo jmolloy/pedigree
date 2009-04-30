@@ -14,6 +14,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+echo "Building disk images..."
+
 IMG=floppy.img
 OFF=0
 HDIMG=hdd_ext2.img
@@ -32,7 +34,7 @@ fini() {
 }
 
 
-if sudo which losetup >/dev/null 2>&1; then
+if which losetup >/dev/null 2>&1; then
   MOUNTPT=floppytmp
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
 
@@ -158,14 +160,20 @@ if sudo which losetup >/dev/null 2>&1; then
 
 elif which mcopy >/dev/null 2>&1; then
 
-  cp ../images/floppy_fat.img ./floppy.img
+  if [ ! -e "./floppy.img" ]
+    then
+        cp ../images/floppy_fat.img ./floppy.img
+   fi
 
   sh ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
 
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
-  tar -xzf ../images/hdd_fat16.tar.gz
+  if [ ! -e "./hdd_fat16.img" ]
+    then
+        tar -xzf ../images/hdd_fat16.tar.gz
+  fi
 
   sh ../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
