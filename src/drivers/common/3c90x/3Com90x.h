@@ -26,9 +26,7 @@
 #include <machine/IrqHandler.h>
 #include <process/Thread.h>
 #include <process/Semaphore.h>
-
-#define Nic3C90x_VENDOR_ID 0x10ec
-#define Nic3C90x_DEVICE_ID 0x8139
+#include <process/Mutex.h>
 
 /** Device driver for the Nic3C90x class of network device */
 class Nic3C90x : public Network, public IrqHandler
@@ -64,34 +62,40 @@ class Nic3C90x : public Network, public IrqHandler
         int writeEepromWord(int address, uint16_t value);
         int writeEeprom(int address, uint16_t value);
 
-        // void recv();
+        int poll();
+
+        static int trampoline(void* p);
+
+        void receiveThread();
 
         void reset();
 
-        /*struct packet
-        {
-            uintptr_t ptr;
-            size_t len;
-        };*/
-
         StationInfo m_StationInfo;
 
-        /*uint32_t m_RxCurr;
-        uint8_t m_TxCurr;
+        /** Local NIC information */
+        uint8_t m_isBrev;
+        uint8_t m_CurrentWindow;
+
         uint8_t *m_pRxBuffVirt;
         uint8_t *m_pTxBuffVirt;
         uintptr_t m_pRxBuffPhys;
         uintptr_t m_pTxBuffPhys;
         MemoryRegion m_RxBuffMR;
-        MemoryRegion m_TxBuffMR;*/
+        MemoryRegion m_TxBuffMR;
+
+        uintptr_t m_pDPD;
+        MemoryRegion m_DPDMR;
+
+        uintptr_t m_pUPD;
+        MemoryRegion m_UPDMR;
 
         /** TX Descriptor */
         struct TXD
         {
           uint32_t DnNextPtr;
           uint32_t FrameStartHeader;
-          uint32_t HdrAddr;
-          uint32_t HdrLength;
+          // uint32_t HdrAddr;
+          // uint32_t HdrLength;
           uint32_t DataAddr;
           uint32_t DataLength;
         } __attribute__((aligned(8)));
@@ -100,20 +104,19 @@ class Nic3C90x : public Network, public IrqHandler
         struct RXD
         {
           uint32_t UpNextPtr;
-          uint32_t UpPxtStatus;
+          uint32_t UpPktStatus;
           uint32_t DataAddr;
           uint32_t DataLength;
         } __attribute__((aligned(8)));
 
-        /** Local NIC information */
-        uint8_t m_isBrev;
-        uint8_t m_CurrentWindow;
-
-        TXD m_TransmitDPD;
-        RXD m_ReceiveUPD;
+        TXD *m_TransmitDPD;
+        RXD *m_ReceiveUPD;
 
         Nic3C90x(const Nic3C90x&);
         void operator =(const Nic3C90x&);
+
+        Mutex m_RxMutex;
+        Mutex m_TxMutex;
 };
 
 #endif

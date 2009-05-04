@@ -367,6 +367,7 @@ void RadixTree<void*>::remove(String key)
           n->parent->children = n->_next;
 
         // Nothing is pointing at us, so we can die peacefully.
+        if(n == root) root = n->_next;
         delete n;
         return;
       }

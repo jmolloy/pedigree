@@ -20,12 +20,14 @@
   * This is part of the ported Etherboot 3c90x driver
   */
 
+#define MAX_PACKET_SIZE     0xFFFF
+
 #define	XCVR_MAGIC	(0x5A00)
 /** any single transmission fails after 16 collisions or other errors
  ** this is the number of times to retry the transmission -- this should
  ** be plenty
  **/
-#define	XMIT_RETRIES	250
+#define	XMIT_RETRIES	2 // 250
 
 /*** Register definitions for the 3c905 ***/
 enum Registers
@@ -179,16 +181,19 @@ enum Commands
 
 /*** Values for int status register bitmask **/
 #define	INT_INTERRUPTLATCH	(1<<0)
-#define INT_HOSTERROR		(1<<1)
-#define INT_TXCOMPLETE		(1<<2)
-#define INT_RXCOMPLETE		(1<<4)
-#define INT_RXEARLY		(1<<5)
-#define INT_INTREQUESTED	(1<<6)
-#define INT_UPDATESTATS		(1<<7)
-#define INT_LINKEVENT		(1<<8)
-#define INT_DNCOMPLETE		(1<<9)
-#define INT_UPCOMPLETE		(1<<10)
-#define INT_CMDINPROGRESS	(1<<12)
-#define INT_WINDOWNUMBER	(7<<13)
+#define INT_HOSTERROR		    (1<<1)
+#define INT_TXCOMPLETE		  (1<<2)
+#define INT_RXCOMPLETE		  (1<<4)
+#define INT_RXEARLY		      (1<<5)
+#define INT_INTREQUESTED  	(1<<6)
+#define INT_UPDATESTATS		  (1<<7)
+#define INT_LINKEVENT		    (1<<8)
+#define INT_DNCOMPLETE		  (1<<9)
+#define INT_UPCOMPLETE		  (1<<10)
+#define INT_DMAINPROGRESS   (1<<11)
+#define INT_CMDINPROGRESS	  (1<<12)
+#define INT_WINDOWNUMBER	  (7<<13)
+
+#define ENABLED_INTS (INT_UPCOMPLETE | INT_UPDATESTATS | INT_HOSTERROR | INT_DNCOMPLETE | INT_TXCOMPLETE | INT_INTERRUPTLATCH)
 
 #endif

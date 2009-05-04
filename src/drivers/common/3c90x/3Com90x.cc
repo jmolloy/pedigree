@@ -65,6 +65,7 @@
 #include <machine/Network.h>
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
+#include <process/Scheduler.h>
 
 #include <network/Ethernet.h>
 
@@ -191,7 +192,7 @@ void Nic3C90x::reset()
 #endif
 
   /** Send the reset command to the card **/
-  NOTICE("3C90x: Issuing RESET:");
+  NOTICE("3C90x: Issuing RESET");
   issueCommand(cmdGlobalReset, 0);
 
   /** Wait for reset command to complete **/
@@ -256,22 +257,40 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
     m_pBase->read16(regCommandIntStatus_w);
     while(m_pBase->read16(regCommandIntStatus_w) & INT_CMDINPROGRESS);
 
+    physical_uintptr_t destPtr = m_pTxBuffPhys;
+    size_t dud = 0;
+    if(Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(buffer)))
+    {
+      Processor::information().getVirtualAddressSpace().getMapping(reinterpret_cast<void*>(buffer), destPtr, dud);
+      destPtr += buffer & 0xFFF;
+    }
+    else
+      memcpy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
+
     /** Setup the DPD (download descriptor) **/
-    m_TransmitDPD.DnNextPtr = 0;
+    m_TransmitDPD->DnNextPtr = 0;
+
+    NOTICE("Writing to " << destPtr << " [" << buffer << "/" << m_pTxBuffPhys << "]");
 
     /** Set notification for transmission complete (bit 15) **/
-    m_TransmitDPD.FrameStartHeader = nBytes | 0x8000;
-    m_TransmitDPD.HdrAddr = /* convert to physical */ buffer;
-    m_TransmitDPD.HdrLength = Ethernet::instance().ethHeaderSize();
-    m_TransmitDPD.DataAddr = /* convert to physical */ buffer + m_TransmitDPD.HdrLength;
-    m_TransmitDPD.DataLength = (nBytes - m_TransmitDPD.HdrLength) + (1 << 31);
+    m_TransmitDPD->FrameStartHeader = nBytes | 0x8000;
+    // m_TransmitDPD->HdrAddr = m_pTxBuffPhys;
+    // m_TransmitDPD->HdrLength = Ethernet::instance().ethHeaderSize();
+    m_TransmitDPD->DataAddr = static_cast<uint32_t>(destPtr); //m_pTxBuffPhys; // + m_TransmitDPD->HdrLength;
+    m_TransmitDPD->DataLength = (nBytes /* - m_TransmitDPD->HdrLength */) + (1 << 31);
 
     /** Send the packet **/
-    m_pBase->write32(/* convert to physical */ reinterpret_cast<uint32_t>(&m_TransmitDPD), regDnListPtr_l);
+    m_pBase->write32(m_pDPD, regDnListPtr_l);
 
     /** End Stall and Wait for upload to complete. **/
     issueCommand(cmdStallCtl, 3);
     while(m_pBase->read32(regDnListPtr_l) != 0);
+
+    m_TxMutex.acquire();
+
+    NOTICE("back");
+
+    return true;
 
     /** Wait for NIC transmit to complete **/
     /// \todo Meant to be a 10 ms timeout on this
@@ -290,9 +309,12 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
 
     /** Successful completion **/
     if((status & 0xbf) == 0x80)
+    {
+      //while(poll() != 1);
       return true;
+    }
 
-    /** Check errors */
+    /** Check errors **/
     NOTICE("3C90x: Status (" << status << ")");
     if(status & 0x02)
     {
@@ -333,7 +355,40 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
   return false;
 }
 
+int Nic3C90x::poll()
+{
+  NOTICE("poll");
+
+  if(!(m_pBase->read16(regCommandIntStatus_w) & 0x0010))
+    return 0;
+
+  m_ReceiveUPD->UpNextPtr = 0;
+  m_ReceiveUPD->UpPktStatus = 0;
+  m_ReceiveUPD->DataAddr = m_pRxBuffPhys;
+  m_ReceiveUPD->DataLength = 1536 + (1 << 31);
+
+  m_pBase->write32(m_pUPD, regUpListPtr_l);
+
+  /** \todo Could wait for UPCOMPLETE interrupt instead... */
+  while((m_ReceiveUPD->UpPktStatus & ((1 << 14) + (1 << 15))) == 0);
+
+  if(m_ReceiveUPD->UpPktStatus & (1 << 14))
+  {
+    // error
+    FATAL("3C90x: error, UpPktStatus = " << m_ReceiveUPD->UpPktStatus << ".");
+    return 0;
+  }
+
+  size_t packLen = m_ReceiveUPD->UpPktStatus & 0x1FFF;
+
+  NetworkStack::instance().receive(packLen, reinterpret_cast<uintptr_t>(m_pRxBuffVirt), this, 0);
+
+  return 1;
+}
+
+
 #if 0
+
 /*** a3c90x_poll: exported routine that waits for a certain length of time
  *** for a packet, and if it sees none, returns 0.  This routine should
  *** copy the packet to nic->packet if it gets a packet and set the size
@@ -395,7 +450,11 @@ a3c90x_poll(struct nic *nic)
 #endif
 
 Nic3C90x::Nic3C90x(Network* pDev) :
-  Network(pDev), m_pBase(0), m_StationInfo(), m_isBrev(0), m_CurrentWindow(0), m_TransmitDPD(), m_ReceiveUPD()
+  Network(pDev), m_pBase(0), m_StationInfo(), m_isBrev(0), m_CurrentWindow(0),
+  m_pRxBuffVirt(0), m_pTxBuffVirt(0), m_pRxBuffPhys(0), m_pTxBuffPhys(0),
+  m_RxBuffMR("3c90x-rxbuffer"), m_TxBuffMR("3c90x-txbuffer"),
+  m_pDPD(0), m_DPDMR("3c90x-dpd"), m_pUPD(0), m_UPDMR("3c90x-upd"),
+  m_TransmitDPD(0), m_ReceiveUPD(0), m_RxMutex(1), m_TxMutex(1)
 {
     setSpecificType(String("3c90x-card"));
 
@@ -407,10 +466,64 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     uint16_t linktype;
 #define HWADDR_OFFSET 10
 
+    // allocate the rx and tx buffers
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_RxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, 0, -1))
+    {
+        ERROR("3C90x: Couldn't allocate Rx Buffer!");
+        return;
+    }
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_TxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, 0, -1))
+    {
+        ERROR("3C90x: Couldn't allocate Tx Buffer!");
+        return;
+    }
+    m_pRxBuffVirt = static_cast<uint8_t *>(m_RxBuffMR.virtualAddress());
+    m_pTxBuffVirt = static_cast<uint8_t *>(m_TxBuffMR.virtualAddress());
+    m_pRxBuffPhys = m_RxBuffMR.physicalAddress();
+    m_pTxBuffPhys = m_TxBuffMR.physicalAddress();
+
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_DPDMR, 2, PhysicalMemoryManager::continuous, 0, -1))
+    {
+        ERROR("3C90x: Couldn't allocated buffer for DPD\n");
+        return;
+    }
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_UPDMR, 2, PhysicalMemoryManager::continuous, 0, -1))
+    {
+        ERROR("3C90x: Couldn't allocated buffer for UPD\n");
+        return;
+    }
+    m_pDPD = m_DPDMR.physicalAddress();
+    m_pUPD = m_UPDMR.physicalAddress();
+    m_TransmitDPD = reinterpret_cast<TXD*>(m_DPDMR.virtualAddress());
+    m_ReceiveUPD = reinterpret_cast<RXD*>(m_UPDMR.virtualAddress());
+
+    // configure the UPD (really, this should be a list with enough to fill out the full 64 KB or something...)
+    for(size_t iUpd = 0; iUpd < 32; iUpd++)
+    {
+      if((iUpd + 1) == 32)
+        m_ReceiveUPD[iUpd].UpNextPtr = 0;
+      else
+        m_ReceiveUPD[iUpd].UpNextPtr = m_pUPD + ((iUpd + 1) * sizeof(RXD));
+      m_ReceiveUPD[iUpd].UpPktStatus = 0;
+      m_ReceiveUPD[iUpd].DataAddr = m_pRxBuffPhys + (iUpd * 1536);
+      m_ReceiveUPD[iUpd].DataLength = 1536 + (1 << 31);
+    }
+
+    /*
+    m_ReceiveUPD->UpNextPtr = m_pUPD + sizeof(RXD);
+    m_ReceiveUPD->UpPktStatus = 0;
+    m_ReceiveUPD->DataAddr = m_pRxBuffPhys;
+    m_ReceiveUPD->DataLength = 1536 + (1 << 31);
+
+    RXD *nextRxds = m_ReceiveUPD[1]
+    */
+
     // grab the IO ports
     m_pBase = m_Addresses[0]->m_Io;
 
     m_CurrentWindow = 255;
+
+    reset();
 
     switch(readEeprom(0x03))
     {
@@ -465,7 +578,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     }
 
     /** Get the hardware address */
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom));
+    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom), false);
     NOTICE("3C90x MAC: " <<
             m_StationInfo.mac[0] << ":" <<
             m_StationInfo.mac[1] << ":" <<
@@ -479,7 +592,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     mstat = m_pBase->read16(regMediaStatus_4_w);
     if((mstat & (1 << 11)) == 0)
     {
-      ERROR("3C90x: Valid link not established!");
+      ERROR("3C90x: Valid link not established");
       return;
     }
 
@@ -605,7 +718,202 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     issueCommand(cmdRxEnable, 0);
 
     /** Set indication and interrupt flags, ack any IRQs **/
-    issueCommand(cmdSetInterruptEnable, 0);
-    issueCommand(cmdSetIndicationEnable, 0x0014);
-    issueCommand(cmdAcknowledgeInterrupt, 0x661);
+    issueCommand(cmdSetInterruptEnable, ENABLED_INTS);
+    issueCommand(cmdSetIndicationEnable, ENABLED_INTS); //0x0014);
+    issueCommand(cmdAcknowledgeInterrupt, 0xff); //0x661);
+
+    // Set the location for the UPD
+    m_pBase->write32(m_pUPD, regUpListPtr_l);
+
+  // register the packet queue handler
+#ifdef THREADS
+  new Thread(Processor::information().getCurrentThread()->getParent(),
+             reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
+             reinterpret_cast<void*> (this));
+#endif
+
+    // install the IRQ
+    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+    NetworkStack::instance().registerDevice(this);
+}
+
+Nic3C90x::~Nic3C90x()
+{
+}
+
+int Nic3C90x::trampoline(void *p)
+{
+  Nic3C90x *pNic = reinterpret_cast<Nic3C90x*> (p);
+  pNic->receiveThread();
+  return 0;
+}
+
+void Nic3C90x::receiveThread()
+{
+  /** \todo I think this is dropping a packet somewhere... I'm going to have to
+    *       fiddle with this a little. It could just as easily be my 3C90X
+    *       emulation for QEMU that's dropping the packet - we shall see.
+    */
+  while(true)
+  {
+    m_RxMutex.acquire();
+
+    // When we come here, the UpListPtr register will hold the *next* UPD...
+    // What we want is the one that it used! That's ok, it's not difficult
+    // to find that out...
+    uint32_t currUpdPhys = m_pBase->read32(regUpListPtr_l);
+    uint32_t myOffset = (currUpdPhys - m_pUPD);
+    uint32_t myNum = (myOffset / sizeof(RXD)) - 1;
+    RXD *usedUpd = &m_ReceiveUPD[myNum];
+
+    NOTICE("Current UPD is at " << currUpdPhys << ", and original is at " << m_pUPD);
+    NOTICE("UPD number is " << myNum << "!");
+
+    if(usedUpd->UpPktStatus & (1 << 14))
+    {
+      // an error occurred
+      ERROR("3C90x: error, UpPktStatus = " << usedUpd->UpPktStatus << ".");
+      continue;
+    }
+
+    size_t packLen = usedUpd->UpPktStatus & 0x1FFF;
+
+    NetworkStack::instance().receive(packLen, reinterpret_cast<uintptr_t>(m_pRxBuffVirt + (myNum * 1536)), this, 0);
+
+    // reset the UPD's status so it can be used again
+    usedUpd->UpPktStatus = 0;
+
+    // Reset the location for the UPD, if we're stalling
+    if(currUpdPhys == 0)
+      m_pBase->write32(m_pUPD, regUpListPtr_l);
+  }
+}
+
+
+bool Nic3C90x::irq(irq_id_t number, InterruptState &state)
+{
+  // disable interrupts
+  issueCommand(cmdSetInterruptEnable, 0);
+
+  while(1)
+  {
+    uint16_t status = m_pBase->read16(regCommandIntStatus_w);
+
+    // check that one of the enabled IRQs is triggered
+    if((status & ENABLED_INTS) == 0)
+      break;
+
+    // acknowledge the interrupts
+    issueCommand(cmdAcknowledgeInterrupt, (status & ENABLED_INTS));
+
+    // handle...
+    if(status & INT_UPCOMPLETE)
+    {
+      NOTICE("UPComplete IRQ");
+      m_RxMutex.release();
+    }
+
+    if(status & INT_DNCOMPLETE)
+      NOTICE("DNComplete IRQ");
+
+    if(status & INT_TXCOMPLETE)
+    {
+      NOTICE("TXCompleteIRQ");
+      m_TxMutex.release();
+
+      uint8_t txStatus = m_pBase->read8(regTxStatus_b);
+
+      // ack it
+      m_pBase->write8(0, regTxStatus_b);
+
+      if((txStatus & 0xbf) == 0x80)
+      {
+        NOTICE("3C90x: Successful TX");
+        continue;
+      }
+
+      if(txStatus & 0x02)
+      {
+        ERROR("3C90x: TX Reclaim Error");
+        reset();
+      }
+      else if(txStatus & 0x04)
+      {
+        ERROR("3C90x: TX Status Overflow");
+        for(int i = 0; i < 32; i++)
+          m_pBase->write8(0, regTxStatus_b);
+        issueCommand(cmdTxEnable, 0);
+      }
+      else if(txStatus & 0x08)
+      {
+        ERROR("3C90x: TX Max Collisions");
+        issueCommand(cmdTxEnable, 0);
+      }
+      else if(txStatus & 0x10)
+      {
+        ERROR("3C90x: TX Underrun");
+        reset();
+      }
+      else if(txStatus & 0x20)
+      {
+        ERROR("3C90x: TX Jabber");
+        reset();
+      }
+      else if((txStatus & 0x80) != 0x80)
+      {
+        ERROR("3C90x: Internal Error - Incomplete Transmission");
+        reset();
+      }
+    }
+
+    if(status & INT_HOSTERROR)
+    {
+      NOTICE("Host error IRQ");
+      reset();
+    }
+
+    if(status & INT_UPDATESTATS)
+      NOTICE("UpdateStats IRQ");
+	}
+
+	// Re-enable interrupts
+  issueCommand(cmdSetInterruptEnable, ENABLED_INTS);
+
+  /*
+  XL_SEL_WIN(7);
+
+	if (ifp->if_snd.ifq_head != NULL)
+		xl_start(ifp);
+  */
+
+  return true;
+}
+
+bool Nic3C90x::setStationInfo(StationInfo info)
+{
+  // free the old DNS servers list, if there is one
+  if(m_StationInfo.dnsServers)
+    delete [] m_StationInfo.dnsServers;
+
+  // MAC isn't changeable, so set it all manually
+  m_StationInfo.ipv4 = info.ipv4;
+  NOTICE("3C90x: Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
+  m_StationInfo.ipv6 = info.ipv6;
+
+  m_StationInfo.subnetMask = info.subnetMask;
+  NOTICE("3C90x: Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");
+  m_StationInfo.gateway = info.gateway;
+  NOTICE("3C90x: Setting gateway, " << info.gateway.toString() << ", " << m_StationInfo.gateway.toString() << "...");
+
+  // Callers do not free their dnsServers memory
+  m_StationInfo.dnsServers = info.dnsServers;
+  m_StationInfo.nDnsServers = info.nDnsServers;
+  NOTICE("3C90x: Setting DNS servers [" << Dec << m_StationInfo.nDnsServers << Hex << " servers being set]...");
+
+  return true;
+}
+
+StationInfo Nic3C90x::getStationInfo()
+{
+  return m_StationInfo;
 }
