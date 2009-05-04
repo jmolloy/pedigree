@@ -33,12 +33,13 @@ class TimedTask : public TimerHandler
 
         TimedTask() :
             m_Nanoseconds(0), m_Seconds(0), m_Timeout(30), m_Success(false),
-            m_Active(false), m_ReturnValue(0), m_Task(0), m_WaitSem(0)
+            m_Active(false), m_TimeoutActive(true), m_ReturnValue(0), m_Task(0),
+            m_WaitSem(0)
         {};
 
         virtual ~TimedTask()
         {
-            if(m_Active)
+            if(m_TimeoutActive)
                 unregisterMe();
             if(m_WaitSem)
                 m_WaitSem->release();
@@ -59,24 +60,15 @@ class TimedTask : public TimerHandler
                 m_Seconds = m_Nanoseconds = 0;
                 m_Active = true;
 
-                if(m_Timeout)
-                {
+                if(m_TimeoutActive)
                     registerMe();
 
-                    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-                    m_Task = new Thread(
-                                    pProcess,
-                                    reinterpret_cast<Thread::ThreadStartFunc>(taskTrampoline),
-                                    reinterpret_cast<void *>(this)
-                                    );
-                }
-                else
-                {
-                    // no timeout!
-                    m_ReturnValue = task();
-                    m_Success = true;
-                    m_WaitSem->release();
-                }
+                Process *pProcess = Processor::information().getCurrentThread()->getParent();
+                m_Task = new Thread(
+                                pProcess,
+                                reinterpret_cast<Thread::ThreadStartFunc>(taskTrampoline),
+                                reinterpret_cast<void *>(this)
+                                );
             }
             else
                 WARNING("TimedTask::begin() called with no semaphore");
@@ -89,7 +81,8 @@ class TimedTask : public TimerHandler
                 m_Active = false;
                 m_Success = false;
 
-                unregisterMe();
+                if(m_TimeoutActive)
+                    unregisterMe();
 
                 delete m_Task;
                 m_Task = 0;
@@ -106,7 +99,8 @@ class TimedTask : public TimerHandler
         {
             m_Active = false;
 
-            unregisterMe();
+            if(m_TimeoutActive)
+                unregisterMe();
 
             m_Success = true;
             m_ReturnValue = returnValue;
@@ -115,6 +109,8 @@ class TimedTask : public TimerHandler
             m_WaitSem = 0;
 
             m_Task->setStatus(Thread::Zombie);
+
+            // Processor::information().getScheduler().killCurrentThread();
 
             while(1)
                 Scheduler::instance().yield();
@@ -135,7 +131,7 @@ class TimedTask : public TimerHandler
 
         void timer(uint64_t delta, InterruptState &state)
         {
-            if(m_Active)
+            if(m_TimeoutActive)
             {
                 if(UNLIKELY(m_Seconds < m_Timeout))
                 {
@@ -167,6 +163,17 @@ class TimedTask : public TimerHandler
         void setTimeout(uint32_t timeout)
         {
             m_Timeout = timeout;
+        }
+
+        void toggleTimeout()
+        {
+            m_TimeoutActive = !m_TimeoutActive;
+        }
+
+        /** Will a timeout cause the task to be cancelled or not? */
+        bool isTimeoutActive()
+        {
+            return m_TimeoutActive;
         }
 
         /** Don't use this if wasSuccessful() == false */
@@ -208,6 +215,7 @@ class TimedTask : public TimerHandler
 
         bool m_Success;
         bool m_Active;
+        bool m_TimeoutActive; // we can be active but not timing out
 
         int m_ReturnValue;
 

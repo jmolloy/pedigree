@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, eddyb
+* Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin, eddyb
 *
 * Permission to use, copy, modify, and distribute this software for any
 * purpose with or without fee is hereby granted, provided that the above
@@ -77,12 +77,12 @@ void searchNode(Device *pDev)
 
         for(unsigned int j = 0; j < NUM_POTENTIAL_NICS; j++)
         {
-          uint16_t vendor = potential_nics[i].vendor;
-          uint16_t device = potential_nics[i].device;
+          uint16_t vendor = potential_nics[j].vendor;
+          uint16_t device = potential_nics[j].device;
           if((pChild->getPciVendorId() == vendor) && (pChild->getPciDeviceId() == device))
           {
             uintptr_t irq = pChild->getInterruptNumber();
-            NOTICE("3C90x [" << potential_nics[i].type << "/" << potential_nics[i].desc << "] found, IRQ = " << irq << ".");
+            NOTICE("3C90x [" << potential_nics[j].type << "/" << potential_nics[j].desc << "] found, IRQ = " << irq << ".");
 
             if(pChild->addresses()[0]->m_IsIoSpace)
                 probeDevice(reinterpret_cast<Network*>(pChild));
@@ -107,7 +107,7 @@ void exit()
 
 }
 
-MODULE_NAME("rtl8139");
+MODULE_NAME("3c90x");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
 MODULE_DEPENDS("NetworkStack");

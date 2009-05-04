@@ -14,6 +14,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+echo "Building disk images..."
+
 IMG=floppy.img
 OFF=0
 HDIMG=hdd_ext2.img
@@ -32,7 +34,7 @@ fini() {
 }
 
 
-if sudo which losetup >/dev/null 2>&1; then
+if which losetup >/dev/null 2>&1; then
   MOUNTPT=floppytmp
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
 
@@ -158,14 +160,20 @@ if sudo which losetup >/dev/null 2>&1; then
 
 elif which mcopy >/dev/null 2>&1; then
 
-  cp ../images/floppy_fat.img ./floppy.img
+  if [ ! -e "./floppy.img" ]
+    then
+        cp ../images/floppy_fat.img ./floppy.img
+   fi
 
   sh ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
 
   mcopy -Do ./src/system/kernel/kernel A:/
   mcopy -Do ./initrd.tar A:/
 
-  tar -xzf ../images/hdd_fat16.tar.gz
+  if [ ! -e "./hdd_fat16.img" ]
+    then
+        tar -xzf ../images/hdd_fat16.tar.gz
+  fi
 
   sh ../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
@@ -199,13 +207,16 @@ elif which mcopy >/dev/null 2>&1; then
   # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.
   # OS X doesn't have --preserve either, but it is how -P is implemented, so
   # -a is best replaced with -pPR.
-  cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
-  cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
+  #cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
+  #cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
 
-  mcopy -Do -s ./tmp/.bashrc C:/
-  mcopy -Do -s ./tmp/* C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
-  rm -rf ./tmp
+  #mcopy -Do -s ./tmp/.bashrc C:/
+  #mcopy -Do -s ./tmp/* C:/
+
+  #rm -rf ./tmp
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else
