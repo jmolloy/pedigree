@@ -82,7 +82,7 @@ void searchNode(Device *pDev)
           if((pChild->getPciVendorId() == vendor) && (pChild->getPciDeviceId() == device))
           {
             uintptr_t irq = pChild->getInterruptNumber();
-            NOTICE("3C90x [" << potential_nics[i].type << "/" << potential_nics[i].desc << "] found, IRQ = " << irq << ".");
+            NOTICE("3C90x [" << potential_nics[j].type << "/" << potential_nics[j].desc << "] found, IRQ = " << irq << ".");
 
             if(pChild->addresses()[0]->m_IsIoSpace)
                 probeDevice(reinterpret_cast<Network*>(pChild));

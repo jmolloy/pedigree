@@ -255,7 +255,7 @@ class MacAddress
         uint16_t *p = reinterpret_cast<uint16_t*>(data);
         uint16_t *me = reinterpret_cast<uint16_t*>(m_Mac);
         size_t i;
-        for(i = 0; i < 6; i += 2)
+        for(i = 0; i < 3; i++)
           me[i] = BIG_TO_HOST16(p[i]);
       }
       else
