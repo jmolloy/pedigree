@@ -26,7 +26,6 @@
 #include <machine/IrqHandler.h>
 #include <process/Thread.h>
 #include <process/Semaphore.h>
-#include <process/Mutex.h>
 
 /** Device driver for the Nic3C90x class of network device */
 class Nic3C90x : public Network, public IrqHandler
@@ -115,8 +114,8 @@ class Nic3C90x : public Network, public IrqHandler
         Nic3C90x(const Nic3C90x&);
         void operator =(const Nic3C90x&);
 
-        Mutex m_RxMutex;
-        Mutex m_TxMutex;
+        Semaphore m_RxMutex;
+        Semaphore m_TxMutex;
 };
 
 #endif

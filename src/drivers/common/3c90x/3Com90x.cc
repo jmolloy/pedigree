@@ -454,7 +454,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
   m_pRxBuffVirt(0), m_pTxBuffVirt(0), m_pRxBuffPhys(0), m_pTxBuffPhys(0),
   m_RxBuffMR("3c90x-rxbuffer"), m_TxBuffMR("3c90x-txbuffer"),
   m_pDPD(0), m_DPDMR("3c90x-dpd"), m_pUPD(0), m_UPDMR("3c90x-upd"),
-  m_TransmitDPD(0), m_ReceiveUPD(0), m_RxMutex(1), m_TxMutex(1)
+  m_TransmitDPD(0), m_ReceiveUPD(0), m_RxMutex(0), m_TxMutex(0)
 {
     setSpecificType(String("3c90x-card"));
 
@@ -578,7 +578,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     }
 
     /** Get the hardware address */
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom), false);
+    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom), true);
     NOTICE("3C90x MAC: " <<
             m_StationInfo.mac[0] << ":" <<
             m_StationInfo.mac[1] << ":" <<
@@ -750,9 +750,12 @@ int Nic3C90x::trampoline(void *p)
 
 void Nic3C90x::receiveThread()
 {
-  /** \todo I think this is dropping a packet somewhere... I'm going to have to
-    *       fiddle with this a little. It could just as easily be my 3C90X
-    *       emulation for QEMU that's dropping the packet - we shall see.
+  /** \bug  The dropped packets bug is because if two packets come in quick sucession
+    *       (as is common with TCP connections), two Upload Complete IRQs will fire.
+    *       However, this code reads only the latest UpListPtr value, which will (if
+    *       two packets arrive) be the second packet's pointer.
+    * \todo Instead, the IRQ handler should push the UpListPtr to a queue, which this
+    *       function would then process.
     */
   while(true)
   {
@@ -773,7 +776,7 @@ void Nic3C90x::receiveThread()
     {
       // an error occurred
       ERROR("3C90x: error, UpPktStatus = " << usedUpd->UpPktStatus << ".");
-      continue;
+      return;
     }
 
     size_t packLen = usedUpd->UpPktStatus & 0x1FFF;
