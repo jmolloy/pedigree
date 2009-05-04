@@ -113,11 +113,7 @@ void Thread::setStatus(Thread::Status s)
 void Thread::threadExited()
 {
   NOTICE("Thread exited");
-  // TODO apply these to the current thread - we don't have a this pointer.
-//  m_Status = Zombie;
-//  delete this;
-  for(;;);
-  Processor::halt();
+  Processor::information().getScheduler().killCurrentThread();
 }
 
 void Thread::sendEvent(Event *pEvent)

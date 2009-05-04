@@ -26,9 +26,13 @@ global _ZN9Processor10jumpKernelEPVmmmmmmm
 ; void Processor::jumpUser(volatile uintptr_t *, uintptr_t, uintptr_t,
 ;                          uintptr_t, uintptr_t, uintptr_t, uintptr_t)
 global _ZN9Processor8jumpUserEPVmmmmmmm
+; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&) 
+global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X86SchedulerState
 
 ; void Thread::threadExited()
 extern _ZN6Thread12threadExitedEv
+; void PerProcessorScheduler::deleteThread(Thread *)
+extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 
 [bits 32]
 [section .text]
@@ -212,3 +216,34 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
 
     ; Interrupt-return to the start function.
     iret
+
+_ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X86SchedulerState:
+    ;; Load the state pointer.
+    mov     edi, [esp+8]
+
+    ;; Load the Thread* pointer.
+    mov     ecx, [esp+4]
+
+    ;; Reload ESP and call deleteThread from the new stack.
+    mov     esp, [edi+16]
+    push    ecx
+    call    _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+    pop     ecx
+
+    ;; Move the state pointer from a callee-save register to a scratch register.
+    mov     eax, edi
+    
+    ;; Reload all callee-save registers.
+    mov     edi, [eax+0]
+    mov     esi, [eax+4]
+    mov     ebx, [eax+8]
+    mov     ebp, [eax+12]
+    mov     esp, [eax+16]
+    mov     edx, [eax+20]
+
+    ;; Return true.
+    mov     eax, 1
+
+    ;; Push the return address on to the stack before returning.
+    push    edx
+    ret

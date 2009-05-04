@@ -190,10 +190,10 @@ void init_stage2()
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
   new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 
-  Processor::setInterrupts(true);
+//  Processor::setInterrupts(true);
 
   // Thread exit.
-  while (1) {Scheduler::instance().yield();}
+//  while (1) {Scheduler::instance().yield();}
 }
 
 MODULE_NAME("init");

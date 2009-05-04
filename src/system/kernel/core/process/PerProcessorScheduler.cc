@@ -272,10 +272,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 
 void PerProcessorScheduler::killCurrentThread()
 {
-#if 0
-    // A spinlock with lockguard is the easiest way of disabling interrupts.
-    Spinlock lock;
-    LockGuard<Spinlock> guard(lock);
+    Processor::setInterrupts(false);
 
     Thread *pThread = Processor::information().getCurrentThread();
 
@@ -300,14 +297,13 @@ void PerProcessorScheduler::killCurrentThread()
 
     pNextThread->getLock().release();
 
-    deleteThreadThenContextSwitch(pThread, pNextThread->state());
-#endif
+    deleteThreadThenRestoreState(pThread, pNextThread->state());
 }
 
 void PerProcessorScheduler::deleteThread(Thread *pThread)
 {
-    NOTICE("AnuS!");
-//     delete pThread;
+    NOTICE("Deleting thread.");
+    delete pThread;
 }
 
 void PerProcessorScheduler::removeThread(Thread *pThread)

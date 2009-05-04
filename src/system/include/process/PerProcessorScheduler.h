@@ -106,7 +106,7 @@ private:
         switches.
 
         \note Implemented in core/processor/ARCH/asm*/
-    static void deleteThreadThenContextSwitch(Thread *pThread, uintptr_t &newState);
+    static void deleteThreadThenRestoreState(Thread *pThread, SchedulerState &newState);
 
     static void deleteThread(Thread *pThread);
 
