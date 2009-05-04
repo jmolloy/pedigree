@@ -14,230 +14,201 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;
 
-; void PerProcessorScheduler::contextSwitch(uintptr_t&,uintptr_t&,uintptr_t&)
-global _ZN21PerProcessorScheduler13contextSwitchERmS0_RVm
-; void PerProcessorScheduler::launchThread(uintptr_t&,uintptr_t&,uintptr_t,uintptr_t,uintptr_t, uintptr_t)
-global _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm
-; void PerProcessorScheduler::launchThread(uintptr_t&,uintptr_t&,SyscallState&)
-global _ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState
-; void Processor::deleteThreadThenContextSwitch(Thread*,uintptr_t&)
-global _ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm
+; bool Processor::saveState(SchedulerState &)
+global _ZN9Processor9saveStateER17X86SchedulerState
+; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
+global _ZN9Processor12restoreStateER17X86SchedulerStatePVm
+; void Processor::restoreState(volatile uintptr_t *, SyscallState &)
+global _ZN9Processor12restoreStateER17X86InterruptStatePVm
+; void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
+;                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+global _ZN9Processor10jumpKernelEPVmmmmmmm
+; void Processor::jumpUser(volatile uintptr_t *, uintptr_t, uintptr_t,
+;                          uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+global _ZN9Processor8jumpUserEPVmmmmmmm
 
-; void PerProcessorScheduler::deleteThread(Thread*)
-extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 ; void Thread::threadExited()
 extern _ZN6Thread12threadExitedEv
 
 [bits 32]
 [section .text]
+    
+_ZN9Processor9saveStateER17X86SchedulerState:
+    ;; Load the state pointer.
+    mov     eax, [esp+4]
 
-; [esp+12] pCurrentThread->lock
-; [esp+8] pNextThread->state
-; [esp+4]  pCurrentThread->state
-; [esp+0]  <Return address>
-_ZN21PerProcessorScheduler13contextSwitchERmS0_RVm:
-    ; Push the two registers we need to save.
-    push ebp
-    mov ebp, esp
-    push ebx
-    push esi
-    push edi
-	
-    ; Save the stack pointer to pCurrentThread->state.
-    mov eax, [ebp+8]
-    mov [eax], esp
+    ;; Save the stack pointer (without the return address)
+    mov     ecx, esp
+    add     ecx, 4
 
-    ; Switch stacks.
-    mov eax, [ebp+12]
-    mov esp, [eax]
+    ;; Save the return address.
+    mov     edx, [esp]
+    
+    mov     [eax+0], edi
+    mov     [eax+4], esi
+    mov     [eax+8], ebx
+    mov     [eax+12], ebp
+    mov     [eax+16], ecx
+    mov     [eax+20], edx
 
-    ; Unlock the current thread.
-    mov eax, [ebp+16]
-    mov dword [eax], 1
-
-    ; Unsave registers and return.
-    pop edi
-    pop esi
-    pop ebx
-    pop ebp
+    ;; Return false.
+    xor     eax, eax
     ret
 
-; [esp+12] pNextThread->state
-; [esp+8]  pThread
-; [esp+4]  <Return address>
-_ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm:
-    ; Save pThread.
-    mov eax, [esp+4]
+_ZN9Processor12restoreStateER17X86SchedulerStatePVm:
+    ;; Load the state pointer.
+    mov     eax, [esp+4]
 
-    ; Switch stacks.
-    mov ecx, [esp+8]
-    mov esp, [ecx]
+    ;; Load the lock pointer.
+    mov     ecx, [esp+8]
 
-    ; Call PerProcessorScheduler::deleteThread on the old thread.
-    push eax
-    call _ZN21PerProcessorScheduler12deleteThreadEP6Thread
-    pop eax
+    ;; Reload all callee-save registers.
+    mov     edi, [eax+0]
+    mov     esi, [eax+4]
+    mov     ebx, [eax+8]
+    mov     ebp, [eax+12]
+    mov     esp, [eax+16]
+    mov     edx, [eax+20]
 
-    ; Now do the actual task switch.
-    pop edi
-    pop esi
-    pop ebx
-    pop ebp
+    ;; Ignore lock if none given (ecx == 0).
+    cmp     ecx, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     dword [ecx], 1
+.no_lock:
+
+    ;; Return true.
+    mov     eax, 1
+
+    ;; Push the return address on to the stack before returning.
+    push    edx
     ret
 
-; [esp+28] bUsermode
-; [esp+24] param
-; [esp+20] func
-; [esp+16] pNextThread->stack
-; [esp+12] pCurrentThread->lock
-; [esp+8]  pCurrentThread->state
-; [esp+4]  <Return address>
-_ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
-    cli
+_ZN9Processor12restoreStateER17X86InterruptStatePVm:
+    ;; Load the lock pointer.
+    mov     ecx, [esp+8]
+
+    ;; The state pointer is on this thread's kernel stack, so change to it.
+    mov     eax, [esp+4]
+    mov     esp, [eax]
+
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     ecx, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     dword [ecx], 1
+.no_lock:
     
-    ; esi and edi are callee-save registers, but we have nowhere to save them, so save them off
-    ; the bottom of the current stack.
-    mov [esp-4], esi
-    mov [esp-8], edi
-
-    ; Pop the return address, state, lock, stack and func and save them.
-    pop    eax          ; return address
-    pop    ecx          ; state
-    pop    edx          ; lock
-    pop    esi          ; stack
-    pop    edi          ; func
-
-    ; Push the return address back onto the stack.
-    push   eax
-
-    ; Now the stack contains a return address plus two parameters, which is what
-    ; contextSwitch expects. Add in EBP and EBX to make a proper contextSwitch stack
-    ; frame.
-    push   ebp
-    push   ebx
-    mov eax, [esp-12]
-    push   eax
-    mov eax, [esp-12]
-    push   eax
-
-    ; And set state to be the current stack pointer.
-    mov    [ecx], esp
-
-    ; Move the remaining two parameters into registers.
-    mov    eax, [esp+20] ; param
-    mov    ecx, [esp+24] ; usermode
-
-    ; We don't need the old stack any more - switch.
-    mov    esp, esi
-
-    ; Unlock the old thread.
-    mov    dword [edx], 1
-
-    ; At this point we prepare for the jump to the next task. Register contents:
-    ;   eax: param
-    ;   ecx: usermode
-    ;   edi: func
-
-    ; Jumping to user mode? go to .jump_to_user_mode.
-    cmp    ecx, 0
-    jne    .jump_to_user_mode
-
-    ; New stack frame.
-    xor    ebp, ebp
-
-    ; Jumping to kernel mode - push the parameter and return address then jmp.
-    push   eax
-    push   _ZN6Thread12threadExitedEv
-    sti
-    jmp    edi
-
-.jump_to_user_mode:
-    ; If we're jumping to user mode, we need to set up an interrupt state.
-
-    ; Set up the target stack, initially.
-    push   eax
-    push   _ZN6Thread12threadExitedEv
-
-    ; Load all segment descriptors with the user-mode selector.
-    mov    ax, 0x23
-    mov    ds, ax
-    mov    es, ax
-    mov    fs, ax
-    mov    gs, ax
-
-    ; Save a copy of the stack pointer in its current position - this will
-    ; become the target stack.
-    mov    eax, esp
-    ; Stack segment (SS)
-    push   0x23
-    ; Stack pointer
-    push   eax
-
-    ; EFLAGS: Push to stack, pop, OR in the IF flag (interrupt enable, 0x200) and
-    ; push again.
-    pushfd
-    pop    eax
-    or     eax, 0x200
-    push   eax
-
-    ; Code segment (CS)
-    push   0x1B
-    ; EIP
-    push   edi
-
-    ; Interrupt-return to the start function.
-    iret
-
-; [esp+12] SyscallState (kernel stack)
-; [esp+8] pCurrentThread->lock
-; [esp+4]  pCurrentThread->state
-; [esp+0]  <Return address>
-_ZN21PerProcessorScheduler12launchThreadERmRVmR17X86InterruptState:
-    cli
-    ; esi and edi are callee-save registers, but we have nowhere to save them, so save them off
-    ; the bottom of the current stack.
-    mov [esp-8], esi
-    mov [esp-12], edi
-
-    ; Pop the return address, state, lock, and stack and save them.
-    pop    eax          ; return address
-    pop    ecx          ; state
-    pop    edx          ; lock
-    pop    esi          ; kernel stack / SyscallState
-
-    push dword 0
-    push dword 0
-
-    ; Push the return address back onto the stack.
-    push   eax
-
-    ; Now the stack contains a return address plus two parameters, which is what
-    ; contextSwitch expects. Add in EBP and EBX to make a proper contextSwitch stack
-    ; frame.
-    push   ebp
-    push   ebx
-    mov eax, [esp-4]
-    push   eax
-    mov eax, [esp-4]
-    push   eax
-    
-    ; And set state to be the current stack pointer.
-    mov    [ecx], esp
-
-    ; We don't need the old stack any more - switch.
-    mov    esp, [esi]
-
-    ; Unlock the old thread.
-    mov    dword [edx], 1
-
-    ; At this point we prepare for the jump to the next task.
-
-    ; Restore the registers
+    ;; Restore the registers
     pop ds
     mov ax, ds
     mov es, ax
     popa
 
-    ; Remove the errorcode and the interrupt number from the stack
+    ;; Remove the errorcode and the interrupt number from the stack
     add esp, 0x08
+    iret
+
+_ZN9Processor10jumpKernelEPVmmmmmmm:
+    ;; Load the lock pointer.
+    mov     ecx, [esp+4]
+
+    ;; Load the address to jump to.
+    mov     eax, [esp+8]
+    ;; Load the new stack pointer.
+    mov     ebx, [esp+12]
+    ;; And each parameter.
+    mov     edx, [esp+16]
+    mov     esi, [esp+20]
+    mov     edi, [esp+24]
+    mov     ebp, [esp+28]
+
+    ;; Change stacks.
+    mov     esp, ebx
+
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     ecx, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     dword [ecx], 1
+.no_lock:
+
+    ;; Set up the stack - push parameters first.
+    push    ebp
+    push    edi
+    push    esi
+    push    edx
+    ;; Then the return address.
+    push    dword _ZN6Thread12threadExitedEv
+
+    ;; New stack frame.
+    xor     ebp, ebp
+    ;; Enable interrupts and jump.
+    sti
+    jmp     eax
+
+_ZN9Processor8jumpUserEPVmmmmmmm:
+    ;; Load the lock pointer.
+    mov     ecx, [esp+4]
+
+    ;; Load the address to jump to.
+    mov     eax, [esp+8]
+    ;; Load the new stack pointer.
+    mov     ebx, [esp+12]
+    ;; And each parameter.
+    mov     edx, [esp+16]
+    mov     esi, [esp+20]
+    mov     edi, [esp+24]
+    mov     ebp, [esp+28]
+
+    ;; Change stacks.
+    mov     esp, ebx
+
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     ecx, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     dword [ecx], 1
+.no_lock:
+
+    ;; Set up the stack - push parameters first.
+    push    ebp
+    push    edi
+    push    esi
+    push    edx
+    ;; Then the return address. User mode threads can't return to kernel code,
+    ;; so just make it 0.
+    push    dword 0
+
+    ;; New stack frame.
+    xor     ebp, ebp
+
+    ; Load all segment descriptors with the user-mode selector.
+    mov    bx, 0x23
+    mov    ds, bx
+    mov    es, bx
+    mov    fs, bx
+    mov    gs, bx
+
+    ; Save a copy of the stack pointer in its current position - this will
+    ; become the target stack.
+    mov    ecx, esp
+    ; Stack segment (SS)
+    push   0x23
+    ; Stack pointer
+    push   ecx
+
+    ; EFLAGS: Push to stack, pop, OR in the IF flag (interrupt enable, 0x200) and
+    ; push again.
+    pushfd
+    pop    ecx
+    or     ecx, 0x200
+    push   ecx
+
+    ; Code segment (CS)
+    push   0x1B
+    ; EIP
+    push   eax
+
+    ; Interrupt-return to the start function.
     iret

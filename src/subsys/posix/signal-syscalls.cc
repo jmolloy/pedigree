@@ -102,6 +102,7 @@ _sig_func_ptr default_sig_handlers[] =
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type)
 {
+#if 0
   SC_NOTICE("sigaction(" << Dec << sig << Hex << ")");
 
   Thread* pThread = Processor::information().getCurrentThread();
@@ -173,7 +174,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     SYSCALL_ERROR(InvalidArgument);
     return -1;
   }
-
+#endif
   return 0;
 }
 
@@ -185,6 +186,7 @@ uintptr_t posix_signal(int sig, void* func)
 
 int posix_raise(int sig)
 {
+#if 0
   SC_NOTICE("raise");
 
   // create the pending signal and pass it in
@@ -199,12 +201,13 @@ int posix_raise(int sig)
 
   // let another thread be scheduled; we won't come back until after the pending signal is handled
   Scheduler::instance().yield();
-
+#endif
   return 0;
 }
 
 int pedigree_sigret()
 {
+#if 0
   SC_NOTICE("pedigree_sigret");
 
   // we do not want an interrupt until we're waiting for the signal handler to complete
@@ -235,12 +238,13 @@ int pedigree_sigret()
   Scheduler::instance().yield();
   while(1)
     Processor::halt();
-
+#endif
   return 0;
 }
 
 int posix_kill(int pid, int sig)
 {
+#if 0
   SC_NOTICE("kill(" << pid << ", " << sig << ")");
 
   Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
@@ -265,12 +269,13 @@ int posix_kill(int pid, int sig)
     SYSCALL_ERROR(NoSuchProcess);
     return -1;
   }
-
+#endif
   return 0;
 }
 
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 {
+#if 0
   SC_NOTICE("sigprocmask");
 
   uint32_t currMask = Processor::information().getCurrentThread()->getParent()->getSignalMask();
@@ -327,7 +332,7 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
     // now that the new signal mask is set, reschedule so that any (now unblocked) signals may run
     Scheduler::instance().yield();
   }
-
+#endif
   return 0;
 }
 

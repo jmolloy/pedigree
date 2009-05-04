@@ -17,235 +17,209 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include <Log.h>
+
 #include <processor/state.h>
 #include <processor/types.h>
-#include <process/SchedulerState.h>
+#include <process/Event.h>
+
+#include <utilities/List.h>
+#include <utilities/ExtensibleBitmap.h>
 
 class Processor;
 class Process;
 
 /**
  * An abstraction of a thread of execution.
+ *
+ * The thread maintains not just one execution context (SchedulerState) but a 
+ * stack of them, along with a stack of masks for inhibiting event dispatch.
+ *
+ * This enables event dispatch at any time without affecting the previous state,
+ * as well as changing the event mask from nested event handlers without affecting
+ * the state of any other running handler.
  */
 class Thread
 {
 public:
-  enum Status
-  {
-    Ready,
-    Running,
-    Sleeping,
-    Zombie
-  };
+    /** The state that a thread can possibly have. */
+    enum Status
+    {
+        Ready,
+        Running,
+        Sleeping,
+        Zombie
+    };
+
+    /** Thread start function type. */
+    typedef int (*ThreadStartFunc)(void*);
   
-  typedef int (*ThreadStartFunc)(void*);
+    /** Creates a new Thread belonging to the given Process. It shares the Process'
+     * virtual address space.
+     *
+     * The constructor registers itself with the Scheduler and parent process - this
+     * does not need to be done manually.
+     * 
+     * If kernelMode is true, and pStack is NULL, no stack space is assigned.
+     *
+     * \param pParent The parent process. Can never be NULL.
+     * \param kernelMode Is the thread going to be operating in kernel space only?
+     * \param pStartFunction The function to be run when the thread starts.
+     * \param pParam A parameter to give the startFunction.
+     * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
+     *               only. */
+    Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+           void *pStack=0);
   
-  /**
-   * Creates a new Thread belonging to the given Process. It shares the Process'
-   * virtual address space.
-   *
-   * The constructor registers itself with the Scheduler and parent process - this
-   * does not need to be done manually.
-   * 
-   * If kernelMode is true, and pStack is NULL, no stack space is assigned 
-   * \param pParent The parent process. Can never be NULL.
-   * \param kernelMode Is the thread going to be operating in kernel space only?
-   * \param pStartFunction The function to be run when the thread starts.
-   * \param pParam A parameter to give the startFunction.
-   * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
-   *               only.
-   */
-  Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
-         void *pStack=0);
+    /** Alternative constructor - this should be used only by initialiseMultitasking() to
+     * define the first kernel thread. */
+    Thread(Process *pParent);
+
+    /** Constructor for when forking a process. Assumes pParent has already been set up with a clone
+     * of the current address space and sets up the new thread to return to the caller in that address space. */
+    Thread(Process *pParent, SyscallState &state);
+
+    /** Destroys the Thread.
+     *
+     * The destructor unregisters itself with the Scheduler and parent process - this
+     * does not need to be done manually. */
+    virtual ~Thread();
+
+    /** Returns a reference to the Thread's saved context. This function is intended only
+     * for use by the Scheduler. */
+    SchedulerState &state()
+    {return m_States[m_nStateLevel];}
+
+    /** Increases the state nesting level by one - pushes a new state to the top of the state stack.
+        This also pushes to the top of the inhibited events stack, copying the current inhibit mask.
+        \return A reference to the previous state. */
+    SchedulerState &pushState()
+    {
+        if (m_nStateLevel == MAX_NESTED_EVENTS)
+        {
+            ERROR("Thread: Max nested events!");
+            /// \todo Take some action here - possibly kill the thread?
+            return m_States[m_nStateLevel];
+        }
+        m_nStateLevel++;
+        m_InhibitMasks[m_nStateLevel] = m_InhibitMasks[m_nStateLevel-1];
+        return m_States[m_nStateLevel-1];
+    }
+
+    /** Decreases the state nesting level by one, popping both the state stack and the inhibit mask
+        stack.*/
+    void popState()
+    {
+        if (m_nStateLevel == 0)
+        {
+            ERROR("Thread: popStack() called with state level 0!");
+        }
+        m_nStateLevel --;
+    }
+
+    /** Returns the state nesting level. */
+    size_t getStateLevel()
+    {return m_nStateLevel;}
+
+    /** Retrieves a pointer to this Thread's parent process. */
+    Process *getParent() const
+    {return m_pParent;}
+
+    /** Retrieves our current status. */
+    Status getStatus() const
+    {return m_Status;}
+
+    /** Sets our current status. */
+    void setStatus(Status s);
   
-  /**
-   * Alternative constructor - this should be used only by initialiseMultitasking() to
-   * define the first kernel thread.
-   */
-  Thread(Process *pParent);
+    /** Retrieves the exit status of the Thread.
+     * \note Valid only if the Thread is in the Zombie state. */
+    int getExitCode()
+    {return m_ExitCode;}
 
-  /**
-   * Constructor for when forking a process. Assumes pParent has already been set up with a clone
-   * of the current address space and sets up the new thread to return to the caller in that address space.
-   */
-  Thread(Process *pParent, SyscallState &state);
-
-  /**
-   * Destroys the Thread.
-   *
-   * The destructor unregisters itself with the Scheduler and parent process - this
-   * does not need to be done manually.
-   */
-  virtual ~Thread();
-
-  /**
-   * Returns a reference to the Thread's saved context. This function is intended only
-   * for use by the Scheduler.
-   */
-  SchedulerState &state()
-  {
-    return (m_bIsInSigHandler) ? m_SigState : m_State;
-  }
-
-  void setIsInSigHandler(bool b)
-  {
-    m_bIsInSigHandler = b;
-  }
-  bool isInSigHandler()
-  {
-    return m_bIsInSigHandler;
-  }
-
-  /**
-   * Retrieves a pointer to this Thread's parent process.
-   */
-  Process *getParent() const
-  {
-    return m_pParent;
-  }
-
-  /**
-   * Retrieves our current status.
-   */
-  Status getStatus() const
-  {
-    return m_Status;
-  }
-  /**
-   * Sets our current status.
-   */
-  void setStatus(Status s);
+    /** Retrieves a pointer to the top of the Thread's kernel stack. */
+    void *getKernelStack()
+    {return m_pKernelStack;}
   
-  /**
-   * Retrieves the exit status of the Thread.
-   * \note Valid only if the Thread is in the Zombie state.
-   */
-  int getExitCode()
-  {
-    return m_ExitCode;
-  }
+    /** Returns the Thread's ID. */
+    size_t getId()
+    {return m_Id;}
 
-  /**
-   * Retrieves a pointer to the top of the Thread's kernel stack.
-   */
-  void *getKernelStack()
-  {
-    return m_pKernelStack;
-  }
-  
-  /** Returns the Thread's ID. */
-  size_t getId()
-  {
-    return m_Id;
-  }
+    /** Returns the last error that occurred (errno). */
+    size_t getErrno()
+    {return m_Errno;}
 
-  /** Returns the last error that occurred (errno). */
-  size_t getErrno()
-  {
-    return m_Errno;
-  }
+    /** Sets the last error - errno. */
+    void setErrno(size_t errno)
+    {m_Errno = errno;}
 
-  /** Sets the last error - errno. */
-  void setErrno(size_t errno)
-  {
-    m_Errno = errno;
-  }
+    /** Returns the thread's scheduler lock. */
+    Spinlock &getLock()
+    {return m_Lock;}
 
-  /** Information about the currently running signal; if there is one */
-  struct CurrentSignal
-  {
-    CurrentSignal() : bRunning(false), loc(0), oldMask(0), currMask(0) {};
-    virtual ~CurrentSignal() {};
+    /** Sends the asynchronous event pEvent to this thread.
+      
+        If the thread ID is greater than or equal to EVENT_TID_MAX, the event will be ignored. */
+    void sendEvent(Event *pEvent);
 
-    bool bRunning;
-    uintptr_t loc;
-    uint32_t oldMask;
-    uint32_t currMask;
-  };
+    /** Sets the given event number as inhibited.
+        \param bInhibit True if the event is to be inhibited, false if the event is to be allowed. */
+    void inhibitEvent(size_t eventNumber, bool bInhibit);
 
-  CurrentSignal getCurrentSignal()
-  {
-    return m_CurrentSignal;
-  }
+    /** Grabs the first available unmasked event and pops it off the queue.
+        This also pushes the inhibit mask stack.
 
-  void setCurrentSignal(CurrentSignal sig)
-  {
-    m_CurrentSignal = sig;
-  }
+        \note This is intended only to be called by PerProcessorScheduler. */
+    Event *getNextEvent();
 
-  Spinlock &getLock()
-  {
-    return m_Lock;
-  }
-
-  /**
-   * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
-   * if it is not being waited on the Thread is destroyed.
-   * \note This is meant to be called only by the thread trampoline - this is the only reason it
-   *       is public. It should NOT be called by anyone else!
-   */
-  static void threadExited();
+    /**
+     * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
+     * if it is not being waited on the Thread is destroyed.
+     * \note This is meant to be called only by the thread trampoline - this is the only reason it
+     *       is public. It should NOT be called by anyone else!
+     */
+    static void threadExited();
 private:
-  /** Copy-constructor */
-  Thread(const Thread &);
-  /** Assignment operator */
-  Thread &operator = (const Thread &);
+    /** Copy-constructor */
+    Thread(const Thread &);
+    /** Assignment operator */
+    Thread &operator = (const Thread &);
 
-  /**
-   * The state of the processor when we were unscheduled.
-   */
-  SchedulerState m_State;
+    /** The stack of processor states. */
+    SchedulerState m_States[MAX_NESTED_EVENTS];
 
-  /**
-   * The state of the processor when we were unscheduled and executing a 
-   * signal handler.
-   */
-  SchedulerState m_SigState;
+    /** The current index into m_States (head of the state stack). */
+    size_t m_nStateLevel;
 
-  /**
-   * Our parent process.
-   */
-  Process *m_pParent;
+    /** Our parent process. */
+    Process *m_pParent;
 
-  /**
-   * Our current status.
-   */
-  volatile Status m_Status;
+    /** Our current status. */
+    volatile Status m_Status;
   
-  /**
-   * Our exit code
-   */
-  int m_ExitCode;
+    /** Our exit code. */
+    int m_ExitCode;
   
-  /**
-   * Our kernel stack.
-   */
-  void *m_pKernelStack;
+    /** Our kernel stack. */
+    void *m_pKernelStack;
 
-  /**
-   * Our thread ID.
-   */
-  size_t m_Id;
+    /** Our thread ID. */
+    size_t m_Id;
 
-  /**
-   * The number of the last error to occur.
-   */
-  size_t m_Errno;
+    /** The number of the last error to occur. */
+    size_t m_Errno;
 
-  /**
-   * Currently executing signal handler.
-   */
-  CurrentSignal m_CurrentSignal;
+    /** Lock for schedulers. */
+    Spinlock m_Lock;
 
-  /**
-   * Lock for schedulers.
-   */
-  Spinlock m_Lock;
+    /** Stack of inhibited Event masks, gets pushed with a new value when an Event handler is run, and
+        popped when one completes.
+  
+        \note A '1' here means the event is inhibited, '0' means it can be fired. */
+    ExtensibleBitmap m_InhibitMasks[MAX_NESTED_EVENTS];
 
-  /**
-   * Is the thread currently executing a signal handler?
-   */
-  bool m_bIsInSigHandler;
+    /** Queue of Events ready to run. */
+    List<Event*> m_EventQueue;
 };
 
 #endif

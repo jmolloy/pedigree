@@ -20,6 +20,8 @@
 #include <process/RoundRobin.h>
 
 #include <processor/Processor.h>
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
 
 #include <machine/Machine.h>
 
@@ -93,160 +95,97 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
         pLock->m_Atom.m_Atom = 1;
     }
 
-    checkSignalState(pNextThread);
-
     pNextThread->getLock().release();
 
-    contextSwitch(pCurrentThread->state(), pNextThread->state(),
-                  pCurrentThread->getLock().m_Atom.m_Atom);
+    if (Processor::saveState(pCurrentThread->state()))
+    {
+        // Just context-restored, return.
 
-    // Return to previous interrupt state.
-    Processor::setInterrupts(bWasInterrupts);
+        // Return to previous interrupt state.
+        Processor::setInterrupts(bWasInterrupts);
+        return;
+    }
+
+    // Restore context, releasing the old thread's lock when we've switched stacks.
+    Processor::restoreState(pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
+    // Not reached.
 }
 
-void PerProcessorScheduler::checkSignalState(Thread *pThread)
+void PerProcessorScheduler::checkEventState(uintptr_t userStack)
 {
-  // find if the process has any queued signals
-  List<void*>& sigq = pThread->getParent()->getPendingSignals();
-  if(sigq.count())
-  {
-    // try to find a non-blocked signal
-    Process::PendingSignal* sig;
-    Process::PendingSignal* firstSig = 0;
-    do
+    bool bWasInterrupts = Processor::getInterrupts();
+    Processor::setInterrupts(false);
+
+    Thread *pThread = Processor::information().getCurrentThread();
+    Event *pEvent = pThread->getNextEvent();
+    if (!pEvent)
     {
-      // grab the signal and check against the mask
-      sig = reinterpret_cast<Process::PendingSignal*>(sigq.popFront());
-      if(firstSig == 0)
-        firstSig = sig;
+        Processor::setInterrupts(bWasInterrupts);
+        return;
+    }
 
-      uint32_t sigmask = pThread->getParent()->getSignalMask();
-      if(sigmask & (1 << sig->sig))
-      {
-        /// \todo This will mean the order gets totally messed up... Not so great!
-        sigq.pushBack(sig);
+    SchedulerState &oldState = pThread->pushState();
 
-        // Blocked, check the next one. If it's the first signal we popped, we've done a full loop
-        // and we know there's no signals we can run.
-        sig = reinterpret_cast<Process::PendingSignal*>(sigq.popFront());
-        if(sig == firstSig)
+    // The address of the serialize buffer is determined by the thread ID and the nesting level.
+    uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS + 
+                                             (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
+
+    // Ensure the page is mapped.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if (!va.isMapped(reinterpret_cast<void*>(addr)))
+    {
+        physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
+        if (!p)
         {
-          sigq.pushFront(sig);
-          sig = 0;
+            panic("checkEventState: Out of memory!");
+            return;
         }
-      }
-      else
-        break;
+        va.map(p, reinterpret_cast<void*>(addr), 0);
     }
-    while(sig);
 
-    // did we find a non-blocked signal?
-    if(sig)
+    pEvent->serialize(reinterpret_cast<uint8_t*>(addr));
+
+    if (Processor::saveState(oldState))
     {
-      // We have a signal to execute...
-      pThread->setIsInSigHandler(true);
-
-      // Set the signal handler state (state() returns a reference to the
-      // signal state if we're in a signal handler as set above)
-      
-      SchedulerState newState;
-      newState = pThread->state();
-
-/** \note This is the old way of doing things. We need to return to a specific address
-          after executing the handler. This is supposed to allow that.
-
-#ifdef X86_COMMON
-      uintptr_t esp = newState.getStackPointer() - sizeof(InterruptState) - 4;
-      *reinterpret_cast<uint32_t*>(esp) = pThread->getParent()->getSigReturnStub();
-      newState.setStackPointer(esp);
-#endif
-#ifdef PPC_COMMON
-      newState.m_Lr = pThread->getParent()->getSigReturnStub();
-#endif
-
-      newState.setInstructionPoint(sig->sigLocation);
-
-*/
-
-      // setup the current signal information structure for the thread
-      Thread::CurrentSignal curr;
-      curr.bRunning = true;
-      curr.currMask = sig->sigMask;
-      curr.oldMask = pThread->getParent()->getSignalMask();
-      curr.loc = sig->sigLocation;
-
-      // set the process signal mask as per the mask in the PendingSignal structure
-      pThread->getParent()->setSignalMask(sig->sigMask);
-      pThread->setCurrentSignal(curr);
-
-      // and now we can finally free the pending signal
-      delete sig;
-
-      // save the old state, because we're moving to a new state
-      /*InterruptState* currState = pThread->getInterruptState();
-      pThread->setSavedInterruptState(currState);
-      ProcessorState procState;
-
-      // setup the return instruction pointer
-      /// \todo StackFrame members could make this cleaner
-#ifdef X86_COMMON
-      uintptr_t esp = currState->getStackPointer() - sizeof(InterruptState) - 4;
-      *reinterpret_cast<uint32_t*>(esp) = pThread->getParent()->getSigReturnStub();
-      procState.setStackPointer(esp);
-#endif
-#ifdef PPC_COMMON
-      procState.m_Lr = pThread->getParent()->getSigReturnStub();
-#endif
-
-      // we're now jumping to the signal handler
-      procState.setInstructionPointer(sig->sigLocation);
-
-      // load the new InterruptState into the thread
-      InterruptState* retState = currState->construct(procState, false);
-      pThread->setInterruptState(retState);
-
-      // we do not use the saved state yet
-      pThread->useSaved(false);
-
-      // setup the current signal information structure for the thread
-      Thread::CurrentSignal curr;
-      curr.bRunning = true;
-      curr.currMask = sig->sigMask;
-      curr.oldMask = pThread->getParent()->getSignalMask();
-      curr.loc = sig->sigLocation;
-
-      // set the process signal mask as per the mask in the PendingSignal structure
-      pThread->getParent()->setSignalMask(sig->sigMask);
-      pThread->setCurrentSignal(curr);
-
-      // and now we can finally free the pending signal
-      delete sig;*/
+        // Just context-restored.
+        Processor::setInterrupts(bWasInterrupts);
+        return;
     }
-  }
 
-  // If we need to use the saved state, load it as the current state. This allows the
-  // thread to run without using an invalid state (as would happen if the state from
-  // the assignment earlier was kept.)
-  /*if(pThread->shouldUseSaved())
-  {
-    pThread->setInterruptState(pThread->getSavedInterruptState());
-    pThread->useSaved(false);
-  }*/
+    if (pEvent->isDeletable())
+        delete pEvent;
+
+    // Simple heuristic for whether to launch the event handler in kernel or user mode - is the 
+    // handler address mapped kernel or user mode?
+    uintptr_t handlerAddress = pEvent->getHandlerAddress();
+    if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
+    {
+        ERROR("checkEventState: Handler address not mapped!");
+        eventHandlerReturned();
+    }
+    physical_uintptr_t page;
+    size_t flags;
+    va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
+    if (flags & VirtualAddressSpace::KernelMode)
+        Processor::jumpKernel(0, EVENT_HANDLER_TRAMPOLINE, 0, handlerAddress, addr);
+    else
+        Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+    // Not reached.
 }
 
-void PerProcessorScheduler::signalHandlerReturned()
+void PerProcessorScheduler::eventHandlerReturned()
 {
-  // We have a signal to execute...
-  Thread *pThread = Processor::information().getCurrentThread();
-  pThread->setIsInSigHandler(true);
+    Processor::setInterrupts(false);
 
-  NOTICE("signal handler returned =O");
+    Thread *pThread = Processor::information().getCurrentThread();
+    pThread->popState();
+
+    Processor::restoreState(pThread->state());
+    // Not reached.
 }
 
 void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc pStartFunction, void *pParam, bool bUsermode, void *pStack)
 {
-    NOTICE("PPSched::addThread");
-
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
 
@@ -271,23 +210,29 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
     pThread->getLock().m_Atom.m_Atom = 1;
 
-    launchThread(pCurrentThread->state(),
-                 pCurrentThread->getLock().m_Atom.m_Atom,
-                 reinterpret_cast<uintptr_t>(pStack),
-                 reinterpret_cast<uintptr_t>(pStartFunction),
-                 reinterpret_cast<uintptr_t>(pParam),
-                 (bUsermode) ? 1 : 0);
+    if (Processor::saveState(pCurrentThread->state()))
+    {
+        // Just context-restored.
+        if (bWasInterrupts) Processor::setInterrupts(true);
+        return;
+    }
 
-    if (bWasInterrupts) Processor::setInterrupts(true);
+    if (bUsermode)
+        Processor::jumpUser(&pCurrentThread->getLock().m_Atom.m_Atom,
+                            reinterpret_cast<uintptr_t>(pStartFunction),
+                            reinterpret_cast<uintptr_t>(pStack),
+                            reinterpret_cast<uintptr_t>(pParam));
+    else
+        Processor::jumpKernel(&pCurrentThread->getLock().m_Atom.m_Atom,
+                              reinterpret_cast<uintptr_t>(pStartFunction),
+                              reinterpret_cast<uintptr_t>(pStack),
+                              reinterpret_cast<uintptr_t>(pParam));
 }
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 {
-    NOTICE("AddThread syscall");
-
-    // A spinlock with lockguard is the easiest way of disabling interrupts.
-    Spinlock lock;
-    LockGuard<Spinlock> guard(lock);
+    bool bWasInterrupts = Processor::getInterrupts();
+    Processor::setInterrupts(false);
 
     // We assume here that pThread's lock is already taken.
 
@@ -314,14 +259,20 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     kStack -= sizeof(SyscallState);
     memcpy(reinterpret_cast<void*>(kStack), reinterpret_cast<void*>(&state), sizeof(SyscallState));
 
-    launchThread(pCurrentThread->state(),
-                 pCurrentThread->getLock().m_Atom.m_Atom,
-                 reinterpret_cast<SyscallState&>(kStack));
+    if (Processor::saveState(pCurrentThread->state()))
+    {
+        // Just context-restored.
+        if (bWasInterrupts) Processor::setInterrupts(true);
+        return;
+    }
+    
+    Processor::restoreState(reinterpret_cast<SyscallState&>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
 }
 
 
 void PerProcessorScheduler::killCurrentThread()
 {
+#if 0
     // A spinlock with lockguard is the easiest way of disabling interrupts.
     Spinlock lock;
     LockGuard<Spinlock> guard(lock);
@@ -347,11 +298,10 @@ void PerProcessorScheduler::killCurrentThread()
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
 
-    checkSignalState(pNextThread);
-
     pNextThread->getLock().release();
 
     deleteThreadThenContextSwitch(pThread, pNextThread->state());
+#endif
 }
 
 void PerProcessorScheduler::deleteThread(Thread *pThread)

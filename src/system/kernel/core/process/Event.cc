@@ -13,10 +13,32 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <process/Event.h>
 
-#ifndef SCHEDULER_STATE_H
-#define SCHEDULER_STATE_H
+#include <Log.h>
 
-typedef uintptr_t SchedulerState;
+Event::Event(uintptr_t handlerAddress, bool isDeletable) :
+    m_HandlerAddress(handlerAddress), m_bIsDeletable(isDeletable)
+{
+}
 
-#endif
+Event::~Event()
+{
+}
+
+bool Event::isDeletable()
+{
+    return m_bIsDeletable;
+}
+
+bool Event::unserialize(uint8_t *pBuffer, Event &event)
+{
+    ERROR("Event::unserialize is abstract, should never be called.");
+    return false;
+}
+
+size_t Event::getEventType(uint8_t *pBuffer)
+{
+    size_t *pBufferSize_t = reinterpret_cast<size_t*> (pBuffer);
+    return pBufferSize_t[0];
+}

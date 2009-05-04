@@ -23,7 +23,6 @@
 #include <process/Mutex.h>
 #include <process/Process.h>
 #include <process/Thread.h>
-#include <process/SchedulerState.h>
 #include <Atomic.h>
 
 class SchedulingAlgorithm;
@@ -49,9 +48,14 @@ public:
                           locked. */
     void schedule(Thread::Status nextStatus=Thread::Ready, Spinlock *pLock=0);
 
-    /** Assumes this thread has just returned from executing a signal handler,
+    /** Looks for event handlers to run, and if found, dispatches one.
+        \param userStack The stack to use if the event has a user-mode handler. Usually obtained
+                         from an interruptState or syscallState. */
+    void checkEventState(uintptr_t userStack);
+
+    /** Assumes this thread has just returned from executing a event handler,
         and lets it resume normal execution. */
-    void signalHandlerReturned();
+    void eventHandlerReturned();
 
     /** Adds a new thread.
         \param pThread The thread to add.
@@ -97,34 +101,6 @@ private:
     /** Assignment operator
      *  \note Not implemented - singleton class */
     PerProcessorScheduler &operator = (const PerProcessorScheduler &);
-
-    /** Checks whether any signals are pending on the given Thread, and dispatches
-        if needed. */
-    void checkSignalState(Thread *pThread);
-
-    /** Perform a context switch. The current processor state is stored in oldState,
-        with the new state switched in from newState. When all resources from 
-        oldState are used (i.e. when the stack is switched), lock is set to
-        zero.
-
-        \note Implemented in core/processor/ARCH/asm. */
-    static void contextSwitch(SchedulerState &oldState, SchedulerState &newState,
-                              volatile uintptr_t &lock);
-
-    /** Start a thread. This overload stores the current processor state in
-        oldState, releases lock, then creates a stack frame consisting of a call
-        to startFunction with a parameter param, on the stack 'stack', in 
-        user privilege mode if usermode is true.
-
-        \note Implemented in core/processor/ARCH/asm. */
-    static void launchThread(SchedulerState &oldState, volatile uintptr_t &lock, 
-                             uintptr_t stack, uintptr_t startFunction, uintptr_t param,
-                             uintptr_t usermode);
-
-    /** Start a thread. This overload stores the current processor state in oldState,
-        releases lock, then jumps to the state given in syscallState. */
-    static void launchThread(SchedulerState &oldState, volatile uintptr_t &lock,
-                             SyscallState &syscallState);
 
     /** Switches stacks, calls PerProcessorScheduler::deleteThread, then context
         switches.

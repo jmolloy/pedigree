@@ -55,6 +55,8 @@ typedef PROCESSOR_SPECIFIC_NAME(InterruptState) InterruptState;
 typedef PROCESSOR_SPECIFIC_NAME(SyscallState) SyscallState;
 /** Lift the processor-specific ProcessorState class into the global namespace */
 typedef PROCESSOR_SPECIFIC_NAME(ProcessorState) ProcessorState;
+/** Lift the processor-specific SchedulerState class into the global namespace */
+typedef PROCESSOR_SPECIFIC_NAME(SchedulerState) SchedulerState;
 
 /** @} */
 

@@ -67,7 +67,7 @@ void apMain()
     Scheduler::instance().yield();
   }
 }
-Semaphore sem(1);
+
 /** A processor idle function. */
 int idle(void *)
 {
@@ -111,9 +111,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
-
+  NOTICE("init bootio");
   // Initialise the boot output.
   bootIO.initialise();
+  NOTICE("noninit bleh");
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif

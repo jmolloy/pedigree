@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#if defined(THREADS)
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <processor/Processor.h>
@@ -24,8 +23,8 @@
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                void *pStack) :
-    m_State(), m_SigState(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -59,8 +58,8 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-    m_State(), m_SigState(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
-    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -74,8 +73,8 @@ Thread::Thread(Process *pParent) :
 }
 
 Thread::Thread(Process *pParent, SyscallState &state) :
-    m_State(), m_SigState(), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
-    m_Errno(0), m_CurrentSignal(), m_Lock(), m_bIsInSigHandler(false)
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -121,4 +120,37 @@ void Thread::threadExited()
   Processor::halt();
 }
 
-#endif
+void Thread::sendEvent(Event *pEvent)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+
+    m_EventQueue.pushBack(pEvent);
+}
+
+void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+    if (bInhibit)
+        m_InhibitMasks[m_nStateLevel].set(eventNumber);
+    else
+        m_InhibitMasks[m_nStateLevel].clear(eventNumber);
+}
+
+Event *Thread::getNextEvent()
+{
+    LockGuard<Spinlock> guard(m_Lock);
+
+    Event *pEvent = 0;
+    for (size_t i = 0; i < m_EventQueue.count(); i++)
+    {
+        Event *e = m_EventQueue.popFront();
+        if (m_InhibitMasks[m_nStateLevel].test(pEvent->getNumber()))
+            m_EventQueue.pushBack(pEvent);
+        pEvent = e;
+        break;
+    }
+    if (pEvent == 0)
+        return 0;
+
+    return pEvent;
+}

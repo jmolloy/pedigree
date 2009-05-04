@@ -16,8 +16,21 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#define EVENT_LIMIT   4096
-#define EVENT_TID_MAX 255
+#include <processor/types.h>
+
+/** The maximum size of one event, serialized. */
+#define EVENT_LIMIT       4096
+/** The maximum thread ID one can dispatch an Event to. */
+#define EVENT_TID_MAX     255
+/** The maximum number of times an event can fire while in an event handler (nesting levels).
+    After this, the process will be terminated. */
+#define MAX_NESTED_EVENTS 16
+
+#if defined(X86) || defined(X64) || defined(PPC32)
+  #define EVENT_HANDLER_TRAMPOLINE 0x80000000
+  #define EVENT_HANDLER_BUFFER     0x80001000
+  #define EVENT_HANDLER_END        (0x80001000 + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
+#endif
 
 /** The abstract base class for an asynchronous event. An event can hold any amount of information
     up to a hard maximum size of EVENT_LIMIT (usually 4096 bytes). An event is serialized using 
@@ -39,36 +52,36 @@ public:
 
     /** Returns true if the event is on the heap and can be deleted when handled. This is for creating
         fire-and-forget messages and not worrying about memory leaks. */
-    virtual bool isDeletable() = 0;
+    virtual bool isDeletable();
 
-    /** Dispatches this event to the given Thread.
+    /** Given a buffer EVENT_LIMIT bytes long, take the variables present in this object and
+        convert them to a binary form.
 
-        \note If pThread's thread ID is greater than <b>or equal to</b> EVENT_TID_MAX, the event will
-              be dispatched to pThread's parent process' first thread instead. */
-    void dispatch(Thread *pThread);
+        It can be assumed that this function will only be called when the Event is about to be
+        dispatched, and so the inhibited mask of the current Thread is available to be changed to
+        what the event handler requires. This change will be undone when the handler completes.
 
-    /** Map this event into the current thread's address space at a point defined by the thread's
-        ID (so that multiple threads can execute events in parallel).
-        \return The address that the event was mapped at.
-
-        \note Should <b>only</b> be called by PerProcessorScheduler.
-    */
-    uintptr_t map();
+        \param pBuffer The buffer to serialize to.
+        \return The number of bytes serialized. */
+    virtual size_t serialize(uint8_t *pBuffer) = 0;
 
     /** Given a serialized Event in binary form, attempt to unserialize into the given object.
         If this is impossible, return false.
 
         \note It is impossible to make static functions virtual, but it is <b>required</b> that 
               all subclasses of Event implement this function statically. */
-    static Event unserialize(uint8_t *pBuffer, Event &pEvent);
+    static bool unserialize(uint8_t *pBuffer, Event &event);
+
+    /** Given a serialized event, returns the type of that event (a constant from eventNumbers.h). */
+    static size_t getEventType(uint8_t *pBuffer);
+
+    /** Returns the handler address. */
+    uintptr_t getHandlerAddress() {return m_HandlerAddress;}
+
+    /** Returns the event number / ID. */
+    virtual size_t getNumber() = 0;
 
 protected:
-    /** Given a buffer EVENT_LIMIT bytes long, take the variables present in this object and
-        convert them to a binary form.
-        \param pBuffer The buffer to serialize to.
-        \return The number of bytes serialized. */
-    virtual size_t serialize(uint8_t *pBuffer) = 0;
-
     /** Handler address. */
     uintptr_t m_HandlerAddress;
 
