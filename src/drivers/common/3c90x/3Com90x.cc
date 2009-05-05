@@ -1,18 +1,18 @@
 /*
-* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, eddyb
-*
-* Permission to use, copy, modify, and distribute this software for any
-* purpose with or without fee is hereby granted, provided that the above
-* copyright notice and this permission notice appear in all copies.
-*
-* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-*/
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
 /** Ported 3c90x driver from Etherboot.
   * I've changed it around to fit into our structure, and
@@ -270,8 +270,6 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
     /** Setup the DPD (download descriptor) **/
     m_TransmitDPD->DnNextPtr = 0;
 
-    NOTICE("Writing to " << destPtr << " [" << buffer << "/" << m_pTxBuffPhys << "]");
-
     /** Set notification for transmission complete (bit 15) **/
     m_TransmitDPD->FrameStartHeader = nBytes | 0x8000;
     // m_TransmitDPD->HdrAddr = m_pTxBuffPhys;
@@ -287,8 +285,6 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
     while(m_pBase->read32(regDnListPtr_l) != 0);
 
     m_TxMutex.acquire();
-
-    NOTICE("back");
 
     return true;
 
@@ -357,7 +353,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
 
 int Nic3C90x::poll()
 {
-  NOTICE("poll");
+  WARNING("3C90X poll() called");
 
   if(!(m_pBase->read16(regCommandIntStatus_w) & 0x0010))
     return 0;
@@ -386,75 +382,12 @@ int Nic3C90x::poll()
   return 1;
 }
 
-
-#if 0
-
-/*** a3c90x_poll: exported routine that waits for a certain length of time
- *** for a packet, and if it sees none, returns 0.  This routine should
- *** copy the packet to nic->packet if it gets a packet and set the size
- *** in nic->packetlen.  Return 1 if a packet was found.
- ***/
-static int
-a3c90x_poll(struct nic *nic)
-    {
-    int i, errcode;
-
-    if (!(inw(INF_3C90X.IOAddr + regCommandIntStatus_w)&0x0010))
-	{
-	return 0;
-	}
-
-    /** we don't need to acknowledge rxComplete -- the upload engine
-     ** does it for us.
-     **/
-
-    /** Build the up-load descriptor **/
-    INF_3C90X.ReceiveUPD.UpNextPtr = 0;
-    INF_3C90X.ReceiveUPD.UpPktStatus = 0;
-    INF_3C90X.ReceiveUPD.DataAddr = virt_to_bus(nic->packet);
-    INF_3C90X.ReceiveUPD.DataLength = 1536 + (1<<31);
-
-    /** Submit the upload descriptor to the NIC **/
-    outl(virt_to_bus(&(INF_3C90X.ReceiveUPD)),
-         INF_3C90X.IOAddr + regUpListPtr_l);
-
-    /** Wait for upload completion (upComplete(15) or upError (14)) **/
-    for(i=0;i<40000;i++);
-    while((INF_3C90X.ReceiveUPD.UpPktStatus & ((1<<14) | (1<<15))) == 0)
-	for(i=0;i<40000;i++);
-
-    /** Check for Error (else we have good packet) **/
-    if (INF_3C90X.ReceiveUPD.UpPktStatus & (1<<14))
-	{
-	errcode = INF_3C90X.ReceiveUPD.UpPktStatus;
-	if (errcode & (1<<16))
-	    printf("3C90X: Rx Overrun (%hX)\n",errcode>>16);
-	else if (errcode & (1<<17))
-	    printf("3C90X: Runt Frame (%hX)\n",errcode>>16);
-	else if (errcode & (1<<18))
-	    printf("3C90X: Alignment Error (%hX)\n",errcode>>16);
-	else if (errcode & (1<<19))
-	    printf("3C90X: CRC Error (%hX)\n",errcode>>16);
-	else if (errcode & (1<<20))
-	    printf("3C90X: Oversized Frame (%hX)\n",errcode>>16);
-	else
-	    printf("3C90X: Packet error (%hX)\n",errcode>>16);
-	return 0;
-	}
-
-    /** Ok, got packet.  Set length in nic->packetlen. **/
-    nic->packetlen = (INF_3C90X.ReceiveUPD.UpPktStatus & 0x1FFF);
-
-    return 1;
-    }
-#endif
-
 Nic3C90x::Nic3C90x(Network* pDev) :
   Network(pDev), m_pBase(0), m_StationInfo(), m_isBrev(0), m_CurrentWindow(0),
   m_pRxBuffVirt(0), m_pTxBuffVirt(0), m_pRxBuffPhys(0), m_pTxBuffPhys(0),
   m_RxBuffMR("3c90x-rxbuffer"), m_TxBuffMR("3c90x-txbuffer"),
   m_pDPD(0), m_DPDMR("3c90x-dpd"), m_pUPD(0), m_UPDMR("3c90x-upd"),
-  m_TransmitDPD(0), m_ReceiveUPD(0), m_RxMutex(0), m_TxMutex(0)
+  m_TransmitDPD(0), m_ReceiveUPD(0), m_RxMutex(0), m_TxMutex(0), m_PendingPackets()
 {
     setSpecificType(String("3c90x-card"));
 
@@ -497,10 +430,10 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     m_TransmitDPD = reinterpret_cast<TXD*>(m_DPDMR.virtualAddress());
     m_ReceiveUPD = reinterpret_cast<RXD*>(m_UPDMR.virtualAddress());
 
-    // configure the UPD (really, this should be a list with enough to fill out the full 64 KB or something...)
-    for(size_t iUpd = 0; iUpd < 32; iUpd++)
+    // configure the UPD... turn it into a list with a well-defined beginning and end
+    for(size_t iUpd = 0; iUpd < NUM_UPDS; iUpd++)
     {
-      if((iUpd + 1) == 32)
+      if((iUpd + 1) == NUM_UPDS)
         m_ReceiveUPD[iUpd].UpNextPtr = 0;
       else
         m_ReceiveUPD[iUpd].UpNextPtr = m_pUPD + ((iUpd + 1) * sizeof(RXD));
@@ -508,15 +441,6 @@ Nic3C90x::Nic3C90x(Network* pDev) :
       m_ReceiveUPD[iUpd].DataAddr = m_pRxBuffPhys + (iUpd * 1536);
       m_ReceiveUPD[iUpd].DataLength = 1536 + (1 << 31);
     }
-
-    /*
-    m_ReceiveUPD->UpNextPtr = m_pUPD + sizeof(RXD);
-    m_ReceiveUPD->UpPktStatus = 0;
-    m_ReceiveUPD->DataAddr = m_pRxBuffPhys;
-    m_ReceiveUPD->DataLength = 1536 + (1 << 31);
-
-    RXD *nextRxds = m_ReceiveUPD[1]
-    */
 
     // grab the IO ports
     m_pBase = m_Addresses[0]->m_Io;
@@ -750,13 +674,6 @@ int Nic3C90x::trampoline(void *p)
 
 void Nic3C90x::receiveThread()
 {
-  /** \bug  The dropped packets bug is because if two packets come in quick sucession
-    *       (as is common with TCP connections), two Upload Complete IRQs will fire.
-    *       However, this code reads only the latest UpListPtr value, which will (if
-    *       two packets arrive) be the second packet's pointer.
-    * \todo Instead, the IRQ handler should push the UpListPtr to a queue, which this
-    *       function would then process.
-    */
   while(true)
   {
     m_RxMutex.acquire();
@@ -764,13 +681,18 @@ void Nic3C90x::receiveThread()
     // When we come here, the UpListPtr register will hold the *next* UPD...
     // What we want is the one that it used! That's ok, it's not difficult
     // to find that out...
-    uint32_t currUpdPhys = m_pBase->read32(regUpListPtr_l);
-    uint32_t myOffset = (currUpdPhys - m_pUPD);
-    uint32_t myNum = (myOffset / sizeof(RXD)) - 1;
+    // However, if the next is zero, the IRQ notified us of the *last* UPD in
+    // the list. That needs to be handled properly too.
+    uint32_t currUpdPhys = reinterpret_cast<uint32_t>(m_PendingPackets.popFront());
+    uint32_t myNum;
+    if(currUpdPhys != 0)
+    {
+      uint32_t myOffset = (currUpdPhys - m_pUPD);
+      myNum = (myOffset / sizeof(RXD)) - 1;
+    }
+    else
+      myNum = NUM_UPDS - 1;
     RXD *usedUpd = &m_ReceiveUPD[myNum];
-
-    NOTICE("Current UPD is at " << currUpdPhys << ", and original is at " << m_pUPD);
-    NOTICE("UPD number is " << myNum << "!");
 
     if(usedUpd->UpPktStatus & (1 << 14))
     {
@@ -812,16 +734,13 @@ bool Nic3C90x::irq(irq_id_t number, InterruptState &state)
     // handle...
     if(status & INT_UPCOMPLETE)
     {
-      NOTICE("UPComplete IRQ");
+      void *currPhys = reinterpret_cast<void*>(m_pBase->read32(regUpListPtr_l));
+      m_PendingPackets.pushBack(currPhys);
       m_RxMutex.release();
     }
 
-    if(status & INT_DNCOMPLETE)
-      NOTICE("DNComplete IRQ");
-
     if(status & INT_TXCOMPLETE)
     {
-      NOTICE("TXCompleteIRQ");
       m_TxMutex.release();
 
       uint8_t txStatus = m_pBase->read8(regTxStatus_b);
@@ -830,10 +749,7 @@ bool Nic3C90x::irq(irq_id_t number, InterruptState &state)
       m_pBase->write8(0, regTxStatus_b);
 
       if((txStatus & 0xbf) == 0x80)
-      {
-        NOTICE("3C90x: Successful TX");
         continue;
-      }
 
       if(txStatus & 0x02)
       {
