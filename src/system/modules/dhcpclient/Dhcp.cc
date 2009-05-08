@@ -112,7 +112,7 @@ struct DhcpOptionDnsServers
   DhcpOptionDnsServers() :
     code(DHCP_DNSSERVERS), len(4)
   {};
-  
+
   uint8_t code;
   uint8_t len; // following this header are len/4 IP addresses
 } __attribute__((packed));
@@ -197,11 +197,11 @@ void entry()
     if(!pCard)
       ERROR("DHCP Client: Card " << Dec << i << Hex << " is invalid.");
     StationInfo info = pCard->getStationInfo();
-    
+
     // check that we should actually try this...
     if(info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1))
       continue; // loopback is already set
-    
+
     IpAddress broadcast(0xffffffff);
     Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);
 
@@ -377,7 +377,7 @@ void entry()
       DhcpOptionDnsServers dnsServs;
       IpAddress* dnsServers = 0;
       size_t nDnsServers = 0;
-      
+
       if(e->dataReady(true) == false)
       {
         WARNING("Did not receive a reply to DHCP REQUEST (timed out), interface " << i << "!");
@@ -413,7 +413,6 @@ void entry()
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
         {
           opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
-          NOTICE("option code is " << opt->code);
           if(opt->code == DHCP_MSGEND)
             break;
           else if(opt->code == DHCP_MSGTYPE)
@@ -450,7 +449,7 @@ void entry()
               base += 4;
             }
           }
-          
+
           byteOffset += opt->len + 2;
         }
 
