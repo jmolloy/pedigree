@@ -20,420 +20,461 @@
 // RadixTree<void*> implementation.
 //
 
+const uint8_t nullKey[] = {0};
+
 RadixTree<void*>::RadixTree() :
-    nItems(0), root(0)
+    m_nItems(0), m_pRoot(0)
 {
+    // The root node always exists and is a lambda transition node (zero-length
+    // key). This removes the need for most special cases.
+    m_pRoot = new Node();
+    m_pRoot->setKey(nullKey);
 }
 
 RadixTree<void*>::~RadixTree()
 {
+    clear();
 }
 
 RadixTree<void*>::RadixTree(const RadixTree &x) :
-    nItems(0), root(0)
+    m_nItems(0), m_pRoot(0)
 {
+    NOTICE("Copy constructor");
+    clear();
+    delete m_pRoot;
+    m_pRoot = cloneNode (x.m_pRoot, 0);
 }
 
 RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
 {
-  clear();
-
-  root = cloneNode (x.root, 0);
-
-  return *this;
+    NOTICE("Clone");
+    clear();
+    delete m_pRoot;
+    m_pRoot = cloneNode (x.m_pRoot, 0);
+    return *this;
 }
 
 size_t RadixTree<void*>::count() const
 {
-  return nItems;
+    return m_nItems;
 }
 
 void RadixTree<void*>::insert(String key, void *value)
 {
-  // Get the root case out of the way early.
-  if (root == 0)
-  {
-    root = new Node;
-    root->key = key;
-    root->value = value;
-    root->children = 0;
-    root->parent = 0;
-    root->prev = 0;
-    root->_next = 0;
-    return;
-  }
+    Node *pNode = m_pRoot;
+    NOTICE("Insert `" << (const char*)key << "'");
+    const uint8_t *cpKey = reinterpret_cast<const uint8_t*> (static_cast<const char*>(key));
 
-  // Follow the key down as far as we can.
-  Node *n = root;
-
-  const char *cKey = static_cast<const char *> (key);
-
-  // We need to do a little preperation to ensure the invariant/assumption used in the loop body.
-  // We assume that the current node has at least one character in common with the key. If this is
-  // not the case, a new sibling node is created. So here, we need to scan the top-level siblings
-  // to see if any share the first character of the key.
-  while (n->_next)
-  {
-    if (*static_cast<const char *> (n->key) == *cKey)
-      break;
-    else
-      n = n->_next;
-  }
-
-  while (true)
-  {
-    const char *nodeKey = static_cast<const char *> (n->key);
-    const char *nodeKeyCopy = nodeKey;
-
-    // Compare cKey with nodeKey, incrementing cKey until it reaches '\0' or nodeKey differs.
-    while (*cKey && *nodeKey && *cKey==*nodeKey)
+    while (true)
     {
-      cKey++;
-      nodeKey++;
-    }
-
-    // Loop ended - but why?
-    if (!*cKey && !*nodeKey)
-    {
-      // Perfect match - n is the correct node for this key.
-      // Overwrite the current value.
-      n->value = value;
-      return;
-    }
-    else if (!*cKey)
-    {
-      // nodeKey was longer than cKey - we need to add a new
-      // node as an intermediate.
-
-      // Create the intermediate node.
-      Node *inter = new Node;
-
-      inter->children = n->children;
-      inter->parent = n;
-      n->children = inter;
-      inter->prev = inter->_next = 0;
-
-      inter->key = String(nodeKey); // Terminated by nodeKey='\0', above.
-      inter->value = n->value;
-
-      // All of inter's new children should be reset with inter as their parent.
-      Node *pN = inter->children;
-      while (pN)
-      {
-        pN->parent = inter;
-        pN = pN->_next;
-      }
-
-      // Set the current node's key to be the uncommon suffix.
-      * const_cast<char*>(nodeKey) = '\0';
-      n->key = String(nodeKeyCopy);
-      n->value = value;
-
-      // Success!
-      return;
-    }
-    else if (!*nodeKey)
-    {
-      // Iterative case - partial match and nodeKey expired, so
-      // we need to look at the node's children.
-      Node *pNode = n->children;
-      bool found = false;
-
-      while (pNode)
-      {
-        // We just have to look at the first letter - by
-        // inductive assumption we can assume that the
-        // first letters in each child are different (else
-        // they would be common and pushed into the parent).
-        if (static_cast<const char *>(pNode->key)[0] == *cKey)
+        NOTICE("Matchkey: " << (const char*)pNode->m_pKey);
+        switch (pNode->matchKey(cpKey))
         {
-          n = pNode;
-          found = true;
-          break;
+            case Node::ExactMatch:
+            {
+                NOTICE("Exact");
+                pNode->setValue(value);
+                return;
+            }
+            case Node::NoMatch:
+            {
+                FATAL("RadixTree: Algorithmic error (insert)");
+                break;
+            }
+            case Node::PartialMatch:
+            {NOTICE("Partial");
+                // We need to create an intermediate node that contains the 
+                // partial match, then adjust the key of this node.
+
+                // Find the common key prefix.
+                size_t i = 0;
+                while (cpKey[i] == pNode->m_pKey[i])
+                    i++;
+
+                Node *pInter = new Node();
+                
+                // Intermediate node's key is the common prefix of both keys.
+                pInter->m_pKey = new uint8_t[i+1];
+                memcpy(pInter->m_pKey, cpKey, i);
+                pInter->m_pKey[i] = 0;
+
+                // Must do this before pNode's key is changed.
+                pNode->getParent()->replaceChild(pNode, pInter);
+
+                // pNode's new key is the uncommon postfix.
+                size_t len = 0;
+                while (pNode->m_pKey[len])
+                    len++;
+                
+                uint8_t *pTmpKey = new uint8_t[len-i+1];
+                memcpy(pTmpKey, &pNode->m_pKey[i], len-i);
+                pTmpKey[len-i] = 0;
+                delete [] pNode->m_pKey;
+                pNode->m_pKey = pTmpKey;
+
+                // If the uncommon postfix of the key is non-zero length, we have
+                // to create another node, a child of pInter.
+                if (cpKey[i] != 0)
+                {
+                    Node *pChild = new Node();
+                    pChild->setKey(&cpKey[i]);
+                    pChild->setValue(value);
+                    pChild->setParent(pInter);
+                    pInter->addChild(pChild);
+                }
+                else
+                    pInter->setValue(value);
+
+                pInter->setParent(pNode->getParent());
+                pInter->addChild(pNode);
+                pNode->setParent(pInter);
+
+                m_nItems ++;
+                NOTICE("End partial");
+                return;
+            }
+            case Node::OverMatch:
+            {
+                NOTICE("Over");
+                size_t i = 0;
+                if (pNode->m_pKey)
+                    while (pNode->m_pKey[i++]) cpKey++;
+                NOTICE("cpKey: " << (const char*)cpKey);
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    NOTICE("Iterate");
+                    // Iterative case.
+                    break;
+                }
+                else
+                {
+                    // No child - create a new one.
+                    pChild = new Node();
+                    pChild->setKey(cpKey);
+                    pChild->setValue(value);
+                    pChild->setParent(pNode);
+                    pNode->addChild(pChild);
+
+                    m_nItems ++;
+                    NOTICE("End Over");
+                    return;
+                }
+            }
         }
-        pNode = pNode->_next;
-      }
-
-      // If we found a match, next iteration.
-      if (found)
-      {
-        continue;
-      }
-
-      // No match. Add a child.
-      pNode = new Node;
-      pNode->parent = n;
-      pNode->_next = n->children;
-      pNode->prev = 0;
-      pNode->key = String(cKey);
-      pNode->value = value;
-      pNode->children = 0;
-
-      n->children = pNode;
-
-      // Success!
-      return;
     }
-    else
-    {
-      // Some (possibly zero) common letters. Take the easy
-      // case first - no common letters.
-      if (nodeKey == nodeKeyCopy)
-      {
-        // No common letters, so create a sibling.
-        Node *pNode = new Node;
-        pNode->parent = n->parent;
-        pNode->prev = n;
-        pNode->_next = n->_next;
-        pNode->key = String(cKey);
-        pNode->value = value;
-        pNode->children = 0;
-        if (pNode->_next)
-          pNode->_next->prev = pNode;
-
-        n->_next = pNode;
-
-        // Done.
-        return;
-      }
-      else
-      {
-        // Some common characters, but not all. Create two children.
-        // First child contains n's children, and the suffix of n where it differs from cKey.
-        Node *pNode1 = new Node;
-        pNode1->parent = n;
-        pNode1->prev = 0;
-        pNode1->key = String(nodeKey);
-        pNode1->value =  n->value;
-        pNode1->children = n->children;
-
-        // All of pNode1's new children should be reset with inter as their parent.
-        Node *pN = pNode1->children;
-        while (pN)
-        {
-          pN->parent = pNode1;
-          pN = pN->_next;
-        }
-
-        // Second child contains no children, and the suffix of cKey where it differs from nodeKey.
-        Node *pNode2 = new Node;
-        pNode2->parent = n;
-        pNode2->prev = pNode1;
-        pNode2->_next = 0;
-        pNode2->key = String(cKey);
-        pNode2->value = value;
-        pNode2->children = 0;
-
-        // Cross reference node2 from node1...
-        pNode1->_next = pNode2;
-
-        // Now, n's children are pNode1 and pNode2;
-        n->children = pNode1;
-
-        // Now set n's key to be the common prefix...
-        * const_cast<char*> (nodeKey) = '\0';
-        n->key = String(nodeKeyCopy);
-        n->value = 0;
-
-        // And we're done.
-        return;
-      }
-    }
-  }
-
 }
 
 void *RadixTree<void*>::lookup(String key)
 {
-  // Get the root case out of the way early.
-  if (root == 0)
-    return 0;
+    Node *pNode = m_pRoot;
+    NOTICE("Lookup");
+    const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
 
-  // Follow the key down as far as we can.
-  Node *n = root;
-  const char *cKey = static_cast<const char *> (key);
+    while (true)
+    {
+        switch (pNode->matchKey(cpKey))
+        {
+            case Node::ExactMatch:
+                return pNode->getValue();
+            case Node::NoMatch:
+            case Node::PartialMatch:
+                return 0;
+            case Node::OverMatch:
+            {
+                size_t i = 0;
+                while (pNode->m_pKey[i++]) cpKey++;
 
-  while (true)
-  {
-    const char *nodeKey = static_cast<const char *> (n->key);
-
-    // Compare cKey with nodeKey, incrementing cKey until it reaches '\0' or nodeKey differs.
-    while (*cKey && *nodeKey && *cKey==*nodeKey)
-    {
-      cKey++;
-      nodeKey++;
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    // Iterative case.
+                    break;
+                }
+                else
+                    return 0;
+            }
+        }
     }
-
-    // Why did the loop exit?
-    if (cKey == static_cast<const char *> (key))
-    {
-      // No characters matched. We must be at the root level, so go across to the next root sibling.
-      if (n->_next)
-      {
-        n = n->_next;
-        continue;
-      }
-      else
-      {
-        // Nothing matched.
-        return 0;
-      }
-    }
-    else if (*cKey == '\0' && *nodeKey == '\0')
-    {
-      return n->value;
-    }
-    else if (*nodeKey == '\0')
-    {
-      // Time to move on to the next node.
-      n = n->children;
-      while (n)
-      {
-        const char *nodeKey2 = static_cast<const char *> (n->key);
-
-        // We can make the assumption that the initial character of every child will be different, as else they'd have been
-        // conjoined. So we just need to find a child that has the correct starting character. Or fail.
-        if (*nodeKey2 == *cKey) break;
-        n = n->_next;
-      }
-      if (n) continue;
-      // We fail :(
-      return 0;
-    }
-    else
-    {
-      // Nope. Death.
-      return 0;
-    }
-  }
 }
 
 void RadixTree<void*>::remove(String key)
 {
-  // Get the root case out of the way early.
-  if (root == 0)
-    return;
+    Node *pNode = m_pRoot;
 
-  // Follow the key down as far as we can.
-  Node *n = root;
-  const char *cKey = static_cast<const char *> (key);
+    const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
 
-  while (true)
-  {
-    const char *nodeKey = static_cast<const char *> (n->key);
-
-    // Compare cKey with nodeKey, incrementing cKey until it reaches '\0' or nodeKey differs.
-    while (*cKey && *nodeKey && *cKey==*nodeKey)
+    // Our invariant is that the root node always exists. Therefore we must
+    // special case here so it doesn't get deleted.
+    if (*cpKey == 0)
     {
-      cKey++;
-      nodeKey++;
-    }
-
-    // Why did the loop exit?
-    if (cKey == static_cast<const char *> (key))
-    {
-      // No characters matched. We must be at the root level, so go across to the next root sibling.
-      if (n->_next)
-      {
-        n = n->_next;
-        continue;
-      }
-      else
-      {
-        // Nothing matched.
+        m_pRoot->setValue(0);
         return;
-      }
     }
-    else if (*cKey == '\0' && *nodeKey == '\0')
-    {
-      // Found it.
-      // If we're a parent, we can't delete ourselves - we just have to overwrite the value with zero.
-      if (n->children)
-      {
-        n->value = 0;
-        return;
-      }
-      else
-      {
-        // We're a leaf, so we can delete ourselves.
-        // Jump out of the sibling linked list.
-        if (n->_next)
-          n->_next->prev = n->prev;
-        if (n->prev)
-          n->prev->_next = n->_next;
 
-        // Ensure that our parent's children pointer is not pointing at us.
-        if (n->parent && n->parent->children == n)
-          n->parent->children = n->_next;
+    while (true)
+    {
+        switch (pNode->matchKey(cpKey))
+        {
+            case Node::ExactMatch:
+            {
+                // Delete this node. If we set the value to zero, it is effectively removed from the map.
+                // There are only certain cases in which we can delete the node completely, however.
+                pNode->setValue(0);
+                m_nItems --;
 
-        // Nothing is pointing at us, so we can die peacefully.
-        if (n == root) root = n->_next;
-        delete n;
-        return;
-      }
+                Node *pParent = 0;
+                if (pNode->m_nChildren == 0)
+                {
+                    // Leaf node, can just delete.
+                    pParent = pNode->getParent();
+                    pParent->removeChild(pNode);
+                    delete pNode;
+
+                    pNode = pParent;
+                    // Optimise up the tree.
+                    while (true)
+                    {
+                        if (pNode == m_pRoot) return;
+
+                        if (pNode->m_nChildren == 1)
+                            // Break out of this loop and get caught in the next
+                            // if(pNode->m_nChildren == 1)
+                            break;
+
+                        if (pNode->m_nChildren == 0 && pNode->getValue() == 0)
+                        {
+                            // Leaf node, can just delete.
+                            pParent = pNode->getParent();
+                            pParent->removeChild(pNode);
+                            delete pNode;
+
+                            pNode = pParent;
+                            continue;
+                        }
+                        return;
+                    }
+                }
+
+                if (pNode->m_nChildren == 1)
+                {
+                    // Change the child's key to be the concatenation of ours and 
+                    // its.
+                    Node *pChild = pNode->getFirstChild();
+                    pParent = pNode->getParent();
+
+                    pChild->prependKey(pNode->getKey());
+                    pChild->setParent(pParent);
+                    pParent->removeChild(pNode);
+                    delete pNode;
+                }
+                return;
+            }
+            case Node::NoMatch:
+            case Node::PartialMatch:
+                // Can't happen unless the key didn't actually exist.
+                return;
+            case Node::OverMatch:
+            {
+                size_t i = 0;
+                if (pNode->m_pKey)
+                    while (pNode->m_pKey[i++]) cpKey++;
+
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    // Iterative case.
+                    break;
+                }
+                else
+                    return;
+            }
+        }
     }
-    else if (*nodeKey == '\0')
-    {
-      // Time to move on to the next node.
-      n = n->children;
-      while (n)
-      {
-        const char *nodeKey2 = static_cast<const char *> (n->key);
-        // We can make the assumption that the initial character of every child will be different, as else they'd have been
-        // conjoined. So we just need to find a child that has the correct starting character. Or fail.
-        if (*nodeKey2 == *cKey) break;
-        n = n->_next;
-      }
-      if (n) continue;
-      // We fail :(
-      return;
-    }
-    else
-    {
-      // Nope. Death.
-      return;
-    }
-  }
 }
 
-void RadixTree<void*>::deleteNode(Node *node)
+RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
 {
-  if (!node) return;
+    // Deal with the easy case first.
+    if (!pNode)
+        return 0;
 
-  deleteNode(node->children);
+    Node *n = new Node();
+    n->setKey(pNode->m_pKey);
+    n->setValue(pNode->value);
+    n->setParent(pParent);
+    for (size_t i = 0; i < 16; i++)
+    {
+        if (pNode->m_pChildren[i] == 0) continue;
+        for (size_t j = 0; j < 16; j++)
+        {
+            if (pNode->m_pChildren[i]->p[j] == 0) continue;
+            n->addChild(cloneNode(pNode->m_pChildren[i]->p[j], n));
+        }
+    }
 
-  deleteNode(node->_next);
-
-  delete node;
-}
-
-RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *node, Node *parent)
-{
-  // Deal with the easy case first.
-  if (!node)
-  {
-    return 0;
-  }
-
-  Node *n = new Node;
-  n->key = node->key;
-  n->value = node->value;
-  n->children = cloneNode(node->children, n);
-  n->_next = cloneNode(node->_next, parent);
-  if (n->_next)
-  {
-    n->_next->prev = n;
-  }
-  n->prev = 0;
-  n->parent = parent;
-
-  return n;
+    return n;
 }
 
 void RadixTree<void*>::clear()
 {
-  deleteNode(root);
-  root = 0;
+    delete m_pRoot;
+    m_pRoot = new Node();
+}
+
+//
+// RadixTree::Node implementation.
+//
+
+RadixTree<void*>::Node::~Node()
+{
+    delete [] m_pKey;
+
+    for (size_t i = 0; i < 16; i++)
+    {
+        if (m_pChildren[i] == 0) continue;
+        for (size_t j = 0; j < 16; j++)
+        {
+            if (m_pChildren[i]->p[j] == 0) continue;
+            delete m_pChildren[i]->p[j];
+        }
+        delete m_pChildren[i];
+    }
+}
+
+RadixTree<void*>::Node *RadixTree<void*>::Node::findChild(const uint8_t *cpKey)
+{
+    // Grab the lookahead token.
+    uint8_t token = cpKey[0];
+    
+    uint8_t i = (token >> 4) & 0xF;
+    uint8_t j = token & 0xF;
+    if (m_pChildren[i] == 0) return 0;
+
+    return m_pChildren[i]->p[j];
+}
+
+void RadixTree<void*>::Node::addChild(Node *pNode)
+{
+    // Grab the lookahead token.
+    uint8_t token = pNode->m_pKey[0];
+    
+    uint8_t i = (token >> 4) & 0xF;
+    uint8_t j = token & 0xF;
+    if (m_pChildren[i] == 0)
+    {
+        m_pChildren[i] = new NodePtr;
+        memset(reinterpret_cast<uint8_t*>(m_pChildren[i]), 0, sizeof(NodePtr));
+    }
+    m_pChildren[i]->p[j] = pNode;
+
+    m_nChildren ++;
+}
+
+void RadixTree<void*>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
+{
+    // Grab the lookahead token.
+    uint8_t token = pNodeOld->m_pKey[0];
+    
+    uint8_t i = (token >> 4) & 0xF;
+    uint8_t j = token & 0xF;
+    if (m_pChildren[i] == 0)
+    {
+        FATAL("RadixTree::replaceChild: Algorithmic error.");
+        return;
+    }
+    m_pChildren[i]->p[j] = pNodeNew;
+}
+
+void RadixTree<void*>::Node::removeChild(Node *pChild)
+{
+    // Grab the lookahead token.
+    uint8_t token = pChild->m_pKey[0];
+    
+    uint8_t i = (token >> 4) & 0xF;
+    uint8_t j = token & 0xF;
+    if (m_pChildren[i] == 0)
+    {
+        FATAL("RadixTree::replaceChild: Algorithmic error.");
+        return;
+    }
+    m_pChildren[i]->p[j] = 0;
+    m_nChildren --;
+}
+
+RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t *cpKey)
+{
+    if (!m_pKey) return OverMatch;
+
+    size_t i = 0;
+    while (cpKey[i] && m_pKey[i])
+    {
+        if (cpKey[i] != m_pKey[i])
+            return (i==0) ? NoMatch : PartialMatch;
+        i++;
+    }
+
+    // Why did the loop exit?
+    if (cpKey[i] == 0 && m_pKey[i] == 0)
+        return ExactMatch;
+    else if (cpKey[i] == 0)
+        return PartialMatch;
+    else
+        return OverMatch;
+}
+
+void RadixTree<void*>::Node::setKey(const uint8_t *cpKey)
+{
+    if (m_pKey)
+        delete [] m_pKey;
+
+    size_t len = 0;
+    while (cpKey[len]) len++;
+    
+    m_pKey = new uint8_t[len+1];
+    size_t i = 0;
+    while (cpKey[i])
+    {
+        m_pKey[i] = cpKey[i];
+        i++;
+    }
+    m_pKey[i] = 0;
+}
+
+RadixTree<void*>::Node *RadixTree<void*>::Node::getFirstChild()
+{
+    for (size_t i = 0; i < 16; i++)
+    {
+        if (m_pChildren[i] == 0) continue;
+        for (size_t j = 0; j < 16; j++)
+        {
+            if (m_pChildren[i]->p[j] == 0) continue;
+            return m_pChildren[i]->p[j];
+        }
+    }
+    return 0;
+}
+
+void RadixTree<void*>::Node::prependKey(const uint8_t *cpKey)
+{
+    size_t curKeyLen = 0;
+    while (m_pKey[curKeyLen])
+        curKeyLen ++;
+    
+    size_t cpKeyLen = 0;
+    while (cpKey[cpKeyLen])
+        cpKeyLen ++;
+
+    uint8_t *pKey = new uint8_t[curKeyLen + cpKeyLen + 1];
+    memcpy(pKey, cpKey, cpKeyLen);
+    memcpy(&pKey[cpKeyLen], m_pKey, curKeyLen+1); // +1 to copy the '\0' too.
+
+    if (m_pKey)
+        delete [] m_pKey;
+    m_pKey = pKey;
 }
 
 //

@@ -24,6 +24,11 @@
 #include <Log.h>
 #include <processor/Processor.h>
 
+/**\file  RadixTree.h
+ *\author James Molloy <jamesm@osdev.org>
+ *\date   Fri May  8 10:50:45 2009
+ *\brief  Implements a Radix Tree, a kind of Trie with compressed keys. */
+
 /** @addtogroup kernelutilities
  * @{ */
 
@@ -38,133 +43,160 @@ template<>
 class RadixTree<void*>
 {
 private:
-  /** Tree node. */
-  class Node
-  {
-  public:
-    Node() :
-      key(),value(0),children(0),parent(0),_next(0),prev(0)
-    {}
-
-    String key;
-    void *value;
-    struct Node *children;
-    struct Node *parent;
-    struct Node *_next;
-    struct Node *prev;
-
-    /** Get the next data structure in the list
-     *\return pointer to the next data structure in the list */
-    Node *next()
+    /** Tree node. */
+    class Node
     {
-      Node *node = this;
-      while ((node == this) || (node && (node->value == 0)))
-      {
-        if (node->children)
-          node = node->children;
-        else if (node->_next)
-          node = node->_next;
-        else
+    public:
+        struct NodePtr
+        {Node *p[16];};
+
+        enum MatchType
         {
-          Node *n = node->parent;
-          node = 0;
-          while (n)
-          {
-            if (n->_next)
-            {
-              node = n->_next;
-              break;
-            }
-            n = n->parent;
-          }
-          continue;
+            ExactMatch,   ///< Key matched node key exactly.
+            NoMatch,      ///< Key didn't match node key at all.
+            PartialMatch, ///< A subset of key matched the node key.
+            OverMatch     ///< Key matched node key, and had extra characters.
+        };
+
+        Node() :
+            m_pKey(0),value(0),m_pParent(0),m_nChildren(0)
+        {
+            memset(reinterpret_cast<uint8_t*>(m_pChildren), 0, 16*sizeof(NodePtr));
         }
-      }
-      return node;
-    }
-    /** Get the previous data structure in the list
-     *\return pointer to the previous data structure in the list
-     *\note Not implemented! */
-    Node *previous()
-      {return 0;}
-  private:
-    Node(const Node&);
-    Node &operator =(const Node&);
-  };
+
+        ~Node ();
+
+        /** Get the next data structure in the list
+         *\return pointer to the next data structure in the list */
+        Node *next()
+        {
+            return 0;
+        }
+        /** Get the previous data structure in the list
+         *\return pointer to the previous data structure in the list
+         *\note Not implemented! */
+        Node *previous()
+        {return 0;}
+        
+        /** Locates a child of this node, given the key portion of key
+            (lookahead on the first token) */
+        Node *findChild(const uint8_t *cpKey);
+
+        /** Adds a new child. */
+        void addChild(Node *pNode);
+
+        /** Replaces a currently existing child. */
+        void replaceChild(Node *pNodeOld, Node *pNodeNew);
+
+        /** Removes a child (doesn't delete it) */
+        void removeChild(Node *pChild);
+
+        /** Compares cpKey and this node's key, returning the type of match
+            found. */
+        MatchType matchKey(const uint8_t *cpKey);
+
+        /** Returns the first found child of the node. */
+        Node *getFirstChild();
+
+        /** Sets the node's key to the concatenation of \p cpKey and the
+         *  current key.
+         *\param cpKey Key to prepend to the current key. */
+        void prependKey(const uint8_t *cpKey);
+
+        void setKey(const uint8_t *cpKey);
+        inline uint8_t *getKey() {return m_pKey;}
+        inline void setValue(void *pV) {value = pV;}
+        inline void *getValue() {return value;}
+        inline void setParent(Node *pP) {m_pParent = pP;}
+        inline Node *getParent() {return m_pParent;}
+
+        /** Node key, zero terminated. */
+        uint8_t *m_pKey;
+        /** Node value.
+            \note Parting from coding standard because Iterator requires the
+                  member be called 'value'. */
+        void *value;
+        /** Array of 16 pointers to 16 nodes (256 total). */
+        NodePtr *m_pChildren[16];
+        /** Parent node. */
+        Node *m_pParent;
+        /** Number of children. */
+        size_t m_nChildren;
+
+    private:
+        Node(const Node&);
+        Node &operator =(const Node&);
+    };
 
 public:
 
-  /** Type of the bidirectional iterator */
-  typedef ::Iterator<void*, Node>       Iterator;
-  /** Type of the constant bidirectional iterator */
-  typedef Iterator::Const               ConstIterator;
+    /** Type of the bidirectional iterator */
+    typedef ::Iterator<void*, Node>       Iterator;
+    /** Type of the constant bidirectional iterator */
+    typedef Iterator::Const               ConstIterator;
 
-  /** The default constructor, does nothing */
-  RadixTree();
-  /** The copy-constructor
-   *\param[in] x the reference object to copy */
-  RadixTree(const RadixTree<void*> &x);
-  /** The destructor, deallocates memory */
-  ~RadixTree();
+    /** The default constructor, does nothing */
+    RadixTree();
+    /** The copy-constructor
+     *\param[in] x the reference object to copy */
+    RadixTree(const RadixTree<void*> &x);
+    /** The destructor, deallocates memory */
+    ~RadixTree();
 
-  /** The assignment operator
-   *\param[in] x the object that should be copied */
-  RadixTree &operator = (const RadixTree &x);
+    /** The assignment operator
+     *\param[in] x the object that should be copied */
+    RadixTree &operator = (const RadixTree &x);
 
-  /** Get the number of elements in the Tree
-   *\return the number of elements in the Tree */
-  size_t count() const;
-  /** Add an element to the Tree.
-   *\param[in] key the key
-   *\param[in] value the element */
-  void insert(String key, void *value);
-  /** Attempts to find an element with the given key.
-   *\return the element found, or NULL if not found. */
-  void *lookup(String key);
-  /** Attempts to remove an element with the given key. */
-  void remove(String key);
+    /** Get the number of elements in the Tree
+     *\return the number of elements in the Tree */
+    size_t count() const;
+    /** Add an element to the Tree.
+     *\param[in] key the key
+     *\param[in] value the element */
+    void insert(String key, void *value);
+    /** Attempts to find an element with the given key.
+     *\return the element found, or NULL if not found. */
+    void *lookup(String key);
+    /** Attempts to remove an element with the given key. */
+    void remove(String key);
 
-  /** Clear the tree */
-  void clear();
+    /** Clear the tree. */
+    void clear();
 
-  /** Get an iterator pointing to the beginning of the List
-   *\return iterator pointing to the beginning of the List */
-  inline Iterator begin()
-  {
-    Iterator it(root);
-    if (root && root->value == 0)
-      it++;
-    return it;
-  }
-  /** Get a constant iterator pointing to the beginning of the List
-   *\return constant iterator pointing to the beginning of the List */
-  inline ConstIterator begin() const
-  {
-    return ConstIterator(root);
-  }
-  /** Get an iterator pointing to the end of the List + 1
-   *\return iterator pointing to the end of the List + 1 */
-  inline Iterator end()
-  {
-    return Iterator(0);
-  }
-  /** Get a constant iterator pointing to the end of the List + 1
-   *\return constant iterator pointing to the end of the List + 1 */
-  inline ConstIterator end() const
-  {
-    return ConstIterator(0);
-  }
+    /** Get an iterator pointing to the beginning of the List
+     *\return iterator pointing to the beginning of the List */
+    inline Iterator begin()
+    {
+        Iterator it(m_pRoot);
+        return it;
+    }
+    /** Get a constant iterator pointing to the beginning of the List
+     *\return constant iterator pointing to the beginning of the List */
+    inline ConstIterator begin() const
+    {
+        return ConstIterator(m_pRoot);
+    }
+    /** Get an iterator pointing to the end of the List + 1
+     *\return iterator pointing to the end of the List + 1 */
+    inline Iterator end()
+    {
+        return Iterator(0);
+    }
+    /** Get a constant iterator pointing to the end of the List + 1
+     *\return constant iterator pointing to the end of the List + 1 */
+    inline ConstIterator end() const
+    {
+        return ConstIterator(0);
+    }
 
 private:
-  /** Internal function to delete a subtree. */
-  void deleteNode(Node *node);
-  /** Internal function to create a copy of a subtree. */
-  Node *cloneNode(Node *node, Node *parent);
+    /** Internal function to create a copy of a subtree. */
+    Node *cloneNode(Node *node, Node *parent);
 
-  /** Number of items in the tree. */
-  int nItems;
-  /** The tree's root. */
-  Node *root;
+    /** Number of items in the tree. */
+    int m_nItems;
+    /** The tree's root. */
+    Node *m_pRoot;
 };
 
 /** RadixTree template specialisation for pointers. Just forwards to the
@@ -173,7 +205,7 @@ private:
 template<class T>
 class RadixTree<T*>
 {
-  public:
+public:
     /** Iterator */
     typedef IteratorAdapter<T*, RadixTree<void*>::Iterator>                    Iterator;
     /** ConstIterator */
@@ -181,74 +213,74 @@ class RadixTree<T*>
 
     /** Default constructor, does nothing */
     inline RadixTree()
-      : m_VoidRadixTree(){}
+        : m_VoidRadixTree(){}
     /** Copy-constructor
      *\param[in] x reference object */
     inline RadixTree(const RadixTree &x)
-      : m_VoidRadixTree(x.m_VoidRadixTree){}
+        : m_VoidRadixTree(x.m_VoidRadixTree){}
     /** Destructor, deallocates memory */
     inline ~RadixTree()
-      {}
+    {}
 
     /** Assignment operator
      *\param[in] x the object that should be copied */
     inline RadixTree &operator = (const RadixTree &x)
     {
-      m_VoidRadixTree = x.m_VoidRadixTree;
-      return *this;
+        m_VoidRadixTree = x.m_VoidRadixTree;
+        return *this;
     }
 
     /** Get the number of elements in the RadixTree */
     inline size_t count() const
     {
-      return m_VoidRadixTree.count();
+        return m_VoidRadixTree.count();
     }
 
     inline void insert(String key, T *value)
     {
-      m_VoidRadixTree.insert(key, reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
+        m_VoidRadixTree.insert(key, reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
     }
     inline T *lookup(String key)
     {
-      return reinterpret_cast<T*>(m_VoidRadixTree.lookup(key));
+        return reinterpret_cast<T*>(m_VoidRadixTree.lookup(key));
     }
     inline void remove(String key)
     {
-      m_VoidRadixTree.remove(key);
+        m_VoidRadixTree.remove(key);
     }
 
     /** Get an iterator pointing to the beginning of the RadixTree
      *\return iterator pointing to the beginning of the RadixTree */
     inline Iterator begin()
     {
-      return Iterator(m_VoidRadixTree.begin());
+        return Iterator(m_VoidRadixTree.begin());
     }
     /** Get a constant iterator pointing to the beginning of the RadixTree
      *\return constant iterator pointing to the beginning of the RadixTree */
     inline ConstIterator begin() const
     {
-      return ConstIterator(m_VoidRadixTree.begin());
+        return ConstIterator(m_VoidRadixTree.begin());
     }
     /** Get an iterator pointing to the end of the RadixTree + 1
      *\return iterator pointing to the end of the RadixTree + 1 */
     inline Iterator end()
     {
-      return Iterator(m_VoidRadixTree.end());
+        return Iterator(m_VoidRadixTree.end());
     }
     /** Get a constant iterator pointing to the end of the RadixTree + 1
      *\return constant iterator pointing to the end of the RadixTree + 1 */
     inline ConstIterator end() const
     {
-      return ConstIterator(m_VoidRadixTree.end());
+        return ConstIterator(m_VoidRadixTree.end());
     }
 
     /** Remove all elements from the RadixTree */
     inline void clear()
     {
-      m_VoidRadixTree.clear();
+        m_VoidRadixTree.clear();
     }
 
-  private:
+private:
     /** The actual container */
     RadixTree<void*> m_VoidRadixTree;
 };

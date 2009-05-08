@@ -109,6 +109,22 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
+  RadixTree<void*> tree;
+  uintptr_t a = reinterpret_cast<uintptr_t>(tree.lookup(String("anus")));
+  NOTICE("a: " << a);
+  tree.insert(String("anus"), reinterpret_cast<void*>(67));
+  uintptr_t b = reinterpret_cast<uintptr_t>(tree.lookup(String("anus")));
+  NOTICE("b: " << b);
+  tree.insert(String("anaii"), reinterpret_cast<void*>(34));
+  uintptr_t c = reinterpret_cast<uintptr_t>(tree.lookup(String("anaii")));
+  NOTICE("c: " << c);
+  uintptr_t d = reinterpret_cast<uintptr_t>(tree.lookup(String("an")));
+  NOTICE("d: " << d);
+  uintptr_t e = reinterpret_cast<uintptr_t>(tree.lookup(String("anus")));
+  NOTICE("e: " << e);
+
+
+  for(;;);
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
   NOTICE("init bootio");
