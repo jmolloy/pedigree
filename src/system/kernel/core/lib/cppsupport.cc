@@ -18,6 +18,7 @@
 #include <Spinlock.h>
 #include "cppsupport.h"
 #include <panic.h>
+#include <Log.h>
 
 // Required for G++ to link static init/destructors.
 void *__dso_handle;

@@ -61,7 +61,7 @@ private:
         Node() :
             m_pKey(0),value(0),m_pParent(0),m_nChildren(0)
         {
-            memset(reinterpret_cast<uint8_t*>(m_pChildren), 0, 16*sizeof(NodePtr));
+            memset(reinterpret_cast<uint8_t*>(m_pChildren), 0, 16*sizeof(NodePtr*));
         }
 
         ~Node ();

@@ -25,10 +25,6 @@ const uint8_t nullKey[] = {0};
 RadixTree<void*>::RadixTree() :
     m_nItems(0), m_pRoot(0)
 {
-    // The root node always exists and is a lambda transition node (zero-length
-    // key). This removes the need for most special cases.
-    m_pRoot = new Node();
-    m_pRoot->setKey(nullKey);
 }
 
 RadixTree<void*>::~RadixTree()
@@ -39,7 +35,6 @@ RadixTree<void*>::~RadixTree()
 RadixTree<void*>::RadixTree(const RadixTree &x) :
     m_nItems(0), m_pRoot(0)
 {
-    NOTICE("Copy constructor");
     clear();
     delete m_pRoot;
     m_pRoot = cloneNode (x.m_pRoot, 0);
@@ -47,7 +42,6 @@ RadixTree<void*>::RadixTree(const RadixTree &x) :
 
 RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
 {
-    NOTICE("Clone");
     clear();
     delete m_pRoot;
     m_pRoot = cloneNode (x.m_pRoot, 0);
@@ -61,18 +55,24 @@ size_t RadixTree<void*>::count() const
 
 void RadixTree<void*>::insert(String key, void *value)
 {
+    if (!m_pRoot)
+    {
+        // The root node always exists and is a lambda transition node (zero-length
+        // key). This removes the need for most special cases.
+        m_pRoot = new Node();
+        m_pRoot->setKey(nullKey);
+    }
+
     Node *pNode = m_pRoot;
-    NOTICE("Insert `" << (const char*)key << "'");
+
     const uint8_t *cpKey = reinterpret_cast<const uint8_t*> (static_cast<const char*>(key));
 
     while (true)
     {
-        NOTICE("Matchkey: " << (const char*)pNode->m_pKey);
         switch (pNode->matchKey(cpKey))
         {
             case Node::ExactMatch:
             {
-                NOTICE("Exact");
                 pNode->setValue(value);
                 return;
             }
@@ -82,7 +82,7 @@ void RadixTree<void*>::insert(String key, void *value)
                 break;
             }
             case Node::PartialMatch:
-            {NOTICE("Partial");
+            {
                 // We need to create an intermediate node that contains the 
                 // partial match, then adjust the key of this node.
 
@@ -106,7 +106,7 @@ void RadixTree<void*>::insert(String key, void *value)
                 while (pNode->m_pKey[len])
                     len++;
                 
-                uint8_t *pTmpKey = new uint8_t[len-i+1];
+                uint8_t *pTmpKey = new uint8_t[(len-i)+1];
                 memcpy(pTmpKey, &pNode->m_pKey[i], len-i);
                 pTmpKey[len-i] = 0;
                 delete [] pNode->m_pKey;
@@ -130,21 +130,18 @@ void RadixTree<void*>::insert(String key, void *value)
                 pNode->setParent(pInter);
 
                 m_nItems ++;
-                NOTICE("End partial");
                 return;
             }
             case Node::OverMatch:
             {
-                NOTICE("Over");
                 size_t i = 0;
                 if (pNode->m_pKey)
                     while (pNode->m_pKey[i++]) cpKey++;
-                NOTICE("cpKey: " << (const char*)cpKey);
+
                 Node *pChild = pNode->findChild(cpKey);
                 if (pChild)
                 {
                     pNode = pChild;
-                    NOTICE("Iterate");
                     // Iterative case.
                     break;
                 }
@@ -158,7 +155,6 @@ void RadixTree<void*>::insert(String key, void *value)
                     pNode->addChild(pChild);
 
                     m_nItems ++;
-                    NOTICE("End Over");
                     return;
                 }
             }
@@ -168,8 +164,16 @@ void RadixTree<void*>::insert(String key, void *value)
 
 void *RadixTree<void*>::lookup(String key)
 {
+    if (!m_pRoot)
+    {
+        // The root node always exists and is a lambda transition node (zero-length
+        // key). This removes the need for most special cases.
+        m_pRoot = new Node();
+        m_pRoot->setKey(nullKey);
+    }
+
     Node *pNode = m_pRoot;
-    NOTICE("Lookup");
+
     const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
 
     while (true)
@@ -202,6 +206,14 @@ void *RadixTree<void*>::lookup(String key)
 
 void RadixTree<void*>::remove(String key)
 {
+    if (!m_pRoot)
+    {
+        // The root node always exists and is a lambda transition node (zero-length
+        // key). This removes the need for most special cases.
+        m_pRoot = new Node();
+        m_pRoot->setKey(nullKey);
+    }
+
     Node *pNode = m_pRoot;
 
     const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
@@ -225,9 +237,17 @@ void RadixTree<void*>::remove(String key)
                 pNode->setValue(0);
                 m_nItems --;
 
+                // We have the invariant that the tree is always optimised. This means that when we delete a node
+                // we only have to optimise the local branch. There are two situations that need covering:
+                //   (a) No children. This means it's a leaf node and can be deleted. We then need to consider its parent,
+                //       which, if its value is zero and now has zero or one children can be optimised itself.
+                //   (b) One child. This is a linear progression and the child node's key can be changed to be concatenation of
+                //       pNode's and its. This doesn't affect anything farther up the tree and so no recursion is needed.
+
                 Node *pParent = 0;
                 if (pNode->m_nChildren == 0)
                 {
+                    NOTICE("Fnarr");
                     // Leaf node, can just delete.
                     pParent = pNode->getParent();
                     pParent->removeChild(pNode);
@@ -239,7 +259,7 @@ void RadixTree<void*>::remove(String key)
                     {
                         if (pNode == m_pRoot) return;
 
-                        if (pNode->m_nChildren == 1)
+                        if (pNode->m_nChildren == 1 && pNode->getValue() == 0)
                             // Break out of this loop and get caught in the next
                             // if(pNode->m_nChildren == 1)
                             break;
@@ -265,9 +285,14 @@ void RadixTree<void*>::remove(String key)
                     Node *pChild = pNode->getFirstChild();
                     pParent = pNode->getParent();
 
+                    // Must call this before delete, so pChild doesn't get deleted.
+                    pNode->removeChild(pChild);
+
                     pChild->prependKey(pNode->getKey());
                     pChild->setParent(pParent);
                     pParent->removeChild(pNode);
+                    pParent->addChild(pChild);
+
                     delete pNode;
                 }
                 return;
@@ -378,7 +403,7 @@ void RadixTree<void*>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
 {
     // Grab the lookahead token.
     uint8_t token = pNodeOld->m_pKey[0];
-    
+
     uint8_t i = (token >> 4) & 0xF;
     uint8_t j = token & 0xF;
     if (m_pChildren[i] == 0)
@@ -398,7 +423,7 @@ void RadixTree<void*>::Node::removeChild(Node *pChild)
     uint8_t j = token & 0xF;
     if (m_pChildren[i] == 0)
     {
-        FATAL("RadixTree::replaceChild: Algorithmic error.");
+        FATAL("RadixTree::removeChild: Algorithmic error.");
         return;
     }
     m_pChildren[i]->p[j] = 0;
