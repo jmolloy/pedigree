@@ -98,9 +98,10 @@ void init()
   }
 
   // Initialise user/group configuration.
-  UserManager::instance().initialise();
+  // UserManager::instance().initialise();
 
   // Build routing tables
+  /*
   File* routeConfig = VFS::instance().find(String("root:/config/routes"));
   if(routeConfig)
   {
@@ -128,8 +129,9 @@ void init()
     if(!bRouteFound)
       RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
   }
+  */
 
-  str += "Loading init program (root:/applications/login)\n";
+  str += "Loading init program (root:/applications/python)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
 
@@ -161,7 +163,7 @@ void destroy()
 void init_stage2()
 {
   // Load initial program.
-  File* initProg = VFS::instance().find(String("root:/applications/login"));
+  File* initProg = VFS::instance().find(String("root:/applications/python"));
   if (!initProg)
   {
     FATAL("Unable to load init program!");

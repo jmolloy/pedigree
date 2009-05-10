@@ -8,5 +8,3 @@ root   (cd)
 kernel /boot/kernel
 module /boot/initrd.tar
 module /ramdisk.tgz
-boot
-
