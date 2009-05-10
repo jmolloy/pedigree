@@ -70,7 +70,7 @@ private:
          *\return pointer to the next data structure in the list */
         Node *next()
         {
-            return 0;
+            return doNext();
         }
         /** Get the previous data structure in the list
          *\return pointer to the previous data structure in the list
@@ -126,6 +126,12 @@ private:
     private:
         Node(const Node&);
         Node &operator =(const Node&);
+        
+        /** Returns the next Node to look at during an in-order iteration. */
+        Node *doNext();
+
+        /** Returns the node's next sibling, by looking at its parent's children. */
+        Node *getNextSibling();
     };
 
 public:
@@ -167,14 +173,15 @@ public:
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
     {
-        Iterator it(m_pRoot);
+        Iterator it(m_pRoot->next());
         return it;
     }
     /** Get a constant iterator pointing to the beginning of the List
      *\return constant iterator pointing to the beginning of the List */
     inline ConstIterator begin() const
     {
-        return ConstIterator(m_pRoot);
+        ConstIterator it(m_pRoot->next());
+        return it;
     }
     /** Get an iterator pointing to the end of the List + 1
      *\return iterator pointing to the end of the List + 1 */

@@ -502,6 +502,51 @@ void RadixTree<void*>::Node::prependKey(const uint8_t *cpKey)
     m_pKey = pKey;
 }
 
+RadixTree<void*>::Node *RadixTree<void*>::Node::doNext()
+{
+    Node *pNode = this;
+    while ( (pNode == this) || (pNode && (pNode->value == 0)) )
+    {
+        Node *tmp;
+        if (pNode->m_nChildren)
+            pNode = pNode->getFirstChild();
+        else
+        {
+            tmp = pNode;
+            pNode = 0;
+            while (tmp && tmp->m_pParent != 0 /* Root node */)
+            {
+                if ( (pNode=tmp->getNextSibling()) != 0)
+                    break;
+                tmp = tmp->m_pParent;
+            }
+            if (tmp->m_pParent == 0) return 0;
+        }
+    }
+    return pNode;
+}
+
+RadixTree<void*>::Node *RadixTree<void*>::Node::getNextSibling()
+{
+    if (!m_pParent) return 0;
+
+    bool b = false;
+    for (size_t i = 0; i < 16; i++)
+    {
+        if (m_pParent->m_pChildren[i] == 0) continue;
+        for (size_t j = 0; j < 16; j++)
+        {
+            if (m_pParent->m_pChildren[i]->p[j] == 0) continue;
+
+            if (b)
+                return m_pParent->m_pChildren[i]->p[j];
+            if (m_pParent->m_pChildren[i]->p[j] == this)
+                b = true;
+        }
+    }
+    return 0;
+}
+
 //
 // Explicitly instantiate RadixTree<void*>
 //
