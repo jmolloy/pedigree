@@ -302,7 +302,6 @@ void PerProcessorScheduler::killCurrentThread()
 
 void PerProcessorScheduler::deleteThread(Thread *pThread)
 {
-    NOTICE("Deleting thread.");
     delete pThread;
 }
 

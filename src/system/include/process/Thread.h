@@ -203,6 +203,11 @@ private:
     /** Our kernel stack. */
     void *m_pKernelStack;
 
+    /** The stack that we allocated from the VMM. This may or may not also be
+        the kernel stack - depends on whether we are a user or kernel mode
+        thread. This is used solely for housekeeping/cleaning up purposes. */
+    void *m_pAllocatedStack;
+
     /** Our thread ID. */
     size_t m_Id;
 

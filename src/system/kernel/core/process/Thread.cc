@@ -23,7 +23,7 @@
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                void *pStack) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -33,6 +33,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // Initialise our kernel stack.
   m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  m_pAllocatedStack = m_pKernelStack;
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
@@ -58,7 +59,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -73,7 +74,7 @@ Thread::Thread(Process *pParent) :
 }
 
 Thread::Thread(Process *pParent, SyscallState &state) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -83,6 +84,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
 
   // Initialise our kernel stack.
   m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  m_pAllocatedStack = m_pKernelStack;
 
   m_Id = m_pParent->addThread(this);
   
@@ -100,8 +102,8 @@ Thread::~Thread()
   
   // TODO delete any pointer data.
 
-  if (m_pKernelStack)
-    VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pKernelStack);
+  if (m_pAllocatedStack)
+    VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
 }
 
 void Thread::setStatus(Thread::Status s)

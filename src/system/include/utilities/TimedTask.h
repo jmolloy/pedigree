@@ -16,6 +16,12 @@
 #ifndef TIMED_TASK_H
 #define TIMED_TASK_H
 
+/**\file   TimedTask.h
+ *\author Matthew Iselin
+ *\date   Sun May 10 16:16:56 2009
+ *\brief  A task to be performed with a soft deadline timeout. */
+
+
 #include <process/Thread.h>
 #include <processor/state.h>
 #include <processor/types.h>
@@ -45,9 +51,13 @@ class TimedTask : public TimerHandler
                 m_WaitSem->release();
             if(m_Task)
             {
+                // We can't delete the task, it could still be running. Also,
+                // killing a task like this is unsafe.
+#if 0
                 Process *pProcess = Processor::information().getCurrentThread()->getParent();
                 pProcess->removeThread(m_Task);
                 delete m_Task;
+#endif
             }
         }
 
@@ -84,9 +94,14 @@ class TimedTask : public TimerHandler
                 if(m_TimeoutActive)
                     unregisterMe();
 
+                // Again, this is not kosher. On an MP system m_Task could
+                // currently be executing!
+                /// \todo Have a specific function in Scheduler to
+                ///       delete another thread.
+#if 0
                 delete m_Task;
                 m_Task = 0;
-
+#endif
                 m_WaitSem->release();
                 m_WaitSem = 0;
             }
@@ -108,12 +123,9 @@ class TimedTask : public TimerHandler
             m_WaitSem->release();
             m_WaitSem = 0;
 
-            m_Task->setStatus(Thread::Zombie);
-
-            // Processor::information().getScheduler().killCurrentThread();
-
-            while(1)
-                Scheduler::instance().yield();
+            Processor::information().getScheduler().killCurrentThread();
+            
+            FATAL("TimedTask::end(): Fatal algorithmic error.");
         }
 
         static int taskTrampoline(void *ptr)

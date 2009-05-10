@@ -19,6 +19,9 @@
 #include <Log.h>
 #include "Pit.h"
 
+/** Ten hertz frequency. */
+#define PIT_FREQUENCY 10
+
 Pit Pit::m_Instance;
 
 bool Pit::registerHandler(TimerHandler *handler)
@@ -42,7 +45,22 @@ bool Pit::initialise()
   if (m_IrqId == 0)
     return false;
 
-  // TODO: Set the PIT frequency
+  // Set the PIT frequency
+  // The value we send to the PIT is the value to divide it's input clock
+  // (1193180 Hz) by, to get our required frequency. Important to note is
+  // that the divisor must be small enough to fit into 16-bits.
+  size_t divisor = 1193180 / PIT_FREQUENCY;
+
+  // Send the command byte.
+  m_IoPort.write8(0x36, 3);
+
+  // Divisor has to be sent byte-wise, so split here into upper/lower bytes.
+  uint8_t l = divisor & 0xFF;
+  uint8_t h = (divisor>>8) & 0xFF;
+
+  // Send the frequency divisor.
+  m_IoPort.write8(l, 0);
+  m_IoPort.write8(h, 0);
 
   return true;
 }
