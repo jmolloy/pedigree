@@ -24,51 +24,51 @@
 class Ext2Node
 {
 private:
-  /** Copy constructors are hidden - unused! */
-  Ext2Node(const Ext2Node &file);
-  Ext2Node& operator =(const Ext2Node&);
+    /** Copy constructors are hidden - unused! */
+    Ext2Node(const Ext2Node &file);
+    Ext2Node& operator =(const Ext2Node&);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  Ext2Node(uintptr_t inode_num, Inode inode, class Ext2Filesystem *pFs);
-  /** Destructor */
-  virtual ~Ext2Node();
+    /** Constructor, should be called only by a Filesystem. */
+    Ext2Node(uintptr_t inode_num, Inode inode, class Ext2Filesystem *pFs);
+    /** Destructor */
+    virtual ~Ext2Node();
 
-  Inode *getInode()
-  {return &m_Inode;}
+    Inode *getInode()
+    {return &m_Inode;}
 
-  uint32_t getInodeNumber()
-  {return m_InodeNumber;}
+    uint32_t getInodeNumber()
+    {return m_InodeNumber;}
 
-  /** Updates inode attributes. */
-  void fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime);
+    /** Updates inode attributes. */
+    void fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime);
 
-  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
-  void truncate();
+    void truncate();
 
 protected:
-  /** Ensures the inode is at least 'size' big. */
-  bool ensureLargeEnough(size_t size);
+    /** Ensures the inode is at least 'size' big. */
+    bool ensureLargeEnough(size_t size);
 
-  bool addBlock(uint32_t blockValue);
+    bool addBlock(uint32_t blockValue);
 
-  bool ensureBlockLoaded(size_t nBlock);
-  bool getBlockNumber(size_t nBlock);
-  bool getBlockNumberIndirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
-  bool getBlockNumberBiindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
-  bool getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
+    bool ensureBlockLoaded(size_t nBlock);
+    bool getBlockNumber(size_t nBlock);
+    bool getBlockNumberIndirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
+    bool getBlockNumberBiindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
+    bool getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, size_t nBlock);
 
-  bool setBlockNumber(size_t blockNum, uint32_t blockValue);
+    bool setBlockNumber(size_t blockNum, uint32_t blockValue);
 
-  Inode m_Inode;
-  uint32_t m_InodeNumber;
-  class Ext2Filesystem *m_pExt2Fs;
+    Inode m_Inode;
+    uint32_t m_InodeNumber;
+    class Ext2Filesystem *m_pExt2Fs;
 
-  uint32_t *m_pBlocks;
-  uint32_t m_nBlocks;
+    uint32_t *m_pBlocks;
+    uint32_t m_nBlocks;
 
-  size_t m_nSize;
+    size_t m_nSize;
 };
 
 #endif
