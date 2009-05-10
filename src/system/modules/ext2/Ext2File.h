@@ -26,23 +26,23 @@
 class Ext2File : public File, public Ext2Node
 {
 private:
-  /** Copy constructors are hidden - unused! */
-  Ext2File(const Ext2File &file);
-  Ext2File& operator =(const Ext2File&);
+    /** Copy constructors are hidden - unused! */
+    Ext2File(const Ext2File &file);
+    Ext2File& operator =(const Ext2File&);
 public:
-  /** Constructor, should be called only by a Filesystem. */
-  Ext2File(String name, uintptr_t inode_num, Inode inode,
-           class Ext2Filesystem *pFs, File *pParent = 0);
-  /** Destructor */
-  virtual ~Ext2File();
+    /** Constructor, should be called only by a Filesystem. */
+    Ext2File(String name, uintptr_t inode_num, Inode inode,
+             class Ext2Filesystem *pFs, File *pParent = 0);
+    /** Destructor */
+    virtual ~Ext2File();
 
-  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
-  void truncate();
+    void truncate();
 
-  /** Updates inode attributes. */
-  void fileAttributeChanged();
+    /** Updates inode attributes. */
+    void fileAttributeChanged();
 };
 
 #endif

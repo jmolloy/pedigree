@@ -20,30 +20,30 @@
 
 Ext2File::Ext2File(String name, uintptr_t inode_num, Inode inode,
                    Ext2Filesystem *pFs, File *pParent) :
-  File(name, LITTLE_TO_HOST32(inode.i_atime),
-       LITTLE_TO_HOST32(inode.i_mtime),
-       LITTLE_TO_HOST32(inode.i_ctime),
-       inode_num,
-       static_cast<Filesystem*>(pFs),
-       LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
-       pParent),
-  Ext2Node(inode_num, inode, pFs)
+    File(name, LITTLE_TO_HOST32(inode.i_atime),
+         LITTLE_TO_HOST32(inode.i_mtime),
+         LITTLE_TO_HOST32(inode.i_ctime),
+         inode_num,
+         static_cast<Filesystem*>(pFs),
+         LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
+         pParent),
+    Ext2Node(inode_num, inode, pFs)
 {
-  uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
-  uint32_t permissions = 0;
-  if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
-  if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
-  if (mode & EXT2_S_IXUSR) permissions |= FILE_UX;
-  if (mode & EXT2_S_IRGRP) permissions |= FILE_GR;
-  if (mode & EXT2_S_IWGRP) permissions |= FILE_GW;
-  if (mode & EXT2_S_IXGRP) permissions |= FILE_GX;
-  if (mode & EXT2_S_IROTH) permissions |= FILE_OR;
-  if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
-  if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
+    uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
+    uint32_t permissions = 0;
+    if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
+    if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
+    if (mode & EXT2_S_IXUSR) permissions |= FILE_UX;
+    if (mode & EXT2_S_IRGRP) permissions |= FILE_GR;
+    if (mode & EXT2_S_IWGRP) permissions |= FILE_GW;
+    if (mode & EXT2_S_IXGRP) permissions |= FILE_GX;
+    if (mode & EXT2_S_IROTH) permissions |= FILE_OR;
+    if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
+    if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
-  setPermissions(permissions);
-  setUid(LITTLE_TO_HOST16(inode.i_uid));
-  setGid(LITTLE_TO_HOST16(inode.i_gid));
+    setPermissions(permissions);
+    setUid(LITTLE_TO_HOST16(inode.i_uid));
+    setGid(LITTLE_TO_HOST16(inode.i_gid));
 }
 
 Ext2File::~Ext2File()
@@ -52,25 +52,25 @@ Ext2File::~Ext2File()
 
 uint64_t Ext2File::read(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  uint64_t ret = static_cast<Ext2Node*>(this)->read(location, size, buffer);
-  m_Size = m_nSize;
-  return ret;
+    uint64_t ret = static_cast<Ext2Node*>(this)->read(location, size, buffer);
+    m_Size = m_nSize;
+    return ret;
 }
 
 uint64_t Ext2File::write(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-  uint64_t ret = static_cast<Ext2Node*>(this)->write(location, size, buffer);
-  m_Size = m_nSize;
-  return ret;
+    uint64_t ret = static_cast<Ext2Node*>(this)->write(location, size, buffer);
+    m_Size = m_nSize;
+    return ret;
 }
 
 void Ext2File::truncate()
 {
-  static_cast<Ext2Node*>(this)->truncate();
-  m_Size = m_nSize;
+    static_cast<Ext2Node*>(this)->truncate();
+    m_Size = m_nSize;
 }
 
 void Ext2File::fileAttributeChanged()
 {
-  static_cast<Ext2Node*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+    static_cast<Ext2Node*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
 }

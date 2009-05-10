@@ -16,6 +16,7 @@
 
 include_directories(../../include ../ ./)
 
+
 add_executable(ext2.o Ext2Filesystem.cc Ext2File.cc Ext2Directory.cc Ext2Symlink.cc Ext2Node.cc)
 target_link_libraries(ext2.o gcc)
 set_target_properties(ext2.o PROPERTIES

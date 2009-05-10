@@ -447,7 +447,8 @@ int posix_exit(int code)
   pProcess->kill();
 
   // Should NEVER get here.
-  for(;;);
+  /// \note asm volatile
+  for(;;) asm volatile("xor %eax, %eax");
 }
 
 int posix_getpid()

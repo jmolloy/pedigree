@@ -28,74 +28,74 @@
 /** This class provides an implementation of the second extended filesystem. */
 class Ext2Filesystem : public Filesystem
 {
-  friend class Ext2File;
-  friend class Ext2Node;
-  friend class Ext2Directory;
-  friend class Ext2Symlink;
+    friend class Ext2File;
+    friend class Ext2Node;
+    friend class Ext2Directory;
+    friend class Ext2Symlink;
 public:
-  Ext2Filesystem();
+    Ext2Filesystem();
 
-  virtual ~Ext2Filesystem();
+    virtual ~Ext2Filesystem();
 
-  //
-  // Filesystem interface.
-  //
-  virtual bool initialise(Disk *pDisk);
-  static Filesystem *probe(Disk *pDisk);
-  virtual File* getRoot();
-  virtual String getVolumeLabel();
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual void truncate(File *pFile);
-  virtual void fileAttributeChanged(File *pFile);
-  virtual void cacheDirectoryContents(File *pFile);
+    //
+    // Filesystem interface.
+    //
+    virtual bool initialise(Disk *pDisk);
+    static Filesystem *probe(Disk *pDisk);
+    virtual File* getRoot();
+    virtual String getVolumeLabel();
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual void truncate(File *pFile);
+    virtual void fileAttributeChanged(File *pFile);
+    virtual void cacheDirectoryContents(File *pFile);
 
 protected:
-  virtual bool createFile(File* parent, String filename, uint32_t mask);
-  virtual bool createDirectory(File* parent, String filename);
-  virtual bool createSymlink(File* parent, String filename, String value);
-  virtual bool remove(File* parent, File* file);
+    virtual bool createFile(File* parent, String filename, uint32_t mask);
+    virtual bool createDirectory(File* parent, String filename);
+    virtual bool createSymlink(File* parent, String filename, String value);
+    virtual bool remove(File* parent, File* file);
 
 private:
-  virtual bool createNode(File* parent, String filename, uint32_t mask, String value, size_t type);
+    virtual bool createNode(File* parent, String filename, uint32_t mask, String value, size_t type);
 
-  /** Inaccessible copy constructor and operator= */
-  Ext2Filesystem(const Ext2Filesystem&);
-  void operator =(const Ext2Filesystem&);
+    /** Inaccessible copy constructor and operator= */
+    Ext2Filesystem(const Ext2Filesystem&);
+    void operator =(const Ext2Filesystem&);
 
-  /** Reads a block of data from the disk. */
-  bool readBlock(uint32_t block, uintptr_t buffer);
-  bool writeBlock(uint32_t block, uintptr_t buffer);
+    /** Reads a block of data from the disk. */
+    bool readBlock(uint32_t block, uintptr_t buffer);
+    bool writeBlock(uint32_t block, uintptr_t buffer);
 
-  uint32_t findFreeBlock(uint32_t inode);
-  uint32_t findFreeInode();
+    uint32_t findFreeBlock(uint32_t inode);
+    uint32_t findFreeInode();
 
-  void releaseBlock(uint32_t block);
+    void releaseBlock(uint32_t block);
 
-  Inode getInode(uint32_t num);
-  bool setInode(uint32_t num, Inode inode);
+    Inode getInode(uint32_t num);
+    bool setInode(uint32_t num, Inode inode);
 
-  /** Our raw device. */
-  Disk *m_pDisk;
+    /** Our raw device. */
+    Disk *m_pDisk;
 
-  /** Our superblock. */
-  Superblock m_Superblock;
+    /** Our superblock. */
+    Superblock m_Superblock;
 
-  /** Group descriptors. */
-  GroupDesc *m_pGroupDescriptors;
+    /** Group descriptors. */
+    GroupDesc *m_pGroupDescriptors;
 
-  /** Size of a block. */
-  uint32_t m_BlockSize;
+    /** Size of a block. */
+    uint32_t m_BlockSize;
 
-  /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
-  Mutex m_WriteLock;
+    /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
+    Mutex m_WriteLock;
 
-  /** Is the superblock dirty? Does it need to be written back to disk? */
-  bool m_bSuperblockDirty;
-  bool m_bGroupDescriptorsDirty;
+    /** Is the superblock dirty? Does it need to be written back to disk? */
+    bool m_bSuperblockDirty;
+    bool m_bGroupDescriptorsDirty;
 
-  /** The root filesystem node. */
-  File *m_pRoot;
+    /** The root filesystem node. */
+    File *m_pRoot;
 };
 
 #endif
