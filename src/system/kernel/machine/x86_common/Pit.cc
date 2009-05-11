@@ -90,5 +90,7 @@ bool Pit::irq(irq_id_t number, InterruptState &state)
   if (LIKELY(m_Handler != 0))
     m_Handler->timer(0, state);
 
+  Processor::information().getScheduler().checkEventState(reinterpret_cast<uintptr_t>(&state));
+
   return true;
 }

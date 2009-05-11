@@ -70,11 +70,21 @@ class Timer
     virtual bool registerHandler(TimerHandler *handler) = 0;
     virtual bool unregisterHandler(TimerHandler *handler) = 0;
 
+    /** Dispatches the Event \p pEvent to the current thread in \p alarmSecs time.
+     *\param pEvent Event to dispatch.
+     *\param alarmSecs Number of seconds to wait.
+     */
+    virtual void addAlarm(class Event *pEvent, size_t alarmSecs) = 0;
+    /** Removes the event \p pEvent from the alarm queue.
+     *\param pEvent Event to remove alarm for. */
+    virtual void removeAlarm(class Event *pEvent) = 0;
+
   protected:
     /** The default constructor */
     inline Timer(){}
     /** The destructor */
     inline virtual ~Timer(){}
+
   private:
     /** The copy-constructor
      *\note NOT implemented */

@@ -16,6 +16,8 @@
 
 #include <compiler.h>
 #include <machine/Machine.h>
+#include <process/Event.h>
+#include <process/Thread.h>
 #include "Rtc.h"
 
 #define INITIAL_RTC_HZ 1024
@@ -35,6 +37,27 @@ Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] =
 uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
+
+void Rtc::addAlarm(Event *pEvent, size_t alarmSecs)
+{
+    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000+getTickCount(),
+                              Processor::information().getCurrentThread());
+    m_Alarms.pushBack(pAlarm);
+}
+
+void Rtc::removeAlarm(Event *pEvent)
+{
+    for (List<Alarm*>::Iterator it = m_Alarms.begin();
+         it != m_Alarms.end();
+         it++)
+    {
+        if ( (*it)->m_pEvent == pEvent )
+        {
+            m_Alarms.erase(it);
+            return;
+        }
+    }
+}
 
 bool Rtc::registerHandler(TimerHandler *handler)
 {
@@ -215,12 +238,9 @@ void Rtc::uninitialise()
 
 Rtc::Rtc()
   : m_IoPort("CMOS"), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(0), m_Month(0),
-    m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0)
+    m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0), m_Alarms()
 {
 }
-
-#include "../../kernel/core/BootIO.h"
-extern BootIO bootIO;
 
 bool Rtc::irq(irq_id_t number, InterruptState &state)
 {
@@ -237,6 +257,29 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
     
+    // Second has ticked, call any alarms.
+    while (true)
+    {
+        bool bDispatched = false;
+        for (List<Alarm*>::Iterator it = m_Alarms.begin();
+             it != m_Alarms.end();
+             it++)
+        {
+            Alarm *pA = *it;
+            NOTICE("Found alarm: " << pA->m_pEvent->getHandlerAddress());
+            if ( pA->m_Time <= getTickCount() )
+            {
+                NOTICE("Dispatching alarm");
+                pA->m_pThread->sendEvent(pA->m_pEvent);
+                m_Alarms.erase(it);
+                bDispatched = true;
+                break;
+            }
+        }
+        if (!bDispatched)
+            break;
+    }
+
     if (UNLIKELY(m_Second == 60))
     {
       ++m_Minute;

@@ -43,10 +43,12 @@ public:
         \param handlerAddress The address of the handling function.
         \param isDeletable Can the object be deleted after map()? This is used for creating objects
                            without worrying about destroying them.
-    
+        \param specificNestingLevel Is the event pinned to a specific nesting level? If this value is not ~0UL,
+                                    then the event will only be fired if the current nesting level is 
+                                    \p specificNestingLevel .
         \note As can be surmised, handlerAddress is NOT reentrant. If you use this Event in multiple
               threads concurrently, you CANNOT change the handler address. */
-    Event(uintptr_t handlerAddress, bool isDeletable);
+    Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel=~0UL);
 
     virtual ~Event();
 
@@ -54,12 +56,14 @@ public:
         fire-and-forget messages and not worrying about memory leaks. */
     virtual bool isDeletable();
 
-    /** Given a buffer EVENT_LIMIT bytes long, take the variables present in this object and
-        convert them to a binary form.
+    /** Given a buffer EVENT_LIMIT bytes long, take the variables
+        present in this object and convert them to a binary form.
 
-        It can be assumed that this function will only be called when the Event is about to be
-        dispatched, and so the inhibited mask of the current Thread is available to be changed to
-        what the event handler requires. This change will be undone when the handler completes.
+        It can be assumed that this function will only be called when
+        the Event is about to be dispatched, and so the inhibited mask
+        of the current Thread is available to be changed to what the
+        event handler requires. This change will be undone when the
+        handler completes.
 
         \param pBuffer The buffer to serialize to.
         \return The number of bytes serialized. */
@@ -78,6 +82,9 @@ public:
     /** Returns the handler address. */
     uintptr_t getHandlerAddress() {return m_HandlerAddress;}
 
+    /** Returns the specific nesting level, or ~0UL if there is none defined. */
+    size_t getSpecificNestingLevel() {return m_NestingLevel;}
+
     /** Returns the event number / ID. */
     virtual size_t getNumber() = 0;
 
@@ -87,6 +94,9 @@ protected:
 
     /** Can the object be deleted after map? */
     bool m_bIsDeletable;
+
+    /** Specific nesting level, or ~0UL. */
+    size_t m_NestingLevel;
 };
 
 #endif

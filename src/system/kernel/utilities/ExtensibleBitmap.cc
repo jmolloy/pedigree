@@ -16,6 +16,7 @@
 
 #include <utilities/ExtensibleBitmap.h>
 #include <utilities/utility.h>
+#include <Log.h>
 
 ExtensibleBitmap::ExtensibleBitmap() :
     m_StaticMap(0), m_pDynamicMap(0), m_DynamicMapSize(0), m_MaxBit(0)

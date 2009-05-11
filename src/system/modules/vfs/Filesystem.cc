@@ -138,7 +138,13 @@ bool Filesystem::remove(String path, File *pStartNode)
     return false;
   }
 
-//  pParent->m_Cache.remove(filename);
+  Directory *pDParent = Directory::fromFile(pParent);
+  if (!pDParent)
+  {
+      FATAL("Filesystem::remove: Massive algorithmic error (2)");
+      return false;
+  }
+  pDParent->m_Cache.remove(filename);
   return remove(pParent, pFile);
 }
 

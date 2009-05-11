@@ -37,6 +37,8 @@
 
 #include <users/UserManager.h>
 
+#include <utilities/TimeoutGuard.h>
+
 extern BootIO bootIO;
 
 void init_stage2();
@@ -187,13 +189,29 @@ void init_stage2()
       WARNING("map() failed in init");
   }
 
+
+  ////////////////////////////////////////////////////////////////////
+  // Temp!
+#if 0
+  Semaphore sem(0);
+
+  {
+      TimeoutGuard guard(5);
+      if (!guard.timedOut())
+      {
+          sem.acquire();
+          NOTICE("Acquired sem");
+      }
+  }
+
+  NOTICE("Ended!");
+  for(;;);
+#endif
+  ////////////////////////////////////////////////////////////////////
+  // End Temp!
+
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
   new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
-
-//  Processor::setInterrupts(true);
-
-  // Thread exit.
-//  while (1) {Scheduler::instance().yield();}
 }
 
 MODULE_NAME("init");

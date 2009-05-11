@@ -103,6 +103,11 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 
         // Return to previous interrupt state.
         Processor::setInterrupts(bWasInterrupts);
+        
+        // Check the event state - we don't have a user mode stack available
+        // to us, so pass zero and don't execute user-mode event handlers.
+        checkEventState(0);
+
         return;
     }
 
@@ -117,6 +122,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     Processor::setInterrupts(false);
 
     Thread *pThread = Processor::information().getCurrentThread();
+    if (!pThread) return;
+
     Event *pEvent = pThread->getNextEvent();
     if (!pEvent)
     {
@@ -152,12 +159,13 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         return;
     }
 
+    uintptr_t handlerAddress = pEvent->getHandlerAddress();
+
     if (pEvent->isDeletable())
         delete pEvent;
 
     // Simple heuristic for whether to launch the event handler in kernel or user mode - is the 
     // handler address mapped kernel or user mode?
-    uintptr_t handlerAddress = pEvent->getHandlerAddress();
     if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
     {
         ERROR("checkEventState: Handler address not mapped!");
@@ -166,11 +174,21 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     physical_uintptr_t page;
     size_t flags;
     va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
+
     if (flags & VirtualAddressSpace::KernelMode)
-        Processor::jumpKernel(0, EVENT_HANDLER_TRAMPOLINE, 0, handlerAddress, addr);
-    else
+    {
+        void (*fn)(size_t) = reinterpret_cast<void (*)(size_t)>(handlerAddress);
+        NOTICE("Calling fn " << handlerAddress);
+        fn(addr);
+        pThread->popState();
+        NOTICE("CheckEVentState returning");
+        return;
+    }
+    else if (userStack != 0)
+    {
         Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
-    // Not reached.
+        // Not reached.
+    }
 }
 
 void PerProcessorScheduler::eventHandlerReturned()

@@ -95,7 +95,7 @@ public:
         \return A reference to the previous state. */
     SchedulerState &pushState()
     {
-        if (m_nStateLevel == MAX_NESTED_EVENTS)
+        if (m_nStateLevel >= MAX_NESTED_EVENTS)
         {
             ERROR("Thread: Max nested events!");
             /// \todo Take some action here - possibly kill the thread?
@@ -120,6 +120,20 @@ public:
     /** Returns the state nesting level. */
     size_t getStateLevel()
     {return m_nStateLevel;}
+
+    /** Overwrites the state at the given nesting level. 
+     *\param stateLevel The nesting level to edit.
+     *\param state The state to copy.
+     */
+    void pokeState(size_t stateLevel, SchedulerState &state)
+    {
+        if (stateLevel >= MAX_NESTED_EVENTS)
+        {
+            ERROR("Thread::pokeState(): stateLevel `" << stateLevel << "' is over the maximum.");
+            return;
+        }
+        m_States[stateLevel] = state;
+    }
 
     /** Retrieves a pointer to this Thread's parent process. */
     Process *getParent() const
@@ -165,6 +179,9 @@ public:
     /** Sets the given event number as inhibited.
         \param bInhibit True if the event is to be inhibited, false if the event is to be allowed. */
     void inhibitEvent(size_t eventNumber, bool bInhibit);
+
+    /** Walks the event queue, removing the event \p pEvent , if found. */
+    void cullEvent(Event *pEvent);
 
     /** Grabs the first available unmasked event and pops it off the queue.
         This also pushes the inhibit mask stack.

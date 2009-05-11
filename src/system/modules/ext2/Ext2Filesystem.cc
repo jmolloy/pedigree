@@ -263,7 +263,7 @@ bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)
 
 bool Ext2Filesystem::remove(File* parent, File* file)
 {
-    return 0;
+    return true;
 }
 
 bool Ext2Filesystem::readBlock(uint32_t block, uintptr_t buffer)

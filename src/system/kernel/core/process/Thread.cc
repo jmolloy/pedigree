@@ -123,6 +123,11 @@ void Thread::sendEvent(Event *pEvent)
     LockGuard<Spinlock> guard(m_Lock);
 
     m_EventQueue.pushBack(pEvent);
+    if (m_Status == Sleeping)
+    {
+        NOTICE("Set ready, thread " << getId());
+        m_Status = Ready;
+    }
 }
 
 void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
@@ -134,21 +139,36 @@ void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
         m_InhibitMasks[m_nStateLevel].clear(eventNumber);
 }
 
+void Thread::cullEvent(Event *pEvent)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+    FATAL("cullEvent");
+    for (List<Event*>::Iterator it = m_EventQueue.begin();
+         it != m_EventQueue.end();
+         it++)
+    {
+        if (*it == pEvent)
+        {
+            m_EventQueue.erase(it);
+            return;
+        }
+    }
+}
+
 Event *Thread::getNextEvent()
 {
     LockGuard<Spinlock> guard(m_Lock);
 
-    Event *pEvent = 0;
     for (size_t i = 0; i < m_EventQueue.count(); i++)
     {
         Event *e = m_EventQueue.popFront();
-        if (m_InhibitMasks[m_nStateLevel].test(pEvent->getNumber()))
-            m_EventQueue.pushBack(pEvent);
-        pEvent = e;
-        break;
+        if (m_InhibitMasks[m_nStateLevel].test(e->getNumber()) ||
+            (e->getSpecificNestingLevel() != ~0UL &&
+             e->getSpecificNestingLevel() != m_nStateLevel))
+            m_EventQueue.pushBack(e);
+        else
+            return e;
     }
-    if (pEvent == 0)
-        return 0;
 
-    return pEvent;
+    return 0;
 }

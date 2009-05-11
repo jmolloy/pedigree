@@ -120,6 +120,7 @@ int posix_open(const char *name, int flags, int mode)
     }
     else
     {
+        NOTICE("Does not exist.");
       // Error - not found.
       SYSCALL_ERROR(DoesNotExist);
       return -1;
@@ -132,6 +133,7 @@ int posix_open(const char *name, int flags, int mode)
   if (file->isDirectory())
   {
     // Error - is directory.
+        NOTICE("Is a directory.");
     SYSCALL_ERROR(IsADirectory);
     return -1;
   }
@@ -139,6 +141,7 @@ int posix_open(const char *name, int flags, int mode)
   if((flags & O_CREAT) && (flags & O_EXCL) && !bCreated)
   {
     // file exists with O_CREAT and O_EXCL
+        NOTICE("File exists");
     SYSCALL_ERROR(FileExists);
     return -1;
   }
@@ -158,7 +161,7 @@ int posix_open(const char *name, int flags, int mode)
   f->flflags = flags | mode;
   fdMap.insert(fd, f);
   file->increaseRefCount(false);
-
+  NOTICE("fine: " << fd);
   return static_cast<int> (fd);
 }
 
@@ -392,8 +395,6 @@ char* posix_getcwd(char* buf, size_t maxlen)
   tmp = str;
   str = "/";
   str += tmp;
-
-  NOTICE("cwd = " << static_cast<const char*>(str) << ", length = " << str.length() << ".");
 
   strcpy(buf, static_cast<const char*>(str));
 

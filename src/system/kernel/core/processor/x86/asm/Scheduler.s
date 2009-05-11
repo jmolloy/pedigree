@@ -128,7 +128,10 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
     mov     ebp, [esp+28]
 
     ;; Change stacks.
+    cmp     ebx, 0
+    jz      .no_stack_change
     mov     esp, ebx
+.no_stack_change:
 
     ;; Stack changed, now we can unlock the old thread.
     cmp     ecx, 0
