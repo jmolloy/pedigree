@@ -14,16 +14,25 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <Log.h>
+#include <machine/Machine.h>
+#include <machine/Timer.h>
+#include <process/Scheduler.h>
 #include <process/Semaphore.h>
 #include <processor/Processor.h>
-#include <process/Scheduler.h>
-#include <Log.h>
-#include "../BootIO.h"
-extern BootIO bootIO;
 
-// NOTE, this is in its own file purely so that a vtable can be generated.
+void interruptSemaphore(uint8_t *pBuffer)
+{
+    Processor::information().getCurrentThread()->setInterrupted(true);
+}
+
+Semaphore::SemaphoreEvent::SemaphoreEvent() :
+    Event(reinterpret_cast<uintptr_t>(&interruptSemaphore), false /* Not deletable */)
+{
+}
+
 Semaphore::Semaphore(size_t nInitialValue)
-  : m_Counter(nInitialValue), m_BeingModified(false), m_Queue(), m_pParent(0), magic(0x1234)
+    : m_Counter(nInitialValue), m_BeingModified(false), m_Queue()
 {
 }
 
@@ -31,21 +40,37 @@ Semaphore::~Semaphore()
 {
 }
 
-void Semaphore::acquire(size_t n)
+void Semaphore::acquire(size_t n, size_t timeoutSecs)
 {
   // Spin 10 times in the case that the lock is about to be released on
-  // multiprocessor systems.
+  // multiprocessor systems, and just once for uniprocessor systems, so we don't
+  // go through the rigmarole of creating a timeout event if the lock is 
+  // available.
 #ifdef MULTIPROCESSOR
   for (int i = 0; i < 10; i++)
-    if (tryAcquire(n))
-    {
-      return;
-    }
 #endif
+    if (tryAcquire(n))
+      return;
+
+  // If we have a timeout, create the event and register it.
+  Event *pEvent = 0;
+  if (timeoutSecs != 0)
+  {
+      pEvent = new SemaphoreEvent();
+      Machine::instance().getTimer()->addAlarm(pEvent, timeoutSecs);
+  }
+
   while (true)
   {
     if (tryAcquire(n))
+    {
+      if (pEvent)
+      {
+        Machine::instance().getTimer()->removeAlarm(pEvent);
+        delete pEvent;
+      }
       return;
+    }
 
     m_BeingModified.acquire();
 
@@ -54,13 +79,32 @@ void Semaphore::acquire(size_t n)
     // but before we grab the "being modified" lock, which means the lock could be released by this point!
     if (tryAcquire(n))
     {
+      if (pEvent)
+      {
+        Machine::instance().getTimer()->removeAlarm(pEvent);
+        delete pEvent;
+      }
       m_BeingModified.release();
       return;
     }
 
-    m_Queue.pushBack(Processor::information().getCurrentThread());
+    Thread *pThread = Processor::information().getCurrentThread();
+    m_Queue.pushBack(pThread);
 
+    pThread->setInterrupted(false);
     Processor::information().getScheduler().sleep(&m_BeingModified);
+
+    // Why were we woken?
+    if (pThread->wasInterrupted())
+    {
+        // We were deliberately interrupted - most likely because of a timeout.
+        if (pEvent)
+        {
+          Machine::instance().getTimer()->removeAlarm(pEvent);
+          delete pEvent;
+        }
+        return;
+    }
   }
 
 }

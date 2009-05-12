@@ -192,17 +192,11 @@ void init_stage2()
 
   ////////////////////////////////////////////////////////////////////
   // Temp!
-#if 0
+#if 1
   Semaphore sem(0);
 
-  {
-      TimeoutGuard guard(5);
-      if (!guard.timedOut())
-      {
-          sem.acquire();
-          NOTICE("Acquired sem");
-      }
-  }
+  sem.acquire(1, 1);
+  NOTICE("Acquired sem: " << Processor::information().getCurrentThread()->wasInterrupted());
 
   NOTICE("Ended!");
   for(;;);

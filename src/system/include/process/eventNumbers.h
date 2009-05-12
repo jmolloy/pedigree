@@ -25,6 +25,7 @@ namespace EventNumbers
     const size_t PosixSignalEnd   = 32;
 
     const size_t TimeoutGuard     = 33;
+    const size_t Interrupt        = 34;
 
     const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
 };

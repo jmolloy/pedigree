@@ -24,7 +24,7 @@
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
                void *pStack) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_Lock(), m_EventQueue()
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -60,7 +60,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
 Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_Lock(), m_EventQueue()
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -75,7 +75,7 @@ Thread::Thread(Process *pParent) :
 
 Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_Lock(), m_EventQueue()
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
   {
@@ -124,10 +124,7 @@ void Thread::sendEvent(Event *pEvent)
 
     m_EventQueue.pushBack(pEvent);
     if (m_Status == Sleeping)
-    {
-        NOTICE("Set ready, thread " << getId());
         m_Status = Ready;
-    }
 }
 
 void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)

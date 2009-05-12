@@ -137,7 +137,7 @@ private:
         entry(0), id(0), waitSem(0), m_Timeout(30), success(false), m_Nanoseconds(0), m_Seconds(0)
       {};
       DnsRequest(const DnsRequest& ent) :
-        entry(ent.entry), id(ent.id), waitSem(ent.waitSem), m_Timeout(ent.m_Timeout),
+        entry(ent.entry), id(ent.id), waitSem(0), m_Timeout(ent.m_Timeout),
         success(ent.success), m_Nanoseconds(ent.m_Nanoseconds), m_Seconds(ent.m_Seconds)
       {};
       
@@ -173,7 +173,7 @@ private:
       {
         entry = ent.entry;
         id = ent.id;
-        waitSem = ent.waitSem;
+//        waitSem(0);
         m_Timeout = ent.m_Timeout;
         success = ent.success;
         m_Nanoseconds = ent.m_Nanoseconds;

@@ -92,6 +92,8 @@ public:
 
     /** Increases the state nesting level by one - pushes a new state to the top of the state stack.
         This also pushes to the top of the inhibited events stack, copying the current inhibit mask.
+        \todo This should also push errno and m_bInterrupted, so syscalls can be
+              used safely in interrupt handlers.
         \return A reference to the previous state. */
     SchedulerState &pushState()
     {
@@ -167,6 +169,16 @@ public:
     void setErrno(size_t errno)
     {m_Errno = errno;}
 
+    /** Returns whether the thread was just interrupted deliberately (e.g.
+        because of a timeout). */
+    bool wasInterrupted()
+    {return m_bInterrupted;}
+
+    /** Sets whether the thread was just interrupted deliberately. */
+    void setInterrupted(bool b)
+    {m_bInterrupted = b;}
+    
+
     /** Returns the thread's scheduler lock. */
     Spinlock &getLock()
     {return m_Lock;}
@@ -230,6 +242,10 @@ private:
 
     /** The number of the last error to occur. */
     size_t m_Errno;
+
+    /** Whether the thread was interrupted deliberately.
+        \see Thread::wasInterrupted */
+    bool m_bInterrupted;
 
     /** Lock for schedulers. */
     Spinlock m_Lock;

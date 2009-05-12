@@ -1,0 +1,53 @@
+<h1>The Pedigree Kernel Event System</h1>
+
+<h2>Introduction</h2>
+
+<p>In order to support event-driven application frameworks and so as not
+to burden the kernel with POSIX primitives (such as signals), a fully
+generic event handling and dispatching system has been built into Pedigree.</p>
+
+<p>Events are sent asynchronously with no return value or indication that they
+have been received or handled. Event subclasses provide <code>serialize</code> and 
+<code>unserialize</code> functions that allow the passing of Events over address space
+boundaries (see below). Events may be nested - one event may be being handled 
+when another is fired. This can continue up to a hard limit, which is 
+implementation defined.</p>
+
+<h2>API</h2>
+
+<p>All events must subclass <code>class Event</code>;</p>
+
+<pre><code>class Event
+{
+public:
+    Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel=~0UL);
+    virtual ~Event();
+
+    virtual bool isDeletable();
+    virtual size_t serialize(uint8_t *pBuffer) = 0;
+    static bool unserialize(uint8_t *pBuffer, Event &amp;event);
+    static size_t getEventType(uint8_t *pBuffer);
+    uintptr_t getHandlerAddress();
+    size_t getSpecificNestingLevel();
+    virtual size_t getNumber();
+};
+</code></pre>
+
+<p>Note that the important functions that <em>require overriding</em> are <code>serialize</code>,
+<code>unserialize</code> and <code>getNumber</code>. For a full description of each function, see
+the doxygen documentation.</p>
+
+<p>Each <code>Event</code> object can have only one handler address. This cannot be changed at 
+runtime; the value is not thread-reentrant. An <code>Event</code> can be deletable - if this
+is true, when the <code>Event</code> is fired it will be immediately deleted. This is useful
+for creating 'fire-and-forget' type events, so you don't have to worry about
+memory leaks.</p>
+
+<p>So, hypothetically, what if you had an Event that when fired, did a kind of <code>longjmp</code> (Probably using the <code>Processor::saveState</code> and <code>Processor::restoreState</code> functions) to some code in the original thread? This could be used as a hard timeout
+(in fact, this exact mechanism is implemented in <code>TimeoutGuard</code>). There is a problem here - Events can be nested, and you may be inadvertently longjmp'ing over another Event that is partially executed (and possibly preempted).</p>
+
+<p>It is for this reason that the <code>specificNestingLevel</code> constructor parameter is implemented. Using this (as opposed to the default value of <code>~0UL</code>) constrains the kernel to only run this Event when it is currently at that event nesting level.</p>
+
+<h2>Implementation</h2>
+
+<p>TODO.</p>
