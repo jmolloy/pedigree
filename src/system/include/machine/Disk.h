@@ -24,6 +24,13 @@
 class Disk : public Device
 {
 public:
+
+  enum SubType
+  {
+    ATA = 0,
+    ATAPI
+  };
+
   Disk()
   {
     m_SpecificType = "Generic Disk";
@@ -39,6 +46,11 @@ public:
   virtual Type getType()
   {
     return Device::Disk;
+  }
+
+  virtual SubType getSubType()
+  {
+    return ATA;
   }
 
   virtual void getName(String &str)
