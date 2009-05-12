@@ -25,6 +25,7 @@
 #include <utilities/RequestQueue.h>
 #include <machine/IrqHandler.h>
 #include "AtaDisk.h"
+#include "AtapiDisk.h"
 
 #define ATA_CMD_READ  0
 #define ATA_CMD_WRITE 1

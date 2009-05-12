@@ -85,7 +85,7 @@ void UserManager::initialiseGroups()
       delete *it2;
       i++;
     }
-    
+
     addGroup(strtoul(id, 0, 10), String(name));
   }
 
@@ -162,10 +162,10 @@ void UserManager::initialiseUsers()
       delete *it2;
       i++;
     }
-    
+
     addUser(strtoul(id, 0, 10), username, fullname, group, home, shell, password);
   }
-  
+
   delete [] pBuffer;
 }
 
@@ -244,8 +244,11 @@ void UserManager::addGroup(size_t gid, String name)
 
 void UserManager::initialise()
 {
-  initialiseGroups();
-  initialiseUsers();
+  addGroup(0, String("root"));
+  addUser(0, String("root"), String("root"), String("root"), String("/"), String("/applications/bash"), String(""));
+
+  // initialiseGroups();
+  // initialiseUsers();
 
   User *pUser = getUser(0);
   if (!pUser)
@@ -254,7 +257,7 @@ void UserManager::initialise()
     return;
   }
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  
+
   pProcess->setUser(pUser);
   pProcess->setGroup(pUser->getDefaultGroup());
 }

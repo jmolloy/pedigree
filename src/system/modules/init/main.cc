@@ -98,7 +98,7 @@ void init()
   }
 
   // Initialise user/group configuration.
-  // UserManager::instance().initialise();
+  UserManager::instance().initialise();
 
   // Build routing tables
   /*
@@ -131,7 +131,7 @@ void init()
   }
   */
 
-  str += "Loading init program (root:/applications/python)\n";
+  str += "Loading init program (root:/install/applications/python)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
 

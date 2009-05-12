@@ -38,6 +38,18 @@
 class VFS
 {
 public:
+  /** Structure matching aliases to filesystems.
+   * \todo Use a proper Map class for this. */
+  struct Alias
+  {
+    Alias() : alias(), fs(0) {}
+    String alias;
+    Filesystem *fs;
+  private:
+    Alias(const Alias&);
+    void operator =(const Alias&);
+  };
+
   /** Constructor */
   VFS();
   /** Destructor */
@@ -62,6 +74,12 @@ public:
 
   /** Does a given alias exist? */
   bool aliasExists(String alias);
+
+  /** Obtains a list of all filesystem aliases */
+  inline List<Alias*> &getAliases()
+  {
+      return m_Aliases;
+  }
 
   /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
    *  the filesystem is destroyed.
@@ -102,17 +120,7 @@ private:
   /** A static File object representing an invalid file */
   static File* m_EmptyFile;
 
-  /** Structure matching aliases to filesystems.
-   * \todo Use a proper Map class for this. */
-  struct Alias
-  {
-    Alias() : alias(), fs(0) {}
-    String alias;
-    Filesystem *fs;
-  private:
-    Alias(const Alias&);
-    void operator =(const Alias&);
-  };
+private:
   List<Alias*> m_Aliases;
 
   List<Filesystem::ProbeCallback*> m_ProbeCallbacks;

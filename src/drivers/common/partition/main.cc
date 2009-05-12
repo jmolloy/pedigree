@@ -23,6 +23,10 @@
 #include "apple.h"
 #include <Log.h>
 
+/// \todo Move into a new file
+#include "../ata/AtapiDisk.h"
+#include "Partition.h"
+
 bool probeDevice(Disk *pDev)
 {
   // Does the disk have an MS-DOS partition table?
