@@ -132,7 +132,7 @@ private:
     * \param nPackBytes The number of bytes in the packet buffer
     * \param packet Location of the command packet to write
     */
-  bool sendCommand(size_t nRespBytes, size_t nPackBytes, uintptr_t packet);
+  bool sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackBytes, uintptr_t packet, bool bWrite = false);
   /** Reads the response from the command packet (as sent above) */
   bool readPacket(size_t maxBytes, uintptr_t buffer);
   /** Writes data required by the command packet (as sent above) */

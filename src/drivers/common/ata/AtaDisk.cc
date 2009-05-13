@@ -187,6 +187,8 @@ uint64_t AtaDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
 uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
+  NOTICE("AtaDisk::doRead");
+
   if (location % 512)
     panic("AtaDisk: read request not on a sector boundary!");
   if (nBytes % 512)

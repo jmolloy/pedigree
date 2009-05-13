@@ -81,12 +81,10 @@ AtaController::~AtaController()
 uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
-  NOTICE("execute request: " << p1 << ".");
   AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
   AtapiDisk *pAtapiDisk = reinterpret_cast<AtapiDisk*> (p2);
   if (p1 == ATA_CMD_READ)
   {
-    NOTICE("The subtype is " << static_cast<int>(pDisk->getSubType()) << " and " << static_cast<int>(pAtapiDisk->getSubType()) << ".");
     if(pDisk->getSubType() == Disk::ATAPI)
       return pAtapiDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
     else

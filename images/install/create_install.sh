@@ -20,7 +20,7 @@ SRCDIR=../../
 
 echo "Building installer disk images..."
 
-if which mcopy >/dev/null 2>&1; then
+if which mcopyNOT >/dev/null 2>&1; then
 
   if [ ! -e "./hdd_fat16.img" ]; then
         tar -xzf ../hdd_fat16.tar.gz
@@ -55,8 +55,8 @@ if which mkisofs > /dev/null 2>&1; then
     cp $SRCDIR/build/src/system/kernel/kernel ./disk/boot
     cp $SRCDIR/build/initrd.tar ./disk/boot
     rm -f pedigree-i386.iso
-    mkisofs -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o pedigree-i386.iso disk
+    mkisofs -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o pedigree-i386.iso -V "Pedigree" disk > /dev/null 2>&1
 else
-    echo Not creating bootable ISO becuase \`mkisofs\' could not be found.
+    echo Not creating bootable ISO because \`mkisofs\' could not be found.
 fi
 
