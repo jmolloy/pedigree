@@ -194,8 +194,6 @@ bool AtapiDisk::initialise()
   // Grab the capacity of the disk for future reference
   getCapacityInternal(&m_NumBlocks, &m_BlockSize);
 
-  NOTICE("This disk has " << Dec << m_NumBlocks << " blocks, each of which is " << m_BlockSize << Hex << " bytes.");
-
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;
   struct InquiryCommand
@@ -209,7 +207,7 @@ bool AtapiDisk::initialise()
   memset(&inqCommand, 0, sizeof(InquiryCommand));
   inqCommand.Opcode = 0x12; // INQUIRY command
   inqCommand.AllocLen = HOST_TO_BIG16(sizeof(Inquiry));
-  bool success = sendCommand(sizeof(Inquiry), sizeof(InquiryCommand), reinterpret_cast<uintptr_t>(&inqCommand));
+  bool success = sendCommand(sizeof(Inquiry), reinterpret_cast<uintptr_t>(&inquiry), sizeof(InquiryCommand), reinterpret_cast<uintptr_t>(&inqCommand));
   if(!success)
   {
     // Uh oh!
@@ -217,18 +215,9 @@ bool AtapiDisk::initialise()
     return false;
   }
 
-  success = readPacket(sizeof(Inquiry), reinterpret_cast<uintptr_t>(&inquiry));
-  if(!success)
-  {
-    WARNING("Couldn't read response to INQUIRY on ATAPI device!");
-    return false;
-  }
-
   // Removable - and get the type too
   m_Removable = ((inquiry.Removable & (1 << 7)) != 0);
   m_Type = static_cast<AtapiType>(inquiry.Peripheral);
-
-  NOTICE("peripheral = " << inquiry.Peripheral << " and type = " << static_cast<int>(m_Type) << "!");
 
   // Supported device?
   if(m_Type != CdDvd && m_Type != Block)
@@ -237,15 +226,6 @@ bool AtapiDisk::initialise()
     WARNING("Pedigree currently only supports CD/DVD and block ATAPI devices.");
     return false;
   }
-
-  // Have some fun <3
-  uint8_t *whee = new uint8_t[m_BlockSize];
-  uint64_t ret = doRead(0x8000, m_BlockSize, reinterpret_cast<uintptr_t>(whee));
-  NOTICE("Read " << ret << " bytes:");
-  for(size_t i = 0; i < 32; i++)
-    NOTICE("At " << Dec << i << Hex << ": " << whee[i]);
-
-  FATAL("ATAPI device init done!");
 
   NOTICE("Detected ATAPI device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
   return true;
@@ -271,7 +251,7 @@ uint64_t AtapiDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
 uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
-  NOTICE("doRead");
+  NOTICE("AtapiDisk::doRead");
 
   if(!nBytes || !buffer)
   {
@@ -287,6 +267,8 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
   size_t blockNum = location / m_BlockSize;
   size_t numBlocks = nBytes / m_BlockSize;
+
+  NOTICE("Block number = " << blockNum << ".");
 
   if(m_Type == CdDvd)
   {
@@ -307,21 +289,12 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     tocCommand.Opcode = 0x43; // READ TOC command
     tocCommand.AllocLen = HOST_TO_BIG16(m_BlockSize);
 
-    NOTICE("Reading TOC");
-
     uint8_t *tmpBuff = new uint8_t[m_BlockSize];
     PointerGuard<uint8_t> tmpBuffGuard(tmpBuff);
-    bool success = sendCommand(m_BlockSize, sizeof(ReadTocCommand), reinterpret_cast<uintptr_t>(&tocCommand));
+    bool success = sendCommand(m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff), sizeof(ReadTocCommand), reinterpret_cast<uintptr_t>(&tocCommand));
     if(!success)
     {
       WARNING("Could not read the TOC!");
-      return 0;
-    }
-
-    success = readPacket(m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff));
-    if(!success)
-    {
-      WARNING("Could not read the TOC response!");
       return 0;
     }
 
@@ -351,7 +324,6 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
       return 0;
     }
 
-    NOTICE("Data track starts at " << trackStart << ".");
     blockNum += trackStart;
   }
 
@@ -366,21 +338,16 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     uint8_t Control;
   } __attribute__((packed)) command;
   memset(&command, 0, sizeof(ReadCommand));
-  command.Opcode = 0x25; // READ(10) command
+  command.Opcode = 0x28; // READ(10) command
   command.StartLBA = HOST_TO_BIG32(blockNum);
   command.BlockCount = HOST_TO_BIG16(numBlocks);
 
-  bool success = sendCommand(nBytes, sizeof(ReadCommand), reinterpret_cast<uintptr_t>(&command));
+  NOTICE("Reading " << nBytes << " bytes [" << numBlocks << " blocks]");
+
+  bool success = sendCommand(nBytes, buffer, sizeof(ReadCommand), reinterpret_cast<uintptr_t>(&command));
   if(!success)
   {
     WARNING("Read command failed on an ATAPI device");
-    return 0;
-  }
-
-  success = readPacket(nBytes, buffer);
-  if(!success)
-  {
-    WARNING("Data read failed on ATAPI device");
     return 0;
   }
 
@@ -390,25 +357,6 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 uint64_t AtapiDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
   return 0;
-
-/*  if (location % 512)
-    panic("AtapiDisk: write request not on a sector boundary!");
-  if (nBytes % 512)
-    panic("AtapiDisk: write request length not a multiple of 512!");
-
-  uint64_t origNBytes = nBytes;
-
-  uint64_t end = location+nBytes;
-  for (uint64_t i = location; i < end; i += 512)
-  {
-    m_SectorCache.insert(i/512, reinterpret_cast<uint8_t*> (buffer));
-
-    buffer += 512;
-    location += 512;
-    nBytes -= 512;
-  }
-
-  return origNBytes;*/
 }
 
 void AtapiDisk::irqReceived()
@@ -416,9 +364,13 @@ void AtapiDisk::irqReceived()
   m_IrqReceived.release();
 }
 
-bool AtapiDisk::sendCommand(size_t nRespBytes, size_t nPackBytes, uintptr_t packet)
+bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackBytes, uintptr_t packet, bool bWrite)
 {
-  /// \todo Round nPackBytes up to an even number, check that it's valid, etc...
+  if(!m_PacketSize)
+  {
+    ERROR("sendCommand called but the packet size is not known!");
+    return false;
+  }
 
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -426,17 +378,23 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, size_t nPackBytes, uintptr_t pack
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = pParent->m_pCommandRegs;
 
+  // Temporary storage, so we can save cycles later
+  uint16_t *tmpPacket = new uint16_t[m_PacketSize / 2];
+  PointerGuard<uint16_t> tmpGuard(tmpPacket);
+  memcpy(tmpPacket, reinterpret_cast<void*>(packet), nPackBytes);
+  memset(tmpPacket + (nPackBytes / 2), 0, m_PacketSize - nPackBytes);
+
   // Round up the packet size to the nearest even number
   if(nPackBytes & 0x1)
     nPackBytes++;
 
   // PACKET command
+  commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6);
   commandRegs->write8(0, 1); // no overlap, no DMA
   commandRegs->write8(0, 2); // tag = 0
   commandRegs->write8(0, 3); // n/a for PACKET command
   commandRegs->write8((nRespBytes == 0) ? 0x2 : (nRespBytes & 0xFF), 4); // byte count limit
   commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
-  commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6);
   commandRegs->write8(0xA0, 7); // the command itself
 
   // Wait for the busy bit to be cleared before continuing
@@ -453,92 +411,56 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, size_t nPackBytes, uintptr_t pack
 
   // Transmit the command (padded as needed)
   uint16_t *commandPacket = reinterpret_cast<uint16_t*>(packet);
-  for(size_t i = 0; i < (nPackBytes / 2); i++)
-    commandRegs->write16(commandPacket[i], 0);
-  NOTICE("current packet size = " << m_PacketSize << " packet bytes = " << nPackBytes << ".");
-  for(size_t i = (nPackBytes / 2); i < (m_PacketSize / 2); i++)
-    commandRegs->write16(0, 0);
+  for(size_t i = 0; i < (m_PacketSize / 2); i++)
+    commandRegs->write16(tmpPacket[i], 0);
+  //for(size_t i = (nPackBytes / 2); i < (m_PacketSize / 2); i++)
+  //  commandRegs->write16(0, 0);
 
   // Wait for the busy bit to be cleared once again
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
 
+  if(status & 0x1)
+  {
+    WARNING("ATAPI sendCommand failed after sending command packet");
+    return false;
+  }
+
+  // Check for DRQ, if not set, there's nothing to read
+  if(!(status & 0x8))
+    return true;
+
+  // Read in the data, if we need to
+  size_t realSz = commandRegs->read8(4) | (commandRegs->read8(5) << 8);
+  uint16_t *dest = reinterpret_cast<uint16_t*>(respBuff);
+  if(nRespBytes)
+  {
+    size_t sizeToRead = ((realSz > nRespBytes) ? nRespBytes : realSz) / 2;
+    for(size_t i = 0; i < sizeToRead; i++)
+    {
+      if(bWrite)
+        commandRegs->write16(dest[i], 0);
+      else
+        dest[i] = commandRegs->read16(0);
+    }
+  }
+
+  // Discard unread data (or write pretend data)
+  if(realSz > nRespBytes)
+  {
+    NOTICE("sendCommand has to read beyond provided buffer");
+    for(size_t i = nRespBytes; i < realSz; i += 2)
+    {
+      if(bWrite)
+        commandRegs->write16(0xFFFF, 0);
+      else
+        commandRegs->read16(0);
+    }
+  }
+
   // Complete
+  status = commandRegs->read8(7);
   return (!(status & 0x01));
-}
-
-bool AtapiDisk::readPacket(size_t maxBytes, uintptr_t buffer)
-{
-  // Grab our parent.
-  AtaController *pParent = static_cast<AtaController*> (m_pParent);
-
-  // Grab our parent's IoPorts for command and control accesses.
-  IoBase *commandRegs = pParent->m_pCommandRegs;
-
-  NOTICE("reading");
-
-  // DRQ set?
-  uint8_t status = commandRegs->read8(7);
-  if(status & 0x1)
-    return false;
-  else if(status & 0x8)
-  {
-    if(maxBytes)
-    {
-      NOTICE("Reading " << maxBytes << " bytes...");
-
-      /// \todo Handle odd size
-      uint16_t *p = reinterpret_cast<uint16_t*>(buffer);
-      uint16_t realSz = commandRegs->read8(4) | (commandRegs->read8(5) << 8);
-      NOTICE("There are " << realSz << " bytes ready.");
-
-      if(maxBytes > realSz)
-        maxBytes = realSz;
-
-      for(size_t i = 0; i < (maxBytes / 2); i++)
-        p[i] = commandRegs->read16(0);
-      if(realSz > maxBytes)
-        for(size_t i = maxBytes; i < realSz; i += 2)
-          commandRegs->read16(0);
-    }
-  }
-  else
-  {
-    NOTICE("not in the right state");
-    return false;
-  }
-
-  // Apparently we should re-read the status register...
-  status = commandRegs->read8(7);
-  return (!(status & 0x1));
-}
-
-bool AtapiDisk::writePacket(size_t maxBytes, uintptr_t buffer)
-{
-  // Grab our parent.
-  AtaController *pParent = static_cast<AtaController*> (m_pParent);
-
-  // Grab our parent's IoPorts for command and control accesses.
-  IoBase *commandRegs = pParent->m_pCommandRegs;
-
-  // DRQ set?
-  uint8_t status = commandRegs->read8(7);
-  if(status & 0x1)
-    return false;
-  else if(status & 0x8)
-  {
-    if(maxBytes)
-    {
-      /// \todo Handle odd size
-      uint16_t *p = reinterpret_cast<uint16_t*>(buffer);
-      for(size_t i = 0; i < (maxBytes / 2); i++)
-        commandRegs->write16(p[i], 0);
-    }
-  }
-
-  // Apparently we should re-read the status register...
-  status = commandRegs->read8(7);
-  return (!(status & 0x1));
 }
 
 bool AtapiDisk::readSense(uintptr_t buff)
@@ -560,17 +482,10 @@ bool AtapiDisk::readSense(uintptr_t buff)
   senseComm.Opcode = 0x03; // REQUEST SENSE
   senseComm.AllocLength = sizeof(Sense);
 
-  bool success = sendCommand(sizeof(Sense), sizeof(SenseCommand), reinterpret_cast<uintptr_t>(&senseComm));
+  bool success = sendCommand(sizeof(Sense), buff, sizeof(SenseCommand), reinterpret_cast<uintptr_t>(&senseComm));
   if(!success)
   {
     WARNING("ATAPI: SENSE command failed");
-    return false;
-  }
-
-  success = readPacket(sizeof(Sense), reinterpret_cast<uintptr_t>(sense));
-  if(!success)
-  {
-    WARNING("ATAPI: Reading SENSE response failed");
     return false;
   }
 
@@ -594,7 +509,7 @@ bool AtapiDisk::unitReady()
   int retry = 5;
   do
   {
-    success = sendCommand(0, sizeof(UnitReadyCommand), reinterpret_cast<uintptr_t>(&command));
+    success = sendCommand(0, 0, sizeof(UnitReadyCommand), reinterpret_cast<uintptr_t>(&command));
   } while((success == false) && readSense(reinterpret_cast<uintptr_t>(&sense)) && --retry);
 
   if(m_Removable &&
@@ -622,6 +537,7 @@ bool AtapiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
     uint32_t LBA;
     uint32_t BlockSize;
   } __attribute__((packed)) capacity;
+  memset(&capacity, 0, sizeof(Capacity));
 
   struct CapacityCommand
   {
@@ -635,17 +551,10 @@ bool AtapiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
   memset(&command, 0, sizeof(CapacityCommand));
   command.Opcode = 0x25; // READ CAPACITY
 
-  bool success = sendCommand(sizeof(Capacity), sizeof(CapacityCommand), reinterpret_cast<uintptr_t>(&command));
+  bool success = sendCommand(sizeof(Capacity), reinterpret_cast<uintptr_t>(&capacity), sizeof(CapacityCommand), reinterpret_cast<uintptr_t>(&command));
   if(!success)
   {
     WARNING("ATAPI READ CAPACITY command failed");
-    return false;
-  }
-
-  success = readPacket(sizeof(Capacity), reinterpret_cast<uintptr_t>(&capacity));
-  if(!success)
-  {
-    WARNING("ATAPI Reading READ CAPACITY response failed");
     return false;
   }
 

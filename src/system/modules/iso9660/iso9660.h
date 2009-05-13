@@ -16,146 +16,126 @@
 #ifndef ISO9660_H
 #define ISO9660_H
 
-#if 0
-
 #include <utilities/PointerGuard.h>
 #include <processor/types.h>
 
-// FAT Attributes
-#define ATTR_READONLY   0x01
-#define ATTR_HIDDEN     0x02
-#define ATTR_SYSTEM     0x04
-#define ATTR_VOLUME_ID  0x08
-#define ATTR_DIRECTORY  0x10
-#define ATTR_ARCHIVE    0x20
+/** ISO 9660 Types */
 
-#define ATTR_LONG_NAME      ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID )
-#define ATTR_LONG_NAME_MASK ( ATTR_READONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE )
-
-/** FAT type */
-enum FatType
+struct Iso9660Timestamp
 {
-  FAT12 = 0, FAT16, FAT32
-};
-
-/** The Fat 'superblock', or boot parameter block as we call it normally
-    Note that this is from the FAT whitepaper, so the names are as specified
-      there (in order to avoid confusion)
-    Note also that Superblock32 and Superblock16 could probably go in Superblock
-      as a union (perhaps) */
-struct Superblock
-{
-  uint8_t   BS_jmpBoot[3];
-  uint8_t   BS_OEMName[8];
-  uint16_t  BPB_BytsPerSec;
-  uint8_t   BPB_SecPerClus;
-  uint16_t  BPB_RsvdSecCnt;
-  uint8_t   BPB_NumFATs;
-  uint16_t  BPB_RootEntCnt;
-  uint16_t  BPB_TotSec16;
-  uint8_t	  BPB_Media;
-  uint16_t  BPB_FATSz16;
-  uint16_t  BPB_SecPerTrk;
-  uint16_t  BPB_NumHeads;
-  uint32_t  BPB_HiddSec;
-  uint32_t  BPB_TotSec32;
+  uint8_t Year[4];
+  uint8_t Month[2];
+  uint8_t Day[2];
+  uint8_t Hour[2];
+  uint8_t Minute[2];
+  uint8_t Second[2];
+  uint8_t CentiSeconds[2];
+  uint8_t Offset;
 } __attribute__((packed));
 
-/** Special FAT BPB starting after the Superblock (FAT32) */
-struct Superblock32
+struct Iso9660DirTimestamp
 {
-  uint32_t  BPB_FATSz32;
-  uint16_t  BPB_ExtFlags;
-  uint16_t  BPB_FsVer;
-  uint32_t  BPB_RootClus;
-  uint16_t  BPB_FsInfo;
-  uint16_t  BPB_BkBootSec;
-  uint8_t   BPB_Reserved[12];
-  uint8_t   BS_DrvNum;
-  uint8_t   BS_Reserved1;
-  uint8_t   BS_BootSig;
-  uint32_t  BS_VolID;
-  uint8_t   BS_VolLab[11];
-  uint8_t   BS_FilSysType[8];
+  uint8_t Year;
+  uint8_t Month;
+  uint8_t Day;
+  uint8_t Hour;
+  uint8_t Minute;
+  uint8_t Second;
+  uint8_t Offset;
 } __attribute__((packed));
 
-/** Special FAT BPB starting after the Superblock (FAT16/12) */
-struct Superblock16
+struct Iso9660VolumeDescriptor
 {
-  uint8_t   BS_DrvNum;
-  uint8_t   BS_Reserved1;
-  uint8_t   BS_BootSig;
-  uint32_t  BS_VolID;
-  int8_t    BS_VolLab[11];
-  int8_t    BS_FilSysType[8];
+  uint8_t Type;
+  uint8_t Ident[5];
+  uint8_t Version;
 } __attribute__((packed));
 
-/** FAT32 FSInfo structure */
-struct FSInfo32
+struct Iso9660VolumeDescriptorPrimary
 {
-  uint32_t  FSI_LeadSig; // always 0x41615252
-  uint8_t   FSI_Reserved1[480];
-  uint32_t  FSI_StrucSig; // always 0x61417272
-  uint32_t  FSI_Free_Count; // free cluster count, 0xFFFFFFFF if unknown
-  uint32_t  FSI_NxtFree;
-  uint8_t   FSI_Reserved2[12];
-  uint32_t  FSI_TrailSig; // always 0xAA550000
+  Iso9660VolumeDescriptor Header;
+
+  uint8_t   Unused1;
+
+  uint8_t   SysIdent[32];
+  uint8_t   VolIdent[32];
+
+  uint8_t   Unused2[8];
+
+  uint32_t  VolSpaceSize_LE; // little-endian
+  uint32_t  VolSpaceSize_BE; // big-endian
+
+  uint8_t   Unused3_EscSequences[32]; // Supplementary descriptors use this field
+
+  uint16_t  VolSetSize_LE;
+  uint16_t  VolSetSize_BE;
+
+  uint16_t  VolSeqNum_LE;
+  uint16_t  VolSeqNum_BE;
+
+  uint16_t  LogicalBlockSize_LE;
+  uint16_t  LogicalBlockSize_BE;
+
+  uint32_t  PathTableSize_LE;
+  uint32_t  PathTableSize_BE;
+
+  uint32_t  TypeLPathTableOccurence;
+  uint32_t  TypeLPathTableOptionOccurence;
+  uint32_t  TypeMPathTableOccurence;
+  uint32_t  TypeMPathTableOptionOccurence;
+
+  uint8_t   RootDirRecord[34];
+
+  uint8_t   VolSetIdent[128];
+  uint8_t   PublisherIdent[128];
+  uint8_t   DataPreparerIdent[128];
+  uint8_t   ApplicationIdent[128];
+  uint8_t   CopyrightFileIdent[37];
+  uint8_t   AbstractFileIdent[37];
+  uint8_t   BiblioFileIdent[37];
+
+  Iso9660Timestamp VolumeCreationTime;
+  Iso9660Timestamp VolumeModificationTime;
+  Iso9660Timestamp VolumeExpiryTime;
+  Iso9660Timestamp VolumeEffectiveTime;
+
+  uint8_t FileStructVersion;
+
+  uint8_t Rsvd1;
+
+  uint8_t ApplicationUse[512];
+
+  uint8_t Rsvd2[653];
 } __attribute__((packed));
 
-/** A Fat directory entry. */
-struct Dir
+struct Iso9660DirRecord
 {
-  uint8_t   DIR_Name[11];
-  uint8_t   DIR_Attr;
-  uint8_t   DIR_NTRes;
-  uint8_t   DIR_CrtTimeTenth;
-  uint16_t  DIR_CrtTime;
-  uint16_t  DIR_CrtDate;
-  uint16_t	DIR_LstAccDate;
-  uint16_t	DIR_FstClusHI;
-  uint16_t	DIR_WrtTime;
-  uint16_t	DIR_WrtDate;
-  uint16_t	DIR_FstClusLO;
-  uint32_t	DIR_FileSize;
+  uint8_t RecLen;
+
+  uint8_t ExtAttrRecordLen;
+
+  uint32_t ExtentLocation_LE;
+  uint32_t ExtentLocation_BE;
+
+  uint32_t DataLen_LE;
+  uint32_t DataLen_BE;
+
+  Iso9660DirTimestamp Time;
+
+  uint8_t FileFlags;
+  uint8_t FileUnitSize;
+  uint8_t InterleaveGapSize;
+
+  uint16_t VolSeqNum_LE;
+  uint16_t VolSeqNum_BE;
+
+  uint8_t FileIdentLen;
+  uint8_t FileIdent[];
 } __attribute__((packed));
 
-/** A Fat long filename directory entry. */
-struct DirLongFilename
-{
-  uint8_t   LDIR_Ord;
-  uint8_t   LDIR_Name1[10];
-  uint8_t   LDIR_Attr;
-  uint8_t   LDIR_Type; // always zero for LFN entries
-  uint8_t   LDIR_Chksum;
-  uint8_t   LDIR_Name2[12];
-  uint16_t  LDIR_FstClusLO; // meaningless, and MUST be zero
-  uint8_t   LDIR_Name3[4];
-} __attribute__((packed));
-
-/** A Fat timestamp */
-struct Timestamp
-{
-  uint32_t secCount : 5;
-  uint32_t minutes : 6;
-  uint32_t hours : 5;
-} __attribute__((packed));
-
-/** A Fat date */
-struct Date
-{
-  uint32_t day : 5;
-  uint32_t month : 4;
-  uint32_t years : 7; // years from 1980, not 1970
-} __attribute__((packed));
-
-/** Common FAT file information */
-struct FatFileInfo
-{
-  Time accessedTime;
-  Time modifiedTime;
-  Time creationTime;
-};
-
-#endif
+/** ISO9660 Defines */
+#define PRIM_VOL_DESC     1
+#define SUPP_VOL_DESC     0
+#define TERM_VOL_DESC     255
 
 #endif

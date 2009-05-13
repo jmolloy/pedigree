@@ -26,18 +26,18 @@
 
 #include "iso9660.h"
 
-#if 0
+class Iso9660Directory;
 
-/** This class provides an implementation of the FAT filesystem. */
-class FatFilesystem : public Filesystem
+/** This class provides an implementation of the ISO9660 filesystem. */
+class Iso9660Filesystem : public Filesystem
 {
-  friend class FatFile;
-  friend class FatDirectory;
+  //friend class Iso9660File;
+  friend class Iso9660Directory;
 
 public:
-  FatFilesystem();
+  Iso9660Filesystem();
 
-  virtual ~FatFilesystem();
+  virtual ~Iso9660Filesystem();
 
   //
   // Filesystem interface.
@@ -51,7 +51,7 @@ public:
   virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
-  virtual void cacheDirectoryContents(File *pFile);
+  virtual void cacheDirectoryContents(File *pFile) {};
 
 protected:
 
@@ -60,181 +60,39 @@ protected:
   virtual bool createSymlink(File* parent, String filename, String value);
   virtual bool remove(File* parent, File* file);
 
-  FatFilesystem(const FatFilesystem&);
-  void operator =(const FatFilesystem&);
-
-  /** Reads a cluster from the disk. */
-  bool readCluster(uint32_t block, uintptr_t buffer);
-
-  /** Writes a cluster to the disk. */
-  bool writeCluster(uint32_t block, uintptr_t buffer);
-
-  /** Reads a block starting from a specific sector from the disk. */
-  bool writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer);
-
-  /** Writes a block starting from a specific sector to the disk. */
-  bool readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer);
-
-  /** Obtains the first sector given a cluster number */
-  uint32_t getSectorNumber(uint32_t cluster);
-
-  /** Grabs a cluster entry - bLock determines if this should enforce locking
-    * internally or allow the caller to ensure the FAT is locked. */
-  uint32_t getClusterEntry(uint32_t cluster, bool bLock = true);
-
-  /** Sets a cluster entry - bLock determines if this should enforce locking
-    * internally or allow the caller to ensure the FAT is locked. */
-  uint32_t setClusterEntry(uint32_t cluster, uint32_t value, bool bLock = true);
-
-  /** Converts a string to 8.3 format */
-  String convertFilenameTo(String filename);
-
-  /** Converts a string from 8.3 format */
-  String convertFilenameFrom(String filename);
-
-  /** Finds a free cluster - bLock determines if we should enforce locking,
-    * defaults to false because findFreeCluster is generally called within a
-    * function that has already locked the FAT */
-  uint32_t findFreeCluster(bool bLock = false);
-
-  /** Updates the size of a file on disk */
-  void updateFileSize(File* pFile, int64_t sizeChange);
-
-  /** Sets the cluster for a file on disk */
-  void setCluster(File* pFile, uint32_t clus);
-
-  /** Reads part of a directory into a buffer, returns the allocated buffer (which needs to be freed */
-  void* readDirectoryPortion(uint32_t clus);
-
-  /** Writes part of a directory from a buffer */
-  void writeDirectoryPortion(uint32_t clus, void* p);
-
-  /** Creates a file - actual doer for the public createFile */
-  File *createFile(File *parentDir, String filename, uint32_t mask, bool bDirectory = false, uint32_t dirClus = 0);
-
-  /** Reads a directory entry from disk */
-  Dir* getDirectoryEntry(uint32_t clus, uint32_t offset);
-
-  /** Writes a directry entry to disk */
-  void writeDirectoryEntry(Dir* dir, uint32_t clus, uint32_t offset);
-
-  /** Is a given cluster *VALUE* EOF? */
-  inline bool isEof(uint32_t cluster)
+  virtual Disk *getDisk()
   {
-    return (cluster >= eofValue());
+    return m_pDisk;
   }
 
-  /** EOF values */
-  inline uint32_t eofValue()
-  {
-    if(m_Type == FAT12)
-      return 0x0FF8;
-    if(m_Type == FAT16)
-      return 0xFFF8;
-    if(m_Type == FAT32)
-      return 0x0FFFFFF8;
-    return 0;
-  }
+  String parseName(Iso9660DirRecord &name);
 
-  /** Gets a UNIX timestamp from a FAT date/time */
-  inline Time getUnixTimestamp(uint16_t time, uint16_t date)
-  {
-    // struct version of the passed parameters
-    Timestamp* sTime = reinterpret_cast<Timestamp*>(&time);
-    Date* sDate = reinterpret_cast<Date*>(&date);
+  File *fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory = false);
 
-    // grab the time information
-    uint32_t seconds = sTime->secCount * 2;
-    uint32_t minutes = sTime->minutes;
-    uint32_t hours = sTime->hours;
-
-    // grab the date information
-    uint32_t day = sDate->day;
-    uint32_t month = sDate->month;
-    uint32_t years = sDate->years + 10; // FAT timestamps start at 1980
-
-    /** This gives the "correct" number of leap days, but ends up with a date a
-      * day too far (eg, 26 Apr instead of 25 Apr)
-      */
-    // uint32_t realYear = years + 1970;
-    // uint32_t leapDays = ((realYear / 4) - (realYear / 100) + (realYear / 400));
-    // leapDays -= ((1980 / 4) - (1980 / 100) + (1980 / 400));
-
-    /** This gives an "incorrect" number of leap days but gives the correct date. */
-    uint32_t leapDays = (years / 4);
-
-    // Cumulative days as the year progresses. Added to the current day's month
-    // to get the proper offset into the year. The leap days are added to this as
-    // well to give the proper final answer.
-    static uint16_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
-    uint32_t cumulDays = cumulativeDays[month - 1];
-
-    Time ret = 0;
-
-    // add the time
-    ret += seconds;
-    ret += minutes * 60;
-    ret += hours * 60 * 60;
-
-    // and finally the date
-    ret += day * 24 * 60 * 60;
-    ret += cumulDays * 24 * 60 * 60;
-    ret += leapDays * 24 * 60 * 60;
-    ret += years * 365 * 24 * 60 * 60;
-
-    // completed
-    return ret;
-  }
-
-  /** Gets a FAT date from a UNIX timestamp */
-  inline uint16_t getFatDate(Time timestamp)
-  {
-    /** \todo Write */
-    return 0;
-  }
+  Iso9660Filesystem(const Iso9660Filesystem&);
+  void operator =(const Iso9660Filesystem&);
 
   /** Our raw device. */
   Disk *m_pDisk;
 
-  /** Our superblocks */
-  Superblock m_Superblock;
-  Superblock16 m_Superblock16;
-  Superblock32 m_Superblock32;
-  FSInfo32 m_FsInfo;
+  /** Our superblock */
+  Iso9660VolumeDescriptorPrimary m_PrimaryVolDesc;
+  Iso9660VolumeDescriptorPrimary m_SuppVolDesc;
+  Iso9660VolumeDescriptor m_VolDesc;
+  Iso9660DirRecord *m_RootDir;
 
-  /** Type of the FAT */
-  FatType m_Type;
+  /** Joliet level (0 if not using it) */
+  int m_JolietLevel;
 
-  /** Required information */
-  uint64_t m_DataAreaStart; // data area can potentially start above 4 GB
-  uint32_t m_RootDirCount;
+  /** Block size, and block number, of the disk */
+  size_t m_BlockSize;
+  size_t m_BlockNumber;
 
-  /** Root directory information */
-  union RootDirInfo
-  {
-    uint32_t sector; // FAT12 and 16 don't use a cluster
-    uint32_t cluster; // but FAT32 does...
-  } m_RootDir;
-
-  /** Size of a block (in this case, a cluster) */
-  uint32_t m_BlockSize;
-
-  /** FAT cache */
-  uint8_t *m_pFatCache;
-
-  /** FAT lock */
-  Mutex m_FatLock;
+  /** Our volume label */
+  String m_VolumeLabel;
 
   /** Root filesystem node. */
   File *m_pRoot;
-
-  /** Disk lock
-    * \note Will slow down access as it'll ensure only one disk operation occurs at once.
-    * \todo #ifdef this behaviour out, or remove it altogether
-    */
-  Mutex m_DiskLock;
 };
-
-#endif
 
 #endif
