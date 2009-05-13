@@ -31,7 +31,7 @@ class Iso9660Directory;
 /** This class provides an implementation of the ISO9660 filesystem. */
 class Iso9660Filesystem : public Filesystem
 {
-  //friend class Iso9660File;
+  friend class Iso9660File;
   friend class Iso9660Directory;
 
 public:
@@ -66,6 +66,7 @@ protected:
   }
 
   String parseName(Iso9660DirRecord &name);
+  String parseJolietName(Iso9660DirRecord &name);
 
   File *fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory = false);
 

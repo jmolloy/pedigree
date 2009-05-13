@@ -135,7 +135,7 @@ struct Iso9660DirRecord
 
 /** ISO9660 Defines */
 #define PRIM_VOL_DESC     1
-#define SUPP_VOL_DESC     0
+#define SUPP_VOL_DESC     2
 #define TERM_VOL_DESC     255
 
 #endif

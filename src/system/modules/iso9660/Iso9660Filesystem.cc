@@ -29,6 +29,54 @@
 
 #include "iso9660.h"
 
+String WideToMultiByteStr(uint8_t *in, size_t inLen, size_t maxLen)
+{
+  NormalStaticString ret;
+  ret.clear();
+
+  while((*in || in[1]) && (inLen > 0) && (maxLen > 0))
+  {
+    uint16_t c = (*in << 8) | in[1];
+    if(c > 0x7f)
+    {
+      NOTICE("TODO: UTF");
+    }
+    else
+      ret.append(static_cast<char>(c));
+
+    in += 2;
+    inLen--;
+  }
+  ret.append('\0');
+
+  return String(ret);
+}
+
+class Iso9660File : public File
+{
+  friend class Iso9660Filesystem;
+
+private:
+  /** Copy constructors are hidden - unused! */
+  Iso9660File(const Iso9660File &);
+  Iso9660File& operator =(const File&);
+  Iso9660File& operator =(const Iso9660File&);
+public:
+  /** Constructor, should be called only by a Filesystem. */
+  Iso9660File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+       uintptr_t inode, class Iso9660Filesystem *pFs, size_t size, Iso9660DirRecord &record, File *pParent = 0) :
+    File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent), m_Dir(record), m_pFs(pFs)
+  {}
+  virtual ~Iso9660File() {}
+
+private:
+  // Our internal directory information (info about *this* directory, not the child)
+  Iso9660DirRecord m_Dir;
+
+  // Filesystem object
+  Iso9660Filesystem *m_pFs;
+};
+
 class Iso9660Directory : public Directory
 {
 private:
@@ -37,10 +85,8 @@ private:
 public:
   Iso9660Directory(String name, size_t inode,
               class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec) :
-    Directory(name, 0, 0, 0, inode, pFs, 0, pParent), m_Dir(dirRec), m_pFs(0)
-  {
-    m_pFs = reinterpret_cast<Iso9660Filesystem*>(pFs);
-  };
+    Directory(name, 0, 0, 0, inode, pFs, 0, pParent), m_Dir(dirRec), m_pFs(pFs)
+  {}
   virtual ~Iso9660Directory() {};
 
   uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer)
@@ -53,13 +99,11 @@ public:
 
   virtual void cacheDirectoryContents()
   {
-    NOTICE("Directory::cacheDirectoryContents");
+    Disk *myDisk = m_pFs->getDisk();
 
     // How big is the directory?
     size_t dirSize = LITTLE_TO_HOST32(m_Dir.DataLen_LE);
     size_t dirLoc = LITTLE_TO_HOST32(m_Dir.ExtentLocation_LE);
-    NOTICE("Offset is " << Dec << dirLoc << Hex << " LBA");
-    NOTICE("Size is " << Dec << dirSize << Hex << " bytes");
 
     // Read the directory, block by block
     size_t numBlocks = dirSize / 2048;
@@ -71,8 +115,7 @@ public:
       PointerGuard<uint8_t> blockGuard(block);
       memset(block, 0, 2048);
 
-      NOTICE("Reading block " << (dirLoc + i) << "...");
-      if(m_pFs->getDisk()->read((dirLoc + i) * 2048, 2048, reinterpret_cast<uintptr_t>(block)) == 0)
+      if(myDisk->read((dirLoc + i) * 2048, 2048, reinterpret_cast<uintptr_t>(block)) == 0)
       {
         NOTICE("Couldn't read disk!");
         return;
@@ -83,10 +126,8 @@ public:
       bool bLastHit = false;
       while(offset < 2048)
       {
-        Iso9660DirRecord *record = reinterpret_cast<Iso9660DirRecord*>(block + offset);
+        Iso9660DirRecord *record = reinterpret_cast<Iso9660DirRecord*>(reinterpret_cast<uintptr_t>(block) + offset);
         offset += record->RecLen;
-
-        NOTICE("record length = " << record->RecLen << ".");
 
         if(record->RecLen == 0)
         {
@@ -103,13 +144,30 @@ public:
 
         String fileName = m_pFs->parseName(*record);
 
-        NOTICE("Name = " << fileName << ".");
+        NOTICE("Adding '" << fileName << "' to cache.");
+        if(record->FileFlags & (1 << 1))
+        {
+          NOTICE("Is a directory");
+
+          // Directory!
+          Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record);
+          m_Cache.insert(fileName, dir);
+        }
+        else
+        {
+          NOTICE("Is a file [" << Dec << LITTLE_TO_HOST32(record->DataLen_LE) << Hex << " bytes big]");
+
+          Iso9660File *file = new Iso9660File(fileName, 0, 0, 0, 0, m_pFs, LITTLE_TO_HOST32(record->DataLen_LE), *record, this);
+          m_Cache.insert(fileName, file);
+        }
       }
       if(bLastHit)
         break;
 
       offset = 0;
     }
+
+    m_bCachePopulated = true;
   }
 
   virtual bool addEntry(String filename, File *pFile, size_t type)
@@ -148,7 +206,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
   m_pDisk = pDisk;
 
   // Only work on ATAPI disks
-  if(pDisk->getSubType() != Disk::ATAPI)
+  if(m_pDisk->getSubType() != Disk::ATAPI)
   {
     WARNING("Not trying to find an ISO9660 filesystem on a non-ATAPI device");
     return false;
@@ -167,7 +225,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
   bool bFound = false;
   for(size_t i = 16; i < 256; i++)
   {
-    tmpInt = pDisk->read(i * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff));
+    tmpInt = m_pDisk->read(i * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff));
     if(!tmpInt || !(tmpInt == m_BlockSize))
       return false;
 
@@ -218,23 +276,38 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
   if(m_JolietLevel)
   {
     // In this case, the supplementary descriptor is actually the main one
-    NOTICE("Joliet level = " << m_JolietLevel << ".");
     m_PrimaryVolDesc = m_SuppVolDesc;
   }
 
   // Grab the volume label, properly trimmed
   char *volLabel = new char[32];
   memcpy(volLabel, m_PrimaryVolDesc.VolIdent, 32);
-  for(size_t i = 31; i >= 0; i--)
+  if(m_JolietLevel)
   {
-    if(volLabel[i] != ' ')
+    String volLabelString = WideToMultiByteStr(reinterpret_cast<uint8_t*>(volLabel), 32, 32);
+    NormalStaticString str;
+    str.append(volLabelString);
+
+    size_t i;
+    for(i = str.length() - 1; i >= 0; i--)
+      if(str[i] != ' ')
+        break;
+    str = str.left(i + 1);
+    m_VolumeLabel = String(str);
+  }
+  else
+  {
+    for(size_t i = 31; i >= 0; i--)
     {
-      volLabel[i + 1] = 0;
-      break;
+      if(volLabel[i] != ' ')
+      {
+        volLabel[i + 1] = 0;
+        break;
+      }
     }
+    m_VolumeLabel = String(volLabel);
   }
 
-  m_VolumeLabel = String(volLabel);
   delete [] volLabel;
 
   m_RootDir = reinterpret_cast<Iso9660DirRecord*>(m_PrimaryVolDesc.RootDirRecord);
@@ -281,8 +354,42 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   if (pFile->isDirectory())
     return 0;
 
-  NOTICE("Iso9660::read");
-  return 0;
+  Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
+  Iso9660DirRecord rec = file->m_Dir;
+
+  // Divvy up the number of bytes to read into blocks
+  size_t numBlocks = size / m_BlockSize;
+
+  uint8_t *dest = reinterpret_cast<uint8_t*>(buffer);
+  size_t offset = location % m_BlockSize;
+  size_t bytesWritten = 0;
+  size_t bytesToGo = size;
+  size_t blockSkip = location / m_BlockSize;
+  size_t blockNum = LITTLE_TO_HOST32(rec.ExtentLocation_LE) + blockSkip;
+
+  // Begin reading
+  while(bytesWritten < size)
+  {
+    uint8_t *tmp = new uint8_t[m_BlockSize];
+    PointerGuard<uint8_t> tmpGuard(tmp);
+
+    m_pDisk->read(blockNum * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmp));
+
+    size_t numToCopy = 0;
+    if(bytesToGo < (m_BlockSize - offset))
+      numToCopy = bytesToGo;
+    else
+      numToCopy = (m_BlockSize - offset);
+
+    memcpy((dest + bytesWritten), (tmp + offset), numToCopy);
+    bytesWritten += numToCopy;
+    bytesToGo -= numToCopy;
+
+    offset = 0;
+    blockNum++;
+  }
+
+  return bytesWritten;
 }
 
 uint64_t Iso9660Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
@@ -337,6 +444,9 @@ bool Iso9660Filesystem::remove(File* parent, File* file)
 
 String Iso9660Filesystem::parseName(Iso9660DirRecord &dirRecord)
 {
+  if(m_JolietLevel)
+    return parseJolietName(dirRecord);
+
   NormalStaticString ret;
   ret.clear();
 
@@ -348,7 +458,7 @@ String Iso9660Filesystem::parseName(Iso9660DirRecord &dirRecord)
     if(dirRecord.FileIdent[i] == ';')
       break;
     else
-      ret.append(dirRecord.FileIdent[i]);
+      ret.append(toLower(static_cast<char>(dirRecord.FileIdent[i])));
   }
 
   if(i && (dirRecord.FileIdent[i - 1] == '.'))
@@ -356,6 +466,23 @@ String Iso9660Filesystem::parseName(Iso9660DirRecord &dirRecord)
   ret.append('\0');
 
   return String(ret);
+}
+
+String Iso9660Filesystem::parseJolietName(Iso9660DirRecord &name)
+{
+  String s = WideToMultiByteStr(name.FileIdent, name.FileIdentLen >> 1, 64);
+  NormalStaticString str;
+  str.append(s);
+  size_t len = str.length();
+
+  if((len > 2) && (str[len - 2] == ';') && (str[len - 1] == '1'))
+    len -= 2;
+
+  while(len >= 2 && (str[len - 1] == '.'))
+    len--;
+  str = str.left(len);
+
+  return String(str);
 }
 
 File *Iso9660Filesystem::fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory)
