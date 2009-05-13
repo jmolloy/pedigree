@@ -194,6 +194,8 @@ bool AtapiDisk::initialise()
   // Grab the capacity of the disk for future reference
   getCapacityInternal(&m_NumBlocks, &m_BlockSize);
 
+  NOTICE("ATAPI disk size = " << m_NumBlocks << " blocks");
+
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;
   struct InquiryCommand
@@ -233,11 +235,9 @@ bool AtapiDisk::initialise()
 
 uint64_t AtapiDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
-  NOTICE("AtapiDisk::read");
-
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location,
+  return pParent->addRequest(ATAPI_CMD_READ, reinterpret_cast<uint64_t> (this), location,
                              nBytes, static_cast<uint64_t> (buffer));
 }
 
@@ -245,14 +245,12 @@ uint64_t AtapiDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
+  return pParent->addRequest(ATAPI_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
                              nBytes, static_cast<uint64_t> (buffer));
 }
 
 uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
-  NOTICE("AtapiDisk::doRead");
-
   if(!nBytes || !buffer)
   {
     ERROR("Bad arguments to AtapiDisk::doRead");
@@ -267,8 +265,6 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
   size_t blockNum = location / m_BlockSize;
   size_t numBlocks = nBytes / m_BlockSize;
-
-  NOTICE("Block number = " << blockNum << ".");
 
   if(m_Type == CdDvd)
   {
@@ -342,8 +338,6 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
   command.StartLBA = HOST_TO_BIG32(blockNum);
   command.BlockCount = HOST_TO_BIG16(numBlocks);
 
-  NOTICE("Reading " << nBytes << " bytes [" << numBlocks << " blocks]");
-
   bool success = sendCommand(nBytes, buffer, sizeof(ReadCommand), reinterpret_cast<uintptr_t>(&command));
   if(!success)
   {
@@ -395,7 +389,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   commandRegs->write8(0, 3); // n/a for PACKET command
   commandRegs->write8((nRespBytes == 0) ? 0x2 : (nRespBytes & 0xFF), 4); // byte count limit
   commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
-  commandRegs->write8(0xA0, 7); // the command itself
+  commandRegs->write8(0xA0, 7);
 
   // Wait for the busy bit to be cleared before continuing
   uint8_t status = commandRegs->read8(7);
@@ -410,13 +404,11 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   }
 
   // Transmit the command (padded as needed)
-  uint16_t *commandPacket = reinterpret_cast<uint16_t*>(packet);
   for(size_t i = 0; i < (m_PacketSize / 2); i++)
     commandRegs->write16(tmpPacket[i], 0);
-  //for(size_t i = (nPackBytes / 2); i < (m_PacketSize / 2); i++)
-  //  commandRegs->write16(0, 0);
 
   // Wait for the busy bit to be cleared once again
+  status = commandRegs->read8(7);
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
 
@@ -448,7 +440,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   // Discard unread data (or write pretend data)
   if(realSz > nRespBytes)
   {
-    NOTICE("sendCommand has to read beyond provided buffer");
+    NOTICE("sendCommand has to read beyond provided buffer [" << realSz << " is bigger than " << nRespBytes << "]");
     for(size_t i = nRespBytes; i < realSz; i += 2)
     {
       if(bWrite)
@@ -550,7 +542,6 @@ bool AtapiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
   } __attribute__((packed)) command;
   memset(&command, 0, sizeof(CapacityCommand));
   command.Opcode = 0x25; // READ CAPACITY
-
   bool success = sendCommand(sizeof(Capacity), reinterpret_cast<uintptr_t>(&capacity), sizeof(CapacityCommand), reinterpret_cast<uintptr_t>(&command));
   if(!success)
   {
