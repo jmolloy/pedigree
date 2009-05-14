@@ -303,7 +303,7 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
       {
         // Look up the partition string.
         const char *pStr = g_pPartitionTypes[pPartitions[i].type];
-        
+
         // Create a partition object.
         Partition *pObj = new Partition(String(pStr),
                                         static_cast<uint64_t>(LITTLE_TO_HOST32(pPartitions[i].start_lba))*512ULL, /* start_lba is in /sectors/. */
@@ -332,7 +332,7 @@ bool msdosProbeDisk(Disk *pDisk)
     NOTICE("MS-DOS partition not found.");
     return false;
   }
-  
+
   String diskName;
   pDisk->getName(diskName);
   NOTICE("MS-DOS partition table found on disk " << diskName);

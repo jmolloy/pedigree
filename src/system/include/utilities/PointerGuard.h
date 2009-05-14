@@ -28,12 +28,12 @@ class PointerGuard
   public:
     PointerGuard(T *p = 0) : m_Pointer(p)
     {
-      NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
+      // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
     }
 
     virtual ~PointerGuard()
     {
-      NOTICE("PointerGuard: Out-of-scope, deleting guarded pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
+      // NOTICE("PointerGuard: Out-of-scope, deleting guarded pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
       if(m_Pointer)
         delete m_Pointer;
     }

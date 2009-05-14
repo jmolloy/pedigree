@@ -57,10 +57,12 @@ private:
   void setupLBA28(uint64_t n, uint32_t nSectors);
   /** Sets the drive up for reading from address 'n' in LBA48 mode. */
   void setupLBA48(uint64_t n, uint32_t nSectors);
+  /** Sends a command packet (ATAPI) */
+  bool sendPacket(size_t nBytes, uintptr_t packet);
 
   /** Is this the master device on the bus? */
   bool m_IsMaster;
-  
+
   /** The result of the IDENTIFY command. */
   uint16_t m_pIdent[256];
   /** The model name of the device. */
@@ -73,7 +75,7 @@ private:
   bool m_SupportsLBA28;
   /** Does the device support LBA48? */
   bool m_SupportsLBA48;
-  
+
   /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
    * \todo A condvar would really be better here. */
   Mutex m_IrqReceived;

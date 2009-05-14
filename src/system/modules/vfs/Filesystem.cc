@@ -82,7 +82,7 @@ bool Filesystem::createDirectory(String path, File *pStartNode)
     SYSCALL_ERROR(DoesNotExist);
     return false;
   }
-  
+
   // Now make the directory.
   createDirectory(pParent, filename);
 
@@ -109,7 +109,7 @@ bool Filesystem::createSymlink(String path, String value, File *pStartNode)
     SYSCALL_ERROR(DoesNotExist);
     return false;
   }
-  
+
   // Now make the symlink.
   createSymlink(pParent, filename, value);
 
@@ -170,7 +170,7 @@ File *Filesystem::findNode(File *pNode, String path)
   if (path[i] != '\0')
   {
     restOfPath = path.split(path.nextCharacter(i));
-    // restOfPath is now 'path', but starting at the next token, and with no leading slash. 
+    // restOfPath is now 'path', but starting at the next token, and with no leading slash.
     // Unfortunately 'path' now has a trailing slash, so chomp it off.
     path.chomp();
   }

@@ -84,4 +84,6 @@ int posix_mkdir(const char* name, int mode);
 
 int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout);
 
+int posix_isatty(int fd);
+
 #endif

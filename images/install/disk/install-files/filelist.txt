@@ -1,0 +1,4 @@
+ /.pedigree-root none yes
+/woot.txt /woot.txt 2db514e9f2f440345528dcb20d613add yes
+/whee.txt /whee.txt 1bd3cb2ef387818ebe0fc318c232e27d yes
+/fail.txt /fail.txt d59eac66dc1d68a7523491b12e043531 no

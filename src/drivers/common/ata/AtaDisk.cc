@@ -26,8 +26,8 @@
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
-  Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false), m_IrqReceived(true),
-  m_SectorCache()
+  Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
+  m_IrqReceived(true), m_SectorCache()
 {
   m_pParent = pDev;
 }
@@ -81,7 +81,7 @@ bool AtaDisk::initialise()
   // If ERR was set we had an err0r.
   if (status & 0x1)
   {
-    WARNING("ATA drive errored on IDENTIFY! Possible ATAPI device?");
+    WARNING("ATA drive errored on IDENTIFY!");
     return false;
   }
 
@@ -387,4 +387,47 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
   commandRegs->write8(lba1, 3);
   commandRegs->write8(lba2, 4);
   commandRegs->write8(lba3, 5);
+}
+
+/** \note I'm pretty sure this is correct. Time will tell I guess! */
+bool AtaDisk::sendPacket(size_t nBytes, uintptr_t packet)
+{
+  // Grab our parent.
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
+
+  // Grab our parent's IoPorts for command and control accesses.
+  IoBase *commandRegs = pParent->m_pCommandRegs;
+
+  // PACKET command
+  commandRegs->write8(0, 1); // no overlap, no DMA
+  commandRegs->write8(0, 2); // tag = 0
+  commandRegs->write8(0, 3); // n/a for PACKET command
+  commandRegs->write8((nBytes & 0xFF), 4); // byte count limit
+  commandRegs->write8(((nBytes >> 8) & 0xFF), 5);
+  commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6);
+  commandRegs->write8(0xA0, 7); // the command itself
+
+  // Wait for the busy bit to be cleared before continuing
+  uint8_t status = commandRegs->read8(7);
+  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    status = commandRegs->read8(7);
+
+  // Error?
+  if(status & 0x01)
+  {
+    ERROR("ATAPI Packet command error [status=" << status << "]!");
+    return false;
+  }
+
+  // Transmit the command
+  uint16_t *commandPacket = reinterpret_cast<uint16_t*>(packet);
+  for(size_t i = 0; i < 6; i++)
+    commandRegs->write16(commandPacket[i], 0);
+
+  // Wait for the busy bit to be cleared once again
+  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    status = commandRegs->read8(7);
+
+  // Complete
+  return (!(status & 0x01));
 }

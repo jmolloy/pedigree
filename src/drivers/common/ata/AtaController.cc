@@ -35,12 +35,12 @@ AtaController::AtaController(Controller *pDev) :
     if (!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
       m_pControlRegs = m_Addresses[i]->m_Io;
   }
-  
+
   // Create two disks - master and slave.
   AtaDisk *pMaster = new AtaDisk(this, true);
   AtaDisk *pSlave = new AtaDisk(this, false);
 
-  // Try and initialise the disks.  
+  // Try and initialise the disks.
   bool masterInitialised = pMaster->initialise();
   bool slaveInitialised = pSlave->initialise();
 
@@ -48,12 +48,26 @@ AtaController::AtaController(Controller *pDev) :
   if (masterInitialised)
     addChild(pMaster);
   else
+  {
     delete pMaster;
+    AtapiDisk *pMasterAtapi = new AtapiDisk(this, true);
+    if(!pMasterAtapi->initialise())
+      delete pMasterAtapi;
+    else
+      addChild(pMasterAtapi);
+  }
 
   if (slaveInitialised)
     addChild(pSlave);
   else
+  {
     delete pSlave;
+    AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false);
+    if(!pSlaveAtapi->initialise())
+      delete pSlaveAtapi;
+    else
+      addChild(pSlaveAtapi);
+  }
 
   Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
   initialise();
@@ -68,10 +82,26 @@ uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
   AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
+  AtapiDisk *pAtapiDisk = reinterpret_cast<AtapiDisk*> (p2);
+<<<<<<< HEAD:src/drivers/common/ata/AtaController.cc
+  if(p1 == ATA_CMD_READ)
+    return pDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
+  else if(p1 == ATA_CMD_WRITE)
+    return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
+=======
   if (p1 == ATA_CMD_READ)
     return pDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
+>>>>>>> 9540acfe39bddd89c2721f7995fbc35d7d91be1c:src/drivers/common/ata/AtaController.cc
+  else if(p1 == ATAPI_CMD_READ)
+    return pAtapiDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
+  else if(p1 == ATAPI_CMD_WRITE)
+    return pAtapiDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
   else
+<<<<<<< HEAD:src/drivers/common/ata/AtaController.cc
+    return 0;
+=======
     return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
+>>>>>>> 9540acfe39bddd89c2721f7995fbc35d7d91be1c:src/drivers/common/ata/AtaController.cc
 }
 
 bool AtaController::irq(irq_id_t number, InterruptState &state)

@@ -444,8 +444,6 @@ int posix_stat(const char *name, struct stat *st)
     mode = S_IFREG;
   }
 
-  NOTICE("valid");
-
   uint32_t permissions = file->getPermissions();
   if (permissions & FILE_UR) mode |= S_IRUSR;
   if (permissions & FILE_UW) mode |= S_IWUSR;
@@ -834,6 +832,21 @@ int posix_mkdir(const char* name, int mode)
   return worked ? 0 : -1;
 }
 
+int posix_isatty(int fd)
+{
+  // Lookup this process.
+  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+  if (!pFd)
+  {
+      // Error - no such file descriptor.
+      ERROR("isatty: no such file descriptor (" << Dec << i << ")");
+      return 0;
+  }
+
+  return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
+}
+
 class SelectTask : public TimedTask
 {
     public:
@@ -1156,4 +1169,3 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
 
   return num_ready;
 }
-

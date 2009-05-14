@@ -204,7 +204,7 @@ File *VFS::find(String path, File *pStartNode)
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
       return 0;
-    return pFs->find(newPath, pStartNode);
+    return pFs->find(newPath, 0);
   }
 }
 
@@ -239,13 +239,12 @@ bool VFS::createFile(String path, uint32_t mask, File *pStartNode)
   {
     String newPath = path.split(i+1);
     path.chomp();
-    
-    
+
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
       return false;
-    return pFs->createFile(newPath, mask, pStartNode);
+    return pFs->createFile(newPath, mask, 0);
   }
 }
 
@@ -273,8 +272,8 @@ bool VFS::createDirectory(String path, File *pStartNode)
   {
     String newPath = path.split(i+1);
     path.chomp();
-    
-    
+
+
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
@@ -307,8 +306,8 @@ bool VFS::createSymlink(String path, String value, File *pStartNode)
   {
     String newPath = path.split(i+1);
     path.chomp();
-    
-    
+
+
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
@@ -341,8 +340,8 @@ bool VFS::remove(String path, File *pStartNode)
   {
     String newPath = path.split(i+1);
     path.chomp();
-    
-    
+
+
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)

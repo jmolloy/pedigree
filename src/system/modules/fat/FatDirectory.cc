@@ -102,10 +102,19 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   size_t numRequired = 1; // need *at least* one for the short filename entry
   size_t fnLength = filename.length();
 
-  // each long filename entry is 13 bytes of filename
-  size_t numSplit = fnLength / 13;
-  numRequired += (numSplit);  // Used to be +1, however if the filename isn't over 13 characters it will fit
-                              // into an 8.3 format. The only downside to that is that you lose case-sensitivity.
+  // Dot and DotDot entries?
+  if(!strncmp(static_cast<const char*>(filename), ".", filename.length()) ||
+     !strncmp(static_cast<const char*>(filename), "..", filename.length()))
+  {
+    // Only one entry required for the dot/dotdot entries, all else get
+    // a free long filename entry.
+  }
+  else
+  {
+    // each long filename entry is 13 bytes of filename
+    size_t numSplit = fnLength / 13;
+    numRequired += (numSplit) + 1;
+  }
 
   size_t longFilenameOffset = fnLength;
 
@@ -485,6 +494,5 @@ void FatDirectory::cacheDirectoryContents()
 
 void FatDirectory::fileAttributeChanged()
 {
-//  static_cast<*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
 }
 

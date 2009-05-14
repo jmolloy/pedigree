@@ -16,7 +16,7 @@
 
 include_directories(${PEDIGREE_SOURCE_DIR}/src/system/include ${PEDIGREE_SOURCE_DIR}/src/drivers)
 
-add_executable(ata.o main.cc AtaController.cc AtaDisk.cc)
+add_executable(ata.o main.cc AtaController.cc AtaDisk.cc AtapiDisk.cc)
 target_link_libraries(ata.o gcc)
 set_target_properties(ata.o PROPERTIES
                             LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")
