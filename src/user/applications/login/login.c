@@ -24,8 +24,8 @@ extern int login(int uid, char *password);
 
 int main(int argc, char **argv)
 {
-  // For the installer, just run Python
 #ifdef INSTALLER
+  // For the installer, just run Python
   printf("Loading installer, please wait...\n");
 
   static char *app_argv[] = {"root:/applications/python", "root:/code/installer/install.py", 0};
