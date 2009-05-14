@@ -40,8 +40,6 @@ AtapiDisk::~AtapiDisk()
 
 bool AtapiDisk::initialise()
 {
-  NOTICE("ATAPI init");
-
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
@@ -193,8 +191,6 @@ bool AtapiDisk::initialise()
 
   // Grab the capacity of the disk for future reference
   getCapacityInternal(&m_NumBlocks, &m_BlockSize);
-
-  NOTICE("ATAPI disk size = " << m_NumBlocks << " blocks");
 
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;

@@ -68,6 +68,41 @@ protected:
   String parseName(Iso9660DirRecord &name);
   String parseJolietName(Iso9660DirRecord &name);
 
+  inline bool isLeap(uint32_t year)
+  {
+    if(year % 400 == 0) return true;
+    else if(year % 100 == 0) return false;
+    else if(year % 4 == 0) return true;
+    else return false;
+  }
+
+  Time timeToUnix(Iso9660DirTimestamp &time)
+  {
+    Time ret = 0;
+
+    ret += time.Second;
+    ret += time.Minute * 60;
+    ret += time.Hour * 60 * 60;
+    ret += (time.Day - 1) * 24 * 60 * 60;
+
+    static uint16_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+    ret += cumulativeDays[time.Month - 1] * 24 * 60 * 60;
+
+    uint32_t year = time.Year + 1900;
+    if((time.Month) > 2 && isLeap(year))
+      ret += 24 * 60 * 60;
+
+    // Add leap days
+    uint32_t realYear = year;
+    uint32_t leapDays = ((realYear / 4) - (realYear / 100) + (realYear / 400));
+    leapDays -= ((1970 / 4) - (1970 / 100) + (1970 / 400));
+
+    ret += leapDays * 24 * 60 * 60;
+    ret += (year - 1970) * 365 * 24 * 60 * 60;
+
+    return ret;
+  }
+
   File *fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory = false);
 
   Iso9660Filesystem(const Iso9660Filesystem&);

@@ -7,7 +7,7 @@ from Installer import Installer
 filesdir = "root:/install-files"
 
 # Will get set by "selectDest()"
-installdir = "./test"
+installdir = "pedigree:/test"
 
 def main(stdscr):
 	global filesdir, installdir
