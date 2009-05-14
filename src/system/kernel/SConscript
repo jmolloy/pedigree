@@ -73,7 +73,8 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         Glob('core/processor/x86_common/*.cc'),
         'core/processor/x86/asm/boot-standalone.s',
         'core/processor/x86/asm/InterruptManager.s',
-        'core/processor/x86/asm/Processor.s'
+        'core/processor/x86/asm/Processor.s',
+        'core/processor/x86/asm/Scheduler.s'
     ]
     include += ['machine/x86_common/x86_emu/x86emu/']
 
