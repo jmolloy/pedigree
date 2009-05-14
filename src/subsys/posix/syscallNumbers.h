@@ -90,6 +90,8 @@
 #define POSIX_READLINK   59
 #define POSIX_LINK       60
 
+#define POSIX_ISATTY     61
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

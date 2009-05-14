@@ -25,6 +25,7 @@ extern int login(int uid, char *password);
 int main(int argc, char **argv)
 {
   // For the installer, just run Python
+#ifdef INSTALLER
   printf("Loading installer, please wait...\n");
 
   static char *app_argv[] = {"root:/applications/python", "root:/code/installer/install.py", 0};
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
   printf("FATAL: Couldn't load Python!\n");
 
   return 0;
+#endif
 
   // Grab the greeting if one exists.
   FILE *stream = fopen("root:/config/greeting", "r");

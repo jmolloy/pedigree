@@ -185,8 +185,7 @@ int getpid()
 
 int _isatty(int file)
 {
-  STUBBED("_isatty");
-  return (file < 3) ? 1 : 0;
+  return (int) syscall1(POSIX_ISATTY, file);
 }
 
 int link(char *old, char *_new)

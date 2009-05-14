@@ -244,11 +244,13 @@ void UserManager::addGroup(size_t gid, String name)
 
 void UserManager::initialise()
 {
+#ifdef INSTALLER
   addGroup(0, String("root"));
   addUser(0, String("root"), String("root"), String("root"), String("/"), String("/applications/bash"), String(""));
-
-  // initialiseGroups();
-  // initialiseUsers();
+#else
+  initialiseGroups();
+  initialiseUsers();
+#endif
 
   User *pUser = getUser(0);
   if (!pUser)

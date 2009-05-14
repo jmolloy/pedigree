@@ -83,14 +83,16 @@ uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
 {
   AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
   AtapiDisk *pAtapiDisk = reinterpret_cast<AtapiDisk*> (p2);
-  if (p1 == ATA_CMD_READ)
+  if(p1 == ATA_CMD_READ)
     return pDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
+  else if(p1 == ATA_CMD_WRITE)
+    return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
   else if(p1 == ATAPI_CMD_READ)
     return pAtapiDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
   else if(p1 == ATAPI_CMD_WRITE)
     return pAtapiDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
   else
-    return pDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
+    return 0;
 }
 
 bool AtaController::irq(irq_id_t number, InterruptState &state)

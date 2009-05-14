@@ -191,6 +191,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_readlink(reinterpret_cast<const char*>(p1), reinterpret_cast<char*>(p2), static_cast<unsigned int>(p3));
     case POSIX_LINK:
       return posix_link(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2));
+    case POSIX_ISATTY:
+      return posix_isatty(static_cast<int>(p1));
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;
