@@ -1,5 +1,5 @@
 import os
-import hashlib
+# import hashlib
 import shutil
 import curses
 import curses.wrapper
@@ -165,6 +165,8 @@ class Installer:
 			raise
 		
 		self.statusUpdate("Please wait...")
+		
+		self.drawWarning("There is no checksum support in this version of the installer!")
 
 		# Start copying files
 		fileLines = fileList.read().rstrip().split("\n")
@@ -204,17 +206,17 @@ class Installer:
 			shutil.copy(self.filesdir + set[0], self.installdir + set[1])
 			
 			# MD5 the newly copied file
-			newFile = open(self.installdir + set[1])
-			hex = hashlib.md5(newFile.read()).hexdigest()
-			newFile.close()
+			#newFile = open(self.installdir + set[1])
+			#hex = hashlib.md5(newFile.read()).hexdigest()
+			#newFile.close()
 			
 			# Ensure the MD5 matches
-			if(hex != set[2]):
-				if(set[3] == "yes"):
-					self.drawError("Compulsory file failed verification:\n" + self.installdir + set[1])
-					raise
-				else:
-					self.drawWarning("File " + str(currFileNum) + " failed verification, continuing anyway:\n" + self.installdir + set[1])
+			#if(hex != set[2]):
+			#	if(set[3] == "yes"):
+			#		self.drawError("Compulsory file failed verification:\n" + self.installdir + set[1])
+			#		raise
+			#	else:
+			#		self.drawWarning("File " + str(currFileNum) + " failed verification, continuing anyway:\n" + self.installdir + set[1])
 
 		fileList.close()
 		

@@ -39,7 +39,7 @@ String WideToMultiByteStr(uint8_t *in, size_t inLen, size_t maxLen)
     uint16_t c = (*in << 8) | in[1];
     if(c > 0x7f)
     {
-      NOTICE("TODO: UTF");
+      /// \todo Handle UTF
     }
     else
       ret.append(static_cast<char>(c));
@@ -54,7 +54,7 @@ String WideToMultiByteStr(uint8_t *in, size_t inLen, size_t maxLen)
 
 class Iso9660File : public File
 {
-  friend class Iso9660Filesystem;
+  friend class Iso9660Directory;
 
 private:
   /** Copy constructors are hidden - unused! */
@@ -69,6 +69,11 @@ public:
   {}
   virtual ~Iso9660File() {}
 
+  inline Iso9660DirRecord &getDirRecord()
+  {
+    return m_Dir;
+  }
+
 private:
   // Our internal directory information (info about *this* directory, not the child)
   Iso9660DirRecord m_Dir;
@@ -79,13 +84,16 @@ private:
 
 class Iso9660Directory : public Directory
 {
+  friend class Iso9660File;
+
 private:
   Iso9660Directory(const Iso9660Directory &);
   Iso9660Directory& operator =(const Iso9660Directory&);
 public:
   Iso9660Directory(String name, size_t inode,
-              class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec) :
-    Directory(name, 0, 0, 0, inode, pFs, 0, pParent), m_Dir(dirRec), m_pFs(pFs)
+              class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec,
+              Time accessedTime = 0, Time modifiedTime = 0, Time creationTime = 0) :
+    Directory(name, accessedTime, modifiedTime, creationTime, inode, pFs, 0, pParent), m_Dir(dirRec), m_pFs(pFs)
   {}
   virtual ~Iso9660Directory() {};
 
@@ -101,12 +109,40 @@ public:
   {
     Disk *myDisk = m_pFs->getDisk();
 
+    // Grab our parent (will always be a directory)
+    Iso9660Directory *pParentDir = reinterpret_cast<Iso9660Directory*>(m_pParent->getParent());
+    if(pParentDir == 0)
+    {
+      // Root directory, . and .. should redirect to this directory
+      Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+      Iso9660Directory *dotdot = new Iso9660Directory(String(".."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+      m_Cache.insert(String("."), dot);
+      m_Cache.insert(String(".."), dotdot);
+    }
+    else
+    {
+      // Non-root, . and .. should point to the correct locations
+      Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+      m_Cache.insert(String("."), dot);
+
+      Iso9660Directory *dotdot = new Iso9660Directory(String(".."),
+                                                    pParentDir->getInode(),
+                                                    pParentDir->m_pFs,
+                                                    pParentDir->getParent(),
+                                                    pParentDir->getDirRecord(),
+                                                    pParentDir->getAccessedTime(),
+                                                    pParentDir->getModifiedTime(),
+                                                    pParentDir->getCreationTime()
+                                                    );
+      m_Cache.insert(String(".."), dotdot);
+    }
+
     // How big is the directory?
     size_t dirSize = LITTLE_TO_HOST32(m_Dir.DataLen_LE);
     size_t dirLoc = LITTLE_TO_HOST32(m_Dir.ExtentLocation_LE);
 
     // Read the directory, block by block
-    size_t numBlocks = dirSize / 2048;
+    size_t numBlocks = (dirSize > 2048) ? dirSize / 2048 : 1;
     size_t i;
     for(i = 0; i < numBlocks; i++)
     {
@@ -144,24 +180,22 @@ public:
 
         String fileName = m_pFs->parseName(*record);
 
-        NOTICE("Adding '" << fileName << "' to cache.");
+        // Grab the UNIX timestamp
+        Time unixTime = m_pFs->timeToUnix(record->Time);
         if(record->FileFlags & (1 << 1))
         {
-          NOTICE("Is a directory");
-
-          // Directory!
-          Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record);
+          Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record, unixTime, unixTime, unixTime);
           m_Cache.insert(fileName, dir);
         }
         else
         {
-          NOTICE("Is a file [" << Dec << LITTLE_TO_HOST32(record->DataLen_LE) << Hex << " bytes big]");
-
-          Iso9660File *file = new Iso9660File(fileName, 0, 0, 0, 0, m_pFs, LITTLE_TO_HOST32(record->DataLen_LE), *record, this);
+          Iso9660File *file = new Iso9660File(fileName, unixTime, unixTime, unixTime, 0, m_pFs, LITTLE_TO_HOST32(record->DataLen_LE), *record, this);
           m_Cache.insert(fileName, file);
         }
       }
-      if(bLastHit)
+
+      // Last in the block, but are there still blocks to read?
+      if(bLastHit && ((i + 1) == numBlocks))
         break;
 
       offset = 0;
@@ -182,6 +216,11 @@ public:
 
   void fileAttributeChanged()
   {};
+
+  inline Iso9660DirRecord &getDirRecord()
+  {
+    return m_Dir;
+  }
 
 private:
   // Our internal directory information (info about *this* directory, not the child)
@@ -355,10 +394,11 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
     return 0;
 
   Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
-  Iso9660DirRecord rec = file->m_Dir;
+  Iso9660DirRecord rec = file->getDirRecord();
 
-  // Divvy up the number of bytes to read into blocks
-  size_t numBlocks = size / m_BlockSize;
+  // Ensure we're not going to write beyond the end of the file
+  if((location + size) > pFile->getSize())
+    size = pFile->getSize() - location;
 
   uint8_t *dest = reinterpret_cast<uint8_t*>(buffer);
   size_t offset = location % m_BlockSize;
@@ -368,7 +408,7 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   size_t blockNum = LITTLE_TO_HOST32(rec.ExtentLocation_LE) + blockSkip;
 
   // Begin reading
-  while(bytesWritten < size)
+  while(bytesToGo)
   {
     uint8_t *tmp = new uint8_t[m_BlockSize];
     PointerGuard<uint8_t> tmpGuard(tmp);
@@ -388,6 +428,9 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
     offset = 0;
     blockNum++;
   }
+  if(dest[bytesWritten] == 0xca || dest[bytesWritten - 1] == 0xca || dest[bytesWritten - 2] == 0xca)
+    NOTICE("a: " << dest[bytesWritten] << ", b: " << dest[bytesWritten-1] << ", c: " << dest[bytesWritten-2] << ".");
+  dest[bytesWritten] = 0;
 
   return bytesWritten;
 }

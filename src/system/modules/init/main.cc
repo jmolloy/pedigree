@@ -131,7 +131,7 @@ void init()
   }
   */
 
-  str += "Loading init program (root:/applications/python)\n";
+  str += "Loading init program (root:/applications/login)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
   str.clear();
 
@@ -163,7 +163,7 @@ void destroy()
 void init_stage2()
 {
   // Load initial program.
-  File* initProg = VFS::instance().find(String("root:/applications/python"));
+  File* initProg = VFS::instance().find(String("root:/applications/login"));
   if (!initProg)
   {
     FATAL("Unable to load init program!");
@@ -186,10 +186,12 @@ void init_stage2()
   for (int j = 0; j < 0x20000; j += 0x1000)
   {
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,                                                                   reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
+    bool b = Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
     if (!b)
       WARNING("map() failed in init");
   }
+
+  static const char *argv[] = {"-v", 0};
 
 
   ////////////////////////////////////////////////////////////////////

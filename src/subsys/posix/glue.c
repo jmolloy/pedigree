@@ -186,7 +186,7 @@ int getpid()
 int _isatty(int file)
 {
   STUBBED("_isatty");
-  return 1;
+  return (file < 3) ? 1 : 0;
 }
 
 int link(char *old, char *_new)
@@ -991,7 +991,7 @@ int pclose(void* stream)
 
 int readlink(const char* path, char* buf, unsigned int bufsize)
 {
-  return (int)syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
+  return (int) syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
 }
 
 int ftime(struct timeb *tp)

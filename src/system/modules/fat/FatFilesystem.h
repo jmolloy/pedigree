@@ -149,19 +149,14 @@ protected:
     uint32_t hours = sTime->hours;
 
     // grab the date information
-    uint32_t day = sDate->day;
+    uint32_t day = sDate->day - 1;
     uint32_t month = sDate->month;
     uint32_t years = sDate->years + 10; // FAT timestamps start at 1980
 
-    /** This gives the "correct" number of leap days, but ends up with a date a
-      * day too far (eg, 26 Apr instead of 25 Apr)
-      */
-    // uint32_t realYear = years + 1970;
-    // uint32_t leapDays = ((realYear / 4) - (realYear / 100) + (realYear / 400));
-    // leapDays -= ((1980 / 4) - (1980 / 100) + (1980 / 400));
-
-    /** This gives an "incorrect" number of leap days but gives the correct date. */
-    uint32_t leapDays = (years / 4);
+    /** This should actually work for practically any year. */
+    uint32_t realYear = years + 1970;
+    uint32_t leapDays = ((realYear / 4) - (realYear / 100) + (realYear / 400));
+    leapDays -= ((1980 / 4) - (1980 / 100) + (1980 / 400));
 
     // Cumulative days as the year progresses. Added to the current day's month
     // to get the proper offset into the year. The leap days are added to this as
