@@ -16,6 +16,7 @@
 
 #include <Log.h>
 #include <vfs/VFS.h>
+#include <vfs/Directory.h>
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <Module.h>
@@ -40,6 +41,168 @@
 extern BootIO bootIO;
 
 void init_stage2();
+
+class RamDir : public Directory
+{
+private:
+  RamDir(const RamDir &);
+  RamDir& operator =(const RamDir&);
+public:
+  RamDir(String name, size_t inode, class Filesystem *pFs, File *pParent) :
+    Directory(name, 0, 0, 0, inode, pFs, 0, pParent), m_FileTree()
+  {}
+  virtual ~RamDir() {};
+
+  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer)
+  {return 0;}
+  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer)
+  {return 0;}
+
+  void truncate()
+  {}
+
+  virtual void cacheDirectoryContents()
+  {}
+
+  virtual bool addEntry(String filename, File *pFile, size_t type)
+  {
+    // This'll get destroyed in the first write
+    uint8_t *newFile = new uint8_t;
+    pFile->setInode(reinterpret_cast<uintptr_t>(newFile));
+    // m_FileTree.insert(filename, pFile);
+    m_Cache.insert(filename, pFile);
+    m_bCachePopulated = true;
+    return true;
+  }
+
+  virtual bool removeEntry(File *pFile)
+  {
+    uint8_t *buff = reinterpret_cast<uint8_t*>(pFile->getInode());
+    if(buff)
+      delete [] buff;
+    // m_FileTree.remove(pFile->getName());
+    m_Cache.remove(pFile->getName());
+    return true;
+  }
+
+  void fileAttributeChanged()
+  {};
+
+private:
+  // List of files we have available in this directory
+  RadixTree<File*> m_FileTree;
+};
+
+class RamFs : public Filesystem
+{
+public:
+  RamFs() : m_pRoot(0)
+  {}
+  virtual ~RamFs()
+  {}
+
+  virtual bool initialise(Disk *pDisk)
+  {
+    m_pRoot = new RamDir(String(""), 0, this, 0);
+    return true;
+  }
+  virtual File* getRoot()
+  {
+    return m_pRoot;
+  }
+  virtual String getVolumeLabel()
+  {
+    return String("ramfs");
+  }
+  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+  {
+    if(pFile->isDirectory())
+      return 0;
+
+    if(!pFile->getSize())
+      return 0;
+
+    size_t nBytes = 0;
+    if(location > pFile->getSize())
+      return 0;
+    else if((location + size) > pFile->getSize())
+      nBytes = pFile->getSize() - location;
+    else
+      nBytes = size;
+
+    if(nBytes == 0)
+      return 0;
+
+    uint8_t *dest = reinterpret_cast<uint8_t*>(buffer);
+    uint8_t *src = reinterpret_cast<uint8_t*>(pFile->getInode());
+
+    memcpy(dest, src + location, nBytes);
+
+    return nBytes;
+  }
+  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+  {
+    if(pFile->isDirectory())
+      return 0;
+
+    size_t nBytes = size;
+
+    // Reallocate if needed
+    if((location + size) > pFile->getSize())
+    {
+      size_t numExtra = (location + size) - pFile->getSize();
+      uint8_t *newBuff = new uint8_t[pFile->getSize() + numExtra];
+      delete [] reinterpret_cast<uint8_t*>(pFile->getInode());
+      pFile->setInode(reinterpret_cast<uintptr_t>(newBuff));
+
+      pFile->setSize(pFile->getSize() + numExtra);
+    }
+
+    uint8_t *dest = reinterpret_cast<uint8_t*>(pFile->getInode());
+    uint8_t *src = reinterpret_cast<uint8_t*>(buffer);
+
+    memcpy(dest + location, src, nBytes);
+
+    return nBytes;
+  }
+  virtual void truncate(File *pFile) {};
+  virtual void fileAttributeChanged(File *pFile) {};
+  virtual void cacheDirectoryContents(File *pFile) {};
+
+protected:
+  virtual bool createFile(File* parent, String filename, uint32_t mask)
+  {
+    if(!parent->isDirectory())
+      return false;
+
+    File *f = new File(filename, 0, 0, 0, 0, this, 0, parent);
+
+    RamDir *p = reinterpret_cast<RamDir*>(parent);
+    return p->addEntry(filename, f, 0);
+  }
+  virtual bool createDirectory(File* parent, String filename)
+  {
+    return false;
+  }
+  virtual bool createSymlink(File* parent, String filename, String value)
+  {
+    return false;
+  }
+  virtual bool remove(File* parent, File* file)
+  {
+    if(file->isDirectory())
+      return false;
+
+    RamDir *p = reinterpret_cast<RamDir*>(parent);
+    return p->removeEntry(file);
+  }
+
+  RamFs(const RamFs&);
+  void operator =(const RamFs&);
+
+  /** Root filesystem node. */
+  File *m_pRoot;
+};
 
 static bool probeDisk(Disk *pDisk)
 {
@@ -89,45 +252,52 @@ void init()
 {
   static HugeStaticString str;
 
+  // Setup the RAMFS for the mount table before the real HDDs. Doing it early
+  // means if someone happens to have a disk with a volume label that matches
+  // "ramfs", we don't end up failing later.
+  RamFs *ramFs = new RamFs;
+  ramFs->initialise(0);
+
+  // Add it to the VFS
+  VFS::instance().addAlias(ramFs, ramFs->getVolumeLabel());
+
   // Mount all available filesystems.
   if (!findDisks(&Device::root()))
   {
 //     FATAL("No disks found!");
   }
 
+  // Build the mount table
+  if(!VFS::instance().createFile(String("ramfs:/mount.tab"), 0777, 0))
+    FATAL("Couldn't create mount table in the RAMFS");
+  File* mountTab = VFS::instance().find(String("ramfs:/mount.tab"));
+
+  List<VFS::Alias*> myAliases = VFS::instance().getAliases();
+  NormalStaticString myMounts;
+  for(List<VFS::Alias*>::Iterator i = myAliases.begin(); i != myAliases.end(); i++)
+  {
+    // Check for the mounts upon which we *don't* want Pedigree to be installed on
+    String alias = (*i)->alias;
+    if(!strncmp(static_cast<const char*>(alias), "PEDIGREEINSTALL", strlen("PEDIGREEINSTALL")))
+      continue;
+    if(!strncmp(static_cast<const char*>(alias), "root", strlen("root")))
+      continue;
+    if(!strncmp(static_cast<const char*>(alias), "ramfs", strlen("ramfs")))
+      continue;
+
+    myMounts += alias;
+    myMounts += '\n';
+  }
+
+  // Write to the file
+  mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
+
+  mountTab->decreaseRefCount(true);
+
+  NOTICE("Available mounts for install:\n" << String(myMounts));
+
   // Initialise user/group configuration.
   UserManager::instance().initialise();
-
-  // Build routing tables
-  /*
-  File* routeConfig = VFS::instance().find(String("root:/config/routes"));
-  if(routeConfig)
-  {
-    NOTICE("Loading route table from file");
-    /// \todo Write this...
-  }
-  else
-  {
-    // try to find a default configuration that can connect to the outside world
-    bool bRouteFound = false;
-    for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-    {
-      /// \todo Perhaps try and ping a remote host?
-      Network* card = NetworkStack::instance().getDevice(i);
-      StationInfo info = card->getStationInfo();
-      if(!(info.gateway == 0)) /// \todo write operator !=
-      {
-        RoutingTable::instance().AddNamed(String("default"), card);
-        bRouteFound = true;
-        break;
-      }
-    }
-
-    // otherwise, just assume the default is interface zero
-    if(!bRouteFound)
-      RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
-  }
-  */
 
   str += "Loading init program (root:/applications/login)\n";
   bootIO.write(str, BootIO::White, BootIO::Black);
@@ -188,8 +358,6 @@ void init_stage2()
     if (!b)
       WARNING("map() failed in init");
   }
-
-  static const char *argv[] = {"-v", 0};
 
   // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
   new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
