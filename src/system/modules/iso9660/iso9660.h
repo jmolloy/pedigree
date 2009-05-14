@@ -138,4 +138,7 @@ struct Iso9660DirRecord
 #define SUPP_VOL_DESC     2
 #define TERM_VOL_DESC     255
 
+/** Useful functions */
+String WideToMultiByteStr(uint8_t *in, size_t inLen, size_t maxLen);
+
 #endif

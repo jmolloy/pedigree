@@ -26,7 +26,7 @@ if which mkisofs > /dev/null 2>&1; then
     cp $SRCDIR/build/initrd.tar ./disk/boot
 	cp $SRCDIR/build/*.so ./disk/libraries
 	cp $SRCDIR/build/src/user/applications/login/login ./disk/applications
-    mkisofs -joliet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o pedigree-i386.iso -V "Pedigree" disk > /dev/null 2>&1
+    mkisofs -joliet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o pedigree-i386.iso -V "PEDIGREEINSTALL" disk > /dev/null 2>&1
 else
     echo Not creating bootable ISO because \`mkisofs\' could not be found.
 fi

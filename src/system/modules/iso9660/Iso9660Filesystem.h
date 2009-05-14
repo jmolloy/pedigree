@@ -22,11 +22,8 @@
 #include <utilities/Tree.h>
 #include <process/Mutex.h>
 #include <LockGuard.h>
-#include "FatFile.h"
 
 #include "iso9660.h"
-
-class Iso9660Directory;
 
 /** This class provides an implementation of the ISO9660 filesystem. */
 class Iso9660Filesystem : public Filesystem

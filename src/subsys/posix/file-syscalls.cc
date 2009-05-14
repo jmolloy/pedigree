@@ -444,8 +444,6 @@ int posix_stat(const char *name, struct stat *st)
     mode = S_IFREG;
   }
 
-  NOTICE("valid");
-
   uint32_t permissions = file->getPermissions();
   if (permissions & FILE_UR) mode |= S_IRUSR;
   if (permissions & FILE_UW) mode |= S_IWUSR;
