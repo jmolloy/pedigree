@@ -35,6 +35,9 @@ NetworkStack::~NetworkStack()
 void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
   // pass onto the ethernet layer
+  /// \todo We should accept a parameter here that specifies the type of packet
+  ///       so we can pass it on to the correct handler, rather than assuming
+  ///       Ethernet.
   Ethernet::instance().receive(nBytes, packet, pCard, offset);
 }
 

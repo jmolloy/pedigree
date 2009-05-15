@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "NetManager.h" 
+#include "NetManager.h"
 #include <network/Endpoint.h>
 #include <network/UdpManager.h>
 #include <network/TcpManager.h>
@@ -29,7 +29,7 @@ void Socket::decreaseRefCount(bool bIsWriter)
     m_nWriters --;
   else
     m_nReaders --;
-    
+
   if (m_nReaders == 0 && m_nWriters == 0)
   {
     m_Endpoint->close();
@@ -58,7 +58,7 @@ File* NetManager::newEndpoint(int type, int protocol)
   {
     ERROR("NetManager::getEndpoint called with unknown protocol");
   }
-  
+
   if(p)
   {
     File *ret = new Socket(type, p, this);
@@ -73,15 +73,15 @@ void NetManager::removeEndpoint(File* f)
 {
   ERROR("Old-style call (removeEndpoint)");
   return;
-  
+
   if(!isEndpoint(f))
     return;
-  
+
   Endpoint* e = getEndpoint(f);
   if(!e)
     return;
   e->close();
-  
+
   size_t removeIndex = f->getInode() & 0x00FFFFFF, i = 0;
   bool removed = false;
   for(Vector<Endpoint*>::Iterator it = m_Endpoints.begin(); it != m_Endpoints.end(); it++, i++)
@@ -93,7 +93,7 @@ void NetManager::removeEndpoint(File* f)
       break;
     }
   }
-  
+
   //if(f->getSize() == NETMAN_TYPE_UDP)
   //  UdpManager::instance().returnEndpoint(e);
   //else if(f->getSize() == NETMAN_TYPE_TCP)
@@ -113,7 +113,7 @@ Endpoint* NetManager::getEndpoint(File* f)
 {
   ERROR("Old-style call (getEndpoint)");
   return 0;
-  
+
   if(!isEndpoint(f))
     return 0;
   size_t indx = f->getInode() & 0x00FFFFFF;
@@ -128,7 +128,7 @@ File* NetManager::accept(File* f)
   // We can pretty safely assume that this is a valid call, as the only File objects
   // defined in the context of the NetManager are Sockets
   Socket *sock = static_cast<Socket *>(f);
-  
+
   Endpoint* server = sock->getEndpoint();
   if(server)
   {
@@ -145,9 +145,9 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
   // We can pretty safely assume that this is a valid call, as the only File objects
   // defined in the context of the NetManager are Sockets
   Socket *sock = static_cast<Socket *>(pFile);
-  
+
   Endpoint* p = sock->getEndpoint(); //NetManager::instance().getEndpoint(pFile);
-    
+
   int ret = 0;
   if(p->isConnectionless())
   {
@@ -157,14 +157,15 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
     ///       However, to do that we need to tell recv not to remove from the queue
     ///       and instead peek at the message (in other words, we need flags)
     Endpoint::RemoteEndpoint remoteHost;
-    ret = p->recv(buffer, size, 0);
+    memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
+    ret = p->recv(buffer, size, &remoteHost);
   }
   else
   {
     /// \todo O_NONBLOCK should control the blocking nature of this call
     ret = p->recv(buffer, size, true, false);
   }
-  
+
   return ret;
 }
 
@@ -173,9 +174,9 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
   // We can pretty safely assume that this is a valid call, as the only File objects
   // defined in the context of the NetManager are Sockets
   Socket *sock = static_cast<Socket *>(pFile);
-  
+
   Endpoint* p = sock->getEndpoint(); // NetManager::instance().getEndpoint(pFile);
-  
+
   if(p->isConnectionless())
   {
     Network *pCard = 0;
@@ -190,14 +191,14 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
         pCard = RoutingTable::instance().DetermineRoute(remoteIp);
       }
     }
-    
+
     return p->send(size, buffer, remoteHost, false, pCard);
   }
   else
   {
     return p->send(size, buffer);
   }
-  
+
   return 0;
 }
 

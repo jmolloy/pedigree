@@ -16,6 +16,7 @@
 
 #include "UdpManager.h"
 #include <Log.h>
+#include <processor/Processor.h>
 
 UdpManager UdpManager::manager;
 
@@ -30,24 +31,24 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHo
   if(m_DataQueue.count())
   {
     DataBlock* ptr = m_DataQueue.popFront();
-    
+
     size_t nBytes = maxSize;
     bool allRead = false;
-    
+
     // only read in this block
     if(nBytes >= ptr->size)
     {
       nBytes = ptr->size;
       allRead = true;
     }
-    
+
     // and only past the offset
     nBytes -= ptr->offset;
-    
+
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr + ptr->offset), nBytes);
-    
+
     *remoteHost = ptr->remoteHost;
-    
+
     if(!allRead)
     {
       ptr->offset = nBytes;
@@ -71,13 +72,13 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
     return;
   uint8_t* data = new uint8_t[nBytes];
   memcpy(data, reinterpret_cast<void*>(payload), nBytes);
-  
+
   DataBlock* newBlock = new DataBlock;
   newBlock->ptr = reinterpret_cast<uintptr_t>(data);
   newBlock->offset = 0;
   newBlock->size = nBytes;
   newBlock->remoteHost = remoteHost;
-  
+
   m_DataQueue.pushBack(newBlock);
   m_DataQueueSize.release();
 }
@@ -87,17 +88,9 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
   bool timedOut = false;
   if(block)
   {
-    Timer* t = Machine::instance().getTimer();
-    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-    timeout->setTimeout(tmout);
-    timeout->setSemaphore(&m_DataQueueSize);
-    timeout->setTimedOut(&timedOut);
-    if(t)
-      t->registerHandler(timeout);
-    m_DataQueueSize.acquire();
-    if(t)
-      t->unregisterHandler(timeout);
-    delete timeout;
+    m_DataQueueSize.acquire(1, tmout);
+    if(Processor::information().getCurrentThread()->wasInterrupted())
+      timedOut = true;
   }
   else
     return m_DataQueueSize.tryAcquire();
@@ -105,7 +98,7 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 };
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
-{  
+{
   // is there an endpoint for this port?
   Endpoint* e;
   StationInfo cardInfo = pCard->getStationInfo();
@@ -119,10 +112,10 @@ void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint
       passOn = e->acceptAnyAddress();
     else
       passOn = true;
-      
+
     if(!passOn)
       return;
-    
+
     // e->setRemotePort(sourcePort);
     Endpoint::RemoteEndpoint host;
     host.ip = from;
@@ -159,7 +152,7 @@ Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint
       return 0; // no local port available
     localPort = base;
   }
-  
+
   // Is there an endpoint for this port?
   /// \todo Why, if there *is* an Endpoint, is it returned? Couldn't that cause
   ///       conflicts?

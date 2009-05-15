@@ -39,19 +39,19 @@ class Arp
 public:
   Arp();
   virtual ~Arp();
-  
+
   /** For access to the stack without declaring an instance of it */
   static Arp& instance()
   {
     return arpInstance;
   }
-  
+
   /** Packet arrival callback */
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
+
   /** Sends an ARP request */
   void send(IpAddress req, Network* pCard = 0);
-  
+
   /** Gets an entry from the ARP cache, and optionally resolves it if needed. */
   bool getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard);
 
@@ -71,7 +71,7 @@ private:
     uint8_t   hwDest[6];
     uint32_t  ipDest;
   } __attribute__ ((packed));
-  
+
   // an entry in the arp cache
   /// \todo Will need to store *time* and *type* - time for removing from cache
   ///       and type for static entries
@@ -80,56 +80,30 @@ private:
     arpEntry() :
       valid(false), ip(), mac()
     {};
-    
+
     bool valid;
     IpAddress ip;
     MacAddress mac;
   };
-  
+
   // an ARP request we've sent
-  class ArpRequest : public TimerHandler
+  class ArpRequest // : public TimerHandler
   {
     public:
       ArpRequest() :
-        destIp(), mac(), waitSem(0), m_Timeout(30), success(false), m_Nanoseconds(0), m_Seconds(0)
+        destIp(), mac(), waitSem(0), success(false)
       {};
-      
+
       IpAddress destIp;
       MacAddress mac;
       Semaphore waitSem;
-      
-      uint32_t m_Timeout; // defaults to 30 seconds
-      
+
       bool success;
-      
-      void timer(uint64_t delta, InterruptState &state)
-      {
-        if(UNLIKELY(m_Seconds < m_Timeout))
-        {
-          m_Nanoseconds += delta;
-          if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
-          {
-            ++m_Seconds;
-            m_Nanoseconds -= 1000000000ULL;
-          }
-          
-          if(UNLIKELY(m_Seconds >= m_Timeout))
-          {
-            success = false;
-            waitSem.release();
-          }
-        }
-      }
-      
-    private:
-    
-      uint64_t m_Nanoseconds;
-      uint64_t m_Seconds;
   };
-  
+
   // ARP Cache
   Tree<size_t, arpEntry*> m_ArpCache;
-  
+
   // ARP request list
   Vector<ArpRequest*> m_ArpRequests;
 

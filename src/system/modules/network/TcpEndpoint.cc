@@ -18,6 +18,7 @@
 #include <Log.h>
 #include <syscallError.h>
 #include <process/Scheduler.h>
+#include <utilities/TimeoutGuard.h>
 
 int TcpEndpoint::state()
 {
@@ -74,12 +75,12 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 
   bool queueReady = false;
   queueReady = dataReady(bBlock);
-  
+
   if(queueReady)
   {
     // read off the front
     uintptr_t front = m_DataStream.getBuffer();
-    
+
     // how many bytes to read
     size_t nBytes = maxSize;
     if(nBytes > m_DataStream.getSize())
@@ -89,17 +90,17 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     // bytes readable
     if(bPeek)
       return nBytes;
-    
+
     // copy
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
-    
+
     // remove from the buffer, we've read
     m_DataStream.remove(0, nBytes);
-    
+
     // we've read in this block
     return nBytes;
   }
-  
+
   // no data is available - EOF?
   if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2)
     return 0;
@@ -118,12 +119,16 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
     WARNING("Dud arguments to depositPayload!");
     return;
   }
-  
-  // here goes
-  m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
+
+  // If there's data to add to the shadow stream, add it now. Then, if the PUSH flag
+  // is set, copy the shadow stream into the main stream. By allowing a zero-byte
+  // deposit, data that did not have the PSH flag can be pushed to the application
+  // when we receive a FIN.
+  if(nBytes)
+    m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
   if(push)
   {
-    // take all the data OUT of the shadow stream, shove it into the user stream
+    // Take all the data OUT of the shadow stream, shove it into the user stream
     size_t shadowSize = m_ShadowDataStream.getSize();
     m_DataStream.append(m_ShadowDataStream.getBuffer(), shadowSize);
     m_ShadowDataStream.remove(0, shadowSize);
@@ -135,52 +140,33 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
 {
   if(block)
   {
-    Semaphore timedOut(0);
-    
-    Timer* t = Machine::instance().getTimer();
-    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-    if(timeout)
+    TimeoutGuard guard(tmout);
+    if(!guard.timedOut())
     {
-      timeout->setTimeout(tmout);
-      timeout->setSemaphore(&timedOut);
-      if(t)
-        t->registerHandler(timeout);
-    }
-    
-    bool ret = false;
-    while(true)
-    {
-      if(timedOut.tryAcquire())
+      bool ret = false;
+      while(true)
       {
-        // only acquired if we time out!
-        break;
+        if(m_DataStream.getSize() != 0)
+        {
+          ret = true;
+          break;
+        }
+
+        // If there's no more data in the stream, and we need to close, do it
+        // You'd think the above would handle this, but timing is an awful thing to assume
+        // Much testing has led to the addition of the stream size check
+        if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
+        {
+          break;
+        }
+
+        // yield control otherwise we're using up all the CPU time here
+        Scheduler::instance().yield();
       }
-      
-      if(m_DataStream.getSize() != 0)
-      {
-        ret = true;
-        break;
-      }
-      
-      // if there's no more data in the stream, and we need to close, do it
-      // you'd think the above would handle this, but timing is an awful thing to assume
-      // much testing has led to the addition of the stream size check
-      if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
-      {
-        break;
-      }
-      
-      // yield control otherwise we're using up all the CPU time here
-      Scheduler::instance().yield();
+      return ret;
     }
-    
-    if(timeout)
-    {
-      if(t)
-        t->unregisterHandler(timeout);
-      delete timeout;
-    }
-    return ret;
+    else
+      return false;
   }
   else
   {

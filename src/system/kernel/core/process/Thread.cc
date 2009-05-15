@@ -21,7 +21,7 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
-Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
@@ -45,16 +45,16 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   }
 
   m_Id = m_pParent->addThread(this);
-  
+
   // Firstly, grab our lock so that the scheduler cannot preemptively load balance
   // us while we're starting.
   m_Lock.acquire();
 
   // Add us to the general scheduler.
   Scheduler::instance().addThread(this, Processor::information().getScheduler());
-  
+
   // Add us to the per-processor scheduler.
-  Processor::information().getScheduler().addThread(this, pStartFunction, pParam, 
+  Processor::information().getScheduler().addThread(this, pStartFunction, pParam,
                                                     bUserMode, pStack);
 }
 
@@ -87,7 +87,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
   m_pAllocatedStack = m_pKernelStack;
 
   m_Id = m_pParent->addThread(this);
-  
+
   // Now we are ready to go into the scheduler.
   Scheduler::instance().addThread(this, Processor::information().getScheduler());
   Processor::information().getScheduler().addThread(this, state);
@@ -99,7 +99,7 @@ Thread::~Thread()
   Scheduler::instance().removeThread(this);
 
   m_pParent->removeThread(this);
-  
+
   // TODO delete any pointer data.
 
   if (m_pAllocatedStack)

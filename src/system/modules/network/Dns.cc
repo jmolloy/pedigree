@@ -274,7 +274,7 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
 
   e->send(sizeof(DnsHeader) + sizeof(QuestionSecNameSuffix) + len + 1, buffLoc, remoteHost, false, pCard);
 
-  req->waitSem.acquire();
+  req->waitSem.acquire(1, 15);
 
   if(!req->success)
   {

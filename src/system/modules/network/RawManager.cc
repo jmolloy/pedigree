@@ -69,16 +69,16 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint
   if(m_DataQueue.count())
   {
     DataBlock* ptr = m_DataQueue.popFront();
-    
+
     // only read in this packet
     size_t nBytes = maxSize;
     if(nBytes >= ptr->size)
       nBytes = ptr->size;
-    
+
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr), nBytes);
 
     *remoteHost = ptr->remoteHost;
-  
+
     delete reinterpret_cast<uint8_t*>(ptr->ptr);
     delete ptr;
     return nBytes;
@@ -93,13 +93,13 @@ void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Remo
     return;
   uint8_t* data = new uint8_t[nBytes];
   memcpy(data, reinterpret_cast<void*>(payload), nBytes);
-  
+
   DataBlock* newBlock = new DataBlock;
   newBlock->ptr = reinterpret_cast<uintptr_t>(data);
   newBlock->size = nBytes;
   if(remoteHost)
     newBlock->remoteHost = *remoteHost;
-  
+
   m_DataQueue.pushBack(newBlock);
   m_DataQueueSize.release();
 }
@@ -109,17 +109,9 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
   bool timedOut = false;
   if(block)
   {
-    Timer* t = Machine::instance().getTimer();
-    NetworkBlockTimeout* timeout = new NetworkBlockTimeout;
-    timeout->setTimeout(tmout);
-    timeout->setSemaphore(&m_DataQueueSize);
-    timeout->setTimedOut(&timedOut);
-    if(t)
-      t->registerHandler(timeout);
-    m_DataQueueSize.acquire();
-    if(t)
-      t->unregisterHandler(timeout);
-    delete timeout;
+    m_DataQueueSize.acquire(1, tmout);
+    if(Processor::information().getCurrentThread()->wasInterrupted())
+      timedOut = true;
   }
   else
     return m_DataQueueSize.tryAcquire();
@@ -168,17 +160,17 @@ Endpoint* RawManager::getEndpoint(int proto)
 {
   Endpoint* ret;
   switch(proto)
-  { 
+  {
     // icmp
     case IPPROTO_ICMP:
       ret = new RawEndpoint(RawEndpoint::RAW_ICMP);
       break;
-    
+
     // udp
     case IPPROTO_UDP:
       ret = new RawEndpoint(RawEndpoint::RAW_UDP);
       break;
-    
+
     // tcp
     case IPPROTO_TCP:
       ret = new RawEndpoint(RawEndpoint::RAW_TCP);
