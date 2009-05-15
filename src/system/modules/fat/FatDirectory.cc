@@ -57,8 +57,6 @@ FatDirectory::FatDirectory(String name, uintptr_t inode_num,
   m_Type = pFs->m_Type;
 
   setInode(inode_num);
-
-  m_Cache.clear();
 }
 
 FatDirectory::~FatDirectory()
@@ -347,6 +345,8 @@ void FatDirectory::cacheDirectoryContents()
     info.creationTime = info.modifiedTime = info.accessedTime = 0;
     m_Cache.insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
     m_Cache.insert(String(".."), new FatDirectory(String(".."), m_Inode, pFs, 0, info));
+    if(!m_bCachePopulated)
+      m_bCachePopulated = true;
   }
 
   // read in the first cluster for this directory

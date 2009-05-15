@@ -184,6 +184,9 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
   delete tmpBuffer;
 
+  // Define the root directory early
+  getRoot();
+
   return true;
 }
 
@@ -350,7 +353,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
       currOffset++; bytesRead++;
 
       // if at any time we're done, end reading
-      // TODO: do we need a null byte?
       if(bytesRead == finalSize)
       {
         delete tmpBuffer;

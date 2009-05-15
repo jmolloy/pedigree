@@ -836,11 +836,11 @@ int posix_isatty(int fd)
 {
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+  FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
   {
       // Error - no such file descriptor.
-      ERROR("isatty: no such file descriptor (" << Dec << i << ")");
+      ERROR("isatty: no such file descriptor (" << Dec << fd << ")");
       return 0;
   }
 

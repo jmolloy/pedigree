@@ -190,7 +190,8 @@ bool AtapiDisk::initialise()
   m_PacketSize = ((m_pIdent[0] & 0x0003) == 0) ? 12 : 16;
 
   // Grab the capacity of the disk for future reference
-  getCapacityInternal(&m_NumBlocks, &m_BlockSize);
+  if(!getCapacityInternal(&m_NumBlocks, &m_BlockSize))
+    return false;
 
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;
