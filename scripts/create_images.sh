@@ -158,7 +158,7 @@ if which losetup >/dev/null 2>&1; then
 #    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_ext.vdi
 #  fi
 
-elif which mcopy >/dev/null 2>&1; then
+elif which mcopyROFL >/dev/null 2>&1; then
 
   #if [ ! -e "./floppy.img" ]
   #  then
@@ -221,4 +221,27 @@ elif which mcopy >/dev/null 2>&1; then
   echo Only creating FAT disk image as \`losetup\' was not found.
 else
   echo Not creating disk images because neither \`losetup\' nor \`mtools\' could not be found.
+fi
+
+# Live CD
+if which mkisofs > /dev/null 2>&1; then
+    rm -f pedigree.iso
+	touch .pedigree-root
+	
+    mkisofs -joliet -graft-points -quiet -input-charset ascii -R \
+	-b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
+	-boot-info-table -o pedigree.iso -V "PEDIGREE" \
+	boot/grub/stage2_eltorito=$SRCDIR/../images/grub/stage2_eltorito \
+	boot/grub/menu.lst=$SRCDIR/../images/grub/menu.lst \
+	boot/kernel=$SRCDIR/src/system/kernel/kernel \
+	boot/initrd.tar=$SRCDIR/initrd.tar \
+	/=$SRCDIR/../images/i686-elf/ \
+	/.pedigree-root=./.pedigree-root \
+	/libraries/libc.so=$SRCDIR/libc.so \
+	/libraries/libm.so=$SRCDIR/libm.so \
+	/applications/login=$SRCDIR/src/user/applications/login/login
+	
+	rm .pedigree-root
+else
+    echo Not creating bootable ISO because \`mkisofs\' could not be found.
 fi
