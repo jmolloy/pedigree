@@ -93,6 +93,8 @@ private:
     void eraseSOL();
     /** Erase entire line. */
     void eraseLine();
+    /** Erase n characters. */
+    void eraseChars(size_t n);
     /** Erase from the current line up. */
     void eraseUp();
     /** Erase from the current line down. */

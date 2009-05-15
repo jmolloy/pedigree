@@ -266,10 +266,8 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
              it++)
         {
             Alarm *pA = *it;
-            NOTICE("Found alarm: " << pA->m_pEvent->getHandlerAddress());
             if ( pA->m_Time <= getTickCount() )
             {
-                NOTICE("Dispatching alarm");
                 pA->m_pThread->sendEvent(pA->m_pEvent);
                 m_Alarms.erase(it);
                 bDispatched = true;

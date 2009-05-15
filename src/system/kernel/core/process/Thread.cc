@@ -139,7 +139,7 @@ void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
 void Thread::cullEvent(Event *pEvent)
 {
     LockGuard<Spinlock> guard(m_Lock);
-    FATAL("cullEvent");
+
     for (List<Event*>::Iterator it = m_EventQueue.begin();
          it != m_EventQueue.end();
          it++)

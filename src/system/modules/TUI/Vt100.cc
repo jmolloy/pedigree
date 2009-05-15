@@ -244,6 +244,10 @@ void Vt100::write(char c)
                                                       (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
         m_bChangingState = false;
         break;
+      case 'X': // Erase characters (XTERM)
+        m_pWindows[m_CurrentWindow]->eraseChars((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1);
+        m_bChangingState = false;
+        break;
       case 'm':
       {
         // Colours!
@@ -558,7 +562,7 @@ void Vt100::Window::setCursorY(uint32_t y)
     {
       for (size_t i = 0; i < m_nWidth; i++)
       {
-        m_pData[i+(base + line)*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+        m_pData[i+(base + line)*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
       }
     }
 
@@ -597,11 +601,11 @@ void Vt100::Window::eraseEOL()
   size_t row = m_CursorY;
   for (size_t col = m_CursorX; col < m_nWidth; col++)
   {
-    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
     if (col == m_CursorX)
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
     else
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
   }
 }
 
@@ -610,11 +614,11 @@ void Vt100::Window::eraseSOL()
   size_t row = m_CursorY;
   for (size_t col = 0; col <= m_CursorX; col++)
   {
-    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
     if (col == m_CursorX)
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
     else
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
   }
 }
 
@@ -623,13 +627,27 @@ void Vt100::Window::eraseLine()
   size_t row = m_CursorY;
   for (size_t col = 0; col < m_nWidth; col++)
   {
-    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
     if (col == m_CursorX)
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
     else
-      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
   }
 }
+
+void Vt100::Window::eraseChars(size_t n)
+{
+  size_t row = m_CursorY;
+  for (size_t col = m_CursorX; col < m_CursorX+n+1; col++)
+  {
+    m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
+    if (col == m_CursorX)
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
+    else
+      m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
+  }
+}
+
 
 void Vt100::Window::eraseDown()
 {
@@ -637,11 +655,11 @@ void Vt100::Window::eraseDown()
   {
     for (size_t col = 0; col < m_nWidth; col ++)
     {
-      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
       if (col == m_CursorX && row == m_CursorY)
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
       else
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
     }
   }
 }
@@ -652,11 +670,11 @@ void Vt100::Window::eraseUp()
   {
     for (size_t col = 0; col < m_nWidth; col ++)
     {
-      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
       if (col == m_CursorX && row == m_CursorY)
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
       else
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
     }
   }
 }
@@ -667,11 +685,11 @@ void Vt100::Window::eraseScreen()
   {
     for (size_t col = 0; col < m_nWidth; col ++)
     {
-      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+      m_pData[col+row*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
       if (col == m_CursorX && row == m_CursorY)
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_BLACK], m_pParent->m_pColours[C_WHITE]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Background], m_pParent->m_pColours[m_Foreground]);
       else
-        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[C_WHITE], m_pParent->m_pColours[C_BLACK]);
+        m_pParent->putCharFb(' ', col, row-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
     }
   }
 }
@@ -700,7 +718,7 @@ void Vt100::Window::scrollDown()
   // Zero out the last row.
   for (size_t i = 0; i < m_nWidth; i++)
   {
-    m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[i+m_nScrollMax*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
   }
 
   refresh();
@@ -717,7 +735,7 @@ void Vt100::Window::scrollUp()
   // Zero out the first row.
   for (size_t i = 0; i < m_nWidth; i++)
   {
-    m_pData[i+m_nScrollMin*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[i+m_nScrollMin*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
   }
 
   refresh();
@@ -760,7 +778,7 @@ void Vt100::Window::deleteCharacters(uint32_t n)
 
   // Zero out the remainder of the line
   for (size_t i = (m_nWidth - n); i < m_nWidth; i++)
-    m_pData[i+m_CursorY*m_nWidth] = static_cast<uint16_t>(' ') | (C_WHITE<<12) | (C_BLACK<<8);
+    m_pData[i+m_CursorY*m_nWidth] = static_cast<uint16_t>(' ') | (m_Foreground<<12) | (m_Background<<8);
 
 
   refresh();
