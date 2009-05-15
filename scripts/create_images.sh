@@ -158,7 +158,7 @@ if which losetup >/dev/null 2>&1; then
 #    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_ext.vdi
 #  fi
 
-elif which mcopyROFL >/dev/null 2>&1; then
+elif which mcopy >/dev/null 2>&1; then
 
   #if [ ! -e "./floppy.img" ]
   #  then
