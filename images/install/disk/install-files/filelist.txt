@@ -24,6 +24,7 @@
 /applications/bash * d128f0a0106617ae912bd9dc207f677e yes
 /applications/ls * cce66e9a330e3159d8de0d08789c7288 no
 /applications/lynx * 83e0abc4761b6f8c7971becf8131db72 no
+/applications/login * 586e607c0ad70390d2eed20465c20e4e yes
 
 /config/greeting * 11718565dc5f69c02f28da1083b9372a yes
 /config/groups * bf1f8f1e305b5559f53e62f80814fcd5 yes
