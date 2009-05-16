@@ -462,6 +462,7 @@ void FatDirectory::cacheDirectoryContents()
           );
         }
 
+        NOTICE("Inserting '" << filename << "'.");
         m_Cache.insert(filename, pF);
         if(!m_bCachePopulated)
           m_bCachePopulated = true;

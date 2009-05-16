@@ -313,7 +313,6 @@ uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
         panic("AtaDisk: write request length not a multiple of 512!");
 
     uint64_t oldLoc = location, oldCount = nBytes;
-    uintptr_t oldBuff = buffer;
 
     uint64_t origNBytes = nBytes;
 
@@ -327,14 +326,18 @@ uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
         nBytes -= 512;
     }
 
-#ifdef CRIPPLE_HDD
-    // When the hard disk is crippled, do not write any data to the disk.
-    return origNBytes;
-#else
-    // Otherwise, run the write routine
-    /// \todo A worker thread should call this instead
-    return internalWrite(oldLoc, oldCount, oldBuff);
+    // When the hard disk is crippled, do not write any data to the disk...
+#ifndef CRIPPLE_HDD
+    // ... But otherwise, run the write routine asynchronously (this will actually perform the write)
+    /// \note Note that the buffer passed is null. The internal write reads from cache (based
+    ///       on the location parameter) when writing.
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
+    return pParent->addAsyncRequest(ATA_CMD_WRITE2,
+            reinterpret_cast<uint64_t> (this), oldLoc, oldCount, 0);
 #endif
+
+    // Data is now written to cache
+    return origNBytes;
 }
 
 uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
@@ -343,6 +346,18 @@ uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t bu
 #ifdef CRIPPLE_HDD
     return 0;
 #endif
+
+    // Verify incoming arguments
+    if(buffer)
+    {
+        ERROR("ATA Internal Write: We got given a buffer!");
+        return 0;
+    }
+    if(!nBytes)
+    {
+        ERROR("ATA Internal Write: Invalid byte count!");
+        return 0;
+    }
 
     /// \todo DMA?
     // Grab our parent.
@@ -353,9 +368,6 @@ uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t bu
 #ifndef PPC_COMMON
     IoBase *controlRegs = pParent->m_pControlRegs;
 #endif
-
-    // Get the buffer in pointer form.
-    uint16_t *pSource = reinterpret_cast<uint16_t*> (buffer);
 
     // How many sectors do we need to read?
     uint32_t nSectors = nBytes / 512;
@@ -425,9 +437,21 @@ uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t bu
             while (commandRegs->read8(7) & 0x80)
                 ;
 
+            // Grab the current sector
+            uint8_t *currSector = new uint8_t[512];
+            uint16_t *tmp = reinterpret_cast<uint16_t*>(currSector);
+            if(!m_SectorCache.lookup((location / 512) + i, reinterpret_cast<uint8_t*> (currSector)))
+            {
+                delete [] currSector;
+                continue;
+            }
+
             // We got the mutex, so an IRQ must have arrived.
             for (int j = 0; j < 256; j++)
-                commandRegs->write16(*pSource++, 0);
+                commandRegs->write16(*tmp++, 0);
+
+            // Delete used memory
+            delete [] currSector;
         }
     }
 

@@ -31,6 +31,7 @@
 #define ATA_CMD_WRITE 1
 #define ATAPI_CMD_READ  2
 #define ATAPI_CMD_WRITE 3
+#define ATA_CMD_WRITE2  4 /// \todo Better name
 
 /** The controller for up to two AtaDisks. This uses a background thread
  * and a request queue. */

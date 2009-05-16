@@ -91,6 +91,8 @@ uint64_t AtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
     return pAtapiDisk->doRead(p3, p4, static_cast<uintptr_t> (p5));
   else if(p1 == ATAPI_CMD_WRITE)
     return pAtapiDisk->doWrite(p3, p4, static_cast<uintptr_t> (p5));
+  else if(p1 == ATA_CMD_WRITE2)
+    return pDisk->internalWrite(p3, p4, static_cast<uintptr_t> (p5));
   else
     return 0;
 }

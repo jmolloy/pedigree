@@ -980,7 +980,7 @@ String FatFilesystem::convertFilenameTo(String filename)
     }
 
     // And finally, pad out whatever we need to to finish off
-    ret.pad(10);
+    ret.pad(11);
 
     ret += '\0';
     return String(static_cast<const char*>(ret));
