@@ -754,7 +754,6 @@ int posix_dup(int fd)
   FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
   if(!f)
   {
-    /// \todo SYSCALL_ERROR of some form
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
@@ -783,7 +782,7 @@ int posix_dup2(int fd1, int fd2)
 {
   F_NOTICE("dup2(" << fd1 << ", " << fd2 << ")");
 
-  if(fd2 < 0) /// \todo OR fd2 >= OPEN_MAX
+  if(fd2 < 0)
   {
     SYSCALL_ERROR(BadFileDescriptor);
     return -1; // EBADF

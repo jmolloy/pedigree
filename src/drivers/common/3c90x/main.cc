@@ -56,7 +56,7 @@ static struct nic potential_nics[] = {
 
 void probeDevice(Network *pDev)
 {
-    // Create a new RTL8139 node
+    // Create a new node
     Nic3C90x *pCard = new Nic3C90x(pDev);
 
     // Replace pDev with pRtl8139.

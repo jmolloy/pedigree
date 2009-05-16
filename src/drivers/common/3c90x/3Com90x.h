@@ -62,8 +62,6 @@ class Nic3C90x : public Network, public IrqHandler
         int writeEepromWord(int address, uint16_t value);
         int writeEeprom(int address, uint16_t value);
 
-        int poll();
-
         static int trampoline(void* p);
 
         void receiveThread();

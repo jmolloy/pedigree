@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,155 +22,154 @@
 
 int TcpEndpoint::state()
 {
-  return static_cast<int>(TcpManager::instance().getState(m_ConnId));
+    return static_cast<int>(TcpManager::instance().getState(m_ConnId));
 }
 
 Endpoint* TcpEndpoint::accept()
 {
-  // acquire() will return true when there is at least one connection waiting
-  m_IncomingConnectionCount.acquire();
-  Endpoint* e = m_IncomingConnections.popFront();
-  return e;
+    // acquire() will return true when there is at least one connection waiting
+    m_IncomingConnectionCount.acquire();
+    Endpoint* e = m_IncomingConnections.popFront();
+    return e;
 }
 
 void TcpEndpoint::listen()
 {
-  /// \todo Interface-specific connections
-  m_IncomingConnections.clear();
-  m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
+    /// \todo Interface-specific connections
+    m_IncomingConnections.clear();
+    m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
 }
 
 bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
 {
-  setRemoteHost(remoteHost);
-  setRemotePort(remoteHost.remotePort);
-  if(getLocalPort() == 0)
-  {
-    uint16_t port = TcpManager::instance().allocatePort();
-    setLocalPort(port);
-    if(getLocalPort() == 0)
-      return false;
-  }
-  m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock, m_Card);
-  if(m_ConnId == 0)
-    WARNING("TcpEndpoint::connect: got 0 for the connection id");
-  return (m_ConnId != 0); /// \todo Error codes
+    setRemoteHost(remoteHost);
+    setRemotePort(remoteHost.remotePort);
+    if (getLocalPort() == 0)
+    {
+        uint16_t port = TcpManager::instance().allocatePort();
+        setLocalPort(port);
+        if (getLocalPort() == 0)
+            return false;
+    }
+    m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock, m_Card);
+    if (m_ConnId == 0)
+        WARNING("TcpEndpoint::connect: got 0 for the connection id");
+    return (m_ConnId != 0); /// \todo Error codes
 }
 
 void TcpEndpoint::close()
 {
-  TcpManager::instance().Disconnect(m_ConnId);
+    TcpManager::instance().Disconnect(m_ConnId);
 }
 
 int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 {
-  /// \todo Send needs to return an error code or something, and PUSH needs to be an option
-  return TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
+    /// \todo Send needs to return an error code or something, and PUSH needs to be an option
+    return TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
 };
 
 int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 {
-  if((!buffer || !maxSize) && !bPeek)
-    return -1;
+    if ((!buffer || !maxSize) && !bPeek)
+        return -1;
 
-  bool queueReady = false;
-  queueReady = dataReady(bBlock);
+    bool queueReady = false;
+    queueReady = dataReady(bBlock);
 
-  if(queueReady)
-  {
-    // read off the front
-    uintptr_t front = m_DataStream.getBuffer();
+    if (queueReady)
+    {
+        // read off the front
+        uintptr_t front = m_DataStream.getBuffer();
 
-    // how many bytes to read
-    size_t nBytes = maxSize;
-    if(nBytes > m_DataStream.getSize())
-      nBytes = m_DataStream.getSize();
+        // how many bytes to read
+        size_t nBytes = maxSize;
+        if (nBytes > m_DataStream.getSize())
+            nBytes = m_DataStream.getSize();
 
-    // if we're merely peeking, return the theoretical maximum number of
-    // bytes readable
-    if(bPeek)
-      return nBytes;
+        // if we're merely peeking, return the theoretical maximum number of
+        // bytes readable
+        if (bPeek)
+            return nBytes;
 
-    // copy
-    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
+        // copy
+        memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
 
-    // remove from the buffer, we've read
-    m_DataStream.remove(0, nBytes);
+        // remove from the buffer, we've read
+        m_DataStream.remove(0, nBytes);
 
-    // we've read in this block
-    return nBytes;
-  }
+        // we've read in this block
+        return nBytes;
+    }
 
-  // no data is available - EOF?
-  if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2)
-    return 0;
-  else
-  {
-    SYSCALL_ERROR(NoMoreProcesses);
-    return -1;
-  }
+    // no data is available - EOF?
+    if (TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2)
+        return 0;
+    else
+    {
+        SYSCALL_ERROR(NoMoreProcesses);
+        return -1;
+    }
 };
 
 void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
 {
-  /// \note Perhaps nBytes should also have an upper limit check?
-  if(!nBytes || !payload)
-  {
-    WARNING("Dud arguments to depositPayload!");
-    return;
-  }
+    if (nBytes > 0xFFFF)
+    {
+        WARNING("Dud length passed to depositPayload!");
+        return;
+    }
 
-  // If there's data to add to the shadow stream, add it now. Then, if the PUSH flag
-  // is set, copy the shadow stream into the main stream. By allowing a zero-byte
-  // deposit, data that did not have the PSH flag can be pushed to the application
-  // when we receive a FIN.
-  if(nBytes)
-    m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
-  if(push)
-  {
-    // Take all the data OUT of the shadow stream, shove it into the user stream
-    size_t shadowSize = m_ShadowDataStream.getSize();
-    m_DataStream.append(m_ShadowDataStream.getBuffer(), shadowSize);
-    m_ShadowDataStream.remove(0, shadowSize);
-    nBytesRemoved += shadowSize;
-  }
+    // If there's data to add to the shadow stream, add it now. Then, if the PUSH flag
+    // is set, copy the shadow stream into the main stream. By allowing a zero-byte
+    // deposit, data that did not have the PSH flag can be pushed to the application
+    // when we receive a FIN.
+    if (nBytes && payload)
+        m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
+    if (push)
+    {
+        // Take all the data OUT of the shadow stream, shove it into the user stream
+        size_t shadowSize = m_ShadowDataStream.getSize();
+        m_DataStream.append(m_ShadowDataStream.getBuffer(), shadowSize);
+        m_ShadowDataStream.remove(0, shadowSize);
+        nBytesRemoved += shadowSize;
+    }
 }
 
 bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
 {
-  if(block)
-  {
-    TimeoutGuard guard(tmout);
-    if(!guard.timedOut())
+    if (block)
     {
-      bool ret = false;
-      while(true)
-      {
-        if(m_DataStream.getSize() != 0)
+        TimeoutGuard guard(tmout);
+        if (!guard.timedOut())
         {
-          ret = true;
-          break;
-        }
+            bool ret = false;
+            while (true)
+            {
+                if (m_DataStream.getSize() != 0)
+                {
+                    ret = true;
+                    break;
+                }
 
-        // If there's no more data in the stream, and we need to close, do it
-        // You'd think the above would handle this, but timing is an awful thing to assume
-        // Much testing has led to the addition of the stream size check
-        if(TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
-        {
-          break;
-        }
+                // If there's no more data in the stream, and we need to close, do it
+                // You'd think the above would handle this, but timing is an awful thing to assume
+                // Much testing has led to the addition of the stream size check
+                if (TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
+                {
+                    break;
+                }
 
-        // yield control otherwise we're using up all the CPU time here
-        Scheduler::instance().yield();
-      }
-      return ret;
+                // Yield control otherwise we're using up all the CPU time here
+                Scheduler::instance().yield();
+            }
+            return ret;
+        }
+        else
+            return false;
     }
     else
-      return false;
-  }
-  else
-  {
-    return (m_DataStream.getSize() != 0);
-  }
+    {
+        return (m_DataStream.getSize() != 0);
+    }
 };
 

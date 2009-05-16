@@ -278,7 +278,7 @@ bool VFS::createDirectory(String path, File *pStartNode)
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
       return false;
-    return pFs->createDirectory(newPath, pStartNode);
+    return pFs->createDirectory(newPath, 0);
   }
 }
 
@@ -312,7 +312,7 @@ bool VFS::createSymlink(String path, String value, File *pStartNode)
     Filesystem *pFs = lookupFilesystem(path);
     if (!pFs)
       return false;
-    return pFs->createSymlink(newPath, value, pStartNode);
+    return pFs->createSymlink(newPath, value, 0);
   }
 }
 

@@ -64,7 +64,7 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 int posix_socket(int domain, int type, int protocol)
 {
   NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
-  
+
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -108,28 +108,6 @@ int posix_socket(int domain, int type, int protocol)
   fdMap.insert(fd, f);
 
   return static_cast<int> (fd);
-}
-
-int fileFromSocket(int sock, File* & file)
-{
-  ERROR("Old-style call (fileFromSocket)");
-  return -1;
-  
-  /// \todo Race here - fix.
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
-
-  if (!f)
-  {
-    SYSCALL_ERROR(BadFileDescriptor);
-    return -1;
-  }
-
-  if(!NetManager::instance().isEndpoint(f->file))
-    return -1;
-
-  file = f->file;
-
-  return 0;
 }
 
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
@@ -199,9 +177,9 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
   }
   else if(s->getProtocol() == NETMAN_TYPE_RAW)
     success = true; /// \todo If the interface is down, fail
-  
+
   NOTICE("posix_connect returns");
-  
+
   return success ? 0 : -1;
 }
 
@@ -297,7 +275,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
     return -1; /// \todo SYSCALL_ERROR of some sort
 
   Endpoint* p = s->getEndpoint();
-  
+
   bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   int ret = -1;
@@ -337,7 +315,7 @@ ssize_t posix_recvfrom(void* callInfo)
     return -1; /// \todo SYSCALL_ERROR of some sort
 
   Endpoint* p = s->getEndpoint();
-  
+
   bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
   int ret = -1;
@@ -460,7 +438,7 @@ int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
 int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
   NOTICE("gethostbyname");
-  
+
   // sanity checks
   if(!hostinfo || !offset)
     return -1;
@@ -476,7 +454,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     NOTICE("No IPs found");
     return -1;
   }
-  
+
   // grab the passed hostent
   struct hostent
   {
@@ -489,21 +467,21 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
   } *entry = reinterpret_cast<struct hostent*>(hostinfo);
   uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
   uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
-  
+
   memset(hostinfo, 0, offset);
 
   // copy the hostname
   char* hostName = reinterpret_cast<char*>(userBlock);
   strcpy(hostName, name);
   userBlock += strlen(name) + 1;
-  
+
   /// \todo Aliases
   char** aliases = reinterpret_cast<char**>(0);
-  
+
   // address list
   char** addrList = reinterpret_cast<char**>(userBlock);
   userBlock += sizeof(char*) * (num + 1); // null terminated list
-  
+
   // make sure we don't overflow the buffer
   if(userBlock < endBlock)
   {
@@ -511,26 +489,26 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     for(size_t i = 0; i < num; i++)
     {
       uint32_t ip = ips[i].getIp();
-      
+
       char tmp[] = {ip & 0xff, (ip & 0xff00) >> 8, (ip & 0xff0000) >> 16, (ip & 0xff000000) >> 24};
       char* ipBlock = reinterpret_cast<char*>(userBlock);
       memcpy(ipBlock, tmp, 4);
-      
+
       addrList[i] = ipBlock;
-      
+
       userBlock += 4;
       if(userBlock >= endBlock)
         break;
     }
   }
-  
+
   // build the real hostent
   entry->h_name = hostName;
   entry->h_aliases = aliases;
   entry->h_addrtype = AF_INET;
   entry->h_length = 4;
   entry->h_addr_list = addrList;
-  
+
   return 0;
 }
 
