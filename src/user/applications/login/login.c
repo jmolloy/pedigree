@@ -60,7 +60,8 @@ int main(int argc, char **argv)
     char username[256];
     int i = 0;
     
-    struct termios curt; tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
+    struct termios curt;
+    tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
     
     while ( i < 256 && (c=getchar()) != '\n' ){
       if(c == '\b'){
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
         printf("%c",c);
       }
     }
-    struct termios curt; tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
+    tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
     printf("\n");
 
     username[i] = '\0';
