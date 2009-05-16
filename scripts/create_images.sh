@@ -125,9 +125,6 @@ if which losetup >/dev/null 2>&1; then
   sudo mkdir -p $MOUNTPT/modules
   sudo mkdir -p $MOUNTPT/tmp
 
-  # This is a root filesystem.
-#   sudo touch $MOUNTPT/.pedigree-root
-
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
@@ -158,6 +155,64 @@ if which losetup >/dev/null 2>&1; then
 #    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_ext.vdi
 #  fi
 
+elif which hdid >/dev/null 2>&1; then # OS X
+    ## Floppy
+    cp ../images/floppy_fat.img ./floppy.img
+    mkdir -p floppytmp
+    export devid=`hdid -nomount ./floppy.img`
+    mount -t msdos $devid floppytmp
+    cp $SRCDIR/src/system/kernel/kernel floppytmp/kernel
+    cp $SRCDIR/initrd.tar floppytmp/initrd.tar
+    umount $devid
+    rm -r floppytmp
+    ## End Floppy
+    
+    ## HDD (fat16)
+    tar -xzf ../images/hdd_fat16.tar.gz
+    mkdir -p hddtmp2
+    export devid=`hdid -nomount ./hdd_fat16.img | head -n 2 | tail -n 1 | awk '{split($0, s); print s[1] }'`
+    mount -t msdos $devid hddtmp2
+    touch hddtmp2/.pedigree-root
+    # ^-- Required, or pedigree won't be able to find the image
+    
+    OLD=$PWD
+  
+    cd $SRCDIR/../images/i686-elf
+    tar -chf tmp.tar *
+    ARCLOC=$PWD
+    cd $OLD/hddtmp2
+    sudo tar -xof $ARCLOC/tmp.tar
+    cd $ARCLOC
+    rm tmp.tar
+
+    cd $OLD
+    
+    sudo mkdir -p hddtmp2/applications
+    sudo mkdir -p hddtmp2/libraries
+    sudo mkdir -p hddtmp2/modules
+    sudo mkdir -p hddtmp2/tmp
+    
+    for f in $@; do
+        BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
+        if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
+            sudo cp $SRCDIR/src/user/$f/$BINARY hddtmp2/$f
+        fi
+        if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
+            sudo cp $SRCDIR/src/user/$f/lib$BINARY.so hddtmp2/libraries/lib$BINARY.so
+        fi
+    done
+    
+    sudo cp $SRCDIR/libc.so hddtmp2/libraries
+    sudo cp $SRCDIR/libm.so hddtmp2/libraries
+    
+    sudo mkdir -p hddtmp2/etc/terminfo/v
+    sudo cp $SRCDIR/../scripts/vt100 hddtmp2/etc/terminfo/v/
+    
+    umount $devid
+    rm -r hddtmp2
+    ## End HDD (fat16)
+    
+    echo Created floppy and FAT16 HD image using hdiutils
 elif which mcopy >/dev/null 2>&1; then
 
   #if [ ! -e "./floppy.img" ]
