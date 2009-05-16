@@ -155,7 +155,7 @@ if which losetup >/dev/null 2>&1; then
 #    VBoxManage convertdd $SRCDIR/hdd_16h_63spt_100c.img $SRCDIR/hdd_ext.vdi
 #  fi
 
-elif which hdid >/dev/null 2>&1; then # OS X
+elif which fartsandlove >/dev/null 2>&1; then # OS X
     ## Floppy
     cp ../images/floppy_fat.img ./floppy.img
     mkdir -p floppytmp
