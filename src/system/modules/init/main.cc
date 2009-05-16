@@ -313,6 +313,11 @@ void init()
     mountTab->decreaseRefCount(true);
 
     NOTICE("Available mounts for install:\n" << String(myMounts));
+    
+#else
+    if(VFS::instance().find(String("root:/.pedigree-root")) == 0){
+        FATAL("No root disk (missing .pedigree-root?)");
+    }
 #endif
 
     // Initialise user/group configuration.
