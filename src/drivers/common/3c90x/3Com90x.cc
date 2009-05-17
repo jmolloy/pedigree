@@ -244,8 +244,7 @@ void Nic3C90x::reset()
 
 bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
 {
-    uint8_t status;
-    uint32_t i, retries;
+    uint32_t retries;
 
     for (retries = 0; retries < XMIT_RETRIES; retries++)
     {
