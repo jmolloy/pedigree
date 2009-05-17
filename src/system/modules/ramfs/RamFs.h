@@ -25,7 +25,7 @@
 #include <vfs/Directory.h>
 #include <processor/types.h>
 #include <machine/Disk.h>
- 
+
 /** Defines a directory in the RamFS */
 /// \todo Support nested directories
 class RamDir : public Directory
@@ -49,7 +49,8 @@ public:
     void truncate()
     {}
 
-    virtual void cacheDirectoryContents();
+    virtual void cacheDirectoryContents()
+    {}
 
     virtual bool addEntry(String filename, File *pFile, size_t type);
 
