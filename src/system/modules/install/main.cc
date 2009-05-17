@@ -33,12 +33,11 @@
 
 #include "../../kernel/core/BootIO.h"
 
-#include <network/NetworkStack.h>
-#include <network/RoutingTable.h>
-
 #include <users/UserManager.h>
 
 #include <utilities/TimeoutGuard.h>
+
+#include <ramfs/RamFs.h>
 
 extern BootIO bootIO;
 
@@ -101,43 +100,52 @@ void init()
 {
     static HugeStaticString str;
 
+    // Setup the RAMFS for the mount table before the real HDDs. Doing it early
+    // means if someone happens to have a disk with a volume label that matches
+    // "ramfs", we don't end up failing later.
+    RamFs *ramFs = new RamFs;
+    ramFs->initialise(0);
+
+    // Add it to the VFS
+    VFS::instance().addAlias(ramFs, ramFs->getVolumeLabel());
+
     // Mount all available filesystems.
     if (!findDisks(&Device::root()))
     {
 //     FATAL("No disks found!");
     }
 
+    // Build the mount table
+    if (!VFS::instance().createFile(String("ramfs:/mount.tab"), 0777, 0))
+        FATAL("Couldn't create mount table in the RAMFS");
+    File* mountTab = VFS::instance().find(String("ramfs:/mount.tab"));
+
+    List<VFS::Alias*> myAliases = VFS::instance().getAliases();
+    NormalStaticString myMounts;
+    for (List<VFS::Alias*>::Iterator i = myAliases.begin(); i != myAliases.end(); i++)
+    {
+        // Check for the mounts upon which we *don't* want Pedigree to be installed on
+        String alias = (*i)->alias;
+        if (!strncmp(static_cast<const char*>(alias), "PEDIGREEINSTALL", strlen("PEDIGREEINSTALL")))
+            continue;
+        if (!strncmp(static_cast<const char*>(alias), "root", strlen("root")))
+            continue;
+        if (!strncmp(static_cast<const char*>(alias), "ramfs", strlen("ramfs")))
+            continue;
+
+        myMounts += alias;
+        myMounts += '\n';
+    }
+
+    // Write to the file
+    mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
+
+    mountTab->decreaseRefCount(true);
+
+    NOTICE("Available mounts for install:\n" << String(myMounts));
+
     // Initialise user/group configuration.
     UserManager::instance().initialise();
-
-    // Build routing tables
-    File* routeConfig = VFS::instance().find(String("root:/config/routes"));
-    if (routeConfig)
-    {
-        NOTICE("Loading route table from file");
-        /// \todo Write this...
-    }
-    else
-    {
-        // try to find a default configuration that can connect to the outside world
-        bool bRouteFound = false;
-        for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-        {
-            /// \todo Perhaps try and ping a remote host?
-            Network* card = NetworkStack::instance().getDevice(i);
-            StationInfo info = card->getStationInfo();
-            if (!(info.gateway == 0)) /// \todo write operator !=
-            {
-                RoutingTable::instance().AddNamed(String("default"), card);
-                bRouteFound = true;
-                break;
-            }
-        }
-
-        // otherwise, just assume the default is interface zero
-        if (!bRouteFound)
-            RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
-    }
 
     str += "Loading init program (root:/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
@@ -218,7 +226,7 @@ void init_stage2()
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 }
 
-MODULE_NAME("init");
+MODULE_NAME("install");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON

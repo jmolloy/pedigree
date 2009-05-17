@@ -217,13 +217,6 @@ elif which mcopy >/dev/null 2>&1; then
   #mcopy -Do -s ./tmp/* C:/
 
   #rm -rf ./tmp
-  
-  if which VBoxManage > /dev/null 2>&1; then
-    if [ -f $SRCDIR/hdd_vbox.vdi ]; then
-      rm $SRCDIR/hdd_vbox.vdi
-    fi
-    VBoxManage convertdd $SRCDIR/hdd_fat16.img $SRCDIR/hdd_vbox.vdi > /dev/null 2>&1
-  fi
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else
