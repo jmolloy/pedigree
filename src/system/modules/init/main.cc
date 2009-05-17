@@ -107,6 +107,12 @@ void init()
 //     FATAL("No disks found!");
     }
 
+    // Is there a root disk mounted?
+    if(VFS::instance().find(String("root:/.pedigree-root")) == 0)
+    {
+        FATAL("No root disk (missing .pedigree-root?)");
+    }
+
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
