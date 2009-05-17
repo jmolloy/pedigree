@@ -16,6 +16,7 @@
 
 #include <Log.h>
 #include <vfs/VFS.h>
+#include <Module.h>
 #include "RamFs.h"
 
 RamDir::RamDir(String name, size_t inode, class Filesystem *pFs, File *pParent) :
@@ -142,3 +143,16 @@ bool RamFs::remove(File* parent, File* file)
     RamDir *p = reinterpret_cast<RamDir*>(parent);
     return p->removeEntry(file);
 }
+
+void entry()
+{
+}
+
+void destroy()
+{
+}
+
+MODULE_NAME("ramfs");
+MODULE_ENTRY(&entry);
+MODULE_EXIT(&destroy);
+MODULE_DEPENDS("VFS");

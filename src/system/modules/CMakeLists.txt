@@ -17,7 +17,7 @@
 set(MODULES)
 set(MODULES ${MODULES} vfs ext2 fat iso9660 network dhcpclient console TUI linker users ramfs)
 if(INSTALLER)
-  set(MODULES ${MODULES} install)
+  set(MODULES ${MODULES} installer)
 else(INSTALLER)
   set(MODULES ${MODULES} init)
 endif(INSTALLER)
