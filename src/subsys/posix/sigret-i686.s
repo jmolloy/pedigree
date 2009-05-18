@@ -17,7 +17,18 @@
 [GLOBAL sigret_stub]
 [GLOBAL sigret_stub_end]
 
+; void sigret_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 sigret_stub:
+
+  ; Standard entry
+  ; push ebp
+  ; mov ebp, esp
+
+  ; Run the handler
+  ; call [esp + 8]
+
+  ; Return to the kernel
   mov eax, 0x10066
   int 0xff
+
 sigret_stub_end:

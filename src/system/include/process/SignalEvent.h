@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,21 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef EVENT_NUMBERS_H
-#define EVENT_NUMBERS_H
+#ifndef SIGNAL_EVENT_H
+#define SIGNAL_EVENT_H
 
-/** The globally-defined event numbers for each Event subclass. These must be unique so that
-    identification of serialized data is possible. */
-namespace EventNumbers
+#include <process/Event.h>
+
+class SignalEvent : public Event
 {
-    const size_t PosixSignalStart = 0;
-    // Posix signals in here.
-    const size_t PosixSignalEnd   = 32;
+public:
+    SignalEvent(uintptr_t handlerAddress, size_t signalNum, size_t specificNestingLevel=~0UL);
+    virtual ~SignalEvent();
 
-    const size_t TimeoutGuard     = 33;
-    const size_t Interrupt        = 34;
+    virtual size_t serialize(uint8_t *pBuffer);
+    static bool unserialize(uint8_t *pBuffer, Event &event);
 
-    const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
+    virtual size_t getNumber()
+    {
+        return m_SignalNumber;
+    }
+
+private:
+    /** This keeps track of the actual signal this SignalEvent is linked to */
+    size_t m_SignalNumber;
 };
 
 #endif

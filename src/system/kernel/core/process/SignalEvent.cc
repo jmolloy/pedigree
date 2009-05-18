@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,21 +13,30 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef EVENT_NUMBERS_H
-#define EVENT_NUMBERS_H
 
-/** The globally-defined event numbers for each Event subclass. These must be unique so that
-    identification of serialized data is possible. */
-namespace EventNumbers
+#include <Log.h>
+#include <processor/types.h>
+#include <process/Event.h>
+#include <process/SignalEvent.h>
+
+SignalEvent::SignalEvent(uintptr_t handlerAddress, size_t signalNum, size_t specificNestingLevel) :
+    Event(handlerAddress, false, specificNestingLevel), m_SignalNumber(signalNum)
 {
-    const size_t PosixSignalStart = 0;
-    // Posix signals in here.
-    const size_t PosixSignalEnd   = 32;
+}
 
-    const size_t TimeoutGuard     = 33;
-    const size_t Interrupt        = 34;
+SignalEvent::~SignalEvent()
+{
+}
 
-    const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
-};
+/// \todo There may be a need for serialization in the future...
+size_t SignalEvent::serialize(uint8_t *pBuffer)
+{
+    NOTICE("SignalEvent::serialize");
+    return 0;
+}
 
-#endif
+bool SignalEvent::unserialize(uint8_t *pBuffer, Event &event)
+{
+    NOTICE("SignalEvent::unserialize");
+    return 0;
+}

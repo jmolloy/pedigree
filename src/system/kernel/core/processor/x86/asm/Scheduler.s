@@ -26,7 +26,7 @@ global _ZN9Processor10jumpKernelEPVmmmmmmm
 ; void Processor::jumpUser(volatile uintptr_t *, uintptr_t, uintptr_t,
 ;                          uintptr_t, uintptr_t, uintptr_t, uintptr_t)
 global _ZN9Processor8jumpUserEPVmmmmmmm
-; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&) 
+; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
 global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X86SchedulerState
 
 ; void Thread::threadExited()
@@ -36,7 +36,7 @@ extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 
 [bits 32]
 [section .text]
-    
+
 _ZN9Processor9saveStateER17X86SchedulerState:
     ;; Load the state pointer.
     mov     eax, [esp+4]
@@ -47,7 +47,7 @@ _ZN9Processor9saveStateER17X86SchedulerState:
 
     ;; Save the return address.
     mov     edx, [esp]
-    
+
     mov     [eax+0], edi
     mov     [eax+4], esi
     mov     [eax+8], ebx
@@ -102,7 +102,7 @@ _ZN9Processor12restoreStateER17X86InterruptStatePVm:
     ;; Release lock.
     mov     dword [ecx], 1
 .no_lock:
-    
+
     ;; Restore the registers
     pop ds
     mov ax, ds
@@ -185,7 +185,7 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     push    edx
     ;; Then the return address. User mode threads can't return to kernel code,
     ;; so just make it 0.
-    push    dword 0
+    push    dword 0xbeef
 
     ;; New stack frame.
     xor     ebp, ebp
@@ -235,7 +235,7 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X86Scheduler
 
     ;; Move the state pointer from a callee-save register to a scratch register.
     mov     eax, edi
-    
+
     ;; Reload all callee-save registers.
     mov     edi, [eax+0]
     mov     esi, [eax+4]

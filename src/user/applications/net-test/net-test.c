@@ -15,8 +15,7 @@
 
 void rofl(int arg)
 {
-  printf("Signal Handler!\n");
-  while(1);
+  printf("Signal Handler (arg=%x)!\n", arg);
 }
 
 int main(int argc, char **argv) {
@@ -43,7 +42,12 @@ int main(int argc, char **argv) {
   }
 */
 
+  printf("Installing signal handler for SIGHUP (size of sigaction = %d)\n", sizeof(struct sigaction));
+
   signal(SIGHUP, rofl);
+
+  printf("Raising SIGHUP\n");
+
   raise(SIGHUP);
 
   printf("Raise returns\n");

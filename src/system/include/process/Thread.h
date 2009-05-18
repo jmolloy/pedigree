@@ -32,7 +32,7 @@ class Process;
 /**
  * An abstraction of a thread of execution.
  *
- * The thread maintains not just one execution context (SchedulerState) but a 
+ * The thread maintains not just one execution context (SchedulerState) but a
  * stack of them, along with a stack of masks for inhibiting event dispatch.
  *
  * This enables event dispatch at any time without affecting the previous state,
@@ -53,13 +53,13 @@ public:
 
     /** Thread start function type. */
     typedef int (*ThreadStartFunc)(void*);
-  
+
     /** Creates a new Thread belonging to the given Process. It shares the Process'
      * virtual address space.
      *
      * The constructor registers itself with the Scheduler and parent process - this
      * does not need to be done manually.
-     * 
+     *
      * If kernelMode is true, and pStack is NULL, no stack space is assigned.
      *
      * \param pParent The parent process. Can never be NULL.
@@ -68,9 +68,9 @@ public:
      * \param pParam A parameter to give the startFunction.
      * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
      *               only. */
-    Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam, 
+    Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
            void *pStack=0);
-  
+
     /** Alternative constructor - this should be used only by initialiseMultitasking() to
      * define the first kernel thread. */
     Thread(Process *pParent);
@@ -97,6 +97,7 @@ public:
         \return A reference to the previous state. */
     SchedulerState &pushState()
     {
+        NOTICE("Thread::pushState");
         if (m_nStateLevel >= MAX_NESTED_EVENTS)
         {
             ERROR("Thread: Max nested events!");
@@ -112,6 +113,7 @@ public:
         stack.*/
     void popState()
     {
+        NOTICE("Thread::popState");
         if (m_nStateLevel == 0)
         {
             ERROR("Thread: popStack() called with state level 0!");
@@ -123,7 +125,7 @@ public:
     size_t getStateLevel()
     {return m_nStateLevel;}
 
-    /** Overwrites the state at the given nesting level. 
+    /** Overwrites the state at the given nesting level.
      *\param stateLevel The nesting level to edit.
      *\param state The state to copy.
      */
@@ -147,7 +149,7 @@ public:
 
     /** Sets our current status. */
     void setStatus(Status s);
-  
+
     /** Retrieves the exit status of the Thread.
      * \note Valid only if the Thread is in the Zombie state. */
     int getExitCode()
@@ -156,7 +158,7 @@ public:
     /** Retrieves a pointer to the top of the Thread's kernel stack. */
     void *getKernelStack()
     {return m_pKernelStack;}
-  
+
     /** Returns the Thread's ID. */
     size_t getId()
     {return m_Id;}
@@ -177,14 +179,14 @@ public:
     /** Sets whether the thread was just interrupted deliberately. */
     void setInterrupted(bool b)
     {m_bInterrupted = b;}
-    
+
 
     /** Returns the thread's scheduler lock. */
     Spinlock &getLock()
     {return m_Lock;}
 
     /** Sends the asynchronous event pEvent to this thread.
-      
+
         If the thread ID is greater than or equal to EVENT_TID_MAX, the event will be ignored. */
     void sendEvent(Event *pEvent);
 
@@ -225,10 +227,10 @@ private:
 
     /** Our current status. */
     volatile Status m_Status;
-  
+
     /** Our exit code. */
     int m_ExitCode;
-  
+
     /** Our kernel stack. */
     void *m_pKernelStack;
 
@@ -252,7 +254,7 @@ private:
 
     /** Stack of inhibited Event masks, gets pushed with a new value when an Event handler is run, and
         popped when one completes.
-  
+
         \note A '1' here means the event is inhibited, '0' means it can be fired. */
     ExtensibleBitmap m_InhibitMasks[MAX_NESTED_EVENTS];
 

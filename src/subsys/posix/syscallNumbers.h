@@ -96,5 +96,6 @@
 
 #define PEDIGREE_LOGIN   101
 #define PEDIGREE_SIGRET  102
+#define PEDIGREE_INIT_SIGRET    103
 
 #endif

@@ -24,6 +24,8 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
+#include <process/SignalEvent.h>
+
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
   m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(),
@@ -211,6 +213,47 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
   lock.release();
 
   return pProcess->getId();
+}
+
+void Process::setSignalHandler(size_t sig, SignalHandler* handler)
+{
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+
+    sig %= 32;
+    if(handler)
+    {
+        SignalHandler* tmp;
+        tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
+        if(tmp)
+        {
+            // Remove from the list
+            m_SignalHandlers.remove(sig);
+
+            SignalEvent *event = reinterpret_cast<SignalEvent*>(tmp->pEvent);
+            tmp->pEvent = 0;
+
+            // Destroy the event
+            if(event)
+            {
+                /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
+                /// \bug FIXME, causes a page fault
+                ///      Need to write proper copy constructors (and operator =) for SignalHandler!
+                // delete event;
+                /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
+            }
+            else
+                WARNING("Signal handler for signal " << sig << " had a null event!");
+
+
+            // And finally, destroy the SignalHandler struct
+            delete tmp;
+        }
+
+        // Insert into the signal handler table
+        handler->sig = sig;
+
+        m_SignalHandlers.insert(sig, handler);
+    }
 }
 
 #endif

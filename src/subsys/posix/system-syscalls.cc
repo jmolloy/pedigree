@@ -46,12 +46,6 @@
 
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
-extern "C"
-{
-  extern void sigret_stub();
-  extern char sigret_stub_end;
-}
-
 /// Saves a char** array in the Vector of String*s given.
 static void save_string_array(const char **array, Vector<String*> &rArray)
 {
@@ -294,15 +288,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
   state.setStackPointer(pState.getStackPointer());
   state.setInstructionPointer(elf->getEntryPoint());
-
-  /// \todo Can this go somewhere other than 0x50000000? Stack perhaps?
-  physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-  Processor::information().getVirtualAddressSpace().map(phys,
-                                                        reinterpret_cast<void*> (0x50000000),
-                                                        VirtualAddressSpace::Write);
-  NOTICE("Copying " << (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)) << " bytes.");
-  memcpy(reinterpret_cast<void*>(0x50000000), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
-  pProcess->setSigReturnStub(0x50000000);
 
   /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON
