@@ -29,6 +29,10 @@
   #include "../x64/utils.h"
 #endif
 
+#if defined(TRACK_PAGE_ALLOCATIONS)
+  #include <commands/AllocationCommand.h>
+#endif
+
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
@@ -39,6 +43,18 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
   LockGuard<Spinlock> guard(m_Lock);
+
+#if defined(TRACK_PAGE_ALLOCATIONS)
+  if (Processor::m_Initialised == 2)
+  {
+      if (!g_AllocationCommand.isMallocing())
+      {
+          m_Lock.release();
+          g_AllocationCommand.allocatePage();
+          m_Lock.acquire();
+      }
+  }
+#endif
 
   return m_PageStack.allocate(0);
 }

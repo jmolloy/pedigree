@@ -19,6 +19,10 @@
 #include <Log.h>
 #include <processor/PhysicalMemoryManager.h>
 
+#if defined(TRACK_PAGE_ALLOCATIONS)
+  #include <commands/AllocationCommand.h>
+#endif
+
 void *dlmallocSbrk(ssize_t incr)
 {
   // NOTE: incr is already page aligned
@@ -32,11 +36,17 @@ void *dlmallocSbrk(ssize_t incr)
   if (Processor::m_Initialised == 2)
     Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
 #endif
+#if defined(TRACK_PAGE_ALLOCATIONS)
+  g_AllocationCommand.setMallocing(true);
+#endif
 
   // Expand the heap
   void *pHeap = VirtualAddressSpace::getKernelAddressSpace().expandHeap(incr,
                                                                         VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
 
+#if defined(TRACK_PAGE_ALLOCATIONS)
+  g_AllocationCommand.setMallocing(false);
+#endif
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH  
   if (Processor::m_Initialised == 2)
     Processor::switchAddressSpace(VAddressSpace);

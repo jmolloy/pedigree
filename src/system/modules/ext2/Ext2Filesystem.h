@@ -87,6 +87,9 @@ private:
     /** Size of a block. */
     uint32_t m_BlockSize;
 
+    /** Size of an Inode. */
+    uint32_t m_InodeSize;
+
     /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
     Mutex m_WriteLock;
 

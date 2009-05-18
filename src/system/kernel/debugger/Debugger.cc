@@ -27,6 +27,7 @@
 #include <DumpCommand.h>
 #include <LogViewer.h>
 #include <Backtracer.h>
+#include <AllocationCommand.h>
 #include <utilities/utility.h>
 #include <StepCommand.h>
 #include <TraceCommand.h>
@@ -146,9 +147,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 15;
+  size_t nCommands = 16;
 #else
-  size_t nCommands = 14;
+  size_t nCommands = 15;
 #endif
   DebuggerCommand *pCommands[] = {&syscallTracer,
                                   &disassembler,
@@ -166,7 +167,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #if defined(THREADS)
                                   &threads,
 #endif
-                                  &io};
+                                  &io,
+                                  &g_AllocationCommand};
 
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.

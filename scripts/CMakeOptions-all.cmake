@@ -23,6 +23,7 @@ add_option(ECHO_CONSOLE_TO_SERIAL "Print the kernel log to serial port 1." ON)
 add_option(SERIAL_IS_FILE "The serial output is not a VT100 compliant tty." ON)
 add_option(VERBOSE_LINKER "Increases the verbosity of messages from the Elf and KernelElf classes." ON)
 add_option(INSTALLER     "Build the installer" OFF)
+add_option(TRACK_PAGE_ALLOCATIONS "Track page allocations in the debugger." OFF)
 add_non_user_option(THREADS)
 
 if(DEBUGGER)

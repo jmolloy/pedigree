@@ -14,11 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "apple.h"
-#include <processor/Processor.h>
-#include <Log.h>
 #include "Partition.h"
-
+#include "apple.h"
+#include <Log.h>
+#include <processor/Processor.h>
 
 bool appleProbeDisk(Disk *pDisk)
 {
@@ -36,7 +35,7 @@ bool appleProbeDisk(Disk *pDisk)
   pDisk->getName(diskName);
 
   // Check for the magic signature.
-  if (pMap->pmSig != APPLE_PM_SIG)
+  if (pMap->pmSig != BIG_TO_HOST16(APPLE_PM_SIG))
   {
     NOTICE("Apple partition map not found on disk " << diskName);
     return false;
@@ -45,7 +44,7 @@ bool appleProbeDisk(Disk *pDisk)
   NOTICE("Apple partition map found on disk " << diskName);
 
   // Cache the number of partition table entries.
-  size_t nEntries = pMap->pmMapBlkCnt;
+  size_t nEntries = BIG_TO_HOST32(pMap->pmMapBlkCnt);
   for (size_t i = 0; i < nEntries; i++)
   {
     if (i > 0) // We don't need to load anything in for the first pmap - already done!
@@ -62,8 +61,8 @@ bool appleProbeDisk(Disk *pDisk)
 
     // Create a partition object.
     Partition *pObj = new Partition(String(pMap->pmParType),
-                                    static_cast<uint64_t>(pMap->pmPyPartStart)*512ULL,
-                                    static_cast<uint64_t>(pMap->pmPartBlkCnt)*512ULL);
+                                    static_cast<uint64_t>(BIG_TO_HOST32(pMap->pmPyPartStart))*512ULL,
+                                    static_cast<uint64_t>(BIG_TO_HOST32(pMap->pmPartBlkCnt))*512ULL);
     pObj->setParent(static_cast<Device*> (pDisk));
     pDisk->addChild(static_cast<Device*> (pObj));
     

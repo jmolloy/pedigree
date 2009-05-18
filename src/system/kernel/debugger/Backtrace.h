@@ -24,10 +24,11 @@
 /** @addtogroup kerneldebugger
  * @{ */
 
-#define MAX_STACK_FRAMES 20
+#define MAX_STACK_FRAMES 6
 
 class Backtrace
 {
+    friend class AllocationCommand;
 public:
   /**
    * Creates a new Backtrace object.

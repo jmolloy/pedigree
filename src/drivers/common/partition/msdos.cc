@@ -303,9 +303,14 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
       {
         // Look up the partition string.
         const char *pStr = g_pPartitionTypes[pPartitions[i].type];
+	NormalStaticString sstr("(");
+	sstr += i;
+	sstr += ") ";
+	sstr += pStr;
+	String str(sstr);
 
         // Create a partition object.
-        Partition *pObj = new Partition(String(pStr),
+        Partition *pObj = new Partition(str,
                                         static_cast<uint64_t>(LITTLE_TO_HOST32(pPartitions[i].start_lba))*512ULL, /* start_lba is in /sectors/. */
                                         static_cast<uint64_t>(LITTLE_TO_HOST32(pPartitions[i].size))*512ULL);
         pObj->setParent(static_cast<Device*> (pDisk));

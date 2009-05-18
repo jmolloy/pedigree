@@ -32,7 +32,7 @@
 #include <users/UserManager.h>
 
 Ext2Filesystem::Ext2Filesystem() :
-    m_pDisk(0), m_Superblock(), m_pGroupDescriptors(0), m_BlockSize(0), m_WriteLock(false),
+    m_pDisk(0), m_Superblock(), m_pGroupDescriptors(0), m_BlockSize(0), m_InodeSize(0), m_WriteLock(false),
     m_bSuperblockDirty(false), m_bGroupDescriptorsDirty(false), m_pRoot(0)
 {
 }
@@ -65,11 +65,12 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // Calculate the block size.
     m_BlockSize = 1024 << LITTLE_TO_HOST32(m_Superblock.s_log_block_size);
 
+    // Calculate the inode size.
+    /// \todo Check for EXT2_DYNAMIC_REV - only applicable for dynamic revision.
+    m_InodeSize = LITTLE_TO_HOST16(m_Superblock.s_inode_size);
+
     // Where is the group descriptor table?
-    /// \todo Logic needs improvement - surely there's a specific way to calculate this?
-    uint32_t gdBlock = 1;
-    if (m_BlockSize == 1024)
-        gdBlock = 2;
+    uint32_t gdBlock = LITTLE_TO_HOST32(m_Superblock.s_first_data_block)+1;
 
     // How large is the group descriptor table?
     uint32_t gdSize = m_BlockSize;
@@ -414,9 +415,9 @@ Inode Ext2Filesystem::getInode(uint32_t inode)
 
     // The inode table may extend onto multiple blocks - if the inode we want is in another block,
     // calculate that now.
-    while ( (index*sizeof(Inode)) >= m_BlockSize )
+    while ( (index*m_InodeSize) >= m_BlockSize )
     {
-        index -= m_BlockSize/sizeof(Inode);
+        index -= m_BlockSize/m_InodeSize;
         inodeTableBlock++;
     }
 
@@ -424,9 +425,8 @@ Inode Ext2Filesystem::getInode(uint32_t inode)
     m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
                   reinterpret_cast<uintptr_t> (buffer));
 
-    Inode *inodeTable = reinterpret_cast<Inode*> (buffer);
+    Inode node = * reinterpret_cast<Inode*> (buffer+index*m_InodeSize);
 
-    Inode node = inodeTable[index];
     delete [] buffer;
 
     return node;
@@ -443,9 +443,9 @@ bool Ext2Filesystem::setInode(uint32_t inode, Inode in)
 
     // The inode table may extend onto multiple blocks - if the inode we want is in another block,
     // calculate that now.
-    while ( (index*sizeof(Inode)) >= m_BlockSize )
+    while ( (index*m_InodeSize) >= m_BlockSize )
     {
-        index -= m_BlockSize/sizeof(Inode);
+        index -= m_BlockSize/m_InodeSize;
         inodeTableBlock++;
     }
 
@@ -453,9 +453,9 @@ bool Ext2Filesystem::setInode(uint32_t inode, Inode in)
     m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
                   reinterpret_cast<uintptr_t> (buffer));
 
-    Inode *inodeTable = reinterpret_cast<Inode*> (buffer);
+    Inode *pInode = reinterpret_cast<Inode*> (buffer+index*m_InodeSize);
+    *pInode = in;
 
-    inodeTable[index] = in;
 
     m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
                    reinterpret_cast<uintptr_t> (buffer));

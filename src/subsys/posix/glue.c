@@ -35,6 +35,57 @@ extern void strcpy(char*,char*);
 extern void printf(char*,...);
 extern void sprintf(char*, char*,...);
 
+#define BS8(x) (x)
+#define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
+#define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
+#define BS64(x) (x)
+
+#ifdef LITTLE_ENDIAN
+
+#define LITTLE_TO_HOST8(x) (x)
+#define LITTLE_TO_HOST16(x) (x)
+#define LITTLE_TO_HOST32(x) (x)
+#define LITTLE_TO_HOST64(x) (x)
+
+#define HOST_TO_LITTLE8(x) (x)
+#define HOST_TO_LITTLE16(x) (x)
+#define HOST_TO_LITTLE32(x) (x)
+#define HOST_TO_LITTLE64(x) (x)
+
+#define BIG_TO_HOST8(x) BS8((x))
+#define BIG_TO_HOST16(x) BS16((x))
+#define BIG_TO_HOST32(x) BS32((x))
+#define BIG_TO_HOST64(x) BS64((x))
+
+#define HOST_TO_BIG8(x) BS8((x))
+#define HOST_TO_BIG16(x) BS16((x))
+#define HOST_TO_BIG32(x) BS32((x))
+#define HOST_TO_BIG64(x) BS64((x))
+
+#else // else Big endian
+
+#define BIG_TO_HOST8(x) (x)
+#define BIG_TO_HOST16(x) (x)
+#define BIG_TO_HOST32(x) (x)
+#define BIG_TO_HOST64(x) (x)
+
+#define HOST_TO_BIG8(x) (x)
+#define HOST_TO_BIG16(x) (x)
+#define HOST_TO_BIG32(x) (x)
+#define HOST_TO_BIG64(x) (x)
+
+#define LITTLE_TO_HOST8(x) BS8((x))
+#define LITTLE_TO_HOST16(x) BS16((x))
+#define LITTLE_TO_HOST32(x) BS32((x))
+#define LITTLE_TO_HOST64(x) BS64((x))
+
+#define HOST_TO_LITTLE8(x) BS8((x))
+#define HOST_TO_LITTLE16(x) BS16((x))
+#define HOST_TO_LITTLE32(x) BS32((x))
+#define HOST_TO_LITTLE64(x) BS64((x))
+
+#endif
+
 #define MAXNAMLEN 255
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
@@ -1301,3 +1352,37 @@ void herror(const char *s)
   printf("%s: %s\n", s, buff);
 }
 
+int makedev()
+{
+    STUBBED("makedev");
+    return -1;
+}
+
+unsigned int htonl(unsigned int n)
+{
+    return HOST_TO_BIG32(n);
+}
+unsigned int ntohl(unsigned int n)
+{
+    return BIG_TO_HOST32(n);
+}
+
+unsigned short htons(unsigned short n)
+{
+    return HOST_TO_BIG16(n);
+}
+unsigned short ntohs(unsigned short n)
+{
+    return BIG_TO_HOST16(n);
+}
+
+int fchmod(int fildes, int mode)
+{
+    STUBBED("fchmod");
+    return -1;
+}
+
+void sync()
+{
+    STUBBED("sync");
+}
