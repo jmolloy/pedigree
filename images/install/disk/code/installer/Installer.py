@@ -242,22 +242,41 @@ class Installer:
 		currFileNum = 0
 		myProgress = 0
 		for line in fileLines:
+			
 			# Remove trailing whitespace and split on spaces
 			# File format:
 			# <source path> <dest path> <md5> <compulsory>
 			line = line.rstrip()
 			set = line.split(" ")
+			
+			# Skip whitespace lines
+			if(len(line) == 0):
+				continue
+			
+			# Check for comment
+			if(line.strip()[0] == '#'):
+				continue
+			
+			# Check for a valid format
 			if(len(set) != 4):
 				self.drawError("Bad set in file list:\n" + line + "\nThis set only has " + str(len(set)) + " entries")
 				continue
+			
+			# * saves duplication
+			if(set[1] == "*"):
+				set[1] = set[0]
 
 			# Create directory structure if required
-			dirSplit = set[1].split("/")
-			dirSplit = dirSplit[1:-1]
+			dirSplit = filter(lambda x: len(x) > 0, set[1].split("/"))
+			dirSplit = dirSplit[:-1]
 			if(len(dirSplit) > 0):
 				currPath = "/"
 				for dir in dirSplit:
-					os.mkdir(self.installdir + currPath)
+					currPath += dir
+					createPath = self.installdir + currPath
+					if(os.path.exists(createPath) == False):
+						os.mkdir(createPath)
+					currPath += "/"
 
 			# Update the progress
 			currFileNum += 1
@@ -273,18 +292,20 @@ class Installer:
 			# Copy the file
 			shutil.copyfile(self.filesdir + set[0], self.installdir + set[1])
 
-			# MD5 the newly copied file
-			#newFile = open(self.installdir + set[1])
-			#hex = hashlib.md5(newFile.read()).hexdigest()
-			#newFile.close()
+			if(set[2] != "none"):
+				# MD5 the newly copied file
+				#newFile = open(self.installdir + set[1])
+				#hex = hashlib.md5(newFile.read()).hexdigest()
+				#newFile.close()
 
-			# Ensure the MD5 matches
-			#if(hex != set[2]):
-			#	if(set[3] == "yes"):
-			#		self.drawError("Compulsory file failed verification:\n" + self.installdir + set[1])
-			#		raise
-			#	else:
-			#		self.drawWarning("File " + str(currFileNum) + " failed verification, continuing anyway:\n" + self.installdir + set[1])
+				# Ensure the MD5 matches
+				#if(hex != set[2]):
+				#	if(set[3] == "yes"):
+				#		self.drawError("Compulsory file failed verification:\n" + self.installdir + set[1])
+				#		raise
+				#	else:
+				#		self.drawWarning("File " + str(currFileNum) + " failed verification, continuing anyway:\n" + self.installdir + set[1])
+				pass
 
 		fileList.close()
 

@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <pwd.h>
+#include <termios.h> 
 #include <sys/wait.h>
 
 // Pedigree function, defined in glue.c
@@ -58,8 +59,23 @@ int main(int argc, char **argv)
     char c;
     char username[256];
     int i = 0;
-    while ( i < 256 && (c=getchar()) != '\n' )
-      username[i++] = c;
+    
+    struct termios curt;
+    tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
+    
+    while ( i < 256 && (c=getchar()) != '\n' ){
+      if(c == '\b'){
+        if(i > 0){
+            username[--i] = '\0';
+            printf("\b \b");
+        }
+      }else{
+        username[i++] = c;
+        printf("%c",c);
+      }
+    }
+    tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
+    printf("\n");
 
     username[i] = '\0';
 

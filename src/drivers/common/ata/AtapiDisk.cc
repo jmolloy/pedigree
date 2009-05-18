@@ -221,7 +221,7 @@ bool AtapiDisk::initialise()
   // Supported device?
   if(m_Type != CdDvd && m_Type != Block)
   {
-    /// \todo Support more than just CDs and DVDs
+    /// \todo Testing needs to be done on more than just CD/DVD and block devices...
     WARNING("Pedigree currently only supports CD/DVD and block ATAPI devices.");
     return false;
   }
