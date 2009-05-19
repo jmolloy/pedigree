@@ -177,8 +177,54 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
 
     NOTICE("Saving state, loc = " << reinterpret_cast<uintptr_t>(&oldState) << "...");
 
+    /** I've included the debugging output from a bad run inline with the NOTICEs **/
+
+    uint32_t whee1, whee2;
+    asm volatile("mov 4(%%ebp), %0" : "=r" (whee1));
+    NOTICE("Returning to = " << whee1 << ".");
+    asm volatile("mov (%%ebp), %0" : "=r" (whee2));
+    NOTICE("Old EBP = " << whee2 << ".");
+
+    /*
+    (NN) Returning to = 0xfa0873a9.
+    (NN) Old EBP = 0xff39bf84.
+    */
+
+    uint32_t esp, ebp;
+    asm volatile("mov %%esp, %0" : "=r" (esp));
+    asm volatile("mov %%ebp, %0" : "=r" (ebp));
+    NOTICE("1. esp = " << esp << ", ebp = " << ebp << ".");
+
+    /*
+    (NN) 1. esp = 0xff39befc, ebp = 0xff39bf54.
+    */
+
     if (Processor::saveState(oldState))
     {
+        uint32_t esp2, ebp2;
+        asm volatile("mov %%esp, %0" : "=r" (esp2));
+        asm volatile("mov %%ebp, %0" : "=r" (ebp2));
+        NOTICE("2. esp = " << esp2 << ", ebp = " << ebp2 << ".");
+        NOTICE("3. esp = " << esp << ", ebp = " << ebp << ".");
+
+        /*
+        (NN) 2. esp = 0xff39bf0c, ebp = 0xff39bf54.
+        (NN) 3. esp = 0x10, ebp = 0xff39bf44.
+        */
+
+        /** The 0x10 between the current stack and the previous stack is
+          * correct. The value for the previous stack variables however is
+          * not.
+          *
+          * If, instead of calling jumpUser below, eventHandlerReturned is
+          * called, the three dumps are:
+          * (NN) 1. esp = 0xff39bf0c, ebp = 0xff39bf54.
+          * (NN) 2. esp = 0xff39bf1c, ebp = 0xff39bf54.
+          * (NN) 3. esp = 0xff39bf0c, ebp = 0xff39bf54.
+          *
+          * Somewhere the stack is being corrupted, it would appear.
+          */
+
         // Just context-restored.
         NOTICE("huzzah");
         Processor::setInterrupts(bWasInterrupts);
@@ -202,6 +248,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     else if (userStack != 0)
     {
         NOTICE("addr = " << addr << ".");
+        eventHandlerReturned();
         Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
         // Not reached.
     }
@@ -223,6 +270,7 @@ void PerProcessorScheduler::eventHandlerReturned()
 
     NOTICE("here3");
     Processor::restoreState(pThread->state());
+    FATAL("eventHandlerReturned() - restoreState returned!?");
     // Not reached.
 }
 

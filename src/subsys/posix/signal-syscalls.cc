@@ -193,6 +193,19 @@ uintptr_t posix_signal(int sig, void* func)
   return 0;
 }
 
+int kgo(Thread* pThread)
+{
+  SchedulerState &oldState = pThread->pushState();
+  if(Processor::saveState(oldState))
+  {
+      NOTICE("Whee!");
+      return 0;
+  }
+
+  NOTICE("rofl :D");
+  return 1;
+}
+
 int posix_raise(int sig, SyscallState &State)
 {
   SC_NOTICE("raise");
@@ -214,7 +227,7 @@ int posix_raise(int sig, SyscallState &State)
   NOTICE("Saving state, loc = " << reinterpret_cast<uintptr_t>(&State) << ", sp = " << State.getStackPointer() << "...");
   NOTICE("Checking event state...");
   Processor::information().getScheduler().checkEventState(State.getStackPointer());
-  NOTICE("Complete");
+  FATAL("Complete");
   Processor::setInterrupts(bWasInterrupts);
 
   // All done
