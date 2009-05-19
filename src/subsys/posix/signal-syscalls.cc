@@ -238,6 +238,11 @@ int pedigree_sigret()
 {
   SC_NOTICE("pedigree_sigret");
 
+    uint32_t esp, ebp;
+    asm volatile("mov %%esp, %0" : "=r" (esp));
+    asm volatile("mov %%ebp, %0" : "=r" (ebp));
+    NOTICE("0. esp = " << esp << ", ebp = " << ebp << ".");
+
   Processor::information().getScheduler().eventHandlerReturned();
 
   FATAL("eventHandlerReturned() returned!");

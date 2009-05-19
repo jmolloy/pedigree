@@ -88,7 +88,7 @@ public:
     /** Returns a reference to the Thread's saved context. This function is intended only
      * for use by the Scheduler. */
     SchedulerState &state()
-    {return m_States[m_nStateLevel];}
+    {return m_StateLevels[m_nStateLevel].m_State;}
 
     /** Increases the state nesting level by one - pushes a new state to the top of the state stack.
         This also pushes to the top of the inhibited events stack, copying the current inhibit mask.
@@ -102,11 +102,12 @@ public:
         {
             ERROR("Thread: Max nested events!");
             /// \todo Take some action here - possibly kill the thread?
-            return m_States[m_nStateLevel];
+            return m_StateLevels[m_nStateLevel].m_State;
         }
         m_nStateLevel++;
-        m_InhibitMasks[m_nStateLevel] = m_InhibitMasks[m_nStateLevel-1];
-        return m_States[m_nStateLevel-1];
+        m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
+        allocateStackAtLevel(m_nStateLevel);
+        return m_StateLevels[m_nStateLevel - 1].m_State;
     }
 
     /** Decreases the state nesting level by one, popping both the state stack and the inhibit mask
@@ -119,11 +120,15 @@ public:
             ERROR("Thread: popStack() called with state level 0!");
         }
         m_nStateLevel --;
+        NOTICE("New kernel stack = " << (uintptr_t) m_StateLevels[m_nStateLevel].m_pKernelStack << "!");
     }
 
     /** Returns the state nesting level. */
     size_t getStateLevel()
     {return m_nStateLevel;}
+
+    /** Allocates a new stack for a specific nesting level, if required */
+    void allocateStackAtLevel(size_t stateLevel);
 
     /** Overwrites the state at the given nesting level.
      *\param stateLevel The nesting level to edit.
@@ -136,7 +141,7 @@ public:
             ERROR("Thread::pokeState(): stateLevel `" << stateLevel << "' is over the maximum.");
             return;
         }
-        m_States[stateLevel] = state;
+        m_StateLevels[stateLevel].m_State = state;
     }
 
     /** Retrieves a pointer to this Thread's parent process. */
@@ -157,7 +162,12 @@ public:
 
     /** Retrieves a pointer to the top of the Thread's kernel stack. */
     void *getKernelStack()
-    {return m_pKernelStack;}
+    {
+        return m_StateLevels[m_nStateLevel].m_pKernelStack;
+    }
+    /*
+        return m_pKernelStack;}
+    */
 
     /** Returns the Thread's ID. */
     size_t getId()
@@ -216,8 +226,25 @@ private:
     /** Assignment operator */
     Thread &operator = (const Thread &);
 
-    /** The stack of processor states. */
-    SchedulerState m_States[MAX_NESTED_EVENTS];
+    /** A level of thread state */
+    struct StateLevel
+    {
+        StateLevel() :
+            m_State(), m_pKernelStack(0), m_InhibitMask()
+        {}
+        ~StateLevel()
+        {}
+
+        /** The processor state for this level. */
+        SchedulerState m_State;
+
+        /** Our kernel stack. */
+        void *m_pKernelStack;
+
+        ExtensibleBitmap m_InhibitMask;
+    } m_StateLevels[MAX_NESTED_EVENTS];
+
+        // SchedulerState m_States[MAX_NESTED_EVENTS];
 
     /** The current index into m_States (head of the state stack). */
     size_t m_nStateLevel;
@@ -230,9 +257,6 @@ private:
 
     /** Our exit code. */
     int m_ExitCode;
-
-    /** Our kernel stack. */
-    void *m_pKernelStack;
 
     /** The stack that we allocated from the VMM. This may or may not also be
         the kernel stack - depends on whether we are a user or kernel mode
@@ -256,7 +280,7 @@ private:
         popped when one completes.
 
         \note A '1' here means the event is inhibited, '0' means it can be fired. */
-    ExtensibleBitmap m_InhibitMasks[MAX_NESTED_EVENTS];
+    // ExtensibleBitmap m_InhibitMasks[MAX_NESTED_EVENTS];
 
     /** Queue of Events ready to run. */
     List<Event*> m_EventQueue;

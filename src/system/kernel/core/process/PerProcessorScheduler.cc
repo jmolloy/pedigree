@@ -207,6 +207,9 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         NOTICE("2. esp = " << esp2 << ", ebp = " << ebp2 << ".");
         NOTICE("3. esp = " << esp << ", ebp = " << ebp << ".");
 
+        if(esp2 != esp)
+            NOTICE("bug isn't fixed yet!");
+
         /*
         (NN) 2. esp = 0xff39bf0c, ebp = 0xff39bf54.
         (NN) 3. esp = 0x10, ebp = 0xff39bf44.
@@ -222,14 +225,13 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           * (NN) 2. esp = 0xff39bf1c, ebp = 0xff39bf54.
           * (NN) 3. esp = 0xff39bf0c, ebp = 0xff39bf54.
           *
-          * Somewhere the stack is being corrupted, it would appear.
+          * Somewhere the *old* stack is being corrupted, it would appear.
           */
 
         // Just context-restored.
-        NOTICE("huzzah");
         Processor::setInterrupts(bWasInterrupts);
-        NOTICE("current stack is safe, returning!");
 
+        NOTICE("returning [" << bWasInterrupts << "]...");
         return;
     }
 
@@ -248,8 +250,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     else if (userStack != 0)
     {
         NOTICE("addr = " << addr << ".");
-        eventHandlerReturned();
-        Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+        Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr, 0xabcd, 0xf00d);
         // Not reached.
     }
     else
