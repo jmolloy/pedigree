@@ -124,7 +124,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   //static LargeStaticString eCode;
   #ifdef DEBUGGER
-    // Debugger::instance().start(state, sError);
+    Debugger::instance().start(state, sError);
   #endif
 
   Scheduler &scheduler = Scheduler::instance();
