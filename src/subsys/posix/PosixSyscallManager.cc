@@ -69,6 +69,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
   switch (state.getSyscallNumber())
   {
+    // POSIX system calls
     case POSIX_OPEN:
       return posix_open(reinterpret_cast<const char*>(p1), p2, p3);
     case POSIX_WRITE:
@@ -162,11 +163,11 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_GETGID:
       return posix_getgid();
     case POSIX_SIGACTION:
-      return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3), static_cast<int>(p4));
+      return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3));
     case POSIX_SIGNAL:
       return posix_signal(static_cast<int>(p1), reinterpret_cast<void*>(p2));
     case POSIX_RAISE:
-      return posix_raise(static_cast<int>(p1));
+      return posix_raise(static_cast<int>(p1), state);
     case POSIX_KILL:
       return posix_kill(static_cast<int>(p1), static_cast<int>(p2));
     case POSIX_SIGPROCMASK:
@@ -193,13 +194,21 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_link(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2));
     case POSIX_ISATTY:
       return posix_isatty(static_cast<int>(p1));
+
+    // Stub warning
     case POSIX_STUBBED:
       WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
       return 0;
+
+    // Pedigree system calls, called from POSIX applications
     case PEDIGREE_LOGIN:
       return pedigree_login(static_cast<int>(p1), reinterpret_cast<const char *>(p2));
     case PEDIGREE_SIGRET:
       return pedigree_sigret();
+    case PEDIGREE_INIT_SIGRET:
+      pedigree_init_sigret();
+      return 0;
+
     default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
   }
 }

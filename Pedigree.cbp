@@ -4562,6 +4562,7 @@
 		<Unit filename="src\system\kernel\core\processor\x86\asm\CMakeLists.txt" />
 		<Unit filename="src\system\kernel\core\processor\x86\asm\InterruptManager.s" />
 		<Unit filename="src\system\kernel\core\processor\x86\asm\Processor.s" />
+		<Unit filename="src\system\kernel\core\processor\x86\asm\Scheduler.s" />
 		<Unit filename="src\system\kernel\core\processor\x86\asm\boot-standalone.s" />
 		<Unit filename="src\system\kernel\core\processor\x86\asm\multiprocessor.s" />
 		<Unit filename="src\system\kernel\core\processor\x86\asm\trampoline.s" />
@@ -4856,6 +4857,7 @@
 		<Unit filename="src\system\modules\fat\fat.h" />
 		<Unit filename="src\system\modules\init\CMakeLists.txt" />
 		<Unit filename="src\system\modules\init\main.cc" />
+		<Unit filename="src\system\modules\install\main.cc" />
 		<Unit filename="src\system\modules\iso9660\Iso9660Directory.h" />
 		<Unit filename="src\system\modules\iso9660\Iso9660File.h" />
 		<Unit filename="src\system\modules\iso9660\Iso9660Filesystem.cc" />
@@ -4906,6 +4908,8 @@
 		<Unit filename="src\system\modules\network\Udp.h" />
 		<Unit filename="src\system\modules\network\UdpManager.cc" />
 		<Unit filename="src\system\modules\network\UdpManager.h" />
+		<Unit filename="src\system\modules\ramfs\RamFs.cc" />
+		<Unit filename="src\system\modules\ramfs\RamFs.h" />
 		<Unit filename="src\system\modules\users\CMakeLists.txt" />
 		<Unit filename="src\system\modules\users\Group.cc" />
 		<Unit filename="src\system\modules\users\Group.h" />

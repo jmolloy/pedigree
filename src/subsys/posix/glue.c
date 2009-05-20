@@ -173,9 +173,9 @@ struct timeb {};
 
 struct sigaction
 {
-  int sa_flags;
-  unsigned long sa_mask;
   _sig_func_ptr sa_handler;
+  unsigned long sa_mask;
+  int sa_flags;
 };
 
 char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
@@ -1068,150 +1068,17 @@ int sigsetmask()
   return -1;
 }
 
-/// \todo These could be better, more correct, etc...
-
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { _exit(errcode); }
-#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { printf(msg); _exit(errcode); }
-
-#if 1
-
-SIGNAL_HANDLER_EXIT     (sigabrt, 1);
-SIGNAL_HANDLER_EXIT     (sigalrm, 1);
-SIGNAL_HANDLER_EXIT     (sigbus, 1);
-SIGNAL_HANDLER_EMPTY    (sigchld);
-SIGNAL_HANDLER_EMPTY    (sigcont); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigfpe, 1); // floating point exception signal
-SIGNAL_HANDLER_EXIT     (sighup, 1);
-SIGNAL_HANDLER_EXITMSG  (sigill, 1, "Illegal instruction\n");
-SIGNAL_HANDLER_EXIT     (sigint, 1);
-SIGNAL_HANDLER_EXIT     (sigkill, 1);
-SIGNAL_HANDLER_EXIT     (sigpipe, 1);
-SIGNAL_HANDLER_EXIT     (sigquit, 1);
-SIGNAL_HANDLER_EXITMSG  (sigsegv, 1, "Segmentation fault!\n");
-SIGNAL_HANDLER_EMPTY    (sigstop); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigterm, 1);
-SIGNAL_HANDLER_EMPTY    (sigtstp); // terminal stop
-SIGNAL_HANDLER_EMPTY    (sigttin); // background process attempts read
-SIGNAL_HANDLER_EMPTY    (sigttou); // background process attempts write
-SIGNAL_HANDLER_EMPTY    (sigusr1);
-SIGNAL_HANDLER_EMPTY    (sigusr2);
-SIGNAL_HANDLER_EMPTY    (sigurg); // high bandwdith data available at a sockeet
-
-SIGNAL_HANDLER_EMPTY    (sigign);
-
-_sig_func_ptr sigs[] = {
-                          sigign, // null signal
-                          sighup,
-                          sigint,
-                          sigquit,
-                          sigill,
-                          sigign, // no SIGTRAP
-                          sigign, // no SIGIOT
-                          sigabrt,
-                          sigign, // no SIGEMT
-                          sigfpe,
-                          sigkill,
-                          sigbus,
-                          sigsegv,
-                          sigign, // no SIGSYS
-                          sigpipe,
-                          sigalrm,
-                          sigterm,
-                          sigurg,
-                          sigstop,
-                          sigtstp,
-                          sigcont,
-                          sigchld,
-                          sigign, // no SIGCLD
-                          sigttin,
-                          sigttou,
-                          sigign, // no SIGIO
-                          sigign, // no SIGXCPU
-                          sigign, // no SIGXFSZ
-                          sigign, // no SIGVTALRM
-                          sigign, // no SIGPROF
-                          sigign, // no SIGWINCH,
-                          sigign, // no SIGLOST
-                          sigusr1,
-                          sigusr2
-                         };
-
-static int bTablesInit = 0;
-
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-  return (int)syscall4(POSIX_SIGACTION, sig, (int) act, (int) oact, 0);
-
-  // setup the default signal handlers, if needed
-  if(bTablesInit == 0)
-  {
-    bTablesInit = 1;
-    struct sigaction in, out;
-    in.sa_handler = (_sig_func_ptr) 0;
-
-    int z;
-    for(z = 0; z < 32; z++)
-      sigaction(z, &in, &out);
-  }
-
-  if(sig > 32)
-  {
-    errno = EINVAL;
-    return (int)((_sig_func_ptr) -1);
-  }
-  else if(sig == 32)
-    sig = 0; // null signal
-
-  // SIGKILL and SIGSTOP are not catchable
-  else if(sig == 9 || sig == 17)
-  {
-    errno = EINVAL;
-    return (int)((_sig_func_ptr) -1);
-  }
-
-  int type = 0;
-
-  struct sigaction* tmpAct = 0;
-  if(act)
-  {
-    tmpAct = (struct sigaction*) malloc(sizeof(struct sigaction));
-    memcpy(tmpAct, act, sizeof(struct sigaction));
-
-    uint32_t funcAddr = (uint32_t) (act->sa_handler);
-    if(funcAddr == 0)
-    {
-      // SIG_DFL: set the default handler
-      tmpAct->sa_handler = sigs[sig];
-      type = 1;
-    }
-    else if(funcAddr == 1)
-    {
-      // SIG_IGN: set the ignore handler
-      tmpAct->sa_handler = sigign;
-      type = 2;
-    }
-    else if(funcAddr == -1)
-    {
-      errno = EINVAL;
-      return (int)((_sig_func_ptr) -1);
-    }
-  }
-
-  int ret = syscall4(POSIX_SIGACTION, sig, (int) tmpAct, (int) oact, type);
-
-  if(act)
-    free(tmpAct);
-
-  return ret;
+  return (int)syscall3(POSIX_SIGACTION, sig, (int) act, (int) oact);
 }
 
 _sig_func_ptr signal(int s, _sig_func_ptr func)
 {
   // obtain the old mask for the sigaction structure, fill it in with default arguments
   // and pass on to sigaction
-  struct sigaction act;
-  struct sigaction tmp;
+  static struct sigaction act;
+  static struct sigaction tmp;
   unsigned long mask = 0;
   sigprocmask(0, 0, &mask);
   act.sa_mask = mask;
@@ -1229,45 +1096,11 @@ _sig_func_ptr signal(int s, _sig_func_ptr func)
 
 int raise(int sig)
 {
-  // setup the default signal handlers, if needed
-  if(bTablesInit == 0)
-  {
-    bTablesInit = 1;
-    struct sigaction in, out;
-    in.sa_handler = (_sig_func_ptr) 0;
-
-    int z;
-    for(z = 0; z < 32; z++)
-      sigaction(z, &in, &out);
-  }
-
   return (int)syscall1(POSIX_RAISE, sig);
 }
 
-#else
-
-int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
-{
-  STUBBED("sigaction");
-  return -1;
-}
-
-#endif
-
 int kill(int pid, int sig)
 {
-  // setup the default signal handlers, if needed
-  if(bTablesInit == 0)
-  {
-    bTablesInit = 1;
-    struct sigaction in, out;
-    in.sa_handler = (_sig_func_ptr) 0;
-
-    int z;
-    for(z = 0; z < 32; z++)
-      sigaction(z, &in, &out);
-  }
-
   return (int)syscall2(POSIX_KILL, pid, sig);
 }
 
@@ -1283,20 +1116,9 @@ int sigsuspend(const long* sigmask)
   return -1;
 }
 
-/** Installs default signal handlers to the kernel */
 void _init_signals()
 {
-  return;
-    if(bTablesInit == 0)
-    {
-        bTablesInit = 1;
-        struct sigaction in, out;
-        in.sa_handler = (_sig_func_ptr) 0;
-
-        int z;
-        for(z = 0; z < 32; z++)
-            sigaction(z, &in, &out);
-    }
+  syscall0(PEDIGREE_INIT_SIGRET);
 }
 
 int fdatasync(int fildes)

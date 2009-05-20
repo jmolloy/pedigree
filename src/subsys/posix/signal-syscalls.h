@@ -20,14 +20,19 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/state.h>
 
+#include <process/Event.h>
+#include <process/SignalEvent.h>
+
 #include "newlib.h"
 
 typedef void (*_sig_func_ptr)(int);
 
-int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact, int type);
+int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact);
 uintptr_t posix_signal(int sig, void* func);
-int posix_raise(int sig);
+int posix_raise(int sig, SyscallState &State);
 int posix_kill(int pid, int sig);
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset);
+
+void pedigree_init_sigret();
 
 #endif

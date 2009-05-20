@@ -30,6 +30,8 @@
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
 
+#include <process/SignalEvent.h>
+
 class VirtualAddressSpace;
 class File;
 class FileDescriptor;
@@ -187,15 +189,18 @@ public:
         /// Signal number
         size_t sig;
 
-        /// Location of the handler
-        uintptr_t handlerLocation;
+        /// Event for the signal handler
+        SignalEvent *pEvent;
+
+        /// Location of the handler <obsolete>
+        uintptr_t handlerLocation_OBS;
 
         /// Signal mask to set when this signal handler is called
         uint32_t sigMask;
 
         /// Signal handler flags
         uint32_t flags;
-    
+
         /// Type - 0 = normal, 1 = SIG_DFL, 2 = SIG_IGN
         int type;
     };
@@ -204,15 +209,16 @@ public:
     List<void*>& getPendingSignals()
     {
         LockGuard<Mutex> guard(m_PendingSignalsLock);
-    
+
         return m_PendingSignals;
     }
 
     /** Adds a new pendng signal */
     void addPendingSignal(size_t sig, PendingSignal* pending)
     {
+#if 0
         LockGuard<Mutex> guard(m_PendingSignalsLock);
-    
+
         if(pending)
         {
             SignalHandler* p = getSignalHandler(sig);
@@ -223,33 +229,17 @@ public:
                 m_PendingSignals.pushBack(pending);
             }
         }
+#endif
     }
 
     /** Sets a signal handler */
-    void setSignalHandler(size_t sig, SignalHandler* handler)
-    {
-        LockGuard<Mutex> guard(m_SignalHandlersLock);
-    
-        sig %= 32;
-        if(handler)
-        {
-            SignalHandler* tmp;
-            if((tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig))) != 0)
-            {
-                m_SignalHandlers.remove(sig);
-                delete tmp;
-            }
-
-            handler->sig = sig;
-            m_SignalHandlers.insert(sig, handler);
-        }
-    }
+    void setSignalHandler(size_t sig, SignalHandler* handler);
 
     /** Gets a signal handler */
     SignalHandler* getSignalHandler(size_t sig)
     {
         LockGuard<Mutex> guard(m_SignalHandlersLock);
-    
+
         return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
     }
 
@@ -351,10 +341,10 @@ private:
 
     /** Signal mask - if a bit is set, that signal is masked */
     uint32_t m_SignalMask;
-  
+
     /** A lock for access to the signal handlers tree */
     Mutex m_SignalHandlersLock;
-  
+
     /** A lock for access to pending signals
      * \note This might not actually work - testing required!
      */

@@ -103,7 +103,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 
         // Return to previous interrupt state.
         Processor::setInterrupts(bWasInterrupts);
-        
+
         // Check the event state - we don't have a user mode stack available
         // to us, so pass zero and don't execute user-mode event handlers.
         checkEventState(0);
@@ -131,14 +131,38 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         return;
     }
 
+    uintptr_t handlerAddress = pEvent->getHandlerAddress();
+
+    // Simple heuristic for whether to launch the event handler in kernel or user mode - is the
+    // handler address mapped kernel or user mode?
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
+    {
+        ERROR("checkEventState: Handler address not mapped!");
+        //eventHandlerReturned();
+        return;
+    }
+    physical_uintptr_t page;
+    size_t flags;
+    va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
+    if(!(flags & VirtualAddressSpace::KernelMode))
+    {
+      if(userStack == 0)
+      {
+          NOTICE("No user stack for usermode event in checkEventState");
+          pThread->sendEvent(pEvent);
+          Processor::setInterrupts(bWasInterrupts);
+          return;
+      }
+    }
+
     SchedulerState &oldState = pThread->pushState();
 
     // The address of the serialize buffer is determined by the thread ID and the nesting level.
-    uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS + 
+    uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS +
                                              (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
 
     // Ensure the page is mapped.
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     if (!va.isMapped(reinterpret_cast<void*>(addr)))
     {
         physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
@@ -159,21 +183,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         return;
     }
 
-    uintptr_t handlerAddress = pEvent->getHandlerAddress();
-
     if (pEvent->isDeletable())
         delete pEvent;
-
-    // Simple heuristic for whether to launch the event handler in kernel or user mode - is the 
-    // handler address mapped kernel or user mode?
-    if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
-    {
-        ERROR("checkEventState: Handler address not mapped!");
-        eventHandlerReturned();
-    }
-    physical_uintptr_t page;
-    size_t flags;
-    va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
 
     if (flags & VirtualAddressSpace::KernelMode)
     {
@@ -181,7 +192,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         NOTICE("Calling fn " << handlerAddress);
         fn(addr);
         pThread->popState();
-        NOTICE("CheckEVentState returning");
+        NOTICE("CheckEventState returning");
         return;
     }
     else if (userStack != 0)
@@ -283,7 +294,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         if (bWasInterrupts) Processor::setInterrupts(true);
         return;
     }
-    
+
     Processor::restoreState(reinterpret_cast<SyscallState&>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
 }
 
