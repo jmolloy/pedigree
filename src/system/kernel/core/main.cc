@@ -77,6 +77,7 @@ int idle(void *)
   {
     Scheduler::instance().yield();
   }
+  return 0;
 }
 
 /** Kernel entry point. */
