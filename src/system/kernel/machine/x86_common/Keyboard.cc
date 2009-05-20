@@ -33,7 +33,7 @@ X86Keyboard::X86Keyboard(uint32_t portBase) :
   m_bDebugState(true),
   m_bShift(false),
   m_bCtrl(false),
-  m_bAlt(false),
+  m_bAlt(false), m_bAltGr(false), m_bEscape(false),
   m_bCapsLock(false),
   m_Port("PS/2 Keyboard controller"),
   m_BufStart(0), m_BufEnd(0), m_BufLength(0),
@@ -297,6 +297,7 @@ Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
   {
     Character c;
     c.valid = 0;
+    m_bEscape = true;
     return c;
   }
 
@@ -317,6 +318,15 @@ Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
   c.is_special = 0;
   c.reserved = 0;
   c.value = 0;
+
+  if (m_bEscape)
+  {
+      if (scancode == ALT)
+          m_bAltGr = bKeypress;
+      m_bEscape = false;
+      return c;
+  }
+
 
   bool bUseUpper = false;  // Use the upper case keymap.
   bool bUseNums = false;   // Use the upper case keymap for numbers.
@@ -360,7 +370,11 @@ Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
   // Now c is valid...
   c.valid = 1;
 
-  if (scancode < 0x02)
+  if (scancode == 0x34 && m_bAltGr)
+  {
+      c.value = 175;
+  }
+  else if (scancode < 0x02)
     c.value = keymap_lower[scancode];
   else if ( (scancode <  0x0e /* backspace */) ||
             (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||

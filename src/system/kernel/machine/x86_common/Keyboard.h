@@ -113,6 +113,9 @@ private:
    * True if alt is held.
    */
   bool m_bAlt;
+
+  bool m_bAltGr;
+  bool m_bEscape;
   
   /**
    * True if caps lock is on.

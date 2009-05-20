@@ -472,6 +472,7 @@ int posix_stat(const char *name, struct stat *st)
 
 int posix_fstat(int fd, struct stat *st)
 {
+    F_NOTICE("fstat(" << fd << ")");
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
@@ -523,7 +524,7 @@ int posix_fstat(int fd, struct stat *st)
 
 int posix_lstat(char *name, struct stat *st)
 {
-  //F_NOTICE("lstat(" << name << ")");
+  F_NOTICE("lstat(" << name << ")");
 
   File *file = VFS::instance().find(String(name), GET_CWD());
 
@@ -582,7 +583,7 @@ int posix_lstat(char *name, struct stat *st)
 
 int posix_opendir(const char *dir, dirent *ent)
 {
-  //F_NOTICE("opendir(" << dir << ")");
+  F_NOTICE("opendir(" << dir << ")");
 
   // Lookup this process.
   FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
@@ -631,7 +632,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-  //F_NOTICE("readdir(" << fd << ")");
+  F_NOTICE("readdir(" << fd << ")");
 
   if(fd == -1)
     return -1;

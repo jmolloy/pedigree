@@ -58,7 +58,7 @@ static bool probeDisk(Disk *pDisk)
         {
             NormalStaticString s;
             s += alias;
-            s += ":/.pedigree-root";
+            s += "\xAF/.pedigree-root";
 
             File* f = VFS::instance().find(String(static_cast<const char*>(s)));
             if (f && !bRootMounted)
@@ -107,8 +107,13 @@ void init()
 //     FATAL("No disks found!");
     }
 
+    if (VFS::instance().find(String("raw\xAF/")) == 0)
+    {
+        FATAL("No raw partition!");
+    }
+
     // Is there a root disk mounted?
-    if(VFS::instance().find(String("root:/.pedigree-root")) == 0)
+    if(VFS::instance().find(String("root\xAF/.pedigree-root")) == 0)
     {
         FATAL("No root disk (missing .pedigree-root?)");
     }
@@ -145,7 +150,7 @@ void init()
             RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
     }
 
-    str += "Loading init program (root:/applications/login)\n";
+    str += "Loading init program (root\xAF/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -163,7 +168,7 @@ void init()
     pProcess->description().clear();
     pProcess->description().append("init");
 
-    pProcess->setCwd(VFS::instance().find(String("root:/")));
+    pProcess->setCwd(VFS::instance().find(String("root\xAF/")));
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
@@ -177,7 +182,7 @@ void destroy()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root:/applications/login"));
+    File* initProg = VFS::instance().find(String("root\xAF/applications/login"));
     if (!initProg)
     {
         FATAL("Unable to load init program!");
@@ -228,7 +233,7 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "rawfs");
 #elif PPC_COMMON
 MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users");
 #endif

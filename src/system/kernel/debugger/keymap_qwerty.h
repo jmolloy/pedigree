@@ -164,7 +164,6 @@ void initKeymap()
   keymap_special[0x57] = KB_F11;
   keymap_special[0x58] = KB_F12;
   keymap_special[0x46] = KB_SCROLLOCK;
-
 }
 
 /** @} */

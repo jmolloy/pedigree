@@ -15,7 +15,7 @@
 #
 
 set(MODULES)
-set(MODULES ${MODULES} vfs ext2 fat iso9660 network dhcpclient console TUI linker users ramfs)
+set(MODULES ${MODULES} vfs ext2 fat iso9660 network dhcpclient console TUI linker users ramfs rawfs)
 if(INSTALLER)
   set(MODULES ${MODULES} installer)
 else(INSTALLER)

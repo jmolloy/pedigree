@@ -164,6 +164,7 @@ void RadixTree<void*>::insert(String key, void *value)
 
 void *RadixTree<void*>::lookup(String key)
 {
+    Node *pOldRoot = m_pRoot;
     if (!m_pRoot)
     {
         // The root node always exists and is a lambda transition node (zero-length
@@ -188,6 +189,10 @@ void *RadixTree<void*>::lookup(String key)
             case Node::OverMatch:
             {
                 size_t i = 0;
+                if (pNode->m_pKey == 0)
+                {
+                    FATAL("Omg!: root " << (uintptr_t)m_pRoot << ", this " << (uintptr_t)pNode << ", oldroot " << (uintptr_t)pOldRoot);
+                }
                 while (pNode->m_pKey[i++]) cpKey++;
 
                 Node *pChild = pNode->findChild(cpKey);
@@ -348,6 +353,7 @@ void RadixTree<void*>::clear()
 {
     delete m_pRoot;
     m_pRoot = new Node();
+    m_pRoot->setKey(nullKey);
 }
 
 //
