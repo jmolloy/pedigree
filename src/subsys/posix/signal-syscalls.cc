@@ -24,6 +24,9 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <machine/Machine.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 extern "C"
 {
     extern void sigret_stub();
@@ -34,7 +37,7 @@ extern "C"
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { posix_write(2, msg, strlen(msg)); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { posix_write(1, msg, strlen(msg)); posix_exit(errcode); }
 
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
@@ -63,50 +66,41 @@ SIGNAL_HANDLER_EMPTY    (sigurg); // high bandwdith data available at a sockeet
 
 SIGNAL_HANDLER_EMPTY    (sigign);
 
-_sig_func_ptr default_sig_handlers[] =
+_sig_func_ptr default_sig_handlers[32] =
 {
-    sigign, // null signal
-    sighup,
-    sigint,
-    sigquit,
-    sigill,
-    sigign, // no SIGTRAP
-    sigign, // no SIGIOT
-    sigabrt,
-    sigign, // no SIGEMT
-    sigfpe,
-    sigkill,
-    sigbus,
-    sigsegv,
-    sigign, // no SIGSYS
-    sigpipe,
-    sigalrm,
-    sigterm,
-    sigurg,
-    sigstop,
-    sigtstp,
-    sigcont,
-    sigchld,
-    sigign, // no SIGCLD
-    sigttin,
-    sigttou,
-    sigign, // no SIGIO
-    sigign, // no SIGXCPU
-    sigign, // no SIGXFSZ
-    sigign, // no SIGVTALRM
-    sigign, // no SIGPROF
-    sigign, // no SIGWINCH,
-    sigign, // no SIGLOST
-    sigusr1,
-    sigusr2
+    sigign, // null signal = 0
+    sighup, // SIGHUP = 1
+    sigint, // SIGINT = 2
+    sigquit, // SIGQUIT = 3
+    sigill, // SIGILL = 4
+    sigign, // no SIGTRAP = 5
+    sigabrt, // SIGABRT = 6
+    sigign, // no SIGEMT = 7
+    sigfpe, // SIGFPE = 8
+    sigkill, // SIGKILL = 9
+    sigbus, // SIGBUS = 10
+    sigsegv, // SIGSEGV = 11
+    sigign, // no SIGSYS = 12
+    sigpipe, // SIGPIPE = 13
+    sigalrm, // SIGALRM = 14
+    sigterm, // SIGTERM = 15
+    sigurg, // SIGURG = 16
+    sigstop, // SIGSTOP = 17
+    sigtstp, // SIGTSTP = 18
+    sigcont, // SIGCONT = 19
+    sigchld, // SIGCHLD = 20
+    sigttin, // SIGTTIN = 21
+    sigttou, // SIGTTOU = 22
+    sigign, // no SIGIO = 23
+    sigign, // no SIGXCPU = 24
+    sigign, // no SIGXFSZ = 25
+    sigign, // no SIGVTALRM = 26
+    sigign, // no SIGPROF = 27
+    sigign, // no SIGWINCH = 28
+    sigign, // no SIGLOST = 29
+    sigusr1, // SIGUSR1 = 30
+    sigusr2 // SIGUSR2 = 31
 };
-
-// useful macros from sys/signal.h
-#define sigaddset(what,sig) (*(what) |= (1<<(sig)), 0)
-#define sigdelset(what,sig) (*(what) &= ~(1<<(sig)), 0)
-#define sigemptyset(what)   (*(what) = 0, 0)
-#define sigfillset(what)    (*(what) = ~(0), 0)
-#define sigismember(what,sig) (((*(what)) & (1<<(sig))) != 0)
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
@@ -114,6 +108,12 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
 
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("posix_sigaction: no subsystem");
+        return -1;
+    }
 
     // sanity and safety checks
     if ((sig > 32) || (sig == SIGKILL || sig == SIGSTOP))
@@ -126,7 +126,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     // store the old signal handler information if we can
     if (oact)
     {
-        Process::SignalHandler* oldSignalHandler = pProcess->getSignalHandler(sig);
+        PosixSubsystem::SignalHandler* oldSignalHandler = pSubsystem->getSignalHandler(sig);
         if (oldSignalHandler)
         {
             oact->sa_flags = oldSignalHandler->flags;
@@ -145,7 +145,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
     // and if needed, fill in the new signal handler
     if (act)
     {
-        Process::SignalHandler* sigHandler = new Process::SignalHandler;
+        PosixSubsystem::SignalHandler* sigHandler = new PosixSubsystem::SignalHandler;
         sigHandler->sigMask = act->sa_mask;
         sigHandler->flags = act->sa_flags;
 
@@ -173,7 +173,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
 
         size_t nLevel = pThread->getStateLevel();
         sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig), nLevel);
-        pProcess->setSignalHandler(sig, sigHandler);
+        pSubsystem->setSignalHandler(sig, sigHandler);
     }
     else if (!oact)
     {
@@ -197,7 +197,14 @@ int posix_raise(int sig, SyscallState &State)
     // Create the pending signal and pass it in
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
-    Process::SignalHandler* signalHandler = pProcess->getSignalHandler(sig);
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("posix_raise: no subsystem");
+        return -1;
+    }
+
+    PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
 
     // Firing and checking the event state needs to be done without any interrupts
     // getting in the way.
@@ -233,14 +240,20 @@ int posix_kill(int pid, int sig)
     Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
     if (p)
     {
-        if ((p->getSignalMask() & (1 << sig)))
+        /*if ((p->getSignalMask() & (1 << sig)))
         {
             /// \todo What happens when the signal is blocked?
             return 0;
-        }
+        }*/
 
         // Build the pending signal and pass it in
-        Process::SignalHandler* signalHandler = p->getSignalHandler(sig);
+        PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getSubsystem());
+        if(!pSubsystem)
+        {
+            ERROR("posix_kill: no subsystem");
+            return -1;
+        }
+        PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
 
         /// \note Technically this is supposed to be sent to the currently executing thread...
         Thread *pThread = p->getThread(0);
@@ -261,64 +274,6 @@ int posix_kill(int pid, int sig)
 /// \todo Integration with Thread inhibit masks
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 {
-#if 0
-    SC_NOTICE("sigprocmask");
-
-    uint32_t currMask = Processor::information().getCurrentThread()->getParent()->getSignalMask();
-
-    if (oset)
-    {
-        // if no actual passed set, the how argument is invalid and we merely return the current mask
-        *oset = currMask;
-        if (!set)
-            return 0;
-    }
-    if (!set)
-    {
-        SYSCALL_ERROR(InvalidArgument);
-        return -1;
-    }
-
-    uint32_t passedMask = *set;
-
-    // SIGKILL and SIGSTOP are not blockable
-    sigdelset(&passedMask, 9);
-    sigdelset(&passedMask, 17);
-
-    uint32_t returnMask = 0;
-    bool bProcessed = false;
-    switch (how)
-    {
-        // SIG_BLOCK: union of the current set and the passed set
-    case 0:
-        returnMask = currMask | passedMask;
-        bProcessed = true;
-        break;
-        // SIG_SETMASK: set the mask to the passed set
-    case 1:
-        returnMask = passedMask;
-        bProcessed = true;
-        break;
-        // SIG_UNBLOCK: unset the bits in the passed set
-    case 2:
-        returnMask = currMask ^ passedMask;
-        bProcessed = true;
-        break;
-    };
-
-    if (!bProcessed)
-    {
-        SYSCALL_ERROR(InvalidArgument);
-        return -1;
-    }
-    else
-    {
-        Processor::information().getCurrentThread()->getParent()->setSignalMask(returnMask);
-
-        // now that the new signal mask is set, reschedule so that any (now unblocked) signals may run
-        Scheduler::instance().yield();
-    }
-#endif
     return 0;
 }
 
@@ -328,7 +283,14 @@ size_t posix_alarm(uint32_t seconds)
 
     // Create the pending signal and pass it in
     Process* pProcess = Processor::information().getCurrentThread()->getParent();
-    Process::SignalHandler* signalHandler = pProcess->getSignalHandler(SIGALRM);
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("posix_alarm: no subsystem");
+        return -1;
+    }
+
+    PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(SIGALRM);
     Event *pEvent = signalHandler->pEvent;
 
     // We now have the Event...
@@ -401,11 +363,18 @@ void pedigree_init_sigret()
     // Install default signal handlers
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        pSubsystem = new PosixSubsystem();
+        pProcess->setSubsystem(pSubsystem);
+    }
+
     for(size_t i = 0; i < 32; i++)
     {
         // Constructor zeroes out everything, which is correct for this initial
         // setup of the signal handlers (except, of course, the handler location).
-        Process::SignalHandler* sigHandler = new Process::SignalHandler;
+        PosixSubsystem::SignalHandler* sigHandler = new PosixSubsystem::SignalHandler;
         sigHandler->sig = i;
 
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
@@ -413,6 +382,6 @@ void pedigree_init_sigret()
         size_t nLevel = pThread->getStateLevel();
         sigHandler->pEvent = new SignalEvent(newHandler, i, nLevel);
 
-        pProcess->setSignalHandler(i, sigHandler);
+        pSubsystem->setSignalHandler(i, sigHandler);
     }
 }

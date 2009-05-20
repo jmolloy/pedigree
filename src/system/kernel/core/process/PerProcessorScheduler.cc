@@ -171,7 +171,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
             panic("checkEventState: Out of memory!");
             return;
         }
-        va.map(p, reinterpret_cast<void*>(addr), 0);
+        va.map(p, reinterpret_cast<void*>(addr), VirtualAddressSpace::Write);
     }
 
     pEvent->serialize(reinterpret_cast<uint8_t*>(addr));

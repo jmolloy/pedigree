@@ -46,26 +46,16 @@ int main(int argc, char **argv)
       }
     */
 
-    printf("Installing signal handler for SIGHUP (size of sigaction = %d)\n", sizeof(struct sigaction));
+    printf("Installing signal handler...\n");
 
-    signal(SIGALRM, rofl);
-    alarm(10);
-    printf("Waiting 4 seconds!\n");
+    signal(SIGUSR1, rofl);
+    printf("Raising it...\n");
+    raise(SIGUSR1);
+    printf("Complete\n");
 
-    sleep(4);
-    unsigned int a = alarm(0);
-    printf("a = %d\n", a);
-
-    //while(!some_global);
-    //printf("Done!\n");
-
-    /// \todo Figure out a way to have the SIGSEGV signal passed to the thread when
-    ///       a page fault fires.
-#if 0
     printf("Segfault?\n");
 
-    *((char*) 0) = 0xf00d;
-#endif
+    *((char*) 0) = 0xab;
 
     printf("Raising SIGHUP - calling its default handler (should be dropped to bash)\n");
 

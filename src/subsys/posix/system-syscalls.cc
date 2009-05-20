@@ -39,6 +39,9 @@
 #include <utilities/Vector.h>
 #include <machine/Machine.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 #include <users/UserManager.h>
 //
 // Syscalls pertaining to system operations.
@@ -108,7 +111,8 @@ int posix_fork(SyscallState &state)
   Processor::setInterrupts(false);
 
   // Create a new process.
-  Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+  Process *pParentProcess = Processor::information().getCurrentThread()->getParent();
+  Process *pProcess = new Process(pParentProcess);
 
   if (!pProcess)
   {
@@ -116,14 +120,23 @@ int posix_fork(SyscallState &state)
     return -1;
   }
 
+  PosixSubsystem *pParentSubsystem = reinterpret_cast<PosixSubsystem*>(pParentProcess->getSubsystem());
+  PosixSubsystem *pSubsystem = new PosixSubsystem();
+  if(!pSubsystem || !pParentSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+  pProcess->setSubsystem(pSubsystem);
+
   // Register with the dynamic linker.
   pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
 
   MemoryMappedFileManager::instance().clone(pProcess);
 
   typedef Tree<size_t,FileDescriptor*> FdMap;
-  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-  FdMap childFdMap = pProcess->getFdMap();
+  FdMap &parentFdMap = pParentSubsystem->getFdMap();
+  FdMap &childFdMap = pSubsystem->getFdMap();
 
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
@@ -139,8 +152,8 @@ int posix_fork(SyscallState &state)
     pFd2->fd = pFd->fd;
     pFd2->fdflags = pFd->fdflags;
     pFd2->flflags = pFd->flflags;
-    pProcess->getFdMap().insert(newFd, pFd2);
-    pProcess->nextFd(newFd + 1);
+    childFdMap.insert(newFd, pFd2);
+    pSubsystem->nextFd(newFd + 1);
 
     pFd2->file->increaseRefCount((pFd2->flflags & O_RDWR) || (pFd2->flflags & O_WRONLY) );
   }
@@ -242,7 +255,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   // Close all FD_CLOEXEC descriptors. Done here because from this point we're committed to running -
   // there's no further return until the end of the function.
   typedef Tree<size_t,FileDescriptor*> FdMap;
-  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap parentFdMap = pSubsystem->getFdMap();
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
@@ -414,7 +435,15 @@ int posix_exit(int code)
   pProcess->setExitStatus( (code&0xFF) << 8 );
 
   typedef Tree<size_t,FileDescriptor*> FdMap;
-  FdMap parentFdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap parentFdMap = pSubsystem->getFdMap();
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());

@@ -29,6 +29,9 @@
 #include <utilities/utility.h>
 #include <utilities/TimedTask.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 #include "file-syscalls.h"
 #include "console-syscalls.h"
 #include "pipe-syscalls.h"
@@ -47,8 +50,17 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 int posix_close(int fd)
 {
   F_NOTICE("close(" << fd << ")");
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+
   /// \todo Race here - fix.
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+  FdMap &fdMap = pSubsystem->getFdMap();
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
 
   if (!f)
   {
@@ -58,7 +70,7 @@ int posix_close(int fd)
 
   f->file->decreaseRefCount( (f->flflags & O_RDWR) || (f->flflags & O_WRONLY) );
 
-  Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
+  fdMap.remove(fd);
   delete f;
   return 0;
 }
@@ -75,9 +87,17 @@ int posix_open(const char *name, int flags, int mode)
   }
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
 
-  size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  size_t fd = pSubsystem->nextFd();
 
   // Check for /dev/tty, and link to our controlling console.
   File* file = 0;
@@ -170,7 +190,14 @@ int posix_read(int fd, char *ptr, int len)
   F_NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
@@ -208,7 +235,14 @@ int posix_write(int fd, char *ptr, int len)
     F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
@@ -237,7 +271,14 @@ int posix_lseek(int file, int ptr, int dir)
   F_NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(file));
   if (!pFd)
@@ -473,7 +514,14 @@ int posix_stat(const char *name, struct stat *st)
 int posix_fstat(int fd, struct stat *st)
 {
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
@@ -585,9 +633,16 @@ int posix_opendir(const char *dir, dirent *ent)
   //F_NOTICE("opendir(" << dir << ")");
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
-  size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  size_t fd = pSubsystem->nextFd();
 
   File* file = VFS::instance().find(String(dir), GET_CWD());
 
@@ -637,7 +692,14 @@ int posix_readdir(int fd, dirent *ent)
     return -1;
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
@@ -665,7 +727,14 @@ void posix_rewinddir(int fd, dirent *ent)
   if(fd == -1)
     return;
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return;
+  }
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(pSubsystem->getFdMap().lookup(fd));
   f->offset = 0;
   posix_readdir(fd, ent);
 }
@@ -676,8 +745,16 @@ int posix_closedir(int fd)
     return -1;
 
   /// \todo Race here - fix.
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
-  Processor::information().getCurrentThread()->getParent()->getFdMap().remove(fd);
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+  fdMap.remove(fd);
 
   delete f;
   return 0;
@@ -686,7 +763,16 @@ int posix_closedir(int fd)
 int posix_ioctl(int fd, int command, void *buf)
 {
   F_NOTICE("ioctl(" << Dec << fd << ", " << Hex << command << ", " << reinterpret_cast<uintptr_t>(buf) << ")");
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(pSubsystem->getFdMap().lookup(fd));
+
   if (!f)
   {
     return -1;
@@ -751,17 +837,23 @@ int posix_dup(int fd)
   F_NOTICE("dup(" << fd << ")");
 
   // grab the file descriptor pointer for the passed descriptor
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+
   if(!f)
   {
     SYSCALL_ERROR(BadFileDescriptor);
     return -1;
   }
 
-  // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-
-  size_t newFd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  size_t newFd = pSubsystem->nextFd();
 
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
@@ -792,7 +884,16 @@ int posix_dup2(int fd1, int fd2)
     return fd2;
 
   // grab the file descriptor pointer for the passed descriptor
-  FileDescriptor* f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(fd1));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
+  FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd1));
+
   if(!f)
   {
     SYSCALL_ERROR(BadFileDescriptor);
@@ -807,9 +908,6 @@ int posix_dup2(int fd1, int fd2)
   // close the original descriptor
   if(posix_close(fd2) == -1)
     return -1;
-
-  // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
 
   // copy the descriptor
   FileDescriptor* f2 = new FileDescriptor;
@@ -834,7 +932,15 @@ int posix_mkdir(const char* name, int mode)
 int posix_isatty(int fd)
 {
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
+
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
   {
@@ -876,7 +982,14 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     F_NOTICE("select(" << Dec << nfds << Hex << ")");
 
     // Lookup this process.
-    FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+      ERROR("No subsystem for this process!");
+      return -1;
+    }
+    FdMap &fdMap = pSubsystem->getFdMap();
 
     List<SelectTask *> tasks;
     List<Semaphore *> taskSems;
@@ -999,7 +1112,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     }
 
     // Kill zombie threads created by TimedTask
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
     for(size_t i = 0; i < pProcess->getNumThreads(); i++)
     {
         Thread *pThread = pProcess->getThread(i);
@@ -1018,7 +1130,14 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
     F_NOTICE("fcntl(" << fd << ", " << cmd << ")");
 
   // grab the file descriptor pointer for the passed descriptor
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
   FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if(!f)
   {
@@ -1060,7 +1179,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
       }
       else
       {
-        size_t fd2 = Processor::information().getCurrentThread()->getParent()->nextFd();
+        size_t fd2 = pSubsystem->nextFd();
 
         // copy the descriptor
         FileDescriptor* f2 = new FileDescriptor;
@@ -1094,7 +1213,14 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
 {
   NOTICE("poll(" << Dec << nfds << Hex << ")");
 
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for this process!");
+      return -1;
+  }
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   unsigned int i;
   int num_ready = 0;

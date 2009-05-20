@@ -26,10 +26,12 @@
 
 #include <process/SignalEvent.h>
 
+#include <Subsystem.h>
+
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-  m_FdMap(), m_NextFd(0), m_FdLock(), m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(),
-  m_pUser(0), m_pGroup(0), m_PendingSignals(), m_SignalHandlers(), m_SigReturnStub(0), m_SignalMask(0), m_SignalHandlersLock(false), m_PendingSignalsLock(false), m_pDynamicLinker(0), m_DeadThreads(0)
+  m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(), m_pUser(0), m_pGroup(0), m_pDynamicLinker(0),
+  m_pSubsystem(0), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
   m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
@@ -38,10 +40,10 @@ Process::Process() :
 
 
 Process::Process(Process *pParent) :
-  m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0), m_FdMap(), m_NextFd(0), m_FdLock(),
-  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(pParent->m_SpaceAllocator), m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup),
-  m_PendingSignals(pParent->m_PendingSignals), m_SignalHandlers(), m_SigReturnStub(pParent->m_SigReturnStub),
-  m_SignalMask(pParent->m_SignalMask), m_SignalHandlersLock(false), m_PendingSignalsLock(false), m_pDynamicLinker(pParent->m_pDynamicLinker), m_DeadThreads(0)
+  m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
+  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(pParent->m_SpaceAllocator),
+  m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
+  m_pSubsystem(new Subsystem(*(pParent->m_pSubsystem))), m_DeadThreads(0)
 {
   m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
 
@@ -50,19 +52,6 @@ Process::Process(Process *pParent) :
   // Set a temporary description.
   str = m_pParent->str;
   str += "<F>"; // F for forked.
-
-  // copy all signal handlers
-  typedef Tree<size_t, void*> sigHandlerTree;
-  sigHandlerTree &parentHandlers = pParent->m_SignalHandlers;
-  sigHandlerTree &myHandlers = m_SignalHandlers;
-  for(sigHandlerTree::Iterator it = parentHandlers.begin(); it != parentHandlers.end(); it++)
-  {
-    size_t key = reinterpret_cast<size_t>(it.key());
-    void *value = it.value();
-
-    SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
-    myHandlers.insert(key, reinterpret_cast<void *>(newSig));
-  }
 }
 
 Process::~Process()
@@ -71,6 +60,8 @@ Process::~Process()
   Thread *pThread = m_Threads[0];
   m_Threads.erase(m_Threads.begin());
   delete pThread; // Calls Scheduler::remove and this::remove.
+
+  delete m_pSubsystem;
 
   Spinlock lock;
   lock.acquire(); // Disables interrupts.
@@ -213,31 +204,6 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
   lock.release();
 
   return pProcess->getId();
-}
-
-void Process::setSignalHandler(size_t sig, SignalHandler* handler)
-{
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
-
-    sig %= 32;
-    if(handler)
-    {
-        SignalHandler* tmp;
-        tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
-        if(tmp)
-        {
-            // Remove from the list
-            m_SignalHandlers.remove(sig);
-
-            // Destroy the SignalHandler struct
-            delete tmp;
-        }
-
-        // Insert into the signal handler table
-        handler->sig = sig;
-
-        m_SignalHandlers.insert(sig, handler);
-    }
 }
 
 #endif
