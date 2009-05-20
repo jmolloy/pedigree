@@ -177,7 +177,7 @@ void destroy()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root:/applications/net-test")); // login"));
+    File* initProg = VFS::instance().find(String("root:/applications/login"));
     if (!initProg)
     {
         FATAL("Unable to load init program!");
