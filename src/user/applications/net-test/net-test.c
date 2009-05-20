@@ -59,13 +59,19 @@ int main(int argc, char **argv)
     //while(!some_global);
     //printf("Done!\n");
 
-    printf("Raising SIGHUP\n");
+    /// \todo Figure out a way to have the SIGSEGV signal passed to the thread when
+    ///       a page fault fires.
+#if 0
+    printf("Segfault?\n");
 
-    raise(SIGALRM);
+    *((char*) 0) = 0xf00d;
+#endif
+
+    printf("Raising SIGHUP - calling its default handler (should be dropped to bash)\n");
+
+    raise(SIGHUP);
 
     printf("Raise returns\n");
-
-    while (1);
 
     return 0;
 }

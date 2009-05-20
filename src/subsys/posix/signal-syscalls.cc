@@ -112,8 +112,8 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
 {
     SC_NOTICE("sigaction(" << Dec << sig << Hex << ", " << reinterpret_cast<uintptr_t>(act) << ", " << reinterpret_cast<uintptr_t>(oact) << ")");
 
-    Thread* pThread = Processor::information().getCurrentThread();
-    Process* pProcess = pThread->getParent();
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
 
     // sanity and safety checks
     if ((sig > 32) || (sig == SIGKILL || sig == SIGSTOP))
@@ -195,8 +195,8 @@ int posix_raise(int sig, SyscallState &State)
     SC_NOTICE("raise");
 
     // Create the pending signal and pass it in
-    Process* pProcess = Processor::information().getCurrentThread()->getParent();
-    Thread* pThread = Processor::information().getCurrentThread();
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
     Process::SignalHandler* signalHandler = pProcess->getSignalHandler(sig);
 
     // Firing and checking the event state needs to be done without any interrupts
@@ -397,4 +397,22 @@ void pedigree_init_sigret()
             reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
             VirtualAddressSpace::Write);
     memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+
+    // Install default signal handlers
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    for(size_t i = 0; i < 32; i++)
+    {
+        // Constructor zeroes out everything, which is correct for this initial
+        // setup of the signal handlers (except, of course, the handler location).
+        Process::SignalHandler* sigHandler = new Process::SignalHandler;
+        sigHandler->sig = i;
+
+        uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
+
+        size_t nLevel = pThread->getStateLevel();
+        sigHandler->pEvent = new SignalEvent(newHandler, i, nLevel);
+
+        pProcess->setSignalHandler(i, sigHandler);
+    }
 }

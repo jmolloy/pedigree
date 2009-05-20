@@ -229,28 +229,8 @@ void Process::setSignalHandler(size_t sig, SignalHandler* handler)
             // Remove from the list
             m_SignalHandlers.remove(sig);
 
-            SignalEvent *event = reinterpret_cast<SignalEvent*>(tmp->pEvent);
-            // tmp->pEvent = 0;
-
-            // Destroy the event
-            if(event)
-            {
-                /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
-                /// \bug FIXME, causes a page fault
-                ///      Need to write proper copy constructors (and operator =) for SignalHandler!
-                NOTICE("Deleting the event");
-                //delete event;
-                NOTICE("Done");
-                /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
-            }
-            else
-                WARNING("Signal handler for signal " << sig << " had a null event!");
-
-
-            // And finally, destroy the SignalHandler struct
-            NOTICE("Deleting the SignalHandler");
+            // Destroy the SignalHandler struct
             delete tmp;
-            NOTICE("Done");
         }
 
         // Insert into the signal handler table
