@@ -132,11 +132,13 @@ void Thread::threadExited()
 void Thread::allocateStackAtLevel(size_t stateLevel)
 {
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
-    {
-        NOTICE("Allocating new kernel stack for level " << Dec << stateLevel << Hex << ".");
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-        NOTICE("It's now " << reinterpret_cast<uintptr_t>(m_StateLevels[stateLevel].m_pKernelStack) << ".");
-    }
+}
+
+void Thread::setKernelStack()
+{
+    if(m_StateLevels[m_nStateLevel].m_pKernelStack)
+        Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack));
 }
 
 void Thread::sendEvent(Event *pEvent)

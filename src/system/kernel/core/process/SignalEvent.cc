@@ -31,12 +31,12 @@ SignalEvent::~SignalEvent()
 /// \todo There may be a need for serialization in the future...
 size_t SignalEvent::serialize(uint8_t *pBuffer)
 {
-    NOTICE("SignalEvent::serialize");
-    return 0;
+    pBuffer[0] = static_cast<uint8_t>(m_SignalNumber & 0xFF);
+    return 1;
 }
 
 bool SignalEvent::unserialize(uint8_t *pBuffer, Event &event)
 {
-    NOTICE("SignalEvent::unserialize");
-    return 0;
+    pBuffer[0] = static_cast<uint8_t>(event.getNumber() & 0xFF);
+    return true;
 }

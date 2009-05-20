@@ -97,7 +97,6 @@ public:
         \return A reference to the previous state. */
     SchedulerState &pushState()
     {
-        NOTICE("Thread::pushState");
         if (m_nStateLevel >= MAX_NESTED_EVENTS)
         {
             ERROR("Thread: Max nested events!");
@@ -107,6 +106,9 @@ public:
         m_nStateLevel++;
         m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
         allocateStackAtLevel(m_nStateLevel);
+
+        setKernelStack();
+
         return m_StateLevels[m_nStateLevel - 1].m_State;
     }
 
@@ -114,13 +116,13 @@ public:
         stack.*/
     void popState()
     {
-        NOTICE("Thread::popState");
         if (m_nStateLevel == 0)
         {
             ERROR("Thread: popStack() called with state level 0!");
         }
         m_nStateLevel --;
-        NOTICE("New kernel stack = " << (uintptr_t) m_StateLevels[m_nStateLevel].m_pKernelStack << "!");
+
+        setKernelStack();
     }
 
     /** Returns the state nesting level. */
@@ -129,6 +131,9 @@ public:
 
     /** Allocates a new stack for a specific nesting level, if required */
     void allocateStackAtLevel(size_t stateLevel);
+
+    /** Sets the new kernel stack for the current state level in the TSS */
+    void setKernelStack();
 
     /** Overwrites the state at the given nesting level.
      *\param stateLevel The nesting level to edit.
@@ -234,6 +239,18 @@ private:
         {}
         ~StateLevel()
         {}
+
+        StateLevel(const StateLevel &s) :
+            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_InhibitMask(s.m_InhibitMask)
+        {}
+
+        StateLevel &operator = (const StateLevel &s)
+        {
+            m_State = s.m_State;
+            m_pKernelStack = s.m_pKernelStack;
+            m_InhibitMask = s.m_InhibitMask;
+            return *this;
+        }
 
         /** The processor state for this level. */
         SchedulerState m_State;

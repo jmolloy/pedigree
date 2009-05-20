@@ -20,12 +20,23 @@
 ; void sigret_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 sigret_stub:
 
-  ; Standard entry
-  ; push ebp
-  ; mov ebp, esp
+  ; Skip the return address
+  add esp, 4
+
+  ; Grab the serialised data, read the first byte for the signal number
+  mov edi, [esp]
+  mov esi, [esp + 4]
+  cmp esi, 0
+  jz .justRun
+
+  xor ebx, ebx
+  mov byte bl, [esi]
+  push ebx
+
+.justRun:
 
   ; Run the handler
-  ; call [esp + 8]
+  call edi
 
   ; Return to the kernel
   mov eax, 0x10066

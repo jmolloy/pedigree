@@ -184,4 +184,5 @@ int RequestQueue::asyncWork()
     // All done with the request
     delete pReq;
   }
+  return 0;
 }
