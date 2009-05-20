@@ -322,19 +322,37 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
     return 0;
 }
 
-int posix_alarm(uint32_t seconds)
+size_t posix_alarm(uint32_t seconds)
 {
     SC_NOTICE("alarm");
 
     // Create the pending signal and pass it in
     Process* pProcess = Processor::information().getCurrentThread()->getParent();
     Process::SignalHandler* signalHandler = pProcess->getSignalHandler(SIGALRM);
+    Event *pEvent = signalHandler->pEvent;
 
-    // We now have the Event, install it
-    /// \todo If there's already one running, we're supposed to return the time
-    ///       before it would've fired.
-    if (signalHandler->pEvent)
-        Machine::instance().getTimer()->addAlarm(signalHandler->pEvent, seconds);
+    // We now have the Event...
+    if(seconds == 0)
+    {
+        // Cancel the previous alarm, return the time it still had to go
+        if (pEvent)
+            return Machine::instance().getTimer()->removeAlarm(pEvent, false);
+        return 0;
+    }
+    else
+    {
+        if (pEvent)
+        {
+            // Stop any previous alarm
+            size_t ret = Machine::instance().getTimer()->removeAlarm(pEvent, false);
+
+            // Install the new one
+            Machine::instance().getTimer()->addAlarm(pEvent, seconds);
+
+            // Return the time the previous event still had to go
+            return ret;
+        }
+    }
 
     // All done
     return 0;
@@ -346,12 +364,24 @@ int posix_sleep(uint32_t seconds)
 
     Semaphore sem(0);
 
+    uint64_t startTick = Machine::instance().getTimer()->getTickCount();
     sem.acquire(1, seconds);
     if (Processor::information().getCurrentThread()->wasInterrupted())
     {
-        /// \todo How many seconds *did* elapse?
-        NOTICE("sleep interrupted");
-        return 0;
+        // Note: seconds is a uint32, therefore it should be safe to cast
+        // to half the width
+        uint64_t endTick = Machine::instance().getTimer()->getTickCount();
+        uint64_t elapsed = endTick - startTick;
+        uint32_t elapsedSecs = static_cast<uint32_t>(elapsed / 1000) + 1;
+
+        if(elapsedSecs >= seconds)
+            return 0;
+        else
+            return elapsedSecs;
+    }
+    else
+    {
+        ERROR("sleep: acquire was not interrupted?");
     }
 
     return 0;

@@ -78,6 +78,12 @@ class Timer
     /** Removes the event \p pEvent from the alarm queue.
      *\param pEvent Event to remove alarm for. */
     virtual void removeAlarm(class Event *pEvent) = 0;
+    /** Removes the event \p pEvent from the alarm queue.
+     *\param pEvent Event to remove alarm for.
+     *\param bRetZero If true, returns zero rather the time until firing
+     *\return The number of seconds before the event would have fired,
+     *        or zero if bRetZero is true. */
+    virtual size_t removeAlarm(class Event *pEvent, bool bRetZero) = 0;
 
   protected:
     /** The default constructor */

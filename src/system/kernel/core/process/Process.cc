@@ -230,7 +230,7 @@ void Process::setSignalHandler(size_t sig, SignalHandler* handler)
             m_SignalHandlers.remove(sig);
 
             SignalEvent *event = reinterpret_cast<SignalEvent*>(tmp->pEvent);
-            tmp->pEvent = 0;
+            // tmp->pEvent = 0;
 
             // Destroy the event
             if(event)
@@ -238,7 +238,9 @@ void Process::setSignalHandler(size_t sig, SignalHandler* handler)
                 /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
                 /// \bug FIXME, causes a page fault
                 ///      Need to write proper copy constructors (and operator =) for SignalHandler!
-                // delete event;
+                NOTICE("Deleting the event");
+                //delete event;
+                NOTICE("Done");
                 /**************************** BIG COMMENT, DON'T FORGET ME ****************************/
             }
             else
@@ -246,7 +248,9 @@ void Process::setSignalHandler(size_t sig, SignalHandler* handler)
 
 
             // And finally, destroy the SignalHandler struct
+            NOTICE("Deleting the SignalHandler");
             delete tmp;
+            NOTICE("Done");
         }
 
         // Insert into the signal handler table

@@ -37,7 +37,6 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // Initialise state level zero
   m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-  NOTICE("Level zero kernel stack: " << reinterpret_cast<uintptr_t>(m_StateLevels[0].m_pKernelStack) << ".");
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;

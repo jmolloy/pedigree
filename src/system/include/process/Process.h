@@ -186,14 +186,35 @@ public:
     /** A signal handler description */
     struct SignalHandler
     {
+        SignalHandler() :
+            sig(255), pEvent(0), sigMask(0), flags(0), type(0)
+        {}
+
+        SignalHandler(const SignalHandler &s) :
+            sig(s.sig), pEvent(new SignalEvent(*(s.pEvent))), sigMask(s.sigMask), flags(s.flags), type(s.type)
+        {}
+
+        ~SignalHandler()
+        {
+            if(pEvent)
+                delete pEvent;
+        }
+
+        SignalHandler &operator = (const SignalHandler &s)
+        {
+            sig = s.sig;
+            pEvent = new SignalEvent(*(s.pEvent));
+            sigMask = s.sigMask;
+            flags = s.flags;
+            type = s.type;
+            return *this;
+        }
+
         /// Signal number
         size_t sig;
 
         /// Event for the signal handler
         SignalEvent *pEvent;
-
-        /// Location of the handler <obsolete>
-        uintptr_t handlerLocation_OBS;
 
         /// Signal mask to set when this signal handler is called
         uint32_t sigMask;

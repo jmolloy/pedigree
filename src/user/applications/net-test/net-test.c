@@ -50,14 +50,18 @@ int main(int argc, char **argv)
 
     signal(SIGALRM, rofl);
     alarm(10);
+    printf("Waiting 4 seconds!\n");
 
-    printf("Waiting 10 seconds!\n");
-    while(!some_global);
-    printf("Done!\n");
+    sleep(4);
+    unsigned int a = alarm(0);
+    printf("a = %d\n", a);
+
+    //while(!some_global);
+    //printf("Done!\n");
 
     printf("Raising SIGHUP\n");
 
-    raise(SIGHUP);
+    raise(SIGALRM);
 
     printf("Raise returns\n");
 
