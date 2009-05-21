@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+#ifndef CONFIG_BACKEND_H
+#define CONFIG_BACKEND_H
+
+#include <processor/types.h>
+
+/** A configuration backend for the Pedigree configuration system.
+  *
+  * By subclassing this class, it is possible to handle different
+  * methods for configuration (for instance, a backend for SQL,
+  * flat files, and pure memory access).
+  */
+class ConfigurationBackend
+{
+public:
+    ConfigurationBackend(String configStore);
+    virtual ~ConfigurationBackend();
+
+    virtual size_t write(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
+    virtual size_t read(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes) = 0;
+
+    virtual String getConfigStore();
+
+    virtual String getTypeName();
+
+protected:
+
+    String m_ConfigStore;
+};
+
+#endif

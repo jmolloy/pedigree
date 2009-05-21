@@ -42,6 +42,7 @@ add_subdirectory(debugger)
 add_subdirectory(linker)
 add_subdirectory(machine)
 add_subdirectory(utilities)
+add_subdirectory(config)
 
 #########################################################################################
 # Script begin.
