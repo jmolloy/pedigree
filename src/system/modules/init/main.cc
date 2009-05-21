@@ -223,10 +223,6 @@ void init_stage2()
     ////////////////////////////////////////////////////////////////////
     // End Temp!
 
-    // The login program is a POSIX program
-    PosixSubsystem *pSub = new PosixSubsystem();
-    pProcess->setSubsystem(pSub);
-
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 }

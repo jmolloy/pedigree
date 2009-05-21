@@ -31,6 +31,9 @@ typedef Tree<size_t, void*> sigHandlerTree;
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(0), m_FdLock()
 {
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);
+
     // Copy all signal handlers
     sigHandlerTree &parentHandlers = s.m_SignalHandlers;
     sigHandlerTree &myHandlers = m_SignalHandlers;
@@ -44,12 +47,36 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     }
 }
 
+PosixSubsystem::~PosixSubsystem()
+{
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+
+    // Destroy all signal handlers
+    sigHandlerTree &myHandlers = m_SignalHandlers;
+    for(sigHandlerTree::Iterator it = myHandlers.begin(); it != myHandlers.end(); it++)
+    {
+        size_t key = reinterpret_cast<size_t>(it.key());
+        void *value = it.value();
+
+        // Get the signal handler and remove it
+        SignalHandler *sig = reinterpret_cast<SignalHandler *>(value);
+        myHandlers.remove(key);
+
+        // SignalHandler destructor will delete the Event
+        delete sig;
+    }
+}
+
 bool PosixSubsystem::kill(Thread *pThread)
 {
     NOTICE("PosixSubsystem::kill");
 
+    // Lock the signal handlers, so it's impossible for our signal handler to be pulled our
+    // from beneath us by another CPU or something.
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+
     // Send SIGKILL
-    SignalHandler *sig = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(9));
+    SignalHandler *sig = getSignalHandler(9); //reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(9));
 
     if(sig && sig->pEvent)
     {
@@ -67,6 +94,10 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
 {
     NOTICE("PosixSubsystem::threadException");
 
+    // Lock the signal handlers, so it's impossible for our signal handler to be pulled our
+    // from beneath us by another CPU or something.
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
+
     // What was the exception?
     SignalHandler *sig = 0;
     switch(eType)
@@ -74,17 +105,17 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         case PageFault:
             NOTICE("    (Page fault)");
             // Send SIGSEGV
-            sig = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(11));
+            sig = getSignalHandler(11);
             break;
         case InvalidOpcode:
             NOTICE("    (Invalid opcode)");
             // Send SIGILL
-            sig = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(4));
+            sig = getSignalHandler(4);
             break;
         default:
             NOTICE("    (Unknown)");
             // Unknown exception
-            ERROR("Unknown exception typein threadException - POSIX subsystem");
+            ERROR("Unknown exception type in threadException - POSIX subsystem");
             break;
     }
 

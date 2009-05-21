@@ -43,7 +43,7 @@ Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
   m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(pParent->m_SpaceAllocator),
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
-  m_pSubsystem(new Subsystem(*(pParent->m_pSubsystem))), m_DeadThreads(0)
+  m_pSubsystem(0), m_DeadThreads(0)
 {
   m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
 
