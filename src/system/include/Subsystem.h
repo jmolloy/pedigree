@@ -77,6 +77,12 @@ class Subsystem
         /** A thread has thrown an exception! */
         virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);
 
+        /** Gets the type of this subsystem */
+        SubsystemType getType()
+        {
+            return m_Type;
+        }
+
     protected:
 
         SubsystemType m_Type;
