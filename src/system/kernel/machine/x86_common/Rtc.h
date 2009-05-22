@@ -41,6 +41,7 @@ class Rtc : public Timer,
     virtual bool unregisterHandler(TimerHandler *handler);
     virtual void addAlarm(class Event *pEvent, size_t alarmSecs);
     virtual void removeAlarm(class Event *pEvent);
+    virtual size_t removeAlarm(class Event *pEvent, bool bRetZero);
     virtual size_t getYear();
     virtual uint8_t getMonth();
     virtual uint8_t getDayOfMonth();
@@ -144,7 +145,7 @@ class Rtc : public Timer,
 
     /** The Rtc class instance */
     static Rtc m_Instance;
-    
+
     /** All timer handlers installed */
     TimerHandler* m_Handlers[MAX_TIMER_HANDLERS];
 

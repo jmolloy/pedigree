@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <syscall.h>
+
+#include "Vt100.h"
+
+#define CONSOLE_READ    1
+#define CONSOLE_WRITE   2
+#define CONSOLE_GETROWS 3
+#define CONSOLE_GETCOLS 4
+#define CONSOLE_DATA_AVAILABLE 5
+
+void *operator new (size_t size) throw()
+{
+  return malloc(size);
+}
+void *operator new[] (size_t size) throw()
+{
+  return malloc(size);
+}
+void *operator new (size_t size, void* memory) throw()
+{
+  return memory;
+}
+void *operator new[] (size_t size, void* memory) throw()
+{
+  return memory;
+}
+void operator delete (void * p)
+{
+  free(p);
+}
+void operator delete[] (void * p)
+{
+  free(p);
+}
+
+void log(char *c)
+{
+    syscall1(TUI_LOG, reinterpret_cast<size_t>(c));
+}
+
+size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz)
+{
+    return syscall4(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz);
+}
+
+size_t getFb(Display::ScreenMode *pMode)
+{
+    return syscall1(TUI_GETFB, reinterpret_cast<size_t>(pMode));
+}
+
+int main (int argc, char **argv)
+{
+    log ("Started up.");
+
+    Display::ScreenMode mode;
+    size_t fb = getFb(&mode);
+
+    Vt100 vt100(mode, reinterpret_cast<void*>(fb));
+
+    char *buffer = new char[2048];
+
+    size_t lastResponse = 0;
+    while (true)
+    {
+        size_t sz;
+        size_t cmd = nextRequest(lastResponse, buffer, &sz, 2047);
+        
+        switch(cmd)
+        {
+            case CONSOLE_WRITE:
+                buffer[sz] = '\0';
+                vt100.write(buffer);
+                lastResponse = sz;
+                break;
+            case CONSOLE_READ:
+                for(;;);
+                break;
+        }
+    }
+
+    return 0;
+}
+

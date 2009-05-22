@@ -13,7 +13,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-set(APPLICATIONS apptest shell syscall-test net-test login)
+set(APPLICATIONS apptest shell syscall-test net-test login TUI)
 set(LIBRARIES)
 
 set(HDD_FILES)

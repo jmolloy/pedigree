@@ -19,6 +19,9 @@
 #include <vfs/VFS.h>
 #include <vfs/Pipe.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 #include <Module.h>
 
 #include <processor/Processor.h>
@@ -30,10 +33,18 @@ int posix_pipe(int filedes[2])
 {
   NOTICE("pipe");
 
-  FdMap& fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
 
-  size_t readFd = Processor::information().getCurrentThread()->getParent()->nextFd();
-  size_t writeFd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  size_t readFd = pSubsystem->nextFd();
+  size_t writeFd = pSubsystem->nextFd();
 
   filedes[0] = readFd;
   filedes[1] = writeFd;

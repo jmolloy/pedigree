@@ -27,6 +27,10 @@ enum Service_t
    * \note If you change this, ensure you change src/subsys/posix/syscall.h ! */
   posix = 1,
 
+  /** Service number for the TUI module subsystem
+   * \note If you change this, ensure you change src/system/modules/TUI/syscall.h! */
+  TUI = 2,
+  
   /** The number of syscall service numbers */
   serviceEnd
 };

@@ -16,7 +16,7 @@
 #ifndef EVENT_NUMBERS_H
 #define EVENT_NUMBERS_H
 
-/** The globally-defined event numbers for each Event subclass. These must be unique so that 
+/** The globally-defined event numbers for each Event subclass. These must be unique so that
     identification of serialized data is possible. */
 namespace EventNumbers
 {

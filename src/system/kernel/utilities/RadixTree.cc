@@ -189,10 +189,6 @@ void *RadixTree<void*>::lookup(String key)
             case Node::OverMatch:
             {
                 size_t i = 0;
-                if (pNode->m_pKey == 0)
-                {
-                    FATAL("Omg!: root " << (uintptr_t)m_pRoot << ", this " << (uintptr_t)pNode << ", oldroot " << (uintptr_t)pOldRoot);
-                }
                 while (pNode->m_pKey[i++]) cpKey++;
 
                 Node *pChild = pNode->findChild(cpKey);

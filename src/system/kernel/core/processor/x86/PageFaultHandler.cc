@@ -136,7 +136,14 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   else
   {
     //  Unrecoverable PFE in a process - Kill the process and yield
-    Processor::information().getCurrentThread()->getParent()->kill();
+    //Processor::information().getCurrentThread()->getParent()->kill();
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    Subsystem *pSubsystem = pProcess->getSubsystem();
+    if(pSubsystem)
+        pSubsystem->threadException(pThread, Subsystem::PageFault, state);
+    else
+        pProcess->kill();
 
     //  kill member function also calls yield(), so shouldn't get here.
     for(;;) ;

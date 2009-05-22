@@ -13,42 +13,55 @@
 
 #include <signal.h>
 
+volatile int some_global = 0;
+
 void rofl(int arg)
 {
-  printf("Signal Handler!\n");
-  while(1);
+    printf("Signal Handler (arg=%x)!\n", arg);
+    some_global = 1;
 }
 
-int main(int argc, char **argv) {
-/*  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-  if(sock == -1)
-  {
-    printf("Couldn't get a socket: %d [%s]\n", errno, strerror(errno));
-    return 1;
-  }
+int main(int argc, char **argv)
+{
+    /*  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+      if(sock == -1)
+      {
+        printf("Couldn't get a socket: %d [%s]\n", errno, strerror(errno));
+        return 1;
+      }
 
-  struct timeval t;
-  t.tv_sec = 30;
+      struct timeval t;
+      t.tv_sec = 30;
 
-  fd_set readfd;
-  FD_SET(sock, &readfd);
+      fd_set readfd;
+      FD_SET(sock, &readfd);
 
-  char* tmp = (char*) malloc(2048);
-  while(1)
-  {
-    select(sock + 1, &readfd, 0, 0, &t);
-    int n = read(sock, tmp, 2048);
-    if(n > 0)
-      printf("interface received %d bytes\n", n);
-  }
-*/
+      char* tmp = (char*) malloc(2048);
+      while(1)
+      {
+        select(sock + 1, &readfd, 0, 0, &t);
+        int n = read(sock, tmp, 2048);
+        if(n > 0)
+          printf("interface received %d bytes\n", n);
+      }
+    */
 
-  signal(SIGHUP, rofl);
-  raise(SIGHUP);
+    printf("Installing signal handler...\n");
 
-  printf("Raise returns\n");
+    signal(SIGUSR1, rofl);
+    printf("Raising it...\n");
+    raise(SIGUSR1);
+    printf("Complete\n");
 
-  while(1);
+    printf("Segfault?\n");
 
-  return 0;
+    *((char*) 0) = 0xab;
+
+    printf("Raising SIGHUP - calling its default handler (should be dropped to bash)\n");
+
+    raise(SIGHUP);
+
+    printf("Raise returns\n");
+
+    return 0;
 }

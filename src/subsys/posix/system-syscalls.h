@@ -49,7 +49,7 @@ int posix_getuid();
 int posix_getgid();
 int pedigree_login(int uid, const char *password);
 
-int posix_alarm(uint32_t seconds);
+size_t posix_alarm(uint32_t seconds);
 int posix_sleep(uint32_t seconds);
 
 int pedigree_sigret();

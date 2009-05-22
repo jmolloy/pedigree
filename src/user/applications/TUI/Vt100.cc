@@ -15,10 +15,8 @@
  */
 
 #include "Vt100.h"
-#include "../../kernel/core/BootIO.h"
-#include <machine/Machine.h>
-#include <machine/Keyboard.h>
 #include "Font.c"
+#include <string.h>
 
 #define FONT_HEIGHT 16
 #define FONT_WIDTH  8
@@ -29,7 +27,7 @@ Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
   m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT),
   m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bContainedParen(false), m_bDontRefresh(false),
-  m_SavedX(0), m_SavedY(0), m_bNewlineAlsoCR(true), m_Cmd()
+  m_SavedX(0), m_SavedY(0), m_bNewlineAlsoCR(false), m_Cmd()
 {
   // Precompile colour list.
   m_pColours[C_BLACK] = compileColour(0x00, 0x00, 0x00);
@@ -322,7 +320,7 @@ void Vt100::write(char c)
         // We're still changing state, so keep m_bChangingState = true.
         break;
       default:
-        WARNING("VT100: Invalid character: " << c);
+//        WARNING("VT100: Invalid character: " << c);
         m_bChangingState = false;
         break;
     }
@@ -397,7 +395,8 @@ void Vt100::write(char c)
             case 'w': c = 203; break; // Top 'T'
             case 'x': c = 186; break; // Vertical bar
             default:
-              WARNING("VT100: Unrecognised line character: " << c);
+                ;
+//              WARNING("VT100: Unrecognised line character: " << c);
           }
           m_pWindows[m_CurrentWindow]->writeChar(c);
         }
@@ -411,7 +410,7 @@ void Vt100::putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b)
   int depth = m_Mode.pf.nBpp;
   if (depth != 8 && depth != 16 && depth != 32)
   {
-    ERROR("VT100: Pixel format is neither 8, 16 or 32 bits per pixel!");
+//    ERROR("VT100: Pixel format is neither 8, 16 or 32 bits per pixel!");
     return;
   }
   int m_Stride = m_Mode.pf.nPitch/ (depth/8);
@@ -588,7 +587,7 @@ void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
   {
     if((start+m_View) > (end+m_View))
     {
-      ERROR("m_nScrollMin > m_nScrollMax [" << start << ", " << end << ", " << m_View << "]");
+//      ERROR("m_nScrollMin > m_nScrollMax [" << start << ", " << end << ", " << m_View << "]");
       return;
     }
     m_nScrollMin = start+m_View;

@@ -34,10 +34,10 @@ public:
   virtual ~RequestQueue();
 
   /** Initialises the queue, spawning the worker thread. */
-  void initialise();
+  virtual void initialise();
 
   /** Destroys the queue, killing the worker thread (safely) */
-  void destroy();
+  virtual void destroy();
 
   /** Adds a request to the queue. Blocks until it finishes and returns the result. */
   uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
@@ -52,7 +52,6 @@ protected:
       request needs to be executed (by the worker thread). */
   virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                                   uint64_t p6, uint64_t p7, uint64_t p8) = 0;
-private:
 
   RequestQueue(const RequestQueue&);
   void operator =(const RequestQueue&);

@@ -22,22 +22,23 @@
 #include <Debugger.h>
 #endif
 
-#ifdef DEBUGGER_QWERTY
-#include <keymap_qwerty.h>
-#endif
-#ifdef DEBUGGER_QWERTZ
-#include <keymap_qwertz.h>
-#endif
+#include <machine/keymaps/pc102.h>
+
+#define CAPSLOCK  0x3a
+#define LSHIFT    0x2a
+#define RSHIFT    0x36
+#define ALT       0x38
+#define CTRL      0x1d
 
 X86Keyboard::X86Keyboard(uint32_t portBase) :
-  m_bDebugState(true),
-  m_bShift(false),
-  m_bCtrl(false),
-  m_bAlt(false), m_bAltGr(false), m_bEscape(false),
-  m_bCapsLock(false),
-  m_Port("PS/2 Keyboard controller"),
-  m_BufStart(0), m_BufEnd(0), m_BufLength(0),
-  m_IrqId(0)
+    m_bDebugState(true),
+    m_bShift(false),
+    m_bCtrl(false),
+    m_bAlt(false), m_bAltGr(false), m_bEscape(false),
+    m_bCapsLock(false),
+    m_Port("PS/2 Keyboard controller"),
+    m_BufStart(0), m_BufEnd(0), m_BufLength(0),
+    m_IrqId(0)
 {
 }
 
@@ -47,364 +48,320 @@ X86Keyboard::~X86Keyboard()
 
 void X86Keyboard::initialise()
 {
-  m_Port.allocate(0x60/*portBase*/, 5);
+    m_Port.allocate(0x60/*portBase*/, 5);
 
-  // Register the irq
-  IrqManager &irqManager = *Machine::instance().getIrqManager();
-  m_IrqId = irqManager.registerIsaIrqHandler(1, this);
-  if (m_IrqId == 0)
-  {
-    ERROR("X86Keyboard: failed to register IRQ handler!");
-  }
+    // Register the irq
+    IrqManager &irqManager = *Machine::instance().getIrqManager();
+    m_IrqId = irqManager.registerIsaIrqHandler(1, this);
+    if (m_IrqId == 0)
+    {
+        ERROR("X86Keyboard: failed to register IRQ handler!");
+    }
 
-  irqManager.enable(1, false);
-
-  // Initialise the keyboard map.
-  initKeymap();
+    irqManager.enable(1, false);
 }
 
 char X86Keyboard::getChar()
 {
-  // If we're in debug state we can only poll.
-  if (m_bDebugState)
-  {
-    uint8_t scancode, status;
-    do
+    // If we're in debug state we can only poll.
+    if (m_bDebugState)
     {
-      // Get the keyboard's status byte.
-      status = m_Port.read8(4);
+        uint8_t scancode, status;
+        do
+        {
+            // Get the keyboard's status byte.
+            status = m_Port.read8(4);
+        }
+        while ( !(status & 0x01) ); // Spin until there's a key ready.
+
+        // Get the scancode for the pending keystroke.
+        scancode = m_Port.read8(0);
+
+        uint64_t c = scancodeToCharacter(scancode);
+        if ((c&Keyboard::Special) || ((c&0xFFFFFFFF) > 0x7f)) return 0;
+        else return static_cast<char>(c&0x7f);
     }
-    while ( !(status & 0x01) ); // Spin until there's a key ready.
+    else
+    {
+        ERROR("Keyboard::getChar() should not be called outside debug mode");
+        return 0;
+    }
+}
 
-    // Get the scancode for the pending keystroke.
-    scancode = m_Port.read8(0);
+uint64_t X86Keyboard::getCharacter()
+{
+    if (!m_bDebugState)
+    {
+        m_BufLength.acquire(1);
 
-    return scancodeToChar(scancode);
-  }
-  else
-  {
-    FATAL("KEYBOARD: getChar() should not be called in normal mode!");
-    return 0;
-  }
+        uint64_t c = m_Buffer[m_BufStart++];
+        m_BufStart = m_BufStart%BUFLEN;
+
+        return c;
+    }
+    else
+    {
+        ERROR("Keyboard::getCharacter() should not be called in debug mode");
+        return 0;
+    }
 }
 
 char X86Keyboard::getCharNonBlock()
 {
-  if (m_bDebugState)
-  {
-    uint8_t scancode, status;
-    // Get the keyboard's status byte.
-    status = m_Port.read8(4);
-    if (!(status & 0x01))
-    return 0;
+    if (m_bDebugState)
+    {
+        uint8_t scancode, status;
+        // Get the keyboard's status byte.
+        status = m_Port.read8(4);
+        if (!(status & 0x01))
+            return 0;
 
-    // Get the scancode for the pending keystroke.
-    scancode = m_Port.read8(0);
+        // Get the scancode for the pending keystroke.
+        scancode = m_Port.read8(0);
 
-    return scancodeToChar(scancode);
-  }
-  else
-  {
-    FATAL("KEYBOARD: getCharNonBlock() should not be called in normal mode!");
-    return 0;
-  }
+        uint64_t c = scancodeToCharacter(scancode);
+        if ((c&Keyboard::Special) || ((c&0xFFFFFFFF) > 0x7f)) return 0;
+        else return static_cast<char>(c&0x7f);
+    }
+    else
+    {
+        ERROR("Keyboard::getCharNonBlock should not be called outside debug mode");
+        return 0;
+    }
 }
 
-Keyboard::Character X86Keyboard::getCharacter()
+uint64_t X86Keyboard::getCharacterNonBlock()
 {
-  m_BufLength.acquire(1);
+    if (!m_bDebugState)
+    {
+        if (m_BufLength.tryAcquire(1))
+        {
+            uint64_t c = m_Buffer[m_BufStart++];
+            m_BufStart = m_BufStart%BUFLEN;
 
-  Character c = m_Buffer[m_BufStart++];
-  m_BufStart = m_BufStart%BUFLEN;
-
-  return c;
-}
-
-Keyboard::Character X86Keyboard::getCharacterNonBlock()
-{
-  if (m_BufLength.tryAcquire(1))
-  {
-    Character c = m_Buffer[m_BufStart++];
-    m_BufStart = m_BufStart%BUFLEN;
-
-    return c;
-  }
-  Character c;
-  c.valid = 0;
-  return c;
-}
-
-bool X86Keyboard::shift()
-{
-  return m_bShift;
-}
-
-bool X86Keyboard::ctrl()
-{
-  return m_bCtrl;
-}
-
-bool X86Keyboard::alt()
-{
-  return m_bAlt;
-}
-
-bool X86Keyboard::capsLock()
-{
-  return m_bCapsLock;
+            return c;
+        }
+        return 0;
+    }
+    else
+    {
+        ERROR("Keyboard::getCharacterNonBlock should not be called in debug mode");
+        return 0;
+    }
 }
 
 void X86Keyboard::setDebugState(bool enableDebugState)
 {
-  m_bDebugState = enableDebugState;
-  IrqManager &irqManager = *Machine::instance().getIrqManager();
-  if (m_bDebugState)
-  {
-    irqManager.enable(1, false);
+    m_bDebugState = enableDebugState;
+    IrqManager &irqManager = *Machine::instance().getIrqManager();
+    if (m_bDebugState)
+    {
+        irqManager.enable(1, false);
 
-    // Zero the buffer.
-    while (m_BufLength.tryAcquire(1)) ;
-    m_BufStart = 0;
-    m_BufEnd = 0;
-  }
-  else
-  {
-    irqManager.enable(1, true);
-  }
+        // Zero the buffer.
+        while (m_BufLength.tryAcquire(1)) ;
+        m_BufStart = 0;
+        m_BufEnd = 0;
+    }
+    else
+    {
+        irqManager.enable(1, true);
+    }
 }
 
 bool X86Keyboard::getDebugState()
 {
-  return m_bDebugState;
+    return m_bDebugState;
 }
 
 bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
 {
-  uint8_t scancode, status;
+    uint8_t scancode, status;
 
-  // Get the keyboard's status byte.
-  status = m_Port.read8(4);
-  if (!(status & 0x01))
-    return true;
+    // Get the keyboard's status byte.
+    status = m_Port.read8(4);
+    if (!(status & 0x01))
+        return true;
 
-  // Get the scancode for the pending keystroke.
-  scancode = m_Port.read8(0);
+    // Get the scancode for the pending keystroke.
+    scancode = m_Port.read8(0);
 
-  Character c = scancodeToCharacter(scancode);
+    uint64_t c = scancodeToCharacter(scancode);
 #ifdef DEBUGGER
-  if (c.valid && c.is_special && c.value == KB_F12)
-  {
-    LargeStaticString sError;
-    sError += "User-induced breakpoint";
-    Debugger::instance().start(state, sError);
-  }
+    if (scancode == 0x58)
+    {
+        LargeStaticString sError;
+        sError += "User-induced breakpoint";
+        Debugger::instance().start(state, sError);
+    }
 #endif
-  if (c.valid)
-  {
-    m_Buffer[m_BufEnd++] = c;
-    m_BufEnd = m_BufEnd%BUFLEN;
-    m_BufLength.release(1);
-  }
+    if (c != 0)
+    {
+        m_Buffer[m_BufEnd++] = c;
+        m_BufEnd = m_BufEnd%BUFLEN;
+        m_BufLength.release(1);
 
-  return true;
+    }
+
+    return true;
 }
 
-char X86Keyboard::scancodeToChar(uint8_t scancode)
+uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
 {
-  // We don't care about 'special' scancodes which start with 0xe0.
-  if (scancode == 0xe0)
-    return 0;
+    // Special 'escape' scancode?
+    if (scancode == 0xe0)
+    {
+        m_bEscape = true;
+        return 0;
+    }
 
-  // Was this a keypress?
-  bool bKeypress = true;
-  if (scancode & 0x80)
-  {
-    bKeypress = false;
-    scancode &= 0x7f;
-  }
+    // Was this a keypress?
+    bool bKeypress = true;
+    if (scancode & 0x80)
+    {
+        bKeypress = false;
+        scancode &= 0x7f;
+    }
 
-  bool bUseUpper = false;  // Use the upper case keymap.
-  bool bUseNums = false;   // Use the upper case keymap for numbers.
-  // Certain scancodes have special meanings.
-  switch (scancode)
-  {
-  case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
-    if (bKeypress)
-      m_bCapsLock = !m_bCapsLock;
-    return 0;
-  case LSHIFT:
-  case RSHIFT:
-    if (bKeypress)
-      m_bShift = true;
-    else
-      m_bShift = false;
-    return 0;
-  case CTRL:
-    if (bKeypress)
-      m_bCtrl = true;
-    else
-      m_bCtrl = false;
-    return 0;
-  case ALT:
-    if (bKeypress)
-      m_bAlt = true;
-    else
-      m_bAlt = false;
-    return 0;
-  }
+    bool bUseUpper = false;  // Use the upper case keymap.
+    // Certain scancodes have special meanings.
+    switch (scancode)
+    {
+        case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
+            if (bKeypress)
+                m_bCapsLock = !m_bCapsLock;
+            return 0;
+        case LSHIFT:
+        case RSHIFT:
+            if (bKeypress)
+                m_bShift = true;
+            else
+                m_bShift = false;
+            m_bEscape = false;
+            return 0;
+        case CTRL:
+            if (bKeypress)
+                m_bCtrl = true;
+            else
+                m_bCtrl = false;
+            m_bEscape = false;
+            return 0;
+        case ALT:
+            if (!m_bEscape)
+            {
+                if (bKeypress)
+                    m_bAlt = true;
+                else
+                    m_bAlt = false;
+                return 0;
+            }
+            else
+            {
+                if (bKeypress)
+                    m_bAltGr = true;
+                else
+                    m_bAltGr = false;
+                m_bEscape = false;
+                return 0;
+            }
+    }
 
-  if ( (m_bCapsLock && !m_bShift) || (!m_bCapsLock && m_bShift) )
-    bUseUpper = true;
+    if ( (m_bCapsLock && !m_bShift) || (!m_bCapsLock && m_bShift) )
+        bUseUpper = true;
 
-  if (m_bShift)
-    bUseNums = true;
+    if (!bKeypress)
+        return 0;
 
-  if (!bKeypress)
-    return 0;
+    // No valid combination for these two keys together.
+    if (m_bAlt && m_bAltGr)
+        return 0;
 
-  if (scancode < 0x02)
-    return keymap_lower[scancode];
-  else if ( (scancode <  0x0e /* backspace */) ||
-            (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||
-            (scancode >= 0x27 /*;*/ && scancode <= 0x29 /*`*/) ||
-            (scancode == 0x2b) ||
-            (scancode >= 0x33 /*,*/ && scancode <= 0x35 /*/*/) )
-  {
-    if (bUseNums)
-      return keymap_upper[scancode];
-    else
-      return keymap_lower[scancode];
-  }
-  else if ( (scancode >= 0x10 /*Q*/ && scancode <= 0x19 /*P*/) ||
-            (scancode >= 0x1e /*A*/ && scancode <= 0x26 /*L*/) ||
-            (scancode >= 0x2c /*Z*/ && scancode <= 0x32 /*M*/) )
-  {
-    if (bUseUpper)
-      return keymap_upper[scancode];
-    else
-      return keymap_lower[scancode];
-  }
-  else if (scancode <= 0x39 /* space */)
-    return keymap_lower[scancode];
-  else
+    // Try and grab a key code for the scancode with all modifiers enabled.
+    table_entry_t *pTableEntry = getTableEntry(m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
+    if (!pTableEntry)
+    {
+        // Fall back and just use the shift modifier.
+        pTableEntry = getTableEntry(false, false, false, m_bShift, m_bEscape, scancode);
+        if (!pTableEntry)
+        {
+            m_bEscape = false;
+            return 0;
+        }
+    }
+    m_bEscape = false;
+
+    if ((pTableEntry->flags & UNICODE_POINT) || (pTableEntry->flags & SPECIAL))
+    {
+        uint64_t ret = pTableEntry->val;
+
+        if (pTableEntry->flags & SPECIAL)
+        {
+            ret |= Keyboard::Special;
+        }
+        else if (bUseUpper && ret >= 0x0061 /* a */ && ret <= 0x007a /* z */)
+            ret -= (0x0061-0x0041); /* a-A */
+
+        if (m_bAlt)   ret |= Keyboard::Alt;
+        if (m_bAltGr) ret |= Keyboard::AltGr;
+        if (m_bCtrl)  ret |= Keyboard::Ctrl;
+        if (m_bShift) ret |= Keyboard::Shift;
+
+        return ret;
+    }
+
     return 0;
 }
 
-Keyboard::Character X86Keyboard::scancodeToCharacter(uint8_t scancode)
+table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode)
 {
-  // We don't care about 'special' scancodes which start with 0xe0.
-  if (scancode == 0xe0)
-  {
-    Character c;
-    c.valid = 0;
-    m_bEscape = true;
-    return c;
-  }
+    // Grab the keymap table index for this key.
+    size_t alt = ((bAlt)?ALT_I:0) | ((bAltGr)?ALTGR_I:0);
+    size_t modifiers =  ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
+    size_t escape = (bEscape)?1:0;
+    size_t idx = TABLE_IDX(alt, modifiers, escape, scancode);
 
-  // Was this a keypress?
-  bool bKeypress = true;
-  if (scancode & 0x80)
-  {
-    bKeypress = false;
-    scancode &= 0x7f;
-  }
+    m_bEscape = false;
 
-  Character c;
-  c.valid = 0;
-  c.ctrl = m_bCtrl;
-  c.alt = m_bAlt;
-  c.shift = m_bShift;
-  c.num_lock = 0;
-  c.is_special = 0;
-  c.reserved = 0;
-  c.value = 0;
+    uint8_t *pSparseTable = reinterpret_cast<uint8_t*>(sparse_buff);
+    uint8_t *pDataTable   = reinterpret_cast<uint8_t*>(data_buff);
 
-  if (m_bEscape)
-  {
-      if (scancode == ALT)
-          m_bAltGr = bKeypress;
-      m_bEscape = false;
-      return c;
-  }
+    // Now walk the sparse tree.
+    size_t bisect = (TABLE_MAX+1)/2;
+    size_t size = (TABLE_MAX+1)/2;
+    sparse_t *pSparse = reinterpret_cast<sparse_t*> (&pSparseTable[0]);
+    size_t data_idx = 0;
+    while (true)
+    {
+        if (idx < bisect)
+        {
+            if (pSparse->left == SPARSE_NULL)
+                return 0;
+            if (pSparse->left & SPARSE_DATA_FLAG)
+            {
+                size_t off = idx - (bisect-size);
+                data_idx = (pSparse->left & ~SPARSE_DATA_FLAG) + off*sizeof(table_entry_t);
+                break;
+            }
+            size /= 2;
+            bisect = bisect - size;
+            pSparse = reinterpret_cast<sparse_t*>(&pSparseTable[pSparse->left]);
+        }
+        else
+        {
+            if (pSparse->right == SPARSE_NULL)
+                return 0;
+            if (pSparse->right & SPARSE_DATA_FLAG)
+            {
+                size_t off = idx - bisect;
+                data_idx = (pSparse->right & ~SPARSE_DATA_FLAG) + off*sizeof(table_entry_t);
+                break;
+            }
+            size /= 2;
+            bisect = bisect + size;
+            pSparse = reinterpret_cast<sparse_t*>(&pSparseTable[pSparse->right]);
+        }
+    }
 
-
-  bool bUseUpper = false;  // Use the upper case keymap.
-  bool bUseNums = false;   // Use the upper case keymap for numbers.
-  // Certain scancodes have special meanings.
-  switch (scancode)
-  {
-  case CAPSLOCK: // TODO: fix capslock. Both a make and break scancode are sent on keydown AND keyup!
-    if (bKeypress)
-      m_bCapsLock = !m_bCapsLock;
-    return c;
-  case LSHIFT:
-  case RSHIFT:
-    if (bKeypress)
-      m_bShift = true;
-    else
-      m_bShift = false;
-    return c;
-  case CTRL:
-    if (bKeypress)
-      m_bCtrl = true;
-    else
-      m_bCtrl = false;
-    return c;
-  case ALT:
-    if (bKeypress)
-      m_bAlt = true;
-    else
-      m_bAlt = false;
-    return c;
-  }
-
-  if ( (m_bCapsLock && !m_bShift) || (!m_bCapsLock && m_bShift) )
-    bUseUpper = true;
-
-  if (m_bShift)
-    bUseNums = true;
-
-  if (!bKeypress)
-    return c;
-
-  // Now c is valid...
-  c.valid = 1;
-
-  if (scancode == 0x34 && m_bAltGr)
-  {
-      c.value = 175;
-  }
-  else if (scancode < 0x02)
-    c.value = keymap_lower[scancode];
-  else if ( (scancode <  0x0e /* backspace */) ||
-            (scancode >= 0x1a /*[*/ && scancode <= 0x1b /*]*/) ||
-            (scancode >= 0x27 /*;*/ && scancode <= 0x29 /*`*/) ||
-            (scancode == 0x2b) ||
-            (scancode >= 0x33 /*,*/ && scancode <= 0x35 /*/*/) )
-  {
-    if (bUseNums)
-      c.value = keymap_upper[scancode];
-    else
-      c.value = keymap_lower[scancode];
-  }
-  else if ( (scancode >= 0x10 /*Q*/ && scancode <= 0x19 /*P*/) ||
-            (scancode >= 0x1e /*A*/ && scancode <= 0x26 /*L*/) ||
-            (scancode >= 0x2c /*Z*/ && scancode <= 0x32 /*M*/) )
-  {
-    if (bUseUpper)
-      c.value = keymap_upper[scancode];
-    else
-      c.value = keymap_lower[scancode];
-  }
-  else if (scancode <= 0x39 /* space */)
-  {
-    c.value = keymap_lower[scancode];
-  }
-  else
-  {
-    c.is_special = 1;
-    c.value = keymap_special[scancode];
-    if (c.value == 0) c.valid = 0;
-  }
-  return c;
+    table_entry_t *pTabEntry = reinterpret_cast<table_entry_t*>(&pDataTable[data_idx]);
+    return pTabEntry;
 }

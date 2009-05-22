@@ -22,6 +22,9 @@
 #include <vfs/VFS.h>
 #include <console/Console.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 #include "file-syscalls.h"
 #include "console-syscalls.h"
 
@@ -30,7 +33,15 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 int posix_tcgetattr(int fd, struct termios *p)
 {
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)
@@ -62,7 +73,15 @@ int posix_tcgetattr(int fd, struct termios *p)
 int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
 {
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
 
   FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
   if (!pFd)

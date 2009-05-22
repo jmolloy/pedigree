@@ -90,6 +90,7 @@ extern "C" int abs (int i)
 extern "C" int exit (int code)
 {
   for(;;);
+  return code;
 }
 
 extern "C" void sscanf()

@@ -23,7 +23,7 @@
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -32,16 +32,19 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   }
 
   // Initialise our kernel stack.
-  m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-  m_pAllocatedStack = m_pKernelStack;
+  // void *m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  m_pAllocatedStack = 0; //m_pKernelStack;
+
+  // Initialise state level zero
+  m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
   if (pStack == 0)
   {
     bUserMode = false;
-    pStack = m_pKernelStack;
-    m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
+    pStack = m_StateLevels[0].m_pKernelStack;
+    m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
   }
 
   m_Id = m_pParent->addThread(this);
@@ -59,7 +62,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 }
 
 Thread::Thread(Process *pParent) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -74,7 +77,7 @@ Thread::Thread(Process *pParent) :
 }
 
 Thread::Thread(Process *pParent, SyscallState &state) :
-    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0),  m_pKernelStack(0), m_pAllocatedStack(0), m_Id(0),
+    m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue()
 {
   if (pParent == 0)
@@ -83,8 +86,11 @@ Thread::Thread(Process *pParent, SyscallState &state) :
   }
 
   // Initialise our kernel stack.
-  m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-  m_pAllocatedStack = m_pKernelStack;
+  // m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  m_pAllocatedStack = 0; //m_pKernelStack;
+
+  // Initialise state level zero
+  m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 
   m_Id = m_pParent->addThread(this);
 
@@ -102,8 +108,12 @@ Thread::~Thread()
 
   // TODO delete any pointer data.
 
-  if (m_pAllocatedStack)
-    VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
+  //if (m_pAllocatedStack)
+  //  VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
+
+  for(size_t i = 0; i < MAX_NESTED_EVENTS; i++)
+    if(m_StateLevels[i].m_pKernelStack)
+        VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pKernelStack);
 }
 
 void Thread::setStatus(Thread::Status s)
@@ -116,6 +126,18 @@ void Thread::threadExited()
 {
   NOTICE("Thread exited");
   Processor::information().getScheduler().killCurrentThread();
+}
+
+void Thread::allocateStackAtLevel(size_t stateLevel)
+{
+    if(m_StateLevels[stateLevel].m_pKernelStack == 0)
+        m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+}
+
+void Thread::setKernelStack()
+{
+    if(m_StateLevels[m_nStateLevel].m_pKernelStack)
+        Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack));
 }
 
 void Thread::sendEvent(Event *pEvent)
@@ -131,9 +153,9 @@ void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
 {
     LockGuard<Spinlock> guard(m_Lock);
     if (bInhibit)
-        m_InhibitMasks[m_nStateLevel].set(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask.set(eventNumber);
     else
-        m_InhibitMasks[m_nStateLevel].clear(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask.clear(eventNumber);
 }
 
 void Thread::cullEvent(Event *pEvent)
@@ -159,7 +181,7 @@ Event *Thread::getNextEvent()
     for (size_t i = 0; i < m_EventQueue.count(); i++)
     {
         Event *e = m_EventQueue.popFront();
-        if (m_InhibitMasks[m_nStateLevel].test(e->getNumber()) ||
+        if (m_StateLevels[m_nStateLevel].m_InhibitMask.test(e->getNumber()) ||
             (e->getSpecificNestingLevel() != ~0UL &&
              e->getSpecificNestingLevel() != m_nStateLevel))
             m_EventQueue.pushBack(e);

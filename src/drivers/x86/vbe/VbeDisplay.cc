@@ -20,9 +20,9 @@
 #include <machine/Vga.h>
 #include <machine/Machine.h>
 #include <processor/PhysicalMemoryManager.h>
-#include <TUI/TUI.h>
+#include <TUI/TuiSyscallManager.h>
 
-extern TUI *g_pTui;
+extern TuiSyscallManager g_TuiSyscallManager;
 
 VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer()
 {
@@ -113,7 +113,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
   Machine::instance().getVga(0)->setMode(m_Mode.id);
 
   // Inform the TUI that the current mode has changed.
-  g_pTui->modeChanged(m_Mode, getFramebuffer());
+  g_TuiSyscallManager.modeChanged(m_Mode, m_pFramebuffer->physicalAddress(), m_pFramebuffer->size());
 
   return true;
 }

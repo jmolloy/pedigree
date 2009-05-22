@@ -24,7 +24,7 @@
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
 
-Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] = 
+Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] =
 {
   { 256, 0x08, {3906250ULL, 3906250ULL}},
   { 512, 0x07, {1953125ULL, 1953125ULL}},
@@ -59,6 +59,39 @@ void Rtc::removeAlarm(Event *pEvent)
     }
 }
 
+size_t Rtc::removeAlarm(class Event *pEvent, bool bRetZero)
+{
+    size_t currTime = getTickCount();
+
+    for (List<Alarm*>::Iterator it = m_Alarms.begin();
+         it != m_Alarms.end();
+         it++)
+    {
+        if ( (*it)->m_pEvent == pEvent )
+        {
+            size_t ret = 0;
+            if(!bRetZero)
+            {
+                size_t alarmEndTime = (*it)->m_Time;
+
+                // Is it later than the end of the alarm?
+                if(alarmEndTime < currTime)
+                    ret = 0;
+                else
+                {
+                    size_t diff = alarmEndTime - currTime;
+                    ret = (diff / 1000) + 1;
+                }
+            }
+
+            m_Alarms.erase(it);
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
 bool Rtc::registerHandler(TimerHandler *handler)
 {
   // find a spare spot and install
@@ -71,7 +104,7 @@ bool Rtc::registerHandler(TimerHandler *handler)
       return true;
     }
   }
-  
+
   // no room!
   return false;
 }
@@ -87,7 +120,7 @@ bool Rtc::unregisterHandler(TimerHandler *handler)
       return true;
     }
   }
-  
+
   // not found
   return false;
 }
@@ -139,7 +172,7 @@ bool Rtc::initialise()
   // Allocate the I/O port range"CMOS"
   if (m_IoPort.allocate(0x70, 2) == false)
     return false;
-  
+
   // initialise handlers
   memset(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
 
@@ -256,7 +289,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   {
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
-    
+
     // Second has ticked, call any alarms.
     while (true)
     {
@@ -282,7 +315,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     {
       ++m_Minute;
       m_Second = 0;
-      
+
       if (UNLIKELY(m_Minute == 60))
       {
         ++m_Hour;

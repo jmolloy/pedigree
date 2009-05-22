@@ -221,6 +221,21 @@ class Installer:
 
 		self.installdir = listEntries[selectedItem] + ":"
 		self.resetProgWin()
+    
+    # Simply put, removes whitespace, comments, and all that other stuff
+    # Also ensures that newlines are consistent
+	def sanitizeFile(self, fileData):
+		fileLines = fileData.strip().split("\n")
+		ret = ""
+		for line in fileLines:
+			# Don't strip leading whitespace, because we actually give meaning to it!
+			line = line.rstrip()
+			if(len(line) == 0):
+				continue
+			if(line[0] == '#'):
+				continue
+			ret += line + "\n"
+		return ret
 
 	def installFiles(self):
 		# Open the file listing. This file contains information about each file that
@@ -237,7 +252,8 @@ class Installer:
 		self.drawWarning("There is no checksum support in this version of the installer!")
 
 		# Start copying files
-		fileLines = fileList.read().rstrip().split("\n")
+		fileData = fileList.read()
+		fileLines = self.sanitizeFile(fileData).split("\n")
 		nFiles = len(fileLines)
 		currFileNum = 0
 		myProgress = 0
@@ -246,16 +262,7 @@ class Installer:
 			# Remove trailing whitespace and split on spaces
 			# File format:
 			# <source path> <dest path> <md5> <compulsory>
-			line = line.rstrip()
 			set = line.split(" ")
-			
-			# Skip whitespace lines
-			if(len(line) == 0):
-				continue
-			
-			# Check for comment
-			if(line.strip()[0] == '#'):
-				continue
 			
 			# Check for a valid format
 			if(len(set) != 4):

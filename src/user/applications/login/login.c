@@ -38,6 +38,20 @@ int main(int argc, char **argv)
   return 0;
 #endif
 
+  int pid;
+  if ( (pid=fork()) == 0)
+  {
+      // Environment:
+      char *newenv[1];
+      newenv[0] = 0;
+
+      // Child.
+      execle("/applications/TUI", "/applications/TUI", 0, newenv);
+      // If we got here, the exec failed.
+      printf("Unable to launch /applications/TUI: `%s'\n");
+      exit(1);
+  }
+
   // Grab the greeting if one exists.
   FILE *stream = fopen("root\xAF/config/greeting", "r");
   if (stream)

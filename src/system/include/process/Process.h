@@ -30,6 +30,8 @@
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
 
+#include <Subsystem.h>
+
 class VirtualAddressSpace;
 class File;
 class FileDescriptor;
@@ -86,25 +88,6 @@ public:
     VirtualAddressSpace *getAddressSpace()
     {
         return m_pAddressSpace;
-    }
-
-    /** Returns the File descriptor map - maps numbers to pointers (of undefined type -
-        the subsystem decides what type). */
-    Tree<size_t,FileDescriptor*> &getFdMap()
-    {
-        return m_FdMap;
-    }
-
-    /** Returns the next available file descriptor. */
-    size_t nextFd()
-    {
-        LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
-        return m_NextFd++;
-    }
-    size_t nextFd(size_t fdNum)
-    {
-        LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
-        return (m_NextFd = fdNum);
     }
 
     /** Sets the exit status of the process. */
@@ -166,113 +149,6 @@ public:
         m_pGroup = pGroup;
     }
 
-    /** Public pending signal type - provides for features in sigaction */
-    struct PendingSignal
-    {
-        /// Signal number
-        size_t sig;
-
-        /// Signal handler location
-        uintptr_t sigLocation;
-
-        /// Process signal mask to set when running this signal handler
-        /// \todo Does this then get overridden when the signal handler returns?
-        ///       If so, the previous mask needs to be stored somewhere as well.
-        uint32_t sigMask;
-    };
-
-    /** A signal handler description */
-    struct SignalHandler
-    {
-        /// Signal number
-        size_t sig;
-
-        /// Location of the handler
-        uintptr_t handlerLocation;
-
-        /// Signal mask to set when this signal handler is called
-        uint32_t sigMask;
-
-        /// Signal handler flags
-        uint32_t flags;
-    
-        /// Type - 0 = normal, 1 = SIG_DFL, 2 = SIG_IGN
-        int type;
-    };
-
-    /** Gets the pending signals list */
-    List<void*>& getPendingSignals()
-    {
-        LockGuard<Mutex> guard(m_PendingSignalsLock);
-    
-        return m_PendingSignals;
-    }
-
-    /** Adds a new pendng signal */
-    void addPendingSignal(size_t sig, PendingSignal* pending)
-    {
-        LockGuard<Mutex> guard(m_PendingSignalsLock);
-    
-        if(pending)
-        {
-            SignalHandler* p = getSignalHandler(sig);
-            if(p)
-            {
-                pending->sigLocation = p->handlerLocation;
-                pending->sig = sig;
-                m_PendingSignals.pushBack(pending);
-            }
-        }
-    }
-
-    /** Sets a signal handler */
-    void setSignalHandler(size_t sig, SignalHandler* handler)
-    {
-        LockGuard<Mutex> guard(m_SignalHandlersLock);
-    
-        sig %= 32;
-        if(handler)
-        {
-            SignalHandler* tmp;
-            if((tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig))) != 0)
-            {
-                m_SignalHandlers.remove(sig);
-                delete tmp;
-            }
-
-            handler->sig = sig;
-            m_SignalHandlers.insert(sig, handler);
-        }
-    }
-
-    /** Gets a signal handler */
-    SignalHandler* getSignalHandler(size_t sig)
-    {
-        LockGuard<Mutex> guard(m_SignalHandlersLock);
-    
-        return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
-    }
-
-    void setSigReturnStub(uintptr_t p)
-    {
-        m_SigReturnStub = p;
-    }
-
-    uintptr_t getSigReturnStub()
-    {
-        return m_SigReturnStub;
-    }
-
-    void setSignalMask(uint32_t mask)
-    {
-        m_SignalMask = mask;
-    }
-
-    uint32_t getSignalMask()
-    {
-        return m_SignalMask;
-    }
-
     void setLinker(DynamicLinker *pDl)
     {
         m_pDynamicLinker = pDl;
@@ -280,6 +156,15 @@ public:
     DynamicLinker *getLinker()
     {
         return m_pDynamicLinker;
+    }
+
+    void setSubsystem(Subsystem *pSubsystem)
+    {
+        m_pSubsystem = pSubsystem;
+    }
+    Subsystem *getSubsystem()
+    {
+        return m_pSubsystem;
     }
 
 private:
@@ -311,19 +196,6 @@ private:
      */
     VirtualAddressSpace *m_pAddressSpace;
     /**
-     * The file descriptor map. Maps number to pointers, the type of which is decided
-     * by the subsystem.
-     */
-    Tree<size_t,FileDescriptor*> m_FdMap;
-    /**
-     * The next available file descriptor.
-     */
-    size_t m_NextFd;
-    /**
-     * Lock to guard the next file descriptor while it is being changed.
-     */
-    Spinlock m_FdLock;
-    /**
      * Process exit status.
      */
     int m_ExitStatus;
@@ -340,28 +212,11 @@ private:
     /** Current group. */
     Group *m_pGroup;
 
-    /** Pending signals */
-    List<void*> m_PendingSignals;
-
-    /** Signal handlers (userspace pointers) */
-    Tree<size_t, void*> m_SignalHandlers;
-
-    /** Location of the signal handler return stub */
-    uintptr_t m_SigReturnStub;
-
-    /** Signal mask - if a bit is set, that signal is masked */
-    uint32_t m_SignalMask;
-  
-    /** A lock for access to the signal handlers tree */
-    Mutex m_SignalHandlersLock;
-  
-    /** A lock for access to pending signals
-     * \note This might not actually work - testing required!
-     */
-    Mutex m_PendingSignalsLock;
-
     /** The Process' dynamic linker. */
     DynamicLinker *m_pDynamicLinker;
+
+    /** The subsystem for this process */
+    Subsystem *m_pSubsystem;
 
 public:
     Semaphore m_DeadThreads;

@@ -23,11 +23,9 @@
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
-#define CONSOLE_SETATTR 3
-#define CONSOLE_GETATTR 4
-#define CONSOLE_GETROWS 5
-#define CONSOLE_GETCOLS 6
-#define CONSOLE_DATA_AVAILABLE 7
+#define CONSOLE_GETROWS 3
+#define CONSOLE_GETCOLS 4
+#define CONSOLE_DATA_AVAILABLE 5
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.
 

@@ -28,6 +28,9 @@
 #include <network/Dns.h>
 #include <network/Tcp.h>
 
+#include <Subsystem.h>
+#include <PosixSubsystem.h>
+
 #include "file-syscalls.h"
 #include "net-syscalls.h"
 
@@ -66,9 +69,17 @@ int posix_socket(int domain, int type, int protocol)
   NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
 
   // Lookup this process.
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
 
-  size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  size_t fd = pSubsystem->nextFd();
 
   File* file = 0;
   bool valid = true;
@@ -114,7 +125,17 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 {
   NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -187,7 +208,17 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_send");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -238,7 +269,17 @@ ssize_t posix_sendto(void* callInfo)
   const sockaddr* address = tmp->remote_addr;
   //size_t* addrlen = tmp->addrlen;
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -269,7 +310,17 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
   NOTICE("posix_recv");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -309,7 +360,17 @@ ssize_t posix_recvfrom(void* callInfo)
   sockaddr* address = tmp->remote_addr;
   size_t* addrlen = tmp->addrlen;
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -349,7 +410,17 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 {
   NOTICE("posix_bind");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -377,7 +448,17 @@ int posix_listen(int sock, int backlog)
 {
   NOTICE("posix_listen");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -393,7 +474,17 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 {
   NOTICE("posix_accept");
 
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(Processor::information().getCurrentThread()->getParent()->getFdMap().lookup(sock));
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+
+  FdMap &fdMap = pSubsystem->getFdMap();
+
+  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
   Socket *s1 = static_cast<Socket *>(f->file);
   if(!s1)
     return -1;
@@ -403,9 +494,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
     return -1;
 
   // add into the descriptor table
-  FdMap &fdMap = Processor::information().getCurrentThread()->getParent()->getFdMap();
-
-  size_t fd = Processor::information().getCurrentThread()->getParent()->nextFd();
+  size_t fd = pSubsystem->nextFd();
 
   Endpoint* e = s->getEndpoint(); // NetManager::instance().getEndpoint(f);
 

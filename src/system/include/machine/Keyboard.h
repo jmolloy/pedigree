@@ -51,21 +51,11 @@ class Keyboard
 {
 public:
 
-  /** Character representation including any modifier bits. */
-  typedef struct
-  {
-    uint16_t ctrl : 1;
-    uint16_t alt : 1;
-    uint16_t shift : 1;
-    uint16_t caps_lock : 1;
-    uint16_t num_lock : 1;
-    uint16_t is_special : 1;
-    uint16_t valid : 1;
-    uint16_t reserved : 1;
-    uint16_t value : 8;
-  } Character;
-
-#define CHARACTER_VALID(x) (x.valid==1)
+  static const uint64_t Special = 1ULL<<63;
+  static const uint64_t Alt     = 1ULL<<62;
+  static const uint64_t AltGr   = 1ULL<<61;
+  static const uint64_t Ctrl    = 1ULL<<60;
+  static const uint64_t Shift   = 1ULL<<59;
 
   virtual ~Keyboard() {}
   
@@ -92,53 +82,24 @@ public:
   
   /**
    * Retrieves a character from the keyboard. Blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation.
+   * If DebugState is false this returns the next character in the buffer in 
+   * UTF-8 format.
+   * If DebugState is true this returns the next character received, or zero if
+   * the character is non-ASCII.
    */
   virtual char getChar() =0;
   
   /**
    * Retrieves a character from the keyboard. Non blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation, or zero also if no
-   *         character was present.
+   * If DebugState is false this returns the next character in the buffer in 
+   * UTF-8 format.
+   * If DebugState is true this returns the next character received, or zero if
+   * the character is non-ASCII.
    */
   virtual char getCharNonBlock() =0;
 
-  /**
-   * Retrieves a character from the keyboard in special descriptor format.
-   * Blocking I/O.
-   * \return The character received along with any modifier keys used.
-   */
-  virtual Character getCharacter() =0;
-
-  /**
-   * Retrieves a character from the keyboard in special descriptor format.
-   * Nonblocking I/O.
-   * \return The character recieved along with any modifier keys used. The character
-   *         can be tested for validity with the CHARACTER_VALID macro.
-   */
-  virtual Character getCharacterNonBlock() =0;
-  
-  /**
-   * \return True if shift is currently held.
-   */
-  virtual bool shift() =0;
-  
-  /**
-   * \return True if ctrl is currently held.
-   */
-  virtual bool ctrl() =0;
-  
-  /**
-   * \return True if alt is currently held.
-   */
-  virtual bool alt() =0;
-  
-  /**
-   * \return True if caps lock is currently on.
-   */
-  virtual bool capsLock() =0;
+  virtual uint64_t getCharacter() =0;
+  virtual uint64_t getCharacterNonBlock() =0;
 };
 
 #endif
