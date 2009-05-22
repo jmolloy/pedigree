@@ -39,34 +39,24 @@ class FileDescriptor
         FileDescriptor () :
             file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
         {
-            NOTICE("basic");
         }
 
         FileDescriptor(File *newFile, uint64_t newOffset = 0, size_t newFd = 0xFFFFFFFF, int fdFlags = 0, int flFlags = 0) :
             file(newFile), offset(newOffset), fd(newFd), fdflags(fdFlags), flflags(flFlags)
         {
-            NOTICE("o.o");
             file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
         }
 
         FileDescriptor(FileDescriptor &desc) :
             file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
         {
-            NOTICE("Copy constructor, file = " << reinterpret_cast<uintptr_t>(file) << "...");
-            NOTICE("fdflags = " << fdflags << ".");
-            NOTICE("flflags = " << flflags << ".");
             file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
-            NOTICE("Done");
         }
 
         FileDescriptor(FileDescriptor *desc) :
             file(desc->file), offset(desc->offset), fd(desc->fd), fdflags(desc->fdflags), flflags(desc->flflags)
         {
-            NOTICE("POINTER KGO Copy constructor, file = " << reinterpret_cast<uintptr_t>(file) << "...");
-            NOTICE("fdflags = " << fdflags << ".");
-            NOTICE("flflags = " << flflags << ".");
             file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
-            NOTICE("Done");
         }
 
         FileDescriptor &operator = (FileDescriptor &desc)

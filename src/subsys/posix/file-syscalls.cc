@@ -1001,7 +1001,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             if (FD_ISSET(i, readfds))
             {
                 /// \todo Subclass File for consoles, then this whole thing can be simplified further!
-                if (ConsoleManager::instance().isConsole(pFd->file))
+                /*if (ConsoleManager::instance().isConsole(pFd->file))
                 {
                     if (ConsoleManager::instance().hasDataAvailable(pFd->file))
                         num_ready++;
@@ -1009,7 +1009,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                         FD_CLR(i, readfds);
 
                     continue;
-                }
+                }*/
 
                 SelectTask *t = new SelectTask;
                 t->pFile = pFd->file;

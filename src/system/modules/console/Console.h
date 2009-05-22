@@ -17,6 +17,7 @@
 #define CONSOLE_H
 
 #include <vfs/VFS.h>
+#include <vfs/File.h>
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
@@ -28,6 +29,45 @@
 #define CONSOLE_GETROWS 5
 #define CONSOLE_GETCOLS 6
 #define CONSOLE_DATA_AVAILABLE 7
+
+/** This lets a Console become a first-class citizen of the VFS,
+  * which means it can integrate seamlessly into select() calls
+  * and support a clean interface.
+  */
+class ConsoleFile : public File
+{
+  private:
+    /** Copy constructors are hidden - (mostly) unimplemented (or invalid)! */
+    File& operator =(const File&);
+
+    ConsoleFile(const ConsoleFile &file) : m_Number(file.m_Number)
+    {
+    };
+    ConsoleFile& operator =(const ConsoleFile &file)
+    {
+      ERROR("Socket copy constructor called");
+      return *this;
+    }
+
+  public:
+    ConsoleFile(String consoleName, size_t consoleNum, Filesystem *pFs) :
+      File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0), m_Number(consoleNum)
+    {};
+    virtual ~ConsoleFile()
+    {};
+
+    /** Similar to POSIX's select() function */
+    virtual int select(bool bWriting = false, int timeout = 0);
+
+    size_t getNumber()
+    {
+        return m_Number;
+    }
+
+  private:
+
+    size_t m_Number;
+};
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.
 

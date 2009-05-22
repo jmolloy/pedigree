@@ -120,22 +120,18 @@ public:
 
   virtual void increaseRefCount(bool bIsWriter)
   {
-      NOTICE("irc1");
     if (bIsWriter)
       m_nWriters ++;
     else
       m_nReaders ++;
-      NOTICE("irc2");
   }
 
   virtual void decreaseRefCount(bool bIsWriter)
   {
-      NOTICE("drc1");
     if (bIsWriter)
       m_nWriters --;
     else
       m_nReaders --;
-      NOTICE("drc2");
   }
 
   void setPermissions(uint32_t perms)
