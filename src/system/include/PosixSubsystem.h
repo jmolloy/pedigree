@@ -45,8 +45,7 @@ class PosixSubsystem : public Subsystem
         {}
 
         /** Default destructor */
-        virtual ~PosixSubsystem()
-        {}
+        virtual ~PosixSubsystem();
 
         /** A thread needs to be killed! */
         virtual bool kill(Thread *pThread);

@@ -121,7 +121,7 @@ int posix_fork(SyscallState &state)
   }
 
   PosixSubsystem *pParentSubsystem = reinterpret_cast<PosixSubsystem*>(pParentProcess->getSubsystem());
-  PosixSubsystem *pSubsystem = new PosixSubsystem();
+  PosixSubsystem *pSubsystem = new PosixSubsystem(*pParentSubsystem);
   if(!pSubsystem || !pParentSubsystem)
   {
       ERROR("No subsystem for one or both of the processes!");
@@ -145,17 +145,10 @@ int posix_fork(SyscallState &state)
       continue;
     size_t newFd = reinterpret_cast<size_t>(it.key());
 
-    FileDescriptor *pFd2 = new FileDescriptor;
-
-    pFd2->file = pFd->file;
-    pFd2->offset = pFd->offset;
-    pFd2->fd = pFd->fd;
-    pFd2->fdflags = pFd->fdflags;
-    pFd2->flflags = pFd->flflags;
+    FileDescriptor *pFd2 = new FileDescriptor(pFd);
     childFdMap.insert(newFd, pFd2);
-    pSubsystem->nextFd(newFd + 1);
 
-    pFd2->file->increaseRefCount((pFd2->flflags & O_RDWR) || (pFd2->flflags & O_WRONLY) );
+    pSubsystem->nextFd(newFd + 1);
   }
 
   // Child returns 0.
@@ -193,6 +186,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->getSpaceAllocator().clear();
   pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return -1;
+  }
+  PosixSubsystem *pNewSub = new PosixSubsystem(*pSubsystem);
+  pProcess->setSubsystem(pNewSub);
+  // pSubsystem = pNewSub;
 
   // Ensure we only have one thread running (us).
   if (pProcess->getNumThreads() > 1)
@@ -256,20 +258,25 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   // there's no further return until the end of the function.
   typedef Tree<size_t,FileDescriptor*> FdMap;
 
-  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-  if(!pSubsystem)
-  {
-      ERROR("No subsystem for one or both of the processes!");
-      return -1;
-  }
-
-  FdMap parentFdMap = pSubsystem->getFdMap();
+  FdMap &parentFdMap = pSubsystem->getFdMap();
+  FdMap &childFdMap = pNewSub->getFdMap();
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
+    size_t newFd = reinterpret_cast<size_t>(it.key());
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
     if(pFd)
+    {
       if(pFd->fdflags & FD_CLOEXEC)
-        posix_close(reinterpret_cast<uintptr_t>(it.key()));
+        posix_close(newFd);
+      else
+      {
+          // Otherwise, insert into the child map. Note that we don't reallocate - because
+          // we're overwriting the previous process, we don't need to worry about it being
+          // freed elsewhere.
+          childFdMap.insert(newFd, pFd);
+          pNewSub->nextFd(newFd + 1);
+      }
+    }
   }
 
   // Create a new stack.

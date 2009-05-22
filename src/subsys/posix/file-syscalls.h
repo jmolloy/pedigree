@@ -35,18 +35,53 @@
 
 class FileDescriptor
 {
-public:
-  FileDescriptor () :
-    file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
-  {
-  }
-  File* file;
-  uint64_t offset;
-  size_t fd;
+    public:
+        FileDescriptor () :
+            file(), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
+        {
+        }
 
-  /// \todo What are these? Can they be documented please?
-  int fdflags;
-  int flflags;
+        FileDescriptor(File *newFile, uint64_t newOffset = 0, size_t newFd = 0xFFFFFFFF, int fdFlags = 0, int flFlags = 0) :
+            file(newFile), offset(newOffset), fd(newFd), fdflags(fdFlags), flflags(flFlags)
+        {
+            file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+        }
+
+        FileDescriptor(FileDescriptor &desc) :
+            file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
+        {
+            file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+        }
+
+        FileDescriptor(FileDescriptor *desc) :
+            file(desc->file), offset(desc->offset), fd(desc->fd), fdflags(desc->fdflags), flflags(desc->flflags)
+        {
+            file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+        }
+
+        FileDescriptor &operator = (FileDescriptor &desc)
+        {
+            file = desc.file;
+            offset = desc.offset;
+            fd = desc.fd;
+            fdflags = desc.fdflags;
+            flflags = desc.flflags;
+            file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+            return *this;
+        }
+
+        virtual ~FileDescriptor()
+        {
+            file->decreaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+        }
+
+        File* file;
+        uint64_t offset;
+        size_t fd;
+
+        /// \todo What are these? Can they be documented please?
+        int fdflags;
+        int flflags;
 };
 
 int posix_close(int fd);

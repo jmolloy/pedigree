@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,8 +40,8 @@
 
 #include <utilities/TimeoutGuard.h>
 
-#include <Subsystem.h>
-#include <PosixSubsystem.h>
+#include <config/ConfigurationManager.h>
+#include <config/MemoryBackend.h>
 
 extern BootIO bootIO;
 
@@ -217,6 +217,22 @@ void init_stage2()
     ////////////////////////////////////////////////////////////////////
     // Temp!
 #if 0
+    MemoryBackend *pBackend = new MemoryBackend(String("SomeConfig"));
+    ConfigurationManager::instance().installBackend(pBackend);
+
+    char *test = "Hello world!";
+    size_t len = strlen(test) + 1;
+
+    NOTICE("Writing...");
+    ConfigurationManager::instance().write(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
+    NOTICE("Written, reading...");
+    memset(test, 0, len);
+    ConfigurationManager::instance().read(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
+    NOTICE("Read in: " << String(test) << ".");
+    NOTICE("Done.");
+#endif
+
+#if 0
     Semaphore sem(0);
 
     sem.acquire(1, 1);
@@ -227,10 +243,6 @@ void init_stage2()
 #endif
     ////////////////////////////////////////////////////////////////////
     // End Temp!
-
-    // The login program is a POSIX program
-    PosixSubsystem *pSub = new PosixSubsystem();
-    pProcess->setSubsystem(pSub);
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
