@@ -94,7 +94,14 @@ bool ConfigurationManager::installBackend(ConfigurationBackend *pBackend, String
 
 void ConfigurationManager::removeBackend(String configStore)
 {
+    // Lookup the backend
+    ConfigurationBackend *backend = m_Backends.lookup(configStore);
+    if(!backend)
+        return;
+
+    // Remove it from the list and free used memory
     m_Backends.remove(configStore);
+    delete backend;
 }
 
 bool ConfigurationManager::backendExists(String configStore)

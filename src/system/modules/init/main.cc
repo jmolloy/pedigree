@@ -40,8 +40,8 @@
 
 #include <utilities/TimeoutGuard.h>
 
-#include <Subsystem.h>
-#include <PosixSubsystem.h>
+#include <config/ConfigurationManager.h>
+#include <config/MemoryBackend.h>
 
 extern BootIO bootIO;
 
@@ -211,6 +211,22 @@ void init_stage2()
 
     ////////////////////////////////////////////////////////////////////
     // Temp!
+#if 0
+    MemoryBackend *pBackend = new MemoryBackend(String("SomeConfig"));
+    ConfigurationManager::instance().installBackend(pBackend);
+
+    char *test = "Hello world!";
+    size_t len = strlen(test) + 1;
+
+    NOTICE("Writing...");
+    ConfigurationManager::instance().write(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
+    NOTICE("Written, reading...");
+    memset(test, 0, len);
+    ConfigurationManager::instance().read(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
+    NOTICE("Read in: " << String(test) << ".");
+    NOTICE("Done.");
+#endif
+
 #if 0
     Semaphore sem(0);
 

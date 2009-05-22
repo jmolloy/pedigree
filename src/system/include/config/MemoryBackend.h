@@ -20,4 +20,61 @@
 #include <config/ConfigurationBackend.h>
 #include <processor/types.h>
 
+/** Memory configuration backend. Stores everything in RAM,
+  * won't save to file. Good for runtime-only information.
+  */
+class MemoryBackend : public ConfigurationBackend
+{
+public:
+    MemoryBackend(String configStore);
+    virtual ~MemoryBackend();
+
+    size_t write(String TableName, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
+    size_t read(String TableName, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes);
+
+    String getTypeName();
+
+private:
+
+    // Value information
+    struct ValueInfo
+    {
+        ValueInfo() : buffer(0), nBytes(0) {};
+        ~ValueInfo() {};
+
+        uintptr_t buffer;
+        size_t nBytes;
+    };
+
+    // A Value name
+    struct Value
+    {
+        Value() : m_ValueInfo() {};
+        ~Value() {};
+
+        RadixTree<ValueInfo*> m_ValueInfo;
+    };
+
+    // A Key
+    struct Key
+    {
+        Key() : m_Values() {};
+        ~Key() {};
+
+        RadixTree<Value*> m_Values;
+    };
+
+    // A Table
+    struct Table
+    {
+        Table() : m_Keys() {};
+        ~Table() {};
+
+        RadixTree<Key*> m_Keys;
+    };
+
+    // Our tables
+    RadixTree<Table*> m_Tables;
+};
+
 #endif
