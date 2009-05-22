@@ -4284,10 +4284,15 @@
 		<Unit filename="src\system\include\BootstrapInfo.h" />
 		<Unit filename="src\system\include\LockGuard.h" />
 		<Unit filename="src\system\include\Log.h" />
+		<Unit filename="src\system\include\PosixSubsystem.h" />
 		<Unit filename="src\system\include\Singleton.h" />
 		<Unit filename="src\system\include\Spinlock.h" />
+		<Unit filename="src\system\include\Subsystem.h" />
 		<Unit filename="src\system\include\Time.h" />
 		<Unit filename="src\system\include\compiler.h" />
+		<Unit filename="src\system\include\config\ConfigurationBackend.h" />
+		<Unit filename="src\system\include\config\ConfigurationManager.h" />
+		<Unit filename="src\system\include\config\MemoryBackend.h" />
 		<Unit filename="src\system\include\doxygen.h" />
 		<Unit filename="src\system\include\errors.h" />
 		<Unit filename="src\system\include\linker\Elf.h" />
@@ -4329,6 +4334,7 @@
 		<Unit filename="src\system\include\process\SchedulerState.h" />
 		<Unit filename="src\system\include\process\SchedulingAlgorithm.h" />
 		<Unit filename="src\system\include\process\Semaphore.h" />
+		<Unit filename="src\system\include\process\SignalEvent.h" />
 		<Unit filename="src\system\include\process\Thread.h" />
 		<Unit filename="src\system\include\process\eventNumbers.h" />
 		<Unit filename="src\system\include\process\initialiseMultitasking.h" />
@@ -4411,12 +4417,17 @@
 		<Unit filename="src\system\kernel\Archive.h" />
 		<Unit filename="src\system\kernel\CMakeLists.txt" />
 		<Unit filename="src\system\kernel\Log.cc" />
+		<Unit filename="src\system\kernel\PosixSubsystem.cc" />
 		<Unit filename="src\system\kernel\SConscript" />
 		<Unit filename="src\system\kernel\Spinlock.cc" />
+		<Unit filename="src\system\kernel\Subsystem.cc" />
 		<Unit filename="src\system\kernel\Version.cc" />
 		<Unit filename="src\system\kernel\Version.h" />
 		<Unit filename="src\system\kernel\boot-arm.cc" />
 		<Unit filename="src\system\kernel\boot-mips.cc" />
+		<Unit filename="src\system\kernel\config\ConfigurationBackend.cc" />
+		<Unit filename="src\system\kernel\config\ConfigurationManager.cc" />
+		<Unit filename="src\system\kernel\config\MemoryBackend.cc" />
 		<Unit filename="src\system\kernel\core\BootIO.cc" />
 		<Unit filename="src\system\kernel\core\BootIO.h" />
 		<Unit filename="src\system\kernel\core\CMakeLists.txt" />
@@ -4452,6 +4463,7 @@
 		<Unit filename="src\system\kernel\core\process\RoundRobin.cc" />
 		<Unit filename="src\system\kernel\core\process\Scheduler.cc" />
 		<Unit filename="src\system\kernel\core\process\Semaphore.cc" />
+		<Unit filename="src\system\kernel\core\process\SignalEvent.cc" />
 		<Unit filename="src\system\kernel\core\process\Thread.cc" />
 		<Unit filename="src\system\kernel\core\process\initialiseMultitasking.cc" />
 		<Unit filename="src\system\kernel\core\processor\CMakeLists.txt" />
@@ -4599,6 +4611,8 @@
 		<Unit filename="src\system\kernel\debugger\SerialIO.h" />
 		<Unit filename="src\system\kernel\debugger\SyscallTracer.cc" />
 		<Unit filename="src\system\kernel\debugger\SyscallTracer.h" />
+		<Unit filename="src\system\kernel\debugger\commands\AllocationCommand.cc" />
+		<Unit filename="src\system\kernel\debugger\commands\AllocationCommand.h" />
 		<Unit filename="src\system\kernel\debugger\commands\Backtracer.cc" />
 		<Unit filename="src\system\kernel\debugger\commands\Backtracer.h" />
 		<Unit filename="src\system\kernel\debugger\commands\BreakpointCommand.cc" />
@@ -4858,6 +4872,7 @@
 		<Unit filename="src\system\modules\init\CMakeLists.txt" />
 		<Unit filename="src\system\modules\init\main.cc" />
 		<Unit filename="src\system\modules\install\main.cc" />
+		<Unit filename="src\system\modules\installer\main.cc" />
 		<Unit filename="src\system\modules\iso9660\Iso9660Directory.h" />
 		<Unit filename="src\system\modules\iso9660\Iso9660File.h" />
 		<Unit filename="src\system\modules\iso9660\Iso9660Filesystem.cc" />

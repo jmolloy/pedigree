@@ -145,17 +145,10 @@ int posix_fork(SyscallState &state)
       continue;
     size_t newFd = reinterpret_cast<size_t>(it.key());
 
-    FileDescriptor *pFd2 = new FileDescriptor;
-
-    pFd2->file = pFd->file;
-    pFd2->offset = pFd->offset;
-    pFd2->fd = pFd->fd;
-    pFd2->fdflags = pFd->fdflags;
-    pFd2->flflags = pFd->flflags;
+    FileDescriptor *pFd2 = new FileDescriptor(pFd);
     childFdMap.insert(newFd, pFd2);
-    pSubsystem->nextFd(newFd + 1);
 
-    pFd2->file->increaseRefCount((pFd2->flflags & O_RDWR) || (pFd2->flflags & O_WRONLY) );
+    pSubsystem->nextFd(newFd + 1);
   }
 
   // Child returns 0.
