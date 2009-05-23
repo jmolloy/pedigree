@@ -47,6 +47,7 @@ int main(int argc, char **argv)
 
       // Child.
       execle("/applications/TUI", "/applications/TUI", 0, newenv);
+      execle("/applications/tui", "/applications/TUI", 0, newenv);
       // If we got here, the exec failed.
       printf("Unable to launch /applications/TUI: `%s'\n");
       exit(1);

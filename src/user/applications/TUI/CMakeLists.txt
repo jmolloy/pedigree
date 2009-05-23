@@ -15,13 +15,14 @@
 #
 
 set(CMAKE_C_FLAGS "-fno-builtin -fno-stack-protector -U__svr4__ -nostdlib")
-include_directories("${PEDIGREE_BINARY_DIR}/include-posix" "${PEDIGREE_SOURCE_DIR}/src/system/modules/TUI")
+include_directories("${PEDIGREE_BINARY_DIR}/include-posix" "${PEDIGREE_SOURCE_DIR}/src/system/modules/TUI/" "${PEDIGREE_SOURCE_DIR}/src/user/applications/TUI/include")
 
 set_source_files_properties(${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o PROPERTIES GENERATED 1)
-add_executable(TUI main.cc Vt100.cc ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
+add_executable(TUI main.cc Xterm.cc FreetypeXterm.cc ${PEDIGREE_BINARY_DIR}/src/subsys/posix/crt0.o)
 set_target_properties(TUI PROPERTIES
                               LINK_FLAGS "-L ${PEDIGREE_BINARY_DIR}")
 target_link_libraries(TUI c)
 target_link_libraries(TUI m)
 target_link_libraries(TUI gcc)
+target_link_libraries(TUI "${PEDIGREE_SOURCE_DIR}/src/user/applications/TUI/libfreetype-i686.a")
 add_dependencies(TUI posix-usermode crt0.o)

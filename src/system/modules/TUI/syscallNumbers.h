@@ -20,5 +20,6 @@
 #define TUI_NEXT_REQUEST 1
 #define TUI_LOG          2
 #define TUI_GETFB        3
+#define TUI_GETCHAR_NONBLOCK 4
 
 #endif

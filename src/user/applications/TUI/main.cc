@@ -18,10 +18,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <syscall.h>
 
-#include "Vt100.h"
+#include "Xterm.h"
+#include "FreetypeXterm.h"
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
@@ -61,7 +63,10 @@ void log(char *c)
 
 size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz)
 {
-    return syscall4(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz);
+    size_t ret = syscall4(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz);
+    // Memory barrier, "sz" will have changed. Reload.
+    asm volatile ("" : : : "memory");
+    return ret;
 }
 
 size_t getFb(Display::ScreenMode *pMode)
@@ -69,6 +74,40 @@ size_t getFb(Display::ScreenMode *pMode)
     return syscall1(TUI_GETFB, reinterpret_cast<size_t>(pMode));
 }
 
+uint32_t getCharNonBlock()
+{
+    return syscall0(TUI_GETCHAR_NONBLOCK);
+}
+
+char queue[256];
+size_t len = 0;
+
+char getFromQueue()
+{
+    if (len > 0)
+    {
+        char c = queue[0];
+        for (size_t i = 0; i < len-1; i++)
+            queue[i] = queue[i+1];
+        len--;
+        return c;
+    }
+    else
+        return 0;
+}
+
+bool addXtermCommandToQueue(uint32_t utf32)
+{
+    return false;
+}
+
+void addUtf32ToQueue(uint32_t utf32)
+{
+    queue[len++] = utf32&0x7F;
+}
+
+Xterm *g_pXterm;
+size_t sz;
 int main (int argc, char **argv)
 {
     log ("Started up.");
@@ -76,26 +115,54 @@ int main (int argc, char **argv)
     Display::ScreenMode mode;
     size_t fb = getFb(&mode);
 
-    Vt100 vt100(mode, reinterpret_cast<void*>(fb));
+    g_pXterm = new FreetypeXterm(mode, reinterpret_cast<void*>(fb));
 
     char *buffer = new char[2048];
-
+    char str[64];
     size_t lastResponse = 0;
     while (true)
     {
-        size_t sz;
         size_t cmd = nextRequest(lastResponse, buffer, &sz, 2047);
-        
+        sprintf(str, "Command %d received.", cmd);
+        log(str);
         switch(cmd)
         {
             case CONSOLE_WRITE:
                 buffer[sz] = '\0';
-                vt100.write(buffer);
+                g_pXterm->write(buffer);
                 lastResponse = sz;
                 break;
             case CONSOLE_READ:
-                for(;;);
+            {
+                size_t i = 0;
+                while (i < sz)
+                {
+                    char c = getFromQueue();
+                    if (c)
+                    {
+                        buffer[i++] = c;
+                        continue;
+                    }
+
+                    uint32_t utf32 = getCharNonBlock();
+                    if (utf32 == 0)
+                    {
+                        if (i == 0)
+                            continue; ///  \todo Block here.
+                        else
+                            break;
+                    }
+                    log("heir");
+
+                    // ENTER (\n) is actually \r on input.
+                    if (utf32 == 0x000A) utf32 = 0x000D;
+
+                    if (!addXtermCommandToQueue(utf32))
+                        addUtf32ToQueue(utf32);
+                }
+                lastResponse = i;
                 break;
+            }
         }
     }
 

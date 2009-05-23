@@ -17,17 +17,20 @@
 #include "Vt100.h"
 #include "Font.c"
 #include <string.h>
+#include <stdio.h>
 
 #define FONT_HEIGHT 16
 #define FONT_WIDTH  8
 
 #define NUM_PAGES_SCROLLBACK 3
 
+extern void log(char*);
+
 Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
   m_nWidth(mode.width/FONT_WIDTH), m_nHeight(mode.height/FONT_HEIGHT),
   m_CurrentWindow(0), m_bChangingState(false), m_bContainedBracket(false), m_bContainedParen(false), m_bDontRefresh(false),
-  m_SavedX(0), m_SavedY(0), m_bNewlineAlsoCR(false), m_Cmd()
+  m_SavedX(0), m_SavedY(0), m_bNewlineAlsoCR(true), m_Cmd()
 {
   // Precompile colour list.
   m_pColours[C_BLACK] = compileColour(0x00, 0x00, 0x00);
@@ -78,8 +81,6 @@ void Vt100::write(char *str)
 
 void Vt100::write(char c)
 {
-  //NOTICE("VT100: write: " << c << " (" << Hex << (uintptr_t)c << ")");
-
   if (m_bChangingState)
   {
     // A VT100 command is being received.
@@ -335,8 +336,15 @@ void Vt100::write(char c)
           m_pWindows[m_CurrentWindow]->setCursorX (m_pWindows[m_CurrentWindow]->getCursorX()-1);
         break;
 
+      // Newline without carriage return.
+      case '\xB': // VT - vertical tab.
+        m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
+
+        break;
+
       // Newline.
       case '\n':
+          log("Vt100: newline");
         // Newline is a cursor down and carriage return operation.
         m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
         if(!getNewlineNLCR())
@@ -344,6 +352,7 @@ void Vt100::write(char c)
         // Fall through...
 
       case '\r':
+          log("Vt100: CR");
         m_pWindows[m_CurrentWindow]->setCursorX (0);
         break;
 

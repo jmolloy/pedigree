@@ -18,6 +18,8 @@
 #include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>
 #include <process/Scheduler.h>
+#include <machine/Machine.h>
+#include <machine/Keyboard.h>
 #include <console/Console.h>
 #include <Log.h>
 #include <Module.h>
@@ -77,6 +79,8 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             *pMode = m_Mode;
             return reinterpret_cast<uintptr_t>(m_FramebufferRegion.virtualAddress());
         }
+        case TUI_GETCHAR_NONBLOCK:
+            return Machine::instance().getKeyboard()->getCharacterNonBlock();
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

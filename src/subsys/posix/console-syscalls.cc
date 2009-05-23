@@ -56,16 +56,26 @@ int posix_tcgetattr(int fd, struct termios *p)
     return -1;
   }
 
-  bool echo, echoNewlines, echoBackspace, nlCausesCr, mapNlToCrIn, mapCrToNlIn;
-  ConsoleManager::instance().getAttributes(pFd->file, &echo, &echoNewlines, &echoBackspace, &nlCausesCr, &mapNlToCrIn, &mapCrToNlIn);
+  size_t flags;
+  ConsoleManager::instance().getAttributes(pFd->file, &flags);
 
   memset(p->c_cc, 0, NCCS*sizeof(cc_t));
   p->c_cc[VEOL] = '\n';
 
-  p->c_iflag = ((mapNlToCrIn)?INLCR:0) | ((mapCrToNlIn)?ICRNL:0);
-  p->c_oflag = (nlCausesCr)?ONLRET:0;
+  p->c_iflag = ((flags&ConsoleManager::IMapNLToCR)?INLCR:0) | 
+               ((flags&ConsoleManager::IMapCRToNL)?ICRNL:0) |
+               ((flags&ConsoleManager::IIgnoreCR)?IGNCR:0) |
+               ((flags&ConsoleManager::IStripToSevenBits)?ISTRIP:0);
+  p->c_oflag = ((flags&ConsoleManager::OPostProcess)?OPOST:0) |
+               ((flags&ConsoleManager::OMapCRToNL)?OCRNL:0) |
+               ((flags&ConsoleManager::OMapNLToCR)?ONLCR:0) |
+               ((flags&ConsoleManager::ONLCausesNewline)?ONLRET:0);
   p->c_cflag = 0;
-  p->c_lflag = ((echo)?ECHO:0) | ((echoNewlines)?ECHONL:0) | ((echoBackspace)?ECHOE:0);
+  p->c_lflag = ((flags&ConsoleManager::LEcho)?ECHO:0) |
+      ((flags&ConsoleManager::LEchoErase)?ECHOE:0) |
+      ((flags&ConsoleManager::LEchoKill)?ECHOK:0) |
+      ((flags&ConsoleManager::LEchoNewline)?ECHONL:0) |
+      ((flags&ConsoleManager::LCookedMode)?ICANON:0);
 
   return 0;
 }
@@ -96,8 +106,23 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
     return -1;
   }
 
+  size_t flags = 0;
+  if (p->c_iflag&INLCR)  flags  |= ConsoleManager::IMapNLToCR;
+  if (p->c_iflag&ICRNL)  flags  |= ConsoleManager::IMapCRToNL;
+  if (p->c_iflag&IGNCR)  flags  |= ConsoleManager::IIgnoreCR;
+  if (p->c_iflag&ISTRIP) flags |= ConsoleManager::IStripToSevenBits;
+  if (p->c_oflag&OPOST)  flags  |= ConsoleManager::OPostProcess;
+  if (p->c_oflag&OCRNL)  flags  |= ConsoleManager::OMapCRToNL;
+  if (p->c_oflag&ONLCR)  flags  |= ConsoleManager::OMapNLToCR;
+  if (p->c_oflag&ONLRET) flags |= ConsoleManager::ONLCausesNewline;
+  if (p->c_lflag&ECHO)   flags   |= ConsoleManager::LEcho;
+  if (p->c_lflag&ECHOE)  flags  |= ConsoleManager::LEchoErase;
+  if (p->c_lflag&ECHOK)  flags  |= ConsoleManager::LEchoKill;
+  if (p->c_lflag&ECHONL) flags |= ConsoleManager::LEchoNewline;
+  if (p->c_lflag&ICANON) flags |= ConsoleManager::LCookedMode;
+
   /// \todo Sanity checks.
-  ConsoleManager::instance().setAttributes(pFd->file, p->c_lflag&ECHO, p->c_lflag&ECHONL, p->c_lflag&ECHOE, p->c_oflag&ONLRET, p->c_iflag&INLCR, p->c_iflag&ICRNL);
+  ConsoleManager::instance().setAttributes(pFd->file, flags);
 
   return 0;
 }

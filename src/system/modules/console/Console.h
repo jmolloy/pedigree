@@ -28,43 +28,33 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 
+#define DEFAULT_FLAGS  (ConsoleManager::IMapCRToNL|ConsoleManager::ONLCausesNewline|ConsoleManager::LEcho|ConsoleManager::LEchoErase|ConsoleManager::LEchoNewline|ConsoleManager::LCookedMode)
+
 /** This lets a Console become a first-class citizen of the VFS,
   * which means it can integrate seamlessly into select() calls
   * and support a clean interface.
   */
 class ConsoleFile : public File
 {
-  private:
+private:
     /** Copy constructors are hidden - (mostly) unimplemented (or invalid)! */
     File& operator =(const File&);
 
-    ConsoleFile(const ConsoleFile &file) : m_Number(file.m_Number)
-    {
-    };
-    ConsoleFile& operator =(const ConsoleFile &file)
-    {
-      ERROR("Socket copy constructor called");
-      return *this;
-    }
+    ConsoleFile(const ConsoleFile &file);
+    ConsoleFile& operator =(const ConsoleFile &file);
 
-  public:
-    ConsoleFile(String consoleName, size_t consoleNum, Filesystem *pFs) :
-      File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0), m_Number(consoleNum)
-    {};
+public:
+    ConsoleFile(String consoleName, Filesystem *pFs);
     virtual ~ConsoleFile()
-    {};
+    {}
 
     /** Similar to POSIX's select() function */
     virtual int select(bool bWriting = false, int timeout = 0);
 
-    size_t getNumber()
-    {
-        return m_Number;
-    }
-
-  private:
-
-    size_t m_Number;
+    String m_Name;
+    RequestQueue *m_pBackEnd;
+    uintptr_t m_Param;
+    size_t m_Flags;
 };
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.
@@ -78,71 +68,84 @@ class ConsoleFile : public File
 class ConsoleManager : public Filesystem
 {
 public:
-  ConsoleManager();
 
-  virtual ~ConsoleManager();
+    enum IAttribute
+    {
+        IMapCRToNL        = 1,
+        IIgnoreCR         = 2,
+        IMapNLToCR        = 4,
+        IStripToSevenBits = 8
+    };
+    enum OAttribute
+    {
+        OPostProcess     = 16,
+        OMapCRToNL       = 32,
+        ONoCrAtCol0      = 64,
+        OMapNLToCR       = 128,
+        ONLCausesNewline = 256
+    };
+    enum LAttribute
+    {
+        LEcho          = 512,
+        LEchoErase     = 1024,
+        LEchoKill      = 2048,
+        LEchoNewline   = 4096,
+        LCookedMode    = 8192
+    };
 
-  static ConsoleManager &instance();
+    ConsoleManager();
 
-  //
-  // ConsoleManager interface.
-  //
-  bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
+    virtual ~ConsoleManager();
 
-  File* getConsole(String consoleName);
+    static ConsoleManager &instance();
 
-  bool isConsole(File* file);
+    //
+    // ConsoleManager interface.
+    //
+    bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
 
-  void setAttributes(File* file, bool echo, bool echoNewlines, bool echoBackspace, bool nlCausesCr, bool mapNlToCrIn, bool mapCrToNlIn);
-  void getAttributes(File* file, bool *echo, bool *echoNewlines, bool *echoBackspace, bool *nlCausesCr, bool *mapNlToCrIn, bool *mapCrToNlIn);
-  int  getCols(File* file);
-  int  getRows(File* file);
-  bool hasDataAvailable(File* file);
+    File* getConsole(String consoleName);
 
-  //
-  // Filesystem interface.
-  //
+    bool isConsole(File* file);
 
-  virtual bool initialise(Disk *pDisk)
+    void setAttributes(File* file, size_t flags);
+    void getAttributes(File* file, size_t *flags);
+    int  getCols(File* file);
+    int  getRows(File* file);
+    bool hasDataAvailable(File* file);
+
+    //
+    // Filesystem interface.
+    //
+
+    virtual bool initialise(Disk *pDisk)
     {return false;}
-  virtual File* getRoot()
-  {return 0;}
-  virtual String getVolumeLabel()
-  {return String("consolemanager");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
+    virtual File* getRoot()
+    {return 0;}
+    virtual String getVolumeLabel()
+    {return String("consolemanager");}
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual void truncate(File *pFile)
+    {}
+    virtual void fileAttributeChanged(File *pFile)
+    {}
+    virtual void cacheDirectoryContents(File *pFile)
+    {}
 
 protected:
-  virtual bool createFile(File* parent, String filename, uint32_t mask)
-  {return false;}
-  virtual bool createDirectory(File* parent, String filename)
-  {return false;}
-  virtual bool createSymlink(File* parent, String filename, String value)
-  {return false;}
-  virtual bool remove(File* parent, File* file)
-  {return false;}
+    virtual bool createFile(File* parent, String filename, uint32_t mask)
+    {return false;}
+    virtual bool createDirectory(File* parent, String filename)
+    {return false;}
+    virtual bool createSymlink(File* parent, String filename, String value)
+    {return false;}
+    virtual bool remove(File* parent, File* file)
+    {return false;}
 
 private:
-  class Console
-  {
-  public:
-    Console() : name(), backEnd(0), param(0) {}
-    String name;
-    RequestQueue *backEnd;
-    uintptr_t param;
-  private:
-    Console(const Console &);
-    Console &operator = (const Console &);
-  };
-
-  Vector<Console*> m_Consoles;
-  static ConsoleManager m_Instance;
+    Vector<ConsoleFile*> m_Consoles;
+    static ConsoleManager m_Instance;
 };
 
 #endif

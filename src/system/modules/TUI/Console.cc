@@ -30,6 +30,12 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     if (m_pReq)
     {
         m_pReq->ret = responseToLast;
+
+        if (m_pReq->p1 == CONSOLE_READ)
+        {
+            memcpy(reinterpret_cast<uint8_t*>(m_pReq->p4), buffer, responseToLast);
+        }
+
         // RequestQueue finished - post the request's mutex to wake the calling thread.
         m_pReq->mutex.release();
     }
@@ -53,9 +59,9 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
     // Perform the request.
     size_t command = m_pReq->p1;
-    if (command == CONSOLE_READ || command == CONSOLE_WRITE)
+    *sz = static_cast<size_t>(m_pReq->p3);
+    if (command == CONSOLE_WRITE)
     {
-        *sz = m_pReq->p3;
         if (*sz > maxBuffSz) m_pReq->p3 = maxBuffSz;
         memcpy(buffer, reinterpret_cast<uint8_t*>(m_pReq->p4), m_pReq->p3);
     }

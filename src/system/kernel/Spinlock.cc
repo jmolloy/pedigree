@@ -36,7 +36,7 @@ void Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
-//      FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
+      //FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
 #endif
   }
 
