@@ -18,3 +18,8 @@ cd build
 cmake -DCROSS=/path/to/compilers/bin/i686-elf- -DCMAKE_TOOLCHAIN_FILE=../CygwinToolchain.cmake ..
 
 This forces CMake to use the cross compilers, and uses an unknown target (you WILL see a notification about it) to remove system-specific flags - especially --out-implib.
+
+ISSUES
+=====================
+
+Report any issues on the project tracker at http://pedigree.codecall.net
