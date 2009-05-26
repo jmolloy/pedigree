@@ -103,7 +103,7 @@ if which losetup >/dev/null 2>&1; then
 
   OLD=$PWD
 
-  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
+#  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
   
 #  cd $SRCDIR/../images/i686-elf
 #  tar -chf tmp.tar *

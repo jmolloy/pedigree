@@ -71,8 +71,15 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         case TUI_NEXT_REQUEST:
             return g_UserConsole.nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4);
         case TUI_LOG:
-            NOTICE("TUI: " << reinterpret_cast<char*>(p1));
+        {
+            // This is the solution to a bug - if the address in p1 traps (because of demand loading),
+            // it MUST trap before we get the log spinlock, else other things will
+            // want to write to it and deadlock.
+            static char buf[1024];
+            strcpy(buf, reinterpret_cast<char*>(p1));
+            NOTICE("TUI: " << buf);
             return 0;
+        }
         case TUI_GETFB:
         {
             Display::ScreenMode *pMode = reinterpret_cast<Display::ScreenMode*>(p1);

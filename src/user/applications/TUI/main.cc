@@ -152,7 +152,6 @@ int main (int argc, char **argv)
                         else
                             break;
                     }
-                    log("heir");
 
                     // ENTER (\n) is actually \r on input.
                     if (utf32 == 0x000A) utf32 = 0x000D;

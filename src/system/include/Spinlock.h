@@ -24,7 +24,7 @@ class Spinlock
     friend class PerProcessorScheduler;
   public:
     inline Spinlock(bool bLocked = false)
-      : m_bInterrupts(), m_Atom(!bLocked){}
+        : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0){}
 
     void acquire();
     void release();
@@ -32,6 +32,7 @@ class Spinlock
   private:
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
+    uintptr_t m_Ra;
 };
 
 #endif

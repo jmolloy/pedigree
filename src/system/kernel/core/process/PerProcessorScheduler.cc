@@ -75,7 +75,6 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     }
 
     // Now neither thread can be moved, we're safe to switch.
-
     pCurrentThread->setStatus(nextStatus);
     pNextThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pNextThread);

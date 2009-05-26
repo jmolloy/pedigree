@@ -18,7 +18,7 @@
 
 extern void log(char*);
 
-int g_RequestedFontHeight = 20;
+int g_RequestedFontHeight = 12;
 
 FreetypeXterm::FreetypeXterm(Display::ScreenMode mode, void *pFramebuffer) :
     Xterm(mode, pFramebuffer)
@@ -65,8 +65,6 @@ FreetypeXterm::FreetypeXterm(Display::ScreenMode mode, void *pFramebuffer) :
     m_FontWidth  = m_NormalFont->glyph->advance.x >> 6;
     m_FontHeight = m_NormalFont->size->metrics.y_ppem;
 
-    sprintf(str, "width: %d, h: %d", m_FontWidth, m_FontHeight);
-    log(str);
     m_nWidth  = mode.width/m_FontWidth;
     m_nHeight = mode.height/m_FontHeight;
 

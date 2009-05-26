@@ -51,6 +51,13 @@ public:
         Zombie
     };
 
+    /** "Debug state" - higher level state of the thread. */
+    enum DebugState
+    {
+        None,
+        SemWait
+    };
+
     /** Thread start function type. */
     typedef int (*ThreadStartFunc)(void*);
 
@@ -195,6 +202,18 @@ public:
     void setInterrupted(bool b)
     {m_bInterrupted = b;}
 
+    /** Returns the thread's debug state. */
+    DebugState getDebugState(uintptr_t &address)
+    {
+        address = m_DebugStateAddress;
+        return m_DebugState;
+    }
+    /** Sets the thread's debug state. */
+    void setDebugState(DebugState state, uintptr_t address)
+    {
+        m_DebugState = state;
+        m_DebugStateAddress = address;
+    }
 
     /** Returns the thread's scheduler lock. */
     Spinlock &getLock()
@@ -301,6 +320,11 @@ private:
 
     /** Queue of Events ready to run. */
     List<Event*> m_EventQueue;
+
+    /** Debug state - a higher level state information for display in the debugger for debugging races and deadlocks. */
+    DebugState m_DebugState;
+    /** Address to supplement the DebugState information */
+    uintptr_t m_DebugStateAddress;
 };
 
 #endif

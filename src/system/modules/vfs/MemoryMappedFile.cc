@@ -188,7 +188,6 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
 
     // Attempt to find an existing MemoryMappedFile* in the cache.
     MemoryMappedFile *pMmFile = m_Cache.lookup(pFile);
-
     if (pMmFile)
     {
         // File existed in cache - check if the file has been changed
@@ -320,15 +319,26 @@ void MemoryMappedFileManager::unmapAll()
 
 bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
 {
-    LockGuard<Mutex> guard(m_CacheLock);
-
+    Spinlock sl;
+    sl.acquire();
+    m_CacheLock.acquire();
+    //NOTICE("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
     /// \todo Handle read-write maps.
-    if (bIsWrite) return false;
+    if (bIsWrite)
+    {
+        m_CacheLock.release();
+        return false;
+    }
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList) return false;
+    if (!pMmFileList)
+    {
+        m_CacheLock.release();
+        NOTICE("Trap end, fail2");
+        return false;
+    }
 
     for (List<MmFile*>::Iterator it = pMmFileList->begin();
          it != pMmFileList->end();
@@ -337,10 +347,16 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
         MmFile *pMmFile = *it;
         if ( (address >= pMmFile->offset) && (address < pMmFile->offset+pMmFile->size) )
         {
+            m_CacheLock.release();
+            sl.release();
+            NOTICE("Trap end");
             pMmFile->file->trap(address, pMmFile->offset);
             return true;
         }
     }
     
+    m_CacheLock.release();
+    sl.release();
+    NOTICE("Trap end, fail");
     return false;
 }

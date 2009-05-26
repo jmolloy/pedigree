@@ -154,23 +154,23 @@ bool DynamicLinker::loadObject(File *pFile)
          it++)
     {
         String filename;
-        filename += "root:/libraries/";
+        filename += "root\xAF/libraries/";
         filename += *it;
-        File *pFile = VFS::instance().find(filename);
-        if (!pFile)
+        File *_pFile = VFS::instance().find(filename);
+        if (!_pFile)
         {
             ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' not found!");
             return false;
         }
-        while (pFile && pFile->isSymlink())
-            pFile = Symlink::fromFile(pFile)->followLink();
-        if (!pFile || !loadObject(pFile))
+        while (_pFile && _pFile->isSymlink())
+            _pFile = Symlink::fromFile(_pFile)->followLink();
+        if (!_pFile || !loadObject(_pFile))
         {
             ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' failed to load!");
             return false;
         }
     }
-
+    NOTICE("About to initplt");
     initPlt(pElf, loadBase);
     
     return true;

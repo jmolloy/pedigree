@@ -62,12 +62,13 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs)
 
   while (true)
   {
+    Thread *pThread = Processor::information().getCurrentThread();
     if (tryAcquire(n))
     {
       if (pEvent)
       {
-        Machine::instance().getTimer()->removeAlarm(pEvent);
-        delete pEvent;
+          Machine::instance().getTimer()->removeAlarm(pEvent);
+          delete pEvent;
       }
       return;
     }
@@ -88,11 +89,12 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs)
       return;
     }
 
-    Thread *pThread = Processor::information().getCurrentThread();
     m_Queue.pushBack(pThread);
 
     pThread->setInterrupted(false);
+    pThread->setDebugState(Thread::SemWait, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
     Processor::information().getScheduler().sleep(&m_BeingModified);
+    pThread->setDebugState(Thread::None, 0);
 
     // Why were we woken?
     if (pThread->wasInterrupted())
