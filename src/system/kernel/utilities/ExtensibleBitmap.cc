@@ -34,7 +34,7 @@ ExtensibleBitmap::ExtensibleBitmap(const ExtensibleBitmap &other) :
 ExtensibleBitmap &ExtensibleBitmap::operator = (const ExtensibleBitmap &other)
 {
     m_StaticMap = other.m_StaticMap;
-    
+
     if (m_DynamicMapSize < other.m_DynamicMapSize)
     {
         uint8_t *pMap = new uint8_t[other.m_DynamicMapSize];
@@ -61,7 +61,10 @@ ExtensibleBitmap::~ExtensibleBitmap()
 void ExtensibleBitmap::set(size_t n)
 {
     if (n < sizeof(uintptr_t)*8)
+    {
         m_StaticMap |= (1 << n);
+        return;
+    }
 
     n -= sizeof(uintptr_t)*8;
 
@@ -89,7 +92,10 @@ void ExtensibleBitmap::set(size_t n)
 void ExtensibleBitmap::clear(size_t n)
 {
     if (n < sizeof(uintptr_t)*8)
+    {
         m_StaticMap &= ~(1 << n);
+        return;
+    }
 
     n -= sizeof(uintptr_t)*8;
 

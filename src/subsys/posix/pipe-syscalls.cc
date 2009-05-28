@@ -41,10 +41,8 @@ int posix_pipe(int filedes[2])
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  size_t readFd = pSubsystem->nextFd();
-  size_t writeFd = pSubsystem->nextFd();
+  size_t readFd = pSubsystem->getFd();
+  size_t writeFd = pSubsystem->getFd();
 
   filedes[0] = readFd;
   filedes[1] = writeFd;
@@ -55,15 +53,15 @@ int posix_pipe(int filedes[2])
   FileDescriptor* read = new FileDescriptor;
   read->file = p;
   read->offset = 0;
-  fdMap.insert(readFd, read);
-  p->increaseRefCount(false);
+  pSubsystem->addFileDescriptor(readFd, read);
+  // p->increaseRefCount(false);
 
   FileDescriptor* write = new FileDescriptor;
   write->file = p;
   write->offset = 0;
   write->flflags = O_WRONLY;
-  fdMap.insert(writeFd, write);
-  p->increaseRefCount(true);
+  pSubsystem->addFileDescriptor(writeFd, write);
+  // p->increaseRefCount(true);
 
   return 0;
 }

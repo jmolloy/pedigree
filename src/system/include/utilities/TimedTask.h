@@ -28,6 +28,8 @@
 #include <process/Semaphore.h>
 #include <process/Scheduler.h>
 
+#include <utilities/TimeoutGuard.h>
+
 /** TimedTask defines a specific task that needs to be performed
   * within a specific timeframe.
   * Inherit from this and define your own task() function in order
@@ -67,12 +69,7 @@ class TimedTask : public TimerHandler
         {
             if(m_WaitSem)
             {
-                m_Seconds = m_Nanoseconds = 0;
                 m_Active = true;
-
-                if(m_TimeoutActive)
-                    registerMe();
-
                 Process *pProcess = Processor::information().getCurrentThread()->getParent();
                 m_Task = new Thread(
                                 pProcess,
@@ -86,7 +83,7 @@ class TimedTask : public TimerHandler
 
         void cancel()
         {
-            if(m_Task)
+            if(m_Active)
             {
                 m_Active = false;
                 m_Success = false;
@@ -124,7 +121,7 @@ class TimedTask : public TimerHandler
             m_WaitSem = 0;
 
             Processor::information().getScheduler().killCurrentThread();
-            
+
             FATAL("TimedTask::end(): Fatal algorithmic error.");
         }
 

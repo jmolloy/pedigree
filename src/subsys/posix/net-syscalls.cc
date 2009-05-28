@@ -62,8 +62,6 @@ struct sockaddr_in
   struct in_addr sin_addr;
 };
 
-typedef Tree<size_t,FileDescriptor*> FdMap;
-
 int posix_socket(int domain, int type, int protocol)
 {
   NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
@@ -77,9 +75,7 @@ int posix_socket(int domain, int type, int protocol)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  size_t fd = pSubsystem->nextFd();
+  size_t fd = pSubsystem->getFd();
 
   File* file = 0;
   bool valid = true;
@@ -116,7 +112,7 @@ int posix_socket(int domain, int type, int protocol)
   f->file = file;
   f->offset = 0;
   f->fd = fd;
-  fdMap.insert(fd, f);
+  pSubsystem->addFileDescriptor(fd, f);
 
   return static_cast<int> (fd);
 }
@@ -133,9 +129,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -216,9 +210,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -277,9 +269,7 @@ ssize_t posix_sendto(void* callInfo)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -318,9 +308,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -368,9 +356,7 @@ ssize_t posix_recvfrom(void* callInfo)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -418,9 +404,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -456,9 +440,7 @@ int posix_listen(int sock, int backlog)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s = static_cast<Socket *>(f->file);
   if(!s)
     return -1; /// \todo SYSCALL_ERROR of some sort
@@ -482,9 +464,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(sock));
+  FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
   Socket *s1 = static_cast<Socket *>(f->file);
   if(!s1)
     return -1;
@@ -494,7 +474,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
     return -1;
 
   // add into the descriptor table
-  size_t fd = pSubsystem->nextFd();
+  size_t fd = pSubsystem->getFd();
 
   Endpoint* e = s->getEndpoint(); // NetManager::instance().getEndpoint(f);
 
@@ -513,7 +493,7 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
   FileDescriptor *desc = new FileDescriptor;
   desc->file = s;
   desc->offset = 0;
-  fdMap.insert(fd, desc);
+  pSubsystem->addFileDescriptor(fd, desc);
 
   return static_cast<int> (fd);
 }

@@ -43,6 +43,35 @@ int test_open ()
     printf("FAIL - errno %d (%s)\n", errno, strerror(errno));
   }
 
+  printf("\tRecycle descriptors - ");
+  int fd4 = open ("/applications/bash", O_RDWR);
+  close(fd4);
+  int fd5 = open ("/applications/bash", O_RDWR);
+  close(fd5);
+  if(fd4 == fd5)
+  {
+    printf("PASS\n");
+  }
+  else
+  {
+    printf("FAIL - %d, %d\n", fd4, fd5);
+  }
+
+  int hahaha = open("/applications/bash", O_RDWR);
+  if(fork() == 0)
+  {
+      close(hahaha);
+      int rofl = open("/applications/bash", O_RDWR);
+
+      printf("%d/%d\n", hahaha, rofl);
+
+      exit(0);
+  }
+
+  printf("Complete\n");
+
+  while(1);
+
   return PASS;
 }
 

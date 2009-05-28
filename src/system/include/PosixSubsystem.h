@@ -22,9 +22,51 @@
 #include <process/Mutex.h>
 
 #include <utilities/Tree.h>
+#include <utilities/ExtensibleBitmap.h>
 #include <LockGuard.h>
 
-class FileDescriptor;
+class File;
+
+/** Abstraction of a file descriptor, which defines an open file
+  * and related flags.
+  */
+class FileDescriptor
+{
+    public:
+
+        /// Default constructor
+        FileDescriptor();
+
+        /// Parameterised constructor
+        FileDescriptor(File *newFile, uint64_t newOffset = 0, size_t newFd = 0xFFFFFFFF, int fdFlags = 0, int flFlags = 0);
+
+        /// Copy constructor
+        FileDescriptor(FileDescriptor &desc);
+
+        /// Pointer copy constructor
+        FileDescriptor(FileDescriptor *desc);
+
+        /// Assignment operator implementation
+        FileDescriptor &operator = (FileDescriptor &desc);
+
+        /// Destructor - decreases file reference count
+        virtual ~FileDescriptor();
+
+        /// Our open file pointer
+        File* file;
+
+        /// Offset within the file for I/O
+        uint64_t offset;
+
+        /// Descriptor number
+        size_t fd;
+
+        /// File descriptor flags (fcntl)
+        int fdflags;
+
+        /// File status flags (fcntl)
+        int flflags;
+};
 
 /** Defines the compatibility layer for the POSIX Subsystem */
 class PosixSubsystem : public Subsystem
@@ -33,7 +75,8 @@ class PosixSubsystem : public Subsystem
 
         /** Default constructor */
         PosixSubsystem() :
-            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(0), m_FdLock()
+            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
+            m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
         {}
 
         /** Copy constructor */
@@ -41,7 +84,8 @@ class PosixSubsystem : public Subsystem
 
         /** Parameterised constructor */
         PosixSubsystem(SubsystemType type) :
-            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(0), m_FdLock()
+            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
+            m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
         {}
 
         /** Default destructor */
@@ -109,27 +153,43 @@ class PosixSubsystem : public Subsystem
 
         /** Returns the File descriptor map - maps numbers to pointers (of undefined type -
             the subsystem decides what type). */
-        Tree<size_t,FileDescriptor*> &getFdMap()
+        Tree<size_t, FileDescriptor*> &getFdMap()
         {
             return m_FdMap;
         }
 
-        /** Returns the next available file descriptor. */
-        size_t nextFd()
+        /** Returns the first available file descriptor. */
+        size_t getFd();
+
+        /** Sets the given file descriptor as "in use". */
+        void allocateFd(size_t fdNum);
+
+        /** Sets the given file descriptor as "available" and deletes the FileDescriptor
+          * linked to it.
+          */
+        void freeFd(size_t fdNum);
+
+        /** Gets a pointer to a FileDescriptor object from an fd number */
+        FileDescriptor *getFileDescriptor(size_t fd)
         {
-            LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
-            return m_NextFd++;
+            LockGuard<Spinlock> guard(m_FdLock);
+            return m_FdMap.lookup(fd);
         }
-        size_t nextFd(size_t fdNum)
+
+        /** Inserts a file descriptor */
+        void addFileDescriptor(size_t fd, FileDescriptor *pFd)
         {
-            LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
-            return (m_NextFd = fdNum);
+            freeFd(fd);
+            allocateFd(fd);
+
+            LockGuard<Spinlock> guard(m_FdLock);
+            m_FdMap.insert(fd, pFd);
         }
 
     private:
 
         /** Signal handlers */
-        Tree<size_t, void*> m_SignalHandlers;
+        Tree<size_t, SignalHandler*> m_SignalHandlers;
 
         /** A lock for access to the signal handlers tree */
         Mutex m_SignalHandlersLock;
@@ -138,7 +198,7 @@ class PosixSubsystem : public Subsystem
          * The file descriptor map. Maps number to pointers, the type of which is decided
          * by the subsystem.
          */
-        Tree<size_t,FileDescriptor*> m_FdMap;
+        Tree<size_t, FileDescriptor*> m_FdMap;
         /**
          * The next available file descriptor.
          */
@@ -147,6 +207,14 @@ class PosixSubsystem : public Subsystem
          * Lock to guard the next file descriptor while it is being changed.
          */
         Spinlock m_FdLock;
+        /**
+         * File descriptors used by this process
+         */
+        ExtensibleBitmap m_FdBitmap;
+        /**
+         * Last known unallocated descriptor
+         */
+        size_t m_LastFd;
 };
 
 #endif

@@ -26,10 +26,74 @@
 #include <utilities/Tree.h>
 #include <LockGuard.h>
 
-typedef Tree<size_t, void*> sigHandlerTree;
+#include "../modules/vfs/File.h"
+
+#define O_RDONLY    0
+#define O_WRONLY    1
+#define O_RDWR      2
+
+typedef Tree<size_t, PosixSubsystem::SignalHandler*> sigHandlerTree;
+
+/// Default constructor
+FileDescriptor::FileDescriptor() :
+    file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
+{
+}
+
+/// Parameterised constructor
+FileDescriptor::FileDescriptor(File *newFile, uint64_t newOffset, size_t newFd, int fdFlags, int flFlags) :
+    file(newFile), offset(newOffset), fd(newFd), fdflags(fdFlags), flflags(flFlags)
+{
+    if(file)
+        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+}
+
+/// Copy constructor
+FileDescriptor::FileDescriptor(FileDescriptor &desc) :
+    file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
+{
+    if(file)
+        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+}
+
+/// Pointer copy constructor
+FileDescriptor::FileDescriptor(FileDescriptor *desc) :
+    file(0), offset(0), fd(0), fdflags(0), flflags(0)
+{
+    if(!desc)
+        return;
+    file = desc->file;
+    offset = desc->offset;
+    fd = desc->fd;
+    fdflags = desc->fdflags;
+    flflags = desc->flflags;
+    if(file)
+        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+}
+
+/// Assignment operator implementation
+FileDescriptor &FileDescriptor::operator = (FileDescriptor &desc)
+{
+    file = desc.file;
+    offset = desc.offset;
+    fd = desc.fd;
+    fdflags = desc.fdflags;
+    flflags = desc.flflags;
+    if(file)
+        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    return *this;
+}
+
+/// Destructor - decreases file reference count
+FileDescriptor::~FileDescriptor()
+{
+    if(file)
+        file->decreaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+}
 
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
-    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(0), m_FdLock()
+    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
+    m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
 {
     LockGuard<Mutex> guard(m_SignalHandlersLock);
     LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);
@@ -43,13 +107,14 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         void *value = it.value();
 
         SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
-        myHandlers.insert(key, reinterpret_cast<void *>(newSig));
+        myHandlers.insert(key, newSig);
     }
 }
 
 PosixSubsystem::~PosixSubsystem()
 {
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    // LockGuard<Mutex> guard(m_SignalHandlersLock);
+    NOTICE("Destructor");
 
     // Destroy all signal handlers
     sigHandlerTree &myHandlers = m_SignalHandlers;
@@ -160,3 +225,49 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
     }
 }
 
+
+size_t PosixSubsystem::getFd()
+{
+    LockGuard<Spinlock> guard(m_FdLock);
+
+    // Try to recycle if possible
+    for(size_t i = m_LastFd; i < m_NextFd; i++)
+    {
+        if(!(m_FdBitmap.test(i)))
+        {
+            m_LastFd = i;
+            m_FdBitmap.set(i);
+            return i;
+        }
+    }
+
+    // Otherwise, allocate
+    // m_NextFd will always contain the highest allocated fd
+    m_FdBitmap.set(m_NextFd);
+    return m_NextFd++;
+}
+
+void PosixSubsystem::allocateFd(size_t fdNum)
+{
+    LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
+    if(fdNum >= m_NextFd)
+        m_NextFd = fdNum + 1;
+    m_FdBitmap.set(fdNum);
+}
+
+void PosixSubsystem::freeFd(size_t fdNum)
+{
+    LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
+    m_FdBitmap.clear(fdNum);
+
+    FileDescriptor *pFd = m_FdMap.lookup(fdNum);
+    //if(pFd)
+    //    delete pFd;
+    if(pFd && pFd->file)
+        pFd->file->decreaseRefCount((pFd->flflags & O_RDWR) || (pFd->flflags & O_WRONLY));
+
+    m_FdMap.remove(fdNum);
+
+    if(fdNum < m_LastFd)
+        m_LastFd = fdNum;
+}

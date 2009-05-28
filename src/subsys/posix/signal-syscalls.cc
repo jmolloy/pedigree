@@ -105,6 +105,7 @@ _sig_func_ptr default_sig_handlers[32] =
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
     SC_NOTICE("sigaction(" << Dec << sig << Hex << ", " << reinterpret_cast<uintptr_t>(act) << ", " << reinterpret_cast<uintptr_t>(oact) << ")");
+    return 0;
 
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
@@ -193,6 +194,7 @@ uintptr_t posix_signal(int sig, void* func)
 int posix_raise(int sig, SyscallState &State)
 {
     SC_NOTICE("raise");
+    return 0;
 
     // Create the pending signal and pass it in
     Thread *pThread = Processor::information().getCurrentThread();
@@ -236,6 +238,7 @@ int pedigree_sigret()
 int posix_kill(int pid, int sig)
 {
     SC_NOTICE("kill(" << pid << ", " << sig << ")");
+    return 0;
 
     Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
     if (p)
@@ -280,6 +283,7 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 size_t posix_alarm(uint32_t seconds)
 {
     SC_NOTICE("alarm");
+    return 0;
 
     // Create the pending signal and pass it in
     Process* pProcess = Processor::information().getCurrentThread()->getParent();

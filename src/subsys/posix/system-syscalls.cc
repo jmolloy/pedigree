@@ -136,7 +136,6 @@ int posix_fork(SyscallState &state)
 
   typedef Tree<size_t,FileDescriptor*> FdMap;
   FdMap &parentFdMap = pParentSubsystem->getFdMap();
-  FdMap &childFdMap = pSubsystem->getFdMap();
 
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
@@ -145,10 +144,10 @@ int posix_fork(SyscallState &state)
       continue;
     size_t newFd = reinterpret_cast<size_t>(it.key());
 
+    NOTICE("Copying fd " << newFd << "...");
     FileDescriptor *pFd2 = new FileDescriptor(pFd);
-    childFdMap.insert(newFd, pFd2);
-
-    pSubsystem->nextFd(newFd + 1);
+    NOTICE("fork descriptor for fd " << newFd << " = " << reinterpret_cast<uintptr_t>(pFd2) << "...");
+    pSubsystem->addFileDescriptor(newFd, pFd2);
   }
 
   // Child returns 0.
@@ -194,7 +193,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
   PosixSubsystem *pNewSub = new PosixSubsystem(*pSubsystem);
   pProcess->setSubsystem(pNewSub);
-  // pSubsystem = pNewSub;
 
   // Ensure we only have one thread running (us).
   if (pProcess->getNumThreads() > 1)
@@ -259,7 +257,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   typedef Tree<size_t,FileDescriptor*> FdMap;
 
   FdMap &parentFdMap = pSubsystem->getFdMap();
-  FdMap &childFdMap = pNewSub->getFdMap();
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
     size_t newFd = reinterpret_cast<size_t>(it.key());
@@ -267,14 +264,20 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     if(pFd)
     {
       if(pFd->fdflags & FD_CLOEXEC)
-        posix_close(newFd);
+      {
+        NOTICE("Closing " << newFd << ".");
+        pSubsystem->freeFd(newFd);
+      }
       else
       {
           // Otherwise, insert into the child map. Note that we don't reallocate - because
           // we're overwriting the previous process, we don't need to worry about it being
           // freed elsewhere.
-          childFdMap.insert(newFd, pFd);
-          pNewSub->nextFd(newFd + 1);
+          NOTICE("Re-inserting " << newFd << ".");
+          FileDescriptor *pFd2 = new FileDescriptor(pFd);
+          NOTICE("execve descriptor for fd " << newFd << " = " << reinterpret_cast<uintptr_t>(pFd2) << "...");
+          pNewSub->addFileDescriptor(newFd, pFd2);
+          delete pFd;
       }
     }
   }
@@ -450,15 +453,14 @@ int posix_exit(int code)
       return -1;
   }
 
-  FdMap parentFdMap = pSubsystem->getFdMap();
+  FdMap &parentFdMap = pSubsystem->getFdMap();
   for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
   {
     FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
     if(!pFd)
       continue;
 
-    pFd->file->decreaseRefCount((pFd->flflags & O_RDWR) || (pFd->flflags & O_WRONLY) );
-    delete pFd;
+    pSubsystem->freeFd(reinterpret_cast<size_t>(it.key()));
   }
 
   delete pProcess->getLinker();

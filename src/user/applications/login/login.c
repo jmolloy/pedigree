@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <pwd.h>
-#include <termios.h> 
+#include <termios.h>
 #include <sys/wait.h>
 
 // Pedigree function, defined in glue.c
@@ -59,10 +59,10 @@ int main(int argc, char **argv)
     char c;
     char username[256];
     int i = 0;
-    
+
     struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
-    
+
     while ( i < 256 && (c=getchar()) != '\n' ){
       if(c == '\b'){
         if(i > 0){
