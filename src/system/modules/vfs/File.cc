@@ -37,6 +37,7 @@ File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
 
 File::~File()
 {
+    NOTICE("File destructor holy balls!");
 }
 
 uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer)

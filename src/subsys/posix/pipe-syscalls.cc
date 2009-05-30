@@ -50,13 +50,13 @@ int posix_pipe(int filedes[2])
   File* p = new Pipe(String("Anonymous pipe"), 0, 0, 0, 0, 0, 0, 0, true);
 
   // create the file descriptor for both
-  FileDescriptor* read = new FileDescriptor;
-  read->file = p;
-  read->offset = 0;
+  FileDescriptor* read = new FileDescriptor(p, 0, readFd);
+  //read->file = p;
+  //read->offset = 0;
   pSubsystem->addFileDescriptor(readFd, read);
   // p->increaseRefCount(false);
 
-  FileDescriptor* write = new FileDescriptor;
+  FileDescriptor* write = new FileDescriptor(p, 0, writeFd);
   write->file = p;
   write->offset = 0;
   write->flflags = O_WRONLY;

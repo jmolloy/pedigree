@@ -53,7 +53,10 @@ FileDescriptor::FileDescriptor(FileDescriptor &desc) :
     file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
 {
     if(file)
-        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    {
+        bool bWrite = (flflags & O_RDWR) || (flflags & O_WRONLY);
+        file->increaseRefCount(bWrite);
+    }
 }
 
 /// Pointer copy constructor
@@ -87,6 +90,7 @@ FileDescriptor &FileDescriptor::operator = (FileDescriptor &desc)
 /// Destructor - decreases file reference count
 FileDescriptor::~FileDescriptor()
 {
+    NOTICE("FileDescriptor destructor [this=" << reinterpret_cast<uintptr_t>(this) << "]");
     if(file)
         file->decreaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
 }
