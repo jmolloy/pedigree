@@ -18,11 +18,17 @@
 #include <vfs/VFS.h>
 #include <Module.h>
 
+#include <process/Scheduler.h>
+
 ConsoleManager ConsoleManager::m_Instance;
 
 int ConsoleFile::select(bool bWriting, int timeout)
 {
-    bool ret = ConsoleManager::instance().hasDataAvailable(this);
+    bool ret = false;
+    if(timeout == 0)
+       ret = ConsoleManager::instance().hasDataAvailable(this);
+    else
+        while(!(ret = ConsoleManager::instance().hasDataAvailable(this))) Scheduler::instance().yield();
     return (ret ? 1 : 0);
 }
 

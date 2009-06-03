@@ -26,13 +26,18 @@
 #include <utilities/Tree.h>
 #include <LockGuard.h>
 
+#include <assert.h>
+
 #include "../modules/vfs/File.h"
 
 #define O_RDONLY    0
 #define O_WRONLY    1
 #define O_RDWR      2
 
+#define	FD_CLOEXEC	1
+
 typedef Tree<size_t, PosixSubsystem::SignalHandler*> sigHandlerTree;
+typedef Tree<size_t, FileDescriptor*> FdMap;
 
 /// Default constructor
 FileDescriptor::FileDescriptor() :
@@ -53,10 +58,7 @@ FileDescriptor::FileDescriptor(FileDescriptor &desc) :
     file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
 {
     if(file)
-    {
-        bool bWrite = (flflags & O_RDWR) || (flflags & O_WRONLY);
-        file->increaseRefCount(bWrite);
-    }
+        file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
 }
 
 /// Pointer copy constructor
@@ -90,14 +92,13 @@ FileDescriptor &FileDescriptor::operator = (FileDescriptor &desc)
 /// Destructor - decreases file reference count
 FileDescriptor::~FileDescriptor()
 {
-    NOTICE("FileDescriptor destructor [this=" << reinterpret_cast<uintptr_t>(this) << "]");
     if(file)
         file->decreaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
 }
 
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
-    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
-    m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
+    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(s.m_NextFd),
+    m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount)
 {
     LockGuard<Mutex> guard(m_SignalHandlersLock);
     LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);
@@ -109,6 +110,8 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     {
         size_t key = reinterpret_cast<size_t>(it.key());
         void *value = it.value();
+        if(!value)
+            continue;
 
         SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
         myHandlers.insert(key, newSig);
@@ -117,23 +120,34 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
 
 PosixSubsystem::~PosixSubsystem()
 {
-    // LockGuard<Mutex> guard(m_SignalHandlersLock);
-    NOTICE("Destructor");
+    assert(--m_FreeCount == 0);
+
+    // Ensure that no descriptor operations are taking place (and then, will take place)
+    m_FdLock.acquire();
+
+    // Modifying signal handlers, ensure that they are not in use
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
 
     // Destroy all signal handlers
     sigHandlerTree &myHandlers = m_SignalHandlers;
+    List<void*> signalsToRemove;
     for(sigHandlerTree::Iterator it = myHandlers.begin(); it != myHandlers.end(); it++)
     {
-        size_t key = reinterpret_cast<size_t>(it.key());
-        void *value = it.value();
+        // Get the signal handler and remove it. Note that there shouldn't be null
+        // SignalHandlers, at all.
+        SignalHandler *sig = reinterpret_cast<SignalHandler *>(it.value());
+        assert(sig);
 
-        // Get the signal handler and remove it
-        SignalHandler *sig = reinterpret_cast<SignalHandler *>(value);
-        myHandlers.remove(key);
-
-        // SignalHandler destructor will delete the Event
+        // SignalHandler's destructor will delete the Event itself
         delete sig;
     }
+
+    // And now that the signals are destroyed, remove them from the Tree
+    myHandlers.clear();
+
+    // For sanity's sake, destroy any remaining descriptors
+    m_FdLock.release();
+    freeMultipleFds();
 }
 
 bool PosixSubsystem::kill(Thread *pThread)
@@ -145,7 +159,7 @@ bool PosixSubsystem::kill(Thread *pThread)
     LockGuard<Mutex> guard(m_SignalHandlersLock);
 
     // Send SIGKILL
-    SignalHandler *sig = getSignalHandler(9); //reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(9));
+    SignalHandler *sig = getSignalHandler(9);
 
     if(sig && sig->pEvent)
     {
@@ -232,7 +246,7 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
 
 size_t PosixSubsystem::getFd()
 {
-    LockGuard<Spinlock> guard(m_FdLock);
+    LockGuard<Mutex> guard(m_FdLock);
 
     // Try to recycle if possible
     for(size_t i = m_LastFd; i < m_NextFd; i++)
@@ -253,7 +267,7 @@ size_t PosixSubsystem::getFd()
 
 void PosixSubsystem::allocateFd(size_t fdNum)
 {
-    LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
+    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
     if(fdNum >= m_NextFd)
         m_NextFd = fdNum + 1;
     m_FdBitmap.set(fdNum);
@@ -261,17 +275,112 @@ void PosixSubsystem::allocateFd(size_t fdNum)
 
 void PosixSubsystem::freeFd(size_t fdNum)
 {
-    LockGuard<Spinlock> guard(m_FdLock); // Must be atomic.
+    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
     m_FdBitmap.clear(fdNum);
 
     FileDescriptor *pFd = m_FdMap.lookup(fdNum);
-    //if(pFd)
-    //    delete pFd;
-    if(pFd && pFd->file)
-        pFd->file->decreaseRefCount((pFd->flflags & O_RDWR) || (pFd->flflags & O_WRONLY));
-
-    m_FdMap.remove(fdNum);
+    if(pFd)
+    {
+        m_FdMap.remove(fdNum);
+        delete pFd;
+    }
 
     if(fdNum < m_LastFd)
         m_LastFd = fdNum;
+}
+
+bool PosixSubsystem::copyDescriptors(PosixSubsystem *pSubsystem)
+{
+    assert(pSubsystem);
+
+    // We're totally resetting our local state, ensure there's no files hanging around.
+    freeMultipleFds();
+
+    // Totally changing everything... Don't allow other functions to meddle.
+    LockGuard<Mutex> guard(m_FdLock);
+    LockGuard<Mutex> guardCopyHost(pSubsystem->m_FdLock);
+
+    // Copy each descriptor across from the original subsystem
+    FdMap &map = pSubsystem->m_FdMap;
+    for(FdMap::Iterator it = map.begin(); it != map.end(); it++)
+    {
+        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(it.value());
+        if(!pFd)
+            continue;
+        size_t newFd = reinterpret_cast<size_t>(it.key());
+
+        FileDescriptor *pNewFd = new FileDescriptor(*pFd);
+
+        // Perform the same action as addFileDescriptor. We need to duplicate here because
+        // we currently hold the FD lock, which will deadlock if we call any function which
+        // attempts to acquire it.
+        if(newFd >= m_NextFd)
+            m_NextFd = newFd + 1;
+        m_FdBitmap.set(newFd);
+        m_FdMap.insert(newFd, pNewFd);
+    }
+
+    return true;
+}
+
+void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iLast)
+{
+    assert(iFirst < iLast);
+
+    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
+
+    // Because removing FDs as we go from the Tree can actually leave the Tree
+    // iterators in a dud state, we'll add all the FDs to remove to this list.
+    List<void*> fdsToRemove;
+
+    // Are all FDs to be freed? Or only a selection?
+    bool bAllToBeFreed = ((iFirst == 0 && iLast == ~0UL) && !bOnlyCloExec);
+    if(bAllToBeFreed)
+        m_LastFd = 0;
+
+    FdMap &map = m_FdMap;
+    for(FdMap::Iterator it = map.begin(); it != map.end(); it++)
+    {
+        size_t Fd = reinterpret_cast<size_t>(it.key());
+        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(it.value());
+        if(!pFd)
+            continue;
+
+        if(!(Fd >= iFirst && Fd <= iLast))
+            continue;
+
+        if(bOnlyCloExec)
+        {
+            if(!(pFd->fdflags & FD_CLOEXEC))
+                continue;
+        }
+
+        // Perform the same action as freeFd. We need to duplicate code here because we currently
+        // hold the FD lock, which will deadlock if we call any function which attempts to
+        // acquire it.
+
+        // No longer usable
+        m_FdBitmap.clear(Fd);
+
+        // Add to the list of FDs to remove, iff we won't be cleaning up the entire set
+        if(!bAllToBeFreed)
+            fdsToRemove.pushBack(reinterpret_cast<void*>(Fd));
+
+        // Delete the descriptor itself
+        delete pFd;
+
+        // And reset the "last freed" tracking variable, if this is lower than it already.
+        if(Fd < m_LastFd)
+            m_LastFd = Fd;
+    }
+
+    // Clearing all AND not caring about CLOEXEC FDs? If so, clear the map. Otherwise, only
+    // clear the FDs that are supposed to be cleared.
+    if(bAllToBeFreed)
+        m_FdMap.clear();
+    else
+    {
+        for(List<void*>::Iterator it = fdsToRemove.begin(); it != fdsToRemove.end(); it++)
+            m_FdMap.remove(reinterpret_cast<size_t>(*it));
+    }
 }

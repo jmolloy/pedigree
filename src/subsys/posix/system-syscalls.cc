@@ -134,21 +134,8 @@ int posix_fork(SyscallState &state)
 
   MemoryMappedFileManager::instance().clone(pProcess);
 
-  typedef Tree<size_t,FileDescriptor*> FdMap;
-  FdMap &parentFdMap = pParentSubsystem->getFdMap();
-
-  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
-  {
-    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
-    if(!pFd)
-      continue;
-    size_t newFd = reinterpret_cast<size_t>(it.key());
-
-    NOTICE("Copying fd " << newFd << "...");
-    FileDescriptor *pFd2 = new FileDescriptor(pFd);
-    NOTICE("fork descriptor for fd " << newFd << " = " << reinterpret_cast<uintptr_t>(pFd2) << "...");
-    pSubsystem->addFileDescriptor(newFd, pFd2);
-  }
+  // Copy the file descriptors from the parent
+  pSubsystem->copyDescriptors(pParentSubsystem);
 
   // Child returns 0.
   state.setSyscallReturnValue(0);
@@ -188,11 +175,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
   if(!pSubsystem)
   {
-      ERROR("No subsystem for one or both of the processes!");
+      ERROR("No subsystem for this process!");
       return -1;
   }
-  PosixSubsystem *pNewSub = new PosixSubsystem(*pSubsystem);
-  pProcess->setSubsystem(pNewSub);
 
   // Ensure we only have one thread running (us).
   if (pProcess->getNumThreads() > 1)
@@ -252,35 +237,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
   }
   delete pOldLinker;
 
-  // Close all FD_CLOEXEC descriptors. Done here because from this point we're committed to running -
-  // there's no further return until the end of the function.
-  typedef Tree<size_t,FileDescriptor*> FdMap;
-
-  FdMap &parentFdMap = pSubsystem->getFdMap();
-  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
-  {
-    size_t newFd = reinterpret_cast<size_t>(it.key());
-    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
-    if(pFd)
-    {
-      if(pFd->fdflags & FD_CLOEXEC)
-      {
-        NOTICE("Closing " << newFd << ".");
-        pSubsystem->freeFd(newFd);
-      }
-      else
-      {
-          // Otherwise, insert into the child map. Note that we don't reallocate - because
-          // we're overwriting the previous process, we don't need to worry about it being
-          // freed elsewhere.
-          NOTICE("Re-inserting " << newFd << ".");
-          FileDescriptor *pFd2 = new FileDescriptor(pFd);
-          NOTICE("execve descriptor for fd " << newFd << " = " << reinterpret_cast<uintptr_t>(pFd2) << "...");
-          pNewSub->addFileDescriptor(newFd, pFd2);
-          delete pFd;
-      }
-    }
-  }
+  // Close all FD_CLOEXEC descriptors.
+  pSubsystem->freeMultipleFds(true);
 
   // Create a new stack.
   for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
@@ -440,11 +398,8 @@ int posix_exit(int code)
 {
   SC_NOTICE("exit(" << Dec << (code&0xFF) << Hex << ")");
 
-  /// Here, we should close ALL file descriptors!
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   pProcess->setExitStatus( (code&0xFF) << 8 );
-
-  typedef Tree<size_t,FileDescriptor*> FdMap;
 
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
   if(!pSubsystem)
@@ -453,19 +408,12 @@ int posix_exit(int code)
       return -1;
   }
 
-  FdMap &parentFdMap = pSubsystem->getFdMap();
-  for(FdMap::Iterator it = parentFdMap.begin(); it != parentFdMap.end(); it++)
-  {
-    FileDescriptor* pFd = reinterpret_cast<FileDescriptor*> (it.value());
-    if(!pFd)
-      continue;
-
-    pSubsystem->freeFd(reinterpret_cast<size_t>(it.key()));
-  }
-
   delete pProcess->getLinker();
 
   MemoryMappedFileManager::instance().unmapAll();
+
+  // Clean up the descriptor table
+  pSubsystem->freeMultipleFds();
 
   pProcess->kill();
 

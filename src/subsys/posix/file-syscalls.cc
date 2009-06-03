@@ -62,6 +62,14 @@ int posix_close(int fd)
 
 int posix_open(const char *name, int flags, int mode)
 {
+    // Verify that the filename is valid
+    if(!name)
+    {
+      F_NOTICE("open called with null filename");
+      SYSCALL_ERROR(DoesNotExist);
+      return -1;
+    }
+
     F_NOTICE("open(" << name << ", " << ((mode&O_RDWR)?"O_RDWR":"") << ((mode&O_RDONLY)?"O_RDONLY":"") << ((mode&O_WRONLY)?"O_WRONLY":"") << ")");
 
     // verify the filename - don't try to open a dud file
@@ -133,8 +141,14 @@ int posix_open(const char *name, int flags, int mode)
         }
     }
 
-    while (file->isSymlink())
+    while(file && file->isSymlink())
         file = Symlink::fromFile(file)->followLink();
+    if(!file)
+    {
+      SYSCALL_ERROR(DoesNotExist);
+      pSubsystem->freeFd(fd);
+      return -1;
+    }
 
     if (file->isDirectory())
     {
@@ -161,8 +175,18 @@ int posix_open(const char *name, int flags, int mode)
         file->truncate();
     }
 
-    FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
-    pSubsystem->addFileDescriptor(fd, f);
+    if(file)
+    {
+      FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
+      if(f)
+        pSubsystem->addFileDescriptor(fd, f);
+    }
+    else
+    {
+      SYSCALL_ERROR(DoesNotExist);
+      pSubsystem->freeFd(fd);
+      return -1;
+    }
 
     NOTICE("fine: " << fd);
     return static_cast<int> (fd);
@@ -756,11 +780,11 @@ int posix_ioctl(int fd, int command, void *buf)
 
     switch (command)
     {
-    case TIOCGWINSZ:
+        case TIOCGWINSZ:
         {
             return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
         }
-    case FIONBIO:
+        case FIONBIO:
         {
             // set/unset non-blocking
             if (buf)
@@ -776,7 +800,7 @@ int posix_ioctl(int fd, int command, void *buf)
 
             return 0;
         }
-    default:
+        default:
         {
             // Error - no such ioctl.
             return -1;
@@ -947,7 +971,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 
     uint32_t timeoutSeconds = 0;
     if (timeout)
-        timeoutSeconds = timeout->tv_sec;
+        timeoutSeconds = timeout->tv_sec + (timeout->tv_usec / 1000);
 
     int num_ready = 0;
     for (int i = 0; i < nfds; i++)
@@ -1086,8 +1110,6 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         return -1;
     }
 
-    NOTICE("descriptor for fd " << fd << " = " << reinterpret_cast<uintptr_t>(f) << "...");
-
     switch (cmd)
     {
         case F_DUPFD:
@@ -1111,7 +1133,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
                 size_t fd2 = pSubsystem->getFd();
 
                 // copy the descriptor
-                FileDescriptor* f2 = new FileDescriptor(f);
+                FileDescriptor* f2 = new FileDescriptor(*f);
                 pSubsystem->addFileDescriptor(fd2, f2);
 
                 return static_cast<int>(fd2);

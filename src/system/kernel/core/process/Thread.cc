@@ -37,13 +37,14 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // Initialise state level zero
   m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  m_StateLevels[0].m_pAuxillaryStack = 0;
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
   if (pStack == 0)
   {
     bUserMode = false;
-    pStack = m_StateLevels[0].m_pKernelStack;
+    pStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
     m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
   }
 
@@ -112,8 +113,12 @@ Thread::~Thread()
   //  VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
 
   for(size_t i = 0; i < MAX_NESTED_EVENTS; i++)
+  {
     if(m_StateLevels[i].m_pKernelStack)
         VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pKernelStack);
+    else if(m_StateLevels[i].m_pAuxillaryStack)
+        VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pAuxillaryStack);
+  }
 }
 
 void Thread::setStatus(Thread::Status s)

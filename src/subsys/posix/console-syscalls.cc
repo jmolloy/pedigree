@@ -41,9 +41,7 @@ int posix_tcgetattr(int fd, struct termios *p)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+  FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
   if (!pFd)
   {
     // Error - no such file descriptor.
@@ -81,9 +79,7 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
       return -1;
   }
 
-  FdMap &fdMap = pSubsystem->getFdMap();
-
-  FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+  FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
   if (!pFd)
   {
     // Error - no such file descriptor.

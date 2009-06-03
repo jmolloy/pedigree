@@ -31,13 +31,13 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_pipe(int filedes[2])
 {
-  NOTICE("pipe");
+  F_NOTICE("pipe");
 
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
   if(!pSubsystem)
   {
-      ERROR("No subsystem for one or both of the processes!");
+      ERROR("No subsystem for the process!");
       return -1;
   }
 
@@ -49,19 +49,14 @@ int posix_pipe(int filedes[2])
 
   File* p = new Pipe(String("Anonymous pipe"), 0, 0, 0, 0, 0, 0, 0, true);
 
-  // create the file descriptor for both
-  FileDescriptor* read = new FileDescriptor(p, 0, readFd);
-  //read->file = p;
-  //read->offset = 0;
+  // Create the file descriptor for both
+  FileDescriptor* read = new FileDescriptor(p, 0, readFd, 0, O_RDONLY);
   pSubsystem->addFileDescriptor(readFd, read);
-  // p->increaseRefCount(false);
 
-  FileDescriptor* write = new FileDescriptor(p, 0, writeFd);
-  write->file = p;
-  write->offset = 0;
-  write->flflags = O_WRONLY;
+  FileDescriptor* write = new FileDescriptor(p, 0, writeFd, 0, O_WRONLY);
   pSubsystem->addFileDescriptor(writeFd, write);
-  // p->increaseRefCount(true);
+
+  F_NOTICE("pipe: returning " << readFd << " and " << writeFd << ".");
 
   return 0;
 }

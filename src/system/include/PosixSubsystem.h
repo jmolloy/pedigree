@@ -75,8 +75,8 @@ class PosixSubsystem : public Subsystem
 
         /** Default constructor */
         PosixSubsystem() :
-            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
-            m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
+            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
+            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1)
         {}
 
         /** Copy constructor */
@@ -84,8 +84,8 @@ class PosixSubsystem : public Subsystem
 
         /** Parameterised constructor */
         PosixSubsystem(SubsystemType type) :
-            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(),
-            m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0)
+            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
+            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1)
         {}
 
         /** Default destructor */
@@ -151,12 +151,8 @@ class PosixSubsystem : public Subsystem
             return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
         }
 
-        /** Returns the File descriptor map - maps numbers to pointers (of undefined type -
-            the subsystem decides what type). */
-        Tree<size_t, FileDescriptor*> &getFdMap()
-        {
-            return m_FdMap;
-        }
+        /** Copies file descriptors from another subsystem */
+        bool copyDescriptors(PosixSubsystem *pSubsystem);
 
         /** Returns the first available file descriptor. */
         size_t getFd();
@@ -169,10 +165,13 @@ class PosixSubsystem : public Subsystem
           */
         void freeFd(size_t fdNum);
 
+        /** Frees a range of descriptors (or only those marked FD_CLOEXEC) */
+        void freeMultipleFds(bool bOnlyCloExec = false, size_t iFirst = 0, size_t iLast = -1);
+
         /** Gets a pointer to a FileDescriptor object from an fd number */
         FileDescriptor *getFileDescriptor(size_t fd)
         {
-            LockGuard<Spinlock> guard(m_FdLock);
+            LockGuard<Mutex> guard(m_FdLock);
             return m_FdMap.lookup(fd);
         }
 
@@ -182,7 +181,7 @@ class PosixSubsystem : public Subsystem
             freeFd(fd);
             allocateFd(fd);
 
-            LockGuard<Spinlock> guard(m_FdLock);
+            LockGuard<Mutex> guard(m_FdLock);
             m_FdMap.insert(fd, pFd);
         }
 
@@ -206,7 +205,7 @@ class PosixSubsystem : public Subsystem
         /**
          * Lock to guard the next file descriptor while it is being changed.
          */
-        Spinlock m_FdLock;
+        Mutex m_FdLock;
         /**
          * File descriptors used by this process
          */
@@ -215,6 +214,10 @@ class PosixSubsystem : public Subsystem
          * Last known unallocated descriptor
          */
         size_t m_LastFd;
+        /**
+         * Number of times freed
+         */
+        int m_FreeCount;
 };
 
 #endif

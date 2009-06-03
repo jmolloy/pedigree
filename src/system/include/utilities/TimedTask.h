@@ -27,48 +27,75 @@
 #include <processor/types.h>
 #include <process/Semaphore.h>
 #include <process/Scheduler.h>
-
-#include <utilities/TimeoutGuard.h>
+#include <processor/Processor.h>
+#include <machine/Timer.h>
+#include <machine/Machine.h>
 
 /** TimedTask defines a specific task that needs to be performed
   * within a specific timeframe.
   * Inherit from this and define your own task() function in order
   * to perform different tasks.
   */
-class TimedTask : public TimerHandler
+class TimedTask
 {
     public:
 
         TimedTask() :
-            m_Nanoseconds(0), m_Seconds(0), m_Timeout(30), m_Success(false),
-            m_Active(false), m_TimeoutActive(true), m_ReturnValue(0), m_Task(0),
-            m_WaitSem(0)
+            m_Timeout(30), m_Success(false), m_Active(false), m_ReturnValue(0), m_Task(0),
+            m_pTimeoutEvent(0), m_WaitSem(0), m_Lock(), m_nLevel(0)
         {};
 
         virtual ~TimedTask()
         {
-            if(m_TimeoutActive)
-                unregisterMe();
             if(m_WaitSem)
-                m_WaitSem->release();
-            if(m_Task)
             {
-                // We can't delete the task, it could still be running. Also,
-                // killing a task like this is unsafe.
-#if 0
-                Process *pProcess = Processor::information().getCurrentThread()->getParent();
-                pProcess->removeThread(m_Task);
-                delete m_Task;
-#endif
+                m_WaitSem->release();
+                m_WaitSem = 0;
             }
+
+            // Delete the event, if needed
+            cleanup(true);
         }
+
+        /** Internal event class */
+        class TimedTaskEvent : public Event
+        {
+        public:
+            TimedTaskEvent() :
+                Event(0, false), m_pTarget(0)
+            {}
+            TimedTaskEvent(TimedTask *pTarget, size_t specificNestingLevel);
+            virtual ~TimedTaskEvent();
+
+            virtual size_t serialize(uint8_t *pBuffer);
+            static bool unserialize(uint8_t *pBuffer, TimedTaskEvent &event);
+
+            virtual size_t getNumber()
+            {return EventNumbers::TimedTask;}
+
+            /** The TimedTask to cancel. */
+            TimedTask *m_pTarget;
+
+        private:
+            TimedTaskEvent(const TimedTaskEvent &);
+            TimedTaskEvent &operator = (const TimedTaskEvent &);
+        };
 
         virtual int task() = 0;
 
         void begin()
         {
-            if(m_WaitSem)
+            if(m_WaitSem && !m_pTimeoutEvent)
             {
+                Thread *pThread = Processor::information().getCurrentThread();
+
+                m_nLevel = pThread->getStateLevel();
+                m_pTimeoutEvent = new TimedTaskEvent(this, m_nLevel);
+
+                // The implementation of task should verify the timeout, and if it is zero, should not loop. Even so,
+                // we want to be able to execute the task.
+                Machine::instance().getTimer()->addAlarm(m_pTimeoutEvent, m_Timeout ? m_Timeout : 10);
+
                 m_Active = true;
                 Process *pProcess = Processor::information().getCurrentThread()->getParent();
                 m_Task = new Thread(
@@ -83,27 +110,21 @@ class TimedTask : public TimerHandler
 
         void cancel()
         {
-            if(m_Active)
+            if(m_WaitSem)
             {
-                m_Active = false;
                 m_Success = false;
-
-                if(m_TimeoutActive)
-                    unregisterMe();
-
-                // Again, this is not kosher. On an MP system m_Task could
-                // currently be executing!
-                /// \todo Have a specific function in Scheduler to
-                ///       delete another thread.
-#if 0
-                delete m_Task;
-                m_Task = 0;
-#endif
                 m_WaitSem->release();
                 m_WaitSem = 0;
             }
-            else
-                ERROR("TimedTask::end() called but no thread is running");
+
+            cleanup(true);
+        }
+
+        void timeout()
+        {
+            // Event fired, already freed.
+            m_pTimeoutEvent = 0;
+            cleanup(true);
         }
 
         /** Called when the task completes successfully */
@@ -111,52 +132,30 @@ class TimedTask : public TimerHandler
         {
             m_Active = false;
 
-            if(m_TimeoutActive)
-                unregisterMe();
-
             m_Success = true;
             m_ReturnValue = returnValue;
 
             m_WaitSem->release();
             m_WaitSem = 0;
 
-            Processor::information().getScheduler().killCurrentThread();
+            m_Task = 0;
 
-            FATAL("TimedTask::end(): Fatal algorithmic error.");
+            cleanup(false);
         }
 
         static int taskTrampoline(void *ptr)
         {
             TimedTask *t = reinterpret_cast<TimedTask *>(ptr);
+
+            // Run the task
             int ret = t->task();
 
             // We don't actually know if we'll ever reach this point, but if we do,
             // we're done :)
             t->end(ret);
 
-            // won't reach here, we get killed by end()
+            // Exit the thread
             return 0;
-        }
-
-        void timer(uint64_t delta, InterruptState &state)
-        {
-            if(m_TimeoutActive)
-            {
-                if(UNLIKELY(m_Seconds < m_Timeout))
-                {
-                    m_Nanoseconds += delta;
-                    if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
-                    {
-                        ++m_Seconds;
-                        m_Nanoseconds -= 1000000000ULL;
-                    }
-
-                    if(UNLIKELY(m_Seconds >= m_Timeout))
-                    {
-                        cancel();
-                    }
-                }
-            }
         }
 
         void setSemaphore(Semaphore *mySem)
@@ -174,15 +173,10 @@ class TimedTask : public TimerHandler
             m_Timeout = timeout;
         }
 
-        void toggleTimeout()
-        {
-            m_TimeoutActive = !m_TimeoutActive;
-        }
-
         /** Will a timeout cause the task to be cancelled or not? */
         bool isTimeoutActive()
         {
-            return m_TimeoutActive;
+            return (m_pTimeoutEvent != 0);
         }
 
         /** Don't use this if wasSuccessful() == false */
@@ -195,46 +189,63 @@ class TimedTask : public TimerHandler
         TimedTask(const TimedTask&);
         const TimedTask& operator = (const TimedTask&);
 
-        void registerMe()
-        {
-            Timer* t = Machine::instance().getTimer();
-            if(t)
-                t->registerHandler(this);
-            else
-            {
-                m_WaitSem->release();
-                ERROR("TimedTask::begin() with no machine timer!");
-            }
-        }
-
-        void unregisterMe()
-        {
-            Timer* t = Machine::instance().getTimer();
-            if(t)
-                t->unregisterHandler(this);
-        }
-
-        uint64_t m_Nanoseconds;
-        uint64_t m_Seconds;
-
     protected:
         uint32_t m_Timeout; // defaults to 30 seconds
 
     private:
 
+        void cleanup(bool bFreeTask)
+        {
+            // Stop any interrupts - now we know that we can't be preempted by
+            // our own event handler.
+            LockGuard<Spinlock> guard(m_Lock);
+
+            if(m_pTimeoutEvent)
+            {
+                // The event hasn't fired yet, remove and delete it.
+                Machine::instance().getTimer()->removeAlarm(m_pTimeoutEvent);
+
+                // Ensure that the event isn't queued.
+                Processor::information().getCurrentThread()->cullEvent(m_pTimeoutEvent);
+                delete m_pTimeoutEvent;
+                m_pTimeoutEvent = 0;
+            }
+
+            if(m_Task && bFreeTask)
+            {
+                // Kill the thread
+#ifndef MULTIPROCESSOR
+                Scheduler::instance().removeThread(m_Task);
+                delete m_Task;
+                m_Task = 0;
+#else
+                /// \todo Write a method for deleting the old task
+                FATAL("Cannot cancel TimedTask on a multiprocessor system.");
+#endif
+            }
+        }
+
         bool m_Success;
         bool m_Active;
-        bool m_TimeoutActive; // we can be active but not timing out
 
         int m_ReturnValue;
 
         Thread *m_Task;
+
+        /// This is used to perform the timeout & task cancellation
+        TimedTaskEvent *m_pTimeoutEvent;
 
         /** Passed to us by the caller, this is how the caller knows that this code
         * has completed executing (whether it's cancelled or completed successfully
         * is another thing :) )
         */
         Semaphore *m_WaitSem;
+
+        /** Our own personal lock. */
+        Spinlock m_Lock;
+
+        /** Nesting level */
+        size_t m_nLevel;
 };
 
 #endif
