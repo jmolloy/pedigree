@@ -52,548 +52,583 @@
 /// Saves a char** array in the Vector of String*s given.
 static void save_string_array(const char **array, Vector<String*> &rArray)
 {
-  while (*array)
-  {
-    String *pStr = new String(*array);
-    rArray.pushBack(pStr);
-    array++;
-  }
+    while (*array)
+    {
+        String *pStr = new String(*array);
+        rArray.pushBack(pStr);
+        array++;
+    }
 }
 /// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
 /// returning the end of the char** array created in arrayEndLoc and the start as the function return value.
 static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
 {
-  char **pMasterArray = reinterpret_cast<char**> (arrayLoc);
+    char **pMasterArray = reinterpret_cast<char**> (arrayLoc);
 
-  char *pPtr = reinterpret_cast<char*> (arrayLoc + sizeof(char*) * (rArray.count()+1) );
-  int i = 0;
-  for (Vector<String*>::Iterator it = rArray.begin();
-       it != rArray.end();
-       it++)
-  {
-    String *pStr = *it;
+    char *pPtr = reinterpret_cast<char*> (arrayLoc + sizeof(char*) * (rArray.count()+1) );
+    int i = 0;
+    for (Vector<String*>::Iterator it = rArray.begin();
+            it != rArray.end();
+            it++)
+    {
+        String *pStr = *it;
 
-    strcpy(pPtr, *pStr);
-    pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
+        strcpy(pPtr, *pStr);
+        pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
 
-    pMasterArray[i] = pPtr;
+        pMasterArray[i] = pPtr;
 
-    pPtr += pStr->length()+1;
-    i++;
+        pPtr += pStr->length()+1;
+        i++;
 
-    delete pStr;
-  }
+        delete pStr;
+    }
 
-  pMasterArray[i] = 0; // Null terminate.
-  arrayEndLoc = reinterpret_cast<uintptr_t> (pPtr);
+    pMasterArray[i] = 0; // Null terminate.
+    arrayEndLoc = reinterpret_cast<uintptr_t> (pPtr);
 
-  return pMasterArray;
+    return pMasterArray;
 }
 
 long posix_sbrk(int delta)
 {
-  long ret = reinterpret_cast<long>(
-    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-  SC_NOTICE("sbrk(" << delta << ") -> " << ret);
-  if (ret == 0)
-  {
-    SYSCALL_ERROR(OutOfMemory);
-    return -1;
-  }
-  else
-    return ret;
+    long ret = reinterpret_cast<long>(
+                   Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
+    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
+    if (ret == 0)
+    {
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
+    else
+        return ret;
 }
 
 int posix_fork(SyscallState &state)
 {
-  SC_NOTICE("fork()");
+    SC_NOTICE("fork()");
 
-  Processor::setInterrupts(false);
+    Processor::setInterrupts(false);
 
-  // Create a new process.
-  Process *pParentProcess = Processor::information().getCurrentThread()->getParent();
-  Process *pProcess = new Process(pParentProcess);
+    // Create a new process.
+    Process *pParentProcess = Processor::information().getCurrentThread()->getParent();
+    Process *pProcess = new Process(pParentProcess);
 
-  if (!pProcess)
-  {
-    SYSCALL_ERROR(OutOfMemory);
-    return -1;
-  }
+    if (!pProcess)
+    {
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
 
-  PosixSubsystem *pParentSubsystem = reinterpret_cast<PosixSubsystem*>(pParentProcess->getSubsystem());
-  PosixSubsystem *pSubsystem = new PosixSubsystem(*pParentSubsystem);
-  if(!pSubsystem || !pParentSubsystem)
-  {
-      ERROR("No subsystem for one or both of the processes!");
-      return -1;
-  }
-  pProcess->setSubsystem(pSubsystem);
+    PosixSubsystem *pParentSubsystem = reinterpret_cast<PosixSubsystem*>(pParentProcess->getSubsystem());
+    PosixSubsystem *pSubsystem = new PosixSubsystem(*pParentSubsystem);
+    if (!pSubsystem || !pParentSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+    pProcess->setSubsystem(pSubsystem);
 
-  // Register with the dynamic linker.
-  pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
+    // Register with the dynamic linker.
+    pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
 
-  MemoryMappedFileManager::instance().clone(pProcess);
+    MemoryMappedFileManager::instance().clone(pProcess);
 
-  // Copy the file descriptors from the parent
-  pSubsystem->copyDescriptors(pParentSubsystem);
+    // Copy the file descriptors from the parent
+    pSubsystem->copyDescriptors(pParentSubsystem);
 
-  // Child returns 0.
-  state.setSyscallReturnValue(0);
+    // Child returns 0.
+    state.setSyscallReturnValue(0);
 
-  // Create a new thread for the new process.
-  new Thread(pProcess, state);
+    // Create a new thread for the new process.
+    new Thread(pProcess, state);
 
-  // Parent returns child ID.
-  return pProcess->getId();
+    // Parent returns child ID.
+    return pProcess->getId();
 }
 
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state)
 {
-  SC_NOTICE("execve(\"" << name << "\")");
+    SC_NOTICE("execve(\"" << name << "\")");
 
-  String myArgv;
-  int i = 0;
-  while(argv[i])
-  {
-    myArgv += String(argv[i]);
-    myArgv += " ";
-    i++;
-  }
-  SC_NOTICE("  {" << myArgv << "}");
+    String myArgv;
+    int i = 0;
+    while (argv[i])
+    {
+        myArgv += String(argv[i]);
+        myArgv += " ";
+        i++;
+    }
+    SC_NOTICE("  {" << myArgv << "}");
 
-  Processor::setInterrupts(false);
+    Processor::setInterrupts(false);
 
-  if (argv == 0 || env == 0)
-  {
-    SYSCALL_ERROR(ExecFormatError);
-    return -1;
-  }
+    if (argv == 0 || env == 0)
+    {
+        SYSCALL_ERROR(ExecFormatError);
+        return -1;
+    }
 
-  Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  pProcess->getSpaceAllocator().clear();
-  pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
-  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-  if(!pSubsystem)
-  {
-      ERROR("No subsystem for this process!");
-      return -1;
-  }
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    pProcess->getSpaceAllocator().clear();
+    pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
 
-  // Ensure we only have one thread running (us).
-  if (pProcess->getNumThreads() > 1)
-  {
-    SYSCALL_ERROR(ExecFormatError);
-    return -1;
-  }
+    // Ensure we only have one thread running (us).
+    if (pProcess->getNumThreads() > 1)
+    {
+        SYSCALL_ERROR(ExecFormatError);
+        return -1;
+    }
 
-  // Attempt to find the file, first!
-  File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
+    // Attempt to find the file, first!
+    File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
 
-  if (!file)
-  {
-    // Error - not found.
-    SYSCALL_ERROR(DoesNotExist);
-    return -1;
-  }
+    if (!file)
+    {
+        // Error - not found.
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
 
-  while (file->isSymlink())
-    file = Symlink::fromFile(file)->followLink();
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
 
-  if (file->isDirectory())
-  {
-    // Error - is directory.
-    SYSCALL_ERROR(IsADirectory);
-    return -1;
-  }
+    if (file->isDirectory())
+    {
+        // Error - is directory.
+        SYSCALL_ERROR(IsADirectory);
+        return -1;
+    }
 
-  pProcess->description() = String(name);
+    // Try and read the shebang, if any
+#if 0
+    String theShebang;
+    static char shebang[2];
+    file->read(0, 2, reinterpret_cast<uintptr_t>(shebang));
+    if (!strncmp(shebang, "#!", 2))
+    {
+        ERROR("Shebang!");
 
-  // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
-  Vector<String*> savedArgv, savedEnv;
-  save_string_array(argv, savedArgv);
-  save_string_array(env, savedEnv);
+        // We have a shebang, so grab the command
+        /// \todo Handle shebang lines that contain arguments (eg, "#!/bin/python -i")
+        NormalStaticString execLine;
+        execLine.clear();
 
-  // Get rid of all the crap from the last elf image.
-  /// \todo Preserve anonymous mmaps etc.
+        size_t i = 2;
+        shebang[1] = 0;
+        while (i < file->getSize())
+        {
+            file->read(i++, 1, reinterpret_cast<uintptr_t>(shebang));
+            if (shebang[0] == '\n')
+                break;
 
-  MemoryMappedFileManager::instance().unmapAll();
+            execLine += shebang;
+        }
 
-  pProcess->getAddressSpace()->revertToKernelAddressSpace();
+        execLine += "\0";
 
-  DynamicLinker *pOldLinker = pProcess->getLinker();
-  DynamicLinker *pLinker = new DynamicLinker();
+        theShebang = String(static_cast<const char*>(execLine));
+        NOTICE("Shebang line = " << theShebang << ".");
+        name = static_cast<const char*>(theShebang);
 
-  // Set the new linker now before we loadProgram, else we could trap and
-  // have a linker mismatch.
-  pProcess->setLinker(pLinker);
-
-  if (!pLinker->loadProgram(file))
-  {
-      /// \todo Check for a shebang here.
-      pProcess->setLinker(pOldLinker);
-      delete pLinker;
-      SYSCALL_ERROR(ExecFormatError);
-      return -1;
-  }
-  delete pOldLinker;
-
-  // Close all FD_CLOEXEC descriptors.
-  pSubsystem->freeMultipleFds(true);
-
-  // Create a new stack.
-  for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
-  {
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+STACK_END),
-                                                                   VirtualAddressSpace::Write);
-    if (!b)
-      WARNING("map() failed in execve");
-  }
-
-  // Create room for the argv and env list.
-  for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
-  {
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+ARGV_ENV_LOC),
-                                                                   VirtualAddressSpace::Write);
-    if (!b)
-      WARNING("map() failed in execve (2)");
-  }
-
-  // Load the saved argv and env into this address space, starting at "location".
-  uintptr_t location = ARGV_ENV_LOC;
-  argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
-  env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
-
-  Elf *elf = pProcess->getLinker()->getProgramElf();
-
-  ProcessorState pState = state;
-  pState.setStackPointer(STACK_START-8);
-  pState.setInstructionPointer(elf->getEntryPoint());
-
-  StackFrame::construct(pState, 0, 2, argv, env);
-
-  state.setStackPointer(pState.getStackPointer());
-  state.setInstructionPointer(elf->getEntryPoint());
-
-  /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
-#ifdef PPC_COMMON
-  state.m_R6 = pState.m_R6;
-  state.m_R7 = pState.m_R7;
-  state.m_R8 = pState.m_R8;
+        return -1;
+    }
 #endif
 
-  return 0;
+    pProcess->description() = String(name);
+
+    // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
+    Vector<String*> savedArgv, savedEnv;
+    save_string_array(argv, savedArgv);
+    save_string_array(env, savedEnv);
+
+    // Get rid of all the crap from the last elf image.
+    /// \todo Preserve anonymous mmaps etc.
+
+    MemoryMappedFileManager::instance().unmapAll();
+
+    pProcess->getAddressSpace()->revertToKernelAddressSpace();
+
+    DynamicLinker *pOldLinker = pProcess->getLinker();
+    DynamicLinker *pLinker = new DynamicLinker();
+
+    // Set the new linker now before we loadProgram, else we could trap and
+    // have a linker mismatch.
+    pProcess->setLinker(pLinker);
+
+    if (!pLinker->loadProgram(file))
+    {
+        /// \todo Check for a shebang here.
+        pProcess->setLinker(pOldLinker);
+        delete pLinker;
+        SYSCALL_ERROR(ExecFormatError);
+        return -1;
+    }
+    delete pOldLinker;
+
+    // Close all FD_CLOEXEC descriptors.
+    pSubsystem->freeMultipleFds(true);
+
+    // Create a new stack.
+    for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                 reinterpret_cast<void*> (j+STACK_END),
+                 VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in execve");
+    }
+
+    // Create room for the argv and env list.
+    for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                 reinterpret_cast<void*> (j+ARGV_ENV_LOC),
+                 VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in execve (2)");
+    }
+
+    // Load the saved argv and env into this address space, starting at "location".
+    uintptr_t location = ARGV_ENV_LOC;
+    argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
+    env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
+
+    Elf *elf = pProcess->getLinker()->getProgramElf();
+
+    ProcessorState pState = state;
+    pState.setStackPointer(STACK_START-8);
+    pState.setInstructionPointer(elf->getEntryPoint());
+
+    StackFrame::construct(pState, 0, 2, argv, env);
+
+    state.setStackPointer(pState.getStackPointer());
+    state.setInstructionPointer(elf->getEntryPoint());
+
+    /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
+#ifdef PPC_COMMON
+    state.m_R6 = pState.m_R6;
+    state.m_R7 = pState.m_R7;
+    state.m_R8 = pState.m_R8;
+#endif
+
+    return 0;
 }
 
 int posix_waitpid(int pid, int *status, int options)
 {
-  if (options & 1)
-  {
-    SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
-  }
-  else
-  {
-    SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
-  }
-
-  // Don't care about process groups at the moment.
-  if (pid < -1)
-  {
-    pid *= -1;
-  }
-
-  while (1)
-  {
-    // Is the pid an absolute pid reference?
-    if (pid > 0)
+    if (options & 1)
     {
-      // Does this process exist?
-      Process *pProcess = 0;
-      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-      {
-        pProcess = Scheduler::instance().getProcess(i);
-
-        if (static_cast<int>(pProcess->getId()) == pid)
-          break;
-      }
-      if(pProcess == 0)
-        return -1;
-
-      if (static_cast<int>(pProcess->getId()) != pid)
-      {
-        // ECHILD - process n'existe pas.
-        return -1;
-      }
-
-      // Is it actually our child?
-      if (pProcess->getParent() != Processor::information().getCurrentThread()->getParent())
-      {
-        // ECHILD - not our child!
-        return -1;
-      }
-
-      // Is it zombie?
-      if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
-      {
-        // Ph33r the Reaper...
-        if (status)
-          *status = pProcess->getExitStatus();
-
-        // Delete the process; it's been reaped good and proper.
-        NOTICE("Pid " << pid << " reaped");
-        delete pProcess;
-        return pid;
-      }
+        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
     }
     else
     {
-      // Get any pid.
-      Process *thisP = Processor::information().getCurrentThread()->getParent();
-      bool hadAnyChildren = false;
-      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-      {
-        Process *pProcess = Scheduler::instance().getProcess(i);
-
-        if (pProcess->getParent() == thisP)
-        {
-          hadAnyChildren = true;
-          if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
-          {
-            // Kill 'em all!
-            if (status)
-              *status = pProcess->getExitStatus();
-            pid = pProcess->getId();
-            NOTICE("Pid " << pid << " reaped");
-            delete pProcess;
-            return pid;
-          }
-        }
-      }
-      if (!hadAnyChildren)
-      {
-        // Error - no children (ECHILD)
-        NOTICE("no children");
-        SYSCALL_ERROR(NoChildren);
-        return -1;
-      }
+        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
     }
 
-    if (options & 1) // WNOHANG set
-      return 0;
+    // Don't care about process groups at the moment.
+    if (pid < -1)
+    {
+        pid *= -1;
+    }
 
-    /// \todo Bugfix - the following line should be deleted, and the line below uncommented.
-    //Scheduler::instance().yield(0);
-    // Sleep...
-    Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
-    SC_NOTICE("deadt");
-  }
+    while (1)
+    {
+        // Is the pid an absolute pid reference?
+        if (pid > 0)
+        {
+            // Does this process exist?
+            Process *pProcess = 0;
+            for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+            {
+                pProcess = Scheduler::instance().getProcess(i);
 
-  return -1;
+                if (static_cast<int>(pProcess->getId()) == pid)
+                    break;
+            }
+            if (pProcess == 0)
+                return -1;
+
+            if (static_cast<int>(pProcess->getId()) != pid)
+            {
+                // ECHILD - process n'existe pas.
+                return -1;
+            }
+
+            // Is it actually our child?
+            if (pProcess->getParent() != Processor::information().getCurrentThread()->getParent())
+            {
+                // ECHILD - not our child!
+                return -1;
+            }
+
+            // Is it zombie?
+            if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
+            {
+                // Ph33r the Reaper...
+                if (status)
+                    *status = pProcess->getExitStatus();
+
+                // Delete the process; it's been reaped good and proper.
+                NOTICE("Pid " << pid << " reaped");
+                delete pProcess;
+                return pid;
+            }
+        }
+        else
+        {
+            // Get any pid.
+            Process *thisP = Processor::information().getCurrentThread()->getParent();
+            bool hadAnyChildren = false;
+            for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+            {
+                Process *pProcess = Scheduler::instance().getProcess(i);
+
+                if (pProcess->getParent() == thisP)
+                {
+                    hadAnyChildren = true;
+                    if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
+                    {
+                        // Kill 'em all!
+                        if (status)
+                            *status = pProcess->getExitStatus();
+                        pid = pProcess->getId();
+                        NOTICE("Pid " << pid << " reaped");
+                        delete pProcess;
+                        return pid;
+                    }
+                }
+            }
+            if (!hadAnyChildren)
+            {
+                // Error - no children (ECHILD)
+                NOTICE("no children");
+                SYSCALL_ERROR(NoChildren);
+                return -1;
+            }
+        }
+
+        if (options & 1) // WNOHANG set
+            return 0;
+
+        /// \todo Bugfix - the following line should be deleted, and the line below uncommented.
+        //Scheduler::instance().yield(0);
+        // Sleep...
+        Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
+        SC_NOTICE("deadt");
+    }
+
+    return -1;
 }
 
 int posix_exit(int code)
 {
-  SC_NOTICE("exit(" << Dec << (code&0xFF) << Hex << ")");
+    SC_NOTICE("exit(" << Dec << (code&0xFF) << Hex << ")");
 
-  Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  pProcess->setExitStatus( (code&0xFF) << 8 );
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    pProcess->setExitStatus( (code&0xFF) << 8 );
 
-  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-  if(!pSubsystem)
-  {
-      ERROR("No subsystem for one or both of the processes!");
-      return -1;
-  }
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
 
-  delete pProcess->getLinker();
+    delete pProcess->getLinker();
 
-  MemoryMappedFileManager::instance().unmapAll();
+    MemoryMappedFileManager::instance().unmapAll();
 
-  // Clean up the descriptor table
-  pSubsystem->freeMultipleFds();
+    // Clean up the descriptor table
+    pSubsystem->freeMultipleFds();
 
-  pProcess->kill();
+    pProcess->kill();
 
-  // Should NEVER get here.
-  /// \note asm volatile
-  for(;;) asm volatile("xor %eax, %eax");
+    // Should NEVER get here.
+    /// \note asm volatile
+    for (;;) asm volatile("xor %eax, %eax");
 }
 
 int posix_getpid()
 {
-  Process *pProcess = Processor::information().getCurrentThread()->getParent();
-  return pProcess->getId();
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    return pProcess->getId();
 }
 
 int posix_gettimeofday(timeval *tv, timezone *tz)
 {
-  Timer *pTimer = Machine::instance().getTimer();
+    Timer *pTimer = Machine::instance().getTimer();
 
-  tv->tv_sec = pTimer->getUnixTimestamp();
-  tv->tv_usec = 0;
+    tv->tv_sec = pTimer->getUnixTimestamp();
+    tv->tv_usec = 0;
 
-  return 0;
+    return 0;
 }
 
 char *store_str_to(char *str, char *strend, String s)
 {
-  int i = 0;
-  while (s[i] && str != strend)
-    *str++ = s[i++];
-  *str++ = '\0';
+    int i = 0;
+    while (s[i] && str != strend)
+        *str++ = s[i++];
+    *str++ = '\0';
 
-  return str;
+    return str;
 }
 
 int posix_getpwent(passwd *pw, int n, char *str)
 {
-  SC_NOTICE("getpwent(" << Dec << n << Hex << ")");
+    SC_NOTICE("getpwent(" << Dec << n << Hex << ")");
 
-  // Grab the given user.
-  User *pUser = UserManager::instance().getUser(n);
-  if (!pUser) return -1;
+    // Grab the given user.
+    User *pUser = UserManager::instance().getUser(n);
+    if (!pUser) return -1;
 
-  char *strend = str + 256; // If we get here, we've gone off the end of str.
+    char *strend = str + 256; // If we get here, we've gone off the end of str.
 
-  pw->pw_name = str;
-  str = store_str_to(str, strend, pUser->getUsername());
+    pw->pw_name = str;
+    str = store_str_to(str, strend, pUser->getUsername());
 
-  pw->pw_passwd = str;
-  *str++ = '\0';
+    pw->pw_passwd = str;
+    *str++ = '\0';
 
-  pw->pw_uid = pUser->getId();
-  pw->pw_gid = pUser->getDefaultGroup()->getId();
-  pw->pw_comment = str;
-  str = store_str_to(str, strend, pUser->getFullName());
+    pw->pw_uid = pUser->getId();
+    pw->pw_gid = pUser->getDefaultGroup()->getId();
+    pw->pw_comment = str;
+    str = store_str_to(str, strend, pUser->getFullName());
 
-  pw->pw_gecos = str;
-  *str++ = '\0';
-  pw->pw_dir = str;
-  str = store_str_to(str, strend, pUser->getHome());
+    pw->pw_gecos = str;
+    *str++ = '\0';
+    pw->pw_dir = str;
+    str = store_str_to(str, strend, pUser->getHome());
 
-  pw->pw_shell = str;
-  str = store_str_to(str, strend, pUser->getShell());
+    pw->pw_shell = str;
+    str = store_str_to(str, strend, pUser->getShell());
 
-  return 0;
+    return 0;
 }
 
 int posix_getpwnam(passwd *pw, const char *name, char *str)
 {
-  // Grab the given user.
-  User *pUser = UserManager::instance().getUser(String(name));
-  if (!pUser) return -1;
+    // Grab the given user.
+    User *pUser = UserManager::instance().getUser(String(name));
+    if (!pUser) return -1;
 
-  char *strend = str + 256; // If we get here, we've gone off the end of str.
+    char *strend = str + 256; // If we get here, we've gone off the end of str.
 
-  pw->pw_name = str;
-  str = store_str_to(str, strend, pUser->getUsername());
+    pw->pw_name = str;
+    str = store_str_to(str, strend, pUser->getUsername());
 
-  pw->pw_passwd = str;
-  *str++ = '\0';
+    pw->pw_passwd = str;
+    *str++ = '\0';
 
-  pw->pw_uid = pUser->getId();
-  pw->pw_gid = pUser->getDefaultGroup()->getId();
-  pw->pw_comment = str;
-  str = store_str_to(str, strend, pUser->getFullName());
+    pw->pw_uid = pUser->getId();
+    pw->pw_gid = pUser->getDefaultGroup()->getId();
+    pw->pw_comment = str;
+    str = store_str_to(str, strend, pUser->getFullName());
 
-  pw->pw_gecos = str;
-  *str++ = '\0';
+    pw->pw_gecos = str;
+    *str++ = '\0';
 
-  pw->pw_dir = str;
-  str = store_str_to(str, strend, pUser->getHome());
+    pw->pw_dir = str;
+    str = store_str_to(str, strend, pUser->getHome());
 
-  pw->pw_shell = str;
-  str = store_str_to(str, strend, pUser->getShell());
+    pw->pw_shell = str;
+    str = store_str_to(str, strend, pUser->getShell());
 
-  return 0;
+    return 0;
 }
 
 int posix_getuid()
 {
-  SC_NOTICE("getuid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getUser()->getId());
-  return Processor::information().getCurrentThread()->getParent()->getUser()->getId();
+    SC_NOTICE("getuid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getUser()->getId());
+    return Processor::information().getCurrentThread()->getParent()->getUser()->getId();
 }
 
 int posix_getgid()
 {
-  SC_NOTICE("getgid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getGroup()->getId());
-  return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
+    SC_NOTICE("getgid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getGroup()->getId());
+    return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
 }
 
 int pedigree_login(int uid, const char *password)
 {
-  // Grab the given user.
-  User *pUser = UserManager::instance().getUser(uid);
-  if (!pUser) return -1;
+    // Grab the given user.
+    User *pUser = UserManager::instance().getUser(uid);
+    if (!pUser) return -1;
 
-  if (pUser->login(String(password)))
-    return 0;
-  else
-    return -1;
+    if (pUser->login(String(password)))
+        return 0;
+    else
+        return -1;
 }
 
 /// \note Currently all functionality can be provided without any extra storage in the handle.
 struct dlHandle
 {
-  int mode;
+    int mode;
 };
 
 uintptr_t posix_dlopen(const char* file, int mode, void* p)
 {
-  SC_NOTICE("dlopen(" << file << ")");
+    SC_NOTICE("dlopen(" << file << ")");
 
-  File *pFile = VFS::instance().find(String(file), GET_CWD());
+    File *pFile = VFS::instance().find(String(file), GET_CWD());
 
-  if (!pFile)
-  {
-      SYSCALL_ERROR(DoesNotExist);
-      return 0;
-  }
+    if (!pFile)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return 0;
+    }
 
-  while (pFile->isSymlink())
-      pFile = Symlink::fromFile(pFile)->followLink();
+    while (pFile->isSymlink())
+        pFile = Symlink::fromFile(pFile)->followLink();
 
-  if (pFile->isDirectory())
-  {
-      // Error - is directory.
-      SYSCALL_ERROR(IsADirectory);
-      return 0;
-  }
+    if (pFile->isDirectory())
+    {
+        // Error - is directory.
+        SYSCALL_ERROR(IsADirectory);
+        return 0;
+    }
 
-  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
-  if(!pProcess->getLinker()->loadObject(pFile))
-  {
-    ERROR("dlopen: couldn't load " << String(file) << ".");
-    return 0;
-  }
+    if (!pProcess->getLinker()->loadObject(pFile))
+    {
+        ERROR("dlopen: couldn't load " << String(file) << ".");
+        return 0;
+    }
 
-  dlHandle* handle = reinterpret_cast<dlHandle*>(p);
+    dlHandle* handle = reinterpret_cast<dlHandle*>(p);
 
-  return reinterpret_cast<uintptr_t>(handle);
+    return reinterpret_cast<uintptr_t>(handle);
 }
 
 // m_ProcessObjects should be better to use!
 
 uintptr_t posix_dlsym(void* handle, const char* name)
 {
-  SC_NOTICE("dlsym(" << name << ")");
+    SC_NOTICE("dlsym(" << name << ")");
 
-  if(!handle)
-      return 0;
+    if (!handle)
+        return 0;
 
-  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
-  return pProcess->getLinker()->resolve(String(name));
+    return pProcess->getLinker()->resolve(String(name));
 }
 
 int posix_dlclose(void* handle)
 {
-  SC_NOTICE("dlclose");
+    SC_NOTICE("dlclose");
 
-  return 0;
+    return 0;
 }
 
