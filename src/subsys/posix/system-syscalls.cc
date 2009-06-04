@@ -250,7 +250,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
 
     pProcess->description() = String(name);
-    NOTICE("Loading " << String(name) << "...");
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     save_string_array(argv, savedArgv);
@@ -307,11 +306,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Load the saved argv and env into this address space, starting at "location".
     uintptr_t location = ARGV_ENV_LOC;
-    NOTICE("Loading argv");
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
-    NOTICE("Loading env");
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
-    NOTICE("Done");
 
     Elf *elf = pProcess->getLinker()->getProgramElf();
 
