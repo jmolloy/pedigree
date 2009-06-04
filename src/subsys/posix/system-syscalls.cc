@@ -188,7 +188,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Attempt to find the file, first!
     File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
-
     if (!file)
     {
         // Error - not found.
@@ -206,45 +205,54 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         return -1;
     }
 
-    // Try and read the shebang, if any
-#if 0
-    String theShebang;
-    static char shebang[2];
-    file->read(0, 2, reinterpret_cast<uintptr_t>(shebang));
-    if (!strncmp(shebang, "#!", 2))
-    {
-        ERROR("Shebang!");
+    // The argv and environment for the new process
+    Vector<String*> savedArgv, savedEnv;
 
+    /// \todo This could probably be cleaned up a little.
+
+    // Try and read the shebang, if any
+    String theShebang, *oldPath = 0;
+    static char tmpBuff[128];
+    file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
+    if (!strncmp(tmpBuff, "#!", 2))
+    {
         // We have a shebang, so grab the command
         /// \todo Handle shebang lines that contain arguments (eg, "#!/bin/python -i")
         NormalStaticString execLine;
         execLine.clear();
 
         size_t i = 2;
-        shebang[1] = 0;
         while (i < file->getSize())
         {
-            file->read(i++, 1, reinterpret_cast<uintptr_t>(shebang));
-            if (shebang[0] == '\n')
-                break;
+            file->read(i, 128, reinterpret_cast<uintptr_t>(tmpBuff));
+            tmpBuff[128] = 0;
+            execLine += tmpBuff;
 
-            execLine += shebang;
+            if (execLine.contains("\n"))
+            {
+                execLine = execLine.left(execLine.first('\n'));
+                break;
+            }
+
+            i += 128;
         }
 
         execLine += "\0";
 
+        oldPath = new String(name);
+        savedArgv.pushBack(oldPath);
+
         theShebang = String(static_cast<const char*>(execLine));
-        NOTICE("Shebang line = " << theShebang << ".");
         name = static_cast<const char*>(theShebang);
 
-        return -1;
+        // And reload the file, now that we're loading a new application
+        file = VFS::instance().find(theShebang, Processor::information().getCurrentThread()->getParent()->getCwd());
     }
-#endif
 
     pProcess->description() = String(name);
+    NOTICE("Loading " << String(name) << "...");
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
-    Vector<String*> savedArgv, savedEnv;
     save_string_array(argv, savedArgv);
     save_string_array(env, savedEnv);
 
@@ -299,8 +307,11 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Load the saved argv and env into this address space, starting at "location".
     uintptr_t location = ARGV_ENV_LOC;
+    NOTICE("Loading argv");
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
+    NOTICE("Loading env");
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
+    NOTICE("Done");
 
     Elf *elf = pProcess->getLinker()->getProgramElf();
 

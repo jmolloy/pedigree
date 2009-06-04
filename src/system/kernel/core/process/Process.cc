@@ -61,7 +61,6 @@ Process::~Process()
   m_Threads.erase(m_Threads.begin());
   delete pThread; // Calls Scheduler::remove and this::remove.
 
-  NOTICE("Cleaning up the process subsystem");
   delete m_pSubsystem;
 
   Spinlock lock;
