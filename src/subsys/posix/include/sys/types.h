@@ -1,4 +1,4 @@
-/* unified sys/types.h: 
+/* unified sys/types.h:
    start with sef's sysvi386 version.
    merge go32 version -- a few ifdefs.
    h8300hms, h8300xray, and sysvnecv70 disagree on the following types:
@@ -10,8 +10,8 @@
    typedef int mode_t;
    typedef int caddr_t;
 
-   however, these aren't "reasonable" values, the sysvi386 ones make far 
-   more sense, and should work sufficiently well (in particular, h8300 
+   however, these aren't "reasonable" values, the sysvi386 ones make far
+   more sense, and should work sufficiently well (in particular, h8300
    doesn't have a stat, and the necv70 doesn't matter.) -- eichin
  */
 
@@ -39,7 +39,7 @@ typedef __uint8_t	u_int8_t;
 #endif
 #if ___int16_t_defined
 typedef __uint16_t	u_int16_t;
-#endif 
+#endif
 #if ___int32_t_defined
 typedef __uint32_t	u_int32_t;
 #endif
@@ -187,8 +187,8 @@ typedef	short	dev_t;
 #ifndef __CYGWIN__	/* which defines these types in it's own types.h. */
 typedef long		off_t;
 
-typedef	unsigned short	uid_t;
-typedef	unsigned short	gid_t;
+typedef	unsigned int	uid_t;
+typedef	unsigned int	gid_t;
 #endif
 
 typedef int pid_t;
@@ -226,7 +226,7 @@ typedef unsigned short nlink_t;
    includes the W32api winsock[2].h header must know what it is doing;
    it must not call the cygwin32 select function.
 */
-# if !(defined (_POSIX_SOURCE) || defined (_WINSOCK_H) || defined (__USE_W32_SOCKETS)) 
+# if !(defined (_POSIX_SOURCE) || defined (_WINSOCK_H) || defined (__USE_W32_SOCKETS))
 #  define _SYS_TYPES_FD_SET
 #  define	NBBY	8		/* number of bits in a byte */
 /*
@@ -286,7 +286,7 @@ typedef long suseconds_t;
 
 
 /* Cygwin will probably never have full posix compliance due to little things
- * like an inability to set the stackaddress. Cygwin is also using void *  
+ * like an inability to set the stackaddress. Cygwin is also using void *
  * pointers rather than structs to ensure maximum binary compatability with
  * previous releases.
  * This means that we don't use the types defined here, but rather in

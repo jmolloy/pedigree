@@ -9,6 +9,7 @@
 #ifdef COMPILING_SUBSYS
 typedef unsigned int uint32_t;
 typedef unsigned long size_t;
+typedef size_t socklen_t;
 #endif
 
 struct hostent
@@ -45,6 +46,18 @@ struct servent
   char* s_proto;
 };
 
+struct addrinfo
+{
+    int ai_flags;
+    int ai_family;
+    int ai_socktype;
+    int ai_protocol;
+    socklen_t ai_addrlen;
+    struct sockaddr *ai_addr;
+    char *ai_canonname;
+    struct addrinfo *ai_next;
+};
+
 #define IPPORT_RESERVED 0xFFFF
 
 extern int h_errno;
@@ -53,6 +66,32 @@ extern int h_errno;
 #define NO_DATA           2
 #define NO_RECOVERY       3
 #define TRY_AGAIN         4
+
+#define AI_PASSIVE      0
+#define AI_CANONNAME    1
+#define AI_NUMERICHOST  2
+#define AI_NUMERICSERV  4
+#define AI_V4MAPPED     8
+#define AI_ALL          16
+#define AI_ADDRCONFIG   32
+
+#define NI_NOFQDN       0
+#define NI_NUMERICHOST  1
+#define NI_NAMEREQD     2
+#define NI_NUMERICSERV  4
+#define NI_NUMERICSCOPE 8
+#define NI_DGRAM        16
+
+#define EAI_AGAIN       0
+#define EAI_BADFLAGS    1
+#define EAI_FAIL        2
+#define EAI_FAMILY      3
+#define EAI_MEMORY      4
+#define EAI_NONAME      5
+#define EAI_SERVICE     6
+#define EAI_SOCKTYPE    7
+#define EAI_SYSTEM      8
+#define EAI_OVERFLOW    9
 
 void             endhostent(void);
 void             endnetent(void);
@@ -74,5 +113,9 @@ void             sethostent(int stayopen);
 void             setnetent(int stayopen);
 void             setprotoent(int stayopen);
 void             setservent(int stayopen);
+void             freeaddrinfo(struct addrinfo *ai);
+int              getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
+int              getnameinfo(const struct sockaddr *sa, socklen_t salen, char *node, socklen_t nodelen, char *service,
+                             socklen_t servicelen, int flags);
 
 #endif

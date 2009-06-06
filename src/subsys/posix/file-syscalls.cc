@@ -457,8 +457,11 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
-    File* file = VFS::instance().find(String(name), GET_CWD());
-
+    File* file = 0;
+    if (!strcmp(name, "/dev/null"))
+        file = NullFs::instance().getFile();
+    else
+        file = VFS::instance().find(String(name), GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -476,7 +479,7 @@ int posix_stat(const char *name, struct stat *st)
     }
 
     int mode = 0;
-    if (ConsoleManager::instance().isConsole(file))
+    if (ConsoleManager::instance().isConsole(file) || !strcmp(name, "/dev/null"))
     {
         mode = S_IFCHR;
     }

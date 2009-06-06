@@ -1,6 +1,6 @@
 /*
  * time.h
- * 
+ *
  * Struct and function declarations for dealing with time.
  */
 
@@ -47,6 +47,7 @@ clock_t	   _EXFUN(clock,    (void));
 double	   _EXFUN(difftime, (time_t _time2, time_t _time1));
 time_t	   _EXFUN(mktime,   (struct tm *_timeptr));
 time_t	   _EXFUN(time,     (time_t *_timer));
+time_t	   _EXFUN(timegm,	(struct tm *));
 #ifndef _REENT_ONLY
 char	  *_EXFUN(asctime,  (const struct tm *_tblock));
 char	  *_EXFUN(ctime,    (const time_t *_time));
@@ -229,7 +230,7 @@ extern "C" {
 #if defined(_POSIX_MONOTONIC_CLOCK)
 
 /*  The identifier for the system-wide monotonic clock, which is defined
- *      as a clock whose value cannot be set via clock_settime() and which 
+ *      as a clock whose value cannot be set via clock_settime() and which
  *          cannot have backward clock jumps. */
 
 #define CLOCK_MONOTONIC (clockid_t)4

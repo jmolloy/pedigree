@@ -485,6 +485,9 @@ int	_EXFUN(_vsscanf_r, (struct _reent *, const char *, const char *, __VALIST)
 ssize_t _EXFUN(__getdelim, (char **, size_t *, int, FILE *));
 ssize_t _EXFUN(__getline, (char **, size_t *, FILE *));
 
+#define getdelim __getdelim
+#define getline __getline
+
 #ifdef __LARGE64_FILES
 #if !defined(__CYGWIN__) || defined(_COMPILING_NEWLIB)
 FILE *	_EXFUN(fdopen64, (int, const char *));
@@ -575,7 +578,7 @@ FILE *_EXFUN(_fopencookie_r,(struct _reent *, void *__cookie,
 
 #ifndef __CUSTOM_FILE_IO__
 /*
- * The __sfoo macros are here so that we can 
+ * The __sfoo macros are here so that we can
  * define function versions in the C library.
  */
 #define       __sgetc_raw_r(__ptr, __f) (--(__f)->_r < 0 ? __srget_r(__ptr, __f) : (int)(*(__f)->_p++))
@@ -584,7 +587,7 @@ FILE *_EXFUN(_fopencookie_r,(struct _reent *, void *__cookie,
 /*  For a platform with CR/LF, additional logic is required by
   __sgetc_r which would otherwise simply be a macro; therefore we
   use an inlined function.  The function is only meant to be inlined
-  in place as used and the function body should never be emitted.  
+  in place as used and the function body should never be emitted.
 
   There are two possible means to this end when compiling with GCC,
   one when compiling with a standard C99 compiler, and for other
@@ -607,7 +610,7 @@ FILE *_EXFUN(_fopencookie_r,(struct _reent *, void *__cookie,
 /* We're using GCC, but without the new C99-compatible behaviour.  */
 #define _ELIDABLE_INLINE extern __inline__ _ATTRIBUTE ((__always_inline__))
 #else
-/* We're using GCC in C99 mode, or an unknown compiler which 
+/* We're using GCC in C99 mode, or an unknown compiler which
   we just have to hope obeys the C99 semantics of inline.  */
 #define _ELIDABLE_INLINE __inline__
 #endif

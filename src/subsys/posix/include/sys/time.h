@@ -77,6 +77,11 @@ int _EXFUN(getitimer, (int __which, struct itimerval *__value));
 int _EXFUN(setitimer, (int __which, const struct itimerval *__value,
 					struct itimerval *__ovalue));
 
+/* The spec says this should be here?
+ * http://www.opengroup.org/onlinepubs/007908775/xsh/select.html
+ */
+int _EXFUN(select, (int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout));
+
 #ifdef __cplusplus
 }
 #endif

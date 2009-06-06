@@ -25,6 +25,7 @@ int h_errno; // required by networking code
 #include "syscall.h"
 
 #include <stdarg.h>
+#include <sys/utsname.h>
 
 typedef void (*_sig_func_ptr)(int);
 
@@ -503,6 +504,8 @@ int umask(int mask)
 int chmod(const char *path, int mode)
 {
   STUBBED("chmod");
+  return 0;
+
   errno = ENOENT;
   return -1;
 }
@@ -510,6 +513,8 @@ int chmod(const char *path, int mode)
 int chown(const char *path, int owner, int group)
 {
   STUBBED("chown");
+  return 0;
+
   errno = ENOENT;
   return -1;
 }
@@ -517,6 +522,8 @@ int chown(const char *path, int owner, int group)
 int utime(const char *path,const struct utimbuf *times)
 {
   STUBBED("utime");
+  return 0;
+
   errno = ENOENT;
   return -1;
 }
@@ -1001,12 +1008,6 @@ int symlink()
   return 0;
 }
 
-int mknod()
-{
-  STUBBED("mknod");
-  return 0;
-}
-
 int fsync()
 {
   STUBBED("fsync");
@@ -1207,4 +1208,96 @@ int fchmod(int fildes, int mode)
 void sync()
 {
     STUBBED("sync");
+}
+
+/// \todo This is pretty hacky, might want to run a syscall instead and have it populated
+///       in the kernel where we can change it as time goes on.
+int uname(struct utsname *n)
+{
+    if(!n)
+        return -1;
+    strcpy(n->sysname, "Pedigree");
+    strcpy(n->release, "Foster");
+    strcpy(n->version, "0.1");
+    strcpy(n->machine, "i686");
+    gethostname(n->nodename, 128);
+    return 0;
+}
+
+int mknod(const char *path, unsigned int mode, short dev)
+{
+    STUBBED("mknod");
+    return -1;
+}
+
+/// \todo open needs to work on directories, then implement this
+int fchdir(int fildes)
+{
+    STUBBED("fchdir");
+    return -1;
+}
+
+int getpwuid_r() //(uid_t uid, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
+{
+    STUBBED("getpwuid_r");
+    return -1;
+}
+
+int getgrgid_r() // (gid_t gid, struct group *grp, char *buffer, size_t bufsize, struct group **result)
+{
+    STUBBED("getgrgid_r");
+    return -1;
+}
+
+int getpwnam_r() // (const char *name, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
+{
+    STUBBED("getpwnam_r");
+    return -1;
+}
+
+int getgrnam_r() // (const char *name, struct group *grp, char *buffer, size_t bufsize, struct group **result)
+{
+    STUBBED("getgrnam_r");
+    return -1;
+}
+
+void err(int eval, const char * fmt, ...)
+{
+    printf("err: %d: (todo: print format string based on arguments): %s\n", errno, strerror(errno));
+    exit(eval);
+}
+
+void freeaddrinfo(struct addrinfo *ai)
+{
+    STUBBED("freeaddrinfo");
+}
+
+int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res)
+{
+    STUBBED("getaddrinfo");
+    return -1;
+}
+
+int getnameinfo(const struct sockaddr *sa, socklen_t salen, char *node, socklen_t nodelen, char *service, socklen_t servicelen, int flags)
+{
+    STUBBED("getnameinfo");
+    return -1;
+}
+
+long timegm() // (struct tm *tm)
+{
+    STUBBED("timegm");
+    return -1;
+}
+
+int chroot(const char *path)
+{
+    STUBBED("chroot");
+    return -1;
+}
+
+char *mkdtemp(char *template)
+{
+    STUBBED("mkdtemp");
+    return 0;
 }
