@@ -24,17 +24,7 @@ int h_errno; // required by networking code
 // Define errno before including syscall.h.
 #include "syscall.h"
 
-#include <stdarg.h>
-#include <sys/utsname.h>
-
-typedef void (*_sig_func_ptr)(int);
-
-extern void *malloc(int);
-extern void free(void*);
-extern void strcpy(char*,char*);
-
-extern void printf(char*,...);
-extern void sprintf(char*, char*,...);
+#include "newlib.h"
 
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
@@ -87,104 +77,25 @@ extern void sprintf(char*, char*,...);
 
 #endif
 
-#define MAXNAMLEN 255
+// #define MAXNAMLEN 255
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
   errno = ENOSYS;
 
+#if 0
 #define	F_DUPFD		0	/* Duplicate fildes */
 #define	F_GETFD		1	/* Get fildes flags (close on exec) */
 #define	F_SETFD		2	/* Set fildes flags (close on exec) */
 #define	F_GETFL		3	/* Get file flags */
 #define	F_SETFL		4	/* Set file flags */
-
-struct dirent
-{
-  char d_name[MAXNAMLEN];
-  int d_ino;
-};
-
-typedef struct ___DIR
-{
-  int fd;
-  struct dirent ent;
-} DIR;
-
-struct timeval {
-  unsigned int tv_sec;
-  unsigned int tv_usec;
-};
-
-struct timezone_type {
-  int tz_minuteswest;
-  int tz_dsttime;
-};
-
-struct sigevent {
-};
-
-struct passwd {
-	char	*pw_name;		/* user name */
-	char	*pw_passwd;		/* encrypted password */
-	int	pw_uid;			/* user uid */
-	int	pw_gid;			/* user gid */
-	char	*pw_comment;		/* comment */
-	char	*pw_gecos;		/* Honeywell login info */
-	char	*pw_dir;		/* home directory */
-	char	*pw_shell;		/* default shell */
-};
-
-struct  stat
-{
-  int   st_dev;
-  int   st_ino;
-  int   st_mode;
-  int   st_nlink;
-  int   st_uid;
-  int   st_gid;
-  int   st_rdev;
-  int   st_size;
-  int   st_atime;
-  int   st_mtime;
-  int   st_ctime;
-};
-
-struct sockaddr
-{
-  unsigned int sa_family;
-  char sa_data[14];
-};
-
-struct in_addr
-{
-  unsigned int s_addr;
-};
-
-struct utimbuf {};
-struct termios {};
-struct fd_set {};
-struct msghdr {};
-struct timeb {};
-
-#define COMPILING_SUBSYS
-#define SYS_SOCK_CONSTANTS_ONLY
-#include "include/netdb.h"
-#include "include/netinet/in.h"
-#include "include/poll.h"
-
-struct sigaction
-{
-  _sig_func_ptr sa_handler;
-  unsigned long sa_mask;
-  int sa_flags;
-};
+#endif
 
 char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
 int daylight = 0;
 long timezone = 0;
 int altzone = 0;
 
-int ftruncate(int a, int b)
+int ftruncate(int a, off_t b)
 {
   STUBBED("ftruncate");
   return -1;
@@ -195,7 +106,7 @@ char* getcwd(char *buf, unsigned long size)
   return (char *)syscall2(POSIX_GETCWD, (int) buf, (int) size);
 }
 
-int mkdir(const char *p, int mode)
+int mkdir(const char *p, mode_t mode)
 {
   return (int)syscall2(POSIX_MKDIR, (int)p, mode);
 }
@@ -213,6 +124,7 @@ int _execve(char *name, char **argv, char **env)
 void _exit(int val)
 {
   syscall1(POSIX_EXIT, val);
+  while(1);
 }
 
 int fork()
@@ -240,29 +152,33 @@ int _isatty(int file)
   return (int) syscall1(POSIX_ISATTY, file);
 }
 
-int link(char *old, char *_new)
+int link(const char *old, const char *_new)
 {
   return (int)syscall2(POSIX_LINK, (int) old, (int) _new);
 }
 
-int lseek(int file, int ptr, int dir)
+off_t lseek(int file, off_t ptr, int dir)
 {
-  return (int)syscall3(POSIX_LSEEK, file, ptr, dir);
+  return (off_t) syscall3(POSIX_LSEEK, file, ptr, dir);
 }
 
-int open(const char *name, int flags, int mode)
+int open(const char *name, int flags, ...) // , mode_t mode)
 {
+  va_list ap;
+  va_start(ap, flags);
+  mode_t mode = va_arg(ap, mode_t);
+  va_end(ap);
   return (int)syscall3(POSIX_OPEN, (int)name, flags, mode);
 }
 
-int read(int file, char *ptr, int len)
+_ssize_t read(int file, void *ptr, size_t len)
 {
-  return (int)syscall3(POSIX_READ, file, (int)ptr, len);
+  return (_ssize_t) syscall3(POSIX_READ, file, (int)ptr, len);
 }
 
-int sbrk(int incr)
+void *sbrk(ptrdiff_t incr)
 {
-  return (int)syscall1(POSIX_SBRK, incr);
+  return (void*) syscall1(POSIX_SBRK, incr);
 }
 
 int stat(const char *file, struct stat *st)
@@ -286,7 +202,7 @@ int getrusage(int target, void *buf)
 }
 #endif
 
-int unlink(char *name)
+int unlink(const char *name)
 {
   return (int)syscall1(POSIX_UNLINK, (int)name);
 }
@@ -301,19 +217,19 @@ int waitpid(int pid, int *status, int options)
   return (int)syscall3(POSIX_WAITPID, pid, (int)status, options);
 }
 
-int write(int file, char *ptr, int len)
+_ssize_t write(int file, const void *ptr, size_t len)
 {
-  return (int)syscall3(POSIX_WRITE, file, (int)ptr, len);
+  return (_ssize_t) syscall3(POSIX_WRITE, file, (int)ptr, len);
 }
 
-int lstat(char *file, struct stat *st)
+int lstat(const char *file, struct stat *st)
 {
-  return (int)syscall2(POSIX_LSTAT, (int)file, (int)st);
+  return (int) syscall2(POSIX_LSTAT, (int)file, (int)st);
 }
 
 DIR *opendir(const char *dir)
 {
-  DIR *p = malloc(sizeof(DIR));
+  DIR *p = (DIR*) malloc(sizeof(DIR));
   p->fd = syscall2(POSIX_OPENDIR, (int)dir, (int)&p->ent);
   if(p->fd < 0)
   {
@@ -357,23 +273,23 @@ int rename(const char *old, const char *new)
   return (int)syscall2(POSIX_RENAME, (int) old, (int) new);
 }
 
-int tcgetattr(int fd, void *p)
+int tcgetattr(int fd, struct termios *p)
 {
   return (int)syscall2(POSIX_TCGETATTR, fd, (int)p);
 }
 
-int tcsetattr(int fd, int optional_actions, void *p)
+int tcsetattr(int fd, int optional_actions, struct termios *p)
 {
   return (int)syscall3(POSIX_TCSETATTR, fd, optional_actions, (int)p);
 }
 
-int mkfifo(const char *_path, int __mode)
+int mkfifo(const char *_path, mode_t __mode)
 {
   STUBBED("mkfifo");
   return -1;
 }
 
-int gethostname(char *name, int len)
+int gethostname(char *name, size_t len)
 {
   STUBBED("gethostname");
   strcpy(name, "pedigree");
@@ -409,36 +325,36 @@ int tcdrain(int fd)
   return -1;
 }
 
-int gettimeofday(struct timeval *tv, struct timezone_type *tz)
+int gettimeofday(struct timeval *tv, void *tz)
 {
   syscall2(POSIX_GETTIMEOFDAY, (int)tv, (int)tz);
 
   return 0;
 }
 
-int getuid()
+uid_t getuid()
 {
   return (int)syscall0(POSIX_GETUID);
 }
 
-int getgid()
+gid_t getgid()
 {
   return (int)syscall0(POSIX_GETGID);
 }
 
-int geteuid()
+uid_t geteuid()
 {
   STUBBED("geteuid");
   return getuid();
 }
 
-int getegid()
+gid_t getegid()
 {
   STUBBED("getegid");
   return getgid();
 }
 
-int getppid()
+pid_t getppid()
 {
   STUBBED("getppid");
   return 0;
@@ -471,14 +387,14 @@ char *strsignal(int sig)
   return (char*)"Unknown";
 }
 
-int setuid(int uid)
+int setuid(uid_t uid)
 {
   STUBBED("setuid");
   errno = EINVAL;
   return -1;
 }
 
-int setgid(int gid)
+int setgid(gid_t gid)
 {
   STUBBED("setgid");
   errno = EINVAL;
@@ -495,13 +411,13 @@ unsigned int alarm(unsigned int seconds)
   return (unsigned int)syscall1(POSIX_ALARM, seconds);
 }
 
-int umask(int mask)
+mode_t umask(mode_t mask)
 {
   STUBBED("umask");
   return 0;
 }
 
-int chmod(const char *path, int mode)
+int chmod(const char *path, mode_t mode)
 {
   STUBBED("chmod");
   return 0;
@@ -510,7 +426,7 @@ int chmod(const char *path, int mode)
   return -1;
 }
 
-int chown(const char *path, int owner, int group)
+int chown(const char *path, uid_t owner, gid_t group)
 {
   STUBBED("chown");
   return 0;
@@ -621,14 +537,14 @@ struct passwd *getpwent()
   return &g_passwd;
 }
 
-struct passwd *getpwuid(int uid)
+struct passwd *getpwuid(uid_t uid)
 {
   if (syscall3(POSIX_GETPWENT, (int)&g_passwd, uid, (int)&g_passwd_str) != 0)
     return 0;
   return &g_passwd;
 }
 
-struct passwd *getpwnam(char *name)
+struct passwd *getpwnam(const char *name)
 {
   if (syscall3(POSIX_GETPWNAM, (int)&g_passwd, (int)name, (int)&g_passwd_str) != 0)
     return 0;
@@ -636,7 +552,7 @@ struct passwd *getpwnam(char *name)
 }
 
 // Pedigree-specific function: login with given uid and password.
-int login(int uid, char *password)
+int login(uid_t uid, char *password)
 {
   return (int)syscall2(PEDIGREE_LOGIN, uid, (int)password);
 }
@@ -687,12 +603,12 @@ int fcntl(int fildes, int cmd, ...)
   return ret;
 }
 
-int sigprocmask(int how, unsigned long* set, unsigned long* oset)
+int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
 {
   return (int)syscall3(POSIX_SIGPROCMASK, how, (int) set, (int) oset);
 }
 
-int fchown(int fildes, int owner, int group)
+int fchown(int fildes, uid_t owner, uid_t group)
 {
   STUBBED("fchown");
   return -1;
@@ -709,44 +625,44 @@ int socket(int domain, int type, int protocol)
   return (int)syscall3(POSIX_SOCKET, domain, type, protocol);
 }
 
-int connect(int sock, const struct sockaddr* address, unsigned long addrlen)
+int connect(int sock, const struct sockaddr* address, size_t addrlen)
 {
   return (int)syscall3(POSIX_CONNECT, sock, (int) address, (int) addrlen);
 }
 
-int send(int sock, const void * buff, unsigned long bufflen, int flags)
+ssize_t send(int sock, const void * buff, size_t bufflen, int flags)
 {
-  return (int)syscall4(POSIX_SEND, sock, (int) buff, (int) bufflen, flags);
+  return (ssize_t)syscall4(POSIX_SEND, sock, (int) buff, (int) bufflen, flags);
 }
 
-int recv(int sock, void * buff, unsigned long bufflen, int flags)
+ssize_t recv(int sock, void * buff, size_t bufflen, int flags)
 {
-  return (int)syscall4(POSIX_RECV, sock, (int) buff, (int) bufflen, flags);
+  return (ssize_t)syscall4(POSIX_RECV, sock, (int) buff, (int) bufflen, flags);
 }
 
-int accept(int sock, struct sockaddr* remote_addr, unsigned long* addrlen)
+int accept(int sock, struct sockaddr* remote_addr, size_t *addrlen)
 {
   return (int)syscall3(POSIX_ACCEPT, sock, (int) remote_addr, (int) addrlen);
 }
 
-int bind(int sock, const struct sockaddr* local_addr, unsigned long addrlen)
+int bind(int sock, const struct sockaddr* local_addr, size_t addrlen)
 {
   return (int)syscall3(POSIX_BIND, sock, (int) local_addr, (int) addrlen);
 }
 
-int getpeername(int sock, struct sockaddr* addr, unsigned long* addrlen)
+int getpeername(int sock, struct sockaddr* addr, size_t *addrlen)
 {
   STUBBED("getpeername");
   return -1;
 }
 
-int getsockname(int sock, struct sockaddr* addr, unsigned long* addrlen)
+int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
 {
   STUBBED("getsockname");
   return -1;
 }
 
-int getsockopt(int sock, int level, int optname, void* optvalue, unsigned long* optlen)
+int getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
 {
   STUBBED("getsockopt");
   return -1;
@@ -761,13 +677,13 @@ struct special_send_recv_data
 {
   int sock;
   void* buff;
-  unsigned long bufflen;
+  size_t bufflen;
   int flags;
   struct sockaddr* remote_addr;
-  unsigned long* addrlen;
+  socklen_t* addrlen;
 } __attribute__((packed));
 
-long recvfrom(int sock, void* buff, unsigned long bufflen, int flags, struct sockaddr* remote_addr, unsigned long* addrlen)
+ssize_t recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockaddr* remote_addr, size_t *addrlen)
 {
   struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
   tmp->sock = sock;
@@ -796,7 +712,7 @@ long sendmsg(int sock, const struct msghdr* msg, int flags)
   return -1;
 }
 
-long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const struct sockaddr* remote_addr, unsigned long* addrlen)
+ssize_t sendto(int sock, const void* buff, size_t bufflen, int flags, const struct sockaddr* remote_addr, socklen_t addrlen)
 {
   struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
   tmp->sock = sock;
@@ -804,7 +720,7 @@ long sendto(int sock, const void* buff, unsigned long bufflen, int flags, const 
   tmp->bufflen = bufflen;
   tmp->flags = flags;
   tmp->remote_addr = (struct sockaddr*)remote_addr;
-  tmp->addrlen = addrlen;
+  tmp->addrlen = &addrlen;
 
   int ret = syscall1(POSIX_SENDTO, (int) tmp);
 
@@ -1002,13 +918,13 @@ int getgrgid()
   return 0;
 }
 
-int symlink()
+int symlink(const char *path1, const char *path2)
 {
   STUBBED("symlink");
   return 0;
 }
 
-int fsync()
+int fsync(int fd)
 {
   STUBBED("fsync");
   return 0;
@@ -1026,21 +942,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
   return 0;
 }
 
-/*
-void* popen(const char *command, const char *mode)
-{
-  STUBBED("popen");
-  return 0;
-}
-
-int pclose(void* stream)
-{
-  STUBBED("pclose");
-  return 0;
-}
-*/
-
-int readlink(const char* path, char* buf, unsigned int bufsize)
+ssize_t readlink(const char* path, char* buf, size_t bufsize)
 {
   return (int) syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
 }
@@ -1199,7 +1101,7 @@ unsigned short ntohs(unsigned short n)
     return BIG_TO_HOST16(n);
 }
 
-int fchmod(int fildes, int mode)
+int fchmod(int fildes, mode_t mode)
 {
     STUBBED("fchmod");
     return -1;
@@ -1224,7 +1126,7 @@ int uname(struct utsname *n)
     return 0;
 }
 
-int mknod(const char *path, unsigned int mode, short dev)
+int mknod(const char *path, mode_t mode, dev_t dev)
 {
     STUBBED("mknod");
     return -1;
@@ -1237,25 +1139,25 @@ int fchdir(int fildes)
     return -1;
 }
 
-int getpwuid_r() //(uid_t uid, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
+int getpwuid_r(uid_t uid, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
 {
     STUBBED("getpwuid_r");
     return -1;
 }
 
-int getgrgid_r() // (gid_t gid, struct group *grp, char *buffer, size_t bufsize, struct group **result)
+int getgrgid_r(gid_t gid, struct group *grp, char *buffer, size_t bufsize, struct group **result)
 {
     STUBBED("getgrgid_r");
     return -1;
 }
 
-int getpwnam_r() // (const char *name, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
+int getpwnam_r(const char *name, struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
 {
     STUBBED("getpwnam_r");
     return -1;
 }
 
-int getgrnam_r() // (const char *name, struct group *grp, char *buffer, size_t bufsize, struct group **result)
+int getgrnam_r(const char *name, struct group *grp, char *buffer, size_t bufsize, struct group **result)
 {
     STUBBED("getgrnam_r");
     return -1;

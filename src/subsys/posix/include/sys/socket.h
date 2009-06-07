@@ -5,11 +5,11 @@
 extern "C" {
 #endif
 
-#ifndef SYS_SOCK_CONSTANTS_ONLY
-
+#ifndef COMPILING_SUBSYS
 #include <inttypes.h>
 #include <sys/types.h>
-//#include <sys/uio.h>
+#endif
+
 
 typedef size_t socklen_t;
 typedef uint32_t sa_family_t;
@@ -41,8 +41,6 @@ struct linger
   int l_onoff;
   int l_linger;
 };
-
-#endif
 
 #define SOCK_DGRAM      1
 #define SOCK_RAW        2
@@ -100,7 +98,6 @@ enum SocketOptions
 #define  SHUT_WR 1 // disables sending
 #define  SHUT_RDWR 2 // disables recv/send
 
-#ifndef SYS_SOCK_CONSTANTS_ONLY
 int     accept(int, struct sockaddr *, socklen_t *);
 int     bind(int, const struct sockaddr *, socklen_t);
 int     connect(int, const struct sockaddr *, socklen_t);
@@ -119,8 +116,6 @@ int     shutdown(int, int);
 int     sockatmark(int);
 int     socket(int, int, int);
 int     socketpair(int, int, int, int [2]);
-#endif
-
 
 #ifdef __cplusplus
 }

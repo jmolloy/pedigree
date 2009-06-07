@@ -2,15 +2,11 @@
 #define _NETDB_H
 
 #ifndef COMPILING_SUBSYS
-#include <inttypes.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #endif
 
-#ifdef COMPILING_SUBSYS
-typedef unsigned int uint32_t;
-typedef unsigned long size_t;
-typedef size_t socklen_t;
-#endif
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 struct hostent
 {

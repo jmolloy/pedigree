@@ -224,6 +224,8 @@ int posix_read(int fd, char *ptr, int len)
         pFd->offset += nRead;
     }
 
+    NOTICE("number of bytes read = " << nRead << "...");
+
     return static_cast<int>(nRead);
 }
 
@@ -520,6 +522,10 @@ int posix_stat(const char *name, struct stat *st)
 
 int posix_fstat(int fd, struct stat *st)
 {
+    F_NOTICE("fstat(" << Dec << fd << Hex << ")");
+    if(!st)
+        return -1;
+
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -572,12 +578,13 @@ int posix_fstat(int fd, struct stat *st)
     st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
     st->st_mtime = static_cast<int>(pFd->file->getModifiedTime());
     st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
+
     return 0;
 }
 
 int posix_lstat(char *name, struct stat *st)
 {
-    //F_NOTICE("lstat(" << name << ")");
+    F_NOTICE("lstat(" << name << ")");
 
     File *file = VFS::instance().find(String(name), GET_CWD());
 

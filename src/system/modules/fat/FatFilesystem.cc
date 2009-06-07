@@ -1023,6 +1023,8 @@ String FatFilesystem::convertFilenameFrom(String filename)
 
 void FatFilesystem::truncate(File *pFile)
 {
+    NOTICE("truncate");
+
     // First of all, set the file size to zero, so that if the file is used
     // elsewhere it's updated.
     updateFileSize(pFile, -pFile->getSize());

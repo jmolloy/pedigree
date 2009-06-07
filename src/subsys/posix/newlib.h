@@ -14,6 +14,7 @@
 #define _EXFUN(x)
 #endif
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <pwd.h>
 #include <unistd.h>
@@ -23,7 +24,20 @@
 #include <sys/ioctl.h>
 #include <sys/termios.h>
 #include <sys/signal.h>
+
+#include <time.h>
 #include <sys/time.h>
+#include <sys/timeb.h>
+
+#include <stdarg.h>
+#include <utime.h>
+
+#include <sys/utsname.h>
+
+#define SYS_SOCK_CONSTANTS_ONLY
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include <poll.h>
 

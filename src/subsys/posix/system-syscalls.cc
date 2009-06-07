@@ -212,7 +212,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Try and read the shebang, if any
     String theShebang, *oldPath = 0;
-    static char tmpBuff[128];
+    static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     if (!strncmp(tmpBuff, "#!", 2))
     {
