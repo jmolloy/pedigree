@@ -49,9 +49,9 @@ int     _EXFUN(execvp, (const char *__file, char * const __argv[] ));
 #if defined(__CYGWIN__)
 int	_EXFUN(faccessat, (int __dirfd, const char *__path, int __mode, int __flags));
 #endif
-#if defined(__CYGWIN__) || defined(__rtems__) || defined(__SPU__)
+//#if defined(__CYGWIN__) || defined(__rtems__) || defined(__SPU__)
 int     _EXFUN(fchdir, (int __fildes));
-#endif
+//#endif
 int     _EXFUN(fchmod, (int __fildes, mode_t __mode ));
 #if !defined(__INSIDE_CYGWIN__)
 int     _EXFUN(fchown, (int __fildes, uid_t __owner, gid_t __group ));
@@ -147,8 +147,10 @@ int     _EXFUN(setgid, (gid_t __gid ));
 #if defined(__CYGWIN__)
 int	_EXFUN(setgroups, (int ngroups, const gid_t *grouplist ));
 #endif
-int     _EXFUN(setpgid, (pid_t __pid, pid_t __pgid ));
-int     _EXFUN(setpgrp, (void ));
+int setpgid(pid_t __pid, pid_t __pgid);
+//int     _EXFUN(setpgid, (pid_t __pid, pid_t __pgid ));
+int setpgrp();
+//int     _EXFUN(setpgrp, (void ));
 #if defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
 int	_EXFUN(setregid, (gid_t __rgid, gid_t __egid));
 int	_EXFUN(setreuid, (uid_t __ruid, uid_t __euid));
@@ -167,7 +169,7 @@ pid_t   _EXFUN(tcgetpgrp, (int __fildes ));
 int     _EXFUN(tcsetpgrp, (int __fildes, pid_t __pgrp_id ));
 char    _EXFUN(*ttyname, (int __fildes ));
 #if defined(__CYGWIN__) || defined(__rtems__)
-int     _EXFUN(ttyname_r, (int, char *, size_t)); 
+int     _EXFUN(ttyname_r, (int, char *, size_t));
 #endif
 int     _EXFUN(unlink, (const char *__path ));
 int 	_EXFUN(usleep, (useconds_t __useconds));
@@ -211,12 +213,12 @@ _READ_WRITE_RETURN_TYPE _EXFUN(_write, (int __fd, const void *__buf, size_t __nb
 int     _EXFUN(_execve, (const char *__path, char * const __argv[], char * const __envp[] ));
 #endif
 
-#if defined(__CYGWIN__) || defined(__rtems__) || defined(__sh__) || defined(__SPU__)
-#if !defined(__INSIDE_CYGWIN__)
+//#if defined(__CYGWIN__) || defined(__rtems__) || defined(__sh__) || defined(__SPU__)
+//#if !defined(__INSIDE_CYGWIN__)
 int     _EXFUN(ftruncate, (int __fd, off_t __length));
 int     _EXFUN(truncate, (const char *, off_t __length));
-#endif
-#endif
+//#endif
+//#endif
 
 #if defined(__CYGWIN__) || defined(__rtems__)
 int	_EXFUN(getdtablesize, (void));
@@ -225,8 +227,11 @@ useconds_t _EXFUN(ualarm, (useconds_t __useconds, useconds_t __interval));
 #if !(defined  (_WINSOCK_H) || defined (__USE_W32_SOCKETS))
 /* winsock[2].h defines as __stdcall, and with int as 2nd arg */
  int	_EXFUN(gethostname, (char *__name, size_t __len));
+ int	sethostname(char *__name, size_t __len);
 #endif
 char *	_EXFUN(mktemp, (char *));
+#else
+int	_EXFUN(gethostname, (char *__name, size_t __len));
 #endif
 
 #if defined(__CYGWIN__) || defined(__SPU__) || defined(__rtems__)

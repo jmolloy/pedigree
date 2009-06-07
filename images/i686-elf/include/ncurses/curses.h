@@ -114,7 +114,12 @@
  * For reentrant code, we map the various global variables into SCREEN by
  * using functions to access them.
  */
+#if NCURSES_REENTRANT
 #define NCURSES_PUBLIC_VAR(name) ncwrap_##name
+#else
+#define NCURSES_PUBLIC_VAR(name) name
+#endif
+
 #define NCURSES_WRAPPED_VAR(type,name) extern type NCURSES_PUBLIC_VAR(name)(void)
 
 /*

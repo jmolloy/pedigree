@@ -89,6 +89,8 @@ extern int h_errno;
 #define EAI_SYSTEM      8
 #define EAI_OVERFLOW    9
 
+const char      *gai_strerror(int ecode);
+
 void             endhostent(void);
 void             endnetent(void);
 void             endprotoent(void);

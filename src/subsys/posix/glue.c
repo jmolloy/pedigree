@@ -1203,3 +1203,23 @@ char *mkdtemp(char *template)
     STUBBED("mkdtemp");
     return 0;
 }
+
+const char * const gai_strings[] = {
+    "The name could not be resolved at this time.", // EAI_AGAIN
+    "The flags had an invalid value.", // EAI_BADFLAGS
+    "A non-recoverable error occurred.", // EAI_FAIL
+    "The address family was not recognized or the address length was invalid for the specified family.", // EAI_FAMILY
+    "There was a memory allocation failure.", // EAI_MEMORY
+    "The name does not resolve for the supplied parameters.", // EAI_NONAME
+    "The service passed was not recognized for the specified socket type.", // EAI_SERVICE
+    "The intended socket type was not recognized.", // EAI_SOCKTYPE
+    "A system error occurred (see errno).", // EAI_SYSTEM
+    "An argument buffer overflowed." // EAI_OVERFLOW
+};
+
+const char *gai_strerror(int ecode)
+{
+    if(ecode > EAI_OVERFLOW)
+        return "";
+    return gai_strings[ecode];
+}

@@ -224,8 +224,6 @@ int posix_read(int fd, char *ptr, int len)
         pFd->offset += nRead;
     }
 
-    NOTICE("number of bytes read = " << nRead << "...");
-
     return static_cast<int>(nRead);
 }
 
