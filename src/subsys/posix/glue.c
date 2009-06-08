@@ -90,7 +90,7 @@ int h_errno; // required by networking code
 #define	F_SETFL		4	/* Set file flags */
 #endif
 
-char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
+//char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
 int daylight = 0;
 long timezone = 0;
 int altzone = 0;
@@ -1193,6 +1193,8 @@ void freeaddrinfo(struct addrinfo *ai)
                 free(ai->ai_next);
         }
     }
+
+    errno = 0;
 }
 
 /// \todo Hacked implementation to get Pacman working. Needs to be improved!
@@ -1219,7 +1221,7 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     if(ip == -1)
     {
         // Not an IP... Try a DNS lookup
-        struct hostent *h = gethostbyname(nodename);
+        h = gethostbyname(nodename);
         if(!h)
             return EAI_FAIL;
     }
@@ -1235,7 +1237,7 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     static struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(atoi(servname));
-    memcpy(&addr.sin_addr.s_addr, h->h_addr, h->h_length);
+    memcpy(&(addr.sin_addr.s_addr), h->h_addr, h->h_length);
 
     // Fill the basics of the return pointer
     if(hints)
@@ -1243,10 +1245,10 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     else
     {
         ret->ai_flags = 0;
-        ret->ai_family = AF_INET;
         ret->ai_socktype = SOCK_STREAM;
         ret->ai_protocol = 0;
     }
+    ret->ai_family = PF_INET;
 
     // Fill the rest now
     ret->ai_addrlen = h->h_length;
