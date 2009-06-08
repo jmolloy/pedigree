@@ -28,8 +28,6 @@
 
 #include <sys/types.h>
 
-_BEGIN_STD_C
-
 struct tm
 {
   int	tm_sec;
@@ -42,6 +40,8 @@ struct tm
   int	tm_yday;
   int	tm_isdst;
 };
+
+_BEGIN_STD_C
 
 clock_t	   _EXFUN(clock,    (void));
 double	   _EXFUN(difftime, (time_t _time2, time_t _time1));

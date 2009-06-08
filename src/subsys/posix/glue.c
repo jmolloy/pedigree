@@ -774,8 +774,15 @@ unsigned int inet_addr(const char *cp)
             *tmp = 0;
             elements[num++] = tmp + 1;
         }
+        else if(!isdigit(*tmp))
+        {
+            // Not a digit - IPs must be digits and periods only!
+            free(tmp_ptr);
+            return -1;
+        }
 
         tmp++;
+
     }
 
     if (num != 4)
@@ -1173,13 +1180,85 @@ void err(int eval, const char * fmt, ...)
 
 void freeaddrinfo(struct addrinfo *ai)
 {
-    STUBBED("freeaddrinfo");
+    if(ai)
+    {
+        free(ai->ai_canonname);
+        struct addrinfo *tmp;
+        for(tmp = ai; tmp != 0;)
+        {
+            ai = tmp;
+            tmp = ai->ai_next;
+
+            if(ai->ai_next)
+                free(ai->ai_next);
+        }
+    }
 }
 
+/// \todo Hacked implementation to get Pacman working. Needs to be improved!
 int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res)
 {
-    STUBBED("getaddrinfo");
-    return -1;
+    // Validate incoming arguments
+    if(!nodename || !res)
+    {
+        errno = EINVAL;
+        return EAI_SYSTEM;
+    }
+
+    // Return buffer
+    struct addrinfo *ret = (struct addrinfo*) malloc(sizeof(struct addrinfo));
+    if(!ret)
+    {
+        errno = ENOMEM;
+        return EAI_SYSTEM;
+    }
+
+    // Attempt to turn the node name into an IP
+    int ip = inet_addr(nodename);
+    struct hostent *h;
+    if(ip == -1)
+    {
+        // Not an IP... Try a DNS lookup
+        struct hostent *h = gethostbyname(nodename);
+        if(!h)
+            return EAI_FAIL;
+    }
+    else
+    {
+        // It's an IP
+        /// \todo Write
+        errno = ENOSYS;
+        return EAI_SYSTEM;
+    }
+
+    // Put it into our static sockaddr
+    static struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(atoi(servname));
+    memcpy(&addr.sin_addr.s_addr, h->h_addr, h->h_length);
+
+    // Fill the basics of the return pointer
+    if(hints)
+        *ret = *hints;
+    else
+    {
+        ret->ai_flags = 0;
+        ret->ai_family = AF_INET;
+        ret->ai_socktype = SOCK_STREAM;
+        ret->ai_protocol = 0;
+    }
+
+    // Fill the rest now
+    ret->ai_addrlen = h->h_length;
+    ret->ai_addr = (struct sockaddr*) &addr;
+    ret->ai_canonname = (char*) malloc(strlen(nodename) + 1);
+    strcpy(ret->ai_canonname, nodename);
+    ret->ai_next = 0;
+
+    // Tell the caller where the pointer is at
+    *res = ret;
+
+    return 0;
 }
 
 int getnameinfo(const struct sockaddr *sa, socklen_t salen, char *node, socklen_t nodelen, char *service, socklen_t servicelen, int flags)
@@ -1188,7 +1267,7 @@ int getnameinfo(const struct sockaddr *sa, socklen_t salen, char *node, socklen_
     return -1;
 }
 
-long timegm() // (struct tm *tm)
+long timegm(struct tm *tm)
 {
     STUBBED("timegm");
     return -1;
