@@ -936,36 +936,94 @@ int posix_isatty(int fd)
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
 }
 
-class SelectTask : public TimedTask
+/** SelectRun: performs a "select" call over a set of Files with a timeout. */
+class SelectRun
 {
     public:
-        SelectTask() :
-                TimedTask(), pFile(0), bWriting(false), fd(-1)
-        {};
-        virtual ~SelectTask()
+
+        /// Information structure to make the Files list more useful
+        struct FileInfo
+        {
+            File *pFile;
+            bool bCheckWrite;
+        };
+
+        /// Default Constructor
+        SelectRun(uint32_t timeout = 15) : m_Files(), m_Timeout(timeout)
         {};
 
-        virtual int task()
+        /// Destructor
+        virtual ~SelectRun()
         {
-            // timeout is handled by *this* object, not by the File::select function
-            return pFile->select(bWriting, m_Timeout);
+            deleteAll();
+        };
+
+        /// Performs the actual run
+        int doRun()
+        {
+            // Check each File in the list
+            /// \todo This should keep looping until the timeout expires, this is currently just one-shot
+            int numReady = 0;
+            for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+            {
+                FileInfo *p = (*it);
+                if(p)
+                    numReady += p->pFile->select(p->bCheckWrite, 0);
+            }
+
+
+            // Reset so we're ready for another round if needed
+            deleteAll();
+            return numReady;
         }
 
-        File *pFile;
-        bool bWriting;
+        /// Adds a file to the internal record
+        void addFile(FileInfo *p)
+        {
+            m_Files.pushBack(p);
+        }
 
-        int fd;
+        /// Sets the timeout
+        void setTimeout(uint32_t t)
+        {
+            m_Timeout = t;
+        }
+
     private:
 
-        SelectTask(const SelectTask&);
-        const SelectTask& operator = (const SelectTask&);
+        /// Deletes all internal FileInfo structures
+        void deleteAll()
+        {
+            for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+            {
+                FileInfo *p = (*it);
+                if(p)
+                    delete p;
+            }
+            m_Files.clear();
+        }
+
+        /// Internal record of Files that we are checking
+        List<FileInfo*> m_Files;
+
+        /// Timeout - is a soft deadline
+        uint32_t m_Timeout;
 };
+
+/** select: determine if a set of file descriptors is readable, writable, or has an error condition.
+ *
+ *  Each descriptor should be checked asynchronously, in order to quickly handle large numbers of
+ *  descriptors, and also to ensure that if the timeout condition expires the select() call returns.
+ *
+ *  The File::select function is used to direct the ugly details to the individual File. This allows
+ *  things such as sockets to still use their very net-specific code without polluting select().
+ */
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
     F_NOTICE("select(" << Dec << nfds << Hex << ")");
 
-    // Lookup this process.
+    // Grab the subsystem for this process
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -974,14 +1032,16 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         return -1;
     }
 
-    List<SelectTask *> tasks;
-    List<Semaphore *> taskSems;
+    // This is the worker for this run
+    SelectRun *run = new SelectRun;
 
+    // Get the timeout
     uint32_t timeoutSeconds = 0;
     if (timeout)
         timeoutSeconds = timeout->tv_sec + (timeout->tv_usec / 1000);
+    run->setTimeout(timeoutSeconds);
 
-    int num_ready = 0;
+    // Setup the SelectRun object with all of the files
     for (int i = 0; i < nfds; i++)
     {
         // valid fd?
@@ -1001,97 +1061,29 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
             if (FD_ISSET(i, readfds))
             {
-                SelectTask *t = new SelectTask;
-                t->pFile = pFd->file;
-                t->bWriting = false;
-                t->fd = i;
-                t->setTimeout(timeoutSeconds);
+                SelectRun::FileInfo *f = new SelectRun::FileInfo;
+                f->pFile = pFd->file;
+                f->bCheckWrite = false;
 
-                Semaphore *s = new Semaphore(0);
-                t->setSemaphore(s);
-
-                tasks.pushBack(t);
-                taskSems.pushBack(s);
-
-                t->begin();
+                run->addFile(f);
             }
         }
         if (writefds)
         {
             if (FD_ISSET(i, writefds))
             {
-                SelectTask *t = new SelectTask;
-                t->pFile = pFd->file;
-                t->bWriting = true;
-                t->fd = i;
-                t->setTimeout(timeoutSeconds);
+                SelectRun::FileInfo *f = new SelectRun::FileInfo;
+                f->pFile = pFd->file;
+                f->bCheckWrite = true;
 
-                Semaphore *s = new Semaphore(0);
-                t->setSemaphore(s);
-
-                tasks.pushBack(t);
-                taskSems.pushBack(s);
-
-                t->begin();
+                run->addFile(f);
             }
         }
     }
 
-    // We've probably got a bunch of tasks now, and a bunch of Semaphores to check for completion of each one.
-    // Let's check those tasks!
-    if (tasks.count())
-    {
-        while (true)
-        {
-            bool bOneHasCompleted = false;
-            List<SelectTask *>::Iterator it = tasks.begin();
-            List<Semaphore *>::Iterator it2 = taskSems.begin();
-            for (; it != tasks.end() && it2 != taskSems.end(); it++, it2++)
-            {
-                // check the semaphore for completion
-                if ((*it2)->tryAcquire())
-                {
-                    if ((*it)->wasSuccessful())
-                    {
-                        int ret = (*it)->getReturnValue();
-                        if (ret == 0)
-                            FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
-                        num_ready += ret;
-                    }
-                    else // timed out or cancelled elsewhere!
-                        FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
-
-                    bOneHasCompleted = true;
-
-                    // clean up - now that one has completed the function will be returning
-                    delete (*it);
-                    delete (*it2);
-                }
-                else if (bOneHasCompleted)
-                {
-                    // one's already done, this one isn't complete - cancel it & clean up
-                    (*it)->cancel();
-                    delete (*it);
-                    delete (*it2);
-                }
-            }
-
-            if (bOneHasCompleted)
-                break;
-
-            Scheduler::instance().yield();
-        }
-    }
-
-    // Kill zombie threads created by TimedTask
-    for (size_t i = 0; i < pProcess->getNumThreads(); i++)
-    {
-        Thread *pThread = pProcess->getThread(i);
-        if (pThread->getStatus() == Thread::Zombie)
-            delete pThread;
-    }
-
-    return num_ready;
+    int numReady = run->doRun();
+    delete run;
+    return numReady;
 }
 
 int posix_fcntl(int fd, int cmd, int num, int* args)

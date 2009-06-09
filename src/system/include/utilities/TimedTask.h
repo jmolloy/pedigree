@@ -110,9 +110,9 @@ class TimedTask
 
         void cancel()
         {
+            m_Success = false;
             if(m_WaitSem)
             {
-                m_Success = false;
                 m_WaitSem->release();
                 m_WaitSem = 0;
             }
@@ -135,8 +135,11 @@ class TimedTask
             m_Success = true;
             m_ReturnValue = returnValue;
 
-            m_WaitSem->release();
-            m_WaitSem = 0;
+            if(m_WaitSem)
+            {
+                m_WaitSem->release();
+                m_WaitSem = 0;
+            }
 
             m_Task = 0;
 
@@ -146,6 +149,8 @@ class TimedTask
         static int taskTrampoline(void *ptr)
         {
             TimedTask *t = reinterpret_cast<TimedTask *>(ptr);
+            if(!t)
+                return 0;
 
             // Run the task
             int ret = t->task();
