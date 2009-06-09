@@ -222,6 +222,56 @@ _ssize_t write(int file, const void *ptr, size_t len)
     return (_ssize_t) syscall3(POSIX_WRITE, file, (int)ptr, len);
 }
 
+ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
+{
+    if(!iov || !iovcnt || (fd == -1))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ssize_t ret = 0;
+    int i;
+    for(i = 0; i < iovcnt; i++)
+    {
+        if(iov[i].iov_base)
+        {
+            ssize_t r = read(fd, iov[i].iov_base, iov[i].iov_len);
+            ret += r;
+
+            // If the read didn't fill the vector, return - no more to fill!
+            if(r < iov[i].iov_len)
+                return ret;
+        }
+    }
+    return ret;
+}
+
+ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
+{
+    if(!iov || !iovcnt || (fd == -1))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ssize_t ret = 0;
+    int i;
+    for(i = 0; i < iovcnt; i++)
+    {
+        if(iov[i].iov_base)
+        {
+            ssize_t r = write(fd, iov[i].iov_base, iov[i].iov_len);
+            ret += r;
+
+            // If the read didn't fill the vector, return - no more to write!
+            if(r < iov[i].iov_len)
+                return ret;
+        }
+    }
+    return ret;
+}
+
 int lstat(const char *file, struct stat *st)
 {
     return (int) syscall2(POSIX_LSTAT, (int)file, (int)st);

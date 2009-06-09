@@ -24,6 +24,7 @@
 #include <sys/ioctl.h>
 #include <sys/termios.h>
 #include <sys/signal.h>
+#include <sys/uio.h>
 
 #include <time.h>
 #include <sys/time.h>
