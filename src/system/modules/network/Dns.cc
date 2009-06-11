@@ -103,26 +103,34 @@ void Dns::mainThread()
       String hostname;
       char* tmp = reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader));
 
-      size_t hostLen = 1;
+      size_t hostLen = 0;
       size_t currOffset = 0;
       size_t secSize = *tmp++;
       while(true)
       {
         hostLen++;
 
+        // Read the character at this position
         char c = *tmp++;
+
+        // If zero, then we are complete
         if(c == 0)
           break;
 
-        char s[2];
-        s[0] = c;
-        s[1] = 0;
-        hostname += s;
-
+        // If the current offset equals the last section size,
+        // reset the current offset and grab the next section size
         if(currOffset++ == secSize)
         {
           hostname += ".";
-          secSize = *tmp++;
+          secSize = c;
+          currOffset = 0;
+        }
+        else
+        {
+            char s[2];
+            s[0] = c;
+            s[1] = 0;
+            hostname += s;
         }
       }
 
@@ -132,7 +140,6 @@ void Dns::mainThread()
 
       NOTICE("Obtained hostname " << hostname << " len " << hostLen << ".");
 
-      /// \todo For hosts like GMail, this does not work unless we have a +1 on the end - find out why!
       uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix);
       uintptr_t ansStart = structStart;
 

@@ -98,6 +98,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
         m_DataStream.remove(0, nBytes);
 
         // we've read in this block
+        NOTICE("Returning first character " << *reinterpret_cast<const uint8_t*>(buffer) << ".");
         return nBytes;
     }
 

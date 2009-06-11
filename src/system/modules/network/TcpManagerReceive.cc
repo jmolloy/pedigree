@@ -511,6 +511,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           stateBlock->rcv_nxt += stateBlock->seg_len;
           stateBlock->rcv_wnd -= stateBlock->seg_len;
 
+          NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload)));
           if(stateBlock->endpoint)
             stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
 

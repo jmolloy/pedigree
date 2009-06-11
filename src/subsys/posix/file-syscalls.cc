@@ -962,15 +962,17 @@ class SelectRun
         int doRun()
         {
             // Check each File in the list
-            /// \todo This should keep looping until the timeout expires, this is currently just one-shot
+            /// \todo This should keep looping until the timeout expires, this is currently just looping forever
             int numReady = 0;
-            for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+            while(numReady == 0)
             {
-                FileInfo *p = (*it);
-                if(p)
-                    numReady += p->pFile->select(p->bCheckWrite, 0);
+                for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+                {
+                    FileInfo *p = (*it);
+                    if(p)
+                        numReady += p->pFile->select(p->bCheckWrite, 0);
+                }
             }
-
 
             // Reset so we're ready for another round if needed
             deleteAll();

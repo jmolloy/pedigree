@@ -49,7 +49,8 @@ int main(int argc, char **argv)
   }
   else
   {
-    printf("penis\n");
+    // Some default greeting
+    printf("Welcome to Pedigree\n");
   }
 
   while (1)
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
     fflush(stdout);
 
     // Perform login - this function is in glue.c.
-    if (login(pw->pw_uid, password) != 0)
+    if(login(pw->pw_uid, password) != 0)
     {
       printf("Password incorrect.\n");
       continue;
@@ -111,6 +112,7 @@ int main(int argc, char **argv)
 
         // Child.
         execle(pw->pw_shell, pw->pw_shell, 0, newenv);
+
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);
         exit(1);
@@ -120,6 +122,9 @@ int main(int argc, char **argv)
         // Parent.
         int stat;
         waitpid(pid, &stat, 0);
+
+        printf("Test complete.\n");
+        while(1);
 
         continue;
       }

@@ -238,10 +238,6 @@ ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
         {
             ssize_t r = read(fd, iov[i].iov_base, iov[i].iov_len);
             ret += r;
-
-            // If the read didn't fill the vector, return - no more to fill!
-            if(r < iov[i].iov_len)
-                return ret;
         }
     }
     return ret;
@@ -263,10 +259,6 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
         {
             ssize_t r = write(fd, iov[i].iov_base, iov[i].iov_len);
             ret += r;
-
-            // If the read didn't fill the vector, return - no more to write!
-            if(r < iov[i].iov_len)
-                return ret;
         }
     }
     return ret;
@@ -499,8 +491,9 @@ int utime(const char *path,const struct utimbuf *times)
 int access(const char *path, int amode)
 {
     STUBBED("access");
+    STUBBED(path);
     errno = ENOENT;
-    return 0;
+    return -1;
 }
 
 const char * const sys_errlist[] = {};
@@ -1024,9 +1017,15 @@ int sigblock()
     return -1;
 }
 
-int sigsetmask()
+int sigsetmask(int mask)
 {
     STUBBED("sigsetmask");
+    return -1;
+}
+
+int siggetmask()
+{
+    STUBBED("siggetmask");
     return -1;
 }
 
@@ -1356,4 +1355,16 @@ const char *gai_strerror(int ecode)
     if (ecode > EAI_OVERFLOW)
         return "";
     return gai_strings[ecode];
+}
+
+int setitimer(int which, const struct itimerval *value, struct itimerval *ovalue)
+{
+    STUBBED("setitimer");
+    return -1;
+}
+
+pid_t setsid()
+{
+    STUBBED("setsid");
+    return -1;
 }

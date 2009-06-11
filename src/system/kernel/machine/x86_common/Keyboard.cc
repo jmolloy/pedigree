@@ -183,27 +183,31 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
   uint8_t scancode, status;
 
   // Get the keyboard's status byte.
-  status = m_Port.read8(4);
-  if (!(status & 0x01))
-    return true;
-
-  // Get the scancode for the pending keystroke.
-  scancode = m_Port.read8(0);
-
-  Character c = scancodeToCharacter(scancode);
-#ifdef DEBUGGER
-  if (c.valid && c.is_special && c.value == KB_F12)
+  while(true)
   {
-    LargeStaticString sError;
-    sError += "User-induced breakpoint";
-    Debugger::instance().start(state, sError);
-  }
-#endif
-  if (c.valid)
-  {
-    m_Buffer[m_BufEnd++] = c;
-    m_BufEnd = m_BufEnd%BUFLEN;
-    m_BufLength.release(1);
+      status = m_Port.read8(4);
+      if (!(status & 0x01))
+        return true;
+
+      // Get the scancode for the pending keystroke.
+      scancode = m_Port.read8(0);
+
+      Character c = scancodeToCharacter(scancode);
+    #ifdef DEBUGGER
+      if (c.valid && c.is_special && c.value == KB_F12)
+      {
+        LargeStaticString sError;
+        sError += "User-induced breakpoint";
+        Debugger::instance().start(state, sError);
+        return true;
+      }
+    #endif
+      if (c.valid)
+      {
+        m_Buffer[m_BufEnd++] = c;
+        m_BufEnd = m_BufEnd%BUFLEN;
+        m_BufLength.release(1);
+      }
   }
 
   return true;
