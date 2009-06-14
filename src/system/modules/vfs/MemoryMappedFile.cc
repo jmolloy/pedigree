@@ -336,7 +336,6 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
     if (!pMmFileList)
     {
         m_CacheLock.release();
-        NOTICE("Trap end, fail2");
         return false;
     }
 
@@ -349,7 +348,6 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
         {
             m_CacheLock.release();
             sl.release();
-            NOTICE("Trap end");
             pMmFile->file->trap(address, pMmFile->offset);
             return true;
         }
@@ -357,6 +355,6 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
     
     m_CacheLock.release();
     sl.release();
-    NOTICE("Trap end, fail");
+
     return false;
 }

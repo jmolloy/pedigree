@@ -20,8 +20,8 @@
 #include <Log.h>
 
 RequestQueue::RequestQueue() :
-  m_pRequestQueue(0), m_RequestQueueSize(0), m_pAsyncRequestQueue(0), m_AsyncRequestQueueSize(0),
-  m_Stop(false), m_RequestQueueMutex(false), m_AsyncRequestQueueMutex(false)
+  m_pRequestQueue(0), m_RequestQueueSize(0),
+  m_Stop(false), m_RequestQueueMutex(false)
 {
 }
 
@@ -35,13 +35,6 @@ void RequestQueue::initialise()
 #ifdef THREADS
   new Thread(Processor::information().getCurrentThread()->getParent(),
              reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-             reinterpret_cast<void*> (this));
-#endif
-
-  // Start the asynchronous worker thread
-#ifdef THREADS
-  new Thread(Processor::information().getCurrentThread()->getParent(),
-             reinterpret_cast<Thread::ThreadStartFunc> (&asyncTrampoline),
              reinterpret_cast<void*> (this));
 #endif
 }
@@ -60,6 +53,7 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
+  pReq->isAsync = false;
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -97,26 +91,26 @@ uint64_t RequestQueue::addAsyncRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
+  pReq->isAsync = true;
 
   // Add to the request queue.
-  m_AsyncRequestQueueMutex.acquire();
+  m_RequestQueueMutex.acquire();
 
-  if (m_pAsyncRequestQueue == 0)
-    m_pAsyncRequestQueue = pReq;
+  if (m_pRequestQueue == 0)
+    m_pRequestQueue = pReq;
   else
   {
-    Request *p = m_pAsyncRequestQueue;
+    Request *p = m_pRequestQueue;
     while (p->next != 0)
       p = p->next;
     p->next = pReq;
   }
 
   // Increment the number of items on the request queue.
-  m_AsyncRequestQueueSize.release();
+  m_RequestQueueSize.release();
 
-  m_AsyncRequestQueueMutex.release();
+  m_RequestQueueMutex.release();
 
-  // The worker thread will handle the request soon...
   return 0;
 }
 
@@ -124,12 +118,6 @@ int RequestQueue::trampoline(void *p)
 {
   RequestQueue *pRQ = reinterpret_cast<RequestQueue*> (p);
   return pRQ->work();
-}
-
-int RequestQueue::asyncTrampoline(void *p)
-{
-  RequestQueue *pRQ = reinterpret_cast<RequestQueue*> (p);
-  return pRQ->asyncWork();
 }
 
 int RequestQueue::work()
@@ -158,31 +146,10 @@ int RequestQueue::work()
 
     // Request finished - post the request's mutex to wake the calling thread.
     pReq->mutex.release();
-  }
-}
 
-int RequestQueue::asyncWork()
-{
-  while (true)
-  {
-    // Sleep on the queue length semaphore - wake when there's something to do.
-    m_AsyncRequestQueueSize.acquire();
-
-    // Get the first request from the queue.
-    m_AsyncRequestQueueMutex.acquire();
-
-    Request *pReq = m_pAsyncRequestQueue;
-    // Quick sanity check:
-    if (pReq == 0) panic("RequestQueue: Asynchronous worker thread woken but no requests pending!");
-    m_pAsyncRequestQueue = pReq->next;
-
-    m_AsyncRequestQueueMutex.release();
-
-    // Perform the request.
-    pReq->ret = executeRequest(pReq->p1, pReq->p2, pReq->p3, pReq->p4, pReq->p5, pReq->p6, pReq->p7, pReq->p8);
-
-    // All done with the request
-    delete pReq;
+    // If the request was asynchronous, destroy the request structure.
+    if (pReq->isAsync)
+        delete pReq;
   }
   return 0;
 }

@@ -17,9 +17,13 @@
 #ifndef SYSCALL_NUMBERS_H
 #define SYSCALL_NUMBERS_H
 
-#define TUI_NEXT_REQUEST 1
-#define TUI_LOG          2
-#define TUI_GETFB        3
-#define TUI_GETCHAR_NONBLOCK 4
+#define TUI_NEXT_REQUEST       1
+#define TUI_LOG                2
+#define TUI_GETFB              3
+#define TUI_REQUEST_PENDING    4
+#define TUI_RESPOND_TO_PENDING 5
+#define TUI_CREATE_CONSOLE     6
+#define TUI_SET_CTTY           7
+#define TUI_SET_CURRENT_CONSOLE 8
 
 #endif

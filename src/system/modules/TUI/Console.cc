@@ -17,7 +17,7 @@
 #include <panic.h>
 
 UserConsole::UserConsole() :
-    RequestQueue(), m_pReq(0)
+    RequestQueue(), m_pReq(0), m_pPendingReq(0)
 {
 }
 
@@ -25,7 +25,33 @@ UserConsole::~UserConsole()
 {
 }
 
-size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz)
+void UserConsole::requestPending()
+{
+    m_pPendingReq = m_pReq;
+    m_pReq = 0;
+}
+
+void UserConsole::respondToPending(size_t response, char *buffer, size_t sz)
+{
+    if (m_pPendingReq)
+    {
+        m_pPendingReq->ret = response;
+
+        if (m_pPendingReq->p1 == CONSOLE_READ)
+        {
+            memcpy(reinterpret_cast<uint8_t*>(m_pPendingReq->p4), buffer, response);
+        }
+
+        // RequestQueue finished - post the request's mutex to wake the calling thread.
+        m_pPendingReq->mutex.release();
+
+        if (m_pPendingReq->isAsync)
+            delete m_pReq;
+    }
+    m_pPendingReq = 0;
+}
+
+size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz, size_t *terminalId)
 {
     if (m_pReq)
     {
@@ -38,6 +64,9 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
         // RequestQueue finished - post the request's mutex to wake the calling thread.
         m_pReq->mutex.release();
+
+        if (m_pReq->isAsync)
+            delete m_pReq;
     }
 
     // Sleep on the queue length semaphore - wake when there's something to do.
@@ -60,10 +89,20 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Perform the request.
     size_t command = m_pReq->p1;
     *sz = static_cast<size_t>(m_pReq->p3);
+
+    *terminalId = m_pReq->p2;
+
     if (command == CONSOLE_WRITE)
     {
         if (*sz > maxBuffSz) m_pReq->p3 = maxBuffSz;
         memcpy(buffer, reinterpret_cast<uint8_t*>(m_pReq->p4), m_pReq->p3);
+        if (m_pReq->isAsync)
+            delete [] reinterpret_cast<uint8_t*>(m_pReq->p4);
+    }
+    else if (command == TUI_CHAR_RECV)
+    {
+        memcpy(buffer, reinterpret_cast<uint8_t*>(&m_pReq->p3), 8);
+        *sz = 8;
     }
 
     return command;

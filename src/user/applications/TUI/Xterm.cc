@@ -76,11 +76,88 @@ void Xterm::write(char *str)
    NOTICE("W: " << pStr);
 #endif
   while (*str)
-    write(*str++);
+  {
+      uint8_t c = static_cast<uint8_t>(*str);
+      // Convert from UTF-8
+      uint32_t utf32;
+      // U+0000 - U+007F
+      if ( (c & 0x80) == 0 )
+          utf32 = c;
+
+      // U+0080 - U+07FF : 110yyyxx 10xxxxxx
+      else if ( (c & 0xE0) == 0xC0 )
+      {
+          str++;
+          uint8_t c2 = *str;
+          if ( (c2 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence.");
+              break;
+          }
+          utf32 = (c2 & 0x3F) | ((c & 0x1F) << 6);
+      }
+
+      // U+0800 - U+FFFF : 1110yyyy 10yyyyxx 10xxxxxx
+      else if ( (c & 0xF0) == 0xE0 )
+      {
+          str ++;
+          uint8_t c2 = *str;
+          if ( (c2 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence");
+              break;
+          }
+          str ++;
+          uint8_t c3 = *str;
+          if ( (c3 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence");
+              break;
+          }
+          utf32 = (c3 & 0x3F) | ((c2&0x3F)<<6) | ((c&0x0F)<<12);
+      }
+
+      // U+10000-U+10FFFF : 11110zzz 10zzyyyy 10yyyyxx 10xxxxxx
+      {
+          str ++;
+          uint8_t c2 = *str;
+          if ( (c2 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence");
+              break;
+          }
+          str ++;
+          uint8_t c3 = *str;
+          if ( (c3 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence");
+              break;
+          }
+          str ++;
+          uint8_t c4 = *str;
+          if ( (c4 & 0xC0) != 0x80 )
+          {
+              // Malformed utf-8 packet.
+              log("Malformed utf-8 sequence");
+              break;
+          }
+          utf32 = (c4 & 0x3F) | ((c3&0x3f)<<6) | ((c2&0x3F)<<12) | ((c<<0x07)<<18);
+      }
+
+      write(utf32);
+  }
 }
 
-void Xterm::write(char c)
+void Xterm::write(uint32_t utf32)
 {
+    char c = 0;
+    if (utf32 < 0x80) c = utf32;
+
   if (m_bChangingState)
   {
     // A VT100 command is being received.
@@ -381,28 +458,28 @@ void Xterm::write(char c)
         if (!m_pWindows[m_CurrentWindow]->getLineDrawingMode())
         {
           // Add the character.
-          m_pWindows[m_CurrentWindow]->writeChar(c);
+          m_pWindows[m_CurrentWindow]->writeChar(utf32);
         }
         else
         {
-          switch (c)
+          switch (utf32)
           {
-            case 'j': c = 188; break; // Lower right corner
-            case 'k': c = 187; break; // Upper right corner
-            case 'l': c = 201; break; // Upper left corner
-            case 'm': c = 200; break; // Lower left corner
-            case 'n': c = 206; break; // Crossing lines.
-            case 'q': c = 205; break; // Horizontal line.
-            case 't': c = 204; break; // Left 'T'
-            case 'u': c = 185; break; // Right 'T'
-            case 'v': c = 202; break; // Bottom 'T'
-            case 'w': c = 203; break; // Top 'T'
-            case 'x': c = 186; break; // Vertical bar
+            case 'j': utf32 = 188; break; // Lower right corner
+            case 'k': utf32 = 187; break; // Upper right corner
+            case 'l': utf32 = 201; break; // Upper left corner
+            case 'm': utf32 = 200; break; // Lower left corner
+            case 'n': utf32 = 206; break; // Crossing lines.
+            case 'q': utf32 = 205; break; // Horizontal line.
+            case 't': utf32 = 204; break; // Left 'T'
+            case 'u': utf32 = 185; break; // Right 'T'
+            case 'v': utf32 = 202; break; // Bottom 'T'
+            case 'w': utf32 = 203; break; // Top 'T'
+            case 'x': utf32 = 186; break; // Vertical bar
             default:
                 ;
 //              WARNING("VT100: Unrecognised line character: " << c);
           }
-          m_pWindows[m_CurrentWindow]->writeChar(c);
+          m_pWindows[m_CurrentWindow]->writeChar(utf32);
         }
     }
   }
@@ -506,10 +583,11 @@ bool Xterm::Window::getLineDrawingMode()
   return m_bLineDrawingMode;
 }
 
-void Xterm::Window::writeChar(unsigned char c)
+void Xterm::Window::writeChar(uint32_t utf32)
 {
-  m_pData[m_CursorX + m_CursorY*m_nWidth] = c | (m_Foreground<<12) | (m_Background<<8);
-  m_pParent->putCharFb(c, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
+    uint8_t c = utf32&0x7F;
+    m_pData[m_CursorX + m_CursorY*m_nWidth] = (c&0x7F) | (m_Foreground<<12) | (m_Background<<8);
+  m_pParent->putCharFb(utf32, m_CursorX, m_CursorY-m_View, m_pParent->m_pColours[m_Foreground], m_pParent->m_pColours[m_Background]);
   m_CursorX++;
   if (m_CursorX == m_nWidth)
   {

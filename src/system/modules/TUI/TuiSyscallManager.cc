@@ -28,8 +28,17 @@
 #include "Console.h"
 #include "syscallNumbers.h"
 
-UserConsole g_UserConsole;
+UserConsole* g_Consoles[256];
+UserConsole *g_UserConsole = 0;
+size_t g_UserConsoleId = 0;
 TuiSyscallManager g_TuiSyscallManager;
+
+void callback(uint64_t key)
+{
+    if (!g_UserConsole)
+        WARNING("Key called with no console");
+    g_UserConsole->addAsyncRequest(TUI_CHAR_RECV, g_UserConsoleId, key);
+}
 
 TuiSyscallManager::TuiSyscallManager() :
     m_FramebufferRegion("Usermode framebuffer"), m_Mode()
@@ -43,6 +52,7 @@ TuiSyscallManager::~TuiSyscallManager()
 void TuiSyscallManager::initialise()
 {
     SyscallManager::instance().registerSyscallHandler(TUI, this);
+    Machine::instance().getKeyboard()->registerCallback(&callback);
 }
 
 uintptr_t TuiSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
@@ -61,7 +71,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     uintptr_t p2 = state.getSyscallParameter(1);
     uintptr_t p3 = state.getSyscallParameter(2);
     uintptr_t p4 = state.getSyscallParameter(3);
-    //uintptr_t p5 = state.getSyscallParameter(4);
+    uintptr_t p5 = state.getSyscallParameter(4);
 
     // We're interruptible.
     Processor::setInterrupts(true);
@@ -69,7 +79,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     switch (state.getSyscallNumber())
     {
         case TUI_NEXT_REQUEST:
-            return g_UserConsole.nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4);
+            return g_UserConsole->nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4, reinterpret_cast<size_t*>(p5));
         case TUI_LOG:
         {
             // This is the solution to a bug - if the address in p1 traps (because of demand loading),
@@ -86,8 +96,48 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             *pMode = m_Mode;
             return reinterpret_cast<uintptr_t>(m_FramebufferRegion.virtualAddress());
         }
-        case TUI_GETCHAR_NONBLOCK:
-            return Machine::instance().getKeyboard()->getCharacterNonBlock();
+        case TUI_REQUEST_PENDING:
+        {
+            if (!g_UserConsole)
+                WARNING("Request pending with no console");
+
+            g_UserConsole->requestPending();
+            return 0;
+        }
+        case TUI_RESPOND_TO_PENDING:
+        {
+            if (!g_UserConsole)
+                WARNING("Respond to pending with no console");
+
+            g_UserConsole->respondToPending(static_cast<size_t>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
+            return 0;
+        }
+        case TUI_CREATE_CONSOLE:
+        {
+            size_t id = static_cast<size_t>(p1);
+            char *name = reinterpret_cast<char*>(p2);
+
+            UserConsole *pC = new UserConsole();
+            ConsoleManager::instance().registerConsole(String(name), pC, id);
+            g_Consoles[id] = pC;
+            if (!g_UserConsole)
+            {
+                g_UserConsole = pC;
+                g_UserConsoleId = id;
+            }
+            return 0;
+        }
+        case TUI_SET_CTTY:
+        {
+            char *name = reinterpret_cast<char*>(p1);
+
+            Processor::information().getCurrentThread()->getParent()->setCtty(ConsoleManager::instance().getConsole(String(name)));
+            break;
+        }
+        case TUI_SET_CURRENT_CONSOLE:
+            g_UserConsoleId = p1;
+            g_UserConsole = g_Consoles[p1];
+            break;
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }
@@ -108,7 +158,6 @@ void TuiSyscallManager::modeChanged(Display::ScreenMode mode, uintptr_t pFramebu
 void init()
 {
     g_TuiSyscallManager.initialise();
-    ConsoleManager::instance().registerConsole(String("console0"), &g_UserConsole, 0);
 }
 
 void destroy()

@@ -69,7 +69,7 @@ public:
     Xterm(Display::ScreenMode mode, void *pFramebuffer);
     virtual ~Xterm();
 
-    void write(char c);
+    void write(uint32_t utf32);
     void write(char *str);
 
     /** Returns the width of the screen in characters. */
@@ -108,7 +108,7 @@ protected:
         ~Window();
 
         /** Writes a character to the screen, incrementing the X cursor and wrapping if nessecary. */
-        void writeChar(unsigned char c);
+        void writeChar(uint32_t c);
 
         /** Gets/sets the cursor coordinates. */
         uint32_t getCursorX() {return m_CursorX;}

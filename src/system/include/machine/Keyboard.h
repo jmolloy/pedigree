@@ -100,6 +100,9 @@ public:
 
   virtual uint64_t getCharacter() =0;
   virtual uint64_t getCharacterNonBlock() =0;
+
+  typedef void (*KeyPressedCallback)(uint64_t);
+  virtual void registerCallback(KeyPressedCallback callback) =0;
 };
 
 #endif

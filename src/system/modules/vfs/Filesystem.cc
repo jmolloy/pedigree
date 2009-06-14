@@ -150,7 +150,6 @@ bool Filesystem::remove(String path, File *pStartNode)
 
 File *Filesystem::findNode(File *pNode, String path)
 {
-    NOTICE("findNode: " << (uintptr_t)pNode);
   if (path.length() == 0)
     return pNode;
 
@@ -208,9 +207,8 @@ File *Filesystem::findNode(File *pNode, String path)
   File *pFile;
   if (pDir->m_bCachePopulated)
   {
-      NOTICE("jkg");
     pFile = pDir->m_Cache.lookup(path);
-    NOTICE("kl");
+
     if (pFile)
     {
       // Cache lookup succeeded, recurse and return.
@@ -225,9 +223,7 @@ File *Filesystem::findNode(File *pNode, String path)
   else
   {
     // Directory contents not cached - cache them now.
-      NOTICE("rejg");
     pDir->cacheDirectoryContents();
-    NOTICE("Bleh");
     // Then lookup.
     pFile = pDir->m_Cache.lookup(path);
     if (pFile)
@@ -237,7 +233,6 @@ File *Filesystem::findNode(File *pNode, String path)
     }
     else
     {
-        NOTICE("reet");
       // Cache lookup failed, does not exist.
       return 0;
     }

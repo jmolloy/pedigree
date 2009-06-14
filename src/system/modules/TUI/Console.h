@@ -18,6 +18,8 @@
 
 #include <console/Console.h>
 
+#define TUI_CHAR_RECV 99
+
 class UserConsole : public RequestQueue
 {
 public:
@@ -25,13 +27,21 @@ public:
     ~UserConsole();
 
     /** Block and wait for a request. */
-    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffsz);
+    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffsz, size_t *tabId);
+
+    /** Set the currently executing request as "pending" - its value will be
+        set later. */
+    void requestPending();
+
+    /** Respond to the previously set pending request. */
+    void respondToPending(size_t response, char *buffer, size_t sz);
 
 private:
     virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
     {return 0;}
 
     Request *m_pReq;
+    Request *m_pPendingReq;
 };
 
 #endif

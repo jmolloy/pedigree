@@ -1,15 +1,15 @@
 0x01    U+001B       # Escape
 
-0x02    U+0031 SHIFT U+0021      # 1 
-0x03    U+0032 SHIFT U+0022      # 2 
-0x04    U+0033 SHIFT U+20A4      # 3 
-0x05    U+0034 SHIFT U+0024      # 4 
-0x06    U+0035 SHIFT U+0025      # 5 
-0x07    U+0036 SHIFT U+005E      # 6 
-0x08    U+0037 SHIFT U+0026      # 7 
-0x09    U+0038 SHIFT U+002A      # 8 
-0x0A    U+0039 SHIFT U+0028      # 9 
-0x0B    U+0030 SHIFT U+0029      # 0 
+0x02    U+0031 SHIFT U+0021      # 1 !
+0x03    U+0032 SHIFT U+0022      # 2 "
+0x04    U+0033 SHIFT U+00A3      # 3 £
+0x05    U+0034 SHIFT U+0024      # 4 $
+0x06    U+0035 SHIFT U+0025      # 5 %
+0x07    U+0036 SHIFT U+005E      # 6 ^
+0x08    U+0037 SHIFT U+0026      # 7 &
+0x09    U+0038 SHIFT U+002A      # 8 *
+0x0A    U+0039 SHIFT U+0028      # 9 (
+0x0B    U+0030 SHIFT U+0029      # 0 )
 
 0x0C    U+002D SHIFT U+005F      # - 
 0x0D    U+003D SHIFT U+002B      # = 
@@ -46,7 +46,7 @@
 0x2A    SHIFT
 0x2B    U+0023 SHIFT U+007E     # # ~
 0x2C    U+007A SHIFT U+005A     # z Z
-0x2D    U+0078 SHIFT U+0058     # x X
+0x2D    U+0078 SHIFT U+0058 CTRL U+007E ALT U+0023 ALTGR U+00BB    # x X
 0x2E    U+0063 SHIFT U+0043     # c C
 0x2F    U+0076 SHIFT U+0056     # v V
 0x30    U+0062 SHIFT U+0042     # b B
@@ -60,5 +60,13 @@
 0x37    U+002A                  # Keypad *
 0x38    ALT
 0x39    U+0020                  # Space
+
+0x47    "home"
+0x48    "up  "
+0x4B    "left"
+0x4D    "righ"
+0x4F    "end"
+0x50    "down"
+0x52    "ins "
 
 0x56    U+005C SHIFT U+007C     # \ |

@@ -248,7 +248,6 @@ void RadixTree<void*>::remove(String key)
                 Node *pParent = 0;
                 if (pNode->m_nChildren == 0)
                 {
-                    NOTICE("Fnarr");
                     // Leaf node, can just delete.
                     pParent = pNode->getParent();
                     pParent->removeChild(pNode);

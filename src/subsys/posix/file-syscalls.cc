@@ -43,8 +43,6 @@ extern int posix_getpid();
 // Syscalls pertaining to files.
 //
 
-typedef Tree<size_t,FileDescriptor*> FdMap;
-
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 int posix_close(int fd)
@@ -58,18 +56,7 @@ int posix_close(int fd)
         return -1;
     }
 
-    /// \todo Race here - fix.
-    FdMap &fdMap = pSubsystem->getFdMap();
-    FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
-
-    if (!f)
-    {
-        SYSCALL_ERROR(BadFileDescriptor);
-        return -1;
-    }
-
-    fdMap.remove(fd);
-    delete f;
+    pSubsystem->freeFd(fd);
     return 0;
 }
 
@@ -93,17 +80,14 @@ int posix_open(const char *name, int flags, int mode)
         return -1;
     }
 
-    FdMap &fdMap = pSubsystem->getFdMap();
-
-    size_t fd = pSubsystem->nextFd();
+    size_t fd = pSubsystem->getFd();
 
     // Check for /dev/tty, and link to our controlling console.
     File* file = 0;
 
     if (!strcmp(name, "/dev/tty"))
     {
-        /// \todo Should be our ctty.
-        file = ConsoleManager::instance().getConsole(String("console0"));
+        file = pProcess->getCtty();
     }
     else if (!strcmp(name, "/dev/null"))
     {
@@ -124,6 +108,7 @@ int posix_open(const char *name, int flags, int mode)
             if (!worked)
             {
                 SYSCALL_ERROR(DoesNotExist);
+                pSubsystem->freeFd(fd);
                 return -1;
             }
 
@@ -131,6 +116,7 @@ int posix_open(const char *name, int flags, int mode)
             if (!file)
             {
                 SYSCALL_ERROR(DoesNotExist);
+                pSubsystem->freeFd(fd);
                 return -1;
             }
 
@@ -141,6 +127,7 @@ int posix_open(const char *name, int flags, int mode)
             NOTICE("Does not exist.");
             // Error - not found.
             SYSCALL_ERROR(DoesNotExist);
+            pSubsystem->freeFd(fd);
             return -1;
         }
     }
@@ -153,6 +140,7 @@ int posix_open(const char *name, int flags, int mode)
         // Error - is directory.
         NOTICE("Is a directory.");
         SYSCALL_ERROR(IsADirectory);
+        pSubsystem->freeFd(fd);
         return -1;
     }
 
@@ -161,6 +149,7 @@ int posix_open(const char *name, int flags, int mode)
         // file exists with O_CREAT and O_EXCL
         NOTICE("File exists");
         SYSCALL_ERROR(FileExists);
+        pSubsystem->freeFd(fd);
         return -1;
     }
 
@@ -172,7 +161,7 @@ int posix_open(const char *name, int flags, int mode)
     }
 
     FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
-    fdMap.insert(fd, f);
+    pSubsystem->addFileDescriptor(fd, f);
 
     NOTICE("fine: " << fd);
     return static_cast<int> (fd);
@@ -190,9 +179,8 @@ int posix_read(int fd, char *ptr, int len)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -235,9 +223,8 @@ int posix_write(int fd, char *ptr, int len)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -271,9 +258,8 @@ int posix_lseek(int file, int ptr, int dir)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(file));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(file);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -514,9 +500,8 @@ int posix_fstat(int fd, struct stat *st)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -633,9 +618,8 @@ int posix_opendir(const char *dir, dirent *ent)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    size_t fd = pSubsystem->nextFd();
+    size_t fd = pSubsystem->getFd();
 
     File* file = VFS::instance().find(String(dir), GET_CWD());
 
@@ -672,7 +656,7 @@ int posix_opendir(const char *dir, dirent *ent)
         return -1;
     }
 
-    fdMap.insert(fd, f);
+    pSubsystem->addFileDescriptor(fd, f);
 
     return static_cast<int>(fd);
 }
@@ -692,9 +676,8 @@ int posix_readdir(int fd, dirent *ent)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -727,7 +710,7 @@ void posix_rewinddir(int fd, dirent *ent)
         ERROR("No subsystem for this process!");
         return;
     }
-    FileDescriptor *f = reinterpret_cast<FileDescriptor*>(pSubsystem->getFdMap().lookup(fd));
+    FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
     f->offset = 0;
     posix_readdir(fd, ent);
 }
@@ -745,11 +728,9 @@ int posix_closedir(int fd)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
-    FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
-    fdMap.remove(fd);
 
-    delete f;
+    pSubsystem->freeFd(fd);
+
     return 0;
 }
 
@@ -764,8 +745,8 @@ int posix_ioctl(int fd, int command, void *buf)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FileDescriptor *f = reinterpret_cast<FileDescriptor*>(pSubsystem->getFdMap().lookup(fd));
 
+    FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
     if (!f)
     {
         return -1;
@@ -784,7 +765,6 @@ int posix_ioctl(int fd, int command, void *buf)
             if (buf)
             {
                 int a = *reinterpret_cast<int *>(buf);
-                NOTICE("a = " << a << ".");
                 if (a)
                     f->flflags = O_NONBLOCK;
                 else
@@ -837,20 +817,19 @@ int posix_dup(int fd)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
-    FileDescriptor *f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
 
+    FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
     if (!f)
     {
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
 
-    size_t newFd = pSubsystem->nextFd();
+    size_t newFd = pSubsystem->getFd();
 
-    // copy the descriptor
+    // Copy the descriptor
     FileDescriptor* f2 = new FileDescriptor(*f);
-    fdMap.insert(newFd, f2);
+    pSubsystem->addFileDescriptor(newFd, f2);
 
     return static_cast<int>(newFd);
 }
@@ -876,9 +855,8 @@ int posix_dup2(int fd1, int fd2)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
-    FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd1));
 
+    FileDescriptor* f = pSubsystem->getFileDescriptor(fd1);
     if (!f)
     {
         SYSCALL_ERROR(BadFileDescriptor);
@@ -887,19 +865,11 @@ int posix_dup2(int fd1, int fd2)
 
     // Copy the descriptor.
     //
-    // This will alsoIncrease the refcount *before* we close the original, else we
+    // This will also increase the refcount *before* we close the original, else we
     // might accidentally trigger an EOF condition on a pipe! (if the write refcount
     // drops to zero)...
     FileDescriptor* f2 = new FileDescriptor(*f);
-
-    // close the original descriptor
-    if (posix_close(fd2) == -1)
-    {
-        delete f2;
-        return -1;
-    }
-
-    fdMap.insert(fd2, f2);
+    pSubsystem->addFileDescriptor(fd2, f2);
 
     return static_cast<int>(fd2);
 }
@@ -921,9 +891,8 @@ int posix_isatty(int fd)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
-    FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
         // Error - no such file descriptor.
@@ -971,7 +940,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
 
     List<SelectTask *> tasks;
     List<Semaphore *> taskSems;
@@ -987,7 +955,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         FileDescriptor *pFd = 0;
         if ((readfds && FD_ISSET(i, readfds)) || (writefds && FD_ISSET(i, writefds)))
         {
-            pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(i));
+            pFd = pSubsystem->getFileDescriptor(i);
             if (!pFd)
             {
                 // Error - no such file descriptor.
@@ -1000,17 +968,6 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
             if (FD_ISSET(i, readfds))
             {
-                /// \todo Subclass File for consoles, then this whole thing can be simplified further!
-                /*if (ConsoleManager::instance().isConsole(pFd->file))
-                {
-                    if (ConsoleManager::instance().hasDataAvailable(pFd->file))
-                        num_ready++;
-                    else
-                        FD_CLR(i, readfds);
-
-                    continue;
-                }*/
-
                 SelectTask *t = new SelectTask;
                 t->pFile = pFd->file;
                 t->bWriting = false;
@@ -1119,13 +1076,16 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         ERROR("No subsystem for this process!");
         return -1;
     }
-    FdMap &fdMap = pSubsystem->getFdMap();
-    FileDescriptor* f = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd));
-    if (!f)
+
+    FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
+    if(!f)
     {
+        ERROR("fcntl given a bad descriptor!");
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
+
+    NOTICE("descriptor for fd " << fd << " = " << reinterpret_cast<uintptr_t>(f) << "...");
 
     switch (cmd)
     {
@@ -1138,31 +1098,26 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
                 {
                     size_t fd2 = static_cast<size_t>(args[0]);
 
-                    // Lookup this process.
-                    FileDescriptor* f1 = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fd2));
-                    if (f1)
-                    {
-                        fdMap.remove(fd2);
-                        delete f1;
-                    }
-
-                    // copy the descriptor
-                    FileDescriptor* f2 = new FileDescriptor(f);
-                    fdMap.insert(fd2, f2);
+                    // Copy the descriptor (addFileDescriptor automatically frees the old one, if needed)
+                    FileDescriptor* f2 = new FileDescriptor(*f);
+                    pSubsystem->addFileDescriptor(fd2, f2);
 
                     return static_cast<int>(fd2);
                 }
             }
             else
             {
-                size_t fd2 = pSubsystem->nextFd();
+                size_t fd2 = pSubsystem->getFd();
 
                 // copy the descriptor
                 FileDescriptor* f2 = new FileDescriptor(f);
-                fdMap.insert(fd2, f2);
+                pSubsystem->addFileDescriptor(fd2, f2);
 
                 return static_cast<int>(fd2);
             }
+            return 0;
+            break;
+
         case F_GETFD:
             return f->fdflags;
         case F_SETFD:
@@ -1183,84 +1138,6 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
 {
     NOTICE("poll(" << Dec << nfds << Hex << ")");
 
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-    FdMap &fdMap = pSubsystem->getFdMap();
-
-    unsigned int i;
-    int num_ready = 0;
-    for (i = 0; i < nfds; i++)
-    {
-        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(fdMap.lookup(fds[i].fd));
-
-        // readable?
-        if (fds[i].events & POLLIN)
-        {
-            if (ConsoleManager::instance().isConsole(pFd->file))
-            {
-                //NOTICE("is a console");
-                if (ConsoleManager::instance().hasDataAvailable(pFd->file))
-                    num_ready++;
-            }
-            else if (NetManager::instance().isEndpoint(pFd->file))
-            {
-                Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-                if (!p)
-                {
-                    continue;
-                }
-
-                if (timeout)
-                {
-                    if (p->dataReady(true, timeout))
-                        num_ready++;
-                    else
-                        fds[i].revents = 0;
-                }
-                else
-                {
-                    // don't wait for data
-                    if (p->dataReady(false))
-                        num_ready++;
-                    else
-                        fds[i].revents = 0;
-                }
-            }
-            else
-                // Regular file - always available to read.
-                num_ready++;
-        }
-
-        // writeable?
-        if (fds[i].events & POLLOUT)
-        {
-            if (NetManager::instance().isEndpoint(pFd->file))
-            {
-                Endpoint* p = NetManager::instance().getEndpoint(pFd->file);
-                if (!p)
-                    continue;
-
-                int state = p->state();
-
-                if (state == 0xff)
-                    num_ready++;
-                else
-                {
-                    // writeable state? (though technically FIN_WAIT_2 isn't writeable)
-                    /// \todo Timeout lets this check block, but this code won't block...
-                    if (state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
-                        num_ready++;
-                }
-            }
-            else
-                num_ready++; // normal files are always ready to write
-        }
-    }
-
-    return num_ready;
+    SYSCALL_ERROR(Unimplemented);
+    return 0;
 }

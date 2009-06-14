@@ -12,6 +12,7 @@
 
 int  main(int argc, char* argv[])
 {
+    for(;;);
     int hSocket;                 /* handle to socket */
     struct hostent *pHostInfo;   /* holds info about a machine */
     struct sockaddr_in Address;  /* Internet socket address stuct */

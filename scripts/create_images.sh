@@ -101,7 +101,7 @@ if which losetup >/dev/null 2>&1; then
 
   sudo touch $MOUNTPT/.pedigree-root
 
-  OLD=$PWD
+#  OLD=$PWD
 
 #  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
   

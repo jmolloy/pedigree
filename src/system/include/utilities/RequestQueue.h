@@ -41,11 +41,11 @@ public:
 
   /** Adds a request to the queue. Blocks until it finishes and returns the result. */
   uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
-                     uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
+                      uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
   /** Adds an asynchronous request to the queue. Will not block. */
   uint64_t addAsyncRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
-                     uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
+                           uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
 protected:
   /** Callback - classes are expected to inherit and override this function. It's called when a
@@ -65,6 +65,7 @@ protected:
     uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
     uint64_t ret;
     Mutex mutex;
+    bool isAsync;
     Request *next;
   private:
     Request(const Request&);
@@ -74,14 +75,8 @@ protected:
   /** Thread trampoline */
   static int trampoline(void *p);
 
-  /** Asynchronous thread trampoline */
-  static int asyncTrampoline(void *p);
-
   /** Thread worker function */
   int work();
-
-  /** Asyncronous thread worker function */
-  int asyncWork();
 
   /** The request queue */
   Request *m_pRequestQueue;
@@ -89,20 +84,11 @@ protected:
   /** The semaphore giving the number of items in the queue. */
   Semaphore m_RequestQueueSize;
 
-  /** The asynchronous request queue */
-  Request *m_pAsyncRequestQueue;
-
-  /** The semaphore giving the number of items in the asynchronous queue. */
-  Semaphore m_AsyncRequestQueueSize;
-
   /** True if the worker thread should cleanup and stop. */
   volatile bool m_Stop;
 
   /** Mutex to be held when the request queue is being changed. */
   Mutex m_RequestQueueMutex;
-
-  /** Mutex to be held when the asynchronous request queue is being changed. */
-  Mutex m_AsyncRequestQueueMutex;
 };
 
 #endif

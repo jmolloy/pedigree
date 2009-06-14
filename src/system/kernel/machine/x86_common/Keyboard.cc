@@ -38,7 +38,7 @@ X86Keyboard::X86Keyboard(uint32_t portBase) :
     m_bCapsLock(false),
     m_Port("PS/2 Keyboard controller"),
     m_BufStart(0), m_BufEnd(0), m_BufLength(0),
-    m_IrqId(0)
+    m_IrqId(0), m_Callback(0)
 {
 }
 
@@ -200,7 +200,8 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
         m_Buffer[m_BufEnd++] = c;
         m_BufEnd = m_BufEnd%BUFLEN;
         m_BufLength.release(1);
-
+        if (m_Callback)
+            m_Callback(c);
     }
 
     return true;
@@ -280,12 +281,19 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     table_entry_t *pTableEntry = getTableEntry(m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
     if (!pTableEntry)
     {
+        NOTICE("Needed to fallback, altgr: " << m_bAltGr <<", alt " << m_bAlt << ", esc: " << m_bEscape);
         // Fall back and just use the shift modifier.
         pTableEntry = getTableEntry(false, false, false, m_bShift, m_bEscape, scancode);
-        if (!pTableEntry)
+        if (!pTableEntry || pTableEntry->flags == 0)
         {
-            m_bEscape = false;
-            return 0;
+            // Fall back again and use no modifier.
+            pTableEntry = getTableEntry(false, false, false, false, false, scancode);
+            if (!pTableEntry)
+            {
+                NOTICE("Failed completely.");
+                m_bEscape = false;
+                return 0;
+            }
         }
     }
     m_bEscape = false;

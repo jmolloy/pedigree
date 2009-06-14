@@ -101,6 +101,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     uint64_t nBytes =  file->m_pBackEnd->addRequest(CONSOLE_READ, file->m_Param, size, buffer);
 
     // Perform cooked mode processing if required.
+#if 0
     if (file->m_Flags & (LCookedMode|LEcho))
     {
         char *pC = reinterpret_cast<char*>(buffer);
@@ -127,11 +128,12 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
                 write(file, location, nBytes, buffer);
         }
     }
-
+#endif
     // Perform input processing.
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
     {
+        NOTICE("Input process : " << (uintptr_t)pC[i] << ", nbytes: " << nBytes);
         if (file->m_Flags & IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
 
@@ -172,30 +174,32 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
         }
     }
 
-    uint64_t nBytes = file->m_pBackEnd->addRequest(CONSOLE_WRITE, file->m_Param, size, buffer);
+    char *newbuf = new char[size];
+    memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
+    uint64_t nBytes = file->m_pBackEnd->addAsyncRequest(CONSOLE_WRITE, file->m_Param, size, reinterpret_cast<uint64_t>(newbuf));
 
-    return nBytes;
+    return size;
 }
 
 int ConsoleManager::getCols(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETCOLS));
+    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETCOLS, pFile->m_Param));
 }
 
 int ConsoleManager::getRows(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETROWS));
+    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETROWS, pFile->m_Param));
 }
 
 bool ConsoleManager::hasDataAvailable(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<bool>(pFile->m_pBackEnd->addRequest(CONSOLE_DATA_AVAILABLE));
+    return static_cast<bool>(pFile->m_pBackEnd->addRequest(CONSOLE_DATA_AVAILABLE, pFile->m_Param));
 }
 
 void initConsole()

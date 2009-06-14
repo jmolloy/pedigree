@@ -23,7 +23,7 @@
 
 #include "newlib.h"
 
-#if 1
+#if 0
 #define SC_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define SC_NOTICE(x)

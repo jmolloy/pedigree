@@ -48,6 +48,11 @@ public:
 
     virtual uint64_t getCharacter();  
     virtual uint64_t getCharacterNonBlock();
+    
+    virtual void registerCallback(KeyPressedCallback callback)
+    {
+        m_Callback = callback;
+    }
 
     //
     // IrqHandler interface
@@ -111,6 +116,9 @@ private:
      * IRQ id.
      */
     irq_id_t m_IrqId;
+
+    /** Callback. */
+    KeyPressedCallback m_Callback;
 };
 
 #endif

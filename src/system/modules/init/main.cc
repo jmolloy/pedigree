@@ -172,6 +172,7 @@ void init()
     pProcess->description().append("init");
 
     pProcess->setCwd(VFS::instance().find(String("root\xAF/")));
+    pProcess->setCtty(0);
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
@@ -185,11 +186,15 @@ void destroy()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root\xAF/applications/login"));
+    File* initProg = VFS::instance().find(String("root\xAF/applications/TUI"));
     if (!initProg)
     {
-        FATAL("Unable to load init program!");
-        return;
+        initProg = VFS::instance().find(String("root\xAF/applications/tui"));
+        if (!initProg)
+        {
+            FATAL("Unable to load init program!");
+            return;
+        }
     }
 
     // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
