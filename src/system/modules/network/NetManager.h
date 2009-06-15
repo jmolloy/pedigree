@@ -32,6 +32,7 @@
 #define NETMAN_TYPE_UDP6   10
 #define NETMAN_TYPE_TCP6   11
 
+#ifndef IN_PROTOCOLS_DEFINED
 #define IN_PROTOCOLS_DEFINED
 enum Protocol
 {
@@ -40,8 +41,10 @@ enum Protocol
   IPPROTO_ICMP,
   IPPROTO_RAW,
   IPPROTO_TCP,
-  IPPROTO_UDP
+  IPPROTO_UDP,
+  IPPROTO_MAX
 };
+#endif
 
 /** File subclass for sockets */
 class Socket : public File
@@ -50,7 +53,7 @@ class Socket : public File
     /** Copy constructors are hidden - (mostly) unimplemented (or invalid)! */
     Socket(const File &file);
     File& operator =(const File&);
-    
+
     // Endpoints are not able to be copied
     Socket(const Socket &file) : m_Endpoint(0), m_Protocol(0)
     {
@@ -61,29 +64,29 @@ class Socket : public File
       ERROR("Socket copy constructor called");
       return *this;
     }
-    
+
   public:
     Socket(int proto, Endpoint *p, Filesystem *pFs) :
       File(String("socket"), 0, 0, 0, 0, pFs, 0, 0), m_Endpoint(p), m_Protocol(proto)
     {};
     virtual ~Socket()
     {};
-    
+
     inline Endpoint *getEndpoint()
     {
       return m_Endpoint;
     }
-    
+
     inline int getProtocol()
     {
       return m_Protocol;
     }
-    
+
     /** Similar to POSIX's select() function */
     virtual int select(bool bWriting = false, int timeout = 0)
     {
         NOTICE("Socket::select");
-        
+
         // Basically, this busy waits for data; the last thing you want to do is
         // cancel execution of dataReady if it's blocking (with a timeout) as it
         // won't be able to free the resources it uses or unregister the Timer it
@@ -119,7 +122,7 @@ class Socket : public File
                     int state = m_Endpoint->state();
                     if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
                         return 1;
-                    
+
                     Scheduler::instance().yield();
                 }
                 while(timeout != 0);
@@ -127,14 +130,14 @@ class Socket : public File
             else
                 return 1;
         }
-        
+
         return 0;
     }
 
     virtual void decreaseRefCount(bool bIsWriter);
-    
+
   private:
-  
+
     Endpoint *m_Endpoint;
     int m_Protocol;
 };
@@ -160,19 +163,19 @@ public:
   //
   // NetManager interface.
   //
-  
+
   File* newEndpoint(int type, int protocol);
-  
+
   bool isEndpoint(File* f);
-  
+
   Endpoint* getEndpoint(File* f);
-  
+
   void removeEndpoint(File* f);
-  
+
   File* accept(File* f);
-  
-  uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-  uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+
+  uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+  uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 
   //
   // Filesystem interface.

@@ -25,180 +25,180 @@ NetManager NetManager::m_Instance;
 
 void Socket::decreaseRefCount(bool bIsWriter)
 {
-  if (bIsWriter)
-    m_nWriters --;
-  else
-    m_nReaders --;
+    if (bIsWriter)
+        m_nWriters --;
+    else
+        m_nReaders --;
 
-  if (m_nReaders == 0 && m_nWriters == 0)
-  {
-    m_Endpoint->close();
-    m_Endpoint->getManager()->returnEndpoint(m_Endpoint);
-    delete this;
-  }
+    if (m_nReaders == 0 && m_nWriters == 0)
+    {
+        if (m_Endpoint)
+        {
+            m_Endpoint->close();
+            m_Endpoint->getManager()->returnEndpoint(m_Endpoint);
+        }
+        delete this;
+    }
 }
 
 File* NetManager::newEndpoint(int type, int protocol)
 {
-  Endpoint* p = 0;
-  if(type == NETMAN_TYPE_UDP)
-  {
-    IpAddress a;
-    p = UdpManager::instance().getEndpoint(a, 0, 0);
-  }
-  else if(type == NETMAN_TYPE_TCP)
-  {
-    p = TcpManager::instance().getEndpoint();
-  }
-  else if(type == NETMAN_TYPE_RAW)
-  {
-    p = RawManager::instance().getEndpoint(protocol);
-  }
-  else
-  {
-    ERROR("NetManager::getEndpoint called with unknown protocol");
-  }
+    Endpoint* p = 0;
+    if (type == NETMAN_TYPE_UDP)
+    {
+        IpAddress a;
+        p = UdpManager::instance().getEndpoint(a, 0, 0);
+    }
+    else if (type == NETMAN_TYPE_TCP)
+    {
+        p = TcpManager::instance().getEndpoint();
+    }
+    else if (type == NETMAN_TYPE_RAW)
+    {
+        p = RawManager::instance().getEndpoint(protocol);
+    }
+    else
+    {
+        ERROR("NetManager::getEndpoint called with unknown protocol");
+    }
 
-  if(p)
-  {
-    File *ret = new Socket(type, p, this);
-    ret->increaseRefCount(false);
-    return ret;
-  }
-  else
-    return 0;
+    if (p)
+    {
+        File *ret = new Socket(type, p, this);
+        ret->increaseRefCount(false);
+        return ret;
+    }
+    else
+        return 0;
 }
 
 void NetManager::removeEndpoint(File* f)
 {
-  ERROR("Old-style call (removeEndpoint)");
-  return;
-
-  if(!isEndpoint(f))
+    ERROR("Old-style call (removeEndpoint)");
     return;
 
-  Endpoint* e = getEndpoint(f);
-  if(!e)
-    return;
-  e->close();
+    if (!isEndpoint(f))
+        return;
 
-  size_t removeIndex = f->getInode() & 0x00FFFFFF, i = 0;
-  bool removed = false;
-  for(Vector<Endpoint*>::Iterator it = m_Endpoints.begin(); it != m_Endpoints.end(); it++, i++)
-  {
-    if(i == removeIndex)
+    Endpoint* e = getEndpoint(f);
+    if (!e)
+        return;
+    e->close();
+
+    size_t removeIndex = f->getInode() & 0x00FFFFFF, i = 0;
+    bool removed = false;
+    for (Vector<Endpoint*>::Iterator it = m_Endpoints.begin(); it != m_Endpoints.end(); it++, i++)
     {
-      m_Endpoints.erase(it);
-      removed = true;
-      break;
+        if (i == removeIndex)
+        {
+            m_Endpoints.erase(it);
+            removed = true;
+            break;
+        }
     }
-  }
 
-  //if(f->getSize() == NETMAN_TYPE_UDP)
-  //  UdpManager::instance().returnEndpoint(e);
-  //else if(f->getSize() == NETMAN_TYPE_TCP)
-  //  TcpManager::instance().returnEndpoint(e);
+    //if(f->getSize() == NETMAN_TYPE_UDP)
+    //  UdpManager::instance().returnEndpoint(e);
+    //else if(f->getSize() == NETMAN_TYPE_TCP)
+    //  TcpManager::instance().returnEndpoint(e);
 
-  //if(f->getSize() == NETMAN_TYPE_RAW)
-  //  RawManager::instance().returnEndpoint(e);
+    //if(f->getSize() == NETMAN_TYPE_RAW)
+    //  RawManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File* f)
 {
-  /// \todo We can actually check the filename too - if it's "socket" & the flags are set we know it's a socket...
-  return f && ((f->getInode() & 0xFF000000) == 0xab000000);
+    /// \todo We can actually check the filename too - if it's "socket" & the flags are set we know it's a socket...
+    return f && ((f->getInode() & 0xFF000000) == 0xab000000);
 }
 
 Endpoint* NetManager::getEndpoint(File* f)
 {
-  ERROR("Old-style call (getEndpoint)");
-  return 0;
+    ERROR("Old-style call (getEndpoint)");
+    return 0;
 
-  if(!isEndpoint(f))
-    return 0;
-  size_t indx = f->getInode() & 0x00FFFFFF;
-  if(indx < m_Endpoints.count())
-    return m_Endpoints[indx];
-  else
-    return 0;
+    if (!isEndpoint(f))
+        return 0;
+    size_t indx = f->getInode() & 0x00FFFFFF;
+    if (indx < m_Endpoints.count())
+        return m_Endpoints[indx];
+    else
+        return 0;
 }
 
 File* NetManager::accept(File* f)
 {
-  // We can pretty safely assume that this is a valid call, as the only File objects
-  // defined in the context of the NetManager are Sockets
-  Socket *sock = static_cast<Socket *>(f);
+    // We can pretty safely assume that this is a valid call, as the only File objects
+    // defined in the context of the NetManager are Sockets
+    Socket *sock = static_cast<Socket *>(f);
 
-  Endpoint* server = sock->getEndpoint();
-  if(server)
-  {
-    Endpoint* client = server->accept();
-    File *ret = new Socket(sock->getProtocol(), client, this);
-    ret->increaseRefCount(false);
-    return ret;
-  }
-  return 0;
-}
-
-uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
-{
-  // We can pretty safely assume that this is a valid call, as the only File objects
-  // defined in the context of the NetManager are Sockets
-  Socket *sock = static_cast<Socket *>(pFile);
-
-  Endpoint* p = sock->getEndpoint(); //NetManager::instance().getEndpoint(pFile);
-
-  int ret = 0;
-  if(p->isConnectionless())
-  {
-    /// \note UDP specific todo
-    /// \todo Actually, we only should read this data if it's from the IP specified
-    ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
-    ///       However, to do that we need to tell recv not to remove from the queue
-    ///       and instead peek at the message (in other words, we need flags)
-    Endpoint::RemoteEndpoint remoteHost;
-    memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
-    ret = p->recv(buffer, size, &remoteHost);
-  }
-  else
-  {
-    /// \todo O_NONBLOCK should control the blocking nature of this call
-    ret = p->recv(buffer, size, true, false);
-  }
-
-  return ret;
-}
-
-uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
-{
-  // We can pretty safely assume that this is a valid call, as the only File objects
-  // defined in the context of the NetManager are Sockets
-  Socket *sock = static_cast<Socket *>(pFile);
-
-  Endpoint* p = sock->getEndpoint(); // NetManager::instance().getEndpoint(pFile);
-
-  if(p->isConnectionless())
-  {
-    Network *pCard = 0;
-    Endpoint::RemoteEndpoint remoteHost;
-    IpAddress remoteIp = p->getRemoteIp();
-    if(sock->getProtocol() == NETMAN_TYPE_UDP)
+    Endpoint* server = sock->getEndpoint();
+    if (server)
     {
-      if(remoteIp.getIp() != 0)
-      {
-        remoteHost.remotePort = p->getRemotePort();
-        remoteHost.ip = remoteIp;
-        pCard = RoutingTable::instance().DetermineRoute(remoteIp);
-      }
+        Endpoint* client = server->accept();
+        File *ret = new Socket(sock->getProtocol(), client, this);
+        ret->increaseRefCount(false);
+        return ret;
+    }
+    return 0;
+}
+
+uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    // We can pretty safely assume that this is a valid call, as the only File objects
+    // defined in the context of the NetManager are Sockets
+    Socket *sock = static_cast<Socket *>(pFile);
+
+    Endpoint* p = sock->getEndpoint();
+
+    int ret = 0;
+    if (p->isConnectionless())
+    {
+        /// \note UDP specific todo
+        /// \todo Actually, we only should read this data if it's from the IP specified
+        ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
+        ///       However, to do that we need to tell recv not to remove from the queue
+        ///       and instead peek at the message (in other words, we need flags)
+        Endpoint::RemoteEndpoint remoteHost;
+        memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
+        ret = p->recv(buffer, size, &remoteHost);
+    }
+    else
+        ret = p->recv(buffer, size, bCanBlock, false);
+
+    return ret;
+}
+
+uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    // We can pretty safely assume that this is a valid call, as the only File objects
+    // defined in the context of the NetManager are Sockets
+    Socket *sock = static_cast<Socket *>(pFile);
+
+    Endpoint* p = sock->getEndpoint();
+
+    if (p->isConnectionless())
+    {
+        Network *pCard = 0;
+        Endpoint::RemoteEndpoint remoteHost;
+        IpAddress remoteIp = p->getRemoteIp();
+        if (sock->getProtocol() == NETMAN_TYPE_UDP)
+        {
+            if (remoteIp.getIp() != 0)
+            {
+                remoteHost.remotePort = p->getRemotePort();
+                remoteHost.ip = remoteIp;
+                pCard = RoutingTable::instance().DetermineRoute(remoteIp);
+            }
+        }
+
+        return p->send(size, buffer, remoteHost, false, pCard);
+    }
+    else
+    {
+        return p->send(size, buffer);
     }
 
-    return p->send(size, buffer, remoteHost, false, pCard);
-  }
-  else
-  {
-    return p->send(size, buffer);
-  }
-
-  return 0;
+    return 0;
 }
 

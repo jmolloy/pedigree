@@ -34,7 +34,7 @@ class VirtualAddressSpace
   public:
     /** Debugger can access our private members for statistics reporting. */
     friend class Debugger;
-  
+
     /** The page is only accessible from kernel-mode. If this flag is not set the
      *  page is also accessible from user-mode. */
     static const size_t KernelMode    = 0x01;
@@ -132,6 +132,18 @@ class VirtualAddressSpace
     /** The destructor does nothing */
     inline virtual ~VirtualAddressSpace(){}
 
+    /** Setter for the internal Heap and HeapEnd variables */
+    void setHeap(void *heap, void *heapEnd)
+    {
+        m_Heap = heap;
+        m_HeapEnd = heapEnd;
+    }
+
+    /** Pointer to the beginning of the heap */
+    void *m_Heap;
+    /** Pointer to the current heap end */
+    void *m_HeapEnd;
+
   protected:
     /** The constructor does nothing */
     inline VirtualAddressSpace(void *Heap)
@@ -151,11 +163,6 @@ class VirtualAddressSpace
      *\param[in] virtualAddress current heap address
      *\param[in] pageCount number of mapped pages to unmap and free */
     void rollbackHeapExpansion(void *virtualAddress, size_t pageCount);
-
-    /** Pointer to the beginning of the heap */
-    void *m_Heap;
-    /** Pointer to the current heap end */
-    void *m_HeapEnd;
 };
 
 /** @} */

@@ -290,7 +290,7 @@ String FatFilesystem::getVolumeLabel()
 
 /////////////////////////////////////////////////////////////////////////////
 
-uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     // Sanity check.
     if (pFile->isDirectory())
@@ -433,7 +433,9 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
     return 0;
 }
 
-uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+/////////////////////////////////////////////////////////////////////////////
+
+uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     // test whether the entire Filesystem is read-only.
     if (m_bReadOnly)
@@ -592,6 +594,8 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
 
     return bytesWritten;
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 void FatFilesystem::updateFileSize(File* pFile, int64_t sizeChange)
 {

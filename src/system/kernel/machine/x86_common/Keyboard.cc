@@ -51,7 +51,7 @@ void X86Keyboard::initialise()
 
   // Register the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();
-  m_IrqId = irqManager.registerIsaIrqHandler(1, this);
+  m_IrqId = irqManager.registerIsaIrqHandler(1, this, true);
   if (m_IrqId == 0)
   {
     ERROR("X86Keyboard: failed to register IRQ handler!");

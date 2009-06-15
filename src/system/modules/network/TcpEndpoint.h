@@ -35,65 +35,69 @@
 class TcpEndpoint : public Endpoint
 {
   public:
-  
+
     /** Constructors and destructors */
     TcpEndpoint() :
       Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(uint16_t local, uint16_t remote) :
       Endpoint(local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(connId), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false)
     {
       m_bConnection = true;
     };
     virtual ~TcpEndpoint() {};
-    
+
     /** Application interface */
     virtual int state();
     virtual int send(size_t nBytes, uintptr_t buffer);
     virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock = false, bool bPeek = false);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
-    
+
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true);
     virtual void close();
-    
+
     virtual Endpoint* accept();
     virtual void listen();
-    
+
     virtual void setRemoteHost(Endpoint::RemoteEndpoint host)
     {
       m_RemoteHost = host;
     }
-    
+
     virtual inline uint32_t getConnId()
     {
       return m_ConnId;
     }
-    
+
     /** TcpManager functionality - called to deposit data into our local buffer */
     virtual void depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
-    
+
     /** Setters */
     void setCard(Network* pCard)
     {
       m_Card = pCard;
     }
-    
+
     void addIncomingConnection(TcpEndpoint* conn)
     {
       if(conn)
@@ -102,13 +106,17 @@ class TcpEndpoint : public Endpoint
         m_IncomingConnectionCount.release();
       }
     }
-  
+
+    /** Shuts down halves of the connection */
+    virtual bool shutdown(ShutdownType what);
+
   private:
-  
+
     /** Copy constructors */
     TcpEndpoint(const TcpEndpoint& s) :
       Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0)
+      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false)
     {
       // shouldn't be called
       ERROR("Tcp: TcpEndpoint copy constructor has been called.");
@@ -119,33 +127,36 @@ class TcpEndpoint : public Endpoint
       ERROR("Tcp: TcpEndpoint copy constructor has been called.");
       return *this;
     }
-    
+
     /** The network device to use */
     Network* m_Card;
-    
+
     /** TcpManager connection ID */
     size_t m_ConnId;
-    
+
     /** The host we're connected to at the moment */
     RemoteEndpoint m_RemoteHost;
-  
+
     /** The incoming data stream */
     TcpBuffer m_DataStream;
-    
+
     /** Number of bytes we've removed off the front of the (shadow) data stream */
     size_t nBytesRemoved;
-    
+
     /** Shadow incoming data stream - actually receives the bytes from the stack until PUSH flag is set
       * or the buffer fills up, or the connection starts closing.
       */
     TcpBuffer m_ShadowDataStream;
-  
+
     /** Listen endpoint? */
     bool m_Listening;
-    
+
     /** Incoming connection queue (to be handled by accept) */
     List<Endpoint*> m_IncomingConnections;
     Semaphore m_IncomingConnectionCount;
+
+    /** Is there a connection active? */
+    bool m_bConnected;
 };
 
 #endif

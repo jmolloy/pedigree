@@ -458,6 +458,12 @@ unsigned int sleep(unsigned int seconds)
     return (unsigned int)syscall1(POSIX_SLEEP, seconds);
 }
 
+int usleep(useconds_t useconds)
+{
+    // Microseconds, TODO: support better granularity than 1 second
+    return (unsigned int)syscall1(POSIX_SLEEP, useconds / 1000000);
+}
+
 unsigned int alarm(unsigned int seconds)
 {
     return (unsigned int)syscall1(POSIX_ALARM, seconds);
@@ -1461,4 +1467,17 @@ int getgroups(int gidsetsize, gid_t grouplist[])
 size_t getpagesize()
 {
     return sysconf(_SC_PAGESIZE);
+}
+
+char *realpath(const char *file_name, char *resolved_name)
+{
+    STUBBED("realpath");
+    if(resolved_name && file_name)
+    {
+        strcpy(resolved_name, file_name);
+        return resolved_name;
+    }
+
+    errno = EINVAL;
+    return 0;
 }

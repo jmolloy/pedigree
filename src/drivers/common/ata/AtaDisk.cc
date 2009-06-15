@@ -192,6 +192,7 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     if (nBytes % 512)
         panic("AtaDisk: read request length not a multiple of 512!");
 
+    // The original number of bytes to read
     uint64_t origNBytes = nBytes;
 
     // Do we have any of these sectors in cache?
@@ -312,7 +313,9 @@ uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     if (nBytes % 512)
         panic("AtaDisk: write request length not a multiple of 512!");
 
+#ifndef CRIPPLE_HDD
     uint64_t oldLoc = location, oldCount = nBytes;
+#endif
 
     uint64_t origNBytes = nBytes;
 

@@ -36,7 +36,7 @@ Pipe::~Pipe()
 {
 }
 
-uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   uint64_t n = 0;
   uint8_t *pBuf = reinterpret_cast<uint8_t*>(buffer);
@@ -57,8 +57,12 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer)
     }
     else
     {
-      // EOF not signalled, so do a blocking wait on data.
-      m_BufLen.acquire();
+      // EOF not signalled, so do a blocking wait on data, if we can.
+      if(bCanBlock)
+          m_BufLen.acquire();
+      else
+          if(!m_BufLen.tryAcquire())
+              return n;
 
       // However, *here*, we must check if EOF is now signalled. When EOF comes in and there is no data, m_BufLen will be posted to
       // wake us up. We need to check if there was data available.
@@ -78,7 +82,7 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer)
   return n;
 }
 
-uint64_t Pipe::write(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Pipe::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   uint64_t n = 0;
   uint8_t *pBuf = reinterpret_cast<uint8_t*>(buffer);

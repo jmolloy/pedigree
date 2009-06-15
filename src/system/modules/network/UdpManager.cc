@@ -35,26 +35,28 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHo
     size_t nBytes = maxSize;
     bool allRead = false;
 
-    // only read in this block
+    // Only read in this block
     if(nBytes >= ptr->size)
     {
       nBytes = ptr->size;
       allRead = true;
     }
 
-    // and only past the offset
+    // And only past the offset
     nBytes -= ptr->offset;
 
     memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr + ptr->offset), nBytes);
 
     *remoteHost = ptr->remoteHost;
 
+    // If the entire block has not been read, repush it with the new offset
     if(!allRead)
     {
       ptr->offset = nBytes;
       m_DataQueue.pushFront(ptr);
       return nBytes;
     }
+    // Otherwise we're done - free the block and return
     else
     {
       delete reinterpret_cast<uint8_t*>(ptr->ptr);
@@ -70,6 +72,12 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
   /// \note Perhaps nBytes should also have an upper limit check?
   if(!nBytes || !payload)
     return;
+
+  // Do not accept a payload if our receiver is shut down
+  if(!m_bCanRecv)
+    return;
+
+  // Otherwise, grab the data block and add it to the queue
   uint8_t* data = new uint8_t[nBytes];
   memcpy(data, reinterpret_cast<void*>(payload), nBytes);
 
@@ -104,19 +112,24 @@ void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint
   StationInfo cardInfo = pCard->getStationInfo();
   if((e = m_Endpoints.lookup(destPort)) != 0)
   {
-    // check if we should pass on the packet
+    /** Should we pass on the packet? **/
     bool passOn = false;
+
+    // Broadcast, and accepting broadcast?
     if(to.getIp() == 0xffffffff)
       passOn = e->acceptAnyAddress();
+
+    // Not to us, but accepting any address?
     if(to.getIp() != cardInfo.ipv4.getIp())
       passOn = e->acceptAnyAddress();
+
+    // To us!
     else
       passOn = true;
 
     if(!passOn)
       return;
 
-    // e->setRemotePort(sourcePort);
     Endpoint::RemoteEndpoint host;
     host.ip = from;
     if(sourcePort)
@@ -138,7 +151,8 @@ void UdpManager::returnEndpoint(Endpoint* e)
 
 Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
 {
-  // try to find a unique port
+  // Try to find a unique port
+  /// \todo Bitmap! So much neater!
   /// \todo Move into a helper function
   if(localPort == 0)
   {
@@ -154,8 +168,8 @@ Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint
   }
 
   // Is there an endpoint for this port?
-  /// \todo Why, if there *is* an Endpoint, is it returned? Couldn't that cause
-  ///       conflicts?
+  /// \note If there is already an Endpoint, we do *not* reallocate it.
+  /// \todo Can UDP endpoints be shared? Is it a good idea?
   Endpoint* e;
   if((e = m_Endpoints.lookup(localPort)) == 0)
   {

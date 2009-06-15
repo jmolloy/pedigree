@@ -142,6 +142,43 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
     return connId;
 }
 
+void TcpManager::Shutdown(size_t connectionId)
+{
+  StateBlockHandle* handle;
+  if((handle = m_CurrentConnections.lookup(connectionId)) == 0)
+    return;
+
+  StateBlock* stateBlock;
+  if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
+    return;
+
+  IpAddress dest;
+  dest = stateBlock->remoteHost.ip;
+
+  // These two checks will end up closing our writing end of the connection
+
+  /** ESTABLISHED: No FIN received - send our own **/
+  if(stateBlock->currentState == Tcp::ESTABLISHED)
+  {
+    stateBlock->fin_seq = stateBlock->snd_nxt;
+
+    stateBlock->currentState = Tcp::FIN_WAIT_1;
+    stateBlock->seg_wnd = 0;
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->snd_nxt++;
+  }
+  /** CLOSE_WAIT: FIN received - reply **/
+  else if(stateBlock->currentState == Tcp::CLOSE_WAIT)
+  {
+    stateBlock->fin_seq = stateBlock->snd_nxt;
+
+    stateBlock->currentState = Tcp::LAST_ACK;
+    stateBlock->seg_wnd = 0;
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->snd_nxt++;
+  }
+}
+
 void TcpManager::Disconnect(size_t connectionId)
 {
   StateBlockHandle* handle;
@@ -204,9 +241,13 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
     return -1;
 
   if(stateBlock->currentState != Tcp::ESTABLISHED &&
+        stateBlock->currentState != Tcp::CLOSE_WAIT)
+     /*
+     &&
      stateBlock->currentState != Tcp::FIN_WAIT_1 &&
-     stateBlock->currentState != Tcp::FIN_WAIT_2)
-    return -1; // we can't send data unless we're in a synchronised state
+     stateBlock->currentState != Tcp::FIN_WAIT_2
+     */
+    return -1; // When we SHUT_WR, we send FIN meaning no more data from us.
 
   NOTICE("Sending segment");
 
@@ -282,10 +323,6 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 
   /// \todo FIXME: Don't let multiple connections use the same local port!
 
-  // this will fail for servers! we need a unique identifier for all TcpEndpoints - shouldn't be
-  // overly difficult to implement (but to lookup... that might be hard?)
-  //if((e = m_Endpoints.lookup(localPort)) == 0)
-  //{
     if(localPort == 0)
       localPort = allocatePort();
 
@@ -297,7 +334,6 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
     tmp->setManager(this);
 
     e = static_cast<Endpoint*>(tmp);
-    //m_Endpoints.insert(localPort, e);
-  //}
+
   return e;
 }

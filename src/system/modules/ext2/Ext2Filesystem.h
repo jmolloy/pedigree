@@ -44,8 +44,8 @@ public:
     static Filesystem *probe(Disk *pDisk);
     virtual File* getRoot();
     virtual String getVolumeLabel();
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
     virtual void truncate(File *pFile);
     virtual void fileAttributeChanged(File *pFile);
     virtual void cacheDirectoryContents(File *pFile);

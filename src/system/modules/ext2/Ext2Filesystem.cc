@@ -130,13 +130,13 @@ void Ext2Filesystem::fileAttributeChanged(File *pFile)
     pE2File->fileAttributeChanged();
 }
 
-uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     FATAL("EXT2: Read should not be called - Ext2File overrides it.");
     return false;
 }
 
-uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     FATAL("EXT2: Write should not be called - Ext2File overrides it.");
     return false;

@@ -30,8 +30,9 @@ class IrqManager
     /** Register an ISA irq
      *\param[in] irq the ISA irq number (from 0 to 15)
      *\param[in] handler pointer to the IrqHandler class
+     *\param[in] bEdge whether this IRQ is edge triggered or not
      *\return the irq's identifier */
-    virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler) = 0;
+    virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge = false) = 0;
     /** Register a PCI irq
      *\todo what parameters do we need here? Perhaps a PCIDevice class or something? */
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler) = 0;

@@ -98,7 +98,6 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
         m_DataStream.remove(0, nBytes);
 
         // we've read in this block
-        NOTICE("Returning first character " << *reinterpret_cast<const uint8_t*>(buffer) << ".");
         return nBytes;
     }
 
@@ -174,3 +173,25 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
     }
 };
 
+bool TcpEndpoint::shutdown(ShutdownType what)
+{
+    if(what == ShutSending)
+    {
+        // No longer able to write!
+        NOTICE("No longer able to send!");
+        TcpManager::instance().Shutdown(m_ConnId);
+        return true;
+    }
+    else if(what == ShutReceiving)
+    {
+        WARNING("TCP: SHUT_RD not yet supported");
+        return true; // Fake it
+    }
+    else if(what == ShutBoth)
+    {
+        // Standard shutdown, don't block
+        TcpManager::instance().Shutdown(m_ConnId);
+        return true;
+    }
+    return false;
+}

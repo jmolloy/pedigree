@@ -23,12 +23,14 @@
 #include <process/SignalEvent.h>
 #include <process/Scheduler.h>
 
+#include <utilities/RadixTree.h>
 #include <utilities/Tree.h>
 #include <LockGuard.h>
 
 #include <assert.h>
 
 #include "../modules/vfs/File.h"
+#include "../modules/vfs/LockedFile.h"
 
 #define O_RDONLY    0
 #define O_WRONLY    1
@@ -39,41 +41,53 @@
 typedef Tree<size_t, PosixSubsystem::SignalHandler*> sigHandlerTree;
 typedef Tree<size_t, FileDescriptor*> FdMap;
 
+RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
+
 /// Default constructor
 FileDescriptor::FileDescriptor() :
-    file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0)
+    file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0), lockedFile(0)
 {
 }
 
 /// Parameterised constructor
-FileDescriptor::FileDescriptor(File *newFile, uint64_t newOffset, size_t newFd, int fdFlags, int flFlags) :
-    file(newFile), offset(newOffset), fd(newFd), fdflags(fdFlags), flflags(flFlags)
+FileDescriptor::FileDescriptor(File *newFile, uint64_t newOffset, size_t newFd, int fdFlags, int flFlags, LockedFile *lf) :
+    file(newFile), offset(newOffset), fd(newFd), fdflags(fdFlags), flflags(flFlags), lockedFile(lf)
 {
     if(file)
+    {
+        lockedFile = g_PosixGlobalLockedFiles.lookup(file->getFullPath());
         file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    }
 }
 
 /// Copy constructor
 FileDescriptor::FileDescriptor(FileDescriptor &desc) :
-    file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags)
+    file(desc.file), offset(desc.offset), fd(desc.fd), fdflags(desc.fdflags), flflags(desc.flflags), lockedFile(0)
 {
     if(file)
+    {
+        lockedFile = g_PosixGlobalLockedFiles.lookup(file->getFullPath());
         file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    }
 }
 
 /// Pointer copy constructor
 FileDescriptor::FileDescriptor(FileDescriptor *desc) :
-    file(0), offset(0), fd(0), fdflags(0), flflags(0)
+    file(0), offset(0), fd(0), fdflags(0), flflags(0), lockedFile(0)
 {
     if(!desc)
         return;
+
     file = desc->file;
     offset = desc->offset;
     fd = desc->fd;
     fdflags = desc->fdflags;
     flflags = desc->flflags;
     if(file)
+    {
+        lockedFile = g_PosixGlobalLockedFiles.lookup(file->getFullPath());
         file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    }
 }
 
 /// Assignment operator implementation
@@ -85,7 +99,10 @@ FileDescriptor &FileDescriptor::operator = (FileDescriptor &desc)
     fdflags = desc.fdflags;
     flflags = desc.flflags;
     if(file)
+    {
+        lockedFile = g_PosixGlobalLockedFiles.lookup(file->getFullPath());
         file->increaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    }
     return *this;
 }
 
@@ -93,12 +110,23 @@ FileDescriptor &FileDescriptor::operator = (FileDescriptor &desc)
 FileDescriptor::~FileDescriptor()
 {
     if(file)
+    {
+        // Unlock the file we have a lock on, release from the global lock table
+        if(lockedFile)
+        {
+            g_PosixGlobalLockedFiles.remove(file->getFullPath());
+            lockedFile->unlock();
+            delete lockedFile;
+        }
         file->decreaseRefCount((flflags & O_RDWR) || (flflags & O_WRONLY));
+    }
 }
 
+/// \todo Copy the MemoryMappedFiles tree
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(s.m_NextFd),
-    m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount)
+    m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
+    m_MemoryMappedFiles()
 {
     LockGuard<Mutex> guard(m_SignalHandlersLock);
     LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);

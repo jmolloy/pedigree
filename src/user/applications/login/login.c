@@ -20,6 +20,8 @@
 #include <termios.h>
 #include <sys/wait.h>
 
+#include <sys/stat.h>
+
 // Pedigree function, defined in glue.c
 extern int login(int uid, char *password);
 
@@ -92,6 +94,8 @@ int main(int argc, char **argv)
     fflush(stdout);
 
     // Perform login - this function is in glue.c.
+    //struct passwd *pw = getpwnam("httpd");
+    //if(login(pw->pw_uid, "httpd") != 0) //password) != 0)
     if(login(pw->pw_uid, password) != 0)
     {
       printf("Password incorrect.\n");
@@ -112,6 +116,7 @@ int main(int argc, char **argv)
 
         // Child.
         execle(pw->pw_shell, pw->pw_shell, 0, newenv);
+        //execle("/applications/apache/httpd", "/applications/apache/httpd", 0, newenv);
 
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);
@@ -122,9 +127,6 @@ int main(int argc, char **argv)
         // Parent.
         int stat;
         waitpid(pid, &stat, 0);
-
-        printf("Test complete.\n");
-        while(1);
 
         continue;
       }

@@ -96,7 +96,7 @@ void ConsoleManager::getAttributes(File* file, bool *echo, bool *echoNewlines, b
   pC->backEnd->addRequest(CONSOLE_GETATTR, pC->param, reinterpret_cast<uint64_t>(echo), reinterpret_cast<uint64_t>(echoNewlines), reinterpret_cast<uint64_t>(echoBackspace), reinterpret_cast<uint64_t>(nlCausesCr), reinterpret_cast<uint64_t>(mapNlToCrIn), reinterpret_cast<uint64_t>(mapCrToNlIn));
 }
 
-uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   /// \todo Sanity checking.
   ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
@@ -104,7 +104,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
   return pC->backEnd->addRequest(CONSOLE_READ, pC->param, size, buffer);
 }
 
-uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   /// \todo Sanity checking.
   ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
