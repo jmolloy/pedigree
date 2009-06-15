@@ -39,14 +39,14 @@ File::~File()
 {
 }
 
-uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-  return m_pFilesystem->read(this, location, size, buffer);
+  return m_pFilesystem->read(this, location, size, buffer, bCanBlock);
 }
 
-uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-  return m_pFilesystem->write(this, location, size, buffer);
+  return m_pFilesystem->write(this, location, size, buffer, bCanBlock);
 }
 
 Time File::getCreationTime()

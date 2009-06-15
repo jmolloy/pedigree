@@ -29,162 +29,192 @@ class ProtocolManager;
  */
 class Endpoint
 {
-  private:
+private:
     Endpoint(const Endpoint &e);
     const Endpoint& operator = (const Endpoint& e);
-  public:
-  
+public:
+
+    /** shutdown() parameter */
+    enum ShutdownType
+    {
+        /** Disable sending on the Endpoint. For TCP this entails a FIN. */
+        ShutSending,
+
+        /** Disable receiving on the Endpoint. */
+        ShutReceiving,
+
+        /** Disable both sides of the Endpoint. */
+        ShutBoth
+    };
+
     /** Constructors and destructors */
     Endpoint() :
-      m_LocalPort(0), m_RemotePort(0), m_RemoteIp(), m_Manager(0), m_bConnection(false)
+            m_LocalPort(0), m_RemotePort(0), m_LocalIp(), m_RemoteIp(), m_Manager(0), m_bConnection(false)
     {};
     Endpoint(uint16_t local, uint16_t remote) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(), m_Manager(0), m_bConnection(false)
+            m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(), m_Manager(0), m_bConnection(false)
     {};
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      m_LocalPort(local), m_RemotePort(remote), m_RemoteIp(remoteIp), m_Manager(0), m_bConnection(false)
+            m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp), m_Manager(0), m_bConnection(false)
     {};
     virtual ~Endpoint() {};
-    
+
     /** Access to internal information */
     uint16_t getLocalPort()
     {
-      return m_LocalPort;
+        return m_LocalPort;
     }
     uint16_t getRemotePort()
     {
-      return m_RemotePort;
+        return m_RemotePort;
+    }
+    IpAddress getLocalIp()
+    {
+        return m_LocalIp;
     }
     IpAddress getRemoteIp()
     {
-      return m_RemoteIp;
+        return m_RemoteIp;
     }
-    
+
     void setLocalPort(uint16_t port)
     {
-      m_LocalPort = port;
+        m_LocalPort = port;
     }
     void setRemotePort(uint16_t port)
     {
-      m_RemotePort = port;
+        m_RemotePort = port;
+    }
+    void setLocalIp(IpAddress local)
+    {
+        m_LocalIp = local;
     }
     void setRemoteIp(IpAddress remote)
     {
-      m_RemoteIp = remote;
+        m_RemoteIp = remote;
     }
-    
+
     /** Special address type, like stationInfo but with port info too */
     struct RemoteEndpoint
     {
-      RemoteEndpoint() :
-        ip(), remotePort(0)
-      {};
-      
-      IpAddress ip; // either IPv4 or IPv6
-      uint16_t remotePort;
+        RemoteEndpoint() :
+                ip(), remotePort(0)
+        {};
+
+        IpAddress ip; // either IPv4 or IPv6
+        uint16_t remotePort;
     };
 
     /** What state is the endpoint in? Only really relevant for connection-based sockets I guess */
     virtual int state()
     {
-      return 0xff; // defaults to the standard state for non-connectable sockets
+        return 0xff; // defaults to the standard state for non-connectable sockets
     }
-    
+
     /** Is data ready to recv yet? */
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
-      return false;
+        return false;
     };
-    
+
     /** <Protocol>Manager functionality */
     virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
     {
     }
-    
+
+    /** All endpoint types must provide a shutdown() method that shuts part of the socket */
+    virtual bool shutdown(ShutdownType what) = 0;
+
     /** Connectionless endpoints */
     virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
     {
-      return -1;
+        return -1;
     };
     virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
     {
-      return -1;
+        return -1;
     };
-    virtual inline bool acceptAnyAddress() { return false; };
+    virtual inline bool acceptAnyAddress()
+    {
+        return false;
+    };
     virtual inline void acceptAnyAddress(bool accept) {};
-    
+
     /** Connection-based endpoints */
     virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true)
     {
-      return false;
+        return false;
     };
     virtual void close()
     {
     };
-    
+
     virtual void listen()
     {
     };
     virtual Endpoint* accept()
     {
-      return 0;
+        return 0;
     };
-    
+
     virtual int send(size_t nBytes, uintptr_t buffer)
     {
-      return -1;
+        return -1;
     };
     virtual int recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
     {
-      return -1;
+        return -1;
     };
-    
+
     virtual inline uint32_t getConnId()
     {
-      return 0;
+        return 0;
     }
-    
+
     virtual void setRemoteHost(RemoteEndpoint host)
     {
     };
-    
+
     virtual void setCard(Network* pCard)
     {
     };
-    
+
     /** Protocol management */
     ProtocolManager *getManager()
     {
-      return m_Manager;
+        return m_Manager;
     }
-    
+
     void setManager(ProtocolManager *man)
     {
-      m_Manager = man;
+        m_Manager = man;
     }
-    
+
     /** Connection type */
     inline bool isConnectionless()
     {
-      return !m_bConnection;
+        return !m_bConnection;
     }
-  
-  private:
-  
+
+private:
+
     /** Our local port (sourcePort in the UDP header) */
     uint16_t m_LocalPort;
-    
+
     /** Our destination port */
     uint16_t m_RemotePort;
-    
+
+    /** Local IP. Zero means bound to all. */
+    IpAddress m_LocalIp;
+
     /** Remote IP */
     IpAddress m_RemoteIp;
-    
+
     /** Protocol manager */
     ProtocolManager *m_Manager;
-    
-  protected:
-    
+
+protected:
+
     /** Connection-based?
       * Because the initialisation for any recv/send action on either type
       * of Endpoint (connected or connectionless) is the same across protocols

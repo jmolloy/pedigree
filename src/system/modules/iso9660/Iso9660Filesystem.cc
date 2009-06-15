@@ -210,7 +210,7 @@ String Iso9660Filesystem::getVolumeLabel()
   return String(static_cast<const char*>(str));
 }
 
-uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   // Sanity check.
   if (pFile->isDirectory())
@@ -258,7 +258,7 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   return bytesWritten;
 }
 
-uint64_t Iso9660Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Iso9660Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
   WARNING("Can't write to an ISO9660 filesystem");
   return 0;

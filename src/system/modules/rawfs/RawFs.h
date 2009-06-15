@@ -39,8 +39,8 @@ public:
     static Filesystem *probe (Disk *pDisk) {return 0;}
     virtual File *getRoot();
     virtual String getVolumeLabel() {return String("RawFs");}
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) {return 0;}
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) {return 0;}
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock) {return 0;}
+    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock) {return 0;}
     virtual void truncate(File *pFile) {return;}
     virtual void fileAttributeChanged(File *pFile) {return;}
     virtual void cacheDirectoryContents(File *pFile) {return;}

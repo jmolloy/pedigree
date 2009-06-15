@@ -41,7 +41,7 @@ bool Pit::initialise()
 
   // Allocate the IRQ
   IrqManager &irqManager = *Machine::instance().getIrqManager();
-  m_IrqId = irqManager.registerIsaIrqHandler(0, this);
+  m_IrqId = irqManager.registerIsaIrqHandler(0, this, true);
   if (m_IrqId == 0)
     return false;
 
@@ -80,7 +80,7 @@ void Pit::uninitialise()
 }
 
 Pit::Pit()
-  : m_IoPort("PIT"), m_IrqId(0), m_Handler(0)
+   : m_IoPort("PIT"), m_IrqId(0), m_Handler(0)
 {
 }
 

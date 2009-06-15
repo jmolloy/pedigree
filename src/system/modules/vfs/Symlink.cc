@@ -41,8 +41,9 @@ File *Symlink::followLink()
     char *pBuffer = new char[1024];
     read(0ULL, static_cast<uint64_t>(getSize()), reinterpret_cast<uintptr_t>(pBuffer));
     pBuffer[getSize()] = '\0';
-
+    NOTICE("Followlink, success");
     m_pCachedSymlink = m_pFilesystem->find(String(pBuffer), m_pParent);
+    NOTICE("Followlink, success2");
     return m_pCachedSymlink;
 }
 

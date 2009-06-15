@@ -36,7 +36,7 @@ class Pic : public IrqManager,
     //
     // IrqManager interface
     //
-    virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler);
+    virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge = false);
     virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
@@ -74,6 +74,8 @@ class Pic : public IrqManager,
 
     /** The IRQ handler */
     IrqHandler *m_Handler[16];
+    /** Whether the IRQs are edge or level triggered */
+    bool        m_HandlerEdge[16];
 
     /** The Pic instance */
     static Pic m_Instance;

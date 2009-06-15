@@ -84,10 +84,10 @@ public:
   //
 
   /** A File calls this to pass up a read request. */
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) =0;
+  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) =0;
 
   /** A File calls this to pass up a write request. */
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) =0;
+  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) =0;
 
   /** A File calls this to pass up a request to truncate a file - remove all data. */
   virtual void truncate(File *pFile) =0;

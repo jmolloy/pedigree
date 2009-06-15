@@ -25,13 +25,14 @@
 
 Pic Pic::m_Instance;
 
-irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler)
+irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge)
 {
   if (UNLIKELY(irq >= 16))
     return 0;
 
   // Save the IrqHandler
   m_Handler[irq] = handler;
+  m_HandlerEdge[irq] = bEdge;
 
   // Enable/Unmask the IRQ
   enable(irq, true);
@@ -96,7 +97,10 @@ Pic::Pic()
   : m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
 {
   for (size_t i = 0;i < 16;i++)
+  {
     m_Handler[i] = 0;
+    m_HandlerEdge[i] = false;
+  }
 }
 
 void Pic::interrupt(size_t interruptNumber, InterruptState &state)
@@ -130,12 +134,18 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq] != 0))
   {
+    if(m_HandlerEdge[irq])
+        eoi(irq);
+
     if (m_Handler[irq]->irq(irq, state) == false)
     {
       // Disable/Mask the IRQ line (the handler did not remove
       // the interrupt reason, yet)
       enable(irq, false);
     }
+
+    if(!m_HandlerEdge[irq])
+        eoi(irq);
   }
   else
   {
@@ -151,8 +161,6 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
     #endif
       #endif
   }
-
-  eoi(irq);
 }
 
 void Pic::eoi(uint8_t irq)

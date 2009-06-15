@@ -22,10 +22,17 @@
 #include <process/Mutex.h>
 
 #include <utilities/Tree.h>
+#include <utilities/RadixTree.h>
 #include <utilities/ExtensibleBitmap.h>
 #include <LockGuard.h>
 
 class File;
+class LockedFile;
+class MemoryMappedFile;
+
+/** A map linking full paths to (advisory) locked files */
+/// \todo Locking!
+extern RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
 
 /** Abstraction of a file descriptor, which defines an open file
   * and related flags.
@@ -38,7 +45,7 @@ class FileDescriptor
         FileDescriptor();
 
         /// Parameterised constructor
-        FileDescriptor(File *newFile, uint64_t newOffset = 0, size_t newFd = 0xFFFFFFFF, int fdFlags = 0, int flFlags = 0);
+        FileDescriptor(File *newFile, uint64_t newOffset = 0, size_t newFd = 0xFFFFFFFF, int fdFlags = 0, int flFlags = 0, LockedFile *lf = 0);
 
         /// Copy constructor
         FileDescriptor(FileDescriptor &desc);
@@ -66,6 +73,9 @@ class FileDescriptor
 
         /// File status flags (fcntl)
         int flflags;
+
+        /// Locked file, non-zero if there is an advisory lock on the file
+        LockedFile *lockedFile;
 };
 
 /** Defines the compatibility layer for the POSIX Subsystem */
@@ -76,7 +86,8 @@ class PosixSubsystem : public Subsystem
         /** Default constructor */
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
-            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1)
+            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
+            m_MemoryMappedFiles()
         {}
 
         /** Copy constructor */
@@ -85,7 +96,8 @@ class PosixSubsystem : public Subsystem
         /** Parameterised constructor */
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
-            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1)
+            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
+            m_MemoryMappedFiles()
         {}
 
         /** Default destructor */
@@ -185,6 +197,22 @@ class PosixSubsystem : public Subsystem
             m_FdMap.insert(fd, pFd);
         }
 
+        /** Links a MemoryMappedFile */
+        void memoryMapFile(void* p, MemoryMappedFile *m)
+        {
+            if(m_MemoryMappedFiles.lookup(p))
+                return;
+            m_MemoryMappedFiles.insert(p, m);
+        }
+
+        /** Removes a MemoryMappedFile link */
+        MemoryMappedFile *unmapFile(void* p)
+        {
+            MemoryMappedFile *ret = m_MemoryMappedFiles.lookup(p);
+            m_MemoryMappedFiles.remove(p);
+            return ret;
+        }
+
     private:
 
         /** Signal handlers */
@@ -218,6 +246,10 @@ class PosixSubsystem : public Subsystem
          * Number of times freed
          */
         int m_FreeCount;
+        /**
+         * Links addresses to their MemoryMappedFiles.
+         */
+        Tree<void*, MemoryMappedFile*> m_MemoryMappedFiles;
 };
 
 #endif

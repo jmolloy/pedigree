@@ -23,7 +23,7 @@ MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
 MemoryMappedFile::MemoryMappedFile(File *pFile) :
     m_pFile(pFile), m_Mappings(), m_bMarkedForDeletion(false),
-    m_Extent(pFile->getSize()), m_RefCount(0)
+    m_Extent(pFile->getSize() + 1), m_RefCount(0)
 {
     if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
     {
@@ -62,7 +62,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
     spinlock.acquire();
 
     VirtualAddressSpace *va = pProcess->getAddressSpace();
-    
+
     VirtualAddressSpace &oldva = Processor::information().getVirtualAddressSpace();
 
     if (&oldva != va)
@@ -98,7 +98,7 @@ void MemoryMappedFile::unload(uintptr_t address)
     spinlock.acquire();
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    
+
     // Remove all the V->P mappings we currently posess.
     for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
          it != m_Mappings.end();
@@ -243,7 +243,7 @@ void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
 
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
     if (!pMmFileList) return;
-    
+
     for (List<MmFile*>::Iterator it = pMmFileList->begin();
          it != pMmFileList->end();
          it++)
@@ -275,7 +275,7 @@ void MemoryMappedFileManager::clone(Process *pProcess)
 
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
     if (!pMmFileList) return;
-    
+
     MmFileList *pMmFileList2 = m_MmFileLists.lookup(pOtherVa);
     if (!pMmFileList2)
     {
@@ -302,7 +302,7 @@ void MemoryMappedFileManager::unmapAll()
 
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
     if (!pMmFileList) return;
-    
+
     for (List<MmFile*>::Iterator it = pMmFileList->begin();
          it != pMmFileList->end();
          it = pMmFileList->begin())
@@ -352,7 +352,6 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
             return true;
         }
     }
-    
     m_CacheLock.release();
     sl.release();
 

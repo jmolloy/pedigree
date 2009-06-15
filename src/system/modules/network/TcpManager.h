@@ -45,51 +45,56 @@ public:
   {};
   virtual ~TcpManager()
   {};
-  
+
   /** For access to the manager without declaring an instance of it */
   static TcpManager& instance()
   {
     return manager;
   }
-  
+
   /** Connects to a remote host (blocks until connected) */
   size_t Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, bool bBlock = true, Network* pCard = 0);
-  
+
   /** Starts listening for connections */
   size_t Listen(Endpoint* e, uint16_t port, Network* pCard = 0);
-  
-  /** Disconnects from a remote host (blocks until disconnected) */
+
+  /** In TCP terms - sends FIN. */
+  void Shutdown(size_t connectionId);
+
+  /** Disconnects from a remote host (blocks until disconnected). Totally tears down the connection, don't
+   *  call unless you absolutely must! Use Shutdown to begin a standard disconnect without blocking.
+   */
   void Disconnect(size_t connectionId);
-  
+
   /** Gets a new Endpoint for a connection */
   Endpoint* getEndpoint(uint16_t localPort = 0, Network* pCard = 0);
-  
+
   /** Returns an Endpoint */
   void returnEndpoint(Endpoint* e);
-  
+
   /** A new packet has arrived! */
   void receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard);
-  
+
   /** Sends a TCP packet over the given connection ID */
   int send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue = true);
-  
+
   /** Removes a given (closed) connection from the system */
   void removeConn(size_t connId);
-  
+
   /** Grabs the current state of a given connection */
   Tcp::TcpState getState(size_t connId)
   {
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return Tcp::UNKNOWN;
-    
+
     StateBlock* stateBlock;
     if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
       return Tcp::UNKNOWN;
-    
+
     return stateBlock->currentState;
   }
-  
+
   /** Gets the next sequence number to use */
   uint32_t getNextSequenceNumber()
   {
@@ -97,7 +102,7 @@ public:
     m_NextTcpSequence += 0xffff;
     return m_NextTcpSequence;
   }
-  
+
   /** Gets a unique connection ID */
   size_t getConnId()
   {
@@ -107,41 +112,41 @@ public:
     m_NextConnId = ret + 1;
     return ret;
   }
-  
+
   /** Grabs the number of packets that have been queued for a given connection */
   uint32_t getNumQueuedPackets(size_t connId)
   {
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return 0;
-    
+
     StateBlock* stateBlock;
     if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
       return 0;
-    
+
     return stateBlock->numEndpointPackets;
   }
-  
+
   /** Reduces the number of queued packets by the specified amount */
   void removeQueuedPackets(size_t connId, uint32_t n = 1)
   {
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return;
-    
+
     StateBlock* stateBlock;
     if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
       return;
-    
+
     stateBlock->numEndpointPackets -= n;
   }
-  
+
   /** Allocates a unique local port for a connection with a server */
   uint16_t allocatePort()
   {
     static uint16_t lastPort = 32768;
     return lastPort++;
-    
+
     // default behaviour: start at 32768
     /// \todo Meant to be randomised, and this isn't ideal
     size_t i;
@@ -175,25 +180,25 @@ public:
 private:
 
   static TcpManager manager;
-  
+
   // next TCP sequence number to allocate
   uint32_t m_NextTcpSequence;
-  
+
   // this keeps track of the next valid connection ID
   size_t m_NextConnId;
-  
+
   // standard state blocks
   Tree<StateBlockHandle, StateBlock*> m_StateBlocks;
-  
+
   // server state blocks (separated from standard blocks in the list)
   Tree<StateBlockHandle, StateBlock*> m_ListeningStateBlocks;
-  
+
   /** Current connections - basically a map between connection IDs and handles */
   Tree<size_t, StateBlockHandle*> m_CurrentConnections;
 
   /** Currently known endpoints (all actually TcpEndpoints). */
   Tree<size_t, Endpoint*> m_Endpoints;
-  
+
   /** Port availability */
   Tree<size_t, bool*> m_PortsAvailable;
 };

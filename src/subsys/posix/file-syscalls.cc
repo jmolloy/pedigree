@@ -350,7 +350,7 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
     HugeStaticString tmp;
     str.clear();
     tmp.clear();
-
+    NOTICE("Before followlink");
     return Symlink::fromFile(f)->followLink(buf, bufsize);
 }
 
@@ -465,6 +465,12 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
+    if(!st)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     File* file = 0;
     if (!strcmp(name, "/dev/null"))
         file = NullFs::instance().getFile();
@@ -532,7 +538,10 @@ int posix_fstat(int fd, struct stat *st)
 {
     F_NOTICE("fstat(" << Dec << fd << Hex << ")");
     if(!st)
+    {
+        SYSCALL_ERROR(InvalidArgument);
         return -1;
+    }
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -597,6 +606,11 @@ int posix_fstat(int fd, struct stat *st)
 int posix_lstat(char *name, struct stat *st)
 {
     F_NOTICE("lstat(" << name << ")");
+    if(!st)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
 
     File *file = VFS::instance().find(String(name), GET_CWD());
 
@@ -649,6 +663,8 @@ int posix_lstat(char *name, struct stat *st)
     st->st_atime = static_cast<int>(file->getAccessedTime());
     st->st_mtime = static_cast<int>(file->getModifiedTime());
     st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_blksize = 1;
+    st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     return 0;
 }

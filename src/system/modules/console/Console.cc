@@ -100,7 +100,7 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
     *flags = pFile->m_Flags;
 }
 
-uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Sanity checking.
     ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
@@ -157,7 +157,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     return nBytes;
 }
 
-uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Sanity checking.
     ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);

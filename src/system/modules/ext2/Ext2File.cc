@@ -50,14 +50,14 @@ Ext2File::~Ext2File()
 {
 }
 
-uint64_t Ext2File::read(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     uint64_t ret = static_cast<Ext2Node*>(this)->read(location, size, buffer);
     m_Size = m_nSize;
     return ret;
 }
 
-uint64_t Ext2File::write(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     uint64_t ret = static_cast<Ext2Node*>(this)->write(location, size, buffer);
     m_Size = m_nSize;

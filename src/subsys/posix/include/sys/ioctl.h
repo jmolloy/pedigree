@@ -3,6 +3,8 @@
 
 #include <sys/termios.h>
 
+_BEGIN_STD_C
+
 /* If you change this, please change file-syscalls.cc. */
 
 #define __IOCTL_FIRST 0x1000
@@ -16,5 +18,9 @@
 #define SIOCATMARK  0x3000  /* Socket at the OOB mark? */
 
 #define __IOCTL_LAST  0x3000
+
+int ioctl(int fildes, int request, void *buff);
+
+_END_STD_C
 
 #endif

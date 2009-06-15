@@ -53,9 +53,9 @@ public:
   virtual ~Pipe();
 
   /** Reads from the file. */
-  virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
+  virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
   /** Writes to the file. */
-  virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+  virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 
   /** Returns true if the File is actually a pipe. */
   virtual bool isPipe()

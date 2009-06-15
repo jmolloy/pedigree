@@ -43,7 +43,7 @@ class RawEndpoint : public Endpoint
       RAW_UDP,
       RAW_TCP
     };
-  
+
     /** Constructors and destructors */
     RawEndpoint() :
       Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
@@ -60,7 +60,7 @@ class RawEndpoint : public Endpoint
       Endpoint(0, 0), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(type)
     {};
     virtual ~RawEndpoint();
-    
+
     /** Injects the given buffer into the network stack */
     virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
 
@@ -73,32 +73,38 @@ class RawEndpoint : public Endpoint
     /** Not relevant in this context
     virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
     virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; }; */
-    
+
     /** Deposits a packet into this endpoint */
     virtual void depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost);
 
     /** What type is this endpoint? */
     inline Type getType() {return m_Type;};
-  
+
+    /** Shutdown on a RAW endpoint does nothing */
+    virtual bool shutdown(ShutdownType what)
+    {
+        return true;
+    }
+
   private:
-  
+
     struct DataBlock
     {
       DataBlock() :
         size(0), ptr(0), remoteHost()
       {};
-      
+
       size_t size;
       uintptr_t ptr;
       Endpoint::RemoteEndpoint remoteHost;
     };
-  
+
     /** Incoming data queue */
     List<DataBlock*> m_DataQueue;
-    
+
     /** Data queue size */
     Semaphore m_DataQueueSize;
-    
+
     /** Accept any address? */
     bool m_bAcceptAll;
 
@@ -117,19 +123,19 @@ public:
   {};
   virtual ~RawManager()
   {};
-  
+
   /** For access to the manager without declaring an instance of it */
   static RawManager& instance()
   {
     return manager;
   }
-  
+
   /** Gets a new Endpoint */
   Endpoint* getEndpoint(int proto); //IpAddress remoteHost, uint16_t localPort, uint16_t remotePort);
-  
+
   /** Returns an Endpoint */
   void returnEndpoint(Endpoint* e);
-  
+
   /** A new packet has arrived! */
   void receive(uintptr_t payload, size_t payloadSize, Endpoint::RemoteEndpoint* remoteHost, int proto, Network* pCard);
 

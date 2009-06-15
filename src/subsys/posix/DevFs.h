@@ -32,7 +32,7 @@ public:
   {return 0;}
   virtual String getVolumeLabel()
   {return String("consolemanager");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
+    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
   {
     memset(reinterpret_cast<void*>(buffer), 0, size);
     return size;

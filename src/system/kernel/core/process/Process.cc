@@ -45,7 +45,12 @@ Process::Process(Process *pParent) :
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_DeadThreads(0)
 {
-  m_pAddressSpace = m_pParent->m_pAddressSpace->clone();
+  m_pAddressSpace = pParent->m_pAddressSpace->clone();
+
+  // Copy the heap, but only if it's not the kernel heap (which is static)
+  uintptr_t parentHeap = reinterpret_cast<uintptr_t>(pParent->m_pAddressSpace->m_Heap); // 0xc0000000
+  if(parentHeap < 0xc0000000) /// \todo A better way would be nice.
+    m_pAddressSpace->setHeap(pParent->m_pAddressSpace->m_Heap, pParent->m_pAddressSpace->m_HeapEnd);
 
   m_Id = Scheduler::instance().addProcess(this);
 
