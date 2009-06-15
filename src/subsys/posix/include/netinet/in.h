@@ -28,12 +28,14 @@ struct sockaddr_in
 };
 
 #ifndef IN_PROTOCOLS_DEFINED
+#define IN_PROTOCOLS_DEFINED
 #define IPPROTO_IP    0
 #define IPPROTO_IPV6  1
 #define IPPROTO_ICMP  2
 #define IPPROTO_RAW   3
 #define IPPROTO_TCP   4
 #define IPPROTO_UDP   5
+#define IPPROTO_MAX   6
 #endif
 
 #define IN_CLASSA_NSHIFT 24

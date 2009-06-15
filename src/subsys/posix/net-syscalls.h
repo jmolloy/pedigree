@@ -34,4 +34,6 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen);
 int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent);
 int posix_gethostbyname(const char* name, void* hostinfo, int offset);
 
+int posix_shutdown(int socket, int how);
+
 #endif

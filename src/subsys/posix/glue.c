@@ -26,6 +26,9 @@ int h_errno; // required by networking code
 
 #include "newlib.h"
 
+// Needs to be seperated, otherwise the compiler's time.h is used.
+#include "include/time.h"
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
@@ -402,6 +405,11 @@ pid_t getppid()
     return 0;
 }
 
+pid_t getpgrp()
+{
+    return getgid();
+}
+
 const char * const sys_siglist[] =
 {
     0,
@@ -490,10 +498,7 @@ int utime(const char *path,const struct utimbuf *times)
 
 int access(const char *path, int amode)
 {
-    STUBBED("access");
-    STUBBED(path);
-    errno = ENOENT;
-    return -1;
+    return (int) syscall2(POSIX_ACCESS, (int) path, amode);
 }
 
 const char * const sys_errlist[] = {};
@@ -632,12 +637,20 @@ int fcntl(int fildes, int cmd, ...)
     switch (cmd)
     {
         // only one argument for each of these
-    case F_DUPFD:
-    case F_SETFD:
-    case F_SETFL:
-        args = (int*) malloc(sizeof(int));
-        args[0] = va_arg(ap, int);
-        num = 1;
+        case F_DUPFD:
+        case F_SETFD:
+        case F_SETFL:
+            args = (int*) malloc(sizeof(int));
+            args[0] = va_arg(ap, int);
+            num = 1;
+            break;
+        case F_GETLK:
+        case F_SETLK:
+        case F_SETLKW:
+            args = (int*) malloc(sizeof(struct flock*));
+            args[0] = (int) va_arg(ap, struct flock*);
+            num = 1;
+            break;
     };
     va_end(ap);
 
@@ -656,6 +669,8 @@ int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
 int fchown(int fildes, uid_t owner, uid_t group)
 {
     STUBBED("fchown");
+    return 0;
+
     return -1;
 }
 
@@ -704,7 +719,15 @@ int getpeername(int sock, struct sockaddr* addr, size_t *addrlen)
 int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
 {
     STUBBED("getsockname");
-    return -1;
+
+    struct sockaddr_in *a = (struct sockaddr_in *) addr;
+    a->sin_family = AF_INET;
+    a->sin_port = 0;
+    a->sin_addr.s_addr = 0;
+
+    *addrlen = sizeof(struct sockaddr_in);
+
+    return 0;
 }
 
 int getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
@@ -777,13 +800,12 @@ ssize_t sendto(int sock, const void* buff, size_t bufflen, int flags, const stru
 int setsockopt(int sock, int level, int optname, const void* optvalue, unsigned long optlen)
 {
     STUBBED("setsockopt");
-    return -1;
+    return 0;
 }
 
 int shutdown(int sock, int how)
 {
-    STUBBED("shutdown");
-    return -1;
+    return (int) syscall2(POSIX_SHUTDOWN, sock, how);
 }
 
 int sockatmark(int sock)
@@ -1247,10 +1269,11 @@ void freeaddrinfo(struct addrinfo *ai)
 }
 
 /// \todo Hacked implementation to get Pacman working. Needs to be improved!
+///       Biggest improvement would be moving into the kernel
 int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res)
 {
     // Validate incoming arguments
-    if(!nodename || !res)
+    if(!res)
     {
         errno = EINVAL;
         return EAI_SYSTEM;
@@ -1264,29 +1287,13 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
         return EAI_SYSTEM;
     }
 
-    // Attempt to turn the node name into an IP
-    int ip = inet_addr(nodename);
-    struct hostent *h;
-    if(ip == -1)
-    {
-        // Not an IP... Try a DNS lookup
-        h = gethostbyname(nodename);
-        if(!h)
-            return EAI_FAIL;
-    }
-    else
-    {
-        // It's an IP
-        /// \todo Write
-        errno = ENOSYS;
-        return EAI_SYSTEM;
-    }
-
-    // Put it into our static sockaddr
+    // Our static sockaddr for returning
     static struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(atoi(servname));
-    memcpy(&(addr.sin_addr.s_addr), h->h_addr, h->h_length);
+    if(servname)
+    {
+        addr.sin_port = htons(atoi(servname));
+    }
 
     // Fill the basics of the return pointer
     if(hints)
@@ -1299,11 +1306,46 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     }
     ret->ai_family = PF_INET;
 
+    // Attempt to turn the node name into an IP
+    int ip = 0;
+    if(nodename)
+        ip = inet_addr(nodename);
+    else
+        ip = inet_addr("127.0.0.1");
+    struct hostent *h;
+    if(ip == -1)
+    {
+        if(!nodename)
+            return EAI_FAIL;
+
+        // Not an IP... Try a DNS lookup
+        STUBBED(nodename);
+        h = gethostbyname(nodename);
+        if(!h)
+            return EAI_FAIL;
+
+        memcpy(&(addr.sin_addr.s_addr), h->h_addr, h->h_length);
+        ret->ai_addrlen = h->h_length;
+    }
+    else
+    {
+        // It's an IP
+        memcpy(&(addr.sin_addr.s_addr), &ip, 4);
+        ret->ai_addrlen = 4;
+    }
+
     // Fill the rest now
-    ret->ai_addrlen = h->h_length;
     ret->ai_addr = (struct sockaddr*) &addr;
-    ret->ai_canonname = (char*) malloc(strlen(nodename) + 1);
-    strcpy(ret->ai_canonname, nodename);
+    if(nodename)
+    {
+        ret->ai_canonname = (char*) malloc(strlen(nodename) + 1);
+        strcpy(ret->ai_canonname, nodename);
+    }
+    else
+    {
+        ret->ai_canonname = (char*) malloc(strlen("localhost") + 1);
+        strcpy(ret->ai_canonname, "localhost");
+    }
     ret->ai_next = 0;
 
     // Tell the caller where the pointer is at
@@ -1366,5 +1408,57 @@ int setitimer(int which, const struct itimerval *value, struct itimerval *ovalue
 pid_t setsid()
 {
     STUBBED("setsid");
-    return -1;
+    return 0;
+}
+
+struct _mmap_tmp
+{
+    void *addr;
+    size_t len;
+    int prot;
+    int flags;
+    int fildes;
+    off_t off;
+};
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
+{
+    struct _mmap_tmp t;
+    t.addr = addr;
+    t.len = len;
+    t.prot = prot;
+    t.flags = flags;
+    t.fildes = fildes;
+    t.off = off;
+
+    return (void*) syscall1(POSIX_MMAP, (int) &t);
+}
+
+int munmap(void *addr, size_t len)
+{
+    return (int) syscall2(POSIX_MUNMAP, (int) addr, (int) len);
+}
+
+int getgroups(int gidsetsize, gid_t grouplist[])
+{
+    if(gidsetsize == 0)
+    {
+        return 1;
+    }
+    else
+    {
+        if(!grouplist)
+        {
+            errno = EINVAL;
+            return -1;
+        }
+
+        grouplist[0] = getgid();
+        return 1;
+    }
+}
+
+size_t getpagesize()
+{
+    return sysconf(_SC_PAGESIZE);
 }

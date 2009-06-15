@@ -20,6 +20,8 @@
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <vfs/File.h>
+#include <vfs/LockedFile.h>
+#include <vfs/MemoryMappedFile.h>
 #include <vfs/Symlink.h>
 #include <vfs/Directory.h>
 #include <vfs/VFS.h>
@@ -194,7 +196,7 @@ int posix_open(const char *name, int flags, int mode)
 
 int posix_read(int fd, char *ptr, int len)
 {
-    F_NOTICE("read(" << Dec << fd << ", " << Hex << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+    F_NOTICE("read(" << Dec << fd << Hex << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -213,11 +215,14 @@ int posix_read(int fd, char *ptr, int len)
         return -1;
     }
 
+    // Are we allowed to block?
+    bool canBlock = !((pFd->flflags & O_NONBLOCK) == O_NONBLOCK);
+
     uint64_t nRead = 0;
     if (ptr && len)
     {
         char *kernelBuf = new char[len];
-        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
+        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf), canBlock);
         memcpy(reinterpret_cast<void*>(ptr), reinterpret_cast<void*>(kernelBuf), len);
         delete [] kernelBuf;
 
@@ -271,7 +276,7 @@ int posix_write(int fd, char *ptr, int len)
     return static_cast<int>(nWritten);
 }
 
-int posix_lseek(int file, int ptr, int dir)
+off_t posix_lseek(int file, off_t ptr, int dir)
 {
     F_NOTICE("lseek(" << file << ", " << ptr << ", " << dir << ")");
 
@@ -514,6 +519,8 @@ int posix_stat(const char *name, struct stat *st)
     st->st_atime = static_cast<int>(file->getAccessedTime());
     st->st_mtime = static_cast<int>(file->getModifiedTime());
     st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_blksize = 1;
+    st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     return 0;
 }
@@ -576,6 +583,8 @@ int posix_fstat(int fd, struct stat *st)
     st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
     st->st_mtime = static_cast<int>(pFd->file->getModifiedTime());
     st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
+    st->st_blksize = 1;
+    st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     return 0;
 }
@@ -1012,6 +1021,76 @@ class SelectRun
         uint32_t m_Timeout;
 };
 
+/** poll: determine if a set of file descriptors are writable/readable.
+ *
+ *  Permits any number of descriptors, unlike select().
+ *  \todo Timeout
+ */
+int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
+{
+    F_NOTICE("poll(" << Dec << nfds << ", " << timeout << Hex << ")");
+
+    // Grab the subsystem for this process
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Number of descriptors ready
+    int numReady = 0;
+
+    // Build the list
+    for(unsigned int i = 0; i < nfds; i++)
+    {
+        struct pollfd *me = &fds[i];
+        me->revents = 0;
+
+        if(me->fd < 0)
+            continue;
+
+        FileDescriptor *pFd = pSubsystem->getFileDescriptor(me->fd);
+        if(!pFd)
+        {
+            me->revents |= POLLNVAL;
+            numReady++;
+        }
+        else
+        {
+            int n = 0;
+            if(me->events & POLLIN)
+            {
+                if(pFd->file->select(false, 0))
+                {
+                    me->revents |= POLLIN;
+                    n++;
+                }
+            }
+
+            if(me->events & POLLOUT)
+            {
+                if(pFd->file->select(true, 0))
+                {
+                    me->revents |= POLLOUT;
+                    n++;
+                }
+            }
+
+            if(n)
+            {
+                me->revents |= POLLHUP | POLLERR | POLLNVAL;
+                numReady++;
+            }
+        }
+    }
+
+    // Return the number ready to go
+    return numReady;
+}
+
+
 /** select: determine if a set of file descriptors is readable, writable, or has an error condition.
  *
  *  Each descriptor should be checked asynchronously, in order to quickly handle large numbers of
@@ -1020,7 +1099,6 @@ class SelectRun
  *  The File::select function is used to direct the ugly details to the individual File. This allows
  *  things such as sockets to still use their very net-specific code without polluting select().
  */
-
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
     F_NOTICE("select(" << Dec << nfds << Hex << ")");
@@ -1083,6 +1161,15 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         }
     }
 
+    // No descriptors but a timeout instead? Sleep.
+    if(!nfds && timeoutSeconds)
+    {
+        Semaphore sem(0);
+        sem.acquire(1, timeoutSeconds);
+        return 0;
+    }
+
+    // Otherwise do the run
     int numReady = run->doRun();
     delete run;
     return numReady;
@@ -1107,7 +1194,6 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
     if(!f)
     {
-        ERROR("fcntl given a bad descriptor!");
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
@@ -1153,16 +1239,195 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         case F_SETFL:
             f->flflags = args[0];
             return 0;
+        case F_GETLK: // Get record-locking information
+        case F_SETLK: // Set or clear a record lock (without blocking
+        case F_SETLKW: // Set or clear a record lock (with blocking)
+
+            // Grab the lock information structure
+            struct flock *lock = reinterpret_cast<struct flock*>(args[0]);
+            if(!lock)
+            {
+                SYSCALL_ERROR(InvalidArgument);
+                return -1;
+            }
+
+            // Lock the LockedFile map
+            // LockGuard<Mutex> lockFileGuard(g_PosixLockedFileMutex);
+
+            // Can only take exclusive locks...
+            if(cmd == F_GETLK)
+            {
+                if(f->lockedFile)
+                {
+                    lock->l_type = F_WRLCK;
+                    lock->l_whence = SEEK_SET;
+                    lock->l_start = lock->l_len = 0;
+                    lock->l_pid = f->lockedFile->getLocker();
+                }
+                else
+                    lock->l_type = F_UNLCK;
+
+                return 0;
+            }
+
+            // Trying to set an exclusive lock?
+            if(lock->l_type == F_WRLCK)
+            {
+                // Already got a LockedFile instance?
+                if(f->lockedFile)
+                {
+                    if(cmd == F_SETLK)
+                    {
+                        return f->lockedFile->lock(false) ? 0 : -1;
+                    }
+                    else
+                    {
+                        // Lock the file, blocking
+                        f->lockedFile->lock(true);
+                        return 0;
+                    }
+                }
+
+                // Not already locked!
+                LockedFile *lf = new LockedFile(f->file);
+                if(!lf)
+                {
+                    SYSCALL_ERROR(OutOfMemory);
+                    return -1;
+                }
+
+                // Insert
+                g_PosixGlobalLockedFiles.insert(f->file->getFullPath(), lf);
+                f->lockedFile = lf;
+
+                // The file is now locked
+                return 0;
+            }
+
+            // Trying to unlock?
+            if(lock->l_type == F_UNLCK)
+            {
+                // No locked file? Fail
+                if(!f->lockedFile)
+                    return -1;
+
+                // Only need to unlock the file - it'll be locked again when needed
+                f->lockedFile->unlock();
+                return 0;
+            }
+
+            // Success, none of the above, no reason to be unlockable
+            return 0;
     }
 
     SYSCALL_ERROR(Unimplemented);
     return -1;
 }
 
-int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
+struct _mmap_tmp
 {
-    NOTICE("poll(" << Dec << nfds << Hex << ")");
+    void *addr;
+    size_t len;
+    int prot;
+    int flags;
+    int fildes;
+    off_t off;
+};
 
-    SYSCALL_ERROR(Unimplemented);
+void *posix_mmap(void *p)
+{
+    F_NOTICE("mmap");
+    if(!p)
+        return 0;
+
+    // Grab the parameter list
+    _mmap_tmp *map_info = reinterpret_cast<_mmap_tmp*>(p);
+
+    // Get real variables from the parameters
+    void *addr = map_info->addr;
+    size_t len = map_info->len;
+    int prot = map_info->prot;
+    int flags = map_info->flags;
+    int fd = map_info->fildes;
+    off_t off = map_info->off;
+
+    F_NOTICE("addr=" << reinterpret_cast<uintptr_t>(addr) << ", len=" << len << ", prot=" << prot << ", flags=" << flags << ", fildes=" << fd << ", off=" << off << ".");
+
+    /// \todo Check args...
+
+    // Get the File object to map
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
+    FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
+    if(!f)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return 0;
+    }
+    File *fileToMap = f->file;
+
+    // Grab the MemoryMappedFile
+    uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+    MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address);
+
+    // Add the offset...
+    address += off;
+    void *finalAddress = reinterpret_cast<void*>(address);
+
+    // Map it in
+    pSubsystem->memoryMapFile(finalAddress, pFile);
+
+    // Complete
+    return reinterpret_cast<void*>(finalAddress);
+}
+
+int posix_munmap(void *addr, size_t len)
+{
+    F_NOTICE("munmap");
+
+    // Grab the Process subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Unmap the file (and grab it)
+    MemoryMappedFile *pFile = pSubsystem->unmapFile(addr);
+    if(pFile)
+        MemoryMappedFileManager::instance().unmap(pFile);
+
+    return 0;
+}
+
+int posix_access(const char *name, int amode)
+{
+    F_NOTICE("access(" << (name ? name : "n/a") << ", " << Dec << amode << Hex << ")");
+    if(!name)
+    {
+        NOTICE("File does not exist");
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Grab the file
+    File *file = VFS::instance().find(String(name), GET_CWD());
+    if (!file)
+    {
+        NOTICE("No file");
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    /// \todo Proper permission checks. For now, the file exists, and you can do what you want with it.
+    NOTICE("Win");
     return 0;
 }
