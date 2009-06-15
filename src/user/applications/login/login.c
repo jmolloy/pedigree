@@ -29,9 +29,9 @@ int main(int argc, char **argv)
   // For the installer, just run Python
   printf("Loading installer, please wait...\n");
 
-  static char *app_argv[] = {"root\xAF/applications/python", "root\xAF/code/installer/install.py", 0};
+  static char *app_argv[] = {"root:/applications/python", "root:/code/installer/install.py", 0};
   static char *app_env[] = { "TERM=xterm", "PATH=/applications", (char *)0 };
-  execve("root\xAF/applications/python", app_argv, app_env);
+  execve("root:/applications/python", app_argv, app_env);
 
   printf("FATAL: Couldn't load Python!\n");
 
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
   }
 #endif
   // Grab the greeting if one exists.
-  FILE *stream = fopen("root\xAF/config/greeting", "r");
+  FILE *stream = fopen("root:/config/greeting", "r");
   if (stream)
   {
     char msg[1025];
@@ -65,7 +65,8 @@ int main(int argc, char **argv)
   }
   else
   {
-    printf("No MOTD\n");
+    // Some default greeting
+    printf("Welcome to Pedigree\n");
   }
 
   while (1)
@@ -112,7 +113,7 @@ int main(int argc, char **argv)
     fflush(stdout);
 
     // Perform login - this function is in glue.c.
-    if (login(pw->pw_uid, password) != 0)
+    if(login(pw->pw_uid, password) != 0)
     {
       printf("Password incorrect.\n");
       continue;
@@ -132,6 +133,7 @@ int main(int argc, char **argv)
 
         // Child.
         execle(pw->pw_shell, pw->pw_shell, 0, newenv);
+
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);
         exit(1);
@@ -141,6 +143,9 @@ int main(int argc, char **argv)
         // Parent.
         int stat;
         waitpid(pid, &stat, 0);
+
+        printf("Test complete.\n");
+        while(1);
 
         continue;
       }

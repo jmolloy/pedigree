@@ -30,5 +30,5 @@ add_kernel_src(debugger
                LocalIO.cc panic.cc assert.cc Scrollable.cc SerialIO.cc SyscallTracer.cc)
 else(DEBUGGER)
 add_kernel_src(debugger
-               LocalIO.cc SerialIO.cc DebuggerIO.cc panic.cc)
+               LocalIO.cc SerialIO.cc DebuggerIO.cc panic.cc assert.cc)
 endif(DEBUGGER)

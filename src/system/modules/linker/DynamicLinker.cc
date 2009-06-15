@@ -98,7 +98,7 @@ bool DynamicLinker::loadProgram(File *pFile)
          it++)
     {
         String filename;
-        filename += "root\xAF/libraries/";
+        filename += "root:/libraries/";
         filename += *it;
         File *pFile = VFS::instance().find(filename);
         if (!pFile)
@@ -154,7 +154,7 @@ bool DynamicLinker::loadObject(File *pFile)
          it++)
     {
         String filename;
-        filename += "root\xAF/libraries/";
+        filename += "root:/libraries/";
         filename += *it;
         File *_pFile = VFS::instance().find(filename);
         if (!_pFile)

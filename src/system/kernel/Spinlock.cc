@@ -36,11 +36,12 @@ void Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
-      //FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
-      asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
+//      FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
+        asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
 #endif
   }
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+
   m_bInterrupts = bInterrupts;
 
 }

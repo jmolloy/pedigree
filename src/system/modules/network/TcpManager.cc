@@ -213,7 +213,7 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
   stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
 
   // success!
-  return 0;
+  return nBytes;
 }
 
 void TcpManager::removeConn(size_t connId)

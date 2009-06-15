@@ -202,6 +202,22 @@
 #endif
 #endif
 
+#ifndef PAGESIZE
+#  ifndef PAGE_SIZE
+#    define PAGESIZE 4096
+#  else
+#    define PAGESIZE PAGE_SIZE
+#  endif
+#endif
+
+/** There is no reason for path sizes to be limited, but a lot of applications
+  * that use PATH_MAX use it for statically allocated arrays, or arrays on the
+  * stack (eek!). As such, it can't be *too* high.
+  */
+#ifndef PATH_MAX
+#define PATH_MAX 2048
+#endif
+
 /* See if small reent asked for at configuration time and
    is not chosen by the platform by default.  */
 #ifdef _WANT_REENT_SMALL

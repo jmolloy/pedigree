@@ -1021,10 +1021,36 @@ String FatFilesystem::convertFilenameFrom(String filename)
     return String(static_cast<const char*>(ret));
 }
 
-// deletes all the data in a file
 void FatFilesystem::truncate(File *pFile)
 {
-    // unlink all the clusters except the first, then set the file size to zero
+    NOTICE("truncate");
+
+    // First of all, set the file size to zero, so that if the file is used
+    // elsewhere it's updated.
+    updateFileSize(pFile, -pFile->getSize());
+    pFile->setSize(0);
+
+    // And then clean up its cluster chain so we only have one remaining
+    // Then, clean up the cluster chain
+    uint32_t clus = pFile->getInode(), prev = 0;
+    if (clus != 0)
+    {
+        prev = clus;
+        clus = getClusterEntry(clus, true);
+        setClusterEntry(prev, eofValue(), true);
+
+        // If the second cluster is not EOF, clean up the chain
+        if(!isEof(clus))
+        {
+            while(!isEof(clus))
+            {
+                prev = clus;
+                clus = getClusterEntry(clus, true);
+                setClusterEntry(prev, 0, true);
+            }
+            setClusterEntry(prev, 0, true);
+        }
+    }
 }
 
 File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask, bool bDirectory, uint32_t dirClus)

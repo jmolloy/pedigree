@@ -254,13 +254,13 @@ private:
     struct StateLevel
     {
         StateLevel() :
-            m_State(), m_pKernelStack(0), m_InhibitMask()
+            m_State(), m_pKernelStack(0), m_pAuxillaryStack(0), m_InhibitMask()
         {}
         ~StateLevel()
         {}
 
         StateLevel(const StateLevel &s) :
-            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_InhibitMask(s.m_InhibitMask)
+            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask)
         {}
 
         StateLevel &operator = (const StateLevel &s)
@@ -276,6 +276,12 @@ private:
 
         /** Our kernel stack. */
         void *m_pKernelStack;
+
+        /** Auxillary stack, to be freed in case the kernel stack is null.
+         *  This allows kernel mode threads to have stacks freed, as they
+         *  are left hanging otherwise.
+         */
+        void *m_pAuxillaryStack;
 
         ExtensibleBitmap m_InhibitMask;
     } m_StateLevels[MAX_NESTED_EVENTS];

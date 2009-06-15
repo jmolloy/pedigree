@@ -206,5 +206,6 @@ struct	ip_timestamp {
 #define	IPTTLDEC	1		/* subtracted when forwarding */
 
 #define	IP_MSS		576		/* default maximum segment size */
+#define IP_TTL      IPDEFTTL
 
 #endif

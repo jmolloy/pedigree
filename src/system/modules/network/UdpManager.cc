@@ -23,7 +23,7 @@ UdpManager UdpManager::manager;
 int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
 {
   bool success = Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
-  return success ? 0 : -1;
+  return success ? nBytes : -1;
 };
 
 int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)

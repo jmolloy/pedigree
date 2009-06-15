@@ -35,6 +35,7 @@
 #include <IoCommand.h>
 #include <ThreadsCommand.h>
 #include <DevicesCommand.h>
+#include <LookupCommand.h>
 #include <SyscallTracerCommand.h>
 #include <LookupCommand.h>
 #include <HelpCommand.h>
@@ -175,7 +176,6 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &g_AllocationCommand,
                                   &lookup,
                                   &help};
-
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
   int n = g_Trace.execTrace();

@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include <syscall.h>
 
@@ -203,14 +206,35 @@ int main (int argc, char **argv)
     rgb_t *pPrevState = new rgb_t[1024*768];
     memset(reinterpret_cast<uint8_t*>(pPrevState), 0x00, 1024*768*3);
 
-    Png *png = new Png("/background.png");
-    png->render(pBg, 1024-png->getWidth(), 768-png->getHeight(), 1024, 768);
+    //Png *png = new Png("/background.png");
+    //png->render(pBg, 1024-png->getWidth(), 768-png->getHeight(), 1024, 768);
+
+    FILE *stream = fopen("/background.png", "rb");
+    if (!stream)
+        log("Stream is null");
+    if (fseek(stream, 0, SEEK_END) != 0)
+    {
+        log("fseek failed, 1");
+    }
+    int a = ftell(stream);
+    if (fseek(stream, 0, SEEK_SET) != 0)
+    {
+        log("fseek failed, 2");
+    }
+
+    struct stat st;
+    fstat(stream->_file, &st);
+
+    char str2[64];
+    sprintf(str2, "tell: %x, %x\n", a, st.st_size);
+    log(str2);
 
     g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf", 
                             false, 1024);
 
     g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf", 
                           false, 1024);
+
 
     void *pFb = reinterpret_cast<void*>(fb);        
 

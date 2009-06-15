@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/applications/bash
 # configure script for zlib. This script is needed only if
 # you wish to build a shared library and your system supports them,
 # of if you need special compiler, flags or install directory.

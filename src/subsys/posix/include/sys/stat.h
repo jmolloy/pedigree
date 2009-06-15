@@ -22,7 +22,7 @@ extern "C" {
 #define stat64 __stat64
 #endif
 #else
-struct	stat 
+struct	stat
 {
   dev_t		st_dev;
   ino_t		st_ino;
@@ -129,12 +129,12 @@ int	_EXFUN(mkfifo,( const char *__path, mode_t __mode ));
 int	_EXFUN(stat,( const char *__path, struct stat *__sbuf ));
 mode_t	_EXFUN(umask,( mode_t __mask ));
 
-#if defined (__SPU__) || defined(__rtems__) || defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
+//#if defined (__SPU__) || defined(__rtems__) || defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
 int	_EXFUN(lstat,( const char *__path, struct stat *__buf ));
 int	_EXFUN(mknod,( const char *__path, mode_t __mode, dev_t __dev ));
-#else
-int	_EXFUN(lstat,( const char *__path, struct stat *__buf ));
-#endif
+//#else
+//int	_EXFUN(lstat,( const char *__path, struct stat *__buf ));
+//#endif
 
 #if defined (__CYGWIN__) && !defined(__INSIDE_CYGWIN__)
 int	_EXFUN(fchmodat, (int, const char *, mode_t, int));

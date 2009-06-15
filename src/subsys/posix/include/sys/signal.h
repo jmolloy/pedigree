@@ -74,7 +74,8 @@ typedef struct {
 #define SA_NOCLDSTOP 1   /* Do not generate SIGCHLD when children stop */
 #define SA_SIGINFO   2   /* Invoke the signal catching function with */
                          /*   three arguments instead of one. */
-#define SA_RESETHAND 3   /* Reset to SIG_DFL when entering signal handler */
+#define SA_RESETHAND 4   /* Reset to SIG_DFL when entering signal handler */
+#define SA_RESTART   8
 
 /* struct sigaction notes from POSIX:
  *
@@ -108,11 +109,14 @@ struct sigaction {
 #include <cygwin/signal.h>
 #else
 #define SA_NOCLDSTOP 1  /* only value supported now for sa_flags */
-#define SA_RESETHAND 2   /* Reset to SIG_DFL when entering signal handler */
+#define SA_SIGINFO   2   /* Invoke the signal catching function with */
+                         /*   three arguments instead of one. */
+#define SA_RESETHAND 4   /* Reset to SIG_DFL when entering signal handler */
+#define SA_RESTART   8
 
 typedef void (*_sig_func_ptr)(int);
 
-struct sigaction 
+struct sigaction
 {
 	_sig_func_ptr sa_handler;
 	sigset_t sa_mask;
@@ -124,7 +128,7 @@ struct sigaction
 #define SIG_BLOCK 1	/* set of signals to block */
 #define SIG_UNBLOCK 2	/* set of signals to, well, unblock */
 
-/* These depend upon the type of sigset_t, which right now 
+/* These depend upon the type of sigset_t, which right now
    is always a long.. They're in the POSIX namespace, but
    are not ANSI. */
 #define sigaddset(what,sig) (*(what) |= (1<<(sig)), 0)
@@ -282,7 +286,7 @@ int _EXFUN(sigqueue, (pid_t pid, int signo, const union sigval value));
 #define	SIGCONT	25	/* continue a stopped process */
 #define	SIGTTIN	26	/* to readers pgrp upon background tty read */
 #define	SIGTTOU	27	/* like TTIN for output if (tp->t_local&LTOSTOP) */
-#define NSIG	28	
+#define NSIG	28
 #else
 #define	SIGURG	16	/* urgent condition on IO channel */
 #define	SIGSTOP	17	/* sendable stop signal not from tty */

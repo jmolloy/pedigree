@@ -37,7 +37,7 @@ public:
   {
     m_pData[0] = '\0';
   }
-  
+
   /**
    * Creates a StaticString from a const char *.
    * This creates a new copy of pSrc - pSrc can be safely
@@ -54,7 +54,7 @@ public:
       m_pData[N-1] = '\0';
     }
   }
-  
+
   /**
    * Copy constructor - creates a StaticString from another StaticString.
    * Copies the memory associated with src.
@@ -71,19 +71,19 @@ public:
       m_pData[N-1] = '\0';
     }
   }
-  
+
   /**
    * Destructor.
    */
   ~StaticString()
   {
   }
-  
-  operator const char*() const 
+
+  operator const char*() const
   {
     return m_pData;
   }
-  
+
   template<unsigned int N2>
   StaticString &operator+=(const StaticString<N2> &str)
   {
@@ -134,40 +134,48 @@ public:
         return i;
     return -1;
   }
-  
+
+  int first(const char search) const
+  {
+    for (size_t i = 0; i < length(); i++)
+      if (m_pData[i] == search)
+        return i;
+    return -1;
+  }
+
   void stripLast()
   {
     if (m_Length)
       m_pData[--m_Length] = '\0';
   }
-  
+
   bool contains(const char *other) const
   {
     if (strlen(other) >= length())
       return (strcmp(m_pData, other) == 0);
-    
+
     size_t mylen = length();
     size_t itslen = strlen(other);
     for (size_t i = 0; i < mylen-itslen+1; i++)
-      if (strcmp(&m_pData[i], other) == 0)
+      if (strncmp(&m_pData[i], other, strlen(other)) == 0)
         return true;
     return false;
   }
-    
+
   template<unsigned int N2>
   bool contains(const StaticString<N2> &other) const
   {
     if (other.length() >= length())
       return (strcmp(m_pData, other) == 0);
-    
+
     size_t mylen = length();
     size_t itslen = other.length();
     for (size_t i = 0; i < mylen-itslen+1; i++)
-      if (strcmp(&m_pData[i], other.m_pData) == 0)
+      if (strncmp(&m_pData[i], other.m_pData, strlen(other.m_pData)) == 0)
         return true;
     return false;
   }
-  
+
   // TODO
   int intValue(int nBase=0) const
   {
@@ -178,7 +186,7 @@ public:
     else
       return ret;
   }
-  
+
   StaticString left(int n) const
   {
     StaticString<N> str;
@@ -268,7 +276,7 @@ public:
   {
     appendInteger<sizeof(char)>(nInt, nRadix, nLen, c);
   }
-  
+
   void append(unsigned short nInt, size_t nRadix=10, size_t nLen=0, char c='0')
   {
     appendInteger<sizeof(short)>(nInt, nRadix, nLen, c);
@@ -382,12 +390,12 @@ public:
       m_Length += nLen - length();
     }
   }
-  
+
   size_t length() const
   {
     return m_Length;
   }
-  
+
   private:
   /**
    * Our actual static data.

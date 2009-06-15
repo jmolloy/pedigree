@@ -1,9 +1,10 @@
 #ifndef _NETINET_IN_H
 #define _NETINET_IN_H
 
-#ifndef SYS_SOCK_CONSTANTS_ONLY
+#ifndef COMPILING_SUBSYS
 #include <inttypes.h>
 #include <sys/socket.h>
+#endif
 
 // htons & friends, if needed
 #ifndef htons
@@ -25,8 +26,6 @@ struct sockaddr_in
   in_port_t sin_port;
   struct in_addr sin_addr;
 };
-
-#endif
 
 #ifndef IN_PROTOCOLS_DEFINED
 #define IPPROTO_IP    0

@@ -15,6 +15,7 @@
  */
 
 #include "Png.h"
+#include <unistd.h>
 
 Png::Png(const char *filename) :
     m_PngPtr(0), m_InfoPtr(0), m_nWidth(0), m_nHeight(0), m_pRowPointers(0)

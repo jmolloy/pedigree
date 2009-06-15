@@ -62,6 +62,14 @@ int posix_close(int fd)
 
 int posix_open(const char *name, int flags, int mode)
 {
+    // Verify that the filename is valid
+    if(!name)
+    {
+      F_NOTICE("open called with null filename");
+      SYSCALL_ERROR(DoesNotExist);
+      return -1;
+    }
+
     F_NOTICE("open(" << name << ", " << ((mode&O_RDWR)?"O_RDWR":"") << ((mode&O_RDONLY)?"O_RDONLY":"") << ((mode&O_WRONLY)?"O_WRONLY":"") << ")");
 
     // verify the filename - don't try to open a dud file
@@ -88,6 +96,8 @@ int posix_open(const char *name, int flags, int mode)
     if (!strcmp(name, "/dev/tty"))
     {
         file = pProcess->getCtty();
+        if (!file)
+            file = NullFs::instance().getFile();
     }
     else if (!strcmp(name, "/dev/null"))
     {
@@ -132,8 +142,14 @@ int posix_open(const char *name, int flags, int mode)
         }
     }
 
-    while (file->isSymlink())
+    while(file && file->isSymlink())
         file = Symlink::fromFile(file)->followLink();
+    if(!file)
+    {
+      SYSCALL_ERROR(DoesNotExist);
+      pSubsystem->freeFd(fd);
+      return -1;
+    }
 
     if (file->isDirectory())
     {
@@ -160,8 +176,18 @@ int posix_open(const char *name, int flags, int mode)
         file->truncate();
     }
 
-    FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
-    pSubsystem->addFileDescriptor(fd, f);
+    if(file)
+    {
+      FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
+      if(f)
+        pSubsystem->addFileDescriptor(fd, f);
+    }
+    else
+    {
+      SYSCALL_ERROR(DoesNotExist);
+      pSubsystem->freeFd(fd);
+      return -1;
+    }
 
     NOTICE("fine: " << fd);
     return static_cast<int> (fd);
@@ -198,7 +224,7 @@ int posix_read(int fd, char *ptr, int len)
 
         pFd->offset += nRead;
     }
-
+    NOTICE("nRead: " << nRead);
     return static_cast<int>(nRead);
 }
 
@@ -280,6 +306,8 @@ int posix_lseek(int file, int ptr, int dir)
         pFd->offset = fileSize + ptr;
         break;
     }
+
+    NOTICE("Ret: " << pFd->offset);
 
     return static_cast<int>(pFd->offset);
 }
@@ -432,8 +460,11 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
-    File* file = VFS::instance().find(String(name), GET_CWD());
-
+    File* file = 0;
+    if (!strcmp(name, "/dev/null"))
+        file = NullFs::instance().getFile();
+    else
+        file = VFS::instance().find(String(name), GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -451,7 +482,7 @@ int posix_stat(const char *name, struct stat *st)
     }
 
     int mode = 0;
-    if (ConsoleManager::instance().isConsole(file))
+    if (ConsoleManager::instance().isConsole(file) || !strcmp(name, "/dev/null"))
     {
         mode = S_IFCHR;
     }
@@ -492,6 +523,10 @@ int posix_stat(const char *name, struct stat *st)
 
 int posix_fstat(int fd, struct stat *st)
 {
+    F_NOTICE("fstat(" << Dec << fd << Hex << ")");
+    if(!st)
+        return -1;
+
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -544,12 +579,15 @@ int posix_fstat(int fd, struct stat *st)
     st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
     st->st_mtime = static_cast<int>(pFd->file->getModifiedTime());
     st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
+
+    NOTICE("Size: " << st->st_size);
+
     return 0;
 }
 
 int posix_lstat(char *name, struct stat *st)
 {
-    //F_NOTICE("lstat(" << name << ")");
+    F_NOTICE("lstat(" << name << ")");
 
     File *file = VFS::instance().find(String(name), GET_CWD());
 
@@ -755,11 +793,11 @@ int posix_ioctl(int fd, int command, void *buf)
 
     switch (command)
     {
-    case TIOCGWINSZ:
+        case TIOCGWINSZ:
         {
             return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
         }
-    case FIONBIO:
+        case FIONBIO:
         {
             // set/unset non-blocking
             if (buf)
@@ -775,7 +813,7 @@ int posix_ioctl(int fd, int command, void *buf)
 
             return 0;
         }
-    default:
+        default:
         {
             // Error - no such ioctl.
             return -1;
@@ -900,39 +938,100 @@ int posix_isatty(int fd)
         return 0;
     }
 
+    NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
 }
 
-class SelectTask : public TimedTask
+/** SelectRun: performs a "select" call over a set of Files with a timeout. */
+class SelectRun
 {
     public:
-        SelectTask() :
-                TimedTask(), pFile(0), bWriting(false), fd(-1)
-        {};
-        virtual ~SelectTask()
+
+        /// Information structure to make the Files list more useful
+        struct FileInfo
+        {
+            File *pFile;
+            bool bCheckWrite;
+        };
+
+        /// Default Constructor
+        SelectRun(uint32_t timeout = 15) : m_Files(), m_Timeout(timeout)
         {};
 
-        virtual int task()
+        /// Destructor
+        virtual ~SelectRun()
         {
-            // timeout is handled by *this* object, not by the File::select function
-            return pFile->select(bWriting, m_Timeout);
+            deleteAll();
+        };
+
+        /// Performs the actual run
+        int doRun()
+        {
+            // Check each File in the list
+            /// \todo This should keep looping until the timeout expires, this is currently just looping forever
+            int numReady = 0;
+            while(numReady == 0)
+            {
+                for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+                {
+                    FileInfo *p = (*it);
+                    if(p)
+                        numReady += p->pFile->select(p->bCheckWrite, 0);
+                }
+            }
+
+            // Reset so we're ready for another round if needed
+            deleteAll();
+            return numReady;
         }
 
-        File *pFile;
-        bool bWriting;
+        /// Adds a file to the internal record
+        void addFile(FileInfo *p)
+        {
+            m_Files.pushBack(p);
+        }
 
-        int fd;
+        /// Sets the timeout
+        void setTimeout(uint32_t t)
+        {
+            m_Timeout = t;
+        }
+
     private:
 
-        SelectTask(const SelectTask&);
-        const SelectTask& operator = (const SelectTask&);
+        /// Deletes all internal FileInfo structures
+        void deleteAll()
+        {
+            for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
+            {
+                FileInfo *p = (*it);
+                if(p)
+                    delete p;
+            }
+            m_Files.clear();
+        }
+
+        /// Internal record of Files that we are checking
+        List<FileInfo*> m_Files;
+
+        /// Timeout - is a soft deadline
+        uint32_t m_Timeout;
 };
+
+/** select: determine if a set of file descriptors is readable, writable, or has an error condition.
+ *
+ *  Each descriptor should be checked asynchronously, in order to quickly handle large numbers of
+ *  descriptors, and also to ensure that if the timeout condition expires the select() call returns.
+ *
+ *  The File::select function is used to direct the ugly details to the individual File. This allows
+ *  things such as sockets to still use their very net-specific code without polluting select().
+ */
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
     F_NOTICE("select(" << Dec << nfds << Hex << ")");
 
-    // Lookup this process.
+    // Grab the subsystem for this process
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -941,14 +1040,16 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         return -1;
     }
 
-    List<SelectTask *> tasks;
-    List<Semaphore *> taskSems;
+    // This is the worker for this run
+    SelectRun *run = new SelectRun;
 
+    // Get the timeout
     uint32_t timeoutSeconds = 0;
     if (timeout)
-        timeoutSeconds = timeout->tv_sec;
+        timeoutSeconds = timeout->tv_sec + (timeout->tv_usec / 1000);
+    run->setTimeout(timeoutSeconds);
 
-    int num_ready = 0;
+    // Setup the SelectRun object with all of the files
     for (int i = 0; i < nfds; i++)
     {
         // valid fd?
@@ -968,97 +1069,29 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
             if (FD_ISSET(i, readfds))
             {
-                SelectTask *t = new SelectTask;
-                t->pFile = pFd->file;
-                t->bWriting = false;
-                t->fd = i;
-                t->setTimeout(timeoutSeconds);
+                SelectRun::FileInfo *f = new SelectRun::FileInfo;
+                f->pFile = pFd->file;
+                f->bCheckWrite = false;
 
-                Semaphore *s = new Semaphore(0);
-                t->setSemaphore(s);
-
-                tasks.pushBack(t);
-                taskSems.pushBack(s);
-
-                t->begin();
+                run->addFile(f);
             }
         }
         if (writefds)
         {
             if (FD_ISSET(i, writefds))
             {
-                SelectTask *t = new SelectTask;
-                t->pFile = pFd->file;
-                t->bWriting = true;
-                t->fd = i;
-                t->setTimeout(timeoutSeconds);
+                SelectRun::FileInfo *f = new SelectRun::FileInfo;
+                f->pFile = pFd->file;
+                f->bCheckWrite = true;
 
-                Semaphore *s = new Semaphore(0);
-                t->setSemaphore(s);
-
-                tasks.pushBack(t);
-                taskSems.pushBack(s);
-
-                t->begin();
+                run->addFile(f);
             }
         }
     }
 
-    // We've probably got a bunch of tasks now, and a bunch of Semaphores to check for completion of each one.
-    // Let's check those tasks!
-    if (tasks.count())
-    {
-        while (true)
-        {
-            bool bOneHasCompleted = false;
-            List<SelectTask *>::Iterator it = tasks.begin();
-            List<Semaphore *>::Iterator it2 = taskSems.begin();
-            for (; it != tasks.end() && it2 != taskSems.end(); it++, it2++)
-            {
-                // check the semaphore for completion
-                if ((*it2)->tryAcquire())
-                {
-                    if ((*it)->wasSuccessful())
-                    {
-                        int ret = (*it)->getReturnValue();
-                        if (ret == 0)
-                            FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
-                        num_ready += ret;
-                    }
-                    else // timed out or cancelled elsewhere!
-                        FD_CLR((*it)->fd, (*it)->bWriting ? writefds : readfds);
-
-                    bOneHasCompleted = true;
-
-                    // clean up - now that one has completed the function will be returning
-                    delete (*it);
-                    delete (*it2);
-                }
-                else if (bOneHasCompleted)
-                {
-                    // one's already done, this one isn't complete - cancel it & clean up
-                    (*it)->cancel();
-                    delete (*it);
-                    delete (*it2);
-                }
-            }
-
-            if (bOneHasCompleted)
-                break;
-
-            Scheduler::instance().yield();
-        }
-    }
-
-    // Kill zombie threads created by TimedTask
-    for (size_t i = 0; i < pProcess->getNumThreads(); i++)
-    {
-        Thread *pThread = pProcess->getThread(i);
-        if (pThread->getStatus() == Thread::Zombie)
-            delete pThread;
-    }
-
-    return num_ready;
+    int numReady = run->doRun();
+    delete run;
+    return numReady;
 }
 
 int posix_fcntl(int fd, int cmd, int num, int* args)
@@ -1085,8 +1118,6 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         return -1;
     }
 
-    NOTICE("descriptor for fd " << fd << " = " << reinterpret_cast<uintptr_t>(f) << "...");
-
     switch (cmd)
     {
         case F_DUPFD:
@@ -1110,7 +1141,7 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
                 size_t fd2 = pSubsystem->getFd();
 
                 // copy the descriptor
-                FileDescriptor* f2 = new FileDescriptor(f);
+                FileDescriptor* f2 = new FileDescriptor(*f);
                 pSubsystem->addFileDescriptor(fd2, f2);
 
                 return static_cast<int>(fd2);

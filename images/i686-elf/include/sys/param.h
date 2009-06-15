@@ -19,6 +19,10 @@
 # define PATHSIZE (1024)
 #endif
 
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 128
+#endif
+
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 

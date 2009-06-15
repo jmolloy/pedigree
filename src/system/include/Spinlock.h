@@ -32,6 +32,7 @@ class Spinlock
   private:
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
+
     uintptr_t m_Ra;
 };
 

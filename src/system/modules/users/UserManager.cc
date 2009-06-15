@@ -34,10 +34,10 @@ UserManager::~UserManager()
 void UserManager::initialiseGroups()
 {
   // Find and parse the config file.
-  File *pFile = VFS::instance().find(String("root\xAF/config/groups"));
+  File *pFile = VFS::instance().find(String("root:/config/groups"));
   if (!pFile)
   {
-    ERROR("USERS: Unable to open file root\xAF/config/groups.");
+    ERROR("USERS: Unable to open file root:/config/groups.");
     return;
   }
 
@@ -95,11 +95,11 @@ void UserManager::initialiseGroups()
 void UserManager::initialiseUsers()
 {
   // Find and parse the config file.
-  File *pFile = VFS::instance().find(String("root\xAF/config/users"));
+  File *pFile = VFS::instance().find(String("root:/config/users"));
 
   if (!pFile)
   {
-    ERROR("USERS: Unable to open file root\xAF/config/users.");
+    ERROR("USERS: Unable to open file root:/config/users.");
     return;
   }
 

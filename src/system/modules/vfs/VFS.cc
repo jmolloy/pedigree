@@ -198,9 +198,8 @@ File *VFS::find(String path, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == '\xAF')
+    if (path[i] == ':')
     {
-        NOTICE("FNARRRRRRRRRRRRRRR");
       bColon = true;
       break;
     }

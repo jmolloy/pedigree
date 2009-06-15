@@ -10,6 +10,9 @@
 #define TIOCGWINSZ  0x1000  /* Get console window size. */
 #define TIOCSWINSZ  0x1001  /* Set console window size. */
 
-#define __IOCTL_LAST  0x1001  
+#define FIONREAD    0x2000  /* Number of bytes available to read */
+#define FIONBIO     0x2001  /* Non-blocking? */
+
+#define __IOCTL_LAST  0x2001
 
 #endif

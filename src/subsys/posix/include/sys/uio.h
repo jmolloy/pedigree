@@ -9,9 +9,7 @@ struct iovec
   size_t iov_len;
 };
 
-/// \todo Write these
-#define readv(a, b, c) (-1)
-#define writev(a, b, c) (-1)
-
+ssize_t readv(int fildes, const struct iovec *iov, int iovcnt);
+ssize_t writev(int fildes, const struct iovec *iov, int iovcnt);
 
 #endif
