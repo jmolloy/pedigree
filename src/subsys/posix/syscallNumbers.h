@@ -92,6 +92,13 @@
 
 #define POSIX_ISATTY     61
 
+#define POSIX_MMAP       62
+#define POSIX_MUNMAP     63
+
+#define POSIX_SHUTDOWN   64
+
+#define POSIX_ACCESS     65
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

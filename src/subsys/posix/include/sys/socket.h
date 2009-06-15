@@ -66,7 +66,8 @@ enum SocketOptions
   SO_SNDBUF,
   SO_SNDLOWAT,
   SO_SNDTIMEO,
-  SO_TYPE
+  SO_TYPE,
+  SO_MAX
 };
 
 #define SOMAXCONN     65536

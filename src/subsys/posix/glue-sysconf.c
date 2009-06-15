@@ -1,10 +1,17 @@
 #define COMPILING_SUBSYS
 
 #include <processor/types.h>
-#include "include/limits.h"
+
+#include <limits.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
 #include "include/time.h"
-#include "include/unistd.h"
-#include "include/errno.h"
+#include <sys/config.h>
+
+// Ensure errno is usable
+#define errno (*__errno())
+extern int *__errno (void);
 
 long sysconf (int name)
 {
@@ -46,7 +53,11 @@ long sysconf (int name)
 #endif
 
     case _SC_CLK_TCK:
+//#ifdef CLK_TCK
       return CLK_TCK;
+//#else
+//      return -1;
+//#endif
 
     case _SC_DELAYTIMER_MAX:
 #ifdef DELAYTIMER_MAX

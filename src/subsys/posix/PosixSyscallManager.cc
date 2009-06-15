@@ -115,7 +115,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_select(static_cast<int>(p1), reinterpret_cast<struct fd_set*>(p2), reinterpret_cast<struct fd_set*>(p3),
                           reinterpret_cast<struct fd_set*>(p4), reinterpret_cast<struct timeval*>(p5));
     case POSIX_LSEEK:
-      return posix_lseek(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3));
+      return posix_lseek(static_cast<int>(p1), static_cast<off_t>(p2), static_cast<int>(p3));
     case POSIX_SOCKET:
       return posix_socket(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3));
     case POSIX_CONNECT:
@@ -194,6 +194,14 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_link(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2));
     case POSIX_ISATTY:
       return posix_isatty(static_cast<int>(p1));
+    case POSIX_MMAP:
+      return reinterpret_cast<uintptr_t>(posix_mmap(reinterpret_cast<void*>(p1)));
+    case POSIX_MUNMAP:
+      return posix_munmap(reinterpret_cast<void*>(p1), static_cast<size_t>(p2));
+    case POSIX_SHUTDOWN:
+      return posix_shutdown(static_cast<int>(p1), static_cast<int>(p2));
+    case POSIX_ACCESS:
+      return posix_access(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
 
     // Stub warning
     case POSIX_STUBBED:

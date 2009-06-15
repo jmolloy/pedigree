@@ -59,7 +59,7 @@ if(X64)
 endif(X64)
 
 # Now the glue code - compile to a .o...
-add_executable(pedigree-glue.o glue.c glue-sysconf.c)
+add_executable(pedigree-glue.o glue.c glue-sysconf.c glue-fseek.c)
 target_link_libraries(pedigree-glue.o gcc)
 set_target_properties(pedigree-glue.o PROPERTIES
                                       COMPILE_FLAGS "${GLUE_FLAGS}"
