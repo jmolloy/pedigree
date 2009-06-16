@@ -36,8 +36,8 @@ public:
     /** Destructor */
     virtual ~Ext2Symlink();
 
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock);
 
     void truncate();
 

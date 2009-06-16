@@ -16,6 +16,7 @@
 
 #include "VFS.h"
 #include "File.h"
+#include "Symlink.h"
 #include "Filesystem.h"
 #include <processor/Processor.h>
 #include <Log.h>
