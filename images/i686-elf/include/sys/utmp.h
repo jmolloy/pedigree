@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 
-#define UTMP_FILE "/var/run/utmp"
+#define UTMP_FILE "/support/utmp"
 
 #define UT_LINESIZE     32
 #define UT_NAMESIZE     32

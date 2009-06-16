@@ -13,6 +13,8 @@
 #define FIONREAD    0x2000  /* Number of bytes available to read */
 #define FIONBIO     0x2001  /* Non-blocking? */
 
-#define __IOCTL_LAST  0x2001
+#define SIOCATMARK  0x3000  /* Socket at the OOB mark? */
+
+#define __IOCTL_LAST  0x3000
 
 #endif
