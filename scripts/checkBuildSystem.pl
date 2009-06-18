@@ -101,9 +101,6 @@ foreach (@compile) {
     # Already installed?
     my $str = "./compilers/dir/$compile{test}";
     $str =~ s/!TARGET/$target/;
-    open my $fd, ">", "/tmp/cunt";
-    print $fd "Fuck a doodle doo : $str\n";
-    close $fd;
     $all_installed = 0 unless (-f $str);
   }
 }

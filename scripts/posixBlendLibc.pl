@@ -38,6 +38,7 @@ my $libgcc = shift @ARGV;
 `rm /tmp/pedigree-tmp/lib_a-init.o`; # We don't want this in the .so - it contains shite that references hidden symbols that is never used.
 `rm /tmp/pedigree-tmp/lib_a-getpwent.o`; # We implement this functionality.
 `rm /tmp/pedigree-tmp/lib_a-signal.o`; # We implement signals
+`rm /tmp/pedigree-tmp/lib_a-fseek.o`; # We reimplement fseek
 `rm /tmp/pedigree-tmp/lib_a-getcwd.o`;
 `rm /tmp/pedigree-tmp/lib_a-rename.o`;
 `rm /tmp/pedigree-tmp/lib_a-rewinddir.o`;

@@ -101,17 +101,19 @@ if which losetup >/dev/null 2>&1; then
 
   sudo touch $MOUNTPT/.pedigree-root
 
-  OLD=$PWD
+#  OLD=$PWD
+
+#  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
   
-  cd $SRCDIR/../images/i686-elf
-  tar -chf tmp.tar *
-  ARCLOC=$PWD
-  cd $OLD/$MOUNTPT
-  sudo tar -xof $ARCLOC/tmp.tar
-  cd $ARCLOC
-  rm tmp.tar
+#  cd $SRCDIR/../images/i686-elf
+#  tar -chf tmp.tar *
+#  ARCLOC=$PWD
+#  cd $OLD/$MOUNTPT
+#  sudo tar -xof $ARCLOC/tmp.tar
+#  cd $ARCLOC
+#  rm tmp.tar
   
-  cd $OLD
+#  cd $OLD
   
   #tar -cf tmp.tar $SRCDIR/../images/i686-elf/*
   #tar -xf tmp.tar $MOUNTPT
