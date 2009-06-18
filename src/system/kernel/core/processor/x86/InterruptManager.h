@@ -74,6 +74,11 @@ class X86InterruptManager : public ::InterruptManager,
     void setInterruptGate(size_t nInterruptNumber,
                           uintptr_t interruptHandler,
                           bool bUserspace) INITIALISATION_ONLY;
+    /** Sets up a task gate
+     *\param[in] nInterruptNumber the interrupt number
+     *\param[in] tssSeg the segment in the GDT for the TSS */
+    void setTaskGate(size_t nInterruptNumber,
+                     uint16_t tssSeg) INITIALISATION_ONLY;
     /** The constructor */
     X86InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor

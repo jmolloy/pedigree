@@ -17,23 +17,27 @@
 #include "gdt.h"
 #include <utilities/utility.h>
 #include <processor/Processor.h>
+#include <processor/VirtualAddressSpace.h>
 
 X86GdtManager X86GdtManager::m_Instance;
+
+// These will all be safe for use when entering a double fault handler
+static char g_SafeStack[8192] = {0};
 
 void X86GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries
-  m_DescriptorCount = 5 + processorCount;
+  m_DescriptorCount = 6 + processorCount;
 
   // Allocate the GDT
   m_Gdt = new segment_descriptor[m_DescriptorCount];
 
   // Fill the GDT
   setSegmentDescriptor(0, 0, 0, 0, 0);
-  setSegmentDescriptor(1, 0, 0xFFFFF, 0x98, 0xC); // Kernel code
-  setSegmentDescriptor(2, 0, 0xFFFFF, 0x92, 0xC); // Kernel data
-  setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code
-  setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data
+  setSegmentDescriptor(1, 0, 0xFFFFF, 0x98, 0xC); // Kernel code - 0x08
+  setSegmentDescriptor(2, 0, 0xFFFFF, 0x92, 0xC); // Kernel data - 0x10
+  setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code - 0x18
+  setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data - 0x20
 
 #ifdef MULTIPROCESSOR
   size_t i = 0;
@@ -52,11 +56,16 @@ void X86GdtManager::initialise(size_t processorCount)
 #else
   X86TaskStateSegment *Tss = new X86TaskStateSegment;
   initialiseTss(Tss);
-  setTssDescriptor(5, reinterpret_cast<uint32_t>(Tss));
+  setTssDescriptor(5, reinterpret_cast<uint32_t>(Tss)); // 0x28
 
   ProcessorInformation &processorInfo = Processor::information();
   processorInfo.setTss(Tss);
   processorInfo.setTssSelector(5 << 3);
+
+  // Create the double-fault handler TSS
+  static X86TaskStateSegment DFTss;
+  initialiseDoubleFaultTss(&DFTss);
+  setTssDescriptor(6, reinterpret_cast<uint32_t>(&DFTss)); // 0x30
 #endif
 
 }
@@ -108,4 +117,47 @@ void X86GdtManager::initialiseTss(X86TaskStateSegment *pTss)
 {
   memset( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
   pTss->ss0 = 0x10;
+}
+
+struct linearAddress
+{
+    uint32_t offset : 12;
+    uint32_t tbl : 10;
+    uint32_t dir : 10;
+} __attribute__((packed));
+
+void X86GdtManager::initialiseDoubleFaultTss(X86TaskStateSegment *pTss)
+{
+    // All our interrupt handlers - the TSS will hook into the DF handler, and the entry point
+    extern uintptr_t interrupt_handler_array[];
+    extern void start();
+
+    memset( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
+
+    // Stack - set to the statically allocated stack (mapped later)
+    pTss->ss0 = pTss->ss = 0x10;
+    pTss->esp0 = pTss->esp = pTss->esp1 = pTss->esp2 = reinterpret_cast<uint32_t>(g_SafeStack) + 8192;
+
+    // When the fault occurs, jump to the ISR handler (so it'll automatically jump to the common ISR handler)
+    pTss->eip = static_cast<uint32_t>(interrupt_handler_array[8]);
+
+    // Set up the segments
+    pTss->ds = pTss->es = pTss->fs = pTss->gs = 0x10;
+    pTss->cs = 0x08;
+
+    // Grab the kernel address space and clone it
+    /// \note This doesn't seem to work??? I've used the current CR3 for now, but it's probably
+    ///       best to create a new PD for the DF handler.
+#if 0
+    VirtualAddressSpace *dfAddressSpace = VirtualAddressSpace::getKernelAddressSpace().clone();
+    NOTICE("CR3 1 = " << Processor::readCr3());
+    Processor::switchAddressSpace(*dfAddressSpace);
+    NOTICE("CR3 2 = " << Processor::readCr3());
+    pTss->cr3 = Processor::readCr3();
+    Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
+#else
+    pTss->cr3 = Processor::readCr3();
+#endif
+
+    return;
 }

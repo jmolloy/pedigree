@@ -111,6 +111,11 @@ void init()
 //     FATAL("No disks found!");
     }
 
+    if (VFS::instance().find(String("raw:/")) == 0)
+    {
+        FATAL("No raw partition!");
+    }
+
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root:/.pedigree-root")) == 0)
     {
@@ -168,6 +173,7 @@ void init()
     pProcess->description().append("init");
 
     pProcess->setCwd(VFS::instance().find(String("root:/")));
+    pProcess->setCtty(0);
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
@@ -181,11 +187,15 @@ void destroy()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root:/applications/login"));
+    File* initProg = VFS::instance().find(String("root:/applications/TUI"));
     if (!initProg)
     {
-        FATAL("Unable to load init program!");
-        return;
+        initProg = VFS::instance().find(String("root:/applications/tui"));
+        if (!initProg)
+        {
+            FATAL("Unable to load init program!");
+            return;
+        }
     }
 
     // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
@@ -212,6 +222,12 @@ void init_stage2()
 
     ////////////////////////////////////////////////////////////////////
     // Temp!
+#if 0
+    NOTICE("Double faulting...");
+    asm volatile("xchg %bx, %bx; mov $0x8000000, %esp; pusha;");
+    panic("No double fault!?");
+#endif
+
 #if 0
     MemoryBackend *pBackend = new MemoryBackend(String("SomeConfig"));
     ConfigurationManager::instance().installBackend(pBackend);
@@ -248,7 +264,7 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "rawfs");
 #elif PPC_COMMON
 MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users");
 #endif

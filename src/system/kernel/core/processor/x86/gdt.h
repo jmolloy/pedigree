@@ -72,6 +72,7 @@ class X86GdtManager
     /** Write default values into a task-state-segment descriptor.
      *\param[in] pTss The TSS descriptor. */
     void initialiseTss(struct X86TaskStateSegment *pTss) INITIALISATION_ONLY;
+    void initialiseDoubleFaultTss(X86TaskStateSegment *pTss) INITIALISATION_ONLY;
     
     /** Protected-mode segment descriptor structure */
     struct segment_descriptor
