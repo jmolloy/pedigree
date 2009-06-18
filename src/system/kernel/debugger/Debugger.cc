@@ -37,6 +37,8 @@
 #include <DevicesCommand.h>
 #include <LookupCommand.h>
 #include <SyscallTracerCommand.h>
+#include <LookupCommand.h>
+#include <HelpCommand.h>
 #include <process/Thread.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
@@ -140,7 +142,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static IoCommand io;
   static DevicesCommand devices;
   static SyscallTracerCommand syscallTracer;
-  static LookupCommand lookupCommand;
+  static LookupCommand lookup;
+  static HelpCommand help;
 
 #if defined(THREADS)
   static ThreadsCommand threads;
@@ -149,9 +152,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 17;
+  size_t nCommands = 18;
 #else
-  size_t nCommands = 16;
+  size_t nCommands = 17;
 #endif
   DebuggerCommand *pCommands[] = {&syscallTracer,
                                   &disassembler,
@@ -171,8 +174,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
                                   &io,
                                   &g_AllocationCommand,
-                                  &lookupCommand};
-
+                                  &lookup,
+                                  &help};
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
   int n = g_Trace.execTrace();

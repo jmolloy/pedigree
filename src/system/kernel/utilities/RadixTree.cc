@@ -164,6 +164,7 @@ void RadixTree<void*>::insert(String key, void *value)
 
 void *RadixTree<void*>::lookup(String key)
 {
+    Node *pOldRoot = m_pRoot;
     if (!m_pRoot)
     {
         // The root node always exists and is a lambda transition node (zero-length
@@ -247,7 +248,6 @@ void RadixTree<void*>::remove(String key)
                 Node *pParent = 0;
                 if (pNode->m_nChildren == 0)
                 {
-                    NOTICE("Fnarr");
                     // Leaf node, can just delete.
                     pParent = pNode->getParent();
                     pParent->removeChild(pNode);
@@ -348,6 +348,7 @@ void RadixTree<void*>::clear()
 {
     delete m_pRoot;
     m_pRoot = new Node();
+    m_pRoot->setKey(nullKey);
 }
 
 //

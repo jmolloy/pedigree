@@ -121,6 +121,18 @@ public:
         m_Cwd = f;
     }
 
+    /** Returns the current controlling terminal. */
+    File *getCtty()
+    {
+        return m_Ctty;
+    }
+    /** Sets the controlling terminal. */
+    void setCtty(File *f)
+    {
+        m_Ctty = f;
+    }
+
+
     /** Returns the memory space allocator for shared libraries. */
     MemoryAllocator &getSpaceAllocator()
     {
@@ -203,6 +215,10 @@ private:
      * Current working directory.
      */
     File *m_Cwd;
+    /**
+     * Current controlling terminal.
+     */
+    File *m_Ctty;
     /**
      * Memory allocator for shared libraries - free parts of the address space.
      */

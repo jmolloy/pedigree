@@ -205,7 +205,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
     // Stub warning
     case POSIX_STUBBED:
-      WARNING("Using stubbed function '" << reinterpret_cast<const char*>(p1) << "'");
+        // This is the solution to a bug - if the address in p1 traps (because of demand loading),
+        // it MUST trap before we get the log spinlock, else other things will
+        // want to write to it and deadlock.
+        static char buf[128];
+        strcpy(buf, reinterpret_cast<char*>(p1));
+        WARNING("Using stubbed function '" << buf << "'");
       return 0;
 
     // Pedigree system calls, called from POSIX applications

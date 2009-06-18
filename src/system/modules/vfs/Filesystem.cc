@@ -208,6 +208,7 @@ File *Filesystem::findNode(File *pNode, String path)
   if (pDir->m_bCachePopulated)
   {
     pFile = pDir->m_Cache.lookup(path);
+
     if (pFile)
     {
       // Cache lookup succeeded, recurse and return.
@@ -223,7 +224,6 @@ File *Filesystem::findNode(File *pNode, String path)
   {
     // Directory contents not cached - cache them now.
     pDir->cacheDirectoryContents();
-
     // Then lookup.
     pFile = pDir->m_Cache.lookup(path);
     if (pFile)

@@ -88,7 +88,6 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     char *buf = reinterpret_cast<char*>(buffer);
     size_t i = 0;
     char c = 0;
-    Keyboard::Character ch;
 
     while ( i < size )
     {
@@ -105,14 +104,15 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         continue;
       }
 
-      ch = pK->getCharacterNonBlock();
-      if (ch.valid == 0)
+      c = pK->getCharNonBlock();
+      if (c == 0)
       {
         if (i == 0)
           continue;
         else
           return i;
       }
+#if 0
       if (ch.is_special)
       {
         switch (ch.value)
@@ -190,7 +190,7 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
       {
         c = ch.value;
       }
-
+#endif
       // Echo.
       if (m_Echo)
       {
@@ -278,10 +278,11 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
     ///       read() call successfully reads from the queue.
     if(m_QueueLength == 0)
     {
-      Keyboard::Character ch;
-      ch = pK->getCharacterNonBlock();
-      if (ch.valid != 0)
+      char c;
+      c = pK->getCharNonBlock();
+      if (c != 0)
       {
+#if 0
         if (ch.is_special)
         {
           switch (ch.value)
@@ -353,6 +354,8 @@ uint64_t TUI::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
         }
         else
           m_pQueue[m_QueueLength++] = ch.value;
+#endif
+        m_pQueue[m_QueueLength++] = c;
       }
     }
     

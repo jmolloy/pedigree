@@ -27,7 +27,7 @@ VFS &VFS::instance()
 }
 
 VFS::VFS() :
-  m_Aliases(), m_ProbeCallbacks()
+    m_Aliases(), m_ProbeCallbacks(), m_MountCallbacks()
 {
 }
 
@@ -51,6 +51,15 @@ bool VFS::mount(Disk *pDisk, String &alias)
       }
       alias = getUniqueAlias(alias);
       addAlias(pFs, alias);
+
+      for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
+           it != m_MountCallbacks.end();
+           it++)
+      {
+          MountCallback mc = *(*it);
+          mc();
+      }
+
       return true;
     }
   }
@@ -140,6 +149,13 @@ void VFS::removeAlias(String alias)
       if (pFs->m_nAliases == 0)
       {
         delete pFs;
+        for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
+             it != m_MountCallbacks.end();
+             it++)
+        {
+            MountCallback mc = *(*it);
+            mc();
+        }
       }
     }
   }
@@ -214,6 +230,14 @@ void VFS::addProbeCallback(Filesystem::ProbeCallback callback)
   *p = callback;
   m_ProbeCallbacks.pushBack(p);
 }
+
+void VFS::addMountCallback(MountCallback callback)
+{
+  MountCallback *p = new MountCallback;
+  *p = callback;
+  m_MountCallbacks.pushBack(p);
+}
+
 
 bool VFS::createFile(String path, uint32_t mask, File *pStartNode)
 {

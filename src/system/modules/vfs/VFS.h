@@ -50,6 +50,9 @@ public:
     void operator =(const Alias&);
   };
 
+  /** Callback type, called when a disk is mounted or unmounted. */
+  typedef void (*MountCallback)();
+
   /** Constructor */
   VFS();
   /** Destructor */
@@ -113,6 +116,10 @@ public:
   /** Adds a filesystem probe callback - this is called when a device is mounted. */
   void addProbeCallback(Filesystem::ProbeCallback callback);
 
+  /** Adds a mount callback - the function is called when a disk is mounted or
+      unmounted. */
+  void addMountCallback(MountCallback callback);
+
 private:
   /** The static instance object. */
   static VFS m_Instance;
@@ -124,6 +131,7 @@ private:
   List<Alias*> m_Aliases;
 
   List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
+  List<MountCallback*> m_MountCallbacks;
 };
 
 #endif

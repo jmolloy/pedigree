@@ -59,6 +59,16 @@ class String
 
     List<String*> tokenise(char token);
 
+    /** Converts a UTF-32 character to its UTF-8 representation.
+     *\param[in] utf32 Input UTF-32 character.
+     *\param[out] utf8 Pointer to a buffer at least 4 bytes long.
+     *\return The number of bytes in the UTF-8 string. */
+    static size_t Utf32ToUtf8(uint32_t utf32, char *utf8)
+    {
+        *utf8 = utf32&0x7f;
+        return 1;
+    }
+
     void assign(const String &x);
     void assign(const char *s);
     void reserve(size_t size);

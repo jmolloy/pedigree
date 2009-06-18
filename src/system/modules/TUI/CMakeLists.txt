@@ -1,3 +1,4 @@
+
 #
 # Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 #
@@ -16,7 +17,7 @@
 
 include_directories(../../include ../ ./)
 
-add_executable(TUI.o TUI.cc Vt100.cc)
+add_executable(TUI.o TuiSyscallManager.cc Console.cc)
 target_link_libraries(TUI.o gcc)
 set_target_properties(TUI.o PROPERTIES
                             LINK_FLAGS "-r -T ${PEDIGREE_SOURCE_DIR}/src/drivers/link.ld")

@@ -32,113 +32,93 @@ class X86Keyboard : public Keyboard,
                     private IrqHandler
 {
 public:
-  X86Keyboard (uint32_t portBase);
-  virtual ~X86Keyboard();
+    X86Keyboard (uint32_t portBase);
+    virtual ~X86Keyboard();
   
-  /**
-   * Initialises the device.
-   */
-  virtual void initialise();
+    /**
+     * Initialises the device.
+     */
+    virtual void initialise();
 
-  virtual void setDebugState(bool enableDebugState);
-  virtual bool getDebugState();
+    virtual void setDebugState(bool enableDebugState);
+    virtual bool getDebugState();
   
-  /**
-   * Retrieves a character from the keyboard. Blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation.
-   */
-  virtual char getChar();
-  
-  /**
-   * Retrieves a character from the keyboard. Non blocking I/O.
-   * \return The character recieved or zero if it is a character
-   *         without an ascii representation, or zero also if no
-   *         character was present.
-   */
-  virtual char getCharNonBlock();
+    virtual char getChar();  
+    virtual char getCharNonBlock();
 
-  virtual Character getCharacter();
-  virtual Character getCharacterNonBlock();
-  
-  /**
-   * \return True if shift is currently held.
-   */
-  virtual bool shift();
-  
-  /**
-   * \return True if ctrl is currently held.
-   */
-  virtual bool ctrl();
-  
-  /**
-   * \return True if alt is currently held.
-   */
-  virtual bool alt();
-  
-  /**
-   * \return True if caps lock is currently on.
-   */
-  virtual bool capsLock();
+    virtual uint64_t getCharacter();  
+    virtual uint64_t getCharacterNonBlock();
+    
+    virtual void registerCallback(KeyPressedCallback callback)
+    {
+        m_Callback = callback;
+    }
 
-  //
-  // IrqHandler interface
-  //
-  virtual bool irq(irq_id_t number, InterruptState &state);
+    //
+    // IrqHandler interface
+    //
+    virtual bool irq(irq_id_t number, InterruptState &state);
 
 private:
-  /**
-   * Converts a scancode into a "real" character.
-   */
-  char scancodeToChar(uint8_t scancode);
+    /**
+     * Converts a scancode into a "real" character in UTF-32 format, plus 
+     * modifier flags in the top 32-bits.
+     */
+    uint64_t scancodeToCharacter(uint8_t scancode);
 
-  Character scancodeToCharacter(uint8_t scancode);
+    struct table_entry *getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode);
 
-  /**
-   * True if we're in debug state.
-   */
-  bool m_bDebugState;
+    /**
+     * True if we're in debug state.
+     */
+    bool m_bDebugState;
 
-  /**
-   * True if shift is held.
-   */
-  bool m_bShift;
+    /**
+     * True if shift is held.
+     */
+    bool m_bShift;
   
-  /**
-   * True if ctrl is held.
-   */
-  bool m_bCtrl;
+    /**
+     * True if ctrl is held.
+     */
+    bool m_bCtrl;
   
-  /**
-   * True if alt is held.
-   */
-  bool m_bAlt;
+    /**
+     * True if alt is held.
+     */
+    bool m_bAlt;
+
+    bool m_bAltGr;
+    bool m_bEscape;
   
-  /**
-   * True if caps lock is on.
-   */
-  bool m_bCapsLock;
+    /**
+     * True if caps lock is on.
+     */
+    bool m_bCapsLock;
   
-  /**
-   * The IO port through which to access the keyboard.
-   */
-  IoPort m_Port;
+    /**
+     * The IO port through which to access the keyboard.
+     */
+    IoPort m_Port;
 
-  /**
-   * Circular input buffer.
-   */
-  Character m_Buffer[BUFLEN];
-  int m_BufStart, m_BufEnd;
+    /**
+     * Circular input buffer.
+     */
+    uint64_t m_Buffer[BUFLEN];
+    int m_BufStart, m_BufEnd;
 
-  /**
-   * Semaphore for how many items are in the buffer.
-   */
-  Semaphore m_BufLength;
+    /**
+     * Semaphore for how many items are in the buffer.
+     */
+    Semaphore m_BufLength;
 
-  /**
-   * IRQ id.
-   */
-  irq_id_t m_IrqId;
+    /**
+     * IRQ id.
+     */
+    irq_id_t m_IrqId;
+
+    /** Callback. */
+    KeyPressedCallback m_Callback;
 };
 
 #endif

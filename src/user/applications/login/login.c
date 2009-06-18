@@ -40,6 +40,22 @@ int main(int argc, char **argv)
   return 0;
 #endif
 
+#if 0
+  int pid;
+  if ( (pid=fork()) == 0)
+  {
+      // Environment:
+      char *newenv[1];
+      newenv[0] = 0;
+
+      // Child.
+      execle("/applications/TUI", "/applications/TUI", 0, newenv);
+      execle("/applications/tui", "/applications/TUI", 0, newenv);
+      // If we got here, the exec failed.
+      printf("Unable to launch /applications/TUI: `%s'\n");
+      exit(1);
+  }
+#endif
   // Grab the greeting if one exists.
   FILE *stream = fopen("root:/config/greeting", "r");
   if (stream)
@@ -66,13 +82,18 @@ int main(int argc, char **argv)
     struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
 
-    while ( i < 256 && (c=getchar()) != '\n' ){
-      if(c == '\b'){
-        if(i > 0){
+    while ( i < 256 && (c=getchar()) != '\n' )
+    {
+      if(c == '\b')
+      {
+        if(i > 0)
+        {
             username[--i] = '\0';
             printf("\b \b");
         }
-      }else{
+      }
+      else
+      {
         username[i++] = c;
         printf("%c",c);
       }

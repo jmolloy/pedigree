@@ -19,7 +19,7 @@
 #include <Log.h>
 #include "Pit.h"
 
-/** Ten hertz frequency. */
+/** Hundred hertz frequency. */
 #define PIT_FREQUENCY 100
 
 Pit Pit::m_Instance;

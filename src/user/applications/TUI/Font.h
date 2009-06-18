@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef FONT_H
+#define FONT_H
+
+#include <stdlib.h>
+#include <stdint.h>
+#include "environment.h"
+#include "colourSpace.h"
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+class Font
+{
+public:
+    Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth);
+    virtual ~Font();
+
+    virtual size_t render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b);
+
+    size_t getWidth()
+    {return m_CellWidth;}
+    size_t getHeight()
+    {return m_CellHeight;}
+
+private:
+
+    Font(const Font&);
+    Font &operator = (const Font&);
+
+    struct Glyph
+    {
+        rgb_t *buffer;
+    };
+    void drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top);
+    Glyph *generateGlyph(uint32_t c, rgb_t f, rgb_t b);
+    void cacheInsert(Glyph *pGlyph, uint32_t c, rgb_t f, rgb_t b);
+    Glyph *cacheLookup(uint32_t c, rgb_t f, rgb_t b);
+
+    static FT_Library m_Library;
+    static bool m_bLibraryInitialised;
+    
+    FT_Face m_Face;
+    size_t m_CellWidth;
+    size_t m_CellHeight;
+    size_t m_nWidth;
+    size_t m_Baseline;
+
+    bool m_bCache;
+    /** The font cache (if active) is a tree of CacheEntries where the key means
+        different things at different levels:
+          Level | Key meaning | Value meaning
+          0     | Fore Colour | Array of CacheEntry
+          1     | Back Colour | Array of Glyph*, 256 in length. */
+    struct CacheEntry
+    {
+        rgb_t key;
+        void *value;
+        CacheEntry *next;
+    };
+    CacheEntry *m_pCache;
+};
+
+#endif

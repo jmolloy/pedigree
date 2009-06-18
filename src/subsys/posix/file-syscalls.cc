@@ -97,8 +97,9 @@ int posix_open(const char *name, int flags, int mode)
 
     if (!strcmp(name, "/dev/tty"))
     {
-        /// \todo Should be our ctty.
-        file = ConsoleManager::instance().getConsole(String("console0"));
+        file = pProcess->getCtty();
+        if (!file)
+            file = NullFs::instance().getFile();
     }
     else if (!strcmp(name, "/dev/null"))
     {
@@ -228,7 +229,7 @@ int posix_read(int fd, char *ptr, int len)
 
         pFd->offset += nRead;
     }
-
+    NOTICE("nRead: " << nRead);
     return static_cast<int>(nRead);
 }
 
@@ -311,6 +312,8 @@ off_t posix_lseek(int file, off_t ptr, int dir)
         break;
     }
 
+    NOTICE("Ret: " << pFd->offset);
+
     return static_cast<int>(pFd->offset);
 }
 
@@ -347,7 +350,7 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
     HugeStaticString tmp;
     str.clear();
     tmp.clear();
-
+    NOTICE("Before followlink");
     return Symlink::fromFile(f)->followLink(buf, bufsize);
 }
 
@@ -594,6 +597,8 @@ int posix_fstat(int fd, struct stat *st)
     st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
     st->st_blksize = 1;
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
+
+    NOTICE("Size: " << st->st_size);
 
     return 0;
 }
@@ -958,6 +963,7 @@ int posix_isatty(int fd)
         return 0;
     }
 
+    NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
 }
 

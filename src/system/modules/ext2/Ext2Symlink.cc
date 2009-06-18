@@ -50,13 +50,13 @@ Ext2Symlink::~Ext2Symlink()
 {
 }
 
-uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
     return static_cast<Ext2Node*>(this)->read(location, size, buffer);
     m_Size = m_nSize;
 }
 
-uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
     return static_cast<Ext2Node*>(this)->write(location, size, buffer);
     m_Size = m_nSize;

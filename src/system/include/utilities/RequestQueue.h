@@ -29,81 +29,66 @@
 class RequestQueue
 {
 public:
-  /** Creates a new RequestQueue. */
-  RequestQueue();
-  virtual ~RequestQueue();
+    /** Creates a new RequestQueue. */
+    RequestQueue();
+    virtual ~RequestQueue();
 
-  /** Initialises the queue, spawning the worker thread. */
-  void initialise();
+    /** Initialises the queue, spawning the worker thread. */
+    virtual void initialise();
 
-  /** Destroys the queue, killing the worker thread (safely) */
-  void destroy();
+    /** Destroys the queue, killing the worker thread (safely) */
+    virtual void destroy();
 
-  /** Adds a request to the queue. Blocks until it finishes and returns the result. */
-  uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
-                     uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
+    /** Adds a request to the queue. Blocks until it finishes and returns the result. */
+    uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
+                        uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
-  /** Adds an asynchronous request to the queue. Will not block. */
-  uint64_t addAsyncRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
-                     uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
+    /** Adds an asynchronous request to the queue. Will not block. */
+    uint64_t addAsyncRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
+                             uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
 protected:
-  /** Callback - classes are expected to inherit and override this function. It's called when a
-      request needs to be executed (by the worker thread). */
-  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                  uint64_t p6, uint64_t p7, uint64_t p8) = 0;
-private:
+    /** Callback - classes are expected to inherit and override this function. It's called when a
+        request needs to be executed (by the worker thread). */
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                    uint64_t p6, uint64_t p7, uint64_t p8) = 0;
 
-  RequestQueue(const RequestQueue&);
-  void operator =(const RequestQueue&);
+    RequestQueue(const RequestQueue&);
+    void operator =(const RequestQueue&);
 
-  /** Request structure */
-  class Request
-  {
-  public:
-    Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),mutex(true),next(0) {}
-    ~Request() {}
-    uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
-    uint64_t ret;
-    Mutex mutex;
-    Request *next;
-  private:
-    Request(const Request&);
-    void operator =(const Request&);
-  };
+    /** Request structure */
+    class Request
+    {
+    public:
+        Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),mutex(true),isAsync(false),next(0) {}
+        ~Request() {}
+        uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
+        uint64_t ret;
+        Mutex mutex;
+        bool isAsync;
+        Request *next;
+    private:
+        Request(const Request&);
+        void operator =(const Request&);
+    };
 
-  /** Thread trampoline */
-  static int trampoline(void *p);
+    /** Thread trampoline */
+    static int trampoline(void *p);
 
-  /** Asynchronous thread trampoline */
-  static int asyncTrampoline(void *p);
+    /** Thread worker function */
+    int work();
 
-  /** Thread worker function */
-  int work();
+    /** The request queue */
+    Request *m_pRequestQueue;
 
-  /** Asyncronous thread worker function */
-  int asyncWork();
+    /** The semaphore giving the number of items in the queue. */
+    Semaphore m_RequestQueueSize;
 
-  /** The request queue */
-  Request *m_pRequestQueue;
+    /** True if the worker thread should cleanup and stop. */
+    volatile bool m_Stop;
 
-  /** The semaphore giving the number of items in the queue. */
-  Semaphore m_RequestQueueSize;
-
-  /** The asynchronous request queue */
-  Request *m_pAsyncRequestQueue;
-
-  /** The semaphore giving the number of items in the asynchronous queue. */
-  Semaphore m_AsyncRequestQueueSize;
-
-  /** True if the worker thread should cleanup and stop. */
-  volatile bool m_Stop;
-
-  /** Mutex to be held when the request queue is being changed. */
-  Mutex m_RequestQueueMutex;
-
-  /** Mutex to be held when the asynchronous request queue is being changed. */
-  Mutex m_AsyncRequestQueueMutex;
+    /** Mutex to be held when the request queue is being changed. */
+    Mutex m_RequestQueueMutex;
 };
 
 #endif

@@ -253,18 +253,23 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
 
     Line += "[";
     Line += tehThread->getId();
-    Line += "] @ ";
-    uintptr_t ip = 0;
+    Line += "] ";
 
-    uintptr_t symStart;
-    const char *pSym = KernelElf::instance().lookupSymbol(ip, &symStart);
-    if (pSym)
+    uintptr_t ip = 0;
+    if (tehThread->getDebugState(ip) == Thread::SemWait)
     {
-      LargeStaticString sym;
-      demangle_full(LargeStaticString(pSym), sym);
-      Line.append(ip, 16);
-      Line += ": ";
-      Line += sym;
+        Line += "Sem-Wait @ ";
+        Line.append(ip, 16);
+
+        uintptr_t symStart;
+        const char *pSym = KernelElf::instance().globalLookupSymbol(ip, &symStart);
+        if (pSym)
+        {
+            LargeStaticString sym;
+            demangle_full(LargeStaticString(pSym), sym);
+            Line += ": ";
+            Line += sym;
+        }
     }
     colour = DebuggerIO::LightGrey;
   }
@@ -281,6 +286,24 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line += "[";
     Line += tehThread->getId();
     Line += "] - CURRENT";
+
+    uintptr_t ip = 0;
+    if (tehThread->getDebugState(ip) == Thread::SemWait)
+    {
+        Line += " - Sem-Wait @ ";
+        Line.append(ip, 16);
+
+        uintptr_t symStart;
+        const char *pSym = KernelElf::instance().globalLookupSymbol(ip, &symStart);
+        if (pSym)
+        {
+            LargeStaticString sym;
+            demangle_full(LargeStaticString(pSym), sym);
+            Line += ": ";
+            Line += sym;
+        }
+    }
+
     colour = DebuggerIO::Yellow;
   }
 

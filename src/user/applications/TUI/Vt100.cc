@@ -15,15 +15,16 @@
  */
 
 #include "Vt100.h"
-#include "../../kernel/core/BootIO.h"
-#include <machine/Machine.h>
-#include <machine/Keyboard.h>
 #include "Font.c"
+#include <string.h>
+#include <stdio.h>
 
 #define FONT_HEIGHT 16
 #define FONT_WIDTH  8
 
 #define NUM_PAGES_SCROLLBACK 3
+
+extern void log(char*);
 
 Vt100::Vt100(Display::ScreenMode mode, void *pFramebuffer) :
   m_Mode(mode), m_pFramebuffer(reinterpret_cast<uint8_t*>(pFramebuffer)),
@@ -80,8 +81,6 @@ void Vt100::write(char *str)
 
 void Vt100::write(char c)
 {
-  //NOTICE("VT100: write: " << c << " (" << Hex << (uintptr_t)c << ")");
-
   if (m_bChangingState)
   {
     // A VT100 command is being received.
@@ -322,7 +321,7 @@ void Vt100::write(char c)
         // We're still changing state, so keep m_bChangingState = true.
         break;
       default:
-        WARNING("VT100: Invalid character: " << c);
+//        WARNING("VT100: Invalid character: " << c);
         m_bChangingState = false;
         break;
     }
@@ -337,8 +336,15 @@ void Vt100::write(char c)
           m_pWindows[m_CurrentWindow]->setCursorX (m_pWindows[m_CurrentWindow]->getCursorX()-1);
         break;
 
+      // Newline without carriage return.
+      case '\xB': // VT - vertical tab.
+        m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
+
+        break;
+
       // Newline.
       case '\n':
+          log("Vt100: newline");
         // Newline is a cursor down and carriage return operation.
         m_pWindows[m_CurrentWindow]->setCursorY (m_pWindows[m_CurrentWindow]->getCursorY()+1);
         if(!getNewlineNLCR())
@@ -346,6 +352,7 @@ void Vt100::write(char c)
         // Fall through...
 
       case '\r':
+          log("Vt100: CR");
         m_pWindows[m_CurrentWindow]->setCursorX (0);
         break;
 
@@ -397,7 +404,8 @@ void Vt100::write(char c)
             case 'w': c = 203; break; // Top 'T'
             case 'x': c = 186; break; // Vertical bar
             default:
-              WARNING("VT100: Unrecognised line character: " << c);
+                ;
+//              WARNING("VT100: Unrecognised line character: " << c);
           }
           m_pWindows[m_CurrentWindow]->writeChar(c);
         }
@@ -411,7 +419,7 @@ void Vt100::putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b)
   int depth = m_Mode.pf.nBpp;
   if (depth != 8 && depth != 16 && depth != 32)
   {
-    ERROR("VT100: Pixel format is neither 8, 16 or 32 bits per pixel!");
+//    ERROR("VT100: Pixel format is neither 8, 16 or 32 bits per pixel!");
     return;
   }
   int m_Stride = m_Mode.pf.nPitch/ (depth/8);
@@ -588,7 +596,7 @@ void Vt100::Window::setScrollRegion(uint32_t start, uint32_t end)
   {
     if((start+m_View) > (end+m_View))
     {
-      ERROR("m_nScrollMin > m_nScrollMax [" << start << ", " << end << ", " << m_View << "]");
+//      ERROR("m_nScrollMin > m_nScrollMax [" << start << ", " << end << ", " << m_View << "]");
       return;
     }
     m_nScrollMin = start+m_View;

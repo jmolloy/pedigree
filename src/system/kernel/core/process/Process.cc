@@ -30,7 +30,7 @@
 
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-  m_ExitStatus(0), m_Cwd(0), m_SpaceAllocator(), m_pUser(0), m_pGroup(0), m_pDynamicLinker(0),
+  m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(), m_pUser(0), m_pGroup(0), m_pDynamicLinker(0),
   m_pSubsystem(0), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
@@ -41,7 +41,7 @@ Process::Process() :
 
 Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
-  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_SpaceAllocator(pParent->m_SpaceAllocator),
+  m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_Ctty(pParent->m_Ctty), m_SpaceAllocator(pParent->m_SpaceAllocator),
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_DeadThreads(0)
 {
