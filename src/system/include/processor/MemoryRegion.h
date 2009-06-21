@@ -42,6 +42,8 @@ class MemoryRegion
     /** The destructor unregisters itself from the PMM. */
     inline virtual ~MemoryRegion() {PhysicalMemoryManager::instance().unmapRegion(this);}
 
+    void free() {PhysicalMemoryManager::instance().unmapRegion(this);}
+
     /** Get the address of the beginning of the MemoryRegion in the virtual
      *  address space
      *\return pointer to the beginning of the MemoryRegion (in the virtual address space) */

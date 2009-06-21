@@ -257,14 +257,15 @@ int main (int argc, char **argv)
     
     swapBuffers(pFb, pBuffer, pPrevState, 1024, mode.pf, rect);
 
-    char *buffer = new char[2048];
+    size_t maxBuffSz = 32678*2-1;
+    char *buffer = new char[maxBuffSz+1];
     char str[64];
     size_t lastResponse = 0;
     size_t tabId;
     while (true)
     {
-        size_t cmd = nextRequest(lastResponse, buffer, &sz, 2047, &tabId);
-        sprintf(str, "Command %d received. (term %d)", cmd, tabId);
+        size_t cmd = nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
+        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
         log(str);
 
         Terminal *pT = 0;
@@ -300,6 +301,7 @@ int main (int argc, char **argv)
             {
                 DirtyRectangle rect2;
                 buffer[sz] = '\0';
+                buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 lastResponse = sz;
                 swapBuffers(pFb, pBuffer, pPrevState, 1024, mode.pf, rect2);

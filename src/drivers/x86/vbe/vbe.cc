@@ -119,6 +119,7 @@ void entry()
       return;
   }
 
+  uintptr_t fbAddr;
   uint16_t *modes = reinterpret_cast<uint16_t*> (REALMODE_PTR(info->videomodes));
   for (int i = 0; modes[i] != 0xFFFF; i++)
   {
@@ -144,6 +145,7 @@ void entry()
     pSm->height = mode->Yres;
     pSm->refresh = 0;
     pSm->framebuffer = mode->framebuffer;
+    fbAddr = mode->framebuffer;
     pSm->pf.mRed = mode->red_mask;
     pSm->pf.pRed = mode->red_position;
     pSm->pf.mGreen = mode->green_mask;
@@ -155,17 +157,19 @@ void entry()
     modeList.pushBack(pSm);
   }
 
+  // Total video memory, in bytes.
+  size_t totalMemory = info->totalMemory * 64*1024;
+
   Bios::instance().free(reinterpret_cast<uintptr_t>(info));
   Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
 
   NOTICE("VBE: Detected compatible display modes:");
-  uintptr_t fbAddr = 0;
+
   for (List<Display::ScreenMode*>::Iterator it = modeList.begin();
        it != modeList.end();
        it++)
   {
     Display::ScreenMode *pSm = *it;
-    fbAddr = pSm->framebuffer;
     NOTICE(Hex << pSm->id << "\t " << Dec << pSm->width << "x" << pSm->height << "x" << pSm->pf.nBpp << "\t " << Hex <<
            pSm->framebuffer);
   }
@@ -180,7 +184,7 @@ void entry()
   }
 
   // Create a new VbeDisplay device node.
-  VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, fbAddr);
+  VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, totalMemory);
 
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());

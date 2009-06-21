@@ -19,7 +19,9 @@
 #include <machine/Device.h>
 #include <machine/Display.h>
 #include <utilities/List.h>
+#include <utilities/MemoryAllocator.h>
 #include <processor/MemoryMappedIo.h>
+#include <processor/PhysicalMemoryManager.h>
 
 class VbeDisplay : public Display
 {
@@ -33,7 +35,7 @@ public:
     };
 
     VbeDisplay();
-    VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, uintptr_t fbAddr);
+    VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz);
 
     virtual ~VbeDisplay();
 
@@ -43,10 +45,20 @@ public:
     virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
     virtual bool setScreenMode(Display::ScreenMode sm);
 
+    virtual rgb_t *newBuffer();
+    virtual void setCurrentBuffer(rgb_t *pBuffer);
+    virtual void updateBuffer(rgb_t *pBuffer, size_t x1=~0UL, size_t y1=~0UL,
+                              size_t x2=~0UL, size_t y2=~0UL);
+    virtual void killBuffer(rgb_t *pBuffer);
+    virtual void bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX, size_t toY, size_t width, size_t height);
+    virtual void fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width, size_t height, rgb_t colour);
+
 private:
     /** Copy constructor is private. */
     VbeDisplay(const VbeDisplay &);
     VbeDisplay &operator = (const VbeDisplay &);
+
+    void packColour(rgb_t colour, size_t idx, uintptr_t fbOffset);
 
     /** VBE version. */
     VbeVersion m_VbeVersion;
@@ -58,6 +70,20 @@ private:
     Display::ScreenMode m_Mode;
 
     MemoryMappedIo *m_pFramebuffer;
+
+    /** Buffer format. */
+    struct Buffer
+    {
+        Buffer() : pBackbuffer(0), fbOffset(0), mr("Buffer") {}
+        rgb_t        *pBackbuffer;
+        uintptr_t     fbOffset;
+        MemoryRegion  mr;
+    };
+    /** Buffers. */
+    Tree<rgb_t*, Buffer*> m_Buffers;
+
+    /** Memory allocator for video memory. */
+    MemoryAllocator m_Allocator;
 };
 
 #endif
