@@ -344,7 +344,6 @@ void FatDirectory::cacheDirectoryContents()
     FatFileInfo info;
     info.creationTime = info.modifiedTime = info.accessedTime = 0;
     m_Cache.insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
-    m_Cache.insert(String(".."), new FatDirectory(String(".."), m_Inode, pFs, 0, info));
     if(!m_bCachePopulated)
       m_bCachePopulated = true;
   }
