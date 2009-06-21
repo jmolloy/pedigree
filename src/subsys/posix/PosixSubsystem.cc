@@ -178,7 +178,7 @@ PosixSubsystem::~PosixSubsystem()
     freeMultipleFds();
 }
 
-bool PosixSubsystem::kill(Thread *pThread)
+bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 {
     NOTICE("PosixSubsystem::kill");
 
@@ -186,13 +186,27 @@ bool PosixSubsystem::kill(Thread *pThread)
     // from beneath us by another CPU or something.
     LockGuard<Mutex> guard(m_SignalHandlersLock);
 
-    // Send SIGKILL
-    SignalHandler *sig = getSignalHandler(9);
-
-    if(sig && sig->pEvent)
+    if(killReason == Interrupted)
     {
-        pThread->sendEvent(sig->pEvent);
-        Processor::setInterrupts(true);
+        // Send SIGINT
+        SignalHandler *sig = getSignalHandler(2);
+
+        if(sig && sig->pEvent)
+        {
+            pThread->sendEvent(sig->pEvent);
+            Processor::setInterrupts(true);
+        }
+    }
+    else
+    {
+        // Some other reason... SIGKILL
+        SignalHandler *sig = getSignalHandler(9);
+
+        if(sig && sig->pEvent)
+        {
+            pThread->sendEvent(sig->pEvent);
+            Processor::setInterrupts(true);
+        }
     }
 
     // Hang the thread

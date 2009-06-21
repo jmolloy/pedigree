@@ -303,11 +303,11 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
       {
         // Look up the partition string.
         const char *pStr = g_pPartitionTypes[pPartitions[i].type];
-	NormalStaticString sstr("(");
-	sstr += i;
-	sstr += ") ";
-	sstr += pStr;
-	String str(sstr);
+        NormalStaticString sstr("(");
+        sstr += i;
+        sstr += ") ";
+        sstr += pStr;
+        String str(sstr);
 
         // Create a partition object.
         Partition *pObj = new Partition(str,
