@@ -160,13 +160,16 @@ void parse(char *filename)
     {
         int alt = NONE_I;
         int modifiers = cmds[i]->modifiers&0x3;
-        
-        if (cmds[i]->modifiers&ALT_F) alt = ALT_I;
-        else if (cmds[i]->modifiers&ALTGR_F) alt = ALTGR_I;
 
+        if (cmds[i]->modifiers&ALT_F) alt = ALT_I;
+        else if (cmds[i]->modifiers&ALTGR_F)
+        {
+            alt = ALTGR_I;
+            printf("scancode: %x, modifiers: %x\n", cmds[i]->scancode, modifiers);}
         
         unsigned int idx = TABLE_IDX(alt, modifiers, cmds[i]->escape, cmds[i]->scancode);
-
+        if (alt == ALTGR_I)
+            printf("Index: %x\n", idx);
         table[idx].flags = cmds[i]->set_modifiers;
         if (cmds[i]->unicode_point != 0)
         {
@@ -194,6 +197,7 @@ int sparse(int idx, int bisect_size)
     }
     else if ((all_set(&table[idx-bisect_size], &table[idx]) > 0) || (bisect_size % 2))
     {
+        printf("DATA: %x -> %x (L)\n", idx-bisect_size, idx);
         // All set, add to data section and set ptr.
         me->left = data_add(&table[idx-bisect_size], &table[idx]) | SPARSE_DATA_FLAG /* This is actual data, not another node. */;
     }
@@ -213,6 +217,7 @@ int sparse(int idx, int bisect_size)
     }
     else if ((all_set(&table[idx], &table[idx+bisect_size]) > 0) || (bisect_size % 2))
     {
+        printf("DATA: %x -> %x (R)\n", idx, idx+bisect_size);
         // All set, add to data section and set ptr.
         me->right = data_add(&table[idx], &table[idx+bisect_size]) | SPARSE_DATA_FLAG /* This is actual data, not another node. */;
     }

@@ -31,7 +31,6 @@ extern "C" void resolveSymbol(void);
 void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 {
   // Value == loadBase. If this changes, add an extra parameter to get loadBase here!
-    NOTICE("Value: " << value);
   uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable()+value);
   if (reinterpret_cast<uintptr_t>(got) == value)
   {

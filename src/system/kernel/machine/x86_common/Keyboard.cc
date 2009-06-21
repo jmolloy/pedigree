@@ -279,12 +279,12 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
 
     // Try and grab a key code for the scancode with all modifiers enabled.
     table_entry_t *pTableEntry = getTableEntry(m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
-    if (!pTableEntry)
+    if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
     {
         NOTICE("Needed to fallback, altgr: " << m_bAltGr <<", alt " << m_bAlt << ", esc: " << m_bEscape);
         // Fall back and just use the shift modifier.
         pTableEntry = getTableEntry(false, false, false, m_bShift, m_bEscape, scancode);
-        if (!pTableEntry || pTableEntry->flags == 0)
+        if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
         {
             // Fall back again and use no modifier.
             pTableEntry = getTableEntry(false, false, false, false, false, scancode);
@@ -327,7 +327,9 @@ table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bo
     size_t modifiers =  ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
     size_t escape = (bEscape)?1:0;
     size_t idx = TABLE_IDX(alt, modifiers, escape, scancode);
-
+    NOTICE("GetTableEntry: A: " << Hex << alt << ", M: " << modifiers << " E: " << escape << ", Scancode: " << scancode);
+    NOTICE("    Index: " << idx);
+    // ??? Why???
     m_bEscape = false;
 
     uint8_t *pSparseTable = reinterpret_cast<uint8_t*>(sparse_buff);
@@ -371,5 +373,6 @@ table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bo
     }
 
     table_entry_t *pTabEntry = reinterpret_cast<table_entry_t*>(&pDataTable[data_idx]);
+    NOTICE("    returning " << pTabEntry->val << ", " << pTabEntry->flags);
     return pTabEntry;
 }
