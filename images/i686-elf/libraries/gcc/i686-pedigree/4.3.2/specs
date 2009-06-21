@@ -1,5 +1,5 @@
 *cpp:
-%{posix:-D_POSIX_SOURCE} -DPEDIGREE
+%{posix:-D_POSIX_SOURCE} -D__PEDIGREE__
 
 *cpp_options:
 %1 %{m*} %{std*&ansi&trigraphs} %{W*&pedantic*} %{w} %{f*} %{g*:%{!g0:%{!fno-working-directory:-fworking-directory}}} %{O*} %{undef}

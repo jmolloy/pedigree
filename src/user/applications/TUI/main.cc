@@ -212,22 +212,25 @@ int main (int argc, char **argv)
     FILE *stream = fopen("/background.png", "rb");
     if (!stream)
         log("Stream is null");
-    if (fseek(stream, 0, SEEK_END) != 0)
+    else
     {
-        log("fseek failed, 1");
-    }
-    int a = ftell(stream);
-    if (fseek(stream, 0, SEEK_SET) != 0)
-    {
-        log("fseek failed, 2");
-    }
+        if (fseek(stream, 0, SEEK_END) != 0)
+        {
+            log("fseek failed, 1");
+        }
+        int a = ftell(stream);
+        if (fseek(stream, 0, SEEK_SET) != 0)
+        {
+            log("fseek failed, 2");
+        }
 
-    struct stat st;
-    fstat(stream->_file, &st);
+        struct stat st;
+        fstat(stream->_file, &st);
 
-    char str2[64];
-    sprintf(str2, "tell: %x, %x\n", a, st.st_size);
-    log(str2);
+        char str2[64];
+        sprintf(str2, "tell: %x, %x\n", a, st.st_size);
+        log(str2);
+    }
 
     g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf", 
                             false, 1024);

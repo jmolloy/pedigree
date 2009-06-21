@@ -62,6 +62,7 @@ extern int h_errno;
 #define NO_DATA           2
 #define NO_RECOVERY       3
 #define TRY_AGAIN         4
+#define NO_ADDRESS        5
 
 #define AI_PASSIVE      0
 #define AI_CANONNAME    1

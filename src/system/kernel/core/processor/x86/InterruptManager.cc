@@ -261,6 +261,16 @@ void X86InterruptManager::setInterruptGate(size_t nInterruptNumber,
   m_IDT[nInterruptNumber].offset1 = (interruptHandler >> 16) & 0xFFFF;
 }
 
+void X86InterruptManager::setTaskGate(size_t nInterruptNumber,
+                                      uint16_t tssSeg)
+{
+  m_IDT[nInterruptNumber].offset0 = 0;
+  m_IDT[nInterruptNumber].selector = tssSeg;
+  m_IDT[nInterruptNumber].res = 0;
+  m_IDT[nInterruptNumber].flags = 0xE5;
+  m_IDT[nInterruptNumber].offset1 = 0;
+}
+
 X86InterruptManager::X86InterruptManager()
   : m_Lock()
 {
@@ -283,6 +293,9 @@ X86InterruptManager::X86InterruptManager()
     setInterruptGate(i,
                      interrupt_handler_array[i],
                      (i == SYSCALL_INTERRUPT_NUMBER || i == 3 /* Interrupt number */) ? true : false);
+
+  // Overwrite the double fault handler
+  setTaskGate(8, 0x30);
 }
 X86InterruptManager::~X86InterruptManager()
 {

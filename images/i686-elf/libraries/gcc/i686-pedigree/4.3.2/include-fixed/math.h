@@ -17,23 +17,28 @@
 
 _BEGIN_STD_C
 
+/* __dmath, __fmath, and __ldmath are only here for backwards compatibility
+ * in case any code used them.  They are no longer used by Newlib, itself,
+ * other than legacy.  */
 union __dmath
 {
-  __ULong i[2];
   double d;
+  __ULong i[2];
 };
 
 union __fmath
 {
-  __ULong i[1];
   float f;
+  __ULong i[1];
 };
 
+#if defined(_HAVE_LONG_DOUBLE)
 union __ldmath
 {
+  long double ld;
   __ULong i[4];
-  _LONG_DOUBLE ld;
 };
+#endif
 
 /* Natural log of 2 */
 #define _M_LOG2_E        0.693147180559945309417
@@ -66,24 +71,45 @@ union __ldmath
 
 #else /* !gcc >= 3.3  */
 
- /* No builtins.  Use floating-point unions instead.  Declare as an array
-    without bounds so no matter what small data support a port and/or
-    library has, the reference will be via the general method for accessing
-    globals. */
+ /*      No builtins.  Use fixed defines instead.  (All 3 HUGE plus the INFINITY
+  * and NAN macros are required to be constant expressions.  Using a variable--
+  * even a static const--does not meet this requirement, as it cannot be
+  * evaluated at translation time.)
+  *      The infinities are done using numbers that are far in excess of
+  * something that would be expected to be encountered in a floating-point
+  * implementation.  (A more certain way uses values from float.h, but that is
+  * avoided because system includes are not supposed to include each other.)
+  *      This method might produce warnings from some compilers.  (It does in
+  * newer GCCs, but not for ones that would hit this #else.)  If this happens,
+  * please report details to the Newlib mailing list.  */
 
  #ifndef HUGE_VAL
-  extern __IMPORT const union __dmath __infinity[];
-  #define HUGE_VAL (__infinity[0].d)
+  #define HUGE_VAL (1.0e999999999)
  #endif
 
  #ifndef HUGE_VALF
-  extern __IMPORT const union __fmath __infinityf[];
-  #define HUGE_VALF (__infinityf[0].f)
+  #define HUGE_VALF (1.0e999999999F)
  #endif
 
- #ifndef HUGE_VALL
-  extern __IMPORT const union __ldmath __infinityld[];
-  #define HUGE_VALL (__infinityld[0].ld)
+ #if !defined(HUGE_VALL)  &&  defined(_HAVE_LONG_DOUBLE)
+  #define HUGE_VALL (1.0e999999999L)
+ #endif
+
+ #if !defined(INFINITY)
+  #define INFINITY (HUGE_VALF)
+ #endif
+
+ #if !defined(NAN)
+  #if defined(__GNUC__)  &&  defined(__cplusplus)
+    /* Exception:  older g++ versions warn about the divide by 0 used in the
+     * normal case (even though older gccs do not).  This trick suppresses the
+     * warning, but causes errors for plain gcc, so is only used in the one
+     * special case.  */
+    static const union { __ULong __i[1]; float __d; } __Nanf = {0x7FC00000};
+    #define NAN (__Nanf.__d)
+  #else
+    #define NAN (0.0F/0.0F)
+  #endif
  #endif
 
 #endif /* !gcc >= 3.3  */
@@ -106,7 +132,7 @@ extern double floor _PARAMS((double));
 /* Non reentrant ANSI C functions.  */
 
 #ifndef _REENT_ONLY
-#ifndef __math_6881
+#ifndef __math_68881
 extern double acos _PARAMS((double));
 extern double asin _PARAMS((double));
 extern double atan2 _PARAMS((double, double));
@@ -238,9 +264,9 @@ extern long int lrint _PARAMS((double));
 extern _LONG_LONG_TYPE int llrint _PARAMS((double));
 extern double round _PARAMS((double));
 extern long int lround _PARAMS((double));
+extern long long int llround _PARAMS((double));
 extern double trunc _PARAMS((double));
 extern double remquo _PARAMS((double, double, int *));
-extern double copysign _PARAMS((double, double));
 extern double fdim _PARAMS((double, double));
 extern double fmax _PARAMS((double, double));
 extern double fmin _PARAMS((double, double));
@@ -259,6 +285,7 @@ extern double gamma _PARAMS((double));
 extern double lgamma _PARAMS((double));
 extern double erf _PARAMS((double));
 extern double erfc _PARAMS((double));
+extern double log2 _PARAMS((double));
 #define log2(x) (log (x) / _M_LOG2_E)
 
 #ifndef __math_68881
@@ -305,9 +332,9 @@ extern long int lrintf _PARAMS((float));
 extern _LONG_LONG_TYPE llrintf _PARAMS((float));
 extern float roundf _PARAMS((float));
 extern long int lroundf _PARAMS((float));
+extern long long int llroundf _PARAMS((float));
 extern float truncf _PARAMS((float));
 extern float remquof _PARAMS((float, float, int *));
-extern float copysignf _PARAMS((float, float));
 extern float fdimf _PARAMS((float, float));
 extern float fmaxf _PARAMS((float, float));
 extern float fminf _PARAMS((float, float));
@@ -337,14 +364,85 @@ extern float gammaf _PARAMS((float));
 extern float lgammaf _PARAMS((float));
 extern float erff _PARAMS((float));
 extern float erfcf _PARAMS((float));
+extern float log2f _PARAMS((float));
 #define log2f(x) (logf (x) / (float) _M_LOG2_E)
 extern float hypotf _PARAMS((float, float));
 #endif /* ! defined (_REENT_ONLY) */
 
+/* On platforms where long double equals double.  */
+#ifdef _LDBL_EQ_DBL
+/* Reentrant ANSI C functions.  */
+#ifndef __math_68881
+extern long double atanl _PARAMS((long double));
+extern long double cosl _PARAMS((long double));
+extern long double sinl _PARAMS((long double));
+extern long double tanl _PARAMS((long double));
+extern long double tanhl _PARAMS((long double));
+extern long double frexpl _PARAMS((long double value, int *));
+extern long double modfl _PARAMS((long double, long double *));
+extern long double ceill _PARAMS((long double));
+extern long double fabsl _PARAMS((long double));
+extern long double floorl _PARAMS((long double));
+extern long double log1pl _PARAMS((long double));
+extern long double expm1l _PARAMS((long double));
+#endif /* ! defined (__math_68881) */
+/* Non reentrant ANSI C functions.  */
+#ifndef _REENT_ONLY
+#ifndef __math_68881
+extern long double acosl _PARAMS((long double));
+extern long double asinl _PARAMS((long double));
+extern long double atan2l _PARAMS((long double, long double));
+extern long double coshl _PARAMS((long double));
+extern long double sinhl _PARAMS((long double));
+extern long double expl _PARAMS((long double));
+extern long double ldexpl _PARAMS((long double, int));
+extern long double logl _PARAMS((long double));
+extern long double log10l _PARAMS((long double));
+extern long double powl _PARAMS((long double, long double));
+extern long double sqrtl _PARAMS((long double));
+extern long double fmodl _PARAMS((long double, long double));
+extern long double hypotl _PARAMS((long double, long double));
+#endif /* ! defined (__math_68881) */
+#endif /* ! defined (_REENT_ONLY) */
+extern long double copysignl _PARAMS((long double, long double));
+extern long double nanl _PARAMS((const char *));
+extern int ilogbl _PARAMS((long double));
+extern long double asinhl _PARAMS((long double));
+extern long double cbrtl _PARAMS((long double));
+extern long double nextafterl _PARAMS((long double, long double));
+extern long double rintl _PARAMS((long double));
+extern long double scalbnl _PARAMS((long double, int));
+extern long double exp2l _PARAMS((long double));
+extern long double scalblnl _PARAMS((long double, long));
+extern long double tgammal _PARAMS((long double));
+extern long double nearbyintl _PARAMS((long double));
+extern long int lrintl _PARAMS((long double));
+extern long long int llrintl _PARAMS((long double));
+extern long double roundl _PARAMS((long double));
+extern long lroundl _PARAMS((long double));
+extern _LONG_LONG_TYPE int llroundl _PARAMS((long double));
+extern long double truncl _PARAMS((long double));
+extern long double remquol _PARAMS((long double, long double, int *));
+extern long double fdiml _PARAMS((long double, long double));
+extern long double fmaxl _PARAMS((long double, long double));
+extern long double fminl _PARAMS((long double, long double));
+extern long double fmal _PARAMS((long double, long double, long double));
+#ifndef _REENT_ONLY
+extern long double acoshl _PARAMS((long double));
+extern long double atanhl _PARAMS((long double));
+extern long double remainderl _PARAMS((long double, long double));
+extern long double lgammal _PARAMS((long double));
+extern long double erfl _PARAMS((long double));
+extern long double erfcl _PARAMS((long double));
+#endif /* ! defined (_REENT_ONLY) */
+#else /* !_LDBL_EQ_DBL */
+#ifdef __i386__
 /* Other long double precision functions.  */
 extern _LONG_DOUBLE rintl _PARAMS((_LONG_DOUBLE));
 extern long int lrintl _PARAMS((_LONG_DOUBLE));
 extern _LONG_LONG_TYPE llrintl _PARAMS((_LONG_DOUBLE));
+#endif /* __i386__ */
+#endif /* !_LDBL_EQ_DBL */
 
 #endif /* !defined (__STRICT_ANSI__) || defined(__cplusplus) || __STDC_VERSION__ >= 199901L */
 

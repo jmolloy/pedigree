@@ -349,7 +349,7 @@ build: i686-pc-linux-gnu
 target: i686-pc-pedigree
 __EOF__
       cat >> $file << \__EOF__
-configured with: ../gcc-4.3.2/configure --host=i686-pedigree --target=i686-pedigree --bindir=/applications --libdir=/libraries --prefix=/pedigree-gcc --with-local-prefix=/ --disable-nls --enable-languages=c,c++ --with-gmp=/home/matthewi/code/pedigree-cross/ --with-mpfr=/home/matthewi/code/pedigree-cross/
+configured with: ../gcc-4.3.2/configure --host=i686-pedigree --prefix=/support/gcc --bindir=/applications --libdir=/libraries --includedir=/include --sysconfdir=/config/gcc --disable-nls --enable-languages=c,c++
 __EOF__
       cat >> $file << __EOF__
 >Description:

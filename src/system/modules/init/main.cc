@@ -223,6 +223,12 @@ void init_stage2()
     ////////////////////////////////////////////////////////////////////
     // Temp!
 #if 0
+    NOTICE("Double faulting...");
+    asm volatile("xchg %bx, %bx; mov $0x8000000, %esp; pusha;");
+    panic("No double fault!?");
+#endif
+
+#if 0
     MemoryBackend *pBackend = new MemoryBackend(String("SomeConfig"));
     ConfigurationManager::instance().installBackend(pBackend);
 
