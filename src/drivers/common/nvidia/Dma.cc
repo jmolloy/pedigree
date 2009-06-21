@@ -680,8 +680,15 @@ void Dma::setUpReverseEngineeredMagicRegs()
     m_pRegs->write32(m_pRegs->read32(NV32_PFB_CONFIG_1), NVACC_RDI_DATA);
 
     // Setup location of active screen in framebuffer.
+    // NOTE: OFFSET0 is 2D destination buffer offset.
+    //       OFFSET1 is 2D source buffer offset.
     m_pRegs->write32(0, NVACC_NV20_OFFSET0);
     m_pRegs->write32(0, NVACC_NV20_OFFSET1);
+
+    // Setup buffer pitch.
+    //m_pRegs->write32(bytes-per-row&0xffff, NVACC_NV20_PITCH0);
+    //m_pRegs->write32(bytes-per-row&0xffff, NVACC_NV20_PITCH1);
+    
     // Setup accessible card memory range.
     m_pRegs->write32(m_nRamSize-1, NVACC_NV20_BLIMIT6);
     m_pRegs->write32(m_nRamSize-1, NVACC_NV20_BLIMIT7);

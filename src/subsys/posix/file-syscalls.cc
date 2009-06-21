@@ -191,7 +191,6 @@ int posix_open(const char *name, int flags, int mode)
       return -1;
     }
 
-    NOTICE("fine: " << fd);
     return static_cast<int> (fd);
 }
 
@@ -229,7 +228,7 @@ int posix_read(int fd, char *ptr, int len)
 
         pFd->offset += nRead;
     }
-    NOTICE("nRead: " << nRead);
+
     return static_cast<int>(nRead);
 }
 
@@ -311,8 +310,6 @@ off_t posix_lseek(int file, off_t ptr, int dir)
         pFd->offset = fileSize + ptr;
         break;
     }
-
-    NOTICE("Ret: " << pFd->offset);
 
     return static_cast<int>(pFd->offset);
 }
