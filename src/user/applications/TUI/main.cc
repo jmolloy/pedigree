@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include <syscall.h>
 
@@ -243,7 +244,7 @@ int main (int argc, char **argv)
 
     pHeader =  new Header(pBuffer, 1024);
     
-    pHeader->addTab("Welcome to the Pedigree operating system.", 0);
+    pHeader->addTab("The Pedigree Operating System", 0);
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
@@ -314,6 +315,23 @@ int main (int argc, char **argv)
                 uint64_t c = * reinterpret_cast<uint64_t*>(buffer);
 
                 if (c == '\n') c = '\r';
+
+                // CTRL + key
+                if (c & Keyboard::Ctrl)
+                {
+                    log("CTRL+key");
+                    c &= 0x1F;
+
+                    /*
+                    if(c == 0x3)
+                    {
+                        log("Sending SIGINT");
+                        kill(g_pCurrentTerm->term->getPid(), SIGINT);
+                        log("Just sent SIGINT");
+                        return false;
+                    }
+                    */
+                }
 
                 pT->addToQueue(c);
                 if(checkCommand(c, rect2))

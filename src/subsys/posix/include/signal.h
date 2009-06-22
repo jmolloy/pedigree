@@ -17,6 +17,7 @@ struct _reent;
 
 _sig_func_ptr _EXFUN(_signal_r, (struct _reent *, int, _sig_func_ptr));
 int	_EXFUN(_raise_r, (struct _reent *, int));
+int _EXFUN(kill, (pid_t, int));
 
 #ifndef _REENT_ONLY
 _sig_func_ptr _EXFUN(signal, (int, _sig_func_ptr));

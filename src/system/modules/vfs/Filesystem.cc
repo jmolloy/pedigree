@@ -202,6 +202,11 @@ File *Filesystem::findNode(File *pNode, String path)
   }
 
   Directory *pDir = Directory::fromFile(pNode);
+  if(!pDir)
+  {
+      // Throw some error...
+      return 0;
+  }
 
   // Cache lookup.
   File *pFile;

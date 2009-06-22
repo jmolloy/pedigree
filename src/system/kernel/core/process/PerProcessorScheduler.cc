@@ -146,12 +146,24 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
     if(!(flags & VirtualAddressSpace::KernelMode))
     {
+        NOTICE("Handler not in kernel, userstack = " << userStack << ".");
       if(userStack == 0)
       {
           NOTICE("No user stack for usermode event in checkEventState");
           pThread->sendEvent(pEvent);
           Processor::setInterrupts(bWasInterrupts);
           return;
+      }
+      else
+      {
+          va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
+          if(flags & VirtualAddressSpace::KernelMode)
+          {
+              NOTICE("User stack for event in checkEventState is the kernel's!");
+              pThread->sendEvent(pEvent);
+              Processor::setInterrupts(bWasInterrupts);
+              return;
+          }
       }
     }
 

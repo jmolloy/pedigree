@@ -27,7 +27,7 @@ extern void setCtty(char*);
 
 Terminal::Terminal(char *pName, rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_Len(0), m_WriteBufferLen(0), m_pXterm(0), m_bHasPendingRequest(false),
-    m_PendingRequestSz(0)
+    m_PendingRequestSz(0), m_Pid(0)
 {
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
     setTabId(tabId);
@@ -47,6 +47,8 @@ Terminal::Terminal(char *pName, rgb_t *pFramebuffer, size_t nWidth, size_t nHeig
         execl("/applications/login", "/applications/login", 0);
         log("Launching login failed!");
     }
+
+    m_Pid = pid;
 
 }
 

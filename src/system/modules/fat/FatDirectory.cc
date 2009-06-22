@@ -250,6 +250,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // If the cache is *not yet* populated, don't add the entry to the cache. This allows
       // cacheDirectoryContents to build the cache properly.
+      NOTICE("Adding " << filename << "...");
       if(m_bCachePopulated)
         m_Cache.insert(filename, pFile);
 
@@ -341,6 +342,7 @@ void FatDirectory::cacheDirectoryContents()
   uint32_t sz = m_DirBlockSize;
   if (m_bRootDir)
   {
+      NOTICE("Adding root directory");
     FatFileInfo info;
     info.creationTime = info.modifiedTime = info.accessedTime = 0;
     m_Cache.insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));

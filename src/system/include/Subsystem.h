@@ -41,7 +41,7 @@ class Subsystem
             None = 255
         };
 
-        /** Reason for the kill() call */
+        /** Reason for kill() */
         enum KillReason
         {
             Interrupted = 0,
