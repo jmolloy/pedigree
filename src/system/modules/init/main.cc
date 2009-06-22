@@ -62,7 +62,7 @@ static bool probeDisk(Disk *pDisk)
         {
             NormalStaticString s;
             s += alias;
-            s += ":/.pedigree-root";
+            s += "»/.pedigree-root";
 
             File* f = VFS::instance().find(String(static_cast<const char*>(s)));
             if (f && !bRootMounted)
@@ -111,13 +111,13 @@ void init()
 //     FATAL("No disks found!");
     }
 
-    if (VFS::instance().find(String("raw:/")) == 0)
+    if (VFS::instance().find(String("raw»/")) == 0)
     {
         FATAL("No raw partition!");
     }
 
     // Is there a root disk mounted?
-    if(VFS::instance().find(String("root:/.pedigree-root")) == 0)
+    if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
         FATAL("No root disk (missing .pedigree-root?)");
     }
@@ -126,7 +126,7 @@ void init()
     UserManager::instance().initialise();
 
     // Build routing tables
-    File* routeConfig = VFS::instance().find(String("root:/config/routes"));
+    File* routeConfig = VFS::instance().find(String("root»/config/routes"));
     if (routeConfig)
     {
         NOTICE("Loading route table from file");
@@ -154,7 +154,7 @@ void init()
             RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
     }
 
-    str += "Loading init program (root:/applications/login)\n";
+    str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -172,7 +172,7 @@ void init()
     pProcess->description().clear();
     pProcess->description().append("init");
 
-    pProcess->setCwd(VFS::instance().find(String("root:/")));
+    pProcess->setCwd(VFS::instance().find(String("root»/")));
     pProcess->setCtty(0);
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
@@ -187,10 +187,10 @@ void destroy()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root:/applications/TUI"));
+    File* initProg = VFS::instance().find(String("root»/applications/TUI"));
     if (!initProg)
     {
-        initProg = VFS::instance().find(String("root:/applications/tui"));
+        initProg = VFS::instance().find(String("root»/applications/tui"));
         if (!initProg)
         {
             FATAL("Unable to load init program!");
@@ -244,15 +244,6 @@ void init_stage2()
     NOTICE("Done.");
 #endif
 
-#if 0
-    Semaphore sem(0);
-
-    sem.acquire(1, 1);
-    NOTICE("Acquired sem: " << Processor::information().getCurrentThread()->wasInterrupted());
-
-    NOTICE("Ended!");
-    for (;;);
-#endif
     ////////////////////////////////////////////////////////////////////
     // End Temp!
 

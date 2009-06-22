@@ -78,7 +78,7 @@ bool DynamicLinker::loadProgram(File *pFile)
         MemoryMappedFileManager::instance().unmap(pMmFile);
         return false;
     }
-    NOTICE("Allocate");
+
     if (!m_pProgramElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), m_ProgramStart, 0, false, &m_ProgramSize))
     {
         ERROR("DynamicLinker: Main program ELF failed to load: `" << pFile->getName() << "'");
@@ -88,7 +88,6 @@ bool DynamicLinker::loadProgram(File *pFile)
 
     m_ProgramBuffer = buffer;
 
-    NOTICE("Get dependencies");
     List<char*> &dependencies = m_pProgramElf->neededLibraries();
 
     // Load all dependencies
@@ -98,7 +97,7 @@ bool DynamicLinker::loadProgram(File *pFile)
          it++)
     {
         String filename;
-        filename += "root:/libraries/";
+        filename += "root»/libraries/";
         filename += *it;
         File *pFile = VFS::instance().find(filename);
         if (!pFile)
@@ -114,7 +113,7 @@ bool DynamicLinker::loadProgram(File *pFile)
             return false;
         }
     }
-    NOTICE("init plt");
+
     initPlt(m_pProgramElf, 0);
 
     return true;
@@ -122,7 +121,6 @@ bool DynamicLinker::loadProgram(File *pFile)
 
 bool DynamicLinker::loadObject(File *pFile)
 {
-    NOTICE("load object: " << pFile->getName());
     uintptr_t buffer;
     size_t size;
     uintptr_t loadBase;
@@ -140,7 +138,7 @@ bool DynamicLinker::loadObject(File *pFile)
         ERROR("DynamicLinker: ELF allocate failed for file `" << pFile->getName() << "'");
         return false;
     }
-    NOTICE("Size: " << size);
+
     SharedObject *pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
 
     m_Objects.insert(loadBase, pSo);
@@ -154,7 +152,7 @@ bool DynamicLinker::loadObject(File *pFile)
          it++)
     {
         String filename;
-        filename += "root:/libraries/";
+        filename += "root»/libraries/";
         filename += *it;
         File *_pFile = VFS::instance().find(filename);
         if (!_pFile)
@@ -170,7 +168,7 @@ bool DynamicLinker::loadObject(File *pFile)
             return false;
         }
     }
-    NOTICE("About to initplt");
+
     initPlt(pElf, loadBase);
     
     return true;

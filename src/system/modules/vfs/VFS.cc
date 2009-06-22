@@ -198,7 +198,8 @@ File *VFS::find(String path, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == ':')
+    // Look for the UTF-8 '»'; 0xC2 0xBB.
+    if (path[i] == '\xc2' && path[i+1] == '\xbb')
     {
       bColon = true;
       break;
@@ -213,7 +214,8 @@ File *VFS::find(String path, File *pStartNode)
   }
   else
   {
-    String newPath = path.split(i+1);
+    String newPath = path.split(i+2);
+    path.chomp();
     path.chomp();
 
     // Attempt to find a filesystem alias.
@@ -246,7 +248,8 @@ bool VFS::createFile(String path, uint32_t mask, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == ':')
+    // Look for the UTF-8 '»'; 0xC2 0xBB.
+    if (path[i] == '\xc2' && path[i+1] == '\xbb')
     {
       bColon = true;
       break;
@@ -261,7 +264,8 @@ bool VFS::createFile(String path, uint32_t mask, File *pStartNode)
   }
   else
   {
-    String newPath = path.split(i+1);
+    String newPath = path.split(i+2);
+    path.chomp();
     path.chomp();
 
     // Attempt to find a filesystem alias.
@@ -279,7 +283,8 @@ bool VFS::createDirectory(String path, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == ':')
+    // Look for the UTF-8 '»'; 0xC2 0xBB.
+    if (path[i] == '\xc2' && path[i+1] == '\xbb')
     {
       bColon = true;
       break;
@@ -294,9 +299,10 @@ bool VFS::createDirectory(String path, File *pStartNode)
   }
   else
   {
-    String newPath = path.split(i+1);
+    // i+2 as the delimiter character (») is two bytes long.
+    String newPath = path.split(i+2);
     path.chomp();
-
+    path.chomp();
 
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
@@ -313,7 +319,8 @@ bool VFS::createSymlink(String path, String value, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == ':')
+    // Look for the UTF-8 '»'; 0xC2 0xBB.
+    if (path[i] == '\xc2' && path[i+1] == '\xbb')
     {
       bColon = true;
       break;
@@ -328,9 +335,9 @@ bool VFS::createSymlink(String path, String value, File *pStartNode)
   }
   else
   {
-    String newPath = path.split(i+1);
+    String newPath = path.split(i+2);
     path.chomp();
-
+    path.chomp();
 
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);
@@ -347,7 +354,8 @@ bool VFS::remove(String path, File *pStartNode)
   size_t i;
   for (i = 0; i < path.length(); i++)
   {
-    if (path[i] == ':')
+    // Look for the UTF-8 '»'; 0xC2 0xBB.
+    if (path[i] == '\xc2' && path[i+1] == '\xbb')
     {
       bColon = true;
       break;
@@ -362,9 +370,9 @@ bool VFS::remove(String path, File *pStartNode)
   }
   else
   {
-    String newPath = path.split(i+1);
+    String newPath = path.split(i+2);
     path.chomp();
-
+    path.chomp();
 
     // Attempt to find a filesystem alias.
     Filesystem *pFs = lookupFilesystem(path);

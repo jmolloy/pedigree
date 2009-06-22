@@ -126,7 +126,7 @@ extern int n_cmds;
 
 char *quote_char(char c);
 cmd_t *make_cmd(unsigned int scancode, unsigned int upoint, char *val, int escape);
-void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *a, cmd_t *agr);
+ void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *sc, cmd_t *a, cmd_t *sa, cmd_t *ca, cmd_t *sca, cmd_t *agr, cmd_t *sagr, cmd_t *cagr, cmd_t *scagr);
 
 
 
@@ -1434,12 +1434,12 @@ yyreduce:
 
   case 5:
 #line 40 "parser.y"
-    {(yyval.cmd) = (yyvsp[(3) - (14)].cmd); set_cmds(1, (yyvsp[(2) - (14)].n), (yyvsp[(3) - (14)].cmd), (yyvsp[(4) - (14)].cmd), (yyvsp[(5) - (14)].cmd), (yyvsp[(6) - (14)].cmd), (yyvsp[(7) - (14)].cmd));;}
+    {(yyval.cmd) = (yyvsp[(3) - (14)].cmd); set_cmds(1, (yyvsp[(2) - (14)].n), (yyvsp[(3) - (14)].cmd), (yyvsp[(4) - (14)].cmd), (yyvsp[(5) - (14)].cmd), (yyvsp[(6) - (14)].cmd), (yyvsp[(7) - (14)].cmd), (yyvsp[(8) - (14)].cmd), (yyvsp[(9) - (14)].cmd), (yyvsp[(10) - (14)].cmd), (yyvsp[(11) - (14)].cmd), (yyvsp[(12) - (14)].cmd), (yyvsp[(13) - (14)].cmd), (yyvsp[(14) - (14)].cmd));;}
     break;
 
   case 6:
 #line 41 "parser.y"
-    {(yyval.cmd) = (yyvsp[(2) - (13)].cmd); set_cmds(0, (yyvsp[(1) - (13)].n), (yyvsp[(2) - (13)].cmd), (yyvsp[(3) - (13)].cmd), (yyvsp[(4) - (13)].cmd), (yyvsp[(5) - (13)].cmd), (yyvsp[(6) - (13)].cmd));;}
+    {(yyval.cmd) = (yyvsp[(2) - (13)].cmd); set_cmds(0, (yyvsp[(1) - (13)].n), (yyvsp[(2) - (13)].cmd), (yyvsp[(3) - (13)].cmd), (yyvsp[(4) - (13)].cmd), (yyvsp[(5) - (13)].cmd), (yyvsp[(6) - (13)].cmd), (yyvsp[(7) - (13)].cmd), (yyvsp[(8) - (13)].cmd), (yyvsp[(9) - (13)].cmd), (yyvsp[(10) - (13)].cmd), (yyvsp[(11) - (13)].cmd), (yyvsp[(12) - (13)].cmd), (yyvsp[(13) - (13)].cmd));;}
     break;
 
   case 7:
@@ -1866,7 +1866,7 @@ cmd_t *make_cmd(unsigned int scancode, unsigned int unicode_point, char *val, in
   return c;
 }
 
-void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *a, cmd_t *agr)
+void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *sc, cmd_t *a, cmd_t *sa, cmd_t *ca, cmd_t *sca, cmd_t *agr, cmd_t *sagr, cmd_t *cagr, cmd_t *scagr)
 {
     if (n)
     {
@@ -1883,15 +1883,50 @@ void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, c
         c->escape = escape;
         c->scancode = scancode;
     }
+    if (sc)
+    {
+        sc->escape = escape;
+        sc->scancode = scancode;
+    }
     if (a)
     {
         a->escape = escape;
         a->scancode = scancode;
     }
+    if (sa)
+    {
+        sa->escape = escape;
+        sa->scancode = scancode;
+    }
+    if (ca)
+    {
+        ca->escape = escape;
+        ca->scancode = scancode;
+    }
+    if (sca)
+    {
+        sca->escape = escape;
+        sca->scancode = scancode;
+    }
     if (agr)
     {
         agr->escape = escape;
         agr->scancode = scancode;
+    }
+    if (sagr)
+    {
+        sagr->escape = escape;
+        sagr->scancode = scancode;
+    }
+    if (cagr)
+    {
+        cagr->escape = escape;
+        cagr->scancode = scancode;
+    }
+    if (scagr)
+    {
+        scagr->escape = escape;
+        scagr->scancode = scancode;
     }
 }
 

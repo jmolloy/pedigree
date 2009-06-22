@@ -9,7 +9,7 @@ extern int n_cmds;
 
 char *quote_char(char c);
 cmd_t *make_cmd(unsigned int scancode, unsigned int upoint, char *val, int escape);
-void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *a, cmd_t *agr);
+ void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *sc, cmd_t *a, cmd_t *sa, cmd_t *ca, cmd_t *sca, cmd_t *agr, cmd_t *sagr, cmd_t *cagr, cmd_t *scagr);
 
 %}
 
@@ -37,8 +37,8 @@ command: command_part NEWLINE command
        | END                         {YYACCEPT;}
        ;
 
-command_part: E0  NUM point shift ctrl shift_ctrl alt shift_alt ctrl_alt shift_ctrl_alt altgr shift_altgr ctrl_altgr shift_ctrl_altgr {$$ = $3; set_cmds(1, $2, $3, $4, $5, $6, $7);}
-            | NUM point shift ctrl shift_ctrl alt shift_alt ctrl_alt shift_ctrl_alt altgr shift_altgr ctrl_altgr shift_ctrl_altgr     {$$ = $2; set_cmds(0, $1, $2, $3, $4, $5, $6);}
+command_part: E0  NUM point shift ctrl shift_ctrl alt shift_alt ctrl_alt shift_ctrl_alt altgr shift_altgr ctrl_altgr shift_ctrl_altgr {$$ = $3; set_cmds(1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);}
+| NUM point shift ctrl shift_ctrl alt shift_alt ctrl_alt shift_ctrl_alt altgr shift_altgr ctrl_altgr shift_ctrl_altgr     {$$ = $2; set_cmds(0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);}
             | E0 NUM SHIFT     {$$ = make_cmd($2, 0, 0, 1); $$->set_modifiers = SHIFT_F;}
             | NUM SHIFT        {$$ = make_cmd($1, 0, 0, 0); $$->set_modifiers = SHIFT_F;}
             | E0 NUM CTRL      {$$ = make_cmd($2, 0, 0, 1); $$->set_modifiers = CTRL_F;}
@@ -132,7 +132,7 @@ cmd_t *make_cmd(unsigned int scancode, unsigned int unicode_point, char *val, in
   return c;
 }
 
-void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *a, cmd_t *agr)
+void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, cmd_t *sc, cmd_t *a, cmd_t *sa, cmd_t *ca, cmd_t *sca, cmd_t *agr, cmd_t *sagr, cmd_t *cagr, cmd_t *scagr)
 {
     if (n)
     {
@@ -149,14 +149,49 @@ void set_cmds(int escape, unsigned int scancode, cmd_t *n, cmd_t *s, cmd_t *c, c
         c->escape = escape;
         c->scancode = scancode;
     }
+    if (sc)
+    {
+        sc->escape = escape;
+        sc->scancode = scancode;
+    }
     if (a)
     {
         a->escape = escape;
         a->scancode = scancode;
     }
+    if (sa)
+    {
+        sa->escape = escape;
+        sa->scancode = scancode;
+    }
+    if (ca)
+    {
+        ca->escape = escape;
+        ca->scancode = scancode;
+    }
+    if (sca)
+    {
+        sca->escape = escape;
+        sca->scancode = scancode;
+    }
     if (agr)
     {
         agr->escape = escape;
         agr->scancode = scancode;
+    }
+    if (sagr)
+    {
+        sagr->escape = escape;
+        sagr->scancode = scancode;
+    }
+    if (cagr)
+    {
+        cagr->escape = escape;
+        cagr->scancode = scancode;
+    }
+    if (scagr)
+    {
+        scagr->escape = escape;
+        scagr->scancode = scancode;
     }
 }
