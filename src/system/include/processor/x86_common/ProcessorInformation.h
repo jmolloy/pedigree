@@ -45,7 +45,12 @@ class X86CommonProcessorInformation
     /** Get the current processor's VirtualAddressSpace
      *\return reference to the current processor's VirtualAddressSpace */
     inline VirtualAddressSpace &getVirtualAddressSpace() const
-      {return *m_VirtualAddressSpace;}
+    {
+        if (m_VirtualAddressSpace)
+            return *m_VirtualAddressSpace;
+        else
+            return VirtualAddressSpace::getKernelAddressSpace();
+    }
     /** Set the current processor's VirtualAddressSpace
      *\param[in] virtualAddressSpace reference to the new VirtualAddressSpace */
     inline void setVirtualAddressSpace(VirtualAddressSpace &virtualAddressSpace)

@@ -299,6 +299,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     // Map the page
     *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
+
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
@@ -314,11 +315,24 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
       for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         Process *p = Scheduler::instance().getProcess(i);
-        Processor::switchAddressSpace(*p->getAddressSpace());
 
         X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (p->getAddressSpace());
+        if (x86VAS == &VAS)
+            continue;
+
+        Processor::switchAddressSpace(*p->getAddressSpace());
+
         pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
         *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+      }
+      if (&VAS != &getKernelAddressSpace())
+      {
+          Processor::switchAddressSpace(getKernelAddressSpace());
+          X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (&getKernelAddressSpace());
+
+          pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+          *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+
       }
       Processor::switchAddressSpace(VAS);
     }

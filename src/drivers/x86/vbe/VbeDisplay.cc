@@ -116,7 +116,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
   Machine::instance().getVga(0)->setMode(m_Mode.id);
 
   // Inform the TUI that the current mode has changed.
-  g_TuiSyscallManager.modeChanged(m_Mode, m_pFramebuffer->physicalAddress(), m_pFramebuffer->size());
+  g_TuiSyscallManager.modeChanged(this, m_Mode, m_pFramebuffer->physicalAddress(), m_pFramebuffer->size());
 
   return true;
 }
@@ -125,18 +125,42 @@ VbeDisplay::rgb_t *VbeDisplay::newBuffer()
 {
     Buffer *pBuffer = new Buffer;
 
+    size_t pgmask = PhysicalMemoryManager::getPageSize()-1;
     size_t sz = m_Mode.width*m_Mode.height * sizeof(rgb_t);
-    PhysicalMemoryManager::instance().allocateRegion(pBuffer->mr,
-                                                     (sz & (PhysicalMemoryManager::getPageSize()-1)) + PhysicalMemoryManager::getPageSize(),
-                                                     PhysicalMemoryManager::continuous,
-                                                     VirtualAddressSpace::Write,
-                                                     -1);
+
+    if (sz & pgmask) sz += PhysicalMemoryManager::getPageSize();
+    sz &= ~pgmask;
+
+    if (!PhysicalMemoryManager::instance().allocateRegion(pBuffer->mr,
+                                                          sz / PhysicalMemoryManager::getPageSize(),
+                                                          0,
+                                                          VirtualAddressSpace::Write,
+                                                          -1))
+    {
+        ERROR("VbeDisplay::newBuffer: allocateRegion failed!");
+    }
 
     pBuffer->pBackbuffer = reinterpret_cast<rgb_t*>(pBuffer->mr.virtualAddress());
-    m_Allocator.allocate(m_Mode.width*m_Mode.height *
-                             (m_Mode.pf.nBpp/8) ,
-                         pBuffer->fbOffset);
-    
+
+    sz = m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8);
+    if (sz & pgmask) sz += PhysicalMemoryManager::getPageSize();
+    sz &= ~pgmask;
+
+    if (!PhysicalMemoryManager::instance().allocateRegion(pBuffer->fbmr,
+                                                          sz / PhysicalMemoryManager::getPageSize(),
+                                                          0,
+                                                          VirtualAddressSpace::Write,
+                                                          -1))
+    {
+        ERROR("VbeDisplay::newBuffer: allocateRegion failed! (1)");
+    }
+
+    pBuffer->pFbBackbuffer = reinterpret_cast<uint8_t*>(pBuffer->mr.virtualAddress());
+
+    m_Buffers.insert(pBuffer->pBackbuffer, pBuffer);
+
+    NOTICE("New buffer: returning " << (uintptr_t)pBuffer->pBackbuffer);
+
     return pBuffer->pBackbuffer;
 }
 
@@ -145,22 +169,11 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
-        ERROR("VbeDisplay: Bad buffer.");
+        ERROR("VbeDisplay: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
 
-    size_t scanline = pBuf->fbOffset / m_Mode.pf.nPitch;
-
-    Bios::instance().setAx(0x4F07);
-    Bios::instance().setBx(0x0000);
-    Bios::instance().setCx(0x0000); // Leftmost displayed pixel in scanline.
-    Bios::instance().setDx(scanline); // First displayed scanline.
-    Bios::instance().executeInterrupt(0x10);
-
-    if (Bios::instance().getAx() != 0x004F)
-    {
-        WARNING("VbeDisplay::setCurrentBuffer failed!");
-    }
+    memcpy(getFramebuffer(), pBuf->pFbBackbuffer, m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8));
 }
 
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
@@ -169,18 +182,18 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
-        return;
+//        return;
     }
     else if (m_Mode.pf.nBpp == 24)
     {
 //        updateBuffer_24bpp (pBuffer, x1, y1, x2, y2);
-        return;
+//       return;
     }
  
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
-        ERROR("VbeDisplay: Bad buffer.");
+        ERROR("VbeDisplay: updateBuffer: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
    
@@ -188,6 +201,9 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
     if (x2 == ~0UL) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
     if (y2 == ~0UL) y2 = m_Mode.height-1;
+    NOTICE("x1: " << x1 << ", y1: " << y1 << ", x2: " << x2 << ", y2: " << y2);
+
+    size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
     // Unoptimised version for arbitrary pixel formats.
     for (size_t y = y1; y <= y2; y++)
@@ -195,8 +211,12 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
         for (size_t x = x1; x <= x2; x++)
         {
             size_t i = y*m_Mode.width + x;
-            packColour(pBuffer[i], i, pBuf->fbOffset);
+            packColour(pBuffer[i], i, reinterpret_cast<uintptr_t>(pBuf->pFbBackbuffer));
         }
+
+        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+y*m_Mode.pf.nPitch + x1*bytesPerPixel,
+               pBuf->pFbBackbuffer + y*m_Mode.pf.nPitch + x1*bytesPerPixel,
+               (x2-x1)*bytesPerPixel);
     }
 }
 
@@ -205,12 +225,12 @@ void VbeDisplay::killBuffer(rgb_t *pBuffer)
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
-        ERROR("VbeDisplay: killBuffer: bad buffer.");
+        ERROR("VbeDisplay: killBuffer: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
     pBuf->mr.free();
-    m_Allocator.free(pBuf->fbOffset, m_Mode.width*m_Mode.height *
-                         (m_Mode.pf.nBpp/8));
+    pBuf->fbmr.free();
+
     delete pBuf;
 }
 
@@ -220,13 +240,13 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
-        ERROR("VbeDisplay: killBuffer: bad buffer.");
+        ERROR("VbeDisplay: bitBlit: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
     
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
-    uint8_t *pFb = reinterpret_cast<uint8_t*>(m_pFramebuffer) + pBuf->fbOffset;
+    uint8_t *pFb = pBuf->pFbBackbuffer;
 
     // Just like memmove(), if the dest < src, copy forwards, else copy backwards.
     size_t min = 0;
@@ -256,11 +276,11 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
-        ERROR("VbeDisplay: killBuffer: bad buffer.");
+        ERROR("VbeDisplay: fillRect: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));        
         return;
     }
     
-    uint8_t *pFb = reinterpret_cast<uint8_t*>(m_pFramebuffer) + pBuf->fbOffset;
+    uint8_t *pFb = reinterpret_cast<uint8_t*>(m_pFramebuffer);
 
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
@@ -294,7 +314,7 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     }
 }
 
-void VbeDisplay::packColour(rgb_t colour, size_t idx, uintptr_t fbOffset)
+void VbeDisplay::packColour(rgb_t colour, size_t idx, uintptr_t pFb)
 {
     PixelFormat pf = m_Mode.pf;
 
@@ -323,8 +343,6 @@ void VbeDisplay::packColour(rgb_t colour, size_t idx, uintptr_t fbOffset)
         (static_cast<uint32_t>(r) << pf.pRed) |
         (static_cast<uint32_t>(g) << pf.pGreen) |
         (static_cast<uint32_t>(b) << pf.pBlue);
-
-    uintptr_t pFb = reinterpret_cast<uintptr_t>(m_pFramebuffer) + fbOffset;
 
     switch (pf.nBpp)
     {

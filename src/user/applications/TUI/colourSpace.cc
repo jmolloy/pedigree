@@ -19,29 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-DirtyRectangle::DirtyRectangle() :
-    m_X(~0), m_Y(~0), m_X2(0), m_Y2(0)
-{
-}
-
-DirtyRectangle::~DirtyRectangle()
-{
-}
-
-void DirtyRectangle::point(size_t x, size_t y)
-{
-    if (x < m_X)
-        m_X = x;
-    if (x > m_X2)
-        m_X2 = x;
-
-    if (y < m_Y)
-        m_Y = y;
-    if (y > m_Y2)
-        m_Y2 = y;
-}
-
+#if 0
 void packColour(Display::PixelFormat pf, rgb_t colour, void *pFb, size_t idx)
 {
     uint8_t r = colour.r;
@@ -125,3 +103,4 @@ rgb_t interpolateColour(rgb_t col1, rgb_t col2, uint16_t a)
 
     return ret;
 }
+#endif

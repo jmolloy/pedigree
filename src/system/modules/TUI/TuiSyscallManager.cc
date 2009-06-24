@@ -28,7 +28,7 @@
 #include "Console.h"
 #include "syscallNumbers.h"
 
-UserConsole* g_Consoles[256];
+UserConsole *g_Consoles[256];
 UserConsole *g_UserConsole = 0;
 size_t g_UserConsoleId = 0;
 TuiSyscallManager g_TuiSyscallManager;
@@ -41,7 +41,7 @@ void callback(uint64_t key)
 }
 
 TuiSyscallManager::TuiSyscallManager() :
-    m_FramebufferRegion("Usermode framebuffer"), m_Mode()
+    m_FramebufferRegion("Usermode framebuffer"), m_Mode(), m_pDisplay(0)
 {
 }
 
@@ -135,14 +135,67 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             break;
         }
         case TUI_SET_CURRENT_CONSOLE:
+        {
             g_UserConsoleId = p1;
             g_UserConsole = g_Consoles[p1];
             break;
+        }
+        case TUI_VID_NEW_BUFFER:
+        {
+            if (!m_pDisplay) return 0;
+            NOTICE("Getting new buffer.");
+            return reinterpret_cast<uintptr_t> (m_pDisplay->newBuffer());
+        }
+        case TUI_VID_SET_BUFFER:
+        {
+            vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
+            if (!m_pDisplay) return 0;
+
+            m_pDisplay->setCurrentBuffer(reinterpret_cast<Display::rgb_t*>(p1));
+            break;
+        }
+        case TUI_VID_UPDATE_BUFFER:
+        {
+            if (!m_pDisplay) return 0;
+            vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
+            NOTICE("pReq: " << (uintptr_t)pReq << ", buffer: " << (uintptr_t)pReq->buffer);
+            m_pDisplay->updateBuffer(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
+                                     pReq->y2);
+            break;
+        }
+        case TUI_VID_KILL_BUFFER:
+        {
+            if (!m_pDisplay) return 0;
+
+            m_pDisplay->killBuffer(reinterpret_cast<Display::rgb_t*>(p1));
+            break;
+        }
+        case TUI_VID_BIT_BLIT:
+        {
+            if (!m_pDisplay) return 0;
+
+            vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
+            
+            m_pDisplay->bitBlit(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
+                                pReq->y2, pReq->w, pReq->h);
+            break;
+        }
+        case TUI_VID_FILL_RECT:
+        {
+            if (!m_pDisplay) return 0;
+
+            vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
+
+            m_pDisplay->fillRectangle(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->w,
+                                      pReq->h, *reinterpret_cast<Display::rgb_t*>(pReq->c));
+            break;
+        }
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
+    return 0;
 }
 
-void TuiSyscallManager::modeChanged(Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize)
+void TuiSyscallManager::modeChanged(Display *pDisplay, Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize)
 {
     m_Mode = mode;
     if (!PhysicalMemoryManager::instance().allocateRegion(m_FramebufferRegion,
@@ -152,7 +205,12 @@ void TuiSyscallManager::modeChanged(Display::ScreenMode mode, uintptr_t pFramebu
                                                           pFramebuffer))
     {
         ERROR("TUI: Unable to create framebuffer memory region!");
-    }                                          
+    }
+
+    m_pDisplay = pDisplay;
+    if (!m_pDisplay)
+        WARNING("TUI: Display not found!");
+
 }
 
 void init()

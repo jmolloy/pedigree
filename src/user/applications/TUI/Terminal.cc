@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "environment.h"
 #include "Terminal.h"
 #include "Header.h"
 #include <string.h>
@@ -25,16 +26,24 @@ extern void log(char*);
 extern void createConsole(size_t, char*);
 extern void setCtty(char*);
 
-Terminal::Terminal(char *pName, rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
-    m_Len(0), m_WriteBufferLen(0), m_pXterm(0), m_bHasPendingRequest(false),
+Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
+    m_pBuffer(0), m_Len(0), m_WriteBufferLen(0), m_pXterm(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0)
 {
+    // Create a new backbuffer.
+    m_pBuffer = Syscall::newBuffer();
+    if (!m_pBuffer) log("Buffer not created correctly!");
+
+    char str[64];
+    sprintf(str, "adTab %x", pHeader);
+    log(str);
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
+    log("After addTab");
     setTabId(tabId);
 
-    createConsole(tabId, pName);
+    Syscall::createConsole(tabId, pName);
 
-    m_pXterm = new Xterm(pFramebuffer, nWidth, nHeight, offsetLeft, offsetTop, pBackground);
+    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop, pBackground);
 
     // Fire up a shell session.
     int pid = fork();
@@ -43,7 +52,7 @@ Terminal::Terminal(char *pName, rgb_t *pFramebuffer, size_t nWidth, size_t nHeig
         close(0);
         close(1);
         close(2);
-        setCtty(pName);
+        Syscall::setCtty(pName);
         execl("/applications/login", "/applications/login", 0);
         log("Launching login failed!");
     }
@@ -190,5 +199,5 @@ void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
     m_pXterm->setActive(b);
     if (b)
-        m_pXterm->renderAll(rect);
+        Syscall::setCurrentBuffer(m_pBuffer);
 }

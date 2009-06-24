@@ -25,8 +25,8 @@ rgb_t g_TextColour                  = {255, 255, 255};
 rgb_t g_MainBackgroundColour        = {0, 0, 0};
 size_t g_FontSize = 16;
 
-Header::Header(rgb_t *pBuffer, size_t nWidth) :
-    m_pBuffer(pBuffer), m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
+Header::Header(size_t nWidth) :
+    m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
     m_pTabs(0), m_NextTabId(0)
 {
     m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
@@ -42,7 +42,7 @@ size_t Header::getHeight()
     return g_FontSize+5;
 }
 
-void Header::render(DirtyRectangle &rect)
+void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
@@ -52,16 +52,16 @@ void Header::render(DirtyRectangle &rect)
     // font-size + 5px.
     for (size_t i = m_nWidth*(g_FontSize+4); i < m_nWidth*(g_FontSize+5); i++)
     {
-        m_pBuffer[i].r = g_BorderColour.r;
-        m_pBuffer[i].g = g_BorderColour.g;
-        m_pBuffer[i].b = g_BorderColour.b;
+        pBuffer[i].r = g_BorderColour.r;
+        pBuffer[i].g = g_BorderColour.g;
+        pBuffer[i].b = g_BorderColour.b;
     }
 
     size_t offset = 0;
     if (m_Page != 0)
     {
         // Render a left-double arrow.
-        offset = renderString("<", offset, 2, g_TextColour, g_MainBackgroundColour);
+        offset = renderString(pBuffer, "<", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
 
     Tab *pTab = m_pTabs;
@@ -84,15 +84,15 @@ void Header::render(DirtyRectangle &rect)
             else if (pTab->flags & TAB_SELECTABLE)
                 backColour = g_TabBackgroundColour;
 
-            offset = renderString(pTab->text, offset, 2, foreColour, backColour);
+            offset = renderString(pBuffer, pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
             // Add a seperator.
             for (size_t i = offset; i < m_nWidth*(g_FontSize+4)+offset; i += m_nWidth)
             {
-                m_pBuffer[i].r = g_BorderColour.r;
-                m_pBuffer[i].g = g_BorderColour.g;
-                m_pBuffer[i].b = g_BorderColour.b;
+                pBuffer[i].r = g_BorderColour.r;
+                pBuffer[i].g = g_BorderColour.g;
+                pBuffer[i].b = g_BorderColour.b;
             }
         }
         pTab = pTab->next;
@@ -102,14 +102,14 @@ void Header::render(DirtyRectangle &rect)
     {
         offset += 5;
         // Render a right-double arrow.
-        offset = renderString(">", offset, 2, g_TextColour, g_MainBackgroundColour);     
+        offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);     
     }
 }
 
-size_t Header::renderString(char *str, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Header::renderString(rgb_t *pBuffer, char *str, size_t x, size_t y, rgb_t f, rgb_t b)
 {
     while (*str)
-        x += m_pFont->render(m_pBuffer, *str++, x, y, f, b);
+        x += m_pFont->render(pBuffer, *str++, x, y, f, b);
     return x;
 }
 

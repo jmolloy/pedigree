@@ -173,7 +173,7 @@ void entry()
     NOTICE(Hex << pSm->id << "\t " << Dec << pSm->width << "x" << pSm->height << "x" << pSm->pf.nBpp << "\t " << Hex <<
            pSm->framebuffer);
   }
- NOTICE("VBE: End of compatible display modes.");
+  NOTICE("VBE: End of compatible display modes.");
 
   // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
   Device *pDevice = searchNode(&Device::root(), fbAddr);

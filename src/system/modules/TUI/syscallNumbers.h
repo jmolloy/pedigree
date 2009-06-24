@@ -17,6 +17,13 @@
 #ifndef SYSCALL_NUMBERS_H
 #define SYSCALL_NUMBERS_H
 
+struct vid_req_t
+{
+    struct rgb_t *buffer;
+    size_t x, y, x2, y2, w, h;
+    struct rgb_t *c;
+};
+
 #define TUI_NEXT_REQUEST       1
 #define TUI_LOG                2
 #define TUI_GETFB              3
@@ -25,5 +32,12 @@
 #define TUI_CREATE_CONSOLE     6
 #define TUI_SET_CTTY           7
 #define TUI_SET_CURRENT_CONSOLE 8
+
+#define TUI_VID_NEW_BUFFER     9
+#define TUI_VID_SET_BUFFER     10
+#define TUI_VID_UPDATE_BUFFER  11
+#define TUI_VID_KILL_BUFFER    12
+#define TUI_VID_BIT_BLIT       13
+#define TUI_VID_FILL_RECT      14
 
 #endif

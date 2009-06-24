@@ -18,7 +18,6 @@
 #define TERMINAL_H
 
 #include "environment.h"
-#include "colourSpace.h"
 #include "_Xterm.h"
 
 /** A Terminal is a wrapper around an Xterm class - it provides UTF-8 <->
@@ -26,7 +25,7 @@
 class Terminal
 {
 public:
-    Terminal(char *pName, rgb_t *pFramebuffer, size_t nWidth, size_t nHeight,
+    Terminal(char *pName, size_t nWidth, size_t nHeight,
              class Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
     ~Terminal();
 
@@ -75,9 +74,16 @@ public:
         return m_pXterm->getCols();
     }
 
+    rgb_t *getBuffer()
+    {
+        return m_pBuffer;
+    }
+
 private:
     void addToQueue(char c);
 
+
+    rgb_t *m_pBuffer;
     Xterm *m_pXterm;
 
     char m_pQueue[256];

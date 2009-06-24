@@ -39,7 +39,7 @@ public:
     virtual ~TuiSyscallManager();
 
     // Called by video drivers to inform us that a mode change has taken place.
-    void modeChanged(Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize);
+    void modeChanged(Display *pDisplay, Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize);
 
 private:
     /** The copy-constructor
@@ -51,6 +51,8 @@ private:
 
     MemoryRegion m_FramebufferRegion;
     Display::ScreenMode m_Mode;
+
+    Display *m_pDisplay;
 };
 
 #endif
