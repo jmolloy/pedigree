@@ -157,10 +157,10 @@ int main (int argc, char **argv)
     g_nHeight = mode.height;
 
     g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf", 
-                            false, g_nWidth);
+                            true, g_nWidth);
 
     g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf", 
-                          false, g_nWidth);
+                          true, g_nWidth);
 
 
     void *pFb = reinterpret_cast<void*>(fb);        
