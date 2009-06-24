@@ -155,7 +155,7 @@ VbeDisplay::rgb_t *VbeDisplay::newBuffer()
         ERROR("VbeDisplay::newBuffer: allocateRegion failed! (1)");
     }
 
-    pBuffer->pFbBackbuffer = reinterpret_cast<uint8_t*>(pBuffer->mr.virtualAddress());
+    pBuffer->pFbBackbuffer = reinterpret_cast<uint8_t*>(pBuffer->fbmr.virtualAddress());
 
     m_Buffers.insert(pBuffer->pBackbuffer, pBuffer);
 
@@ -172,13 +172,14 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
         ERROR("VbeDisplay: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
-
+    NOTICE("setCurrentbuffer");
     memcpy(getFramebuffer(), pBuf->pFbBackbuffer, m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8));
 }
 
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
                               size_t y2)
 {
+    NOTICE("updateBuffer");
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
