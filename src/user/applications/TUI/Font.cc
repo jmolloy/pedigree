@@ -115,15 +115,22 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
 {
     for (size_t y = top; y < top+m_CellHeight; y++)
     {
-        for (size_t x = left; x < left+m_CellWidth; x++)
+        size_t idx = y*m_nWidth+left;
+
+        memcpy(reinterpret_cast<uint8_t*>(&pFb[idx]),
+               reinterpret_cast<uint8_t*>(&pBitmap->buffer[(y-top)*m_CellWidth]),
+               m_CellWidth*sizeof(rgb_t));
+
+/*        for (size_t x = left; x < left+m_CellWidth; x++)
         {
             size_t idx = y*m_nWidth+x;
 
+
 /*            if (m_pBackground)
                 pFb[idx] = interpolateColour(m_pBackground[idx], pBitmap->buffer[(y-top)*m_CellWidth+(x-left)], 128);
-                else*/
+                else
                 pFb[idx] = pBitmap->buffer[(y-top)*m_CellWidth+(x-left)];
-        }
+                }*/
     }
 }
 
@@ -164,13 +171,20 @@ Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
     if (m_pCache == 0) return 0;
 
     // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = static_cast<uint64_t> (c&0xFFFF) | (f.r<<16) | (f.g<<24) | (f.b<<32) | (b.r<<40) | (b.g<<48) | (b.b<<56);
+    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
+        (static_cast<uint64_t>(f.r)<<16ULL) |
+        (static_cast<uint64_t>(f.g)<<24ULL) |
+        (static_cast<uint64_t>(f.b)<<32ULL) |
+        (static_cast<uint64_t>(b.r)<<40ULL) |
+        (static_cast<uint64_t>(b.g)<<48ULL) |
+        (static_cast<uint64_t>(b.b)<<56ULL);
 
     key %= m_CacheSize;
 
     // Grab the bucket value.
     CacheEntry *pBucket = m_pCache[key];
 
+    int i = 0;
     while (pBucket)
     {
         if (pBucket->c == c &&
@@ -185,6 +199,7 @@ Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
         }
         else
             pBucket = pBucket->next;
+        i++;
     }
 
     return 0;
@@ -195,7 +210,13 @@ void Font::cacheInsert(Glyph *pGlyph, uint32_t c, rgb_t f, rgb_t b)
     if (m_pCache == 0) return;
 
     // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = static_cast<uint64_t> (c&0xFFFF) | (f.r<<16) | (f.g<<24) | (f.b<<32) | (b.r<<40) | (b.g<<48) | (b.b<<56);
+    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
+        (static_cast<uint64_t>(f.r)<<16ULL) |
+        (static_cast<uint64_t>(f.g)<<24ULL) |
+        (static_cast<uint64_t>(f.b)<<32ULL) |
+        (static_cast<uint64_t>(b.r)<<40ULL) |
+        (static_cast<uint64_t>(b.g)<<48ULL) |
+        (static_cast<uint64_t>(b.b)<<56ULL);
 
     key %= m_CacheSize;
 

@@ -44,25 +44,39 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
     LockGuard<Spinlock> guard(m_Lock);
 
+    physical_uintptr_t ptr = m_PageStack.allocate(0);
+
 #if defined(TRACK_PAGE_ALLOCATIONS)             
     if (Processor::m_Initialised == 2)
     {
         if (!g_AllocationCommand.isMallocing())
         {
             m_Lock.release();
-            g_AllocationCommand.allocatePage();
+            g_AllocationCommand.allocatePage(ptr);
             m_Lock.acquire();
         }
     }
 #endif
 
-    return m_PageStack.allocate(0);
+    return ptr;
 }
 void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
     m_PageStack.free(page);
+
+#if defined(TRACK_PAGE_ALLOCATIONS)             
+    if (Processor::m_Initialised == 2)
+    {
+        if (!g_AllocationCommand.isMallocing())
+        {
+            m_Lock.release();
+            g_AllocationCommand.freePage(page);
+            m_Lock.acquire();
+        }
+    }
+#endif
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,

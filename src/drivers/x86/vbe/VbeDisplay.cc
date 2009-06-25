@@ -281,7 +281,7 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
         return;
     }
     
-    uint8_t *pFb = reinterpret_cast<uint8_t*>(m_pFramebuffer);
+    uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
 
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
@@ -308,6 +308,7 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
                     pFb[ (i*m_Mode.width + j) * 3 + 0] = colour.r;
                     pFb[ (i*m_Mode.width + j) * 3 + 1] = colour.g;
                     pFb[ (i*m_Mode.width + j) * 3 + 2] = colour.b;
+                    break;
                 default:
                     WARNING("VbeDisplay: Pixel format not handled in fillRectangle.");
             }

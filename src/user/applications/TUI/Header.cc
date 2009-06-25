@@ -44,6 +44,8 @@ size_t Header::getHeight()
 
 void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
+    size_t charWidth = m_pFont->getWidth();
+
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
@@ -83,6 +85,9 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
                 backColour = g_SelectedTabBackgroundColour;
             else if (pTab->flags & TAB_SELECTABLE)
                 backColour = g_TabBackgroundColour;
+
+            // Fill to background colour.
+            Syscall::fillRect(pBuffer, offset-4, 0, strlen(pTab->text)*charWidth+10, g_FontSize+4, backColour);
 
             offset = renderString(pBuffer, pTab->text, offset, 2, foreColour, backColour);
 

@@ -158,7 +158,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         {
             if (!m_pDisplay) return 0;
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
-            NOTICE("pReq: " << (uintptr_t)pReq << ", buffer: " << (uintptr_t)pReq->buffer);
+
             m_pDisplay->updateBuffer(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
                                      pReq->y2);
             break;

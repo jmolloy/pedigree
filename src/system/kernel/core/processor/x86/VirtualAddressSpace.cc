@@ -168,22 +168,22 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  //VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
+  VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
 
   // Switch to this virtual address space
-  //Processor::switchAddressSpace(*this);
+  Processor::switchAddressSpace(*this);
 
   // Get the page table used to map this page directory into the address space
-  //physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FF) );
+  physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FE) );
 
   // Switch to the original virtual address space
-  //Processor::switchAddressSpace(VAddressSpace);
+  Processor::switchAddressSpace(VAddressSpace);
 
   // TODO: Free other things, perhaps in VirtualAddressSpace
   //       We can't do this in VirtualAddressSpace destructor though!
 
   // Free the page table used to map the page directory into the address space and the page directory itself
-  //physicalMemoryManager.freePage(pageTable);
+  physicalMemoryManager.freePage(pageTable);
   physicalMemoryManager.freePage(m_PhysicalPageDirectory);
 }
 
@@ -567,6 +567,9 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
     if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
       continue;
 
+    if (i*1024*4096 >= KERNEL_SPACE_START)
+      continue;
+
     for (uintptr_t j = 0; j < 1024; j++)
     {
       uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
@@ -588,6 +591,9 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
       /// \todo There's going to be a caveat with CoW here...
       PhysicalMemoryManager::instance().freePage(physicalAddress);
     }
+    
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    *pageDirectoryEntry = 0;
   }
 }
 

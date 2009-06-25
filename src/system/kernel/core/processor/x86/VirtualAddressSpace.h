@@ -186,7 +186,8 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*>(0x10000000)
+#define KERNEL_SPACE_START 0xC0000000
+#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*> (0x10000000)
 #define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
 #define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)

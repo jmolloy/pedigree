@@ -28,7 +28,7 @@
 AllocationCommand g_AllocationCommand;
 
 AllocationCommand::AllocationCommand()
-    : DebuggerCommand(), Scrollable(), m_Allocations(), m_nLines(0), m_Tree(),
+    : DebuggerCommand(), Scrollable(), m_Allocations(), m_Frees(), m_nLines(0), m_Tree(),
       m_It(), m_nIdx(0), m_bAllocating(false)
 {
 }
@@ -43,6 +43,8 @@ void AllocationCommand::autocomplete(const HugeStaticString &input, HugeStaticSt
 
 bool AllocationCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
+    postProcess();
+
   // How many lines do we have?
   m_nLines = NUM_BT_FRAMES+1;
 
@@ -223,15 +225,57 @@ size_t AllocationCommand::getLineCount()
   return m_nLines;
 }
 
-void AllocationCommand::allocatePage()
+void AllocationCommand::allocatePage(physical_uintptr_t page)
 {
     // Get a backtrace.
     Backtrace bt;
     bt.performBpBacktrace(0, 0);
     
     Allocation *pA = new Allocation;
+    pA->page = page;
     memcpy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
 
     m_Allocations.pushBack(pA);
+}
+
+void AllocationCommand::freePage(physical_uintptr_t page)
+{
+    m_Frees.pushBack(reinterpret_cast<void*>(page));
+}
+
+void AllocationCommand::postProcess()
+{
+    NOTICE("Beginning free-list post processing...");
+    for (Vector<void*>::Iterator it = m_Frees.begin();
+         it != m_Frees.end();
+         it++)
+    {
+        physical_uintptr_t page = reinterpret_cast<physical_uintptr_t>(*it);
+
+        // Look through the allocations vector for this address.
+        for (Vector<Allocation*>::Iterator it2 = m_Allocations.begin();
+             it2 != m_Allocations.end();
+             it2++)
+        {
+            if ( (*it2)->page == page )
+            {
+                delete (*it2);
+                m_Allocations.erase(it2);
+                break;
+            }
+        }
+
+        m_Frees.erase(it);
+        it = m_Frees.begin();
+    }
+    NOTICE("End free-list post processing.");
+}
+
+void AllocationCommand::checkpoint()
+{
+    NOTICE("Allocation checkpoint.");
+    // TODO delete().
+    m_Allocations.clear();
+    m_Frees.clear();
 }
 

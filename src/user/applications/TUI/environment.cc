@@ -97,9 +97,6 @@ void Syscall::setCurrentBuffer(rgb_t *pBuffer)
 void Syscall::updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     vid_req_t req;
-     char str[64];
-     sprintf(str, "updateBuffer: %x, %x", rect.getX2(), rect.getY2());
-    log(str);
 
     req.buffer = pBuffer;
     req.x = rect.getX();
@@ -129,6 +126,8 @@ void Syscall::bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
     req.w = w;
     req.h = h;
 
+    asm volatile("" ::: "memory");
+
     syscall1(TUI_VID_BIT_BLIT, reinterpret_cast<uintptr_t>(&req));
 }
 
@@ -141,6 +140,8 @@ void Syscall::fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, r
     req.w = w;
     req.h = h;
     req.c = &c;
+
+    asm volatile("" ::: "memory");
 
     syscall1(TUI_VID_FILL_RECT, reinterpret_cast<uintptr_t>(&req));
 }

@@ -19,7 +19,11 @@
 #include <utilities/utility.h>
 
 #ifdef DEBUGGER
-#include <Debugger.h>
+  #include <Debugger.h>
+
+  #ifdef TRACK_PAGE_ALLOCATIONS
+    #include <AllocationCommand.h>
+  #endif
 #endif
 
 #include <machine/keymaps/pc102.h>
@@ -188,7 +192,13 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
 
     uint64_t c = scancodeToCharacter(scancode);
 #ifdef DEBUGGER
-    if (scancode == 0x58)
+#ifdef TRACK_PAGE_ALLOCATIONS
+    if (scancode == 0x57) // F11
+    {
+        g_AllocationCommand.checkpoint();
+    }
+#endif
+    if (scancode == 0x58) // F12
     {
         LargeStaticString sError;
         sError += "User-induced breakpoint";
