@@ -33,22 +33,22 @@ void HelpCommand::autocomplete(const HugeStaticString &input, HugeStaticString &
 
 bool HelpCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-    output += "allocations - Inspect page allocations.\n";
-    output += "backtrace   - Obtain a backtrace.\n";
-    output += "cpuinfo     - Obtain CPUINFO details (stubbed)\n";
-    output += "devices     - Inspect detected devices.\n";
-    output += "disassemble - Disassemble contents at given address.\n";
-    output += "dump        - Dump machine state (registers etc).\n";
-    output += "help        - Display this text.\n";
-    output += "io          - List allocated IO ports and memory regions.\n";
-    output += "log         - View the kernel log.\n";
-    output += "lookup      - Lookup the symbol corresponding to an address.\n";
-    output += "memory      - Inspect the contents of (virtual) memory.\n";
-    output += "panic       - Cause a system panic.\n";
-    output += "quit        - Leave and continue execution.\n";
-    output += "step        - Single step and reenter the debugger.\n";
-    output += "syscall     - Trace syscall execution times (stubbed).\n";
-    output += "threads     - Inspect what each thread is doing.\n";
-    output += "trace       - Graphical execution tracer.\n";
+    output += "page-allocations - Inspect page allocations.\n";
+    output += "backtrace        - Obtain a backtrace.\n";
+    output += "cpuinfo          - Obtain CPUINFO details (stubbed)\n";
+    output += "devices          - Inspect detected devices.\n";
+    output += "disassemble      - Disassemble contents at given address.\n";
+    output += "dump             - Dump machine state (registers etc).\n";
+    output += "help             - Display this text.\n";
+    output += "io               - List allocated IO ports and memory regions.\n";
+    output += "log              - View the kernel log.\n";
+    output += "lookup           - Lookup the symbol corresponding to an address.\n";
+    output += "memory           - Inspect the contents of (virtual) memory.\n";
+    output += "panic            - Cause a system panic.\n";
+    output += "quit             - Leave and continue execution.\n";
+    output += "step             - Single step and reenter the debugger.\n";
+    output += "syscall          - Trace syscall execution times (stubbed).\n";
+    output += "threads          - Inspect what each thread is doing.\n";
+    output += "trace            - Graphical execution tracer.\n";
     return true;
 }

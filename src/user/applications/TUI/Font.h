@@ -62,18 +62,15 @@ private:
     size_t m_Baseline;
 
     bool m_bCache;
-    /** The font cache (if active) is a tree of CacheEntries where the key means
-        different things at different levels:
-          Level | Key meaning | Value meaning
-          0     | Fore Colour | Array of CacheEntry
-          1     | Back Colour | Array of Glyph*, 256 in length. */
     struct CacheEntry
     {
-        rgb_t key;
-        void *value;
+        uint32_t c;
+        rgb_t f, b;
+        Glyph *value;
         CacheEntry *next;
     };
-    CacheEntry *m_pCache;
+    CacheEntry **m_pCache;
+    size_t m_CacheSize;
 };
 
 #endif

@@ -285,23 +285,31 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Create a new stack.
     for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                 reinterpret_cast<void*> (j+STACK_END),
-                 VirtualAddressSpace::Write);
-        if (!b)
-            WARNING("map() failed in execve");
+        void *pVirt = reinterpret_cast<void*> (j+STACK_END);
+        if (!Processor::information().getVirtualAddressSpace().isMapped(pVirt))
+        {
+            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+            bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                           pVirt,
+                                                                           VirtualAddressSpace::Write);
+            if (!b)
+                WARNING("map() failed in execve");
+        }
     }
 
     // Create room for the argv and env list.
     for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                 reinterpret_cast<void*> (j+ARGV_ENV_LOC),
-                 VirtualAddressSpace::Write);
-        if (!b)
-            WARNING("map() failed in execve (2)");
+        void *pVirt = reinterpret_cast<void*> (j+ARGV_ENV_LOC);
+        if (!Processor::information().getVirtualAddressSpace().isMapped(pVirt))
+        {
+            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+            bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                           pVirt,
+                                                                           VirtualAddressSpace::Write);
+            if (!b)
+                WARNING("map() failed in execve (2)");
+        }
     }
 
     // Load the saved argv and env into this address space, starting at "location".

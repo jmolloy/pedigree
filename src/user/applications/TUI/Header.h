@@ -27,7 +27,7 @@
 class Header
 {
 public:
-    Header(rgb_t *pBuffer, size_t nWidth);
+    Header(size_t nWidth);
     ~Header();
 
     size_t addTab(char *string, size_t flags);
@@ -36,7 +36,7 @@ public:
     void centreOn(size_t tabId);
     void select(size_t tabId);
 
-    void render(DirtyRectangle &rect);
+    void render(rgb_t *pBuffer, DirtyRectangle &rect);
 
     size_t getHeight();
 
@@ -45,9 +45,8 @@ private:
     Header &operator = (const Header&);
     
     void update();
-    size_t renderString(char *str, size_t x, size_t y, rgb_t f, rgb_t b);
+    size_t renderString(rgb_t *pBuffer, char *str, size_t x, size_t y, rgb_t f, rgb_t b);
 
-    rgb_t *m_pBuffer;
     size_t m_nWidth;
     size_t m_Page;
     size_t m_LastPage;

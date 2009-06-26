@@ -58,7 +58,7 @@ private:
     VbeDisplay(const VbeDisplay &);
     VbeDisplay &operator = (const VbeDisplay &);
 
-    void packColour(rgb_t colour, size_t idx, uintptr_t fbOffset);
+    void packColour(rgb_t colour, size_t idx, uintptr_t pFb);
 
     /** VBE version. */
     VbeVersion m_VbeVersion;
@@ -74,10 +74,10 @@ private:
     /** Buffer format. */
     struct Buffer
     {
-        Buffer() : pBackbuffer(0), fbOffset(0), mr("Buffer") {}
+        Buffer() : pBackbuffer(0), pFbBackbuffer(0), mr("Buffer"), fbmr("Fb buffer") {}
         rgb_t        *pBackbuffer;
-        uintptr_t     fbOffset;
-        MemoryRegion  mr;
+        uint8_t      *pFbBackbuffer;
+        MemoryRegion  mr,fbmr;
     };
     /** Buffers. */
     Tree<rgb_t*, Buffer*> m_Buffers;

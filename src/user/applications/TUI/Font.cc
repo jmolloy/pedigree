@@ -21,7 +21,7 @@ bool Font::m_bLibraryInitialised = false;
 
 Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth) :
     m_Face(), m_CellWidth(0), m_CellHeight(0), m_nWidth(nWidth), m_Baseline(requestedSize), m_bCache(bCache),
-    m_pCache(0)
+    m_pCache(0), m_CacheSize(0)
 {
     char str[64];
     int error;
@@ -67,6 +67,13 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
     m_CellHeight = m_Face->size->metrics.height >> 6;
     m_Baseline = m_CellHeight;
     m_CellHeight += -(m_Face->size->metrics.descender >> 6);
+
+    if (m_bCache)
+    {
+        m_CacheSize = 32256-1;
+        m_pCache = new CacheEntry *[m_CacheSize];
+        memset(m_pCache, 0, m_CacheSize*sizeof(CacheEntry*));
+    }
 }
 
 Font::~Font()
@@ -77,16 +84,16 @@ size_t Font::render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b
 {
     Glyph *pGlyph = 0;
     bool bKillGlyph = true;
-    // We can't cache characters over 0xFF anyway.
-    if (m_bCache && c < 0xFF)
+    // We can't cache characters over 0xFFFF anyway.
+    if (m_bCache && c < 0xFFFF)
     {
         pGlyph = cacheLookup(c, f, b);
         if (!pGlyph)
         {
             pGlyph = generateGlyph(c, f, b);
             cacheInsert(pGlyph, c, f, b);
-            bKillGlyph = false;
         }
+        bKillGlyph = false;
     }
     else
         pGlyph = generateGlyph(c, f, b);
@@ -108,15 +115,22 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
 {
     for (size_t y = top; y < top+m_CellHeight; y++)
     {
-        for (size_t x = left; x < left+m_CellWidth; x++)
+        size_t idx = y*m_nWidth+left;
+
+        memcpy(reinterpret_cast<uint8_t*>(&pFb[idx]),
+               reinterpret_cast<uint8_t*>(&pBitmap->buffer[(y-top)*m_CellWidth]),
+               m_CellWidth*sizeof(rgb_t));
+
+/*        for (size_t x = left; x < left+m_CellWidth; x++)
         {
             size_t idx = y*m_nWidth+x;
 
+
 /*            if (m_pBackground)
                 pFb[idx] = interpolateColour(m_pBackground[idx], pBitmap->buffer[(y-top)*m_CellWidth+(x-left)], 128);
-                else*/
+                else
                 pFb[idx] = pBitmap->buffer[(y-top)*m_CellWidth+(x-left)];
-        }
+                }*/
     }
 }
 
@@ -156,54 +170,79 @@ Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
 {
     if (m_pCache == 0) return 0;
 
-    bool bFound = false;
-    CacheEntry *pEntry = m_pCache;
-    while (pEntry)
+    // Hash key is made up of the foreground, background and lower 16-bits of the character.
+    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
+        (static_cast<uint64_t>(f.r)<<16ULL) |
+        (static_cast<uint64_t>(f.g)<<24ULL) |
+        (static_cast<uint64_t>(f.b)<<32ULL) |
+        (static_cast<uint64_t>(b.r)<<40ULL) |
+        (static_cast<uint64_t>(b.g)<<48ULL) |
+        (static_cast<uint64_t>(b.b)<<56ULL);
+
+    key %= m_CacheSize;
+
+    // Grab the bucket value.
+    CacheEntry *pBucket = m_pCache[key];
+
+    int i = 0;
+    while (pBucket)
     {
-        if (pEntry->key.r == f.r &&
-            pEntry->key.g == f.g &&
-            pEntry->key.b == f.b)
+        if (pBucket->c == c &&
+            pBucket->f.r == f.r &&
+            pBucket->f.g == f.g &&
+            pBucket->f.b == f.b &&
+            pBucket->b.r == b.r &&
+            pBucket->b.g == b.g &&
+            pBucket->b.b == b.b)
         {
-            bFound = true;
-            break;
+            return pBucket->value;
         }
-        pEntry = pEntry->next;
+        else
+            pBucket = pBucket->next;
+        i++;
     }
 
-    if (!bFound) return 0;
-
-    bFound = false;
-    pEntry = reinterpret_cast<CacheEntry*>(pEntry->value);
-    while (pEntry)
-    {
-        if (pEntry->key.r == b.r &&
-            pEntry->key.g == b.g &&
-            pEntry->key.b == b.b)
-        {
-            bFound = true;
-            break;
-        }
-        pEntry = pEntry->next;
-    }
-
-    if (!bFound) return 0;
-
-    Glyph **ppGlyphs = reinterpret_cast<Glyph**>(pEntry->value);
-    return ppGlyphs[c&0xFF];
+    return 0;
 }
 
 void Font::cacheInsert(Glyph *pGlyph, uint32_t c, rgb_t f, rgb_t b)
 {
-#if 0
-    bool bFound = false;
-    CacheEntry *pEntry = m_pCache;
-    if (m_pCache == 0)
+    if (m_pCache == 0) return;
+
+    // Hash key is made up of the foreground, background and lower 16-bits of the character.
+    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
+        (static_cast<uint64_t>(f.r)<<16ULL) |
+        (static_cast<uint64_t>(f.g)<<24ULL) |
+        (static_cast<uint64_t>(f.b)<<32ULL) |
+        (static_cast<uint64_t>(b.r)<<40ULL) |
+        (static_cast<uint64_t>(b.g)<<48ULL) |
+        (static_cast<uint64_t>(b.b)<<56ULL);
+
+    key %= m_CacheSize;
+
+    // Grab the bucket value.
+    CacheEntry *pBucket = m_pCache[key];
+
+    if (!pBucket)
     {
+        pBucket = new CacheEntry;
+        pBucket->c = c;
+        pBucket->f = f;
+        pBucket->b = b;
+        pBucket->value = pGlyph;
+        pBucket->next = 0;
+
+        m_pCache[key] = pBucket;
+        return;
     }
-    else
-        while (pEntry->next)
-        {
-            if (pEntry->next
-        }
-#endif
+    while (pBucket->next)
+        pBucket = pBucket->next;
+
+    // Last node in chain.
+    pBucket->next = new CacheEntry;
+    pBucket->next->c = c;
+    pBucket->next->f = f;
+    pBucket->next->b = b;
+    pBucket->next->value = pGlyph;
+    pBucket->next->next = 0;
 }

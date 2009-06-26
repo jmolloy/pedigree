@@ -19,7 +19,11 @@
 #include <utilities/utility.h>
 
 #ifdef DEBUGGER
-#include <Debugger.h>
+  #include <Debugger.h>
+
+  #ifdef TRACK_PAGE_ALLOCATIONS
+    #include <AllocationCommand.h>
+  #endif
 #endif
 
 #include <machine/keymaps/pc102.h>
@@ -188,7 +192,13 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
 
     uint64_t c = scancodeToCharacter(scancode);
 #ifdef DEBUGGER
-    if (scancode == 0x58)
+#ifdef TRACK_PAGE_ALLOCATIONS
+    if (scancode == 0x57) // F11
+    {
+        g_AllocationCommand.checkpoint();
+    }
+#endif
+    if (scancode == 0x58) // F12
     {
         LargeStaticString sError;
         sError += "User-induced breakpoint";
@@ -327,8 +337,7 @@ table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bo
     size_t modifiers =  ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
     size_t escape = (bEscape)?1:0;
     size_t idx = TABLE_IDX(alt, modifiers, escape, scancode);
-    NOTICE("GetTableEntry: A: " << Hex << alt << ", M: " << modifiers << " E: " << escape << ", Scancode: " << scancode);
-    NOTICE("    Index: " << idx);
+
     // ??? Why???
     m_bEscape = false;
 
@@ -373,6 +382,6 @@ table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bo
     }
 
     table_entry_t *pTabEntry = reinterpret_cast<table_entry_t*>(&pDataTable[data_idx]);
-    NOTICE("    returning " << pTabEntry->val << ", " << pTabEntry->flags);
+
     return pTabEntry;
 }

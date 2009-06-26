@@ -168,22 +168,22 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
 X86VirtualAddressSpace::~X86VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  //VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
+  VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
 
   // Switch to this virtual address space
-  //Processor::switchAddressSpace(*this);
+  Processor::switchAddressSpace(*this);
 
   // Get the page table used to map this page directory into the address space
-  //physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FF) );
+  physical_uintptr_t pageTable = PAGE_GET_PHYSICAL_ADDRESS( PAGE_DIRECTORY_ENTRY(VIRTUAL_PAGE_DIRECTORY, 0x3FE) );
 
   // Switch to the original virtual address space
-  //Processor::switchAddressSpace(VAddressSpace);
+  Processor::switchAddressSpace(VAddressSpace);
 
   // TODO: Free other things, perhaps in VirtualAddressSpace
   //       We can't do this in VirtualAddressSpace destructor though!
 
   // Free the page table used to map the page directory into the address space and the page directory itself
-  //physicalMemoryManager.freePage(pageTable);
+  physicalMemoryManager.freePage(pageTable);
   physicalMemoryManager.freePage(m_PhysicalPageDirectory);
 }
 
@@ -299,6 +299,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     // Map the page
     *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
+
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
@@ -314,11 +315,24 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
       for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
       {
         Process *p = Scheduler::instance().getProcess(i);
-        Processor::switchAddressSpace(*p->getAddressSpace());
 
         X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (p->getAddressSpace());
+        if (x86VAS == &VAS)
+            continue;
+
+        Processor::switchAddressSpace(*p->getAddressSpace());
+
         pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
         *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+      }
+      if (&VAS != &getKernelAddressSpace())
+      {
+          Processor::switchAddressSpace(getKernelAddressSpace());
+          X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (&getKernelAddressSpace());
+
+          pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+          *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+
       }
       Processor::switchAddressSpace(VAS);
     }
@@ -553,6 +567,9 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
     if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
       continue;
 
+    if (i*1024*4096 >= KERNEL_SPACE_START)
+      continue;
+
     for (uintptr_t j = 0; j < 1024; j++)
     {
       uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
@@ -574,6 +591,9 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
       /// \todo There's going to be a caveat with CoW here...
       PhysicalMemoryManager::instance().freePage(physicalAddress);
     }
+    
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    *pageDirectoryEntry = 0;
   }
 }
 

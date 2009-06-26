@@ -20,6 +20,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+struct rgb_t
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} __attribute__((packed));
+
 namespace Keyboard
 {
     static const uint64_t Special = 1ULL<<63;
@@ -57,7 +64,53 @@ namespace Display
         uintptr_t framebuffer;
         PixelFormat pf;
     };
+}
+
+class DirtyRectangle
+{
+public:
+    DirtyRectangle();
+    ~DirtyRectangle();
+
+    void point(size_t x, size_t y);
+
+    size_t getX() {return m_X;}
+    size_t getY() {return m_Y;}
+    size_t getX2() {return m_X2;}
+    size_t getY2() {return m_Y2;}
+    size_t getWidth() {return m_X2-m_X+1;}
+    size_t getHeight() {return m_Y2-m_Y+1;}
+
+    void reset()
+    {
+        m_X = 0; m_Y = 0; m_X2 = 0; m_X2 = 0;
+    }
+
+private:
+    size_t m_X, m_Y, m_X2, m_Y2;
 };
+
+namespace Syscall
+{
+//    void log(char *c);    void log(const char *c);
+
+    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
+    size_t getFb(Display::ScreenMode *pMode);
+    void requestPending();
+    void respondToPending(size_t response, char *buffer, size_t sz);
+    void createConsole(size_t tabId, char *pName);
+    void setCtty(char *pName);
+    void setCurrentConsole(size_t tabId);
+    rgb_t *newBuffer();
+    void setCurrentBuffer(rgb_t *pBuffer);
+    void updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect);
+    void killBuffer(rgb_t *pBuffer);
+    void bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
+                 size_t w, size_t h);
+    void fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, rgb_t c);
+}
+
+rgb_t interpolateColour(rgb_t col1, rgb_t col2, uint16_t a);
 
 extern void log(const char *);
 

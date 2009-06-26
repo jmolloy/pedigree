@@ -17,6 +17,7 @@
 #ifndef COLOURSPACE_H
 #define COLOURSPACE_H
 
+#if 0
 #include "environment.h"
 
 struct rgb_t
@@ -36,6 +37,8 @@ public:
 
     size_t getX() {return m_X;}
     size_t getY() {return m_Y;}
+    size_t getX2() {return m_X2;}
+    size_t getY2() {return m_Y2;}
     size_t getWidth() {return m_X2-m_X+1;}
     size_t getHeight() {return m_Y2-m_Y+1;}
 
@@ -54,5 +57,7 @@ void packColour(Display::PixelFormat pf, rgb_t colour,
 void swapBuffers(void *pDest, rgb_t *pSrc, rgb_t *pPrevState, size_t nPixels, Display::PixelFormat pf, DirtyRectangle &rect);
 
 rgb_t interpolateColour(rgb_t col1, rgb_t col2, uint16_t a);
+
+#endif
 
 #endif

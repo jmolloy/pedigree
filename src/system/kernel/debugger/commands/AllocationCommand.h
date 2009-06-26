@@ -62,12 +62,16 @@ public:
         return NormalStaticString("page-allocations");
     }
 
-    void allocatePage();
+    void allocatePage(physical_uintptr_t page);
+    void freePage(physical_uintptr_t page);
+    void postProcess();
   
     bool isMallocing()
     {return m_bAllocating;}
     void setMallocing(bool b)
     {m_bAllocating = b;}
+
+    void checkpoint();
 
     //
     // Scrollable interface
@@ -79,10 +83,12 @@ public:
 private:
     struct Allocation
     {
+        physical_uintptr_t page;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
     };
     Vector<Allocation*> m_Allocations;
+    Vector<void*> m_Frees;
     size_t m_nLines;
     Tree<size_t, Allocation*> m_Tree;
     Tree<size_t, Allocation*>::Iterator m_It;

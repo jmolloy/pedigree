@@ -17,7 +17,6 @@
 #define XTERM_H
 
 #include "environment.h"
-#include "colourSpace.h"
 
 #define XTERM_BOLD      0x1
 #define XTERM_UNDERLINE 0x2
