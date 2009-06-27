@@ -136,7 +136,7 @@ int posix_open(const char *name, int flags, int mode)
         }
         else
         {
-            NOTICE("Does not exist.");
+            F_NOTICE("Does not exist.");
             // Error - not found.
             SYSCALL_ERROR(DoesNotExist);
             pSubsystem->freeFd(fd);
@@ -156,7 +156,7 @@ int posix_open(const char *name, int flags, int mode)
     if (file->isDirectory())
     {
         // Error - is directory.
-        NOTICE("Is a directory.");
+        F_NOTICE("Is a directory.");
         SYSCALL_ERROR(IsADirectory);
         pSubsystem->freeFd(fd);
         return -1;
@@ -165,7 +165,7 @@ int posix_open(const char *name, int flags, int mode)
     if ((flags & O_CREAT) && (flags & O_EXCL) && !bCreated)
     {
         // file exists with O_CREAT and O_EXCL
-        NOTICE("File exists");
+        F_NOTICE("File exists");
         SYSCALL_ERROR(FileExists);
         pSubsystem->freeFd(fd);
         return -1;
@@ -594,8 +594,6 @@ int posix_fstat(int fd, struct stat *st)
     st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
     st->st_blksize = 1;
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
-
-    NOTICE("Size: " << st->st_size);
 
     return 0;
 }
@@ -1432,7 +1430,6 @@ int posix_access(const char *name, int amode)
     F_NOTICE("access(" << (name ? name : "n/a") << ", " << Dec << amode << Hex << ")");
     if(!name)
     {
-        NOTICE("File does not exist");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -1441,12 +1438,10 @@ int posix_access(const char *name, int amode)
     File *file = VFS::instance().find(String(name), GET_CWD());
     if (!file)
     {
-        NOTICE("No file");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
 
     /// \todo Proper permission checks. For now, the file exists, and you can do what you want with it.
-    NOTICE("Win");
     return 0;
 }

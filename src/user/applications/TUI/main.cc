@@ -26,6 +26,8 @@
 #include "environment.h"
 #include <syscall.h>
 
+#include <signal.h>
+
 //include "Xterm.h"
 //include "FreetypeXterm.h"
 
@@ -234,6 +236,29 @@ int main (int argc, char **argv)
                 uint64_t c = * reinterpret_cast<uint64_t*>(buffer);
 
                 if (c == '\n') c = '\r';
+
+                // CTRL + key, here only for quick and easy testing
+                /// \todo Move into its own function to properly handle (along with proper special character handling)
+                /****** NOTE: BELOW IS TEMPORARY, WILL MOVE ******/
+                if (c & Keyboard::Ctrl)
+                {
+                    log("CTRL+key");
+                    c &= 0x1F;
+
+                    if(c < 0x1F)
+                    {
+                        log("Control key passed");
+                        if(c == 0x3)
+                        {
+                            log("Sending SIGINT");
+                            kill(g_pCurrentTerm->term->getPid(), SIGINT);
+                            log("Just sent SIGINT");
+                        }
+
+                        break;
+                    }
+                }
+                /****** NOTE: ABOVE IS TEMPORARY, WILL MOVE ******/
 
                 pT->addToQueue(c);
                 if(checkCommand(c, rect2))

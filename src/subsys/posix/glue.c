@@ -399,17 +399,6 @@ gid_t getegid()
     return getgid();
 }
 
-pid_t getppid()
-{
-    STUBBED("getppid");
-    return 0;
-}
-
-pid_t getpgrp()
-{
-    return getgid();
-}
-
 const char * const sys_siglist[] =
 {
     0,
@@ -1411,12 +1400,6 @@ int setitimer(int which, const struct itimerval *value, struct itimerval *ovalue
     return -1;
 }
 
-pid_t setsid()
-{
-    STUBBED("setsid");
-    return 0;
-}
-
 struct _mmap_tmp
 {
     void *addr;
@@ -1479,5 +1462,26 @@ char *realpath(const char *file_name, char *resolved_name)
     }
 
     errno = EINVAL;
+    return 0;
+}
+
+pid_t setsid()
+{
+    return syscall0(POSIX_SETSID);
+}
+
+int setpgid(pid_t pid, pid_t pgid)
+{
+    return syscall2(POSIX_SETPGID, (int) pid, (int) pgid);
+}
+
+pid_t getpgrp()
+{
+    return syscall0(POSIX_GETPGRP);
+}
+
+pid_t getppid()
+{
+    STUBBED("getppid");
     return 0;
 }

@@ -46,6 +46,18 @@ class DynamicLinker;
 class Process
 {
 public:
+    /** Subsystems may inherit Process to provide custom functionality. However, they need
+     *  to know whether a Process pointer is subsystem-specific. This enumeration is designed
+     *  to allow functions using Process objects in subsystems with inherited Process objects
+     *  to be able to figure out what type the Process is without depending on any external
+     *  accounting.
+     */
+    enum ProcessType
+    {
+        Stock,
+        Posix
+    };
+
     /** Default constructor. */
     Process();
 
@@ -56,7 +68,7 @@ public:
     Process(Process *pParent);
 
     /** Destructor. */
-    ~Process();
+    virtual ~Process();
 
     /** Adds a thread to this process.
      *  \return The thread ID to be assigned to the new Thread. */
@@ -177,6 +189,12 @@ public:
     Subsystem *getSubsystem()
     {
         return m_pSubsystem;
+    }
+
+    /** Gets the type of the Process (subsystems may override) */
+    virtual ProcessType getType()
+    {
+        return Stock;
     }
 
 private:

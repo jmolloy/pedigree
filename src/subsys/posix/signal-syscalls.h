@@ -25,6 +25,18 @@
 
 #include "newlib.h"
 
+#if 1
+#define SG_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
+#else
+#define SG_NOTICE(x)
+#endif
+
+#if 0
+#define SG_VERBOSE_NOTICE(x) SG_NOTICE(x)
+#else
+#define SG_VERBOSE_NOTICE
+#endif
+
 typedef void (*_sig_func_ptr)(int);
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact);

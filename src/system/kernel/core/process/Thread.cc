@@ -151,7 +151,10 @@ void Thread::sendEvent(Event *pEvent)
 
     m_EventQueue.pushBack(pEvent);
     if (m_Status == Sleeping)
+    {
+        // Interrupt the sleeping thread, there's an event firing
         m_Status = Ready;
+    }
 }
 
 void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)

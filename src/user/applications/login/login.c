@@ -14,12 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <unistd.h>
-#include <stdio.h>
 #include <pwd.h>
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
 #include <termios.h>
 #include <sys/wait.h>
-
 #include <sys/stat.h>
 
 // Pedigree function, defined in glue.c
@@ -56,6 +56,12 @@ int main(int argc, char **argv)
       exit(1);
   }
 #endif
+
+  // New process group for job control. We'll ignore SIGINT for now
+  /// \todo Perhaps restart the process on SIGINT?
+  signal(SIGINT, SIG_IGN);
+  setsid();
+
   // Grab the greeting if one exists.
   FILE *stream = fopen("root:/config/greeting", "r");
   if (stream)

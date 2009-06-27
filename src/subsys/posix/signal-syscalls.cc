@@ -26,6 +26,7 @@
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
+#include <PosixProcess.h>
 
 extern "C"
 {
@@ -42,21 +43,21 @@ extern "C"
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
 
-SIGNAL_HANDLER_EXIT     (sigabrt, 1);
-SIGNAL_HANDLER_EXIT     (sigalrm, 1);
-SIGNAL_HANDLER_EXIT     (sigbus, 1);
+SIGNAL_HANDLER_EXIT     (sigabrt, SIGABRT);
+SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM);
+SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS);
 SIGNAL_HANDLER_EMPTY    (sigchld);
 SIGNAL_HANDLER_EMPTY    (sigcont); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigfpe, 1); // floating point exception signal
-SIGNAL_HANDLER_EXIT     (sighup, 1);
-SIGNAL_HANDLER_EXITMSG  (sigill, 1, SSIGILL);
-SIGNAL_HANDLER_EXIT     (sigint, 1);
-SIGNAL_HANDLER_EXIT     (sigkill, 1);
-SIGNAL_HANDLER_EXIT     (sigpipe, 1);
-SIGNAL_HANDLER_EXIT     (sigquit, 1);
-SIGNAL_HANDLER_EXITMSG  (sigsegv, 1, SSIGSEGV);
+SIGNAL_HANDLER_EXIT     (sigfpe, SIGFPE); // floating point exception signal
+SIGNAL_HANDLER_EXIT     (sighup, SIGHUP);
+SIGNAL_HANDLER_EXITMSG  (sigill, SIGILL, SSIGILL);
+SIGNAL_HANDLER_EXIT     (sigint, SIGINT);
+SIGNAL_HANDLER_EXIT     (sigkill, SIGKILL);
+SIGNAL_HANDLER_EXIT     (sigpipe, SIGPIPE);
+SIGNAL_HANDLER_EXIT     (sigquit, SIGQUIT);
+SIGNAL_HANDLER_EXITMSG  (sigsegv, SIGSEGV, SSIGSEGV);
 SIGNAL_HANDLER_EMPTY    (sigstop); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigterm, 1);
+SIGNAL_HANDLER_EXIT     (sigterm, SIGTERM);
 SIGNAL_HANDLER_EMPTY    (sigtstp); // terminal stop
 SIGNAL_HANDLER_EMPTY    (sigttin); // background process attempts read
 SIGNAL_HANDLER_EMPTY    (sigttou); // background process attempts write
@@ -104,8 +105,7 @@ _sig_func_ptr default_sig_handlers[32] =
 
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-    SC_NOTICE("sigaction(" << Dec << sig << Hex << ", " << reinterpret_cast<uintptr_t>(act) << ", " << reinterpret_cast<uintptr_t>(oact) << ")");
-    return 0;
+    SG_NOTICE("sigaction(" << Dec << sig << Hex << ", " << reinterpret_cast<uintptr_t>(act) << ", " << reinterpret_cast<uintptr_t>(oact) << ")");
 
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
@@ -153,22 +153,26 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(act->sa_handler);
         if (newHandler == 0)
         {
+            SG_VERBOSE_NOTICE(" + SIG_DFL");
             newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[sig]);
             sigHandler->type = 1;
         }
         else if (newHandler == 1)
         {
+            SG_VERBOSE_NOTICE(" + SIG_IGN");
             newHandler = reinterpret_cast<uintptr_t>(sigign);
             sigHandler->type = 2;
         }
         else if (static_cast<int>(newHandler) == -1)
         {
+            SG_VERBOSE_NOTICE(" + Invalid");
             delete sigHandler;
             SYSCALL_ERROR(InvalidArgument);
             return -1;
         }
         else
         {
+            // SG_NOTICE(" + <handler has been provided>");
             sigHandler->type = 0;
         }
 
@@ -193,8 +197,7 @@ uintptr_t posix_signal(int sig, void* func)
 
 int posix_raise(int sig, SyscallState &State)
 {
-    SC_NOTICE("raise");
-    return 0;
+    SG_NOTICE("raise");
 
     // Create the pending signal and pass it in
     Thread *pThread = Processor::information().getCurrentThread();
@@ -226,7 +229,7 @@ int posix_raise(int sig, SyscallState &State)
 
 int pedigree_sigret()
 {
-    SC_NOTICE("pedigree_sigret");
+    SG_NOTICE("pedigree_sigret");
 
     Processor::information().getScheduler().eventHandlerReturned();
 
@@ -235,35 +238,72 @@ int pedigree_sigret()
     return 0;
 }
 
+int doProcessKill(Process *p, int sig)
+{
+    // Build the pending signal and pass it in
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("posix_kill: no subsystem");
+        return -1;
+    }
+    PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
+
+    /// \note Technically this is supposed to be sent to the currently executing thread...
+    Thread *pThread = p->getThread(0);
+
+    // Fire the event
+    if (signalHandler->pEvent)
+        pThread->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+
+    return 0;
+}
+
 int posix_kill(int pid, int sig)
 {
-    SC_NOTICE("kill(" << pid << ", " << sig << ")");
-    return 0;
+    SG_NOTICE("kill(" << pid << ", " << sig << ")");
 
-    Process* p = Scheduler::instance().getProcess(static_cast<size_t>(pid));
+    // Does this process exist?
+    Process *p = 0;
+    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+    {
+        p = Scheduler::instance().getProcess(i);
+
+        if (static_cast<int>(p->getId()) == pid)
+            break;
+    }
+
+    // If it does, handle the kill request
     if (p)
     {
-        /*if ((p->getSignalMask() & (1 << sig)))
+        // If the process is part of a group, and the pid is the process group ID, send to
+        // the group.
+        PosixProcess *pPosixProcess = static_cast<PosixProcess *>(p);
+        if(
+            (p->getType() == Process::Posix) &&
+            (pPosixProcess->getGroupMembership() == PosixProcess::Leader) &&
+            (pPosixProcess->getProcessGroup() != 0)
+            )
         {
-            /// \todo What happens when the signal is blocked?
-            return 0;
-        }*/
+            ProcessGroup *pGroup = pPosixProcess->getProcessGroup();
 
-        // Build the pending signal and pass it in
-        PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getSubsystem());
-        if(!pSubsystem)
-        {
-            ERROR("posix_kill: no subsystem");
-            return -1;
+            // Iterate over the group and recurse.
+            for(List<PosixProcess *>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            {
+                // Do not send it to ourselves
+                PosixProcess *member = *it;
+                if(member)
+                    doProcessKill(member, sig);
+            }
         }
-        PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
+        else
+        {
+            doProcessKill(p, sig);
 
-        /// \note Technically this is supposed to be sent to the currently executing thread...
-        Thread *pThread = p->getThread(0);
-
-        // Fire the event
-        if (signalHandler->pEvent)
-            pThread->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+            // If it was us, try to handle the signal *now*, or else we're going to end up who-knows-where on return.
+            if(pid == posix_getpid())
+                Processor::information().getScheduler().checkEventState(0);
+        }
     }
     else
     {
@@ -282,8 +322,7 @@ int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
 
 size_t posix_alarm(uint32_t seconds)
 {
-    SC_NOTICE("alarm");
-    return 0;
+    SG_NOTICE("alarm");
 
     // Create the pending signal and pass it in
     Process* pProcess = Processor::information().getCurrentThread()->getParent();
@@ -326,7 +365,7 @@ size_t posix_alarm(uint32_t seconds)
 
 int posix_sleep(uint32_t seconds)
 {
-    SC_NOTICE("sleep");
+    SG_NOTICE("sleep");
 
     Semaphore sem(0);
 

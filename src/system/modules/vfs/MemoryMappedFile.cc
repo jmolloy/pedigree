@@ -204,6 +204,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
     // or (b) the file was out of date.
     if (!pMmFile)
     {
+        NOTICE("Allocating new");
         pMmFile = new MemoryMappedFile(pFile);
         m_Cache.insert(pFile, pMmFile);
     }

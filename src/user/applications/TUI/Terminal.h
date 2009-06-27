@@ -79,6 +79,11 @@ public:
         return m_pBuffer;
     }
 
+    int getPid()
+    {
+        return m_Pid;
+    }
+
 private:
     void addToQueue(char c);
 
@@ -96,6 +101,8 @@ private:
 
     bool m_bHasPendingRequest;
     size_t m_PendingRequestSz;
+
+    int m_Pid;
 };
 
 #endif

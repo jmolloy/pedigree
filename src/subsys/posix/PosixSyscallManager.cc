@@ -202,6 +202,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_shutdown(static_cast<int>(p1), static_cast<int>(p2));
     case POSIX_ACCESS:
       return posix_access(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
+    case POSIX_SETSID:
+      return posix_setsid();
+    case POSIX_SETPGID:
+      return posix_setpgid(static_cast<int>(p1), static_cast<int>(p2));
+    case POSIX_GETPGRP:
+      return posix_getpgrp();
 
     // Stub warning
     case POSIX_STUBBED:
@@ -209,7 +215,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         // it MUST trap before we get the log spinlock, else other things will
         // want to write to it and deadlock.
         static char buf[128];
-        strcpy(buf, reinterpret_cast<char*>(p1));
+        strncpy(buf, reinterpret_cast<char*>(p1), 128);
         WARNING("Using stubbed function '" << buf << "'");
       return 0;
 
