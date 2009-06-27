@@ -82,9 +82,12 @@ Xterm::~Xterm()
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    //char str[64];
-    //sprintf(str, "Write: %x", utf32);
-    //log(str);
+    /*
+    char str[64];
+    sprintf(str, "Write: %x", utf32);
+    log(str);
+    */
+
     switch (utf32)
     {
         case '\n':

@@ -409,18 +409,35 @@ void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
-  LockGuard<Spinlock> guard(m_Lock);
+  // LockGuard<Spinlock> guard(m_Lock);
+    m_Lock.acquire();
 
   // Get a virtual address for the stack
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
   {
     pStack = m_freeStacks.popBack();
+
+    m_Lock.release();
   }
   else
   {
     pStack = m_pStackTop;
     m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
+
+    m_Lock.release();
+
+    // Map it in
+    uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
+    for (int j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = map(phys,
+                 reinterpret_cast<void*> (j + stackBottom),
+                 VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in doAllocateStack");
+    }
   }
   return pStack;
 }
@@ -568,8 +585,9 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
       continue;
 
     if (i*1024*4096 >= KERNEL_SPACE_START)
-      continue;
+     continue;
 
+    bool bDidSkip = false;
     for (uintptr_t j = 0; j < 1024; j++)
     {
       uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
@@ -579,7 +597,10 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
 
       void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
       if (getKernelAddressSpace().isMapped(virtualAddress))
+      {
+        bDidSkip = true;
         continue;
+      }
 
       // Grab the physical address for it.
       physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
@@ -590,8 +611,20 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
       // And release the physical memory.
       /// \todo There's going to be a caveat with CoW here...
       PhysicalMemoryManager::instance().freePage(physicalAddress);
+
+      // This PTE is no longer valid
+      *pageTableEntry = 0;
+
+      // Invalidate the TLB entry
+      Processor::invalidate(reinterpret_cast<void*>(physicalAddress));
     }
+
+    // Don't remove the directory entry if we skipped a kernel page
+    if(bDidSkip)
+      continue;
     
+    /// \note I'm now getting a page fault during execve (MemoryMappedFile::trap) that occurs only
+    ///       when these lines are kept in. I've left them here because they're correct. - Matt
     PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
     *pageDirectoryEntry = 0;
   }

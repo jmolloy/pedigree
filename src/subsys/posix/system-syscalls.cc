@@ -41,6 +41,7 @@
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
+#include <PosixProcess.h>
 
 #include <users/UserManager.h>
 //
@@ -112,8 +113,7 @@ int posix_fork(SyscallState &state)
 
     // Create a new process.
     Process *pParentProcess = Processor::information().getCurrentThread()->getParent();
-    Process *pProcess = new Process(pParentProcess);
-
+    PosixProcess *pProcess = new PosixProcess(pParentProcess);
     if (!pProcess)
     {
         SYSCALL_ERROR(OutOfMemory);
@@ -128,6 +128,26 @@ int posix_fork(SyscallState &state)
         return -1;
     }
     pProcess->setSubsystem(pSubsystem);
+
+    // Copy POSIX Process Group information if needed
+    /// \todo Get a response on Stack Overflow and possibly put into the PosixProcess copy constructor
+    if(pParentProcess->getType() == Process::Posix)
+    {
+        PosixProcess *p = static_cast<PosixProcess*>(pParentProcess);
+        pProcess->setProcessGroup(p->getProcessGroup());
+
+        // Do not adopt leadership status.
+        if(p->getGroupMembership() == PosixProcess::Leader)
+        {
+            NOTICE("fork parent was a group leader.");
+            pProcess->setGroupMembership(PosixProcess::Member);
+        }
+        else
+        {
+            NOTICE("fork parent had status " << static_cast<int>(p->getGroupMembership()) << "...");
+            pProcess->setGroupMembership(p->getGroupMembership());
+        }
+    }
 
     // Register with the dynamic linker.
     pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
@@ -271,7 +291,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     if (!pLinker->loadProgram(file))
     {
-        /// \todo Check for a shebang here.
         pProcess->setLinker(pOldLinker);
         delete pLinker;
         SYSCALL_ERROR(ExecFormatError);
@@ -283,19 +302,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     pSubsystem->freeMultipleFds(true);
 
     // Create a new stack.
-    for (int j = 0; j < STACK_START-STACK_END; j += PhysicalMemoryManager::getPageSize())
-    {
-        void *pVirt = reinterpret_cast<void*> (j+STACK_END);
-        if (!Processor::information().getVirtualAddressSpace().isMapped(pVirt))
-        {
-            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-            bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                           pVirt,
-                                                                           VirtualAddressSpace::Write);
-            if (!b)
-                WARNING("map() failed in execve");
-        }
-    }
+    uintptr_t newStack = reinterpret_cast<uintptr_t>(Processor::information().getVirtualAddressSpace().allocateStack());
 
     // Create room for the argv and env list.
     for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
@@ -320,7 +327,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     Elf *elf = pProcess->getLinker()->getProgramElf();
 
     ProcessorState pState = state;
-    pState.setStackPointer(STACK_START-8);
+    //pState.setStackPointer(STACK_START-8);
+    pState.setStackPointer(newStack-8);
     pState.setInstructionPointer(elf->getEntryPoint());
 
     StackFrame::construct(pState, 0, 2, argv, env);
@@ -434,8 +442,6 @@ int posix_waitpid(int pid, int *status, int options)
         if (options & 1) // WNOHANG set
             return 0;
 
-        /// \todo Bugfix - the following line should be deleted, and the line below uncommented.
-        //Scheduler::instance().yield(0);
         // Sleep...
         Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
         SC_NOTICE("deadt");
@@ -461,6 +467,30 @@ int posix_exit(int code)
     delete pProcess->getLinker();
 
     MemoryMappedFileManager::instance().unmapAll();
+
+    // If it's a POSIX process, remove group membership
+    if(pProcess->getType() == Process::Posix)
+    {
+        PosixProcess *p = static_cast<PosixProcess*>(pProcess);
+        ProcessGroup *pGroup = p->getProcessGroup();
+        if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
+        {
+            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            {
+                if((*it) == p)
+                {
+                    it = pGroup->Members.erase(it);
+                    break;
+                }
+            }
+        }
+        else if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
+        {
+            // Group leader not handled yet!
+            /// \todo The group ID must not be allowed to be allocated again until the last group member exits.
+            ERROR("Group leader is exiting, not handled yet!");
+        }
+    }
 
     // Clean up the descriptor table
     pSubsystem->freeMultipleFds();
@@ -647,3 +677,82 @@ int posix_dlclose(void* handle)
     return 0;
 }
 
+int posix_setsid()
+{
+    NOTICE("setsid");
+
+    // Not a POSIX process
+    Process *pStockProcess = Processor::information().getCurrentThread()->getParent();
+    if(pStockProcess->getType() != Process::Posix)
+    {
+        ERROR("setsid called on something not a POSIX process");
+        return -1;
+    }
+
+    PosixProcess *pProcess = static_cast<PosixProcess *>(pStockProcess);
+
+    // Already in a group?
+    PosixProcess::Membership myMembership = pProcess->getGroupMembership();
+    if(myMembership != PosixProcess::NoGroup)
+    {
+        // If we don't actually have a group, something's gone wrong
+        if(!pProcess->getProcessGroup())
+            FATAL("Process' is apparently a member of a group, but its group pointer is invalid.");
+
+        // Are we the group leader of that other group?
+        if(myMembership == PosixProcess::Leader)
+        {
+            NOTICE("setsid() called while the leader of another group");
+            SYSCALL_ERROR(PermissionDenied);
+            return -1;
+        }
+        else
+        {
+            NOTICE("setsid() called while a member of another group");
+        }
+    }
+
+    // Delete the old group, if any
+    ProcessGroup *pGroup = pProcess->getProcessGroup();
+    if(pGroup)
+    {
+        pProcess->setProcessGroup(0);
+
+        /// \todo Remove us from the list
+        if(pGroup->Members.count() <= 1) // Us or nothing
+            delete pGroup;
+    }
+
+    // Create the actual group itself
+    ProcessGroup *pNewGroup = new ProcessGroup;
+    pNewGroup->processGroupId = pProcess->getId();
+    pNewGroup->Leader = pProcess;
+    pNewGroup->Members.clear();
+
+    // We're now a group leader - we got promoted!
+    pProcess->setProcessGroup(pNewGroup);
+    pProcess->setGroupMembership(PosixProcess::Leader);
+
+    NOTICE("Now part of a group [id=" << pNewGroup->processGroupId << "]!");
+
+    // Success!
+    return pNewGroup->processGroupId;
+}
+
+int posix_setpgid(int pid, int pgid)
+{
+    NOTICE("STUBBED setpgid");
+    return 0;
+}
+
+int posix_getpgrp()
+{
+    NOTICE("getpgrp");
+
+    PosixProcess *pProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
+    ProcessGroup *pGroup = pProcess->getProcessGroup();
+    if(pGroup)
+        return pProcess->getProcessGroup()->processGroupId;
+    else
+        return pProcess->getId(); // Fallback if no ProcessGroup pointer yet
+}

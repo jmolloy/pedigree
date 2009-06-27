@@ -99,6 +99,10 @@
 
 #define POSIX_ACCESS     65
 
+#define POSIX_SETSID     66
+#define POSIX_SETPGID    67
+#define POSIX_GETPGRP    68
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

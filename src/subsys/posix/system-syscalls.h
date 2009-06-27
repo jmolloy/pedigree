@@ -58,5 +58,9 @@ uintptr_t posix_dlopen(const char* file, int mode, void* p);
 uintptr_t posix_dlsym(void* handle, const char* name);
 int       posix_dlclose(void* handle);
 
+int posix_setsid();
+int posix_setpgid(int pid, int pgid);
+int posix_getpgrp();
+
 #endif
 

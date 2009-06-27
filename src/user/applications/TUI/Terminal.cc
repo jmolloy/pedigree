@@ -24,7 +24,7 @@
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_Len(0), m_WriteBufferLen(0), m_pXterm(0), m_bHasPendingRequest(false),
-    m_PendingRequestSz(0)
+    m_PendingRequestSz(0), m_Pid(0)
 {
     // Create a new backbuffer.
     m_pBuffer = Syscall::newBuffer();
@@ -43,7 +43,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop, pBackground);
 
     // Fire up a shell session.
-    int pid = fork();
+    int pid = m_Pid = fork();
     if (pid == 0)
     {
         close(0);

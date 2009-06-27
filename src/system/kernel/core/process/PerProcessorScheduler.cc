@@ -146,12 +146,24 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
     if(!(flags & VirtualAddressSpace::KernelMode))
     {
-      if(userStack == 0)
+      NOTICE("Handler not in kernel, userstack = " << userStack << ".");
+      if(userStack != 0)
+        va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
+      if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
       {
-          NOTICE("No user stack for usermode event in checkEventState");
-          pThread->sendEvent(pEvent);
-          Processor::setInterrupts(bWasInterrupts);
-          return;
+          // Allocate a proper userstack
+          void *newStack = va.allocateStack();
+          if(!newStack)
+          {
+              // Let the event go, we're out of memory
+              ERROR("An event was let go because a usermode stack could not be allocated!");
+              Processor::setInterrupts(bWasInterrupts);
+              return;
+          }
+
+          // And we now have a stack
+          /// \todo We need to be able to free or at least cache the allocated stack!
+          userStack = reinterpret_cast<uintptr_t>(newStack);
       }
     }
 

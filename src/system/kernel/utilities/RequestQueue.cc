@@ -75,6 +75,17 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
 
   // Wait for the request to be satisfied. This should sleep the thread.
   pReq->mutex.acquire();
+  if(Processor::information().getCurrentThread()->wasInterrupted())
+  {
+      // The request was interrupted somehow. We cannot assume that pReq's
+      // contents are valid, so just return zero. The caller may have to redo
+      // their request.
+      // By releasing here, the worker thread can detect that the request was
+      // interrupted and clean up by itself.
+      NOTICE("RequestQueue::addRequest - interrupted");
+      pReq->mutex.release();
+      return 0;
+  }
 
   // Grab the result.
   uintptr_t ret = pReq->ret;
@@ -143,6 +154,15 @@ int RequestQueue::work()
 
     // Perform the request.
     pReq->ret = executeRequest(pReq->p1, pReq->p2, pReq->p3, pReq->p4, pReq->p5, pReq->p6, pReq->p7, pReq->p8);
+    if(pReq->mutex.tryAcquire())
+    {
+        // Something's gone wrong - the calling thread has released the Mutex. Destroy the request
+        // and grab the next request from the queue. The calling thread has long since stopped
+        // caring about whether we're done or not.
+        NOTICE("RequestQueue::work - caller interrupted");
+        delete pReq;
+        continue;
+    }
 
     // Request finished - post the request's mutex to wake the calling thread.
     pReq->mutex.release();

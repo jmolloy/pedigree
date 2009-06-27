@@ -18,7 +18,7 @@ volatile int some_global = 0;
 void rofl(int arg)
 {
     printf("Signal Handler (arg=%x)!\n", arg);
-    some_global = 1;
+    exit(2);
 }
 
 int main(int argc, char **argv)
@@ -48,20 +48,10 @@ int main(int argc, char **argv)
 
     printf("Installing signal handler...\n");
 
-    signal(SIGUSR1, rofl);
-    printf("Raising it...\n");
-    raise(SIGUSR1);
-    printf("Complete\n");
+    signal(SIGINT, rofl);
 
-    printf("Segfault?\n");
-
-    *((char*) 0) = 0xab;
-
-    printf("Raising SIGHUP - calling its default handler (should be dropped to bash)\n");
-
-    raise(SIGHUP);
-
-    printf("Raise returns\n");
+    printf("CTRL-C should break this loop\n");
+    while(1);
 
     return 0;
 }
