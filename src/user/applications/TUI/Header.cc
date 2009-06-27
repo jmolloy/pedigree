@@ -175,6 +175,9 @@ void Header::centreOn(size_t tabId)
 
 size_t Header::addTab(char *string, size_t flags)
 {
+    char str[64];
+    sprintf(str, "Header: %x", this);
+    log(str);
     Tab *pTab = new Tab;
     pTab->text = string;
     pTab->id = m_NextTabId++;
