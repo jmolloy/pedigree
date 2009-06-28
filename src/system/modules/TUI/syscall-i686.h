@@ -22,7 +22,7 @@ static int syscall0(int function)
 {
   int eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax));
+  asm volatile("int $255" : "=a" (ret) : "0" (eax) : "ebx");
   return ret;
 }
 

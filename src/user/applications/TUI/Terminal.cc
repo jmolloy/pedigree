@@ -22,17 +22,19 @@
 #include <stdio.h>
 #include <unistd.h>
 
+extern Header *g_pHeader;
+
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
-    m_pBuffer(0), m_Len(0), m_WriteBufferLen(0), m_pXterm(0), m_bHasPendingRequest(false),
+    m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0), m_Pid(0)
 {
     // Create a new backbuffer.
     m_pBuffer = Syscall::newBuffer();
     if (!m_pBuffer) log("Buffer not created correctly!");
 
-    char str[64];
-    //sprintf(str, "adTab %x", pHeader);
-    log(str);
+//    char str[64];
+//    sprintf(str, "adTab %x", pHeader);
+    //log(str);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
     log("After addTab");
