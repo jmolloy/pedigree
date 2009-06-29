@@ -56,6 +56,8 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         log("Launching login failed!");
     }
 
+    m_Pid = pid;
+
 }
 
 Terminal::~Terminal()

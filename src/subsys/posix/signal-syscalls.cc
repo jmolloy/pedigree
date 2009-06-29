@@ -178,6 +178,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
 
         size_t nLevel = pThread->getStateLevel();
         sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig), nLevel);
+        NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ".");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
     else if (!oact)

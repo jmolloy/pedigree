@@ -287,8 +287,6 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
 {
     for (int i = 0; i < MSDOS_PARTTAB_NUM; i++)
     {
-//    if (pPartitions[i].active != 0)
-//    {
         // Check the type of the partition.
         if (pPartitions[i].type == g_ExtendedPartitionNumber)
         {
@@ -316,7 +314,6 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
             pObj->setParent(static_cast<Device*> (pDisk));
             pDisk->addChild(static_cast<Device*> (pObj));
         }
-//    }
     }
     return true;
 }

@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "environment.h"
 #include <syscall.h>
@@ -168,8 +169,8 @@ int main (int argc, char **argv)
     void *pFb = reinterpret_cast<void*>(fb);        
 
     g_pHeader =  new Header(g_nWidth);
-
-    g_pHeader->addTab("Welcome to the Pedigree operating system.", 0);
+    
+    g_pHeader->addTab("The Pedigree Operating System", 0);
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);

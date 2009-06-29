@@ -41,6 +41,13 @@ class Subsystem
             None = 255
         };
 
+        /** Reason for kill() */
+        enum KillReason
+        {
+            Interrupted = 0,
+            Unknown = 255
+        };
+
         /** Type of exception.
           * This is passed to the subsystem when a Thread throws an exception,
           * which allows subsystem-specific behaviour to be performed.
@@ -72,7 +79,7 @@ class Subsystem
         {}
 
         /** A thread needs to be killed! */
-        virtual bool kill(Thread *pThread);
+        virtual bool kill(KillReason killReason, Thread *pThread = 0);
 
         /** A thread has thrown an exception! */
         virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);

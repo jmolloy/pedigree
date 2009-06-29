@@ -284,7 +284,13 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
         }
 
         // Acquire the 'outstanding IRQ' mutex.
-        m_IrqReceived.acquire();
+        m_IrqReceived.acquire(1, 10);
+        if(Processor::information().getCurrentThread()->wasInterrupted())
+        {
+            // Interrupted! Fail! Assume nothing read so far.
+            WARNING("ATA: Timed out while waiting for IRQ");
+            return 0;
+        }
 
         for (int i = 0; i < nSectorsToRead; i++)
         {

@@ -20,7 +20,7 @@
 #include <process/Thread.h>
 #include <processor/Processor.h>
 
-bool Subsystem::kill(Thread *pThread)
+bool Subsystem::kill(KillReason killReason, Thread *pThread)
 {
     FATAL("Subsystem::kill - not overridden");
     return false;

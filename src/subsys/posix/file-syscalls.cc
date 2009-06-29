@@ -666,7 +666,13 @@ int posix_lstat(char *name, struct stat *st)
 
 int posix_opendir(const char *dir, dirent *ent)
 {
-    //F_NOTICE("opendir(" << dir << ")");
+    if(!dir)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("opendir(" << dir << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -721,7 +727,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-    //F_NOTICE("readdir(" << fd << ")");
+    // F_NOTICE("readdir(" << fd << ")");
 
     if (fd == -1)
         return -1;

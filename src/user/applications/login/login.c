@@ -21,9 +21,32 @@
 #include <termios.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <signal.h>
+
+// PID of the process we're running
+int g_RunningPid = -1;
 
 // Pedigree function, defined in glue.c
 extern int login(int uid, char *password);
+
+// SIGINT handler
+void sigint(int sig)
+{
+    // If we're in the background...
+    if(g_RunningPid != -1)
+    {
+        // Pass it down to the running program
+        kill(g_RunningPid, SIGINT);
+    }
+    else
+    {
+        // Do not kill us
+        /// \todo Can't be killed because the console read request still exists - exit() needs
+        ///       to actually cancel all pending requests as well! In the meantime this will have
+        ///       to suffice...
+        printf("foff");
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -79,6 +102,9 @@ int main(int argc, char **argv)
 
   while (1)
   {
+    // Not running anything
+    g_RunningPid = -1;
+
     printf("Username: ");
     fflush(stdout);
     char c;
@@ -134,6 +160,9 @@ int main(int argc, char **argv)
       int pid;
       if ( (pid=fork()) == 0)
       {
+        // Child...
+        g_RunningPid = -1;
+
         // Environment:
         char *newenv[2];
         newenv[0] = (char*)malloc(256);
@@ -154,6 +183,8 @@ int main(int argc, char **argv)
         // Parent.
         int stat;
         waitpid(pid, &stat, 0);
+
+        g_RunningPid = -1;
 
         continue;
       }

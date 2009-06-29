@@ -165,6 +165,17 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           /// \todo We need to be able to free or at least cache the allocated stack!
           userStack = reinterpret_cast<uintptr_t>(newStack);
       }
+      else
+      {
+          va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
+          if(flags & VirtualAddressSpace::KernelMode)
+          {
+              NOTICE("User stack for event in checkEventState is the kernel's!");
+              pThread->sendEvent(pEvent);
+              Processor::setInterrupts(bWasInterrupts);
+              return;
+          }
+      }
     }
 
     SchedulerState &oldState = pThread->pushState();

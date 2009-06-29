@@ -1077,7 +1077,7 @@ int raise(int sig)
     return (int)syscall1(POSIX_RAISE, sig);
 }
 
-int kill(int pid, int sig)
+int kill(pid_t pid, int sig)
 {
     return (int)syscall2(POSIX_KILL, pid, sig);
 }
