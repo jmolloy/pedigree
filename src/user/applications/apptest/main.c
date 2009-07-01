@@ -14,7 +14,7 @@ int  main(int argc, char* argv[])
 {
     printf("Reading...\n");
     char str[64];
-//    fread(str, 64, 1, stdin);
+    fread(str, 1, 64, stdin);
 
     printf("Read.\n");
     for(;;);

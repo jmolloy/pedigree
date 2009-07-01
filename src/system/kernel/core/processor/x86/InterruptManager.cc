@@ -173,6 +173,11 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     {
       interruptState.m_Eax = pHandler->syscall(interruptState);
       interruptState.m_Ebx = Processor::information().getCurrentThread()->getErrno();
+      if (Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
+      {
+          NOTICE("Unwind state exit, in interrupt handler");
+          Processor::information().getCurrentThread()->getParent()->getSubsystem()->exit(0);
+      }
     }
     return;
   }
