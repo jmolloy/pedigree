@@ -29,6 +29,9 @@
 
 #include <assert.h>
 
+#include "PosixProcess.h"
+
+#include "../modules/linker/DynamicLinker.h"
 #include "../modules/vfs/File.h"
 #include "../modules/vfs/LockedFile.h"
 
@@ -178,6 +181,82 @@ PosixSubsystem::~PosixSubsystem()
     freeMultipleFds();
 }
 
+void PosixSubsystem::exit(int code)
+{
+
+    Thread *pThread = Processor::information().getCurrentThread();
+
+    Process *pProcess = pThread->getParent();
+    if (pProcess->getExitStatus() == 0)
+        pProcess->setExitStatus( (code&0xFF) << 8 );
+    
+    // Exit called, but we could be at any nesting level in the event stack.
+    // We have to propagate this exit() to all lower stack levels because they may have
+    // semaphores and stuff open.
+
+    // So, if we're not dealing with the lowest in the stack...
+    if (pThread->getStateLevel() > 0)
+    {
+        // OK, we have other events running. They'll have to die first before we can do anything.
+        pThread->setUnwindState(Thread::Exit);
+
+        Thread *pBlockingThread = pThread->getBlockingThread(pThread->getStateLevel()-1);
+        while (pBlockingThread)
+        {
+            pBlockingThread->setUnwindState(Thread::ReleaseBlockingThread);
+            pBlockingThread = pBlockingThread->getBlockingThread();
+        }
+
+        Processor::information().getScheduler().eventHandlerReturned();
+    }
+
+    // We're the lowest in the stack, so we can proceed with the exit function.
+
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return;
+    }
+
+    delete pProcess->getLinker();
+
+    MemoryMappedFileManager::instance().unmapAll();
+
+    // If it's a POSIX process, remove group membership
+    if(pProcess->getType() == Process::Posix)
+    {
+        PosixProcess *p = static_cast<PosixProcess*>(pProcess);
+        ProcessGroup *pGroup = p->getProcessGroup();
+        if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
+        {
+            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            {
+                if((*it) == p)
+                {
+                    it = pGroup->Members.erase(it);
+                    break;
+                }
+            }
+        }
+        else if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
+        {
+            // Group leader not handled yet!
+            /// \todo The group ID must not be allowed to be allocated again until the last group member exits.
+            ERROR("Group leader is exiting, not handled yet!");
+        }
+    }
+
+    // Clean up the descriptor table
+    pSubsystem->freeMultipleFds();
+
+    pProcess->kill();
+
+    // Should NEVER get here.
+    /// \note asm volatile
+    for (;;) asm volatile("xor %eax, %eax");
+}
+
 bool PosixSubsystem::kill(Thread *pThread)
 {
     NOTICE("PosixSubsystem::kill");
@@ -241,6 +320,7 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         Processor::setInterrupts(bWasInterrupts);
     }
 
+    /// \todo WTF?
     // Hang the thread
     while(1)
         Scheduler::instance().yield();

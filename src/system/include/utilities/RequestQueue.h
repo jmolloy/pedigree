@@ -89,6 +89,8 @@ protected:
 
     /** Mutex to be held when the request queue is being changed. */
     Mutex m_RequestQueueMutex;
+
+    Thread *m_pThread;
 };
 
 #endif

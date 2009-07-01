@@ -21,7 +21,7 @@
 
 RequestQueue::RequestQueue() :
   m_pRequestQueue(0), m_RequestQueueSize(0),
-  m_Stop(false), m_RequestQueueMutex(false)
+  m_Stop(false), m_RequestQueueMutex(false), m_pThread(0)
 {
 }
 
@@ -33,9 +33,9 @@ void RequestQueue::initialise()
 {
   // Start the worker thread.
 #ifdef THREADS
-  new Thread(Processor::information().getCurrentThread()->getParent(),
-             reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-             reinterpret_cast<void*> (this));
+  m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                       reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
+                       reinterpret_cast<void*> (this));
 #endif
 }
 
@@ -73,9 +73,16 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
 
   m_RequestQueueMutex.release();
 
+  // We are waiting on the worker thread - mark the thread as such.
+  Thread *pThread = Processor::information().getCurrentThread();
+  pThread->setBlockingThread(m_pThread);
+
   // Wait for the request to be satisfied. This should sleep the thread.
   pReq->mutex.acquire();
-  if(Processor::information().getCurrentThread()->wasInterrupted())
+
+  pThread->setBlockingThread(0);
+
+  if(pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
   {
       // The request was interrupted somehow. We cannot assume that pReq's
       // contents are valid, so just return zero. The caller may have to redo
@@ -162,6 +169,16 @@ int RequestQueue::work()
         NOTICE("RequestQueue::work - caller interrupted");
         delete pReq;
         continue;
+    }
+    switch (Processor::information().getCurrentThread()->getUnwindState())
+    {
+        case Thread::Continue:
+            break;
+        case Thread::Exit:
+            return 0;
+        case Thread::ReleaseBlockingThread:
+            Processor::information().getCurrentThread()->setUnwindState(Thread::Continue);
+            break;
     }
 
     // Request finished - post the request's mutex to wake the calling thread.

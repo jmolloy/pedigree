@@ -26,6 +26,12 @@ bool Subsystem::kill(KillReason killReason, Thread *pThread)
     return false;
 }
 
+void Subsystem::exit(int code)
+{
+    FATAL("Subsystem::exit - not overridden");
+}
+
+
 void Subsystem::threadException(Thread *pThread, ExceptionType eType, InterruptState &state)
 {
     FATAL("Subsystem::threadException - not overridden");

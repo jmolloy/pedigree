@@ -134,7 +134,7 @@ public:
 
     /** Returns the state nesting level. */
     size_t getStateLevel()
-    {return m_nStateLevel;}
+    {return m_nStateLevel;}    
 
     /** Allocates a new stack for a specific nesting level, if required */
     void allocateStackAtLevel(size_t stateLevel);
@@ -177,9 +177,6 @@ public:
     {
         return m_StateLevels[m_nStateLevel].m_pKernelStack;
     }
-    /*
-        return m_pKernelStack;}
-    */
 
     /** Returns the Thread's ID. */
     size_t getId()
@@ -201,6 +198,46 @@ public:
     /** Sets whether the thread was just interrupted deliberately. */
     void setInterrupted(bool b)
     {m_bInterrupted = b;}
+
+    /** Enum used by the following function. */
+    enum UnwindType
+    {
+        Continue = 0,              ///< No unwind necessary, carry on as normal.
+        ReleaseBlockingThread, ///< (a) below.
+        Exit                   ///< (b) below.
+    };  
+
+    /** Returns nonzero if the thread has been asked to unwind quickly.
+        
+        This happens if this thread (or a thread blocking on this thread) is scheduled for deletion.
+        The intended behaviour is that the stack is unwound as quickly as possible with all semaphores
+        and buffers deleted to a point where
+
+          (a) no threads can possibly be blocking on this or
+          (b) The thread has no more locks taken and is ready to be destroyed, at which point it should
+              call the subsys exit() function.
+        
+        Whether to adopt option A or B depends on whether this thread or not has been asked to terminate,
+        given by the return value. **/
+    UnwindType getUnwindState()
+    {
+        return m_UnwindState;
+    }
+    /** Sets the above unwind state. */
+    void setUnwindState(UnwindType ut)
+    {
+        m_UnwindState = ut;
+    }
+
+    void setBlockingThread(Thread *pT)
+    {
+        m_StateLevels[getStateLevel()].m_pBlockingThread = pT;
+    }
+    Thread *getBlockingThread(size_t level=~0UL)
+    {
+        if (level == ~0UL) level = getStateLevel();
+        return m_StateLevels[level].m_pBlockingThread;
+    }
 
     /** Returns the thread's debug state. */
     DebugState getDebugState(uintptr_t &address)
@@ -254,13 +291,14 @@ private:
     struct StateLevel
     {
         StateLevel() :
-            m_State(), m_pKernelStack(0), m_pAuxillaryStack(0), m_InhibitMask()
+            m_State(), m_pKernelStack(0), m_pAuxillaryStack(0), m_InhibitMask(), m_pBlockingThread(0)
         {}
         ~StateLevel()
         {}
 
         StateLevel(const StateLevel &s) :
-            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask)
+            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask),
+            m_pBlockingThread(s.m_pBlockingThread)
         {}
 
         StateLevel &operator = (const StateLevel &s)
@@ -283,10 +321,14 @@ private:
          */
         void *m_pAuxillaryStack;
 
-        ExtensibleBitmap m_InhibitMask;
-    } m_StateLevels[MAX_NESTED_EVENTS];
+        /** Stack of inhibited Event masks, gets pushed with a new value when an Event handler is run, and
+            popped when one completes.
 
-        // SchedulerState m_States[MAX_NESTED_EVENTS];
+            \note A '1' here means the event is inhibited, '0' means it can be fired. */
+        ExtensibleBitmap m_InhibitMask;
+
+        Thread *m_pBlockingThread;
+    } m_StateLevels[MAX_NESTED_EVENTS];
 
     /** The current index into m_States (head of the state stack). */
     size_t m_nStateLevel;
@@ -318,12 +360,6 @@ private:
     /** Lock for schedulers. */
     Spinlock m_Lock;
 
-    /** Stack of inhibited Event masks, gets pushed with a new value when an Event handler is run, and
-        popped when one completes.
-
-        \note A '1' here means the event is inhibited, '0' means it can be fired. */
-    // ExtensibleBitmap m_InhibitMasks[MAX_NESTED_EVENTS];
-
     /** Queue of Events ready to run. */
     List<Event*> m_EventQueue;
 
@@ -331,6 +367,8 @@ private:
     DebugState m_DebugState;
     /** Address to supplement the DebugState information */
     uintptr_t m_DebugStateAddress;
+
+    UnwindType m_UnwindState;
 };
 
 #endif

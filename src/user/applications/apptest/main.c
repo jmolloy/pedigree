@@ -12,6 +12,11 @@
 
 int  main(int argc, char* argv[])
 {
+    printf("Reading...\n");
+    char str[64];
+//    fread(str, 64, 1, stdin);
+
+    printf("Read.\n");
     for(;;);
     int hSocket;                 /* handle to socket */
     struct hostent *pHostInfo;   /* holds info about a machine */

@@ -97,7 +97,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs)
     pThread->setDebugState(Thread::None, 0);
 
     // Why were we woken?
-    if (pThread->wasInterrupted())
+    if (pThread->wasInterrupted() || pThread->getUnwindState() != Thread::Continue)
     {
         // We were deliberately interrupted - most likely because of a timeout.
         if (pEvent)

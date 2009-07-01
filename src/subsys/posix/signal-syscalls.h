@@ -34,7 +34,7 @@
 #if 0
 #define SG_VERBOSE_NOTICE(x) SG_NOTICE(x)
 #else
-#define SG_VERBOSE_NOTICE
+#define SG_VERBOSE_NOTICE(x)
 #endif
 
 typedef void (*_sig_func_ptr)(int);

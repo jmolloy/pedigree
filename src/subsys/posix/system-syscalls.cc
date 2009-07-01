@@ -455,47 +455,9 @@ int posix_exit(int code)
     SC_NOTICE("exit(" << Dec << (code&0xFF) << Hex << ")");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    pProcess->setExitStatus( (code&0xFF) << 8 );
-
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for one or both of the processes!");
-        return -1;
-    }
 
-    delete pProcess->getLinker();
-
-    MemoryMappedFileManager::instance().unmapAll();
-
-    // If it's a POSIX process, remove group membership
-    if(pProcess->getType() == Process::Posix)
-    {
-        PosixProcess *p = static_cast<PosixProcess*>(pProcess);
-        ProcessGroup *pGroup = p->getProcessGroup();
-        if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
-        {
-            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
-            {
-                if((*it) == p)
-                {
-                    it = pGroup->Members.erase(it);
-                    break;
-                }
-            }
-        }
-        else if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
-        {
-            // Group leader not handled yet!
-            /// \todo The group ID must not be allowed to be allocated again until the last group member exits.
-            ERROR("Group leader is exiting, not handled yet!");
-        }
-    }
-
-    // Clean up the descriptor table
-    pSubsystem->freeMultipleFds();
-
-    pProcess->kill();
+    pSubsystem->exit(code);
 
     // Should NEVER get here.
     /// \note asm volatile

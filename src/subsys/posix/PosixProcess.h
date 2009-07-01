@@ -50,6 +50,10 @@ class ProcessGroup
          *  obtain every Process in the process group.
          */
         List<PosixProcess*> Members;
+
+    private:
+        ProcessGroup(const ProcessGroup&);
+        ProcessGroup &operator = (ProcessGroup &);
 };
 
 class PosixProcess : public Process

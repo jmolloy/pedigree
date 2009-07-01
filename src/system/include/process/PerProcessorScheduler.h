@@ -87,10 +87,7 @@ public:
     }
 
     /** TimerHandler callback. */
-    void timer(uint64_t delta, InterruptState &state)
-    {
-        schedule();
-    }
+    void timer(uint64_t delta, InterruptState &state);
 
     void removeThread(Thread *pThread);
 

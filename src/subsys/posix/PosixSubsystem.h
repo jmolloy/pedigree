@@ -163,6 +163,8 @@ class PosixSubsystem : public Subsystem
             return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
         }
 
+        void exit(int code);
+
         /** Copies file descriptors from another subsystem */
         bool copyDescriptors(PosixSubsystem *pSubsystem);
 

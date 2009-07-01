@@ -78,6 +78,9 @@ class Subsystem
         virtual ~Subsystem()
         {}
 
+        /** Need to exit this process. */
+        virtual void exit(int code);
+
         /** A thread needs to be killed! */
         virtual bool kill(KillReason killReason, Thread *pThread = 0);
 

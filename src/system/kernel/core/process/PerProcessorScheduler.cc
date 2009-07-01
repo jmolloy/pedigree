@@ -360,3 +360,13 @@ void PerProcessorScheduler::removeThread(Thread *pThread)
 {
     m_pSchedulingAlgorithm->removeThread(pThread);
 }
+
+void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
+{
+    schedule();
+
+    // Check if the thread should exit.
+    Thread *pThread = Processor::information().getCurrentThread();
+    if (pThread->getUnwindState() == Thread::Exit)
+        pThread->getParent()->getSubsystem()->exit(0);
+}
