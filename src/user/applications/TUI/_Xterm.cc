@@ -49,17 +49,15 @@ Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLe
 
     m_ScrollEnd = m_Height-1;
 
-    m_pBackbuffer[0] = new rgb_t[nWidth*nHeight];
-    m_pBackbuffer[1] = new rgb_t[nWidth*nHeight];
+    m_pAltBuffer = new rgb_t[nWidth*nHeight];
 
-    memset(m_pBackbuffer[0], 0, nWidth*nHeight*3);
-    memset(m_pBackbuffer[1], 0, nWidth*nHeight*3);
+    memset(m_pAltBuffer, 0, nWidth*nHeight*3);
 
-    m_pStatebuffer[0] = new TermChar[m_Width*m_Height];
-    m_pStatebuffer[1] = new TermChar[m_Width*m_Height];
+    m_pStatebuffer = new TermChar[m_Width*m_Height];
+    m_pAltStatebuffer = new TermChar[m_Width*m_Height];
 
     rgb_t fg, bg;
-    fg.r = 255, fg.g = 255; fg.b = 255;
+    fg.r = 0xB0, fg.g = 0xB0; fg.b = 0xB0;
     bg.r = 0; bg.g = 0; bg.b = 0;    
 
     TermChar blank;
@@ -69,15 +67,16 @@ Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLe
     blank.flags = 0;
     for (size_t i = 0; i < m_Width*m_Height; i++)
     {
-        m_pStatebuffer[0][i] = blank;
-        m_pStatebuffer[1][i] = blank;
+        m_pStatebuffer[i] = blank;
+        m_pAltStatebuffer[i] = blank;
     }
 }
 
 Xterm::~Xterm()
 {
-    delete [] m_pBackbuffer[0];
-    delete [] m_pBackbuffer[1];
+    delete [] m_pStatebuffer;
+    delete [] m_pAltStatebuffer;
+    delete [] m_pAltBuffer;
 }
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
@@ -90,16 +89,30 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     switch (utf32)
     {
+        case '\x08':
+            // Write over the cursor.
+            if (m_CursorX > 0)
+            {
+                render(m_CursorX, m_CursorY, rect);
+                m_CursorX --;
+                render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
+            }
+            break;
+
         case '\n':
             // Write over the cursor.
             render(m_CursorX, m_CursorY, rect);
             cursorDownScrollIfNeeded(rect);
-            // Fall through:
+            m_CursorX = 0;
+            render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
+            break;
+
         case '\r':
             render(m_CursorX, m_CursorY, rect);
             m_CursorX = 0;
             render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
             break;
+
         default:
             set(m_CursorX, m_CursorY, utf32);
             render(m_CursorX, m_CursorY, rect);
@@ -128,7 +141,7 @@ void Xterm::cursorDownScrollIfNeeded(DirtyRectangle &rect)
 
 void Xterm::scrollUp(size_t n, DirtyRectangle &rect)
 {
-    log("ScrollUp");
+
 /*
 +----------+
 |          |
@@ -158,38 +171,15 @@ void Xterm::scrollUp(size_t n, DirtyRectangle &rect)
     rect.point(0, m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop);
     rect.point(m_FbWidth, (m_ScrollEnd+1) * g_NormalFont->getHeight() + m_OffsetTop);
 
-    memmove(reinterpret_cast<void*>(&m_pBackbuffer[m_ActiveBuffer][ scrollTop_px ]),
-            reinterpret_cast<void*>(&m_pBackbuffer[m_ActiveBuffer][ top1_px ]),
+//    Syscall::bitBlit(m_pFramebuffer, 
+
+    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px ]),
+            reinterpret_cast<void*>(&m_pFramebuffer[ top1_px ]),
             (scrollBottom_px - top1_px) * 3);
-    memset (reinterpret_cast<void*>(&m_pBackbuffer[m_ActiveBuffer][ bottom2_px ]),
+    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
             0,
             (scrollBottom_px - bottom2_px) * 3);
 
-    if (m_bActive)
-    {
-        memmove(reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px ]),
-                reinterpret_cast<void*>(&m_pFramebuffer[ top1_px ]),
-                (scrollBottom_px - top1_px) * 3);
-        memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
-                0,
-                (scrollBottom_px - bottom2_px) * 3);        
-    }
-
-    log("ScrollUp -- end");
-#if 0
-    size_t start = (m_ScrollStart+n)*m_FbWidth*g_NormalFont->getHeight();
-    size_t end = m_ScrollStart*m_FbWidth*g_NormalFont->getHeight();
-    size_t sz  = (m_ScrollEnd-m_ScrollStart-n+1)*m_FbWidth*g_NormalFont->getHeight();
-    memmove (reinterpret_cast<void*> (
-                 &m_pBackbuffer[m_ActiveBuffer][start+m_OffsetTop*m_FbWidth]),
-             reinterpret_cast<void*> (
-                 &m_pBackbuffer[m_ActiveBuffer][end+m_OffsetTop*m_FbWidth]),
-             sz);
-    memset (reinterpret_cast<void*> (
-                &m_pBackbuffer[m_ActiveBuffer][start+sz+m_OffsetTop*m_FbWidth]),
-            0,
-            n*m_FbWidth*g_NormalFont->getHeight());
-#endif
 }
 
 void Xterm::renderAll(DirtyRectangle &rect)
@@ -197,28 +187,6 @@ void Xterm::renderAll(DirtyRectangle &rect)
     rect.point(m_OffsetLeft, m_OffsetTop);
     rect.point(m_Width*g_NormalFont->getWidth()+m_OffsetLeft,
                m_Height*g_NormalFont->getHeight()+m_OffsetTop);
-
-    if (m_OffsetLeft == 0 && true /*m_pBackground == 0*/)
-    {
-        size_t start = m_OffsetTop*m_FbWidth;
-        memcpy(reinterpret_cast<void*>(&m_pFramebuffer[start]),
-               reinterpret_cast<void*>(&m_pBackbuffer[m_ActiveBuffer][start]),
-               m_FbWidth*m_Height*g_NormalFont->getHeight()*3);
-    }
-    else
-    {
-
-        for (size_t i = m_OffsetLeft; i < m_Width*g_NormalFont->getWidth()+m_OffsetLeft; i++)
-            for (size_t j = m_OffsetTop; j < m_Height*g_NormalFont->getHeight()+m_OffsetTop; j++)
-            {
-                size_t idx = j*m_FbWidth+i;
-                if (m_pBackground)
-                    m_pFramebuffer[idx] = interpolateColour(m_pBackground[idx],
-                                                            m_pBackbuffer[m_ActiveBuffer][idx], 128);
-                else
-                    m_pFramebuffer[idx] = m_pBackbuffer[m_ActiveBuffer][idx];
-            }
-    }
 }
 
 void Xterm::render(size_t x, size_t y, DirtyRectangle &rect, size_t flags)
@@ -226,7 +194,7 @@ void Xterm::render(size_t x, size_t y, DirtyRectangle &rect, size_t flags)
     if (!m_bActive)
         return;
 
-    TermChar c = m_pStatebuffer[m_ActiveBuffer][y*m_Width+x];
+    TermChar c = m_pStatebuffer[y*m_Width+x];
 
     // If both flags and c.flags have inverse, invert the inverse by
     // unsetting it in both sets of flags.
@@ -252,13 +220,13 @@ void Xterm::render(size_t x, size_t y, DirtyRectangle &rect, size_t flags)
 
     // Ensure the painted area is marked dirty.
     rect.point(x*g_NormalFont->getWidth()+m_OffsetLeft, y*g_NormalFont->getHeight()+m_OffsetTop);
-    rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
+    rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
 
     if (flags & XTERM_BOLD)
-        g_BoldFont->render(m_pBackbuffer[m_ActiveBuffer], utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
+        g_BoldFont->render(m_pFramebuffer, utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
                            y*g_BoldFont->getHeight()+m_OffsetTop, fg, bg);
     else
-        g_NormalFont->render(m_pBackbuffer[m_ActiveBuffer], utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
+        g_NormalFont->render(m_pFramebuffer, utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
                              y*g_NormalFont->getHeight()+m_OffsetTop, fg, bg);
 
     // Blend with the background.
@@ -268,15 +236,15 @@ void Xterm::render(size_t x, size_t y, DirtyRectangle &rect, size_t flags)
             size_t idx = j*m_FbWidth+i;
             if (false /*m_pBackground*/)
                 m_pFramebuffer[idx] = interpolateColour(m_pBackground[idx],
-                                                        m_pBackbuffer[m_ActiveBuffer][idx], 128);
+                                                        m_pFramebuffer[idx], 128);
             else
-                m_pFramebuffer[idx] = m_pBackbuffer[m_ActiveBuffer][idx];
+                m_pFramebuffer[idx] = m_pFramebuffer[idx];
         }
 }
 
 void Xterm::set(size_t x, size_t y, uint32_t utf32)
 {
-    TermChar *c = &m_pStatebuffer[m_ActiveBuffer][y*m_Width+x];
+    TermChar *c = &m_pStatebuffer[y*m_Width+x];
     
     if (m_Flags & XTERM_BRIGHTFG)
         c->fore = g_BrightColours[m_FgColour];

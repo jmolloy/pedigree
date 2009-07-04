@@ -63,7 +63,7 @@ private:
     rgb_t *m_pFramebuffer;
 
     /** Backbuffer. */
-    rgb_t *m_pBackbuffer[2];
+    rgb_t *m_pAltBuffer;
 
     /** Background image. */
     rgb_t *m_pBackground;
@@ -75,7 +75,8 @@ private:
         rgb_t fore, back;
         uint32_t utf32;
     };
-    TermChar *m_pStatebuffer[2];
+    TermChar *m_pStatebuffer;
+    TermChar *m_pAltStatebuffer;
 
     /** Current active buffer. */
     size_t m_ActiveBuffer;
