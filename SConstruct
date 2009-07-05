@@ -51,7 +51,7 @@ opts.AddVariables(
     ('LIBGCC','The folder containing libgcc.a.',''),
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
-    BoolVariable('warnings', 'compilation with -Wall and similiar', 1)
+    BoolVariable('warnings', 'compilation with -Wall and similiar', 1),
 )
 
 env = Environment(options = opts,tools = ['default'],ENV = os.environ)
@@ -61,14 +61,23 @@ Help(opts.GenerateHelpText(env))
 opts.Save('options.cache',env)
 #^-- Save the cache file over the old one
 
+# Pedigree is to be built on a POSIXy host (Cygwin on Windows)
+env.Platform('posix')
+
+# Trickery to get around the case-insensitivity on Windows
+env['OBJSUFFIX'] = ".compiled.obj"
+
+# Explicitly defined to get around SCons picking this up from the environment
+env['PROGSUFFIX'] = ''
+
 ####################################
 # Compiler/Target specific settings
 ####################################
 # Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo "int main(void) {return 0;}" | gcc -xc -c - --fno-stack-protector')
+out = commands.getoutput('echo "int main(void) {return 0;}" | ' + env['CC'] + ' + -xc -c - -fno-stack-protector')
 if re.match('.*error:',out) == None:
-    env['CXXFLAGS'] += ' --fno-stack-protector'
-    env['CFLAGS'] += ' --fno-stack-protector'
+    env['CXXFLAGS'] += ' -fno-stack-protector'
+    env['CFLAGS'] += ' -fno-stack-protector'
 
 out = commands.getoutput(env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present

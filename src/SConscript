@@ -8,7 +8,7 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    #'system',
+    'system',
     #'subsys',
     #'user',
     'drivers'
