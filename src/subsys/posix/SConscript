@@ -1,0 +1,81 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+tmp = env.Clone()
+
+# Change to then name of this module
+posix_objname = 'posix.o'
+glue_objname = 'pedigree-glue.o'
+crt0_objname = 'crt0.o'
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+    
+]
+
+# To include new files just add to the list, or Glob("*.cpp")
+posix_files = [
+    Glob("*.cc")
+]
+
+glue_files = [
+	'glue.c',
+	'glue-sysconf.c',
+	'glue-fseek.c'
+]
+
+crt0_files = ['crt0.c']
+
+# I'd like something else rather than CPPDEFINES here. -Matt
+if 'X86' in env['CPPDEFINES']:
+	posix_files += ["sigret-i686.s"]
+if 'PPC' in env['CPPDEFINES']:
+	posix_files += ["sigret-ppc.s"]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    '#/src/system/include/',
+	'#/src/system/modules',
+	'./include',
+    '.'
+]
+
+# To add a library add to the list below
+libraries = [
+    'gcc'
+]
+
+# To add a library path add to the list below
+libpaths = [
+    env['LIBGCC']
+]
+
+####################################
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
+tmp.objects = [tmp.Object(i) for i in posix_files]
+tmp['CPPPATH'] = [i for i in include]
+tmp['LIBS'] = [i for i in libraries]
+tmp['LIBPATH'] = [i for i in libpaths]
+#^-- Stupid way of doing it but I plan on adding processing.
+
+if not len(posix_files) == 0:
+    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
+
+# No libraries needed for glue or CRT0
+tmp['LIBS'] = ''
+
+tmp.objects = [tmp.Object(i) for i in glue_files]
+if not len(glue_files) == 0:
+    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+
+tmp.objects = [tmp.Object(i) for i in crt0_files]
+if not len(crt0_files) == 0:
+    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+
+# TODO: Copy CRT0 to wherever it needs to go.
+# TODO: libc/libm build

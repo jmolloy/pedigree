@@ -8,10 +8,12 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'system',
-    'subsys',
-    #'user',
-    'drivers'
+    'applications/apptest',
+    'applications/syscall-test',
+    'applications/net-test',
+    'applications/login',
+    'applications/TUI',
+    'applications/keymap'
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
