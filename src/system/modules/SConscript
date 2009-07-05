@@ -11,8 +11,22 @@ objname = 'modules'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+	'console',
+	'dhcpclient',
+	'ext2',
+    'fat',
+	'init',
+	'iso9660',
+	'linker',
+	'network',
+	'ramfs',
+	'rawfs',
+	'TUI',
+	'users',
+	'vfs'
 ]
+
+# TODO: Add installer-specific module
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
