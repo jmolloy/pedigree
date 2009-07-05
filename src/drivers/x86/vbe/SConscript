@@ -9,7 +9,7 @@ Import(['env'])
 tmp = env.Clone()
 
 # Change to then name of this module
-objname = 'ata'
+objname = 'vbe.o'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
