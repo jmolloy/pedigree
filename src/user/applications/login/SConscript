@@ -11,7 +11,7 @@ tmp = env.Clone()
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
-objname = appdir + '/apptest'
+objname = appdir + '/login'
 
 env.Alias("apps", objname)
 

@@ -11,7 +11,7 @@ tmp = env.Clone()
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
-objname = appdir + '/apptest'
+objname = appdir + '/TUI'
 
 env.Alias("apps", objname)
 
@@ -27,7 +27,14 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.c")
+	'main.cc',
+	'Font.cc',
+	'Png.cc',
+	'colourSpace.cc',
+	'Header.cc',
+	'_Xterm.cc',
+	'Terminal.cc',
+	'environment.cc'
 ]
 
 # Already-built object files to link
@@ -38,6 +45,8 @@ objects = [
 # To include a new directory for includes, just add it to the list
 include = [
 	builddir + '/include-posix',
+	'#/src/modules/system/TUI',
+	'./include',
     '.'
 ]
 
@@ -45,13 +54,17 @@ include = [
 libraries = [
     'gcc',
 	'c',
-	'm'
+	'm',
+	'freetype-i686.a',
+	'libpng-i686.a',
+	'libz-i686.a'
 ]
 
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
-	builddir
+	builddir,
+	'.'
 ]
 
 ####################################

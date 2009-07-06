@@ -457,19 +457,6 @@ void Xterm::write(uint32_t utf32)
 
       // Any other character.
       default:
-          if(c < 0x1F)
-          {
-              log("Control key passed");
-            if(c == 0x3)
-            {
-                log("Sending SIGINT");
-                kill(g_pCurrentTerm->term->getPid(), SIGINT);
-                log("Just sent SIGINT");
-            }
-
-            break;
-          }
-
         if (!m_pWindows[m_CurrentWindow]->getLineDrawingMode())
         {
           // Add the character.

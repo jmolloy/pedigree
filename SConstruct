@@ -76,6 +76,7 @@ env['PEDIGREE_BUILD_MODULES'] = env['BUILDDIR'] + '/modules'
 env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
 env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
 env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
+env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
 
 ####################################
 # Compiler/Target specific settings

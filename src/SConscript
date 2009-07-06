@@ -10,7 +10,7 @@ Import(['env'])
 subdirs = [
     'system',
     'subsys',
-    #'user',
+    'user',
     'modules'
 ]
 
@@ -25,4 +25,5 @@ env.Depends(floppyimg, 'subsys')
 env.Depends(floppyimg, 'kernel')
 env.Depends(floppyimg, 'initrd')
 env.Depends(floppyimg, 'libs')
+env.Depends(floppyimg, 'apps')
 env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_images.sh ' + builddir)

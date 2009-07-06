@@ -19,7 +19,7 @@ OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
 SRCDIR=$1
-HDFILES="login"
+HDFILES="login syscall-test net-test login TUI"
 
 init() {
     mkdir -p $MOUNTPT
@@ -71,11 +71,8 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      sudo cp $SRCDIR/apps/$BINARY $MOUNTPT/applications/
     fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
@@ -128,11 +125,8 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      sudo cp $SRCDIR/apps/$BINARY $MOUNTPT/applications/
     fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
@@ -194,11 +188,8 @@ elif which fartsandlove >/dev/null 2>&1; then # OS X
     
     for f in $@; do
         BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-        if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-            sudo cp $SRCDIR/src/user/$f/$BINARY hddtmp2/$f
-        fi
-        if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-            sudo cp $SRCDIR/src/user/$f/lib$BINARY.so hddtmp2/libraries/lib$BINARY.so
+        if [ -f $SRCDIR/apps/$BINARY ]; then
+            sudo cp $SRCDIR/apps/$BINARY hddtmp2/applications/
         fi
     done
     
@@ -245,11 +236,8 @@ elif which mcopy >/dev/null 2>&1; then
 
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      mcopy -Do $SRCDIR/src/user/$f/$BINARY C:/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      mcopy -Do $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      mcopy -Do $SRCDIR/apps/$BINARY C:/applications
     fi
   done
 
