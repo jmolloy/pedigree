@@ -20,6 +20,7 @@ glue_objname = 'pedigree-glue.o'
 crt0_objname = kerneldir + '/crt0.o'
 
 env.Alias("subsys", posix_objname)
+env.Alias("subsys", glue_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -48,7 +49,7 @@ if 'PPC' in env['CPPDEFINES']:
 # To include a new directory for includes, just add it to the list
 include = [
     '#/src/system/include/',
-	'#/src/system/modules',
+	'#/src/modules/system',
 	'./include',
     '.'
 ]
@@ -72,7 +73,7 @@ tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(posix_files) == 0:
-    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
+    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
 # TODO: Glue flags, such as -fPIC
 tmp.objects = [tmp.Object(i) for i in glue_files]
@@ -98,5 +99,7 @@ buildLibm = tmp.File(builddir + '/libm.so')
 
 env.Alias("libs", buildLibc)
 env.Alias("libs", buildLibm)
+env.Alias("crt0", crt0_objname)
 
+env.Depends([buildLibc, buildLibm], "subsys")
 env.Command([buildLibc, buildLibm], None, '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])

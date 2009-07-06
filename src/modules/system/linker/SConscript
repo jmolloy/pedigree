@@ -57,4 +57,4 @@ tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))

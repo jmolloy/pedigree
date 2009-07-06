@@ -21,6 +21,7 @@ builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
 floppyimg = env.File(builddir + '/floppy.img')
 
 # Disk images go after everything else
+env.Depends(floppyimg, 'subsys')
 env.Depends(floppyimg, 'kernel')
 env.Depends(floppyimg, 'initrd')
 env.Depends(floppyimg, 'libs')
