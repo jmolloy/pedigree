@@ -211,7 +211,7 @@ elif which mcopy >/dev/null 2>&1; then
         cp $SRCDIR/../images/floppy_fat.img $SRCDIR/floppy.img
   # fi
 
-  sh ../scripts/mtsetup.sh $SRCDIR/floppy.img > /dev/null 2>&1
+  sh $SRCDIR/../scripts/mtsetup.sh $SRCDIR/floppy.img > /dev/null 2>&1
 
   mcopy -Do $SRCDIR/kernel/kernel A:/
   mcopy -Do $SRCDIR/initrd.tar A:/
@@ -221,7 +221,7 @@ elif which mcopy >/dev/null 2>&1; then
         tar -xzf ../images/hdd_fat16.tar.gz
   #fi
 
-  sh ../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
+  sh $SRCDIR/../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
   touch ./.pedigree-root
 
