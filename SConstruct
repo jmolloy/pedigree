@@ -70,11 +70,18 @@ env['OBJSUFFIX'] = ".compiled.obj"
 # Explicitly defined to get around SCons picking this up from the environment
 env['PROGSUFFIX'] = ''
 
+# Pedigree binary locations
+env['PEDIGREE_BUILD_BASE'] = env['BUILDDIR']
+env['PEDIGREE_BUILD_MODULES'] = env['BUILDDIR'] + '/modules'
+env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
+env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
+env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
+
 ####################################
 # Compiler/Target specific settings
 ####################################
 # Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo "int main(void) {return 0;}" | ' + env['CC'] + ' + -xc -c - -fno-stack-protector')
+out = commands.getoutput('echo "int main(void) {return 0;}" | ' + env['CC'] + ' -xc -c - -fno-stack-protector')
 if re.match('.*error:',out) == None:
     env['CXXFLAGS'] += ' -fno-stack-protector'
     env['CFLAGS'] += ' -fno-stack-protector'

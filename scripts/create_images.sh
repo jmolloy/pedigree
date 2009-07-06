@@ -14,14 +14,12 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-echo "Building disk images..."
-
 IMG=floppy.img
 OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
-SRCDIR=.
-HDFILES=$@
+SRCDIR=$1
+HDFILES="login"
 
 init() {
     mkdir -p $MOUNTPT
@@ -41,7 +39,7 @@ if which losetup >/dev/null 2>&1; then
   init;
 
   # Floppy mounted - transfer files.
-  sudo cp $SRCDIR/src/system/kernel/kernel $MOUNTPT/kernel
+  sudo cp $SRCDIR/kernel/kernel $MOUNTPT/kernel
   sudo cp $SRCDIR/initrd.tar $MOUNTPT/initrd.tar
 
   # Unmount floppy.
@@ -219,13 +217,13 @@ elif which mcopy >/dev/null 2>&1; then
 
   #if [ ! -e "./floppy.img" ]
   #  then
-        cp ../images/floppy_fat.img ./floppy.img
+        cp $SRCDIR/../images/floppy_fat.img $SRCDIR/floppy.img
   # fi
 
-  sh ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
+  sh ../scripts/mtsetup.sh $SRCDIR/floppy.img > /dev/null 2>&1
 
-  mcopy -Do ./src/system/kernel/kernel A:/
-  mcopy -Do ./initrd.tar A:/
+  mcopy -Do $SRCDIR/kernel/kernel A:/
+  mcopy -Do $SRCDIR/initrd.tar A:/
 
   #if [ ! -e "./hdd_fat16.img" ]
   #  then
@@ -290,7 +288,7 @@ if which mkisofs > /dev/null 2>&1; then
 	-boot-info-table -o pedigree.iso -V "PEDIGREE" \
 	boot/grub/stage2_eltorito=$SRCDIR/../images/grub/stage2_eltorito \
 	boot/grub/menu.lst=$SRCDIR/../images/grub/menu.lst \
-	boot/kernel=$SRCDIR/src/system/kernel/kernel \
+	boot/kernel=$SRCDIR/kernel/kernel \
 	boot/initrd.tar=$SRCDIR/initrd.tar \
 	/=$SRCDIR/../images/i686-elf/ \
 	/.pedigree-root=./.pedigree-root \
