@@ -244,7 +244,7 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
-  mkdir -p ./tmp
+  #mkdir -p ./tmp
 
   # This was cp -a, but OS X doesn't have -a. On linux -a is equivalent to:
   # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.

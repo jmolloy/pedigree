@@ -93,8 +93,8 @@ if env['CROSS'] != '':
 # Compiler/Target specific settings
 ####################################
 # Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo "int main(void) {return 0;}" | ' + env['CC'] + ' -xc -c - -fno-stack-protector')
-if re.match('.*error:',out) == None:
+out = commands.getoutput('echo -e "int main(void) {return 0;}" | ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
+if not 'unrecognized option' in out:
     env['CXXFLAGS'] += ' -fno-stack-protector'
     env['CFLAGS'] += ' -fno-stack-protector'
 
