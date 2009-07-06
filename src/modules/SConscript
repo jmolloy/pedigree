@@ -63,5 +63,5 @@ initrd += ' ' + builddir.abspath + '/subsystems/*'
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
-env.Command(initrdFile, None, '@echo Building initrd && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
 env.Alias("initrd", initrdFile)
+env.Command(initrdFile, None, '@echo Building initrd && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
