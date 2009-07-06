@@ -1,0 +1,67 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+# Common drivers - order is important
+driver_common_subdirs = [
+	'ata',
+	'partition',
+	'loopback',
+	'nvidia',
+    '3c90x'
+]
+
+# Architecture-specific drivers (x86 for now, TODO: other archs)
+driver_arch = 'x86'
+driver_arch_subdirs = [
+	'pci',
+    'ne2k',
+	'vbe'
+]
+
+# Modules - order is important
+module_subdirs = [
+	'vfs',
+	'ext2',
+    'fat',
+	'iso9660',
+	'network',
+	'dhcpclient',
+	'console',
+	'TUI',
+	'linker',
+	'users',
+	'ramfs',
+	'rawfs',
+	'init'
+]
+
+drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
+drivers += ['drivers/common/' + i for i in driver_common_subdirs]
+modules = ['system/' + i for i in module_subdirs]
+
+SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
+SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
+
+# Ready to generate the initrd... (TODO: Dependencies?)
+builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])
+initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
+
+# initrd lists
+initrdList = [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
+initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
+initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in module_subdirs]
+initrdList += [builddir.abspath + '/subsystems/posix.o']
+
+initrd = ' '.join(initrdList)
+initrd += ' ' + builddir.abspath + '/subsystems/*'
+
+env.Depends(initrdFile, "drivers")
+env.Depends(initrdFile, "modules")
+env.Depends(initrdFile, "subsys")
+env.Command(initrdFile, None, '@echo Building initrd && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
+env.Alias("initrd", initrdFile)

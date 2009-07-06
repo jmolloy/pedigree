@@ -9,19 +9,25 @@ Import(['env'])
 tmp = env.Clone()
 
 # Change to then name of this module
-objname = 'linker.o'
+moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+objname = moduledir + '/linker.o'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
     
 ]
 
-# TODO: Actual files
-
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
     Glob("*.cc")
 ]
+
+if 'X86' in env['CPPDEFINES']:
+	files += ['i686/asm-i686.s', 'i686/DynamicLinker.cc']
+elif 'X64' in env['CPPDEFINES']:
+	files += ['amd64/asm-amd64.s', 'amd64/DynamicLinker.cc']
+elif 'PPC' in env['CPPDEFINES']:
+	files += ['ppc/asm-ppc.s', 'ppc/DynamicLinker.cc']
 
 # To include a new directory for includes, just add it to the list
 include = [

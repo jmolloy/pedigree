@@ -8,10 +8,18 @@ Import(['env'])
 
 tmp = env.Clone()
 
+# Build directories
+builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+
 # Change to then name of this module
-posix_objname = 'posix.o'
+posix_objname = subsysdir + '/posix.o'
 glue_objname = 'pedigree-glue.o'
-crt0_objname = 'crt0.o'
+crt0_objname = kerneldir + '/crt0.o'
+
+env.Alias("subsys", posix_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -64,18 +72,31 @@ tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(posix_files) == 0:
-    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
+    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
 
-# No libraries needed for glue or CRT0
-tmp['LIBS'] = ''
-
+# TODO: Glue flags, such as -fPIC
 tmp.objects = [tmp.Object(i) for i in glue_files]
 if not len(glue_files) == 0:
-    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -r')
 
+# No libraries needed for CRT0
+tmp['LIBS'] = ''
 tmp.objects = [tmp.Object(i) for i in crt0_files]
 if not len(crt0_files) == 0:
-    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -r')
 
-# TODO: Copy CRT0 to wherever it needs to go.
-# TODO: libc/libm build
+# Build libc/libm
+
+# TODO: other archs
+baseLibc = tmp.File("#src/subsys/posix/newlib-i686-libc.a")
+baseLibm = tmp.File("#src/subsys/posix/newlib-i686-libm.a")
+baseInclude = tmp.Dir("#src/subsys/posix/include")
+base = tmp.Dir("#")
+buildDir = tmp.Dir(builddir)
+buildLibc = tmp.File(builddir + '/libc.so')
+buildLibm = tmp.File(builddir + '/libm.so')
+
+env.Alias("libs", buildLibc)
+env.Alias("libs", buildLibm)
+
+env.Command([buildLibc, buildLibm], None, '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])

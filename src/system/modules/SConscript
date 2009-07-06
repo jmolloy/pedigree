@@ -11,19 +11,19 @@ objname = 'modules'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-	'console',
-	'dhcpclient',
+	'vfs',
 	'ext2',
     'fat',
-	'init',
 	'iso9660',
-	'linker',
 	'network',
+	'dhcpclient',
+	'console',
+	'TUI',
+	'linker',
+	'users',
 	'ramfs',
 	'rawfs',
-	'TUI',
-	'users',
-	'vfs'
+	'init'
 ]
 
 # TODO: Add installer-specific module
@@ -42,3 +42,17 @@ env.objects = [env.Object(i) for i in files]
 if not len(files) == 0:
     #^-- Prevents 'no input files'
     build = env.Program(objname,env.objects)
+	
+    # Empty command for a psuedo-target
+    env.Command('modules', None, '@echo')
+
+# Ready to generate the initrd... (TODO: Dependencies?)
+builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])
+initrdDir = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
+
+# TODO: Needs to depend on drivers, but without using explicit driver names... It wants a real
+# file though :/
+
+# NOTE: This is *horrendous*! I'll take a look at it when I'm not so tired and fix it up. -Matt
+modules = ' '.join([builddir.abspath + '/modules/' + i + '.o' for i in subdirs])
+env.Command(initrdDir, None, '@tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + builddir.abspath + '/drivers/* ' + modules)

@@ -18,3 +18,6 @@ if 'PPC' in env['CPPDEFINES']:
     subdirs += ['ppc']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
+# Empty command for a psuedo-target
+env.Command('drivers', None, '@echo')
