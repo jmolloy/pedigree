@@ -34,7 +34,7 @@ files = [
     Glob('core/process/*.cc'),
     Glob('core/processor/*.cc'),
     Glob('core/lib/*.cc'),
-    Glob('core/lib/*.c')
+    Glob('core/lib/*.c'),
     Glob('config/*.cc')
 ]
 
