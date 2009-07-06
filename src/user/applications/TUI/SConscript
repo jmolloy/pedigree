@@ -13,6 +13,7 @@ kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
 objname = appdir + '/TUI'
 
+# Part of the apps target
 env.Alias("apps", objname)
 
 # Dependencies
@@ -27,44 +28,44 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-	'main.cc',
-	'Font.cc',
-	'Png.cc',
-	'colourSpace.cc',
-	'Header.cc',
-	'_Xterm.cc',
-	'Terminal.cc',
-	'environment.cc'
+    'main.cc',
+    'Font.cc',
+    'Png.cc',
+    'colourSpace.cc',
+    'Header.cc',
+    '_Xterm.cc',
+    'Terminal.cc',
+    'environment.cc'
 ]
 
 # Already-built object files to link
 objects = [
-	kerneldir + '/crt0.o'
+    kerneldir + '/crt0.o'
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
-	builddir + '/include-posix',
-	'#/src/modules/system/TUI',
-	'./include',
+    '#/src/subsys/posix/include',
+    '#/src/modules/system/TUI',
+    './include',
     '.'
 ]
 
 # To add a library add to the list below
 libraries = [
     'gcc',
-	'c',
-	'm',
-	'freetype-i686.a',
-	'libpng-i686.a',
-	'libz-i686.a'
+    'c',
+    'm',
+    'freetype-i686.a',
+    'libpng-i686.a',
+    'libz-i686.a'
 ]
 
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
-	builddir,
-	'.'
+    builddir,
+    '.'
 ]
 
 ####################################

@@ -8,37 +8,49 @@ Import(['env'])
 
 # Common drivers - order is important
 driver_common_subdirs = [
-	'ata',
-	'partition',
-	'loopback',
-	'nvidia',
+    'ata',
+    'partition',
+    'loopback',
+    'nvidia',
     '3c90x'
 ]
 
-# Architecture-specific drivers (x86 for now, TODO: other archs)
-driver_arch = 'x86'
-driver_arch_subdirs = [
-	'pci',
-    'ne2k',
-	'vbe'
-]
+# Architecture-specific drivers
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+    driver_arch = 'x86'
+    driver_arch_subdirs = [
+        'pci',
+        'ne2k',
+        'vbe'
+    ]
+elif env['ARCH_TARGET'] == 'PPC':
+    driver_arch = 'ppc'
+    driver_arch_subdirs = [
+        'ata-specific',
+        'framebuffer',
+        'test'
+    ]
 
 # Modules - order is important
 module_subdirs = [
-	'vfs',
-	'ext2',
+    'vfs',
+    'ext2',
     'fat',
-	'iso9660',
-	'network',
-	'dhcpclient',
-	'console',
-	'TUI',
-	'linker',
-	'users',
-	'ramfs',
-	'rawfs',
-	'init'
+    'iso9660',
+    'network',
+    'dhcpclient',
+    'console',
+    'TUI',
+    'linker',
+    'users',
+    'ramfs',
+    'rawfs'
 ]
+
+if env['installer']:
+    module_subdirs += ['installer']
+else:
+    module_subdirs += ['init']
 
 drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
 drivers += ['drivers/common/' + i for i in driver_common_subdirs]
@@ -47,7 +59,7 @@ modules = ['system/' + i for i in module_subdirs]
 SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
 SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
 
-# Ready to generate the initrd... (TODO: Dependencies?)
+# Ready to generate the initrd...
 builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])
 initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
 
@@ -55,6 +67,8 @@ initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
 initrdList = [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
 initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in module_subdirs]
+
+# Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
 
 initrd = ' '.join(initrdList)
@@ -64,4 +78,4 @@ env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
 env.Alias("initrd", initrdFile)
-env.Command(initrdFile, None, '@echo Building initrd && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
+env.Command(initrdFile, None, '@echo Building initrd... && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)

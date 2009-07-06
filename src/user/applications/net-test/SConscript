@@ -32,26 +32,26 @@ files = [
 
 # Already-built object files to link
 objects = [
-	kerneldir + '/crt0.o'
+    kerneldir + '/crt0.o'
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
-	builddir + '/include-posix',
+    '#/src/subsys/posix/include',
     '.'
 ]
 
 # To add a library add to the list below
 libraries = [
     'gcc',
-	'c',
-	'm'
+    'c',
+    'm'
 ]
 
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
-	builddir
+    builddir
 ]
 
 ####################################

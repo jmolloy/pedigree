@@ -23,7 +23,7 @@ files = [
     'Version.cc',
     'Archive.cc',
     'Spinlock.cc',
-	'Subsystem.cc',
+    'Subsystem.cc',
     Glob('debugger/*.cc'),
     Glob('debugger/commands/*.cc'),
     Glob('debugger/libudis86/*.c'),

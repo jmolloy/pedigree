@@ -282,7 +282,8 @@ if which mkisofs > /dev/null 2>&1; then
 	/.pedigree-root=./.pedigree-root \
 	/libraries/libc.so=$SRCDIR/libc.so \
 	/libraries/libm.so=$SRCDIR/libm.so \
-	/applications/login=$SRCDIR/src/user/applications/login/login
+	/applications/login=$SRCDIR/apps/login \
+	/applications/TUI=$SRCDIR/apps/TUI
 	
 	rm .pedigree-root
 else

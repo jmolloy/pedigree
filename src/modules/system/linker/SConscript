@@ -25,11 +25,11 @@ files = [
 ]
 
 if 'X86' in env['CPPDEFINES']:
-	files += ['i686/asm-i686.s', 'i686/DynamicLinker.cc']
+    files += ['i686/asm-i686.s', 'i686/DynamicLinker.cc']
 elif 'X64' in env['CPPDEFINES']:
-	files += ['amd64/asm-amd64.s', 'amd64/DynamicLinker.cc']
+    files += ['amd64/asm-amd64.s', 'amd64/DynamicLinker.cc']
 elif 'PPC' in env['CPPDEFINES']:
-	files += ['ppc/asm-ppc.s', 'ppc/DynamicLinker.cc']
+    files += ['ppc/asm-ppc.s', 'ppc/DynamicLinker.cc']
 
 # To include a new directory for includes, just add it to the list
 include = [

@@ -10,8 +10,8 @@ Import(['env'])
 subdirs = [
     'system',
     'subsys',
-    'user',
-    'modules'
+    'modules',
+    'user'
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

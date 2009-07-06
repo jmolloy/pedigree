@@ -33,24 +33,24 @@ posix_files = [
 ]
 
 glue_files = [
-	'glue.c',
-	'glue-sysconf.c',
-	'glue-fseek.c'
+    'glue.c',
+    'glue-sysconf.c',
+    'glue-fseek.c'
 ]
 
 crt0_files = ['crt0.c']
 
 # I'd like something else rather than CPPDEFINES here. -Matt
 if 'X86' in env['CPPDEFINES']:
-	posix_files += ["sigret-i686.s"]
+    posix_files += ["sigret-i686.s"]
 if 'PPC' in env['CPPDEFINES']:
-	posix_files += ["sigret-ppc.s"]
+    posix_files += ["sigret-ppc.s"]
 
 # To include a new directory for includes, just add it to the list
 include = [
     '#/src/system/include/',
-	'#/src/modules/system',
-	'./include',
+    '#/src/modules/system',
+    './include',
     '.'
 ]
 
@@ -75,10 +75,14 @@ tmp['LIBPATH'] = [i for i in libpaths]
 if not len(posix_files) == 0:
     build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
-# TODO: Glue flags, such as -fPIC
+# TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
+glueFlags = ""
+if env['ARCH_TARGET'] == 'X64':
+    glueFlags = "-mcmodel=small -fPIC " + glueFlags
+
 tmp.objects = [tmp.Object(i) for i in glue_files]
 if not len(glue_files) == 0:
-    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -r')
+    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
 
 # No libraries needed for CRT0
 tmp['LIBS'] = ''
@@ -88,18 +92,25 @@ if not len(crt0_files) == 0:
 
 # Build libc/libm
 
-# TODO: other archs
-baseLibc = tmp.File("#src/subsys/posix/newlib-i686-libc.a")
-baseLibm = tmp.File("#src/subsys/posix/newlib-i686-libm.a")
-baseInclude = tmp.Dir("#src/subsys/posix/include")
+if env['ARCH_TARGET'] == 'X86':
+    libc_arch = 'i686'
+elif env['ARCH_TARGET'] == 'X64':
+    libc_arch = 'amd64'
+elif env['ARCH_TARGET'] == 'PPC':
+    driver_arch = 'ppc'
+
 base = tmp.Dir("#")
+baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")
+baseLibm = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libm.a")
+baseInclude = tmp.Dir("#src/subsys/posix/include")
+
 buildDir = tmp.Dir(builddir)
 buildLibc = tmp.File(builddir + '/libc.so')
 buildLibm = tmp.File(builddir + '/libm.so')
+buildInclude = tmp.Dir(builddir + '/include-posix')
 
 env.Alias("libs", buildLibc)
 env.Alias("libs", buildLibm)
 env.Alias("crt0", crt0_objname)
 
-env.Depends([buildLibc, buildLibm], "subsys")
-env.Command([buildLibc, buildLibm], None, '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])
+env.Command([buildLibc, buildLibm], "subsys", '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])

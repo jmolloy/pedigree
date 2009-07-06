@@ -10,7 +10,6 @@ Import(['env'])
 subdirs = [
     'common',
     'kernel',
-    #'modules'
     #,'boot'
     # ^-- Need to add ARCH options first
 ]
