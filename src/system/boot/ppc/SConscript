@@ -1,0 +1,57 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+# Change to then name of this module
+basedir = Dir("#").abspath
+kerneldir = Dir("#" + env["PEDIGREE_BUILD_KERNEL"]).abspath
+objname = 'bootloader'
+
+env.Alias("kernel", objname)
+
+# TODO: Add a command for the initrd
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+    
+]
+
+# To include new files just add to the list, or Glob("*.cpp")
+files = [
+    'boot.s',
+    'main.cc',
+    'prom.cc',
+    'Elf32.cc'
+]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    '.'
+]
+
+# To add a library add to the list below
+libraries = [
+]
+
+# To add a library path add to the list below
+libpaths = [
+    env['LIBGCC']
+]
+
+####################################
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+env.objects = [env.Object(i) for i in files]
+env['CPPPATH'] = [i for i in include]
+env['LIBS'] = [i for i in libraries]
+env['LIBPATH'] = [i for i in libpaths]
+#^-- Stupid way of doing it but I plan on adding processing.
+
+if not len(files) == 0:
+    #^-- Prevents 'no input files'
+    build = env.Program(objname,env.objects,LINKFLAGS="-T " + basedir + "/src/system/boot/ppc/link-arm.ld")
+
+env.Command("autogen.h", None, "@perl " + basedir + "/src/system/boot/ppc/mkheader.pl " + kerneldir + "/kernel")
