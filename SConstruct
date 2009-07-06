@@ -101,6 +101,7 @@ if re.match('.*error:',out) == None:
 out = commands.getoutput(env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present
 tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
+ver = re.match('.*?version ([^ ]+)',out,re.S)
 
 if tmp != None:
     env['ARCH_TARGET'] = tmp.group(1)
@@ -122,6 +123,17 @@ if tmp != None:
         defines += ['ARM']
         
         env['ARCH_TARGET'] = 'ARM'
+        
+    # LIBGCC path
+    if env['LIBGCC'] == '':
+        crossPath = os.path.dirname(env['CC'])
+        
+        libgccPath = commands.getoutput(env['CXX'] + ' --print-libgcc-file-name')
+        if not os.path.exists(libgccPath):
+            print "Error: libgcc path could not be determined. Use the LIBGCC option."
+            Exit(1)
+        
+        env['LIBGCC'] = os.path.dirname(libgccPath)
 
 # Default to x86 if something went wrong
 else:
