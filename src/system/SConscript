@@ -11,7 +11,6 @@ subdirs = [
     'common',
     'kernel',
     'boot'
-    # ^-- Need to add ARCH options first
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
