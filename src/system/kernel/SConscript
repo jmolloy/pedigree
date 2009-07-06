@@ -35,6 +35,7 @@ files = [
     Glob('core/processor/*.cc'),
     Glob('core/lib/*.cc'),
     Glob('core/lib/*.c')
+    Glob('config/*.cc')
 ]
 
 # To include a new directory for includes, just add it to the list
