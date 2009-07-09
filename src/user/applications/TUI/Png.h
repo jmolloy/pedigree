@@ -39,6 +39,9 @@ public:
     {return m_nHeight;}
 
 private:
+    Png(const Png &);
+    Png &operator = (const Png &);
+
     uint32_t compileColour(uint8_t r, uint8_t g, uint8_t b, Display::PixelFormat pf);
 
     png_structp m_PngPtr;

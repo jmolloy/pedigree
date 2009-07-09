@@ -35,7 +35,8 @@ files = [
     'Header.cc',
     '_Xterm.cc',
     'Terminal.cc',
-    'environment.cc'
+    'environment.cc',
+    'Vt100.cc'
 ]
 
 # Already-built object files to link
@@ -77,4 +78,4 @@ tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostdlib')
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostdlib -DNEW_XTERM')

@@ -179,7 +179,7 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
                               size_t y2)
 {
-    NOTICE("updateBuffer");
+    NOTICE("updateBuffer: " << x1 << ", " << y1 << ", " << x2 << ", " << y2);
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
@@ -202,7 +202,6 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
     if (x2 == ~0UL) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
     if (y2 == ~0UL) y2 = m_Mode.height-1;
-    NOTICE("x1: " << x1 << ", y1: " << y1 << ", x2: " << x2 << ", y2: " << y2);
 
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 

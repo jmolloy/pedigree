@@ -27,83 +27,97 @@
 class Xterm
 {
 public:
-    Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
+    Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop);
     ~Xterm();
 
     /** Writes the given UTF-32 character to the Xterm. */
     void write(uint32_t utf32, DirtyRectangle &rect);
-
-    /** Sets the Xterm as "active". In this mode, the Xterm will update the
-        framebuffer. With it disabled, all updates are performed merely on the
-        back buffer. */
-    void setActive(bool active)
-    {m_bActive = active;}
 
     /** Performs a full re-render. */
     void renderAll(DirtyRectangle &rect);
 
     size_t getRows()
     {
-        return m_Height;
+        return m_pWindows[0]->m_Height;
     }
     size_t getCols()
     {
-        return m_Width;
+        return m_pWindows[0]->m_Width;
     }
 
 private:
-    void render(size_t x, size_t y, DirtyRectangle &rect, size_t flags=0);
-    void set(size_t x, size_t y, uint32_t utf32);
-
-    void cursorDownScrollIfNeeded(DirtyRectangle &rect);
-
-    void scrollUp(size_t n, DirtyRectangle &rect);
-
-    /** Framebuffer. */
-    rgb_t *m_pFramebuffer;
-
-    /** Backbuffer. */
-    rgb_t *m_pAltBuffer;
-
-    /** Background image. */
-    rgb_t *m_pBackground;
-
-    /** Terminal state, for updating cursor position correctly. */
-    struct TermChar
+    class Window
     {
-        size_t flags;
-        rgb_t fore, back;
-        uint32_t utf32;
+        friend class Xterm;
+        private:
+            struct TermChar
+            {
+                uint8_t flags;
+                uint8_t fore, back;
+                uint32_t utf32;
+            };
+
+        public:
+            Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth);
+            ~Window();
+
+            void resize(size_t nRows, size_t nCols);
+
+            void setScrollRegion(int start, int end);
+            void setForeColour(uint8_t fgColour);
+            void setBackColour(uint8_t bgColour);
+            void setFlags(uint8_t flags);
+
+            void renderAll(DirtyRectangle &rect);
+            void setChar(uint32_t utf32, size_t x, size_t y);
+
+            void addChar(uint32_t utf32, DirtyRectangle &rect);
+
+            void cursorLeft(DirtyRectangle &rect);
+            void cursorLeftToMargin(DirtyRectangle &rect);
+            void cursorDown(size_t n, DirtyRectangle &);
+
+            void cursorDownAndLeftToMargin(DirtyRectangle &rect);
+            void cursorDownAndLeft(DirtyRectangle &rect);
+
+            void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
+
+        private:
+            Window(const Window &);
+            Window &operator = (const Window &);
+
+            void scrollRegionUp(size_t n, DirtyRectangle &rect);
+            void scrollScreenUp(size_t n, DirtyRectangle &rect);
+
+            TermChar *m_pBuffer;
+            size_t m_BufferLength;
+
+            rgb_t *m_pFramebuffer;
+
+            size_t m_FbWidth;
+            size_t m_Width, m_Height;
+
+            size_t m_OffsetLeft, m_OffsetTop;
+
+            size_t m_nMaxScrollback;
+            size_t m_CursorX, m_CursorY;
+
+            size_t m_ScrollStart, m_ScrollEnd;
+
+            TermChar *m_pInsert;
+            TermChar *m_pView;
+
+            uint8_t m_Fg, m_Bg;
+            uint8_t m_Flags;
     };
-    TermChar *m_pStatebuffer;
-    TermChar *m_pAltStatebuffer;
+
+    Xterm(const Xterm &);
+    Xterm &operator = (const Xterm &);
 
     /** Current active buffer. */
     size_t m_ActiveBuffer;
 
-    /** Current cursor position. */
-    size_t m_CursorX, m_CursorY;
-
-    /** Current foreground colour. */
-    uint8_t m_FgColour;
-    /** Current background colour. */
-    uint8_t m_BgColour;
-    /** Current flags. */
-    uint8_t m_Flags;
-
-    /** Scroll region, zero-based, inclusive. */
-    size_t m_ScrollStart, m_ScrollEnd;
-
-    /** Width of the framebuffer, in pixels. */
-    size_t m_FbWidth;
-    /** Width and height of the terminal, in characters. */
-    size_t m_Width, m_Height;
-
-    /** Offset in pixels of the terminal window from the start of the framebuffer. */
-    size_t m_OffsetLeft, m_OffsetTop;
-
-    /** True if we're currently the active terminal. */
-    bool m_bActive;
+    Window *m_pWindows[2];
 };
 
 #endif

@@ -430,6 +430,7 @@ void Vt100::putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b)
   int idx = static_cast<int>(c) * FONT_HEIGHT;
   uint16_t *p16Fb = reinterpret_cast<uint16_t*> (m_pFramebuffer);
   uint32_t *p32Fb = reinterpret_cast<uint32_t*> (m_pFramebuffer);
+  
   for (int i = 0; i < FONT_HEIGHT; i++)
   {
     unsigned char row = ppc_font[idx+i];
@@ -449,6 +450,15 @@ void Vt100::putCharFb(unsigned char c, int x, int y, uint32_t f, uint32_t b)
         m_pFramebuffer[y*m_Stride + i*m_Stride + x + j] = col&0xFF;
       else if (depth == 16)
         p16Fb[y*m_Stride + i*m_Stride + x + j] = col&0xFFFF;
+      else if (depth == 24)
+      {
+        m_pFramebuffer[(y*m_Stride + i*m_Stride + x + j)*3+0]
+          = (col>>16)&0xFF;
+        m_pFramebuffer[(y*m_Stride + i*m_Stride + x + j)*3+1]
+          = (col>>8)&0xFF;
+        m_pFramebuffer[(y*m_Stride + i*m_Stride + x + j)*3+2]
+          = col&0xFF;
+      }
       else
         p32Fb[y*m_Stride + i*m_Stride + x + j] = col;
     }

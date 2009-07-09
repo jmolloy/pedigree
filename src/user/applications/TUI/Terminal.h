@@ -18,7 +18,12 @@
 #define TERMINAL_H
 
 #include "environment.h"
-#include "_Xterm.h"
+
+#ifndef NEW_XTERM
+# include "_Xterm.h"
+#else
+# include "Vt100.h"
+#endif
 
 /** A Terminal is a wrapper around an Xterm class - it provides UTF-8 <->
     UTF-32 conversion and input queueing. */
@@ -85,11 +90,18 @@ public:
     }
 
 private:
+    Terminal(const Terminal &);
+    Terminal &operator = (const Terminal &);
+
     void addToQueue(char c);
 
 
     rgb_t *m_pBuffer;
+#ifndef NEW_XTERM
     Xterm *m_pXterm;
+#else
+    Vt100 *m_pXterm;
+#endif
 
     char m_pQueue[256];
     size_t m_Len;
@@ -103,6 +115,8 @@ private:
     size_t m_PendingRequestSz;
 
     int m_Pid;
+
+    size_t m_OffsetLeft, m_OffsetTop;
 };
 
 #endif

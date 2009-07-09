@@ -117,7 +117,7 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
     {
         uint32_t k = key&0xFFFFFFFFULL;
         char str[5];
-        memcpy(str, (char*)&k, 4);
+        memcpy(str, reinterpret_cast<char*>(&k), 4);
         str[4] = 0;
 
         if (!strcmp(str, "left"))
@@ -140,8 +140,8 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
         {
             // Create a new terminal.
             char *pStr = new char[64];
-            sprintf(pStr, "Console%d", nextConsoleNum++);
-            Terminal *pT = addTerminal(pStr, rect);
+            sprintf(pStr, "Console%ld", nextConsoleNum++);
+            addTerminal(pStr, rect);
             return true;
         }
     }
@@ -154,7 +154,7 @@ Font *g_BoldFont;
 int main (int argc, char **argv)
 {
     Display::ScreenMode mode;
-    size_t fb = Syscall::getFb(&mode);
+    Syscall::getFb(&mode);
 
     g_nWidth = mode.width;
     g_nHeight = mode.height;
@@ -165,16 +165,13 @@ int main (int argc, char **argv)
     g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf", 
                           true, g_nWidth);
 
-
-    void *pFb = reinterpret_cast<void*>(fb);        
-
     g_pHeader =  new Header(g_nWidth);
     
-    g_pHeader->addTab("The Pedigree Operating System", 0);
+    g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
-
+log("Add terminal fin");
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
     
@@ -188,8 +185,8 @@ int main (int argc, char **argv)
     while (true)
     {
         size_t cmd = Syscall::nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
-//        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-//       log(str);
+        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
+       log(str);
 
         Terminal *pT = 0;
         TerminalList *pTL = g_pTermList;
@@ -204,7 +201,7 @@ int main (int argc, char **argv)
         }
         if (pT == 0)
         {
-            sprintf(str, "Completely unrecognised terminal ID %d, aborting.", tabId);
+            sprintf(str, "Completely unrecognised terminal ID %ld, aborting.", tabId);
             log (str);
             continue;
         }

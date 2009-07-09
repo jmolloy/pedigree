@@ -26,23 +26,34 @@ extern Header *g_pHeader;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
-    m_PendingRequestSz(0), m_Pid(0)
+    m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop)
 {
     // Create a new backbuffer.
     m_pBuffer = Syscall::newBuffer();
     if (!m_pBuffer) log("Buffer not created correctly!");
 
-//    char str[64];
-//    sprintf(str, "adTab %x", pHeader);
-    //log(str);
-
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
-    log("After addTab");
+
     setTabId(tabId);
 
     Syscall::createConsole(tabId, pName);
 
-    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop, pBackground);
+#ifndef NEW_XTERM
+    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop);
+#else
+    Display::ScreenMode mode;
+    mode.width = nWidth;
+    mode.height = nHeight-offsetTop;
+    mode.pf.mRed = 0xFF;
+    mode.pf.mGreen = 0xFF;
+    mode.pf.mBlue = 0xFF;
+    mode.pf.pRed = 16;
+    mode.pf.pGreen = 8;
+    mode.pf.pBlue = 0;
+    mode.pf.nBpp = 24;
+    mode.pf.nPitch = nWidth*3;
+    m_pXterm = new Vt100(mode, reinterpret_cast<uint8_t*>(m_pBuffer)+nWidth*offsetTop);
+#endif
 
     // Fire up a shell session.
     int pid = m_Pid = fork();
@@ -163,9 +174,6 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
             utf32 = ((static_cast<uint32_t>(m_pWriteBuffer[0])&0x0F) << 12) |
                 ((static_cast<uint32_t>(m_pWriteBuffer[1])&0x3F) << 6) |
                 (static_cast<uint32_t>(m_pWriteBuffer[2])&0x3F);
-            char buf[16];
-            sprintf(buf, "utf32: %x", utf32);
-            log(buf);
             nBytes = 3;
         }
         else if ( (m_pWriteBuffer[0] & 0xF8) == 0xF0 )
@@ -187,7 +195,13 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         m_WriteBufferLen -= nBytes;
 
         // End UTF-8 -> UTF-32 conversion.
+#ifndef NEW_XTERM
         m_pXterm->write(utf32, rect);
+#else
+        rect.point(m_OffsetLeft,m_OffsetTop);
+        rect.point(m_pXterm->getCols()*8+m_OffsetLeft, m_pXterm->getRows()*16+m_OffsetTop);
+        m_pXterm->write(static_cast<uint8_t>(utf32&0xFF));
+#endif
     }
 }
 
@@ -198,7 +212,6 @@ void Terminal::addToQueue(char c)
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
-    m_pXterm->setActive(b);
     if (b)
         Syscall::setCurrentBuffer(m_pBuffer);
 }

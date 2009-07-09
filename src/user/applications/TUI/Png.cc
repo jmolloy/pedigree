@@ -70,7 +70,7 @@ Png::Png(const char *filename) :
                  PNG_TRANSFORM_STRIP_ALPHA | // No alpha
                  PNG_TRANSFORM_PACKING , // Unpack 2 and 4 bit samples.
                  
-                 png_voidp_NULL);
+                 reinterpret_cast<void*>(0));
 
     m_pRowPointers = reinterpret_cast<uint8_t**>(png_get_rows(m_PngPtr, m_InfoPtr));
 
@@ -90,7 +90,7 @@ Png::Png(const char *filename) :
         return;
     }
 
-    sprintf(str, "PNG loaded %d %d\n", m_nWidth, m_nHeight);
+    sprintf(str, "PNG loaded %ul %ul\n", m_nWidth, m_nHeight);
     log(str);
 }
 

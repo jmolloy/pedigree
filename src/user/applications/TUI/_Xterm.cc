@@ -37,109 +37,181 @@ rgb_t g_BrightColours[] = { {0x33,0x33,0x33},
 
 extern Font *g_NormalFont, *g_BoldFont;
 
-Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
-    m_pFramebuffer(pFramebuffer), m_pBackground(pBackground),
-    m_ActiveBuffer(0), m_CursorX(0), m_CursorY(0), m_FgColour(7),
-    m_BgColour(0), m_Flags(0), m_ScrollStart(0), m_ScrollEnd(0),
-    m_FbWidth(nWidth), m_Width(0), m_Height(0), m_OffsetLeft(offsetLeft),
-    m_OffsetTop(offsetTop), m_bActive(true)
+Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop) :
+    m_ActiveBuffer(0)
 {
-    m_Width = nWidth / g_NormalFont->getWidth();
-    m_Height = nHeight / g_NormalFont->getHeight();
+    size_t width = nWidth / g_NormalFont->getWidth();
+    size_t height = nHeight / g_NormalFont->getHeight();
 
-    m_ScrollEnd = m_Height-1;
-
-    m_pAltBuffer = new rgb_t[nWidth*nHeight];
-
-    memset(m_pAltBuffer, 0, nWidth*nHeight*3);
-
-    m_pStatebuffer = new TermChar[m_Width*m_Height];
-    m_pAltStatebuffer = new TermChar[m_Width*m_Height];
-
-    rgb_t fg, bg;
-    fg.r = 0xB0, fg.g = 0xB0; fg.b = 0xB0;
-    bg.r = 0; bg.g = 0; bg.b = 0;    
-
-    TermChar blank;
-    blank.fore = fg;
-    blank.back = bg;
-    blank.utf32 = ' ';
-    blank.flags = 0;
-    for (size_t i = 0; i < m_Width*m_Height; i++)
-    {
-        m_pStatebuffer[i] = blank;
-        m_pAltStatebuffer[i] = blank;
-    }
+    m_pWindows[0] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth);
+    m_pWindows[1] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth);
 }
 
 Xterm::~Xterm()
 {
-    delete [] m_pStatebuffer;
-    delete [] m_pAltStatebuffer;
-    delete [] m_pAltBuffer;
+    delete m_pWindows[0];
+    delete m_pWindows[1];
 }
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    /*
+    
     char str[64];
     sprintf(str, "Write: %x", utf32);
     log(str);
-    */
 
     switch (utf32)
     {
         case '\x08':
-            // Write over the cursor.
-            if (m_CursorX > 0)
-            {
-                render(m_CursorX, m_CursorY, rect);
-                m_CursorX --;
-                render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
-            }
+            m_pWindows[m_ActiveBuffer]->cursorLeft(rect);
             break;
 
         case '\n':
-            // Write over the cursor.
-            render(m_CursorX, m_CursorY, rect);
-            cursorDownScrollIfNeeded(rect);
-            m_CursorX = 0;
-            render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
+            m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
             break;
 
         case '\r':
-            render(m_CursorX, m_CursorY, rect);
-            m_CursorX = 0;
-            render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
+            m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
             break;
 
         default:
-            set(m_CursorX, m_CursorY, utf32);
-            render(m_CursorX, m_CursorY, rect);
-
-            m_CursorX++;
-            if ((m_CursorX % m_Width) == 0)
-            {
-                m_CursorX = 0;
-                cursorDownScrollIfNeeded(rect);
-            }
-            render(m_CursorX, m_CursorY, rect, XTERM_INVERSE);
+            m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
     }
 }
 
-void Xterm::cursorDownScrollIfNeeded(DirtyRectangle &rect)
+Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
+    m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
+    m_pInsert(0), m_pView(0), m_Fg(7), m_Bg(0), m_Flags(0)
 {
-    m_CursorY ++;
+    // Using malloc() instead of new[] so we can use realloc()
+    m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));
+
+    TermChar blank;
+    blank.fore = 7;
+    blank.back = 0;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = 0; i < m_Width*m_Height; i++)
+        m_pBuffer[i] = blank;
+
+    m_pInsert = m_pView = m_pBuffer;
+}
+
+Xterm::Window::~Window()
+{
+    free(m_pBuffer);
+}
+
+void Xterm::Window::resize(size_t nRows, size_t nCols)
+{
+}
+
+void Xterm::Window::setScrollRegion(int start, int end)
+{
+    if (start == -1)
+        start = 0;
+    if (end == -1)
+        end = m_Height-1;
+    m_ScrollStart = start;
+    m_ScrollEnd = end;
+}
+
+void Xterm::Window::setForeColour(uint8_t fgColour)
+{
+    m_Fg = fgColour;
+}
+
+void Xterm::Window::setBackColour(uint8_t bgColour)
+{
+    m_Bg = bgColour;
+}
+
+void Xterm::Window::setFlags(uint8_t flags)
+{
+    m_Flags = flags;
+}
+
+void Xterm::Window::renderAll(DirtyRectangle &rect)
+{
+}
+
+void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
+{
+    TermChar *c = &m_pInsert[y*m_Width+x];
+
+    c->fore = m_Fg;
+    c->back = m_Bg;
+
+    c->flags = m_Flags;
+    c->utf32 = utf32;
+}
+
+void Xterm::Window::cursorDown(size_t n, DirtyRectangle &rect)
+{
+    m_CursorY += n;
     if (m_CursorY > m_ScrollEnd)
     {
-        m_CursorY --;
-
-        // Scroll up one line.
-        scrollUp(1, rect);
+        size_t amount = m_CursorY-m_ScrollEnd;
+        if (m_ScrollStart == 0 && m_ScrollEnd == m_Height-1)
+        {
+            scrollScreenUp(amount, rect);
+        }
+        else
+        {
+            scrollRegionUp(amount, rect);
+        }
+        m_CursorY = m_ScrollEnd;
     }
 }
 
-void Xterm::scrollUp(size_t n, DirtyRectangle &rect)
+void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t y)
+{
+    if (x == ~0UL) x = m_CursorX;
+    if (y == ~0UL) y = m_CursorY;
+
+    TermChar c = m_pInsert[y*m_Width+x];
+
+    // If both flags and c.flags have inverse, invert the inverse by
+    // unsetting it in both sets of flags.
+    if ((flags & XTERM_INVERSE) && (c.flags & XTERM_INVERSE))
+    {
+        c.flags &= ~XTERM_INVERSE;
+        flags &= ~XTERM_INVERSE;
+    }
+
+    flags = c.flags | flags;
+    
+    rgb_t fg = g_Colours[c.fore];
+    if (flags & XTERM_BRIGHTFG)
+        fg = g_BrightColours[c.fore];
+    rgb_t bg = g_Colours[c.back];
+    if (flags & XTERM_BRIGHTBG)
+        bg = g_BrightColours[c.fore];
+
+    if (flags & XTERM_INVERSE)
+    {
+        rgb_t tmp = fg;
+        fg = bg;
+        bg = tmp;
+    }
+
+    uint32_t utf32 = c.utf32;
+// char str[64];
+// sprintf(str, "Render(%d,%d,%d,%d)", m_OffsetLeft, m_OffsetTop, x, y);
+// log(str);
+    // Ensure the painted area is marked dirty.
+    rect.point(x*g_NormalFont->getWidth()+m_OffsetLeft, y*g_NormalFont->getHeight()+m_OffsetTop);
+    rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
+
+    if (flags & XTERM_BOLD)
+        g_BoldFont->render(m_pFramebuffer, utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
+                           y*g_BoldFont->getHeight()+m_OffsetTop, fg, bg);
+    else
+        g_NormalFont->render(m_pFramebuffer, utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
+                             y*g_NormalFont->getHeight()+m_OffsetTop, fg, bg);
+}
+
+void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 {
 
 /*
@@ -153,19 +225,19 @@ void Xterm::scrollUp(size_t n, DirtyRectangle &rect)
 |          |  
 +----------+
 
- */         
+ */
 
-    size_t scrollTop_char = m_ScrollStart*m_Width;
+//    size_t scrollTop_char = m_ScrollStart*m_Width;
     size_t scrollTop_px   = m_ScrollStart * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
     // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive. 
-    size_t scrollBottom_char = (m_ScrollEnd+1)*m_Width;
+//    size_t scrollBottom_char = (m_ScrollEnd+1)*m_Width;
     size_t scrollBottom_px   = (m_ScrollEnd+1) * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
-    size_t top1_char = (m_ScrollStart+n)*m_Width;
+//    size_t top1_char = (m_ScrollStart+n)*m_Width;
     size_t top1_px   = (m_ScrollStart+n) * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
-    size_t bottom2_char = scrollBottom_char - n*m_Width;
+//    size_t bottom2_char = scrollBottom_char - n*m_Width;
     size_t bottom2_px   = scrollBottom_px - n*m_FbWidth*g_NormalFont->getHeight();
 
     rect.point(0, m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop);
@@ -180,82 +252,109 @@ void Xterm::scrollUp(size_t n, DirtyRectangle &rect)
             0,
             (scrollBottom_px - bottom2_px) * 3);
 
+    ///\todo memmove and memset character array.
 }
 
-void Xterm::renderAll(DirtyRectangle &rect)
+void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 {
     rect.point(m_OffsetLeft, m_OffsetTop);
-    rect.point(m_Width*g_NormalFont->getWidth()+m_OffsetLeft,
-               m_Height*g_NormalFont->getHeight()+m_OffsetTop);
-}
+    rect.point(m_FbWidth, m_Height*g_NormalFont->getHeight());
+    size_t scrollTop_px   = m_OffsetTop * m_FbWidth;
 
-void Xterm::render(size_t x, size_t y, DirtyRectangle &rect, size_t flags)
-{
-    if (!m_bActive)
-        return;
+//    size_t scrollBottom_char = m_Height*m_Width;
+//    size_t scrollBottom_px   = m_Height * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
-    TermChar c = m_pStatebuffer[y*m_Width+x];
+    size_t bottom2_px = (m_Height-n) * m_FbWidth;
 
-    // If both flags and c.flags have inverse, invert the inverse by
-    // unsetting it in both sets of flags.
-    if ((flags & XTERM_INVERSE) && (c.flags & XTERM_INVERSE))
+    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px ]),
+            reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px + n*m_FbWidth*g_NormalFont->getHeight() ]),
+            n * m_FbWidth * 3 * g_NormalFont->getHeight());
+    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
+            0,
+            (m_Height-n) * m_FbWidth * 3 * g_NormalFont->getHeight());
+
+    if (m_pView == m_pInsert)
+        m_pView += n*m_Width;
+    m_pInsert += n*m_Width;
+
+    // Have we gone off the end of the scroll area?
+    if (m_pInsert + m_Height*m_Width > (m_pBuffer+m_BufferLength))
     {
-        c.flags &= ~XTERM_INVERSE;
-        flags &= ~XTERM_INVERSE;
-    }
-
-    flags = c.flags | flags;
-    
-    rgb_t fg = c.fore;
-    rgb_t bg = c.back;
-
-    if (flags & XTERM_INVERSE)
-    {
-        rgb_t tmp = fg;
-        fg = bg;
-        bg = tmp;
-    }
-
-    uint32_t utf32 = c.utf32;
-
-    // Ensure the painted area is marked dirty.
-    rect.point(x*g_NormalFont->getWidth()+m_OffsetLeft, y*g_NormalFont->getHeight()+m_OffsetTop);
-    rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
-
-    if (flags & XTERM_BOLD)
-        g_BoldFont->render(m_pFramebuffer, utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
-                           y*g_BoldFont->getHeight()+m_OffsetTop, fg, bg);
-    else
-        g_NormalFont->render(m_pFramebuffer, utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
-                             y*g_NormalFont->getHeight()+m_OffsetTop, fg, bg);
-
-    // Blend with the background.
-    for (size_t i = x*g_NormalFont->getWidth()+m_OffsetLeft; i < (x+1)*g_NormalFont->getWidth()+m_OffsetLeft; i++)
-        for (size_t j = y*g_NormalFont->getHeight()+m_OffsetTop; j < (y+1)*g_NormalFont->getHeight()+m_OffsetTop; j++)
+        // Either expand the buffer (if the length is less than the scrollback size) or memmove data up a bit.
+        if (m_BufferLength < m_nMaxScrollback)
         {
-            size_t idx = j*m_FbWidth+i;
-            if (false /*m_pBackground*/)
-                m_pFramebuffer[idx] = interpolateColour(m_pBackground[idx],
-                                                        m_pFramebuffer[idx], 128);
-            else
-                m_pFramebuffer[idx] = m_pFramebuffer[idx];
+            // Expand.
+            size_t amount = m_Height;
+            if (amount+m_BufferLength > m_nMaxScrollback)
+                amount = m_nMaxScrollback-m_BufferLength;
+
+            uintptr_t pInsOffset  = m_pInsert - m_pBuffer;
+            uintptr_t pViewOffset = m_pView - m_pBuffer;
+
+            m_pBuffer = reinterpret_cast<TermChar*>(realloc(m_pBuffer, amount+m_BufferLength));
+
+            m_pInsert = reinterpret_cast<TermChar*>(reinterpret_cast<uintptr_t>(m_pBuffer) + pInsOffset);
+            m_pView   = reinterpret_cast<TermChar*>( reinterpret_cast<uintptr_t>(m_pBuffer) + pViewOffset);
+
+            TermChar blank;
+            blank.fore = 7;
+            blank.back = 0;
+            blank.utf32 = ' ';
+            blank.flags = 0;
+            for (size_t i = m_BufferLength; i < m_BufferLength+amount; i++)
+                m_pBuffer[i] = blank;
+
+            m_BufferLength += amount;
         }
+        else
+        {
+            memmove(&m_pBuffer[m_Width*m_Height],
+                    &m_pBuffer[0],
+                    m_Width*m_Height*sizeof(TermChar));
+            TermChar blank;
+            blank.fore = 7;
+            blank.back = 0;
+            blank.utf32 = ' ';
+            blank.flags = 0;
+            for (size_t i = m_BufferLength-m_Width*m_Height; i < m_BufferLength; i++)
+                m_pBuffer[i] = blank;
+        }
+    }
 }
 
-void Xterm::set(size_t x, size_t y, uint32_t utf32)
+void Xterm::Window::cursorLeft(DirtyRectangle &rect)
 {
-    TermChar *c = &m_pStatebuffer[y*m_Width+x];
-    
-    if (m_Flags & XTERM_BRIGHTFG)
-        c->fore = g_BrightColours[m_FgColour];
-    else
-        c->fore = g_Colours[m_FgColour];
+    if (m_CursorX == 0) return;
+    render(rect);
+    m_CursorX --;
+    render(rect, XTERM_INVERSE);
+}
 
-    if (m_Flags & XTERM_BRIGHTBG)
-        c->back = g_BrightColours[m_BgColour];
-    else
-        c->back = g_Colours[m_BgColour];
+void Xterm::Window::cursorDownAndLeftToMargin(DirtyRectangle &rect)
+{
+    render(rect);
+    cursorDown(1, rect);
+    m_CursorX = 0;
+    render(rect, XTERM_INVERSE);
+}
 
-    c->flags = m_Flags;
-    c->utf32 = utf32;
+void Xterm::Window::cursorLeftToMargin(DirtyRectangle &rect)
+{
+    render(rect);
+    m_CursorX = 0;
+    render(rect, XTERM_INVERSE);
+}
+
+void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
+{
+    setChar(utf32, m_CursorX, m_CursorY);
+    render(rect);
+
+    m_CursorX++;
+    if ((m_CursorX % m_Width) == 0)
+    {
+        m_CursorX = 0;
+        cursorDown(1, rect);
+    }
+    render(rect, XTERM_INVERSE);
 }
