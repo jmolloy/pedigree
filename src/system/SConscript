@@ -10,9 +10,7 @@ Import(['env'])
 subdirs = [
     'common',
     'kernel',
-    'modules'
-    #,'boot'
-    # ^-- Need to add ARCH options first
+    'boot'
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

@@ -14,14 +14,12 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-echo "Building disk images..."
-
 IMG=floppy.img
 OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
-SRCDIR=.
-HDFILES=$@
+SRCDIR=$1
+HDFILES="login syscall-test net-test login TUI"
 
 init() {
     mkdir -p $MOUNTPT
@@ -41,7 +39,7 @@ if which losetup >/dev/null 2>&1; then
   init;
 
   # Floppy mounted - transfer files.
-  sudo cp $SRCDIR/src/system/kernel/kernel $MOUNTPT/kernel
+  sudo cp $SRCDIR/kernel/kernel $MOUNTPT/kernel
   sudo cp $SRCDIR/initrd.tar $MOUNTPT/initrd.tar
 
   # Unmount floppy.
@@ -73,11 +71,8 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      sudo cp $SRCDIR/apps/$BINARY $MOUNTPT/applications/
     fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
@@ -130,11 +125,8 @@ if which losetup >/dev/null 2>&1; then
   # Transfer files.
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      sudo cp $SRCDIR/src/user/$f/$BINARY $MOUNTPT/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      sudo cp $SRCDIR/src/user/$f/lib$BINARY.so $MOUNTPT/libraries/lib$BINARY.so
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      sudo cp $SRCDIR/apps/$BINARY $MOUNTPT/applications/
     fi
   done
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
@@ -196,11 +188,8 @@ elif which fartsandlove >/dev/null 2>&1; then # OS X
     
     for f in $@; do
         BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-        if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-            sudo cp $SRCDIR/src/user/$f/$BINARY hddtmp2/$f
-        fi
-        if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-            sudo cp $SRCDIR/src/user/$f/lib$BINARY.so hddtmp2/libraries/lib$BINARY.so
+        if [ -f $SRCDIR/apps/$BINARY ]; then
+            sudo cp $SRCDIR/apps/$BINARY hddtmp2/applications/
         fi
     done
     
@@ -219,20 +208,20 @@ elif which mcopy >/dev/null 2>&1; then
 
   #if [ ! -e "./floppy.img" ]
   #  then
-        cp ../images/floppy_fat.img ./floppy.img
+        cp $SRCDIR/../images/floppy_fat.img $SRCDIR/floppy.img
   # fi
 
-  sh ../scripts/mtsetup.sh ./floppy.img > /dev/null 2>&1
+  sh $SRCDIR/../scripts/mtsetup.sh $SRCDIR/floppy.img > /dev/null 2>&1
 
-  mcopy -Do ./src/system/kernel/kernel A:/
-  mcopy -Do ./initrd.tar A:/
+  mcopy -Do $SRCDIR/kernel/kernel A:/
+  mcopy -Do $SRCDIR/initrd.tar A:/
 
   #if [ ! -e "./hdd_fat16.img" ]
   #  then
         tar -xzf ../images/hdd_fat16.tar.gz
   #fi
 
-  sh ../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
+  sh $SRCDIR/../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
   touch ./.pedigree-root
 
@@ -247,18 +236,15 @@ elif which mcopy >/dev/null 2>&1; then
 
   for f in $HDFILES; do
     BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/src/user/$f/$BINARY ]; then
-      mcopy -Do $SRCDIR/src/user/$f/$BINARY C:/$f
-    fi
-    if [ -f $SRCDIR/src/user/$f/lib$BINARY.so ]; then
-      mcopy -Do $SRCDIR/src/user/$f/lib$BINARY.so C:/libraries
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      mcopy -Do $SRCDIR/apps/$BINARY C:/applications
     fi
   done
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
 
-  mkdir -p ./tmp
+  #mkdir -p ./tmp
 
   # This was cp -a, but OS X doesn't have -a. On linux -a is equivalent to:
   # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.
@@ -290,13 +276,14 @@ if which mkisofs > /dev/null 2>&1; then
 	-boot-info-table -o pedigree.iso -V "PEDIGREE" \
 	boot/grub/stage2_eltorito=$SRCDIR/../images/grub/stage2_eltorito \
 	boot/grub/menu.lst=$SRCDIR/../images/grub/menu.lst \
-	boot/kernel=$SRCDIR/src/system/kernel/kernel \
+	boot/kernel=$SRCDIR/kernel/kernel \
 	boot/initrd.tar=$SRCDIR/initrd.tar \
 	/=$SRCDIR/../images/i686-elf/ \
 	/.pedigree-root=./.pedigree-root \
 	/libraries/libc.so=$SRCDIR/libc.so \
 	/libraries/libm.so=$SRCDIR/libm.so \
-	/applications/login=$SRCDIR/src/user/applications/login/login
+	/applications/login=$SRCDIR/apps/login \
+	/applications/TUI=$SRCDIR/apps/TUI
 	
 	rm .pedigree-root
 else

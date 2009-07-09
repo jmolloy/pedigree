@@ -1,0 +1,19 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+subdirs = []
+if env['ARCH_TARGET'] == 'PPC':
+    subdirs += ['ppc']
+
+# TODO: Complete ARM/MIPS SConscripts
+elif env['ARCH_TARGET'] == 'ARM':
+    subdirs += ['arm']
+if env['ARCH_TARGET'] == 'MIPS':
+    subdirs += ['mips']
+
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

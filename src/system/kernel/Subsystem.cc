@@ -14,9 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Subsystem.h>
 #include <Log.h>
-
+#include <Subsystem.h>
 #include <process/Thread.h>
 #include <processor/Processor.h>
 

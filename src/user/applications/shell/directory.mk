@@ -1,1 +1,0 @@
-CSRC += ../shell.c

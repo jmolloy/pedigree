@@ -10,8 +10,20 @@ Import(['env'])
 subdirs = [
     'system',
     'subsys',
-    #'user',
-    'drivers'
+    'modules',
+    'user'
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
+# Complete the build - image creation
+builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+floppyimg = env.File(builddir + '/floppy.img')
+
+# Disk images go after everything else
+env.Depends(floppyimg, 'subsys')
+env.Depends(floppyimg, 'kernel')
+env.Depends(floppyimg, 'initrd')
+env.Depends(floppyimg, 'libs')
+env.Depends(floppyimg, 'apps')
+env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_images.sh ' + builddir)

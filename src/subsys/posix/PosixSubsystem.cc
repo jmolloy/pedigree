@@ -31,9 +31,9 @@
 
 #include "PosixProcess.h"
 
-#include "../modules/linker/DynamicLinker.h"
-#include "../modules/vfs/File.h"
-#include "../modules/vfs/LockedFile.h"
+#include <linker/DynamicLinker.h>
+#include <vfs/File.h>
+#include <vfs/LockedFile.h>
 
 #define O_RDONLY    0
 #define O_WRONLY    1

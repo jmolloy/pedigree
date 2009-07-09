@@ -8,10 +8,19 @@ Import(['env'])
 
 tmp = env.Clone()
 
+# Build directories
+builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+
 # Change to then name of this module
-posix_objname = 'posix.o'
+posix_objname = subsysdir + '/posix.o'
 glue_objname = 'pedigree-glue.o'
-crt0_objname = 'crt0.o'
+crt0_objname = kerneldir + '/crt0.o'
+
+env.Alias("subsys", posix_objname)
+env.Alias("subsys", glue_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -24,24 +33,24 @@ posix_files = [
 ]
 
 glue_files = [
-	'glue.c',
-	'glue-sysconf.c',
-	'glue-fseek.c'
+    'glue.c',
+    'glue-sysconf.c',
+    'glue-fseek.c'
 ]
 
 crt0_files = ['crt0.c']
 
 # I'd like something else rather than CPPDEFINES here. -Matt
 if 'X86' in env['CPPDEFINES']:
-	posix_files += ["sigret-i686.s"]
+    posix_files += ["sigret-i686.s"]
 if 'PPC' in env['CPPDEFINES']:
-	posix_files += ["sigret-ppc.s"]
+    posix_files += ["sigret-ppc.s"]
 
 # To include a new directory for includes, just add it to the list
 include = [
     '#/src/system/include/',
-	'#/src/system/modules',
-	'./include',
+    '#/src/modules/system',
+    './include',
     '.'
 ]
 
@@ -64,18 +73,44 @@ tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(posix_files) == 0:
-    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/drivers/link.ld"))
+    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
-# No libraries needed for glue or CRT0
-tmp['LIBS'] = ''
+# TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
+glueFlags = ""
+if env['ARCH_TARGET'] == 'X64':
+    glueFlags = "-mcmodel=small -fPIC " + glueFlags
 
 tmp.objects = [tmp.Object(i) for i in glue_files]
 if not len(glue_files) == 0:
-    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
 
+# No libraries needed for CRT0
+tmp['LIBS'] = ''
 tmp.objects = [tmp.Object(i) for i in crt0_files]
 if not len(crt0_files) == 0:
-    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -r')
 
-# TODO: Copy CRT0 to wherever it needs to go.
-# TODO: libc/libm build
+# Build libc/libm
+
+if env['ARCH_TARGET'] == 'X86':
+    libc_arch = 'i686'
+elif env['ARCH_TARGET'] == 'X64':
+    libc_arch = 'amd64'
+elif env['ARCH_TARGET'] == 'PPC':
+    driver_arch = 'ppc'
+
+base = tmp.Dir("#")
+baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")
+baseLibm = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libm.a")
+baseInclude = tmp.Dir("#src/subsys/posix/include")
+
+buildDir = tmp.Dir(builddir)
+buildLibc = tmp.File(builddir + '/libc.so')
+buildLibm = tmp.File(builddir + '/libm.so')
+buildInclude = tmp.Dir(builddir + '/include-posix')
+
+env.Alias("libs", buildLibc)
+env.Alias("libs", buildLibm)
+env.Alias("crt0", crt0_objname)
+
+env.Command([buildLibc, buildLibm], "subsys", '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])

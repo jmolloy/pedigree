@@ -7,7 +7,10 @@ import os.path
 Import(['env'])
 
 # Change to then name of this module
-objname = 'kernel'
+kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+objname = kerneldir + '/kernel'
+
+env.Alias("kernel", objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -20,6 +23,7 @@ files = [
     'Version.cc',
     'Archive.cc',
     'Spinlock.cc',
+    'Subsystem.cc',
     Glob('debugger/*.cc'),
     Glob('debugger/commands/*.cc'),
     Glob('debugger/libudis86/*.c'),
@@ -30,7 +34,8 @@ files = [
     Glob('core/process/*.cc'),
     Glob('core/processor/*.cc'),
     Glob('core/lib/*.cc'),
-    Glob('core/lib/*.c')
+    Glob('core/lib/*.c'),
+    Glob('config/*.cc')
 ]
 
 # To include a new directory for includes, just add it to the list

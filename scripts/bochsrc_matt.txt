@@ -21,7 +21,8 @@ ata0-master:  type=disk, path=hdd_fat16.img, mode=flat, translation=auto
 i440fxsupport: enabled=1, slot2=pcivga, slot1=ne2k
 
 # Gigabit Adapter
-ne2k: ioaddr=0x280, irq=3, mac=b0:cd:b5:50:c2:04, ethmod=win32, ethdev=\Device\NPF_{CAD706C2-CDEB-4B63-B0E9-2BB55B78D859}
+ne2k: ioaddr=0x280, irq=3, mac=b0:cd:b5:50:c2:04, ethmod=win32, ethdev=\Device\NPF_{9956D8F7-E904-4194-8339-D25ECA074B21}
+# \Device\NPF_{CAD706C2-CDEB-4B63-B0E9-2BB55B78D859}
 # \Device\NPF_{F2854197-1A5D-4CB1-9E6B-15AE60EA9163}
 
 # TAP Adapter

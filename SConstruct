@@ -39,6 +39,7 @@ defines = [
 opts = Variables('options.cache')
 #^-- Load saved settings (if they exist)
 opts.AddVariables(
+    ('CROSS','Base for cross-compilers, tool names will be appended automatically',''),
     ('CC','Sets the C compiler to use.'),
     ('CXX','Sets the C++ compiler to use.'),
     ('AS','Sets the assembler to use.'),
@@ -50,8 +51,10 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     BoolVariable('verbose','Display verbose build output.',0),
+    BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1),
+	BoolVariable('installer', 'Build the installer', 0)
 )
 
 env = Environment(options = opts,tools = ['default'],ENV = os.environ)
@@ -65,17 +68,34 @@ opts.Save('options.cache',env)
 env.Platform('posix')
 
 # Trickery to get around the case-insensitivity on Windows
-env['OBJSUFFIX'] = ".compiled.obj"
+env['OBJSUFFIX'] = ".obj"
 
 # Explicitly defined to get around SCons picking this up from the environment
 env['PROGSUFFIX'] = ''
+
+# Pedigree binary locations
+env['PEDIGREE_BUILD_BASE'] = env['BUILDDIR']
+env['PEDIGREE_BUILD_MODULES'] = env['BUILDDIR'] + '/modules'
+env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
+env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
+env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
+env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
+
+# Set the compilers if CROSS is not an empty string
+if env['CROSS'] != '':
+    crossBase = env['CROSS']
+    env['CC'] = crossBase + 'gcc'
+    env['CXX'] = crossBase + 'g++'
+    env['LD'] = crossBase + 'gcc'
+    env['AS'] = crossBase + 'as'
+    env['AR'] = crossBase + 'ar'
 
 ####################################
 # Compiler/Target specific settings
 ####################################
 # Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo "int main(void) {return 0;}" | ' + env['CC'] + ' + -xc -c - -fno-stack-protector')
-if re.match('.*error:',out) == None:
+out = commands.getoutput('echo -e "int main(void) {return 0;}" | ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
+if not 'unrecognized option' in out:
     env['CXXFLAGS'] += ' -fno-stack-protector'
     env['CFLAGS'] += ' -fno-stack-protector'
 
@@ -83,18 +103,46 @@ out = commands.getoutput(env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present
 tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
 
-env['ARCH_TARGET'] = tmp.group(1)
+if tmp != None:
+    env['ARCH_TARGET'] = tmp.group(1)
 
-if re.match('i[3456]86',tmp.group(1)) != None:
-    defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
-    #^-- Should provide overloads for these...like machine=ARM_VOLITILE
-elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-    defines += ['X64']
-elif re.match('ppc|powerpc',tmp.group(1)) != None:
-    defines += ['PPC']
-elif re.match('arm',tmp.group(1)) != None:
-    defines += ['ARM']
+    if re.match('i[3456]86',tmp.group(1)) != None:
+        defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
+        #^-- Should provide overloads for these...like machine=ARM_VOLITILE
+        
+        env['ARCH_TARGET'] = 'X86'
+    elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
+        defines += ['X64']
+        
+        env['ARCH_TARGET'] = 'X64'
+    elif re.match('ppc|powerpc',tmp.group(1)) != None:
+        defines += ['PPC']
+        
+        env['ARCH_TARGET'] = 'PPC'
+    elif re.match('arm',tmp.group(1)) != None:
+        defines += ['ARM']
+        
+        env['ARCH_TARGET'] = 'ARM'
+
+# Default to x86 if something went wrong
+else:
+    env['ARCH_TARGET'] = 'X86'
+        
+# LIBGCC path
+if env['LIBGCC'] == '':
+    crossPath = os.path.dirname(env['CC'])
     
+    libgccPath = commands.getoutput(env['CXX'] + ' --print-libgcc-file-name')
+    if not os.path.exists(libgccPath):
+        print "Error: libgcc path could not be determined. Use the LIBGCC option."
+        Exit(1)
+    
+    env['LIBGCC'] = os.path.dirname(libgccPath)
+
+# NASM is used for X86 and X64 builds
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+    crossPath = os.path.dirname(env['CC'])
+    env['AS'] = crossPath + '/nasm'
 
 ####################################
 # Some quirks
@@ -108,18 +156,31 @@ if env['warnings']:
 if env['verbose_link']:
     env['LINKFLAGS'] += ' --verbose'
 
+if env['installer']:
+	defines += ['INSTALLER']
+
 ####################################
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
-    env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
-    env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
-    env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
-    env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
-    env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
-    env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
-    env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
+	if env['nocolour']:
+		env['CCCOMSTR']   =    '     Compiling $TARGET'
+		env['CXXCOMSTR']  =    '     Compiling $TARGET'
+		env['ASCOMSTR']   =    '    Assembling $TARGET'
+		env['LINKCOMSTR'] =    '       Linking $TARGET'
+		env['ARCOMSTR']   =    '     Archiving $TARGET'
+		env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
+		env['NMCOMSTR']   =    '  Creating map $TARGET'
+		env['DOCCOMSTR']  =    '   Documenting $TARGET'
+	else:
+		env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
+		env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
+		env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
+		env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
+		env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
+		env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
+		env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
+		env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
 
 ####################################
 # Setup our build options
