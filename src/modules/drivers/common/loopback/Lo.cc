@@ -28,6 +28,8 @@ Loopback Loopback::m_Instance;
 Loopback::Loopback() :
   Network(), m_StationInfo()
 {
+    NOTICE("Loopback init");
+
   setSpecificType(String("Loopback-card"));
   NetworkStack::instance().registerDevice(this);
   
