@@ -51,6 +51,7 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     BoolVariable('verbose','Display verbose build output.',0),
+    BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
     BoolVariable('warnings', 'compilation with -Wall and similiar', 1),
 	BoolVariable('installer', 'Build the installer', 0)
@@ -162,14 +163,24 @@ if env['installer']:
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
-    env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
-    env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
-    env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
-    env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
-    env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
-    env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
-    env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
+	if env['nocolour']:
+		env['CCCOMSTR']   =    '     Compiling $TARGET'
+		env['CXXCOMSTR']  =    '     Compiling $TARGET'
+		env['ASCOMSTR']   =    '    Assembling $TARGET'
+		env['LINKCOMSTR'] =    '       Linking $TARGET'
+		env['ARCOMSTR']   =    '     Archiving $TARGET'
+		env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
+		env['NMCOMSTR']   =    '  Creating map $TARGET'
+		env['DOCCOMSTR']  =    '   Documenting $TARGET'
+	else:
+		env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
+		env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
+		env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
+		env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
+		env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
+		env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
+		env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
+		env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
 
 ####################################
 # Setup our build options
