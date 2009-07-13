@@ -250,7 +250,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // If the cache is *not yet* populated, don't add the entry to the cache. This allows
       // cacheDirectoryContents to build the cache properly.
-      NOTICE("Adding " << filename << "...");
+      // NOTICE("Adding " << filename << "...");
       if(m_bCachePopulated)
         m_Cache.insert(filename, pFile);
 
@@ -463,7 +463,7 @@ void FatDirectory::cacheDirectoryContents()
           );
         }
 
-        NOTICE("Inserting '" << filename << "'.");
+        // NOTICE("Inserting '" << filename << "'.");
         m_Cache.insert(filename, pF);
         if(!m_bCachePopulated)
           m_bCachePopulated = true;

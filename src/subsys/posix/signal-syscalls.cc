@@ -178,7 +178,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
 
         size_t nLevel = pThread->getStateLevel();
         sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig), nLevel);
-        NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ".");
+        SG_NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ").");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
     else if (!oact)
@@ -395,7 +395,7 @@ int posix_sleep(uint32_t seconds)
 
 void pedigree_init_sigret()
 {
-    NOTICE("init_sigret");
+    SG_NOTICE("init_sigret");
 
     // Map the signal return stub to the correct location
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();

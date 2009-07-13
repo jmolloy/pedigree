@@ -73,7 +73,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
       case ICMP_ECHO_REQUEST:
         {
       
-        //NOTICE("ICMP: Echo request");
+        NOTICE("ICMP: Echo request");
         
         // send the reply
         send(
@@ -96,7 +96,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
         // Now that things can be moved out to user applications thanks to SOCK_RAW,
         // the kernel doesn't need to implement too much of the ICMP suite.
 
-        //NOTICE("ICMP: Unhandled packet - type is " << header->type << ".");
+        NOTICE("ICMP: Unhandled packet - type is " << header->type << ".");
         break;
     }
   }

@@ -85,7 +85,7 @@ class Socket : public File
     /** Similar to POSIX's select() function */
     virtual int select(bool bWriting = false, int timeout = 0)
     {
-        NOTICE("Socket::select");
+        // NOTICE("Socket::select");
 
         // Basically, this busy waits for data; the last thing you want to do is
         // cancel execution of dataReady if it's blocking (with a timeout) as it
@@ -93,25 +93,27 @@ class Socket : public File
         // uses for the timeout.
         if(!bWriting)
         {
-            do
-            {
+//            do
+//            {
                 int state = m_Endpoint->state();
                 if(m_Protocol == NETMAN_TYPE_TCP)
                 {
                     if(state == Tcp::ESTABLISHED)
                     {
-                        if(m_Endpoint->dataReady(false))
+                        if(m_Endpoint->dataReady(timeout > 0, timeout))
                             return 1;
                     }
                     else
                         return 1; // not established, allow EOF from recv()
                 }
-                else if(m_Endpoint->dataReady(false))
+                else if(m_Endpoint->dataReady(timeout > 0, timeout))
                     return 1; // non-TCP sockets just need to check for data
 
                 Scheduler::instance().yield();
-            }
-            while(timeout != 0);
+//            }
+//            while(timeout != 0);
+
+              return 0;
         }
         else
         {

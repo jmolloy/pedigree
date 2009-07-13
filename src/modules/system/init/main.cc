@@ -141,11 +141,13 @@ void init()
             /// \todo Perhaps try and ping a remote host?
             Network* card = NetworkStack::instance().getDevice(i);
             StationInfo info = card->getStationInfo();
-            if (!(info.gateway == 0)) /// \todo write operator !=
+
+            // If the device has a gateway, set it as the default and continue
+            if (!(info.gateway == 0) && !bRouteFound) /// \todo write operator !=
             {
                 RoutingTable::instance().AddNamed(String("default"), card);
                 bRouteFound = true;
-                break;
+//                break;
             }
         }
 

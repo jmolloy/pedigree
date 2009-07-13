@@ -820,9 +820,6 @@ unsigned int inet_addr(const char *cp)
     /// \todo Support formats other than a.b.c.d
     /// \todo Rewrite!
 
-    STUBBED("inet_addr");
-    STUBBED(cp);
-
     char* tmp = (char*) malloc(strlen(cp) + 1);
     char* tmp_ptr = tmp; // so we can free the memory
     strcpy(tmp, (char *)cp);
@@ -857,7 +854,6 @@ unsigned int inet_addr(const char *cp)
     unsigned int d = atoi(elements[3]);
 
     unsigned int ret = (d << 24) | (c << 16) | (b << 8) | a;
-    STUBBED("done");
 
     free(tmp_ptr);
 

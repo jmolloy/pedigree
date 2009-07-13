@@ -995,16 +995,17 @@ class SelectRun
         {
             // Check each File in the list
             /// \todo This should keep looping until the timeout expires, this is currently just looping forever
+            /// \todo These should each run concurrently, not one after the other...
             int numReady = 0;
-            while(numReady == 0)
-            {
+            // while(numReady == 0)
+            // {
                 for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
                 {
                     FileInfo *p = (*it);
                     if(p)
-                        numReady += p->pFile->select(p->bCheckWrite, 0);
+                        numReady += p->pFile->select(p->bCheckWrite, m_Timeout);
                 }
-            }
+            // }
 
             // Reset so we're ready for another round if needed
             deleteAll();
@@ -1451,3 +1452,4 @@ int posix_access(const char *name, int amode)
     /// \todo Proper permission checks. For now, the file exists, and you can do what you want with it.
     return 0;
 }
+

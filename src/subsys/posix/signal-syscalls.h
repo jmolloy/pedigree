@@ -25,7 +25,7 @@
 
 #include "newlib.h"
 
-#if 1
+#if 0
 #define SG_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define SG_NOTICE(x)
