@@ -29,6 +29,8 @@ int h_errno; // required by networking code
 // Needs to be seperated, otherwise the compiler's time.h is used.
 #include "include/time.h"
 
+#include <string.h>
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
@@ -815,50 +817,95 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
     return -1;
 }
 
-unsigned int inet_addr(const char *cp)
+int inet_addr(const char *cp)
 {
-    /// \todo Support formats other than a.b.c.d
-    /// \todo Rewrite!
+    // Valid string?
+    if(!cp || !*cp)
+        return 0;
 
+    // Reallocate the string so the memory can be modified
     char* tmp = (char*) malloc(strlen(cp) + 1);
-    char* tmp_ptr = tmp; // so we can free the memory
     strcpy(tmp, (char *)cp);
 
-    // iterate through, removing decimals and taking the four pointers
-    char* elements[4] = {tmp, 0, 0, 0};
-    int num = 1;
-    while (*tmp)
+    // Store the pointer so the memory can be freed
+    char* tmp_ptr = tmp;
+
+    // Is there a non-IP character in the string?
+    size_t c, max = strlen(tmp);
+    for(c = 0; c < max; c++)
     {
-        if (*tmp == '.')
+        // Only digits and periods in IPs
+        char test = tmp[c];
+        if(!isdigit(test) && (test != '.'))
         {
-            *tmp = 0;
-            elements[num++] = tmp + 1;
-        }
-        else if(!isdigit(*tmp))
-        {
-            // Not a digit - IPs must be digits and periods only!
             free(tmp_ptr);
             return 0;
         }
-
-        tmp++;
-
     }
 
-    if (num != 4)
-        return 0;
+    // Does the string have a '.' at all?
+    if(strchr(tmp, '.') != 0)
+    {
+        // Build the list, at most there will be 4
+        char *ipComponents[4] = {tmp, 0, 0, 0};
+        int numComponents = 1;
+        while((tmp = strchr(tmp, '.')) != 0)
+        {
+            // Terminate this component
+            *tmp = '\0';
 
-    unsigned int a = atoi(elements[0]);
-    unsigned int b = atoi(elements[1]);
-    unsigned int c = atoi(elements[2]);
-    unsigned int d = atoi(elements[3]);
+            // Add to the list
+            ipComponents[numComponents++] = ++tmp;
+        }
 
-    unsigned int ret = (d << 24) | (c << 16) | (b << 8) | a;
+        // Handle
+        int ret = 0, i;
+        switch(numComponents)
+        {
+            case 4:
+                // Standard case
+                for(i = 0; i < numComponents; ++i)
+                    ret += (atoi(ipComponents[i]) << (i * 3)) & 0xFF;
+                break;
 
-    free(tmp_ptr);
+            case 3:
+                {
+                    // Last quantity is a 16-bit value
+                    int a = atoi(ipComponents[0]);
+                    int b = atoi(ipComponents[1]);
+                    int c = atoi(ipComponents[2]);
+                    ret = ((a & 0xFF) << 24) + ((b & 0xFF) << 16) + (c & 0xFFFF);
+                }
+                break;
 
-    return ret;
+            case 2:
+                {
+                    // Last quantity is a 16-bit value
+                    int a = atoi(ipComponents[0]);
+                    int b = atoi(ipComponents[1]);
+                    ret = ((a & 0xFF) << 24) + (b & 0xFFFFFF);
+                }
+                break;
+
+            // This shouldn't be reachable, but you never know
+            case 1:
+            default:
+                ret = 0;
+        }
+
+        // All done
+        free(tmp_ptr);
+        return ret;
+    }
+    else
+    {
+        // Convert to an integer and return
+        int ret = atoi(tmp);
+        free(tmp_ptr);
+        return ret;
+    }
 }
+
 
 char* inet_ntoa(struct in_addr addr)
 {
