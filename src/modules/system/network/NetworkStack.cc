@@ -19,6 +19,8 @@
 #include <Module.h>
 #include <Log.h>
 
+#include "Dns.h"
+
 NetworkStack NetworkStack::stack;
 
 NetworkStack::NetworkStack() :
@@ -71,6 +73,8 @@ void NetworkStack::deRegisterDevice(Network *pDevice)
 
 void entry()
 {
+    // Initialise the DNS implementation
+    Dns::instance().initialise();
 }
 
 void exit()

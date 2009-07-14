@@ -28,11 +28,6 @@ uint16_t Dns::m_NextId = 0;
 Dns::Dns() :
   m_DnsCache(), m_DnsRequests(), m_Endpoint(0)
 {
-  m_Endpoint = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
-  m_Endpoint->acceptAnyAddress(true);
-  new Thread(Processor::information().getCurrentThread()->getParent(),
-             reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-             reinterpret_cast<void*>(this));
 }
 
 Dns::Dns(const Dns& ent) :
@@ -47,6 +42,15 @@ Dns::~Dns()
 {
 }
 
+void Dns::initialise()
+{
+  m_Endpoint = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
+  m_Endpoint->acceptAnyAddress(true);
+  new Thread(Processor::information().getCurrentThread()->getParent(),
+             reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
+             reinterpret_cast<void*>(this));
+}
+
 int Dns::trampoline(void* p)
 {
   Dns *pDns = reinterpret_cast<Dns*>(p);
@@ -56,12 +60,12 @@ int Dns::trampoline(void* p)
 
 void Dns::mainThread()
 {
-  uint8_t* buff = new uint8_t[512];
+  uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-  memset(buff, 0, 512);
+  memset(buff, 0, 1024);
 
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
-  Endpoint* e = m_Endpoint; //UdpManager::instance().getEndpoint(addr, 53, 53);
+  Endpoint* e = m_Endpoint;
 
   Endpoint::RemoteEndpoint remoteHost;
 
@@ -70,7 +74,7 @@ void Dns::mainThread()
     if(e->dataReady(true))
     {
       // read the packet
-      int n = e->recv(buffLoc, 512, &remoteHost);
+      int n = e->recv(buffLoc, 1024, &remoteHost);
       if(n <= 0)
         continue;
 
@@ -224,16 +228,16 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   }
 
   // setup for our request
-  Endpoint* e = m_Endpoint; //UdpManager::instance().getEndpoint(info.dnsServer, 0, 53);
+  Endpoint* e = m_Endpoint;
 
-  uint8_t* buff = new uint8_t[512];
+  uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-  memset(buff, 0, 512);
+  memset(buff, 0, 1024);
 
   // setup the DNS message header
   DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
   head->id = m_NextId++;
-  head->opAndParam = HOST_TO_BIG16(DNS_RECUSRION);
+  head->opAndParam = HOST_TO_BIG16(DNS_RECURSION);
   head->qCount = HOST_TO_BIG16(1);
 
   // build the modified hostname

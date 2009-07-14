@@ -19,6 +19,8 @@
 #include <network/NetworkStack.h>
 #include <network/UdpManager.h>
 
+#include <processor/Processor.h>
+
 #define MAX_OPTIONS_SIZE    (1500 - 28 /* UDP header + IP header */ - 236 /* DhcpPacket size, below */)
 
 /** Defines a DHCP packet (RFC 2131) */

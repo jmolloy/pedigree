@@ -15,6 +15,7 @@
  */
 
 #include <utilities/Tree.h>
+#include <Log.h>
 
 //
 // Tree<void*,void*> implementation.
@@ -84,7 +85,11 @@ void Tree<void*,void*>::insert(void *key, void *value)
   
   bool inserted = false;
   
-  if (lookup(key)) return; // Key already in tree.
+  if (lookup(key))
+  {
+    delete n;
+    return; // Key already in tree.
+  }
   
   if (root == 0)
   {

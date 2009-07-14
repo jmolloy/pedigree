@@ -175,6 +175,7 @@ Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint
   {
     e = new UdpEndpoint(remoteHost, localPort, remotePort);
     e->setManager(this);
+
     m_Endpoints.insert(localPort, e);
   }
   return e;

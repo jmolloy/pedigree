@@ -337,7 +337,6 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
         tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
         if(tmp)
         {
-            NOTICE("Removing an old signal (was " << reinterpret_cast<uintptr_t>(tmp) << ").");
 
             // Remove from the list
             m_SignalHandlers.remove(sig);
@@ -349,7 +348,6 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
         // Insert into the signal handler table
         handler->sig = sig;
 
-        NOTICE("Adding new signal for " << sig << ": " << reinterpret_cast<uintptr_t>(handler) << ".");
         m_SignalHandlers.insert(sig, handler);
     }
 }

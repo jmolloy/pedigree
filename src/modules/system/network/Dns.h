@@ -34,7 +34,7 @@
 #define DNS_OPCODE     0x7800 // 0 = standard, 1 = inverse
 #define DNS_AUTHANS    0x400 // 1 if authoritative answer
 #define DNS_TRUNC      0x200 // 1 if the message is truncated
-#define DNS_RECUSRION  0x100 // 1 if recursion is wanted
+#define DNS_RECURSION  0x100 // 1 if recursion is wanted
 #define DNS_RECURAVAIL 0x80 // 1 if recursion is available
 #define DNS_RSVD       0x70
 #define DNS_RESPONSE   0xF // response code - 0 means no errors
@@ -63,6 +63,9 @@ public:
   
   /** Main daemon thread */
   void mainThread();
+
+  /** Initialises the Endpoint and begins running the worker thread */
+  void initialise();
   
   /** Requests a lookup for a hostname */
   IpAddress* hostToIp(String hostname, size_t& nIps, Network* pCard = 0);
