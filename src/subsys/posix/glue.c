@@ -865,7 +865,7 @@ int inet_addr(const char *cp)
             case 4:
                 // Standard case
                 for(i = 0; i < numComponents; ++i)
-                    ret += (atoi(ipComponents[i]) << (i * 3)) & 0xFF;
+                    ret += (atoi(ipComponents[i]) & 0xFF) << (i * 8);
                 break;
 
             case 3:
