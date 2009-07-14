@@ -838,7 +838,7 @@ unsigned int inet_addr(const char *cp)
         {
             // Not a digit - IPs must be digits and periods only!
             free(tmp_ptr);
-            return -1;
+            return 0;
         }
 
         tmp++;
