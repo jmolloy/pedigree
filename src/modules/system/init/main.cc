@@ -156,18 +156,6 @@ void init()
             RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
     }
 
-    /*static void enableDebugBreakpoint(size_t nBpNumber,
-                                      uintptr_t nLinearAddress,
-                                      DebugFlags::FaultType nFaultType,
-                                      size_t nLength);*/
-
-    volatile uint32_t abc = 0;
-    Processor::enableDebugBreakpoint(0, reinterpret_cast<uintptr_t>(&abc), DebugFlags::DataReadWrite, 4);
-    abc = 0xdeadbeef;
-    NOTICE("abc = " << abc << "...");
-
-    NOTICE("Done");
-
     str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
