@@ -12,7 +12,8 @@ driver_common_subdirs = [
     'partition',
     'loopback',
     'nvidia',
-    '3c90x'
+    '3c90x',
+    'rtl8139'
 ]
 
 # Architecture-specific drivers
