@@ -93,5 +93,5 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   // and dump it into any raw sockets (note the -1 for protocol - this means WIRE level endpoints)
   // RawManager::instance().receive(packAddr, newSize, 0, -1, pCard);
   
-  delete newPacket;
+  delete [] newPacket;
 }

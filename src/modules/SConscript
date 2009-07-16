@@ -45,7 +45,8 @@ module_subdirs = [
     'linker',
     'users',
     'ramfs',
-    'rawfs'
+    'rawfs',
+    'lodisk'
 ]
 
 if env['installer']:
