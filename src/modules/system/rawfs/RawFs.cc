@@ -33,6 +33,8 @@ RawFs::RawFs() :
 
 RawFs::~RawFs()
 {
+    if(m_pRoot)
+        delete m_pRoot;
 }
 
 File *RawFs::getRoot()

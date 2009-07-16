@@ -54,7 +54,7 @@ uint16_t Tcp::tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint
 
   uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
 
-  delete tmpPack;
+  delete [] tmpPack;
 
   return checksum;
 }
@@ -90,7 +90,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
   bool success = Ip::send(dest, me.ipv4, IP_TCP, newSize, packAddr, pCard);
 
-  delete newPacket;
+  delete [] newPacket;
   return success;
 }
 

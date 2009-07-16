@@ -93,6 +93,8 @@ int main(int argc, char **argv)
     int nread = fread(msg, 1, 1024, stream);
     msg[nread] = '\0';
     printf("%s", msg);
+
+    fclose(stream);
   }
   else
   {

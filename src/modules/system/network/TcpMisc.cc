@@ -209,7 +209,11 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
   
   bool inserted = false;
   
-  if (lookup(key)) return; // Key already in tree.
+  if (lookup(key))
+  {
+      delete n;
+      return; // Key already in tree.
+  }
   
   if (root == 0)
   {

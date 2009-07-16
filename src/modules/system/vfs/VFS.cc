@@ -170,7 +170,7 @@ void VFS::removeAllAliases(Filesystem *pFs)
     if (pFs == (*it)->fs)
     {
       Alias *pA = *it;
-      m_Aliases.erase(it);
+      it = m_Aliases.erase(it);
       delete pA;
     }
   }

@@ -52,7 +52,7 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   StationInfo me = pCard->getStationInfo();
   Ip::send(dest, me.ipv4, IP_ICMP, newSize, packAddr, pCard);
   
-  delete newPacket;
+  delete [] newPacket;
 }
 
 void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)

@@ -73,6 +73,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
 Terminal::~Terminal()
 {
+    delete m_pXterm;
 }
 
 void Terminal::addToQueue(uint64_t key)

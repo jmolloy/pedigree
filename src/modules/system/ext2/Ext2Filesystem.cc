@@ -40,6 +40,8 @@ Ext2Filesystem::Ext2Filesystem() :
 Ext2Filesystem::~Ext2Filesystem()
 {
     delete [] m_pGroupDescriptors;
+    if(m_pRoot)
+        delete m_pRoot;
 }
 
 bool Ext2Filesystem::initialise(Disk *pDisk)

@@ -125,6 +125,14 @@ int posix_fork(SyscallState &state)
     if (!pSubsystem || !pParentSubsystem)
     {
         ERROR("No subsystem for one or both of the processes!");
+
+        if(pSubsystem)
+            delete pSubsystem;
+        if(pParentSubsystem)
+            delete pParentSubsystem;
+        delete pProcess;
+
+        SYSCALL_ERROR(OutOfMemory);
         return -1;
     }
     pProcess->setSubsystem(pSubsystem);

@@ -35,6 +35,7 @@ Header::Header(size_t nWidth) :
 
 Header::~Header()
 {
+    delete m_pFont;
 }
 
 size_t Header::getHeight()
@@ -111,7 +112,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     }
 }
 
-size_t Header::renderString(rgb_t *pBuffer, char *str, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Header::renderString(rgb_t *pBuffer, const char *str, size_t x, size_t y, rgb_t f, rgb_t b)
 {
     while (*str)
         x += m_pFont->render(pBuffer, *str++, x, y, f, b);
@@ -176,7 +177,7 @@ void Header::centreOn(size_t tabId)
 size_t Header::addTab(char *string, size_t flags)
 {
     char str[64];
-    sprintf(str, "Header: %x", this);
+    sprintf(str, "Header: %x", reinterpret_cast<uint32_t>(this));
     log(str);
     Tab *pTab = new Tab;
     pTab->text = string;

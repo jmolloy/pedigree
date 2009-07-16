@@ -12,7 +12,10 @@ public:
   {};
 
   virtual ~NullFs()
-  {};
+  {
+    if(m_pNull)
+        delete m_pNull;
+  };
 
   static NullFs &instance()
   {

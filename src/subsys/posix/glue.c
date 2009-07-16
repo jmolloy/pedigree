@@ -1366,7 +1366,10 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
         STUBBED(nodename);
         h = gethostbyname(nodename);
         if(!h)
+        {
+            free(ret);
             return EAI_FAIL;
+        }
 
         memcpy(&(addr.sin_addr.s_addr), h->h_addr, h->h_length);
         ret->ai_addrlen = h->h_length;

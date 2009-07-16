@@ -49,7 +49,10 @@ RamFs::RamFs() : m_pRoot(0)
 {}
 
 RamFs::~RamFs()
-{}
+{
+    if(m_pRoot)
+        delete m_pRoot;
+}
 
 bool RamFs::initialise(Disk *pDisk)
 {

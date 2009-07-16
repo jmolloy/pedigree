@@ -14,6 +14,7 @@ int test_open ()
   int fd = open ("/applications/shell", O_RDONLY);
   if (fd != -1)
   {
+    close(fd);
     printf("PASS\n");
   }
   else
@@ -25,6 +26,7 @@ int test_open ()
   int fd2 = open ("/applications/penis", O_RDONLY);
   if (fd2 == -1 && errno == ENOENT)
   {
+    close(fd2);
     printf("PASS\n");
   }
   else
@@ -36,6 +38,7 @@ int test_open ()
   int fd3 = open ("/file-doesnt-exist", O_RDWR | O_CREAT);
   if (fd3 != -1)
   {
+    close(fd3);
     printf("PASS\n");
   }
   else
@@ -65,8 +68,10 @@ int test_open ()
 
       printf("%d/%d\n", hahaha, rofl);
 
+      close(rofl);
       exit(0);
   }
+  close(hahaha);
 
   printf("Complete\n");
 

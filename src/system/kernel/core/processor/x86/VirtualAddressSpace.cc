@@ -429,7 +429,7 @@ void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 
     // Map it in
     uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
-    for (int j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
+    for (size_t j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
     {
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         bool b = map(phys,
@@ -614,9 +614,6 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
 
       // This PTE is no longer valid
       *pageTableEntry = 0;
-
-      // Invalidate the TLB entry
-      Processor::invalidate(reinterpret_cast<void*>(physicalAddress));
     }
 
     // Don't remove the directory entry if we skipped a kernel page

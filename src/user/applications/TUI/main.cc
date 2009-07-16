@@ -186,7 +186,7 @@ log("Add terminal fin");
     {
         size_t cmd = Syscall::nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
         sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-       log(str);
+        log(str);
 
         Terminal *pT = 0;
         TerminalList *pTL = g_pTermList;

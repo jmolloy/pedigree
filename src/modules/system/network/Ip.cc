@@ -85,7 +85,10 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
       if(me.gateway.getIp())
         dest = me.gateway;
       else
+      {
+        delete [] newPacket;
         return false;
+      }
     }
   }
 
@@ -101,7 +104,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   if(macValid)
     Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
 
-  delete newPacket;
+  delete [] newPacket;
   return macValid;
 }
 

@@ -54,6 +54,10 @@ FatFilesystem::FatFilesystem() :
 
 FatFilesystem::~FatFilesystem()
 {
+    if(m_pRoot)
+        delete m_pRoot;
+    if(m_pFatCache)
+        delete [] m_pFatCache;
 }
 
 bool FatFilesystem::initialise(Disk *pDisk)
@@ -182,7 +186,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
     memcpy(reinterpret_cast<void*>(m_pFatCache+0), reinterpret_cast<void*>(tmpBuffer), fatSz);
 
-    delete tmpBuffer;
+    delete [] tmpBuffer;
 
     // Define the root directory early
     getRoot();
@@ -356,7 +360,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
             // if at any time we're done, end reading
             if (bytesRead == finalSize)
             {
-                delete tmpBuffer;
+                delete [] tmpBuffer;
                 return bytesRead;
             }
         }
@@ -373,7 +377,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
             break;
     }
 
-    delete tmpBuffer;
+    delete [] tmpBuffer;
 
     // if we reach here, something's gone wrong
     return 0;
@@ -571,7 +575,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
                 // and now actually write the updated file contents
                 writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
 
-                delete tmpBuffer;
+                delete [] tmpBuffer;
                 return bytesWritten;
             }
         }
@@ -590,7 +594,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
             break;
     }
 
-    delete tmpBuffer;
+    delete [] tmpBuffer;
 
     return bytesWritten;
 }

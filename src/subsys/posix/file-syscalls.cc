@@ -409,6 +409,7 @@ int posix_rename(const char* source, const char* dst)
     dest->truncate();
     dest->write(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
     VFS::instance().remove(String(source), GET_CWD());
+    delete [] buf;
 
     return 0;
 }
@@ -1190,6 +1191,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     {
         Semaphore sem(0);
         sem.acquire(1, timeoutSeconds);
+        delete run;
         return 0;
     }
 

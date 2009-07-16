@@ -107,8 +107,10 @@ void Device::removeChild(size_t n)
   for(Vector<Device*>::Iterator it = m_Children.begin();
       it != m_Children.end();
       it++, i++)
-  if (i == n)
-  m_Children.erase(it);
+  {
+    if (i == n)
+      it = m_Children.erase(it);
+  }
 }
 /** Removes the given Device from this device's child list. */
 void Device::removeChild(Device *d)

@@ -54,7 +54,7 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
   
   uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
   
-  delete tmpPack;
+  delete [] tmpPack;
   
   return checksum;
 }
@@ -89,7 +89,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   
   bool success = Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
   
-  delete newPacket;
+  delete [] newPacket;
   return success;
 }
 

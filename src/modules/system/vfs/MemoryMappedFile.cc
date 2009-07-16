@@ -311,7 +311,7 @@ void MemoryMappedFileManager::unmapAll()
         (*it)->file->unload( (*it)->offset );
         (*it)->file->decreaseRefCount();
         delete *it;
-        pMmFileList->erase(it);
+        it = pMmFileList->erase(it);
     }
 
     delete pMmFileList;
