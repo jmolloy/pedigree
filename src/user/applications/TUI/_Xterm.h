@@ -67,13 +67,21 @@ private:
             void setForeColour(uint8_t fgColour);
             void setBackColour(uint8_t bgColour);
             void setFlags(uint8_t flags);
+            uint8_t getFlags();
 
             void renderAll(DirtyRectangle &rect);
             void setChar(uint32_t utf32, size_t x, size_t y);
 
             void addChar(uint32_t utf32, DirtyRectangle &rect);
 
+            void setCursor(size_t x, size_t y, DirtyRectangle &rect);
+            void setCursorX(size_t x, DirtyRectangle &rect);
+            void setCursorY(size_t y, DirtyRectangle &rect);
+            size_t getCursorX();
+            size_t getCursorY();
+
             void cursorLeft(DirtyRectangle &rect);
+            void cursorLeftNum(size_t n, DirtyRectangle &rect);
             void cursorLeftToMargin(DirtyRectangle &rect);
             void cursorDown(size_t n, DirtyRectangle &);
 
@@ -82,12 +90,12 @@ private:
 
             void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
 
+            void scrollRegionUp(size_t n, DirtyRectangle &rect);
+            void scrollScreenUp(size_t n, DirtyRectangle &rect);
+
         private:
             Window(const Window &);
             Window &operator = (const Window &);
-
-            void scrollRegionUp(size_t n, DirtyRectangle &rect);
-            void scrollScreenUp(size_t n, DirtyRectangle &rect);
 
             TermChar *m_pBuffer;
             size_t m_BufferLength;
@@ -118,6 +126,24 @@ private:
     size_t m_ActiveBuffer;
 
     Window *m_pWindows[2];
+
+    /// Set of parameters for the XTerm commands
+    typedef struct
+    {
+        int params[4];
+        int cur_param;
+    } XtermCmd;
+    XtermCmd m_Cmd;
+
+    /// Are we currently interpreting a state change?
+    bool m_bChangingState;
+
+    /// Did this state include a '['? This changes the way some commands are interpreted.
+    bool m_bContainedBracket;
+    bool m_bContainedParen;
+
+    /// Saved cursor position.
+    uint32_t m_SavedX, m_SavedY;
 };
 
 #endif

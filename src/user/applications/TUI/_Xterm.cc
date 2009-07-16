@@ -17,6 +17,17 @@
 #include "_Xterm.h"
 #include "Font.h"
 
+#define C_BLACK   0
+#define C_RED     1
+#define C_GREEN   2
+#define C_YELLOW  3
+#define C_BLUE    4
+#define C_MAGENTA 5
+#define C_CYAN    6
+#define C_WHITE   7
+
+#define C_BRIGHT  8
+
 rgb_t g_Colours[] = { {0x00,0x00,0x00},
                       {0xB0,0x00,0x00},
                       {0x00,0xB0,0x00},
@@ -38,7 +49,8 @@ rgb_t g_BrightColours[] = { {0x33,0x33,0x33},
 extern Font *g_NormalFont, *g_BoldFont;
 
 Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop) :
-    m_ActiveBuffer(0)
+    m_ActiveBuffer(0), m_Cmd(), m_bChangingState(false), m_bContainedBracket(false),
+    m_bContainedParen(false), m_SavedX(0), m_SavedY(0)
 {
     size_t width = nWidth / g_NormalFont->getWidth();
     size_t height = nHeight / g_NormalFont->getHeight();
@@ -60,22 +72,241 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     sprintf(str, "Write: %x", utf32);
     log(str);
 
-    switch (utf32)
+    if(m_bChangingState)
     {
-        case '\x08':
-            m_pWindows[m_ActiveBuffer]->cursorLeft(rect);
-            break;
+        if(utf32 == '?') return; // Useless character.
 
-        case '\n':
-            m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
-            break;
+        if (m_bContainedParen)
+        {
+            if (utf32 == '0')
+            {
+                // \e(0 -- enter alternate character mode.
+                // m_pWindows[m_CurrentWindow]->setLineDrawingMode(true);
+            }
+            else if (utf32 == 'B')
+            {
+                // \e(B -- exit line drawing mode.
+                // m_pWindows[m_CurrentWindow]->setLineDrawingMode(false);
+            }
+            m_bChangingState = false;
+            return;
+        }
 
-        case '\r':
-            m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
-            break;
+        switch(utf32)
+        {
+            case '[':
+                m_bContainedBracket = true;
+                break;
+            case '(':
+                m_bContainedParen = true;
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (utf32-'0');
+                break;
+            case ';':
+                m_Cmd.cur_param++;
+                break;
 
-        default:
-            m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
+            case 'h':
+                // 1049l is the code to switch to the alternate window.
+                if (m_Cmd.params[0] == 1049)
+                {
+                  m_ActiveBuffer = 1;
+                  m_pWindows[m_ActiveBuffer]->render(rect);
+                }
+                m_bChangingState = false;
+                break;
+            case 'l':
+                // 1049l is the code to switch back to the main window.
+                if (m_Cmd.params[0] == 1049)
+                {
+                  m_ActiveBuffer = 0;
+                  m_pWindows[m_ActiveBuffer]->render(rect);
+                }
+                m_bChangingState = false;
+                break;
+
+            case 'H':
+            {
+                size_t x = (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : 0;
+                size_t y = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
+                m_pWindows[m_ActiveBuffer]->setCursor(x, y, rect);
+                m_bChangingState = false;
+                break;
+            }
+
+            case 'A':
+                m_pWindows[m_ActiveBuffer]->setCursorY(m_pWindows[m_ActiveBuffer]->getCursorY() -
+                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
+                m_bChangingState = false;
+                break;
+            case 'B':
+                m_pWindows[m_ActiveBuffer]->setCursorY(m_pWindows[m_ActiveBuffer]->getCursorY() +
+                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
+                m_bChangingState = false;
+                break;
+            case 'C':
+                m_pWindows[m_ActiveBuffer]->setCursorX(m_pWindows[m_ActiveBuffer]->getCursorX() +
+                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
+                m_bChangingState = false;
+                break;
+
+
+            case 'D':
+                if (m_bContainedBracket)
+                {
+                    // If it contained a bracket, it's a cursor command.
+                    m_pWindows[m_ActiveBuffer]->setCursorX(m_pWindows[m_ActiveBuffer]->getCursorX() -
+                                                          ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
+                }
+                else
+                {
+                    // Else, it's a scroll downwards command.
+                    //m_pWindows[m_CurrentWindow]->scrollDown();
+                    log("No scroll down yet :(");
+                }
+                m_bChangingState = false;
+                break;
+
+            case 'd':
+                // Absolute row reference. (XTERM)
+                m_pWindows[m_ActiveBuffer]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
+                m_bChangingState = false;
+                break;
+
+            case 'G':
+                // Absolute column reference. (XTERM)
+                m_pWindows[m_ActiveBuffer]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
+                m_bChangingState = false;
+                break;
+
+            case 'm':
+            {
+                // Colours, yay!
+                for (int i = 0; i < m_Cmd.cur_param+1; i++)
+                {
+                    switch (m_Cmd.params[i])
+                    {
+                        case 0:
+                        {
+                            // Reset all attributes.
+                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                            m_pWindows[m_ActiveBuffer]->setFlags(flags ^ XTERM_BOLD);
+                            m_pWindows[m_ActiveBuffer]->setForeColour(C_WHITE);
+                            m_pWindows[m_ActiveBuffer]->setBackColour(C_BLACK);
+                            break;
+                        }
+                        case 1:
+                            // Bold
+                            m_pWindows[m_ActiveBuffer]->setFlags(XTERM_BOLD);
+                            break;
+                        case 7:
+                        {
+                            // Inverse
+                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                            if(flags & XTERM_INVERSE) flags ^= XTERM_INVERSE; else flags |= XTERM_INVERSE;
+                            m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                            break;
+                        }
+                        case 30:
+                        case 31:
+                        case 32:
+                        case 33:
+                        case 34:
+                        case 35:
+                        case 36:
+                        case 37:
+                            // Foreground.
+                            m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i]-30);
+                            break;
+                        case 40:
+                        case 41:
+                        case 42:
+                        case 43:
+                        case 44:
+                        case 45:
+                        case 46:
+                        case 47:
+                            // Background.
+                            m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i]-40);
+                            break;
+
+                        default:
+                            // Do nothing.
+                            break;
+                    }
+                }
+                m_bChangingState = false;
+                break;
+            }
+            case '\e':
+                // We received another VT100 command while expecting a terminating command - this must mean it's one of \e7 or \e8.
+                switch (m_Cmd.params[0])
+                {
+                    case 7: // Save cursor.
+                        m_SavedX = m_pWindows[m_ActiveBuffer]->getCursorX();
+                        m_SavedY = m_pWindows[m_ActiveBuffer]->getCursorY();
+                        m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
+                        break;
+                    case 8: // Restore cursor.
+                        m_pWindows[m_ActiveBuffer]->setCursor(m_SavedX, m_SavedY, rect);
+                        m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
+                        break;
+                };
+                // We're still changing state, so keep m_bChangingState = true.
+                break;
+
+            default:
+                {
+                char tmp[128];
+                sprintf(tmp, "Unhandled XTerm escape code: %d.", utf32);
+                log(tmp);
+
+                m_bChangingState = false;
+                }
+                break;
+        };
+    }
+    else
+    {
+        switch (utf32)
+        {
+            case '\x08':
+                m_pWindows[m_ActiveBuffer]->cursorLeft(rect);
+                break;
+
+            case '\n':
+                m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
+                break;
+
+            case '\r':
+                m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
+                break;
+
+            // VT100 - command start
+            case '\e':
+                m_bChangingState = true;
+                m_bContainedBracket = false;
+                m_bContainedParen = false;
+                m_Cmd.cur_param = 0;
+                m_Cmd.params[0] = 0;
+                m_Cmd.params[1] = 0;
+                m_Cmd.params[2] = 0;
+                m_Cmd.params[3] = 0;
+                break;
+
+            default:
+                m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
+        }
     }
 }
 
@@ -129,6 +360,11 @@ void Xterm::Window::setBackColour(uint8_t bgColour)
 void Xterm::Window::setFlags(uint8_t flags)
 {
     m_Flags = flags;
+}
+
+uint8_t Xterm::Window::getFlags()
+{
+    return m_Flags;
 }
 
 void Xterm::Window::renderAll(DirtyRectangle &rect)
@@ -322,11 +558,48 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     }
 }
 
+void Xterm::Window::setCursor(size_t x, size_t y, DirtyRectangle &rect)
+{
+    render(rect);
+    m_CursorX = x;
+    m_CursorY = y;
+    render(rect, XTERM_INVERSE);
+}
+
+void Xterm::Window::setCursorX(size_t x, DirtyRectangle &rect)
+{
+    setCursor(x, m_CursorY, rect);
+}
+void Xterm::Window::setCursorY(size_t y, DirtyRectangle &rect)
+{
+    setCursor(m_CursorX, y, rect);
+}
+
+size_t Xterm::Window::getCursorX()
+{
+    return m_CursorX;
+}
+size_t Xterm::Window::getCursorY()
+{
+    return m_CursorY;
+}
+
 void Xterm::Window::cursorLeft(DirtyRectangle &rect)
 {
     if (m_CursorX == 0) return;
     render(rect);
     m_CursorX --;
+    render(rect, XTERM_INVERSE);
+}
+
+void Xterm::Window::cursorLeftNum(size_t n, DirtyRectangle &rect)
+{
+    if (m_CursorX == 0) return;
+    render(rect);
+
+    if(n > m_CursorX) n = m_CursorX;
+
+    m_CursorX -= n;
     render(rect, XTERM_INVERSE);
 }
 
