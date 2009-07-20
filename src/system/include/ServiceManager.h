@@ -37,7 +37,10 @@ class ServiceManager
         ServiceManager();
         virtual ~ServiceManager();
 
-        static ServiceManager &instance();
+        static ServiceManager &instance()
+        {
+            return m_Instance;
+        }
 
         /**
          *  Enumerates all possible operations that can be performed for a
