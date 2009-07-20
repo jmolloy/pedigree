@@ -74,6 +74,10 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     if(m_bChangingState)
     {
+        char tmp32[128];
+        sprintf(tmp32, "XTerm command: %d/%c\n", utf32, utf32);
+        log(tmp32);
+
         if(utf32 == '?') return; // Useless character.
 
         if (m_bContainedParen)
@@ -171,8 +175,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 else
                 {
                     // Else, it's a scroll downwards command.
-                    //m_pWindows[m_CurrentWindow]->scrollDown();
-                    log("No scroll down yet :(");
+                    m_pWindows[m_ActiveBuffer]->scrollDown(1, rect);
                 }
                 m_bChangingState = false;
                 break;
@@ -189,6 +192,69 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_bChangingState = false;
                 break;
 
+            case 'M':
+            case 'T':
+            {
+                size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
+//                for(size_t i = 0; i < nScrollLines; i++)
+                m_pWindows[m_ActiveBuffer]->scrollUp(nScrollLines, rect);
+                m_bChangingState = false;
+                break;
+            }
+            case 'S':
+            {
+                size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
+//                for(size_t i = 0; i < nScrollLines; i++)
+                m_pWindows[m_ActiveBuffer]->scrollDown(nScrollLines, rect);
+                m_bChangingState = false;
+                break;
+            }
+
+            case 'P':
+                 m_pWindows[m_ActiveBuffer]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1, rect);
+                m_bChangingState = false;
+                break;
+            case 'J':
+                switch (m_Cmd.params[0])
+                {
+                    case 0: // Erase down.
+                         m_pWindows[m_ActiveBuffer]->eraseDown(rect);
+                        break;
+                    case 1: // Erase up.
+                        m_pWindows[m_ActiveBuffer]->eraseUp(rect);
+                        break;
+                    case 2: // Erase entire screen and move to home.
+                        m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
+                        break;
+                }
+                m_bChangingState = false;
+                break;
+            case 'K':
+                switch (m_Cmd.params[0])
+                {
+                    case 0: // Erase end of line.
+                        m_pWindows[m_ActiveBuffer]->eraseEOL(rect);
+                        break;
+                    case 1: // Erase start of line.
+                        m_pWindows[m_ActiveBuffer]->eraseSOL(rect);
+                        break;
+                    case 2: // Erase entire line.
+                        m_pWindows[m_ActiveBuffer]->eraseLine(rect);
+                        break;
+                }
+                m_bChangingState = false;
+                break;
+            case 'X': // Erase characters (XTERM)
+                 m_pWindows[m_ActiveBuffer]->eraseChars((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1, rect);
+                m_bChangingState = false;
+                break;
+
+            case 'r':
+                m_pWindows[m_ActiveBuffer]->setScrollRegion((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
+                                                            (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
+                m_bChangingState = false;
+                break;
+
             case 'm':
             {
                 // Colours, yay!
@@ -199,21 +265,30 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         case 0:
                         {
                             // Reset all attributes.
-                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
-                            m_pWindows[m_ActiveBuffer]->setFlags(flags ^ XTERM_BOLD);
+                            m_pWindows[m_ActiveBuffer]->setFlags(0);
                             m_pWindows[m_ActiveBuffer]->setForeColour(C_WHITE);
                             m_pWindows[m_ActiveBuffer]->setBackColour(C_BLACK);
                             break;
                         }
                         case 1:
+                        {
                             // Bold
-                            m_pWindows[m_ActiveBuffer]->setFlags(XTERM_BOLD);
+                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                            if(!(flags & XTERM_BOLD))
+                            {
+                                flags |= XTERM_BOLD;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                            }
                             break;
+                        }
                         case 7:
                         {
                             // Inverse
                             uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
-                            if(flags & XTERM_INVERSE) flags ^= XTERM_INVERSE; else flags |= XTERM_INVERSE;
+                            if(flags & XTERM_INVERSE)
+                                flags &= ~XTERM_INVERSE;
+                            else
+                                flags |= XTERM_INVERSE;
                             m_pWindows[m_ActiveBuffer]->setFlags(flags);
                             break;
                         }
@@ -268,7 +343,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             default:
                 {
                 char tmp[128];
-                sprintf(tmp, "Unhandled XTerm escape code: %d.", utf32);
+                sprintf(tmp, "Unhandled XTerm escape code: %d/%c.", utf32, utf32);
                 log(tmp);
 
                 m_bChangingState = false;
@@ -373,7 +448,7 @@ void Xterm::Window::renderAll(DirtyRectangle &rect)
 
 void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
 {
-    TermChar *c = &m_pInsert[y*m_Width+x];
+    TermChar *c = &m_pView[y*m_Width+x];
 
     c->fore = m_Fg;
     c->back = m_Bg;
@@ -630,4 +705,230 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
         cursorDown(1, rect);
     }
     render(rect, XTERM_INVERSE);
+}
+
+void Xterm::Window::scrollUp(size_t n, DirtyRectangle &rect)
+{
+}
+
+void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
+{
+    scrollRegionUp(n, rect);
+}
+
+void wmemset(void *p, uint16_t s, size_t l)
+{
+    uint16_t *u = reinterpret_cast<uint16_t*>(p);
+    for(size_t i = 0; i < l; i++)
+        u[i] = s;
+}
+
+void Xterm::Window::eraseScreen(DirtyRectangle &rect)
+{
+    log("eraseScreen");
+    for(size_t row = 0; row < m_Height; row++)
+    {
+        for(size_t col = 0; col < m_Width; col++)
+        {
+            g_NormalFont->render(m_pFramebuffer,
+                                 static_cast<uint32_t>(' '),
+                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                                 g_Colours[m_Fg],
+                                 g_Colours[m_Bg]
+            );
+        }
+    }
+    
+    rect.point(m_OffsetLeft, m_OffsetTop);
+    rect.point(m_OffsetLeft + m_Width, m_OffsetTop + m_Height);
+}
+
+void Xterm::Window::eraseEOL(DirtyRectangle &rect)
+{
+    log("eraseEOL");
+    size_t row = m_CursorY;
+    for(size_t col = m_CursorX; col < m_Width; col++)
+    {
+        g_NormalFont->render(m_pFramebuffer,
+                             static_cast<uint32_t>(' '),
+                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[m_Fg],
+                             g_Colours[m_Bg]
+        );
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::eraseSOL(DirtyRectangle &rect)
+{
+    log("eraseSOL");
+    size_t row = m_CursorY;
+    for(size_t col = m_CursorX; col >= 0; col--)
+    {
+        g_NormalFont->render(m_pFramebuffer,
+                             static_cast<uint32_t>(' '),
+                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[m_Fg],
+                             g_Colours[m_Bg]
+        );
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::eraseLine(DirtyRectangle &rect)
+{
+    log("eraseLine");
+    size_t row = m_CursorY;
+    for(size_t col = 0; col < m_CursorX; col++)
+    {
+        g_NormalFont->render(m_pFramebuffer,
+                             static_cast<uint32_t>(' '),
+                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[m_Fg],
+                             g_Colours[m_Bg]
+        );
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
+{
+    log("eraseChars");
+    size_t row = m_CursorY;
+    for(size_t col = m_CursorX; col >= (m_CursorX - n); col--)
+    {
+        g_NormalFont->render(m_pFramebuffer,
+                             static_cast<uint32_t>(' '),
+                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[m_Fg],
+                             g_Colours[m_Bg]
+        );
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::eraseUp(DirtyRectangle &rect)
+{
+    log("eraseUp");
+    for(size_t row = m_CursorY; row >= 0; row--)
+    {
+        for(size_t col = 0; col < m_Width; col++)
+        {
+            g_NormalFont->render(m_pFramebuffer,
+                                 static_cast<uint32_t>(' '),
+                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                                 g_Colours[m_Fg],
+                                 g_Colours[m_Bg]
+            );
+        }
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::eraseDown(DirtyRectangle &rect)
+{
+    log("eraseDown");
+    for(size_t row = m_CursorY; row < m_Height; row++)
+    {
+        for(size_t col = 0; col < m_Width; col++)
+        {
+            g_NormalFont->render(m_pFramebuffer,
+                                 static_cast<uint32_t>(' '),
+                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                                 g_Colours[m_Fg],
+                                 g_Colours[m_Bg]
+            );
+        }
+    }
+    renderAll(rect);
+}
+
+void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
+{
+    log("deleteCharacters");
+
+    // Shove the characters in this line down to fill the old gap...
+
+    // Start of the delete region
+    size_t deleteStart = m_CursorX;
+
+    // End of the delete region
+    size_t deleteEnd = deleteStart + n;
+
+    // Number of characters to shift
+    size_t numChars = m_Width - deleteEnd;
+    char tmp[512];
+    sprintf(tmp, "h=%d/w=%d/n=%d/x=%d/y=%d/fw=%d/ot=%d/ol=%d/nc=%d", m_Height, m_Width, n, m_CursorX, m_CursorY, m_FbWidth, m_OffsetTop, m_OffsetLeft, numChars);
+    log(tmp);
+    sprintf(tmp, " ds=%d/de=%d", deleteStart, deleteEnd);
+    log(tmp);
+
+    // Location of the first character
+    log("A");
+#if 0
+    size_t locFirstChar = (m_OffsetLeft + (deleteStart * g_NormalFont->getWidth())) + (m_CursorY * m_FbWidth) + m_OffsetTop;
+    size_t locLastChar = (m_OffsetLeft + (deleteEnd * g_NormalFont->getWidth())) + (m_CursorY * m_FbWidth)    + m_OffsetTop;
+    for(size_t y = 0; y < g_NormalFont->getHeight(); y++)
+    {
+        memmove(reinterpret_cast<void*>(&m_pFramebuffer[ locFirstChar ]),
+                reinterpret_cast<void*>(&m_pFramebuffer[ locLastChar ]),
+                (numChars * g_NormalFont->getWidth()) * sizeof(rgb_t));
+
+        /*
+        memset(reinterpret_cast<void*>(&m_pFramebuffer[ locFirstChar ]),
+                static_cast<uint16_t>('+') | (C_CYAN << 8) | (C_WHITE << 12),
+                (locLastChar - locFirstChar) * sizeof(rgb_t));
+        */
+        locFirstChar += m_FbWidth;
+        locLastChar += m_FbWidth;
+    }
+#endif
+
+#if 0
+    memmove(reinterpret_cast<void*>(&m_pView[(m_CursorY * m_Width) + deleteStart]),
+            reinterpret_cast<void*>(&m_pView[(m_CursorY * m_Width) + deleteEnd]),
+            numChars * sizeof(TermChar));
+#endif
+    size_t row = m_CursorY;
+    for(size_t off = 0; off < numChars; off++)
+    {
+        size_t destX = deleteStart + off;
+        size_t srcX = deleteEnd + off;
+        TermChar c = m_pView[(row * m_Width) + srcX];
+
+        g_NormalFont->render(m_pFramebuffer,
+                             c.utf32,
+                             (destX * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[c.fore],
+                             g_Colours[c.back]
+        );
+    }
+    log("B");
+    
+    // Remove the space we just created
+    /*size_t row = m_CursorY;
+    sprintf(tmp, "Clearing to '-': %d, %d, %d", m_Width, numChars, m_Width - numChars);
+    log(tmp);
+    for(size_t col = (m_Width - numChars); col < m_Width; col++)
+    {
+        g_NormalFont->render(m_pFramebuffer,
+                             static_cast<uint32_t>('-'),
+                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
+                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
+                             g_Colours[m_Fg],
+                             g_Colours[m_Bg]
+        );
+    }*/
+    log("C");
+
+    rect.point(m_OffsetLeft, m_OffsetTop);
+    rect.point(m_OffsetLeft + m_Width, m_OffsetTop + m_Height);
 }

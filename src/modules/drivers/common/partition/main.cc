@@ -23,7 +23,14 @@
 #include "apple.h"
 #include <Log.h>
 
+#include <ServiceManager.h>
+#include <ServiceFeatures.h>
+
 #include "Partition.h"
+#include "PartitionService.h"
+
+Service *pService = 0;
+ServiceFeatures *pFeatures = 0;
 
 bool probeDevice(Disk *pDev)
 {
@@ -71,16 +78,41 @@ void searchNode(Device *pDev)
   }
 }
 
+bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
+{
+    // Correct type?
+    if(pFeatures->provides(type))
+    {
+        // We only provide Touch services
+        if(type & ServiceFeatures::touch)
+        {
+            Disk *pDisk = reinterpret_cast<Disk *>(pData);
+            return probeDevice(pDisk);
+        }
+    }
+
+    // Not provided by us, fail!
+    return false;
+}
+
 void entry()
 {
-  // Walk the device tree looking for disks that don't have "partition" children.
-  Device *pDev = &Device::root();
-  searchNode(pDev);
+    // Install the Partition Service
+    pService = new PartitionService;
+    pFeatures = new ServiceFeatures;
+    pFeatures->add(ServiceFeatures::touch);
+    ServiceManager::instance().addService(String("partition"), pService, pFeatures);
+
+    // Walk the device tree looking for disks that don't have "partition" children.
+    Device *pDev = &Device::root();
+    searchNode(pDev);
 }
 
 void exit()
 {
-
+    ServiceManager::instance().removeService(String("partition"));
+    delete pService;
+    delete pFeatures;
 }
 
 MODULE_NAME("partition");

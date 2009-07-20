@@ -164,66 +164,6 @@ void Xterm::write(uint32_t utf32)
   {
     switch (c)
     {
-      case 'M':
-      case 'T':
-      {
-        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
-        for(size_t i = 0; i < nScrollLines; i++)
-          m_pWindows[m_CurrentWindow]->scrollUp();
-        m_bChangingState = false;
-        break;
-      }
-      case 'S':
-      {
-        size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
-        for(size_t i = 0; i < nScrollLines; i++)
-          m_pWindows[m_CurrentWindow]->scrollDown();
-        m_bChangingState = false;
-        break;
-      }
-      case 'P':
-        m_pWindows[m_CurrentWindow]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1);
-        m_bChangingState = false;
-        break;
-      case 'J':
-        switch (m_Cmd.params[0])
-        {
-          case 0: // Erase down.
-            m_pWindows[m_CurrentWindow]->eraseDown();
-            break;
-          case 1: // Erase up.
-            m_pWindows[m_CurrentWindow]->eraseUp();
-            break;
-          case 2: // Erase entire screen and move to home.
-            m_pWindows[m_CurrentWindow]->eraseScreen();
-            break;
-        }
-        m_bChangingState = false;
-        break;
-      case 'K':
-        switch (m_Cmd.params[0])
-        {
-          case 0: // Erase end of line.
-            m_pWindows[m_CurrentWindow]->eraseEOL();
-            break;
-          case 1: // Erase start of line.
-            m_pWindows[m_CurrentWindow]->eraseSOL();
-            break;
-          case 2: // Erase entire line.
-            m_pWindows[m_CurrentWindow]->eraseLine();
-            break;
-        }
-        m_bChangingState = false;
-        break;
-      case 'r':
-        m_pWindows[m_CurrentWindow]->setScrollRegion( (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
-                                                      (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
-        m_bChangingState = false;
-        break;
-      case 'X': // Erase characters (XTERM)
-        m_pWindows[m_CurrentWindow]->eraseChars((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1);
-        m_bChangingState = false;
-        break;
     }
   }
   else

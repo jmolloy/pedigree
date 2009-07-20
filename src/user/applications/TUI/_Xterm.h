@@ -93,6 +93,27 @@ private:
             void scrollRegionUp(size_t n, DirtyRectangle &rect);
             void scrollScreenUp(size_t n, DirtyRectangle &rect);
 
+            void scrollUp(size_t n, DirtyRectangle &rect);
+            void scrollDown(size_t n, DirtyRectangle &rect);
+            
+            /** Erase to end of line. */
+            void eraseEOL(DirtyRectangle &rect);
+            /** Erase to start of line. */
+            void eraseSOL(DirtyRectangle &rect);
+            /** Erase entire line. */
+            void eraseLine(DirtyRectangle &rect);
+            /** Erase n characters. */
+            void eraseChars(size_t n, DirtyRectangle &rect);
+            /** Erase from the current line up. */
+            void eraseUp(DirtyRectangle &rect);
+            /** Erase from the current line down. */
+            void eraseDown(DirtyRectangle &rect);
+            /** Erase the entire screen. */
+            void eraseScreen(DirtyRectangle &rect);
+
+            /** Deletes n characters */
+            void deleteCharacters(size_t n, DirtyRectangle &rect);
+
         private:
             Window(const Window &);
             Window &operator = (const Window &);

@@ -23,6 +23,8 @@
 #include <machine/Disk.h>
 #include <utilities/Cache.h>
 
+/// \todo Expose functionality here as a Service - specifically creating/removing disks.
+
 /// 4 KB is enough to fit 8 HD sectors and 2 CD sectors, which makes it a good
 /// choice for the page cache size.
 #define FILEDISK_PAGE_SIZE      4096

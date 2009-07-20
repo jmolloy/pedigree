@@ -18,6 +18,8 @@
 #include "LoDisk.h"
 #include <assert.h>
 
+#include <ServiceManager.h>
+
 FileDisk::FileDisk(String file, AccessType mode) :
     m_pFile(0), m_Mode(mode), m_PageCache()
 {
@@ -25,7 +27,22 @@ FileDisk::FileDisk(String file, AccessType mode) :
     if(!m_pFile)
         WARNING("FileDisk: '" << file << "' doesn't exist...");
     else
+    {
         m_pFile->increaseRefCount(false);
+
+        // Chat to the partition service and let it pick up that we're around now
+        ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
+        Service         *pService  = ServiceManager::instance().getService(String("partition"));
+        if(pFeatures->provides(ServiceFeatures::touch))
+        {
+            if(pService)
+                pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(this), sizeof(FileDisk));
+            else
+                ERROR("FileDisk: Couldn't tell the partition service about the new disk presence");
+        }
+        else
+            ERROR("FileDisk: Partition service doesn't appear to support touch");
+    }
 }
 
 FileDisk::~FileDisk()
