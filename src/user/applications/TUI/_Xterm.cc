@@ -85,12 +85,12 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             if (utf32 == '0')
             {
                 // \e(0 -- enter alternate character mode.
-                // m_pWindows[m_CurrentWindow]->setLineDrawingMode(true);
+                m_pWindows[m_ActiveBuffer]->setLineRenderMode(true);
             }
             else if (utf32 == 'B')
             {
                 // \e(B -- exit line drawing mode.
-                // m_pWindows[m_CurrentWindow]->setLineDrawingMode(false);
+                m_pWindows[m_ActiveBuffer]->setLineRenderMode(false);
             }
             m_bChangingState = false;
             return;
@@ -378,6 +378,27 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             default:
+                // Line drawing
+                if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
+                {
+                    switch (utf32)
+                    {
+                        case 'j': utf32 = 188; break; // Lower right corner
+                        case 'k': utf32 = 187; break; // Upper right corner
+                        case 'l': utf32 = 201; break; // Upper left corner
+                        case 'm': utf32 = 200; break; // Lower left corner
+                        case 'n': utf32 = 206; break; // Crossing lines.
+                        case 'q': utf32 = 205; break; // Horizontal line.
+                        case 't': utf32 = 204; break; // Left 'T'
+                        case 'u': utf32 = 185; break; // Right 'T'
+                        case 'v': utf32 = 202; break; // Bottom 'T'
+                        case 'w': utf32 = 203; break; // Top 'T'
+                        case 'x': utf32 = 186; break; // Vertical bar
+                        default:
+                        ;
+                    }
+                }
+
                 m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
         }
     }
@@ -385,7 +406,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
 Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(7), m_Bg(0), m_Flags(0)
+    m_pInsert(0), m_pView(0), m_Fg(7), m_Bg(0), m_Flags(0), m_bLineRender(false)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));

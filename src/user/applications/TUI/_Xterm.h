@@ -114,6 +114,16 @@ private:
             /** Deletes n characters */
             void deleteCharacters(size_t n, DirtyRectangle &rect);
 
+            void setLineRenderMode(bool b)
+            {
+                m_bLineRender = b;
+            }
+
+            bool getLineRenderMode()
+            {
+                return m_bLineRender;
+            }
+
         private:
             Window(const Window &);
             Window &operator = (const Window &);
@@ -138,6 +148,8 @@ private:
 
             uint8_t m_Fg, m_Bg;
             uint8_t m_Flags;
+
+            bool m_bLineRender;
     };
 
     Xterm(const Xterm &);
