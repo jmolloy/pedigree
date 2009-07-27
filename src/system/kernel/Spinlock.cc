@@ -16,6 +16,8 @@
 #include <Spinlock.h>
 #include <processor/Processor.h>
 
+#include <panic.h>
+
 void Spinlock::acquire()
 {
   // Save the current irq status.
@@ -38,6 +40,9 @@ void Spinlock::acquire()
 #ifndef MULTIPROCESSOR
 //      FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
         asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
+
+        // Panic in case there's a return from the debugger (or the debugger isn't available)
+        panic("Spinlock has deadlocked");
 #endif
   }
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));

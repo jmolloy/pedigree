@@ -22,6 +22,7 @@
 #include "../x86_common/PhysicalMemoryManager.h"
 #include <processor/PageFaultHandler.h>
 #include <process/initialiseMultitasking.h>
+#include <SlabAllocator.h>
 
 // Multiprocessor headers
 #if defined(MULTIPROCESSOR)

@@ -28,6 +28,8 @@
 #include <Log.h>
 #include <utilities/utility.h>
 
+#include <panic.h>
+
 void _assert(bool b, const char *file, int line, const char *func)
 {
     if(b)
@@ -38,5 +40,8 @@ void _assert(bool b, const char *file, int line, const char *func)
     Processor::breakpoint();
 
     ERROR("You may not resume after a failed assertion.");
+
+    // Best reason for a return is that the debugger isn't active. Either way, it's an error condition, panic.
+    panic("assertion failed");
     Processor::halt();
 }

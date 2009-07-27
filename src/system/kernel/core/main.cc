@@ -113,12 +113,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 
-  // Initialise the boot output.
-  bootIO.initialise();
-
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
+
+  // Initialise the boot output.
+  bootIO.initialise();
 
   // Spew out a starting string.
   HugeStaticString str;

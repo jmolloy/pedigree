@@ -27,8 +27,8 @@ void *dlmallocSbrk(ssize_t incr)
 {
   // NOTE: incr is already page aligned
 
-  Spinlock lock;
-  lock.acquire();
+  //Spinlock lock;
+  //lock.acquire();
 
   // Get the current address space
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -52,7 +52,7 @@ void *dlmallocSbrk(ssize_t incr)
     Processor::switchAddressSpace(VAddressSpace);
 #endif
 
-  lock.release();
+  //lock.release();
 
   return pHeap;
 }
