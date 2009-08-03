@@ -22,7 +22,10 @@
 
 #include <process/Scheduler.h>
 #include <processor/PhysicalMemoryManager.h>
+
+#define MACHINE_FORWARD_DECL_ONLY
 #include <machine/Machine.h>
+#include <machine/Timer.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
@@ -43,27 +46,27 @@ extern "C"
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
 
-SIGNAL_HANDLER_EXIT     (sigabrt, SIGABRT);
-SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM);
-SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS);
-SIGNAL_HANDLER_EMPTY    (sigchld);
-SIGNAL_HANDLER_EMPTY    (sigcont); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigfpe, SIGFPE); // floating point exception signal
-SIGNAL_HANDLER_EXIT     (sighup, SIGHUP);
-SIGNAL_HANDLER_EXITMSG  (sigill, SIGILL, SSIGILL);
-SIGNAL_HANDLER_EXIT     (sigint, SIGINT);
-SIGNAL_HANDLER_EXIT     (sigkill, SIGKILL);
-SIGNAL_HANDLER_EXIT     (sigpipe, SIGPIPE);
-SIGNAL_HANDLER_EXIT     (sigquit, SIGQUIT);
-SIGNAL_HANDLER_EXITMSG  (sigsegv, SIGSEGV, SSIGSEGV);
-SIGNAL_HANDLER_EMPTY    (sigstop); /// \todo Continue & Pause execution
-SIGNAL_HANDLER_EXIT     (sigterm, SIGTERM);
-SIGNAL_HANDLER_EMPTY    (sigtstp); // terminal stop
-SIGNAL_HANDLER_EMPTY    (sigttin); // background process attempts read
-SIGNAL_HANDLER_EMPTY    (sigttou); // background process attempts write
-SIGNAL_HANDLER_EMPTY    (sigusr1);
-SIGNAL_HANDLER_EMPTY    (sigusr2);
-SIGNAL_HANDLER_EMPTY    (sigurg); // high bandwdith data available at a sockeet
+SIGNAL_HANDLER_EXIT     (sigabrt, SIGABRT)
+SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
+SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS)
+SIGNAL_HANDLER_EMPTY    (sigchld)
+SIGNAL_HANDLER_EMPTY    (sigcont) /// \todo Continue & Pause execution
+SIGNAL_HANDLER_EXIT     (sigfpe, SIGFPE) // floating point exception signal
+SIGNAL_HANDLER_EXIT     (sighup, SIGHUP)
+SIGNAL_HANDLER_EXITMSG  (sigill, SIGILL, SSIGILL)
+SIGNAL_HANDLER_EXIT     (sigint, SIGINT)
+SIGNAL_HANDLER_EXIT     (sigkill, SIGKILL)
+SIGNAL_HANDLER_EXIT     (sigpipe, SIGPIPE)
+SIGNAL_HANDLER_EXIT     (sigquit, SIGQUIT)
+SIGNAL_HANDLER_EXITMSG  (sigsegv, SIGSEGV, SSIGSEGV)
+SIGNAL_HANDLER_EMPTY    (sigstop) /// \todo Continue & Pause execution
+SIGNAL_HANDLER_EXIT     (sigterm, SIGTERM)
+SIGNAL_HANDLER_EMPTY    (sigtstp) // terminal stop
+SIGNAL_HANDLER_EMPTY    (sigttin) // background process attempts read
+SIGNAL_HANDLER_EMPTY    (sigttou) // background process attempts write
+SIGNAL_HANDLER_EMPTY    (sigusr1)
+SIGNAL_HANDLER_EMPTY    (sigusr2)
+SIGNAL_HANDLER_EMPTY    (sigurg) // high bandwdith data available at a sockeet
 
 SIGNAL_HANDLER_EMPTY    (sigign);
 

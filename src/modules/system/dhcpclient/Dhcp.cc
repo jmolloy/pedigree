@@ -296,8 +296,8 @@ void entry()
           break;
         }
         DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
-        DhcpOptionMagicCookie thisCookie = *reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
-        if(thisCookie.cookie != MAGIC_COOKIE)
+        DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
+        if(thisCookie->cookie != MAGIC_COOKIE)
         {
           NOTICE("Magic cookie incorrect!");
           break;
@@ -403,8 +403,8 @@ void entry()
           break;
         }
         DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
-        DhcpOptionMagicCookie thisCookie = *reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
-        if(thisCookie.cookie != MAGIC_COOKIE)
+        DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
+        if(thisCookie->cookie != MAGIC_COOKIE)
         {
           NOTICE("Magic cookie incorrect!");
           break;

@@ -30,7 +30,7 @@
 #include <machine/Machine.h>
 #include <linker/DynamicLinker.h>
 #include <panic.h>
-#include <assert.h>
+#include <utilities/assert.h>
 
 #include <kernel/core/BootIO.h>
 

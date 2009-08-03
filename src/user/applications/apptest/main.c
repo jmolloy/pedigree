@@ -17,7 +17,8 @@ int  main(int argc, char* argv[])
     fread(str, 1, 64, stdin);
 
     printf("Read.\n");
-    for(;;);
+    
+#if 0
     int hSocket;                 /* handle to socket */
     struct hostent *pHostInfo;   /* holds info about a machine */
     struct sockaddr_in Address;  /* Internet socket address stuct */
@@ -73,7 +74,7 @@ int  main(int argc, char* argv[])
 
     printf("Sending HTTP request...\n");
 
-    char *buffer = "GET / HTTP/1.0\r\n\r\n";
+    const char *buffer = "GET / HTTP/1.0\r\n\r\n";
 
     send(hSocket,buffer,strlen(buffer), 0);
 
@@ -92,4 +93,7 @@ int  main(int argc, char* argv[])
         printf("\nCould not close socket\n");
         return 0;
     }
+#endif
+
+    return 0;
 }

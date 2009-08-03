@@ -36,7 +36,7 @@
   * Specifying RamOnly causes the file to be stored only in RAM with no changes
   * committed to the file.
   */
-class FileDisk : Disk
+class FileDisk : public Disk
 {
     public:
 

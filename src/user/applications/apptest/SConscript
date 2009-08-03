@@ -18,7 +18,6 @@ env.Alias("apps", objname)
 
 # Dependencies
 env.Depends(objname, "crt0")
-env.Depends(objname, "subsys")
 env.Depends(objname, "libs")
 
 # To include a new subdirectory just add to the list.
@@ -63,5 +62,13 @@ tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
+cflags = tmp['CFLAGS']
+
+# Only for this application is this convoluted *MESS* required...
+cflags = cflags.replace('-nostdinc', '')
+cflags = cflags.replace('-ffreestanding', '')
+cflags = cflags.replace('-nostdlib', '')
+tmp['CFLAGS'] = cflags
+
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostdlib')
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostartfiles')

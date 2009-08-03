@@ -33,6 +33,29 @@ defines = [
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
 ]
 
+# Default CFLAGS
+default_cflags = '-std=gnu99 -march=i486 -fno-builtin -nostdlib -nostdinc -ffreestanding -m32 -g0 -O3 '
+
+# Default CXXFLAGS
+default_cxxflags = '-std=gnu++98 -march=i486 -fno-builtin -nostdlib -nostdinc -ffreestanding -fno-rtti -fno-exceptions -m32 -g0 -O3 '
+
+# Entry level warning flags
+default_cflags += '-Wno-long-long '
+default_cxxflags += '-Weffc++ -Wold-style-cast '
+
+# Extra warnings (common to C/C++)
+extra_warnings = '-Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
+default_cflags += '-Wnested-externs '
+default_cflags += extra_warnings
+default_cxxflags += extra_warnings
+
+# Turn off some stuff that kills the build
+default_cflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format'
+default_cxxflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format'
+
+# Default linker flags
+default_linkflags = '-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'
+
 ####################################
 # Default build flags (Also used to auto-generate help)
 ####################################
@@ -43,17 +66,18 @@ opts.AddVariables(
     ('CC','Sets the C compiler to use.'),
     ('CXX','Sets the C++ compiler to use.'),
     ('AS','Sets the assembler to use.'),
+    ('AR','Sets the archiver to use.'),
     ('LINK','Sets the linker to use.'),
-    ('CFLAGS','Sets the C compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3'),
-    ('CXXFLAGS','Sets the C++ compiler flags.','-march=i486 -fno-builtin -nostdlib -m32 -g0 -O3 -Weffc++ -Wold-style-cast -Wno-long-long -fno-rtti -fno-exceptions'),
+    ('CFLAGS','Sets the C compiler flags.',default_cflags),
+    ('CXXFLAGS','Sets the C++ compiler flags.',default_cxxflags),
     ('ASFLAGS','Sets the assembler flags.','-f elf'),
-    ('LINKFLAGS','Sets the linker flags','-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'),
+    ('LINKFLAGS','Sets the linker flags',default_linkflags),
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
-    BoolVariable('warnings', 'compilation with -Wall and similiar', 1),
+    BoolVariable('warnings', 'If nonzero, compilation without -Werror', 1),
 	BoolVariable('installer', 'Build the installer', 0)
 )
 
@@ -61,8 +85,6 @@ env = Environment(options = opts,tools = ['default'],ENV = os.environ)
 #^-- Create a new environment object passing the options
 Help(opts.GenerateHelpText(env))
 #^-- Create the scons help text from the options we specified earlier
-opts.Save('options.cache',env)
-#^-- Save the cache file over the old one
 
 # Pedigree is to be built on a POSIXy host (Cygwin on Windows)
 env.Platform('posix')
@@ -89,17 +111,19 @@ if env['CROSS'] != '':
     env['LD'] = crossBase + 'gcc'
     env['AS'] = crossBase + 'as'
     env['AR'] = crossBase + 'ar'
+    env['LINK'] = env['LD']
+env['LD'] = env['LINK']
 
 ####################################
 # Compiler/Target specific settings
 ####################################
 # Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo -e "int main(void) {return 0;}" | ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
+out = commands.getoutput('echo -e "int main(void) {return 0;}" | LANG=C ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
 if not 'unrecognized option' in out:
     env['CXXFLAGS'] += ' -fno-stack-protector'
     env['CFLAGS'] += ' -fno-stack-protector'
 
-out = commands.getoutput(env['CXX'] + ' -v')
+out = commands.getoutput("LANG=C " + env['CXX'] + ' -v')
 #^-- The old script used --dumpmachine, which isn't always present
 tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
 
@@ -130,9 +154,7 @@ else:
         
 # LIBGCC path
 if env['LIBGCC'] == '':
-    crossPath = os.path.dirname(env['CC'])
-    
-    libgccPath = commands.getoutput(env['CXX'] + ' --print-libgcc-file-name')
+    libgccPath = commands.getoutput('LANG=C ' + env['CXX'] + ' --print-libgcc-file-name')
     if not os.path.exists(libgccPath):
         print "Error: libgcc path could not be determined. Use the LIBGCC option."
         Exit(1)
@@ -150,8 +172,8 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
 defines += ['__UD_STANDALONE__']
 #^-- Required no matter what.
 
-if env['warnings']:
-    env['CXXFLAGS'] += ' -Wall'
+if not env['warnings']:
+    env['CXXFLAGS'] += ' -Werror'
 
 if env['verbose_link']:
     env['LINKFLAGS'] += ' --verbose'
@@ -188,6 +210,10 @@ if not env['verbose']:
 env['CPPDEFINES'] = []
 env['CPPDEFINES'] = [i for i in defines]
 #^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
+
+# Save the cache, all the options are configured
+opts.Save('options.cache',env)
+#^-- Save the cache file over the old one
 
 ####################################
 # Generate Version.cc

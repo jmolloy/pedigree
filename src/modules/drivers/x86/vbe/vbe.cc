@@ -119,7 +119,7 @@ void entry()
       return;
   }
 
-  uintptr_t fbAddr;
+  uintptr_t fbAddr = 0;
   uint16_t *modes = reinterpret_cast<uint16_t*> (REALMODE_PTR(info->videomodes));
   for (int i = 0; modes[i] != 0xFFFF; i++)
   {

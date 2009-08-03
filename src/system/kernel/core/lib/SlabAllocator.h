@@ -138,6 +138,9 @@ class SACache
         // Gets the bitmap location given a slab
         uint8_t *getBitmap(uintptr_t slab);
     private:
+        SACache(const SACache &);
+        const SACache& operator = (const SACache &);
+
         /// First slab
         uintptr_t m_FirstSlab;
 
@@ -179,6 +182,9 @@ class SlabAllocator
             return m_FirstCache;
         }
     private:
+        SlabAllocator(const SlabAllocator&);
+        const SlabAllocator& operator = (const SlabAllocator&);
+
         static SlabAllocator m_Instance;
 
         SACache *m_FirstCache;

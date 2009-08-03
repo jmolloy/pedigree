@@ -19,7 +19,7 @@ OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
 SRCDIR=$1
-HDFILES="login syscall-test net-test login TUI"
+HDFILES="login syscall-test net-test TUI"
 
 init() {
     mkdir -p $MOUNTPT
@@ -223,14 +223,14 @@ elif which mcopy >/dev/null 2>&1; then
 
   sh $SRCDIR/../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
 
+  # Make this the root disk
   touch ./.pedigree-root
-
-  mmd -Do applications libraries modules etc usr tmp
-
-  # make this the root disk
   mcopy -Do ./.pedigree-root C:/
 
   rm ./.pedigree-root
+
+  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
+  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
 
   mcopy -Do $SRCDIR/../scripts/termcap C:/etc
 
@@ -243,23 +243,6 @@ elif which mcopy >/dev/null 2>&1; then
 
   mcopy -Do $SRCDIR/libc.so C:/libraries
   mcopy -Do $SRCDIR/libm.so C:/libraries
-
-  #mkdir -p ./tmp
-
-  # This was cp -a, but OS X doesn't have -a. On linux -a is equivalent to:
-  # -dpR. OS X doesn't have -d, but -d is the same as -P --preserve=links.
-  # OS X doesn't have --preserve either, but it is how -P is implemented, so
-  # -a is best replaced with -pPR.
-  #cp -p $SRCDIR/../images/i686-elf/.bashrc ./tmp
-  #cp -pPR $SRCDIR/../images/i686-elf/* ./tmp
-
-  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
-  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
-
-  #mcopy -Do -s ./tmp/.bashrc C:/
-  #mcopy -Do -s ./tmp/* C:/
-
-  #rm -rf ./tmp
 
   echo Only creating FAT disk image as \`losetup\' was not found.
 else

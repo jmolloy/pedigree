@@ -82,7 +82,7 @@ enum Rtl8139Constants {
 
     RTL_BUFF_SIZE = 0x10000,    // The size of the Rx and Tx buffers
 
-    RTL_PACK_MAX = 0x10000,     // The maximal size of a packet
+    RTL_PACK_MAX = 0xFFFF,     // The maximal size of a packet
     RTL_PACK_MIN = 0x16,        // The minimal size of a packet
 };
 

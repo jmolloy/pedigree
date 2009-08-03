@@ -27,7 +27,7 @@
 #include <utilities/Tree.h>
 #include <LockGuard.h>
 
-#include <assert.h>
+#include <utilities/assert.h>
 
 #include "PosixProcess.h"
 

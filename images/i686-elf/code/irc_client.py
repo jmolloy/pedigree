@@ -29,7 +29,7 @@ def win(stdscr):
 
     server.setblocking(1)
     
-    server.connect(('irc.freenode.net', 6667))
+    server.connect(('10.0.0.1', 6667))
 
     server.setblocking(0)
 

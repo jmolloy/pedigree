@@ -222,12 +222,6 @@ protected:
 
   /** Root filesystem node. */
   File *m_pRoot;
-
-  /** Disk lock
-    * \note Will slow down access as it'll ensure only one disk operation occurs at once.
-    * \todo #ifdef this behaviour out, or remove it altogether
-    */
-  Mutex m_DiskLock;
 };
 
 #endif

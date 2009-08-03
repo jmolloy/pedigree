@@ -1,12 +1,10 @@
 #ifndef _NETINET_IN_H
 #define _NETINET_IN_H
 
-#ifndef COMPILING_SUBSYS
 #include <inttypes.h>
 #include <sys/socket.h>
-#endif
 
-// htons & friends, if needed
+/* Grab htons & friends, if needed */
 #ifndef htons
 #include <net/hton.h>
 #endif

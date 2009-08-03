@@ -26,10 +26,12 @@ int h_errno; // required by networking code
 
 #include "newlib.h"
 
-// Needs to be seperated, otherwise the compiler's time.h is used.
-#include "include/time.h"
-
+#include <time.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
 
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
@@ -132,12 +134,12 @@ void _exit(int val)
     while (1);
 }
 
-int fork()
+int fork(void)
 {
     return (int)syscall0(POSIX_FORK);
 }
 
-int vfork()
+int vfork(void)
 {
     return fork();
 }
@@ -147,7 +149,7 @@ int fstat(int file, struct stat *st)
     return (int)syscall2(POSIX_FSTAT, (int)file, (int)st);
 }
 
-int getpid()
+int getpid(void)
 {
     return (int)syscall0(POSIX_GETPID);
 }
@@ -379,23 +381,23 @@ int gettimeofday(struct timeval *tv, void *tz)
     return 0;
 }
 
-uid_t getuid()
+uid_t getuid(void)
 {
     return (int)syscall0(POSIX_GETUID);
 }
 
-gid_t getgid()
+gid_t getgid(void)
 {
     return (int)syscall0(POSIX_GETGID);
 }
 
-uid_t geteuid()
+uid_t geteuid(void)
 {
     STUBBED("geteuid");
     return getuid();
 }
 
-gid_t getegid()
+gid_t getegid(void)
 {
     STUBBED("getegid");
     return getgid();
@@ -546,17 +548,17 @@ int select(int nfds, struct fd_set * readfds,
     return (int)syscall5(POSIX_SELECT, nfds, (int)readfds, (int)writefds, (int)errorfds, (int)timeout);
 }
 
-void setgrent()
+void setgrent(void)
 {
     STUBBED("setgrent");
 }
 
-void endgrent()
+void endgrent(void)
 {
     STUBBED("endgrent");
 }
 
-struct group *getgrent()
+struct group *getgrent(void)
 {
     STUBBED("getgrent");
     errno = ENOSYS;
@@ -566,17 +568,17 @@ struct group *getgrent()
 static struct passwd g_passwd;
 int g_passwd_num = 0;
 char g_passwd_str[256];
-void setpwent()
+void setpwent(void)
 {
     g_passwd_num = 0;
 }
 
-void endpwent()
+void endpwent(void)
 {
     g_passwd_num = 0;
 }
 
-struct passwd *getpwent()
+struct passwd *getpwent(void)
 {
     if (syscall3(POSIX_GETPWENT, (int)&g_passwd, g_passwd_num, (int)&g_passwd_str) != 0)
         return 0;
@@ -765,13 +767,13 @@ ssize_t recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockadd
     return ret;
 }
 
-long recvmsg(int sock, struct msghdr* msg, int flags)
+ssize_t recvmsg(int sock, struct msghdr* msg, int flags)
 {
     STUBBED("recvmsg");
     return -1;
 }
 
-long sendmsg(int sock, const struct msghdr* msg, int flags)
+ssize_t sendmsg(int sock, const struct msghdr* msg, int flags)
 {
     STUBBED("sendmsg");
     return -1;
@@ -953,7 +955,7 @@ struct servent* getservbyname(const char *name, const char *proto)
     return 0;
 }
 
-void endservent()
+void endservent(void)
 {
     STUBBED("endservent");
 }
@@ -964,7 +966,7 @@ struct servent* getservbyport(int port, const char *proto)
     return 0;
 }
 
-struct servent* getservent()
+struct servent* getservent(void)
 {
     STUBBED("setservent");
     return 0;
@@ -975,7 +977,7 @@ void setservent(int stayopen)
     STUBBED("setservent");
 }
 
-void endprotoent()
+void endprotoent(void)
 {
     STUBBED("endprotoent");
 }
@@ -1013,7 +1015,7 @@ struct protoent* getprotobynumber(int proto)
     return 0;
 }
 
-struct protoent* getprotoent()
+struct protoent* getprotoent(void)
 {
     STUBBED("getprotoent");
     return 0;
@@ -1024,13 +1026,13 @@ void setprotoent(int stayopen)
     STUBBED("setprotoent");
 }
 
-int getgrnam()
+int getgrnam(void)
 {
     STUBBED("getgrnam");
     return 0;
 }
 
-int getgrgid()
+int getgrgid(void)
 {
     STUBBED("getgrgid");
     return 0;
@@ -1048,7 +1050,7 @@ int fsync(int fd)
     return 0;
 }
 
-int inet_pton()
+int inet_pton(void)
 {
     STUBBED("inet_pton");
     return -1;
@@ -1071,13 +1073,13 @@ int ftime(struct timeb *tp)
     return -1;
 }
 
-int sigmask()
+int sigmask(void)
 {
     STUBBED("sigmask");
     return -1;
 }
 
-int sigblock()
+int sigblock(void)
 {
     STUBBED("sigblock");
     return -1;
@@ -1089,7 +1091,7 @@ int sigsetmask(int mask)
     return -1;
 }
 
-int siggetmask()
+int siggetmask(void)
 {
     STUBBED("siggetmask");
     return -1;
@@ -1143,7 +1145,7 @@ int sigsuspend(const long* sigmask)
     return -1;
 }
 
-void _init_signals()
+void _init_signals(void)
 {
     syscall0(PEDIGREE_INIT_SIGRET);
 }
@@ -1184,7 +1186,7 @@ int dlclose(void *handle)
     return 0;
 }
 
-char *dlerror()
+char *dlerror(void)
 {
     STUBBED("dlerror");
     return 0;
@@ -1201,7 +1203,7 @@ void herror(const char *s)
     printf("%s: %s\n", s, buff);
 }
 
-int makedev()
+int makedev(void)
 {
     STUBBED("makedev");
     return -1;
@@ -1231,7 +1233,7 @@ int fchmod(int fildes, mode_t mode)
     return -1;
 }
 
-void sync()
+void sync(void)
 {
     STUBBED("sync");
 }
@@ -1499,7 +1501,7 @@ int getgroups(int gidsetsize, gid_t grouplist[])
     }
 }
 
-size_t getpagesize()
+size_t getpagesize(void)
 {
     return sysconf(_SC_PAGESIZE);
 }
@@ -1517,7 +1519,7 @@ char *realpath(const char *file_name, char *resolved_name)
     return 0;
 }
 
-pid_t setsid()
+pid_t setsid(void)
 {
     return syscall0(POSIX_SETSID);
 }
@@ -1527,12 +1529,12 @@ int setpgid(pid_t pid, pid_t pgid)
     return syscall2(POSIX_SETPGID, (int) pid, (int) pgid);
 }
 
-pid_t getpgrp()
+pid_t getpgrp(void)
 {
     return syscall0(POSIX_GETPGRP);
 }
 
-pid_t getppid()
+pid_t getppid(void)
 {
     STUBBED("getppid");
     return 0;

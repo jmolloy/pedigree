@@ -28,19 +28,29 @@ size_t strlen(const char *src)
 
 int strcpy(char *dest, const char *src)
 {
+  int n = 0;
   while (*src)
+  {
     *dest++ = *src++;
+    n++;
+  }
   *dest = '\0';
+
+  return n;
 }
 
 int strncpy(char *dest, const char *src, int len)
 {
+  int n = 0;
   while (*src && len)
   {
     *dest++ = *src++;
     len--;
+    n++;
   }
   *dest = '\0';
+
+  return n;
 }
 
 int sprintf(char *buf, const char *fmt, ...)
@@ -104,6 +114,8 @@ char *strcat(char *dest, const char *src)
     dest[di++] = src[si++];
   
   dest[di] = '\0';
+
+  return dest;
 }
 
 char *strncat(char *dest, const char *src, int n)
@@ -117,6 +129,8 @@ char *strncat(char *dest, const char *src, int n)
   }
   
   dest[di] = '\0';
+
+  return dest;
 }
 
 int isspace(char c)
@@ -212,7 +226,7 @@ char *strrchr(const char *str, char target)
 
 char *strchr(const char *str, char target)
 {
-  int i;
+  size_t i;
   for (i = 0; i < strlen(str); i++)
     if (str[i] == target)
       return (char*)&str[i];

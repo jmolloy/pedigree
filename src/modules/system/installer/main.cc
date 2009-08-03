@@ -31,13 +31,14 @@
 #include <linker/DynamicLinker.h>
 #include <panic.h>
 
-#include "../../kernel/core/BootIO.h"
+#include <kernel/core/BootIO.h>
 
 #include <users/UserManager.h>
 
 #include <utilities/TimeoutGuard.h>
 
 #include <ramfs/RamFs.h>
+#include <lodisk/LoDisk.h>
 
 extern BootIO bootIO;
 
@@ -57,7 +58,7 @@ static bool probeDisk(Disk *pDisk)
         {
             NormalStaticString s;
             s += alias;
-            s += ":/.pedigree-root";
+            s += "»/.pedigree-root";
 
             File* f = VFS::instance().find(String(static_cast<const char*>(s)));
             if (f && !bRootMounted)
@@ -100,25 +101,40 @@ void init_install()
 {
     static HugeStaticString str;
 
-    // Setup the RAMFS for the mount table before the real HDDs. Doing it early
-    // means if someone happens to have a disk with a volume label that matches
-    // "ramfs", we don't end up failing later.
-    RamFs *ramFs = new RamFs;
-    ramFs->initialise(0);
-
-    // Add it to the VFS
-    VFS::instance().addAlias(ramFs, ramFs->getVolumeLabel());
-
     // Mount all available filesystems.
     if (!findDisks(&Device::root()))
     {
 //     FATAL("No disks found!");
     }
 
+    // Setup the RAMFS for the mount table before the real HDDs. Doing it early
+    // means if someone happens to have a disk with a volume label that matches
+    // "ramfs", we don't end up failing later.
+    FileDisk *pRamDisk = new FileDisk(String("PEDIGREEINSTALL»/disk.img"), FileDisk::RamOnly);
+    if(pRamDisk && pRamDisk->initialise())
+        NOTICE("The installer module got a ramdisk from disk.img.");
+    else
+        FATAL("Couldn't initialise ramdisk!");
+
+    // Shove the ramdisk into the device tree somewhere
+    pRamDisk->setParent(&Device::root());
+    Device::root().addChild(pRamDisk);
+
+    // Mount it in the VFS
+    findDisks(pRamDisk);
+
+    FATAL("ramdisk is go");
+    
+    /*RamFs *ramFs = new RamFs;
+    ramFs->initialise(0);
+
+    // Add it to the VFS
+    VFS::instance().addAlias(ramFs, ramFs->getVolumeLabel());*/
+
     // Build the mount table
-    if (!VFS::instance().createFile(String("ramfs:/mount.tab"), 0777, 0))
+    if (!VFS::instance().createFile(String("ramfs»/mount.tab"), 0777, 0))
         FATAL("Couldn't create mount table in the RAMFS");
-    File* mountTab = VFS::instance().find(String("ramfs:/mount.tab"));
+    File* mountTab = VFS::instance().find(String("ramfs»/mount.tab"));
 
     List<VFS::Alias*> myAliases = VFS::instance().getAliases();
     NormalStaticString myMounts;
@@ -147,7 +163,7 @@ void init_install()
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
-    str += "Loading init program (root:/applications/login)\n";
+    str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -165,7 +181,7 @@ void init_install()
     pProcess->description().clear();
     pProcess->description().append("init");
 
-    pProcess->setCwd(VFS::instance().find(String("root:/")));
+    pProcess->setCwd(VFS::instance().find(String("root»/")));
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
@@ -179,7 +195,7 @@ void destroy_install()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root:/applications/login"));
+    File* initProg = VFS::instance().find(String("root»/applications/login"));
     if (!initProg)
     {
         FATAL("Unable to load init program!");

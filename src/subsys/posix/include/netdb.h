@@ -1,9 +1,7 @@
 #ifndef _NETDB_H
 #define _NETDB_H
 
-#ifndef COMPILING_SUBSYS
 #include <stdint.h>
-#endif
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -17,7 +15,6 @@ struct hostent
   char** h_addr_list;
   char* h_addr;
 };
-//#define h_addr h_addr_list[0]
 
 struct netent
 {

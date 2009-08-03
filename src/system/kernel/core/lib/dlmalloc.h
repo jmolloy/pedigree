@@ -18,6 +18,7 @@
 #define DLMALLOC_H
 
 #include <processor/types.h>
+#include <utilities/utility.h>
 #define ABORT dlmallocAbort
 #define HAVE_MORECORE 1
 #define MORECORE dlmallocSbrk

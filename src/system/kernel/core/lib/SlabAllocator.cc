@@ -21,7 +21,7 @@
 #include "dlmalloc.h"
 
 #include <panic.h>
-#include <assert.h>
+#include <utilities/assert.h>
 
 #include <LockGuard.h>
 #include <Spinlock.h>

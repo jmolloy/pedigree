@@ -22,6 +22,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <stdlib.h>
 
 // PID of the process we're running
 int g_RunningPid = -1;
@@ -54,9 +55,11 @@ int main(int argc, char **argv)
   // For the installer, just run Python
   printf("Loading installer, please wait...\n");
 
+  /*
   static char *app_argv[] = {"root:/applications/python", "root:/code/installer/install.py", 0};
   static char *app_env[] = { "TERM=xterm", "PATH=/applications", (char *)0 };
   execve("root:/applications/python", app_argv, app_env);
+  */
 
   printf("FATAL: Couldn't load Python!\n");
 

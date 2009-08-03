@@ -39,7 +39,8 @@ Ext2Filesystem::Ext2Filesystem() :
 
 Ext2Filesystem::~Ext2Filesystem()
 {
-    delete [] m_pGroupDescriptors;
+    if(m_pGroupDescriptors)
+        delete [] m_pGroupDescriptors;
     if(m_pRoot)
         delete m_pRoot;
 }

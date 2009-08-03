@@ -14,7 +14,7 @@ struct utimbuf
 int utime(const char *path, const struct utimbuf *times);
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif /* _SYS_UTIME_H */

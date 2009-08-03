@@ -17,6 +17,8 @@
 #ifndef UD_SYN_H
 #define UD_SYN_H
 
+#include <utilities/utility.h>
+
 //include <stdio.h>
 #include <stdarg.h>
 #include "types.h"

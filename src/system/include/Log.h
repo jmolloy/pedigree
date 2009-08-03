@@ -51,18 +51,18 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Error << __FILE__ << ":" << __LINE__ << ": " << Flush; \
     Log::instance() << Log::Error << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
   while (0)
+
+    /* Log::instance() << Log::Error << __FILE__ << ":" << __LINE__ << ": " << Flush; \ */
 
 /** Add a fatal message to the log */
 #define FATAL(text) \
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Fatal << __FILE__ << ":" << __LINE__ << ": " << Flush; \
     Log::instance() << Log::Fatal << text << Flush; \
     Log::instance().m_Lock.release(); \
     Processor::breakpoint(); \

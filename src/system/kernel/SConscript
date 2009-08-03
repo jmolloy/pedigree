@@ -40,9 +40,12 @@ files = [
     Glob('config/*.cc')
 ]
 
+libudis86_files = [
+]
+
 # To include a new directory for includes, just add it to the list
 include = [
-    '../include/',
+    '#/src/system/include',
     'debugger/',
     'debugger/commands/',
     'debugger/libudis86/',

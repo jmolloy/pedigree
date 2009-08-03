@@ -22,10 +22,12 @@ echo "Building installer disk image..."
 
 if which mkisofs > /dev/null 2>&1; then
     rm -f pedigree-i386.iso
-    cp $SRCDIR/build/src/system/kernel/kernel ./disk/boot
+    mkdir -p ./disk/boot/grub
+    cp $SRCDIR/images/grub/stage2_eltorito ./disk/boot/grub
+    cp $SRCDIR/images/grub/menu.lst ./disk/boot/grub
+    cp $SRCDIR/build/kernel/kernel ./disk/boot
     cp $SRCDIR/build/initrd.tar ./disk/boot
-	cp $SRCDIR/build/*.so ./disk/libraries
-	cp $SRCDIR/build/src/user/applications/login/login ./disk/applications
+    cp $SRCDIR/build/disk.img ./disk/disk.img
     mkisofs -joliet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o pedigree-i386.iso -V "PEDIGREEINSTALL" disk > /dev/null 2>&1
 else
     echo Not creating bootable ISO because \`mkisofs\' could not be found.

@@ -66,6 +66,7 @@
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
+#include <machine/IrqManager.h>
 
 #include <network/Ethernet.h>
 
@@ -311,12 +312,12 @@ Nic3C90x::Nic3C90x(Network* pDev) :
 #define HWADDR_OFFSET 10
 
     // allocate the rx and tx buffers
-    if (!PhysicalMemoryManager::instance().allocateRegion(m_RxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, 0, -1))
+    if (!PhysicalMemoryManager::instance().allocateRegion(m_RxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
     {
         ERROR("3C90x: Couldn't allocate Rx Buffer!");
         return;
     }
-    if (!PhysicalMemoryManager::instance().allocateRegion(m_TxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, 0, -1))
+    if (!PhysicalMemoryManager::instance().allocateRegion(m_TxBuffMR, (MAX_PACKET_SIZE / 0x1000) + 1, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
     {
         ERROR("3C90x: Couldn't allocate Tx Buffer!");
         return;
@@ -326,12 +327,12 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     m_pRxBuffPhys = m_RxBuffMR.physicalAddress();
     m_pTxBuffPhys = m_TxBuffMR.physicalAddress();
 
-    if (!PhysicalMemoryManager::instance().allocateRegion(m_DPDMR, 2, PhysicalMemoryManager::continuous, 0, -1))
+    if (!PhysicalMemoryManager::instance().allocateRegion(m_DPDMR, 2, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
     {
         ERROR("3C90x: Couldn't allocated buffer for DPD\n");
         return;
     }
-    if (!PhysicalMemoryManager::instance().allocateRegion(m_UPDMR, 2, PhysicalMemoryManager::continuous, 0, -1))
+    if (!PhysicalMemoryManager::instance().allocateRegion(m_UPDMR, 2, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
     {
         ERROR("3C90x: Couldn't allocated buffer for UPD\n");
         return;

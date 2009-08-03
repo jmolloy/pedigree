@@ -126,7 +126,7 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
             size_t idx = y*m_nWidth+x;
 
 
-/*            if (m_pBackground)
+            if (m_pBackground)
                 pFb[idx] = interpolateColour(m_pBackground[idx], pBitmap->buffer[(y-top)*m_CellWidth+(x-left)], 128);
                 else
                 pFb[idx] = pBitmap->buffer[(y-top)*m_CellWidth+(x-left)];
@@ -157,7 +157,7 @@ Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
         for (ssize_t c = 0; c < m_Face->glyph->bitmap.width; c++)
         {
             size_t idx = (r+m_Baseline-m_Face->glyph->bitmap_top)*m_CellWidth + (m_Face->glyph->bitmap_left+c);
-            if (idx < 0 || idx >= m_CellWidth*m_CellHeight)
+            if ((static_cast<int32_t>(idx) < 0) || idx >= m_CellWidth*m_CellHeight)
                 continue;
             size_t gidx = (r*m_Face->glyph->bitmap.pitch)+c;
             pGlyph->buffer[idx] = interpolateColour(f, b, m_Face->glyph->bitmap.buffer[gidx]);

@@ -37,7 +37,10 @@
 #include <linker/DynamicLinker.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
+
+#define MACHINE_FORWARD_DECL_ONLY
 #include <machine/Machine.h>
+#include <machine/Timer.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
@@ -470,6 +473,9 @@ int posix_exit(int code)
     // Should NEVER get here.
     /// \note asm volatile
     for (;;) asm volatile("xor %eax, %eax");
+
+    // Makes the compiler happyface again
+    return 0;
 }
 
 int posix_getpid()

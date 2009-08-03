@@ -3,11 +3,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PASS 1
 #define FAIL 0
 
-int test_open ()
+int test_open(void)
 {
   printf ("open():\n");
   printf ("\tOpen existing file - ");

@@ -20,6 +20,7 @@
 #include <machine/Network.h>
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
+#include <machine/IrqManager.h>
 
 // #define NE2K_NO_THREADS
 

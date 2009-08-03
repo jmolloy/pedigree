@@ -48,9 +48,9 @@ if 'PPC' in env['CPPDEFINES']:
 
 # To include a new directory for includes, just add it to the list
 include = [
-    '#/src/system/include/',
-    '#/src/modules/system',
     './include',
+    '#/src/system/include',
+    '#/src/modules/system',
     '.'
 ]
 
@@ -66,12 +66,12 @@ libpaths = [
 
 ####################################
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
-tmp.objects = [tmp.Object(i) for i in posix_files]
 tmp['CPPPATH'] = [i for i in include]
 tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
+tmp.objects = [tmp.Object(i) for i in posix_files]
 if not len(posix_files) == 0:
     build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
@@ -79,16 +79,20 @@ if not len(posix_files) == 0:
 glueFlags = ""
 if env['ARCH_TARGET'] == 'X64':
     glueFlags = "-mcmodel=small -fPIC " + glueFlags
+    
+tmp_glue = tmp.Clone()
 
-tmp.objects = [tmp.Object(i) for i in glue_files]
+tmp_glue.objects = [tmp.Object(i) for i in glue_files]
 if not len(glue_files) == 0:
-    build = tmp.Program(glue_objname,tmp.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
+    build = tmp_glue.Program(glue_objname,tmp_glue.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
+
+tmp_crt0 = tmp.Clone()
 
 # No libraries needed for CRT0
-tmp['LIBS'] = ''
-tmp.objects = [tmp.Object(i) for i in crt0_files]
+tmp_crt0['LIBS'] = ''
+tmp_crt0.objects = [tmp.Object(i) for i in crt0_files]
 if not len(crt0_files) == 0:
-    build = tmp.Program(crt0_objname,tmp.objects,LINKFLAGS='-nostdlib -r')
+    build = tmp_crt0.Program(crt0_objname,tmp_crt0.objects,LINKFLAGS='-nostdlib -r')
 
 # Build libc/libm
 

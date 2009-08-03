@@ -123,6 +123,8 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
  * `Whence' must be one of the three SEEK_* macros.
  */
 
+typedef _fpos_t _EXFUN((*seek_fnptr), (struct _reent *, _PTR, _fpos_t, int));
+
 int _fseek_r(struct _reent *ptr, register FILE *fp, long offset, int whence)
 {
   _fpos_t _EXFUN((*seekfn), (struct _reent *, _PTR, _fpos_t, int));
@@ -153,7 +155,7 @@ int _fseek_r(struct _reent *ptr, register FILE *fp, long offset, int whence)
 
   /* Have to be able to seek.  */
 
-  if ((seekfn = fp->_seek) == NULL)
+  if ((seekfn = (seek_fnptr) fp->_seek) == NULL)
     {
       ptr->_errno = ESPIPE;	/* ??? */
       _funlockfile (fp);

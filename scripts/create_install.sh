@@ -14,7 +14,51 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+SRCDIR=../build
+
+# Hard disk files
+HDFILES="login TUI"
+
+# Create a hard disk image for use as a ramdisk
+if which mcopy >/dev/null 2>&1; then
+
+  # disk.img, not hdd_fat16.img
+  rm disk.img
+  mkdir -p $SRCDIR/tmp
+  cd $SRCDIR/tmp
+  tar -xzf ../$SRCDIR/../images/hdd_fat16.tar.gz
+  mv hdd_fat16.img ../disk.img
+  cd ..
+  rm -rf tmp
+
+  sh $SRCDIR/../scripts/mtsetup.sh ./disk.img > /dev/null 2>&1
+
+  # This should be the root disk
+  touch ./.pedigree-root
+  mcopy -Do ./.pedigree-root C:/
+  rm ./.pedigree-root
+
+  mcopy -Do -s $SRCDIR/../images/install/disk-contents/* C:/
+
+  # Copy libc/libm shared objects
+  mcopy -Do $SRCDIR/libc.so C:/libraries
+  mcopy -Do $SRCDIR/libm.so C:/libraries
+
+  # Copy across relevant binaries
+  for f in $HDFILES; do
+    BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
+    if [ -f $SRCDIR/apps/$BINARY ]; then
+      mcopy -Do $SRCDIR/apps/$BINARY C:/applications
+    fi
+  done
+
+  echo Install hard disk image created
+fi
+
 # Redirect to the CD script
 cd ../images/install
 ./create_install.sh
+cd ../../build
 
+# Remove the ramdisk now
+# rm $SRCDIR/disk.img

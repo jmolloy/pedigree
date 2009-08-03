@@ -26,4 +26,7 @@ env.Depends(floppyimg, 'kernel')
 env.Depends(floppyimg, 'initrd')
 env.Depends(floppyimg, 'libs')
 env.Depends(floppyimg, 'apps')
-env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_images.sh ' + builddir)
+if env["installer"]:
+    env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_install.sh ' + builddir)
+else:
+    env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_images.sh ' + builddir)

@@ -24,7 +24,10 @@
 
 #include <machine/_types.h>
 
-struct sigevent {};
+struct sigevent
+{
+    int donotuse;
+};
 
 #if defined(__rtems__)
 /*
@@ -71,7 +74,6 @@ typedef	quad_t *	qaddr_t;
 # include <stddef.h>
 # include <machine/types.h>
 
-#ifdef COMPILING_SUBSYS
 # ifndef _CLOCK_T
 #   define _CLOCK_T_	unsigned long		/* clock() */
 # endif
@@ -84,7 +86,6 @@ typedef	quad_t *	qaddr_t;
 # ifndef _TIMER_T_
 #   define _TIMER_T_   	unsigned long
 # endif
-#endif
 
 /* To ensure the stat struct's layout doesn't change when sizeof(int), etc.
    changes, we assume sizeof short and long never change and have all types
@@ -196,7 +197,8 @@ typedef int pid_t;
 typedef	long key_t;
 #endif
 
-#ifndef COMPILING_SUBSYS
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 typedef _ssize_t ssize_t;
 #endif
 

@@ -16,7 +16,7 @@
 
 #include "../Module.h"
 #include "LoDisk.h"
-#include <assert.h>
+#include <utilities/assert.h>
 
 #include <ServiceManager.h>
 
@@ -28,15 +28,23 @@ FileDisk::FileDisk(String file, AccessType mode) :
         WARNING("FileDisk: '" << file << "' doesn't exist...");
     else
     {
+        NOTICE("Initialising...");
         m_pFile->increaseRefCount(false);
 
         // Chat to the partition service and let it pick up that we're around now
         ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
         Service         *pService  = ServiceManager::instance().getService(String("partition"));
+        NOTICE("Asking if the partition provider supports touch");
         if(pFeatures->provides(ServiceFeatures::touch))
         {
+            NOTICE("It does, attempting to inform the partitioner of our presence...");
             if(pService)
-                pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(this), sizeof(FileDisk));
+            {
+                if(pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(this), sizeof(FileDisk)))
+                    NOTICE("Successful.");
+                else
+                    ERROR("Failed.");
+            }
             else
                 ERROR("FileDisk: Couldn't tell the partition service about the new disk presence");
         }
@@ -57,6 +65,7 @@ bool FileDisk::initialise()
 
 uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
+    NOTICE("FileDisk::read(" << location << ", " << Dec << nBytes << Hex << ", " << buffer << ")");
     if(!m_pFile)
         return 0;
 
@@ -67,6 +76,8 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     // How many pages does the read cross?
     uint64_t pageCount = nBytes / FILEDISK_PAGE_SIZE;
     if(pageOffset)
+        pageCount++;
+    if((nBytes % FILEDISK_PAGE_SIZE))
         pageCount++;
 
     // Read the data
@@ -91,17 +102,17 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
             buff = new uint8_t[FILEDISK_PAGE_SIZE]; /// \todo Don't use the heap!
 
             // Read the data from the file itself
-            uint64_t sz = m_pFile->read((startPage + n) * FILEDISK_PAGE_SIZE, nBytesToRead, reinterpret_cast<uintptr_t>(buff));
+            uint64_t sz = m_pFile->read((startPage + n) * FILEDISK_PAGE_SIZE, FILEDISK_PAGE_SIZE, reinterpret_cast<uintptr_t>(buff));
 
             // Verify the size - it has to fit in with what we asked for
-            assert(sz <= nBytesToRead);
+            assert(sz <= FILEDISK_PAGE_SIZE);
             
             // Clean up the top of the buffer (just in case we don't read a full page)
             if(FILEDISK_PAGE_SIZE - sz)
                 memset(buff + sz, 0, FILEDISK_PAGE_SIZE - sz);
             
             // All is well - copy into the buffer & insert to the page cache
-            memcpy(destPage, buff, sz);
+            memcpy(destPage, buff, nBytesToRead);
             m_PageCache.insert(startPage + n, buff);
         }
 

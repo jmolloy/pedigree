@@ -48,7 +48,7 @@ bool isPowerOf2(uint32_t n)
 
 FatFilesystem::FatFilesystem() :
         m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_FsInfo(), m_Type(FAT12), m_DataAreaStart(0),
-        m_RootDirCount(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(false), m_pRoot(0), m_DiskLock(false)
+        m_RootDirCount(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(false), m_pRoot(0)
 {
 }
 
@@ -62,6 +62,8 @@ FatFilesystem::~FatFilesystem()
 
 bool FatFilesystem::initialise(Disk *pDisk)
 {
+    NOTICE("Initialising FAT for a disk");
+
     m_pDisk = pDisk;
 
     // Attempt to read the superblock.
@@ -743,8 +745,6 @@ bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    LockGuard<Mutex> guard(m_DiskLock);
-
     m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
     return true;
 }
@@ -758,8 +758,6 @@ bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    LockGuard<Mutex> guard(m_DiskLock);
-
     m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
     return true;
 }

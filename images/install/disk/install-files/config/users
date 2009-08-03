@@ -1,8 +1,0 @@
-# User definitions file.
-
-# Lines beginning with a '#' are comments.
-
-# uid ; username ; full name ; default group ; home directory ; shell ; password (plaintext for the moment).
-0;root;Root User;administrators;/;/applications/bash;root
-1;james;James Molloy;users;/users/james;/applications/bash;james
-2;matt;Matt Iselin;users;/users/matt;/applications/bash;matt

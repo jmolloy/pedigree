@@ -2,6 +2,9 @@
 	assert.h
 */
 
+/* If we're compiling the subsystem, we can't take anything from here... It's not technically valid. */
+#ifndef _COMPILING_SUBSYS
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,4 +46,8 @@ void _EXFUN(__assert_func, (const char *, int, const char *, const char *)
 
 #ifdef __cplusplus
 }
+#endif
+
+#else
+#error Wrong assert.h included when compiling the POSIX subsystem.
 #endif

@@ -55,7 +55,7 @@ class Socket : public File
     File& operator =(const File&);
 
     // Endpoints are not able to be copied
-    Socket(const Socket &file) : m_Endpoint(0), m_Protocol(0)
+    Socket(const Socket &file) : File(), m_Endpoint(0), m_Protocol(0)
     {
       ERROR("Socket copy constructor called");
     };

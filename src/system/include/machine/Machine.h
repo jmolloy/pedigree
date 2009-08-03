@@ -18,12 +18,25 @@
 #define MACHINE_MACHINE_H
 
 #include <processor/types.h>
+
+/// \note Avoids pulling in a bunch of extra include files (specifically, an ambiguous
+///       reference to <machine/types.h> when working with the POSIX subsystem). POSIX
+///       subsystem ftl.
+#if !defined(MACHINE_FORWARD_DECL_ONLY)
 #include <machine/Serial.h>
 #include <machine/Vga.h>
 #include <machine/IrqManager.h>
 #include <machine/SchedulerTimer.h>
 #include <machine/Timer.h>
 #include <machine/Keyboard.h>
+#else
+class Serial;
+class Vga;
+class IrqManager;
+class SchedulerTimer;
+class Timer;
+class Keyboard;
+#endif
 
 /**
  * This is an abstraction on a machine, or board.

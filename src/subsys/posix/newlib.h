@@ -1,17 +1,13 @@
 #ifndef NEWLIB_H
 #define NEWLIB_H
 
-#ifndef COMPILING_SUBSYS
-#define COMPILING_SUBSYS
-#endif
-
-#ifdef ssize_t
-#undef ssize_t
+#ifndef _COMPILING_SUBSYS
+#define _COMPILING_SUBSYS
 #endif
 
 #ifdef _EXFUN
 #undef _EXFUN
-#define _EXFUN(x)
+#define _EXFUN(x, y)
 #endif
 
 #include <fcntl.h>

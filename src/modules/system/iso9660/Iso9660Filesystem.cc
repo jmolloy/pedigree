@@ -151,7 +151,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
     str.append(volLabelString);
 
     size_t i;
-    for(i = str.length() - 1; i >= 0; i--)
+    for(i = str.length() - 1; static_cast<int32_t>(i) >= 0; i--)
       if(str[i] != ' ')
         break;
     str = str.left(i + 1);
@@ -159,7 +159,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
   }
   else
   {
-    for(size_t i = 31; i >= 0; i--)
+    for(size_t i = 31; static_cast<int32_t>(i) >= 0; i--)
     {
       if(volLabel[i] != ' ')
       {

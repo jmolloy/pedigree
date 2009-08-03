@@ -38,11 +38,16 @@ void Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
-//      FATAL("Spinlock: already acquired on a uniprocessor system, interrupts=" << Processor::getInterrupts());
-        asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
+    /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
+    ///       depends on the log spinlock, which may have deadlocked. So we actually
+    ///       force the spinlock to release here, then hit the breakpoint.
+    release();
 
-        // Panic in case there's a return from the debugger (or the debugger isn't available)
-        panic("Spinlock has deadlocked");
+    // Break into the debugger, with the return address in EAX to make debugging easier
+    asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
+
+    // Panic in case there's a return from the debugger (or the debugger isn't available)
+    panic("Spinlock has deadlocked");
 #endif
   }
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));

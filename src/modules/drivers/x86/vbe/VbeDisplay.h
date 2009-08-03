@@ -78,6 +78,10 @@ private:
         rgb_t        *pBackbuffer;
         uint8_t      *pFbBackbuffer;
         MemoryRegion  mr,fbmr;
+
+        private:
+            Buffer(const Buffer&);
+            const Buffer& operator = (const Buffer&);
     };
     /** Buffers. */
     Tree<rgb_t*, Buffer*> m_Buffers;

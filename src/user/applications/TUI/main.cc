@@ -171,7 +171,6 @@ int main (int argc, char **argv)
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
-log("Add terminal fin");
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
     

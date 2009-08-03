@@ -223,8 +223,33 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
       e.append(", errorcode 0x");
       e.append(interruptState.m_Errorcode, 16, 8, '0');
     }
+
+    if (nIntNumber == 8)
+    {
+        X86TaskStateSegment *tss = reinterpret_cast<X86TaskStateSegment *>(Processor::information().getTss());
+        ERROR(""); ERROR(""); ERROR("");
+        ERROR("--------------------------- DOUBLE FAULT ---------------------------");
+        ERROR("");
+        ERROR("EIP was: " << tss->eip << ".");
+        ERROR("ESP/EBP: " << tss->esp << ", " << tss->ebp << ".");
+        ERROR("");
+        ERROR("GPs:");
+        ERROR("EAX: " << tss->eax << ", EBX: " << tss->ebx << ", ECX: " << tss->ecx << ".");
+        ERROR("EDX: " << tss->edx << ", ESI: " << tss->esi << ", EDI: " << tss->edi << ".");
+        ERROR("");
+        ERROR("Segments:");
+        ERROR("CS: " << tss->cs << ", DS: " << tss->ds << ", ES: " << tss->es << ".");
+        ERROR("FS: " << tss->fs << ", GS: " << tss->gs << ", SS: " << tss->ss << ".");
+
+        // Unrecoverable fault
+        interruptState.setInstructionPointer(tss->eip);
+        interruptState.setBasePointer(tss->ebp);
+        interruptState.setFlags(tss->eflags);
+    }
 #if defined(DEBUGGER)
     Debugger::instance().start(interruptState, e);
+    if (nIntNumber == 8)
+        panic("Can't return from a #DF");
 #else
     panic(e);
 #endif

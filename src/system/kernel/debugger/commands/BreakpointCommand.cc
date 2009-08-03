@@ -79,8 +79,8 @@ bool BreakpointCommand::execute(const HugeStaticString &input, HugeStaticString 
   {
     LargeStaticString inputCopy(input);
     // We expect a number.
-    size_t nBp = input.intValue();
-    if (nBp < 0 || nBp >= Processor::getDebugBreakpointCount())
+    int32_t nBp = input.intValue();
+    if (nBp < 0 || nBp >= static_cast<int32_t>(Processor::getDebugBreakpointCount()))
     {
       output = "Invalid breakpoint number.\n";
       return true;

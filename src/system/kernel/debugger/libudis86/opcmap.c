@@ -471,10 +471,10 @@ struct map_entry itab_2byte[0x100] =
 /* 2D */ { UD_Icvtps2pi,P,	W,	NOARG,	Pa32 | REX(_R|_X|_B) },
 /* 2E */ { UD_Iucomiss,	V,	W,	NOARG,	Pa32 | REX(_R|_X|_B) },
 /* 2F */ { UD_Icomiss,	V,	W,	NOARG,	Pa32 | REX(_R|_X|_B) },
-/* 30 */ { UD_Iwrmsr,	NOARG,	NOARG,	NOARG,	},
-/* 31 */ { UD_Irdtsc,	NOARG,	NOARG,	NOARG,	},
-/* 32 */ { UD_Irdmsr,	NOARG,	NOARG,	NOARG,	},
-/* 33 */ { UD_Irdpmc,	NOARG,	NOARG,	NOARG,	},
+/* 30 */ { UD_Iwrmsr,	NOARG,  NOARG,	NOARG,	Pnone	},
+/* 31 */ { UD_Irdtsc,	NOARG,  NOARG,	NOARG,	Pnone	},
+/* 32 */ { UD_Irdmsr,	NOARG,  NOARG,	NOARG,	Pnone	},
+/* 33 */ { UD_Irdpmc,	NOARG,  NOARG,	NOARG,	Pnone	},
 /* 34 */ { UD_Isysenter, NOARG,	NOARG,	NOARG,	Pinv64 },
 /* 35 */ { UD_Isysexit,	NOARG,	NOARG,	NOARG,	Pinv64 },
 /* 36 */ { UD_Iinvalid,	NOARG,	NOARG,	NOARG,	Pnone },
@@ -2808,7 +2808,7 @@ struct map_entry itab_g_invalid[0x8] =
 
 /* AMD 3DNow! Instructions */
 struct map_entry itab_3DNow =  
-  { UD_I3dnow,	P,	Q,	NOARG };
+  { UD_I3dnow,	P,	Q,	NOARG,	Pnone };
 struct map_entry nop = 
   { UD_Inop,	NOARG,	NOARG,	NOARG, Pnone };
 struct map_entry pause = 

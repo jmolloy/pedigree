@@ -149,11 +149,11 @@ void LocalIO::drawHorizontalLine(char c, size_t row, size_t colStart, size_t col
 
   if (colEnd >= m_nWidth)
     colEnd = m_nWidth-1;
-  if (colStart < 0)
+  if (static_cast<int32_t>(colStart) < 0)
     colStart = 0;
   if (row >= m_nHeight)
     row = m_nHeight-1;
-  if (row < 0)
+  if (static_cast<int32_t>(row) < 0)
     row = 0;
 
   uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);
@@ -178,11 +178,11 @@ void LocalIO::drawVerticalLine(char c, size_t col, size_t rowStart, size_t rowEn
 
   if (rowEnd >= m_nHeight)
     rowEnd = m_nHeight-1;
-  if (rowStart < 0)
+  if (static_cast<int32_t>(rowStart) < 0)
     rowStart = 0;
   if (col >= m_nWidth)
     col = m_nWidth-1;
-  if (col < 0)
+  if (static_cast<int32_t>(col) < 0)
     col = 0;
 
   uint8_t attributeByte = (backColour << 4) | (foreColour & 0x0F);

@@ -1,14 +1,14 @@
 extern int write(int,int,int);
-extern int open(char*,int,int);
+extern int open(const char*,int,int);
 extern int main(int,char**,char**);
 extern int _exit(int);
-extern int sprintf(char*, char*, ...);
+extern int sprintf(char*, const char*, ...);
 extern void setenv(char*,char*,int);
 
 extern char **environ;
 void *__gxx_personality_v0;
 
-extern void _init_signals();
+extern void _init_signals(void);
 
 void _start(char **argv, char **env)
 {
@@ -48,7 +48,7 @@ void _start(char **argv, char **env)
       if (*value == '=') *value++ = '\0';
       // Set the env var.
       setenv(key, value, 1);
-      *i++;
+      i++;
     }
   }
 

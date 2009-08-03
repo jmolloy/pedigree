@@ -6,7 +6,9 @@
  * -----------------------------------------------------------------------------
  */
 
-//include <string.h>
+#include <utilities/utility.h>
+
+//#include <string.h>
 #include "types.h"
 #include "input.h"
 #include "opcmap.h"

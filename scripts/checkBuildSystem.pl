@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-my $gcc_version = "4.3.2";
+my $gcc_version = "4.4.1";
 my $binutils_version = "2.19.1";
-my $nasm_version = "2.02";
+my $nasm_version = "2.07";
 
 
 my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-$gcc_version.tar.bz2",
@@ -23,10 +23,10 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'filename' => "binutils-$binutils_version.tar.bz2",
                   'extract' => "tar -xjf binutils-$binutils_version.tar.bz2",
                   'arch' => 'all'},
-                 {'url' => "http://downloads.sourceforge.net/nasm/nasm-$nasm_version.tar.gz",
+                 {'url' => "http://www.nasm.us/pub/nasm/releasebuilds/$nasm_version/nasm-$nasm_version.tar.bz2",
                   'name' => 'Nasm',
-                  'filename' => "nasm-$nasm_version.tar.gz",
-                  'extract' => "tar -xzf nasm-$nasm_version.tar.gz",
+                  'filename' => "nasm-$nasm_version.tar.bz2",
+                  'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
                   'arch' => 'i686-elf amd64-elf'} );
 
 my @patch = ( );

@@ -20,6 +20,7 @@
 #include <machine/Network.h>
 #include <network/NetworkStack.h>
 #include <processor/Processor.h>
+#include <machine/IrqManager.h>
 
 
 Rtl8139::Rtl8139(Network* pDev) :
@@ -166,7 +167,7 @@ void Rtl8139::recv()
     uint16_t length = *(reinterpret_cast<uint16_t *>(rxPacket+2));
 
     // if bad packet, reset
-    if(!(status & RTL_RXSTS_RXOK) || (status & (RTL_RXSTS_ISE | RTL_RXSTS_CRC | RTL_RXSTS_FAE)) || (length > RTL_PACK_MAX) || (length < RTL_PACK_MIN))
+    if(!(status & RTL_RXSTS_RXOK) || (status & (RTL_RXSTS_ISE | RTL_RXSTS_CRC | RTL_RXSTS_FAE)) || (length >= RTL_PACK_MAX) || (length < RTL_PACK_MIN))
     {
         WARNING("RTL8139: Bad packet: len: " << length << ", status: " << status << "!");
         reset();

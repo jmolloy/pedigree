@@ -1,9 +1,7 @@
 #ifndef _NETDB_H
 #define _NETDB_H
 
-#ifndef COMPILING_SUBSYS
 #include <stdint.h>
-#endif
 
 #include <sys/socket.h>
 #include <netinet/in.h>

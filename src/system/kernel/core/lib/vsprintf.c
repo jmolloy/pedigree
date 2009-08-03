@@ -20,6 +20,7 @@
  */
 
 #include <stdarg.h>
+#include <utilities/utility.h>
 //include <string.h>
 
 /* we use this so that we can do without the ctype library */

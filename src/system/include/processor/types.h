@@ -78,9 +78,15 @@ typedef PROCESSOR_SPECIFIC_NAME(physical_uintptr_t) physical_uintptr_t;
 typedef PROCESSOR_SPECIFIC_NAME(processor_register_t) processor_register_t;
 
 /** Define ssize_t */
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 typedef PROCESSOR_SPECIFIC_NAME(ssize_t) ssize_t;
+#endif
 /** Define size_t */
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
 typedef PROCESSOR_SPECIFIC_NAME(size_t) size_t;
+#endif
 
 // NOTE: This should be defined in the file included at the top of this file
 //       if this processor architecture does not support I/O ports

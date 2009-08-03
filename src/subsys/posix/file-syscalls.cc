@@ -241,8 +241,7 @@ int posix_write(int fd, char *ptr, int len)
         F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
         ptr[len] = c;
     }
-    else
-        ;
+
     F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
 
     // Lookup this process.
@@ -1205,8 +1204,12 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
 {
     if (num)
         F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
+    /// \note Added braces. Compiler warned about ambiguity if F_NOTICE isn't enabled. It seems to be able
+    ///       to figure out what we meant to do, but making it explicit never hurt anyone.
     else
+    {
         F_NOTICE("fcntl(" << fd << ", " << cmd << ")");
+    }
 
     // grab the file descriptor pointer for the passed descriptor
     Process *pProcess = Processor::information().getCurrentThread()->getParent();

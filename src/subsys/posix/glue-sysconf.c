@@ -1,4 +1,4 @@
-#define COMPILING_SUBSYS
+#define _PEDIGREE_COMPILING_SUBSYS
 
 #include <processor/types.h>
 
@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
-#include "include/time.h"
 #include <sys/config.h>
 
 // Ensure errno is usable

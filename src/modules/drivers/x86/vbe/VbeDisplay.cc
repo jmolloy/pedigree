@@ -159,7 +159,7 @@ VbeDisplay::rgb_t *VbeDisplay::newBuffer()
 
     m_Buffers.insert(pBuffer->pBackbuffer, pBuffer);
 
-    NOTICE("New buffer: returning " << (uintptr_t)pBuffer->pBackbuffer);
+    NOTICE("New buffer: returning " << reinterpret_cast<uintptr_t>(pBuffer->pBackbuffer));
 
     return pBuffer->pBackbuffer;
 }

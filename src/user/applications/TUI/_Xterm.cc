@@ -775,8 +775,8 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
-    size_t row = m_CursorY;
-    for(size_t col = m_CursorX; col >= 0; col--)
+    int32_t row = static_cast<int32_t>(m_CursorY);
+    for(int32_t col = static_cast<int32_t>(m_CursorX); col >= 0; col--)
     {
         g_NormalFont->render(m_pFramebuffer,
                              static_cast<uint32_t>(' '),
@@ -826,7 +826,7 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
-    for(size_t row = m_CursorY; row >= 0; row--)
+    for(int32_t row = static_cast<int32_t>(m_CursorY); row >= 0; row--)
     {
         for(size_t col = 0; col < m_Width; col++)
         {

@@ -5,10 +5,8 @@
 extern "C" {
 #endif
 
-#ifndef COMPILING_SUBSYS
 #include <inttypes.h>
 #include <sys/types.h>
-#endif
 
 
 typedef size_t socklen_t;
@@ -20,13 +18,13 @@ struct sockaddr
   char sa_data[14];
 };
 
-/// \todo sockaddr_storage structure
+/*** \todo sockaddr_storage structure ***/
 
 struct msghdr
 {
   void*         msg_name;
   socklen_t     msg_namelen;
-  //struct iovec* msg_iov;
+  /* struct iovec* msg_iov; */
   void*         msg_iov;
   int32_t       msg_iovlen;
   void*         msg_control;
@@ -34,7 +32,7 @@ struct msghdr
   int32_t       msg_flags;
 };
 
-/// \todo cmsghdr
+/*** \todo cmsghdr ***/
 
 struct linger
 {
@@ -72,7 +70,6 @@ enum SocketOptions
 
 #define SOMAXCONN     65536
 
-/// \todo check that these are actually exclusive, if not, set to bit values
 #define MSG_CTRUNC    0
 #define MSG_DONTROUTE 1
 #define MSG_EOR       2
@@ -95,9 +92,9 @@ enum SocketOptions
 #define AF_UNSPEC (PF_MAX+1)
 
 
-#define  SHUT_RD 0 // disables receiving
-#define  SHUT_WR 1 // disables sending
-#define  SHUT_RDWR 2 // disables recv/send
+#define  SHUT_RD 0 /** Disables receiving */
+#define  SHUT_WR 1 /** Disables sending */
+#define  SHUT_RDWR 2 /** Disables recv/send */
 
 int     accept(int, struct sockaddr *, socklen_t *);
 int     bind(int, const struct sockaddr *, socklen_t);

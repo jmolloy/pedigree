@@ -21,7 +21,12 @@
 #include <processor/state.h>
 #include <machine/Device.h>
 #include <utilities/utility.h>
+
+#define MACHINE_FORWARD_DECL_ONLY
 #include <machine/Machine.h>
+#include <machine/Timer.h>
+#undef MACHINE_FORWARD_DECL_ONLY
+
 #include <process/Semaphore.h>
 #include "../../kernel/core/BootIO.h"
 extern BootIO bootIO;
