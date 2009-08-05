@@ -16,6 +16,9 @@ import os
 import commands
 import re
 import string
+import getpass
+from socket import gethostname
+from datetime import *
 ####################################
 # Add an option here to have it defined
 ####################################
@@ -50,8 +53,8 @@ default_cflags += extra_warnings
 default_cxxflags += extra_warnings
 
 # Turn off some stuff that kills the build
-default_cflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format'
-default_cxxflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format'
+default_cflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
+default_cxxflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
 
 # Default linker flags
 default_linkflags = '-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc'
@@ -78,19 +81,22 @@ opts.AddVariables(
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
     BoolVariable('warnings', 'If nonzero, compilation without -Werror', 1),
-	BoolVariable('installer', 'Build the installer', 0)
+	BoolVariable('installer', 'Build the installer', 0),
+    BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
+    
+    ('OBJSUFFIX', 'Suffix for compiled objects', '.obj'),
+    
+    ####################################
+    # These options are NOT TO BE USED on the command line!
+    ####################################
+    ('CPPDEFINES', 'Final set of preprocessor definitions (DO NOT USE)', ''),
+    ('ARCH_TARGET', 'Automatically generated architecture name (DO NOT USE)', ''),
 )
 
 env = Environment(options = opts,tools = ['default'],ENV = os.environ)
 #^-- Create a new environment object passing the options
 Help(opts.GenerateHelpText(env))
 #^-- Create the scons help text from the options we specified earlier
-
-# Pedigree is to be built on a POSIXy host (Cygwin on Windows)
-env.Platform('posix')
-
-# Trickery to get around the case-insensitivity on Windows
-env['OBJSUFFIX'] = ".obj"
 
 # Explicitly defined to get around SCons picking this up from the environment
 env['PROGSUFFIX'] = ''
@@ -103,117 +109,126 @@ env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
 env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
 env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
 
-# Set the compilers if CROSS is not an empty string
-if env['CROSS'] != '':
-    crossBase = env['CROSS']
-    env['CC'] = crossBase + 'gcc'
-    env['CXX'] = crossBase + 'g++'
-    env['LD'] = crossBase + 'gcc'
-    env['AS'] = crossBase + 'as'
-    env['AR'] = crossBase + 'ar'
-    env['LINK'] = env['LD']
-env['LD'] = env['LINK']
+# If we need to generate flags, do so
+if env['genflags']:
 
-####################################
-# Compiler/Target specific settings
-####################################
-# Check to see if the compiler supports --fno-stack-protector
-out = commands.getoutput('echo -e "int main(void) {return 0;}" | LANG=C ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
-if not 'unrecognized option' in out:
-    env['CXXFLAGS'] += ' -fno-stack-protector'
-    env['CFLAGS'] += ' -fno-stack-protector'
+    # Pedigree is to be built on a POSIXy host (Cygwin on Windows)
+    env.Platform('posix')
 
-out = commands.getoutput("LANG=C " + env['CXX'] + ' -v')
-#^-- The old script used --dumpmachine, which isn't always present
-tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
+    # Set the compilers if CROSS is not an empty string
+    if env['CROSS'] != '':
+        crossBase = env['CROSS']
+        env['CC'] = crossBase + 'gcc'
+        env['CXX'] = crossBase + 'g++'
+        env['LD'] = crossBase + 'gcc'
+        env['AS'] = crossBase + 'as'
+        env['AR'] = crossBase + 'ar'
+        env['LINK'] = env['LD']
+    env['LD'] = env['LINK']
 
-if tmp != None:
-    env['ARCH_TARGET'] = tmp.group(1)
+    ####################################
+    # Compiler/Target specific settings
+    ####################################
+    # Check to see if the compiler supports --fno-stack-protector
+    out = commands.getoutput('echo -e "int main(void) {return 0;}" | LANG=C ' + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
+    if not 'unrecognized option' in out:
+        env['CXXFLAGS'] += ' -fno-stack-protector'
+        env['CFLAGS'] += ' -fno-stack-protector'
 
-    if re.match('i[3456]86',tmp.group(1)) != None:
-        defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
-        #^-- Should provide overloads for these...like machine=ARM_VOLITILE
-        
+    out = commands.getoutput("LANG=C " + env['CXX'] + ' -v')
+    #^-- The old script used --dumpmachine, which isn't always present
+    tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
+
+    if tmp != None:
+        env['ARCH_TARGET'] = tmp.group(1)
+
+        if re.match('i[3456]86',tmp.group(1)) != None:
+            defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
+            #^-- Should provide overloads for these...like machine=ARM_VOLITILE
+            
+            env['ARCH_TARGET'] = 'X86'
+        elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
+            defines += ['X64']
+            
+            env['ARCH_TARGET'] = 'X64'
+        elif re.match('ppc|powerpc',tmp.group(1)) != None:
+            defines += ['PPC']
+            
+            env['ARCH_TARGET'] = 'PPC'
+        elif re.match('arm',tmp.group(1)) != None:
+            defines += ['ARM']
+            
+            env['ARCH_TARGET'] = 'ARM'
+
+    # Default to x86 if something went wrong
+    else:
         env['ARCH_TARGET'] = 'X86'
-    elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-        defines += ['X64']
+            
+    # LIBGCC path
+    if env['LIBGCC'] == '':
+        libgccPath = commands.getoutput('LANG=C ' + env['CXX'] + ' --print-libgcc-file-name')
+        if not os.path.exists(libgccPath):
+            print "Error: libgcc path could not be determined. Use the LIBGCC option."
+            Exit(1)
         
-        env['ARCH_TARGET'] = 'X64'
-    elif re.match('ppc|powerpc',tmp.group(1)) != None:
-        defines += ['PPC']
-        
-        env['ARCH_TARGET'] = 'PPC'
-    elif re.match('arm',tmp.group(1)) != None:
-        defines += ['ARM']
-        
-        env['ARCH_TARGET'] = 'ARM'
+        env['LIBGCC'] = os.path.dirname(libgccPath)
 
-# Default to x86 if something went wrong
-else:
-    env['ARCH_TARGET'] = 'X86'
-        
-# LIBGCC path
-if env['LIBGCC'] == '':
-    libgccPath = commands.getoutput('LANG=C ' + env['CXX'] + ' --print-libgcc-file-name')
-    if not os.path.exists(libgccPath):
-        print "Error: libgcc path could not be determined. Use the LIBGCC option."
-        Exit(1)
+    # NASM is used for X86 and X64 builds
+    if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+        crossPath = os.path.dirname(env['CC'])
+        env['AS'] = crossPath + '/nasm'
+
+    ####################################
+    # Some quirks
+    ####################################
+    defines += ['__UD_STANDALONE__']
+    #^-- Required no matter what.
+
+    if not env['warnings']:
+        env['CXXFLAGS'] += ' -Werror'
+
+    if env['verbose_link']:
+        env['LINKFLAGS'] += ' --verbose'
+
+    if env['installer']:
+        defines += ['INSTALLER']
+
+    ####################################
+    # Setup our build options
+    ####################################
+    env['CPPDEFINES'] = []
+    env['CPPDEFINES'] = [i for i in defines]
+    #^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
     
-    env['LIBGCC'] = os.path.dirname(libgccPath)
+    # Don't regenerate until we really have to
+    env['genflags'] = False
 
-# NASM is used for X86 and X64 builds
-if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-    crossPath = os.path.dirname(env['CC'])
-    env['AS'] = crossPath + '/nasm'
-
-####################################
-# Some quirks
-####################################
-defines += ['__UD_STANDALONE__']
-#^-- Required no matter what.
-
-if not env['warnings']:
-    env['CXXFLAGS'] += ' -Werror'
-
-if env['verbose_link']:
-    env['LINKFLAGS'] += ' --verbose'
-
-if env['installer']:
-	defines += ['INSTALLER']
+    # Save the cache, all the options are configured
+    opts.Save('options.cache',env)
+    #^-- Save the cache file over the old one
 
 ####################################
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-	if env['nocolour']:
-		env['CCCOMSTR']   =    '     Compiling $TARGET'
-		env['CXXCOMSTR']  =    '     Compiling $TARGET'
-		env['ASCOMSTR']   =    '    Assembling $TARGET'
-		env['LINKCOMSTR'] =    '       Linking $TARGET'
-		env['ARCOMSTR']   =    '     Archiving $TARGET'
-		env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
-		env['NMCOMSTR']   =    '  Creating map $TARGET'
-		env['DOCCOMSTR']  =    '   Documenting $TARGET'
-	else:
-		env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
-		env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
-		env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
-		env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
-		env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
-		env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
-		env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
-		env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
-
-####################################
-# Setup our build options
-####################################
-env['CPPDEFINES'] = []
-env['CPPDEFINES'] = [i for i in defines]
-#^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
-
-# Save the cache, all the options are configured
-opts.Save('options.cache',env)
-#^-- Save the cache file over the old one
+    if env['nocolour']:
+        env['CCCOMSTR']   =    '     Compiling $TARGET'
+        env['CXXCOMSTR']  =    '     Compiling $TARGET'
+        env['ASCOMSTR']   =    '    Assembling $TARGET'
+        env['LINKCOMSTR'] =    '       Linking $TARGET'
+        env['ARCOMSTR']   =    '     Archiving $TARGET'
+        env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
+        env['NMCOMSTR']   =    '  Creating map $TARGET'
+        env['DOCCOMSTR']  =    '   Documenting $TARGET'
+    else:
+        env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
+        env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
+        env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
+        env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
+        env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
+        env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
+        env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
+        env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
 
 ####################################
 # Generate Version.cc
@@ -224,42 +239,36 @@ opts.Save('options.cache',env)
 ## PEDIGREE_USER
 ## PEDIGREE_MACHINE
 ####################################
-if os.path.exists('/bin/date'):
-    out = commands.getoutput('/bin/date \"+%k:%M %A %e-%b-%Y\"')
-    tmp = re.match('^[^\n]+',out)
-    env['PEDIGREE_BUILDTIME'] = tmp.group()
-else:
-    env['PEDIGREE_BUILDTIME'] = '(Unknown)'
 
-if os.path.exists(commands.getoutput("which git")):
-    out = commands.getoutput(commands.getoutput("which git") + ' rev-parse --verify HEAD --short')
-    env['PEDIGREE_REVISION'] = out
+# Grab the date (rather than using the `date' program)
+env['PEDIGREE_BUILDTIME'] = datetime.today().strftime("%k:%M %A %e-%b-%Y")
+
+# Use the OS to find out information about the user and computer name
+env['PEDIGREE_USER'] = getpass.getuser()
+env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
+
+# Grab the git revision of the repo
+gitpath = commands.getoutput("which git")
+if os.path.exists(gitpath):
+    env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
 else:
-    env['PEDIGREE_REVISION'] = '(Unknown)'
-    
-if os.path.exists(commands.getoutput("which whoami")):
-    out = commands.getoutput(commands.getoutput("which whoami"))
-    tmp = re.match('^[^\n]+',out)
-    env['PEDIGREE_USER'] = tmp.group()
-else:
-    env['PEDIGREE_USER'] = '(Unknown)'
-    
-if os.path.exists(commands.getoutput("which uname")):
-    out = commands.getoutput(commands.getoutput("which uname"))
-    tmp = re.match('^[^\n]+',out)
-    env['PEDIGREE_MACHINE'] = tmp.group()
-else:
-    env['PEDIGREE_MACHINE'] = '(Unknown)'
-    
-env['PEDIGREE_FLAGS'] = string.join(env['CPPDEFINES'],' ')
+    env['PEDIGREE_REVISION'] = "(unknown, git not found)"
+
+# Set the flags
+env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
+
+# Build the string of data to write
+version_out = ''
+version_out += 'const char *g_pBuildTime = "'     + env['PEDIGREE_BUILDTIME'] + '";\n'
+version_out += 'const char *g_pBuildRevision = "' + env['PEDIGREE_REVISION']  + '";\n'
+version_out += 'const char *g_pBuildFlags = "'    + env['PEDIGREE_FLAGS']     + '";\n'
+version_out += 'const char *g_pBuildUser = "'     + env['PEDIGREE_USER']      + '";\n'
+version_out += 'const char *g_pBuildMachine = "'  + env['PEDIGREE_MACHINE']   + '";\n'
+version_out += 'const char *g_pBuildTarget = "'   + env['ARCH_TARGET']        + '";\n'
+
 # Write the file to disk (We *assume* src/system/kernel/)
 file = open('src/system/kernel/Version.cc','w')
-file.writelines(['const char *g_pBuildTime = "',    env['PEDIGREE_BUILDTIME'],'";\n'])
-file.writelines(['const char *g_pBuildRevision = "',env['PEDIGREE_REVISION'],'";\n'])
-file.writelines(['const char *g_pBuildFlags = "',   env['PEDIGREE_FLAGS'],'";\n'])
-file.writelines(['const char *g_pBuildUser = "',    env['PEDIGREE_USER'],'";\n'])
-file.writelines(['const char *g_pBuildMachine = "', env['PEDIGREE_MACHINE'],'";\n'])
-file.writelines(['const char *g_pBuildTarget = "',  env['ARCH_TARGET'],'";\n'])
+file.write(version_out)
 file.close()
 
 ####################################
