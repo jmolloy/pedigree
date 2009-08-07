@@ -153,8 +153,11 @@ void entry()
 
     for (int j = 0; j < 32; j++)
     {
+      bool bIsMultifunc = false;
       for (int k = 0; k < 8; k++)
       {
+        if (k > 0 && !bIsMultifunc)
+            break;
         ca.bus = i;
         ca.device = j;
         ca.function = k;
@@ -166,6 +169,9 @@ void entry()
 
         ConfigSpace cs;
         readConfigSpace(ca, &cs);
+
+        if (cs.header_type & 0x80)
+            bIsMultifunc = true;
 
         NOTICE("PCI: " << Dec << ca.bus << ":" << ca.device << ":" << ca.function << "\t Vendor:" << Hex << cs.vendor << " Device:" << cs.device);
 
