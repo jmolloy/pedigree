@@ -148,6 +148,12 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
   {
     // TODO: Map the page table into all other address spaces
     *pageDirectoryEntry = physicalAddress | toFlags(flags);
+
+    // Zero the page table
+    memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
+           0,
+           PhysicalMemoryManager::getPageSize());
+
     return true;
   }
   else

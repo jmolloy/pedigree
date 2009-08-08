@@ -31,7 +31,7 @@ fini() {
     rm -rf $MOUNTPT
 }
 
-
+export PATH=$PATH:/sbin
 if which losetup >/dev/null 2>&1; then
   MOUNTPT=floppytmp
   cp $SRCDIR/../images/floppy_ext2.img $SRCDIR/floppy.img
