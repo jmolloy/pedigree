@@ -3,3 +3,4 @@ src/system/kernel/Version.cc
 src/system/kernel/TAGS
 options.cache
 .sconsign.dblite
+compilers/dir
