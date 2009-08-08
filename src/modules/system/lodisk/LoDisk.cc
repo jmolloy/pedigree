@@ -21,7 +21,7 @@
 #include <ServiceManager.h>
 
 FileDisk::FileDisk(String file, AccessType mode) :
-    m_pFile(0), m_Mode(mode), m_PageCache()
+    m_pFile(0), m_Mode(mode), m_PageCache(), m_MemRegion("FileDisk")
 {
     m_pFile = VFS::instance().find(file);
     if(!m_pFile)
@@ -65,7 +65,6 @@ bool FileDisk::initialise()
 
 uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
-    NOTICE("FileDisk::read(" << location << ", " << Dec << nBytes << Hex << ", " << buffer << ")");
     if(!m_pFile)
         return 0;
 
@@ -89,30 +88,37 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
         uint64_t nBytesToRead = numBytes > FILEDISK_PAGE_SIZE ? FILEDISK_PAGE_SIZE : numBytes;
 
         // Look up in the cache
-        uint8_t *destPage = dest + (pageOffset + (FILEDISK_PAGE_SIZE * n));
+        uint8_t *destPage = dest + (FILEDISK_PAGE_SIZE * n);
         uint8_t *buff = 0;
         if((buff = reinterpret_cast<uint8_t *>(m_PageCache.lookup(startPage + n))))
         {
             // Single copy, rather than multiple
-            memcpy(destPage, buff, nBytesToRead);
+            memcpy(destPage, buff + pageOffset, nBytesToRead);
         }
         else
         {
             // Allocate space for the page cache
-            buff = new uint8_t[FILEDISK_PAGE_SIZE]; /// \todo Don't use the heap!
+            /// \todo Is this correct? Are these pages still freeable, even if the mem region is updated?
+            if(!PhysicalMemoryManager::instance().allocateRegion(m_MemRegion, FILEDISK_PAGE_SIZE / PhysicalMemoryManager::instance().getPageSize(), 0, VirtualAddressSpace::Write, -1))
+            {
+                ERROR("FileDisk: Couldn't allocate space for a block\n");
+                return 0;
+            }
+            buff = reinterpret_cast<uint8_t*>(m_MemRegion.virtualAddress());
 
             // Read the data from the file itself
             uint64_t sz = m_pFile->read((startPage + n) * FILEDISK_PAGE_SIZE, FILEDISK_PAGE_SIZE, reinterpret_cast<uintptr_t>(buff));
 
             // Verify the size - it has to fit in with what we asked for
             assert(sz <= FILEDISK_PAGE_SIZE);
+            assert(sz > 0);
             
             // Clean up the top of the buffer (just in case we don't read a full page)
             if(FILEDISK_PAGE_SIZE - sz)
                 memset(buff + sz, 0, FILEDISK_PAGE_SIZE - sz);
             
             // All is well - copy into the buffer & insert to the page cache
-            memcpy(destPage, buff, nBytesToRead);
+            memcpy(destPage, buff + pageOffset, nBytesToRead);
             m_PageCache.insert(startPage + n, buff);
         }
 

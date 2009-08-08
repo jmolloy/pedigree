@@ -196,6 +196,15 @@ bool DynamicLinker::trap(uintptr_t address)
         {
             SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
 
+            // Totally pedantic
+#ifdef ADDITIONAL_CHECKS
+            if(!pSo)
+            {
+                ERROR("A null shared object was in the object list.");
+                continue;
+            }
+#endif
+
             if (address >= pSo->address && address < pSo->address+pSo->size)
             {
                 pElf = pSo->elf;

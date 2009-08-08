@@ -219,9 +219,24 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
   Iso9660DirRecord rec = file->getDirRecord();
 
+  // Because of the way this function handles sizes, size is technically incorrect at this stage. We need
+  // to take one byte from it in order to avoid writing a byte too many. This shows up when you try writing
+  // to a buffer that's, say, 4096 bytes big and has the page following it unmapped - the final byte falls
+  // on the unmapped page. This stops that.
+  if(size)
+    size--;
+
+  // Attempting to read past the EOF?
+  if(location > pFile->getSize())
+    return 0; // Impossible
+
   // Ensure we're not going to write beyond the end of the file
   if((location + size) > pFile->getSize())
     size = pFile->getSize() - location;
+
+  // Further sanity checks...
+  if(size == 0 || size >= pFile->getSize())
+    return 0;
 
   uint8_t *dest = reinterpret_cast<uint8_t*>(buffer);
   size_t offset = location % m_BlockSize;
@@ -251,9 +266,7 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
     offset = 0;
     blockNum++;
   }
-  if(dest[bytesWritten] == 0xca || dest[bytesWritten - 1] == 0xca || dest[bytesWritten - 2] == 0xca)
-    NOTICE("a: " << dest[bytesWritten] << ", b: " << dest[bytesWritten-1] << ", c: " << dest[bytesWritten-2] << ".");
-  dest[bytesWritten] = 0;
+  dest[bytesWritten++] = 0;
 
   return bytesWritten;
 }

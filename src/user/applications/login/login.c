@@ -56,9 +56,9 @@ int main(int argc, char **argv)
   printf("Loading installer, please wait...\n");
 
   /*
-  static char *app_argv[] = {"root:/applications/python", "root:/code/installer/install.py", 0};
+  static char *app_argv[] = {"root»/applications/python", "root»/code/installer/install.py", 0};
   static char *app_env[] = { "TERM=xterm", "PATH=/applications", (char *)0 };
-  execve("root:/applications/python", app_argv, app_env);
+  execve("root»/applications/python", app_argv, app_env);
   */
 
   printf("FATAL: Couldn't load Python!\n");
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
   setsid();
 
   // Grab the greeting if one exists.
-  FILE *stream = fopen("root:/config/greeting", "r");
+  FILE *stream = fopen("root»/config/greeting", "r");
   if (stream)
   {
     char msg[1025];

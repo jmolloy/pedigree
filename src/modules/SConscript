@@ -8,12 +8,25 @@ Import(['env'])
 
 # Common drivers - order is important
 driver_common_subdirs = [
+    # Pedigree-specific disk I/O
     'ata',
     'partition',
-    'loopback',
+    
+    # Pedigree-specific video
     'nvidia',
+    
+    # Pedigree-specific NICs
     '3c90x',
-    'rtl8139'
+    'rtl8139',
+    'loopback',
+    
+    # CDI framwork
+    'cdi',
+    
+    # CDI NIC drivers
+    'e1000',
+    'pcnet',
+    'sis900'
 ]
 
 # Architecture-specific drivers

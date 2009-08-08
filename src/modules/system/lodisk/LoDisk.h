@@ -22,6 +22,7 @@
 #include <vfs/VFS.h>
 #include <machine/Disk.h>
 #include <utilities/Cache.h>
+#include <processor/MemoryRegion.h>
 
 /// \todo Expose functionality here as a Service - specifically creating/removing disks.
 
@@ -52,7 +53,7 @@ class FileDisk : public Disk
         };
 
         FileDisk() :
-            m_pFile(0), m_Mode(Standard), m_PageCache()
+            m_pFile(0), m_Mode(Standard), m_PageCache(), m_MemRegion("FileDisk-Failed")
         {
             FATAL("I require a constructor with arguments!");
         }
@@ -98,6 +99,9 @@ class FileDisk : public Disk
           *       in order to improve performance.
           */
         Tree<size_t, void*> m_PageCache;
+        
+        // Our region of memory
+        MemoryRegion m_MemRegion;
 };
 
 #endif

@@ -95,7 +95,7 @@ Filesystem *Ext2Filesystem::probe(Disk *pDisk)
     Ext2Filesystem *pFs = new Ext2Filesystem();
     if (!pFs->initialise(pDisk))
     {
-        delete pFs;
+        // delete pFs;
         return 0;
     }
     else

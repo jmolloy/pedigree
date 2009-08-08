@@ -160,6 +160,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
         reinterpret_cast<uintptr_t>(buffer)) == 0)
     {
         WARNING("MemoryMappedFile: read() failed in trap()");
+        WARNING("File is " << m_pFile->getName() << ", offset was " << (v - offset) << ", reading a page.");
         // Non-fatal, continue.
     }
 

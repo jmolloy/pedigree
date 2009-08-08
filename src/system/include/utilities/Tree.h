@@ -20,6 +20,8 @@
 #include <processor/types.h>
 #include <utilities/Iterator.h>
 
+#include <new>
+
 /** @addtogroup kernelutilities
  * @{ */
 
@@ -46,104 +48,8 @@ class Tree<void*,void*>
     };
 
   public:
-    
-    /** Random access iterator for the Tree. */
-    /*class Iterator
-    {
-      public:
-        Iterator() :
-          pNode(0), pPreviousNode(0)
-        {};
-        Iterator(Iterator& it) :
-          pNode(it.pNode), pPreviousNode(it.pPreviousNode)
-        {};
-        Iterator(Node* p) :
-          pNode(p), pPreviousNode((p != 0) ? p->parent : 0)
-        {};
-        virtual ~Iterator()
-        {};
-        
-        void* key()
-        {
-          if(pNode)
-            return pNode->key;
-          else
-            return 0;
-        }
-        
-        void* value()
-        {
-          if(pNode)
-            return pNode->element;
-          else
-            return 0;
-        }
-        
-        void operator ++ ()
-        {
-          traverseNext();
-        }
-        
-        void* operator * ()
-        {
-          // pNode will be null when we reach the end of the list
-          return reinterpret_cast<void*>(pNode);
-        }
-        
-        bool operator != (Iterator& it)
-        {
-          return pNode != it.pNode;
-        }
-        
-        bool operator == (Iterator& it)
-        {
-          return pNode == it.pNode;
-        }
-        
-        Iterator& operator = (Iterator& it)
-        {
-          pNode = it.pNode;
-          pPreviousNode = it.pPreviousNode;
-          
-          return *(const_cast<Iterator*>(this));
-        }
-        
-      protected:
-        Node* pNode;
-        Node* pPreviousNode;
-        
-        void traverseNext()
-        {
-          if(pNode == 0)
-            return;
-          
-          if((pPreviousNode == pNode->parent) && pNode->leftChild)
-          {
-            pPreviousNode = pNode;
-            pNode = pNode->leftChild;
-            traverseNext();
-          }
-          else if((pPreviousNode == pNode->leftChild) && !pNode->leftChild)
-          {
-            pPreviousNode = pNode;
-            return;
-          }
-          else if((pPreviousNode == pNode) && pNode->rightChild)
-          {
-            pPreviousNode = pNode;
-            pNode = pNode->rightChild;
-            traverseNext();
-          }
-          else
-          {
-            pPreviousNode = pNode;
-            pNode = pNode->parent;
-            traverseNext();
-          }
-        }
-    };*/
 
-    /// \todo This actually will mean for each Tree you can only use one iterator at a time, which may
+    /// \todo This will actually mean for each Tree you can only use one iterator at a time, which may
     ///       not be effective depending on how this is used.
     class IteratorNode
     {
@@ -169,6 +75,15 @@ class Tree<void*,void*>
         IteratorNode *previous()
         {
           return 0;
+        }
+
+        void reset(Node* node, Node* prev, size_t n)
+        {
+            value = pNode = node;
+            pPreviousNode = prev;
+            if(n > 1)
+                traverseNext();
+            value = pNode;
         }
         
         Node* value;
@@ -248,10 +163,15 @@ class Tree<void*,void*>
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-        
-      if(m_Begin)
-        delete m_Begin;
-      m_Begin = new IteratorNode(root, 0, nItems);
+      // If there is no node already, create a new one
+      if(!m_Begin)
+          m_Begin = new IteratorNode(root, 0, nItems);
+
+      // Reset the iterator node
+      else
+          m_Begin->reset(root, 0, nItems);
+          //m_Begin = new (static_cast<void*>(m_Begin)) IteratorNode(root, 0, nItems);
+
       return Iterator(m_Begin);
     }
     /** Get a constant iterator pointing to the beginning of the Vector
