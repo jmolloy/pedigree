@@ -222,6 +222,8 @@ elif which mcopy >/dev/null 2>&1; then
   #fi
 
   sh $SRCDIR/../scripts/mtsetup.sh ./hdd_fat16.img > /dev/null 2>&1
+  
+  mmd C:/tmp C:/etc
 
   # Make this the root disk
   touch ./.pedigree-root
