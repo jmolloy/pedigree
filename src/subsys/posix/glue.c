@@ -97,11 +97,6 @@ int h_errno; // required by networking code
 #define	F_SETFL		4	/* Set file flags */
 #endif
 
-//char *tzname[2] = { (char *)"GMT", (char *)"GMT" };
-int daylight = 0;
-long timezone = 0;
-int altzone = 0;
-
 int ftruncate(int a, off_t b)
 {
     STUBBED("ftruncate");

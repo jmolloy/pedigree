@@ -120,10 +120,23 @@ extern __IMPORT long _timezone;
 extern __IMPORT int _daylight;
 extern __IMPORT char *_tzname[2];
 
-/* POSIX defines the external tzname being defined in time.h */
+extern int       daylight;
+extern long int  timezone;
+extern char     *tzname[];
+
+/* POSIX defines these externals being defined in time.h */
 #ifndef tzname
 #define tzname _tzname
 #endif
+
+#ifndef timezone
+#define timezone _timezone
+#endif
+
+#ifndef daylight
+#define daylight _daylight
+#endif
+
 #endif /* !__STRICT_ANSI__ */
 
 #ifdef __cplusplus

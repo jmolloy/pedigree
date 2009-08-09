@@ -484,7 +484,7 @@ int posix_getpid()
     return pProcess->getId();
 }
 
-int posix_gettimeofday(timeval *tv, timezone *tz)
+int posix_gettimeofday(timeval *tv, struct timezone *tz)
 {
     Timer *pTimer = Machine::instance().getTimer();
 
