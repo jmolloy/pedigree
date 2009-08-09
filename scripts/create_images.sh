@@ -254,12 +254,13 @@ fi
 # Live CD
 if which mkisofs > /dev/null 2>&1; then
     rm -f pedigree.iso
-	touch .pedigree-root
-	
+    touch .pedigree-root
+    cp $SRCDIR/../images/grub/stage2_eltorito .
+
     mkisofs -joliet -graft-points -quiet -input-charset ascii -R \
 	-b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
 	-boot-info-table -o pedigree.iso -V "PEDIGREE" \
-	boot/grub/stage2_eltorito=$SRCDIR/../images/grub/stage2_eltorito \
+	boot/grub/stage2_eltorito=./stage2_eltorito \
 	boot/grub/menu.lst=$SRCDIR/../images/grub/menu.lst \
 	boot/kernel=$SRCDIR/kernel/kernel \
 	boot/initrd.tar=$SRCDIR/initrd.tar \
@@ -269,8 +270,9 @@ if which mkisofs > /dev/null 2>&1; then
 	/libraries/libm.so=$SRCDIR/libm.so \
 	/applications/login=$SRCDIR/apps/login \
 	/applications/TUI=$SRCDIR/apps/TUI
-	
-	rm .pedigree-root
+
+    rm stage2_eltorito
+    rm .pedigree-root
 else
     echo Not creating bootable ISO because \`mkisofs\' could not be found.
 fi
