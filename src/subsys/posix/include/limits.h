@@ -96,6 +96,12 @@
 #    define __LONG_LONG_MAX__ 9223372036854775807LL
 #   endif
 
+#   undef SIZE_MAX
+#   define SIZE_MAX ULONG_MAX
+
+#   undef SSIZE_MAX
+#   define SSIZE_MAX LONG_MAX
+
 #   if defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 /* Minimum and maximum values a `signed long long int' can hold.  */
 #    undef LLONG_MIN

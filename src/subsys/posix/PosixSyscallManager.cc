@@ -208,6 +208,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
       return posix_setpgid(static_cast<int>(p1), static_cast<int>(p2));
     case POSIX_GETPGRP:
       return posix_getpgrp();
+    case POSIX_SIGALTSTACK:
+      return posix_sigaltstack(reinterpret_cast<struct sigaltstack *>(p1), reinterpret_cast<struct sigaltstack *>(p2));
 
     // Stub warning
     case POSIX_STUBBED:

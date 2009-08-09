@@ -8,6 +8,7 @@ extern "C" {
 
 #include "_ansi.h"
 #include <sys/features.h>
+#include <sys/types.h>
 
 /* #ifndef __STRICT_ANSI__*/
 
@@ -113,6 +114,8 @@ struct sigaction {
                          /*   three arguments instead of one. */
 #define SA_RESETHAND 4   /* Reset to SIG_DFL when entering signal handler */
 #define SA_RESTART   8
+#define SA_ONSTACK   16
+#define SA_DISABLE   32
 
 typedef void (*_sig_func_ptr)(int);
 
@@ -142,6 +145,18 @@ int _EXFUN(sigprocmask, (int how, const sigset_t *set, sigset_t *oset));
 #if defined(_POSIX_THREADS)
 int _EXFUN(pthread_sigmask, (int how, const sigset_t *set, sigset_t *oset));
 #endif
+
+#define SIGSTKSZ    (16384)
+#define MINSIGSTKSZ (4096)
+
+typedef struct stack_t
+{
+    void *ss_sp;
+    size_t ss_size;
+    int ss_flags;
+} stack_t;
+
+int _EXFUN(sigaltstack, (const struct sigaltstack *stack, struct sigaltstack *oldstack));
 
 /* protos for functions found in winsup sources for CYGWIN */
 #if defined(__CYGWIN__) || defined(__rtems__)

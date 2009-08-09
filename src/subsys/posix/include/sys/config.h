@@ -160,6 +160,9 @@
 #  endif /* __alpha__ || sparc64 */
 # endif
 #endif
+
+#   undef SSIZE_MAX
+#   define SSIZE_MAX LONG_MAX
 /* End of block that should be kept in sync with GCC's limits.h.  */
 
 #ifndef _POINTER_INT

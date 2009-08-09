@@ -33,6 +33,9 @@ int h_errno; // required by networking code
 #include <sys/wait.h>
 #include <sys/socket.h>
 
+#include <sys/resource.h>
+#include <sys/statfs.h>
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
@@ -337,6 +340,12 @@ int gethostname(char *name, size_t len)
 {
     STUBBED("gethostname");
     strcpy(name, "pedigree");
+    return 0;
+}
+
+int	sethostname(char *name, size_t len)
+{
+    STUBBED("sethostname");
     return 0;
 }
 
@@ -1533,4 +1542,75 @@ pid_t getppid(void)
 {
     STUBBED("getppid");
     return 0;
+}
+
+int getrlimit(int resource, struct rlimit *rlp)
+{
+    STUBBED("setrlimit");
+    return -1;
+}
+
+int setrlimit(int resource, const struct rlimit *rlp)
+{
+    STUBBED("setrlimit");
+    return -1;
+}
+
+/// \todo Write - should just be a simple ls-style read of the raw drive
+int getmntinfo(struct statfs **mntbufp, int flags)
+{
+    STUBBED("getmntinfo");
+    return -1;
+}
+
+int statfs(const char *path, struct statfs *buf)
+{
+    STUBBED("statfs");
+    return -1;
+}
+
+int fstatfs(int fd, struct statfs *buf)
+{
+    STUBBED("fstatfs");
+    return -1;
+}
+
+struct fstab *getfsent(void)
+{
+    STUBBED("getfsent");
+    return 0;
+}
+
+struct fstab *getfsfile(const char *mount_point)
+{
+    STUBBED("getfsfile");
+    return 0;
+}
+
+struct fstab *getfsspec(const char *special_file)
+{
+    STUBBED("getfsspec");
+    return 0;
+}
+
+int setfsent(void)
+{
+    STUBBED("setfsent");
+    return -1;
+}
+
+void endfsent(void)
+{
+    STUBBED("endfsent");
+}
+
+int getrusage(int who, struct rusage *r_usage)
+{
+    STUBBED("getrusage");
+    return -1;
+}
+
+int sigaltstack(const struct sigaltstack *stack, struct sigaltstack *oldstack)
+{
+    return syscall2(POSIX_SIGALTSTACK, (int) stack, (int) oldstack);
 }

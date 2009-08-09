@@ -87,7 +87,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles()
+            m_MemoryMappedFiles(), m_AltSigStack()
         {}
 
         /** Copy constructor */
@@ -97,7 +97,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles()
+            m_MemoryMappedFiles(), m_AltSigStack()
         {}
 
         /** Default destructor */
@@ -108,6 +108,45 @@ class PosixSubsystem : public Subsystem
 
         /** A thread has thrown an exception! */
         virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);
+
+        /** Alternate signal stack */
+        /// \todo Figure out how to make this work for more than just the current process (ie, work
+        ///       with CheckEventState... Which requires exposing parts of the POSIX subsystem to
+        ///       the scheduler - not good!).
+        struct AlternateSignalStack
+        {
+            /// Default constructor
+            AlternateSignalStack() : base(0), size(0), inUse(false), enabled(false)
+            {};
+
+            /// Default destructor
+            virtual ~AlternateSignalStack()
+            {};
+
+            /// The location of this stack
+            uintptr_t base;
+
+            /// Size of the stack
+            size_t size;
+
+            /// Are we to use this alternate stack rather than a normal stack?
+            bool inUse;
+
+            /// Enabled?
+            bool enabled;
+        };
+
+        /** Grabs the alternate signal stack */
+        AlternateSignalStack &getAlternateSignalStack()
+        {
+            return m_AltSigStack;
+        }
+
+        /** Sets the alternate signal stack, if possible */
+        void setAlternateSignalStack(AlternateSignalStack &s)
+        {
+            m_AltSigStack = s;
+        }
 
         /** A signal handler */
         struct SignalHandler
@@ -252,6 +291,10 @@ class PosixSubsystem : public Subsystem
          * Links addresses to their MemoryMappedFiles.
          */
         Tree<void*, MemoryMappedFile*> m_MemoryMappedFiles;
+        /**
+         * Alternate signal stack - if defined, used instead of a system-defined stack
+         */
+        AlternateSignalStack m_AltSigStack;
 };
 
 #endif
