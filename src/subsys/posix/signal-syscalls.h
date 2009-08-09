@@ -45,7 +45,7 @@ int posix_raise(int sig, SyscallState &State);
 int posix_kill(int pid, int sig);
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset);
 
-int posix_sigaltstack(const struct sigaltstack *stack, struct sigaltstack *oldstack);
+int posix_sigaltstack(const stack_t *stack, struct stack_t *oldstack);
 
 void pedigree_init_sigret();
 

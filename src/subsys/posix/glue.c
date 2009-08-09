@@ -349,12 +349,6 @@ int	sethostname(char *name, size_t len)
     return 0;
 }
 
-int sethostname(char *name, int len)
-{
-    STUBBED("sethostname");
-    return 0;
-}
-
 int ioctl(int fd, int command, void *buf)
 {
     return (int)syscall3(POSIX_IOCTL, fd, command, (int)buf);
@@ -1610,7 +1604,7 @@ int getrusage(int who, struct rusage *r_usage)
     return -1;
 }
 
-int sigaltstack(const struct sigaltstack *stack, struct sigaltstack *oldstack)
+int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
     return syscall2(POSIX_SIGALTSTACK, (int) stack, (int) oldstack);
 }

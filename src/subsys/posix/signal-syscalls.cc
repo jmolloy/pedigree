@@ -414,7 +414,7 @@ int posix_sleep(uint32_t seconds)
     return 0;
 }
 
-int posix_sigaltstack(const struct sigaltstack *stack, struct sigaltstack *oldstack)
+int posix_sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
     // Verify arguments
     if(!stack && !oldstack)

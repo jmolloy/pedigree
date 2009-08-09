@@ -156,7 +156,7 @@ typedef struct stack_t
     int ss_flags;
 } stack_t;
 
-int _EXFUN(sigaltstack, (const struct sigaltstack *stack, struct sigaltstack *oldstack));
+int _EXFUN(sigaltstack, (const stack_t *stack, stack_t *oldstack));
 
 /* protos for functions found in winsup sources for CYGWIN */
 #if defined(__CYGWIN__) || defined(__rtems__)

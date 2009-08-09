@@ -209,7 +209,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     case POSIX_GETPGRP:
       return posix_getpgrp();
     case POSIX_SIGALTSTACK:
-      return posix_sigaltstack(reinterpret_cast<struct sigaltstack *>(p1), reinterpret_cast<struct sigaltstack *>(p2));
+      return posix_sigaltstack(reinterpret_cast<const stack_t *>(p1), reinterpret_cast<stack_t *>(p2));
 
     // Stub warning
     case POSIX_STUBBED:
