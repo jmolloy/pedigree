@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ -f hdd_ext2.img ]; then
-  qemu-system-x86_64 -fda floppy.img -hda hdd_ext2.img -hdb hdd_fat16.img -boot a $*
+if [ -f build/hdd_ext2.img ]; then
+  qemu-system-x86_64 -fda build/floppy.img -hda ./build/hdd_ext2.img -hdb ./build/hdd_fat16.img -boot a $*
 else
-  qemu-system-x86_64 -fda floppy.img -hda hdd_fat16.img -boot a $*
+  qemu-system-x86_64 -fda build/floppy.img -hda ./build/hdd_fat16.img -boot a $*
 fi

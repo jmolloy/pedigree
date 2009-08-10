@@ -18,7 +18,7 @@ env.Alias("apps", objname)
 
 # Dependencies
 env.Depends(objname, "crt0")
-env.Depends(objname, "subsys")
+#env.Depends(objname, "subsys")
 env.Depends(objname, "libs")
 
 # To include a new subdirectory just add to the list.

@@ -172,7 +172,7 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
         ERROR("VbeDisplay: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
-    NOTICE("setCurrentbuffer");
+
     memcpy(getFramebuffer(), pBuf->pFbBackbuffer, m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8));
 }
 
@@ -259,15 +259,38 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
         increment = -1;
     }
 
-    // Unoptimised bitblit. This could definately be made better.
-    for (size_t y = min; y < max; y += increment)
+    if (toX == 0 && fromX == 0 && width == m_Mode.width)
     {
-        memmove(&pBuffer[(y+toY)*m_Mode.width + toX],
-                &pBuffer[(y+fromY)*m_Mode.width + fromX],
-                width*sizeof(rgb_t));
-        memmove(&pFb[((y+toY)*m_Mode.width + toX) * bytesPerPixel],
-                &pFb[((y+fromY)*m_Mode.width + fromX) * bytesPerPixel],
-                width*bytesPerPixel);
+        size_t to = toY*m_Mode.width;
+        size_t from = fromY*m_Mode.width;
+        size_t sz = width*height;
+        memmove(&pBuffer[to],
+                &pBuffer[from],
+                sz*sizeof(rgb_t));
+        memmove(&pFb[to * bytesPerPixel],
+                &pFb[from * bytesPerPixel],
+                sz*bytesPerPixel);
+        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ to*bytesPerPixel,
+               pBuf->pFbBackbuffer + to*bytesPerPixel,
+               sz*bytesPerPixel);
+    }
+    else
+    {
+        // Unoptimised bitblit. This could definately be made better.
+        for (size_t y = min; y < max; y += increment)
+        {
+            size_t to = (y+toY)*m_Mode.width + toX;
+            size_t from = (y+fromY)*m_Mode.width + fromX;
+            memmove(&pBuffer[to],
+                    &pBuffer[from],
+                    width*sizeof(rgb_t));
+            memmove(&pFb[to * bytesPerPixel],
+                    &pFb[from * bytesPerPixel],
+                    width*bytesPerPixel);
+            memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ to*bytesPerPixel,
+                   pBuf->pFbBackbuffer + to*bytesPerPixel,
+                   width*bytesPerPixel);
+        }
     }
 }
 

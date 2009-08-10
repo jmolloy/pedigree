@@ -587,22 +587,28 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 {
-    rect.point(m_OffsetLeft, m_OffsetTop);
-    rect.point(m_FbWidth, m_Height*g_NormalFont->getHeight());
-    size_t top_px   = m_OffsetTop * m_FbWidth;
-    size_t top2_px   = m_OffsetTop * m_FbWidth+ n*m_FbWidth*g_NormalFont->getHeight();
+//    rect.point(m_OffsetLeft, m_OffsetTop);
+//    rect.point(m_FbWidth, m_Height*g_NormalFont->getHeight());
+    size_t top_px   = m_OffsetTop;
+    size_t top2_px   = m_OffsetTop+ n*g_NormalFont->getHeight();
 
 //    size_t scrollBottom_char = m_Height*m_Width;
 //    size_t scrollBottom_px   = m_Height * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
-    size_t bottom2_px = top_px + (m_Height-n) * m_FbWidth * g_NormalFont->getHeight();
+    size_t bottom2_px = top_px + (m_Height-n)*g_NormalFont->getHeight();
 
-    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ top_px ]),
-            reinterpret_cast<void*>(&m_pFramebuffer[ top2_px ]),
-             (m_Height-n) * m_FbWidth * 3 * g_NormalFont->getHeight());
-    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
-            0,
-            n * m_FbWidth * 3 * g_NormalFont->getHeight());
+    // If we're bitblitting, we need to commit all changes before now.
+    Syscall::updateBuffer(m_pFramebuffer, rect);
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
+    Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
+
+//    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ top_px ]),
+//            reinterpret_cast<void*>(&m_pFramebuffer[ top2_px ]),
+//             (m_Height-n) * m_FbWidth * 3 * g_NormalFont->getHeight());
+//    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
+//            0,
+//            n * m_FbWidth * 3 * g_NormalFont->getHeight());
 
     if (m_pView == m_pInsert)
         m_pView += n*m_Width;
