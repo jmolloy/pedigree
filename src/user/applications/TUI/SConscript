@@ -59,7 +59,7 @@ libraries = [
     'm',
     'freetype-i686.a',
     'libpng-i686.a',
-    'libz-i686.a'
+    'libz-i686.a',
 ]
 
 # To add a library path add to the list below
@@ -77,8 +77,8 @@ tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
-tmp['CFLAGS'] = tmp['CFLAGS'].replace('-nostdinc -ffreestanding', '')
-tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace('-nostdinc -ffreestanding', '')
+# tmp['CFLAGS'] += ' -DNEW_XTERM '
+# tmp['CXXFLAGS'] += ' -DNEW_XTERM '
 
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostdlib -DNEW_XTERM')
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostartfiles')

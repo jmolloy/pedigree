@@ -41,7 +41,7 @@ int posix_waitpid(int pid, int *status, int options);
 int posix_exit(int code);
 int posix_getpid();
 
-int posix_gettimeofday(timeval *tv, timezone *tz);
+int posix_gettimeofday(timeval *tv, struct timezone *tz);
 
 int posix_getpwent(passwd *pw, int n, char *str);
 int posix_getpwnam(passwd *pw, const char *name, char *str);

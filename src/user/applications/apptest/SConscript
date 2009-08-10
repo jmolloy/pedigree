@@ -62,13 +62,5 @@ tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
-cflags = tmp['CFLAGS']
-
-# Only for this application is this convoluted *MESS* required...
-cflags = cflags.replace('-nostdinc', '')
-cflags = cflags.replace('-ffreestanding', '')
-cflags = cflags.replace('-nostdlib', '')
-tmp['CFLAGS'] = cflags
-
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-fno-builtin -U__svr4__ -nostartfiles')
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib')

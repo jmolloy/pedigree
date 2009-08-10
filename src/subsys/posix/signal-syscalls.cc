@@ -224,7 +224,14 @@ int posix_raise(int sig, SyscallState &State)
     if (signalHandler->pEvent)
         pThread->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
 
-    Processor::information().getScheduler().checkEventState(State.getStackPointer());
+    // If the alternate stack is available, and not in use, use that
+    uintptr_t stackPointer = State.getStackPointer();
+    PosixSubsystem::AlternateSignalStack &currStack = pSubsystem->getAlternateSignalStack();
+    if(currStack.enabled && !currStack.inUse)
+        stackPointer = (currStack.base + currStack.size) - 1;
+
+    // Jump to the signal handler
+    Processor::information().getScheduler().checkEventState(stackPointer);
     Processor::setInterrupts(bWasInterrupts);
 
     // All done
@@ -235,6 +242,17 @@ int pedigree_sigret()
 {
     SG_NOTICE("pedigree_sigret");
 
+    // Grab the subsystem for this thread
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+
+    // If the alternate stack is in use, we're done with it for now
+    PosixSubsystem::AlternateSignalStack &currStack = pSubsystem->getAlternateSignalStack();
+    if(currStack.inUse)
+        currStack.inUse = false;
+
+    // Return to the old code
     Processor::information().getScheduler().eventHandlerReturned();
 
     FATAL("eventHandlerReturned() returned!");
@@ -393,6 +411,56 @@ int posix_sleep(uint32_t seconds)
         ERROR("sleep: acquire was not interrupted?");
     }
 
+    return 0;
+}
+
+int posix_sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
+{
+    // Verify arguments
+    if(!stack && !oldstack)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    if(stack && (stack->ss_size < MINSIGSTKSZ))
+    {
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
+
+    // Grab the subsystem for this thread
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+
+    // Look at the current alternative stack
+    PosixSubsystem::AlternateSignalStack &currStack = pSubsystem->getAlternateSignalStack();
+
+    // Are we running on the alternate stack?
+    if(currStack.inUse)
+    {
+        SG_NOTICE("Can't set new alternate signal stack as it's the one we're running on!");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    // Fill the old stack, if needed
+    if(oldstack)
+    {
+        oldstack->ss_sp = reinterpret_cast<void*>(currStack.base);
+        oldstack->ss_size = currStack.size;
+        oldstack->ss_flags = (currStack.enabled ? 0 : SA_DISABLE) | (currStack.inUse ? SA_ONSTACK : 0);
+    }
+
+    // Set the new one
+    if(stack)
+    {
+        currStack.base = reinterpret_cast<uintptr_t>(stack->ss_sp);
+        currStack.size = stack->ss_size;
+        currStack.enabled = (stack->ss_flags & SA_DISABLE) != SA_DISABLE;
+    }
+
+    // Success!
     return 0;
 }
 

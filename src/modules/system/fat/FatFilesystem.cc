@@ -62,8 +62,6 @@ FatFilesystem::~FatFilesystem()
 
 bool FatFilesystem::initialise(Disk *pDisk)
 {
-    NOTICE("Initialising FAT for a disk");
-
     m_pDisk = pDisk;
 
     // Attempt to read the superblock.
@@ -181,14 +179,9 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
     // read the FAT into cache
     uint32_t fatSector = m_Superblock.BPB_RsvdSecCnt;
+
     m_pFatCache = new uint8_t[fatSz];
-
-    uint8_t* tmpBuffer = new uint8_t[fatSz];
-    readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(tmpBuffer));
-
-    memcpy(reinterpret_cast<void*>(m_pFatCache+0), reinterpret_cast<void*>(tmpBuffer), fatSz);
-
-    delete [] tmpBuffer;
+    readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(m_pFatCache));
 
     // Define the root directory early
     getRoot();
@@ -298,6 +291,8 @@ String FatFilesystem::getVolumeLabel()
 
 uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
+    // NOTICE("FatFilesystem::read");
+
     // Sanity check.
     if (pFile->isDirectory())
         return 0;
@@ -306,12 +301,14 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     uint32_t clus = pFile->getInode();
     if (clus == 0)
     {
+        WARNING("FAT: File has bad inode");
         return 0; // can't do it
     }
 
     // validity checking
     if (static_cast<size_t>(location) > pFile->getSize())
     {
+        WARNING("FAT: Attempting to read past the EOF");
         return 0;
     }
 
@@ -323,8 +320,13 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
         // overflow (location > size) or zero bytes required (location == size)
         if (finalSize == 0 || finalSize > pFile->getSize())
+        {
+            WARNING("FAT: location + size > EOF");
             return 0;
+        }
     }
+
+    // NOTICE("Reading " << finalSize << " bytes from " << location << " [" << pFile->getSize() << "]...");
 
     // finalSize holds the total amount of data to read, now find the cluster and sector offsets
     uint32_t clusOffset = location / (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec);
@@ -338,7 +340,10 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     {
         clus = getClusterEntry(clus);
         if (clus == 0 || isEof(clus))
+        {
+            WARNING("FAT: CLUSTER FAIL - " << clus); // <-- This is where the installer + lodisk is failing.
             return 0; // can't do it
+        }
         clusOffset--;
     }
 
@@ -382,6 +387,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     delete [] tmpBuffer;
 
     // if we reach here, something's gone wrong
+    WARNING("FAT: read returning zero... Something's not right.");
     return 0;
 }
 
@@ -745,8 +751,8 @@ bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
-    return true;
+    size_t sz = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
+    return sz == size;
 }
 
 bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
@@ -758,8 +764,8 @@ bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
-    return true;
+    size_t sz = m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
+    return sz == size;
 }
 
 uint32_t FatFilesystem::getSectorNumber(uint32_t cluster)

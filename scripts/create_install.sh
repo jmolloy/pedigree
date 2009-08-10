@@ -32,6 +32,9 @@ if which mcopy >/dev/null 2>&1; then
   rm -rf tmp
 
   sh $SRCDIR/../scripts/mtsetup.sh ./disk.img > /dev/null 2>&1
+  
+  # Set the volume label to the installer image label
+  mlabel -c C:INSRAMFS
 
   # This should be the root disk
   touch ./.pedigree-root

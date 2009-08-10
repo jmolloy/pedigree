@@ -107,6 +107,11 @@ void init_install()
 //     FATAL("No disks found!");
     }
 
+    if (VFS::instance().find(String("raw»/")) == 0)
+    {
+        FATAL("No raw partition!");
+    }
+
     // Setup the RAMFS for the mount table before the real HDDs. Doing it early
     // means if someone happens to have a disk with a volume label that matches
     // "ramfs", we don't end up failing later.
@@ -123,30 +128,25 @@ void init_install()
     // Mount it in the VFS
     findDisks(pRamDisk);
 
-    FATAL("ramdisk is go");
-    
-    /*RamFs *ramFs = new RamFs;
-    ramFs->initialise(0);
-
-    // Add it to the VFS
-    VFS::instance().addAlias(ramFs, ramFs->getVolumeLabel());*/
-
     // Build the mount table
-    if (!VFS::instance().createFile(String("ramfs»/mount.tab"), 0777, 0))
-        FATAL("Couldn't create mount table in the RAMFS");
-    File* mountTab = VFS::instance().find(String("ramfs»/mount.tab"));
+    // if (!VFS::instance().createFile(String("root»/mount.tab"), 0777, 0))
+    //    FATAL("Couldn't create mount table in the RAMFS");
+    // File* mountTab = VFS::instance().find(String("root»/mount.tab"));
 
     List<VFS::Alias*> myAliases = VFS::instance().getAliases();
     NormalStaticString myMounts;
     for (List<VFS::Alias*>::Iterator i = myAliases.begin(); i != myAliases.end(); i++)
     {
         // Check for the mounts upon which we *don't* want Pedigree to be installed on
+        /// \todo Find a better way of doing this...
         String alias = (*i)->alias;
         if (!strncmp(static_cast<const char*>(alias), "PEDIGREEINSTALL", strlen("PEDIGREEINSTALL")))
             continue;
         if (!strncmp(static_cast<const char*>(alias), "root", strlen("root")))
             continue;
-        if (!strncmp(static_cast<const char*>(alias), "ramfs", strlen("ramfs")))
+        if (!strncmp(static_cast<const char*>(alias), "insramfs", strlen("insramfs")))
+            continue;
+        if (!strncmp(static_cast<const char*>(alias), "raw", strlen("raw")))
             continue;
 
         myMounts += alias;
@@ -154,16 +154,16 @@ void init_install()
     }
 
     // Write to the file
-    mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
+    // mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
 
-    mountTab->decreaseRefCount(true);
+    // mountTab->decreaseRefCount(true);
 
     NOTICE("Available mounts for install:\n" << String(myMounts));
 
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
-    str += "Loading init program (root»/applications/login)\n";
+    str += "Loading init program (root»/applications/TUI)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -182,6 +182,7 @@ void init_install()
     pProcess->description().append("init");
 
     pProcess->setCwd(VFS::instance().find(String("root»/")));
+    pProcess->setCtty(0);
 
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
@@ -195,11 +196,15 @@ void destroy_install()
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root»/applications/login"));
+    File* initProg = VFS::instance().find(String("root»/applications/TUI"));
     if (!initProg)
     {
-        FATAL("Unable to load init program!");
-        return;
+        initProg = VFS::instance().find(String("root»/applications/tui"));
+        if (!initProg)
+        {
+            FATAL("Unable to load init program!");
+            return;
+        }
     }
 
     // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
@@ -246,8 +251,8 @@ MODULE_NAME("installer");
 MODULE_ENTRY(&init_install);
 MODULE_EXIT(&destroy_install);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "ramfs");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "lodisk");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users", "ramfs");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users", "lodisk");
 #endif
 

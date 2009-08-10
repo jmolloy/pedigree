@@ -3,10 +3,14 @@
 
 #include "_ansi.h"
 #include <sys/signal.h>
+#include <sys/types.h>
 
 _BEGIN_STD_C
 
+#ifndef sig_atomic_t
 typedef int	sig_atomic_t;		/* Atomic entity type (ANSI) */
+#endif
+
 typedef int sig_t;
 
 #define SIG_DFL ((_sig_func_ptr)0)	/* Default action */

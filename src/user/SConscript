@@ -6,6 +6,8 @@
 import os.path
 Import(['env'])
 
+tmp = env.Clone()
+
 # To include a new subdirectory just add to the list.
 subdirs = [
     'applications/apptest',
@@ -15,4 +17,20 @@ subdirs = [
     'applications/TUI'
 ]
 
+# Cleans a set of flags
+def fixFlags(flags):
+    flags = flags.replace('-nostdinc', '')
+    flags = flags.replace('-ffreestanding', '')
+    flags = flags.replace('-nostdlib', '')
+    if env['ARCH_TARGET'] == 'PPC':
+        flags += ' -U__svr4__ '
+    return flags
+
+# Fix the CFLAGS and CXXFLAGS for applications
+env['CFLAGS'] = fixFlags(env['CFLAGS'])
+env['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
+
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
+# Reset the old environment
+env = tmp

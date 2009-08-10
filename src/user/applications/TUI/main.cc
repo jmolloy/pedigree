@@ -176,8 +176,8 @@ int main (int argc, char **argv)
     
     Syscall::updateBuffer(pCurrentTerminal->getBuffer(), rect);
 
-    size_t maxBuffSz = 32678*2-1;
-    char *buffer = new char[maxBuffSz+1];
+    size_t maxBuffSz = (32768 * 2) - 1;
+    char *buffer = new char[maxBuffSz + 1];
     char str[64];
     size_t lastResponse = 0;
     size_t tabId;

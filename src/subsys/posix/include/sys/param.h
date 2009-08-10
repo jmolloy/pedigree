@@ -23,7 +23,13 @@
 #define MAXHOSTNAMELEN 128
 #endif
 
+#ifndef MAXSYMLINKS
+#define MAXSYMLINKS 128
+#endif
+
+#ifndef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #endif
