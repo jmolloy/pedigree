@@ -602,7 +602,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     rect.reset();
     Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
-
+    
 //    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ top_px ]),
 //            reinterpret_cast<void*>(&m_pFramebuffer[ top2_px ]),
 //             (m_Height-n) * m_FbWidth * 3 * g_NormalFont->getHeight());
@@ -635,7 +635,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 
             TermChar blank;
             blank.fore = 7;
-            blank.back = 0;
+            blank.back = 5;
             blank.utf32 = ' ';
             blank.flags = 0;
             for (size_t i = m_BufferLength; i < m_BufferLength+amount; i++)

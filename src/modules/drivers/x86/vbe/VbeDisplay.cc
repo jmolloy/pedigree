@@ -237,6 +237,7 @@ void VbeDisplay::killBuffer(rgb_t *pBuffer)
 void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
                          size_t toY, size_t width, size_t height)
 {
+    NOTICE("bitBlit: " << fromX << ", " << fromY << " -> " << toX << ", " << toY << "; " << width << ", " << height);
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
@@ -264,15 +265,27 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
         size_t to = toY*m_Mode.width;
         size_t from = fromY*m_Mode.width;
         size_t sz = width*height;
+        size_t extent_s, extent_e;
+        if (from > to)
+        {
+            extent_s = to;
+            extent_e = from+sz - extent_s;
+        }
+        else
+        {
+            extent_s = from;
+            extent_e = to+sz - extent_s;
+        }
+
         memmove(&pBuffer[to],
                 &pBuffer[from],
                 sz*sizeof(rgb_t));
         memmove(&pFb[to * bytesPerPixel],
                 &pFb[from * bytesPerPixel],
                 sz*bytesPerPixel);
-        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ to*bytesPerPixel,
-               pBuf->pFbBackbuffer + to*bytesPerPixel,
-               sz*bytesPerPixel);
+        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ extent_s*bytesPerPixel,
+               pBuf->pFbBackbuffer + extent_s*bytesPerPixel,
+               extent_e*bytesPerPixel);
     }
     else
     {
@@ -296,6 +309,7 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
 
 void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width, size_t height, rgb_t colour)
 {
+    NOTICE("fillRect: " << x << ", " << y << "; " << width << ", " << height);
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
@@ -304,6 +318,7 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     }
     
     uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
+    uint8_t *pFb2 = pBuf->pFbBackbuffer;
 
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
@@ -323,13 +338,18 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
                 case 16:
                 {
                     uint16_t *pFb16 = reinterpret_cast<uint16_t*> (pFb);
+                    uint16_t *pFb162 = reinterpret_cast<uint16_t*> (pFb2);
                     pFb16[i*m_Mode.width + j] = compiledColour&0xFFFF;
+                    pFb162[i*m_Mode.width + j] = compiledColour&0xFFFF;
                     break;
                 }
                 case 24:
                     pFb[ (i*m_Mode.width + j) * 3 + 0] = colour.r;
                     pFb[ (i*m_Mode.width + j) * 3 + 1] = colour.g;
                     pFb[ (i*m_Mode.width + j) * 3 + 2] = colour.b;
+                    pFb2[ (i*m_Mode.width + j) * 3 + 0] = colour.r;
+                    pFb2[ (i*m_Mode.width + j) * 3 + 1] = colour.g;
+                    pFb2[ (i*m_Mode.width + j) * 3 + 2] = colour.b;
                     break;
                 default:
                     WARNING("VbeDisplay: Pixel format not handled in fillRectangle.");

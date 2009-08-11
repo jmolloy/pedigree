@@ -233,7 +233,7 @@ if env['genflags']:
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    if env['nocolour']:
+    if env['nocolour'] or os.environ['TERM'] == 'dumb' :
         env['CCCOMSTR']   =    '     Compiling $TARGET'
         env['CXXCOMSTR']  =    '     Compiling $TARGET'
         env['ASCOMSTR']   =    '    Assembling $TARGET'
