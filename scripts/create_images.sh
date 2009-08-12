@@ -257,7 +257,7 @@ if which mkisofs > /dev/null 2>&1; then
     touch .pedigree-root
     cp $SRCDIR/../images/grub/stage2_eltorito .
 
-    mkisofs -joliet -graft-points -quiet -input-charset ascii -R \
+    mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
 	-b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
 	-boot-info-table -o pedigree.iso -V "PEDIGREE" \
 	boot/grub/stage2_eltorito=./stage2_eltorito \

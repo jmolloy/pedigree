@@ -50,8 +50,23 @@ private:
     {
         friend class Xterm;
         private:
-            struct TermChar
+            class TermChar
             {
+            public:
+                bool operator == (const TermChar &other) const
+                {
+                    return (flags == other.flags &&
+                            fore == other.fore &&
+                            back == other.back &&
+                            utf32 == other.utf32);
+                }
+                bool operator != (const TermChar &other) const
+                {
+                    return !(flags == other.flags &&
+                            fore == other.fore &&
+                            back == other.back &&
+                            utf32 == other.utf32);
+                }
                 uint8_t flags;
                 uint8_t fore, back;
                 uint32_t utf32;
@@ -69,7 +84,7 @@ private:
             void setFlags(uint8_t flags);
             uint8_t getFlags();
 
-            void renderAll(DirtyRectangle &rect);
+            void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void setChar(uint32_t utf32, size_t x, size_t y);
 
             void addChar(uint32_t utf32, DirtyRectangle &rect);
