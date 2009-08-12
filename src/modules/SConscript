@@ -8,6 +8,9 @@ Import(['env'])
 
 # Common drivers - order is important
 driver_common_subdirs = [
+	# DMA
+	'dma',
+
     # Pedigree-specific disk I/O
     'ata',
     'partition',
@@ -26,7 +29,10 @@ driver_common_subdirs = [
     # CDI NIC drivers
     'e1000',
     'pcnet',
-    'sis900'
+    'sis900',
+    
+    # CDI Disk drivers
+    'floppy'
 ]
 
 # Architecture-specific drivers

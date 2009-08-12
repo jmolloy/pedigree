@@ -52,6 +52,10 @@ struct cdi_driver {
     void (*destroy)(struct cdi_driver* driver);
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Muss vor dem ersten Aufruf einer anderen CDI-Funktion aufgerufen werden.
  * Initialisiert interne Datenstruktur der Implementierung fuer das jeweilige
@@ -86,6 +90,10 @@ void cdi_driver_destroy(struct cdi_driver* driver);
  * @param driver Zu registierender Treiber
  */
 void cdi_driver_register(struct cdi_driver* driver);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
 

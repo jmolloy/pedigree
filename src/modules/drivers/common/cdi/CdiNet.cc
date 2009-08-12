@@ -19,15 +19,21 @@
 #include <machine/Network.h>
 #include <network/NetworkStack.h>
 
+// Prototypes in the extern "C" block to ensure that they are not mangled
+extern "C" {
+    void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device);
+    void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size);
+};
 
 CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
-    Network(pDev), m_device(device), m_StationInfo()
+    Network(pDev), m_Device(device), m_StationInfo()
 {
-    uint64_t mac = device->mac;
+    setSpecificType(String("CDI NIC"));
 
-    setSpecificType(String("CDI network card"));
-    // FIXME Little endian only
-    m_StationInfo.mac.setMac((uint8_t*) &mac, false);
+    /// \todo Check endianness - *should* be fine, but we'll see...
+    uint64_t mac = m_Device->mac;
+    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(&mac), false);
+
     NetworkStack::instance().registerDevice(this);
 }
 
@@ -37,14 +43,13 @@ CdiNet::~CdiNet()
 
 bool CdiNet::send(uint32_t nBytes, uintptr_t buffer)
 {
-    m_device->send_packet(m_device, (void*) buffer, nBytes);
+    m_Device->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
 
     return true;
 }
 
 StationInfo CdiNet::getStationInfo()
 {
-    NOTICE("CdiNet::getStationInfo");
     return m_StationInfo;
 }
 
@@ -72,11 +77,9 @@ bool CdiNet::setStationInfo(StationInfo info)
     return true;
 }
 
-extern "C" {
-
 void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
 {
-    Network* pDev = (Network*) void_pdev;
+    Network* pDev = reinterpret_cast<Network*>(void_pdev);
 
     WARNING("cdi_cpp_net_register");
 
@@ -86,7 +89,7 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     // Replace pDev with pCdiNet
     pCdiNet->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pCdiNet);
-    device->dev.pDev = (void*) pCdiNet;
+    device->dev.pDev = reinterpret_cast<void*>(pCdiNet);
 }
 
 
@@ -94,15 +97,11 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  * Wird von Netzwerktreibern aufgerufen, wenn ein Netzwerkpaket
  * empfangen wurde.
  */
-void cdi_net_receive(
-    struct cdi_net_device* device, void* buffer, size_t size)
+void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    WARNING("cdi_net_receive " << *(uint8_t*) buffer << "; size = " << size);
-    WARNING("cdi_net_receive buffer at " << (uintptr_t) buffer);
+    WARNING("cdi_net_receive " << *reinterpret_cast<uint8_t*>(buffer) << "; size = " << size);
+    WARNING("cdi_net_receive buffer at " << reinterpret_cast<uintptr_t>(buffer));
 
-    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer),
-        (Network*) device->dev.pDev, 0);
+    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.pDev), 0);
     WARNING("cdi_net_receive done");
-}
-
 }

@@ -55,11 +55,9 @@ int main(int argc, char **argv)
   // For the installer, just run Python
   printf("Loading installer, please wait...\n");
 
-  /*
-  static char *app_argv[] = {"root»/applications/python", "root»/code/installer/install.py", 0};
-  static char *app_env[] = { "TERM=xterm", "PATH=/applications", (char *)0 };
-  execve("root»/applications/python", app_argv, app_env);
-  */
+  static const char *app_argv[] = {"root»/applications/python", "root»/code/installer/install.py", 0};
+  static const char *app_env[] = { "TERM=xterm", "PATH=/applications", "PYTHONHOME=/", 0 };
+  execve("root»/applications/python", (char * const *) app_argv, (char * const *) app_env);
 
   printf("FATAL: Couldn't load Python!\n");
 

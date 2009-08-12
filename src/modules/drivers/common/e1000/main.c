@@ -36,9 +36,9 @@
 
 #include "device.h"
 
-struct e1000_driver {
+static struct e1000_driver {
     struct cdi_net_driver net;
-};
+} driver;
 
 static struct e1000_driver driver;
 static const char* driver_name = "e1000";

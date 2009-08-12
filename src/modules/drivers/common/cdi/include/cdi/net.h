@@ -36,6 +36,9 @@ struct cdi_net_driver {
     struct cdi_driver   drv;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Initialisiert die Datenstrukturen fuer einen Netzerktreiber
@@ -60,6 +63,11 @@ void cdi_net_device_init(struct cdi_net_device* device);
  */
 void cdi_net_receive(
     struct cdi_net_device* device, void* buffer, size_t size);
+
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
 

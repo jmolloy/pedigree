@@ -628,8 +628,8 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
     
     /// \note I'm now getting a page fault during execve (MemoryMappedFile::trap) that occurs only
     ///       when these lines are kept in. I've left them here because they're correct. - Matt
-    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
-    *pageDirectoryEntry = 0;
+    // PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    // *pageDirectoryEntry = 0;
   }
 }
 

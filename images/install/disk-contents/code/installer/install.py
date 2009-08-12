@@ -12,6 +12,8 @@ installdir = "pedigree:/test"
 def main(stdscr):
 	global filesdir, installdir
 	
+	return 0
+	
 	inst = Installer(stdscr, "Pedigree", filesdir, installdir)
 	inst.setupCurses()
 	
@@ -21,4 +23,22 @@ def main(stdscr):
 	inst.postInstall()
 	inst.done()
 
-curses.wrapper(main)
+print "Installer is starting up..."
+
+try:
+	stdscr = curses.initscr()
+	exit()
+	curses.endwin()
+	
+	curses.noecho()
+	
+	# main(stdscr)
+except:
+	pass
+
+curses.nocbreak()
+stdscr.keypad(0)
+curses.echo()
+curses.endwin()
+	
+# curses.wrapper(main)

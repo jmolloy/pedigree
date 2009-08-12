@@ -11,7 +11,7 @@
 #ifndef _CDI_LISTS_
 #define _CDI_LISTS_
 #include <stddef.h>
-//#include <stdint.h>
+#include <stdint.h>
 
 /**
  * Repraesentiert eine Liste.

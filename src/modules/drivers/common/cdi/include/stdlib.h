@@ -19,7 +19,18 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void* malloc(size_t size);
 extern void free(void* ptr);
+
+extern void *memset(void *s, int c, size_t n);
+void *memcpy(void *s1, const void *s2, size_t n);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif

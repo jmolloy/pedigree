@@ -36,6 +36,14 @@
   } \
   while (0)
 
+/// \note You use this in the wrong way, you die.
+#define NOTICE_NOLOCK(text) \
+  do \
+  { \
+    Log::instance() << Log::Notice << text << Flush; \
+  } \
+  while (0)
+
 /** Add a warning message to the log */
 #define WARNING(text) \
   do \
@@ -43,6 +51,14 @@
     Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Warning << text << Flush; \
     Log::instance().m_Lock.release(); \
+  } \
+  while (0)
+
+/// \note You use this in the wrong way, you die.
+#define WARNING_NOLOCK(text) \
+  do \
+  { \
+    Log::instance() << Log::Warning << text << Flush; \
   } \
   while (0)
 
@@ -56,15 +72,35 @@
   } \
   while (0)
 
+/// \note You use this in the wrong way, you die.
+#define ERROR_NOLOCK(text) \
+  do \
+  { \
+    Log::instance() << Log::Error << text << Flush; \
+  } \
+  while (0)
+
     /* Log::instance() << Log::Error << __FILE__ << ":" << __LINE__ << ": " << Flush; \ */
 
-/** Add a fatal message to the log */
+/** Add a fatal message to the log
+ *  The panic is just in case the debugger isn't active, or the user returns
+ *  from the debugger.
+ */
 #define FATAL(text) \
   do \
   { \
     Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Fatal << text << Flush; \
     Log::instance().m_Lock.release(); \
+    Processor::breakpoint(); \
+  } \
+  while (0)
+
+/// \note You use this in the wrong way, you die.
+#define FATAL_NOLOCK(text) \
+  do \
+  { \
+    Log::instance() << Log::Fatal << text << Flush; \
     Processor::breakpoint(); \
   } \
   while (0)

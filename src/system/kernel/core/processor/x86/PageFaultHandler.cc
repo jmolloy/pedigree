@@ -124,7 +124,13 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   //static LargeStaticString eCode;
   #ifdef DEBUGGER
-    Debugger::instance().start(state, sError);
+    uintptr_t physAddr = 0, flags = 0;
+    if(va.isMapped(reinterpret_cast<void*>(state.getInstructionPointer())))
+        va.getMapping(reinterpret_cast<void*>(state.getInstructionPointer()), physAddr, flags);
+
+    // Page faults in usermode are basically useless to debug in the debugger
+    //if(!(flags & PFE_USER_MODE))
+        Debugger::instance().start(state, sError);
   #endif
 
   Scheduler &scheduler = Scheduler::instance();

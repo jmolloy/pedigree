@@ -20,9 +20,10 @@ struct cdi_dma_handle {
     size_t      length;
     uint8_t     mode;
     void*       buffer;
+    void*       realbuffer;
 
-    // LOST-Implementation...
-    FILE*       file;
+    // Pedigree-specific: memory region for this buffer
+    void*       region;
 };
 
 // Geraet => Speicher
@@ -33,6 +34,9 @@ struct cdi_dma_handle {
 #define CDI_DMA_MODE_SINGLE         (1 << 6)
 #define CDI_DMA_MODE_BLOCK          (2 << 6)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Initialisiert einen Transport per DMA
@@ -62,6 +66,10 @@ int cdi_dma_write(struct cdi_dma_handle* handle);
  * @return 0 bei Erfolg, -1 im Fehlerfall
  */
 int cdi_dma_close(struct cdi_dma_handle* handle);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
 

@@ -27,9 +27,10 @@
 #define MSDOS_IDENT_2 0xAA
 
 // Start of partition table in the first sector.
-#define MSDOS_PARTTAB_START 0x1BE
+#define MSDOS_PARTTAB_START     0x1BE
 // Number of partition entries in one table.
-#define MSDOS_PARTTAB_NUM   0x4
+#define MSDOS_PARTTAB_NUM       0x4
+#define MSDOS_EXT_PARTTAB_NUM   0x2
 
 /** An MS-DOS partition table entry. */
 typedef struct

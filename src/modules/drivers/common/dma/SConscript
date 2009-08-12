@@ -1,0 +1,58 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+tmp = env.Clone()
+
+# Change to then name of this module
+driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
+objname = driverdir + '/dma.o'
+
+env.Alias("drivers", objname)
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+
+]
+
+# To include new files just add to the list, or Glob("*.cpp")
+files = [
+    Glob("*.c"),
+    Glob("*.cc"),
+]
+
+# Architecture-specific drivers
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+	files += [Glob("x86/*.cc")]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    '#/src/system/include',
+    '#/src/modules/system',
+    '.'
+]
+
+# To add a library add to the list below
+libraries = [
+    'gcc'
+]
+
+# To add a library path add to the list below
+libpaths = [
+    env['LIBGCC']
+]
+
+####################################
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
+tmp.objects = [tmp.Object(i) for i in files]
+tmp['CPPPATH'] = [i for i in include]
+tmp['LIBS'] = [i for i in libraries]
+tmp['LIBPATH'] = [i for i in libpaths]
+#^-- Stupid way of doing it but I plan on adding processing.
+
+if not len(files) == 0:
+    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))

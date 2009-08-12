@@ -74,9 +74,7 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
     // How many pages does the read cross?
     uint64_t pageCount = nBytes / FILEDISK_PAGE_SIZE;
-    if(pageOffset)
-        pageCount++;
-    if((nBytes % FILEDISK_PAGE_SIZE))
+    if(pageOffset || (nBytes % FILEDISK_PAGE_SIZE))
         pageCount++;
 
     // Read the data
@@ -85,15 +83,14 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     for(uint64_t n = 0; n < pageCount && numBytes > 0; n++)
     {
         // How many bytes are to be read during this round?
-        uint64_t nBytesToRead = numBytes > FILEDISK_PAGE_SIZE ? FILEDISK_PAGE_SIZE : numBytes;
+        uint64_t nBytesToRead = (pageOffset + numBytes) > FILEDISK_PAGE_SIZE ? FILEDISK_PAGE_SIZE : numBytes;
 
         // Look up in the cache
-        uint8_t *destPage = dest + (FILEDISK_PAGE_SIZE * n);
         uint8_t *buff = 0;
         if((buff = reinterpret_cast<uint8_t *>(m_PageCache.lookup(startPage + n))))
         {
             // Single copy, rather than multiple
-            memcpy(destPage, buff + pageOffset, nBytesToRead);
+            memcpy(dest, buff + pageOffset, nBytesToRead);
         }
         else
         {
@@ -118,13 +115,14 @@ uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
                 memset(buff + sz, 0, FILEDISK_PAGE_SIZE - sz);
             
             // All is well - copy into the buffer & insert to the page cache
-            memcpy(destPage, buff + pageOffset, nBytesToRead);
+            memcpy(dest, buff + pageOffset, nBytesToRead);
             m_PageCache.insert(startPage + n, buff);
         }
 
         // Another page read
         pageOffset = 0;
         numBytes -= nBytesToRead;
+        dest += nBytesToRead;
     }
 
     return (nBytes - numBytes);

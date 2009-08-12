@@ -18,7 +18,7 @@ static cdi_list_t ethernet_packet_receivers;
 
 typedef unsigned long dword;
 
-extern void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* dev);
+void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* dev);
 
 /*
 static void rpc_send_packet
