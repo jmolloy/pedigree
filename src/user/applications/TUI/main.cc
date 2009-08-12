@@ -239,9 +239,13 @@ int main (int argc, char **argv)
                 /****** NOTE: BELOW IS TEMPORARY, WILL MOVE ******/
                 if (c & Keyboard::Ctrl)
                 {
-                    log("CTRL+key");
+                    char str[32];
+                    sprintf(str, "CTRL+Key: %llx", c);
+                    log(str);
                     c &= 0x1F;
 
+                    sprintf(str, "clamped: %x", c);
+                    log(str);
                     if(c < 0x1F)
                     {
                         log("Control key passed");
@@ -250,9 +254,8 @@ int main (int argc, char **argv)
                             log("Sending SIGINT");
                             kill(g_pCurrentTerm->term->getPid(), SIGINT);
                             log("Just sent SIGINT");
+                            break;
                         }
-
-                        break;
                     }
                 }
                 /****** NOTE: ABOVE IS TEMPORARY, WILL MOVE ******/

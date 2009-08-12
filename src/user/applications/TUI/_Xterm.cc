@@ -29,12 +29,12 @@
 #define C_BRIGHT  8
 
 rgb_t g_Colours[] = { {0x00,0x00,0x00},
-                      {0xB0,0x00,0x00},
-                      {0x00,0xB0,0x00},
-                      {0xB0,0xB0,0x00},
-                      {0x00,0x00,0xB0},
-                      {0xB0,0x00,0xB0},
-                      {0x00,0xB0,0xB0},
+                      {0xB0,0x22,0x22},
+                      {0x22,0xB0,0x22},
+                      {0xB0,0xB0,0x22},
+                      {0x22,0x22,0xB0},
+                      {0xB0,0x22,0xB0},
+                      {0x22,0xB0,0xB0},
                       {0xB0,0xB0,0xB0} };
 
 rgb_t g_BrightColours[] = { {0x33,0x33,0x33},
@@ -125,7 +125,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 if (m_Cmd.params[0] == 1049)
                 {
                   m_ActiveBuffer = 1;
-                  m_pWindows[m_ActiveBuffer]->render(rect);
+                  m_pWindows[m_ActiveBuffer]->renderAll(rect, m_pWindows[0]);
                 }
                 m_bChangingState = false;
                 break;
@@ -134,7 +134,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 if (m_Cmd.params[0] == 1049)
                 {
                   m_ActiveBuffer = 0;
-                  m_pWindows[m_ActiveBuffer]->render(rect);
+                  m_pWindows[m_ActiveBuffer]->renderAll(rect, m_pWindows[1]);
                 }
                 m_bChangingState = false;
                 break;
@@ -398,7 +398,6 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         ;
                     }
                 }
-
                 m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
         }
     }
@@ -461,13 +460,26 @@ uint8_t Xterm::Window::getFlags()
     return m_Flags;
 }
 
-void Xterm::Window::renderAll(DirtyRectangle &rect)
+void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
 {
+    TermChar *pOld = pPrevious->m_pView;
+    TermChar *pNew = m_pView;
+
+    // "Cleverer" full redraw - only redraw those glyphs that are different from the previous window.
+    for (size_t y = 0; y < m_Height; y++)
+    {
+        for (size_t x = 0; x < m_Width; x++)
+        {
+            if (pOld[y*m_Width+x] != pNew[y*m_Width+x])
+                render(rect, 0, x, y);
+        }
+    }
+                
 }
 
 void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
 {
-    TermChar *c = &m_pView[y*m_Width+x];
+    TermChar *c = &m_pInsert[y*m_Width+x];
 
     c->fore = m_Fg;
     c->back = m_Bg;
@@ -499,7 +511,7 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     if (x == ~0UL) x = m_CursorX;
     if (y == ~0UL) y = m_CursorY;
 
-    TermChar c = m_pInsert[y*m_Width+x];
+    TermChar c = m_pView[y*m_Width+x];
 
     // If both flags and c.flags have inverse, invert the inverse by
     // unsetting it in both sets of flags.
@@ -612,30 +624,31 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 
     if (m_pView == m_pInsert)
         m_pView += n*m_Width;
+
     m_pInsert += n*m_Width;
 
     // Have we gone off the end of the scroll area?
-    if (m_pInsert + m_Height*m_Width > (m_pBuffer+m_BufferLength))
+    if (m_pInsert + m_Height*m_Width >= (m_pBuffer+m_BufferLength))
     {
         // Either expand the buffer (if the length is less than the scrollback size) or memmove data up a bit.
-        if (m_BufferLength < m_nMaxScrollback)
+        if (m_BufferLength < m_nMaxScrollback*m_Width)
         {
             // Expand.
-            size_t amount = m_Height;
-            if (amount+m_BufferLength > m_nMaxScrollback)
-                amount = m_nMaxScrollback-m_BufferLength;
+            size_t amount = m_Width*m_Height;
+            if (amount+m_BufferLength > m_nMaxScrollback*m_Width)
+                amount = (m_nMaxScrollback*m_Width)-m_BufferLength;
 
-            uintptr_t pInsOffset  = m_pInsert - m_pBuffer;
-            uintptr_t pViewOffset = m_pView - m_pBuffer;
+            uintptr_t pInsOffset  = reinterpret_cast<uintptr_t>(m_pInsert) - reinterpret_cast<uintptr_t>(m_pBuffer);
+            uintptr_t pViewOffset = reinterpret_cast<uintptr_t>(m_pView) - reinterpret_cast<uintptr_t>(m_pBuffer);
 
-            m_pBuffer = reinterpret_cast<TermChar*>(realloc(m_pBuffer, amount+m_BufferLength));
+            m_pBuffer = reinterpret_cast<TermChar*>(realloc(m_pBuffer, (amount+m_BufferLength)*sizeof(TermChar)));
 
             m_pInsert = reinterpret_cast<TermChar*>(reinterpret_cast<uintptr_t>(m_pBuffer) + pInsOffset);
             m_pView   = reinterpret_cast<TermChar*>( reinterpret_cast<uintptr_t>(m_pBuffer) + pViewOffset);
 
             TermChar blank;
-            blank.fore = 7;
-            blank.back = 5;
+            blank.fore = m_Fg;
+            blank.back = m_Bg;
             blank.utf32 = ' ';
             blank.flags = 0;
             for (size_t i = m_BufferLength; i < m_BufferLength+amount; i++)
