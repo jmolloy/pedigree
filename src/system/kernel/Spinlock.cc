@@ -16,6 +16,10 @@
 #include <Spinlock.h>
 #include <processor/Processor.h>
 
+#ifdef TRACK_LOCKS
+#include <LocksCommand.h>
+#endif
+
 #include <panic.h>
 
 void Spinlock::acquire()
@@ -52,25 +56,23 @@ void Spinlock::acquire()
   }
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
+#ifdef TRACK_LOCKS
+  g_LocksCommand.lockAcquired(this);
+#endif
+
   m_bInterrupts = bInterrupts;
 
 }
 void Spinlock::release()
 {
-  //if (Processor::getInterrupts())
- // {
-  //  FATAL("Spinlock: release with interrupts enabled!" << m_bInterrupts);
-  //  Processor::breakpoint();
- // }
 
   bool bInterrupts = m_bInterrupts;
 
   m_Atom = true;
-  /*while (m_Atom.compareAndSwap(false, true) == false)
-  {
-    FATAL("Spinlock: failed to release!");
-    Processor::breakpoint();
-    }*/
+
+#ifdef TRACK_LOCKS
+  g_LocksCommand.lockReleased(this);
+#endif
 
   // Reenable irqs if they were enabled before
   if (bInterrupts)

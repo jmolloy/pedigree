@@ -29,6 +29,7 @@
 class Backtrace
 {
     friend class AllocationCommand;
+    friend class LocksCommand;
 public:
   /**
    * Creates a new Backtrace object.
