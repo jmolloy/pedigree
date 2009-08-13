@@ -338,14 +338,14 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             default:
-                {
+            {
                 char tmp[128];
                 sprintf(tmp, "Unhandled XTerm escape code: %d/%c.", utf32, utf32);
                 log(tmp);
 
                 m_bChangingState = false;
-                }
-                break;
+            }
+            break;
         };
     }
     else
@@ -397,7 +397,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         ;
                     }
                 }
-                m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
+                if (utf32 >= 32)
+                    m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
         }
     }
 }

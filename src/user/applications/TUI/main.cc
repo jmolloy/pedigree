@@ -78,13 +78,12 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
     g_pCurrentTerm->term->setActive(true, rect);
 
     Syscall::setCurrentConsole(pTL->term->getTabId());
-
-    g_pHeader->render(g_pCurrentTerm->term->getBuffer(), rect);
 }
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
     size_t h = g_pHeader->getHeight()+1;
+
     Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth, g_nHeight-h, g_pHeader, 0, h, 0);
 
     TerminalList *pTermList = new TerminalList;
@@ -104,7 +103,14 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 
     selectTerminal(pTermList, rect);
 
-    g_pHeader->render(g_pCurrentTerm->term->getBuffer(), rect);
+    TerminalList *pTL = g_pTermList;
+    while (pTL)
+    {
+        g_pHeader->select(pTL->term->getTabId());
+        g_pHeader->render(pTL->term->getBuffer(), rect);
+        pTL = pTL->next;
+    }
+    g_pHeader->select(pTermList->term->getTabId());
 
     return pTerm;
 }
@@ -235,25 +241,16 @@ int main (int argc, char **argv)
                 if (c == '\n') c = '\r';
 
                 // CTRL + key, here only for quick and easy testing
-                /// \todo Move into its own function to properly handle (along with proper special character handling)
                 /****** NOTE: BELOW IS TEMPORARY, WILL MOVE ******/
-                if (c & Keyboard::Ctrl)
+                if ( (c & Keyboard::Ctrl) && !(c & Keyboard::Special))
                 {
-                    char str[32];
-                    sprintf(str, "CTRL+Key: %llx", c);
-                    log(str);
                     c &= 0x1F;
 
-                    sprintf(str, "clamped: %x", c);
-                    log(str);
                     if(c < 0x1F)
                     {
-                        log("Control key passed");
                         if(c == 0x3)
                         {
-                            log("Sending SIGINT");
                             kill(g_pCurrentTerm->term->getPid(), SIGINT);
-                            log("Just sent SIGINT");
                             break;
                         }
                     }
@@ -263,6 +260,7 @@ int main (int argc, char **argv)
                 pT->addToQueue(c);
                 if(checkCommand(c, rect2))
                     Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+                rect2.reset();
                 if (!pT->hasPendingRequest() || pT->queueLength() == 0)
                     break;
                 sz = pT->getPendingRequestSz();

@@ -32,6 +32,9 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pBuffer = Syscall::newBuffer();
     if (!m_pBuffer) log("Buffer not created correctly!");
 
+    rgb_t b = {0,0,0};
+    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, b);
+
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
     setTabId(tabId);
