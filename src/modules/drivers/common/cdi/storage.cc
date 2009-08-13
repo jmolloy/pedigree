@@ -129,7 +129,8 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         }
 
         size -= tmp_size;
-        src += tmp_size;
+        // JamesM: Avoiding void* arithmetic because of compiler errors;
+        src = (void*) ( ((size_t)src) + tmp_size);
         block_write_start++;
     }
     
@@ -144,7 +145,8 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
             return -1;
         }
         size -= tmp_size * block_size;
-        src += tmp_size * block_size;
+        // JamesM: Avoiding void* arithmetic because of compiler errors;
+        src = (void*) ( ((size_t)src) + tmp_size * block_size);
         block_write_start += block_size;        
     }
 
