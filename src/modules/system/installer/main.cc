@@ -129,9 +129,9 @@ void init_install()
     findDisks(pRamDisk);
 
     // Build the mount table
-    // if (!VFS::instance().createFile(String("root»/mount.tab"), 0777, 0))
-    //    FATAL("Couldn't create mount table in the RAMFS");
-    // File* mountTab = VFS::instance().find(String("root»/mount.tab"));
+    if (!VFS::instance().createFile(String("root»/mount.tab"), 0777, 0))
+        FATAL("Couldn't create mount table in the RAMFS");
+    File* mountTab = VFS::instance().find(String("root»/mount.tab"));
 
     List<VFS::Alias*> myAliases = VFS::instance().getAliases();
     NormalStaticString myMounts;
@@ -154,9 +154,9 @@ void init_install()
     }
 
     // Write to the file
-    // mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
+    mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
 
-    // mountTab->decreaseRefCount(true);
+    mountTab->decreaseRefCount(true);
 
     NOTICE("Available mounts for install:\n" << String(myMounts));
 

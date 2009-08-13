@@ -70,9 +70,7 @@ int init_pcnet(int argc, char* argv[])
     pcnet_driver_init(argc, argv);
     cdi_driver_register((struct cdi_driver*) &driver);
 
-//#ifdef CDI_STANDALONE
     cdi_run_drivers();
-//#endif
 
     return 0;
 }
@@ -158,8 +156,3 @@ static void pcnet_driver_destroy(struct cdi_driver* driver)
 
     // TODO Alle Karten deinitialisieren
 }
-
-MODULE_NAME("pcnet");
-MODULE_ENTRY(&init_pcnet);
-MODULE_EXIT(&pcnet_driver_destroy);
-MODULE_DEPENDS("cdi");

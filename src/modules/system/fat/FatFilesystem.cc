@@ -291,8 +291,6 @@ String FatFilesystem::getVolumeLabel()
 
 uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    // NOTICE("FatFilesystem::read");
-
     // Sanity check.
     if (pFile->isDirectory())
         return 0;
@@ -306,7 +304,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     }
 
     // validity checking
-    if (static_cast<size_t>(location) > pFile->getSize())
+    if (static_cast<size_t>(location) >= pFile->getSize())
     {
         WARNING("FAT: Attempting to read past the EOF");
         return 0;
@@ -319,14 +317,12 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
         finalSize = pFile->getSize() - location;
 
         // overflow (location > size) or zero bytes required (location == size)
-        if (finalSize == 0 || finalSize > pFile->getSize())
+        if ((finalSize == 0) || (finalSize > pFile->getSize()))
         {
             WARNING("FAT: location + size > EOF");
             return 0;
         }
     }
-
-    // NOTICE("Reading " << finalSize << " bytes from " << location << " [" << pFile->getSize() << "]...");
 
     // finalSize holds the total amount of data to read, now find the cluster and sector offsets
     uint32_t clusOffset = location / (m_Superblock.BPB_SecPerClus * m_Superblock.BPB_BytsPerSec);
@@ -341,7 +337,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
         clus = getClusterEntry(clus);
         if (clus == 0 || isEof(clus))
         {
-            WARNING("FAT: CLUSTER FAIL - " << clus); // <-- This is where the installer + lodisk is failing.
+            WARNING("FAT: CLUSTER FAIL - " << clus << ", cluster offset = " << clusOffset << "."); // <-- This is where the installer + lodisk is failing.
             return 0; // can't do it
         }
         clusOffset--;

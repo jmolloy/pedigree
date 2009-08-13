@@ -42,11 +42,12 @@ void Backtrace::performBacktrace(InterruptState &state)
   }
 #endif
   // Can we perform a "normal", base-pointer-linked-list backtrace?
+  // Don't lock on the log - we may have hit a backtrace because the Log lock deadlocked
 #if defined(X86_COMMON)
-  WARNING("Dwarf backtracing not available.");
+  WARNING_NOLOCK("Dwarf backtracing not available.");
   performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
 #else
-  ERROR ("Backtrace: No backtracing method available!");
+  ERROR_NOLOCK("Backtrace: No backtracing method available!");
 #endif
 }
 

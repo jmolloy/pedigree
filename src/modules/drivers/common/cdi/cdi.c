@@ -114,4 +114,4 @@ void cdi_driver_register(struct cdi_driver* driver)
 MODULE_NAME("cdi");
 MODULE_ENTRY(&cdi_init);
 MODULE_EXIT(&cdi_destroy);
-MODULE_DEPENDS("NetworkStack");
+MODULE_DEPENDS("NetworkStack", "VFS");

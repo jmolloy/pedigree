@@ -19,8 +19,6 @@ class CdiIrqHandler : public IrqHandler {
         virtual bool irq(irq_id_t number, InterruptState &state);
 };
 
-extern "C" {
-
 static CdiIrqHandler cdi_irq_handler;
 
 #include "cdi.h"
@@ -51,6 +49,8 @@ bool CdiIrqHandler::irq(irq_id_t irq, InterruptState &state)
 
     return true;
 }
+
+extern "C" {
 
 /**
  * Registiert einen neuen IRQ-Handler.
@@ -169,7 +169,6 @@ int cdi_alloc_phys_mem(size_t size, void** vaddr, void** paddr)
     MemoryRegion* region = new MemoryRegion("cdi");
     size_t page_size = PhysicalMemoryManager::instance().getPageSize();
 
-    NOTICE("cdi_alloc_phys_mem: " << size);
     if (!PhysicalMemoryManager::instance().allocateRegion(
         *region, (size + page_size - 1) / page_size,
         PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
@@ -180,8 +179,6 @@ int cdi_alloc_phys_mem(size_t size, void** vaddr, void** paddr)
 
     *vaddr = region->virtualAddress();
     *paddr = (void*) (region->physicalAddress());
-
-    NOTICE("cdi_alloc_phys_mem: vaddr = " << ((uint32_t) *vaddr));
 
     return 0;
 }
@@ -200,7 +197,6 @@ void* cdi_alloc_phys_addr(size_t size, uintptr_t paddr)
     size_t page_size = PhysicalMemoryManager::instance().getPageSize();
     void* vaddr;
 
-    NOTICE("cdi_alloc_phys_addr " << size << " paddr = " << paddr);
     if (!PhysicalMemoryManager::instance().allocateRegion(
         *region, (size + page_size - 1) / page_size,
         PhysicalMemoryManager::continuous, VirtualAddressSpace::Write,
@@ -211,8 +207,6 @@ void* cdi_alloc_phys_addr(size_t size, uintptr_t paddr)
     }
 
     vaddr = region->virtualAddress();
-
-    NOTICE("cdi_alloc_phys_addr: vaddr = " << ((uint32_t) vaddr));
 
     return vaddr;
 }

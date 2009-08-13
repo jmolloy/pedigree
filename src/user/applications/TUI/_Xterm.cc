@@ -67,15 +67,14 @@ Xterm::~Xterm()
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    
     char str[64];
-    sprintf(str, "Write: %x", utf32);
+    sprintf(str, "XTerm: Write: %x", utf32);
     log(str);
 
     if(m_bChangingState)
     {
         char tmp32[128];
-        sprintf(tmp32, "XTerm command: %d/%c\n", utf32, utf32);
+        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
         log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
@@ -758,6 +757,8 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
+    log("eraseScreen");
+
     for(size_t row = 0; row < m_Height; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
@@ -778,6 +779,8 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
+    log("eraseEOL");
+
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < m_Width; col++)
     {
@@ -795,6 +798,8 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
+    log("eraseSOL");
+
     int32_t row = static_cast<int32_t>(m_CursorY);
     for(int32_t col = static_cast<int32_t>(m_CursorX); col >= 0; col--)
     {
@@ -812,6 +817,8 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
+    log("eraseLine");
+
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_CursorX; col++)
     {
@@ -829,6 +836,8 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
+    log("eraseChars");
+
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < (m_CursorX + n); col++)
     {
@@ -846,6 +855,8 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
+    log("eraseUp");
+
     for(int32_t row = static_cast<int32_t>(m_CursorY); row >= 0; row--)
     {
         for(size_t col = 0; col < m_Width; col++)
@@ -865,6 +876,8 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
+    log("eraseDown");
+
     for(size_t row = m_CursorY; row < m_Height; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
@@ -884,6 +897,8 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
+    log("deleteCharacters");
+
     // Start of the delete region
     size_t deleteStart = m_CursorX;
 

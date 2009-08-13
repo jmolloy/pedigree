@@ -109,7 +109,7 @@ Thread *Process::getThread(size_t n)
 {
   if (n >= m_Threads.count())
   {
-    FATAL("Process::getThread(" << Dec << n << ") - Parameter out of bounds.");
+    FATAL("Process::getThread(" << Dec << n << Hex << ") - Parameter out of bounds.");
     return 0;
   }
   return m_Threads[n];

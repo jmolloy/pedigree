@@ -27,11 +27,9 @@
 #include <process/Thread.h>
 #include <process/Semaphore.h>
 
-extern "C" {
 #include "cdi/net.h"
-}
 
-/** Device driver for the RTL8139 class of network device */
+/** CDI NIC Device */
 class CdiNet : public Network
 {
     public:
@@ -41,7 +39,12 @@ class CdiNet : public Network
         virtual void getName(String &str)
         {
             // TODO Get the name from the CDI driver
-            str = "cdi-net";
+            if(!m_Device)
+                str = "cdi-net";
+            else
+            {
+                str = String(m_Device->dev.name);
+            }
         }
 
         virtual bool send(size_t nBytes, uintptr_t buffer);
@@ -50,7 +53,10 @@ class CdiNet : public Network
         virtual StationInfo getStationInfo();
 
     private:
-        struct cdi_net_device* m_device;
+        CdiNet(const CdiNet&);
+        const CdiNet & operator = (const CdiNet&);
+
+        struct cdi_net_device* m_Device;
         StationInfo m_StationInfo;
 };
 

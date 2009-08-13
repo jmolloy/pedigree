@@ -17,6 +17,20 @@
 #ifndef CDI_STDIO_H
 #define CDI_STDIO_H
 
+#include <processor/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int printf(const char* fmt, ...);
+int snprintf(char *s, size_t n, const char *format, ...);
+int sprintf(char *s, const char *format, ...);
+
+int puts(const char *s);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif

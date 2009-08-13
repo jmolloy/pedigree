@@ -23,7 +23,7 @@ HDFILES="login TUI"
 if which mcopy >/dev/null 2>&1; then
 
   # disk.img, not hdd_fat16.img
-  rm disk.img
+  rm -f disk.img
   mkdir -p $SRCDIR/tmp
   cd $SRCDIR/tmp
   tar -xzf ../$SRCDIR/../images/hdd_fat16.tar.gz
@@ -64,4 +64,4 @@ cd ../images/install
 cd ../../build
 
 # Remove the ramdisk now
-# rm $SRCDIR/disk.img
+rm -f $SRCDIR/disk.img
