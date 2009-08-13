@@ -104,6 +104,11 @@ void Syscall::updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect)
     req.x2 = rect.getX2()-1;
     req.y2 = rect.getY2()-1;
 
+    // Sanity check - this happens if no points were given!
+    if (req.x  == ~0UL && req.y  == ~0UL &&
+        req.x2 == ~0UL && req.y2 == ~0UL)
+        return;
+
     asm volatile("" ::: "memory");
 
     syscall1(TUI_VID_UPDATE_BUFFER, reinterpret_cast<uintptr_t>(&req));
