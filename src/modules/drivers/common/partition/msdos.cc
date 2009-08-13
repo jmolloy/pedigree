@@ -283,12 +283,15 @@ const char *g_pPartitionTypes[256] = {
     "BBT"
 };
 
+/// Holds the next partition number to mount
+static int gNextPartition = 0;
+
 void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
 {
     // Look up the partition string.
     const char *pStr = g_pPartitionTypes[pPartitions[i].type];
     NormalStaticString sstr("(");
-    sstr += i;
+    sstr += gNextPartition++; /// \todo Might need locking?
     sstr += ") ";
     sstr += pStr;
     String str(sstr);
@@ -301,7 +304,7 @@ void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
     pDisk->addChild(static_cast<Device*> (pObj));
 }
 
-bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint64_t prevEbr, uint64_t thisEbr)
+bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint64_t partitionBase, uint64_t currentBase)
 {
     for (int i = 0; i < MSDOS_EXT_PARTTAB_NUM; i++)
     {
@@ -315,32 +318,46 @@ bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint
         // Check the type of the partition.
         if (pPartitions[i].type == g_ExtendedPartitionNumber)
         {
-            // Touch up the start LBA - relative to previous EBR
-            uint64_t startLba = pPartitions[i].start_lba + prevEbr;
+            // In a linked extended partition record, the LBA start is the difference between the start
+            // of the actual extended partition and the next extended partition record's MBR sector.
+            uint64_t startLba = LITTLE_TO_HOST32(pPartitions[i].start_lba) + partitionBase;
+
+            // Update the partition information. Forget about turning it back into whatever
+            // endianness it was in before.
             pPartitions[i].start_lba = static_cast<uint32_t>(startLba & 0xFFFFFFFF);
 
             // Extended partition - read in 512 bytes and recurse.
             uint8_t buffer[512];
-            if (pDisk->read(pPartitions[i].start_lba, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+            if (pDisk->read(pPartitions[i].start_lba * 512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
             {
                 WARNING("Couldn't read next sector for the extended partition.");
                 continue;
             }
 
-            // Call the extended partition reader. It stores some extra state.
-            MsdosPartitionInfo *pPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
-            if(!msdosReadExtTable(pPartitions, pDisk, MSDOS_EXT_PARTTAB_NUM, thisEbr, startLba))
+            // Is it a "valid" MBR?
+            if(buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
+            {
+                WARNING("Extended partition record read failed.");
+                continue;
+            }
+
+            // Call the extended partition reader. We pass in the current extended partition record's base,
+            // along with the base of the extended partition record we're about to parse.
+            MsdosPartitionInfo *pNextPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
+            if(!msdosReadExtTable(pNextPartitions, pDisk, MSDOS_PARTTAB_NUM, partitionBase, startLba))
                 WARNING("Reading the extended partition table failed");
         }
         else if (pPartitions[i].type == g_EmptyPartitionNumber)
         {
-            // Empty partition - do nothing.
+            // Empty partition - end of chain
+            return true;
         }
         else
         {
-            // Touch up the start LBA - relative to this EBR
-            uint64_t startLba = pPartitions[i].start_lba + thisEbr;
-            pPartitions[i].start_lba = static_cast<uint32_t>(startLba & 0xFFFFFFFF);
+            // The start LBA of a logical partition is relative to the extended partition record which describes it
+            uint64_t startLba = LITTLE_TO_HOST32(pPartitions[i].start_lba) + currentBase;
+
+            pPartitions[i].start_lba = HOST_TO_LITTLE32(static_cast<uint32_t>(startLba & 0xFFFFFFFF));
             msdosRegPartition(pPartitions, i, pDisk);
         }
     }
@@ -361,17 +378,26 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
         // Check the type of the partition.
         if (pPartitions[i].type == g_ExtendedPartitionNumber)
         {
-            // Extended partition - read in 512 bytes and recurse.
+            uint64_t startLba = LITTLE_TO_HOST32(pPartitions[i].start_lba);
+
+            // Extended partition - read in 512 bytes and recurse. The first sector will always be relative to this sector (zero).
             uint8_t buffer[512];
-            if (pDisk->read(pPartitions[i].start_lba, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+            if (pDisk->read(startLba * 512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
             {
                 WARNING("Couldn't read next sector for the extended partition.");
                 continue;
             }
 
-            // Call the extended partition reader. It stores some extra state.
+            // Is it valid?
+            if(buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
+            {
+                WARNING("Extended partition record read failed.");
+                continue;
+            }
+
+            // Call the extended partition reader, give it the base of this partition entry for its calculations.
             MsdosPartitionInfo *pPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
-            if(!msdosReadExtTable(pPartitions, pDisk, MSDOS_EXT_PARTTAB_NUM, 0, 0))
+            if(!msdosReadExtTable(pPartitions, pDisk, MSDOS_PARTTAB_NUM, startLba, startLba))
                 WARNING("Reading the extended partition table failed");
         }
         else if (pPartitions[i].type == g_EmptyPartitionNumber)
