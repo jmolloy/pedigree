@@ -20,7 +20,10 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 posix_objname = subsysdir + '/posix.o'
 glue_objname = 'pedigree-glue.o'
 crt0_objname = kerneldir + '/crt0.o'
+crti_objname = kerneldir + '/crti.o'
+crtn_objname = kerneldir + '/crtn.o'
 
+env.Alias("crt", [crt0_objname, crti_objname, crtn_objname])
 env.Alias("subsys", posix_objname)
 env.Alias("subsys", glue_objname)
 
@@ -42,11 +45,19 @@ glue_files = [
 
 crt0_files = ['crt0.c']
 
-# I'd like something else rather than CPPDEFINES here. -Matt
-if 'X86' in env['CPPDEFINES']:
-    posix_files += ["sigret-i686.s"]
-if 'PPC' in env['CPPDEFINES']:
-    posix_files += ["sigret-ppc.s"]
+suffix = '-noarch'
+if env['ARCH_TARGET'] == 'X86':
+    suffix = '-i686'
+elif env['ARCH_TARGET'] == 'X64':
+    suffix = '-amd64'
+if env['ARCH_TARGET'] == 'PPC':
+    suffix = '-ppc'
+
+posix_files += ["sigret" + suffix + ".s"]
+
+# CRTI/CRTN
+crti_files = ["crti" + suffix + ".s"]
+crtn_files = ["crtn" + suffix + ".s"]
 
 # To include a new directory for includes, just add it to the list
 include = [
@@ -95,6 +106,18 @@ tmp_crt0['LIBS'] = ''
 tmp_crt0.objects = [tmp.Object(i) for i in crt0_files]
 if not len(crt0_files) == 0:
     build = tmp_crt0.Program(crt0_objname,tmp_crt0.objects,LINKFLAGS='-nostdlib -r')
+    
+# CRTI
+tmp_crti = tmp.Clone()
+tmp_crti.objects = [tmp.Object(i) for i in crti_files]
+if not len(crti_files) == 0:
+    build = tmp_crti.Program(crti_objname,tmp_crti.objects,LINKFLAGS='-nostdlib -r')
+
+# CRTN
+tmp_crtn = tmp.Clone()
+tmp_crtn.objects = [tmp.Object(i) for i in crtn_files]
+if not len(crtn_files) == 0:
+    build = tmp_crtn.Program(crtn_objname,tmp_crtn.objects,LINKFLAGS='-nostdlib -r')
 
 # Build libc/libm
 
@@ -119,7 +142,7 @@ buildInclude = tmp.Dir(builddir + '/include-posix')
 
 env.Alias("libs", buildLibc)
 env.Alias("libs", buildLibm)
-env.Alias("crt0", crt0_objname)
+env.Alias("crt0", "crt")
 
 # TODO: Put into a script, clean up. This is kind of horrible.
 
