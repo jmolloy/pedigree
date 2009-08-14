@@ -50,5 +50,6 @@ bool HelpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
     output += "syscall          - Trace syscall execution times (stubbed).\n";
     output += "threads          - Inspect what each thread is doing.\n";
     output += "trace            - Graphical execution tracer.\n";
+    output += "locks            - Show spinlock information.\n";
     return true;
 }

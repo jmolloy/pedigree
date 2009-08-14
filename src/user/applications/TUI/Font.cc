@@ -62,7 +62,7 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
 
     error = FT_Load_Char(m_Face, '@', FT_LOAD_RENDER);
 
-    m_CellWidth  = (m_Face->glyph->advance.x >> 6)+1; // Because of hinting it's possible to go a pixel over the boundary.
+    m_CellWidth  = (m_Face->glyph->advance.x >> 6); // Because of hinting it's possible to go a pixel over the boundary.
 
     m_CellHeight = m_Face->size->metrics.height >> 6;
     m_Baseline = m_CellHeight;
@@ -120,17 +120,6 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
         memcpy(reinterpret_cast<uint8_t*>(&pFb[idx]),
                reinterpret_cast<uint8_t*>(&pBitmap->buffer[(y-top)*m_CellWidth]),
                m_CellWidth*sizeof(rgb_t));
-
-/*        for (size_t x = left; x < left+m_CellWidth; x++)
-        {
-            size_t idx = y*m_nWidth+x;
-
-
-            if (m_pBackground)
-                pFb[idx] = interpolateColour(m_pBackground[idx], pBitmap->buffer[(y-top)*m_CellWidth+(x-left)], 128);
-                else
-                pFb[idx] = pBitmap->buffer[(y-top)*m_CellWidth+(x-left)];
-                }*/
     }
 }
 
@@ -154,8 +143,10 @@ Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
     
     for (ssize_t r = 0; r < m_Face->glyph->bitmap.rows; r++)
     {
+        if (r >= static_cast<ssize_t>(m_CellHeight)) break;
         for (ssize_t c = 0; c < m_Face->glyph->bitmap.width; c++)
         {
+            if (c >= static_cast<ssize_t>(m_CellWidth)) break;
             size_t idx = (r+m_Baseline-m_Face->glyph->bitmap_top)*m_CellWidth + (m_Face->glyph->bitmap_left+c);
             if ((static_cast<int32_t>(idx) < 0) || idx >= m_CellWidth*m_CellHeight)
                 continue;

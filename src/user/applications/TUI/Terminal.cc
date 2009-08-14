@@ -84,6 +84,33 @@ void Terminal::addToQueue(uint64_t key)
     if (key & Keyboard::Special)
     {
         // Handle specially.
+        uint32_t utf32 = key & ~0UL;
+        char *str = reinterpret_cast<char*> (&utf32);
+        if (!strncmp(str, "left", 4))
+        {
+            addToQueue('\e');
+            addToQueue('[');
+            addToQueue('D');
+        }
+        if (!strncmp(str, "righ", 4))
+        {
+            addToQueue('\e');
+            addToQueue('[');
+            addToQueue('C');
+        }
+        if (!strncmp(str, "up", 2))
+        {
+            addToQueue('\e');
+            addToQueue('[');
+            addToQueue('A');
+        }
+        if (!strncmp(str, "down", 4))
+        {
+            addToQueue('\e');
+            addToQueue('[');
+            addToQueue('B');
+        }
+
     }
     else if (key & Keyboard::Alt)
     {

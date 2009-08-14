@@ -264,25 +264,25 @@ class Tree<K*,V*>
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.begin());
+      return static_cast<Iterator>(m_VoidTree.begin());
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
     inline ConstIterator begin() const
     {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.begin());
+      return static_cast<ConstIterator>(m_VoidTree.begin());
     }
     /** Get an iterator pointing to the last element + 1
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return reinterpret_cast<Iterator>(m_VoidTree.end());
+      return static_cast<Iterator>(m_VoidTree.end());
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
     inline ConstIterator end() const
     {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.end());
+      return static_cast<ConstIterator>(m_VoidTree.end());
     }
 
   private:

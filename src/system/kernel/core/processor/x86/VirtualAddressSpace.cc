@@ -255,6 +255,8 @@ bool X86VirtualAddressSpace::doIsMapped(void *virtualAddress)
 {
   LockGuard<Spinlock> guard(m_Lock);
 
+  virtualAddress = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(virtualAddress) & ~0xFFF);
+
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 

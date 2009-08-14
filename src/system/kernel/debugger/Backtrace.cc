@@ -81,28 +81,34 @@ void Backtrace::performDwarfBacktrace(InterruptState &state)
 
 void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
 {
-  if (base == 0)
-    base = Processor::getBasePointer();
-  if (instruction == 0)
-    instruction = Processor::getInstructionPointer();
+    if (base == 0)
+        base = Processor::getBasePointer();
+    if (instruction == 0)
+        instruction = Processor::getInstructionPointer();
   
-  size_t i = 1;
-  m_pBasePointers[0] = base;
-  m_pReturnAddresses[0] = instruction;
+    size_t i = 1;
+    m_pBasePointers[0] = base;
+    m_pReturnAddresses[0] = instruction;
   
-  while (i < MAX_STACK_FRAMES)
-  {
-    uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
-    if (nextAddress == 0) break;
-    m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
-    m_pBasePointers[i] = nextAddress;
-    base = nextAddress;
-    m_pStates[i].setBasePointer(m_pBasePointers[i]);
-    m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
-    i++;
-  }
+    while (i < MAX_STACK_FRAMES)
+    {
+        // Sanity check: would we fault by reading this address?
+        if (Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(base)) &&
+            Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(base+sizeof(uintptr_t))))
+        {
+            uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
+            if (nextAddress == 0) break;
+            m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
+            m_pBasePointers[i] = nextAddress;
+            base = nextAddress;
+            m_pStates[i].setBasePointer(m_pBasePointers[i]);
+            m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
+            i++;
+        }
+        else break;
+    }
   
-  m_nStackFrames = i;
+    m_nStackFrames = i;
 }
 
 void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromFrame)

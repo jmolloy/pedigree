@@ -382,17 +382,17 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 {
                     switch (utf32)
                     {
-                        case 'j': utf32 = 188; break; // Lower right corner
-                        case 'k': utf32 = 187; break; // Upper right corner
-                        case 'l': utf32 = 201; break; // Upper left corner
-                        case 'm': utf32 = 200; break; // Lower left corner
-                        case 'n': utf32 = 206; break; // Crossing lines.
-                        case 'q': utf32 = 205; break; // Horizontal line.
-                        case 't': utf32 = 204; break; // Left 'T'
-                        case 'u': utf32 = 185; break; // Right 'T'
-                        case 'v': utf32 = 202; break; // Bottom 'T'
-                        case 'w': utf32 = 203; break; // Top 'T'
-                        case 'x': utf32 = 186; break; // Vertical bar
+                        case 'j': utf32 = 0x2518; break; // Lower right corner
+                        case 'k': utf32 = 0x2510; break; // Upper right corner
+                        case 'l': utf32 = 0x250c; break; // Upper left corner
+                        case 'm': utf32 = 0x2514; break; // Lower left corner
+                        case 'n': utf32 = 0x253c; break; // Crossing lines.
+                        case 'q': utf32 = 0x2500; break; // Horizontal line.
+                        case 't': utf32 = 0x251c; break; // Left 'T'
+                        case 'u': utf32 = 0x2524; break; // Right 'T'
+                        case 'v': utf32 = 0x2534; break; // Bottom 'T'
+                        case 'w': utf32 = 0x252c; break; // Top 'T'
+                        case 'x': utf32 = 0x2502; break; // Vertical bar
                         default:
                         ;
                     }
