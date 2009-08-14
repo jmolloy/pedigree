@@ -51,7 +51,7 @@ static inline void reg_outw
 static inline void reg_outl
     (struct e1000_device* netcard, uint16_t reg, uint32_t value)
 {
-    volatile uint32_t* mmio = netcard->mem_base + reg;
+    volatile uint32_t* mmio = (uint32_t*) ((char*) netcard->mem_base + reg);
     *mmio = value;
 }
 
@@ -70,7 +70,7 @@ static inline uint16_t reg_inw(struct e1000_device* netcard, uint16_t reg)
 
 static inline uint32_t reg_inl(struct e1000_device* netcard, uint16_t reg)
 {
-    volatile uint32_t* mmio = netcard->mem_base + reg;
+    volatile uint32_t* mmio = (uint32_t*) ((char*) netcard->mem_base + reg);
     return *mmio;
 }
 

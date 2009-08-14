@@ -119,8 +119,3 @@ static void e1000_driver_destroy(struct cdi_driver* driver)
 
     // TODO Alle Karten deinitialisieren
 }
-
-MODULE_NAME("e1000");
-MODULE_ENTRY(&init_e1000);
-MODULE_EXIT(&e1000_driver_destroy);
-MODULE_DEPENDS("cdi");

@@ -37,6 +37,7 @@
 #include "cdi/io.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef TYNDUR
 #include <syscall.h>
@@ -257,9 +258,9 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
         printf("pcnet: descriptor region at 0x%x virtual and 0x%x physical\n", virt_desc_region, phys_desc_region);
     #endif
     netcard->receive_descriptor = virt_desc_region;
-    netcard->transmit_descriptor = virt_desc_region + 2 * 1024;
+    netcard->transmit_descriptor = (void*) ((char*) virt_desc_region + (2 * 1024));
     netcard->phys_receive_descriptor = phys_desc_region;
-    netcard->phys_transmit_descriptor = phys_desc_region + 2 * 1024;
+    netcard->phys_transmit_descriptor = (char*) phys_desc_region + (2 * 1024);
 
     // Fill the initialization block
     // NOTE: Transmit and receive buffer contain 8 entries
@@ -293,7 +294,7 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
             return;
         }
         netcard->receive_buffer[2 * i] = virt_buffer;
-        netcard->receive_buffer[2 * i + 1] = virt_buffer + 2048;
+        netcard->receive_buffer[2 * i + 1] = (char*) virt_buffer + 2048;
         netcard->receive_descriptor[2 * i].address = (uint32_t) phys_buffer;
         netcard->receive_descriptor[2 * i].flags = DESCRIPTOR_OWN | 0xF7FF;
         netcard->receive_descriptor[2 * i].flags2 = 0;
@@ -309,7 +310,7 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
             return;
         }
         netcard->transmit_buffer[2 * i] = virt_buffer;
-        netcard->transmit_buffer[2 * i + 1] = virt_buffer + 2048;
+        netcard->transmit_buffer[2 * i + 1] = (char*) virt_buffer + 2048;
         netcard->transmit_descriptor[2 * i].address = (uint32_t) phys_buffer;
         netcard->transmit_descriptor[2 * i + 1].address = (uint32_t) phys_buffer + 2048;
     }

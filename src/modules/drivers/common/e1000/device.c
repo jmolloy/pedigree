@@ -26,6 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -208,7 +209,7 @@ void e1000_send_packet(struct cdi_net_device* device, void* data, size_t size)
 
     // Head auslesen
     head = reg_inl(netcard, REG_TXDESC_HEAD);
-    if (netcard->tx_cur_buffer == head) {
+    if (netcard->tx_cur_buffer == ((int) head)) {
         printf("e1000: Kein Platz in der Sendewarteschlange!\n");
         return;
     }
@@ -245,7 +246,7 @@ static void e1000_handle_interrupt(struct cdi_device* device)
 
         uint32_t head = reg_inl(netcard, REG_RXDESC_HEAD);
 
-        while (netcard->rx_cur_buffer != head) {
+        while (netcard->rx_cur_buffer != ((int) head)) {
 
             size_t size = netcard->rx_desc[netcard->rx_cur_buffer].length;
             uint8_t status = netcard->rx_desc[netcard->rx_cur_buffer].status;
@@ -283,7 +284,7 @@ static void e1000_handle_interrupt(struct cdi_device* device)
             netcard->rx_cur_buffer %= RX_BUFFER_NUM;
         }
 
-        if (netcard->rx_cur_buffer == head) {
+        if (netcard->rx_cur_buffer == ((int) head)) {
             reg_outl(netcard, REG_RXDESC_TAIL,
                 (head + RX_BUFFER_NUM - 1) % RX_BUFFER_NUM);
         } else {

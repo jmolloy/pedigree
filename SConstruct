@@ -208,6 +208,7 @@ if env['genflags']:
 
     if not env['warnings']:
         env['CXXFLAGS'] += ' -Werror'
+        env['CFLAGS'] += ' -Werror'
 
     if env['verbose_link']:
         env['LINKFLAGS'] += ' --verbose'

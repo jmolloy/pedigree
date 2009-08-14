@@ -23,7 +23,7 @@
 void cdi_storage_driver_init(struct cdi_storage_driver* driver)
 {
     driver->drv.type = CDI_STORAGE;
-    cdi_driver_init((struct cdi_driver*) driver);
+    cdi_driver_init(reinterpret_cast<struct cdi_driver*>(driver));
 }
 
 /**
@@ -31,7 +31,7 @@ void cdi_storage_driver_init(struct cdi_storage_driver* driver)
  */
 void cdi_storage_driver_destroy(struct cdi_storage_driver* driver)
 {
-    cdi_driver_destroy((struct cdi_driver*) driver);
+    cdi_driver_destroy(reinterpret_cast<struct cdi_driver*>(driver));
 }
 
 /**
@@ -41,7 +41,7 @@ void cdi_storage_driver_register(struct cdi_storage_driver* driver)
 {
     static int initialized = 0;
 
-    cdi_driver_register((struct cdi_driver*) driver);
+    cdi_driver_register(reinterpret_cast<struct cdi_driver*>(driver));
 }
 
 /**
@@ -60,10 +60,9 @@ void cdi_storage_device_init(struct cdi_storage_device* device)
  * @param size Anzahl der zu lesenden Bytes
  * @param dest Buffer
  */
-int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos,
-    size_t size, void* dest)
+int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos, size_t size, void* dest)
 {
-    struct cdi_storage_driver* driver = (struct cdi_storage_driver*) device->dev.driver;
+    struct cdi_storage_driver* driver = reinterpret_cast<struct cdi_storage_driver*>(device->dev.driver);
     size_t block_size = device->block_size;
     // Start- und Endblock
     uint64_t block_read_start = pos / block_size;
@@ -102,10 +101,11 @@ int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos,
 int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
     size_t size, void* src)
 {
-    struct cdi_storage_driver* driver = (struct cdi_storage_driver*) device->dev.driver;
+    struct cdi_storage_driver* driver = reinterpret_cast<struct cdi_storage_driver*>(device->dev.driver);
     
     size_t block_size = device->block_size;
     uint64_t block_write_start = pos / block_size;
+    uint8_t *source = reinterpret_cast<uint8_t*>(src);
     uint8_t buffer[block_size];
     size_t offset;
     size_t tmp_size;
@@ -121,7 +121,7 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         if (driver->read_blocks(device, block_write_start, 1, buffer) != 0) {
             return -1;
         }
-        memcpy(buffer + offset, src, tmp_size);
+        memcpy(buffer + offset, source, tmp_size);
 
         // Buffer abspeichern
         if (driver->write_blocks(device, block_write_start, 1, buffer) != 0) {
@@ -129,7 +129,7 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         }
 
         size -= tmp_size;
-        src += tmp_size;
+        source += tmp_size;
         block_write_start++;
     }
     
@@ -138,13 +138,13 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
     tmp_size = size / block_size;
     if (tmp_size != 0) {
         // Buffer abspeichern
-        if (driver->write_blocks(device, block_write_start, tmp_size, src)
+        if (driver->write_blocks(device, block_write_start, tmp_size, source)
             != 0) 
         {
             return -1;
         }
         size -= tmp_size * block_size;
-        src += tmp_size * block_size;
+        source += tmp_size * block_size;
         block_write_start += block_size;        
     }
 
@@ -154,7 +154,7 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         if (driver->read_blocks(device, block_write_start, 1, buffer) != 0) {
             return -1;
         }
-        memcpy(buffer, src, size);
+        memcpy(buffer, source, size);
 
         // Buffer abspeichern
         if (driver->write_blocks(device, block_write_start, 1, buffer) != 0) {
