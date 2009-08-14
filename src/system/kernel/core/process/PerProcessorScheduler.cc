@@ -141,6 +141,9 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         //eventHandlerReturned();
         return;
     }
+    //if (pEvent->getNumber() == ~0UL){
+    //    FATAL("my anus.");}
+
     physical_uintptr_t page;
     size_t flags;
     va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);

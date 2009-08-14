@@ -23,9 +23,13 @@
 #include <Backtrace.h>
 
 LocksCommand g_LocksCommand;
+extern Spinlock g_MallocLock;
+
+// This is global because we need to rely on it before the constructor is called.
+static bool g_bReady = false;
 
 LocksCommand::LocksCommand()
-    : DebuggerCommand(), m_Descriptors()
+    : DebuggerCommand(), m_Descriptors(), m_bAcquiring(false)
 {
 }
 
@@ -75,8 +79,18 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
     return true;
 }
 
+void LocksCommand::setReady()
+{
+    g_bReady = true;
+}
+
 void LocksCommand::lockAcquired(Spinlock *pLock)
 {
+    if (!g_bReady || pLock == &g_MallocLock || g_MallocLock.acquired() || m_bAcquiring)
+        return;
+
+    m_bAcquiring = true;
+
     // Get a backtrace.
     Backtrace bt;
     bt.performBpBacktrace(0, 0);
@@ -84,16 +98,24 @@ void LocksCommand::lockAcquired(Spinlock *pLock)
     LockDescriptor *pD = new LockDescriptor;
     pD->pLock = pLock;
     memcpy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
-    
+    pD->n = bt.m_nStackFrames;
+
     m_Descriptors.insert(pLock, pD);
+    m_bAcquiring = false;
 }
 
 void LocksCommand::lockReleased(Spinlock *pLock)
 {
+    if (!g_bReady || pLock == &g_MallocLock || g_MallocLock.acquired() || m_bAcquiring)
+        return;
+
+    m_bAcquiring = true;
+
     LockDescriptor *pD = m_Descriptors.lookup(pLock);
     if (pD)
     {
         delete pD;
     }
     m_Descriptors.remove(pLock);
+    m_bAcquiring = false;
 }

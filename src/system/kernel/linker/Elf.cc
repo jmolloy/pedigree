@@ -69,7 +69,9 @@ Elf::Elf() :
     m_nPltSize(0),
     m_nEntry(0),
     m_NeededLibraries(),
-    m_SymbolTable(this)
+    m_SymbolTable(this),
+    m_InitFunc(0),
+    m_FiniFunc(0)
 {
 }
 
@@ -231,6 +233,12 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                         }
                         case DT_PLTRELSZ:
                             m_nPltSize = pDyn->un.val;
+                            break;
+                        case DT_INIT:
+                            m_InitFunc = pDyn->un.val;
+                            break;
+                        case DT_FINI:
+                            m_FiniFunc = pDyn->un.val;
                             break;
                     }
 

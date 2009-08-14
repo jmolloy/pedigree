@@ -62,6 +62,8 @@ public:
         return NormalStaticString("locks");
     }
 
+    void setReady();
+
     void lockAcquired(Spinlock *pLock);
     void lockReleased(Spinlock *pLock);
   
@@ -73,6 +75,8 @@ private:
         size_t n;
     };
     Tree<Spinlock*,LockDescriptor*> m_Descriptors;
+
+    bool m_bAcquiring;
 };
 
 extern LocksCommand g_LocksCommand;

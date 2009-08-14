@@ -190,6 +190,9 @@ public:
      * sbrk memory breakpoint. */
     uintptr_t getLastAddress();
 
+    uintptr_t getInitFunc() {return m_InitFunc;}
+    uintptr_t getFiniFunc() {return m_FiniFunc;}
+
     /** Returns the name of the symbol which contains 'addr', and also the starting address
      * of that symbol in 'startAddr' if startAddr != 0.
      * \param[in] addr The address to look up.
@@ -374,6 +377,8 @@ protected:
     uintptr_t             m_nEntry;
     List<char*>           m_NeededLibraries;
     SymbolTable           m_SymbolTable;
+    uintptr_t             m_InitFunc;
+    uintptr_t             m_FiniFunc;
 
 private:
     /** The copy-constructor

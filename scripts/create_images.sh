@@ -69,12 +69,7 @@ if which losetup >/dev/null 2>&1; then
   sudo touch $MOUNTPT/.pedigree-root
 
   # Transfer files.
-  for f in $HDFILES; do
-    BINARY=`echo $f | sed 's,.*/\([^/]*\)$,\1,'`
-    if [ -f $SRCDIR/apps/$BINARY ]; then
-      sudo cp $SRCDIR/apps/$BINARY $MOUNTPT/applications/
-    fi
-  done
+  sudo cp $SRCDIR/apps/* $MOUNTPT/applications
   sudo cp $SRCDIR/libc.so $MOUNTPT/libraries
   sudo cp $SRCDIR/libm.so $MOUNTPT/libraries
 

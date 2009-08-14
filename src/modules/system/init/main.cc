@@ -44,6 +44,8 @@
 #include <config/ConfigurationManager.h>
 #include <config/MemoryBackend.h>
 
+extern void pedigree_init_sigret();
+
 extern BootIO bootIO;
 
 void init_stage2();
@@ -221,33 +223,8 @@ void init_stage2()
             WARNING("map() failed in init");
     }
 
-
-    ////////////////////////////////////////////////////////////////////
-    // Temp!
-#if 0
-    NOTICE("Double faulting...");
-    asm volatile("xchg %bx, %bx; mov $0x8000000, %esp; pusha;");
-    panic("No double fault!?");
-#endif
-
-#if 0
-    MemoryBackend *pBackend = new MemoryBackend(String("SomeConfig"));
-    ConfigurationManager::instance().installBackend(pBackend);
-
-    char *test = "Hello world!";
-    size_t len = strlen(test) + 1;
-
-    NOTICE("Writing...");
-    ConfigurationManager::instance().write(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
-    NOTICE("Written, reading...");
-    memset(test, 0, len);
-    ConfigurationManager::instance().read(String("SomeConfig"), String("Table"), String("SomeKey"), String("Whee"), String("Hello"), reinterpret_cast<uintptr_t>(test), len);
-    NOTICE("Read in: " << String(test) << ".");
-    NOTICE("Done.");
-#endif
-
-    ////////////////////////////////////////////////////////////////////
-    // End Temp!
+    // Initialise the sigret shizzle.
+    pedigree_init_sigret();
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);

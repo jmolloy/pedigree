@@ -18,6 +18,7 @@
 
 #ifdef DEBUGGER
     #include <Debugger.h>
+    #include <LocksCommand.h>
 #endif
 
 #include <KernelElf.h>                    // KernelElf::initialise()
@@ -142,6 +143,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
+
+#ifdef TRACK_LOCKS
+  g_LocksCommand.setReady();
+#endif
 
   /// \note We have to do this before we call Processor::initialisationDone() otherwise the
   ///       BootstrapStruct_t might already be unmapped

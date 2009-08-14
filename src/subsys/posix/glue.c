@@ -1145,7 +1145,7 @@ int sigsuspend(const long* sigmask)
 
 void _init_signals(void)
 {
-    syscall0(PEDIGREE_INIT_SIGRET);
+    //syscall0(PEDIGREE_INIT_SIGRET);
 }
 
 int fdatasync(int fildes)
