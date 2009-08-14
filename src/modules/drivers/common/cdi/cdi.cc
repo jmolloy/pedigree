@@ -62,13 +62,6 @@ void cdi_run_drivers(void)
             }
         }
     }
-
-/*
-    // Warten auf Ereignisse
-    while (1) {
-        wait_for_rpc();
-    }
-*/
 }
 
 /**

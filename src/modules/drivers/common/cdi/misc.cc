@@ -9,11 +9,17 @@
  */  
 
 #include <Log.h>
+#include <processor/Processor.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
 #include <machine/Machine.h>
 #include <machine/IrqHandler.h>
+
+#include <utilities/TimeoutGuard.h>
+#include <process/Semaphore.h>
+#include <process/Mutex.h>
+#include <LockGuard.h>
 
 class CdiIrqHandler : public IrqHandler {
         virtual bool irq(irq_id_t number, InterruptState &state);
@@ -35,14 +41,22 @@ static struct cdi_device* driver_irq_device[IRQ_COUNT] = { NULL };
  * Array, das die jeweilige Anzahl an aufgerufenen Interrupts seit dem
  * cdi_reset_wait_irq speichert.
  */
-static volatile uint8_t driver_irq_count[IRQ_COUNT] = { 0 };
+static Mutex irqCountLock;
+static Semaphore *driver_irq_count[IRQ_COUNT] = {0};
+// static volatile uint8_t driver_irq_count[IRQ_COUNT] = { 0 };
 
 /**
  * Interner IRQ-Handler, der den IRQ-Handler des Treibers aufruft
  */
 bool CdiIrqHandler::irq(irq_id_t irq, InterruptState &state)
 {
-    driver_irq_count[irq]++;
+    if(driver_irq_count[irq])
+    {
+        irqCountLock.acquire();
+        driver_irq_count[irq]->release();
+        irqCountLock.release();
+    }
+
     if (driver_irq_handler[irq]) {
         driver_irq_handler[irq](driver_irq_device[irq]);
     }
@@ -70,15 +84,18 @@ void cdi_register_irq(uint8_t irq, void (*handler)(struct cdi_device*),
 
     // Der Interrupt wurde schon mal registriert
     if (driver_irq_handler[irq]) {
-//        fprintf(stderr, "cdi: Versuch IRQ %d mehrfach zu registrieren\n", irq);
+        NOTICE("cdi: Versuch IRQ " << irq << " mehrfach zu registrieren");
         return;
     }
+
+    if(driver_irq_count[irq])
+        delete driver_irq_count[irq];
+    driver_irq_count[irq] = new Semaphore(0);
 
     driver_irq_handler[irq] = handler;
     driver_irq_device[irq] = device;
 
-    Machine::instance().getIrqManager()->registerIsaIrqHandler(irq,
-        static_cast<IrqHandler*>(&cdi_irq_handler));
+    Machine::instance().getIrqManager()->registerIsaIrqHandler(irq, static_cast<IrqHandler*>(&cdi_irq_handler));
 }
 
 /**
@@ -94,8 +111,16 @@ int cdi_reset_wait_irq(uint8_t irq)
         return -1;
     }
 
-    driver_irq_count[irq] = 0;
-    return 0;
+    if(driver_irq_count[irq])
+    {
+        irqCountLock.acquire();
+        while(driver_irq_count[irq]->tryAcquire())
+            driver_irq_count[irq]->release();
+        irqCountLock.release();
+        return 0;
+    }
+
+    return -1;
 }
 
 // Dummy-Callback fuer den timer_register-Aufruf in cdi_wait_irq
@@ -116,8 +141,6 @@ int cdi_reset_wait_irq(uint8_t irq)
  */
 int cdi_wait_irq(uint8_t irq, uint32_t timeout)
 {
-//    uint64_t timeout_ticks;
-
     if (irq > IRQ_COUNT) {
         return -1;
     }
@@ -126,30 +149,19 @@ int cdi_wait_irq(uint8_t irq, uint32_t timeout)
         return -2;
     }
 
-    // Wenn der IRQ bereits gefeuert wurde, koennen wir uns ein paar Syscalls
-    // sparen
-    if (driver_irq_count [irq]) {
-        return 0;
-    }
+    LockGuard<Mutex> lock(irqCountLock);
 
-/*
-    timeout_ticks = get_tick_count() + (uint64_t) timeout * 1000;
-    timer_register(wait_irq_dummy_callback, timeout * 1000);
-
-    p();
-*/
-    while (!driver_irq_count [irq]) {
-/*        v_and_wait_for_rpc();
-
-        if (timeout_ticks < get_tick_count()) {
+    if(driver_irq_count[irq])
+    {
+        driver_irq_count[irq]->acquire(1, (timeout / 1000) + 1);
+        if(Processor::information().getCurrentThread()->wasInterrupted())
             return -3;
-        }
-        p();
-*/
+        else
+            return 0;
     }
-//    v();
-
-    return 0;
+    else
+        return -2;
+}
 }
 
 
@@ -178,7 +190,7 @@ int cdi_alloc_phys_mem(size_t size, void** vaddr, void** paddr)
     }
 
     *vaddr = region->virtualAddress();
-    *paddr = (void*) (region->physicalAddress());
+    *paddr = reinterpret_cast<void*>(region->physicalAddress());
 
     return 0;
 }
@@ -218,7 +230,7 @@ void* cdi_alloc_phys_addr(size_t size, uintptr_t paddr)
  */
 int cdi_ioports_alloc(uint16_t start, uint16_t count)
 {
-//    return (request_ports(start, count) ? 0 : -1);
+    // Not required in Pedigree drivers (ring0)
     return 0;
 }
 
@@ -229,7 +241,7 @@ int cdi_ioports_alloc(uint16_t start, uint16_t count)
  */
 int cdi_ioports_free(uint16_t start, uint16_t count)
 {
-//    return (release_ports(start, count) ? 0 : -1);
+    // Not required in Pedigree drivers (ring0)
     return 0;
 }
 
@@ -238,7 +250,12 @@ int cdi_ioports_free(uint16_t start, uint16_t count)
  */
 void cdi_sleep_ms(uint32_t ms)
 {
-//    msleep(ms);
-}
+    if(ms < 1000)
+        WARNING("cdi_sleep_ms called with millisecond granularity - yell at a dev to implement");
 
+    if(ms >= 1000)
+    {
+        Semaphore sem(0);
+        sem.acquire(1, (ms / 1000));
+    }
 }

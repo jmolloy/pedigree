@@ -13,6 +13,8 @@ typedef struct {
             unsigned long size;
 } list_t;
 
+extern "C"
+{
 list_t* list_create(void);
 void list_destroy(list_t* list);
 list_t* list_push(list_t* list, void* value);
@@ -22,6 +24,7 @@ void* list_get_element_at(list_t* list, int index);
 list_t* list_insert(list_t* list, int index, void* value);
 void* list_remove(list_t* list, int index);
 unsigned long list_size(list_t* list);
+};
 
 
 #include "cdi/lists.h"

@@ -61,8 +61,7 @@ void cdi_net_device_init(struct cdi_net_device* device);
  * Wird von Netzwerktreibern aufgerufen, wenn ein Netzwerkpaket
  * empfangen wurde.
  */
-void cdi_net_receive(
-    struct cdi_net_device* device, void* buffer, size_t size);
+void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size);
 
 
 #ifdef __cplusplus
