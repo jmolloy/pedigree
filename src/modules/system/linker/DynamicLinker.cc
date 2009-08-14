@@ -170,7 +170,7 @@ bool DynamicLinker::loadObject(File *pFile)
     }
 
     initPlt(pElf, loadBase);
-    
+
     return true;
 }
 

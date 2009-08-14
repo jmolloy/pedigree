@@ -253,7 +253,9 @@ X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
 
 bool X86VirtualAddressSpace::doIsMapped(void *virtualAddress)
 {
+#ifndef TRACK_LOCKS
   LockGuard<Spinlock> guard(m_Lock);
+#endif
 
   virtualAddress = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(virtualAddress) & ~0xFFF);
 

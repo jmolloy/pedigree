@@ -17,6 +17,7 @@
 #include "file-syscalls.h"
 #include "system-syscalls.h"
 #include "pipe-syscalls.h"
+#include "signal-syscalls.h"
 #include "syscallNumbers.h"
 #include <syscallError.h>
 #include <processor/types.h>
@@ -347,6 +348,35 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.setStackPointer(pState.getStackPointer());
     state.setInstructionPointer(elf->getEntryPoint());
 
+    // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
+
+    pedigree_init_sigret();
+
+    class RunInitEvent : public Event
+    {
+    public:
+        RunInitEvent(uintptr_t addr) : Event(addr, true)
+        {}
+        size_t serialize(uint8_t *pBuffer)
+        {return 0;}
+        size_t getNumber() {return ~0UL;}
+    };
+
+    // Find the init function location, if it exists.
+    uintptr_t initLoc = elf->getInitFunc();
+    if (initLoc)
+    {
+        RunInitEvent *ev = new RunInitEvent(initLoc);
+        // Poke the initLoc so we know it's mapped in!
+        volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
+        volatile uintptr_t tmp = * vInitLoc;
+        *vInitLoc = tmp; // GCC can't ignore a write.
+        asm volatile("" :::"memory"); // Memory barrier.
+        Processor::information().getCurrentThread()->sendEvent(ev);
+        // Yield, so the code gets run before we return.
+        Scheduler::instance().yield();
+    }
+    
     /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON
     state.m_R6 = pState.m_R6;

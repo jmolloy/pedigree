@@ -34,7 +34,6 @@ sigret_stub:
   push ebx
 
 .justRun:
-
   ; Run the handler
   call edi
 

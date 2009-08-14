@@ -29,6 +29,11 @@ class Spinlock
     void acquire();
     void release();
 
+    bool acquired()
+    {
+        return m_Atom;
+    }
+
   private:
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
