@@ -1,0 +1,80 @@
+diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
+--- gcc-4.3.2-orig/config.sub	2008-01-23 12:37:40.000000000 +1000
++++ gcc-4.3.2/config.sub	2009-03-12 15:16:17.000000000 +1000
+@@ -1388,6 +1388,9 @@ case $os in
+ 	-zvmoe)
+ 		os=-zvmoe
+ 		;;
++  -pedigree*)
++    os=-pedigree
++    ;;
+ 	-none)
+ 		;;
+ 	*)
+diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
+--- gcc-4.3.2-orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
++++ gcc-4.3.2/gcc/config/pedigree.h	2009-03-12 15:20:51.000000000 +1000
+@@ -0,0 +1,20 @@
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()      \
++  do {                                \
++    builtin_define_std ("pedigree");      \
++    builtin_define_std ("unix");      \
++    builtin_assert ("system=pedigree");   \
++    builtin_assert ("system=unix");   \
++  } while(0);
++
++#undef TARGET_VERSION
++#define TARGET_VERSION fprintf(stderr, " (i386 pedigree)")
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "%{!shared: \
++                        %{!symbolic: \
++                        %{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}}\
++                       crti.o%s \
++                       crtbegin.o%s"
++
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
+diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
+--- gcc-4.3.2-orig/gcc/config.gcc	2008-06-10 02:32:15.000000000 +1000
++++ gcc-4.3.2/gcc/config.gcc	2009-03-12 16:51:59.000000000 +1000
+@@ -605,6 +605,12 @@ case ${target} in
+     *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
+   esac
+   ;;
++*-*-pedigree*)
++  extra_parts="crtbegin.o crtend.o"
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_atexit=yes
++  ;;
+ *-*-elf)
+   # Assume that newlib is being used and so __cxa_atexit is provided.
+   default_use_cxa_atexit=yes
+@@ -1070,6 +1076,11 @@ hppa[12]*-*-hpux11*)
+ 	use_collect2=yes
+ 	gas=yes
+ 	;;
++i[3-7]86-*-pedigree*)
++  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
++  tmake_file="i386/t-i386elf t-svr4"
++  use_fixproto=yes
++  ;;
+ i[34567]86-*-darwin*)
+ 	need_64bit_hwint=yes
+ 
+diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/crossconfig.m4
+--- gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4	2008-01-15 10:15:43.000000000 +1000
++++ gcc-4.3.2/libstdc++-v3/crossconfig.m4	2009-03-21 10:46:35.000000000 +1000
+@@ -232,6 +232,11 @@ case "${host}" in
+       ],
+       [AC_DEFINE(HAVE_SIGSETJMP, 1, [Define if sigsetjmp is available.])])
+     ;;
++  *-pedigree*)
++    AC_CHECK_HEADERS([sys/types.h locale.h float.h])
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_COMPLEX_MATH_SUPPORT
++    ;;
+   *-mingw32*)
+     AC_CHECK_HEADERS([sys/types.h locale.h float.h])
+     GLIBCXX_CHECK_LINKER_FEATURES
