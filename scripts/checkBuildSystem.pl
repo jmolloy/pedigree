@@ -29,7 +29,16 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
                   'arch' => 'i686-elf amd64-elf'} );
 
-my @patch = ( );
+my @patch = ( {'cwd' => "gcc-$gcc_version",
+               'name' => "Gcc pedigree target patch",
+               'flags' => '-p1',
+               'input' => 'pedigree-gcc.patch',
+               'arch' => 'all'},
+              {'cwd' => "binutils-$binutils_version",
+               'name' => "Binutils pedigree target patch",
+               'flags' => '-p1',
+               'input' => 'pedigree-binutils.patch',
+               'arch' => 'all'} );
 
 my @compile = ( {'dir' => "nasm-$nasm_version",
                  'inplace' => 1, # Nasm should be build inside the source tree.
@@ -78,6 +87,8 @@ $ENV{ASFLAGS} = "";
 
 my $prefix = `pwd`;
 chomp $prefix;
+
+die "Please use target 'i686-pedigree'." unless $target eq 'i686-pedigree';
 
 # Firstly, find out where to store the compilers.
 unless (-l "./compilers/dir") {
