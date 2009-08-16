@@ -86,20 +86,14 @@ void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device)
 {
     Disk* pDev = reinterpret_cast<Disk*>(void_pdev);
 
-    WARNING("cdi_cpp_disk_register - " << device->dev.name);
-
-    // Create a new CdiDisk node
+    // Create a new CdiDisk node.
+    /// \todo I'm assuming pDev is invalid at this stage. This isn't necessarily
+    ///       correct, but it's a quick fix that should work for now. It will need
+    ///       to be fixed later!
     CdiDisk *pCdiDisk = new CdiDisk(pDev, device);
-
-    // Replace pDev with pCdiNet
-    pCdiDisk->setParent(pDev->getParent());
-    pDev->getParent()->replaceChild(pDev, pCdiDisk);
     device->dev.pDev = reinterpret_cast<void*>(pCdiDisk);
 
     // Insert into the tree, properly
     pCdiDisk->setParent(&Device::root());
     Device::root().addChild(pCdiDisk);
-
-    // Attempt to mount in the VFS
-    //findDisks(pCdiDisk);
 }
