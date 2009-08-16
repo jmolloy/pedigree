@@ -473,7 +473,7 @@ static int floppy_drive_sector_read(struct floppy_device* device, uint32_t lba,
     uint8_t sector;
     uint8_t cylinder;
     uint8_t head;
-    uint8_t status;
+    uint8_t status = 0;
     uint8_t data;
     struct cdi_dma_handle dma_handle;
 
@@ -540,7 +540,7 @@ static int floppy_drive_sector_read(struct floppy_device* device, uint32_t lba,
             // IRQ bestaetigen
             floppy_drive_int_sense(device);
             floppy_reset_irqcnt(device);
-            floppy_read_data(device, buffer + bytes_done++);
+            floppy_read_data(device, (uint8_t*) buffer + bytes_done++);
         }
     }
 
@@ -600,7 +600,7 @@ static int floppy_drive_sector_write(struct floppy_device* device, uint32_t lba,
     uint8_t sector;
     uint8_t cylinder;
     uint8_t head;
-    uint8_t status;
+    uint8_t status = 0;
     uint8_t data;
     struct cdi_dma_handle dma_handle;
 
@@ -709,7 +709,7 @@ int floppy_device_probe(struct floppy_device* device)
     if(device->id == 0) {
         return (t >> 4);
     }
-    else if(device->id == 1) {
+    else if(device->id == 1){
         return (t & 0xF);
     }
     
@@ -830,7 +830,7 @@ int floppy_read_blocks(struct cdi_storage_device* dev, uint64_t block,
         // Wenn das schief geht, wird mehrmals probiert
         for (j = 0; (j < 5) && (result != 0); j++) {
             result = floppy_drive_sector_read(device, (uint32_t) block + i,
-                buffer + i * dev->block_size);
+                (char*) buffer + i * dev->block_size);
         }
     }
 
@@ -855,7 +855,7 @@ int floppy_write_blocks(struct cdi_storage_device* dev, uint64_t block,
         // Wenn das schief geht, wird mehrmals probiert
         for (j = 0; (j < 5) && (result != 0); j++) {
             result = floppy_drive_sector_write(device, (uint32_t) block + i,
-                buffer + i * dev->block_size);
+                (char*) buffer + i * dev->block_size);
         }
     }
 

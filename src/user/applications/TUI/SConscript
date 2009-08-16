@@ -17,9 +17,8 @@ objname = appdir + '/TUI'
 env.Alias("apps", objname)
 
 # Dependencies
-env.Depends(objname, "crt0")
-#env.Depends(objname, "subsys")
-env.Depends(objname, "libs")
+tmp.Depends(objname, env.Alias("crt0"))
+tmp.Depends(objname, env.Alias("libs"))
 
 # To include a new subdirectory just add to the list.
 subdirs = [

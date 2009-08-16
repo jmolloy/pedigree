@@ -19,6 +19,7 @@
 #include <vfs/Filesystem.h>
 #include <utilities/List.h>
 #include <utilities/Vector.h>
+#include <utilities/Cache.h>
 #include <utilities/Tree.h>
 #include <process/Mutex.h>
 #include <LockGuard.h>
@@ -204,6 +205,9 @@ protected:
   uint64_t m_DataAreaStart; // data area can potentially start above 4 GB
   uint32_t m_RootDirCount;
 
+  /** FAT sector */
+  uint16_t m_FatSector;
+
   /** Root directory information */
   union RootDirInfo
   {
@@ -222,6 +226,9 @@ protected:
 
   /** Root filesystem node. */
   File *m_pRoot;
+
+  // FAT cache
+  Cache<uint8_t*, 512> m_FatCache;
 };
 
 #endif

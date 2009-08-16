@@ -13,6 +13,8 @@ typedef struct {
             unsigned long size;
 } list_t;
 
+extern "C"
+{
 list_t* list_create(void);
 void list_destroy(list_t* list);
 list_t* list_push(list_t* list, void* value);
@@ -22,6 +24,7 @@ void* list_get_element_at(list_t* list, int index);
 list_t* list_insert(list_t* list, int index, void* value);
 void* list_remove(list_t* list, int index);
 unsigned long list_size(list_t* list);
+};
 
 
 #include "cdi/lists.h"
@@ -37,7 +40,7 @@ struct cdi_list_implementation {
  */
 cdi_list_t cdi_list_create()
 {
-    return (cdi_list_t) list_create();
+    return reinterpret_cast<cdi_list_t>(list_create());
 }
 
 /** 
@@ -46,7 +49,7 @@ cdi_list_t cdi_list_create()
  */
 void cdi_list_destroy(cdi_list_t list)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     list_destroy(l);
 }
 
@@ -55,8 +58,8 @@ void cdi_list_destroy(cdi_list_t list)
  */
 cdi_list_t cdi_list_push(cdi_list_t list, void* value)
 {
-    list_t* l = (list_t*) list;
-    return (cdi_list_t) list_push(l, value); 
+    list_t* l = reinterpret_cast<list_t*>(list);
+    return reinterpret_cast<cdi_list_t>(list_push(l, value));
 }
 
 /**
@@ -64,7 +67,7 @@ cdi_list_t cdi_list_push(cdi_list_t list, void* value)
  */
 void* cdi_list_pop(cdi_list_t list)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     return list_pop(l); 
 }
 
@@ -74,7 +77,7 @@ void* cdi_list_pop(cdi_list_t list)
  */
 size_t cdi_list_empty(cdi_list_t list)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     return list_is_empty(l);
 }
 
@@ -83,7 +86,7 @@ size_t cdi_list_empty(cdi_list_t list)
  */
 void* cdi_list_get(cdi_list_t list, size_t index)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     return list_get_element_at(l, index);
 }
 
@@ -94,8 +97,8 @@ void* cdi_list_get(cdi_list_t list, size_t index)
  */
 cdi_list_t cdi_list_insert(cdi_list_t list, size_t index, void* value)
 {
-    list_t* l = (list_t*) list;
-    return (cdi_list_t) list_insert(l, index, value);
+    list_t* l = reinterpret_cast<list_t*>(list);
+    return reinterpret_cast<cdi_list_t>(list_insert(l, index, value));
 }
 
 /**
@@ -103,7 +106,7 @@ cdi_list_t cdi_list_insert(cdi_list_t list, size_t index, void* value)
  */
 void* cdi_list_remove(cdi_list_t list, size_t index)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     return list_remove(l, index);
 }
 
@@ -112,6 +115,6 @@ void* cdi_list_remove(cdi_list_t list, size_t index)
  */
 size_t cdi_list_size(cdi_list_t list)
 {
-    list_t* l = (list_t*) list;
+    list_t* l = reinterpret_cast<list_t*>(list);
     return list_size(l);
 }

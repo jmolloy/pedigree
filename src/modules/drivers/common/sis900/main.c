@@ -161,8 +161,3 @@ static void sis900_driver_destroy(struct cdi_driver* driver)
 
     // TODO Alle Karten deinitialisieren
 }
-
-MODULE_NAME("sis900");
-MODULE_ENTRY(&init_sis900);
-MODULE_EXIT(&sis900_driver_destroy);
-MODULE_DEPENDS("cdi");

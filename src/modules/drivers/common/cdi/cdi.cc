@@ -25,7 +25,6 @@ static void cdi_destroy(void);
 void cdi_init(void)
 {
     drivers = cdi_list_create();
-//    atexit(cdi_destroy);
 }
 
 /**
@@ -36,7 +35,7 @@ static void cdi_destroy(void)
     struct cdi_driver* driver;
     int i;
 
-    for (i = 0; (driver = cdi_list_get(drivers, i)); i++) {
+    for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
         if (driver->destroy) {
             driver->destroy(driver);
         }
@@ -54,35 +53,15 @@ void cdi_run_drivers(void)
     struct cdi_driver* driver;
     struct cdi_device* device;
     int i, j;
-    for (i = 0; (driver = cdi_list_get(drivers, i)); i++) {
-
-/* TODO
-        if (driver->type == CDI_NETWORK) {
-            init_service_register((char*) driver->name);
-        }
-*/
-
-        for (j = 0; (device = cdi_list_get(driver->devices, j)); j++) {
+    for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
+        for (j = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(driver->devices, j))); j++) {
             device->driver = driver;
 
             if (driver->init_device) {
                 driver->init_device(device);
             }
         }
-
-/*
-        if (driver->type != CDI_NETWORK) {
-            init_service_register((char*) driver->name);
-        }
-*/
     }
-
-/*
-    // Warten auf Ereignisse
-    while (1) {
-        wait_for_rpc();
-    }
-*/
 }
 
 /**

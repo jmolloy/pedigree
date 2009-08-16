@@ -34,6 +34,8 @@ typedef struct {
             unsigned long size;
 } list_t;
 
+extern "C"
+{
 list_t* list_create(void);
 void list_destroy(list_t* list);
 list_t* list_push(list_t* list, void* value);
@@ -43,6 +45,7 @@ void* list_get_element_at(list_t* list, int index);
 list_t* list_insert(list_t* list, int index, void* value);
 void* list_remove(list_t* list, int index);
 unsigned long list_size(list_t* list);
+};
 
 struct list_node {
     struct list_node* next;
@@ -50,7 +53,6 @@ struct list_node {
 };
 
 typedef unsigned long dword;
-typedef int bool;
 
 /* 
  * Die folgenden Variablen werden für ein minimales Caching benutzt 
@@ -68,7 +70,7 @@ static struct list_node* last_node = NULL;
  */
 list_t* list_create() 
 {
-    list_t* list = malloc(sizeof(list_t));
+    list_t* list = new list_t;
     list->anchor = NULL;
     list->size   = 0;
 
@@ -84,15 +86,15 @@ void list_destroy(list_t* list)
     while (list_pop(list) != NULL);
 
     // Listenhandle freigeben
-    free(list);
+    delete list;
 }
 
 /**
  * @return TRUE, wenn die Liste leer ist, FALSE sonst.
  */
-bool list_is_empty(list_t* list)
+int list_is_empty(list_t* list)
 {
-    return (!list) || (list->anchor == NULL);
+    return ((!list) || (list->anchor == NULL)) ? 1 : 0;
 }
 
 /**
@@ -122,7 +124,7 @@ list_t* list_push(list_t* list, void* value)
         return NULL;
     }
 
-    struct list_node* element = malloc(sizeof(struct list_node));
+    struct list_node* element = new list_node;
     element->value = value;
     element->next = list->anchor;
     list->anchor = element;
@@ -157,7 +159,7 @@ void* list_pop(list_t* list)
 
         old_anchor = list->anchor;
         list->anchor = list->anchor->next;
-        free(old_anchor);
+        delete old_anchor;
     
         list->size--;
     } else {
@@ -257,7 +259,7 @@ void* list_get_element_at(list_t* list, int index)
  */
 list_t* list_insert(list_t* list, int index, void* value)
 {
-    struct list_node* new_node = malloc(sizeof(struct list_node));
+    struct list_node* new_node = new list_node;
     new_node->value = value;
 
     if (!list) {
@@ -318,7 +320,7 @@ void* list_remove(list_t* list, int index)
         node = prev_node->next;
         prev_node->next = node->next;
         value = node->value;
-        free(node);
+        delete node;
     } else {
         if (!list->anchor) {
             return NULL;
@@ -327,7 +329,7 @@ void* list_remove(list_t* list, int index)
         node = list->anchor;
         list->anchor = node->next;;
         value = node->value;
-        free(node);
+        delete node;
     }
     
     list->size--;

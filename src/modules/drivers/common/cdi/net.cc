@@ -18,7 +18,10 @@ static cdi_list_t ethernet_packet_receivers;
 
 typedef unsigned long dword;
 
-void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* dev);
+extern "C"
+{
+    void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* dev);
+};
 
 /*
 static void rpc_send_packet
@@ -33,7 +36,7 @@ static void rpc_register_receiver
 void cdi_net_driver_init(struct cdi_net_driver* driver)
 {
     driver->drv.type = CDI_NETWORK;
-    cdi_driver_init((struct cdi_driver*) driver);
+    cdi_driver_init(reinterpret_cast<struct cdi_driver*>(driver));
     
     netcard_list = cdi_list_create();
     ethernet_packet_receivers = cdi_list_create();
@@ -47,7 +50,7 @@ void cdi_net_driver_init(struct cdi_net_driver* driver)
  */
 void cdi_net_driver_destroy(struct cdi_net_driver* driver)
 {
-    cdi_driver_destroy((struct cdi_driver*) driver);
+    cdi_driver_destroy(reinterpret_cast<struct cdi_driver*>(driver));
 }
 
 /**
@@ -77,10 +80,9 @@ void cdi_net_device_init(struct cdi_net_device* device)
  */
 struct cdi_net_device* cdi_net_get_device(int num) 
 {
-    int i = 0;
-    for (;i < cdi_list_size(netcard_list);i++)
+    for (size_t i = 0; i < cdi_list_size(netcard_list); i++)
     {
-        struct cdi_net_device *device = cdi_list_get(netcard_list, i);
+        struct cdi_net_device *device = reinterpret_cast<struct cdi_net_device*>(cdi_list_get(netcard_list, i));
         if (device->number == num)
             return device;
     }

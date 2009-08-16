@@ -27,7 +27,7 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.cc")
+    Glob("*.c")
 ]
 
 # Already-built object files to link

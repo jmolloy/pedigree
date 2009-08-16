@@ -71,6 +71,7 @@ opts = Variables('options.cache')
 opts.AddVariables(
     ('CROSS','Base for cross-compilers, tool names will be appended automatically',''),
     ('CC','Sets the C compiler to use.'),
+    ('CC_NOCACHE','Sets the non-ccached C compiler to use (defaults to CC).', ''),
     ('CXX','Sets the C++ compiler to use.'),
     ('AS','Sets the assembler to use.'),
     ('AR','Sets the archiver to use.'),
@@ -88,6 +89,7 @@ opts.AddVariables(
     BoolVariable('warnings', 'If nonzero, compilation without -Werror', 1),
 	BoolVariable('installer', 'Build the installer', 0),
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
+    BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
     
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -124,15 +126,24 @@ env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
 
 # If we need to generate flags, do so
 if env['genflags']:
+
+    if env['CC_NOCACHE'] == '':
+        env['CC_NOCACHE'] = env['CC']
     
     # Set the compilers if CROSS is not an empty string
     if env['CROSS'] != '':
         crossBase = env['CROSS']
-        env['CC'] = crossBase + 'gcc'
-        env['CXX'] = crossBase + 'g++'
-        env['LD'] = crossBase + 'gcc'
-        env['AS'] = crossBase + 'as'
+        prefix = ''
+        if env['ccache']:
+            prefix = 'ccache '
+        env['CC'] = prefix + crossBase + 'gcc'
+        env['CC_NOCACHE'] = crossBase + 'gcc'
+        env['CXX'] = prefix + crossBase + 'g++'
+        env['AS'] = prefix + crossBase + 'as'
+        
+        # AR and LD never have the prefix added. They must run on the host.
         env['AR'] = crossBase + 'ar'
+        env['LD'] = crossBase + 'gcc'
         env['LINK'] = env['LD']
     env['LD'] = env['LINK']
 
@@ -209,6 +220,7 @@ if env['genflags']:
 
     if not env['warnings']:
         env['CXXFLAGS'] += ' -Werror'
+        env['CFLAGS'] += ' -Werror'
 
     if env['verbose_link']:
         env['LINKFLAGS'] += ' --verbose'

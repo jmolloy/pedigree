@@ -21,6 +21,10 @@
  */
 typedef struct cdi_list_implementation* cdi_list_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** 
  * Erzeugt eine neue Liste 
  *
@@ -105,5 +109,9 @@ void* cdi_list_remove(cdi_list_t list, size_t index);
  * @param list Liste, deren Laenge zurueckgegeben werden soll
  */
 size_t cdi_list_size(cdi_list_t list);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif

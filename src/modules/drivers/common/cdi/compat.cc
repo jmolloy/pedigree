@@ -36,4 +36,5 @@ int sprintf(char *s, const char *fmt, ...)
 int puts(const char *s)
 {
     NOTICE(s);
+    return strlen(s);
 }

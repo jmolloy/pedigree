@@ -36,7 +36,7 @@ static void add_child_devices(cdi_list_t list, Device *pDev)
         dev->class_id = pChild->getPciClassCode();
         dev->subclass_id = pChild->getPciSubclassCode();
         dev->irq = pChild->getInterruptNumber();
-        dev->pDev = (void*) pChild;
+        dev->pDev = reinterpret_cast<void*>(pChild);
 
         // Add BARs
         Vector<Device::Address*> addresses = pChild->addresses();
