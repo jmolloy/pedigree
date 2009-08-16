@@ -68,8 +68,8 @@ Xterm::~Xterm()
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
     char str[64];
-//    sprintf(str, "XTerm: Write: %x", utf32);
-//    log(str);
+    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
+    log(str);
 
     if(m_bChangingState)
     {
@@ -426,6 +426,16 @@ Xterm::Window::~Window()
     free(m_pBuffer);
 }
 
+void Xterm::Window::showCursor(DirtyRectangle &rect)
+{
+    render(rect, XTERM_INVERSE);
+}
+
+void Xterm::Window::hideCursor(DirtyRectangle &rect)
+{
+    render(rect);
+}
+
 void Xterm::Window::resize(size_t nRows, size_t nCols)
 {
 }
@@ -486,6 +496,13 @@ void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
 
     c->flags = m_Flags;
     c->utf32 = utf32;
+}
+
+Xterm::Window::TermChar Xterm::Window::getChar(size_t x, size_t y)
+{
+    if (x == ~0UL) x = m_CursorX;
+    if (y == ~0UL) y = m_CursorY;
+    return m_pInsert[y*m_Width+x];
 }
 
 void Xterm::Window::cursorDown(size_t n, DirtyRectangle &rect)
@@ -599,13 +616,8 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 {
-//    rect.point(m_OffsetLeft, m_OffsetTop);
-//    rect.point(m_FbWidth, m_Height*g_NormalFont->getHeight());
     size_t top_px   = m_OffsetTop;
     size_t top2_px   = m_OffsetTop+ n*g_NormalFont->getHeight();
-
-//    size_t scrollBottom_char = m_Height*m_Width;
-//    size_t scrollBottom_px   = m_Height * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
     size_t bottom2_px = top_px + (m_Height-n)*g_NormalFont->getHeight();
 
@@ -615,13 +627,6 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
     
-//    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ top_px ]),
-//            reinterpret_cast<void*>(&m_pFramebuffer[ top2_px ]),
-//             (m_Height-n) * m_FbWidth * 3 * g_NormalFont->getHeight());
-//    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
-//            0,
-//            n * m_FbWidth * 3 * g_NormalFont->getHeight());
-
     if (m_pView == m_pInsert)
         m_pView += n*m_Width;
 
@@ -674,10 +679,8 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::setCursor(size_t x, size_t y, DirtyRectangle &rect)
 {
-    render(rect);
     m_CursorX = x;
     m_CursorY = y;
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::setCursorX(size_t x, DirtyRectangle &rect)
@@ -701,41 +704,35 @@ size_t Xterm::Window::getCursorY()
 void Xterm::Window::cursorLeft(DirtyRectangle &rect)
 {
     if (m_CursorX == 0) return;
-    render(rect);
     m_CursorX --;
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::cursorLeftNum(size_t n, DirtyRectangle &rect)
 {
     if (m_CursorX == 0) return;
-    render(rect);
 
     if(n > m_CursorX) n = m_CursorX;
 
     m_CursorX -= n;
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::cursorDownAndLeftToMargin(DirtyRectangle &rect)
 {
-    render(rect);
     cursorDown(1, rect);
     m_CursorX = 0;
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::cursorLeftToMargin(DirtyRectangle &rect)
 {
-    render(rect);
     m_CursorX = 0;
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
 {
+    TermChar tc = getChar();
     setChar(utf32, m_CursorX, m_CursorY);
-    render(rect);
+    if (getChar() != tc)
+        render(rect);
 
     m_CursorX++;
     if ((m_CursorX % m_Width) == 0)
@@ -743,7 +740,6 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
         m_CursorX = 0;
         cursorDown(1, rect);
     }
-    render(rect, XTERM_INVERSE);
 }
 
 void Xterm::Window::scrollUp(size_t n, DirtyRectangle &rect)
@@ -759,41 +755,32 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
     log("eraseScreen");
 
+    // One good fillRect should do the job nicely.
+    Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
+
     for(size_t row = 0; row < m_Height; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
         {
-            g_NormalFont->render(m_pFramebuffer,
-                                 static_cast<uint32_t>(' '),
-                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                                 g_Colours[m_Fg],
-                                 g_Colours[m_Bg]
-            );
+            setChar(' ', col, row);
         }
     }
-    
-    rect.point(m_OffsetLeft, m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_Height * g_NormalFont->getHeight()) + m_OffsetTop);
 }
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
     log("eraseEOL");
 
+    size_t l = m_OffsetLeft+m_CursorX*g_NormalFont->getWidth();
+
+    // Again, one fillRect should do it.
+    Syscall::fillRect(m_pFramebuffer, l, m_OffsetTop+m_CursorY*g_NormalFont->getHeight(), m_FbWidth-l, g_NormalFont->getHeight(), g_Colours[m_Bg]);
+
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < m_Width; col++)
     {
-        g_NormalFont->render(m_pFramebuffer,
-                             static_cast<uint32_t>(' '),
-                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                             g_Colours[m_Fg],
-                             g_Colours[m_Bg]
-        );
+        setChar(' ', col, row);
     }
-    rect.point((m_CursorX * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
 }
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)

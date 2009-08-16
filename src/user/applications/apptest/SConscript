@@ -27,14 +27,12 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.c")
+    Glob("*.cc")
 ]
 
 # Already-built object files to link
 objects = [
-    kerneldir + '/crt0.o',
-    kerneldir + '/crti.o',
-    kerneldir + '/crtn.o',
+#    kerneldir + '/crt0.o',
 ]
 
 # To include a new directory for includes, just add it to the list

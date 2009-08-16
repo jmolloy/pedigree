@@ -41,7 +41,7 @@ my @patch = ( {'cwd' => "gcc-$gcc_version",
                'arch' => 'all'} );
 
 my @compile = ( {'dir' => "nasm-$nasm_version",
-                 'inplace' => 1, # Nasm should be build inside the source tree.
+                 'inplace' => 1, # Nasm should be built inside the source tree.
                  'name' => "Nasm",
                  'configure' => "--prefix=\$PREFIX",
                  'make' => "",
@@ -58,8 +58,8 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
-                 'make' => "all-gcc all-target-libgcc",
-                 'install' => "install-gcc install-target-libgcc",
+                 'make' => "all-gcc",
+                 'install' => "install-gcc",
                  'arch' => 'i686-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",

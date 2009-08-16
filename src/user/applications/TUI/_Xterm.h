@@ -45,6 +45,15 @@ public:
         return m_pWindows[0]->m_Width;
     }
 
+    void showCursor(DirtyRectangle &rect)
+    {
+        m_pWindows[m_ActiveBuffer]->showCursor(rect);
+    }
+    void hideCursor(DirtyRectangle &rect)
+    {
+        m_pWindows[m_ActiveBuffer]->hideCursor(rect);
+    }
+
 private:
     class Window
     {
@@ -76,6 +85,9 @@ private:
             Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth);
             ~Window();
 
+            void showCursor(DirtyRectangle &rect);
+            void hideCursor(DirtyRectangle &rect);
+        
             void resize(size_t nRows, size_t nCols);
 
             void setScrollRegion(int start, int end);
@@ -86,6 +98,7 @@ private:
 
             void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void setChar(uint32_t utf32, size_t x, size_t y);
+            TermChar getChar(size_t x=~0UL, size_t y=~0UL);
 
             void addChar(uint32_t utf32, DirtyRectangle &rect);
 

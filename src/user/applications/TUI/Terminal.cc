@@ -173,6 +173,8 @@ char Terminal::getFromQueue()
 
 void Terminal::write(char *pStr, DirtyRectangle &rect)
 {
+    m_pXterm->hideCursor(rect);
+
     while (*pStr || m_WriteBufferLen)
     {
         // Fill the buffer.
@@ -234,6 +236,8 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         m_pXterm->write(static_cast<uint8_t>(utf32&0xFF));
 #endif
     }
+
+    m_pXterm->showCursor(rect);
 }
 
 void Terminal::addToQueue(char c)

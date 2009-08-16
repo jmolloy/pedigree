@@ -86,7 +86,8 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             // it MUST trap before we get the log spinlock, else other things will
             // want to write to it and deadlock.
             static char buf[1024];
-            strcpy(buf, reinterpret_cast<char*>(p1));
+            strncpy(buf, reinterpret_cast<char*>(p1), 1023);
+            buf[1023] = '\0';
             NOTICE("TUI: " << buf);
             return 0;
         }
