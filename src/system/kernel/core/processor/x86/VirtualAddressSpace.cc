@@ -195,7 +195,7 @@ X86VirtualAddressSpace::~X86VirtualAddressSpace()
 
 X86VirtualAddressSpace::X86VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPageDirectory(0), m_VirtualPageDirectory(VIRTUAL_PAGE_DIRECTORY),
-    m_VirtualPageTables(VIRTUAL_PAGE_TABLES), m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_Lock()
+    m_VirtualPageTables(VIRTUAL_PAGE_TABLES), m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_Lock(false, true)
 {
   // Allocate a new page directory
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
@@ -247,7 +247,7 @@ X86VirtualAddressSpace::X86VirtualAddressSpace(void *Heap,
                                                void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
     m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
-    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock()
+    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock(false, true)
 {
 }
 

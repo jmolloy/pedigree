@@ -80,14 +80,18 @@ List<String*> String::tokenise(char token)
       pStr->m_Length --;
       pStr->m_Data[pStr->length()] = '\0';
 
-      list.pushBack(pStr);
+      if (pStr->length() == 0)
+          delete pStr;
+      else
+          list.pushBack(pStr);
       idx = 0;
     }
     else
       idx = copy.nextCharacter(idx);
   }
 
-  list.pushBack(new String(copy));
+  if (copy.length() > 0)
+    list.pushBack(new String(copy));
 
   return list;
 }

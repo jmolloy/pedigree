@@ -1,4 +1,4 @@
-/*
+#/*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -190,8 +190,8 @@ int main (int argc, char **argv)
     while (true)
     {
         size_t cmd = Syscall::nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
-        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-        log(str);
+//        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
+//        log(str);
 
         Terminal *pT = 0;
         TerminalList *pTL = g_pTermList;

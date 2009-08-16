@@ -88,7 +88,7 @@ protected:
     volatile bool m_Stop;
 
     /** Mutex to be held when the request queue is being changed. */
-    Mutex m_RequestQueueMutex;
+    Spinlock m_RequestQueueMutex;
 
     Thread *m_pThread;
 };

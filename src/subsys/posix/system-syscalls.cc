@@ -246,39 +246,54 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     String theShebang, *oldPath = 0;
     static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
+    tmpBuff[128] = '\0';
+    
+    List<String*> additionalArgv;
+
     if (!strncmp(tmpBuff, "#!", 2))
     {
-        // We have a shebang, so grab the command
-        /// \todo Handle shebang lines that contain arguments (eg, "#!/bin/python -i")
-        NormalStaticString execLine;
-        execLine.clear();
+        // We have a shebang, so grab the command.
 
-        size_t i = 2;
-        while (i < file->getSize())
+        // Scan the found string for a newline. If we don't get a newline, the shebang was over 128 bytes and we error out.
+        bool found = false;
+        for (size_t i = 0; i < 128; i++)
         {
-            file->read(i, 128, reinterpret_cast<uintptr_t>(tmpBuff));
-            tmpBuff[128] = 0;
-            execLine += tmpBuff;
-
-            if (execLine.contains("\n"))
+            if (tmpBuff[i] == '\n')
             {
-                execLine = execLine.left(execLine.first('\n'));
+                found = true;
+                tmpBuff[i] = '\0';
                 break;
             }
-
-            i += 128;
+        }
+        if (!found)
+        {
+            // Parameter error.
+            SYSCALL_ERROR(InvalidArgument);
+            return -1;
         }
 
-        execLine += "\0";
+        // Shebang loaded, tokenise.
+        String str(&tmpBuff[2]); // Skip #!
+        additionalArgv = str.tokenise(' ');
 
-        oldPath = new String(name);
-        savedArgv.pushBack(oldPath);
+        String *newFname = 0;
 
-        theShebang = String(static_cast<const char*>(execLine));
-        name = static_cast<const char*>(theShebang);
+        for (List<String*>::Iterator it = additionalArgv.begin();
+             it != additionalArgv.end();
+             it++)
+        {
+            if (it == additionalArgv.begin())
+                newFname = *it;
+            savedArgv.pushBack(*it);
+        }
+        
+        if (newFname == 0)
+            FATAL("Algorithmic error in execve.");
+
+        name = static_cast<const char*>(*newFname);
 
         // And reload the file, now that we're loading a new application
-        file = VFS::instance().find(theShebang, Processor::information().getCurrentThread()->getParent()->getCwd());
+        file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
     }
 
     pProcess->description() = String(name);

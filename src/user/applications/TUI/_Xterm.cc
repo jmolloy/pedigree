@@ -68,14 +68,14 @@ Xterm::~Xterm()
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
     char str[64];
-    sprintf(str, "XTerm: Write: %x", utf32);
-    log(str);
+//    sprintf(str, "XTerm: Write: %x", utf32);
+//    log(str);
 
     if(m_bChangingState)
     {
         char tmp32[128];
-        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-        log(tmp32);
+//        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
+//        log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
 

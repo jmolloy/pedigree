@@ -366,7 +366,7 @@ X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
 #if defined(ACPI)                               
       m_AcpiRanges(),
 #endif                                              
-      m_MemoryRegions(), m_Lock(), m_RegionLock()
+      m_MemoryRegions(), m_Lock(false, true), m_RegionLock(false, true)
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()

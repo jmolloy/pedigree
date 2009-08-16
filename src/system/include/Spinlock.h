@@ -22,9 +22,10 @@
 class Spinlock
 {
     friend class PerProcessorScheduler;
+    friend class LocksCommand;
   public:
-    inline Spinlock(bool bLocked = false)
-        : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0){}
+    inline Spinlock(bool bLocked = false, bool bAvoidTracking = false)
+        : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0), m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba) {}
 
     void acquire();
     void release();
@@ -39,6 +40,8 @@ class Spinlock
     Atomic<bool> m_Atom;
 
     uintptr_t m_Ra;
+    bool m_bAvoidTracking;
+    uint32_t m_Magic;
 };
 
 #endif

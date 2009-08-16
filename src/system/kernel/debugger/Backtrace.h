@@ -24,7 +24,7 @@
 /** @addtogroup kerneldebugger
  * @{ */
 
-#define MAX_STACK_FRAMES 6
+#define MAX_STACK_FRAMES 12
 
 class Backtrace
 {

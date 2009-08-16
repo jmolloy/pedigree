@@ -61,6 +61,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   // Add us to the per-processor scheduler.
   Processor::information().getScheduler().addThread(this, pStartFunction, pParam,
                                                     bUserMode, pStack);
+
 }
 
 Thread::Thread(Process *pParent) :

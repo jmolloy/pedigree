@@ -65,7 +65,7 @@ extern "C" void __cxa_guard_release()
   // TODO
 }
 
-Spinlock g_MallocLock(false);
+Spinlock g_MallocLock(false, true);
 
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()

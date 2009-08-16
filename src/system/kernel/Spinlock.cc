@@ -39,6 +39,11 @@ void Spinlock::acquire()
   if (bInterrupts)
     Processor::setInterrupts(false);
 
+  if (m_Magic != 0xdeadbaba)
+  {
+      FATAL("Wrong magic in acquire.");
+  }
+
   while (m_Atom.compareAndSwap(true, false) == false)
   {
 #ifndef MULTIPROCESSOR
@@ -48,7 +53,7 @@ void Spinlock::acquire()
     release();
 
     // Break into the debugger, with the return address in EAX to make debugging easier
-    asm volatile("mov %0, %%eax; int3" : : "m"(m_Ra));
+    asm volatile("mov %0, %%eax; int3" : : "r"(reinterpret_cast<uintptr_t>(this)));
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
@@ -57,7 +62,8 @@ void Spinlock::acquire()
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
 #ifdef TRACK_LOCKS
-  g_LocksCommand.lockAcquired(this);
+  if (!m_bAvoidTracking)
+      g_LocksCommand.lockAcquired(this);
 #endif
 
   m_bInterrupts = bInterrupts;
@@ -65,8 +71,17 @@ void Spinlock::acquire()
 }
 void Spinlock::release()
 {
-
+  bool bWasInterrupts = Processor::getInterrupts();
+  if (bWasInterrupts == true)
+  {
+      FATAL("Spinlock: release() called with interrupts enabled.");
+  }
   bool bInterrupts = m_bInterrupts;
+
+  if (m_Magic != 0xdeadbaba)
+  {
+      FATAL("Wrong magic in release.");
+  }
 
   m_Atom = true;
 

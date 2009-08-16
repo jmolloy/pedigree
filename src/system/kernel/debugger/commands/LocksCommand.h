@@ -18,15 +18,13 @@
 #define LOCKSCOMMAND_H
 
 #include <DebuggerCommand.h>
-#include <Scrollable.h>
-#include <utilities/Vector.h>
-#include <utilities/Tree.h>
 #include <Spinlock.h>
 
 /** @addtogroup kerneldebuggercommands
  * @{ */
 
 #define NUM_BT_FRAMES 6
+#define MAX_DESCRIPTORS 50
 
 /**
  * Traces lock allocations.
@@ -73,8 +71,9 @@ private:
         Spinlock *pLock;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
+        bool used;
     };
-    Tree<Spinlock*,LockDescriptor*> m_Descriptors;
+    LockDescriptor m_pDescriptors[MAX_DESCRIPTORS];
 
     bool m_bAcquiring;
 };

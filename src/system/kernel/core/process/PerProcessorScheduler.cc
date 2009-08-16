@@ -30,6 +30,10 @@
 #include <panic.h>
 #include <Log.h>
 
+#ifdef TRACK_LOCKS
+#include <LocksCommand.h>
+#endif
+
 PerProcessorScheduler::PerProcessorScheduler() :
     m_pSchedulingAlgorithm(0)
 {
@@ -92,6 +96,9 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
         if (pLock->m_bInterrupts)
             bWasInterrupts = true;
         pLock->m_Atom.m_Atom = 1;
+#ifdef TRACK_LOCKS
+        g_LocksCommand.lockReleased(pLock);
+#endif
     }
 
     pNextThread->getLock().release();
@@ -111,6 +118,9 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     }
 
     // Restore context, releasing the old thread's lock when we've switched stacks.
+#ifdef TRACK_LOCKS
+    g_LocksCommand.lockReleased(&pCurrentThread->getLock());
+#endif
     Processor::restoreState(pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
     // Not reached.
 }
@@ -263,6 +273,9 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     // This thread is safe from being moved as its status is now "running".
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
     pThread->getLock().m_Atom.m_Atom = 1;
+#ifdef TRACK_LOCKS
+    g_LocksCommand.lockReleased(&pThread->getLock());
+#endif
 
     if (Processor::saveState(pCurrentThread->state()))
     {
@@ -332,6 +345,12 @@ void PerProcessorScheduler::killCurrentThread()
 
     // Removing the current thread. Grab its lock.
     pThread->getLock().acquire();
+
+    // If we're tracking locks, don't pollute the results. Yes, we've kept
+    // this lock held, but it no longer matters.
+#ifdef TRACK_LOCKS
+    g_LocksCommand.lockReleased(&pThread->getLock());
+#endif
 
     // Get another thread ready to schedule.
     // This will also get the lock for the returned thread.

@@ -29,8 +29,9 @@ extern Spinlock g_MallocLock;
 static bool g_bReady = false;
 
 LocksCommand::LocksCommand()
-    : DebuggerCommand(), m_Descriptors(), m_bAcquiring(false)
+    : DebuggerCommand(), m_bAcquiring(false)
 {
+    memset(m_pDescriptors, 0, sizeof(LockDescriptor)*MAX_DESCRIPTORS);
 }
 
 LocksCommand::~LocksCommand()
@@ -43,11 +44,32 @@ void LocksCommand::autocomplete(const HugeStaticString &input, HugeStaticString 
 
 bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-    for (Tree<Spinlock*,LockDescriptor*>::Iterator it = m_Descriptors.begin();
-         it != m_Descriptors.end();
-         it++)
+    // If we see just "locks", no parameters were matched.
+    uintptr_t address = 0;
+    if (input != "locks")
     {
-        LockDescriptor *pD = reinterpret_cast<LockDescriptor*>(it.value());
+        // Is it an address?
+        address = input.intValue();
+
+        if (address == 0)
+        {
+            // No, try a symbol name.
+            // TODO.
+            output = "Not a valid address: `";
+            output += input;
+            output += "'.\n";
+            return true;
+        }
+    }
+
+    for (int i = 0; i < MAX_DESCRIPTORS; i++)
+    {
+        LockDescriptor *pD = &m_pDescriptors[i];
+        if (pD->used == false) continue;
+
+        if (address && address != reinterpret_cast<uintptr_t>(pD->pLock))
+            continue;
+                
         output += "Lock at ";
         output.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
         output += ":\n";
@@ -76,6 +98,23 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
         }
     }
 
+    if (address)
+    {
+        Spinlock *pLock = reinterpret_cast<Spinlock*>(address);
+        output += "Lock state:\n";
+        output += "  m_bInterrupts: ";
+        output += pLock->m_bInterrupts;
+        output += "\n  m_Atom:";
+        output += (pLock->m_Atom) ? "Unlocked" : "Locked";
+        output += "\n  m_Ra: ";
+        output.append(pLock->m_Ra, 16);
+        output += "\n  m_bAvoidTracking: ";
+        output += pLock->m_bAvoidTracking;
+        output += "\n  m_Magic: ";
+        output.append(pLock->m_Magic, 16);
+        output += "\n";
+    }
+
     return true;
 }
 
@@ -83,10 +122,10 @@ void LocksCommand::setReady()
 {
     g_bReady = true;
 }
-
+bool g_bMallocLockAcquired = false;
 void LocksCommand::lockAcquired(Spinlock *pLock)
 {
-    if (!g_bReady || pLock == &g_MallocLock || g_MallocLock.acquired() || m_bAcquiring)
+    if (!g_bReady || m_bAcquiring)
         return;
 
     m_bAcquiring = true;
@@ -95,27 +134,40 @@ void LocksCommand::lockAcquired(Spinlock *pLock)
     Backtrace bt;
     bt.performBpBacktrace(0, 0);
 
-    LockDescriptor *pD = new LockDescriptor;
-    pD->pLock = pLock;
-    memcpy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
-    pD->n = bt.m_nStackFrames;
-
-    m_Descriptors.insert(pLock, pD);
+    LockDescriptor *pD = 0;
+    for (int i = 0; i < MAX_DESCRIPTORS; i++)
+    {
+        if (m_pDescriptors[i].used == false)
+        {
+            pD = &m_pDescriptors[i];
+            break;
+        }
+    }
+    if (pD)
+    {
+        pD->used = true;
+        pD->pLock = pLock;
+        memcpy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
+        pD->n = bt.m_nStackFrames;
+    }
     m_bAcquiring = false;
 }
 
 void LocksCommand::lockReleased(Spinlock *pLock)
 {
-    if (!g_bReady || pLock == &g_MallocLock || g_MallocLock.acquired() || m_bAcquiring)
+    if (!g_bReady || m_bAcquiring)
         return;
 
     m_bAcquiring = true;
 
-    LockDescriptor *pD = m_Descriptors.lookup(pLock);
-    if (pD)
+    for (int i = 0; i < MAX_DESCRIPTORS; i++)
     {
-        delete pD;
+        if (m_pDescriptors[i].used == true &&
+            m_pDescriptors[i].pLock == pLock)
+        {
+            m_pDescriptors[i].used = false;
+        }
     }
-    m_Descriptors.remove(pLock);
+            
     m_bAcquiring = false;
 }

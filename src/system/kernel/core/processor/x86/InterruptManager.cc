@@ -302,7 +302,7 @@ void X86InterruptManager::setTaskGate(size_t nInterruptNumber,
 }
 
 X86InterruptManager::X86InterruptManager()
-  : m_Lock()
+    : m_Lock(false, true)
 {
   // Initialise the pointers to the interrupt handler
   for (size_t i = 0;i < 256;i++)
