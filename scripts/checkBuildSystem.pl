@@ -60,7 +60,7 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
-                 'arch' => 'i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
+                 'arch' => 'i686-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc (mips)",
@@ -204,6 +204,13 @@ foreach (@compile) {
   }
 }
 
-print "Complete.\n";
-`rm -rf ./compilers/build_tmp`;
+print "Complete; linking crt*.o...\n";
+
+`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crt0.o $prefix/build/kernel/crt0.o`;
+`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crti.o $prefix/build/kernel/crti.o`;
+`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crtn.o $prefix/build/kernel/crtn.o`;
+`ln -s ./compilers/dir/include $prefix/build/include-posix`;
+print "Done.\n";
+
+`rm -rf ./compilers/dir/build_tmp`;
 exit 0;
