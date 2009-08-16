@@ -82,6 +82,7 @@ Ne2k::Ne2k(Network* pDev) :
 
   // reset current page, put the card into normal mode, and set
   // packet buffer information
+  m_pBase->write8(0x61, NE_CMD);
   m_pBase->write8(PAGE_RX + 1, NE_CURR);
 
   m_NextPacket = PAGE_RX + 1;
