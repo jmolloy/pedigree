@@ -87,6 +87,10 @@ extern int h_errno;
 #define EAI_SYSTEM      8
 #define EAI_OVERFLOW    9
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char      *gai_strerror(int ecode);
 
 void             endhostent(void);
@@ -113,5 +117,9 @@ void             freeaddrinfo(struct addrinfo *ai);
 int              getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
 int              getnameinfo(const struct sockaddr *sa, socklen_t salen, char *node, socklen_t nodelen, char *service,
                              socklen_t servicelen, int flags);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
