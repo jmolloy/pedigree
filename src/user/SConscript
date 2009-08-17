@@ -13,6 +13,7 @@ subdirs = [
     'applications/apptest',
     'applications/syscall-test',
     'applications/net-test',
+    'applications/netconfig',
     'applications/login',
     'applications/TUI'
 ]

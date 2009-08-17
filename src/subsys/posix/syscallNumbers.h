@@ -105,6 +105,17 @@
 
 #define POSIX_SIGALTSTACK 69
 
+#define POSIX_SEM_CLOSE     70
+#define POSIX_SEM_DESTROY   71
+#define POSIX_SEM_GETVALUE  72
+#define POSIX_SEM_INIT      73
+#define POSIX_SEM_OPEN      74
+#define POSIX_SEM_POST      75
+#define POSIX_SEM_TIMEWAIT  76
+#define POSIX_SEM_TRYWAIT   77
+#define POSIX_SEM_UNLINK    78
+#define POSIX_SEM_WAIT      79
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

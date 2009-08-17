@@ -29,6 +29,8 @@ static CdiIrqHandler cdi_irq_handler;
 
 #include "cdi.h"
 #include "cdi/misc.h"
+#include "cdi/cmos.h"
+#include "cdi/io.h"
 
 /** Anzahl der verfuegbaren IRQs */
 #define IRQ_COUNT           0x10
@@ -258,4 +260,16 @@ void cdi_sleep_ms(uint32_t ms)
         Semaphore sem(0);
         sem.acquire(1, (ms / 1000));
     }
+}
+
+uint8_t cdi_cmos_read(uint8_t index)
+{
+    cdi_outb(0x70, index);
+    return cdi_inb(0x71);
+}
+
+void cdi_cmos_write(uint8_t index, uint8_t value)
+{
+    cdi_outb(0x70, index);
+    cdi_outb(0x71, value);
 }

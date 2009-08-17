@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+#include <iostream>
+
+using namespace std;
+
 class Anus
 {
 public:
@@ -17,5 +21,7 @@ int main(int argc, char **argv)
     printf("My anus says: ");
     myanus.print();
     printf("\n");
+
+    cout << "Whee!" << endl;
     return 0;
 }

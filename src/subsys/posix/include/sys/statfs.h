@@ -17,7 +17,17 @@ struct statfs {
    char    f_fstypename[32];    /* FS name */
 };
 
+#include <sys/mount.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int _EXFUN(statfs, (const char *path, struct statfs *buf));
 int _EXFUN(fstatfs, (int fd, struct statfs *buf));
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif

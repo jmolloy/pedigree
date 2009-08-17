@@ -11,7 +11,7 @@ tmp = env.Clone()
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
-objname = appdir + '/apptest'
+objname = appdir + '/netconfig'
 
 # Part of the apps target
 env.Alias("apps", objname)

@@ -32,6 +32,7 @@ int h_errno; // required by networking code
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <semaphore.h>
 
 #include <sys/resource.h>
 #include <sys/statfs.h>
@@ -1607,4 +1608,64 @@ int getrusage(int who, struct rusage *r_usage)
 int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
     return syscall2(POSIX_SIGALTSTACK, (int) stack, (int) oldstack);
+}
+
+int sem_close(sem_t *sem)
+{
+    STUBBED("sem_close");
+    return -1;
+}
+
+int sem_destroy(sem_t *sem)
+{
+    STUBBED("sem_destroy");
+    return -1;
+}
+
+int sem_getvalue(sem_t *sem, int *val)
+{
+    STUBBED("sem_getvalue");
+    return -1;
+}
+
+int sem_init(sem_t *sem, int pshared, unsigned value)
+{
+    STUBBED("sem_init");
+    return -1;
+}
+
+sem_t *sem_open(const char *name, int mode, ...)
+{
+    STUBBED("sem_open");
+    return 0;
+}
+
+int sem_post(sem_t *sem)
+{
+    STUBBED("sem_post");
+    return -1;
+}
+
+int sem_timedwait(sem_t *sem, const struct timespec *tm)
+{
+    STUBBED("sem_timedwait");
+    return -1;
+}
+
+int sem_trywait(sem_t *sem)
+{
+    STUBBED("sem_trywait");
+    return -1;
+}
+
+int sem_unlink(const char *name)
+{
+    STUBBED("sem_unlink");
+    return -1;
+}
+
+int sem_wait(sem_t *sem)
+{
+    STUBBED("sem_wait");
+    return -1;
 }
