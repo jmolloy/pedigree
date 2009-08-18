@@ -8,29 +8,32 @@ Import(['env'])
 
 # Common drivers - order is important
 driver_common_subdirs = [
-	# DMA
-	'dma',
+    # DMA
+    'dma',
 
     # Pedigree-specific disk I/O
     'ata',
     'partition',
-    
+
     # Pedigree-specific video
     'nvidia',
-    
+
     # Pedigree-specific NICs
     '3c90x',
     'rtl8139',
     'loopback',
-    
+
+    # Pedigree-specific USB drivers
+    'uhci',
+
     # CDI framwork
     'cdi',
-    
+
     # CDI NIC drivers
     'e1000',
     'pcnet',
     'sis900',
-    
+
     # CDI Disk drivers
     'floppy'
 ]
@@ -65,7 +68,8 @@ module_subdirs = [
     'users',
     'ramfs',
     'rawfs',
-    'lodisk'
+    'lodisk',
+    'usb'
 ]
 
 if env['installer']:

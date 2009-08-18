@@ -175,7 +175,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             if (!m_pDisplay) return 0;
 
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
-            
+
             m_pDisplay->bitBlit(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
                                 pReq->y2, pReq->w, pReq->h);
             break;
@@ -225,4 +225,4 @@ void destroy()
 MODULE_NAME("TUI");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("console");
+MODULE_DEPENDS("console", "uhci");

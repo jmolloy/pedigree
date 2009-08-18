@@ -22,7 +22,7 @@ env.Depends(objname, "libs")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")
@@ -32,7 +32,7 @@ files = [
 
 # Already-built object files to link
 objects = [
-    kerneldir + '/crt0.o',
+
 ]
 
 # To include a new directory for includes, just add it to the list
@@ -54,7 +54,8 @@ libraries = [
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
-    builddir
+    builddir,
+    '#/images/i686-elf/libraries'
 ]
 
 ####################################

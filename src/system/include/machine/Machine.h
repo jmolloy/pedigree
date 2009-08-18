@@ -41,7 +41,7 @@ class Keyboard;
 /**
  * This is an abstraction on a machine, or board.
  * It provides functions to retrieve Timers, Serial controllers,
- * VGA controllers, Ethernet controllers etc, without having to 
+ * VGA controllers, Ethernet controllers etc, without having to
  * know the exact implementation required or memory map.
  * It also provides a "probe" function, which will attempt to detect
  * if a machine is present.
@@ -50,7 +50,7 @@ class Machine
 {
   public:
     static Machine &instance();
- 
+
     /**
      * Initialises the machine.
      */
@@ -58,43 +58,48 @@ class Machine
     inline bool isInitialised(){return m_bInitialised;}
 
     virtual void initialiseDeviceTree() = 0;
-    
+
     /**
      * Returns the n'th Serial device.
      */
     virtual Serial *getSerial(size_t n) =0;
-    
+
     /**
      * Returns the number of Serial device.
      */
     virtual size_t getNumSerial() =0;
-    
+
     /**
      * Returns the n'th VGA device.
      */
     virtual Vga *getVga(size_t n) =0;
-    
+
     /**
      * Returns the number of VGA devices.
      */
     virtual size_t getNumVga() =0;
-    
+
     virtual IrqManager *getIrqManager() = 0;
     /**
      * Returns the SchedulerTimer device.
      */
     virtual SchedulerTimer *getSchedulerTimer() =0;
-    
+
     /**
      * Returns the n'th Timer device.
      */
     virtual Timer *getTimer() =0;
-    
+
     /**
      * Returns the keyboard device.
      */
     virtual Keyboard *getKeyboard() =0;
-    
+
+    /**
+    * Sets the keyboard device.
+    */
+    virtual void setKeyboard(Keyboard *kb) =0;
+
 #ifdef MULTIPROCESSOR
     /**
      * Stops all other cores. This is used during debugger initialisation.

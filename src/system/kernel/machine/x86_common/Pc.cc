@@ -38,7 +38,7 @@ void Pc::initialise()
   // Initialise Vga
   if (m_Vga.initialise() == false)
     panic("Pc: Vga initialisation failed");
-  
+
   // Initialise ACPI
   #if defined(ACPI)
     Acpi &acpi = Acpi::instance();
@@ -70,7 +70,7 @@ void Pc::initialise()
 
     // Initialise the local APIC, if we have gotten valid data from
     // the ACPI/SMP structures
-    if (bLocalApicValid == true && 
+    if (bLocalApicValid == true &&
         m_LocalApic.initialise(localApicAddress))
     {
       NOTICE("Local APIC initialised");
@@ -119,7 +119,8 @@ void Pc::initialise()
   if (pit.initialise() == false)
     panic("Pc: Pit initialisation failed");
 
-  m_Keyboard.initialise();
+  m_Keyboard = new X86Keyboard(0x60);
+  m_Keyboard->initialise();
 
   // Find and parse the SMBIOS tables
   #if defined(SMBIOS)
@@ -166,7 +167,7 @@ void Pc::initialiseDeviceTree()
   pIsa->setParent(&Device::root());
 
   // TODO:: probe PCI devices.
-  
+
 }
 
 Serial *Pc::getSerial(size_t n)
@@ -210,7 +211,12 @@ Timer *Pc::getTimer()
 
 Keyboard *Pc::getKeyboard()
 {
-  return &m_Keyboard;
+  return m_Keyboard;
+}
+
+void Pc::setKeyboard(Keyboard *kb)
+{
+    m_Keyboard = kb;
 }
 
 #ifdef MULTIPROCESSOR
@@ -222,7 +228,7 @@ Keyboard *Pc::getKeyboard()
 #endif
 
 Pc::Pc()
-  : m_Vga(0x3C0, 0xB8000), m_Keyboard(0x60)
+  : m_Vga(0x3C0, 0xB8000), m_Keyboard(0)
   #if defined(SMBIOS)
     , m_SMBios()
   #endif

@@ -53,6 +53,7 @@ class Pc : public Machine
     virtual SchedulerTimer *getSchedulerTimer();
     virtual Timer *getTimer();
     virtual Keyboard *getKeyboard();
+    virtual void setKeyboard(Keyboard *kb);
 
     #if defined(APIC)
       /** Get the Local APIC class instance
@@ -80,7 +81,7 @@ class Pc : public Machine
 
     X86Serial m_pSerial[2];
     X86Vga m_Vga;
-    X86Keyboard m_Keyboard;
+    Keyboard *m_Keyboard;
 
     #if defined(SMBIOS)
       SMBios m_SMBios;
