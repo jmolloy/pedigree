@@ -1,0 +1,39 @@
+Pedigree is not a one-man project. Several people have contributed many
+hours in order to see Pedigree grow from a tiny operating system into a
+large and powerful piece of software.
+
+This file is intended to acknowledge these people's input to the
+Pedigree project.
+
+== The original three ==================================================
+James Molloy (JamesM)
+Jörg Pfähler (bluecode)
+James Pritchett (Tyler-Osdev)
+
+== Current core team ===================================================
+James Molloy (JamesM)
+Matthew Iselin (pcmattman)
+
+== Developers (those with commit access) ===============================
+Alex Smith (AlexExtreme)
+Tyler Kennedy (TkTech)
+Eduard Burtescu (eddyb)
+
+== List of Contributors ================================================
+The following people have provided patches or other generous services to
+the project.
+
+ - Eduard Burtescu
+   + Provided an RTL8139 driver
+   + Various XTerm patches.
+   + Wrote an initial implementation of USB for Pedigree
+ - Kevin Wolf
+   + Initial CDI implementation
+   + Ports of CDI e1000, pcnet, and sis900 drivers
+ - Tyler Kennedy
+   + Provides the pedigree-project.org server
+   + Facilitated most of the migration to SCons
+ - Josh Cornutt
+   + Provided optimised mem* routines
+ - Rich Edelman
+   + Provides git mirroring
