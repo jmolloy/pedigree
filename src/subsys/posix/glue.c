@@ -1612,26 +1612,22 @@ int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 
 int sem_close(sem_t *sem)
 {
-    STUBBED("sem_close");
-    return -1;
+    return syscall1(POSIX_SEM_CLOSE, (int) sem);
 }
 
 int sem_destroy(sem_t *sem)
 {
-    STUBBED("sem_destroy");
-    return -1;
+    return syscall1(POSIX_SEM_DESTROY, (int) sem);
 }
 
 int sem_getvalue(sem_t *sem, int *val)
 {
-    STUBBED("sem_getvalue");
-    return -1;
+    return syscall2(POSIX_SEM_GETVALUE, (int) sem, (int) val);
 }
 
 int sem_init(sem_t *sem, int pshared, unsigned value)
 {
-    STUBBED("sem_init");
-    return -1;
+    return syscall3(POSIX_SEM_INIT, (int) sem, pshared, value);
 }
 
 sem_t *sem_open(const char *name, int mode, ...)
@@ -1642,20 +1638,17 @@ sem_t *sem_open(const char *name, int mode, ...)
 
 int sem_post(sem_t *sem)
 {
-    STUBBED("sem_post");
-    return -1;
+    return syscall1(POSIX_SEM_POST, (int) sem);
 }
 
 int sem_timedwait(sem_t *sem, const struct timespec *tm)
 {
-    STUBBED("sem_timedwait");
-    return -1;
+    return syscall2(POSIX_SEM_TIMEWAIT, (int) sem, (int) tm);
 }
 
 int sem_trywait(sem_t *sem)
 {
-    STUBBED("sem_trywait");
-    return -1;
+    return syscall1(POSIX_SEM_TRYWAIT, (int) sem);
 }
 
 int sem_unlink(const char *name)
@@ -1666,6 +1659,15 @@ int sem_unlink(const char *name)
 
 int sem_wait(sem_t *sem)
 {
-    STUBBED("sem_wait");
-    return -1;
+    return syscall1(POSIX_SEM_WAIT, (int) sem);
+}
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
+{
+    return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
+}
+
+int pthread_join(pthread_t thread, void **value_ptr)
+{
+    return syscall2(POSIX_PTHREAD_JOIN, (int) thread, (int) value_ptr);
 }

@@ -31,6 +31,9 @@
 
 #include <sys/utsname.h>
 
+#include <semaphore.h>
+#include <pthread.h>
+
 #define SYS_SOCK_CONSTANTS_ONLY
 #include <sys/socket.h>
 #include <netinet/in.h>

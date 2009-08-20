@@ -42,3 +42,34 @@ sigret_stub:
   int 0xff
 
 sigret_stub_end:
+
+[GLOBAL pthread_stub]
+[GLOBAL pthread_stub_end]
+
+; void pthread_stub(size_t p1, size_t p2, size_t p3, size_t p4);
+pthread_stub:
+
+  ; Skip the return address
+  add esp, 4
+
+  ; Call the entry function
+  mov eax, 0x10051
+  int 0xff
+  
+  ; Run the function
+  ; mov edi, [esp]
+  ; mov esi, [esp + 4]
+  ; push esi
+  ; mov esi, [esp + 8]
+  ; push esi
+  
+  ; call edi
+
+  ; Return to the kernel
+  mov ebx, eax
+  mov eax, 0x10050
+  int 0xff
+  
+  jmp $
+
+pthread_stub_end:

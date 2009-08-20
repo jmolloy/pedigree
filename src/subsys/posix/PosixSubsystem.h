@@ -20,6 +20,7 @@
 #include <processor/types.h>
 #include <process/SignalEvent.h>
 #include <process/Mutex.h>
+#include <process/Semaphore.h>
 
 #include <utilities/Tree.h>
 #include <utilities/RadixTree.h>
@@ -87,7 +88,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_Semaphores(), m_Threads()
         {}
 
         /** Copy constructor */
@@ -97,7 +98,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_Semaphores(), m_Threads()
         {}
 
         /** Default destructor */
@@ -254,6 +255,57 @@ class PosixSubsystem : public Subsystem
             return ret;
         }
 
+        /** Gets a semaphore given a descriptor */
+        Semaphore *getSemaphore(size_t n)
+        {
+            return m_Semaphores.lookup(n);
+        }
+
+        /** Inserts a semaphore given a descriptor and a Semaphore */
+        void insertSemaphore(size_t n, Semaphore *sem)
+        {
+            Semaphore *t = m_Semaphores.lookup(n);
+            if(t)
+            {
+                m_Semaphores.remove(n);
+                delete t;
+            }
+
+            m_Semaphores.insert(n, sem);
+        }
+
+        /** Removes a semaphore given a descriptor */
+        void removeSemaphore(size_t n)
+        {
+            Semaphore *t = m_Semaphores.lookup(n);
+            if(t)
+            {
+                m_Semaphores.remove(n);
+                delete t;
+            }
+        }
+
+        /** Gets a thread given a descriptor */
+        Thread *getThread(size_t n)
+        {
+            return m_Threads.lookup(n);
+        }
+
+        /** Inserts a thread given a descriptor and a Thread */
+        void insertThread(size_t n, Thread *thread)
+        {
+            Thread *t = m_Threads.lookup(n);
+            if(t)
+                m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
+            return m_Threads.insert(n, thread);
+        }
+
+        /** Removes a thread given a descriptor */
+        void removeThread(size_t n)
+        {
+            m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
+        }
+
     private:
 
         /** Signal handlers */
@@ -295,6 +347,14 @@ class PosixSubsystem : public Subsystem
          * Alternate signal stack - if defined, used instead of a system-defined stack
          */
         AlternateSignalStack m_AltSigStack;
+        /**
+         * Links some file descriptors to Semaphores.
+         */
+        Tree<size_t, Semaphore*> m_Semaphores;
+        /**
+         * Links some file descriptors to Threads.
+         */
+        Tree<size_t, Thread*> m_Threads;
 };
 
 #endif
