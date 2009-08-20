@@ -53,6 +53,9 @@ public:
      * \param n The number of semaphore items to release. Must be non-zero. */
     void release(size_t n=1);
 
+    /** Gets the current value of the semaphore */
+    ssize_t getValue();
+
 private:
     /** Private copy constructor
         \note NOT implemented. */

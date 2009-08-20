@@ -27,12 +27,12 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.cc")
+    Glob("*.c")
 ]
 
 # Already-built object files to link
 objects = [
-
+    kerneldir + '/crt0.o'
 ]
 
 # To include a new directory for includes, just add it to the list
@@ -48,7 +48,7 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'stdc++',
+    # 'stdc++',
 ]
 
 # To add a library path add to the list below

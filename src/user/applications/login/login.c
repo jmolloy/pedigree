@@ -175,7 +175,6 @@ int main(int argc, char **argv)
 
         // Child.
         execle(pw->pw_shell, pw->pw_shell, 0, newenv);
-        //execle("/applications/apache/httpd", "/applications/apache/httpd", 0, newenv);
 
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);

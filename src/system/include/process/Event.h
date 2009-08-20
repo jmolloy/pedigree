@@ -27,9 +27,10 @@
 #define MAX_NESTED_EVENTS 16
 
 #if defined(X86) || defined(X64) || defined(PPC32)
-  #define EVENT_HANDLER_TRAMPOLINE 0x80000000
-  #define EVENT_HANDLER_BUFFER     0x80001000
-  #define EVENT_HANDLER_END        (0x80001000 + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
+  #define EVENT_HANDLER_TRAMPOLINE  0x80000000
+  #define EVENT_HANDLER_TRAMPOLINE2 0x80000100 /// \todo Temporary fix so I can test my pthreads stuff...
+  #define EVENT_HANDLER_BUFFER      0x80001000
+  #define EVENT_HANDLER_END         (0x80001000 + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
 #endif
 
 /** The abstract base class for an asynchronous event. An event can hold any amount of information

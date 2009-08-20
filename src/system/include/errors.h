@@ -19,7 +19,7 @@
 // This namespace is mapped to posix errno's where possible. Keep it that way!
 namespace Error
 {
-  enum Error
+  enum PosixError
   {
     NotEnoughPermissions =1,
     DoesNotExist         =2,
@@ -48,6 +48,7 @@ namespace Error
     IllegalSeek          =29,
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
+    TimedOut             =116,
     InProgress           =119,
     Already              =120,
     IsConnected          =127,
