@@ -14,13 +14,13 @@
 * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
+#include <Log.h>
 #include <Module.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <machine/Device.h>
 #include <machine/Network.h>
 #include "Rtl8139.h"
-#include <Log.h>
 
 void probeDevice(Network *pDev)
 {
@@ -30,11 +30,6 @@ void probeDevice(Network *pDev)
     // Replace pDev with pRtl8139.
     pRtl8139->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pRtl8139);
-
-
-    // And delete pDev for good measure.
-    //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
-    //delete pDev;
 }
 
 void searchNode(Device *pDev)
@@ -46,7 +41,7 @@ void searchNode(Device *pDev)
         if((pChild->getPciVendorId() == RTL8139_VENDOR_ID) && (pChild->getPciDeviceId() == RTL8139_DEVICE_ID))
         {
             uintptr_t irq = pChild->getInterruptNumber();
-            WARNING("RTL8139 found, IRQ = " << irq << ".");
+            NOTICE("RTL8139 found, IRQ = " << irq << ".");
 
             if(pChild->addresses()[0]->m_IsIoSpace)
                 probeDevice(reinterpret_cast<Network*>(pChild));
@@ -59,12 +54,8 @@ void searchNode(Device *pDev)
 
 void entry()
 {
-    // Walk the device tree looking for controllers that have
-    // "control" and "command" addresses.
     Device *pDev = &Device::root();
     searchNode(pDev);
-
-    /// \todo ISA probe for devices
 }
 
 void exit()

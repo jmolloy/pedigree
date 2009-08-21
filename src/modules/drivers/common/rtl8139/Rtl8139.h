@@ -71,7 +71,6 @@ class Rtl8139 : public Network, public IrqHandler
         uint8_t m_TxCurr;
 
         volatile bool m_InRx;
-        volatile bool m_InTx;
 
         uint8_t *m_pRxBuffVirt;
         uint8_t *m_pTxBuffVirt;
