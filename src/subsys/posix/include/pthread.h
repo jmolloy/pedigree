@@ -12,6 +12,7 @@ typedef int pthread_attr_t;
 
 int _EXFUN(pthread_create, (pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg));
 int _EXFUN(pthread_join, (pthread_t thread, void **value_ptr));
+void _EXFUN(pthread_exit, (void *value_ptr));
 
 #ifdef __cplusplus
 }

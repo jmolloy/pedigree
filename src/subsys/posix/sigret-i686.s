@@ -41,10 +41,13 @@ sigret_stub:
   mov eax, 0x10066
   int 0xff
 
+  jmp $
+
 sigret_stub_end:
 
 [GLOBAL pthread_stub]
 [GLOBAL pthread_stub_end]
+[EXTERN pthread_exit]
 
 ; void pthread_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 pthread_stub:
@@ -53,19 +56,22 @@ pthread_stub:
   add esp, 4
 
   ; Call the entry function
+  mov ebx, 0
   mov eax, 0x10051
   int 0xff
   
-  ; Run the function
-  ; mov edi, [esp]
-  ; mov esi, [esp + 4]
-  ; push esi
-  ; mov esi, [esp + 8]
-  ; push esi
+  ; First parameter: entry point
+  mov esi, [esp]
   
-  ; call edi
-
-  ; Return to the kernel
+  ; Second parameter: argument
+  mov edi, [esp + 4]
+  push edi
+  
+  ; Run the function
+  call esi
+  
+  ; Effectively, pthread_exit... We can't refer to libc functions from here,
+  ; as this code is copied to userspace at runtime.
   mov ebx, eax
   mov eax, 0x10050
   int 0xff

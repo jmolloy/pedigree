@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 
 #include <signal.h>
  
@@ -16,15 +17,21 @@ static void wait_thread(void)
         // do nothing except chew CPU slices for up to one second.
     }
 }
+
+volatile int whee = 0;
  
 static void *thread_func(void *vptr_args)
 {
     int i;
  
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < 80; i++)
     {
-        fputs("  b\n", stderr);
-        wait_thread();
+        //printf(" b\n");
+        //while(!whee);
+        //whee = 1;
+        fputs("b", stderr);
+        //whee = 0;
+        // wait_thread();
     }
  
     return NULL;
@@ -34,6 +41,9 @@ int main(void)
 {
     int i;
     pthread_t thread;
+
+    int whee;
+    int* p = &whee;
  
     if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
     {
@@ -41,16 +51,21 @@ int main(void)
         return EXIT_FAILURE;
     }
  
-    for (i = 0; i < 20; i++)
+    /*for (i = 0; i < 20; i++)
     {
-        fputs("a\n", stdout);
-        wait_thread();
-    }
+        while(whee);
+        whee = 0;
+        fputs("a", stdout);
+        whee = 1;
+        // wait_thread();
+    }*/
  
     if (pthread_join(thread, NULL) != 0)
     {
         return EXIT_FAILURE;
     }
+
+    printf("\nAnd now main() has waited for the thread to run.\n");
  
     return EXIT_SUCCESS;
 }

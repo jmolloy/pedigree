@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     char c;
     char username[256];
     int i = 0;
-
+    
     struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
 
@@ -150,8 +150,6 @@ int main(int argc, char **argv)
     fflush(stdout);
 
     // Perform login - this function is in glue.c.
-    //struct passwd *pw = getpwnam("httpd");
-    //if(login(pw->pw_uid, "httpd") != 0) //password) != 0)
     if(login(pw->pw_uid, password) != 0)
     {
       printf("Password incorrect.\n");

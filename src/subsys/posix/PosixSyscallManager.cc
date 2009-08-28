@@ -61,9 +61,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
 
-    /// \todo This needs to be implemented for posix_recvfrom/posix_sendto
-    // uintptr_t p6 = state.getSyscallParameter(5);
-
     //NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
 
     // We're interruptible.
@@ -237,11 +234,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         //     return posix_sem_unlink(.....
 
         case POSIX_PTHREAD_RETURN:
-            posix_pthread_return(p1);
+            posix_pthread_exit(reinterpret_cast<void*>(p1));
             return 0;
         case POSIX_PTHREAD_ENTER:
-            posix_pthread_enter();
-            return 0;
+            return posix_pthread_enter(p1);
 
         case POSIX_PTHREAD_CREATE:
             return posix_pthread_create(reinterpret_cast<pthread_t*>(p1), reinterpret_cast<const pthread_attr_t*>(p2), reinterpret_cast<pthreadfn>(p3), reinterpret_cast<void*>(p4));

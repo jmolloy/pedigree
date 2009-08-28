@@ -22,7 +22,7 @@
 #include <Log.h>
 
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
-               void *pStack) :
+               void *pStack, bool semiUser) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue)
@@ -47,6 +47,12 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
     bUserMode = false;
     pStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
     m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
+  }
+  else if(semiUser)
+  {
+      // Still have a kernel stack for when we jump to user mode, but start the
+      // thread in kernel mode first.
+      bUserMode = false;
   }
 
   m_Id = m_pParent->addThread(this);

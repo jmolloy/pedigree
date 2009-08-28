@@ -285,16 +285,32 @@ class PosixSubsystem : public Subsystem
             }
         }
 
+        /** POSIX Thread information */
+        class PosixThread
+        {
+            public:
+                PosixThread() : pThread(0), isRunning(true), returnValue(0) {};
+                virtual ~PosixThread() {};
+
+                Thread *pThread;
+                Mutex isRunning;
+                void *returnValue;
+
+            private:
+                PosixThread(const PosixThread &);
+                const PosixThread& operator = (const PosixThread &);
+        };
+
         /** Gets a thread given a descriptor */
-        Thread *getThread(size_t n)
+        PosixThread *getThread(size_t n)
         {
             return m_Threads.lookup(n);
         }
 
         /** Inserts a thread given a descriptor and a Thread */
-        void insertThread(size_t n, Thread *thread)
+        void insertThread(size_t n, PosixThread *thread)
         {
-            Thread *t = m_Threads.lookup(n);
+            PosixThread *t = m_Threads.lookup(n);
             if(t)
                 m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
             return m_Threads.insert(n, thread);
@@ -354,7 +370,7 @@ class PosixSubsystem : public Subsystem
         /**
          * Links some file descriptors to Threads.
          */
-        Tree<size_t, Thread*> m_Threads;
+        Tree<size_t, PosixThread*> m_Threads;
 };
 
 #endif

@@ -308,6 +308,7 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             break;
     }
 
+    // If we're good to go, send the signal.
     if(sig && sig->pEvent)
     {
         bool bWasInterrupts = Processor::getInterrupts();
@@ -318,11 +319,6 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
 
         Processor::setInterrupts(bWasInterrupts);
     }
-
-    /// \todo WTF?
-    // Hang the thread
-    while(1)
-        Scheduler::instance().yield();
 }
 
 void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
@@ -336,7 +332,6 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
         tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
         if(tmp)
         {
-
             // Remove from the list
             m_SignalHandlers.remove(sig);
 

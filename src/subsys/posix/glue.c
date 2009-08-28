@@ -1671,3 +1671,8 @@ int pthread_join(pthread_t thread, void **value_ptr)
 {
     return syscall2(POSIX_PTHREAD_JOIN, (int) thread, (int) value_ptr);
 }
+
+void pthread_exit(void *ret)
+{
+    syscall1(POSIX_PTHREAD_RETURN, (int) ret);
+}

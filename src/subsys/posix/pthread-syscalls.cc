@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <process/Scheduler.h>
 #include <pthread-syscalls.h>
 #include <syscallError.h>
 #include "errors.h"
@@ -24,21 +25,67 @@ extern "C"
     extern char pthread_stub_end;
 }
 
-int pthread_entry(void* fn)
+struct pthreadInfoBlock
 {
-    NOTICE("pthread child is starting");
-    uintptr_t stack = reinterpret_cast<uintptr_t>(Processor::information().getVirtualAddressSpace().allocateStack());
-    NOTICE("Stack = " << stack << ", fn = " << reinterpret_cast<uintptr_t>(fn) << ".");
-    if(!stack)
-        return -1;
-    NOTICE("instructions at the trampoline: " << *reinterpret_cast<uint32_t*>(EVENT_HANDLER_TRAMPOLINE2) << "/" << *reinterpret_cast<uint32_t*>(EVENT_HANDLER_TRAMPOLINE) << "!");
-    Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(fn), 0, 0, 0);
+    void *entry;
+    void *arg;
+} __attribute__((packed));
 
+/**
+ * pthread_kernel_enter: Kernel side entry point for all POSIX userspace threads.
+ *
+ * Excuse the "story" littered throughout this (and other) function(s).
+ * When you're working with pthreads, sometimes you need small things to
+ * lighten up your coding, and this is one way that works (so far).
+ *
+ * \param fn A pointer to a pthreadInfoBlock structure that contains information
+ *           about the entry point and arguments for the new thread.
+ * \return Nothing. Had you going for a moment there with that int, didn't I? If
+ *         this function does return, kindly ignore the resulting fatal error
+ *         and look for the flying pigs.
+ */
+int pthread_kernel_enter(void *blk)
+{
+    PT_NOTICE("pthread_kernel_enter");
+
+    // Grab our backpack with our map and additional information
+    pthreadInfoBlock *args = reinterpret_cast<pthreadInfoBlock*>(blk);
+    void *entry = args->entry;
+    void *new_args = args->arg;
+
+    // It's grabbed now, so we don't need any more room on the bag rack.
+    delete args;
+
+    PT_NOTICE("pthread child [" << reinterpret_cast<uintptr_t>(entry) << "] is starting");
+
+    // Just keep using our current stack, don't bother to save any state. We'll never return,
+    // so there's no need to be sentimental (and no need to worry about return addresses etc)
+    uintptr_t stack = 0;
+    asm volatile("mov %%esp, %%eax" : "=a" (stack));
+    if(!stack) // Because sanity costs little.
+        return -1;
+
+    // Begin our quest from the Kernel Highlands and dive deep into the murky depths of the Userland River.
+    // We'll take with us our current stack, a map to our destination, and some additional information that
+    // may come in handy when we arrive.
+    Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
+
+    // If we get here, we probably got catapaulted many miles back to the Kernel Highlands.
+    // That's probably not a good thing. They won't really accept us here anymore :(
+    FATAL("I'm not supposed to be in the Kernel Highlands!");
     return 0;
 }
 
+/**
+ * posix_pthread_create: POSIX thread creation
+ *
+ * This function will create a new execution thread in userspace.
+ */
 int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadfn start_addr, void *arg)
 {
+    PT_NOTICE("pthread_create");
+
+    // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -47,24 +94,107 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
         return -1;
     }
 
-    Thread *p = new Thread(pProcess, pthread_entry, reinterpret_cast<void*>(start_addr));
+    // Build the information structure to pass to the pthread entry function
+    pthreadInfoBlock *dat = new pthreadInfoBlock;
+    dat->entry = reinterpret_cast<void*>(start_addr);
+    dat->arg = arg;
+
+    // Allocate a stack for this thread
+    void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
+    if(!stack)
+    {
+        ERROR("posix_pthread_create: couldn't get a stack!");
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
+
+    // Create the thread
+    Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), stack, true);
+
+    // Insert into the process thread identification list and set the new ID
+    PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;
+    p->pThread = pThread;
+    p->returnValue = 0;
+    pSubsystem->insertThread(pThread->getId(), p);
+    *thread = static_cast<pthread_t>(pThread->getId());
+
+    // All done!
     return 0;
 }
 
+/**
+ * posix_pthread_join: POSIX thread join
+ *
+ * Joining a thread basically means the caller of pthread_join will wait until
+ * the passed thread completes execution. The return value from the thread is
+ * stored in value_ptr.
+ */
 int posix_pthread_join(pthread_t thread, void **value_ptr)
 {
-    // Should wait for the thread to complete, and then put its return into value_ptr.
+    PT_NOTICE("pthread_join");
+
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the thread information structure and verify it
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    if(!p)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Now that we have it, wait for the thread and then store the return value
+    p->isRunning.acquire();
+    if(value_ptr)
+        *value_ptr = p->returnValue;
+
+    // Success!
     return 0;
 }
 
-void posix_pthread_enter()
+/**
+ * posix_pthread_enter: Called by userspace when entering the new thread.
+ *
+ * At this stage, this function does not do anything. In future, this may
+ * change to support adding new state information to the thread lists, or
+ * to set some kernel-side state.
+ */
+int posix_pthread_enter(uintptr_t arg)
 {
-    PT_NOTICE("enter");
+    return 0;
 }
 
-void posix_pthread_return(uintptr_t ret)
+/**
+ * posix_pthread_exit
+ *
+ * This function is called either when the thread function returns, or
+ * when pthread_exit is called. The single parameter specifies a return
+ * value from the thread.
+ */
+void posix_pthread_exit(void *ret)
 {
-    PT_NOTICE("return(" << ret << ")");
+    PT_NOTICE("pthread_exit");
+
+    // Grab the subsystem and unlock any waiting threads
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (pSubsystem)
+    {
+        PosixSubsystem::PosixThread *p = pSubsystem->getThread(pThread->getId());
+        if(p)
+        {
+            p->returnValue = ret;
+            p->isRunning.release();
+        }
+    }
 
     // Kill the thread
     Processor::information().getScheduler().killCurrentThread();
@@ -72,17 +202,15 @@ void posix_pthread_return(uintptr_t ret)
     while(1);
 }
 
+/**
+ * pedigree_init_pthreads
+ *
+ * This function copies the user mode thread wrapper from the kernel to a known
+ * user mode location. The location is already mapped by pedigree_init_signals
+ * which must be called before this function.
+ */
 void pedigree_init_pthreads()
 {
     PT_NOTICE("init_pthreads");
-
-    // Map the signal return stub to the correct location
-    /* This must be called after pedigree_init_sigret (which maps in a page anyway)
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    Processor::information().getVirtualAddressSpace().map(phys,
-            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE2),
-            VirtualAddressSpace::Write);
-    */
     memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE2), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
-    NOTICE("instructions at the trampoline: " << *reinterpret_cast<uint32_t*>(EVENT_HANDLER_TRAMPOLINE2) << "/" << *reinterpret_cast<uint32_t*>(EVENT_HANDLER_TRAMPOLINE) << "!");
 }

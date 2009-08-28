@@ -37,8 +37,8 @@ typedef void (*pthreadfn)(void*);
 int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadfn start_addr, void *arg);
 int posix_pthread_join(pthread_t thread, void **value_ptr);
 
-void posix_pthread_enter();
-void posix_pthread_return(uintptr_t ret);
+int posix_pthread_enter(uintptr_t blk);
+void posix_pthread_exit(void *ret);
 
 void pedigree_init_pthreads();
 
