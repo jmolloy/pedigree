@@ -24,7 +24,7 @@
 
 
 Rtl8139::Rtl8139(Network* pDev) :
-Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_InRx(false), m_InTx(false), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
+Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_InRx(false), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
 m_pRxBuffPhys(0), m_pTxBuffPhys(0), m_RxBuffMR("rtl8139-rxbuffer"), m_TxBuffMR("rtl8139-txbuffer")
 {
     setSpecificType(String("rtl8139-card"));
@@ -126,13 +126,11 @@ void Rtl8139::reset()
     m_pBase->write16(RTL_IMR_RXOK | RTL_IMR_RXERR, RTL_IMR);
     m_pBase->write16(0xffff, RTL_ISR);
     m_InRx = false;
-    m_InTx = false;
     NOTICE("RTL8139: Reset");
 }
 
 bool Rtl8139::send(uint32_t nBytes, uintptr_t buffer)
 {
-    //while(m_InTx);
     if(nBytes > RTL_PACK_MAX)
     {
         ERROR("RTL8139: Attempt to send a packet with size > 64 KB");
@@ -150,9 +148,6 @@ bool Rtl8139::send(uint32_t nBytes, uintptr_t buffer)
     // next descriptor, or go to 0 if over 4
     m_TxCurr++;
     m_TxCurr %= 4;
-
-    //m_InTx = true;
-    //m_pBase->write16((RTL_IMR_TXOK | RTL_IMR_TXERR) | m_pBase->read16(RTL_IMR), RTL_IMR);
     // success!
     return true;
 }
@@ -171,7 +166,6 @@ void Rtl8139::recv()
     {
         WARNING("RTL8139: Bad packet: len: " << length << ", status: " << status << "!");
         reset();
-        //m_pBase->write16(RTL_ISR_RXOK, RTL_ISR);
         return;
     }
     // create packet buffer, needed later
@@ -198,9 +192,6 @@ void Rtl8139::recv()
     }
     // adjust current offset (it never should be over the buffer's size)
     m_RxCurr %= RTL_BUFF_SIZE;
-
-    // update current offset in the card
-    //m_pBase->write16(static_cast<uint16_t>(m_RxCurr), RTL_RXCURR);
 
     // send the packet to the stack
     NetworkStack::instance().receive(length-4, reinterpret_cast<uintptr_t>(packBuff), this, 0);
@@ -251,12 +242,6 @@ bool Rtl8139::irq(irq_id_t number, InterruptState &state)
         // RxOK, receive the packet
         if(irqStatus & RTL_ISR_RXOK)
             recv();
-
-        if(/*m_InTx && */(irqStatus & RTL_ISR_TXOK))
-        {
-            /*m_InTx = false;
-            m_pBase->write16(~(RTL_IMR_TXOK | RTL_IMR_TXERR) & m_pBase->read16(RTL_IMR), RTL_IMR);*/
-        }
 
         // if rx error, reset
         if(irqStatus & RTL_ISR_RXERR)
