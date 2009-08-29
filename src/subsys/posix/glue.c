@@ -1879,6 +1879,12 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+    if(!mutex)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
     if(*mutex == PTHREAD_MUTEX_INITIALIZER)
     {
         if(pthread_mutex_init(mutex, 0) == -1)
@@ -1890,6 +1896,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
+    if(!mutex)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
     if(*mutex == PTHREAD_MUTEX_INITIALIZER)
     {
         if(pthread_mutex_init(mutex, 0) == -1)
@@ -1910,6 +1922,61 @@ int pthread_mutexattr_init(pthread_mutexattr_t *attr)
 }
 
 int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
+{
+    return 0;
+}
+
+/**
+ * Some background on how I've decided to handle condvars...
+ *
+ * Basically, waiting on a resource to reach a certain value, while keeping a
+ * lock on it, is the idea of condvars. So I've decided to implement condvars
+ * as mutexes, which will (hopefully!) work just as well.
+ */
+
+int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
+{
+    return pthread_mutex_init(cond, 0);
+}
+
+int pthread_cond_destroy(pthread_cond_t *cond)
+{
+    return pthread_mutex_destroy(cond);
+}
+
+int pthread_cond_broadcast(pthread_cond_t *cond)
+{
+    return pthread_mutex_unlock(cond);
+}
+
+/// \note pthread_cond_signal will unblock *at least one* thread... In this
+///       implementation, it really is just like broadcast.
+int pthread_cond_signal(pthread_cond_t *cond)
+{
+    return pthread_mutex_unlock(cond);
+}
+
+int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *tm)
+{
+    errno = ENOSYS;
+    return -1;
+}
+
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+{
+    if(pthread_mutex_unlock(mutex) == -1)
+        return -1;
+    pthread_mutex_lock(cond);
+    pthread_mutex_lock(mutex);
+    return 0;
+}
+
+int pthread_condattr_destroy(pthread_condattr_t *attr)
+{
+    return 0;
+}
+
+int pthread_condattr_init(pthread_condattr_t *attr)
 {
     return 0;
 }
