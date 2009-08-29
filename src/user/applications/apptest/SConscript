@@ -19,6 +19,7 @@ env.Alias("apps", objname)
 # Dependencies
 env.Depends(objname, "crt")
 env.Depends(objname, "libs")
+env.Depends(objname, "pthreads")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -48,6 +49,7 @@ libraries = [
     'gcc',
     'c',
     'm',
+    'pthread'
     # 'stdc++',
 ]
 

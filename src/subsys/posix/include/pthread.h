@@ -36,6 +36,11 @@ extern "C" {
 #define PTHREAD_PROCESS_SHARED
 #define PTHREAD_PROCESS_PRIVATE
 
+#define PTHREAD_MUTEX_NORMAL            0
+#define PTHREAD_MUTEX_ERRORCHECK        1
+#define PTHREAD_MUTEX_RECURSIVE         2
+#define PTHREAD_MUTEX_DEFAULT           3
+
 // Base functionality
 int         _EXFUN(pthread_create, (pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg));
 int         _EXFUN(pthread_join, (pthread_t thread, void **value_ptr));
