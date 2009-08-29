@@ -252,6 +252,17 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_PTHREAD_SIGMASK:
             return posix_pthread_sigmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
 
+        case POSIX_PTHREAD_MUTEX_INIT:
+            return posix_pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(p1), reinterpret_cast<const pthread_mutexattr_t*>(p2));
+        case POSIX_PTHREAD_MUTEX_DESTROY:
+            return posix_pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(p1));
+        case POSIX_PTHREAD_MUTEX_LOCK:
+            return posix_pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(p1));
+        case POSIX_PTHREAD_MUTEX_TRYLOCK:
+            return posix_pthread_mutex_trylock(reinterpret_cast<pthread_mutex_t*>(p1));
+        case POSIX_PTHREAD_MUTEX_UNLOCK:
+            return posix_pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(p1));
+
         // Stub warning
         case POSIX_STUBBED:
             // This is the solution to a bug - if the address in p1 traps (because of demand loading),

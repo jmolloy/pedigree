@@ -1866,3 +1866,50 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
 {
     return 0;
 }
+
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+    return syscall2(POSIX_PTHREAD_MUTEX_INIT, (int) mutex, (int) attr);
+}
+
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+    return syscall1(POSIX_PTHREAD_MUTEX_DESTROY, (int) mutex);
+}
+
+int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+    if(*mutex == PTHREAD_MUTEX_INITIALIZER)
+    {
+        if(pthread_mutex_init(mutex, 0) == -1)
+            return -1;
+    }
+
+    return syscall1(POSIX_PTHREAD_MUTEX_LOCK, (int) mutex);
+}
+
+int pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+    if(*mutex == PTHREAD_MUTEX_INITIALIZER)
+    {
+        if(pthread_mutex_init(mutex, 0) == -1)
+            return -1;
+    }
+
+    return syscall1(POSIX_PTHREAD_MUTEX_TRYLOCK, (int) mutex);
+}
+
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+    return syscall1(POSIX_PTHREAD_MUTEX_UNLOCK, (int) mutex);
+}
+
+int pthread_mutexattr_init(pthread_mutexattr_t *attr)
+{
+    return 0;
+}
+
+int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
+{
+    return 0;
+}

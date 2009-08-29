@@ -129,7 +129,7 @@ FileDescriptor::~FileDescriptor()
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
-    m_MemoryMappedFiles(), m_AltSigStack(), m_Semaphores(), m_Threads()
+    m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
 {
     LockGuard<Mutex> guard(m_SignalHandlersLock);
     LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);

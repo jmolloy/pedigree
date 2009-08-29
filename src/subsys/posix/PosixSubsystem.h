@@ -88,7 +88,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack(), m_Semaphores(), m_Threads()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Copy constructor */
@@ -98,7 +98,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack(), m_Semaphores(), m_Threads()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Default destructor */
@@ -254,33 +254,52 @@ class PosixSubsystem : public Subsystem
             m_MemoryMappedFiles.remove(p);
             return ret;
         }
-
-        /** Gets a semaphore given a descriptor */
-        Semaphore *getSemaphore(size_t n)
+        
+        /**
+         * POSIX Semaphore or Mutex
+         *
+         * It's up to the programmer to use this right.
+         */
+        class PosixSyncObject
         {
-            return m_Semaphores.lookup(n);
+            public:
+                PosixSyncObject() : pObject(0), isMutex(false) {};
+                virtual ~PosixSyncObject() {};
+
+                void *pObject;
+                bool isMutex;
+
+            private:
+                PosixSyncObject(const PosixSyncObject &);
+                const PosixSyncObject & operator = (const PosixSyncObject &);
+        };
+
+        /** Gets a synchronisation object given a descriptor */
+        PosixSyncObject *getSyncObject(size_t n)
+        {
+            return m_SyncObjects.lookup(n);
         }
 
-        /** Inserts a semaphore given a descriptor and a Semaphore */
-        void insertSemaphore(size_t n, Semaphore *sem)
+        /** Inserts a synchronisation object given a descriptor */
+        void insertSyncObject(size_t n, PosixSyncObject *sem)
         {
-            Semaphore *t = m_Semaphores.lookup(n);
+            PosixSyncObject *t = m_SyncObjects.lookup(n);
             if(t)
             {
-                m_Semaphores.remove(n);
+                m_SyncObjects.remove(n);
                 delete t;
             }
 
-            m_Semaphores.insert(n, sem);
+            m_SyncObjects.insert(n, sem);
         }
 
         /** Removes a semaphore given a descriptor */
-        void removeSemaphore(size_t n)
+        void removeSyncObject(size_t n)
         {
-            Semaphore *t = m_Semaphores.lookup(n);
+            PosixSyncObject *t = m_SyncObjects.lookup(n);
             if(t)
             {
-                m_Semaphores.remove(n);
+                m_SyncObjects.remove(n);
                 delete t;
             }
         }
@@ -367,9 +386,9 @@ class PosixSubsystem : public Subsystem
          */
         AlternateSignalStack m_AltSigStack;
         /**
-         * Links some file descriptors to Semaphores.
+         * Links some file descriptors to PosixSyncObjects.
          */
-        Tree<size_t, Semaphore*> m_Semaphores;
+        Tree<size_t, PosixSyncObject*> m_SyncObjects;
         /**
          * Links some file descriptors to Threads.
          */
