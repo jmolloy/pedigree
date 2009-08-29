@@ -349,6 +349,6 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
       return ret;
   }
-  WARNING("KERNELELF: GlobalLookupSymbol(" << Hex << addr << ") failed.");
+  WARNING_NOLOCK("KERNELELF: GlobalLookupSymbol(" << Hex << addr << ") failed.");
   return 0;
 }

@@ -58,20 +58,23 @@ int pthread_kernel_enter(void *blk)
 
     PT_NOTICE("pthread child [" << reinterpret_cast<uintptr_t>(entry) << "] is starting");
 
-    // Just keep using our current stack, don't bother to save any state. We'll never return,
-    // so there's no need to be sentimental (and no need to worry about return addresses etc)
+    // Just keep using our current stack, don't bother to save any state. We'll
+    // never return, so there's no need to be sentimental (and no need to worry
+    // about return addresses etc)
     uintptr_t stack = 0;
     asm volatile("mov %%esp, %%eax" : "=a" (stack));
     if(!stack) // Because sanity costs little.
         return -1;
 
-    // Begin our quest from the Kernel Highlands and dive deep into the murky depths of the Userland River.
-    // We'll take with us our current stack, a map to our destination, and some additional information that
-    // may come in handy when we arrive.
+    // Begin our quest from the Kernel Highlands and dive deep into the murky
+    // depths of the Userland River. We'll take with us our current stack, a
+    // map to our destination, and some additional information that may come
+    // in handy when we arrive.
     Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
 
-    // If we get here, we probably got catapaulted many miles back to the Kernel Highlands.
-    // That's probably not a good thing. They won't really accept us here anymore :(
+    // If we get here, we probably got catapaulted many miles back to the
+    // Kernel Highlands. That's probably not a good thing. They won't really
+    // accept us here anymore :(
     FATAL("I'm not supposed to be in the Kernel Highlands!");
     return 0;
 }

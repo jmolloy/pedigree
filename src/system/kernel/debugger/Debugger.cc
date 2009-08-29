@@ -89,9 +89,9 @@ Debugger::~Debugger()
 void Debugger::initialise()
 {
   if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getBreakpointInterruptNumber(), this))
-    ERROR("Debugger: breakpoint interrupt registration failed!");
+    ERROR_NOLOCK("Debugger: breakpoint interrupt registration failed!");
   if (!InterruptManager::instance().registerInterruptHandlerDebugger(InterruptManager::instance().getDebugInterruptNumber(), this))
-    ERROR("Debugger: debug interrupt registration failed!");
+    ERROR_NOLOCK("Debugger: debug interrupt registration failed!");
 }
 
 /// \todo OZMFGBARBIE, this needs major cleanup. Look at the state of it!! :O

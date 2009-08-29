@@ -147,7 +147,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     
     if (nLength == 0xFFFFFFFF)
     {
-      ERROR("64-bit DWARF file detected, but not supported!");
+      ERROR_NOLOCK("64-bit DWARF file detected, but not supported!");
       return false;
     }
 
@@ -192,7 +192,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     uint32_t nCieId = * reinterpret_cast<uint32_t*> (m_nData+nCie);
     if (nCieId != k_nCieId)
     {
-      WARNING ("DwarfUnwinder::unwind - CIE ID incorrect!");
+      WARNING_NOLOCK("DwarfUnwinder::unwind - CIE ID incorrect!");
       return false;
     }
     nCie += sizeof(uint32_t);

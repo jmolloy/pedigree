@@ -143,6 +143,8 @@ void _exit(int val)
 
 int fork(void)
 {
+    return (int)syscall0(POSIX_FORK);
+
     if(nHandlers)
     {
         for(int i = 0; i < nHandlers; i++)
