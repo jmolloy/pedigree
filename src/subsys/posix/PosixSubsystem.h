@@ -289,12 +289,15 @@ class PosixSubsystem : public Subsystem
         class PosixThread
         {
             public:
-                PosixThread() : pThread(0), isRunning(true), returnValue(0) {};
+                PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false), isDetached(false) {};
                 virtual ~PosixThread() {};
 
                 Thread *pThread;
                 Mutex isRunning;
                 void *returnValue;
+
+                bool canReclaim;
+                bool isDetached;
 
             private:
                 PosixThread(const PosixThread &);

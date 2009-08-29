@@ -124,9 +124,11 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 
   doUnmap(virtualAddress);
 }
-void *X86VirtualAddressSpace::allocateStack()
+void *X86VirtualAddressSpace::allocateStack(size_t stackSz)
 {
-  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+    if(stackSz == 0)
+        stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
+    return doAllocateStack(stackSz);
 }
 void X86VirtualAddressSpace::freeStack(void *pStack)
 {

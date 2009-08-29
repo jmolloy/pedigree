@@ -17,6 +17,7 @@
 #include "signal-syscalls.h"
 #include "system-syscalls.h"
 #include "file-syscalls.h"
+#include "pthread-syscalls.h"
 #include <syscallError.h>
 #include <Log.h>
 
@@ -260,10 +261,10 @@ int pedigree_sigret()
     return 0;
 }
 
-int doProcessKill(Process *p, int sig)
+int doThreadKill(Thread *p, int sig)
 {
     // Build the pending signal and pass it in
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getSubsystem());
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getParent()->getSubsystem());
     if(!pSubsystem)
     {
         ERROR("posix_kill: no subsystem");
@@ -271,14 +272,16 @@ int doProcessKill(Process *p, int sig)
     }
     PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
 
-    /// \note Technically this is supposed to be sent to the currently executing thread...
-    Thread *pThread = p->getThread(0);
-
     // Fire the event
     if (signalHandler->pEvent)
-        pThread->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+        p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
 
     return 0;
+}
+
+int doProcessKill(Process *p, int sig)
+{
+    return doThreadKill(p->getThread(0), sig);
 }
 
 int posix_kill(int pid, int sig)
@@ -336,8 +339,47 @@ int posix_kill(int pid, int sig)
     return 0;
 }
 
+int posix_pthread_kill(pthread_t thread, int sig)
+{
+    PT_NOTICE("pthread_kill");
+
+    // Check the signal
+    if(sig > 32)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Grab the subsystem
+    Thread *pCurrThread = Processor::information().getCurrentThread();
+    Process *pProcess = pCurrThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the target thread, send the signal
+    PosixSubsystem::PosixThread *pTarget = pSubsystem->getThread(thread);
+    if(pTarget && pTarget->pThread)
+    {
+        return doThreadKill(pTarget->pThread, sig);
+    }
+    else
+    {
+        SYSCALL_ERROR(NoSuchProcess);
+        return -1;
+    }
+}
+
 /// \todo Integration with Thread inhibit masks
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset)
+{
+    return 0;
+}
+
+int posix_pthread_sigmask(int how, const uint32_t *set, uint32_t *oset)
 {
     return 0;
 }

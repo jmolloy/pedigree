@@ -36,6 +36,12 @@ typedef void (*pthreadfn)(void*);
 
 int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadfn start_addr, void *arg);
 int posix_pthread_join(pthread_t thread, void **value_ptr);
+int posix_pthread_detach(pthread_t thread);
+
+pthread_t posix_pthread_self();
+
+int posix_pthread_kill(pthread_t thread, int sig);
+int posix_pthread_sigmask(int how, const uint32_t *set, uint32_t *oset);
 
 int posix_pthread_enter(uintptr_t blk);
 void posix_pthread_exit(void *ret);

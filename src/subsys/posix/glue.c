@@ -37,6 +37,8 @@ int h_errno; // required by networking code
 #include <sys/resource.h>
 #include <sys/statfs.h>
 
+#define _PTHREAD_ATTR_MAGIC 0xdeadbeef
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
@@ -93,13 +95,21 @@ int h_errno; // required by networking code
 #define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
   errno = ENOSYS;
 
-#if 0
-#define	F_DUPFD		0	/* Duplicate fildes */
-#define	F_GETFD		1	/* Get fildes flags (close on exec) */
-#define	F_SETFD		2	/* Set fildes flags (close on exec) */
-#define	F_GETFL		3	/* Get file flags */
-#define	F_SETFL		4	/* Set file flags */
-#endif
+#define NUM_ATFORK_HANDLERS 32 // (* 3)
+
+// Defines an fork handler
+struct forkHandler
+{
+    void (*prepare)(void);
+    void (*parent)(void);
+    void (*child)(void);
+};
+
+// Tables of handlers
+static struct forkHandler atforkHandlers[NUM_ATFORK_HANDLERS];
+
+// Number of handlers (also an index to the next one)
+static int nHandlers = 0;
 
 int ftruncate(int a, off_t b)
 {
@@ -135,7 +145,41 @@ void _exit(int val)
 
 int fork(void)
 {
-    return (int)syscall0(POSIX_FORK);
+    if(nHandlers)
+    {
+        for(int i = 0; i < nHandlers; i++)
+        {
+            if(atforkHandlers[i].prepare)
+                atforkHandlers[i].prepare();
+        }
+    }
+
+    int pid = (int)syscall0(POSIX_FORK);
+
+    if(pid == 0)
+    {
+        if(nHandlers)
+        {
+            for(int i = 0; i < nHandlers; i++)
+            {
+                if(atforkHandlers[i].child)
+                    atforkHandlers[i].child();
+            }
+        }
+    }
+    else if(pid > 0)
+    {
+        if(nHandlers)
+        {
+            for(int i = 0; i < nHandlers; i++)
+            {
+                if(atforkHandlers[i].parent)
+                    atforkHandlers[i].parent();
+            }
+        }
+    }
+
+    return pid;
 }
 
 int vfork(void)
@@ -1662,6 +1706,8 @@ int sem_wait(sem_t *sem)
     return syscall1(POSIX_SEM_WAIT, (int) sem);
 }
 
+/// \todo Move into pthreads.c, and turn into libpthread rather than adding to libc
+
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
     return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
@@ -1675,4 +1721,148 @@ int pthread_join(pthread_t thread, void **value_ptr)
 void pthread_exit(void *ret)
 {
     syscall1(POSIX_PTHREAD_RETURN, (int) ret);
+}
+
+int pthread_detach(pthread_t thread)
+{
+    return syscall1(POSIX_PTHREAD_DETACH, thread);
+}
+
+pthread_t pthread_self()
+{
+    return syscall0(POSIX_PTHREAD_SELF);
+}
+
+int pthread_equal(pthread_t t1, pthread_t t2)
+{
+    return (t1 == t2) ? 1 : 0;
+}
+
+int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
+{
+    // Already full?
+    if(nHandlers == NUM_ATFORK_HANDLERS)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    // Create and insert
+    struct forkHandler handler;
+    handler.prepare = prepare;
+    handler.parent = parent;
+    handler.child = child;
+    atforkHandlers[nHandlers++] = handler;
+    return 0;
+}
+
+int pthread_kill(pthread_t thread, int sig)
+{
+    return syscall2(POSIX_PTHREAD_KILL, (int) thread, sig);
+}
+
+int pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
+{
+    return syscall3(POSIX_PTHREAD_SIGMASK, how, (int) set, (int) oset);
+}
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+    if(!attr)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    if(attr->magic == _PTHREAD_ATTR_MAGIC)
+    {
+        errno = EBUSY;
+        return -1;
+    }
+
+    attr->stackSize = 0x100000;
+    attr->detachState = 0;
+    attr->magic = _PTHREAD_ATTR_MAGIC;
+    return 0;
+}
+
+int pthread_attr_destroy(pthread_attr_t *attr)
+{
+    if(!attr)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    if(attr->magic != _PTHREAD_ATTR_MAGIC)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *ret)
+{
+    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || !ret)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    *ret = attr->detachState;
+    return -1;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
+{
+    if(
+        (!attr || (attr->magic != _PTHREAD_ATTR_MAGIC))
+        ||
+        (detachstate != PTHREAD_CREATE_DETACHED && detachstate != PTHREAD_CREATE_JOINABLE)
+        )
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    attr->detachState = detachstate;
+    return -1;
+}
+
+int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *sz)
+{
+    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || !sz)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    *sz = attr->stackSize;
+
+    return 0;
+}
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
+{
+    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || (stacksize < PTHREAD_STACK_MIN) || (stacksize > (1 << 24)))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    attr->stackSize = stacksize;
+
+    return 0;
+}
+
+int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param)
+{
+    return 0;
+}
+
+int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param)
+{
+    return 0;
 }

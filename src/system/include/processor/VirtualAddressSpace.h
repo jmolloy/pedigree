@@ -112,7 +112,7 @@ class VirtualAddressSpace
     virtual void unmap(void *virtualAddress) = 0;
 
     /** \todo documentation */
-    virtual void *allocateStack() = 0;
+    virtual void *allocateStack(size_t stackSz = 0) = 0;
     /** \todo documentation */
     virtual void freeStack(void *pStack) = 0;
 

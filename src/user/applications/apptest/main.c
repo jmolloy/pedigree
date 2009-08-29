@@ -23,13 +23,15 @@ volatile int whee = 0;
 static void *thread_func(void *vptr_args)
 {
     int i;
+
+    printf("Hello world from thread %d!\n", pthread_self());
  
     for (i = 0; i < 80; i++)
     {
         //printf(" b\n");
         //while(!whee);
         //whee = 1;
-        fputs("b", stderr);
+        fputs("b", stdout);
         //whee = 0;
         // wait_thread();
     }

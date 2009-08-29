@@ -243,6 +243,14 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_pthread_create(reinterpret_cast<pthread_t*>(p1), reinterpret_cast<const pthread_attr_t*>(p2), reinterpret_cast<pthreadfn>(p3), reinterpret_cast<void*>(p4));
         case POSIX_PTHREAD_JOIN:
             return posix_pthread_join(static_cast<pthread_t>(p1), reinterpret_cast<void **>(p2));
+        case POSIX_PTHREAD_DETACH:
+            return posix_pthread_detach(static_cast<pthread_t>(p1));
+        case POSIX_PTHREAD_SELF:
+            return posix_pthread_self();
+        case POSIX_PTHREAD_KILL:
+            return posix_pthread_kill(static_cast<pthread_t>(p1), static_cast<int>(p2));
+        case POSIX_PTHREAD_SIGMASK:
+            return posix_pthread_sigmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
 
         // Stub warning
         case POSIX_STUBBED:

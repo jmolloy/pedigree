@@ -85,6 +85,14 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
 {
     PT_NOTICE("pthread_create");
 
+    // Build some defaults for the attributes, if needed
+    size_t stackSize = 0;
+    if(attr)
+    {
+        if(attr->stackSize >= PTHREAD_STACK_MIN)
+            stackSize = attr->stackSize;
+    }
+
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -100,7 +108,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     dat->arg = arg;
 
     // Allocate a stack for this thread
-    void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
+    void *stack = Processor::information().getVirtualAddressSpace().allocateStack(stackSize);
     if(!stack)
     {
         ERROR("posix_pthread_create: couldn't get a stack!");
@@ -111,10 +119,18 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     // Create the thread
     Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), stack, true);
 
-    // Insert into the process thread identification list and set the new ID
+    // Create our information structure, shove in the initial elements
     PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;
     p->pThread = pThread;
     p->returnValue = 0;
+
+    // Take information from the attributes
+    if(attr)
+    {
+        p->isDetached = (attr->detachState == PTHREAD_CREATE_DETACHED);
+    }
+
+    // Insert the thread
     pSubsystem->insertThread(pThread->getId(), p);
     *thread = static_cast<pthread_t>(pThread->getId());
 
@@ -150,13 +166,83 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
         return -1;
     }
 
+    // Check that we can join
+    if(p->isDetached)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     // Now that we have it, wait for the thread and then store the return value
     p->isRunning.acquire();
     if(value_ptr)
         *value_ptr = p->returnValue;
 
+    // Clean up - we're never going to use this again
+    pSubsystem->removeThread(thread);
+    delete p;
+
     // Success!
     return 0;
+}
+
+/**
+ * posix_pthread_detach: POSIX thread detach
+ *
+ * If the thread has completed, clean up its information. Otherwise signal that
+ * its thread information will not be used, and can be cleaned up.
+ *
+ * Similar to join, but without caring about the return value.
+ */
+int posix_pthread_detach(pthread_t thread)
+{
+    PT_NOTICE("pthread_join");
+
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the thread information structure and verify it
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    if(!p)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Check that we can detach
+    if(p->isDetached)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Now that we have it, wait for the thread and then store the return value
+    if(p->isRunning.tryAcquire())
+    {
+        // Clean up - we're never going to use this again
+        pSubsystem->removeThread(thread);
+        delete p;
+    }
+    else
+        p->canReclaim = true;
+
+    // Success!
+    return 0;
+}
+
+/**
+ * posix_pthread_self: Returns the thread ID for the current thread.
+ */
+pthread_t posix_pthread_self()
+{
+    Thread *pThread = Processor::information().getCurrentThread();
+    return pThread->getId();
 }
 
 /**
@@ -193,6 +279,13 @@ void posix_pthread_exit(void *ret)
         {
             p->returnValue = ret;
             p->isRunning.release();
+
+            if(p->canReclaim)
+            {
+                // Clean up...
+                pSubsystem->removeThread(pThread->getId());
+                delete p;
+            }
         }
     }
 
