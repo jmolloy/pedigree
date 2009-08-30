@@ -76,7 +76,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
         uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
         uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
 
-        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute))
+        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | VirtualAddressSpace::Write))
         {
             WARNING("MemoryMappedFile: map() failed at " << v);
             return false;
