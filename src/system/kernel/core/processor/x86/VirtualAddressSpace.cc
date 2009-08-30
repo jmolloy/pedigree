@@ -126,7 +126,13 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::allocateStack()
 {
-  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+    return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+}
+void *X86VirtualAddressSpace::allocateStack(size_t stackSz)
+{
+    if(stackSz == 0)
+        stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
+    return doAllocateStack(stackSz);
 }
 void X86VirtualAddressSpace::freeStack(void *pStack)
 {
@@ -363,12 +369,12 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
     return false;
 
+  // Map the page
+  *pageTableEntry = physicalAddress | Flags;
+
   // Flush the TLB (if we are marking a page as swapped-out)
   if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
     Processor::invalidate(virtualAddress);
-
-  // Map the page
-  *pageTableEntry = physicalAddress | Flags;
 
   return true;
 }
@@ -630,10 +636,13 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
     if(bDidSkip)
       continue;
     
-    /// \note I'm now getting a page fault during execve (MemoryMappedFile::trap) that occurs only
-    ///       when these lines are kept in. I've left them here because they're correct. - Matt
-    // PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
-    // *pageDirectoryEntry = 0;
+    // Remove the page table from the directory
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    *pageDirectoryEntry = 0;
+    
+    // Invalidate the page table mapping
+    uint32_t *pageTable = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, 0);
+    Processor::invalidate(pageTable);
   }
 }
 

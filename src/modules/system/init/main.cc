@@ -45,6 +45,7 @@
 #include <config/MemoryBackend.h>
 
 extern void pedigree_init_sigret();
+extern void pedigree_init_pthreads();
 
 extern BootIO bootIO;
 
@@ -223,8 +224,9 @@ void init_stage2()
             WARNING("map() failed in init");
     }
 
-    // Initialise the sigret shizzle.
+    // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
+    pedigree_init_pthreads();
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);

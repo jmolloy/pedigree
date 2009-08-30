@@ -114,6 +114,12 @@ class VirtualAddressSpace
     /** \todo documentation */
     virtual void *allocateStack() = 0;
     /** \todo documentation */
+    virtual void *allocateStack(size_t stackSz)
+    {
+        // Default implementation just ignores the stack size.
+        return allocateStack();
+    }
+    /** \todo documentation */
     virtual void freeStack(void *pStack) = 0;
 
     /** Create a new VirtualAddressSpace. Only the kernel is mapped into that virtual address

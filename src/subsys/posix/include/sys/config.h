@@ -217,8 +217,12 @@
   * that use PATH_MAX use it for statically allocated arrays, or arrays on the
   * stack (eek!). As such, it can't be *too* high.
   */
+#ifndef _POSIX_PATH_MAX
+#define _POSIX_PATH_MAX 2048
+#endif
+
 #ifndef PATH_MAX
-#define PATH_MAX 2048
+#define PATH_MAX _POSIX_PATH_MAX
 #endif
 
 /* See if small reent asked for at configuration time and

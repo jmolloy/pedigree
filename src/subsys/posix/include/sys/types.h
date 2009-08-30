@@ -423,6 +423,24 @@ typedef struct {
 } pthread_rwlockattr_t;
 #endif /* defined(_POSIX_READER_WRITER_LOCKS) */
 
+// Pedigree pthread types
+typedef int pthread_t;
+typedef int pthread_cond_t;
+typedef int pthread_condattr_t;
+typedef int pthread_key_t;
+typedef int pthread_mutex_t;
+typedef int pthread_mutexattr_t;
+typedef int pthread_once_t;
+typedef int pthread_rwlock_t;
+typedef int pthread_rwlockattr_t;
+
+typedef struct _pthread_attr_t
+{
+    size_t stackSize;
+    int detachState;
+    __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
+} pthread_attr_t;
+
 #endif  /* !__need_inttypes */
 
 #undef __need_inttypes

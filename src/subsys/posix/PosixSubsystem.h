@@ -20,6 +20,7 @@
 #include <processor/types.h>
 #include <process/SignalEvent.h>
 #include <process/Mutex.h>
+#include <process/Semaphore.h>
 
 #include <utilities/Tree.h>
 #include <utilities/RadixTree.h>
@@ -87,7 +88,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Copy constructor */
@@ -97,7 +98,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack()
+            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Default destructor */
@@ -253,6 +254,95 @@ class PosixSubsystem : public Subsystem
             m_MemoryMappedFiles.remove(p);
             return ret;
         }
+        
+        /**
+         * POSIX Semaphore or Mutex
+         *
+         * It's up to the programmer to use this right.
+         */
+        class PosixSyncObject
+        {
+            public:
+                PosixSyncObject() : pObject(0), isMutex(false) {};
+                virtual ~PosixSyncObject() {};
+
+                void *pObject;
+                bool isMutex;
+
+            private:
+                PosixSyncObject(const PosixSyncObject &);
+                const PosixSyncObject & operator = (const PosixSyncObject &);
+        };
+
+        /** Gets a synchronisation object given a descriptor */
+        PosixSyncObject *getSyncObject(size_t n)
+        {
+            return m_SyncObjects.lookup(n);
+        }
+
+        /** Inserts a synchronisation object given a descriptor */
+        void insertSyncObject(size_t n, PosixSyncObject *sem)
+        {
+            PosixSyncObject *t = m_SyncObjects.lookup(n);
+            if(t)
+            {
+                m_SyncObjects.remove(n);
+                delete t;
+            }
+
+            m_SyncObjects.insert(n, sem);
+        }
+
+        /** Removes a semaphore given a descriptor */
+        void removeSyncObject(size_t n)
+        {
+            PosixSyncObject *t = m_SyncObjects.lookup(n);
+            if(t)
+            {
+                m_SyncObjects.remove(n);
+                delete t;
+            }
+        }
+
+        /** POSIX Thread information */
+        class PosixThread
+        {
+            public:
+                PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false), isDetached(false) {};
+                virtual ~PosixThread() {};
+
+                Thread *pThread;
+                Mutex isRunning;
+                void *returnValue;
+
+                bool canReclaim;
+                bool isDetached;
+
+            private:
+                PosixThread(const PosixThread &);
+                const PosixThread& operator = (const PosixThread &);
+        };
+
+        /** Gets a thread given a descriptor */
+        PosixThread *getThread(size_t n)
+        {
+            return m_Threads.lookup(n);
+        }
+
+        /** Inserts a thread given a descriptor and a Thread */
+        void insertThread(size_t n, PosixThread *thread)
+        {
+            PosixThread *t = m_Threads.lookup(n);
+            if(t)
+                m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
+            return m_Threads.insert(n, thread);
+        }
+
+        /** Removes a thread given a descriptor */
+        void removeThread(size_t n)
+        {
+            m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
+        }
 
     private:
 
@@ -295,6 +385,14 @@ class PosixSubsystem : public Subsystem
          * Alternate signal stack - if defined, used instead of a system-defined stack
          */
         AlternateSignalStack m_AltSigStack;
+        /**
+         * Links some file descriptors to PosixSyncObjects.
+         */
+        Tree<size_t, PosixSyncObject*> m_SyncObjects;
+        /**
+         * Links some file descriptors to Threads.
+         */
+        Tree<size_t, PosixThread*> m_Threads;
 };
 
 #endif

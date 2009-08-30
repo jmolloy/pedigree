@@ -227,19 +227,19 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     if (nIntNumber == 8)
     {
         X86TaskStateSegment *tss = reinterpret_cast<X86TaskStateSegment *>(Processor::information().getTss());
-        ERROR(""); ERROR(""); ERROR("");
-        ERROR("--------------------------- DOUBLE FAULT ---------------------------");
-        ERROR("");
-        ERROR("EIP was: " << tss->eip << ".");
-        ERROR("ESP/EBP: " << tss->esp << ", " << tss->ebp << ".");
-        ERROR("");
-        ERROR("GPs:");
-        ERROR("EAX: " << tss->eax << ", EBX: " << tss->ebx << ", ECX: " << tss->ecx << ".");
-        ERROR("EDX: " << tss->edx << ", ESI: " << tss->esi << ", EDI: " << tss->edi << ".");
-        ERROR("");
-        ERROR("Segments:");
-        ERROR("CS: " << tss->cs << ", DS: " << tss->ds << ", ES: " << tss->es << ".");
-        ERROR("FS: " << tss->fs << ", GS: " << tss->gs << ", SS: " << tss->ss << ".");
+        ERROR_NOLOCK(""); ERROR_NOLOCK(""); ERROR_NOLOCK("");
+        ERROR_NOLOCK("--------------------------- DOUBLE FAULT ---------------------------");
+        ERROR_NOLOCK("");
+        ERROR_NOLOCK("EIP was: " << tss->eip << ".");
+        ERROR_NOLOCK("ESP/EBP: " << tss->esp << ", " << tss->ebp << ".");
+        ERROR_NOLOCK("");
+        ERROR_NOLOCK("GPs:");
+        ERROR_NOLOCK("EAX: " << tss->eax << ", EBX: " << tss->ebx << ", ECX: " << tss->ecx << ".");
+        ERROR_NOLOCK("EDX: " << tss->edx << ", ESI: " << tss->esi << ", EDI: " << tss->edi << ".");
+        ERROR_NOLOCK("");
+        ERROR_NOLOCK("Segments:");
+        ERROR_NOLOCK("CS: " << tss->cs << ", DS: " << tss->ds << ", ES: " << tss->es << ".");
+        ERROR_NOLOCK("FS: " << tss->fs << ", GS: " << tss->gs << ", SS: " << tss->ss << ".");
 
         // Unrecoverable fault
         interruptState.setInstructionPointer(tss->eip);

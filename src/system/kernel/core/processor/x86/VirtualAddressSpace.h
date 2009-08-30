@@ -49,6 +49,7 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
     virtual void *allocateStack();
+    virtual void *allocateStack(size_t stackSz);
     virtual void freeStack(void *pStack);
 
     virtual VirtualAddressSpace *clone();

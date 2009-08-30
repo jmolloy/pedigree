@@ -1,13 +1,8 @@
 #ifndef	_SYS_SOCKET_H
 #define	_SYS_SOCKET_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <inttypes.h>
 #include <sys/types.h>
-
 
 typedef size_t socklen_t;
 typedef uint32_t sa_family_t;
@@ -95,6 +90,10 @@ enum SocketOptions
 #define  SHUT_RD 0 /** Disables receiving */
 #define  SHUT_WR 1 /** Disables sending */
 #define  SHUT_RDWR 2 /** Disables recv/send */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int     accept(int, struct sockaddr *, socklen_t *);
 int     bind(int, const struct sockaddr *, socklen_t);

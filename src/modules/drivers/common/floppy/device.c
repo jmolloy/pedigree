@@ -34,6 +34,7 @@
 #include "cdi/misc.h"
 #include "cdi/io.h"
 #include "cdi/dma.h"
+#include "cdi/cmos.h"
 
 #include "device.h"
 
@@ -701,11 +702,10 @@ static int floppy_drive_sector_write(struct floppy_device* device, uint32_t lba,
  */
 int floppy_device_probe(struct floppy_device* device)
 {
-    // Fragen Sie den CMOS, wenn ein Diskettenlaufwerk vorhanden
-    cdi_outb(0x70, 0x10);
-    uint8_t t = cdi_inb(0x71);
+    // Read floppy presence from CMOS
+    uint8_t t = cdi_cmos_read(0x10);
 
-    // Dieses Byte enthält zwei Nibbles, die im Besitz der Antriebsart
+    // Each nibble contains information about the device type
     if(device->id == 0) {
         return (t >> 4);
     }

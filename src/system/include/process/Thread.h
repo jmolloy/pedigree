@@ -74,9 +74,11 @@ public:
      * \param pStartFunction The function to be run when the thread starts.
      * \param pParam A parameter to give the startFunction.
      * \param pStack (Optional) A (user mode) stack to give the thread - applicable for user mode threads
-     *               only. */
+     *               only.
+     * \param semiUser (Optional) Whether to start the thread as if it was a user mode thread, but begin
+                     in kernel mode (to do setup and jump to usermode manually). */
     Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
-           void *pStack=0);
+           void *pStack=0, bool semiUser = false);
 
     /** Alternative constructor - this should be used only by initialiseMultitasking() to
      * define the first kernel thread. */

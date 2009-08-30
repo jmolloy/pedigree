@@ -18,6 +18,7 @@
 #include "system-syscalls.h"
 #include "pipe-syscalls.h"
 #include "signal-syscalls.h"
+#include "pthread-syscalls.h"
 #include "syscallNumbers.h"
 #include <syscallError.h>
 #include <processor/types.h>
@@ -366,6 +367,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
     pedigree_init_sigret();
+    pedigree_init_pthreads();
 
     class RunInitEvent : public Event
     {

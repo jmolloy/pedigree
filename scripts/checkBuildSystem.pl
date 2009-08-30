@@ -206,10 +206,10 @@ foreach (@compile) {
 
 print "Complete; linking crt*.o...\n";
 
-`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crt0.o $prefix/build/kernel/crt0.o`;
-`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crti.o $prefix/build/kernel/crti.o`;
-`ln -s ./compilers/dir/lib/gcc/$target/$gcc_version/crtn.o $prefix/build/kernel/crtn.o`;
-`ln -s ./compilers/dir/include $prefix/build/include-posix`;
+`ln -s $prefix/build/kernel/crt0.o ./compilers/dir/lib/gcc/$target/$gcc_version/crt0.o`;
+`ln -s $prefix/build/kernel/crti.o ./compilers/dir/lib/gcc/$target/$gcc_version/crti.o`;
+`ln -s $prefix/build/kernel/crtn.o ./compilers/dir/lib/gcc/$target/$gcc_version/crtn.o`;
+`ln -s $prefix/build/include-posix ./compilers/dir/$target/include`;
 print "Done.\n";
 
 `rm -rf ./compilers/dir/build_tmp`;

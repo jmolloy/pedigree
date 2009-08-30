@@ -148,3 +148,8 @@ void Semaphore::release(size_t n)
     // TODO LockManager::released(*this);
   #endif
 }
+
+ssize_t Semaphore::getValue()
+{
+    return static_cast<ssize_t>(m_Counter);
+}

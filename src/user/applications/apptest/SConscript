@@ -17,12 +17,13 @@ objname = appdir + '/apptest'
 env.Alias("apps", objname)
 
 # Dependencies
-env.Depends(objname, "crt0")
+env.Depends(objname, "crt")
 env.Depends(objname, "libs")
+env.Depends(objname, "pthreads")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")
@@ -37,6 +38,8 @@ objects = [
 
 # To include a new directory for includes, just add it to the list
 include = [
+    '#/src/subsys/posix/include/c++/4.3.2',
+    '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree',
     '#/src/subsys/posix/include',
     '.'
 ]
@@ -46,12 +49,15 @@ libraries = [
     'gcc',
     'c',
     'm',
+    'pthread'
+    # 'stdc++',
 ]
 
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
-    builddir
+    builddir,
+    '#/images/i686-elf/libraries'
 ]
 
 ####################################

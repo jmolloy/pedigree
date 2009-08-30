@@ -32,6 +32,7 @@ int h_errno; // required by networking code
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <semaphore.h>
 
 #include <sys/resource.h>
 #include <sys/statfs.h>
@@ -92,13 +93,21 @@ int h_errno; // required by networking code
 #define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
   errno = ENOSYS;
 
-#if 0
-#define	F_DUPFD		0	/* Duplicate fildes */
-#define	F_GETFD		1	/* Get fildes flags (close on exec) */
-#define	F_SETFD		2	/* Set fildes flags (close on exec) */
-#define	F_GETFL		3	/* Get file flags */
-#define	F_SETFL		4	/* Set file flags */
-#endif
+#define NUM_ATFORK_HANDLERS 32 // (* 3)
+
+// Defines an fork handler
+struct forkHandler
+{
+    void (*prepare)(void);
+    void (*parent)(void);
+    void (*child)(void);
+};
+
+// Tables of handlers
+static struct forkHandler atforkHandlers[NUM_ATFORK_HANDLERS];
+
+// Number of handlers (also an index to the next one)
+static int nHandlers = 0;
 
 int ftruncate(int a, off_t b)
 {
@@ -135,6 +144,42 @@ void _exit(int val)
 int fork(void)
 {
     return (int)syscall0(POSIX_FORK);
+
+    if(nHandlers)
+    {
+        for(int i = 0; i < nHandlers; i++)
+        {
+            if(atforkHandlers[i].prepare)
+                atforkHandlers[i].prepare();
+        }
+    }
+
+    int pid = (int)syscall0(POSIX_FORK);
+
+    if(pid == 0)
+    {
+        if(nHandlers)
+        {
+            for(int i = 0; i < nHandlers; i++)
+            {
+                if(atforkHandlers[i].child)
+                    atforkHandlers[i].child();
+            }
+        }
+    }
+    else if(pid > 0)
+    {
+        if(nHandlers)
+        {
+            for(int i = 0; i < nHandlers; i++)
+            {
+                if(atforkHandlers[i].parent)
+                    atforkHandlers[i].parent();
+            }
+        }
+    }
+
+    return pid;
 }
 
 int vfork(void)
@@ -1607,4 +1652,74 @@ int getrusage(int who, struct rusage *r_usage)
 int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
     return syscall2(POSIX_SIGALTSTACK, (int) stack, (int) oldstack);
+}
+
+int sem_close(sem_t *sem)
+{
+    return syscall1(POSIX_SEM_CLOSE, (int) sem);
+}
+
+int sem_destroy(sem_t *sem)
+{
+    return syscall1(POSIX_SEM_DESTROY, (int) sem);
+}
+
+int sem_getvalue(sem_t *sem, int *val)
+{
+    return syscall2(POSIX_SEM_GETVALUE, (int) sem, (int) val);
+}
+
+int sem_init(sem_t *sem, int pshared, unsigned value)
+{
+    return syscall3(POSIX_SEM_INIT, (int) sem, pshared, value);
+}
+
+sem_t *sem_open(const char *name, int mode, ...)
+{
+    STUBBED("sem_open");
+    return 0;
+}
+
+int sem_post(sem_t *sem)
+{
+    return syscall1(POSIX_SEM_POST, (int) sem);
+}
+
+int sem_timedwait(sem_t *sem, const struct timespec *tm)
+{
+    return syscall2(POSIX_SEM_TIMEWAIT, (int) sem, (int) tm);
+}
+
+int sem_trywait(sem_t *sem)
+{
+    return syscall1(POSIX_SEM_TRYWAIT, (int) sem);
+}
+
+int sem_unlink(const char *name)
+{
+    STUBBED("sem_unlink");
+    return -1;
+}
+
+int sem_wait(sem_t *sem)
+{
+    return syscall1(POSIX_SEM_WAIT, (int) sem);
+}
+
+int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
+{
+    // Already full?
+    if(nHandlers == NUM_ATFORK_HANDLERS)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    // Create and insert
+    struct forkHandler handler;
+    handler.prepare = prepare;
+    handler.parent = parent;
+    handler.child = child;
+    atforkHandlers[nHandlers++] = handler;
+    return 0;
 }
