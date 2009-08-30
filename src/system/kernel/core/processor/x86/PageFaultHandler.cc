@@ -54,7 +54,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     va.getMapping(reinterpret_cast<void*>(page), phys, flags);
     if (flags & VirtualAddressSpace::CopyOnWrite)
     {
-        FATAL("Copy on write");
+        FATAL_NOLOCK("Copy on write");
 #if 0
       static uint8_t buffer[/*PhysicalMemoryManager::instance().getPageSize()*/4096];
       memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
@@ -119,8 +119,8 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   // Ensure the log spinlock isn't going to die on us...
 //  Log::instance().m_Lock.release();
 
-  ERROR(static_cast<const char*>(sError));
-  ERROR(static_cast<const char*>(sCode));
+  ERROR_NOLOCK(static_cast<const char*>(sError));
+  ERROR_NOLOCK(static_cast<const char*>(sCode));
 
   //static LargeStaticString eCode;
   #ifdef DEBUGGER
