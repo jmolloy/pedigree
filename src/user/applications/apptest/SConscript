@@ -49,8 +49,8 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'pthread'
-    # 'stdc++',
+    # 'pthread'
+    'stdc++',
 ]
 
 # To add a library path add to the list below
