@@ -1,0 +1,486 @@
+/*
+* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
+*
+* Permission to use, copy, modify, and distribute this software for any
+* purpose with or without fee is hereby granted, provided that the above
+* copyright notice and this permission notice appear in all copies.
+*
+* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+#ifndef i945G_CONSTANTS_H
+#define i945G_CONSTANTS_H
+
+enum i945GConstants {
+    /* HW registers */
+
+    /* Fence registers */
+    FENCE = 0x2000,
+    FENCE_NUM = 8,
+
+    /* Primary ring buffer */
+    PRI_RING_TAIL = 0x2030,
+    RING_TAIL_MASK = 0x001ffff8,
+    RING_INUSE = 0x1,
+
+    PRI_RING_HEAD = 0x2034,
+    RING_HEAD_WRAP_MASK = 0x7ff,
+    RING_HEAD_WRAP_SHIFT = 21,
+    RING_HEAD_MASK = 0x001ffffc,
+
+    PRI_RING_START = 0x2038,
+    RING_START_MASK = 0xfffff000,
+
+    PRI_RING_LENGTH = 0x203c,
+    RING_LENGTH_MASK = 0x001ff000,
+    RING_REPORT_MASK = (0x3 << 1),
+    RING_NO_REPORT = (0x0 << 1),
+    RING_REPORT_64K = (0x1 << 1),
+    RING_REPORT_4K = (0x2 << 1),
+    RING_REPORT_128K = (0x3 << 1),
+    RING_ENABLE = 0x1,
+
+    /*
+    * Tail can't wrap to any closer than RING_MIN_FREE bytes of the head,
+    * and the last RING_MIN_FREE bytes need to be padded with MI_NOOP
+    */
+    RING_MIN_FREE = 64,
+
+    IPEHR = 0x2088,
+
+    INSTDONE = 0x2090,
+    PRI_RING_EMPTY = 1,
+
+    HWSTAM = 0x2098,
+    IER = 0x20A0,
+    IIR = 0x20A4,
+    IMR = 0x20A8,
+    VSYNC_PIPE_A_INTERRUPT = (1 << 7),
+    PIPE_A_EVENT_INTERRUPT = (1 << 6),
+    VSYNC_PIPE_B_INTERRUPT = (1 << 5),
+    PIPE_B_EVENT_INTERRUPT = (1 << 4),
+    HOST_PORT_EVENT_INTERRUPT = (1 << 3),
+    CAPTURE_EVENT_INTERRUPT = (1 << 2),
+    USER_DEFINED_INTERRUPT = (1 << 1),
+    BREAKPOINT_INTERRUPT = 1,
+
+    INSTPM = 0x20c0,
+    SYNC_FLUSH_ENABLE = (1 << 5),
+
+    INSTPS = 0x20c4,
+
+    MEM_MODE = 0x20cc,
+
+    MASK_SHIFT = 16,
+
+    FW_BLC_0 = 0x20d8,
+    FW_DISPA_WM_SHIFT = 0,
+    FW_DISPA_WM_MASK = 0x3f,
+    FW_DISPA_BL_SHIFT = 8,
+    FW_DISPA_BL_MASK = 0xf,
+    FW_DISPB_WM_SHIFT = 16,
+    FW_DISPB_WM_MASK = 0x1f,
+    FW_DISPB_BL_SHIFT = 24,
+    FW_DISPB_BL_MASK = 0x7,
+
+    FW_BLC_1 = 0x20dc,
+    FW_DISPC_WM_SHIFT = 0,
+    FW_DISPC_WM_MASK = 0x1f,
+    FW_DISPC_BL_SHIFT = 8,
+    FW_DISPC_BL_MASK = 0x7,
+
+    GPIOA = 0x5010,
+    GPIOB = 0x5014,
+    GPIOC = 0x5018, /* this may be external DDC on i830 */
+    GPIOD = 0x501C, /* this is DVO DDC */
+    GPIOE = 0x5020, /* this is DVO i2C */
+    GPIOF = 0x5024,
+
+    /* PLL registers */
+    VGA0_DIVISOR = 0x06000,
+    VGA1_DIVISOR = 0x06004,
+    VGAPD = 0x06010,
+    VGAPD_0_P1_SHIFT = 0,
+    VGAPD_0_P1_FORCE_DIV2 = (1 << 5),
+    VGAPD_0_P2_SHIFT = 7,
+    VGAPD_1_P1_SHIFT = 8,
+    VGAPD_1_P1_FORCE_DIV2 = (1 << 13),
+    VGAPD_1_P2_SHIFT = 15,
+
+    DPLL_A = 0x06014,
+    DPLL_B = 0x06018,
+    DPLL_VCO_ENABLE = (1 << 31),
+    DPLL_2X_CLOCK_ENABLE = (1 << 30),
+    DPLL_SYNCLOCK_ENABLE = (1 << 29),
+    DPLL_VGA_MODE_DISABLE = (1 << 28),
+    DPLL_P2_MASK = 1,
+    DPLL_P2_SHIFT = 23,
+    DPLL_I9XX_P2_SHIFT = 24,
+    DPLL_P1_FORCE_DIV2 = (1 << 21),
+    DPLL_P1_MASK = 0x1f,
+    DPLL_P1_SHIFT = 16,
+    DPLL_REFERENCE_SELECT_MASK = (0x3 << 13),
+    DPLL_REFERENCE_DEFAULT = (0x0 << 13),
+    DPLL_REFERENCE_TVCLK = (0x2 << 13),
+    DPLL_RATE_SELECT_MASK = (1 << 8),
+    DPLL_RATE_SELECT_FP0 = (0 << 8),
+    DPLL_RATE_SELECT_FP1 = (1 << 8),
+
+    FPA0 = 0x06040,
+    FPA1 = 0x06044,
+    FPB0 = 0x06048,
+    FPB1 = 0x0604c,
+    FP_DIVISOR_MASK = 0x3f,
+    FP_N_DIVISOR_SHIFT = 16,
+    FP_M1_DIVISOR_SHIFT = 8,
+    FP_M2_DIVISOR_SHIFT = 0,
+
+    /* PLL parameters (these are for 852GM/855GM/865G, check earlier chips). */
+    /* Clock values are in units of kHz */
+    PLL_REFCLK = 48000,
+    MIN_CLOCK = 25000,
+    MAX_CLOCK = 350000,
+
+    /* Two pipes */
+    PIPE_A = 0,
+    PIPE_B = 1,
+    PIPE_MASK = 1,
+
+    /* palette registers */
+    PALETTE_A = 0x0a000,
+    PALETTE_B = 0x0a800,
+    PALETTE_8_ENTRIES = 256,
+    PALETTE_8_SIZE = (PALETTE_8_ENTRIES * 4),
+    PALETTE_10_ENTRIES = 128,
+    PALETTE_10_SIZE = (PALETTE_10_ENTRIES * 8),
+    PALETTE_8_MASK = 0xff,
+    PALETTE_8_RED_SHIFT = 16,
+    PALETTE_8_GREEN_SHIFT = 8,
+    PALETTE_8_BLUE_SHIFT = 0,
+
+    /* CRTC registers */
+    HTOTAL_A = 0x60000,
+    HBLANK_A = 0x60004,
+    HSYNC_A = 0x60008,
+    VTOTAL_A = 0x6000c,
+    VBLANK_A = 0x60010,
+    VSYNC_A = 0x60014,
+    SRC_SIZE_A = 0x6001c,
+    BCLRPAT_A = 0x60020,
+
+    HTOTAL_B = 0x61000,
+    HBLANK_B = 0x61004,
+    HSYNC_B = 0x61008,
+    VTOTAL_B = 0x6100c,
+    VBLANK_B = 0x61010,
+    VSYNC_B = 0x61014,
+    SRC_SIZE_B = 0x6101c,
+    BCLRPAT_B = 0x61020,
+
+    HTOTAL_MASK = 0xfff,
+    HTOTAL_SHIFT = 16,
+    HACTIVE_MASK = 0x7ff,
+    HACTIVE_SHIFT = 0,
+    HBLANKEND_MASK = 0xfff,
+    HBLANKEND_SHIFT = 16,
+    HBLANKSTART_MASK = 0xfff,
+    HBLANKSTART_SHIFT = 0,
+    HSYNCEND_MASK = 0xfff,
+    HSYNCEND_SHIFT = 16,
+    HSYNCSTART_MASK = 0xfff,
+    HSYNCSTART_SHIFT = 0,
+    VTOTAL_MASK = 0xfff,
+    VTOTAL_SHIFT = 16,
+    VACTIVE_MASK = 0x7ff,
+    VACTIVE_SHIFT = 0,
+    VBLANKEND_MASK = 0xfff,
+    VBLANKEND_SHIFT = 16,
+    VBLANKSTART_MASK = 0xfff,
+    VBLANKSTART_SHIFT = 0,
+    VSYNCEND_MASK = 0xfff,
+    VSYNCEND_SHIFT = 16,
+    VSYNCSTART_MASK = 0xfff,
+    VSYNCSTART_SHIFT = 0,
+    SRC_SIZE_HORIZ_MASK = 0x7ff,
+    SRC_SIZE_HORIZ_SHIFT = 16,
+    SRC_SIZE_VERT_MASK = 0x7ff,
+    SRC_SIZE_VERT_SHIFT = 0,
+
+    ADPA = 0x61100,
+    ADPA_DAC_ENABLE = (1 << 31),
+    ADPA_DAC_DISABLE = 0,
+    ADPA_PIPE_SELECT_SHIFT = 30,
+    ADPA_USE_VGA_HVPOLARITY = (1 << 15),
+    ADPA_SETS_HVPOLARITY = 0,
+    ADPA_DPMS_CONTROL_MASK = (0x3 << 10),
+    ADPA_DPMS_D0 = (0x0 << 10),
+    ADPA_DPMS_D2 = (0x1 << 10),
+    ADPA_DPMS_D1 = (0x2 << 10),
+    ADPA_DPMS_D3 = (0x3 << 10),
+    ADPA_VSYNC_ACTIVE_SHIFT = 4,
+    ADPA_HSYNC_ACTIVE_SHIFT = 3,
+    ADPA_SYNC_ACTIVE_MASK = 1,
+    ADPA_SYNC_ACTIVE_HIGH = 1,
+    ADPA_SYNC_ACTIVE_LOW = 0,
+
+    DVOA = 0x61120,
+    DVOB = 0x61140,
+    DVOC = 0x61160,
+    LVDS = 0x61180,
+    PORT_ENABLE = (1 << 31),
+    PORT_PIPE_SELECT_SHIFT = 30,
+    PORT_TV_FLAGS_MASK = 0xFF,
+    PORT_TV_FLAGS = 0xC4,    /* ripped from my BIOS
+    to understand and correct */
+
+    DVOA_SRCDIM = 0x61124,
+    DVOB_SRCDIM = 0x61144,
+    DVOC_SRCDIM = 0x61164,
+
+    PIPEA_DSL = 0x70000,
+    PIPEB_DSL = 0x71000,
+    PIPEACONF = 0x70008,
+    PIPEBCONF = 0x71008,
+    PIPEASTAT = 0x70024, /* bits 0-15 are "write 1 to clear" */
+    PIPEBSTAT = 0x71024,
+
+    PIPECONF_ENABLE = (1 << 31),
+    PIPECONF_DISABLE = 0,
+    PIPECONF_DOUBLE_WIDE = (1 << 30),
+    PIPECONF_SINGLE_WIDE = 0,
+    PIPECONF_LOCKED = (1 << 25),
+    PIPECONF_UNLOCKED = 0,
+    PIPECONF_GAMMA = (1 << 24),
+    PIPECONF_PALETTE = 0,
+    PIPECONF_PROGRESSIVE = (0 << 21),
+    PIPECONF_INTERLACE_W_FIELD_INDICATION = (6 << 21),
+    PIPECONF_INTERLACE_FIELD_0_ONLY = (7 << 21),
+    PIPECONF_INTERLACE_MASK = (7 << 21),
+
+    /* enable bits, write 1 to enable */
+    PIPESTAT_FIFO_UNDERRUN = (1 << 31),
+    PIPESTAT_CRC_ERROR_EN = (1 << 29),
+    PIPESTAT_CRC_DONE_EN = (1 << 28),
+    PIPESTAT_HOTPLUG_EN = (1 << 26),
+    PIPESTAT_VERTICAL_SYNC_EN = (1 << 25),
+    PIPESTAT_DISPLINE_COMP_EN = (1 << 24),
+    PIPESTAT_FLD_EVT_ODD_EN = (1 << 21),
+    PIPESTAT_FLD_EVT_EVEN_EN = (1 << 20),
+    PIPESTAT_TV_HOTPLUG_EN = (1 << 18),
+    PIPESTAT_VBLANK_EN = (1 << 17),
+    PIPESTAT_OVL_UPDATE_EN = (1 << 16),
+    /* status bits, write 1 to clear */
+    PIPESTAT_HOTPLUG_STATE = (1 << 15),
+    PIPESTAT_CRC_ERROR = (1 << 13),
+    PIPESTAT_CRC_DONE = (1 << 12),
+    PIPESTAT_HOTPLUG = (1 << 10),
+    PIPESTAT_VSYNC = (1 << 9),
+    PIPESTAT_DISPLINE_COMP = (1 << 8),
+    PIPESTAT_FLD_EVT_ODD = (1 << 5),
+    PIPESTAT_FLD_EVT_EVEN = (1 << 4),
+    PIPESTAT_TV_HOTPLUG = (1 << 2),
+    PIPESTAT_VBLANK = (1 << 1),
+    PIPESTAT_OVL_UPDATE = (1 << 0),
+
+    DISPARB = 0x70030,
+    DISPARB_AEND_MASK = 0x1ff,
+    DISPARB_AEND_SHIFT = 0,
+    DISPARB_BEND_MASK = 0x3ff,
+    DISPARB_BEND_SHIFT = 9,
+
+    /* Desktop HW cursor */
+    CURSOR_CONTROL = 0x70080,
+    CURSOR_ENABLE = (1 << 31),
+    CURSOR_GAMMA_ENABLE = (1 << 30),
+    CURSOR_STRIDE_MASK = (0x3 << 28),
+    CURSOR_STRIDE_256 = (0x0 << 28),
+    CURSOR_STRIDE_512 = (0x1 << 28),
+    CURSOR_STRIDE_1K = (0x2 << 28),
+    CURSOR_STRIDE_2K = (0x3 << 28),
+    CURSOR_FORMAT_MASK = (0x7 << 24),
+    CURSOR_FORMAT_2C = (0x0 << 24),
+    CURSOR_FORMAT_3C = (0x1 << 24),
+    CURSOR_FORMAT_4C = (0x2 << 24),
+    CURSOR_FORMAT_ARGB = (0x4 << 24),
+    CURSOR_FORMAT_XRGB = (0x5 << 24),
+
+    /* Mobile HW cursor (and i810) */
+    CURSOR_A_CONTROL = CURSOR_CONTROL,
+    CURSOR_B_CONTROL = 0x700c0,
+    CURSOR_MODE_MASK = 0x27,
+    CURSOR_MODE_DISABLE = 0,
+    CURSOR_MODE_64_3C = 0x04,
+    CURSOR_MODE_64_4C_AX = 0x05,
+    CURSOR_MODE_64_4C = 0x06,
+    CURSOR_MODE_64_32B_AX = 0x07,
+    CURSOR_MODE_64_ARGB_AX = 0x27,
+    CURSOR_PIPE_SELECT_SHIFT = 28,
+    CURSOR_MOBILE_GAMMA_ENABLE = (1 << 26),
+    CURSOR_MEM_TYPE_LOCAL = (1 << 25),
+
+    /* All platforms (desktop has no pipe B) */
+    CURSOR_A_BASEADDR = 0x70084,
+    CURSOR_B_BASEADDR = 0x700c4,
+    CURSOR_BASE_MASK = 0xffffff00,
+
+    CURSOR_A_POSITION = 0x70088,
+    CURSOR_B_POSITION = 0x700c8,
+    CURSOR_POS_SIGN = (1 << 15),
+    CURSOR_POS_MASK = 0x7ff,
+    CURSOR_X_SHIFT = 0,
+    CURSOR_Y_SHIFT = 16,
+
+    CURSOR_A_PALETTE0 = 0x70090,
+    CURSOR_A_PALETTE1 = 0x70094,
+    CURSOR_A_PALETTE2 = 0x70098,
+    CURSOR_A_PALETTE3 = 0x7009c,
+    CURSOR_B_PALETTE0 = 0x700d0,
+    CURSOR_B_PALETTE1 = 0x700d4,
+    CURSOR_B_PALETTE2 = 0x700d8,
+    CURSOR_B_PALETTE3 = 0x700dc,
+    CURSOR_COLOR_MASK = 0xff,
+    CURSOR_RED_SHIFT = 16,
+    CURSOR_GREEN_SHIFT = 8,
+    CURSOR_BLUE_SHIFT = 0,
+    CURSOR_PALETTE_MASK = 0xffffff,
+
+    /* Desktop only */
+    CURSOR_SIZE = 0x700a0,
+    CURSOR_SIZE_MASK = 0x3ff,
+    CURSOR_SIZE_H_SHIFT = 0,
+    CURSOR_SIZE_V_SHIFT = 12,
+
+    DSPACNTR = 0x70180,
+    DSPBCNTR = 0x71180,
+    DISPPLANE_PLANE_ENABLE = (1 << 31),
+    DISPPLANE_PLANE_DISABLE = 0,
+    DISPPLANE_GAMMA_ENABLE = (1<<30),
+    DISPPLANE_GAMMA_DISABLE = 0,
+    DISPPLANE_PIXFORMAT_MASK = (0xf<<26),
+    DISPPLANE_8BPP = (0x2<<26),
+    DISPPLANE_15_16BPP = (0x4<<26),
+    DISPPLANE_16BPP = (0x5<<26),
+    DISPPLANE_32BPP_NO_ALPHA = (0x6<<26),
+    DISPPLANE_32BPP = (0x7<<26),
+    DISPPLANE_STEREO_ENABLE = (1<<25),
+    DISPPLANE_STEREO_DISABLE = 0,
+    DISPPLANE_SEL_PIPE_SHIFT = 24,
+    DISPPLANE_SRC_KEY_ENABLE = (1<<22),
+    DISPPLANE_SRC_KEY_DISABLE = 0,
+    DISPPLANE_LINE_DOUBLE = (1<<20),
+    DISPPLANE_NO_LINE_DOUBLE = 0,
+    DISPPLANE_STEREO_POLARITY_FIRST = 0,
+    DISPPLANE_STEREO_POLARITY_SECOND = (1<<18),
+    /* plane B only */
+    DISPPLANE_ALPHA_TRANS_ENABLE = (1<<15),
+    DISPPLANE_ALPHA_TRANS_DISABLE = 0,
+    DISPPLANE_SPRITE_ABOVE_DISPLAYA = 0,
+    DISPPLANE_SPRITE_ABOVE_OVERLAY = 1,
+
+    DSPABASE = 0x70184,
+    DSPASTRIDE = 0x70188,
+
+    DSPBBASE = 0x71184,
+    DSPBSTRIDE = 0x71188,
+
+    VGACNTRL = 0x71400,
+    VGA_DISABLE = (1 << 31),
+    VGA_ENABLE = 0,
+    VGA_PIPE_SELECT_SHIFT = 29,
+    VGA_PALETTE_READ_SELECT = 23,
+    VGA_PALETTE_A_WRITE_DISABLE = (1 << 22),
+    VGA_PALETTE_B_WRITE_DISABLE = (1 << 21),
+    VGA_LEGACY_PALETTE = (1 << 20),
+    VGA_6BIT_DAC = 0,
+    VGA_8BIT_DAC = (1 << 20),
+
+    ADD_ID = 0x71408,
+    ADD_ID_MASK = 0xff,
+
+    /* BIOS scratch area registers (830M and 845G). */
+    SWF0 = 0x71410,
+    SWF1 = 0x71414,
+    SWF2 = 0x71418,
+    SWF3 = 0x7141c,
+    SWF4 = 0x71420,
+    SWF5 = 0x71424,
+    SWF6 = 0x71428,
+
+    /* BIOS scratch area registers (852GM, 855GM, 865G). */
+    SWF00 = 0x70410,
+    SWF01 = 0x70414,
+    SWF02 = 0x70418,
+    SWF03 = 0x7041c,
+    SWF04 = 0x70420,
+    SWF05 = 0x70424,
+    SWF06 = 0x70428,
+
+    SWF10 = SWF0,
+    SWF11 = SWF1,
+    SWF12 = SWF2,
+    SWF13 = SWF3,
+    SWF14 = SWF4,
+    SWF15 = SWF5,
+    SWF16 = SWF6,
+
+    SWF30 = 0x72414,
+    SWF31 = 0x72418,
+    SWF32 = 0x7241c,
+
+    /* Memory Commands */
+    MI_NOOP = (0x00 << 23),
+    MI_NOOP_WRITE_ID = (1 << 22),
+    MI_NOOP_ID_MASK = ((1 << 22) - 1),
+
+    MI_FLUSH = (0x04 << 23),
+    MI_WRITE_DIRTY_STATE = (1 << 4),
+    MI_END_SCENE = (1 << 3),
+    MI_INHIBIT_RENDER_CACHE_FLUSH = (1 << 2),
+    MI_INVALIDATE_MAP_CACHE = (1 << 0),
+
+    MI_STORE_DWORD_IMM = ((0x20 << 23) | 1),
+
+    /* 2D Commands */
+    COLOR_BLT_CMD = ((2 << 29) | (0x40 << 22) | 3),
+    XY_COLOR_BLT_CMD = ((2 << 29) | (0x50 << 22) | 4),
+    XY_SETUP_CLIP_BLT_CMD = ((2 << 29) | (0x03 << 22) | 1),
+    XY_SRC_COPY_BLT_CMD = ((2 << 29) | (0x53 << 22) | 6),
+    SRC_COPY_BLT_CMD = ((2 << 29) | (0x43 << 22) | 4),
+    XY_MONO_PAT_BLT_CMD = ((2 << 29) | (0x52 << 22) | 7),
+    XY_MONO_SRC_BLT_CMD = ((2 << 29) | (0x54 << 22) | 6),
+    XY_MONO_SRC_IMM_BLT_CMD = ((2 << 29) | (0x71 << 22) | 5),
+    TXT_IMM_BLT_CMD = ((2 << 29) | (0x30 << 22) | 2),
+    SETUP_BLT_CMD = ((2 << 29) | (0x00 << 22) | 6),
+
+    DW_LENGTH_MASK = 0xff,
+
+    WRITE_ALPHA = (1 << 21),
+    WRITE_RGB = (1 << 20),
+    VERT_SEED = (3 << 8),
+    HORIZ_SEED = (3 << 12),
+
+    COLOR_DEPTH_8 = (0 << 24),
+    COLOR_DEPTH_16 = (1 << 24),
+    COLOR_DEPTH_32 = (3 << 24),
+
+    SRC_ROP_GXCOPY = 0xcc,
+    SRC_ROP_GXXOR = 0x66,
+
+    PAT_ROP_GXCOPY = 0xf0,
+    PAT_ROP_GXXOR = 0x5a,
+
+    PITCH_SHIFT = 0,
+    ROP_SHIFT = 16,
+    WIDTH_SHIFT = 0,
+    HEIGHT_SHIFT = 16,
+
+    /* in bytes */
+    MAX_MONO_IMM_SIZE = 128,
+};
+
+#endif
