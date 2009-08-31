@@ -32,7 +32,14 @@ CdiDisk::CdiDisk(Disk* pDev, struct cdi_storage_device* device) :
     Disk(), m_Device(device)
 {
     setSpecificType(String("CDI Disk"));
+}
 
+CdiDisk::~CdiDisk()
+{
+}
+
+bool CdiDisk::initialise()
+{
     // Chat to the partition service and let it pick up that we're around now
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
     Service         *pService  = ServiceManager::instance().getService(String("partition"));
@@ -45,21 +52,23 @@ CdiDisk::CdiDisk(Disk* pDev, struct cdi_storage_device* device) :
             if(pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(this), sizeof(CdiDisk)))
                 NOTICE("Successful.");
             else
+            {
                 ERROR("Failed.");
+                return false;
+            }
         }
         else
+        {
             ERROR("FileDisk: Couldn't tell the partition service about the new disk presence");
+            return false;
+        }
     }
     else
+    {
         ERROR("FileDisk: Partition service doesn't appear to support touch");
-}
+        return false;
+    }
 
-CdiDisk::~CdiDisk()
-{
-}
-
-bool CdiDisk::initialise()
-{
     return true;
 }
 
@@ -91,6 +100,11 @@ void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device)
     ///       correct, but it's a quick fix that should work for now. It will need
     ///       to be fixed later!
     CdiDisk *pCdiDisk = new CdiDisk(pDev, device);
+    if(!pCdiDisk->initialise())
+    {
+        delete pCdiDisk;
+        return;
+    }
     device->dev.pDev = reinterpret_cast<void*>(pCdiDisk);
 
     // Insert into the tree, properly

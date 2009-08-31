@@ -253,13 +253,18 @@ int cdi_ioports_free(uint16_t start, uint16_t count)
 void cdi_sleep_ms(uint32_t ms)
 {
     if(ms < 1000)
-        WARNING("cdi_sleep_ms called with millisecond granularity - yell at a dev to implement");
+    {
+        WARNING("cdi_sleep_ms called with millisecond granularity - yell at a dev to implement. Waiting a second rather than " << Dec << ms << Hex << " ms.");
+        ms = 1000;
+    }
 
     if(ms >= 1000)
     {
         Semaphore sem(0);
         sem.acquire(1, (ms / 1000));
     }
+
+    // FATAL("hai");
 }
 
 uint8_t cdi_cmos_read(uint8_t index)

@@ -35,7 +35,7 @@ driver_common_subdirs = [
     'sis900',
 
     # CDI Disk drivers
-    'floppy'
+    # 'floppy' # Needs millisecond granularity in cdi_sleep_ms...
 ]
 
 # Architecture-specific drivers
