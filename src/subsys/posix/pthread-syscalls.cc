@@ -61,8 +61,7 @@ int pthread_kernel_enter(void *blk)
     // Just keep using our current stack, don't bother to save any state. We'll
     // never return, so there's no need to be sentimental (and no need to worry
     // about return addresses etc)
-    uintptr_t stack = 0;
-    asm volatile("mov %%esp, %%eax" : "=a" (stack));
+    uintptr_t stack = Processor::getStackPointer();
     if(!stack) // Because sanity costs little.
         return -1;
 
