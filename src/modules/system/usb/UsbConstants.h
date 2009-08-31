@@ -21,6 +21,7 @@
 
 #define HCI_CLASS       0x0C
 #define HCI_SUBCLASS    0x03
+#define HCI_PROGIF      0x20
 
 typedef struct UsbSetup
 {

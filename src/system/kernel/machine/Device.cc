@@ -29,7 +29,7 @@ Device::Device() : m_Addresses(), m_Children(), m_pParent(0),
 #endif
                    m_InterruptNumber(0),
                    m_SpecificType(),
-                   m_ClassCode(0), m_SubclassCode(0), m_VendorId(0), m_DeviceId(0)
+                   m_ClassCode(0), m_SubclassCode(0), m_VendorId(0), m_DeviceId(0), m_ProgInterface(0)
 {
 }
 
@@ -39,7 +39,7 @@ Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_Interr
 #endif
                              m_SpecificType(p->m_SpecificType),
                              m_ClassCode(p->m_ClassCode), m_SubclassCode(p->m_SubclassCode),
-                             m_VendorId(p->m_VendorId), m_DeviceId(p->m_DeviceId)
+                             m_VendorId(p->m_VendorId), m_DeviceId(p->m_DeviceId), m_ProgInterface(p->m_ProgInterface)
 {
   m_pParent = p->m_pParent;
   for (unsigned int i = 0; i < p->m_Children.count(); i++)

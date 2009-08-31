@@ -118,12 +118,13 @@ public:
   }
 
   /** PCI-specific identifiers - class code, subclass code, vendor and device ID **/
-  void setPciIdentifiers(uint8_t classCode, uint8_t subclassCode, uint16_t vendorId, uint16_t deviceId)
+  void setPciIdentifiers(uint8_t classCode, uint8_t subclassCode, uint16_t vendorId, uint16_t deviceId, uint8_t progIf)
   {
     m_ClassCode = classCode;
     m_SubclassCode = subclassCode;
     m_VendorId = vendorId;
     m_DeviceId = deviceId;
+    m_ProgInterface = progIf;
   }
   /** Returns the PCI class code. */
   uint8_t getPciClassCode()
@@ -144,6 +145,11 @@ public:
   uint16_t getPciDeviceId()
   {
     return m_DeviceId;
+  }
+  /** Returns the PCI programming interface. */
+  uint8_t getPciProgInterface()
+  {
+    return m_ProgInterface;
   }
 
   /** Dumps a textual representation of the device into the given string. */
@@ -236,6 +242,8 @@ protected:
   uint16_t m_VendorId;
   /** PCI Device ID */
   uint16_t m_DeviceId;
+  /** PCI Programming Interface */
+  uint8_t m_ProgInterface;
 };
 
 #endif

@@ -41,8 +41,13 @@ void searchNode(Device *pDev)
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
-        if((pChild->getPciClassCode() == HCI_CLASS) && (pChild->getPciSubclassCode() == HCI_SUBCLASS))
+        if((pChild->getPciClassCode() == HCI_CLASS) &&
+           (pChild->getPciSubclassCode() == HCI_SUBCLASS) &&
+           (pChild->getPciProgInterface() == HCI_PROGIF))
+        {
             probeHCI(pChild);
+        }
+
         // Recurse.
         searchNode(pChild);
     }

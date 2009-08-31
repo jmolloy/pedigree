@@ -51,7 +51,8 @@ struct ConfigSpace
   uint16_t device;
   uint16_t command;
   uint16_t status;
-  uint16_t revision;
+  uint8_t  revision;
+  uint8_t  progif;
   uint8_t  subclass;
   uint8_t  class_code;
   uint8_t  cache_line_size;
@@ -179,7 +180,7 @@ void entry()
         char c[256];
         sprintf(c, "%s - %s", getDevice(cs.vendor, cs.device), getVendor(cs.vendor));
         pDevice->setSpecificType(String(c));
-        pDevice->setPciIdentifiers(cs.class_code, cs.subclass, cs.vendor, cs.device);
+        pDevice->setPciIdentifiers(cs.class_code, cs.subclass, cs.vendor, cs.device, cs.progif);
 
         for (int l = 0; l < 6; l++)
         {
