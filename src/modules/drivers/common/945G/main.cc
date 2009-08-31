@@ -14,21 +14,21 @@
 * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#include <Log.h>
 #include <Module.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <machine/Device.h>
-#include <usb/UsbConstants.h>
-#include "UHCI.h"
+#include "945G.h"
+#include <Log.h>
 
-void probeUHCI(Device *pDev)
+void probeDevice(Device *pDev)
 {
-    NOTICE("USB: UHCI found");
-    UHCI *pUHCI = new UHCI(pDev);
-    // Replace pDev with pUHCI.
-    pUHCI->setParent(pDev->getParent());
-    pDev->getParent()->replaceChild(pDev, pUHCI);
+    // Create a new 945G node
+    i945G *p945G = new i945G(pDev);
+
+    // Replace pDev with p945G.
+    p945G->setParent(pDev->getParent());
+    pDev->getParent()->replaceChild(pDev, p945G);
 }
 
 void searchNode(Device *pDev)
@@ -36,11 +36,14 @@ void searchNode(Device *pDev)
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
-        if((pChild->getPciClassCode() == HCI_CLASS) &&
-           (pChild->getPciSubclassCode() == HCI_SUBCLASS) &&
-           (pChild->getPciProgInterface() == HCI_PROGIF_UHCI))
+
+        if((pChild->getPciVendorId() == i945G_VENDOR_ID) && (pChild->getPciDeviceId() == i945G_DEVICE_ID))
         {
-            probeUHCI(pChild);
+            uintptr_t irq = pChild->getInterruptNumber();
+            WARNING("945G found, IRQ = " << irq << ".");
+
+            //if(pChild->addresses()[0]->m_IsIoSpace)
+                probeDevice(pChild);
         }
 
         // Recurse.
@@ -59,7 +62,7 @@ void exit()
 
 }
 
-MODULE_NAME("uhci");
+MODULE_NAME("945G");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("pci", "usb");
+MODULE_DEPENDS(0);

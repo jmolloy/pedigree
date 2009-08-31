@@ -17,6 +17,7 @@ driver_common_subdirs = [
 
     # Pedigree-specific video
     'nvidia',
+    '945G',
 
     # Pedigree-specific NICs
     '3c90x',
