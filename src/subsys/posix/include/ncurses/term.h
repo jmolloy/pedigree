@@ -701,7 +701,7 @@ typedef struct term {		/* describe an actual terminal */
     char *      _termname;      /* used for termname() */
 } TERMINAL;
 
-#if 1 || 0
+#if 0
 NCURSES_WRAPPED_VAR(TERMINAL *, cur_term);
 NCURSES_WRAPPED_VAR(NCURSES_CONST char * const *, boolnames);
 NCURSES_WRAPPED_VAR(NCURSES_CONST char * const *, boolcodes);
