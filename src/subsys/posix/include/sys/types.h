@@ -294,7 +294,7 @@ typedef long suseconds_t;
  * This means that we don't use the types defined here, but rather in
  * <cygwin/types.h>
  */
-#if defined(_POSIX_THREADS) && !defined(__CYGWIN__)
+#if 0 &&  defined(_POSIX_THREADS) && !defined(__CYGWIN__)
 
 #include <sys/sched.h>
 
@@ -423,6 +423,7 @@ typedef struct {
 } pthread_rwlockattr_t;
 #endif /* defined(_POSIX_READER_WRITER_LOCKS) */
 
+#if defined(_POSIX_THREADS)
 // Pedigree pthread types
 typedef int pthread_t;
 typedef int pthread_cond_t;
@@ -440,6 +441,7 @@ typedef struct _pthread_attr_t
     int detachState;
     __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
 } pthread_attr_t;
+#endif
 
 #endif  /* !__need_inttypes */
 
