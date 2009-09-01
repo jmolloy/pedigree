@@ -237,7 +237,7 @@ extern "C" {
 
 /* line graphics */
 
-#if 1 || NCURSES_REENTRANT
+#if NCURSES_REENTRANT
 NCURSES_WRAPPED_VAR(chtype*, acs_map);
 #define acs_map NCURSES_PUBLIC_VAR(acs_map())
 #else
