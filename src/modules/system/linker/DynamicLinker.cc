@@ -68,20 +68,24 @@ DynamicLinker::~DynamicLinker()
 
 bool DynamicLinker::loadProgram(File *pFile)
 {
+    NOTICE("LoadProgram: " << (uintptr_t)pFile);
     uintptr_t buffer;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
+
+    String fileName;
+    pFile->getName(fileName);
 
     m_pProgramElf = new Elf();
     if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
     {
-        FATAL("DynamicLinker: Main program ELF failed to create: `" << pFile->getName() << "' at " << buffer);
+        FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
         MemoryMappedFileManager::instance().unmap(pMmFile);
         return false;
     }
 
     if (!m_pProgramElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), m_ProgramStart, 0, false, &m_ProgramSize))
     {
-        ERROR("DynamicLinker: Main program ELF failed to load: `" << pFile->getName() << "'");
+        ERROR("DynamicLinker: Main program ELF failed to load: `" << fileName << "'");
         MemoryMappedFileManager::instance().unmap(pMmFile);
         return false;
     }

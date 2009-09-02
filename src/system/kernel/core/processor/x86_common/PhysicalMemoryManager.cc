@@ -58,6 +58,9 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     }
 #endif
 
+    if (ptr == 0)
+        FATAL("Out of physical memory!");
+
     return ptr;
 }
 void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
@@ -147,6 +150,8 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
         Region.m_PhysicalAddress = start;
         Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
+
+//       NOTICE("MR: Allocated " << Hex << vAddress << " (phys " << static_cast<uintptr_t>(start) << "), size " << (cPages*4096));
 
         // Add to the list of memory-regions
         PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
@@ -388,6 +393,7 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
             VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
             for (size_t i = 0;i < cPages;i++)
                 virtualAddressSpace.unmap(reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize()));
+//            NOTICE("MR: Freed " << Hex << start << ", size " << (cPages*4096));
             m_MemoryRegions.free(start, pRegion->size());
             PhysicalMemoryManager::m_MemoryRegions.erase(it);
             break;
@@ -395,7 +401,8 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
     }
 }
 
-
+size_t g_FreePages = 0;
+size_t g_AllocedPages = 0;
 physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t constraints)
 {
     size_t index = 0;
@@ -420,6 +427,9 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t co
         {
             m_StackSize[0] -= 4;
             result = *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4);
+            /// \note Testing.
+            g_FreePages --;
+            g_AllocedPages ++;
         }
         else
         {
@@ -467,6 +477,10 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
         {
             *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4) = static_cast<uint32_t>(physicalAddress);
             m_StackSize[0] += 4;
+            /// \note Testing.
+            g_FreePages ++;
+            if (g_AllocedPages > 0)
+                g_AllocedPages --;
         }
         else
         {

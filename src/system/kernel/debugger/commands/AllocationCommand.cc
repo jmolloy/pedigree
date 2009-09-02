@@ -60,6 +60,10 @@ bool AllocationCommand::execute(const HugeStaticString &input, HugeStaticString 
       uintptr_t accum = 0;
       for (int i = 0; i < NUM_BT_FRAMES; i++)
           accum ^= pA->ra[i];
+
+      // Along with process ID...
+      accum += pA->pid<<16;
+
       // Lookup the checksum.
       Allocation *pOther = m_Tree.lookup(accum);
       if (pOther == 0)
@@ -185,7 +189,8 @@ const char *AllocationCommand::getLine1(size_t index, DebuggerIO::Colour &colour
       Line += m_nIdx;
       Line += "/";
       Line += m_Tree.count();
-      Line += ")";
+      Line += ") PID: ";
+      Line += pA->pid;
       return Line;
   }
   index--;
@@ -235,6 +240,12 @@ void AllocationCommand::allocatePage(physical_uintptr_t page)
     pA->page = page;
     memcpy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
 
+    Process *pP = Processor::information().getCurrentThread()->getParent();
+    if (pP)
+        pA->pid = pP->getId();
+    else
+        pA->pid = -1;
+
     m_Allocations.pushBack(pA);
 }
 
@@ -265,7 +276,7 @@ void AllocationCommand::postProcess()
             }
         }
 
-        m_Frees.erase(it);
+        it = m_Frees.erase(it);
         it = m_Frees.begin();
     }
     NOTICE("End free-list post processing.");

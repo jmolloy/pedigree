@@ -134,6 +134,11 @@ public:
         setKernelStack();
     }
 
+    void *getStateUserStack()
+    {
+        return m_StateLevels[m_nStateLevel].m_pUserStack;
+    }
+
     /** Returns the state nesting level. */
     size_t getStateLevel()
     {return m_nStateLevel;}    
@@ -293,13 +298,13 @@ private:
     struct StateLevel
     {
         StateLevel() :
-            m_State(), m_pKernelStack(0), m_pAuxillaryStack(0), m_InhibitMask(), m_pBlockingThread(0)
+            m_State(), m_pKernelStack(0), m_pUserStack(0), m_pAuxillaryStack(0), m_InhibitMask(), m_pBlockingThread(0)
         {}
         ~StateLevel()
         {}
 
         StateLevel(const StateLevel &s) :
-            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask),
+            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pUserStack(s.m_pUserStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask),
             m_pBlockingThread(s.m_pBlockingThread)
         {}
 
@@ -316,6 +321,8 @@ private:
 
         /** Our kernel stack. */
         void *m_pKernelStack;
+
+        void *m_pUserStack;
 
         /** Auxillary stack, to be freed in case the kernel stack is null.
          *  This allows kernel mode threads to have stacks freed, as they

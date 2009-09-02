@@ -78,13 +78,17 @@ public:
     bool decreaseRefCount()
     {
         m_RefCount--;
-        if (m_RefCount == 0) return m_bMarkedForDeletion;
+        if (m_RefCount == 0) return true;//m_bMarkedForDeletion;
         else return false;
     }
 
     size_t getExtent()
         {return m_Extent;}
 
+    File *getFile()
+    {
+        return m_pFile;
+    }
 private:
     MemoryMappedFile(const MemoryMappedFile &);
     MemoryMappedFile &operator = (const MemoryMappedFile &);

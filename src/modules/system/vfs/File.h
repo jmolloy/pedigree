@@ -79,6 +79,7 @@ public:
 
     /** Returns the name of the file. */
     String getName();
+    void getName(String &s);
     // File names cannot be changed.
 
     /** Obtains the full path of the File. */

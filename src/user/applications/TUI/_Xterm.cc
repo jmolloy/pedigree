@@ -67,9 +67,9 @@ Xterm::~Xterm()
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    char str[64];
-    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
-    log(str);
+//    char str[64];
+//    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
+//    log(str);
 
     if(m_bChangingState)
     {
@@ -753,7 +753,7 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
-    log("eraseScreen");
+//    log("eraseScreen");
 
     // One good fillRect should do the job nicely.
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
@@ -769,7 +769,7 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
-    log("eraseEOL");
+//    log("eraseEOL");
 
     size_t l = m_OffsetLeft+m_CursorX*g_NormalFont->getWidth();
 
@@ -785,7 +785,7 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
-    log("eraseSOL");
+//    log("eraseSOL");
 
     int32_t row = static_cast<int32_t>(m_CursorY);
     for(int32_t col = static_cast<int32_t>(m_CursorX); col >= 0; col--)
@@ -804,7 +804,7 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
-    log("eraseLine");
+    //log("eraseLine");
 
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_CursorX; col++)
@@ -823,7 +823,7 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
-    log("eraseChars");
+    //log("eraseChars");
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < (m_CursorX + n); col++)
@@ -842,7 +842,7 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
-    log("eraseUp");
+    //log("eraseUp");
 
     for(int32_t row = static_cast<int32_t>(m_CursorY); row >= 0; row--)
     {
@@ -863,7 +863,7 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
-    log("eraseDown");
+//    log("eraseDown");
 
     for(size_t row = m_CursorY; row < m_Height; row++)
     {
@@ -884,7 +884,7 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
-    log("deleteCharacters");
+    //  log("deleteCharacters");
 
     // Start of the delete region
     size_t deleteStart = m_CursorX;

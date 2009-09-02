@@ -55,6 +55,7 @@
 #define POSIX_DUP2       34
 #define POSIX_LSTAT      35
 #define POSIX_UNLINK     36
+#define POSIX_SYMLINK    1000
 
 #define POSIX_GETHOSTBYNAME   37
 #define POSIX_GETHOSTBYADDR   38

@@ -209,6 +209,8 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
         return false;
     }
 
+    Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
+
     // Create the new File object.
     File *pFile = 0;
     switch (type)
@@ -217,8 +219,13 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
             pFile = new Ext2File(filename, inode_num, newInode, this, parent);
             break;
         case EXT2_S_IFDIR:
-            pFile = new Ext2Directory(filename, inode_num, newInode, this, parent);
+        {
+            Ext2Directory *pE2Dir = new Ext2Directory(filename, inode_num, newInode, this, parent);
+            pFile = pE2Dir;
+            pE2Dir->addEntry(String(".."), pE2Parent, EXT2_S_IFDIR);
+            pE2Dir->addEntry(String("."), pFile, EXT2_S_IFDIR);
             break;
+        }
         case EXT2_S_IFLNK:
             pFile = new Ext2Symlink(filename, inode_num, newInode, this, parent);
             break;
@@ -235,7 +242,6 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     }
 
     // Add to the parent directory.
-    Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
     if (!pE2Parent->addEntry(filename, pFile, type))
     {
         ERROR("EXT2: Internal error adding directory entry.");
@@ -257,7 +263,10 @@ bool Ext2Filesystem::createFile(File *parent, String filename, uint32_t mask)
 
 bool Ext2Filesystem::createDirectory(File* parent, String filename)
 {
-    return createNode(parent, filename, 0, String(""), EXT2_S_IFDIR);
+    if (!createNode(parent, filename, 0, String(""), EXT2_S_IFDIR))
+        return false;
+
+    
 }
 
 bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)

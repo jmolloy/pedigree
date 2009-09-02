@@ -195,6 +195,7 @@ void init_stage2()
     File* initProg = VFS::instance().find(String("root»/applications/TUI"));
     if (!initProg)
     {
+        NOTICE("INIT: FileNotFound!!");
         initProg = VFS::instance().find(String("root»/applications/tui"));
         if (!initProg)
         {
@@ -202,7 +203,9 @@ void init_stage2()
             return;
         }
     }
-
+    NOTICE("INIT: File found: " << (uintptr_t)initProg);
+    String fname = initProg->getName();
+    NOTICE("INIT: name: " << fname);
     // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
     // in the kernel address space so we have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();

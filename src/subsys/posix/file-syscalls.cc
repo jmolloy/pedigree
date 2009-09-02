@@ -346,7 +346,7 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
     HugeStaticString tmp;
     str.clear();
     tmp.clear();
-    NOTICE("Before followlink");
+
     return Symlink::fromFile(f)->followLink(buf, bufsize);
 }
 
@@ -358,6 +358,18 @@ int posix_unlink(char *name)
         return 0;
     else
         return -1; /// \todo SYSCALL_ERROR of some sort
+}
+
+int posix_symlink(char *target, char *link)
+{
+    F_NOTICE("symlink(" << target << ", " << link << ")");
+
+    bool worked = VFS::instance().createSymlink(String(link), String(target), GET_CWD());    
+    if (worked)
+        return 0;
+    else
+        ERROR("Symlink failed for `" << link << "' -> `" << target << "'");
+    return -1;
 }
 
 int posix_rename(const char* source, const char* dst)

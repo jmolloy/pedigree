@@ -274,7 +274,8 @@ Rtc::Rtc()
     m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0), m_Alarms()
 {
 }
-
+extern size_t g_FreePages;
+extern size_t g_AllocedPages;
 bool Rtc::irq(irq_id_t number, InterruptState &state)
 {
   static size_t index = 0;
@@ -289,6 +290,21 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   {
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
+
+#if 1
+    Serial *pSerial = Machine::instance().getSerial(1);
+    NormalStaticString str;
+    str += "Heap: ";
+    str += (reinterpret_cast<uintptr_t>(VirtualAddressSpace::getKernelAddressSpace().m_HeapEnd)-0xC0000000) / 1024;
+    str += "K\tPages: ";
+    str += (g_AllocedPages * 4096) / 1024;
+    str += "K\t Free: ";
+    str += (g_FreePages * 4096) / 1024;
+    str += "K\n";
+
+    pSerial->write(str);
+    
+#endif
 
     // Second has ticked, call any alarms.
     while (true)

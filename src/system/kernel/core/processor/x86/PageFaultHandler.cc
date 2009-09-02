@@ -45,6 +45,8 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);
 
+//  NOTICE_NOLOCK("PF: At " << Hex << cr2 << ", eip: " << state.getInstructionPointer());
+
   // Check for copy-on-write.
   VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
   if (va.isMapped(reinterpret_cast<void*>(page)))

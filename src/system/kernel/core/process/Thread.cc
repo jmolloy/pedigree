@@ -33,12 +33,11 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   }
 
   // Initialise our kernel stack.
-  // void *m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-  m_pAllocatedStack = 0; //m_pKernelStack;
+  m_pAllocatedStack = 0;
 
   // Initialise state level zero
-  m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
   m_StateLevels[0].m_pAuxillaryStack = 0;
+  allocateStackAtLevel(0);
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
@@ -98,10 +97,10 @@ Thread::Thread(Process *pParent, SyscallState &state) :
 
   // Initialise our kernel stack.
   // m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-  m_pAllocatedStack = 0; //m_pKernelStack;
+  m_pAllocatedStack = 0;
 
   // Initialise state level zero
-  m_StateLevels[0].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+  allocateStackAtLevel(0);
 
   m_Id = m_pParent->addThread(this);
 
@@ -128,6 +127,10 @@ Thread::~Thread()
         VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pKernelStack);
     else if(m_StateLevels[i].m_pAuxillaryStack)
         VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pAuxillaryStack);
+    if (m_StateLevels[i].m_pUserStack)
+        // Can't use Processor::getCurrent.. as by the time we're called
+        // we may have switched address spaces to allow the thread to die.
+        m_pParent->getAddressSpace()->freeStack(m_StateLevels[i].m_pUserStack);
   }
 }
 
@@ -147,6 +150,8 @@ void Thread::allocateStackAtLevel(size_t stateLevel)
 {
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+    if(m_StateLevels[stateLevel].m_pUserStack == 0)
+        m_StateLevels[stateLevel].m_pUserStack = Processor::information().getVirtualAddressSpace().allocateStack();
 }
 
 void Thread::setKernelStack()

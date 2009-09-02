@@ -30,7 +30,7 @@ VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffe
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz) :
-    Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(),
+    Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
     m_Buffers(), m_Allocator()
 {
   Display::ScreenMode *pSm = 0;
@@ -54,7 +54,9 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
        it != m_Addresses.end();
        it++)
   {
-    if ((*it)->m_Address == pSm->framebuffer)
+    uintptr_t address = (*it)->m_Address;
+    size_t size = (*it)->m_Size;
+    if (address <= pSm->framebuffer && (address+size) > pSm->framebuffer)
     {
       m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
       break;
@@ -116,6 +118,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
   Machine::instance().getVga(0)->setMode(m_Mode.id);
 
   // Inform the TUI that the current mode has changed.
+
   g_TuiSyscallManager.modeChanged(this, m_Mode, m_pFramebuffer->physicalAddress(), m_pFramebuffer->size());
 
   return true;

@@ -151,8 +151,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         //eventHandlerReturned();
         return;
     }
-    //if (pEvent->getNumber() == ~0UL){
-    //    FATAL("my anus.");}
+
+    SchedulerState &oldState = pThread->pushState();
 
     physical_uintptr_t page;
     size_t flags;
@@ -164,19 +164,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
       if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
       {
-          // Allocate a proper userstack
-          void *newStack = va.allocateStack();
-          if(!newStack)
-          {
-              // Let the event go, we're out of memory
-              ERROR("An event was let go because a usermode stack could not be allocated!");
-              Processor::setInterrupts(bWasInterrupts);
-              return;
-          }
-
-          // And we now have a stack
-          /// \todo We need to be able to free or at least cache the allocated stack!
-          userStack = reinterpret_cast<uintptr_t>(newStack);
+          userStack = reinterpret_cast<uintptr_t>(pThread->getStateUserStack());
       }
       else
       {
@@ -190,8 +178,6 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           }
       }
     }
-
-    SchedulerState &oldState = pThread->pushState();
 
     // The address of the serialize buffer is determined by the thread ID and the nesting level.
     uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS +

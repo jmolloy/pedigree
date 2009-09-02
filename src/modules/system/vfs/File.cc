@@ -88,6 +88,11 @@ String File::getName()
   return m_Name;
 }
 
+void File::getName(String &s)
+{
+    s = m_Name;
+}
+
 size_t File::getSize()
 {
   return m_Size;

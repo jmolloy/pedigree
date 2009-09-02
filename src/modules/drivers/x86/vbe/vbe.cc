@@ -62,7 +62,10 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
       ///      Unfortunately, that causes false positives - it picks up PCI-PCI
       ///      bridges and suchlike that have overlapping addresses. :(
       ///      I haven't got an answer for this one yet.
-      if (pChild->addresses()[j]->m_Address /*<=*/ == fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
+      ///
+      ///      FIXED: Check PCI class code for 0x03 (Display controller)
+      if (pChild->getPciClassCode() == 0x03 &&
+          pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
       {
         return pChild;
       }

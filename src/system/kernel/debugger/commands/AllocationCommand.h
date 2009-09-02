@@ -86,6 +86,7 @@ private:
         physical_uintptr_t page;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
+        size_t pid;
     };
     Vector<Allocation*> m_Allocations;
     Vector<void*> m_Frees;

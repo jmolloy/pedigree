@@ -106,8 +106,10 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
     TerminalList *pTL = g_pTermList;
     while (pTL)
     {
+        DirtyRectangle rect2;
         g_pHeader->select(pTL->term->getTabId());
-        g_pHeader->render(pTL->term->getBuffer(), rect);
+        g_pHeader->render(pTL->term->getBuffer(), rect2);
+        Syscall::updateBuffer(pTL->term->getBuffer(), rect2);        
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());

@@ -34,6 +34,15 @@ MemoryMappedFile::MemoryMappedFile(File *pFile) :
 
 MemoryMappedFile::~MemoryMappedFile()
 {
+    // Free all physical pages.
+    for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
+         it != m_Mappings.end();
+         it++)
+    {
+        uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
+        PhysicalMemoryManager::instance().freePage(p);
+    }
+    m_Mappings.clear();
 }
 
 bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
@@ -196,7 +205,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
         if (false /*pFile->hasBeenTouched()*/)
         {
             pMmFile->markForDeletion();
-            m_Cache.remove(pFile);
+             m_Cache.remove(pFile);
             pMmFile = 0;
         }
     }
@@ -252,7 +261,11 @@ void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
         if ( (*it)->file == pMmFile )
         {
             (*it)->file->unload( (*it)->offset );
-            (*it)->file->decreaseRefCount();
+            if ((*it)->file->decreaseRefCount())
+            {
+                delete (*it)->file;
+                m_Cache.remove( (*it)->file->getFile() );
+            }
             delete *it;
             pMmFileList->erase(it);
             break;
@@ -309,7 +322,11 @@ void MemoryMappedFileManager::unmapAll()
          it = pMmFileList->begin())
     {
         (*it)->file->unload( (*it)->offset );
-        (*it)->file->decreaseRefCount();
+        if ((*it)->file->decreaseRefCount())
+        {
+            m_Cache.remove( (*it)->file->getFile() );
+            delete (*it)->file;
+        }
         delete *it;
         it = pMmFileList->erase(it);
     }

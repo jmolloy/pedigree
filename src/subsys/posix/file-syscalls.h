@@ -44,6 +44,7 @@ int posix_stat(const char *file, struct stat *st);
 int posix_fstat(int fd, struct stat *st);
 int posix_lstat(char *file, struct stat *st);
 int posix_rename(const char* src, const char* dst);
+int posix_symlink(char *target, char *link);
 
 char* posix_getcwd(char* buf, size_t maxlen);
 int posix_readlink(const char* path, char* buf, unsigned int bufsize);

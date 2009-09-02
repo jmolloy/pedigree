@@ -183,6 +183,12 @@ void entry()
 
         for (int l = 0; l < 6; l++)
         {
+            // PCI-PCI bridges have a different layout for the last 4 BARs: they hold extra data.
+            if ((cs.header_type&0x7F) == 0x1 && l >= 2)
+            {
+                break;
+            }
+
           if (cs.bar[l] == 0) continue;
 
           // Write the BAR with FFFFFFFF to discover the size of mapping that the device requires.
@@ -198,7 +204,15 @@ void entry()
           // Assume it doesn't need 4GB of space...
           uint32_t size = ~(mask&0xFFFFFFF0) + 1; // AND with ~0xF to get rid of the flags field in the bottom 4 bits.
 
+          bool io = (cs.bar[l] & 0x1);
+          if (io)
+              // IO space is only 64K in size.
+              size &= 0xFFFF;
+
           sprintf(c, "bar%d", l);
+          uintptr_t s = (cs.bar[l]&0xFFFFFFF0);
+
+          NOTICE("PCI:     BAR" << Dec << l << Hex << ": " << s << ".." << (s + size) << " (" << io << ")");
           pDevice->addresses().pushBack(new Device::Address(String(c), cs.bar[l]&0xFFFFFFF0, size, (cs.bar[l]&0x1) == 0x1));
         }
 

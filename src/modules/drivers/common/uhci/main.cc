@@ -50,8 +50,10 @@ void searchNode(Device *pDev)
 
 void entry()
 {
+#if 0
     Device *pDev = &Device::root();
     searchNode(pDev);
+#endif
 }
 
 void exit()

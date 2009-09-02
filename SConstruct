@@ -35,7 +35,9 @@ defines = [
     'BITS_32',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-    'TRACK_LOCKS',
+#    'TRACK_LOCKS',
+     'TRACK_PAGE_ALLOCATIONS',
+    'CRIPPLE_HDD',
 ]
 
 # Default CFLAGS

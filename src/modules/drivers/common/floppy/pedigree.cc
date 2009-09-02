@@ -24,7 +24,9 @@ extern "C" {
 /// Wrapper for the actual driver's code
 void pedigree_init()
 {
+#if 0
     init_floppy(0, 0);
+#endif
 }
 
 void pedigree_destroy()

@@ -162,7 +162,7 @@ bool AtaDisk::initialise()
     uint16_t word83 = LITTLE_TO_HOST16(m_pIdent[83]);
     if (word83 & (1<<10))
     {
-        m_SupportsLBA48 = /*true*/ false;
+        m_SupportsLBA48 = true;
     }
 
     NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");

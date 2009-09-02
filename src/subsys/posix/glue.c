@@ -1083,8 +1083,7 @@ int getgrgid(void)
 
 int symlink(const char *path1, const char *path2)
 {
-    STUBBED("symlink");
-    return 0;
+    return (int) syscall2(POSIX_SYMLINK, (int)path1, (int) path2);
 }
 
 int fsync(int fd)

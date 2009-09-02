@@ -94,6 +94,7 @@ Elf::~Elf()
 
 bool Elf::create(uint8_t *pBuffer, size_t length)
 {
+    NOTICE("Elf::create: buffer at " << Hex << (uintptr_t)pBuffer << ", len " << length);
     // The main header will be at pBuffer[0].
     ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
 
