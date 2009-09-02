@@ -10,6 +10,7 @@
 #define _EXFUN(x, y)
 #endif
 
+#define _POSIX_THREADS
 #include <fcntl.h>
 #include <stdio.h>
 #include <pwd.h>

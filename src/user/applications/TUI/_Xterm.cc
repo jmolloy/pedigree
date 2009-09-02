@@ -67,15 +67,15 @@ Xterm::~Xterm()
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    char str[64];
-    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
-    log(str);
+    //char str[64];
+    //sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
+    //log(str);
 
     if(m_bChangingState)
     {
-        char tmp32[128];
-//        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-//        log(tmp32);
+        //char tmp32[128];
+        //sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
+        //log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
 
@@ -484,7 +484,7 @@ void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
                 render(rect, 0, x, y);
         }
     }
-                
+
 }
 
 void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
@@ -539,7 +539,7 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     }
 
     flags = c.flags | flags;
-    
+
     rgb_t fg = g_Colours[c.fore];
     if (flags & XTERM_BRIGHTFG)
         fg = g_BrightColours[c.fore];
@@ -555,9 +555,9 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     }
 
     uint32_t utf32 = c.utf32;
-// char str[64];
-// sprintf(str, "Render(%d,%d,%d,%d)", m_OffsetLeft, m_OffsetTop, x, y);
-// log(str);
+    // char str[64];
+    // sprintf(str, "Render(%d,%d,%d,%d)", m_OffsetLeft, m_OffsetTop, x, y);
+    // log(str);
     // Ensure the painted area is marked dirty.
     rect.point(x*g_NormalFont->getWidth()+m_OffsetLeft, y*g_NormalFont->getHeight()+m_OffsetTop);
     rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
@@ -578,10 +578,10 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 |          |
 |----------| Scroll top    ^
 |----------| Top1          |
-|          |     
+|          |
 |----------| Bottom2       ^
-|----------| Scroll bottom |   
-|          |  
+|----------| Scroll bottom |
+|          |
 +----------+
 
  */
@@ -589,7 +589,7 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 //    size_t scrollTop_char = m_ScrollStart*m_Width;
     size_t scrollTop_px   = m_ScrollStart * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
-    // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive. 
+    // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive.
 //    size_t scrollBottom_char = (m_ScrollEnd+1)*m_Width;
     size_t scrollBottom_px   = (m_ScrollEnd+1) * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
 
@@ -602,7 +602,7 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
     rect.point(0, m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop);
     rect.point(m_FbWidth, (m_ScrollEnd+1) * g_NormalFont->getHeight() + m_OffsetTop);
 
-//    Syscall::bitBlit(m_pFramebuffer, 
+//    Syscall::bitBlit(m_pFramebuffer,
 
     memmove(reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px ]),
             reinterpret_cast<void*>(&m_pFramebuffer[ top1_px ]),
@@ -626,7 +626,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     rect.reset();
     Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
-    
+
     if (m_pView == m_pInsert)
         m_pView += n*m_Width;
 
@@ -753,7 +753,6 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
-    log("eraseScreen");
 
     // One good fillRect should do the job nicely.
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
@@ -769,7 +768,6 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
-    log("eraseEOL");
 
     size_t l = m_OffsetLeft+m_CursorX*g_NormalFont->getWidth();
 
@@ -785,7 +783,6 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
-    log("eraseSOL");
 
     int32_t row = static_cast<int32_t>(m_CursorY);
     for(int32_t col = static_cast<int32_t>(m_CursorX); col >= 0; col--)
@@ -804,7 +801,6 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
-    log("eraseLine");
 
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_CursorX; col++)
@@ -823,7 +819,6 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
-    log("eraseChars");
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < (m_CursorX + n); col++)
@@ -842,7 +837,6 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
-    log("eraseUp");
 
     for(int32_t row = static_cast<int32_t>(m_CursorY); row >= 0; row--)
     {
@@ -863,7 +857,6 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
-    log("eraseDown");
 
     for(size_t row = m_CursorY; row < m_Height; row++)
     {
@@ -884,7 +877,6 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
-    log("deleteCharacters");
 
     // Start of the delete region
     size_t deleteStart = m_CursorX;
