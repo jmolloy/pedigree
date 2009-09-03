@@ -15,6 +15,7 @@ subdirs = [
     'applications/net-test',
     'applications/netconfig',
     'applications/login',
+    'applications/mount',
     'applications/TUI'
 ]
 

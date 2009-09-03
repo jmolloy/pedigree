@@ -75,4 +75,6 @@ int posix_munmap(void *addr, size_t len);
 
 int posix_access(const char *name, int amode);
 
+int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
+
 #endif

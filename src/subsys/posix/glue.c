@@ -1723,3 +1723,8 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
     atforkHandlers[nHandlers++] = handler;
     return 0;
 }
+
+int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
+{
+    return syscall3(PEDIGREE_GET_MOUNT, (int) mount_buf, (int) info_buf, n);
+}

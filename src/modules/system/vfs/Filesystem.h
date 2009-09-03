@@ -79,6 +79,12 @@ public:
             is unspecified. */
   bool remove(String path, File *pStartNode=0);
 
+  /** Returns the disk in use */
+  Disk *getDisk()
+  {
+      return m_pDisk;
+  }
+
   //
   // File interface.
   //
@@ -109,6 +115,8 @@ protected:
   virtual bool remove(File* parent, File* file) =0;
   /** is this entire filesystem read-only?  */
   bool m_bReadOnly;
+  /** Disk device(if any). */
+  Disk *m_pDisk;
 private:
 
   /** Internal function to find a node - Returns 0 on failure or the node.
@@ -124,6 +132,13 @@ private:
 
   /** Accessed by VFS */
   size_t m_nAliases;
+
+  /** Copy constructor.
+  \note NOT implemented. */
+  Filesystem(const Filesystem&);
+  /** Assignment operator.
+  \note NOT implemented. */
+  void operator=(const Filesystem &);
 };
 
 #endif

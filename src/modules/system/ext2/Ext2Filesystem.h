@@ -75,9 +75,6 @@ private:
     Inode getInode(uint32_t num);
     bool setInode(uint32_t num, Inode inode);
 
-    /** Our raw device. */
-    Disk *m_pDisk;
-
     /** Our superblock. */
     Superblock m_Superblock;
 
