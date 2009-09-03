@@ -248,7 +248,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     tmpBuff[128] = '\0';
-    
+
     List<String*> additionalArgv;
 
     if (!strncmp(tmpBuff, "#!", 2))
@@ -287,7 +287,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
                 newFname = *it;
             savedArgv.pushBack(*it);
         }
-        
+
         if (newFname == 0)
             FATAL("Algorithmic error in execve.");
 
@@ -393,7 +393,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         // Yield, so the code gets run before we return.
         Scheduler::instance().yield();
     }
-    
+
     /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
 #ifdef PPC_COMMON
     state.m_R6 = pState.m_R6;
@@ -778,4 +778,30 @@ int posix_getpgrp()
         return pProcess->getProcessGroup()->processGroupId;
     else
         return pProcess->getId(); // Fallback if no ProcessGroup pointer yet
+}
+
+int pedigree_load_keymap(char *buf, size_t len)
+{
+    // File format:  0    Sparse tree offset
+    //               4    Data tree offset
+    //               ...  Sparse tree & data tree.
+
+    uint32_t sparseTreeLoc = * reinterpret_cast<uint32_t*> (&buf[0]);
+    uint32_t dataLoc       = * reinterpret_cast<uint32_t*> (&buf[4]);
+    uint32_t sparseTreeSz  = dataLoc - sparseTreeLoc;
+    uint32_t dataSz        = len - dataLoc;
+NOTICE("stl: " << Hex << sparseTreeLoc  <<", dl: " << dataLoc << ", stz: " << sparseTreeSz << ", dz: " << dataSz);
+    uint8_t *sparseTree = new uint8_t[sparseTreeSz];
+    memcpy(sparseTree, &buf[sparseTreeLoc], sparseTreeSz);
+
+    uint8_t *data = new uint8_t[dataSz];
+    memcpy(data, &buf[dataLoc], dataSz);
+
+    extern uint8_t *g_pSparseTable;
+    extern uint8_t *g_pDataTable;
+
+    g_pSparseTable = sparseTree;
+    g_pDataTable = data;
+
+    return 0;
 }

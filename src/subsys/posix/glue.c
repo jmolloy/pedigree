@@ -1722,3 +1722,8 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
     atforkHandlers[nHandlers++] = handler;
     return 0;
 }
+
+int pedigree_load_keymap(char *buf, size_t sz)
+{
+    return syscall2(PEDIGREE_LOAD_KEYMAP, (int)buf, (int)sz);
+}

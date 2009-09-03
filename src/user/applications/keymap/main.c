@@ -21,13 +21,19 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include "cmd.h"
 #include "parser.tab.h"
 
 extern int yylex();
+extern int yyparse();
 extern FILE *yyin;
 extern char **environ;
 extern YYSTYPE yylval;
+
+#ifndef NOT_PEDIGREE
+extern int pedigree_load_keymap(char *buffer, size_t len);
+#endif
 
 cmd_t *cmds[MAX_CMDS];
 int n_cmds = 0;
@@ -40,21 +46,21 @@ int data_pos = 0;
 int data_buffsz = 0;
 char *data_buff = 0;
 
-// Modifiers are CTRL and SHIFT.
-// Combinators are ALT, ALTGR, and 240 user-programmable combining flags (used for accents).
+// Modifiers are CTRL and SHIFT, ALT, ALTGR.
+// Combinators are 256 user-programmable combining flags (used for accents).
 
 #define UNICODE_POINT 0x80000000
 #define SPECIAL       0x40000000
 
 typedef struct table_entry
 {
-    uint32_t flags; // UNICODE_POINT | SPECIAL | combinators | modifiers
+    uint32_t flags; // UNICODE_POINT | SPECIAL | modifiers
     uint32_t val;   // If flags&UNICODE_POINT, U+val; else number giving special key.
 } table_entry_t;
 
-#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<10) | ((modifiers&3)<<8) | ((escape&1)<<7) | (scancode&0x7F) )
+#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<12) | ((modifiers&0xF)<<8) | ((escape&1)<<7) | (scancode&0x7F) )
 
-#define TABLE_MAX TABLE_IDX(255,3,1,127)
+#define TABLE_MAX TABLE_IDX(255,15,1,127)
 
 table_entry_t table[TABLE_MAX+1];
 
@@ -129,11 +135,13 @@ int all_clear(table_entry_t *start, table_entry_t *end)
 
 int yywrap()
 {
+    return 1;
 }
 
-int yyerror()
+int yyerror(const char *str)
 {
-  printf("Syntax error!\n");
+  printf("Syntax error: %s\n", str);
+  exit(1);
   return 1;
 }
 
@@ -151,7 +159,6 @@ void parse(char *filename)
         fprintf(stderr, "Unable to open file `%s'\n", filename);
         exit(1);
     }
-
     yyin = stream;
     yyparse();
 
@@ -160,8 +167,8 @@ void parse(char *filename)
     int i;
     for (i = 0; i < n_cmds; i++)
     {
-        int comb = cmds[i]->combinators&0xFF;
-        int modifiers = cmds[i]->modifiers&0x3;
+        int comb = cmds[i]->combinators & 0xFF;
+        int modifiers = cmds[i]->modifiers & 0xF;
 
         unsigned int idx = TABLE_IDX(comb, modifiers, cmds[i]->escape, cmds[i]->scancode);
         table[idx].flags = cmds[i]->set_modifiers;
@@ -270,7 +277,7 @@ void compile(char *filename)
     // Change the filename to uppercase and underscored for the header guard.
     char *header_guard = strdup(fname);
     int i;
-    for (i = 0; i < strlen(fname)+2; i++)
+    for (i = 0; i < (int)strlen(fname)+2; i++)
     {
         if (fname[i] == '.')
             header_guard[i] = '_';
@@ -306,11 +313,16 @@ void compile(char *filename)
 #define SHIFT_I          0x1\n\
 #define CTRL_I           0x2\n\
 \n\
-#define ALT_I            0x1\n\
-#define ALTGR_I          0x2\n\
+#define ALT_I            0x4\n\
+#define ALTGR_I          0x8\n\
 \n\
-#define TABLE_IDX(alt, modifiers, escape, scancode) ( ((alt&3)<<10) | ((modifiers&3)<<8) | ((escape&1)<<7) | (scancode&0x7F) )\n\
-#define TABLE_MAX TABLE_IDX(2,3,1,128)\n\
+#define ALT_M            0x1\n\
+#define ALTGR_M          0x2\n\
+#define SHIFT_M          0x3\n\
+#define CTRL_M           0x4\n\
+\n\
+#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<12) | ((modifiers&0xF)<<8) | ((escape&1)<<7) | (scancode&0x7F) )\n\
+#define TABLE_MAX TABLE_IDX(255,15,1,127)\n\
 \n\
 typedef struct table_entry\n\
 {\n\
@@ -344,10 +356,54 @@ char sparse_buff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
 
 void install(char *filename)
 {
-    printf("Install not implemented yet.\n");
+#ifdef NOT_PEDIGREE
+    fprintf(stderr, "Unable to install a keymap on non-pedigree OS.\n");
+    exit(1);
+#else
+
+    // Look for a '.kmc' extension.
+    int len = strlen(filename);
+    if (len < 4 ||
+        filename[len-3] != 'k' ||
+        filename[len-2] != 'm' ||
+        filename[len-1] != 'c')
+    {
+        printf("Warning: Filename does not end in '.kmc' - are you sure this is a compiled keymap file?\n");
+        printf("*** If you load an invalid keymap your system will be rendered unusable without a manual reboot. ***\n");
+        printf("\nContinue? [no] ");
+
+        char input[64];
+        scanf("%s", input);
+        if (strcmp(input, "yes"))
+        {
+            printf("Aborted, no change took place.\n");
+            exit(0);
+        }
+    }
+
+    // Load the file in to a buffer.
+    FILE *stream = fopen(filename, "r");
+    if (!stream)
+    {
+        fprintf(stderr, "Error opening file `%s'.\n", filename);
+    }
+    fseek(stream, 0, SEEK_END);
+    len = ftell(stream);
+    fseek(stream, 0, SEEK_SET);
+
+    char *buffer = (char*)malloc(len);
+    fread(buffer, 1, len, stream);
+    fclose(stream);
+
+    if (pedigree_load_keymap(buffer, len))
+        fprintf(stderr, "Error loading keymap.\n");
+    else
+        printf("Keymap loaded.\n");
+    exit (0);
+#endif
 }
 
-int main(char argc, char **argv)
+int main(int argc, char **argv)
 {
     if (argc != 3)
     {

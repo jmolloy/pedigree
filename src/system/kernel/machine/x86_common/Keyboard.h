@@ -34,7 +34,7 @@ class X86Keyboard : public Keyboard,
 public:
     X86Keyboard (uint32_t portBase);
     virtual ~X86Keyboard();
-  
+
     /**
      * Initialises the device.
      */
@@ -42,13 +42,13 @@ public:
 
     virtual void setDebugState(bool enableDebugState);
     virtual bool getDebugState();
-  
-    virtual char getChar();  
+
+    virtual char getChar();
     virtual char getCharNonBlock();
 
-    virtual uint64_t getCharacter();  
+    virtual uint64_t getCharacter();
     virtual uint64_t getCharacterNonBlock();
-    
+
     virtual void registerCallback(KeyPressedCallback callback)
     {
         m_Callback = callback;
@@ -61,12 +61,12 @@ public:
 
 private:
     /**
-     * Converts a scancode into a "real" character in UTF-32 format, plus 
+     * Converts a scancode into a "real" character in UTF-32 format, plus
      * modifier flags in the top 32-bits.
      */
     uint64_t scancodeToCharacter(uint8_t scancode);
 
-    struct table_entry *getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode);
+    struct table_entry *getTableEntry(uint8_t combinator, bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode);
 
     /**
      * True if we're in debug state.
@@ -77,25 +77,27 @@ private:
      * True if shift is held.
      */
     bool m_bShift;
-  
+
     /**
      * True if ctrl is held.
      */
     bool m_bCtrl;
-  
-    /**
-     * True if alt is held.
-     */
-    bool m_bAlt;
 
+    bool m_bAlt;
     bool m_bAltGr;
+
+    /**
+     * Index of the current active combinator, if any
+     */
+    uint8_t m_Combinator;
+
     bool m_bEscape;
-  
+
     /**
      * True if caps lock is on.
      */
     bool m_bCapsLock;
-  
+
     /**
      * The IO port through which to access the keyboard.
      */

@@ -15,7 +15,8 @@ subdirs = [
     'applications/net-test',
     'applications/netconfig',
     'applications/login',
-    'applications/TUI'
+    'applications/TUI',
+    'applications/keymap',
 ]
 
 # Cleans a set of flags

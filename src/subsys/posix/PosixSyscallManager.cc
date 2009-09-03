@@ -228,7 +228,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_sem_trywait(reinterpret_cast<sem_t*>(p1));
         case POSIX_SEM_WAIT:
             return posix_sem_wait(reinterpret_cast<sem_t*>(p1));
-        
+
         /// \todo Implement me! :(
         // case POSIX_SEM_OPEN:
         //     return posix_sem_open(......
@@ -283,6 +283,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_INIT_SIGRET:
             pedigree_init_sigret();
             return 0;
+        case PEDIGREE_LOAD_KEYMAP:
+            return pedigree_load_keymap(reinterpret_cast<char*>(p1), static_cast<size_t>(p2));
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }

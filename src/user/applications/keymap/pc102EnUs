@@ -1,3 +1,10 @@
+# Make sure you start your COMBINE numbers above 5: I've started at 10 to be on the safe side.
+DEFINE acute 10
+DEFINE grave 11
+DEFINE circumflex 12
+DEFINE cedilla 13
+DEFINE diaeresis 14
+
 0x01    U+001B                  # Escape
 
 0x02    U+0031 SHIFT U+0021     # 1 !
@@ -18,7 +25,7 @@
 
 0x10    U+0071 SHIFT U+0051     # q Q
 0x11    U+0077 SHIFT U+0057     # w W
-0x12    U+0065 SHIFT U+0045     # e E
+0x12    U+0065 SHIFT U+0045 COMBINE[acute] U+00E9 SHIFT COMBINE[acute] U+00C9 COMBINE[grave] U+00E8 SHIFT COMBINE[grave] U+00C8 COMBINE[circumflex] U+00EA SHIFT COMBINE[circumflex] U+00CA COMBINE[diaeresis] U+00EB SHIFT COMBINE[diaeresis] U+00CB  # e E
 0x13    U+0072 SHIFT U+0052     # r R
 0x14    U+0074 SHIFT U+0054     # t T
 0x15    U+0079 SHIFT U+0059     # y Y
@@ -41,9 +48,9 @@ ESC 0x1C    U+000A              # Keypad Enter
 0x24    U+006A SHIFT U+004A     # j J
 0x25    U+006B SHIFT U+004B     # k K
 0x26    U+006C SHIFT U+004C     # l L
-0x27    U+003B SHIFT U+003A     # ; :
-0x28    U+0027 SHIFT U+0022     # ' "
-0x29    U+0060 SHIFT U+007E     # ` ~
+0x27    U+003B SHIFT U+003A ALTGR SET-COMBINE[acute][U+0027]      # ; :  (with altgr becomes acute accent)
+0x28    U+0027 SHIFT U+0022 ALTGR SET-COMBINE[circumflex][U+005E] # ' "  (with altgr becomes circum accent)
+0x29    U+0060 SHIFT U+007E ALTGR SET-COMBINE[grave][U+0060]      # ` ~
 
 0x2A    SHIFT                   # Shift
 0x2B    U+005C SHIFT U+007C     # \ |

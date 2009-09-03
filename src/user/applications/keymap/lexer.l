@@ -33,6 +33,11 @@ SHIFT                   {return SHIFT;}
 CTRL                    {return CTRL;}
 ALT                     {return ALT;}
 ALTGR                   {return ALTGR;}
+COMBINE                 {return COMBINE;}
+SET-COMBINE             {return SET_COMBINE;}
+DEFINE                  {return DEFINE;}
+\[                      {return OPEN_SQ;}
+\]                      {return CLOSE_SQ;}
 0x[0-9A-Fa-f]+          {yylval = hex_var(); return NUM;}
 [0-9]+                  {yylval = num_var(); return NUM;}
 [a-zA-Z0-9_-]+          {yylval = text_var(); return STRING;}

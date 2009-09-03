@@ -229,6 +229,8 @@ int posix_read(int fd, char *ptr, int len)
         pFd->offset += nRead;
     }
 
+    F_NOTICE("    -> " << Dec << nRead << Hex);
+
     return static_cast<int>(nRead);
 }
 
@@ -364,7 +366,7 @@ int posix_symlink(char *target, char *link)
 {
     F_NOTICE("symlink(" << target << ", " << link << ")");
 
-    bool worked = VFS::instance().createSymlink(String(link), String(target), GET_CWD());    
+    bool worked = VFS::instance().createSymlink(String(link), String(target), GET_CWD());
     if (worked)
         return 0;
     else

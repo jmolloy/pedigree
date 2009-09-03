@@ -54,11 +54,16 @@
      SHIFT_ALTGR = 270,
      CTRL_ALTGR = 271,
      SHIFT_CTRL_ALTGR = 272,
-     QUOTED_CHAR = 273,
-     CODE_POINT = 274,
-     NUM = 275,
-     ERROR = 276,
-     END = 277
+     SET_COMBINE = 273,
+     COMBINE = 274,
+     OPEN_SQ = 275,
+     CLOSE_SQ = 276,
+     DEFINE = 277,
+     QUOTED_CHAR = 278,
+     CODE_POINT = 279,
+     NUM = 280,
+     ERROR = 281,
+     END = 282
    };
 #endif
 /* Tokens.  */
@@ -77,26 +82,32 @@
 #define SHIFT_ALTGR 270
 #define CTRL_ALTGR 271
 #define SHIFT_CTRL_ALTGR 272
-#define QUOTED_CHAR 273
-#define CODE_POINT 274
-#define NUM 275
-#define ERROR 276
-#define END 277
+#define SET_COMBINE 273
+#define COMBINE 274
+#define OPEN_SQ 275
+#define CLOSE_SQ 276
+#define DEFINE 277
+#define QUOTED_CHAR 278
+#define CODE_POINT 279
+#define NUM 280
+#define ERROR 281
+#define END 282
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 17 "parser.y"
+#line 31 "parser.y"
 {
   int n;
   char str[256];
   char c;
   struct cmd *cmd;
+  struct cmd_list *cmd_list;
 }
 /* Line 1489 of yacc.c.  */
-#line 100 "parser.tab.h"
+#line 111 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

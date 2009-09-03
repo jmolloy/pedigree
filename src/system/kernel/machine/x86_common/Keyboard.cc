@@ -34,11 +34,14 @@
 #define ALT       0x38
 #define CTRL      0x1d
 
+uint8_t *g_pSparseTable = reinterpret_cast<uint8_t*>(sparse_buff);
+uint8_t *g_pDataTable = reinterpret_cast<uint8_t*>(data_buff);
+
 X86Keyboard::X86Keyboard(uint32_t portBase) :
     m_bDebugState(true),
     m_bShift(false),
-    m_bCtrl(false),
-    m_bAlt(false), m_bAltGr(false), m_bEscape(false),
+    m_bCtrl(false), m_bAlt(false), m_bAltGr(false),
+    m_Combinator(0), m_bEscape(false),
     m_bCapsLock(false),
     m_Port("PS/2 Keyboard controller"),
     m_BufStart(0), m_BufEnd(0), m_BufLength(0),
@@ -283,21 +286,17 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     if (!bKeypress)
         return 0;
 
-    // No valid combination for these two keys together.
-    if (m_bAlt && m_bAltGr)
-        return 0;
-
     // Try and grab a key code for the scancode with all modifiers enabled.
-    table_entry_t *pTableEntry = getTableEntry(m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
+    table_entry_t *pTableEntry = getTableEntry(m_Combinator, m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
     if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
     {
-        NOTICE("Needed to fallback, altgr: " << m_bAltGr <<", alt " << m_bAlt << ", esc: " << m_bEscape);
+        NOTICE("Needed to fallback");
         // Fall back and just use the shift modifier.
-        pTableEntry = getTableEntry(false, false, false, m_bShift, m_bEscape, scancode);
+        pTableEntry = getTableEntry(0, false, false, false, m_bShift, m_bEscape, scancode);
         if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
         {
             // Fall back again and use no modifier.
-            pTableEntry = getTableEntry(false, false, false, false, false, scancode);
+            pTableEntry = getTableEntry(0, false, false, false, false, false, scancode);
             if (!pTableEntry)
             {
                 NOTICE("Failed completely.");
@@ -308,10 +307,37 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     }
     m_bEscape = false;
 
+    // Does this key set any flags?
+    uint32_t flags = pTableEntry->flags & 0xFF;
+    if (flags)
+    {
+        // Special case for shift and ctrl here...
+        if (flags == SHIFT_M || flags == CTRL_M || flags == ALT_M || flags == ALTGR_M) return 0;
+
+        // If the key sets the same combinator that we're currently using, the "dead" key becomes live and shows the default key.
+        if (flags == m_Combinator)
+        {
+            // Unset combinator and fall through to display default glyph.
+            m_Combinator = 0;
+        }
+        else
+        {
+            // Change combinator.
+            m_Combinator = flags;
+            NOTICE("Set combinator to " << flags);
+            return 0;
+        }
+    }
+    else
+    {
+        // Dead keys should be reset here.
+        m_Combinator = 0;
+    }
+
     if ((pTableEntry->flags & UNICODE_POINT) || (pTableEntry->flags & SPECIAL))
     {
         uint64_t ret = pTableEntry->val;
-
+        NOTICE("U+" << Hex << pTableEntry->val);
         if (pTableEntry->flags & SPECIAL)
         {
             ret |= Keyboard::Special;
@@ -319,8 +345,8 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
         else if (bUseUpper && ret >= 0x0061 /* a */ && ret <= 0x007a /* z */)
             ret -= (0x0061-0x0041); /* a-A */
 
-        if (m_bAlt)   ret |= Keyboard::Alt;
-        if (m_bAltGr) ret |= Keyboard::AltGr;
+        if (m_Combinator == ALT_I)   ret |= Keyboard::Alt;
+        if (m_Combinator == ALTGR_I) ret |= Keyboard::AltGr;
         if (m_bCtrl)  ret |= Keyboard::Ctrl;
         if (m_bShift) ret |= Keyboard::Shift;
 
@@ -330,19 +356,20 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     return 0;
 }
 
-table_entry_t *X86Keyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode)
+table_entry_t *X86Keyboard::getTableEntry(uint8_t combinator, bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode)
 {
     // Grab the keymap table index for this key.
-    size_t alt = ((bAlt)?ALT_I:0) | ((bAltGr)?ALTGR_I:0);
-    size_t modifiers =  ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
+    size_t comb = combinator;
+    size_t modifiers =  ((bAlt)?ALT_I:0) | ((bAltGr)?ALTGR_I:0) | ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
     size_t escape = (bEscape)?1:0;
-    size_t idx = TABLE_IDX(alt, modifiers, escape, scancode);
+    size_t idx = TABLE_IDX(comb, modifiers, escape, scancode);
 
     // ??? Why???
+    // No idea. JamesM
     m_bEscape = false;
 
-    uint8_t *pSparseTable = reinterpret_cast<uint8_t*>(sparse_buff);
-    uint8_t *pDataTable   = reinterpret_cast<uint8_t*>(data_buff);
+    uint8_t *pSparseTable = g_pSparseTable;
+    uint8_t *pDataTable   = g_pDataTable;
 
     // Now walk the sparse tree.
     size_t bisect = (TABLE_MAX+1)/2;
