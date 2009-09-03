@@ -26,7 +26,7 @@
   #endif
 #endif
 
-#include <machine/keymaps/pc102.h>
+#include <machine/keymaps/pc102EnUs.h>
 
 #define CAPSLOCK  0x3a
 #define LSHIFT    0x2a

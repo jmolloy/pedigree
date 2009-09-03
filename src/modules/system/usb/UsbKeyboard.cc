@@ -16,6 +16,7 @@
 
 #include <machine/Machine.h>
 #include <machine/Timer.h>
+#include <machine/keymaps/UsbKeyboardEnUs.h>
 #include <process/Thread.h>
 #include <processor/IoPort.h>
 #include <processor/state.h>
@@ -23,7 +24,6 @@
 #include <usb/UsbConstants.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbKeyboard.h>
-#include <usb/UsbKeyboardMappingEnUs.h>
 #include <usb/UsbManager.h>
 
 UsbKeyboard::UsbKeyboard(UsbDevice *dev) :
@@ -197,8 +197,8 @@ table_entry_t *UsbKeyboard::getTableEntry(bool bAlt, bool bAltGr, bool bCtrl, bo
     size_t modifiers =  ((bCtrl)?CTRL_I:0) | ((bShift)?SHIFT_I:0);
     size_t idx = TABLE_IDX(alt, modifiers, 0, scancode);
 
-    uint8_t *pSparseTable = reinterpret_cast<uint8_t*>(usb_sparse_buff);
-    uint8_t *pDataTable   = reinterpret_cast<uint8_t*>(usb_data_buff);
+    uint8_t *pSparseTable = reinterpret_cast<uint8_t*>(sparse_buff);
+    uint8_t *pDataTable   = reinterpret_cast<uint8_t*>(data_buff);
 
     // Now walk the sparse tree.
     size_t bisect = (TABLE_MAX+1)/2;

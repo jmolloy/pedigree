@@ -35,10 +35,14 @@ defines = [
     'BITS_32',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-#    'TRACK_LOCKS',
-     'TRACK_PAGE_ALLOCATIONS',
     'CRIPPLE_HDD',
 ]
+
+if 'DEBUGGER' in defines:
+    defines += [
+        'TRACK_LOCKS',
+        'TRACK_PAGE_ALLOCATIONS',
+    ]
 
 # Default CFLAGS
 # 
@@ -85,6 +89,9 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
+    
+    BoolVariable('CRIPPLE_HDD','Disable writing to hard disks at runtime.',1),
+    
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
@@ -229,6 +236,9 @@ if env['genflags']:
 
     if env['installer']:
         defines += ['INSTALLER']
+    
+    if env['CRIPPLE_HDD']:
+        defines += ['CRIPPLE_HDD']
 
     ####################################
     # Setup our build options

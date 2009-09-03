@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#define _POSIX_THREADS
 #include <sys/types.h>
 #include <stdint.h>
 #include <unistd.h>

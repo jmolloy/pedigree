@@ -49,7 +49,7 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'pthread',
+#    'pthread',
     'stdc++',
 ]
 

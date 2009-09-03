@@ -23,14 +23,12 @@
 #define SHIFT_I 1
 #define CTRL_I  2
 
-#define ALT_I   1
-#define ALTGR_I 2
+#define ALT_I   254
+#define ALTGR_I 255
 
 #define NONE_F 0
-#define SHIFT_F 1
-#define CTRL_F  2
-#define ALT_F   4
-#define ALTGR_F 8
+#define SHIFT_F 9
+#define CTRL_F  10
 
 typedef struct cmd
 {

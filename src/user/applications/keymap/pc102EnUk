@@ -1,0 +1,91 @@
+0x01    U+001B                  # Escape
+
+0x02    U+0031 SHIFT U+0021     # 1 !
+0x03    U+0032 SHIFT U+0022     # 2 "
+0x04    U+0033 SHIFT U+00A3     # 3 £
+0x05    U+0034 SHIFT U+0024     # 4 $
+0x06    U+0035 SHIFT U+0025     # 5 %
+0x07    U+0036 SHIFT U+005E     # 6 ^
+0x08    U+0037 SHIFT U+0026     # 7 &
+0x09    U+0038 SHIFT U+002A     # 8 *
+0x0A    U+0039 SHIFT U+0028     # 9 (
+0x0B    U+0030 SHIFT U+0029     # 0 )
+
+0x0C    U+002D SHIFT U+005F     # - _
+0x0D    U+003D SHIFT U+002B     # = +
+0x0E    U+0008                  # Backspace
+0x0F    U+0009                  # Tab
+
+0x10    U+0071 SHIFT U+0051     # q Q
+0x11    U+0077 SHIFT U+0057     # w W
+0x12    U+0065 SHIFT U+0045     # e E
+0x13    U+0072 SHIFT U+0052     # r R
+0x14    U+0074 SHIFT U+0054     # t T
+0x15    U+0079 SHIFT U+0059     # y Y
+0x16    U+0075 SHIFT U+0055     # u U
+0x17    U+0069 SHIFT U+0049     # i I
+0x18    U+006F SHIFT U+004F     # o O
+0x19    U+0070 SHIFT U+0050     # p P
+0x1A    U+005B SHIFT U+007B     # [ {
+0x1B    U+005D SHIFT U+007D     # ] }
+0x1C    U+000A                  # Enter
+ESC 0x1C    U+000A              # Keypad Enter
+
+0x1D    CTRL                    # Ctrl
+0x1E    U+0061 SHIFT U+0041     # a A
+0x1F    U+0073 SHIFT U+0053     # s S
+0x20    U+0064 SHIFT U+0044     # d D
+0x21    U+0066 SHIFT U+0046     # f F
+0x22    U+0067 SHIFT U+0047     # g G
+0x23    U+0068 SHIFT U+0048     # h H
+0x24    U+006A SHIFT U+004A     # j J
+0x25    U+006B SHIFT U+004B     # k K
+0x26    U+006C SHIFT U+004C     # l L
+0x27    U+003B SHIFT U+003A     # ; :
+0x28    U+0027 SHIFT U+0040     # ' @
+
+0x2A    SHIFT                   # Shift
+0x2B    U+0023 SHIFT U+007E     # # ~
+0x2C    U+007A SHIFT U+005A     # z Z
+0x2D    U+0078 SHIFT U+0058     # x X
+0x2E    U+0063 SHIFT U+0043     # c C
+0x2F    U+0076 SHIFT U+0056     # v V
+0x30    U+0062 SHIFT U+0042     # b B
+0x31    U+006E SHIFT U+004E     # n N
+0x32    U+006D SHIFT U+004D     # m M
+0x33    U+002C SHIFT U+003C ALTGR U+00AB    # , < «
+0x34    U+002E SHIFT U+003E ALTGR U+00BB    # . > »
+0x35    U+002F SHIFT U+003F     # / ?
+ESC 0x35    U+002F              # Keypad /
+0x36    SHIFT
+
+0x37    U+002A                  # Keypad *
+0x38    ALT                     # Alt
+0x39    U+0020                  # Space
+
+0x47    U+0037 SHIFT "home"     # Keypad 7 Home
+0x48    U+0038 SHIFT "up  "     # Keypad 8 UpArrow
+0x49    U+0039 SHIFT "pgup"     # Keypad 9 PageUp
+0x4A    U+002D                  # Keypad -
+0x4B    U+0034 SHIFT "left"     # Keypad 4 LeftArrow
+0x4C    U+0035                  # Keypad 5
+0x4D    U+0036 SHIFT "righ"     # Keypad 6 RightArrow
+0x4E    U+002B                  # Keypad +
+0x4F    U+0031 SHIFT "end "     # Keypad 1 End
+0x50    U+0032 SHIFT "down"     # Keypad 2 DownArrow
+0x51    U+0033 SHIFT "pgdn"     # Keypad 3 PageDown
+0x52    U+0030 SHIFT "ins "     # Keypad 0 Insert
+0x53    U+002E SHIFT "del "     # Keypad . Delete
+
+ESC 0x47    "home"              # Home
+ESC 0x48    "up  "              # UpArrow
+ESC 0x49    "pgup"              # PageUp
+ESC 0x4B    "left"              # LeftArrow
+ESC 0x4D    "righ"              # RightArrow
+ESC 0x4F    "end "              # End
+ESC 0x50    "down"              # DownArrow
+ESC 0x51    "pgdn"              # PageDown
+ESC 0x52    "ins "              # Insert
+ESC 0x53    "del "              # Delete
+
+0x56    U+005C SHIFT U+007C     # \ |

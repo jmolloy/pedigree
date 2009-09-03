@@ -40,19 +40,21 @@ int data_pos = 0;
 int data_buffsz = 0;
 char *data_buff = 0;
 
+// Modifiers are CTRL and SHIFT.
+// Combinators are ALT, ALTGR, and 240 user-programmable combining flags (used for accents).
 
 #define UNICODE_POINT 0x80000000
 #define SPECIAL       0x40000000
 
 typedef struct table_entry
 {
-    uint32_t flags; // UNICODE_POINT | SPECIAL | ALTGR_F | ALT_F | CTRL_F | SHIFT_F
+    uint32_t flags; // UNICODE_POINT | SPECIAL | combinators | modifiers
     uint32_t val;   // If flags&UNICODE_POINT, U+val; else number giving special key.
 } table_entry_t;
 
-#define TABLE_IDX(alt, modifiers, escape, scancode) ( ((alt&3)<<10) | ((modifiers&3)<<8) | ((escape&1)<<7) | (scancode&0x7F) )
+#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<10) | ((modifiers&3)<<8) | ((escape&1)<<7) | (scancode&0x7F) )
 
-#define TABLE_MAX TABLE_IDX(2,3,1,128)
+#define TABLE_MAX TABLE_IDX(255,3,1,127)
 
 table_entry_t table[TABLE_MAX+1];
 
@@ -158,18 +160,10 @@ void parse(char *filename)
     int i;
     for (i = 0; i < n_cmds; i++)
     {
-        int alt = NONE_I;
+        int comb = cmds[i]->combinators&0xFF;
         int modifiers = cmds[i]->modifiers&0x3;
 
-        if (cmds[i]->modifiers&ALT_F) alt = ALT_I;
-        else if (cmds[i]->modifiers&ALTGR_F)
-        {
-            alt = ALTGR_I;
-            printf("scancode: %x, modifiers: %x\n", cmds[i]->scancode, modifiers);}
-        
-        unsigned int idx = TABLE_IDX(alt, modifiers, cmds[i]->escape, cmds[i]->scancode);
-        if (alt == ALTGR_I)
-            printf("Index: %x\n", idx);
+        unsigned int idx = TABLE_IDX(comb, modifiers, cmds[i]->escape, cmds[i]->scancode);
         table[idx].flags = cmds[i]->set_modifiers;
         if (cmds[i]->unicode_point != 0)
         {
@@ -197,7 +191,7 @@ int sparse(int idx, int bisect_size)
     }
     else if ((all_set(&table[idx-bisect_size], &table[idx]) > 0) || (bisect_size % 2))
     {
-        printf("DATA: %x -> %x (L)\n", idx-bisect_size, idx);
+//         printf("DATA: %x -> %x (L)\n", idx-bisect_size, idx);
         // All set, add to data section and set ptr.
         me->left = data_add(&table[idx-bisect_size], &table[idx]) | SPARSE_DATA_FLAG /* This is actual data, not another node. */;
     }
@@ -217,7 +211,7 @@ int sparse(int idx, int bisect_size)
     }
     else if ((all_set(&table[idx], &table[idx+bisect_size]) > 0) || (bisect_size % 2))
     {
-        printf("DATA: %x -> %x (R)\n", idx, idx+bisect_size);
+//         printf("DATA: %x -> %x (R)\n", idx, idx+bisect_size);
         // All set, add to data section and set ptr.
         me->right = data_add(&table[idx], &table[idx+bisect_size]) | SPARSE_DATA_FLAG /* This is actual data, not another node. */;
     }
@@ -336,7 +330,7 @@ char sparse_buff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
     {
         fprintf(stream, "\\x%02x", (unsigned char)sparse_buff[i]);
         if ((i % 20) == 0 && i != 0) fprintf(stream, "\\\n");
-    } 
+    }
     fprintf(stream, "\";\n\nchar data_buff[%d] =\n\"", data_buffsz+1);
     for (i = 0; i < data_buffsz; i++)
     {

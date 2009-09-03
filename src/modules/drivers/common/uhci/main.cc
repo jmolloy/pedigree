@@ -31,18 +31,18 @@ void probeUHCI(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pUHCI);
 }
 
-void probeHCI(Device *pDev)
-{
-    probeUHCI(pDev);
-}
-
 void searchNode(Device *pDev)
 {
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
-        if((pChild->getPciClassCode() == HCI_CLASS) && (pChild->getPciSubclassCode() == HCI_SUBCLASS))
-            probeHCI(pChild);
+        if((pChild->getPciClassCode() == HCI_CLASS) &&
+           (pChild->getPciSubclassCode() == HCI_SUBCLASS) &&
+           (pChild->getPciProgInterface() == HCI_PROGIF_UHCI))
+        {
+            probeUHCI(pChild);
+        }
+
         // Recurse.
         searchNode(pChild);
     }
