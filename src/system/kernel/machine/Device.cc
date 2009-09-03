@@ -139,6 +139,63 @@ void Device::replaceChild(Device *src, Device *dest)
     }
 }
 
+/** Search functions */
+
+void Device::searchByVendorId(uint16_t vendorId, void (*callback)(Device*))
+{
+    for (unsigned int i = 0; i < m_Children.count(); i++)
+    {
+        Device *pChild = m_Children[i];
+        if(pChild->getPciVendorId() == vendorId)
+            callback(pChild);
+        pChild->searchByVendorId(vendorId, callback);
+    }
+}
+
+void Device::searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*))
+{
+    for (unsigned int i = 0; i < m_Children.count(); i++)
+    {
+        Device *pChild = m_Children[i];
+        if((pChild->getPciVendorId() == vendorId) && (pChild->getPciDeviceId() == deviceId))
+            callback(pChild);
+        pChild->searchByVendorIdAndDeviceId(vendorId, deviceId, callback);
+    }
+}
+
+void Device::searchByClass(uint16_t classCode, void (*callback)(Device*))
+{
+    for (unsigned int i = 0; i < m_Children.count(); i++)
+    {
+        Device *pChild = m_Children[i];
+        if(pChild->getPciClassCode() == classCode)
+            callback(pChild);
+        pChild->searchByClass(classCode, callback);
+    }
+}
+
+void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*))
+{
+    for (unsigned int i = 0; i < m_Children.count(); i++)
+    {
+        Device *pChild = m_Children[i];
+        if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode))
+            callback(pChild);
+        pChild->searchByClassAndSubclass(classCode, subclassCode, callback);
+    }
+}
+
+void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*))
+{
+    for (unsigned int i = 0; i < m_Children.count(); i++)
+    {
+        Device *pChild = m_Children[i];
+        if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode) && (pChild->getPciProgInterface() == progInterface))
+            callback(pChild);
+        pChild->searchByClassSubclassAndProgInterface(classCode, subclassCode, progInterface, callback);
+    }
+}
+
 Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
   m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad)
 {

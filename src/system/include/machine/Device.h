@@ -194,6 +194,17 @@ public:
   /** Attempts to find the device src in this device's children. If found, it replaces 'src' with 'dest' in this device's child list, so that 'src' is no longer a child of this device, and 'dest' is, in the same position that 'src' was. */
   void replaceChild(Device *src, Device *dest);
 
+  /** Search functions */
+  void searchByVendorId(uint16_t vendorId, void (*callback)(Device*));
+
+  void searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*));
+
+  void searchByClass(uint16_t classCode, void (*callback)(Device*));
+
+  void searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*));
+
+  void searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*));
+
 #ifdef OPENFIRMWARE
   /** Gets the device's OpenFirmware handle. */
   OFHandle getOFHandle()

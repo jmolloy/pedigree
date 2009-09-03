@@ -22,36 +22,21 @@
 #include <usb/UsbConstants.h>
 #include "UHCI.h"
 
-void probeUHCI(Device *pDev)
+void probeDevice(Device *pDev)
 {
-    NOTICE("USB: UHCI found");
+    NOTICE("UHCI found");
+
+    // Create a new UHCI node
     UHCI *pUHCI = new UHCI(pDev);
+
     // Replace pDev with pUHCI.
     pUHCI->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pUHCI);
 }
 
-void searchNode(Device *pDev)
-{
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-    {
-        Device *pChild = pDev->getChild(i);
-        if((pChild->getPciClassCode() == HCI_CLASS) &&
-           (pChild->getPciSubclassCode() == HCI_SUBCLASS) &&
-           (pChild->getPciProgInterface() == HCI_PROGIF_UHCI))
-        {
-            probeUHCI(pChild);
-        }
-
-        // Recurse.
-        searchNode(pChild);
-    }
-}
-
 void entry()
 {
-    Device *pDev = &Device::root();
-    searchNode(pDev);
+    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeDevice);
 }
 
 void exit()
