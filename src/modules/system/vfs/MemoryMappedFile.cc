@@ -138,7 +138,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     // Quick sanity check...
     if (address-offset > m_Extent)
     {
-        FATAL("MemoryMappedFile: trap called with invalid address: " << Hex << address);
+        FATAL_NOLOCK("MemoryMappedFile: trap called with invalid address: " << Hex << address);
         return;
     }
 
@@ -152,7 +152,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     // Map it into the address space.
     if (!va.map(p, reinterpret_cast<void *>(v), VirtualAddressSpace::Write | VirtualAddressSpace::Execute))
     {
-        FATAL("MemoryMappedFile: map() failed in trap()");
+        FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
         return;
     }
 
@@ -168,8 +168,8 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     if (m_pFile->read(v-offset, PhysicalMemoryManager::getPageSize(),
         reinterpret_cast<uintptr_t>(buffer)) == 0)
     {
-        WARNING("MemoryMappedFile: read() failed in trap()");
-        WARNING("File is " << m_pFile->getName() << ", offset was " << (v - offset) << ", reading a page.");
+        WARNING_NOLOCK("MemoryMappedFile: read() failed in trap()");
+        WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << (v - offset) << ", reading a page.");
         // Non-fatal, continue.
     }
 
@@ -222,7 +222,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
     address = 0;
     if (!pMmFile->load(address))
     {
-        ERROR("MemoryMappedFile: load failed in map()");
+        ERROR_NOLOCK("MemoryMappedFile: load failed in map()");
         return 0;
     }
 

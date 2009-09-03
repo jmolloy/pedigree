@@ -285,6 +285,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return 0;
         case PEDIGREE_LOAD_KEYMAP:
             return pedigree_load_keymap(reinterpret_cast<char*>(p1), static_cast<size_t>(p2));
+        case PEDIGREE_GET_MOUNT:
+            return pedigree_get_mount(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }

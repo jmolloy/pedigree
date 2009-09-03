@@ -189,9 +189,6 @@ protected:
     return 0;
   }
 
-  /** Our raw device. */
-  Disk *m_pDisk;
-
   /** Our superblocks */
   Superblock m_Superblock;
   Superblock16 m_Superblock16;

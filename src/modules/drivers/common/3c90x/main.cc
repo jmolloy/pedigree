@@ -54,52 +54,22 @@ static struct nic potential_nics[] = {
 
 #define NUM_POTENTIAL_NICS (sizeof(potential_nics) / sizeof(potential_nics[0]))
 
-void probeDevice(Network *pDev)
+void probeDevice(Device *pDev)
 {
-    // Create a new node
-    Nic3C90x *pCard = new Nic3C90x(pDev);
+    NOTICE("3C90x found");
 
-    // Replace pDev with pRtl8139.
+    // Create a new node
+    Nic3C90x *pCard = new Nic3C90x(reinterpret_cast<Network*>(pDev));
+
+    // Replace pDev with pCard
     pCard->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pCard);
-
-
-    // And delete pDev for good measure.
-    //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
-    //delete pDev;
-}
-
-void searchNode(Device *pDev)
-{
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-    {
-        Device *pChild = pDev->getChild(i);
-
-        for(unsigned int j = 0; j < NUM_POTENTIAL_NICS; j++)
-        {
-          uint16_t vendor = potential_nics[j].vendor;
-          uint16_t device = potential_nics[j].device;
-          if((pChild->getPciVendorId() == vendor) && (pChild->getPciDeviceId() == device))
-          {
-            uintptr_t irq = pChild->getInterruptNumber();
-            NOTICE("3C90x [" << potential_nics[j].type << "/" << potential_nics[j].desc << "] found, IRQ = " << irq << ".");
-
-            if(pChild->addresses()[0]->m_IsIoSpace)
-                probeDevice(reinterpret_cast<Network*>(pChild));
-          }
-        }
-
-        // Recurse.
-        searchNode(pChild);
-    }
 }
 
 void entry()
 {
-    // Walk the device tree looking for controllers that have
-    // "control" and "command" addresses.
-    Device *pDev = &Device::root();
-    searchNode(pDev);
+    for(unsigned int i = 0; i < NUM_POTENTIAL_NICS; i++)
+        Device::root().searchByVendorIdAndDeviceId(potential_nics[i].vendor, potential_nics[i].device, probeDevice);
 }
 
 void exit()

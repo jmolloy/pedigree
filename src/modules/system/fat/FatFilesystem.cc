@@ -47,7 +47,7 @@ bool isPowerOf2(uint32_t n)
 }
 
 FatFilesystem::FatFilesystem() :
-        m_pDisk(0), m_Superblock(), m_Superblock16(), m_Superblock32(), m_FsInfo(), m_Type(FAT12), m_DataAreaStart(0),
+        m_Superblock(), m_Superblock16(), m_Superblock32(), m_FsInfo(), m_Type(FAT12), m_DataAreaStart(0),
         m_RootDirCount(0), m_FatSector(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(false), m_pRoot(0),
         m_FatCache()
 {

@@ -26,7 +26,7 @@
 #include "Symlink.h"
 
 Filesystem::Filesystem() :
-  m_bReadOnly(false), m_nAliases(0)
+  m_bReadOnly(false), m_pDisk(0), m_nAliases(0)
 {
 }
 

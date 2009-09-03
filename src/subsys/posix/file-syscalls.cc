@@ -1472,3 +1472,31 @@ int posix_access(const char *name, int amode)
     return 0;
 }
 
+int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
+{
+    NOTICE("pedigree_get_mount(" << Dec << n << Hex << ")");
+
+    List<VFS::Alias*> myAliases = VFS::instance().getAliases();
+    size_t i = 0;
+    for(List<VFS::Alias*>::Iterator it = myAliases.begin(); it != myAliases.end() && i <= n; it++, i++)
+    {
+        if(i == n)
+        {
+            String info, str;
+            Disk *disk = (*it)->fs->getDisk();
+            if(disk)
+            {
+                disk->getName(str);
+                disk->getParent()->getName(info);
+                info += " // ";
+                info += str;
+            }
+            else
+                info = "no disk";
+            strcpy(mount_buf, static_cast<const char*>((*it)->alias));
+            strcpy(info_buf, static_cast<const char*>(info));
+            return 0;
+        }
+    }
+    return -1;
+}

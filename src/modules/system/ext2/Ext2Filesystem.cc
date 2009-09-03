@@ -32,7 +32,7 @@
 #include <users/UserManager.h>
 
 Ext2Filesystem::Ext2Filesystem() :
-    m_pDisk(0), m_Superblock(), m_pGroupDescriptors(0), m_BlockSize(0), m_InodeSize(0), m_WriteLock(false),
+    m_Superblock(), m_pGroupDescriptors(0), m_BlockSize(0), m_InodeSize(0), m_WriteLock(false),
     m_bSuperblockDirty(false), m_bGroupDescriptorsDirty(false), m_pRoot(0)
 {
 }
