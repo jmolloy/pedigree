@@ -1,3 +1,4 @@
+733
 /*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
@@ -1726,6 +1727,7 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
 int pedigree_load_keymap(char *buf, size_t sz)
 {
     return syscall2(PEDIGREE_LOAD_KEYMAP, (int)buf, (int)sz);
+}
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
