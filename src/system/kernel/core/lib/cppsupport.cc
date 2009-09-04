@@ -74,13 +74,13 @@ struct mallinfo g_Mallinfo;
 void *operator new (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  //void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+    //g_MallocLock.acquire();
+  void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
-  void *ret = malloc(size);
-  g_MallocLock.release();
+  //void *ret = malloc(size);
+  //g_MallocLock.release();
   return ret;
 #else
   return 0;
@@ -89,13 +89,13 @@ void *operator new (size_t size) throw()
 void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-  g_MallocLock.acquire();
-  //void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+    //g_MallocLock.acquire();
+  void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
-  void *ret = malloc(size);
-  g_MallocLock.release();
+  //void *ret = malloc(size);
+  //g_MallocLock.release();
   return ret;
 #else
   return 0;
@@ -119,13 +119,13 @@ void operator delete (void * p)
       ERROR_NOLOCK("Bad free " << Hex << up);
       Processor::breakpoint();
   }
-  g_MallocLock.acquire();
-  //SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  //g_MallocLock.acquire();
+  SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
-  free(p);
-  g_MallocLock.release();
+  //free(p);
+  //g_MallocLock.release();
 #endif
 }
 void operator delete[] (void * p)
@@ -140,13 +140,13 @@ void operator delete[] (void * p)
       Processor::breakpoint();
   }
 
-  g_MallocLock.acquire();
-  //SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  //g_MallocLock.acquire();
+  SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
-  free(p);
-  g_MallocLock.release();
+  //free(p);
+  //g_MallocLock.release();
 #endif
 }
 void operator delete (void *p, void *q)

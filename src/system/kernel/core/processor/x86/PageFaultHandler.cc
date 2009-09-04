@@ -45,8 +45,6 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);
 
-//  NOTICE_NOLOCK("PF: At " << Hex << cr2 << ", eip: " << state.getInstructionPointer());
-
   if (g_MallocLock.acquired())
   {
       g_MallocLock.release();

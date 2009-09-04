@@ -80,7 +80,6 @@
   } \
   while (0)
 
-    /* Log::instance() << Log::Error << __FILE__ << ":" << __LINE__ << ": " << Flush; \ */
 
 /** Add a fatal message to the log
  *  The panic is just in case the debugger isn't active, or the user returns
@@ -108,7 +107,7 @@
 /** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
 /** The maximum number of static entries in the log. */
-#define LOG_ENTRIES 160
+#define LOG_ENTRIES ((1<<21)/sizeof(LogEntry))
 
 /** Radix for Log's integer output */
 enum NumberType
@@ -183,11 +182,10 @@ public:
   /** Get the number of dynamic entries in the log
    *\return the number of dynamic entries in the log */
   inline size_t getDynamicEntryCount() const
-    {return m_DynamicLog.count();}
+    {return 0;}
 
   /** Stores an entry in the log.
    *\param[in] T type of the log's text */
-  template<class T>
   struct LogEntry
   {
     /** Constructor does nothing */
@@ -199,20 +197,19 @@ public:
     /** The severity level of this entry. */
     SeverityLevel type;
     /** The actual entry text. */
-    T str;   
+    StaticString<LOG_LENGTH> str;   
   };
 
   /** Type of a static log entry (no memory-management involved) */
-  typedef LogEntry<StaticString<LOG_LENGTH> > StaticLogEntry;
-  /** Type of a dynamic log entry (memory-management involved) */
-  typedef LogEntry<String> DynamicLogEntry;
-
+  typedef LogEntry StaticLogEntry;
+  typedef LogEntry DynamicLogEntry;
+   
   /** Returns the n'th static log entry, counting from the start. */
   inline const StaticLogEntry &getStaticEntry(size_t n) const
-    {return m_StaticLog[n];}
+    {return m_StaticLog[(m_StaticEntryStart+n) % LOG_ENTRIES];}
   /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
   inline const DynamicLogEntry &getDynamicEntry(size_t n) const
-    {return *m_DynamicLog[n - m_StaticEntries];}
+    {return m_StaticLog[0];}
 
 private:
   /** Default constructor - does nothing. */
@@ -229,9 +226,11 @@ private:
   /** Static buffer of log messages. */
   StaticLogEntry m_StaticLog[LOG_ENTRIES];
   /** Dynamic buffer of log messages */
-  Vector<DynamicLogEntry*> m_DynamicLog;
+//  Vector<DynamicLogEntry*> m_DynamicLog;
   /** Number of entries in the static log */
   size_t m_StaticEntries;
+
+  size_t m_StaticEntryStart, m_StaticEntryEnd;
 
   /** Temporary buffer which gets filled by calls to operator<<, and flushed by << Flush. */
   StaticLogEntry m_Buffer;

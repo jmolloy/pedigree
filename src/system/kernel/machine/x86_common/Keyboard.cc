@@ -185,6 +185,8 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
 {
     uint8_t scancode, status;
 
+    if (m_bDebugState) return true;
+
     // Get the keyboard's status byte.
     status = m_Port.read8(4);
     if (!(status & 0x01))
@@ -290,7 +292,6 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     table_entry_t *pTableEntry = getTableEntry(m_Combinator, m_bAlt, m_bAltGr, m_bCtrl, m_bShift, m_bEscape, scancode);
     if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
     {
-        NOTICE("Needed to fallback");
         // Fall back and just use the shift modifier.
         pTableEntry = getTableEntry(0, false, false, false, m_bShift, m_bEscape, scancode);
         if (!pTableEntry || (pTableEntry->val == 0 && pTableEntry->flags == 0))
@@ -299,7 +300,6 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
             pTableEntry = getTableEntry(0, false, false, false, false, false, scancode);
             if (!pTableEntry)
             {
-                NOTICE("Failed completely.");
                 m_bEscape = false;
                 return 0;
             }
@@ -324,7 +324,6 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
         {
             // Change combinator.
             m_Combinator = flags;
-            NOTICE("Set combinator to " << flags);
             return 0;
         }
     }
@@ -337,7 +336,7 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
     if ((pTableEntry->flags & UNICODE_POINT) || (pTableEntry->flags & SPECIAL))
     {
         uint64_t ret = pTableEntry->val;
-        NOTICE("U+" << Hex << pTableEntry->val);
+
         if (pTableEntry->flags & SPECIAL)
         {
             ret |= Keyboard::Special;

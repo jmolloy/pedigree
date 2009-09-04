@@ -95,8 +95,7 @@ SACache::~SACache()
 
 SACache::SlabFooter *SACache::getFooter(uintptr_t slab)
 {
-    if(!slab)
-        panic("SACache::getFooter called with null slab");
+    assert(slab);
 
     size_t footerOffset = ((SLAB_SIZE * 0x1000) - 1) - m_BitmapSize - sizeof(SlabFooter);
     return reinterpret_cast<SlabFooter *>(slab + footerOffset);
@@ -104,8 +103,7 @@ SACache::SlabFooter *SACache::getFooter(uintptr_t slab)
 
 uint8_t *SACache::getBitmap(uintptr_t slab)
 {
-    if(!slab)
-        panic("SACache::getBitmap called with null slab");
+    assert(slab);
 
     if(m_BlockSize < BIG_BLOCK_THRESHOLD)
     {
@@ -155,7 +153,7 @@ SACache::SlabFooter *SACache::initialise(uintptr_t slab)
     else
     {
 #if BIG_BLOCK_SUPPORT
-        // Craete the new pointer (safe, because there's a static cache for these small blocks)
+        // Create the new pointer (safe, because there's a static cache for these small blocks)
         SlabFooter *p = reinterpret_cast<SlabFooter *>(SlabAllocator::instance().getFirstCache()->allocate());
 
         // Information about the allocation
@@ -259,9 +257,13 @@ uintptr_t SACache::allocate()
                 break;
             }
 
+            // If the bitmap size isn't a multiple of 8, check.
+            size_t bitNumber = (i * 8) + bit;
+            if (bitNumber >= m_NumBlocks)
+                continue;
+
             // It shouldn't be possible to not have found a bit
-            if(bit >= 8)
-                FATAL("Impossible");
+            assert(bit < 8);
 
             // Set this block as used, and return it
             bitmap[i] |= (1 << bit);
@@ -274,7 +276,6 @@ uintptr_t SACache::allocate()
                 f->state = SASlab::Partial;
 
             // Return the address
-            size_t bitNumber = (i * 8) + bit;
             size_t realOffset = bitNumber * m_BlockSize;
             uintptr_t finalAddr = slab + realOffset;
             return finalAddr;
@@ -291,10 +292,10 @@ uintptr_t SACache::allocate()
 void SACache::free(uintptr_t blk)
 {
     // Find the cache that this block is within
-    uintptr_t s = m_FirstSlab, slab = 0;
+    uintptr_t s = m_FirstSlab, slab = m_FirstSlab;
 #if BIG_BLOCK_SUPPORT
     SlabFooter *f = (m_BlockSize < BIG_BLOCK_THRESHOLD) ? getFooter(s) : m_BigBlockInfo;
-    while(f != 0 && f->state == SASlab::Full)
+    while(f != 0)
     {
         // Is this block within the slab?
         if(f->memStart <= blk && f->memEnd > blk)
@@ -317,7 +318,7 @@ void SACache::free(uintptr_t blk)
     }
 #else
     SlabFooter *f = getFooter(slab);
-    while(f != 0 && f->state == SASlab::Full)
+    while(f != 0)
     {
         // Is this block within the slab?
         if(f->memStart <= blk && f->memEnd > blk)
@@ -348,12 +349,12 @@ void SACache::free(uintptr_t blk)
         // Set it as free...
         size_t bitmapIndex = blockNumber / 8;
         size_t bitIndex = blockNumber % 8;
-        uint8_t *bmap = getBitmap(s);
+        uint8_t *bmap = getBitmap(slab);
 
 #ifdef ADDITIONAL_CHECKS
         // Assert that the bit is actually set, so that we do not attempt to free an already-freed object.
         // This is considered an error condition - freeing a freed pointer is typically a mistake.
-        // assert((bmap[bitmapIndex] & (1 << bitIndex)) != 0); // Potential double free?
+        assert((bmap[bitmapIndex] & (1 << bitIndex)) != 0); // Potential double free?
 #endif
         /// \note Above assertion seems to fail all the time... But that's before the debugger's available, so
         ///       I haven't been able to trace it yet...
@@ -379,7 +380,7 @@ void SACache::free(uintptr_t blk)
     }
 #if DEBUGGING_SLAB_ALLOCATOR
     else
-        WARNING("SlabAllocator: Cache was given block " << blk << ", but I have no slab for it?");
+        WARNING_NOLOCK("SlabAllocator: Cache was given block " << blk << ", but I have no slab for it?");
 #endif
 }
 
@@ -405,7 +406,7 @@ void SACache::link(uintptr_t slab)
 void SACache::link(SlabFooter *p)
 {
     // Traverse the list...
-    assert(m_BlockSize < BIG_BLOCK_THRESHOLD);
+    assert(m_BlockSize >= BIG_BLOCK_THRESHOLD);
     SlabFooter *f = m_BigBlockInfo;
     while(f != 0)
     {
@@ -464,7 +465,7 @@ uintptr_t SlabAllocator::allocateDoer(SACache *cache)
 uintptr_t SlabAllocator::allocate(size_t nBytes)
 {
 #if DEBUGGING_SLAB_ALLOCATOR
-    NOTICE("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
+    NOTICE_NOLOCK("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
 #endif
 
     // If we're not initialised, fix that
@@ -518,15 +519,16 @@ uintptr_t SlabAllocator::allocate(size_t nBytes)
 
 #if DEBUGGING_SLAB_ALLOCATOR
     if(!ret)
-        ERROR("SlabAllocator::allocate: Allocation failed (" << Dec << nBytes << Hex << " bytes)");
+        ERROR_NOLOCK("SlabAllocator::allocate: Allocation failed (" << Dec << nBytes << Hex << " bytes)");
 #endif
+
     return ret;
 }
 
 void SlabAllocator::free(uintptr_t mem)
 {
 #if DEBUGGING_SLAB_ALLOCATOR
-    NOTICE("SlabAllocator::free");
+    NOTICE_NOLOCK("SlabAllocator::free");
 #endif
 
     // If we're not initialised, fix that

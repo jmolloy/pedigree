@@ -35,7 +35,7 @@ void _assert(bool b, const char *file, int line, const char *func)
     if(b)
         return;
 
-    ERROR("Assertion failed in file " << String(file) << " (line " << Dec << line << Hex << ")");
+    ERROR("Assertion failed in file " << file << " (line " << Dec << line << Hex << ")");
     ERROR("In function '" << func << "'.");
     Processor::breakpoint();
 

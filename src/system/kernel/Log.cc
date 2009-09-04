@@ -25,8 +25,9 @@ Log Log::m_Instance;
 
 Log::Log () :
   m_Lock(),
-  m_DynamicLog(),
   m_StaticEntries(0),
+  m_StaticEntryStart(0),
+  m_StaticEntryEnd(0),
   m_Buffer(),
   m_NumberType(Dec)
 {
@@ -93,17 +94,13 @@ Log &Log::operator<< (Modifier type)
   {
     if (m_StaticEntries >= LOG_ENTRIES)
     {
-      if (Processor::isInitialised() == 0)
-        panic("Log: Not enough static log entries");
-
-      DynamicLogEntry *entry = new DynamicLogEntry;
-      entry->type = m_Buffer.type;
-      entry->timestamp = m_Buffer.timestamp;
-      entry->str = m_Buffer.str;
-      m_DynamicLog.pushBack(entry);
+        m_StaticEntryStart = (m_StaticEntryStart+1) % LOG_ENTRIES;
     }
     else
-      m_StaticLog[m_StaticEntries++] = m_Buffer;
+        m_StaticEntries ++;
+
+    m_StaticLog[m_StaticEntryEnd] = m_Buffer;
+    m_StaticEntryEnd = (m_StaticEntryEnd+1) % LOG_ENTRIES;
 
 #ifdef ECHO_CONSOLE_TO_SERIAL
     if (Machine::instance().isInitialised() == true)
