@@ -20,5 +20,5 @@
 
 void dlmallocAbort()
 {
-  panic("dlmallocAbort");
+    panic("dlmallocAbort");
 }

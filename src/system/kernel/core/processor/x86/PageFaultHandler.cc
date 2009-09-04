@@ -50,9 +50,15 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   if (g_MallocLock.acquired())
   {
       g_MallocLock.release();
-      LargeStaticString str;
-      str += "Page fault in malloc()/free()";
-      Debugger::instance().start(state, str);   
+      //  Get PFE location and error code
+      static LargeStaticString sError;
+      sError.clear();
+      sError.append("Page fault in malloc/free: 0x");
+      sError.append(cr2, 16, 8, '0');
+      sError.append(", error code 0x");
+      sError.append(code, 16, 8, '0');
+
+      Debugger::instance().start(state, sError);
   }
 
   // Check for copy-on-write.
