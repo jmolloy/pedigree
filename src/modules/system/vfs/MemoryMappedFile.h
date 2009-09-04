@@ -109,6 +109,8 @@ private:
 
     /** Reference count. */
     size_t m_RefCount;
+
+    Mutex m_Lock;
 };
 
 /** This class is a multiplexing trap handler, to take traps pertaining to

@@ -163,6 +163,8 @@ class List<void*>
     node_t *m_First;
     /** Pointer to the last Node in the List */
     node_t *m_Last;
+
+    uint32_t m_Magic;
 };
 
 /** List template specialisation for pointers. Just forwards to the

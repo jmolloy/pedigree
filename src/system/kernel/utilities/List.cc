@@ -15,23 +15,29 @@
  */
 
 #include <utilities/List.h>
+#include <Log.h>
+#include <processor/Processor.h>
 
 //
 // List<void*> implementation
 //
 
 List<void*>::List()
-  : m_Count(0), m_First(0), m_Last(0)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
 {
 }
 List<void*>::List(const List &x)
-  : m_Count(0), m_First(0), m_Last(0)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
 {
   assign(x);
 }
 List<void*>::~List()
 {
-  clear();
+    if (m_Magic != 0x1BADB002)
+    {
+        FATAL("List: bad magic.");
+    }
+    clear();
 }
 
 List<void*> &List<void*>::operator = (const List &x)

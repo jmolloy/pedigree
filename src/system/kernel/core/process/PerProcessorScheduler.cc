@@ -165,6 +165,10 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
       if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
       {
           userStack = reinterpret_cast<uintptr_t>(pThread->getStateUserStack());
+          if (!userStack)
+          {
+              pThread->setStateUserStack(reinterpret_cast<void*>(va.allocateStack()));
+          }
       }
       else
       {

@@ -32,7 +32,7 @@ class Spinlock
 
     bool acquired()
     {
-        return m_Atom;
+        return !m_Atom;
     }
 
   private:

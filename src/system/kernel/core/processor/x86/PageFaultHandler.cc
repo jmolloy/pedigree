@@ -36,7 +36,7 @@ bool PageFaultHandler::initialise()
 
   return(IntManager.registerInterruptHandler(PAGE_FAULT_EXCEPTION, this));
 }
-
+extern Spinlock g_MallocLock;
 void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
   uint32_t cr2, code;
@@ -46,6 +46,14 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);
 
 //  NOTICE_NOLOCK("PF: At " << Hex << cr2 << ", eip: " << state.getInstructionPointer());
+
+  if (g_MallocLock.acquired())
+  {
+      g_MallocLock.release();
+      LargeStaticString str;
+      str += "Page fault in malloc()/free()";
+      Debugger::instance().start(state, str);   
+  }
 
   // Check for copy-on-write.
   VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();

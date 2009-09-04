@@ -65,14 +65,14 @@ extern "C" void __cxa_guard_release()
   // TODO
 }
 
-Spinlock g_MallocLock(false, true);
+Spinlock g_MallocLock(false, false);
 
 #include "dlmalloc.h"
 void *operator new (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   g_MallocLock.acquire();
-  // void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+  //void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
   void *ret = malloc(size);
   g_MallocLock.release();
   return ret;
@@ -84,7 +84,7 @@ void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   g_MallocLock.acquire();
-  // void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+  //void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
   void *ret = malloc(size);
   g_MallocLock.release();
   return ret;
@@ -104,7 +104,7 @@ void operator delete (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   g_MallocLock.acquire();
-  // SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  //SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   free(p);
   g_MallocLock.release();
 #endif
@@ -113,7 +113,7 @@ void operator delete[] (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
   g_MallocLock.acquire();
-  // SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  //SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   free(p);
   g_MallocLock.release();
 #endif

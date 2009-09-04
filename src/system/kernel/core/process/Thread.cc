@@ -150,8 +150,8 @@ void Thread::allocateStackAtLevel(size_t stateLevel)
 {
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-    if(m_StateLevels[stateLevel].m_pUserStack == 0)
-        m_StateLevels[stateLevel].m_pUserStack = Processor::information().getVirtualAddressSpace().allocateStack();
+//    if(m_StateLevels[stateLevel].m_pUserStack == 0)
+//        m_StateLevels[stateLevel].m_pUserStack = m_pParent->getAddressSpace()->allocateStack();
 }
 
 void Thread::setKernelStack()

@@ -97,6 +97,8 @@ void Debugger::initialise()
 /// \todo OZMFGBARBIE, this needs major cleanup. Look at the state of it!! :O
 void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
+  Log::instance() << " << Flushing log content >>" << Flush;
+
   // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
   // decide to switch threads.
 #ifdef MULTIPROCESSOR

@@ -139,6 +139,12 @@ public:
         return m_StateLevels[m_nStateLevel].m_pUserStack;
     }
 
+    void setStateUserStack(void *st)
+    {
+        m_StateLevels[m_nStateLevel].m_pUserStack = st;
+    }
+
+
     /** Returns the state nesting level. */
     size_t getStateLevel()
     {return m_nStateLevel;}    

@@ -23,7 +23,7 @@ MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
 MemoryMappedFile::MemoryMappedFile(File *pFile) :
     m_pFile(pFile), m_Mappings(), m_bMarkedForDeletion(false),
-    m_Extent(pFile->getSize() + 1), m_RefCount(0)
+    m_Extent(pFile->getSize() + 1), m_RefCount(0), m_Lock()
 {
     if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
     {
@@ -47,6 +47,8 @@ MemoryMappedFile::~MemoryMappedFile()
 
 bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 {
+    LockGuard<Mutex> guard(m_Lock);
+
     if (!pProcess)
         pProcess = Processor::information().getCurrentThread()->getParent();
 
@@ -102,10 +104,9 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 
 void MemoryMappedFile::unload(uintptr_t address)
 {
-    // Create a spinlock as an easy way of disabling interrupts.
-    Spinlock spinlock;
-    spinlock.acquire();
+    LockGuard<Mutex> guard(m_Lock);
 
+    // Create a spinlock as an easy way of disabling interrupts.
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     // Remove all the V->P mappings we currently posess.
@@ -129,12 +130,12 @@ void MemoryMappedFile::unload(uintptr_t address)
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
-
-    spinlock.release();
 }
 
 void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
 {
+    LockGuard<Mutex> guard(m_Lock);
+
     // Quick sanity check...
     if (address-offset > m_Extent)
     {
@@ -194,7 +195,7 @@ MemoryMappedFileManager::~MemoryMappedFileManager()
 
 MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
 {
-    LockGuard<Mutex> guard(m_CacheLock);
+    m_CacheLock.acquire();
 
     // Attempt to find an existing MemoryMappedFile* in the cache.
     MemoryMappedFile *pMmFile = m_Cache.lookup(pFile);
@@ -205,7 +206,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
         if (false /*pFile->hasBeenTouched()*/)
         {
             pMmFile->markForDeletion();
-             m_Cache.remove(pFile);
+            m_Cache.remove(pFile);
             pMmFile = 0;
         }
     }
@@ -218,6 +219,8 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
         m_Cache.insert(pFile, pMmFile);
     }
 
+    m_CacheLock.release();
+
     // Now we know that pMmFile is valid, load it into our address space.
     address = 0;
     if (!pMmFile->load(address))
@@ -229,6 +232,8 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
     pMmFile->increaseRefCount();
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    /// \todo This operation should be atomic with respect to threads.
 
     // Add to the MmFileList for this VA space (if it exists).
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
@@ -337,27 +342,24 @@ void MemoryMappedFileManager::unmapAll()
 
 bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
 {
-    Spinlock sl;
-    sl.acquire();
-    m_CacheLock.acquire();
-    //NOTICE("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+    NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
     /// \todo Handle read-write maps.
     if (bIsWrite)
     {
-        m_CacheLock.release();
-        sl.release();
         return false;
     }
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
+    m_CacheLock.acquire();
+
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
     if (!pMmFileList)
     {
         m_CacheLock.release();
-        sl.release();
         return false;
     }
+
 
     for (List<MmFile*>::Iterator it = pMmFileList->begin();
          it != pMmFileList->end();
@@ -367,13 +369,15 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
         if ( (address >= pMmFile->offset) && (address < pMmFile->offset+pMmFile->size) )
         {
             m_CacheLock.release();
-            sl.release();
             pMmFile->file->trap(address, pMmFile->offset);
+
+            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
             return true;
         }
     }
     m_CacheLock.release();
-    sl.release();
+
+    NOTICE_NOLOCK("Trap end (false): " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
 
     return false;
 }
