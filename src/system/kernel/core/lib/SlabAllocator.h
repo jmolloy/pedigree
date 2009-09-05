@@ -34,15 +34,16 @@
 #include "dlmalloc.h"
 
 /// Size of each slab in 4096-byte pages
-/// \note If anyone knowingly allocates more than 16384 bytes in one go, I will
-///       hunt them down and stab them. Find a better way, PLEASE. -Matt
-#define SLAB_SIZE                       4
+#define SLAB_SIZE                       1
+
+/// Minimum slab size in bytes
+#define SLAB_MINIMUM_SIZE               (4096 * SLAB_SIZE)
 
 /// Block size of the first, static, cache
 #define FIRST_STATIC_CACHE_SIZE         32
 
 /// Threshold for a "big block"
-#define BIG_BLOCK_THRESHOLD             8192
+#define BIG_BLOCK_THRESHOLD             1024
 
 /// Outputs information during each function call
 #define DEBUGGING_SLAB_ALLOCATOR        0
@@ -69,9 +70,9 @@ class SASlab
         SASlab();
         virtual ~SASlab();
 
-        static uintptr_t get()
+        static uintptr_t get(size_t slabSize)
         {
-            return reinterpret_cast<uintptr_t>(dlmallocSbrk(4096 * SLAB_SIZE));
+            return reinterpret_cast<uintptr_t>(dlmallocSbrk(slabSize));
         }
     private:
 

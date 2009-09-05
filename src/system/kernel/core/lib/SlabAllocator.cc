@@ -65,7 +65,8 @@ SACache::SACache(size_t blkSize) :
 #endif
 {
     // Grab a slab...
-    m_FirstSlab = SASlab::get();
+    size_t slabSize = m_BlockSize > SLAB_MINIMUM_SIZE ? m_BlockSize : SLAB_MINIMUM_SIZE;
+    m_FirstSlab = SASlab::get(slabSize);
     if(!m_FirstSlab)
     {
         ERROR("Couldn't get a slab!");
@@ -73,7 +74,7 @@ SACache::SACache(size_t blkSize) :
     }
 
     // Find the number of blocks per slab we can use
-    m_NumBlocks = (SLAB_SIZE * 0x1000) / m_BlockSize;
+    m_NumBlocks = (slabSize) / m_BlockSize;
     m_NumBlocks -= (sizeof(SlabFooter) / m_BlockSize) + 1;
     m_NumBlocks -= (m_NumBlocks / 8 ) + 1;
 
@@ -97,7 +98,8 @@ SACache::SlabFooter *SACache::getFooter(uintptr_t slab)
 {
     assert(slab);
 
-    size_t footerOffset = ((SLAB_SIZE * 0x1000) - 1) - m_BitmapSize - sizeof(SlabFooter);
+    size_t slabSize = m_BlockSize > SLAB_MINIMUM_SIZE ? m_BlockSize : SLAB_MINIMUM_SIZE;
+    size_t footerOffset = ((slabSize) - 1) - m_BitmapSize - sizeof(SlabFooter);
     return reinterpret_cast<SlabFooter *>(slab + footerOffset);
 }
 
@@ -107,7 +109,8 @@ uint8_t *SACache::getBitmap(uintptr_t slab)
 
     if(m_BlockSize < BIG_BLOCK_THRESHOLD)
     {
-        size_t bitmapOffset = ((SLAB_SIZE * 0x1000) - 1) - m_BitmapSize;
+        size_t slabSize = m_BlockSize > SLAB_MINIMUM_SIZE ? m_BlockSize : SLAB_MINIMUM_SIZE;
+        size_t bitmapOffset = ((slabSize) - 1) - m_BitmapSize;
         return reinterpret_cast<uint8_t*>(slab + bitmapOffset);
     }
 #if BIG_BLOCK_SUPPORT
@@ -131,13 +134,15 @@ uint8_t *SACache::getBitmap(uintptr_t slab)
 
 SACache::SlabFooter *SACache::initialise(uintptr_t slab)
 {
+    size_t slabSize = m_BlockSize > SLAB_MINIMUM_SIZE ? m_BlockSize : SLAB_MINIMUM_SIZE;
+
     // Determine how we should approach the footer - 2K and over use a *new* slab for the footer
     if(m_BlockSize < BIG_BLOCK_THRESHOLD)
     {
         // Add the footer
         SlabFooter *footer = getFooter(slab);
         footer->memStart = slab;
-        footer->memEnd = footer->memStart + (SLAB_SIZE * 0x1000);
+        footer->memEnd = footer->memStart + (slabSize);
         footer->numAlloc = 0;
         footer->state = SASlab::Empty;
         footer->NextSlab = 0;
@@ -158,7 +163,7 @@ SACache::SlabFooter *SACache::initialise(uintptr_t slab)
 
         // Information about the allocation
         p->memStart = slab;
-        p->memEnd = p->memStart + (SLAB_SIZE * 0x1000);
+        p->memEnd = p->memStart + (slabSize);
         p->numAlloc = 0;
         p->state = SASlab::Empty;
         p->NextSlab = 0;
@@ -170,7 +175,7 @@ SACache::SlabFooter *SACache::initialise(uintptr_t slab)
         if(!m_BigBlockInfo) m_BigBlockInfo = p; else link(p);
 
         // Different number of blocks now
-        m_NumBlocks = (SLAB_SIZE * 0x1000) / m_BlockSize;
+        m_NumBlocks = (slabSize) / m_BlockSize;
         m_BitmapSize = 1;
 
         return p;
@@ -224,7 +229,8 @@ uintptr_t SACache::allocate()
     if(!f)
     {
         // Grab a new slab, if possible
-        slab = SASlab::get();
+        size_t slabSize = m_BlockSize > SLAB_MINIMUM_SIZE ? m_BlockSize : SLAB_MINIMUM_SIZE;
+        slab = SASlab::get(slabSize);
         if(!slab)
         {
             FATAL("Out of memory");
