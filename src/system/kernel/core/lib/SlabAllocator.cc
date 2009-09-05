@@ -490,6 +490,7 @@ uintptr_t SlabAllocator::allocate(size_t nBytes)
     else
     {
         // Round the size up to the nearest power of two
+        /// \todo 32-bit only, needs a fix to support 64-bit too
         nBytes--;
         nBytes |= nBytes >> 1;
         nBytes |= nBytes >> 2;

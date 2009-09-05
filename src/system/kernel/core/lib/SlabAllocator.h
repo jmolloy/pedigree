@@ -137,6 +137,12 @@ class SACache
 
         // Gets the bitmap location given a slab
         uint8_t *getBitmap(uintptr_t slab);
+
+        // Gets the cache block size
+        size_t getBlockSize()
+        {
+            return m_BlockSize;
+        }
     private:
         SACache(const SACache &);
         const SACache& operator = (const SACache &);

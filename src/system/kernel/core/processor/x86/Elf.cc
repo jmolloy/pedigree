@@ -72,6 +72,8 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
   else if (R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
     const char *pStr = pStringTable + pSymbols[R_SYM(rel.info)].name;
+    NOTICE("pStr = " << reinterpret_cast<uintptr_t>(pStr) << ".");
+    NOTICE("First character = " << *pStr << "...");
 
     if (pSymtab == 0)
       pSymtab = KernelElf::instance().getSymbolTable();
@@ -90,7 +92,10 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
   }
 
   if (S == 0 && (R_TYPE(rel.info) != R_386_RELATIVE))
-    return false;
+  {
+      WARNING("BAH");
+      return false;
+  }
   if (S == ~0UL)
     S = 0; // undefined
 

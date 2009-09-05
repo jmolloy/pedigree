@@ -203,7 +203,7 @@ void init_stage2()
             return;
         }
     }
-    NOTICE("INIT: File found: " << (uintptr_t)initProg);
+    NOTICE("INIT: File found: " << reinterpret_cast<uintptr_t>(initProg));
     String fname = initProg->getName();
     NOTICE("INIT: name: " << fname);
     // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not

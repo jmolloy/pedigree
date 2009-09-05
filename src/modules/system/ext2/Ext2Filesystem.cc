@@ -265,8 +265,7 @@ bool Ext2Filesystem::createDirectory(File* parent, String filename)
 {
     if (!createNode(parent, filename, 0, String(""), EXT2_S_IFDIR))
         return false;
-
-    
+    return true;
 }
 
 bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)

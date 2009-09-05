@@ -68,7 +68,7 @@ DynamicLinker::~DynamicLinker()
 
 bool DynamicLinker::loadProgram(File *pFile)
 {
-    NOTICE("LoadProgram: " << (uintptr_t)pFile);
+    NOTICE("LoadProgram: " << reinterpret_cast<uintptr_t>(pFile));
     uintptr_t buffer;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
 
