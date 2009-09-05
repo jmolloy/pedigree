@@ -201,6 +201,7 @@ uintptr_t SACache::allocate()
                 f = reinterpret_cast<SlabFooter *>(f->NextInfo);
                 slab = f->memStart;
             }
+            assert(slab);
         }
         else
             f = 0;
@@ -349,7 +350,7 @@ void SACache::free(uintptr_t blk)
         // Set it as free...
         size_t bitmapIndex = blockNumber / 8;
         size_t bitIndex = blockNumber % 8;
-        uint8_t *bmap = getBitmap(slab);
+        uint8_t *bmap = getBitmap(f->memStart);
 
 #ifdef ADDITIONAL_CHECKS
         // Assert that the bit is actually set, so that we do not attempt to free an already-freed object.
