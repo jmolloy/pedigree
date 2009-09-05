@@ -34,13 +34,15 @@
 #include "dlmalloc.h"
 
 /// Size of each slab in 4096-byte pages
-#define SLAB_SIZE                       1
+/// \note If anyone knowingly allocates more than 16384 bytes in one go, I will
+///       hunt them down and stab them. Find a better way, PLEASE. -Matt
+#define SLAB_SIZE                       4
 
 /// Block size of the first, static, cache
 #define FIRST_STATIC_CACHE_SIZE         32
 
 /// Threshold for a "big block"
-#define BIG_BLOCK_THRESHOLD             1024
+#define BIG_BLOCK_THRESHOLD             8192
 
 /// Outputs information during each function call
 #define DEBUGGING_SLAB_ALLOCATOR        0

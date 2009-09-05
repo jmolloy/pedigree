@@ -243,6 +243,7 @@ uintptr_t SACache::allocate()
     {
         // Grab the bitmap and find a free block
         uint8_t *bitmap = getBitmap(slab);
+        assert(bitmap != 0);
         for(size_t i = 0; i < m_BitmapSize; i++)
         {
             // If no free bits, skip
@@ -280,13 +281,12 @@ uintptr_t SACache::allocate()
             size_t realOffset = bitNumber * m_BlockSize;
             uintptr_t finalAddr = slab + realOffset;
             return finalAddr;
-
-            break;
         }
     }
 
     // No memory
     f->state = SASlab::Full;
+    WARNING("SlabAllocator: Full slab, returning null [blksz=" << Dec << m_BlockSize << Hex << "]!");
     return 0;
 }
 
@@ -409,20 +409,15 @@ void SACache::link(SlabFooter *p)
     // Traverse the list...
     assert(m_BlockSize >= BIG_BLOCK_THRESHOLD);
     SlabFooter *f = m_BigBlockInfo;
-    while(f != 0)
-    {
-        if(f->NextInfo)
-        {
-            // Safe, use it
-            f = reinterpret_cast<SlabFooter *>(p->NextInfo);
-        }
-        else
-            break;
-    }
+    while(f->NextInfo)
+        f = reinterpret_cast<SlabFooter *>(f->NextInfo);
+
+    assert(f);
 
     // Link it on
     if(f)
         f->NextInfo = reinterpret_cast<uintptr_t>(p);
+    p->NextInfo = 0;
 }
 #endif
 
@@ -522,6 +517,8 @@ uintptr_t SlabAllocator::allocate(size_t nBytes)
 #if DEBUGGING_SLAB_ALLOCATOR
     if(!ret)
         ERROR_NOLOCK("SlabAllocator::allocate: Allocation failed (" << Dec << nBytes << Hex << " bytes)");
+#else
+    assert(ret != 0);
 #endif
 
     return ret;

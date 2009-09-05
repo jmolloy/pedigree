@@ -122,7 +122,9 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
 
     // Load in the section headers.
     m_nSectionHeaders = pHeader->shnum;
+    NOTICE("first alloc: " << Dec << (pHeader->shnum * sizeof(ElfSectionHeader_t)) << Hex << " bytes");
     m_pSectionHeaders = new ElfSectionHeader_t[pHeader->shnum];
+    NOTICE("HERE 1");
     memcpy (reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
 
     // Find the section header string table.
@@ -130,6 +132,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
 
     // Load the section header string table.
     m_pShstrtab = new char[pShstrtab->size];
+    NOTICE("HERE 2");
     memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], pShstrtab->size);
 
     ElfSectionHeader_t *pSymbolTable=0, *pStringTable=0;
@@ -150,7 +153,9 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     else
     {
         m_nSymbolTableSize = pSymbolTable->size;
+        NOTICE("Allocating symbol table, " << Dec << m_nSymbolTableSize << Hex << " bytes");
         m_pSymbolTable = new ElfSymbol_t[m_nSymbolTableSize/sizeof(ElfSymbol_t)];
+        NOTICE("HERE 3");
         memcpy (reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
     }
 
@@ -160,7 +165,9 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     }
     else
     {
+        NOTICE("Allocating string table");
         m_pStringTable = new char[pStringTable->size];
+        NOTICE("HERE 4");
         memcpy (reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], pStringTable->size);
     }
 
@@ -169,6 +176,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nProgramHeaders = pHeader->phnum;
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
+        NOTICE("HERE 5");
         memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
         size_t nDynamicStringTableSize = 0;
