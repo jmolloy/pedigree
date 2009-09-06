@@ -21,6 +21,8 @@
 #include <process/Semaphore.h>
 #include <processor/Processor.h>
 
+#include <utilities/assert.h>
+
 void interruptSemaphore(uint8_t *pBuffer)
 {
     Processor::information().getCurrentThread()->setInterrupted(true);
@@ -32,16 +34,19 @@ Semaphore::SemaphoreEvent::SemaphoreEvent() :
 }
 
 Semaphore::Semaphore(size_t nInitialValue)
-    : m_Counter(nInitialValue), m_BeingModified(false), m_Queue()
+    : magic(0xdeadbaba), m_Counter(nInitialValue), m_BeingModified(false), m_Queue()
 {
+    assert(magic == 0xdeadbaba);
 }
 
 Semaphore::~Semaphore()
 {
+    assert(magic == 0xdeadbaba);
 }
 
 void Semaphore::acquire(size_t n, size_t timeoutSecs)
 {
+    assert(magic == 0xdeadbaba);
   // Spin 10 times in the case that the lock is about to be released on
   // multiprocessor systems, and just once for uniprocessor systems, so we don't
   // go through the rigmarole of creating a timeout event if the lock is 
@@ -128,6 +133,7 @@ bool Semaphore::tryAcquire(size_t n)
 
 void Semaphore::release(size_t n)
 {
+    assert(magic == 0xdeadbaba);
   m_Counter += n;
 
   m_BeingModified.acquire();

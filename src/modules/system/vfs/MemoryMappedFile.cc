@@ -68,6 +68,8 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
             return false;
     }
 
+    NOTICE("MemoryMappedFile: " << Hex << address << " -> " << (address+m_Extent) << " (pid " << pProcess->getId() << ")");
+
     // Create a spinlock as an easy way of disabling interrupts.
     Spinlock spinlock;
     spinlock.acquire();

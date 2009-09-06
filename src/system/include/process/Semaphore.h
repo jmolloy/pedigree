@@ -82,6 +82,8 @@ private:
         {return EventNumbers::Interrupt;}
     };
 
+    size_t magic;
+
     Atomic<ssize_t> m_Counter;
     Spinlock m_BeingModified;
     List<class Thread*> m_Queue;
