@@ -86,9 +86,9 @@ void SlamCache::free(uintptr_t object)
 #endif
 
     Node *N = reinterpret_cast<Node*> (object);
-#if VIGILANT_OVERRUN_CHECK
+#if OVERRUN_CHECK
     // Grab the footer and check it.
-    AllocFooter *pFoot = reinterpret_cast<AllocFooter*> (object+m_ObjectSize-sizeof(AllocFooter));
+    SlamAllocator::AllocFooter *pFoot = reinterpret_cast<SlamAllocator::AllocFooter*> (object+m_ObjectSize-sizeof(SlamAllocator::AllocFooter));
     assert(pFoot->magic == VIGILANT_MAGIC);
 #endif
 
@@ -221,10 +221,12 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 
         // Set up the header
         head->cache = &m_Caches[lg2];
-#if VIGILANT_OVERRUN_CHECK
+#if OVERRUN_CHECK
         head->magic = VIGILANT_MAGIC;
-        /// \todo Fill in backtrace.
         foot->magic = VIGILANT_MAGIC;
+  #if VIGILANT_OVERRUN_CHECK
+        /// \todo Fill in backtrace.
+  #endif
 #endif  
     }
 
@@ -253,7 +255,7 @@ void SlamAllocator::free(uintptr_t mem)
 
     // If the cache is null, then the pointer is corrupted.
     assert(head->cache != 0);
-#if VIGILANT_OVERRUN_CHECK
+#if OVERRUN_CHECK
     assert(head->magic == VIGILANT_MAGIC);
     // Footer gets checked in SlamCache::free, as we don't know the object size.
 #endif

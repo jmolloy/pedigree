@@ -56,7 +56,7 @@
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.
-/*#define OVERRUN_CHECK                   1*/
+#define OVERRUN_CHECK                   1
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
@@ -147,16 +147,18 @@ class SlamAllocator
         /// freeing slightly less performance-intensive...
         struct AllocHeader
         {
-#if VIGILANT_OVERRUN_CHECK
+#if OVERRUN_CHECK
             size_t magic;
+#if VIGILANT_OVERRUN_CHECK
             size_t backtrace[VIGILANT_NUM_BT];
+#endif
 #endif
             SlamCache *cache;
         };
 public:
         struct AllocFooter
         {
-#if VIGILANT_OVERRUN_CHECK
+#if OVERRUN_CHECK
             size_t magic;
 #endif
         };
