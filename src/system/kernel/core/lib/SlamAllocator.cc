@@ -65,6 +65,8 @@ uintptr_t SlamCache::allocate()
         {
             N = m_PartialLists[thisCpu];
             pNext = N->next;
+            if (N == 0)
+                return reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
         } while (!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 #if USING_MAGIC
         N->magic = 0;

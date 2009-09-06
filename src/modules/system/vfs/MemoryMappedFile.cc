@@ -344,7 +344,7 @@ void MemoryMappedFileManager::unmapAll()
 
 bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
 {
-    NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+    //NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
     /// \todo Handle read-write maps.
     if (bIsWrite)
     {
@@ -373,13 +373,13 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
             m_CacheLock.release();
             pMmFile->file->trap(address, pMmFile->offset);
 
-            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+//            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
             return true;
         }
     }
     m_CacheLock.release();
 
-    NOTICE_NOLOCK("Trap end (false): " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+//    NOTICE_NOLOCK("Trap end (false): " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
 
     return false;
 }
