@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #ifndef SLAB_ALLOCATOR_H
+#if 0
 #define SLAB_ALLOCATOR_H
 
 /** An implementation of the Slab Allocator (Bonwick94)
@@ -211,4 +212,5 @@ class SlabAllocator
         Spinlock m_Lock;
 };
 
+#endif
 #endif

@@ -21,7 +21,7 @@
 #include <processor/Processor.h>
 #include <Log.h>
 
-#include "SlabAllocator.h"
+#include "SlamAllocator.h"
 
 // Required for G++ to link static init/destructors.
 void *__dso_handle;
@@ -75,7 +75,7 @@ void *operator new (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     //g_MallocLock.acquire();
-  void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+  void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
@@ -90,7 +90,7 @@ void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     //g_MallocLock.acquire();
-  void *ret = reinterpret_cast<void *>(SlabAllocator::instance().allocate(size));
+  void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
@@ -120,7 +120,7 @@ void operator delete (void * p)
       Processor::breakpoint();
   }
   //g_MallocLock.acquire();
-  SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
@@ -141,7 +141,7 @@ void operator delete[] (void * p)
   }
 
   //g_MallocLock.acquire();
-  SlabAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+  SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
   // Do this BEFORE the malloc, because it does a full sanity check of all
   // chunks.
   //g_Mallinfo = mallinfo();
