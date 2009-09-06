@@ -40,13 +40,13 @@
 /// but relies on a magic number which introduces false positives
 /// (depending on number length and value), and requires a
 /// doubly linked list instead of a singly.
-#define USING_MAGIC                     0
+#define USING_MAGIC                     1
 
 /// Used only if USING_MAGIC. Type of the magic number.
-#define MAGIC_TYPE                      uint64_t
+#define MAGIC_TYPE                      uint32_t
 
 /// Used only if USING_MAGIC. Magic value.
-#define MAGIC_VALUE                     0xb00b1e55deadbeefULL
+#define MAGIC_VALUE                     0xb00b1e55ULL
 
 /// Minimum size of an object.
 #define OBJECT_MINIMUM_SIZE             (sizeof(SlamCache::Node))
@@ -64,6 +64,10 @@
 
 #define VIGILANT_MAGIC                  0x1337cafe
 #define VIGILANT_NUM_BT                 4
+
+/// This will check EVERY object on EVERY alloc/free.
+/// It will cripple your performance.
+#define CRIPPLINGLY_VIGILANT            1
 
 /** A cache allocates objects of a constant size. */
 class SlamCache
@@ -95,6 +99,10 @@ public:
     /** Frees an object. */
     void free(uintptr_t object);
 
+#if CRIPPLINGLY_VIGILANT
+    void check();
+#endif
+
 private:
     SlamCache(const SlamCache &);
     const SlamCache& operator = (const SlamCache &);
@@ -117,6 +125,10 @@ private:
     // This version of the allocator doesn't have a free list, instead
     // the reap() function returns memory directly to the VMM. This
     // avoids needing to lock the free list on MP systems.
+
+#if CRIPPLINGLY_VIGILANT
+    Vector<void*> m_Slabs;
+#endif
 };
 
 class SlamAllocator
@@ -142,7 +154,7 @@ class SlamAllocator
         static SlamAllocator m_Instance;
 
         SlamCache m_Caches[32];
-
+public:
         /// Prepended to all allocated data. Basically just information to make
         /// freeing slightly less performance-intensive...
         struct AllocHeader
@@ -155,7 +167,7 @@ class SlamAllocator
 #endif
             SlamCache *cache;
         };
-public:
+
         struct AllocFooter
         {
 #if OVERRUN_CHECK
