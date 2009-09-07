@@ -27,7 +27,7 @@ SlamAllocator SlamAllocator::m_Instance;
 SlamCache::SlamCache() :
     m_ObjectSize(0), m_SlabSize(0)
 #if CRIPPLINGLY_VIGILANT
-    ,m_Slabs()
+    ,m_FirstSlab()
 #endif
 {
 }
@@ -76,7 +76,7 @@ uintptr_t SlamCache::allocate()
             {
                 uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
 #if CRIPPLINGLY_VIGILANT
-                m_Slabs.pushBack(reinterpret_cast<void*>(slab));
+                trackSlab(slab);
 #endif
                 return slab;
             }
@@ -90,7 +90,7 @@ uintptr_t SlamCache::allocate()
     {
         uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
 #if CRIPPLINGLY_VIGILANT
-        m_Slabs.pushBack(reinterpret_cast<void*>(slab));
+        trackSlab(slab);
 #endif
         return slab;
     }
@@ -184,48 +184,107 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     
     return reinterpret_cast<Node*> (slab);
 }
-static bool disableChecking = false;
+
+#if CRIPPLINGLY_VIGILANT
 void SlamCache::check()
 {
-    if (disableChecking)
-        return;
-    if (!Machine::instance().isInitialised() || Processor::m_Initialised == 2)
+    if (!Machine::instance().isInitialised() || Processor::m_Initialised != 2)
         return;
     if (m_ObjectSize == 0)
         return;
 
     size_t nObjects = m_SlabSize/m_ObjectSize;
-    for (Vector<void*>::Iterator it = m_Slabs.begin();
-         it != m_Slabs.end();
-         it++)
-    {
-        uintptr_t slab = reinterpret_cast<uintptr_t> (*it);
-        for (size_t i = 0; i < nObjects; i++)
-        {
-            uintptr_t addr = slab + i*m_ObjectSize;
-            Node *pNode = reinterpret_cast<Node*>(addr);
-            if (pNode->magic == MAGIC_VALUE)
-                // Free, continue.
-                continue;
-            SlamAllocator::AllocHeader *pHead = reinterpret_cast
-              <SlamAllocator::AllocHeader*> (addr);
-            SlamAllocator::AllocFooter *pFoot = reinterpret_cast
-                <SlamAllocator::AllocFooter*> (addr+m_ObjectSize-
-                                               sizeof(SlamAllocator::AllocFooter));
-            if(pHead->magic != VIGILANT_MAGIC)
-            {
-                disableChecking=true;
-                panic("you what?!");
-            }
-            if(pFoot->magic == VIGILANT_MAGIC)
-            {
-                disableChecking=true;
-                panic("eh?");
-            }
 
+    size_t maxPerSlab = (m_SlabSize / sizeof(uintptr_t))-2;
+
+    uintptr_t curSlab = m_FirstSlab;
+    while (true)
+    {
+        if (!curSlab) return;
+        uintptr_t numAlloced = *reinterpret_cast<uintptr_t*> (curSlab);
+        uintptr_t next = *reinterpret_cast<uintptr_t*> (curSlab+sizeof(uintptr_t));
+
+        for (size_t i = 0; i < numAlloced; i++)
+        {
+            uintptr_t slab = *reinterpret_cast<uintptr_t*> (curSlab+sizeof(uintptr_t)*(i+2));
+            for (size_t i = 0; i < nObjects; i++)
+            {
+                uintptr_t addr = slab + i*m_ObjectSize;
+                Node *pNode = reinterpret_cast<Node*>(addr);
+                if (pNode->magic == MAGIC_VALUE)
+                    // Free, continue.
+                    continue;
+                SlamAllocator::AllocHeader *pHead = reinterpret_cast
+                    <SlamAllocator::AllocHeader*> (addr);
+                SlamAllocator::AllocFooter *pFoot = reinterpret_cast
+                    <SlamAllocator::AllocFooter*> (addr+m_ObjectSize-
+                                                   sizeof(SlamAllocator::AllocFooter));
+                if (pHead->magic != VIGILANT_MAGIC)
+                {
+                    ERROR("Possible heap underrun: object starts at " << addr << ", size: " << m_ObjectSize << ", block: " << (addr+sizeof(SlamAllocator::AllocHeader)));
+                }
+                if (pFoot->magic != VIGILANT_MAGIC)
+                {
+                    ERROR("Possible heap overrun: object starts at " << addr);
+                    assert(false);
+                }
+            }
+        }
+        if (numAlloced == maxPerSlab)
+            curSlab = next;
+        else
+            break;
+    }
+}
+
+void SlamCache::trackSlab(uintptr_t slab)
+{
+    if (!Machine::instance().isInitialised() || Processor::m_Initialised != 2)
+        return;
+    if (m_ObjectSize == 0)
+        return;
+
+    if (!m_FirstSlab)
+    {
+        m_FirstSlab = getSlab();
+        uintptr_t *numAlloced = reinterpret_cast<uintptr_t*> (m_FirstSlab);
+        uintptr_t *next = reinterpret_cast<uintptr_t*> (m_FirstSlab+sizeof(uintptr_t));
+        *numAlloced = 0;
+        *next = 0;
+    }
+
+    size_t maxPerSlab = (m_SlabSize / sizeof(uintptr_t))-2;
+
+    uintptr_t curSlab = m_FirstSlab;
+    while (true)
+    {
+        uintptr_t *numAlloced = reinterpret_cast<uintptr_t*> (curSlab);
+        uintptr_t *next = reinterpret_cast<uintptr_t*> (curSlab+sizeof(uintptr_t));
+
+        if (*numAlloced < maxPerSlab)
+        {
+            uintptr_t *p = reinterpret_cast<uintptr_t*> (curSlab + (*numAlloced + 2) * sizeof(uintptr_t));
+            *p = slab;
+            *numAlloced = *numAlloced+1;
+            return;
+        }
+
+        if (*next)
+            curSlab = *next;
+        else
+        {
+            uintptr_t newSlab = getSlab();
+            *next = newSlab;
+            curSlab = newSlab;
+
+            uintptr_t *numAlloced = reinterpret_cast<uintptr_t*> (curSlab);
+            uintptr_t *next = reinterpret_cast<uintptr_t*> (curSlab+sizeof(uintptr_t));
+            *numAlloced = 0;
+            *next = 0;
         }
     }
 }
+#endif
 
 SlamAllocator::SlamAllocator() :
     m_bInitialised(false)
@@ -294,6 +353,10 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
         foot->magic = VIGILANT_MAGIC;
   #if VIGILANT_OVERRUN_CHECK
         /// \todo Fill in backtrace.
+        for (int i = 0; i < VIGILANT_NUM_BT; i++)
+            head->backtrace[i] = 0x33333333;
+        for (int i = 0; i < 32; i++)
+            foot->bytes[i] = 0x11;
   #endif
 #endif  
     }

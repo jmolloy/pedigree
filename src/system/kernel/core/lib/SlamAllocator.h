@@ -60,10 +60,10 @@
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
-#define VIGILANT_OVERRUN_CHECK          0
+#define VIGILANT_OVERRUN_CHECK          1
 
 #define VIGILANT_MAGIC                  0x1337cafe
-#define VIGILANT_NUM_BT                 4
+#define VIGILANT_NUM_BT                 10
 
 /// This will check EVERY object on EVERY alloc/free.
 /// It will cripple your performance.
@@ -100,6 +100,7 @@ public:
     void free(uintptr_t object);
 
 #if CRIPPLINGLY_VIGILANT
+    void trackSlab(uintptr_t slab);
     void check();
 #endif
 
@@ -127,7 +128,7 @@ private:
     // avoids needing to lock the free list on MP systems.
 
 #if CRIPPLINGLY_VIGILANT
-    Vector<void*> m_Slabs;
+    uintptr_t m_FirstSlab;
 #endif
 };
 
@@ -171,6 +172,7 @@ public:
         struct AllocFooter
         {
 #if OVERRUN_CHECK
+            uint8_t bytes[32];
             size_t magic;
 #endif
         };
