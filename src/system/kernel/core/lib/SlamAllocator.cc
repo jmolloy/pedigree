@@ -212,16 +212,23 @@ void SlamCache::check()
             SlamAllocator::AllocFooter *pFoot = reinterpret_cast
                 <SlamAllocator::AllocFooter*> (addr+m_ObjectSize-
                                                sizeof(SlamAllocator::AllocFooter));
+
+            //assert(pHead->magic == VIGILANT_MAGIC);
+            //assert(0); // <-- Won't fire early on..
+            
             if(pHead->magic != VIGILANT_MAGIC)
             {
                 disableChecking=true;
                 panic("you what?!");
             }
+
+            /*
             if(pFoot->magic == VIGILANT_MAGIC)
             {
                 disableChecking=true;
                 panic("eh?");
             }
+            */
 
         }
     }
