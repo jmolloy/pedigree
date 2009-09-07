@@ -169,6 +169,9 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
             pLast = pNode;
     }
 
+    Node *N = reinterpret_cast<Node*> (slab);
+    N->magic = TEMP_MAGIC;
+
     if (pFirst)
     {
         // We now need to do two atomic updates.
@@ -185,7 +188,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 #endif
     }
     
-    return reinterpret_cast<Node*> (slab);
+    return N;
 }
 
 #if CRIPPLINGLY_VIGILANT
