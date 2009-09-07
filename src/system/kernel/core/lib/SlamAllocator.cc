@@ -22,6 +22,8 @@
 #include <processor/Processor.h>
 #include <panic.h>
 
+#define TEMP_MAGIC 0x67845753
+
 SlamAllocator SlamAllocator::m_Instance;
 
 SlamCache::SlamCache() :
@@ -82,7 +84,7 @@ uintptr_t SlamCache::allocate()
             }
         } while (!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 #if USING_MAGIC
-        N->magic = 0;
+        N->magic = TEMP_MAGIC;
 #endif
         return reinterpret_cast<uintptr_t>(N);
     }
@@ -124,6 +126,7 @@ void SlamCache::free(uintptr_t object)
 #if USING_MAGIC
     if (pPartialPointer)
         pPartialPointer->prev = N;
+    assert(N->magic = MAGIC_VALUE);
 #endif
 }
 
@@ -211,7 +214,7 @@ void SlamCache::check()
             {
                 uintptr_t addr = slab + i*m_ObjectSize;
                 Node *pNode = reinterpret_cast<Node*>(addr);
-                if (pNode->magic == MAGIC_VALUE)
+                if (pNode->magic == MAGIC_VALUE || pNode->magic == TEMP_MAGIC)
                     // Free, continue.
                     continue;
                 SlamAllocator::AllocHeader *pHead = reinterpret_cast
