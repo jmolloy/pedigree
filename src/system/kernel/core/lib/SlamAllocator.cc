@@ -72,13 +72,15 @@ uintptr_t SlamCache::allocate()
         Node *N =0, *pNext =0;
         do
         {
-            N = m_PartialLists[thisCpu];
+            N = const_cast<Node*>(m_PartialLists[thisCpu]);
             pNext = N->next;
+
             if (N == 0)
             {
                 uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
 #if CRIPPLINGLY_VIGILANT
-                trackSlab(slab);
+                if (SlamAllocator::instance().getVigilance())
+                    trackSlab(slab);
 #endif
                 return slab;
             }
@@ -86,13 +88,15 @@ uintptr_t SlamCache::allocate()
 #if USING_MAGIC
         N->magic = TEMP_MAGIC;
 #endif
+
         return reinterpret_cast<uintptr_t>(N);
     }
     else
     {
         uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
 #if CRIPPLINGLY_VIGILANT
-        trackSlab(slab);
+        if (SlamAllocator::instance().getVigilance())
+            trackSlab(slab);
 #endif
         return slab;
     }
@@ -114,25 +118,31 @@ void SlamCache::free(uintptr_t object)
 #endif
 
 #if USING_MAGIC
+    // Possible double free?
+    assert(N->magic != MAGIC_VALUE);
     N->magic = MAGIC_VALUE;
     N->prev = 0;
 #endif
     Node *pPartialPointer =0;
     do
     {
-        pPartialPointer = m_PartialLists[thisCpu];
+        pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
         N->next = pPartialPointer;
     } while (!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
+
 #if USING_MAGIC
     if (pPartialPointer)
         pPartialPointer->prev = N;
-    assert(N->magic = MAGIC_VALUE);
 #endif
 }
 
+Spinlock s;
 uintptr_t SlamCache::getSlab()
 {
-    return reinterpret_cast<uintptr_t>(dlmallocSbrk(m_SlabSize));
+    s.acquire();
+    uintptr_t ret = reinterpret_cast<uintptr_t>(dlmallocSbrk(m_SlabSize));
+    s.release();
+    return ret;
 }
 
 void SlamCache::freeSlab(uintptr_t slab)
@@ -178,7 +188,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         Node *pPartialPointer =0;
         do
         {
-            pPartialPointer = m_PartialLists[thisCpu];
+            pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
             pLast->next = pPartialPointer;
         } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
 
@@ -187,17 +197,19 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
             pPartialPointer->prev = pLast;
 #endif
     }
-    
+
     return N;
 }
 
 #if CRIPPLINGLY_VIGILANT
-void SlamCache::check()
+Spinlock rarp;
+void SlamCache::check(int x)
 {
     if (!Machine::instance().isInitialised() || Processor::m_Initialised != 2)
         return;
     if (m_ObjectSize == 0)
         return;
+    rarp.acquire();
 
     size_t nObjects = m_SlabSize/m_ObjectSize;
 
@@ -206,7 +218,11 @@ void SlamCache::check()
     uintptr_t curSlab = m_FirstSlab;
     while (true)
     {
-        if (!curSlab) return;
+        if (!curSlab)
+        {
+            rarp.release();
+            return;
+        }
         uintptr_t numAlloced = *reinterpret_cast<uintptr_t*> (curSlab);
         uintptr_t next = *reinterpret_cast<uintptr_t*> (curSlab+sizeof(uintptr_t));
 
@@ -241,6 +257,7 @@ void SlamCache::check()
         else
             break;
     }
+    rarp.release();
 }
 
 void SlamCache::trackSlab(uintptr_t slab)
@@ -294,6 +311,9 @@ void SlamCache::trackSlab(uintptr_t slab)
 
 SlamAllocator::SlamAllocator() :
     m_bInitialised(false)
+#if CRIPPLINGLY_VIGILANT
+    , m_bVigilant(false)
+#endif
 {
 }
 
@@ -318,8 +338,9 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
         initialise();
 
 #if CRIPPLINGLY_VIGILANT
-    for (int i = 0; i < 32; i++)
-        m_Caches[i].check();
+    if (m_bVigilant)
+        for (int i = 0; i < 32; i++)
+            m_Caches[i].check(0);
 #endif
 
     // Return value.
@@ -338,13 +359,14 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     }
 
     // Allocate 4GB and I'll kick your teeth in.
-    assert(lg2 < 32);
+    assert(lg2 < 24);
 
     nBytes = powerOf2;
     assert(nBytes >= OBJECT_MINIMUM_SIZE);
 
     ret = m_Caches[lg2].allocate();
 
+    //   l.release();
     if (ret)
     {
         // Shove some data on the front that we'll use later
@@ -388,8 +410,9 @@ void SlamAllocator::free(uintptr_t mem)
         initialise();
 
 #if CRIPPLINGLY_VIGILANT
-    for (int i = 0; i < 32; i++)
-        m_Caches[i].check();
+    if (m_bVigilant)
+        for (int i = 0; i < 32; i++)
+            m_Caches[i].check(1);
 #endif
 
     // Grab the header

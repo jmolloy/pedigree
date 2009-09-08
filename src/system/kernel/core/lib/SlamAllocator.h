@@ -101,7 +101,7 @@ public:
 
 #if CRIPPLINGLY_VIGILANT
     void trackSlab(uintptr_t slab);
-    void check();
+    void check(int x);
 #endif
 
 private:
@@ -112,7 +112,7 @@ private:
     ///\todo MAX_CPUS
     Node *m_PartialLists[255];
 #else
-    Node *m_PartialLists[1];
+    volatile Node *m_PartialLists[1];
 #endif
 
     uintptr_t getSlab();
@@ -148,6 +148,13 @@ class SlamAllocator
             return m_Instance;
         }
 
+#if CRIPPLINGLY_VIGILANT
+    void setVigilance(bool b)
+    {m_bVigilant = b;}
+    bool getVigilance()
+    {return m_bVigilant;}
+#endif
+
     private:
         SlamAllocator(const SlamAllocator&);
         const SlamAllocator& operator = (const SlamAllocator&);
@@ -178,6 +185,10 @@ public:
         };
 private:
         bool m_bInitialised;
+
+#if CRIPPLINGLY_VIGILANT
+    bool m_bVigilant;
+#endif
 };
 
 #endif

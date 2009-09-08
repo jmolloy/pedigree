@@ -135,11 +135,11 @@ bool ThreadsCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     }
     else if (c == '\n' || c == '\r')
     {
-      if(swapThread(state, pScreen))
-      {
-        bStop = true;
-        bReturn = false;
-      }
+//      if(swapThread(state, pScreen))
+//      {
+//        bStop = true;
+//        bReturn = false;
+//      }
     }
     else if (c == 'q')
       bStop = true;

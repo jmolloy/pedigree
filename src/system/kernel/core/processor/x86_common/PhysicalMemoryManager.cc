@@ -344,7 +344,7 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
     extern void *init;
     extern void *code;
 
-    LockGuard<Spinlock> guard(m_Lock);
+    m_Lock.acquire();
 
     // Unmap & free the .init section
     VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
@@ -363,6 +363,7 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
     }
 
     // Free the physical page
+    m_Lock.release();
     m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
 }
 

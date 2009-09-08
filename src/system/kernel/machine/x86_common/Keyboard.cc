@@ -27,6 +27,7 @@
 #endif
 
 #include <machine/keymaps/pc102EnUs.h>
+#include <SlamAllocator.h>
 
 #define CAPSLOCK  0x3a
 #define LSHIFT    0x2a
@@ -197,6 +198,16 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
 
     uint64_t c = scancodeToCharacter(scancode);
 #ifdef DEBUGGER
+#if CRIPPLINGLY_VIGILANT
+    if (scancode == 0x43) // F9
+    {
+        SlamAllocator::instance().setVigilance(true);
+    }
+    if (scancode == 0x44) // F10
+    {
+        SlamAllocator::instance().setVigilance(false);
+    }
+#endif
 #ifdef TRACK_PAGE_ALLOCATIONS
     if (scancode == 0x57) // F11
     {
