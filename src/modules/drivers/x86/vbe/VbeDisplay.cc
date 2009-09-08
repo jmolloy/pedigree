@@ -162,8 +162,6 @@ VbeDisplay::rgb_t *VbeDisplay::newBuffer()
 
     m_Buffers.insert(pBuffer->pBackbuffer, pBuffer);
 
-    NOTICE("New buffer: returning " << reinterpret_cast<uintptr_t>(pBuffer->pBackbuffer));
-
     return pBuffer->pBackbuffer;
 }
 
@@ -182,7 +180,6 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
                               size_t y2)
 {
-    NOTICE("updateBuffer: " << x1 << ", " << y1 << ", " << x2 << ", " << y2);
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
@@ -240,7 +237,6 @@ void VbeDisplay::killBuffer(rgb_t *pBuffer)
 void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
                          size_t toY, size_t width, size_t height)
 {
-    NOTICE("bitBlit: " << fromX << ", " << fromY << " -> " << toX << ", " << toY << "; " << width << ", " << height);
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {
@@ -312,7 +308,6 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
 
 void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width, size_t height, rgb_t colour)
 {
-    NOTICE("fillRect: " << x << ", " << y << "; " << width << ", " << height);
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf)
     {

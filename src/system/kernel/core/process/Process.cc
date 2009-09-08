@@ -38,22 +38,25 @@ Process::Process() :
                                                  // This is treated as a "fail number" by the dynamic linker.
 }
 
-
 Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
   m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_Ctty(pParent->m_Ctty), m_SpaceAllocator(pParent->m_SpaceAllocator),
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_DeadThreads(0)
 {
+    Spinlock s;
+    s.acquire();
+    NOTICE("Cloning adddr");
   m_pAddressSpace = pParent->m_pAddressSpace->clone();
-
+  NOTICE("Cloned");
   // Copy the heap, but only if it's not the kernel heap (which is static)
   uintptr_t parentHeap = reinterpret_cast<uintptr_t>(pParent->m_pAddressSpace->m_Heap); // 0xc0000000
   if(parentHeap < 0xc0000000) /// \todo A better way would be nice.
     m_pAddressSpace->setHeap(pParent->m_pAddressSpace->m_Heap, pParent->m_pAddressSpace->m_HeapEnd);
 
   m_Id = Scheduler::instance().addProcess(this);
-
+  NOTICE("Added");
+  s.release();
   // Set a temporary description.
   str = m_pParent->str;
   str += "<F>"; // F for forked.

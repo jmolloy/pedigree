@@ -100,7 +100,7 @@ long posix_sbrk(int delta)
 {
     long ret = reinterpret_cast<long>(
                    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
+//    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
     if (ret == 0)
     {
         SYSCALL_ERROR(OutOfMemory);
@@ -408,11 +408,11 @@ int posix_waitpid(int pid, int *status, int options)
 {
     if (options & 1)
     {
-        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
+//        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
     }
     else
     {
-        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
+        //       SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
     }
 
     // Don't care about process groups at the moment.
@@ -491,7 +491,6 @@ int posix_waitpid(int pid, int *status, int options)
             if (!hadAnyChildren)
             {
                 // Error - no children (ECHILD)
-                NOTICE("no children");
                 SYSCALL_ERROR(NoChildren);
                 return -1;
             }
@@ -502,7 +501,6 @@ int posix_waitpid(int pid, int *status, int options)
 
         // Sleep...
         Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
-        SC_NOTICE("deadt");
     }
 
     return -1;

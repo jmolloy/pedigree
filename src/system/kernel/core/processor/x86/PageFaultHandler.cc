@@ -45,20 +45,6 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   uintptr_t page = cr2 & ~(PhysicalMemoryManager::instance().getPageSize()-1);
 
-  if (g_MallocLock.acquired())
-  {
-      g_MallocLock.release();
-      //  Get PFE location and error code
-      static LargeStaticString sError;
-      sError.clear();
-      sError.append("Page fault in malloc/free: 0x");
-      sError.append(cr2, 16, 8, '0');
-      sError.append(", error code 0x");
-      sError.append(code, 16, 8, '0');
-
-      Debugger::instance().start(state, sError);
-  }
-
   // Check for copy-on-write.
   VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
   if (va.isMapped(reinterpret_cast<void*>(page)))
@@ -92,15 +78,18 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     }
   }
 
-  // Check our handler list.
-  for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
-       it != m_Handlers.end();
-       it++)
+  if (cr2 < 0xc0000000)
   {
-    if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
-    {
-      return;
-    }
+      // Check our handler list.
+      for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
+           it != m_Handlers.end();
+           it++)
+      {
+          if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
+          {
+              return;
+          }
+      }
   }
 
   //  Get PFE location and error code

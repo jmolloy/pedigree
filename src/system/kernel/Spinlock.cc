@@ -50,10 +50,11 @@ void Spinlock::acquire()
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
     ///       depends on the log spinlock, which may have deadlocked. So we actually
     ///       force the spinlock to release here, then hit the breakpoint.
-    release();
+      size_t atom = m_Atom;
+      m_Atom = true;
 
     // Break into the debugger, with the return address in EAX to make debugging easier
-    asm volatile("mov %0, %%eax; int3" : : "r"(reinterpret_cast<uintptr_t>(this)));
+    asm volatile("mov %0, %%eax; mov %1, %%ebx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "r"(atom));
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
@@ -62,7 +63,7 @@ void Spinlock::acquire()
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
 #ifdef TRACK_LOCKS
-  if (!m_bAvoidTracking)
+//  if (!m_bAvoidTracking)
       g_LocksCommand.lockAcquired(this);
 #endif
 
@@ -83,10 +84,23 @@ void Spinlock::release()
       FATAL("Wrong magic in release.");
   }
 
-  m_Atom = true;
+  if (m_Atom.compareAndSwap(false, true) == false)
+  {
+      /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
+    ///       depends on the log spinlock, which may have deadlocked. So we actually
+    ///       force the spinlock to release here, then hit the breakpoint.
+    m_Atom = true;
+
+    // Break into the debugger, with the return address in EAX to make debugging easier
+    asm volatile("mov %0, %%eax; mov %1, %%ebx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "m"(m_Atom));
+
+    // Panic in case there's a return from the debugger (or the debugger isn't available)
+    panic("Spinlock has deadlocked");
+  }
 
 #ifdef TRACK_LOCKS
-  g_LocksCommand.lockReleased(this);
+//  if (!m_bAvoidTracking)
+    g_LocksCommand.lockReleased(this);
 #endif
 
   // Reenable irqs if they were enabled before

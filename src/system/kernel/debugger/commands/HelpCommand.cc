@@ -51,5 +51,6 @@ bool HelpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
     output += "threads          - Inspect what each thread is doing.\n";
     output += "trace            - Graphical execution tracer.\n";
     output += "locks            - Show spinlock information.\n";
+    output += "mapping          - Show V->P information for an effective addr.\n";
     return true;
 }

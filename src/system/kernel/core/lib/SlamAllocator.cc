@@ -381,10 +381,6 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
         foot->magic = VIGILANT_MAGIC;
   #if VIGILANT_OVERRUN_CHECK
         /// \todo Fill in backtrace.
-        for (int i = 0; i < VIGILANT_NUM_BT; i++)
-            head->backtrace[i] = 0x33333333;
-        for (int i = 0; i < 32; i++)
-            foot->bytes[i] = 0x11;
   #endif
 #endif  
     }

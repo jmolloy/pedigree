@@ -60,14 +60,14 @@
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
-#define VIGILANT_OVERRUN_CHECK          1
+#define VIGILANT_OVERRUN_CHECK          0
 
 #define VIGILANT_MAGIC                  0x1337cafe
-#define VIGILANT_NUM_BT                 10
+#define VIGILANT_NUM_BT                 4
 
 /// This will check EVERY object on EVERY alloc/free.
 /// It will cripple your performance.
-#define CRIPPLINGLY_VIGILANT            1
+#define CRIPPLINGLY_VIGILANT            0
 
 /** A cache allocates objects of a constant size. */
 class SlamCache
@@ -179,7 +179,6 @@ public:
         struct AllocFooter
         {
 #if OVERRUN_CHECK
-            uint8_t bytes[32];
             size_t magic;
 #endif
         };

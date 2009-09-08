@@ -40,6 +40,7 @@
 #include <LookupCommand.h>
 #include <HelpCommand.h>
 #include <LocksCommand.h>
+#include <MappingCommand.h>
 #include <process/Thread.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
@@ -48,7 +49,6 @@
 Debugger Debugger::m_Instance;
 
 TraceCommand g_Trace;
-
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
 /// through pCommands at index start. Returns -1 if none found.
 static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, size_t nCmds, size_t start)
@@ -147,6 +147,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static SyscallTracerCommand syscallTracer;
   static LookupCommand lookup;
   static HelpCommand help;
+  static MappingCommand mapping;
 
 #if defined(THREADS)
   static ThreadsCommand threads;
@@ -155,9 +156,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 19;
+  size_t nCommands = 20;
 #else
-  size_t nCommands = 18;
+  size_t nCommands = 19;
 #endif
   DebuggerCommand *pCommands[] = {&syscallTracer,
                                   &disassembler,
@@ -179,7 +180,8 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &g_AllocationCommand,
                                   &lookup,
                                   &help,
-                                  &g_LocksCommand};
+                                  &g_LocksCommand,
+                                  &mapping};
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
   int n = g_Trace.execTrace();

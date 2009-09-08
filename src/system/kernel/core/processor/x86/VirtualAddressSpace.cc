@@ -61,6 +61,8 @@ physical_uintptr_t g_EscrowPages[256]; /// \todo MAX_PROCESSORS
 
 X86KernelVirtualAddressSpace X86KernelVirtualAddressSpace::m_Instance;
 
+VirtualAddressSpace *g_pCurrentlyCloning = 0;
+
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
   return X86KernelVirtualAddressSpace::m_Instance;
@@ -315,7 +317,6 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     // Map the page
     *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
-
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
@@ -328,29 +329,41 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_VIRTUAL_HEAP)
     {
-      for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-      {
-        Process *p = Scheduler::instance().getProcess(i);
+        NOTICE("Mapping in all modda fokkka");
+        for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+        {
+            Process *p = Scheduler::instance().getProcess(i);
 
-        X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (p->getAddressSpace());
-        if (x86VAS == &VAS)
-            continue;
+            X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (p->getAddressSpace());
+            if (x86VAS == &VAS)
+                continue;
 
-        Processor::switchAddressSpace(*p->getAddressSpace());
+            Processor::switchAddressSpace(*p->getAddressSpace());
 
-        pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
-        *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
-      }
-      if (&VAS != &getKernelAddressSpace())
-      {
-          Processor::switchAddressSpace(getKernelAddressSpace());
-          X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (&getKernelAddressSpace());
+            pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+            *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+        }
+        if (g_pCurrentlyCloning)
+        {
+            X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (g_pCurrentlyCloning);
+            if (x86VAS != &VAS)
+            {
+                Processor::switchAddressSpace(*g_pCurrentlyCloning);
 
-          pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
-          *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+                pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+                *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+            }
+        }
+        if (&VAS != &getKernelAddressSpace())
+        {
+            Processor::switchAddressSpace(getKernelAddressSpace());
+            X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (&getKernelAddressSpace());
 
-      }
-      Processor::switchAddressSpace(VAS);
+            pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
+            *pageDirectoryEntry = page | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+
+        }
+        Processor::switchAddressSpace(VAS);
     }
 
   }
@@ -540,6 +553,8 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
     return 0;
   }
 
+  g_pCurrentlyCloning = pClone;
+
   for (uintptr_t i = 0; i < 1024; i++)
   {
     uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
@@ -585,6 +600,8 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
       Processor::switchAddressSpace(thisAddressSpace);
     }
   }
+
+  g_pCurrentlyCloning = 0;
 
   return pClone;
 }

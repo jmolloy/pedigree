@@ -40,7 +40,7 @@ defines = [
 
 if 'DEBUGGER' in defines:
     defines += [
-#        'TRACK_LOCKS',
+        'TRACK_LOCKS',
         'TRACK_PAGE_ALLOCATIONS',
     ]
 
