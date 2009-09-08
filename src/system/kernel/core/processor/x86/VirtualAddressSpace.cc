@@ -329,7 +329,6 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_VIRTUAL_HEAP)
     {
-        NOTICE("Mapping in all modda fokkka");
         for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
         {
             Process *p = Scheduler::instance().getProcess(i);

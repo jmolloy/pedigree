@@ -40,8 +40,8 @@ defines = [
 
 if 'DEBUGGER' in defines:
     defines += [
-        'TRACK_LOCKS',
-        'TRACK_PAGE_ALLOCATIONS',
+#        'TRACK_LOCKS',
+#        'TRACK_PAGE_ALLOCATIONS',
     ]
 
 # Default CFLAGS

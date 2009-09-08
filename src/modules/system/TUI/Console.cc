@@ -46,7 +46,7 @@ void UserConsole::respondToPending(size_t response, char *buffer, size_t sz)
         m_pPendingReq->mutex.release();
 
         if (m_pPendingReq->isAsync)
-            delete m_pReq;
+            delete m_pPendingReq;
     }
     m_pPendingReq = 0;
 }
