@@ -27,6 +27,7 @@
 #include <processor/KernelCoreSyscallManager.h>
 #include <process/Scheduler.h>
 #include <panic.h>
+#include <utilities/assert.h>
 
 DLTrapHandler DLTrapHandler::m_Instance;
 
@@ -263,7 +264,10 @@ DLTrapHandler::~DLTrapHandler()
 
 bool DLTrapHandler::trap(uintptr_t address, bool bIsWrite)
 {
-    return Processor::information().getCurrentThread()->getParent()->getLinker()->trap(address);
+    DynamicLinker *pL = Processor::information().getCurrentThread()->getParent()->getLinker();
+    if (!pL)
+        return false;
+    return pL->trap(address);
 }
 
 void init()

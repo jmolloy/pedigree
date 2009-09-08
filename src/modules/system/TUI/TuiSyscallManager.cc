@@ -36,7 +36,10 @@ TuiSyscallManager g_TuiSyscallManager;
 void callback(uint64_t key)
 {
     if (!g_UserConsole)
+    {
         WARNING("Key called with no console");
+        return;
+    }
     g_UserConsole->addAsyncRequest(TUI_CHAR_RECV, g_UserConsoleId, key);
 }
 
