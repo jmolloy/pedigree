@@ -49,9 +49,6 @@ private:
      *\note Not implemented (singleton) */
     TuiSyscallManager &operator = (const TuiSyscallManager &);
 
-    MemoryRegion m_FramebufferRegion;
-    Display::ScreenMode m_Mode;
-
     Display *m_pDisplay;
 };
 

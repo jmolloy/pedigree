@@ -22,6 +22,8 @@
 #include <processor/Processor.h>
 
 Log Log::m_Instance;
+BootProgressFn g_BootProgress = 0;
+BootProgressTotalFn g_BootProgressTotal = 0;
 
 Log::Log () :
   m_Lock(),

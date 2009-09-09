@@ -201,4 +201,4 @@ void exit()
 MODULE_NAME("vbe");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("TUI", "pci");
+MODULE_DEPENDS("pci");

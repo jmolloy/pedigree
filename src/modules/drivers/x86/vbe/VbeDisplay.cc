@@ -20,9 +20,12 @@
 #include <machine/Vga.h>
 #include <machine/Machine.h>
 #include <processor/PhysicalMemoryManager.h>
-#include <TUI/TuiSyscallManager.h>
 
-extern TuiSyscallManager g_TuiSyscallManager;
+/// \todo Put this in the config manager.
+Display::ScreenMode g_ScreenMode;
+Display *g_pDisplay = 0;
+uintptr_t g_Framebuffer;
+size_t g_FbSize;
 
 VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_Allocator()
 {
@@ -117,9 +120,10 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
   // Tell the Machine instance what VBE mode we're in, so it can set it again if we enter the debugger and return.
   Machine::instance().getVga(0)->setMode(m_Mode.id);
 
-  // Inform the TUI that the current mode has changed.
-
-  g_TuiSyscallManager.modeChanged(this, m_Mode, m_pFramebuffer->physicalAddress(), m_pFramebuffer->size());
+  g_pDisplay = this;
+  g_ScreenMode = m_Mode;
+  g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
+  g_FbSize = m_pFramebuffer->size();
 
   return true;
 }

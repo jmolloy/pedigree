@@ -33,6 +33,9 @@ UserConsole *g_UserConsole = 0;
 size_t g_UserConsoleId = 0;
 TuiSyscallManager g_TuiSyscallManager;
 
+extern Display *g_pDisplay;
+extern Display::ScreenMode g_ScreenMode;
+
 void callback(uint64_t key)
 {
     if (!g_UserConsole)
@@ -44,7 +47,7 @@ void callback(uint64_t key)
 }
 
 TuiSyscallManager::TuiSyscallManager() :
-    m_FramebufferRegion("Usermode framebuffer"), m_Mode(), m_pDisplay(0)
+    m_pDisplay(0)
 {
 }
 
@@ -54,6 +57,8 @@ TuiSyscallManager::~TuiSyscallManager()
 
 void TuiSyscallManager::initialise()
 {
+    m_pDisplay = g_pDisplay;
+
     SyscallManager::instance().registerSyscallHandler(TUI, this);
     Machine::instance().getKeyboard()->registerCallback(&callback);
 }
@@ -96,9 +101,9 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         }
         case TUI_GETFB:
         {
-            Display::ScreenMode *pMode = reinterpret_cast<Display::ScreenMode*>(p1);
-            *pMode = m_Mode;
-            return reinterpret_cast<uintptr_t>(m_FramebufferRegion.virtualAddress());
+            Display::ScreenMode *sm = reinterpret_cast<Display::ScreenMode*>(p1);
+            *sm = g_ScreenMode;
+            return 0;
         }
         case TUI_REQUEST_PENDING:
         {
@@ -199,24 +204,6 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     return 0;
 }
 
-void TuiSyscallManager::modeChanged(Display *pDisplay, Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize)
-{
-    m_Mode = mode;
-    if (!PhysicalMemoryManager::instance().allocateRegion(m_FramebufferRegion,
-                                                          pFbSize/PhysicalMemoryManager::getPageSize(),
-                                                          PhysicalMemoryManager::nonRamMemory | PhysicalMemoryManager::force | PhysicalMemoryManager::continuous,
-                                                          VirtualAddressSpace::Write,
-                                                          pFramebuffer))
-    {
-        ERROR("TUI: Unable to create framebuffer memory region!");
-    }
-
-    m_pDisplay = pDisplay;
-    if (!m_pDisplay)
-        WARNING("TUI: Display not found!");
-
-}
-
 void init()
 {
     g_TuiSyscallManager.initialise();
@@ -229,4 +216,9 @@ void destroy()
 MODULE_NAME("TUI");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
+#ifdef X86_COMMON
+// Why is uhci here?!
+MODULE_DEPENDS("console", "uhci", "vbe");
+#else
 MODULE_DEPENDS("console", "uhci");
+#endif

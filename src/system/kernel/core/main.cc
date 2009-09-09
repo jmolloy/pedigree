@@ -155,17 +155,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   size_t nFiles = initrd.getNumFiles();
   for (size_t i = 0; i < nFiles; i++)
   {
-    uint32_t percentage = ((i+1)*100) / nFiles;
-    str.clear();
-    str += "\r                                        \rLoading modules: ";
-    str.append(percentage, 10, 3, ' ');
-    str += "% (";
-    str += initrd.getFileName(i);
-    str += ")";
-    bootIO.write(str, BootIO::LightGrey, BootIO::Black);
+      if (g_BootProgressTotal)
+          g_BootProgressTotal(nFiles*2); // Each file has to be preloaded and executed.
 
     // Load file.
-    NOTICE("Module load by thread " <<  Processor::information().getCurrentThread()->getId());
     KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                      initrd.getFileSize(i));
   }

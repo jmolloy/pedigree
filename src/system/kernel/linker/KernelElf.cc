@@ -181,6 +181,8 @@ KernelElf::~KernelElf()
 #endif
 #define MOD_LEN 0x400000
 
+static size_t g_Progress = 0;
+
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   // The module memory allocator requires dynamic memory - this isn't initialised until after our constructor
@@ -237,12 +239,20 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
   DEBUG("KERNELELF: Preloaded module " << module->name);
 
+  g_Progress ++;
+  if (g_BootProgress)
+      g_BootProgress("moduleload", g_Progress);
+
   m_Modules.pushBack(module);
 
   // Can we load this module yet?
   if (moduleDependenciesSatisfied(module))
   {
     executeModule(module);
+
+    g_Progress ++;
+    if (g_BootProgress)
+        g_BootProgress("moduleexec", g_Progress);
 
     // Now check if we've allowed any currently pending modules to load.
     bool somethingLoaded = true;
@@ -256,6 +266,10 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
         if (moduleDependenciesSatisfied(*it))
         {
           executeModule(*it);
+          g_Progress ++;
+          if (g_BootProgress)
+              g_BootProgress("moduleexec", g_Progress);
+
           m_PendingModules.erase(it);
           somethingLoaded = true;
           break;
@@ -267,7 +281,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   {
     m_PendingModules.pushBack(module);
   }
-  NOTICE("Returning");
+
   return module;
 }
 
@@ -295,7 +309,6 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
 
 void KernelElf::executeModule(Module *module)
 {
-    NOTICE("Executing");
   m_LoadedModules.pushBack(const_cast<char*>(module->name));
 
   if (!module->elf.finaliseModule(module->buffer, module->buflen))

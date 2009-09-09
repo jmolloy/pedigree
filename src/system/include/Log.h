@@ -125,6 +125,16 @@ enum Modifier
   Flush
 };
 
+// Function pointer to output boot progress -
+// Description, current progress, total progress.
+typedef void (*BootProgressFn)(const char *, uintptr_t);
+// Function pointer to set total progress - 
+// Total progress.
+typedef void (*BootProgressTotalFn)(uintptr_t);
+
+extern BootProgressFn g_BootProgress;
+extern BootProgressTotalFn g_BootProgressTotal;
+
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
  *\note You should use the NOTICE, WARNING, ERROR and FATAL macros to write something
