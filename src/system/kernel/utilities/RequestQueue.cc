@@ -183,11 +183,13 @@ int RequestQueue::work()
             break;
     }
 
+    bool bAsync = pReq->isAsync;
+
     // Request finished - post the request's mutex to wake the calling thread.
     pReq->mutex.release();
 
     // If the request was asynchronous, destroy the request structure.
-    if (pReq->isAsync)
+    if (bAsync)
         delete pReq;
   }
   return 0;

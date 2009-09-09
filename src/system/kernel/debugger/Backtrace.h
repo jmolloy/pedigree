@@ -69,8 +69,9 @@ private:
   /**
    * Performs a "normal" backtrace, based on following a linked list of frame pointers.
    */
+public:
   void performBpBacktrace(uintptr_t base, uintptr_t instruction);
-  
+private:
   /**
    * The return addresses.
    */
