@@ -25,7 +25,7 @@ from datetime import *
 ####################################
 defines = [
     'THREADS',                  # Enable threading
-    'DEBUGGER',                 # Enable the debugger
+    #'DEBUGGER',                 # Enable the debugger
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     #'SMBIOS',                  # Enable SMBIOS
     'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
@@ -35,7 +35,7 @@ defines = [
     'BITS_32',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-    'CRIPPLE_HDD',
+    #'CRIPPLE_HDD',
 ]
 
 if 'DEBUGGER' in defines:
@@ -91,6 +91,7 @@ opts.AddVariables(
     ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
     
     BoolVariable('CRIPPLE_HDD','Disable writing to hard disks at runtime.',1),
+    BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
     
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
@@ -236,6 +237,9 @@ if env['genflags']:
 
     if env['installer']:
         defines += ['INSTALLER']
+    
+    if env['debugger']:
+		defines += ['DEBUGGER']
     
     if env['CRIPPLE_HDD']:
         defines += ['CRIPPLE_HDD']
