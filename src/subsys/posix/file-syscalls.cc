@@ -17,6 +17,9 @@
 #include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <vfs/File.h>
@@ -1407,27 +1410,144 @@ void *posix_mmap(void *p)
         return 0;
     }
 
+    // The return address
+    void *finalAddress = 0;
+
+    // Valid file passed?
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
     if(!f)
     {
-        SYSCALL_ERROR(BadFileDescriptor);
-        return 0;
+        // Anonymous mmap instead?
+        if(flags & MAP_ANON)
+        {
+            // Allocation information
+            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+            uintptr_t mapAddress = reinterpret_cast<uintptr_t>(addr);
+            size_t pageSz = PhysicalMemoryManager::getPageSize();
+            size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
+
+            // Verify the passed length
+            if(!len || (mapAddress & (pageSz-1)))
+            {
+                SYSCALL_ERROR(InvalidArgument);
+                return 0;
+            }
+
+            // Does the application want a fixed mapping?
+            // A fixed mapping is a direct mapping into the address space by an
+            // application.
+            if(flags & MAP_FIXED)
+            {
+                // Verify the passed address
+                if(!mapAddress)
+                {
+                    SYSCALL_ERROR(InvalidArgument);
+                    return 0;
+                }
+
+                // Unmap existing allocations (before releasing the space to the process'
+                // space allocator though).
+                /// \todo Could this wreak havoc with CoW or shared memory (when we get it)?
+                for (size_t i = 0; i < numPages; i++)
+                {
+                    void *unmapAddr = reinterpret_cast<void*>(mapAddress + (i * pageSz));
+                    if(va.isMapped(unmapAddr))
+                    {
+                        // Unmap the virtual address
+                        physical_uintptr_t phys = 0;
+                        size_t flags = 0;
+                        va.getMapping(unmapAddr, phys, flags);
+                        va.unmap(reinterpret_cast<void*>(unmapAddr));
+
+                        // Free the physical page
+                        PhysicalMemoryManager::instance().freePage(phys);
+                    }
+                }
+
+                // Allow the pages to be used the the process now
+                pProcess->getSpaceAllocator().free(mapAddress, len);
+
+                // Now, allocate the memory
+                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, len))
+                {
+                    SYSCALL_ERROR(OutOfMemory);
+                    return 0;
+                }
+            }
+            else if(flags & MAP_ANON)
+            {
+                // Anonymous mapping - get an address from the space allocator
+                if(!pProcess->getSpaceAllocator().allocate(len, mapAddress))
+                {
+                    SYSCALL_ERROR(OutOfMemory);
+                    return 0;
+                }
+            }
+            else
+            {
+                // Flags not supported
+                SYSCALL_ERROR(NotSupported);
+                return 0;
+            }
+
+            // Got an address and a length, map it in now
+            for(size_t i = 0; i < numPages; i++)
+            {
+                physical_uintptr_t  phys = PhysicalMemoryManager::instance().allocatePage();
+                uintptr_t           virt = mapAddress + (i * pageSz);
+                if(!va.isMapped(reinterpret_cast<void*>(virt)))
+                {
+                    if(!va.map(phys, reinterpret_cast<void*>(virt), VirtualAddressSpace::Write))
+                    {
+                        /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
+                        SYSCALL_ERROR(OutOfMemory);
+                        return 0;
+                    }
+                }
+                else
+                {
+                    // Page is already mapped, that shouldn't be possible.
+                    FATAL("mmap: address " << virt << " is already mapped into the address space");
+                }
+            }
+
+            // And finally, we're ready to go.
+            finalAddress = reinterpret_cast<void*>(mapAddress);
+
+            // Add to the tracker
+            /// \todo This is not really ideal - rather than storing a MMFile
+            ///       we should store an object of some description. Then it'll
+            ///       be something like pSubsystem->addMemoryMap()
+            pSubsystem->memoryMapFile(finalAddress, 0);
+        }
+        else
+        {
+            // No valid file given, return error
+            SYSCALL_ERROR(BadFileDescriptor);
+            return 0;
+        }
     }
-    File *fileToMap = f->file;
+    else
+    {
+        // Grab the file to map in
+        File *fileToMap = f->file;
 
-    // Grab the MemoryMappedFile
-    uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-    MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address);
+        // Grab the MemoryMappedFile for it. This will automagically handle
+        // MAP_FIXED mappings too
+        /// \todo There *should* be proper flag checks here!
+        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address);
 
-    // Add the offset...
-    address += off;
-    void *finalAddress = reinterpret_cast<void*>(address);
+        // Add the offset...
+        address += off;
+        finalAddress = reinterpret_cast<void*>(address);
 
-    // Map it in
-    pSubsystem->memoryMapFile(finalAddress, pFile);
+        // Another memory mapped file to keep track of
+        pSubsystem->memoryMapFile(finalAddress, pFile);
+    }
 
     // Complete
-    return reinterpret_cast<void*>(finalAddress);
+    return finalAddress;
 }
 
 int posix_munmap(void *addr, size_t len)
@@ -1443,10 +1563,43 @@ int posix_munmap(void *addr, size_t len)
         return -1;
     }
 
-    // Unmap the file (and grab it)
+    // Lookup the address
     MemoryMappedFile *pFile = pSubsystem->unmapFile(addr);
+
+    // If it's a valid file, unmap it and we're done
     if(pFile)
         MemoryMappedFileManager::instance().unmap(pFile);
+
+    // Otherwise, free the space manually
+    else
+    {
+        // Anonymous mmap, manually free the space
+        size_t pageSz = PhysicalMemoryManager::getPageSize();
+        size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
+
+        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+
+        // Unmap!
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+        for (size_t i = 0; i < numPages; i++)
+        {
+            void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
+            if(va.isMapped(unmapAddr))
+            {
+                // Unmap the virtual address
+                physical_uintptr_t phys = 0;
+                size_t flags = 0;
+                va.getMapping(unmapAddr, phys, flags);
+                va.unmap(reinterpret_cast<void*>(unmapAddr));
+
+                // Free the physical page
+                PhysicalMemoryManager::instance().freePage(phys);
+            }
+        }
+
+        // Free from the space allocator as well
+        pProcess->getSpaceAllocator().free(address, len);
+    }
 
     return 0;
 }

@@ -115,6 +115,10 @@ void SlamCache::free(uintptr_t object)
     // Grab the footer and check it.
     SlamAllocator::AllocFooter *pFoot = reinterpret_cast<SlamAllocator::AllocFooter*> (object+m_ObjectSize-sizeof(SlamAllocator::AllocFooter));
     assert(pFoot->magic == VIGILANT_MAGIC);
+
+#if BOCHS_MAGIC_WATCHPOINTS
+    asm volatile("xchg %%dx,%%dx" :: "a" (&pFoot->catcher));
+#endif
 #endif
 
 #if USING_MAGIC
@@ -379,6 +383,13 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #if OVERRUN_CHECK
         head->magic = VIGILANT_MAGIC;
         foot->magic = VIGILANT_MAGIC;
+
+
+#if BOCHS_MAGIC_WATCHPOINTS
+        /// \todo head->catcher should be used for underrun checking
+        // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
+        asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
+#endif
   #if VIGILANT_OVERRUN_CHECK
         /// \todo Fill in backtrace.
   #endif
@@ -419,6 +430,11 @@ void SlamAllocator::free(uintptr_t mem)
 #if OVERRUN_CHECK
     assert(head->magic == VIGILANT_MAGIC);
     // Footer gets checked in SlamCache::free, as we don't know the object size.
+
+#if BOCHS_MAGIC_WATCHPOINTS
+        /// \todo head->catcher should be used for underrun checking
+        // asm volatile("xchg %%dx,%%dx" :: "a" (&head->catcher));
+#endif
 #endif
 
     // Free the memory
