@@ -52,6 +52,7 @@ namespace Error
     InProgress           =119,
     Already              =120,
     IsConnected          =127,
+    NotSupported         =134,
     Unimplemented        =88
   };
 }
