@@ -62,10 +62,12 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
             memcpy(reinterpret_cast<uint8_t*>(m_pReq->p4), buffer, responseToLast);
         }
 
+        bool bAsync = m_pReq->isAsync;
+
         // RequestQueue finished - post the request's mutex to wake the calling thread.
         m_pReq->mutex.release();
 
-        if (m_pReq->isAsync)
+        if (bAsync)
             delete m_pReq;
     }
 

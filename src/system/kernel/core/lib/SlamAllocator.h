@@ -69,6 +69,12 @@
 /// It will cripple your performance.
 #define CRIPPLINGLY_VIGILANT            0
 
+/// If you're using a modified version of Bochs which supports magic
+/// watchpoints (xchg cx, cx), this will set and remove watchpoints
+/// on all allocations. This means you find out exactly where each
+/// overrun occurs (EIP and all) rather than guessing.
+#define BOCHS_MAGIC_WATCHPOINTS         0
+
 /** A cache allocates objects of a constant size. */
 class SlamCache
 {
@@ -168,6 +174,9 @@ public:
         struct AllocHeader
         {
 #if OVERRUN_CHECK
+#if BOCHS_MAGIC_WATCHPOINTS
+            uint32_t catcher;
+#endif
             size_t magic;
 #if VIGILANT_OVERRUN_CHECK
             size_t backtrace[VIGILANT_NUM_BT];
@@ -179,6 +188,9 @@ public:
         struct AllocFooter
         {
 #if OVERRUN_CHECK
+#if BOCHS_MAGIC_WATCHPOINTS
+            uint32_t catcher;
+#endif
             size_t magic;
 #endif
         };

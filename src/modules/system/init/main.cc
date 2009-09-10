@@ -125,6 +125,20 @@ void init()
         FATAL("No root disk (missing .pedigree-root?)");
     }
 
+#if 0
+    // Testing froggey's Bochs patch for magic watchpoints... -Matt
+    volatile uint32_t abc = 0;
+    NOTICE("Address of abc = " << reinterpret_cast<uintptr_t>(&abc) << "...");
+    asm volatile("xchg %%cx,%%cx" :: "a" (&abc));
+    abc = 0xdeadbeef;
+    abc = 0xdeadbe;
+    abc = 0xdead;
+    abc = 0xde;
+    abc = 0xd;
+    abc = 0;
+    FATAL("Test complete: " << abc << ".");
+#endif
+
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
