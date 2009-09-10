@@ -17,6 +17,9 @@
 #include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <vfs/File.h>
@@ -1406,28 +1409,66 @@ void *posix_mmap(void *p)
         ERROR("No subsystem for this process!");
         return 0;
     }
-
-    FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
-    if(!f)
+    void *finalAddress;
+    MemoryMappedFile *pFile;
+    // Check if we are dealing with anonymous mmap
+    if(flags & MAP_ANON)
     {
-        SYSCALL_ERROR(BadFileDescriptor);
-        return 0;
+        bool allowOverlap = false;
+        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+        size_t pageSz = PhysicalMemoryManager::getPageSize();
+        size_t cPages = len/pageSz;
+        if(len%pageSz)
+            cPages++;
+        if(flags & MAP_FIXED)
+        {
+            // Fixed mmaping, try first to allocate the whole address space
+            if(!pProcess->getSpaceAllocator().allocateSpecific(address, len))
+            {
+                // Fallback and try with overlapping enabled
+                pProcess->getSpaceAllocator().allocateSpecificOverlapping(address, len);
+                allowOverlap = true;
+            }
+        }
+        else
+        {
+            // We have to get an address from the space allocator
+            if(!pProcess->getSpaceAllocator().allocate(len, address))
+                return 0;
+        }
+        // Map all the pages we need
+        for (size_t i = 0; i < pageSz * cPages; i += pageSz)
+        {
+            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+            bool b = Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (i+address), VirtualAddressSpace::Write);
+            if (!b && !allowOverlap)
+                return 0;
+        }
+        finalAddress = reinterpret_cast<void*>(address);
+        pFile = NULL;
     }
-    File *fileToMap = f->file;
+    else
+    {
+        FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
+        if(!f)
+        {
+            SYSCALL_ERROR(BadFileDescriptor);
+            return 0;
+        }
+        File *fileToMap = f->file;
 
-    // Grab the MemoryMappedFile
-    uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-    MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address);
+        // Grab the MemoryMappedFile
+        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+        pFile = MemoryMappedFileManager::instance().map(fileToMap, address);
 
-    // Add the offset...
-    address += off;
-    void *finalAddress = reinterpret_cast<void*>(address);
-
+        // Add the offset...
+        address += off;
+        finalAddress = reinterpret_cast<void*>(address);
+    }
     // Map it in
     pSubsystem->memoryMapFile(finalAddress, pFile);
-
     // Complete
-    return reinterpret_cast<void*>(finalAddress);
+    return finalAddress;
 }
 
 int posix_munmap(void *addr, size_t len)
@@ -1447,6 +1488,15 @@ int posix_munmap(void *addr, size_t len)
     MemoryMappedFile *pFile = pSubsystem->unmapFile(addr);
     if(pFile)
         MemoryMappedFileManager::instance().unmap(pFile);
+    else
+    {
+        // Anonymous mmap, free manually the space
+        size_t cPages = len / PhysicalMemoryManager::getPageSize();
+        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+        for (size_t i = 0;i < cPages;i++)
+            Processor::information().getVirtualAddressSpace().unmap(reinterpret_cast<void*> (address + i * PhysicalMemoryManager::getPageSize()));
+        pProcess->getSpaceAllocator().free(address, len);
+    }
 
     return 0;
 }

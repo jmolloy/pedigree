@@ -11,10 +11,7 @@ _BEGIN_STD_C
 #define MAP_SHARED 1
 #define MAP_PRIVATE 2
 #define MAP_FIXED 4
-
-#ifdef _PEDIGREE_ALLOW_ANON_MMAP
 #define MAP_ANON 8
-#endif
 
 #define MAP_FAILED ((void*) 0)
 
