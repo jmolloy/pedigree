@@ -167,7 +167,9 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           userStack = reinterpret_cast<uintptr_t>(pThread->getStateUserStack());
           if (!userStack)
           {
-              pThread->setStateUserStack(reinterpret_cast<void*>(va.allocateStack()));
+              // Oops, forgot to add in the actual setting of the userstack. -Matt
+              userStack = reinterpret_cast<uintptr_t>(va.allocateStack());
+              pThread->setStateUserStack(reinterpret_cast<void*>(userStack));
           }
       }
       else

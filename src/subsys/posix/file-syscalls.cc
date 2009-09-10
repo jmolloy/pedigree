@@ -1447,6 +1447,7 @@ void *posix_mmap(void *p)
 
                 // Unmap existing allocations (before releasing the space to the process'
                 // space allocator though).
+                /// \todo Could this wreak havoc with CoW or shared memory (when we get it)?
                 for (size_t i = 0; i < numPages; i++)
                 {
                     void *unmapAddr = reinterpret_cast<void*>(mapAddress + (i * pageSz));
