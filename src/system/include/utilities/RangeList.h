@@ -75,7 +75,12 @@ class RangeList
      *\param[in] length the length
      *\return true, if successfully allocated, false otherwise */
     bool allocateSpecific(T address, T length);
-
+    /** Allocate a range of specific size and beginning address,
+     * with overlapping allowed
+     *\param[in] address the beginning address
+     *\param[in] length the length
+     *\return true, if successfully allocated at least one part of the range, false otherwise */
+    void allocateSpecificOverlapping(T address, T length);
     void clear();
 
     /** Get the number of ranges in the list
@@ -202,6 +207,37 @@ bool RangeList<T>::allocateSpecific(T address, T length)
   return false;
 }
 template<typename T>
+void RangeList<T>::allocateSpecificOverlapping(T address, T length)
+{
+  Iterator cur(m_List.begin());
+  ConstIterator end(m_List.end());
+  for (;cur != end;++cur)
+    if ((*cur)->address >= address &&
+        ((*cur)->address + (*cur)->length) <= (address + length))
+    {
+      delete *cur;
+      m_List.erase(cur);
+    }
+    else if ((*cur)->address >= address && (*cur)->address < (address + length) &&
+            ((*cur)->address + (*cur)->length) >= (address + length))
+    {
+        (*cur)->address += length - ((*cur)->address - address);
+        (*cur)->length -= length - ((*cur)->address - address);
+    }
+    else if ((*cur)->address < address &&
+             ((*cur)->address + (*cur)->length) <= (address + length))
+    {
+      (*cur)->length = (*cur)->address - address;
+    }
+    else if ((*cur)->address < address &&
+             ((*cur)->address + (*cur)->length) > (address + length))
+    {
+      Range *newRange = new Range(address + length, (*cur)->address + (*cur)->length - address - length);
+      m_List.pushBack(newRange);
+      (*cur)->length = address - (*cur)->address;
+    }
+}
+template<typename T>
 typename RangeList<T>::Range RangeList<T>::getRange(size_t index) const
 {
   if (index >= m_List.size())return Range(0, 0);
@@ -224,5 +260,4 @@ void RangeList<T>::clear()
         delete *cur;
     m_List.clear();
 }
-
 #endif
