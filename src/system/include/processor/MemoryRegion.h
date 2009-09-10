@@ -38,7 +38,7 @@ class MemoryRegion
   public:
     /** The default constructor does nothing  */
     inline MemoryRegion(const char *pName)
-      : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0), m_pName(pName){}
+        : m_VirtualAddress(0),m_PhysicalAddress(0), m_Size(0), m_pName(pName), m_bNonRamMemory(false), m_bForced(false) {}
     /** The destructor unregisters itself from the PMM. */
     inline virtual ~MemoryRegion() {PhysicalMemoryManager::instance().unmapRegion(this);}
 
@@ -88,6 +88,23 @@ class MemoryRegion
       return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(m_VirtualAddress) + (address - m_PhysicalAddress));
     }
 
+    void setNonRamMemory(bool b)
+    {
+        m_bNonRamMemory = b;
+    }
+    bool getNonRamMemory()
+    {
+        return m_bNonRamMemory;
+    }
+    void setForced(bool b)
+    {
+        m_bForced = b;
+    }
+    bool getForced()
+    {
+        return m_bForced;
+    }
+
   private:
     /** The copy-constructor
      *\note Not implemented */
@@ -106,6 +123,8 @@ class MemoryRegion
     size_t m_Size;
     /** User-visible name of the memory-region */
     const char *m_pName;
+
+    bool m_bNonRamMemory, m_bForced;
 };
 
 /** @} */

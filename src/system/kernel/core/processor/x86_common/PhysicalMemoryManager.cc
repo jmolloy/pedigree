@@ -98,9 +98,14 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         // Remove the memory from the range-lists (if desired/possible)
         if ((pageConstraints & nonRamMemory) == nonRamMemory)
         {
+            Region.setNonRamMemory(true);
             if (m_PhysicalRanges.allocateSpecific(start, cPages * getPageSize()) == false)
+            {
                 if ((pageConstraints & force) != force)
                     return false;
+                else
+                    Region.setForced(true);
+            }
         }
         else
         {
@@ -120,6 +125,12 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             {
                 ERROR("PhysicalMemoryManager: Memory region neither completely below nor above 1MB");
                 return false;
+            }
+            else
+            {
+                // Ensure that free() does not attempt to free the given memory...
+                Region.setNonRamMemory(true);
+                Region.setForced(true);
             }
         }
 
@@ -150,7 +161,6 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
         Region.m_PhysicalAddress = start;
         Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
-
 //       NOTICE("MR: Allocated " << Hex << vAddress << " (phys " << static_cast<uintptr_t>(start) << "), size " << (cPages*4096));
 
         // Add to the list of memory-regions
@@ -389,11 +399,52 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
     {
         if (*it == pRegion)
         {
+
             size_t cPages = pRegion->size() / PhysicalMemoryManager::getPageSize();
             uintptr_t start = reinterpret_cast<uintptr_t> (pRegion->virtualAddress());
+            physical_uintptr_t phys = pRegion->physicalAddress();
             VirtualAddressSpace &virtualAddressSpace = VirtualAddressSpace::getKernelAddressSpace();
+
+            if (pRegion->getNonRamMemory())
+            {
+                if (!pRegion->getForced())
+                    m_PhysicalRanges.free(phys, pRegion->size());
+            }
+            else
+            {
+                if (phys < 0x100000 &&
+                    (phys + cPages * getPageSize()) < 0x100000)
+                {
+                    m_RangeBelow1MB.free(phys, cPages * getPageSize());
+                }
+                else if (phys < 0x1000000 &&
+                         (phys + cPages * getPageSize()) < 0x1000000)
+                {
+                    m_RangeBelow16MB.free(phys, cPages * getPageSize());
+                }
+                else if (phys < 0x1000000)
+                {
+                    ERROR("PhysicalMemoryManager: Memory region neither completely below nor above 1MB");
+                    return;
+                }
+            }
+
             for (size_t i = 0;i < cPages;i++)
-                virtualAddressSpace.unmap(reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize()));
+            {
+                void *vAddr = reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize());
+                if (!virtualAddressSpace.isMapped(vAddr))
+                {
+                    FATAL("Algorithmic error in PhysicalMemoryManager::unmapRegion");
+                }
+                physical_uintptr_t pAddr;
+                size_t flags;
+                virtualAddressSpace.getMapping(vAddr, pAddr, flags);
+
+                if (!pRegion->getNonRamMemory() && pAddr > 0x1000000)
+                    m_PageStack.free(pAddr);
+                
+                virtualAddressSpace.unmap(vAddr);
+            }
 //            NOTICE("MR: Freed " << Hex << start << ", size " << (cPages*4096));
             m_MemoryRegions.free(start, pRegion->size());
             PhysicalMemoryManager::m_MemoryRegions.erase(it);
