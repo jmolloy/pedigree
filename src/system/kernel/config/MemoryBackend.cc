@@ -26,102 +26,72 @@ MemoryBackend::~MemoryBackend()
     ConfigurationManager::instance().removeBackend(m_ConfigStore);
 }
 
-size_t MemoryBackend::write(String TableName, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes)
+size_t MemoryBackend::createTable(String table)
 {
-    // Sanity check to avoid wasted time
-    if(!buffer || !nBytes)
-        return 0;
+    m_Tables.insert(table, new Table());
+    return 0;
+}
 
-    // Look up what we can, and allocate what we can't
-    Table *table = 0;
-    Key *key = 0;
-    Value *value = 0;
-    ValueInfo *info = 0;
+void MemoryBackend::insert(String table, String key, ConfigValue &value)
+{
+    Table *pT = m_Tables.lookup(table);
+    if (!pT) return;
 
-    table = m_Tables.lookup(TableName);
-    if(table)
+    ConfigValue *pConfigValue = new ConfigValue(value);
+    pT->m_Rows.insert(key, pConfigValue);
+}
+
+ConfigValue &MemoryBackend::select(String table, String key)
+{
+    static ConfigValue v;
+    v.type = Invalid;
+
+    Table *pT = m_Tables.lookup(table);
+    if (!pT) return v;
+
+    ConfigValue *pV = pT->m_Rows.lookup(key);
+    if (pV)
+        return *pV;
+    else
+        return v;
+}
+
+void MemoryBackend::watch(String table, String key, ConfigurationWatcher watcher)
+{
+    Table *pT = m_Tables.lookup(table);
+    if (!pT) return;
+
+    ConfigValue *pV = pT->m_Rows.lookup(key);
+    if (pV)
     {
-        key = table->m_Keys.lookup(KeyName);
-        if(key)
+        for (int i = 0; i < MAX_WATCHERS; i++)
         {
-            value = key->m_Values.lookup(KeyValue);
-            if(value)
+            if (pV->watchers[i] == 0)
             {
-                info = value->m_ValueInfo.lookup(ValueName);
+                pV->watchers[i] = watcher;
+                break;
             }
         }
     }
-
-    // Dependence goes backwards
-    if(!table)
-    {
-        table = new Table;
-        m_Tables.insert(TableName, table);
-    }
-
-    if(!key)
-    {
-        key = new Key;
-        table->m_Keys.insert(KeyName, key);
-    }
-
-    if(!value)
-    {
-        value = new Value;
-        key->m_Values.insert(KeyValue, value);
-    }
-
-    if(!info)
-    {
-        info = new ValueInfo;
-        info->buffer = reinterpret_cast<uintptr_t>(new uint8_t[nBytes]);
-        info->nBytes = nBytes;
-        value->m_ValueInfo.insert(ValueName, info);
-    }
-
-    // Do we need to reallocate the info?
-    if(info->nBytes != nBytes)
-    {
-        delete reinterpret_cast<uint8_t*>(info->buffer);
-        info->buffer = reinterpret_cast<uintptr_t>(new uint8_t[nBytes]);
-        info->nBytes = nBytes;
-    }
-
-    // Copy!
-    memcpy(reinterpret_cast<void*>(info->buffer), reinterpret_cast<void*>(buffer), nBytes);
-    return nBytes;
 }
 
-size_t MemoryBackend::read(String TableName, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes)
+void MemoryBackend::unwatch(String table, String key, ConfigurationWatcher watcher)
 {
-    // Sanity check to avoid wasted time
-    if(!buffer || !maxBytes)
-        return 0;
+    Table *pT = m_Tables.lookup(table);
+    if (!pT) return;
 
-    // Look up the table
-    Table *table = m_Tables.lookup(TableName);
-    if(!table)
-        return 0;
-
-    // Look up the key name
-    Key *key = table->m_Keys.lookup(KeyName);
-    if(!key)
-        return 0;
-
-    // Look up the key value
-    Value *value = key->m_Values.lookup(KeyValue);
-    if(!value)
-        return 0;
-
-    // Finally, look up the value itself
-    ValueInfo *info = value->m_ValueInfo.lookup(ValueName);
-    if(!info)
-        return 0;
-
-    // Copy
-    size_t bytesToCopy = (info->nBytes >= maxBytes ? maxBytes : info->nBytes);
-    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(info->buffer), bytesToCopy);
-    return bytesToCopy;
+    ConfigValue *pV = pT->m_Rows.lookup(key);
+    if (pV)
+    {
+        for (int i = 0; i < MAX_WATCHERS; i++)
+        {
+            if (pV->watchers[i] == watcher)
+            {
+                pV->watchers[i] = 0;
+                break;
+            }
+        }
+    }
 }
 
 String MemoryBackend::getTypeName()

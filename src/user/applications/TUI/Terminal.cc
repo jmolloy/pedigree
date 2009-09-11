@@ -220,6 +220,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         }
         else
         {
+            m_WriteBufferLen = 0;
             nBytes = 1;
             continue;
         }

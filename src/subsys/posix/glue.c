@@ -995,7 +995,14 @@ struct hostent* gethostbyname(const char *name)
 struct servent* getservbyname(const char *name, const char *proto)
 {
     STUBBED("getservbyname");
-    return 0;
+
+    static struct servent se;
+    if (!strcmp(name, "tftp"))
+        se.s_port = 69;
+    else
+        return 0;
+
+    return &se;
 }
 
 void endservent(void)

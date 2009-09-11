@@ -18,6 +18,8 @@
 
 #include <processor/types.h>
 
+#include <config/ConfigurationManager.h>
+
 /** A configuration backend for the Pedigree configuration system.
   *
   * By subclassing this class, it is possible to handle different
@@ -30,12 +32,20 @@ public:
     ConfigurationBackend(String configStore);
     virtual ~ConfigurationBackend();
 
-    virtual size_t write(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
-    virtual size_t read(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes) = 0;
+    virtual size_t createTable(String table) =0;
+    /** Inserts the value 'value' into the table 'table', with its key as 'key' */
+    virtual void insert(String table, String key, ConfigValue &value) =0;
+    /** Returns the value in table, with key matching 'key', or zero. */
+    virtual ConfigValue &select(String table, String key) =0;
+
+    /** Watch a specific table entry. */
+    virtual void watch(String table, String key, ConfigurationWatcher watcher) =0;
+    /** Remove a watcher from a table entry. */
+    virtual void unwatch(String table, String key, ConfigurationWatcher watcher) =0;
 
     virtual String getConfigStore();
 
-    virtual String getTypeName();
+    virtual String getTypeName() =0;
 
 protected:
 

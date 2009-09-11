@@ -230,7 +230,6 @@ int main (int argc, char **argv)
                 buffer[sz] = '\0';
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
-                log(buffer);
                 lastResponse = sz;
                 Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
                 break;
