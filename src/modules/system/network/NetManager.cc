@@ -161,7 +161,7 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
         ///       and instead peek at the message (in other words, we need flags)
         Endpoint::RemoteEndpoint remoteHost;
         memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
-        ret = p->recv(buffer, size, &remoteHost);
+        ret = p->recv(buffer, size, bCanBlock, &remoteHost);
     }
     else
         ret = p->recv(buffer, size, bCanBlock, false);

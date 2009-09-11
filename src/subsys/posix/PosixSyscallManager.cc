@@ -164,7 +164,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_GETGID:
             return posix_getgid();
         case POSIX_SIGACTION:
-            return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const sigaction*>(p2), reinterpret_cast<sigaction*>(p3));
+            return posix_sigaction(static_cast<int>(p1), reinterpret_cast<const struct sigaction*>(p2), reinterpret_cast<struct sigaction*>(p3));
         case POSIX_SIGNAL:
             return posix_signal(static_cast<int>(p1), reinterpret_cast<void*>(p2));
         case POSIX_RAISE:
@@ -264,6 +264,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_pthread_mutex_trylock(reinterpret_cast<pthread_mutex_t*>(p1));
         case POSIX_PTHREAD_MUTEX_UNLOCK:
             return posix_pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(p1));
+
+        case POSIX_SYSLOG:
+            return posix_syslog(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
 
         // Stub warning
         case POSIX_STUBBED:

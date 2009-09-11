@@ -16,6 +16,7 @@
 
 #include "UdpManager.h"
 #include <Log.h>
+#include <syscallError.h>
 #include <processor/Processor.h>
 
 UdpManager UdpManager::manager;
@@ -26,9 +27,9 @@ int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost
   return success ? nBytes : -1;
 };
 
-int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost)
 {
-  if(m_DataQueue.count())
+  if(dataReady(bBlock, 0))
   {
     DataBlock* ptr = m_DataQueue.popFront();
 
@@ -64,7 +65,15 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHo
       return nBytes;
     }
   }
-  return 0;
+
+  if(!bBlock)
+  {
+    // EAGAIN, or EWOULDBLOCK
+    SYSCALL_ERROR(NoMoreProcesses);
+    return -1;
+  }
+  else
+    return 0;
 };
 
 void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
@@ -93,17 +102,24 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
 
 bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 {
-  bool timedOut = false;
-  if(block)
-  {
-    m_DataQueueSize.acquire(1, tmout);
-    if(Processor::information().getCurrentThread()->wasInterrupted())
-      timedOut = true;
-  }
-  else
-    return m_DataQueueSize.tryAcquire();
-  return !timedOut;
-};
+    // Attempt to avoid setting up the timeout if possible
+    if(m_DataQueueSize.tryAcquire())
+        return true;
+
+    // Otherwise jump straight into blocking
+    bool timedOut = false;
+    if(block)
+    {
+        if(tmout)
+            m_DataQueueSize.acquire(1, tmout);
+        else
+            m_DataQueueSize.acquire();
+
+        if(Processor::information().getCurrentThread()->wasInterrupted())
+            timedOut = true;
+    }
+    return !timedOut;
+}
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
 {

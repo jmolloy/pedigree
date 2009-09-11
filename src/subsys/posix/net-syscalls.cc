@@ -303,7 +303,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
         ///       However, to do that we need to tell recv not to remove from the queue
         ///       and instead peek at the message (in other words, we need flags)
         Endpoint::RemoteEndpoint remoteHost;
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, &remoteHost);
+        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
     }
 
     return ret;
@@ -355,7 +355,7 @@ ssize_t posix_recvfrom(void* callInfo)
             p->dataReady(true);
 
         Endpoint::RemoteEndpoint remoteHost;
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, &remoteHost);
+        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
 
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(remoteHost.remotePort);
@@ -363,7 +363,6 @@ ssize_t posix_recvfrom(void* callInfo)
         *addrlen = sizeof(struct sockaddr_in);
     }
 
-    NOTICE("recvfrom returning " << ret << ".");
     return ret;
 }
 

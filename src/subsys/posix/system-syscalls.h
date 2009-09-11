@@ -62,6 +62,8 @@ int posix_setsid();
 int posix_setpgid(int pid, int pgid);
 int posix_getpgrp();
 
+int posix_syslog(const char *msg, int prio);
+
 int pedigree_load_keymap(char *buffer, size_t len);
 
 #endif

@@ -11,7 +11,7 @@ _BEGIN_STD_C
 typedef int	sig_atomic_t;		/* Atomic entity type (ANSI) */
 #endif
 
-typedef int sig_t;
+typedef _sig_func_ptr sig_t;
 
 #define SIG_DFL ((_sig_func_ptr)0)	/* Default action */
 #define SIG_IGN ((_sig_func_ptr)1)	/* Ignore action */
@@ -22,6 +22,7 @@ struct _reent;
 _sig_func_ptr _EXFUN(_signal_r, (struct _reent *, int, _sig_func_ptr));
 int	_EXFUN(_raise_r, (struct _reent *, int));
 int _EXFUN(kill, (pid_t, int));
+int _EXFUN(sigaction, (int sig, const struct sigaction *act, struct sigaction *oact));
 
 #ifndef _REENT_ONLY
 _sig_func_ptr _EXFUN(signal, (int, _sig_func_ptr));

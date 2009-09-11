@@ -803,3 +803,18 @@ NOTICE("stl: " << Hex << sparseTreeLoc  <<", dl: " << dataLoc << ", stz: " << sp
 
     return 0;
 }
+
+int posix_syslog(const char *msg, int prio)
+{
+    if(prio <= LOG_ERR)
+        ERROR(msg);
+    else if(prio == LOG_WARNING)
+        WARNING(msg);
+    else if(prio == LOG_NOTICE || prio == LOG_INFO)
+        NOTICE(msg);
+#if DEBUGGER
+    else
+        NOTICE(msg);
+#endif
+    return 0;
+}

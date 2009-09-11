@@ -17,6 +17,7 @@
 #include "RawManager.h"
 #include "NetManager.h"
 #include <Log.h>
+#include <syscallError.h>
 
 #include "Ip.h"
 
@@ -64,9 +65,9 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
   return -1;
 };
 
-int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint* remoteHost)
+int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::RemoteEndpoint* remoteHost)
 {
-  if(m_DataQueue.count())
+  if(dataReady(bBlock, 0))
   {
     DataBlock* ptr = m_DataQueue.popFront();
 
@@ -83,7 +84,15 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint
     delete ptr;
     return nBytes;
   }
-  return -1; // no data
+
+  if(!bBlock)
+  {
+    // EAGAIN, or EWOULDBLOCK
+    SYSCALL_ERROR(NoMoreProcesses);
+    return -1;
+  }
+  else
+    return 0;
 };
 
 void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost)
@@ -106,17 +115,24 @@ void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Remo
 
 bool RawEndpoint::dataReady(bool block, uint32_t tmout)
 {
-  bool timedOut = false;
-  if(block)
-  {
-    m_DataQueueSize.acquire(1, tmout);
-    if(Processor::information().getCurrentThread()->wasInterrupted())
-      timedOut = true;
-  }
-  else
-    return m_DataQueueSize.tryAcquire();
-  return !timedOut;
-};
+    // Attempt to avoid setting up the timeout if possible
+    if(m_DataQueueSize.tryAcquire())
+        return true;
+
+    // Otherwise jump straight into blocking
+    bool timedOut = false;
+    if(block)
+    {
+        if(tmout)
+            m_DataQueueSize.acquire(1, tmout);
+        else
+            m_DataQueueSize.acquire();
+
+        if(Processor::information().getCurrentThread()->wasInterrupted())
+            timedOut = true;
+    }
+    return !timedOut;
+}
 
 void RawManager::receive(uintptr_t payload, size_t payloadSize, Endpoint::RemoteEndpoint* remoteHost, int type, Network* pCard)
 {
@@ -136,7 +152,10 @@ void RawManager::receive(uintptr_t payload, size_t payloadSize, Endpoint::Remote
     RawEndpoint* e = reinterpret_cast<RawEndpoint*>((*it));
 
     if(e->getType() == endType)
+    {
+        NOTICE("Depositing payload");
       e->depositPacket(payloadSize, payload, remoteHost);
+    }
   }
 }
 

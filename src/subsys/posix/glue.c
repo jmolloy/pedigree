@@ -1239,9 +1239,30 @@ int poll(struct pollfd fds[], unsigned int nfds, int timeout)
     return (int)syscall3(POSIX_POLL, (int)fds, nfds, timeout);
 }
 
+#define HOST_NOT_FOUND    1
+#define NO_DATA           2
+#define NO_RECOVERY       3
+#define TRY_AGAIN         4
+#define NO_ADDRESS        5
+
+const char * const sys_herrors[] =
+{
+    0,
+    "The host cannot be found.",
+    "The requested name is valid, but does not have an IP address."
+    "A non-recoverable name server error occurred.",
+    "A temporary error occurred on an authoritative name server. Try again later.",
+    "The requested name is valid, but does not have an IP address."
+};
+
+const char *hstrerror(int err)
+{
+    return sys_herrors[err];
+}
+
 void herror(const char *s)
 {
-    char *buff = (char*)strerror(h_errno);
+    const char *buff = hstrerror(h_errno);
     printf("%s: %s\n", s, buff);
 }
 
@@ -1731,4 +1752,76 @@ int pedigree_load_keymap(char *buf, size_t sz)
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     return syscall3(PEDIGREE_GET_MOUNT, (int) mount_buf, (int) info_buf, n);
+}
+
+void closelog()
+{
+}
+
+void openlog(const char *log, int logopt, int facility)
+{
+}
+
+int setlogmask(int mask)
+{
+    return 0;
+}
+
+void syslog(int prio, const char *fmt, ...)
+{
+    static char print_temp[1024];
+    va_list argptr;
+    va_start(argptr, fmt);
+    vsprintf(print_temp, fmt, argptr);
+    syscall2(POSIX_SYSLOG, (int) print_temp, prio);
+    va_end(argptr);
+}
+
+int pause()
+{
+    STUBBED("pause");
+    return -1;
+}
+
+pid_t forkpty(int *amaster, char *name, struct termios *termp, struct winsize *winp)
+{
+    STUBBED("forkpty");
+    errno = ENOENT;
+    return -1;
+}
+
+struct utmp *pututline(struct utmp *ut)
+{
+    STUBBED("pututline");
+    return 0;
+}
+
+void logwtmp(const char *line, const char *name, const char *host)
+{
+    STUBBED("logwtmp");
+}
+
+unsigned if_nametoindex(const char *name)
+{
+    STUBBED("if_nametoindex");
+    return 0;
+}
+
+char* if_indextoname(unsigned index, char *buf)
+{
+    STUBBED("if_indextoname");
+    errno = ENXIO;
+    return 0;
+}
+
+struct if_nameindex* if_nameindex()
+{
+    STUBBED("if_nameindex");
+    errno = ENOBUFS;
+    return 0;
+}
+
+void if_freenameindex(struct if_nameindex *nameindex)
+{
+    STUBBED("if_freenameindex");
 }
