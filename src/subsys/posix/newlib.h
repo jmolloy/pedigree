@@ -43,4 +43,6 @@
 
 #include <poll.h>
 
+#include <syslog.h>
+
 #endif

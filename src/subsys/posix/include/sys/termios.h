@@ -86,6 +86,10 @@ typedef unsigned int tcflag_t;
 #define TCOFLUSH  1
 #define TCIOFLUSH 2
 
+#define TIOCPKT_FLUSHWRITE      1
+#define TIOCPKT_NOSTOP          2
+#define TIOCPKT_DOSTOP          4
+
 #define  B0	0000000		/* hang up */
 #define  B50	0000001
 #define  B75	0000002
@@ -103,6 +107,9 @@ typedef unsigned int tcflag_t;
 #define  B19200	0000016
 #define  B38400	0000017
 
+// Character in termios.c_cc that disables that element
+#define _POSIX_VDISABLE '\0'
+
 typedef struct termios
 {
   tcflag_t c_iflag;		///< Has useless properties - ignored.
@@ -118,14 +125,14 @@ typedef struct winsize
   unsigned short ws_col;
 } winsize_t;
 
-int tcgetattr(int, struct termios *);
-int tcsetattr(int, int, struct termios *);
-int tcflow(int fd, int action);
-int tcflush(int fd, int queue_selector);
-int tcdrain(int fd);
+int _EXFUN(tcgetattr, (int, termios_t *));
+int _EXFUN(tcsetattr, (int, int, struct termios *));
+int _EXFUN(tcflow, (int fd, int action));
+int _EXFUN(tcflush, (int fd, int queue_selector));
+int _EXFUN(tcdrain, (int fd));
 
 #ifdef __cplusplus
-}
+};
 #endif
 
 #endif // SYS_TERMIOS_H

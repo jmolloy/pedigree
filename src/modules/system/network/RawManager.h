@@ -65,7 +65,7 @@ class RawEndpoint : public Endpoint
     virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
 
     /** Reads from the front of the packet queue. Will return truncated packets if maxSize < packet size. */
-    virtual int recv(uintptr_t buffer, size_t maxSize, Endpoint::RemoteEndpoint* remoteHost);
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::RemoteEndpoint* remoteHost);
 
     /** Are there packets to read? */
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);

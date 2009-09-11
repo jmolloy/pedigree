@@ -73,8 +73,8 @@ void Dns::mainThread()
   {
     if(e->dataReady(true))
     {
-      // read the packet
-      int n = e->recv(buffLoc, 1024, &remoteHost);
+      // Read the packet (Safe to block because we've already run dataReady)
+      int n = e->recv(buffLoc, 1024, true, &remoteHost);
       if(n <= 0)
         continue;
 

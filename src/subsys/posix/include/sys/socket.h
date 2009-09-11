@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <sys/types.h>
 
+#define _SS_MAXSIZE	128
+
 typedef size_t socklen_t;
 typedef uint32_t sa_family_t;
 
@@ -13,7 +15,11 @@ struct sockaddr
   char sa_data[14];
 };
 
-/*** \todo sockaddr_storage structure ***/
+struct sockaddr_storage
+{
+    sa_family_t ss_family;
+    char        ss_data[_SS_MAXSIZE];
+} __attribute__((aligned(4)));
 
 struct msghdr
 {
@@ -39,6 +45,7 @@ struct linger
 #define SOCK_RAW        2
 #define SOCK_STREAM     3
 #define SOCK_SEQPACKET  4
+#define SOCK_RDM        5
 
 #define SOL_SOCKET      0
 
@@ -85,7 +92,6 @@ enum SocketOptions
 #define AF_INET6  (PF_INET6)
 #define AF_UNIX   (PF_UNIX)
 #define AF_UNSPEC (PF_MAX+1)
-
 
 #define  SHUT_RD 0 /** Disables receiving */
 #define  SHUT_WR 1 /** Disables sending */

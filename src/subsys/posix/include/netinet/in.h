@@ -36,6 +36,9 @@ struct sockaddr_in
 #define IPPROTO_MAX   6
 #endif
 
+#define IPPORT_RESERVED         1024
+#define IPPORT_USERRESERVED     1024
+
 #define IN_CLASSA_NSHIFT 24
 
 #define INADDR_ANY        0

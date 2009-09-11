@@ -130,7 +130,7 @@ public:
     {
         return -1;
     };
-    virtual int recv(uintptr_t buffer, size_t maxSize, RemoteEndpoint* remoteHost)
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost)
     {
         return -1;
     };

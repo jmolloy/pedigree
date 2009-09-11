@@ -26,8 +26,6 @@ files = [
     'Subsystem.cc',
     'ServiceManager.cc',
     'Service.cc',
-    Glob('debugger/*.cc'),
-    Glob('debugger/commands/*.cc'),
     Glob('debugger/libudis86/*.c'),
     Glob('utilities/*.cc'),
     Glob('machine/*.cc'),
@@ -39,6 +37,19 @@ files = [
     Glob('core/lib/*.c'),
     Glob('config/*.cc')
 ]
+
+if 'DEBUGGER' in env['CPPDEFINES']:
+	files += [
+		Glob('debugger/*.cc'),
+		Glob('debugger/commands/*.cc'),
+	]
+else:
+	files += [
+		Glob('debugger/panic.cc'),
+		Glob('debugger/SerialIO.cc'),
+		Glob('debugger/LocalIO.cc'),
+		Glob('debugger/DebuggerIO.cc'),
+	]
 
 libudis86_files = [
 ]

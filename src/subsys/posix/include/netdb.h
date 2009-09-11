@@ -51,8 +51,6 @@ struct addrinfo
     struct addrinfo *ai_next;
 };
 
-#define IPPORT_RESERVED 0xFFFF
-
 extern int h_errno;
 
 #define HOST_NOT_FOUND    1
