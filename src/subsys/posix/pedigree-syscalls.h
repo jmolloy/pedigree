@@ -41,4 +41,7 @@ int pedigree_config_numcols(size_t resultIdx);
 int pedigree_config_numrows(size_t resultIdx);
 int pedigree_config_nextrow(size_t resultIdx);
 
+int pedigree_config_was_successful(size_t resultIdx);
+void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen);
+
 #endif

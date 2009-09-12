@@ -1889,3 +1889,13 @@ int pedigree_config_nextrow(size_t resultIdx)
 {
     return syscall1(PEDIGREE_CONFIG_NEXTROW, resultIdx);
 }
+
+int pedigree_config_was_successful(size_t resultIdx)
+{
+    return syscall1(PEDIGREE_CONFIG_WAS_SUCCESSFUL, resultIdx);
+}
+
+void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
+{
+    syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (int)buf, bufsz);
+}

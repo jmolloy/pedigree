@@ -216,10 +216,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     if (flags & VirtualAddressSpace::KernelMode)
     {
         void (*fn)(size_t) = reinterpret_cast<void (*)(size_t)>(handlerAddress);
-        NOTICE("Calling fn " << handlerAddress);
         fn(addr);
         pThread->popState();
-        NOTICE("CheckEventState returning");
         return;
     }
     else if (userStack != 0)

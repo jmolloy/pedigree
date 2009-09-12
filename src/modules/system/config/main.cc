@@ -50,7 +50,6 @@ extern "C" int memcmp(const void *s1, const void *s2, size_t n)
 
 int xClose(sqlite3_file *file)
 {
-    NOTICE("close");
     return 0;
 }
 
@@ -196,7 +195,6 @@ int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, in
 
 int xDelete(sqlite3_vfs *vfs, const char *zName, int syncDir)
 {
-    NOTICE("Delete");
     return 0;
 }
 

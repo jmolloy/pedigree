@@ -129,3 +129,17 @@ int pedigree_config_nextrow(size_t resultIdx)
         g_Rows[resultIdx] ++;
     return 0;
 }
+
+int pedigree_config_was_successful(size_t resultIdx)
+{
+    if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
+        return -1;
+    return (g_Results[resultIdx]->succeeded()) ? 0 : -1;
+}
+
+void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen)
+{
+    if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
+        return;
+    strncpy(buf, g_Results[resultIdx]->errorMessage(), buflen);
+}
