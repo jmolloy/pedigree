@@ -189,7 +189,7 @@ DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
 }
 
 void entry()
-{
+{return ;
   // retrieve DHCP addresses for all NICs in the system
   NOTICE("DHCP Client: Iterating through all devices");
   for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)

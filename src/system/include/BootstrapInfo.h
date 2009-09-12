@@ -25,8 +25,8 @@
 
 #ifndef PPC_COMMON
 
-  struct BootstrapStruct_t
-  {
+struct BootstrapStruct_t
+{
     // If we are passed via grub, this information will be completely different to
     // via the bootstrapper.
     uint32_t flags;
@@ -68,31 +68,44 @@
 
     inline bool isInitrdLoaded() const
     {
-      return (mods_count != 0);
+        return (mods_count != 0);
     }
     inline uint8_t *getInitrdAddress() const
     {
-      return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
+        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
     }
     inline size_t getInitrdSize() const
     {
-      return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
-             *reinterpret_cast<uint32_t*>(mods_addr);
+        return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
+            *reinterpret_cast<uint32_t*>(mods_addr);
     }
-  } PACKED;
+    inline size_t isDatabaseLoaded() const
+    {
+        return (mods_count > 1);
+    }
+    inline uint8_t *getDatabaseAddress() const
+    {
+        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr+16));
+    }
+    inline size_t getDatabaseSize() const
+    {
+        return *reinterpret_cast<uint32_t*>(mods_addr + 20) -
+            *reinterpret_cast<uint32_t*>(mods_addr + 16);
+    }          
+} PACKED;
 
-  struct MemoryMapEntry_t
-  {
+struct MemoryMapEntry_t
+{
     uint32_t size;
     uint64_t address;
     uint64_t length;
     uint32_t type;
-  } PACKED;
+} PACKED;
 
 #else
 
-  struct BootstrapStruct_t
-  {
+struct BootstrapStruct_t
+{
     int (*prom)(struct anon*);
     uint32_t initrd_start;
     uint32_t initrd_end;
@@ -105,17 +118,17 @@
 
     inline bool isInitrdLoaded() const
     {
-      return true;
+        return true;
     }
     inline uint8_t *getInitrdAddress() const
     {
-      return reinterpret_cast<uint8_t*>(initrd_start);
+        return reinterpret_cast<uint8_t*>(initrd_start);
     }
     inline size_t getInitrdSize() const
     {
-      return initrd_end - initrd_start;
+        return initrd_end - initrd_start;
     }
-  };
+};
 
 #endif
 

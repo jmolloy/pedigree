@@ -41,6 +41,7 @@ if which losetup >/dev/null 2>&1; then
   # Floppy mounted - transfer files.
   sudo cp $SRCDIR/kernel/kernel $MOUNTPT/kernel
   sudo cp $SRCDIR/initrd.tar $MOUNTPT/initrd.tar
+  sudo cp $SRCDIR/config.db $MOUNTPT/config.db
 
   # Unmount floppy.
   fini;
@@ -66,7 +67,7 @@ if which losetup >/dev/null 2>&1; then
   sudo mkdir -p $MOUNTPT/tmp
 
   # This is a root filesystem.
-  sudo touch $MOUNTPT/.pedigree-root
+  sudo cp $SRCDIR/config.db $MOUNTPT/.pedigree-root
 
   # Transfer files.
   sudo cp $SRCDIR/apps/* $MOUNTPT/applications
