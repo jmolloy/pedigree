@@ -247,6 +247,8 @@ int xGetLastError(sqlite3_vfs *vfs, int i, char *c)
     return 0;
 }
 
+
+
 static struct sqlite3_vfs thevfs =
 {
     1,
@@ -280,6 +282,15 @@ int sqlite3_os_end()
     return 0;
 }
 
+void xCallback(sqlite3_context *context, int n, sqlite3_value **values)
+{
+    const unsigned char *text = sqlite3_value_text(values[0]);
+    uintptr_t x = strtoul(reinterpret_cast<const char*>(text), 0, 16);
+    void (*func)(void) = reinterpret_cast< void (*)(void) >(x);
+    func();
+    sqlite3_result_int(context, 0);
+}
+
 sqlite3 *g_pSqlite = 0;
 
 void init()
@@ -310,11 +321,14 @@ void init()
     g_FileSz = sSize;
 
     sqlite3_initialize();
+
     int ret = sqlite3_open("root»/.pedigree-root", &g_pSqlite);
     if (ret)
     {
         FATAL("sqlite3 error: " << sqlite3_errmsg(g_pSqlite));
     }
+
+    sqlite3_create_function(g_pSqlite, "pedigree_callback", 1, SQLITE_ANY, 0, &xCallback, 0, 0);
 }
 
 void destroy()

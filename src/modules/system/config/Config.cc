@@ -37,13 +37,11 @@ Config::Result::~Result()
 
 String Config::Result::getColumnName(size_t n)
 {
-    NOTICE("getColname");
     return String(m_ppResult[n]);
 }
 
 String Config::Result::getStr(size_t row, size_t n)
 {
-    NOTICE("getstr(n)");
     return String(m_ppResult[(row+1) * m_Cols + n]);
 }
 
@@ -88,7 +86,6 @@ bool Config::Result::getBool(size_t row, const char *str)
 
 size_t Config::Result::lookupCol(const char *str)
 {
-    NOTICE("lookupCol");
     for (size_t i = 0; i < m_Cols; i++)
     {
         if (!strcmp(str, m_ppResult[i]))
@@ -107,12 +104,9 @@ Config::~Config()
 
 Config::Result *Config::query(const char *sql)
 {
-    NOTICE("config query start");
     char **result;
     int rows, cols;
     char *error;
     int ret = sqlite3_get_table(g_pSqlite, sql, &result, &rows, &cols, &error);
-    Result *pR = new Result(result, static_cast<size_t>(rows), static_cast<size_t>(cols), error, ret);
-    NOTICE("config query end");
-    return pR;
+    return new Result(result, static_cast<size_t>(rows), static_cast<size_t>(cols), error, ret);
 }
