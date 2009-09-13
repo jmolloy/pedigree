@@ -14,9 +14,9 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-if ! which sqlite >/dev/null 2>&1;
+if ! which sqlite3 >/dev/null 2>&1;
 then
-    echo "'sqlite' not found, cannot create initial database."
+    echo "'sqlite3' not found, cannot create initial database."
     exit
 fi
 
