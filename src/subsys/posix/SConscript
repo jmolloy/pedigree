@@ -186,7 +186,7 @@ def doLibm(target, source, env):
 
 #    builddir, inputLibcA, glue_name
     
-env.Command([buildLibc], ["subsys", glue_objname], "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + buildLibcA.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
-env.Command([buildLibm], ["subsys"], "@python " + base.abspath + "/scripts/buildLibm.py " + buildDir.abspath + " " + buildLibmA.abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
+env.Command([buildLibc], ["subsys", glue_objname], "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
+env.Command([buildLibm], ["subsys"], "@python " + base.abspath + "/scripts/buildLibm.py " + buildDir.abspath + " " + baseLibm.abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
 
 # env.Command([buildLibc, buildLibm], "subsys", '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])
