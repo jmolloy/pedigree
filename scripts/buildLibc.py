@@ -21,7 +21,7 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
     glue = builddir + "/src/subsys/posix/" + glue_name
     shutil.copy(glue, tmpdir + "/" + glue_name)
 
-    objs_to_remove = ["getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty"]
+    objs_to_remove = ["init", "getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty"]
 
     for i in objs_to_remove:
         try:
