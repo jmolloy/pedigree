@@ -275,7 +275,7 @@ void entry()
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, true, &remoteHost)) > 0)
+      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, false, &remoteHost)) > 0)
       {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
 
@@ -386,7 +386,7 @@ void entry()
         UdpManager::instance().returnEndpoint(e);
         continue;
       }
-      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, true, &remoteHost)) > 0)
+      while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, false, &remoteHost)) > 0)
       {
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
 
