@@ -146,7 +146,9 @@ int     _EXFUN(setgid, (gid_t __gid ));
 int	_EXFUN(setgroups, (int ngroups, const gid_t *grouplist ));
 #endif
 
+#ifndef setpgid
 int setpgid(pid_t __pid, pid_t __pgid);
+#endif
 int setpgrp(void);
 
 #if defined(__CYGWIN__) && !defined(__INSIDE_CYGWIN__)

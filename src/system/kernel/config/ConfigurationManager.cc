@@ -35,40 +35,51 @@ ConfigurationManager &ConfigurationManager::instance()
     return m_Instance;
 }
 
-size_t ConfigurationManager::write(
-            String configStore,
-            String Table,
-            String KeyName,
-            String KeyValue,
-            String ValueName,
-            uintptr_t buffer,
-            size_t nBytes)
+size_t ConfigurationManager::createTable(String configStore, String table)
 {
     // Lookup the backend
     ConfigurationBackend *backend = m_Backends.lookup(configStore);
     if(!backend)
         return 0;
-
-    // Perform the write
-    return backend->write(Table, KeyName, KeyValue, ValueName, buffer, nBytes);
+    return backend->createTable(table);
 }
 
-size_t ConfigurationManager::read(
-            String configStore,
-            String Table,
-            String KeyName,
-            String KeyValue,
-            String ValueName,
-            uintptr_t buffer,
-            size_t maxBytes)
+void ConfigurationManager::insert(String configStore, String table, String key, ConfigValue &value)
 {
     // Lookup the backend
     ConfigurationBackend *backend = m_Backends.lookup(configStore);
     if(!backend)
-        return 0;
+        return;
+    return backend->insert(table, key, value);
+}
 
-    // Perform the read
-    return backend->read(Table, KeyName, KeyValue, ValueName, buffer, maxBytes);
+ConfigValue &ConfigurationManager::select(String configStore, String table, String key)
+{
+    static ConfigValue v;
+    
+    // Lookup the backend
+    ConfigurationBackend *backend = m_Backends.lookup(configStore);
+    if(!backend)
+        return v;
+    return backend->select(table, key);
+}
+
+void ConfigurationManager::watch(String configStore, String table, String key, ConfigurationWatcher watcher)
+{
+    // Lookup the backend
+    ConfigurationBackend *backend = m_Backends.lookup(configStore);
+    if(!backend)
+        return;
+    return backend->watch(table, key, watcher);
+}
+
+void ConfigurationManager::unwatch(String configStore, String table, String key, ConfigurationWatcher watcher)
+{
+    // Lookup the backend
+    ConfigurationBackend *backend = m_Backends.lookup(configStore);
+    if(!backend)
+        return;
+    return backend->unwatch(table, key, watcher);
 }
 
 bool ConfigurationManager::installBackend(ConfigurationBackend *pBackend, String configStore)

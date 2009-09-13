@@ -56,6 +56,9 @@
 /** Output device for boot-time information. */
 BootIO bootIO;
 
+/** Global copy of the bootstrap information. */
+BootstrapStruct_t *g_pBootstrapInfo;
+
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -86,6 +89,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 {
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
+
+  g_pBootstrapInfo = &bsInf;
 
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
@@ -167,6 +172,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // mapping of 0-4MB
   // NOTE: BootstrapStruct_t unusable after this point
 #ifdef X86_COMMON
+  /// \todo Reenable this, when the config system saves the config file.
   Processor::initialisationDone();
 #endif
 

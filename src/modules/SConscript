@@ -70,7 +70,8 @@ module_subdirs = [
     'rawfs',
     'lodisk',
     'usb',
-    'splash'
+    'splash',
+    'config'
 ]
 
 if env['installer']:
@@ -93,6 +94,9 @@ initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
 
 # JamesM: Put VBE driver first, then Splash
 initrdList = []
+if "config" in module_subdirs:
+    initrdList += [builddir.abspath + '/modules/config.o']
+    module_subdirs.remove("config")
 if "pci" in driver_arch_subdirs:
     initrdList += [builddir.abspath + '/drivers/pci.o']
     driver_arch_subdirs.remove("pci")

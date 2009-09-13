@@ -995,7 +995,14 @@ struct hostent* gethostbyname(const char *name)
 struct servent* getservbyname(const char *name, const char *proto)
 {
     STUBBED("getservbyname");
-    return 0;
+
+    static struct servent se;
+    if (!strcmp(name, "tftp"))
+        se.s_port = 69;
+    else
+        return 0;
+
+    return &se;
 }
 
 void endservent(void)
@@ -1824,4 +1831,71 @@ struct if_nameindex* if_nameindex()
 void if_freenameindex(struct if_nameindex *nameindex)
 {
     STUBBED("if_freenameindex");
+}
+
+void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz)
+{
+    syscall4(PEDIGREE_CONFIG_GETCOLNAME, resultIdx, n, (int)buf, bufsz);
+}
+
+void pedigree_config_getstr_n(size_t resultIdx, size_t n, char *buf, size_t bufsz)
+{
+    syscall4(PEDIGREE_CONFIG_GETSTR_N, resultIdx, n, (int)buf, bufsz);
+}
+void pedigree_config_getstr_s(size_t resultIdx, const char *col, char *buf, size_t bufsz)
+{
+    syscall4(PEDIGREE_CONFIG_GETSTR_S, resultIdx, (int)col, (int)buf, bufsz);
+}
+
+int pedigree_config_getnum_n(size_t resultIdx, size_t n)
+{
+    return syscall2(PEDIGREE_CONFIG_GETNUM_N, resultIdx, n);
+}
+int pedigree_config_getnum_s(size_t resultIdx, const char *col)
+{
+    return syscall2(PEDIGREE_CONFIG_GETNUM_S, resultIdx, (int)col);
+}
+
+int pedigree_config_getbool_n(size_t resultIdx, size_t n)
+{
+    return syscall2(PEDIGREE_CONFIG_GETBOOL_N, resultIdx, n);
+}
+int pedigree_config_getbool_s(size_t resultIdx, const char *col)
+{
+    return syscall2(PEDIGREE_CONFIG_GETBOOL_S, resultIdx, (int)col);
+}
+
+int pedigree_config_query(const char *query)
+{
+    return syscall1(PEDIGREE_CONFIG_QUERY, (int)query);
+}
+
+void pedigree_config_freeresult(size_t resultIdx)
+{
+    syscall1(PEDIGREE_CONFIG_FREERESULT, resultIdx);
+}
+
+int pedigree_config_numcols(size_t resultIdx)
+{
+    return syscall1(PEDIGREE_CONFIG_NUMCOLS, resultIdx);
+}
+
+int pedigree_config_numrows(size_t resultIdx)
+{
+    return syscall1(PEDIGREE_CONFIG_NUMROWS, resultIdx);
+}
+
+int pedigree_config_nextrow(size_t resultIdx)
+{
+    return syscall1(PEDIGREE_CONFIG_NEXTROW, resultIdx);
+}
+
+int pedigree_config_was_successful(size_t resultIdx)
+{
+    return syscall1(PEDIGREE_CONFIG_WAS_SUCCESSFUL, resultIdx);
+}
+
+void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
+{
+    syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (int)buf, bufsz);
 }

@@ -29,11 +29,6 @@ ConfigurationBackend::~ConfigurationBackend()
     ConfigurationManager::instance().removeBackend(m_ConfigStore);
 }
 
-size_t ConfigurationBackend::write(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes)
-{
-    return 0;
-}
-
 String ConfigurationBackend::getConfigStore()
 {
     return m_ConfigStore;
