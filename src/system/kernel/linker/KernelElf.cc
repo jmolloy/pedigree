@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>

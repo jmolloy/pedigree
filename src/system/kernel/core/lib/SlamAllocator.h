@@ -26,8 +26,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
-// For dlmallocSbrk.
-#include "dlmalloc.h"
+extern void *dlmallocSbrk(ssize_t incr);
 
 /// Size of each slab in 4096-byte pages
 #define SLAB_SIZE                       1

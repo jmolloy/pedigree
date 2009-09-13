@@ -16,3 +16,6 @@
 -- actually *do* something, so we let it set the "rubbish" column here, so
 -- the parser is happy.
 create table 'trigger_dumpzone' (rubbish integer);
+
+-- We need to put something in the dumpzone, else the optimiser will optimise the call away!
+insert into trigger_dumpzone (rubbish) values (1);

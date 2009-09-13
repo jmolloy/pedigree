@@ -51,8 +51,14 @@ int main(int argc, char **argv)
     for (i = 0; i < cols; i++)
     {
         pedigree_config_getcolname(result, i, buf, 256);
-        printf(" %s |", buf);
+        printf(" %s", buf);
         col_lens[i] = strlen(buf);
+        while (col_lens[i] < 15)
+        {
+            printf(" ");
+            col_lens[i] ++;
+        }
+        printf(" |");
     }
     printf("\n");
     for (i = 0; i < cols; i++)
@@ -69,6 +75,7 @@ int main(int argc, char **argv)
     {
         for (i = 0; i < cols; i++)
         {
+            memset(buf, 0, 256);
             pedigree_config_getstr_n(result, i, buf, 256);
             printf(" %s\t", buf);
             int j;

@@ -23,7 +23,7 @@
 #include <utilities/demangle.h>
 #include <machine/Machine.h>
 #include <processor/Disassembler.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 TraceCommand::TraceCommand()
   : DebuggerCommand(),

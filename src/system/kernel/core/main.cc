@@ -21,7 +21,7 @@
     #include <LocksCommand.h>
 #endif
 
-#include <KernelElf.h>                    // KernelElf::initialise()
+#include <linker/KernelElf.h>             // KernelElf::initialise()
 #include <Version.h>
 #include <Log.h>
 #include <panic.h>

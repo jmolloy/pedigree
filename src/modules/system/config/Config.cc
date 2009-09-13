@@ -37,22 +37,32 @@ Config::Result::~Result()
 
 String Config::Result::getColumnName(size_t n)
 {
-    return String(m_ppResult[n]);
+    char *str = m_ppResult[n];
+    if (str)
+        return String(str);
+    return String("");
 }
 
 String Config::Result::getStr(size_t row, size_t n)
 {
-    return String(m_ppResult[(row+1) * m_Cols + n]);
+    char *str = m_ppResult[(row+1) * m_Cols + n];
+    if (str)
+        return String(str);
+    return String("");
 }
 
 size_t Config::Result::getNum(size_t row, size_t n)
 {
+    if (m_ppResult[(row+1) * m_Cols + n] == 0)
+        return 0;
     return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
 bool Config::Result::getBool(size_t row, size_t n)
 {
     const char *s = m_ppResult[(row+1) * m_Cols + n];
+    if (s == 0)
+        return false;
     if (!strcmp(s, "true") || !strcmp(s, "True") || !strcmp(s, "1"))
         return true;
     else
@@ -63,13 +73,18 @@ String Config::Result::getStr(size_t row, const char *str)
 {
     size_t n = lookupCol(str);
     if (n == ~0UL) return String("");
-    return String(m_ppResult[(row+1) * m_Cols + n]);
+    char *str2 = m_ppResult[(row+1) * m_Cols + n];
+    if (str2)
+        return String(str2);
+    return String("");
 }
 
 size_t Config::Result::getNum(size_t row, const char *str)
 {
     size_t n = lookupCol(str);
     if (n == ~0UL) return 0;
+    if (m_ppResult[(row+1) * m_Cols + n] == 0)
+        return 0;
     return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
@@ -78,6 +93,8 @@ bool Config::Result::getBool(size_t row, const char *str)
     size_t n = lookupCol(str);
     if (n == ~0UL) return false;
     const char *s = m_ppResult[(row+1) * m_Cols + n];
+    if (s == 0)
+        return false;
     if (!strcmp(s, "true") || !strcmp(s, "True") || !strcmp(s, "1"))
         return true;
     else

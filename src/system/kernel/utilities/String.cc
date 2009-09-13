@@ -101,3 +101,12 @@ void String::chomp()
   m_Length --;
   m_Data[m_Length] = '\0';
 }
+
+void String::sprintf(const char *fmt, ...)
+{
+    reserve(256);
+    va_list vl;
+    va_start(vl, fmt);
+    vsprintf(m_Data, fmt, vl);
+    va_end(vl);
+}

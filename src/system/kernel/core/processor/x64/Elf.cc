@@ -16,7 +16,7 @@
 
 #include <linker/Elf.h>
 #include <Log.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 // http://www.caldera.com/developers/devspecs/abi386-4.pdf
 

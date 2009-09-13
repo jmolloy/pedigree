@@ -20,7 +20,7 @@
 #include <DebuggerIO.h>
 #include <process/Scheduler.h>
 #include <process/Process.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>
 #include <Backtrace.h>

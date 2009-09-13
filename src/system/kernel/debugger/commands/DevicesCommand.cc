@@ -20,7 +20,7 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include <machine/Machine.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 DevicesCommand::DevicesCommand()
   : DebuggerCommand()

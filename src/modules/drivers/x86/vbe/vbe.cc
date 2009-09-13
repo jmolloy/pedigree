@@ -6,11 +6,15 @@
 #include <utilities/List.h>
 #include <machine/Machine.h>
 #include <machine/Display.h>
+#include <config/Config.h>
 #include "VbeDisplay.h"
 
 #include <machine/x86_common/Bios.h>
 
 #define REALMODE_PTR(x) ((x[1] << 4) + x[0])
+
+VbeDisplay *g_pDisplays[4];
+size_t g_nDisplays = 0;
 
 struct vbeControllerInfo {
    char signature[4];             // == "VESA"
@@ -57,13 +61,6 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
     // Get its addresses, and search for fbAddr.
     for (unsigned int j = 0; j < pChild->addresses().count(); j++)
     {
-      /// \bug Some graphics cards don't start their framebuffer directly on a BAR 
-      ///      start address. So we want to test if the fbAddr is within a BAR.
-      ///      Unfortunately, that causes false positives - it picks up PCI-PCI
-      ///      bridges and suchlike that have overlapping addresses. :(
-      ///      I haven't got an answer for this one yet.
-      ///
-      ///      FIXED: Check PCI class code for 0x03 (Display controller)
       if (pChild->getPciClassCode() == 0x03 &&
           pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
       {
@@ -187,7 +184,50 @@ void entry()
   }
 
   // Create a new VbeDisplay device node.
-  VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, totalMemory);
+  VbeDisplay *pDisplay = new VbeDisplay(pDevice, vbeVersion, modeList, totalMemory, g_nDisplays);
+
+  g_pDisplays[g_nDisplays] = pDisplay;
+
+  // Does the display already exist in the database?
+  size_t mode_id = 0;
+  String str;
+  str.sprintf("SELECT id FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
+  Config::Result *pResult = Config::instance().query(str);
+  if (pResult->succeeded() && pResult->rows() == 1)
+  {
+      mode_id = pResult->getNum(0, "mode_id");
+      delete pResult;
+      str.sprintf("UPDATE displays SET available_modes_table='display-modes/%d' WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
+      pResult = Config::instance().query(str);
+      if (!pResult->succeeded())
+          FATAL("Display update failed: " << pResult->errorMessage());
+      delete pResult;
+  }
+  else if (pResult->succeeded() && pResult->rows() > 1)
+  {
+      delete pResult;
+      FATAL("Multiple displays for pointer `" << reinterpret_cast<uintptr_t>(pDisplay) << "'");
+  }
+  else if (pResult->succeeded())
+  {
+      delete pResult;
+      mode_id = 0x117;
+      str.sprintf("INSERT INTO displays (pointer,mode_id,available_modes_table) VALUES (%d,%d,'display-modes/%d')", reinterpret_cast<uintptr_t>(pDisplay), 0x117, g_nDisplays);
+      pResult = Config::instance().query(str);
+      if (!pResult->succeeded())
+          FATAL("Display insert failed: " << pResult->errorMessage());
+      delete pResult;
+  }
+  else
+  {
+      FATAL("Display select failed: " << pResult->errorMessage());
+      delete pResult;
+  }
+
+  g_nDisplays++;
+
+  pDisplay->setScreenMode(mode_id);
+
 
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());

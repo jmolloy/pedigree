@@ -21,7 +21,7 @@
 #include <machine/Machine.h>
 #include <processor/PhysicalMemoryManager.h>
 
-#include <config/ConfigurationManager.h>
+#include <config/Config.h>
 #include <utilities/utility.h>
 
 /// \todo Put this in the config manager.
@@ -35,15 +35,19 @@ VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffe
  
 }
 
-VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz) :
+VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum) :
     Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
     m_Buffers(), m_Allocator()
 {
-
-    String tableName("display-modes");
-    String m("MemoryBackend");
-    ConfigurationManager::instance().createTable(m,tableName);
-    ConfigurationManager::instance().createTable(m,String("display-mode"));
+    String str;
+    str.sprintf("DELETE FROM 'display-modes/%d'", displayNum);
+    Config::Result *pR = Config::instance().query(str);
+    if (!pR->succeeded())
+    {
+        FATAL("VbeDisplay: Sql error: " << pR->errorMessage());
+        return;
+    }
+    delete pR;
 
   Display::ScreenMode *pSm = 0;
   // Try to find mode 0x117 (1024x768x16)
@@ -51,28 +55,14 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
        it != m_ModeList.end();
        it++)
   {
-
-      char str[64];
-      ConfigValue v;
-      v.type = Str;
-      sprintf(str, "%d x %d x %d", (*it)->width, (*it)->height, (*it)->pf.nBpp);
-      v.str = String(str);
-
-      sprintf(str, "%x", (*it)->id);
-
-      ConfigurationManager::instance().insert(m,tableName, String(str), v);
-
-      if ((*it)->id == 0x117)
+      str.sprintf("INSERT INTO 'display-modes/%d' (id,width,height,depth,refresh) VALUES (%d,%d,%d,%d,%d)", displayNum, (*it)->id, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
+      pR = Config::instance().query(str);
+      if (!pR->succeeded())
       {
-          pSm = *it;
-          v.type = Number;
-          v.num = (*it)->id;
-          ConfigurationManager::instance().insert(m,String("display-mode"), String("selected"), v);
+          FATAL("VbeDisplay: Sql error: " << pR->errorMessage());
+          return;
       }
-  }
-  if (pSm == 0)
-  {
-    FATAL("Screenmode not found");
+      delete pR;
   }
 
   for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
@@ -89,8 +79,6 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
   }
 
   m_Allocator.free(0, vidMemSz);
-
-  setScreenMode(*pSm);
 }
 
 VbeDisplay::~VbeDisplay()
@@ -118,6 +106,29 @@ bool VbeDisplay::getScreenModes(List<Display::ScreenMode*> &sms)
 {
   sms = m_ModeList;
   return true;
+}
+
+bool VbeDisplay::setScreenMode(size_t modeId)
+{
+  Display::ScreenMode *pSm = 0;
+
+  for (List<Display::ScreenMode*>::Iterator it = m_ModeList.begin();
+       it != m_ModeList.end();
+       it++)
+  {
+      if ((*it)->id == modeId)
+      {
+          pSm = *it;
+          break;
+      }
+  }
+  if (pSm == 0)
+  {
+      ERROR("Screenmode not found: " << modeId);
+      return false;
+  }
+
+  return setScreenMode(*pSm);
 }
 
 bool VbeDisplay::setScreenMode(Display::ScreenMode sm)

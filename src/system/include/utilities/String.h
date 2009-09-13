@@ -69,6 +69,8 @@ class String
         return 1;
     }
 
+    void sprintf(const char *format, ...);
+
     void assign(const String &x);
     void assign(const char *s);
     void reserve(size_t size);

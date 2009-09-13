@@ -35,7 +35,7 @@ public:
     };
 
     VbeDisplay();
-    VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz);
+    VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum);
 
     virtual ~VbeDisplay();
 
@@ -44,6 +44,7 @@ public:
     virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
     virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
     virtual bool setScreenMode(Display::ScreenMode sm);
+    virtual bool setScreenMode(size_t modeId);
 
     virtual rgb_t *newBuffer();
     virtual void setCurrentBuffer(rgb_t *pBuffer);

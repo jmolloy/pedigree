@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "dlmalloc.h"
 #include <processor/Processor.h>
 #include <Log.h>
 #include <processor/PhysicalMemoryManager.h>

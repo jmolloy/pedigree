@@ -17,7 +17,7 @@
 #include "LocksCommand.h"
 #include <utilities/utility.h>
 #include <processor/Processor.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>
 #include <Backtrace.h>

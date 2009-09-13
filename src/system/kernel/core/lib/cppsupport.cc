@@ -66,21 +66,39 @@ extern "C" void __cxa_guard_release()
   // TODO
 }
 
-Spinlock g_MallocLock(false, false);
+extern "C" void *malloc(size_t sz)
+{
+    return reinterpret_cast<void *>(SlamAllocator::instance().allocate(sz));
+}
 
-struct mallinfo g_Mallinfo;
+extern "C" void free(void *p)
+{
+    if (p == 0)
+        return;
+    SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+}
 
-#include "dlmalloc.h"
+extern "C" void *realloc(void *p, size_t sz)
+{
+    if (p == 0)
+        return malloc(sz);
+    if (sz == 0)
+    {
+        free(p);
+        return 0;
+    }
+    
+    void *tmp = malloc(sz);
+    memcpy(tmp, p, sz);
+    free(p);
+
+    return tmp;
+}
+
 void *operator new (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-    //g_MallocLock.acquire();
   void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
-  // Do this BEFORE the malloc, because it does a full sanity check of all
-  // chunks.
-  //g_Mallinfo = mallinfo();
-  //void *ret = malloc(size);
-  //g_MallocLock.release();
   return ret;
 #else
   return 0;
@@ -89,13 +107,7 @@ void *operator new (size_t size) throw()
 void *operator new[] (size_t size) throw()
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
-    //g_MallocLock.acquire();
   void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
-  // Do this BEFORE the malloc, because it does a full sanity check of all
-  // chunks.
-  //g_Mallinfo = mallinfo();
-  //void *ret = malloc(size);
-  //g_MallocLock.release();
   return ret;
 #else
   return 0;
@@ -119,13 +131,7 @@ void operator delete (void * p)
       ERROR_NOLOCK("Bad free " << Hex << up);
       Processor::breakpoint();
   }
-  //g_MallocLock.acquire();
   SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
-  // Do this BEFORE the malloc, because it does a full sanity check of all
-  // chunks.
-  //g_Mallinfo = mallinfo();
-  //free(p);
-  //g_MallocLock.release();
 #endif
 }
 void operator delete[] (void * p)
@@ -140,13 +146,7 @@ void operator delete[] (void * p)
       Processor::breakpoint();
   }
 
-  //g_MallocLock.acquire();
   SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
-  // Do this BEFORE the malloc, because it does a full sanity check of all
-  // chunks.
-  //g_Mallinfo = mallinfo();
-  //free(p);
-  //g_MallocLock.release();
 #endif
 }
 void operator delete (void *p, void *q)

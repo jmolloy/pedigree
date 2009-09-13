@@ -20,7 +20,7 @@
 #include <Log.h>
 #include <utilities/demangle.h>
 #include <processor/Disassembler.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 DisassembleCommand::DisassembleCommand()
 {

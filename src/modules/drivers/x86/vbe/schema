@@ -18,46 +18,36 @@ create table 'displays' (
        'mode_id' integer,
        'available_modes_table' varchar(64));
 
-insert into 'displays' ('pointer', 'mode_id', 'available_modes_table') values (1234, 13, 'display-modes/0');
-
 create table 'display-modes/0' (
        'id' integer primary key,
-       'selected' boolean);
+       'width' integer,
+       'height' integer,
+       'depth' integer,
+       'refresh' integer);
 
 create table 'display-modes/1' (
        'id' integer primary key,
-       'selected' boolean);
+       'width' integer,
+       'height' integer,
+       'depth' integer,
+       'refresh' integer);
 
 create table 'display-modes/2' (
        'id' integer primary key,
-       'selected' boolean);
+       'width' integer,
+       'height' integer,
+       'depth' integer,
+       'refresh' integer);
 
 create table 'display-modes/3' (
        'id' integer primary key,
-       'selected' boolean);
+       'width' integer,
+       'height' integer,
+       'depth' integer,
+       'refresh' integer);
 
--- Create a trigger, looking at each display-mode table, for updates to the 
--- selected column.
-create trigger 'display-modes/0-selected' after update of 'selected' on 'display-modes/0'
-when NEW.selected=true
-begin
-        update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback');
-end;
-
-create trigger 'display-modes/1-selected' after update of 'selected' on 'display-modes/1'
-when NEW.selected=true
-begin
-        update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback');
-end;
-
-create trigger 'display-modes/2-selected' after update of 'selected' on 'display-modes/2'
-when NEW.selected=true
-begin
-        update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback');
-end;
-
-create trigger 'display-modes/3-selected' after update of 'selected' on 'display-modes/3'
-when NEW.selected=true
+create trigger 'display-modes/0-selected' after update of 'mode_id' on 'displays'
+when NEW.mode_id <> OLD.mode_id
 begin
         update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback');
 end;

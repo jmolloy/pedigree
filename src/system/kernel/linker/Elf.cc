@@ -20,7 +20,7 @@
 #include <BootstrapInfo.h>
 #include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 #include <process/Process.h>
 
 /** Helper function: iterates through all program headers given to find where pCurrent resides, then copies that data into a new

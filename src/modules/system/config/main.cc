@@ -26,6 +26,8 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/MemoryRegion.h>
 
+#include <linker/KernelElf.h>
+
 #include "Config.h"
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
@@ -58,7 +60,7 @@ int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
     int ret = 0;
     if (iOfst+iAmt >= g_FileSz)
     {
-        memset(&ptr, 0, iAmt);
+        memset(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
         ret = SQLITE_IOERR_SHORT_READ;
     }
@@ -285,7 +287,24 @@ int sqlite3_os_end()
 void xCallback(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const unsigned char *text = sqlite3_value_text(values[0]);
-    uintptr_t x = strtoul(reinterpret_cast<const char*>(text), 0, 16);
+
+    if (!text) return;
+
+    uintptr_t x;
+    if (text[0] == '0')
+    {
+        x = strtoul(reinterpret_cast<const char*>(text), 0, 16);
+    }
+    else
+    {
+        x = KernelElf::instance().lookupSymbol(reinterpret_cast<const char*>(text));
+        if (!x)
+        {
+            ERROR("Couldn't trigger callback `" << reinterpret_cast<const char*>(text) << "': symbol not found.");
+            return;
+        }
+    }
+    
     void (*func)(void) = reinterpret_cast< void (*)(void) >(x);
     func();
     sqlite3_result_int(context, 0);
