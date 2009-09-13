@@ -34,6 +34,19 @@ void MemoryInspector::autocomplete (const HugeStaticString& input, HugeStaticStr
 
 bool MemoryInspector::execute (const HugeStaticString& input, HugeStaticString& output, InterruptState& state, DebuggerIO* pScreen)
 {
+  uintptr_t nAddress;
+  if(input == "memory")
+      nAddress = 0;
+  else
+  {
+    static LargeStaticString addrString;
+    addrString = input;
+    if (!tryGoto(addrString, nAddress, state))
+    {
+        output = "Bad address or register.\n";
+        return true;
+    }
+  }
   // Is the terminal wide enough to do 16-character wide display?
   if (pScreen->getWidth() >= 87)
     m_nCharsPerLine = 16;
@@ -55,7 +68,7 @@ bool MemoryInspector::execute (const HugeStaticString& input, HugeStaticString& 
                               pScreen->getWidth() - 1,
                               DebuggerIO::White,
                               DebuggerIO::Green);
-  
+
   // Write the correct text in the upper status line.
   pScreen->drawString("Pedigree debugger - Memory inspector",
                       0,
@@ -64,7 +77,9 @@ bool MemoryInspector::execute (const HugeStaticString& input, HugeStaticString& 
                       DebuggerIO::Green);
 
   resetStatusLine(pScreen);
-  
+
+  scrollTo(nAddress/m_nCharsPerLine);
+
   // Main loop.
   bool bStop = false;
   while(!bStop)
@@ -214,7 +229,7 @@ void MemoryInspector::doGoto(DebuggerIO *pScreen, InterruptState &state)
   }
 
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
-  
+
   uintptr_t nAddress;
   if (!tryGoto(str, nAddress, state))
   {
@@ -253,12 +268,12 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
     else
       str += c;
   }
-  
+
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
-  
+
   unsigned int nChars = 0;
   uint8_t pChars[8];
-  
+
   // Valid search?
   if (str[0] == '"')
   {
@@ -271,7 +286,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
       pScreen->drawString("Search string too long (> 8 characters)", pScreen->getHeight()-2, 0, DebuggerIO::Red, DebuggerIO::Black);
       return;
     }
-    
+
     nChars = str.length();
     for (size_t i = 0; i < str.length(); i++)
       pChars[i] = str[i];
@@ -304,10 +319,10 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
       pChars[nChars-i-1] = static_cast<uint8_t> (nConverted);
     }
   }
-  
+
   if (bForward)
     str = "[Search for ";
-  else 
+  else
     str = "[Reverse for ";
   for (size_t i = 0; i < nChars; i++)
   {
@@ -316,7 +331,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
   }
   str += ": over ?(K|M) of memory]";
   pScreen->drawString(str, pScreen->getHeight()-2, 0, DebuggerIO::White, DebuggerIO::Black);
-  
+
   str2.clear();
   while (1)
   {
@@ -337,7 +352,7 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
     else
       str2 += c;
   }
-  
+
   // Erase the bottom line.
   pScreen->drawHorizontalLine(' ', pScreen->getHeight()-2, 0, pScreen->getWidth()-1, DebuggerIO::White, DebuggerIO::Black);
   str = str2.right(1);
@@ -355,11 +370,11 @@ void MemoryInspector::doSearch(bool bForward, DebuggerIO *pScreen, InterruptStat
     nRange *= 1024;
   else if (suffix == 'M')
     nRange *= 1048576;
-  
+
   pScreen->drawString("Searching...", pScreen->getHeight()-2, 0, DebuggerIO::Green, DebuggerIO::Black);
-  
+
   // Do the search.
-  
+
 }
 
 bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, InterruptState &state)
