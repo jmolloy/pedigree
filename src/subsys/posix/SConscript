@@ -155,44 +155,6 @@ env.Alias("crt0", "crt")
 
 # TODO: Put into a script, clean up. This is kind of horrible.
 
-def doLibc(target, source, env):
-    builddir = '#' + env['BUILDDIR']
-    
-    buildDir = tmp.Dir(builddir)
-    buildLibc = tmp.File(builddir + '/libc.so')
-    buildLibm = tmp.File(builddir + '/libm.so')
-    buildLibcA = tmp.File(builddir + '/libc.a')
-    buildLibmA = tmp.File(builddir + '/libm.a')
-    
-    print "Building libc..."
-    
-    tmpdir = tempfile.mkdtemp()
-
-    olddir = os.getcwd()
-    os.chdir(tmpdir)
-
-    shutil.copy(baseLibc.abspath, tmpdir + "/libc.a")
-    os.system(env['AR'] + " x libc.a")
-
-    glue = builddir + "/src/subsys/posix/" + glue_objname
-    shutil.copy(env.File(glue).abspath, tmpdir + "/" + glue_objname)
-
-    objs_to_remove = ["init", "getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty"]
-
-    for i in objs_to_remove:
-        os.remove("lib_a-" + i + ".o")
-
-    os.system(env['CC_NOCACHE'] + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -L" + env['LIBGCC'] + " -o " + buildLibc.abspath + " *.o -lgcc")
-    os.system(env['AR'] + " cru " + buildLibcA.abspath + " *.o")
-
-    for i in os.listdir("."):
-        os.remove(i)
-
-    os.chdir(olddir)
-    os.rmdir(tmpdir)
-    
-    print "libc built!"
-
 def doLibm(target, source, env):
     builddir = '#' + env['BUILDDIR']
     
@@ -222,7 +184,9 @@ def doLibm(target, source, env):
     
     print "libm built!"
 
-env.Command([buildLibc], ["subsys", glue_objname], doLibc)
-env.Command([buildLibm], ["subsys"], doLibm)
+#    builddir, inputLibcA, glue_name
+    
+env.Command([buildLibc], ["subsys", glue_objname], "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + buildLibcA.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
+env.Command([buildLibm], ["subsys"], "@python " + base.abspath + "/scripts/buildLibm.py " + buildDir.abspath + " " + buildLibmA.abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
 
 # env.Command([buildLibc, buildLibm], "subsys", '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])
