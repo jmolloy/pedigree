@@ -405,18 +405,21 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
 Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(7), m_Bg(0), m_Flags(0), m_bLineRender(false)
+    m_pInsert(0), m_pView(0), m_Fg(0), m_Bg(15), m_Flags(0), m_bLineRender(false)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));
 
     TermChar blank;
-    blank.fore = 7;
-    blank.back = 0;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
     for (size_t i = 0; i < m_Width*m_Height; i++)
         m_pBuffer[i] = blank;
+
+    if(m_Bg)
+        Syscall::fillRect(m_pFramebuffer, 0, m_OffsetTop, m_FbWidth, nRows*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     m_pInsert = m_pView = m_pBuffer;
 }
@@ -573,45 +576,87 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
 void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 {
 
-/*
-+----------+
-|          |
-|----------| Scroll top    ^
-|----------| Top1          |
-|          |
-|----------| Bottom2       ^
-|----------| Scroll bottom |
-|          |
-+----------+
+    /*
+    +----------+
+    |          |
+    |----------| Top2       ^
+    |----------| Top1       |
+    |          |
+    |----------| Bottom2    ^
+    |----------| Bottom1    |
+    |          |
+    +----------+
 
- */
+    */
 
-//    size_t scrollTop_char = m_ScrollStart*m_Width;
-    size_t scrollTop_px   = m_ScrollStart * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
+    size_t top1_y   = (m_ScrollStart+n) * g_NormalFont->getHeight() + m_OffsetTop;
+    size_t top2_y   = m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop;
 
     // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive.
-//    size_t scrollBottom_char = (m_ScrollEnd+1)*m_Width;
-    size_t scrollBottom_px   = (m_ScrollEnd+1) * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
+    size_t bottom1_y   = (m_ScrollEnd+1) * g_NormalFont->getHeight() + m_OffsetTop;
+    size_t bottom2_y   = (m_ScrollEnd+1-n) * g_NormalFont->getHeight() + m_OffsetTop;
 
-//    size_t top1_char = (m_ScrollStart+n)*m_Width;
-    size_t top1_px   = (m_ScrollStart+n) * m_FbWidth * g_NormalFont->getHeight() + m_OffsetTop * m_FbWidth;
+    rect.point(0, top2_y);
+    rect.point(m_FbWidth, bottom1_y);
 
-//    size_t bottom2_char = scrollBottom_char - n*m_Width;
-    size_t bottom2_px   = scrollBottom_px - n*m_FbWidth*g_NormalFont->getHeight();
+    // If we're bitblitting, we need to commit all changes before now.
+    Syscall::updateBuffer(m_pFramebuffer, rect);
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);
+    Syscall::fillRect(m_pFramebuffer, 0, bottom2_y, m_FbWidth, bottom1_y-bottom2_y, g_Colours[m_Bg]);
 
-    rect.point(0, m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop);
-    rect.point(m_FbWidth, (m_ScrollEnd+1) * g_NormalFont->getHeight() + m_OffsetTop);
+    memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
 
-//    Syscall::bitBlit(m_pFramebuffer,
+    TermChar blank;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = m_Width*(m_ScrollEnd+1-n); i < m_Width*(m_ScrollEnd+1); i++)
+        m_pBuffer[i] = blank;
+}
 
-    memmove(reinterpret_cast<void*>(&m_pFramebuffer[ scrollTop_px ]),
-            reinterpret_cast<void*>(&m_pFramebuffer[ top1_px ]),
-            (scrollBottom_px - top1_px) * 3);
-    memset (reinterpret_cast<void*>(&m_pFramebuffer[ bottom2_px ]),
-            0,
-            (scrollBottom_px - bottom2_px) * 3);
+void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
+{
 
-    ///\todo memmove and memset character array.
+    /*
+    +----------+
+    |          |
+    |----------| Top1       |
+    |----------| Top2       v
+    |          |
+    |----------| Bottom1    |
+    |----------| Bottom2    v
+    |          |
+    +----------+
+
+    */
+
+    size_t top1_y   = m_ScrollStart * g_NormalFont->getHeight() + m_OffsetTop;
+    size_t top2_y   = (m_ScrollStart+n) * g_NormalFont->getHeight() + m_OffsetTop;
+
+    // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive.
+    size_t bottom1_y   = (m_ScrollEnd+1-n) * g_NormalFont->getHeight() + m_OffsetTop;
+    size_t bottom2_y   = (m_ScrollEnd+1) * g_NormalFont->getHeight() + m_OffsetTop;
+
+    rect.point(0, top1_y);
+    rect.point(m_FbWidth, bottom2_y);
+
+    // If we're bitblitting, we need to commit all changes before now.
+    Syscall::updateBuffer(m_pFramebuffer, rect);
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);
+    Syscall::fillRect(m_pFramebuffer, 0, top1_y, m_FbWidth, top2_y-top1_y, g_Colours[m_Bg]);
+
+    memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
+
+    TermChar blank;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = m_Width*m_ScrollStart; i < m_Width*(m_ScrollStart+n); i++)
+        m_pBuffer[i] = blank;
 }
 
 void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
@@ -667,8 +712,8 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
                     &m_pBuffer[0],
                     m_Width*m_Height*sizeof(TermChar));
             TermChar blank;
-            blank.fore = 7;
-            blank.back = 0;
+            blank.fore = m_Fg;
+            blank.back = m_Bg;
             blank.utf32 = ' ';
             blank.flags = 0;
             for (size_t i = m_BufferLength-m_Width*m_Height; i < m_BufferLength; i++)
@@ -744,6 +789,7 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
 
 void Xterm::Window::scrollUp(size_t n, DirtyRectangle &rect)
 {
+    scrollRegionDown(n, rect);
 }
 
 void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)

@@ -87,7 +87,7 @@ private:
 
             void showCursor(DirtyRectangle &rect);
             void hideCursor(DirtyRectangle &rect);
-        
+
             void resize(size_t nRows, size_t nCols);
 
             void setScrollRegion(int start, int end);
@@ -119,11 +119,13 @@ private:
             void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
 
             void scrollRegionUp(size_t n, DirtyRectangle &rect);
+            void scrollRegionDown(size_t n, DirtyRectangle &rect);
+
             void scrollScreenUp(size_t n, DirtyRectangle &rect);
 
             void scrollUp(size_t n, DirtyRectangle &rect);
             void scrollDown(size_t n, DirtyRectangle &rect);
-            
+
             /** Erase to end of line. */
             void eraseEOL(DirtyRectangle &rect);
             /** Erase to start of line. */
