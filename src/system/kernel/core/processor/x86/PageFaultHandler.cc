@@ -36,7 +36,7 @@ bool PageFaultHandler::initialise()
 
   return(IntManager.registerInterruptHandler(PAGE_FAULT_EXCEPTION, this));
 }
-extern Spinlock g_MallocLock;
+
 void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
   uint32_t cr2, code;
@@ -54,9 +54,8 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     va.getMapping(reinterpret_cast<void*>(page), phys, flags);
     if (flags & VirtualAddressSpace::CopyOnWrite)
     {
-        FATAL_NOLOCK("Copy on write");
 #if 0
-      static uint8_t buffer[/*PhysicalMemoryManager::instance().getPageSize()*/4096];
+      static uint8_t buffer[PhysicalMemoryManager::instance().getPageSize()];
       memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
 
       // Now that we've saved the page content, we can make a new physical page and map it.

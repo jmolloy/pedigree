@@ -32,7 +32,7 @@ create table 'users' (
        'password' varchar(64));
 
 insert into 'users' values (NULL, 'root', 'Root User', 'administrators', '/', '/applications/bash', 'root');
-insert into 'users' values (NULL, 'james', 'James Molloy', 'users', '/users/jamesm', '/applications/bash', 'james');
+insert into 'users' values (NULL, 'james', 'James Molloy', 'users', '/users/james', '/applications/bash', 'james');
 insert into 'users' values (NULL, 'matt', 'Matt Iselin', 'users', '/users/matt', '/applications/bash', 'matt');
 insert into 'users' values (NULL, 'httpd', 'Http Daemon', 'httpd', '/', '/applications/apache/httpd', 'httpd');
 commit;

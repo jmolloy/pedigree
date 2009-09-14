@@ -130,6 +130,26 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
      *\return the proessor independant flag representation */
     size_t fromFlags(uint32_t Flags);
 
+    /** Begins a "cross-address-space" transaction; maps this address space's
+        page directory and a page table in temporarily to the current address
+        space, to be used with mapCrossSpace.
+
+        This uses the pages "KERNEL_VIRTUAL_TEMP2" and "KERNEL_VIRTUAL_TEMP3".
+
+        \return A value to pass to mapCrossSpace. This value contains the
+                current page table mapped into KERNEL_VIRTUAL_TEMP3. */
+    uintptr_t beginCrossSpace(X86VirtualAddressSpace *pOther);
+    /** The mapping function for cross-space mappings. beginCrossSpace must be
+        called first.
+
+        \param v Value given by "beginCrossSpace". */
+    bool mapCrossSpace(uintptr_t &v,
+                       physical_uintptr_t physicalAddress,
+                       void *virtualAddress,
+                       size_t flags);
+    /** Called to end a cross-space transaction. */
+    void endCrossSpace();
+    
     /** Physical address of the page directory */
     physical_uintptr_t m_PhysicalPageDirectory;
     /** Virtual address of the page directory */
@@ -188,14 +208,15 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 // Virtual address space layout
 //
 #define KERNEL_SPACE_START 0xC0000000
-                                                        //0x080d9dc5
+
 #define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*> (0x50000000)
 #define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
 #define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)
 #define VIRTUAL_PAGE_TABLES reinterpret_cast<void*>(0xFFC00000)
-#define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void*>(0xFFBFD000)
-#define KERNEL_VIRTUAL_TEMP2 reinterpret_cast<void*>(0xFFBFE000)
+#define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void*>(0xFFBFC000)
+#define KERNEL_VIRTUAL_TEMP2 reinterpret_cast<void*>(0xFFBFD000)
+#define KERNEL_VIRTUAL_TEMP3 reinterpret_cast<void*>(0xFFBFE000)
 #define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xC0000000)
 #define KERNEL_VIRUTAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFF7FF000)
 #define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFF400000 - 0x100000)

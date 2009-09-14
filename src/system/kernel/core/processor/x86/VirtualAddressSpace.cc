@@ -536,130 +536,193 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
 
 VirtualAddressSpace *X86VirtualAddressSpace::clone()
 {
-  // No lock guard in here - we assume that if we're cloning, nothing will be trying
-  // to map/unmap memory.
-  // Also, we need a way of solving this as we use the map/unmap functions, which
-  // themselves try and grab the lock.
-  /// \bug This assumption is false!
+    // No lock guard in here - we assume that if we're cloning, nothing will be trying
+    // to map/unmap memory.
+    // Also, we need a way of solving this as we use the map/unmap functions, which
+    // themselves try and grab the lock.
+    /// \bug This assumption is false!
 
-  VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
-  // Create a new virtual address space
-  VirtualAddressSpace *pClone = VirtualAddressSpace::create();
-  if (pClone == 0)
-  {
-    WARNING("X86VirtualAddressSpace: Clone() failed!");
-    return 0;
-  }
-
-  g_pCurrentlyCloning = pClone;
-
-  for (uintptr_t i = 0; i < 1024; i++)
-  {
-    uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
-
-    if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
-      continue;
-
-    for (uintptr_t j = 0; j < 1024; j++)
+    // Create a new virtual address space
+    VirtualAddressSpace *pClone = VirtualAddressSpace::create();
+    if (pClone == 0)
     {
-      uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
-
-      if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
-        continue;
-
-      uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
-
-      void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
-      if (getKernelAddressSpace().isMapped(virtualAddress))
-        continue;
-
-      // Page mapped in source address space, but not in kernel.
-      /// \todo Copy on write.
-      physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
-
-      // Temporarily map in.
-      map(newFrame,
-          KERNEL_VIRTUAL_TEMP1,
-          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
-
-      // Copy across.
-      memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
-
-      // Unmap.
-      unmap(KERNEL_VIRTUAL_TEMP1);
-
-      // Change to the new, cloned address space.
-      Processor::switchAddressSpace(*pClone);
-
-      // Map in.
-      pClone->map(newFrame, virtualAddress, fromFlags(flags));
-
-      // Switch back.
-      Processor::switchAddressSpace(thisAddressSpace);
+        WARNING("X86VirtualAddressSpace: Clone() failed!");
+        return 0;
     }
-  }
 
-  g_pCurrentlyCloning = 0;
+    g_pCurrentlyCloning = pClone;
 
-  return pClone;
+    uintptr_t v = beginCrossSpace(reinterpret_cast<X86VirtualAddressSpace*>(pClone));
+
+    for (uintptr_t i = 0; i < 1024; i++)
+    {
+        uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
+
+        if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+            continue;
+
+        for (uintptr_t j = 0; j < 1024; j++)
+        {
+            uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
+
+            if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                continue;
+
+            uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
+
+            void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+            if (getKernelAddressSpace().isMapped(virtualAddress))
+                continue;
+
+            // Page mapped in source address space, but not in kernel.
+            /// \todo Copy on write.
+            physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+
+            // Temporarily map in.
+            map(newFrame,
+                KERNEL_VIRTUAL_TEMP1,
+                VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+
+            // Copy across.
+            memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
+
+            // Unmap.
+            unmap(KERNEL_VIRTUAL_TEMP1);
+
+            // Map in.
+            mapCrossSpace(v, newFrame, virtualAddress, fromFlags(flags));
+        }
+    }
+
+    endCrossSpace();
+
+    g_pCurrentlyCloning = 0;
+
+    return pClone;
 }
 
 void X86VirtualAddressSpace::revertToKernelAddressSpace()
 {
-  // Again, similar to clone(), we don't grab the lock. We should, but we don't.
+    // Again, similar to clone(), we don't grab the lock. We should, but we don't.
 
-  for (uintptr_t i = 0; i < 1024; i++)
-  {
-    uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
-
-    if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
-      continue;
-
-    if (i*1024*4096 >= KERNEL_SPACE_START)
-     continue;
-
-    bool bDidSkip = false;
-    for (uintptr_t j = 0; j < 1024; j++)
+    for (uintptr_t i = 0; i < 1024; i++)
     {
-      uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
+        uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, i);
 
-      if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
-        continue;
+        if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+            continue;
 
-      void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
-      if (getKernelAddressSpace().isMapped(virtualAddress))
-      {
-        bDidSkip = true;
-        continue;
-      }
+        if (i*1024*4096 >= KERNEL_SPACE_START)
+            continue;
 
-      // Grab the physical address for it.
-      physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
+        bool bDidSkip = false;
+        for (uintptr_t j = 0; j < 1024; j++)
+        {
+            uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);
 
-      // Page mapped in this address space but not in kernel. Unmap it.
-      unmap(virtualAddress);
+            if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+                continue;
 
-      // And release the physical memory.
-      /// \todo There's going to be a caveat with CoW here...
-      PhysicalMemoryManager::instance().freePage(physicalAddress);
+            void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+            if (getKernelAddressSpace().isMapped(virtualAddress))
+            {
+                bDidSkip = true;
+                continue;
+            }
 
-      // This PTE is no longer valid
-      *pageTableEntry = 0;
+            // Grab the physical address for it.
+            physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
+
+            // Page mapped in this address space but not in kernel. Unmap it.
+            unmap(virtualAddress);
+
+            // And release the physical memory.
+            /// \todo There's going to be a caveat with CoW here...
+            PhysicalMemoryManager::instance().freePage(physicalAddress);
+
+            // This PTE is no longer valid
+            *pageTableEntry = 0;
+        }
+
+        // Don't remove the directory entry if we skipped a kernel page
+        if(bDidSkip)
+            continue;
+    
+        // Remove the page table from the directory
+        PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+        *pageDirectoryEntry = 0;
+    
+        // Invalidate the page table mapping
+        uint32_t *pageTable = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, 0);
+        Processor::invalidate(pageTable);
+    }
+}
+
+uintptr_t X86VirtualAddressSpace::beginCrossSpace(X86VirtualAddressSpace *pOther)
+{
+    map(pOther->m_PhysicalPageDirectory, KERNEL_VIRTUAL_TEMP2, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+
+    uint32_t *pDir = reinterpret_cast<uint32_t*> (KERNEL_VIRTUAL_TEMP2);
+    map(pDir[0], KERNEL_VIRTUAL_TEMP3, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+
+    return 0x00000000;
+}
+
+bool X86VirtualAddressSpace::mapCrossSpace(uintptr_t &v, physical_uintptr_t physicalAddress,
+                                 void *virtualAddress, size_t flags)
+{
+    size_t Flags = toFlags(flags);
+    size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+
+    uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(KERNEL_VIRTUAL_TEMP2, pageDirectoryIndex);
+    uint32_t *pDir = reinterpret_cast<uint32_t*> (KERNEL_VIRTUAL_TEMP2);
+  
+    if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
+    {
+        uint32_t page = PhysicalMemoryManager::instance().allocatePage();
+        // Set the page.
+        *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
+
+        // Map it in.
+        v = pageDirectoryIndex;
+        unmap(KERNEL_VIRTUAL_TEMP3);
+        map(pDir[pageDirectoryIndex], KERNEL_VIRTUAL_TEMP3, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+
+        // Zero.
+        memset(KERNEL_VIRTUAL_TEMP3, 0, PhysicalMemoryManager::getPageSize());
+    }
+    else if ( (Flags & PAGE_USER) && ((*pageDirectoryEntry & PAGE_USER) != PAGE_USER))
+    {
+        *pageDirectoryEntry |= PAGE_USER;
     }
 
-    // Don't remove the directory entry if we skipped a kernel page
-    if(bDidSkip)
-      continue;
-    
-    // Remove the page table from the directory
-    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
-    *pageDirectoryEntry = 0;
-    
-    // Invalidate the page table mapping
-    uint32_t *pageTable = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, 0);
-    Processor::invalidate(pageTable);
-  }
+    // Check we now have the right page table mapped in. If not, map it in.
+    if (v != pageDirectoryIndex)
+    {
+        v = pageDirectoryIndex;
+        unmap(KERNEL_VIRTUAL_TEMP3);
+        map(pDir[pageDirectoryIndex], KERNEL_VIRTUAL_TEMP3, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    }
+
+    size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+    uint32_t *pageTableEntry = & (reinterpret_cast<uint32_t*>(KERNEL_VIRTUAL_TEMP3)[pageTableIndex]);
+
+    // Is a page already present
+    if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
+        return false;
+
+    // Map the page
+    *pageTableEntry = physicalAddress | Flags;
+
+    return true;
+}
+
+void X86VirtualAddressSpace::endCrossSpace()
+{
+    unmap(KERNEL_VIRTUAL_TEMP2);
+    unmap(KERNEL_VIRTUAL_TEMP3);
 }
 
 bool X86KernelVirtualAddressSpace::isMapped(void *virtualAddress)
