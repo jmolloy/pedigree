@@ -140,7 +140,6 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     for (size_t i = 0; i < nBytes; i++)
     {
         /// \note Turned this into a C++-style cast... I have no idea what this achieves. - Matt
-        NOTICE("Input process : " << static_cast<uintptr_t>(pC[i]) << ", nbytes: " << nBytes);
         if (file->m_Flags & IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
 

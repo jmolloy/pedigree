@@ -28,6 +28,9 @@
 
 #define C_BRIGHT  8
 
+#define DEFAULT_FG 7
+#define DEFAULT_BG 0
+
 rgb_t g_Colours[] = { {0x00,0x00,0x00},
                       {0xB0,0x22,0x22},
                       {0x22,0xB0,0x22},
@@ -263,8 +266,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         {
                             // Reset all attributes.
                             m_pWindows[m_ActiveBuffer]->setFlags(0);
-                            m_pWindows[m_ActiveBuffer]->setForeColour(C_WHITE);
-                            m_pWindows[m_ActiveBuffer]->setBackColour(C_BLACK);
+                            m_pWindows[m_ActiveBuffer]->setForeColour(DEFAULT_FG);
+                            m_pWindows[m_ActiveBuffer]->setBackColour(DEFAULT_BG);
                             break;
                         }
                         case 1:
@@ -405,7 +408,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
 Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(0), m_Bg(15), m_Flags(0), m_bLineRender(false)
+    m_pInsert(0), m_pView(0), m_Fg(DEFAULT_FG), m_Bg(DEFAULT_BG), m_Flags(0), m_bLineRender(false)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));

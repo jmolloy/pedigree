@@ -278,8 +278,6 @@ int main (int argc, char **argv)
                     char c = pT->getFromQueue();
                     if (c)
                     {
-                        sprintf(str, "Read: %x", c);
-                        log(str);
                         buffer[i++] = c;
                         continue;
                     }
