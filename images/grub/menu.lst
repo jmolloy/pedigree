@@ -7,3 +7,4 @@ title  Pedigree
 root   (cd)
 kernel /boot/kernel
 module /boot/initrd.tar
+module /.pedigree-root

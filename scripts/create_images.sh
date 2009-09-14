@@ -250,7 +250,7 @@ fi
 # Live CD
 if which mkisofs > /dev/null 2>&1; then
     rm -f pedigree.iso
-    touch .pedigree-root
+    cp $SRCDIR/../build/config.db .pedigree-root
     cp $SRCDIR/../images/grub/stage2_eltorito .
 
     mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
