@@ -1,0 +1,38 @@
+-- Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+--
+-- Permission to use, copy, modify, and distribute this software for any
+-- purpose with or without fee is hereby granted, provided that the above
+-- copyright notice and this permission notice appear in all copies.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+-- WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+-- MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+-- ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+-- WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+-- ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+-- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+-- User & Groups tables
+begin;
+create table 'groups' (
+       'gid' integer primary key,
+       'name' varchar(64));
+
+insert into 'groups' values (NULL, 'administrators');
+insert into 'groups' values (NULL, 'users');
+insert into 'groups' values (NULL, 'httpd');
+
+create table 'users' (
+       'uid' integer primary key,
+       'username' varchar(64),
+       'fullname' varchar(64),
+       'groupname' varchar(64),
+       'homedir' varchar(64),
+       'shell' varchar(255),
+       'password' varchar(64));
+
+insert into 'users' values (NULL, 'root', 'Root User', 'administrators', '/', '/applications/bash', 'root');
+insert into 'users' values (NULL, 'james', 'James Molloy', 'users', '/users/jamesm', '/applications/bash', 'james');
+insert into 'users' values (NULL, 'matt', 'Matt Iselin', 'users', '/users/matt', '/applications/bash', 'matt');
+insert into 'users' values (NULL, 'httpd', 'Http Daemon', 'httpd', '/', '/applications/apache/httpd', 'httpd');
+commit;

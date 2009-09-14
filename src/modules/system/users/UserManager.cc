@@ -19,6 +19,7 @@
 #include <vfs/VFS.h>
 #include <utilities/utility.h>
 #include <process/Process.h>
+#include <config/Config.h>
 
 UserManager UserManager::m_Instance;
 
@@ -33,140 +34,47 @@ UserManager::~UserManager()
 
 void UserManager::initialiseGroups()
 {
-  // Find and parse the config file.
-  File *pFile = VFS::instance().find(String("root»/config/groups"));
-  if (!pFile)
+  Config::Result *pResult = Config::instance().query("select * from groups");
+  if (!pResult->succeeded())
+      ERROR("Error: " << pResult->errorMessage());
+
+  for (size_t i = 0; i < pResult->rows();i++)
   {
-    ERROR("USERS: Unable to open file root»/config/groups.");
-    return;
+    uint32_t gid;
+    String name;
+
+    gid = pResult->getNum(i, "gid") - 1;
+    name = pResult->getStr(i, "name");
+
+    addGroup(gid, name);
   }
 
-  // Else, we can read it in and get cracking.
-  char *pBuffer = new char[pFile->getSize()+1];
-  if (pFile->read(0, pFile->getSize(), reinterpret_cast<uintptr_t>(pBuffer)) != pFile->getSize())
-  {
-    WARNING("USERS: Read length of file 'groups' differs from as advertised!");
-    return;
-  }
-  pBuffer[pFile->getSize()] = '\0';
-
-  // Start the scan process.
-  List<String*> lines = String(pBuffer).tokenise('\n');
-  for (List<String*>::Iterator it = lines.begin();
-       it != lines.end();
-       it++)
-  {
-    String *pStr = *it;
-    if ((*pStr)[0] == '#' || pStr->length() == 0)
-    {
-      delete pStr;
-      continue;
-    }
-
-    List<String*> tokens = pStr->tokenise(';');
-    delete pStr;
-
-    String id, name;
-
-    int i = 0;
-    for (List<String*>::Iterator it2 = tokens.begin();
-         it2 != tokens.end();
-         it2++)
-    {
-      switch (i)
-      {
-        case 0:
-          id = **it2;
-          break;
-        case 1:
-          name = **it2;
-          break;
-      }
-      delete *it2;
-      i++;
-    }
-
-    addGroup(strtoul(id, 0, 10), String(name));
-  }
-
-  delete [] pBuffer;
+  delete pResult;
 }
 
 void UserManager::initialiseUsers()
 {
-  // Find and parse the config file.
-  File *pFile = VFS::instance().find(String("root»/config/users"));
+  Config::Result *pResult = Config::instance().query("select * from users");
+  if (!pResult->succeeded())
+      ERROR("Error: " << pResult->errorMessage());
 
-  if (!pFile)
+  for (size_t i = 0; i < pResult->rows();i++)
   {
-    ERROR("USERS: Unable to open file root»/config/users.");
-    return;
+    uint32_t uid;
+    String username, fullname, groupname, homedir, shell, password;
+
+    uid = pResult->getNum(i, "uid") - 1;
+    username = pResult->getStr(i, "username");
+    fullname = pResult->getStr(i, "fullname");
+    groupname = pResult->getStr(i, "groupname");
+    homedir = pResult->getStr(i, "homedir");
+    shell = pResult->getStr(i, "shell");
+    password = pResult->getStr(i, "password");
+
+    addUser(uid, username, fullname, groupname, homedir, shell, password);
   }
 
-  // Else, we can read it in and get cracking.
-  char *pBuffer = new char[pFile->getSize()+1];
-  if (pFile->read(0, pFile->getSize(), reinterpret_cast<uintptr_t>(pBuffer)) != pFile->getSize())
-  {
-    WARNING("USERS: Read length of file differs from as advertised!");
-    return;
-  }
-  pBuffer[pFile->getSize()] = '\0';
-
-  // Start the scan process.
-  List<String*> lines = String(pBuffer).tokenise('\n');
-  for (List<String*>::Iterator it = lines.begin();
-       it != lines.end();
-       it++)
-  {
-    String *pStr = *it;
-    if ((*pStr)[0] == '#' || pStr->length() == 0)
-    {
-      delete pStr;
-      continue;
-    }
-
-    List<String*> tokens = pStr->tokenise(';');
-    delete pStr;
-
-    String id, username, fullname, group, home, shell, password;
-
-    int i = 0;
-    for (List<String*>::Iterator it2 = tokens.begin();
-         it2 != tokens.end();
-         it2++)
-    {
-      switch (i)
-      {
-        case 0:
-          id = **it2;
-          break;
-        case 1:
-          username = **it2;
-          break;
-        case 2:
-          fullname = **it2;
-          break;
-        case 3:
-          group = **it2;
-          break;
-        case 4:
-          home = **it2;
-          break;
-        case 5:
-          shell = **it2;
-          break;
-        case 6:
-          password = **it2;
-          break;
-      }
-      delete *it2;
-      i++;
-    }
-
-    addUser(strtoul(id, 0, 10), username, fullname, group, home, shell, password);
-  }
-
-  delete [] pBuffer;
+  delete pResult;
 }
 
 User *UserManager::getUser(size_t id)
