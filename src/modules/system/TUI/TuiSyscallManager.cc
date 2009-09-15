@@ -23,6 +23,7 @@
 #include <console/Console.h>
 #include <Log.h>
 #include <Module.h>
+#include <config/Config.h>
 
 #include "TuiSyscallManager.h"
 #include "Console.h"
@@ -44,6 +45,29 @@ void callback(uint64_t key)
         return;
     }
     g_UserConsole->addAsyncRequest(TUI_CHAR_RECV, g_UserConsoleId, key);
+}
+
+extern "C" void tuiModeChangedCallback()
+{
+    if (!g_UserConsole)
+    {
+        WARNING("Mode changed called with no console");
+        return;
+    }
+
+    /// \todo Multiple displays.
+    Config::Result *pResult = Config::instance().query("SELECT width,height FROM displays d, 'display-modes/0' m WHERE m.id=d.mode_id");
+    if (!pResult->succeeded() || !pResult->rows())
+    {
+        FATAL("Uh oh...");
+    }
+    uint64_t width  = static_cast<uint64_t> (pResult->getNum(0, "width"));
+    uint64_t height = static_cast<uint64_t> (pResult->getNum(0, "height"));
+    uint64_t a = (height<<32)|width;
+    NOTICE("width: " << Hex << width << ", height: " << height << ", a: " << a);
+    delete pResult;
+
+    g_UserConsole->addAsyncRequest(TUI_MODE_CHANGED, g_UserConsoleId, a);
 }
 
 TuiSyscallManager::TuiSyscallManager() :

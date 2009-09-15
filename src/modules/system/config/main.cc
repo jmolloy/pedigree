@@ -284,7 +284,7 @@ int sqlite3_os_end()
     return 0;
 }
 
-void xCallback(sqlite3_context *context, int n, sqlite3_value **values)
+void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const unsigned char *text = sqlite3_value_text(values[0]);
 
@@ -307,6 +307,58 @@ void xCallback(sqlite3_context *context, int n, sqlite3_value **values)
     
     void (*func)(void) = reinterpret_cast< void (*)(void) >(x);
     func();
+    sqlite3_result_int(context, 0);
+}
+
+void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
+{
+    const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
+
+    if (!text) return;
+
+    uintptr_t x;
+    if (text[0] == '0')
+    {
+        x = strtoul(text, 0, 16);
+    }
+    else
+    {
+        x = KernelElf::instance().lookupSymbol(text);
+        if (!x)
+        {
+            ERROR("Couldn't trigger callback `" << text << "': symbol not found.");
+            return;
+        }
+    }
+    
+    void (*func)(const char *) = reinterpret_cast< void (*)(const char*) >(x);
+    func(reinterpret_cast<const char*>(sqlite3_value_text(values[1])));
+    sqlite3_result_int(context, 0);
+}
+
+void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
+{
+    const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
+
+    if (!text) return;
+
+    uintptr_t x;
+    if (text[0] == '0')
+    {
+        x = strtoul(text, 0, 16);
+    }
+    else
+    {
+        x = KernelElf::instance().lookupSymbol(text);
+        if (!x)
+        {
+            ERROR("Couldn't trigger callback `" << text << "': symbol not found.");
+            return;
+        }
+    }
+    
+    void (*func)(const char *, const char*) = reinterpret_cast< void (*)(const char*,const char*) >(x);
+    func(reinterpret_cast<const char*>(sqlite3_value_text(values[1])), reinterpret_cast<const char*>(sqlite3_value_text(values[2])));
     sqlite3_result_int(context, 0);
 }
 
@@ -347,7 +399,9 @@ void init()
         FATAL("sqlite3 error: " << sqlite3_errmsg(g_pSqlite));
     }
 
-    sqlite3_create_function(g_pSqlite, "pedigree_callback", 1, SQLITE_ANY, 0, &xCallback, 0, 0);
+    sqlite3_create_function(g_pSqlite, "pedigree_callback", 1, SQLITE_ANY, 0, &xCallback0, 0, 0);
+    sqlite3_create_function(g_pSqlite, "pedigree_callback", 2, SQLITE_ANY, 0, &xCallback1, 0, 0);
+    sqlite3_create_function(g_pSqlite, "pedigree_callback", 3, SQLITE_ANY, 0, &xCallback2, 0, 0);
 }
 
 void destroy()

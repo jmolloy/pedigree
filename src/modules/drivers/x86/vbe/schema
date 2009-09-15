@@ -46,8 +46,8 @@ create table 'display-modes/3' (
        'depth' integer,
        'refresh' integer);
 
-create trigger 'display-modes/0-selected' after update of 'mode_id' on 'displays'
-when NEW.mode_id <> OLD.mode_id
+create trigger 'display-mode-selected' before update of 'mode_id' on 'displays'
+when OLD.mode_id <> NEW.mode_id
 begin
-        update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback');
+       update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback', NEW.id, NEW.mode_id);
 end;

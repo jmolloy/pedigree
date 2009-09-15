@@ -18,6 +18,7 @@
 
 #include <console/Console.h>
 
+#define TUI_MODE_CHANGED 98
 #define TUI_CHAR_RECV 99
 
 class UserConsole : public RequestQueue

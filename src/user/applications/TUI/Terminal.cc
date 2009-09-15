@@ -79,6 +79,20 @@ Terminal::~Terminal()
     delete m_pXterm;
 }
 
+void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
+{
+    Syscall::killBuffer(m_pBuffer);
+
+    m_pBuffer = Syscall::newBuffer();
+    if (!m_pBuffer) log("Buffer not created correctly!");
+    log("here0");
+    rgb_t b = {0,0,0};
+    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+m_OffsetLeft, nHeight+m_OffsetTop, b);
+    log("here1");
+    m_pXterm->resize(nWidth, nHeight, m_pBuffer);
+    log("here2");
+}
+
 void Terminal::addToQueue(uint64_t key)
 {
     if (key & Keyboard::Special)

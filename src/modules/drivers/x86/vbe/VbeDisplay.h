@@ -54,6 +54,11 @@ public:
     virtual void bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX, size_t toY, size_t width, size_t height);
     virtual void fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width, size_t height, rgb_t colour);
 
+    size_t getModeId()
+    {
+        return m_Mode.id;
+    }
+
 private:
     /** Copy constructor is private. */
     VbeDisplay(const VbeDisplay &);
@@ -75,10 +80,12 @@ private:
     /** Buffer format. */
     struct Buffer
     {
-        Buffer() : pBackbuffer(0), pFbBackbuffer(0), mr("Buffer"), fbmr("Fb buffer") {}
+        Buffer() : pBackbuffer(0), pFbBackbuffer(0), mr("Buffer"), fbmr("Fb buffer"), valid(true) {}
         rgb_t        *pBackbuffer;
         uint8_t      *pFbBackbuffer;
         MemoryRegion  mr,fbmr;
+
+        bool valid;
 
         private:
             Buffer(const Buffer&);

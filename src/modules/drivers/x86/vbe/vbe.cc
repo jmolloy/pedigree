@@ -75,6 +75,19 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
   return 0;
 }
 
+extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
+{
+    size_t id = strtoul(pId, 0, 10) - 1;
+    size_t mode_id = strtoul(pModeId, 0, 10);
+
+    if (id >= g_nDisplays) return;
+
+    if (g_pDisplays[id]->getModeId() != mode_id)
+    {
+        g_pDisplays[id]->setScreenMode(mode_id);
+    }
+}
+
 void entry()
 {
   Machine::instance().getKeyboard()->setDebugState(false);
