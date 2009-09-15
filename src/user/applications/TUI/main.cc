@@ -88,14 +88,13 @@ void modeChanged(size_t width, size_t height)
 
         // Kill and renew the buffers.
         pTerm->renewBuffer(width, height-(g_pHeader->getHeight()+1));
-        log("penis0");
+
         DirtyRectangle rect;
         g_pHeader->select(pTerm->getTabId());
-        log("penis1");
+
         g_pHeader->render(pTerm->getBuffer(), rect);
-        log("penis2");
+
         Syscall::updateBuffer(pTerm->getBuffer(), rect);
-        log("penis3");
 
         pTL = pTL->next;
     }

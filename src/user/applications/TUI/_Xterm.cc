@@ -444,7 +444,6 @@ void Xterm::Window::hideCursor(DirtyRectangle &rect)
 
 void Xterm::Window::resize(size_t nWidth, size_t nHeight, rgb_t *pBuffer)
 {
-    log("here3");
     size_t cols = nWidth / g_NormalFont->getWidth();
     size_t rows = nHeight / g_NormalFont->getHeight();
 
@@ -460,7 +459,7 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, rgb_t *pBuffer)
     blank.flags = 0;
     for (size_t i = 0; i < cols*rows; i++)
         newBuf[i] = blank;
-    log("here4");
+
     if(m_Bg)
         Syscall::fillRect(pBuffer, 0, m_OffsetTop, nWidth, rows*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
@@ -474,9 +473,9 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, rgb_t *pBuffer)
             newBuf[r*cols + c] = m_pInsert[r*m_Width + c];
         }
     }
-    log("here5");
+
     free(m_pBuffer);
-    log("here6");
+
     m_pInsert = m_pView = m_pBuffer = newBuf;
     m_BufferLength = rows*cols;
 
@@ -490,12 +489,11 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, rgb_t *pBuffer)
         m_CursorX = 0;
     if (m_CursorY >= m_Height)
         m_CursorY = 0;
-    log("here6");
+
     DirtyRectangle rect;
     renderAll(rect, 0);
-    log("here7");
+
     Syscall::updateBuffer(m_pFramebuffer, rect);
-    log("here8");
 }
 
 void Xterm::Window::setScrollRegion(int start, int end)
@@ -656,8 +654,8 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
     // If we're bitblitting, we need to commit all changes before now.
     Syscall::updateBuffer(m_pFramebuffer, rect);
-    rect.reset();log("blit0");
-    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);log("blit1");
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_y, m_FbWidth, bottom1_y-bottom2_y, g_Colours[m_Bg]);
 
     memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
@@ -699,8 +697,8 @@ void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
 
     // If we're bitblitting, we need to commit all changes before now.
     Syscall::updateBuffer(m_pFramebuffer, rect);
-    rect.reset();log("blit2");
-    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);log("blit3");
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);
     Syscall::fillRect(m_pFramebuffer, 0, top1_y, m_FbWidth, top2_y-top1_y, g_Colours[m_Bg]);
 
     memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
@@ -723,8 +721,8 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 
     // If we're bitblitting, we need to commit all changes before now.
     Syscall::updateBuffer(m_pFramebuffer, rect);
-    rect.reset();log("blit4");
-    Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());log("blit5");
+    rect.reset();
+    Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     if (m_pView == m_pInsert)
