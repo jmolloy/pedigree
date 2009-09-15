@@ -118,14 +118,17 @@ void Process::kill()
   /// \todo Grab the scheduler lock!
   Processor::setInterrupts(false);
 
-  NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
+  if(m_pParent)
+	NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
+  else
+	NOTICE("Kill: " << m_Id << " (parent: < orphan :( >)");
 
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
     Process *pProcess = Scheduler::instance().getProcess(i);
 
-    if (pProcess->m_pParent == this)
+    if (pProcess && (pProcess->m_pParent == this))
     {
       if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
       {
@@ -151,7 +154,8 @@ void Process::kill()
   }
 
   // Tell any threads that may be waiting for us to die.
-  m_pParent->m_DeadThreads.release();
+  if(m_pParent)
+	m_pParent->m_DeadThreads.release();
 
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
