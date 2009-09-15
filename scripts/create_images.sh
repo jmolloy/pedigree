@@ -211,6 +211,7 @@ elif which mcopy >/dev/null 2>&1; then
 
   mcopy -Do $SRCDIR/kernel/kernel A:/
   mcopy -Do $SRCDIR/initrd.tar A:/
+  mcopy -Do $SRCDIR/../build/config.db A:/
 
   #if [ ! -e "./hdd_fat16.img" ]
   #  then
@@ -222,9 +223,8 @@ elif which mcopy >/dev/null 2>&1; then
   mmd C:/tmp C:/etc
 
   # Make this the root disk
-  touch ./.pedigree-root
+  cp $SRCDIR/../build/config.db .pedigree-root
   mcopy -Do ./.pedigree-root C:/
-
   rm ./.pedigree-root
 
   mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/

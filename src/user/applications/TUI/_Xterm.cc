@@ -442,8 +442,58 @@ void Xterm::Window::hideCursor(DirtyRectangle &rect)
     render(rect);
 }
 
-void Xterm::Window::resize(size_t nRows, size_t nCols)
+void Xterm::Window::resize(size_t nWidth, size_t nHeight, rgb_t *pBuffer)
 {
+    size_t cols = nWidth / g_NormalFont->getWidth();
+    size_t rows = nHeight / g_NormalFont->getHeight();
+
+    g_NormalFont->setWidth(nWidth);
+    g_BoldFont->setWidth(nWidth);
+
+    TermChar *newBuf = reinterpret_cast<TermChar*>(malloc(cols*rows*sizeof(TermChar)));
+
+    TermChar blank;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = 0; i < cols*rows; i++)
+        newBuf[i] = blank;
+
+    if(m_Bg)
+        Syscall::fillRect(pBuffer, 0, m_OffsetTop, nWidth, rows*g_NormalFont->getHeight(), g_Colours[m_Bg]);
+
+    for (size_t r = 0; r < m_Height; r++)
+    {
+        if (r >= rows) break;
+        for (size_t c = 0; c < m_Width; c++)
+        {
+            if (c >= cols) break;
+
+            newBuf[r*cols + c] = m_pInsert[r*m_Width + c];
+        }
+    }
+
+    free(m_pBuffer);
+
+    m_pInsert = m_pView = m_pBuffer = newBuf;
+    m_BufferLength = rows*cols;
+
+    m_pFramebuffer = pBuffer;
+    m_FbWidth = nWidth;
+    m_Width = cols;
+    m_Height = rows;
+    m_ScrollStart = 0;
+    m_ScrollEnd = rows-1;
+    if (m_CursorX >= m_Width)
+        m_CursorX = 0;
+    if (m_CursorY >= m_Height)
+        m_CursorY = 0;
+
+    DirtyRectangle rect;
+    renderAll(rect, 0);
+
+    Syscall::updateBuffer(m_pFramebuffer, rect);
 }
 
 void Xterm::Window::setScrollRegion(int start, int end)
@@ -478,7 +528,7 @@ uint8_t Xterm::Window::getFlags()
 
 void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
 {
-    TermChar *pOld = pPrevious->m_pView;
+    TermChar *pOld = (pPrevious) ? pPrevious->m_pView : 0;
     TermChar *pNew = m_pView;
 
     // "Cleverer" full redraw - only redraw those glyphs that are different from the previous window.
@@ -486,7 +536,7 @@ void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
     {
         for (size_t x = 0; x < m_Width; x++)
         {
-            if (pOld[y*m_Width+x] != pNew[y*m_Width+x])
+            if (!pOld || (pOld[y*m_Width+x] != pNew[y*m_Width+x]))
                 render(rect, 0, x, y);
         }
     }

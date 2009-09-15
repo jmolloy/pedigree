@@ -54,6 +54,12 @@ public:
         m_pWindows[m_ActiveBuffer]->hideCursor(rect);
     }
 
+    void resize(size_t w, size_t h, rgb_t *b)
+    {
+        m_pWindows[0]->resize(w, h, b);
+        m_pWindows[1]->resize(w, h, b);
+    }
+
 private:
     class Window
     {
@@ -88,7 +94,7 @@ private:
             void showCursor(DirtyRectangle &rect);
             void hideCursor(DirtyRectangle &rect);
 
-            void resize(size_t nRows, size_t nCols);
+            void resize(size_t nRows, size_t nCols, rgb_t *pBuffer);
 
             void setScrollRegion(int start, int end);
             void setForeColour(uint8_t fgColour);

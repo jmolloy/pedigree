@@ -43,6 +43,7 @@
 #define CONSOLE_GETROWS 3
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
+#define TUI_MODE_CHANGED 98
 #define TUI_CHAR_RECV   99
 
 void log(char *c)
@@ -67,6 +68,37 @@ TerminalList *g_pCurrentTerm = 0;
 Header *g_pHeader = 0;
 size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
+
+void modeChanged(size_t width, size_t height)
+{
+    char str[64];
+    sprintf(str, "w: %d, h: %d\n", width, height);
+    log(str);
+
+
+    g_pHeader->setWidth(width);
+
+    g_nWidth = width;
+    g_nHeight = height;
+
+    TerminalList *pTL = g_pTermList;
+    while (pTL)
+    {
+        Terminal *pTerm = pTL->term;
+
+        // Kill and renew the buffers.
+        pTerm->renewBuffer(width, height-(g_pHeader->getHeight()+1));
+
+        DirtyRectangle rect;
+        g_pHeader->select(pTerm->getTabId());
+
+        g_pHeader->render(pTerm->getBuffer(), rect);
+
+        Syscall::updateBuffer(pTerm->getBuffer(), rect);
+
+        pTL = pTL->next;
+    }
+}
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
@@ -192,8 +224,18 @@ int main (int argc, char **argv)
     while (true)
     {
         size_t cmd = Syscall::nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
-//        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-//        log(str);
+        sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
+        log(str);
+
+        if (cmd == TUI_MODE_CHANGED)
+        {
+            uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
+            sprintf(str, "u: %llx", u);
+            log(str);            
+            modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
+
+            continue;
+        }
 
         Terminal *pT = 0;
         TerminalList *pTL = g_pTermList;
@@ -305,7 +347,11 @@ int main (int argc, char **argv)
                 break;
 
             default:
-                log("Unknown command.");
+            {
+                char str[64];
+                sprintf(str, "Unknown command: %x", cmd);
+                log(str);
+            }
         }
 
     }

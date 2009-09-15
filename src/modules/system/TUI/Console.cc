@@ -101,7 +101,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (m_pReq->isAsync)
             delete [] reinterpret_cast<uint8_t*>(m_pReq->p4);
     }
-    else if (command == TUI_CHAR_RECV)
+    else if (command == TUI_CHAR_RECV || command == TUI_MODE_CHANGED)
     {
         memcpy(buffer, reinterpret_cast<uint8_t*>(&m_pReq->p3), 8);
         *sz = 8;

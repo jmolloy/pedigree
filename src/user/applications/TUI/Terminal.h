@@ -34,6 +34,9 @@ public:
              class Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
     ~Terminal();
 
+    /** Kills and recreates the terminal's buffer, with a change in size. */
+    void renewBuffer(size_t nWidth, size_t nHeight);
+    
     /** Adds a 64-bit keycode from the Keyboard class. */
     void addToQueue(uint64_t key);
     

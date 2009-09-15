@@ -38,6 +38,11 @@ public:
     size_t getHeight()
     {return m_CellHeight;}
 
+    void setWidth(size_t w)
+    {
+        m_nWidth = w;
+    }
+
 private:
 
     Font(const Font&);

@@ -50,7 +50,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     delete pR;
 
   Display::ScreenMode *pSm = 0;
-  // Try to find mode 0x117 (1024x768x16)
+
   for (List<Display::ScreenMode*>::Iterator it = m_ModeList.begin();
        it != m_ModeList.end();
        it++)
@@ -133,37 +133,46 @@ bool VbeDisplay::setScreenMode(size_t modeId)
 
 bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
 {
-  m_Mode = sm;
+    m_Mode = sm;
 
-  // SET SuperVGA VIDEO MODE - AX=4F02h, BX=new mode
-  Bios::instance().setAx (0x4F02);
-  Bios::instance().setBx (m_Mode.id | (1<<14));
-  Bios::instance().setEs (0x0000);
-  Bios::instance().setDi (0x0000);
-  Bios::instance().executeInterrupt (0x10);
+    // Invalidate all current buffers.
+    for (Tree<rgb_t*,Buffer*>::Iterator it = m_Buffers.begin();
+         it != m_Buffers.end();
+         it++)
+    {
+        Buffer *pBuf = reinterpret_cast<Buffer*>(it.value());
+        pBuf->valid = false;
+    }
 
-  // Check the signature.
-  if (Bios::instance().getAx() != 0x004F)
-  {
-    ERROR("VBE: Set mode failed! (mode " << Hex << m_Mode.id << ")");
-    return false;
-  }
-  NOTICE("VBE: Set mode " << m_Mode.id);
+    // SET SuperVGA VIDEO MODE - AX=4F02h, BX=new mode
+    Bios::instance().setAx (0x4F02);
+    Bios::instance().setBx (m_Mode.id | (1<<14));
+    Bios::instance().setEs (0x0000);
+    Bios::instance().setDi (0x0000);
+    Bios::instance().executeInterrupt (0x10);
 
-  // Tell the Machine instance what VBE mode we're in, so it can set it again if we enter the debugger and return.
-  Machine::instance().getVga(0)->setMode(m_Mode.id);
+    // Check the signature.
+    if (Bios::instance().getAx() != 0x004F)
+    {
+        ERROR("VBE: Set mode failed! (mode " << Hex << m_Mode.id << ")");
+        return false;
+    }
+    NOTICE("VBE: Set mode " << m_Mode.id);
 
-  g_pDisplay = this;
-  g_ScreenMode = m_Mode;
-  g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
-  g_FbSize = m_pFramebuffer->size();
+    // Tell the Machine instance what VBE mode we're in, so it can set it again if we enter the debugger and return.
+    Machine::instance().getVga(0)->setMode(m_Mode.id);
 
-  return true;
+    g_pDisplay = this;
+    g_ScreenMode = m_Mode;
+    g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
+    g_FbSize = m_pFramebuffer->size();
+
+    return true;
 }
 
 VbeDisplay::rgb_t *VbeDisplay::newBuffer()
 {
-    Buffer *pBuffer = new Buffer;
+    Buffer *pBuffer = new Buffer();
 
     size_t pgmask = PhysicalMemoryManager::getPageSize()-1;
     size_t sz = m_Mode.width*m_Mode.height * sizeof(rgb_t);
@@ -205,7 +214,7 @@ VbeDisplay::rgb_t *VbeDisplay::newBuffer()
 void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
 {
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
-    if (!pBuf)
+    if (!pBuf || !pBuf->valid)
     {
         ERROR("VbeDisplay: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
@@ -217,24 +226,24 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
                               size_t y2)
 {
+    Buffer *pBuf = m_Buffers.lookup(pBuffer);
+    if (!pBuf || !pBuf->valid)
+    {
+        ERROR("VbeDisplay: updateBuffer: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
+        return;
+    }
+
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
-//        return;
+//        return;ffd
     }
     else if (m_Mode.pf.nBpp == 24)
     {
 //        updateBuffer_24bpp (pBuffer, x1, y1, x2, y2);
 //       return;
     }
- 
-    Buffer *pBuf = m_Buffers.lookup(pBuffer);
-    if (!pBuf)
-    {
-        ERROR("VbeDisplay: updateBuffer: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
-        return;
-    }
-   
+    
     if (x1 == ~0UL) x1 = 0;
     if (x2 == ~0UL) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
@@ -269,13 +278,15 @@ void VbeDisplay::killBuffer(rgb_t *pBuffer)
     pBuf->fbmr.free();
 
     delete pBuf;
+
+    m_Buffers.remove(pBuffer);
 }
 
 void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
                          size_t toY, size_t width, size_t height)
 {
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
-    if (!pBuf)
+    if (!pBuf || !pBuf->valid)
     {
         ERROR("VbeDisplay: bitBlit: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
@@ -346,7 +357,7 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
 void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width, size_t height, rgb_t colour)
 {
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
-    if (!pBuf)
+    if (!pBuf || !pBuf->valid)
     {
         ERROR("VbeDisplay: fillRect: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));        
         return;
@@ -448,4 +459,3 @@ void VbeDisplay::packColour(rgb_t colour, size_t idx, uintptr_t pFb)
         }
     }
 }
-

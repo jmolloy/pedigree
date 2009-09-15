@@ -38,6 +38,13 @@ public:
 
     void render(rgb_t *pBuffer, DirtyRectangle &rect);
 
+    void setWidth(size_t nWidth)
+    {
+        m_nWidth = nWidth;
+        m_pFont->setWidth(nWidth);
+        update();
+    }
+
     size_t getHeight();
 
 private:
