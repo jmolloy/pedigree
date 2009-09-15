@@ -128,7 +128,7 @@ enum Modifier
 // Function pointer to output boot progress -
 // Description, current progress, total progress.
 typedef void (*BootProgressFn)(const char *, uintptr_t);
-// Function pointer to set total progress - 
+// Function pointer to set total progress -
 // Total progress.
 typedef void (*BootProgressTotalFn)(uintptr_t);
 
@@ -207,19 +207,22 @@ public:
     /** The severity level of this entry. */
     SeverityLevel type;
     /** The actual entry text. */
-    StaticString<LOG_LENGTH> str;   
+    StaticString<LOG_LENGTH> str;
   };
 
   /** Type of a static log entry (no memory-management involved) */
   typedef LogEntry StaticLogEntry;
   typedef LogEntry DynamicLogEntry;
-   
+
   /** Returns the n'th static log entry, counting from the start. */
   inline const StaticLogEntry &getStaticEntry(size_t n) const
     {return m_StaticLog[(m_StaticEntryStart+n) % LOG_ENTRIES];}
   /** Returns the (n - getStaticEntryCount())'th dynamic log entry */
   inline const DynamicLogEntry &getDynamicEntry(size_t n) const
     {return m_StaticLog[0];}
+
+  bool echoToSerial()
+    {return m_EchoToSerial;}
 
 private:
   /** Default constructor - does nothing. */
@@ -247,6 +250,9 @@ private:
 
   /** The number type mode that we are in. */
   NumberType m_NumberType;
+
+  /** If we should output to serial */
+  bool m_EchoToSerial;
 
   /** The Log instance (singleton class) */
   static Log m_Instance;

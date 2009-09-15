@@ -19,6 +19,7 @@
 #include <machine/Machine.h>
 #include <machine/Vga.h>
 #include <machine/Serial.h>
+#include <Log.h>
 
 BootIO::BootIO() :
     m_CursorX(0), m_CursorY(0)
@@ -46,15 +47,16 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
 {
   for(size_t i = 0; i < str.length(); i++)
     putCharVga(str[i], foreColour, backColour);
-#ifndef ECHO_CONSOLE_TO_SERIAL
-  for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
+  if(!Log::instance().echoToSerial())
   {
-    startColour(Machine::instance().getSerial(i), foreColour, backColour);
-    for(size_t j = 0; j < str.length(); j++)
-      Machine::instance().getSerial(i)->write(str[j]);
-    endColour(Machine::instance().getSerial(i));
+    for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
+    {
+        startColour(Machine::instance().getSerial(i), foreColour, backColour);
+        for(size_t j = 0; j < str.length(); j++)
+          Machine::instance().getSerial(i)->write(str[j]);
+        endColour(Machine::instance().getSerial(i));
+    }
   }
-#endif
 
 #ifdef PPC_COMMON
   // For PPC: causes the graphics framebuffer to be updated from the text one.
