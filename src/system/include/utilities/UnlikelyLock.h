@@ -21,7 +21,7 @@
 
 /** \file UnlikelyLock.h
     \author James Molloy
-    \date 15 September 2009 */
+    \date 16 September 2009 */
 
 /** An "Unlikely lock" is a lock which normally any number of threads can access
     concurrently, but when locked, all threads must exit and never reenter.
