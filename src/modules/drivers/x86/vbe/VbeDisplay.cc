@@ -236,7 +236,7 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
     if (m_Mode.pf.nBpp == 16)
     {
 //        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
-//        return;ffd
+//        return;
     }
     else if (m_Mode.pf.nBpp == 24)
     {
