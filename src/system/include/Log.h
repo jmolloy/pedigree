@@ -22,6 +22,7 @@
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <utilities/StaticString.h>
+#include <panic.h>
 
 /** @addtogroup kernel
  * @{ */
@@ -90,8 +91,10 @@
   { \
     Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Fatal << text << Flush; \
+	const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
     Log::instance().m_Lock.release(); \
     Processor::breakpoint(); \
+	panic(panicstr); \
   } \
   while (0)
 
@@ -101,6 +104,7 @@
   { \
     Log::instance() << Log::Fatal << text << Flush; \
     Processor::breakpoint(); \
+	panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \
   } \
   while (0)
 
@@ -223,6 +227,9 @@ public:
 
   bool echoToSerial()
     {return m_EchoToSerial;}
+
+  inline const LogEntry &getLatestEntry() const
+    {return m_StaticLog[m_StaticEntries - 1];}
 
 private:
   /** Default constructor - does nothing. */

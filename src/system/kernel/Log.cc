@@ -24,6 +24,8 @@
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
+#define LOG_TO_SERIAL 0
+
 Log Log::m_Instance;
 BootProgressFn g_BootProgress = 0;
 BootProgressTotalFn g_BootProgressTotal = 0;
