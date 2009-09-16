@@ -32,7 +32,7 @@ size_t g_FbSize;
 
 VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_Allocator()
 {
- 
+
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum) :
@@ -49,8 +49,6 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     }
     delete pR;
 
-  Display::ScreenMode *pSm = 0;
-
   for (List<Display::ScreenMode*>::Iterator it = m_ModeList.begin();
        it != m_ModeList.end();
        it++)
@@ -63,19 +61,6 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
           return;
       }
       delete pR;
-  }
-
-  for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
-       it != m_Addresses.end();
-       it++)
-  {
-    uintptr_t address = (*it)->m_Address;
-    size_t size = (*it)->m_Size;
-    if (address <= pSm->framebuffer && (address+size) > pSm->framebuffer)
-    {
-      m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
-      break;
-    }
   }
 
   m_Allocator.free(0, vidMemSz);
@@ -142,6 +127,19 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     {
         Buffer *pBuf = reinterpret_cast<Buffer*>(it.value());
         pBuf->valid = false;
+    }
+
+    for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
+        it != m_Addresses.end();
+        it++)
+    {
+        uintptr_t address = (*it)->m_Address;
+        size_t size = (*it)->m_Size;
+        if (address <= m_Mode.framebuffer && (address+size) > m_Mode.framebuffer)
+        {
+            m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
+            break;
+        }
     }
 
     // SET SuperVGA VIDEO MODE - AX=4F02h, BX=new mode
@@ -243,7 +241,7 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
 //        updateBuffer_24bpp (pBuffer, x1, y1, x2, y2);
 //       return;
     }
-    
+
     if (x1 == ~0UL) x1 = 0;
     if (x2 == ~0UL) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
@@ -291,7 +289,7 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
         ERROR("VbeDisplay: bitBlit: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
-    
+
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
     uint8_t *pFb = pBuf->pFbBackbuffer;
@@ -359,10 +357,10 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     Buffer *pBuf = m_Buffers.lookup(pBuffer);
     if (!pBuf || !pBuf->valid)
     {
-        ERROR("VbeDisplay: fillRect: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));        
+        ERROR("VbeDisplay: fillRect: Bad buffer:" << reinterpret_cast<uintptr_t>(pBuffer));
         return;
     }
-    
+
     uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
     uint8_t *pFb2 = pBuf->pFbBackbuffer;
 
