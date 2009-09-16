@@ -18,7 +18,8 @@ subdirs = [
     'applications/keymap',
     'applications/mount',
     'applications/TUI',
-    'applications/config'
+    'applications/config',
+    'applications/display-mode'
 ]
 
 # Cleans a set of flags

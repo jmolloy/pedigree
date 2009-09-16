@@ -121,6 +121,7 @@ private:
 
             void cursorDownAndLeftToMargin(DirtyRectangle &rect);
             void cursorDownAndLeft(DirtyRectangle &rect);
+            void cursorTab(DirtyRectangle &rect);
 
             void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
 

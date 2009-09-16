@@ -363,6 +363,10 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
                 break;
 
+            case '\t':
+                m_pWindows[m_ActiveBuffer]->cursorTab(rect);
+                break;
+
             case '\r':
                 m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
                 break;
@@ -823,6 +827,11 @@ void Xterm::Window::cursorDownAndLeftToMargin(DirtyRectangle &rect)
 void Xterm::Window::cursorLeftToMargin(DirtyRectangle &rect)
 {
     m_CursorX = 0;
+}
+
+void Xterm::Window::cursorTab(DirtyRectangle &rect)
+{
+    m_CursorX = (m_CursorX + 8) & ~7;
 }
 
 void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)

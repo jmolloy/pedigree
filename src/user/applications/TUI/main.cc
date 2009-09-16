@@ -141,7 +141,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
         DirtyRectangle rect2;
         g_pHeader->select(pTL->term->getTabId());
         g_pHeader->render(pTL->term->getBuffer(), rect2);
-        Syscall::updateBuffer(pTL->term->getBuffer(), rect2);        
+        Syscall::updateBuffer(pTL->term->getBuffer(), rect2);
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());
@@ -199,21 +199,21 @@ int main (int argc, char **argv)
     g_nWidth = mode.width;
     g_nHeight = mode.height;
 
-    g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf", 
+    g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf",
                             true, g_nWidth);
 
-    g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf", 
+    g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf",
                           true, g_nWidth);
 
     g_pHeader =  new Header(g_nWidth);
-    
+
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
-    
+
     Syscall::updateBuffer(pCurrentTerminal->getBuffer(), rect);
 
     size_t maxBuffSz = (32768 * 2) - 1;
@@ -231,7 +231,7 @@ int main (int argc, char **argv)
         {
             uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
             sprintf(str, "u: %llx", u);
-            log(str);            
+            log(str);
             modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
 
             continue;
@@ -254,7 +254,7 @@ int main (int argc, char **argv)
             log (str);
             continue;
         }
-        
+
         // If the current terminal's queue is empty, set the request
         // pending further input.
         if (cmd == CONSOLE_READ && pT->queueLength() == 0)
@@ -263,7 +263,7 @@ int main (int argc, char **argv)
             Syscall::requestPending();
             continue;
         }
-        
+
         switch(cmd)
         {
             case CONSOLE_WRITE:
@@ -301,9 +301,10 @@ int main (int argc, char **argv)
                 }
                 /****** NOTE: ABOVE IS TEMPORARY, WILL MOVE ******/
 
-                pT->addToQueue(c);
                 if(checkCommand(c, rect2))
                     Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+                else
+                    pT->addToQueue(c);
                 rect2.reset();
                 if (!pT->hasPendingRequest() || pT->queueLength() == 0)
                     break;
