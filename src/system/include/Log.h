@@ -165,6 +165,9 @@ public:
   inline static Log &instance()
     {return m_Instance;}
 
+   /** Initialises the Log. */
+  void initialise();
+
   /** Adds an entry to the log.
    *\param[in] str the null-terminated ASCII string that should be added */
   Log &operator<< (const char *str);

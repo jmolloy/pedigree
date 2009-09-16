@@ -87,10 +87,10 @@ int idle(void *)
 /** Kernel entry point. */
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
-  g_pBootstrapInfo = &bsInf;
-
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
+
+  g_pBootstrapInfo = &bsInf;
 
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
@@ -122,6 +122,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
+  // Initialise the kernel log.
+  Log::instance().initialise();
 
   // Initialise the boot output.
   bootIO.initialise();

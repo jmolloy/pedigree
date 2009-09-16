@@ -24,8 +24,6 @@
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
-#define LOG_TO_SERIAL 1
-
 Log Log::m_Instance;
 BootProgressFn g_BootProgress = 0;
 BootProgressTotalFn g_BootProgressTotal = 0;
@@ -37,10 +35,20 @@ Log::Log () :
     m_StaticEntryEnd(0),
     m_Buffer(),
     m_NumberType(Dec),
-    m_EchoToSerial(LOG_TO_SERIAL)
+    #ifdef LOG_TO_SERIAL
+    m_EchoToSerial(true)
+    #else
+    m_EchoToSerial(false)
+    #endif
 {
-    // Disabled because of initialisation problems
-    /*
+}
+
+Log::~Log ()
+{
+}
+
+void Log::initialise ()
+{
     char *cmdline = g_pBootstrapInfo->getCommandLine();
     if(cmdline)
     {
@@ -61,11 +69,7 @@ Log::Log () :
                 break;
             }
         }
-    }*/
-}
-
-Log::~Log ()
-{
+    }
 }
 
 Log &Log::operator<< (const char *str)
