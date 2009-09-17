@@ -226,6 +226,12 @@ protected:
 
   // FAT cache
   Cache<uint8_t*, 512> m_FatCache;
+
+  /**
+   * Hint for the free cluster code, to avoid searching the ENTIRE FAT each
+   * time someone wants a free cluster (on non-FAT32 volumes).
+   */
+  uint32_t m_FreeClusterHint;
 };
 
 #endif

@@ -181,6 +181,7 @@ void entry()
         sprintf(c, "%s - %s", getDevice(cs.vendor, cs.device), getVendor(cs.vendor));
         pDevice->setSpecificType(String(c));
         pDevice->setPciIdentifiers(cs.class_code, cs.subclass, cs.vendor, cs.device, cs.progif);
+        pDevice->setPciPosition(ca.bus, ca.device, ca.function);
 
         for (int l = 0; l < 6; l++)
         {

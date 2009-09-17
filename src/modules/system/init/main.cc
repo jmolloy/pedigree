@@ -44,6 +44,8 @@
 #include <config/ConfigurationManager.h>
 #include <config/MemoryBackend.h>
 
+#include <machine/DeviceHashTree.h>
+
 extern void pedigree_init_sigret();
 extern void pedigree_init_pthreads();
 
@@ -104,6 +106,10 @@ static bool findDisks(Device *pDev)
     return false;
 }
 
+void hashesoneoneone(Device *pDev)
+{
+}
+
 void init()
 {
     static HugeStaticString str;
@@ -124,6 +130,9 @@ void init()
     {
         FATAL("No root disk (missing .pedigree-root?)");
     }
+
+    // Fill out the device hash table
+    DeviceHashTree::instance().fill(&Device::root());
 
 #if 0
     // Testing froggey's Bochs patch for magic watchpoints... -Matt
@@ -176,8 +185,6 @@ void init()
     str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
-
-    Machine::instance().getKeyboard()->setDebugState(false);
 
     // At this point we're uninterruptible, as we're forking.
     Spinlock lock;

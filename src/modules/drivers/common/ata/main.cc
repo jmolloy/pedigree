@@ -23,10 +23,12 @@
 #include "AtaController.h"
 #include <Log.h>
 
+static int nController = 0;
+
 void probeDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
-  AtaController *pController = new AtaController(pDev);
+  AtaController *pController = new AtaController(pDev, nController++);
 
   // Replace pDev with pController.
   pController->setParent(pDev->getParent());
@@ -44,8 +46,8 @@ void searchNode(Device *pDev)
   {
     Device *pChild = pDev->getChild(i);
     // Is this a controller?
-//    if (pChild->getType() == Device::Controller)
-//    {
+    if (pChild->getType() == Device::Controller)
+    {
       // Check it's not an ATA controller already.
       String name;
       pChild->getName(name);
@@ -62,10 +64,10 @@ void searchNode(Device *pDev)
         }
         if (!strcmp(pChild->addresses()[j]->m_Name, "control"))
           foundControl = true;
-      }        
+      }
       if (foundCommand && foundControl)
         probeDevice(reinterpret_cast<Controller*> (pChild));
-//    }
+    }
     // Recurse.
     searchNode(pChild);
   }
