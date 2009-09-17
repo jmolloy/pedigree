@@ -13,7 +13,7 @@
 -- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 create table 'displays' (
-       'id' integer unique,
+       'id' integer primary key,
        'pointer' integer,
        'mode_id' integer);
 
