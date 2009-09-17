@@ -13,34 +13,14 @@
 -- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 create table 'displays' (
-       'id' integer primary key,
+       'id' integer unique,
        'pointer' integer,
+       'mode_id' integer);
+
+create table 'display-modes' (
+       'id' integer primary key,
        'mode_id' integer,
-       'available_modes_table' varchar(64));
-
-create table 'display-modes/0' (
-       'id' integer primary key,
-       'width' integer,
-       'height' integer,
-       'depth' integer,
-       'refresh' integer);
-
-create table 'display-modes/1' (
-       'id' integer primary key,
-       'width' integer,
-       'height' integer,
-       'depth' integer,
-       'refresh' integer);
-
-create table 'display-modes/2' (
-       'id' integer primary key,
-       'width' integer,
-       'height' integer,
-       'depth' integer,
-       'refresh' integer);
-
-create table 'display-modes/3' (
-       'id' integer primary key,
+       'display_id' integer,
        'width' integer,
        'height' integer,
        'depth' integer,

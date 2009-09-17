@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
     if(argc == 2 && !strcmp(argv[1], "list"))
     {
-        result = pedigree_config_query("select * from 'display-modes/0'");
+        result = pedigree_config_query("select * from 'display-modes'");
         if (result == -1)
             fprintf(stderr, "Unable to get the modes.\n");
 
@@ -39,16 +39,16 @@ int main(int argc, char **argv)
             printf("No modes\n");
         else
             while (pedigree_config_nextrow(result) == 0)
-                printf("Mode %ux%ux%u\n", pedigree_config_getnum_s(result, "width"), pedigree_config_getnum_s(result, "height"), pedigree_config_getnum_s(result, "depth"));
+                printf("Display[%d]: Mode %dx%dx%d\n", pedigree_config_getnum_s(result, "display_id"), pedigree_config_getnum_s(result, "width"), pedigree_config_getnum_s(result, "height"), pedigree_config_getnum_s(result, "depth"));
 
         pedigree_config_freeresult(result);
 
     }
     else if(argc == 3 && !strcmp(argv[1], "select"))
     {
-        if(sscanf(argv[2], "%ux%ux%u", &width, &height, &depth) == 3)
+        if(sscanf(argv[2], "%dx%dx%d", &width, &height, &depth) == 3)
         {
-            sprintf(buf, "select * from 'display-modes/0' where width = %u and height = %u and depth = %u", width, height, depth);
+            sprintf(buf, "select * from 'display-modes' where width = %d and height = %d and depth = %d and display_id = 0", width, height, depth);
             result = pedigree_config_query(buf);
             memset(buf, 0, 256);
             if (result == -1)
@@ -69,9 +69,9 @@ int main(int argc, char **argv)
             else
             {
                 memset(buf, 0, 256);
-                sprintf(buf, "update displays set mode_id = %u where id = 1", pedigree_config_getnum_s(result, "id"));
+                sprintf(buf, "update displays set mode_id = %d where id = 0", pedigree_config_getnum_s(result, "mode_id"));
                 pedigree_config_freeresult(result);
-                printf("Setting mode %ux%ux%u...\n", width, height, depth);
+                printf("Setting mode %dx%dx%d...\n", width, height, depth);
                 result = pedigree_config_query(buf);
                 memset(buf, 0, 256);
                 if (result == -1)
