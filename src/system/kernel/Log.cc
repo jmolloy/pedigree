@@ -35,10 +35,10 @@ Log::Log () :
     m_StaticEntryEnd(0),
     m_Buffer(),
     m_NumberType(Dec),
-    #ifdef LOG_TO_SERIAL
-    m_EchoToSerial(true)
-    #else
+    #ifdef DONT_LOG_TO_SERIAL
     m_EchoToSerial(false)
+    #else
+    m_EchoToSerial(true)
     #endif
 {
 }
