@@ -31,3 +31,9 @@ when OLD.mode_id <> NEW.mode_id
 begin
        update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('vbeModeChangedCallback', NEW.id, NEW.mode_id);
 end;
+
+create trigger 'display-mode-changed' after update of 'mode_id' on 'displays'
+when OLD.mode_id <> NEW.mode_id
+begin
+       update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('tuiModeChangedCallback');
+end;
