@@ -26,6 +26,7 @@
 
 #include "environment.h"
 #include <syscall.h>
+#include <syslog.h>
 
 #include <signal.h>
 
@@ -71,10 +72,7 @@ size_t nextConsoleNum = 1;
 
 void modeChanged(size_t width, size_t height)
 {
-    char str[64];
-    sprintf(str, "w: %d, h: %d\n", width, height);
-    log(str);
-
+    syslog(LOG_ALERT, "w: %d, h: %d\n", width, height);
 
     g_pHeader->setWidth(width);
 
@@ -230,8 +228,7 @@ int main (int argc, char **argv)
         if (cmd == TUI_MODE_CHANGED)
         {
             uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
-            sprintf(str, "u: %llx", u);
-            log(str);
+            syslog(LOG_ALERT, "u: %llx", u);
             modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
 
             continue;
