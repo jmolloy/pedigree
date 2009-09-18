@@ -23,6 +23,8 @@
 #include <utilities/Vector.h>
 #include <process/Scheduler.h>
 
+#include <network/ConnectionlessEndpoint.h>
+#include <network/ConnectionBasedEndpoint.h>
 #include <network/Endpoint.h>
 #include <network/Tcp.h>
 
@@ -87,52 +89,59 @@ class Socket : public File
     {
         NOTICE("Socket::select(" << bWriting << ", " << Dec << timeout << Hex << ")");
 
-        // Basically, this busy waits for data; the last thing you want to do is
-        // cancel execution of dataReady if it's blocking (with a timeout) as it
-        // won't be able to free the resources it uses or unregister the Timer it
-        // uses for the timeout.
-        if(!bWriting)
+        // Are we working with a connectionless endpoint?
+        if(m_Endpoint->getType() == Endpoint::Connectionless)
         {
-//            do
-//            {
-                int state = m_Endpoint->state();
-                if(m_Protocol == NETMAN_TYPE_TCP)
-                {
-                    if(state == Tcp::ESTABLISHED)
-                    {
-                        if(m_Endpoint->dataReady(timeout > 0, timeout))
-                            return 1;
-                    }
-                    else
-                        return 1; // not established, allow EOF from recv()
-                }
-                else if(m_Endpoint->dataReady(timeout > 0, timeout))
-                {
-                    return 1; // non-TCP sockets just need to check for data
-                }
-
-                Scheduler::instance().yield();
-//            }
-//            while(timeout != 0);
-
-              return 0;
-        }
-        else
-        {
-            if(m_Protocol == NETMAN_TYPE_TCP)
+            ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(m_Endpoint);
+            if(bWriting)
             {
-                do
-                {
-                    int state = m_Endpoint->state();
-                    if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
-                        return 1;
-
-                    Scheduler::instance().yield();
-                }
-                while(timeout != 0);
+                return 1;
             }
             else
-                return 1;
+            {
+                return ce->dataReady(timeout > 0, timeout) ? 1 : 0;
+            }
+        }
+        else if(m_Endpoint->getType() == Endpoint::ConnectionBased)
+        {
+            ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(m_Endpoint);
+            int state = ce->state();
+            if(m_Protocol == NETMAN_TYPE_TCP)
+            {
+                if(bWriting)
+                {
+                    /// \todo Need a proper function in Endpoint!
+                    do
+                    {
+                        if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
+                            return 1;
+
+                        Scheduler::instance().yield();
+                        state = ce->state();
+                    }
+                    while(timeout != 0);
+                }
+                else
+                {
+                    // Check for any data from the outset. This saves a block
+                    // and also serves to keep data being received even when
+                    // the connection is in a non-transfer state.
+                    if(ce->dataReady(false))
+                        return 1;
+
+                    // ESTABLISHED = data transfer
+                    if(state == Tcp::ESTABLISHED)
+                        return ce->dataReady(timeout > 0, timeout) ? 1 : 0;
+                    // Not established = let the application get EOF
+                    else if(state > Tcp::ESTABLISHED)
+                        return 1;
+                    // Before ESTABLISHED, not ready
+                    else
+                        return 0;
+                }
+            }
+            else
+                return 0;
         }
 
         return 0;

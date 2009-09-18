@@ -18,6 +18,7 @@
 #include <Log.h>
 #include <network/NetworkStack.h>
 #include <network/UdpManager.h>
+#include <network/ConnectionlessEndpoint.h>
 
 #include <processor/Processor.h>
 
@@ -205,7 +206,8 @@ void entry()
       continue; // loopback is already set
 
     IpAddress broadcast(0xffffffff);
-    Endpoint* e = UdpManager::instance().getEndpoint(broadcast, 68, 67);
+    ConnectionlessEndpoint* e = 
+        static_cast<ConnectionlessEndpoint *>(UdpManager::instance().getEndpoint(broadcast, 68, 67));
 
     #define BUFFSZ 2048
     uint8_t* buff = new uint8_t[BUFFSZ];

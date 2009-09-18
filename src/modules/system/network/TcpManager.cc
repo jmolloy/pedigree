@@ -300,6 +300,7 @@ void TcpManager::returnEndpoint(Endpoint* e)
   // and the connection released once it hits the CLOSED state.
   return;
 
+#if 0
   if(e)
   {
     // remove from the endpoint list
@@ -312,6 +313,7 @@ void TcpManager::returnEndpoint(Endpoint* e)
     // clean up the memory
     delete e;
   }
+#endif
 }
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)

@@ -20,6 +20,7 @@
 #include <network/TcpManager.h>
 #include <network/RawManager.h>
 #include <network/RoutingTable.h>
+#include <network/ConnectionBasedEndpoint.h>
 
 NetManager NetManager::m_Instance;
 
@@ -34,7 +35,12 @@ void Socket::decreaseRefCount(bool bIsWriter)
     {
         if (m_Endpoint)
         {
-            m_Endpoint->close();
+            m_Endpoint->shutdown(Endpoint::ShutBoth);
+            if(m_Endpoint->getType() == Endpoint::ConnectionBased)
+            {
+                ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(m_Endpoint);
+                ce->close();
+            }
             m_Endpoint->getManager()->returnEndpoint(m_Endpoint);
         }
         delete this;
@@ -83,7 +89,13 @@ void NetManager::removeEndpoint(File* f)
     Endpoint* e = getEndpoint(f);
     if (!e)
         return;
-    e->close();
+
+    e->shutdown(Endpoint::ShutBoth);
+    if(e->getType() == Endpoint::ConnectionBased)
+    {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(e);
+        ce->close();
+    }
 
     size_t removeIndex = f->getInode() & 0x00FFFFFF, i = 0;
     bool removed = false;
@@ -96,14 +108,6 @@ void NetManager::removeEndpoint(File* f)
             break;
         }
     }
-
-    //if(f->getSize() == NETMAN_TYPE_UDP)
-    //  UdpManager::instance().returnEndpoint(e);
-    //else if(f->getSize() == NETMAN_TYPE_TCP)
-    //  TcpManager::instance().returnEndpoint(e);
-
-    //if(f->getSize() == NETMAN_TYPE_RAW)
-    //  RawManager::instance().returnEndpoint(e);
 }
 
 bool NetManager::isEndpoint(File* f)
@@ -133,9 +137,11 @@ File* NetManager::accept(File* f)
     Socket *sock = static_cast<Socket *>(f);
 
     Endpoint* server = sock->getEndpoint();
-    if (server)
+    if(server && server->getType() == Endpoint::ConnectionBased)
     {
-        Endpoint* client = server->accept();
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(server);
+        Endpoint* client = ce->accept();
+
         File *ret = new Socket(sock->getProtocol(), client, this);
         ret->increaseRefCount(false);
         return ret;
@@ -152,8 +158,10 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
     Endpoint* p = sock->getEndpoint();
 
     int ret = 0;
-    if (p->isConnectionless())
+    if (p->getType() == Endpoint::Connectionless)
     {
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
+
         /// \note UDP specific todo
         /// \todo Actually, we only should read this data if it's from the IP specified
         ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
@@ -161,10 +169,13 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
         ///       and instead peek at the message (in other words, we need flags)
         Endpoint::RemoteEndpoint remoteHost;
         memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
-        ret = p->recv(buffer, size, bCanBlock, &remoteHost);
+        ret = ce->recv(buffer, size, bCanBlock, &remoteHost);
     }
     else
-        ret = p->recv(buffer, size, bCanBlock, false);
+    {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        ret = ce->recv(buffer, size, bCanBlock, false);
+    }
 
     return ret;
 }
@@ -177,12 +188,14 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
 
     Endpoint* p = sock->getEndpoint();
 
-    if (p->isConnectionless())
+    if (p->getType() == Endpoint::Connectionless)
     {
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
+
         Network *pCard = 0;
         Endpoint::RemoteEndpoint remoteHost;
         IpAddress remoteIp = p->getRemoteIp();
-        if (sock->getProtocol() == NETMAN_TYPE_UDP)
+        if(sock->getProtocol() == NETMAN_TYPE_UDP)
         {
             if (remoteIp.getIp() != 0)
             {
@@ -191,12 +204,17 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
                 pCard = RoutingTable::instance().DetermineRoute(remoteIp);
             }
         }
+        else
+        {
+            pCard = RoutingTable::instance().DefaultRoute();
+        }
 
-        return p->send(size, buffer, remoteHost, false, pCard);
+        return ce->send(size, buffer, remoteHost, false, pCard);
     }
     else
     {
-        return p->send(size, buffer);
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        return ce->send(size, buffer);
     }
 
     return 0;

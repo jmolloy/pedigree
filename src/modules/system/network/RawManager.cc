@@ -151,7 +151,7 @@ void RawManager::receive(uintptr_t payload, size_t payloadSize, Endpoint::Remote
   {
     RawEndpoint* e = reinterpret_cast<RawEndpoint*>((*it));
 
-    if(e->getType() == endType)
+    if(e->getRawType() == endType)
     {
         NOTICE("Depositing payload");
       e->depositPacket(payloadSize, payload, remoteHost);

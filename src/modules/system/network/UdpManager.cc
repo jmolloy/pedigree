@@ -124,9 +124,9 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
 {
   // is there an endpoint for this port?
-  Endpoint* e;
+  ConnectionlessEndpoint* e;
   StationInfo cardInfo = pCard->getStationInfo();
-  if((e = m_Endpoints.lookup(destPort)) != 0)
+  if((e = static_cast<ConnectionlessEndpoint *>(m_Endpoints.lookup(destPort))) != 0)
   {
     /** Should we pass on the packet? **/
     bool passOn = false;

@@ -15,3 +15,5 @@
  */
 
 #include "Endpoint.h"
+#include "ConnectionlessEndpoint.h"
+#include "ConnectionBasedEndpoint.h"
