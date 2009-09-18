@@ -117,6 +117,13 @@ public:
     m_SpecificType = str;
   }
 
+  /** PCI-specific location identifiers **/
+  void setPciPosition(uint32_t bus, uint32_t device, uint32_t func)
+  {
+    m_PciBusPos = bus;
+    m_PciDevicePos = device;
+    m_PciFunctionNum = func;
+  }
   /** PCI-specific identifiers - class code, subclass code, vendor and device ID **/
   void setPciIdentifiers(uint8_t classCode, uint8_t subclassCode, uint16_t vendorId, uint16_t deviceId, uint8_t progIf)
   {
@@ -150,6 +157,21 @@ public:
   uint8_t getPciProgInterface()
   {
     return m_ProgInterface;
+  }
+  /** Returns the PCI bus position for this device. */
+  uint32_t getPciBusPosition()
+  {
+    return m_PciBusPos;
+  }
+  /** Returns the PCI device position on the bus for this device. */
+  uint32_t getPciDevicePosition()
+  {
+    return m_PciDevicePos;
+  }
+  /** Returns the PCI Function number for this device. */
+  uint32_t getPciFunctionNumber()
+  {
+    return m_PciFunctionNum;
   }
 
   /** Dumps a textual representation of the device into the given string. */
@@ -255,6 +277,13 @@ protected:
   uint16_t m_DeviceId;
   /** PCI Programming Interface */
   uint8_t m_ProgInterface;
+
+  /** PCI Bus number */
+  uint32_t m_PciBusPos;
+  /** PCI Device number */
+  uint32_t m_PciDevicePos;
+  /** PCI Function number */
+  uint32_t m_PciFunctionNum;
 };
 
 #endif

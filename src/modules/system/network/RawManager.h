@@ -24,6 +24,7 @@
 
 #include "Manager.h"
 
+#include "ConnectionlessEndpoint.h"
 #include "Endpoint.h"
 #include "Ethernet.h"
 
@@ -31,7 +32,7 @@
  * The Pedigree network stack - RAW Endpoint
  * \todo This is really messy - needs a rewrite at some point!
  */
-class RawEndpoint : public Endpoint
+class RawEndpoint : public ConnectionlessEndpoint
 {
   public:
 
@@ -46,18 +47,22 @@ class RawEndpoint : public Endpoint
 
     /** Constructors and destructors */
     RawEndpoint() :
-      Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+      ConnectionlessEndpoint(), m_DataQueue(), m_DataQueueSize(0),
+      m_bAcceptAll(false), m_Type(RAW_WIRE)
     {};
 
     /** These shouldn't be used - totally pointless */
     RawEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+      ConnectionlessEndpoint(local, remote), m_DataQueue(),
+          m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
     {};
     RawEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
+      ConnectionlessEndpoint(remoteIp, local, remote), m_DataQueue(),
+      m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
     {};
     RawEndpoint(Type type) :
-      Endpoint(0, 0), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_Type(type)
+      ConnectionlessEndpoint(0, 0), m_DataQueue(), m_DataQueueSize(0),
+      m_bAcceptAll(false), m_Type(type)
     {};
     virtual ~RawEndpoint();
 
@@ -70,15 +75,14 @@ class RawEndpoint : public Endpoint
     /** Are there packets to read? */
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
 
-    /** Not relevant in this context
-    virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
-    virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; }; */
-
     /** Deposits a packet into this endpoint */
     virtual void depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost);
 
     /** What type is this endpoint? */
-    inline Type getType() {return m_Type;};
+    inline Type getRawType()
+    {
+        return m_Type;
+    }
 
     /** Shutdown on a RAW endpoint does nothing */
     virtual bool shutdown(ShutdownType what)

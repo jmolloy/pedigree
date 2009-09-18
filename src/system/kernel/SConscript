@@ -28,6 +28,7 @@ files = [
     'Service.cc',
     Glob('debugger/libudis86/*.c'),
     Glob('utilities/*.cc'),
+    Glob('utilities/sha1/*.cpp'),
     Glob('machine/*.cc'),
     Glob('linker/*.cc'),
     Glob('core/*.cc'),

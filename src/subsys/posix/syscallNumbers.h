@@ -134,6 +134,8 @@
 
 #define POSIX_SYSLOG     93
 
+#define POSIX_FTRUNCATE	 94
+
 #define POSIX_STUBBED    99
 
 #define PEDIGREE_LOGIN   101

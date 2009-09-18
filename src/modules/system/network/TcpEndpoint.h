@@ -23,6 +23,7 @@
 
 #include <Log.h>
 
+#include "ConnectionBasedEndpoint.h"
 #include "Endpoint.h"
 #include "TcpMisc.h"
 
@@ -32,36 +33,40 @@
  *        so we can actually bind properly if there's multiple
  *        cards with different configurations.
  */
-class TcpEndpoint : public Endpoint
+class TcpEndpoint : public ConnectionBasedEndpoint
 {
   public:
 
     /** Constructors and destructors */
     TcpEndpoint() :
-      Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
-      m_bConnected(false)
+      ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(),
+      m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
+      m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
-      m_bConnected(false)
+      ConnectionBasedEndpoint(local, remote), m_Card(0), m_ConnId(0),
+      m_RemoteHost(), m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
+      m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
-      m_bConnected(false)
+      ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
+      m_ConnId(0), m_RemoteHost(), m_DataStream(), nBytesRemoved(0),
+      m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false)
     {
       m_bConnection = true;
     };
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_Card(0), m_ConnId(connId), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
-      m_bConnected(false)
+      ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
+      m_ConnId(connId), m_RemoteHost(), m_DataStream(), nBytesRemoved(0),
+      m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false)
     {
       m_bConnection = true;
     };
@@ -114,9 +119,10 @@ class TcpEndpoint : public Endpoint
 
     /** Copy constructors */
     TcpEndpoint(const TcpEndpoint& s) :
-      Endpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), m_DataStream(),
-      nBytesRemoved(0), m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
-      m_bConnected(false)
+      ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(),
+      m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
+      m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false)
     {
       // shouldn't be called
       ERROR("Tcp: TcpEndpoint copy constructor has been called.");

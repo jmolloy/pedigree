@@ -197,7 +197,7 @@ private:
   Vector<DnsRequest*> m_DnsRequests;
   
   /// DNS communication endpoint
-  Endpoint* m_Endpoint;
+  ConnectionlessEndpoint* m_Endpoint;
 };
 
 #endif

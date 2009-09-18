@@ -44,11 +44,12 @@ Dns::~Dns()
 
 void Dns::initialise()
 {
-  m_Endpoint = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
-  m_Endpoint->acceptAnyAddress(true);
-  new Thread(Processor::information().getCurrentThread()->getParent(),
-             reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-             reinterpret_cast<void*>(this));
+    Endpoint *p = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
+    m_Endpoint = static_cast<ConnectionlessEndpoint *>(p);
+    m_Endpoint->acceptAnyAddress(true);
+    new Thread(Processor::information().getCurrentThread()->getParent(),
+               reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
+               reinterpret_cast<void*>(this));
 }
 
 int Dns::trampoline(void* p)
@@ -65,7 +66,7 @@ void Dns::mainThread()
   memset(buff, 0, 1024);
 
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
-  Endpoint* e = m_Endpoint;
+  ConnectionlessEndpoint* e = m_Endpoint;
 
   Endpoint::RemoteEndpoint remoteHost;
 
@@ -228,7 +229,7 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
   }
 
   // setup for our request
-  Endpoint* e = m_Endpoint;
+  ConnectionlessEndpoint* e = m_Endpoint;
 
   uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);

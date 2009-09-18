@@ -77,7 +77,7 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
 
 extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 {
-    size_t id = strtoul(pId, 0, 10) - 1;
+    size_t id = strtoul(pId, 0, 10);
     size_t mode_id = strtoul(pModeId, 0, 10);
 
     if (id >= g_nDisplays) return;
@@ -204,13 +204,13 @@ void entry()
   // Does the display already exist in the database?
   size_t mode_id = 0;
   String str;
-  str.sprintf("SELECT id FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
+  str.sprintf("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
   Config::Result *pResult = Config::instance().query(str);
   if (pResult->succeeded() && pResult->rows() == 1)
   {
       mode_id = pResult->getNum(0, "mode_id");
       delete pResult;
-      str.sprintf("UPDATE displays SET available_modes_table='display-modes/%d' WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
+      str.sprintf("UPDATE displays SET id=%d WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
       pResult = Config::instance().query(str);
       if (!pResult->succeeded())
           FATAL("Display update failed: " << pResult->errorMessage());
@@ -225,7 +225,7 @@ void entry()
   {
       delete pResult;
       mode_id = 0x117;
-      str.sprintf("INSERT INTO displays (pointer,mode_id,available_modes_table) VALUES (%d,%d,'display-modes/%d')", reinterpret_cast<uintptr_t>(pDisplay), 0x117, g_nDisplays);
+      str.sprintf("INSERT INTO displays VALUES (%d,%d,%d)", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay), 0x117);
       pResult = Config::instance().query(str);
       if (!pResult->succeeded())
           FATAL("Display insert failed: " << pResult->errorMessage());

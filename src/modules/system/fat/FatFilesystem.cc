@@ -49,7 +49,7 @@ bool isPowerOf2(uint32_t n)
 FatFilesystem::FatFilesystem() :
         m_Superblock(), m_Superblock16(), m_Superblock32(), m_FsInfo(), m_Type(FAT12), m_DataAreaStart(0),
         m_RootDirCount(0), m_FatSector(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(false), m_pRoot(0),
-        m_FatCache()
+        m_FatCache(), m_FreeClusterHint()
 {
 }
 
@@ -186,6 +186,9 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
     //m_pFatCache = new uint8_t[fatSz];
     //readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(m_pFatCache));
+
+    // Setup the free cluster hint for non-FAT32 volumes
+    m_FreeClusterHint = 2;
 
     // Define the root directory early
     getRoot();
@@ -417,7 +420,7 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
 
     uint32_t mask = m_Type == FAT32 ? 0x0FFFFFFF : 0xFFFF;
 
-    for (j = (m_Type == FAT32 ? m_FsInfo.FSI_NxtFree : 2); j < (totalSectors / m_Superblock.BPB_SecPerClus); j++)
+    for (j = (m_Type == FAT32 ? m_FsInfo.FSI_NxtFree : m_FreeClusterHint); j < (totalSectors / m_Superblock.BPB_SecPerClus); j++)
     {
         clus = getClusterEntry(j, false);
         if ((clus & mask) == 0)
@@ -429,12 +432,16 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
 
             // Clean out the cluster - anyone calling findFreeCluster wants to use the cluster
             // for data, so cleaning it up first is always a good thing!
+            /// \note Not sure exactly *what* I was thinking here...
+            /*
             uint8_t *tmpBuf = new uint8_t[m_BlockSize];
             memset(tmpBuf, 0, m_BlockSize);
             writeCluster(j, reinterpret_cast<uintptr_t>(tmpBuf));
             delete [] tmpBuf;
+            */
 
             // All done!
+            m_FreeClusterHint = j + 1;
             return j;
         }
     }
@@ -557,7 +564,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
     uint8_t* srcBuffer = reinterpret_cast<uint8_t*>(buffer);
 
-    // main read loop
+    // main write loop
     while (true)
     {
         // read in the entire cluster
@@ -1079,7 +1086,7 @@ String FatFilesystem::convertFilenameFrom(String filename)
 
 void FatFilesystem::truncate(File *pFile)
 {
-    NOTICE("truncate");
+    NOTICE("FatFilesystem::truncate");
 
     // First of all, set the file size to zero, so that if the file is used
     // elsewhere it's updated.

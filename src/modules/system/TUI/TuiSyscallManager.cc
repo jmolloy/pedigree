@@ -56,7 +56,7 @@ extern "C" void tuiModeChangedCallback()
     }
 
     /// \todo Multiple displays.
-    Config::Result *pResult = Config::instance().query("SELECT width,height FROM displays d, 'display-modes/0' m WHERE m.id=d.mode_id");
+    Config::Result *pResult = Config::instance().query("SELECT width,height FROM displays d, 'display-modes' m WHERE m.mode_id=d.mode_id");
     if (!pResult->succeeded() || !pResult->rows())
     {
         FATAL("Uh oh...");

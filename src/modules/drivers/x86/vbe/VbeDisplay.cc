@@ -40,7 +40,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     m_Buffers(), m_Allocator()
 {
     String str;
-    str.sprintf("DELETE FROM 'display-modes/%d'", displayNum);
+    str.sprintf("DELETE FROM 'display-modes' where display_id = %d", displayNum);
     Config::Result *pR = Config::instance().query(str);
     if (!pR->succeeded())
     {
@@ -53,7 +53,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
        it != m_ModeList.end();
        it++)
   {
-      str.sprintf("INSERT INTO 'display-modes/%d' (id,width,height,depth,refresh) VALUES (%d,%d,%d,%d,%d)", displayNum, (*it)->id, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
+      str.sprintf("INSERT INTO 'display-modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
       pR = Config::instance().query(str);
       if (!pR->succeeded())
       {

@@ -48,6 +48,7 @@ namespace Error
     IllegalSeek          =29,
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
+    OperationNotSupported=95,
     TimedOut             =116,
     InProgress           =119,
     Already              =120,

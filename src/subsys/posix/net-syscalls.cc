@@ -109,10 +109,10 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
-
-    int endpointState = p->state();
-    if (endpointState != 0xff)
+    if(p->getType() == Endpoint::ConnectionBased)
     {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        int endpointState = ce->state();
         if (endpointState < Tcp::CLOSED)
         {
             if (endpointState < Tcp::ESTABLISHED)
@@ -138,11 +138,13 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     bool success = false;
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
 
-        success = p->connect(remoteHost, blocking);
+        success = ce->connect(remoteHost, blocking);
 
         if (!blocking)
         {
@@ -156,12 +158,14 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         // to send to multiple addresses and receive from multiple clients
         // sendto and recvfrom must be used
 
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
+
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
 
-        p->setRemotePort(remoteHost.remotePort);
-        p->setRemoteIp(remoteHost.ip);
+        ce->setRemotePort(remoteHost.remotePort);
+        ce->setRemoteIp(remoteHost.ip);
         success = true;
     }
     else if (s->getProtocol() == NETMAN_TYPE_RAW)
@@ -194,10 +198,13 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
     bool success = false;
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        return p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        return ce->send(bufflen, reinterpret_cast<uintptr_t>(buff));
     }
     else if (s->getProtocol() == NETMAN_TYPE_UDP)
     {
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
+
         // special handling - need to check for a remote host
         IpAddress remoteIp = p->getRemoteIp();
         if (remoteIp.getIp() != 0)
@@ -205,7 +212,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
             Endpoint::RemoteEndpoint remoteHost;
             remoteHost.remotePort = p->getRemotePort();
             remoteHost.ip = remoteIp;
-            p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
+            ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteIp));
         }
     }
 
@@ -256,15 +263,18 @@ ssize_t posix_sendto(void* callInfo)
         ///       which probably means UDP gets a free sendto as well.
         ///       Until then, this is NOT valid according to the standards.
         ERROR("TCP sendto called, but not implemented properly!");
-        return p->send(bufflen, reinterpret_cast<uintptr_t>(buff));
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        return ce->send(bufflen, reinterpret_cast<uintptr_t>(buff));
     }
     else if (s->getProtocol() == NETMAN_TYPE_UDP || s->getProtocol() == NETMAN_TYPE_RAW)
     {
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
+
         Endpoint::RemoteEndpoint remoteHost;
         const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
         remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
-        return p->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteHost.ip));
+        return ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, RoutingTable::instance().DetermineRoute(remoteHost.ip));
     }
 
     return -1;
@@ -294,7 +304,8 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
     int ret = -1;
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, flags & MSG_PEEK);
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+        ret = ce->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, flags & MSG_PEEK);
     }
     else if (s->getProtocol() == NETMAN_TYPE_UDP)
     {
@@ -302,8 +313,9 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
         ///       during connect - otherwise we fail (UDP should use sendto/recvfrom)
         ///       However, to do that we need to tell recv not to remove from the queue
         ///       and instead peek at the message (in other words, we need flags)
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
         Endpoint::RemoteEndpoint remoteHost;
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
+        ret = ce->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
     }
 
     return ret;
@@ -342,7 +354,9 @@ ssize_t posix_recvfrom(void* callInfo)
     int ret = -1;
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, true, flags & MSG_PEEK);
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+
+        ret = ce->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, flags & MSG_PEEK);
 
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(p->getRemotePort());
@@ -351,11 +365,10 @@ ssize_t posix_recvfrom(void* callInfo)
     }
     else if (s->getProtocol() == NETMAN_TYPE_UDP || s->getProtocol() == NETMAN_TYPE_RAW)
     {
-        if (blocking && (s->getProtocol() != NETMAN_TYPE_RAW))
-            p->dataReady(true);
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
 
         Endpoint::RemoteEndpoint remoteHost;
-        ret = p->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
+        ret = ce->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
 
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(remoteHost.remotePort);
@@ -417,11 +430,30 @@ int posix_listen(int sock, int backlog)
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
     Socket *s = static_cast<Socket *>(f->file);
     if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
 
     Endpoint* p = s->getEndpoint();
+    if(p->getType() != Endpoint::ConnectionBased)
+    {
+        SYSCALL_ERROR(OperationNotSupported);
+        return -1;
+    }
 
-    p->listen();
+    ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+
+    if(s->getProtocol() == NETMAN_TYPE_TCP)
+    {
+        if((ce->state() != Tcp::CLOSED) || (ce->state() != Tcp::UNKNOWN))
+        {
+            SYSCALL_ERROR(InvalidArgument);
+            return -1;
+        }
+    }
+
+    ce->listen();
 
     return 0;
 }

@@ -24,6 +24,7 @@
 
 #include "Manager.h"
 
+#include "ConnectionlessEndpoint.h"
 #include "Endpoint.h"
 #include "Udp.h"
 
@@ -33,19 +34,24 @@
  *        so we can actually bind properly if there's multiple
  *        cards with different configurations.
  */
-class UdpEndpoint : public Endpoint
+class UdpEndpoint : public ConnectionlessEndpoint
 {
   public:
 
     /** Constructors and destructors */
     UdpEndpoint() :
-      Endpoint(), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true), m_bCanRecv(true)
+      ConnectionlessEndpoint(), m_DataQueue(), m_DataQueueSize(0),
+      m_bAcceptAll(false), m_bCanSend(true), m_bCanRecv(true)
     {};
     UdpEndpoint(uint16_t local, uint16_t remote) :
-      Endpoint(local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true), m_bCanRecv(true)
+      ConnectionlessEndpoint(local, remote), m_DataQueue(),
+      m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true),
+      m_bCanRecv(true)
     {};
     UdpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-      Endpoint(remoteIp, local, remote), m_DataQueue(), m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true), m_bCanRecv(true)
+      ConnectionlessEndpoint(remoteIp, local, remote), m_DataQueue(),
+      m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true),
+      m_bCanRecv(true)
     {};
 
     virtual ~UdpEndpoint() {};

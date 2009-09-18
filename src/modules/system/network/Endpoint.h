@@ -26,6 +26,10 @@ class ProtocolManager;
 
 /**
  * The Pedigree network stack - Protocol Endpoint
+ *
+ * Some features are global across Endpoints; they are provided here. Other
+ * features are specific to connectionless and connection-based Endpoints,
+ * which are handled by separate object definitions.
  */
 class Endpoint
 {
@@ -33,6 +37,16 @@ private:
     Endpoint(const Endpoint &e);
     const Endpoint& operator = (const Endpoint& e);
 public:
+
+    /** Type of this endpoint */
+    enum EndpointType
+    {
+        /** Connectionless - UDP, RAW */
+        Connectionless = 0,
+
+        /** Connection-based - TCP */
+        ConnectionBased
+    };
 
     /** shutdown() parameter */
     enum ShutdownType
@@ -58,6 +72,9 @@ public:
             m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp), m_Manager(0), m_bConnection(false)
     {};
     virtual ~Endpoint() {};
+
+    /** Endpoint type (implemented by the concrete child classes) */
+    virtual EndpointType getType() = 0;
 
     /** Access to internal information */
     uint16_t getLocalPort()
@@ -94,24 +111,24 @@ public:
         m_RemoteIp = remote;
     }
 
-    /** Special address type, like stationInfo but with port info too */
+    /**
+     * Special address type, like stationInfo but with information about
+     * the remote host's port for communications.
+     */
     struct RemoteEndpoint
     {
         RemoteEndpoint() :
                 ip(), remotePort(0)
         {};
 
-        IpAddress ip; // either IPv4 or IPv6
+        /// IpAddress will handle IPv6 and IPv4
+        IpAddress ip;
+
+        /// Remote host's port
         uint16_t remotePort;
     };
 
-    /** What state is the endpoint in? Only really relevant for connection-based sockets I guess */
-    virtual int state()
-    {
-        return 0xff; // defaults to the standard state for non-connectable sockets
-    }
-
-    /** Is data ready to recv yet? */
+    /** Is data ready to receive? */
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
         return false;
@@ -125,56 +142,10 @@ public:
     /** All endpoint types must provide a shutdown() method that shuts part of the socket */
     virtual bool shutdown(ShutdownType what) = 0;
 
-    /** Connectionless endpoints */
-    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
-    {
-        return -1;
-    };
-    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost)
-    {
-        return -1;
-    };
-    virtual inline bool acceptAnyAddress()
-    {
-        return false;
-    };
-    virtual inline void acceptAnyAddress(bool accept) {};
-
-    /** Connection-based endpoints */
-    virtual bool connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock = true)
-    {
-        return false;
-    };
-    virtual void close()
-    {
-    };
-
-    virtual void listen()
-    {
-    };
-    virtual Endpoint* accept()
-    {
-        return 0;
-    };
-
-    virtual int send(size_t nBytes, uintptr_t buffer)
-    {
-        return -1;
-    };
-    virtual int recv(uintptr_t buffer, size_t maxSize, bool block, bool bPeek)
-    {
-        return -1;
-    };
-
-    virtual inline uint32_t getConnId()
-    {
-        return 0;
-    }
-
-    virtual void setRemoteHost(RemoteEndpoint host)
-    {
-    };
-
+    /**
+     * This would allow an Endpoint to switch cards to utilise the best route
+     * for a return packet. I'm not sure if it's used or not.
+     */
     virtual void setCard(Network* pCard)
     {
     };

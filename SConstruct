@@ -25,11 +25,11 @@ from datetime import *
 ####################################
 defines = [
     'THREADS',                  # Enable threading
-    #'DEBUGGER',                 # Enable the debugger
+    #'DEBUGGER',                # Enable the debugger
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     #'SMBIOS',                  # Enable SMBIOS
     'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
-    'ECHO_CONSOLE_TO_SERIAL',   # Puts the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0)
+    #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
     'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH',
     'ADDITIONAL_CHECKS',
     'BITS_32',
@@ -45,11 +45,11 @@ if 'DEBUGGER' in defines:
     ]
 
 # Default CFLAGS
-# 
+#
 default_cflags = '-std=gnu99 -march=i486 -fno-builtin -nostdinc -nostdlib -ffreestanding -m32 -g0 -O3 '
 
 # Default CXXFLAGS
-# 
+#
 default_cxxflags = '-std=gnu++98 -march=i486 -fno-builtin -nostdinc -nostdlib -ffreestanding -fno-rtti -fno-exceptions -m32 -g0 -O3 '
 
 # Entry level warning flags
@@ -89,10 +89,10 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
-    
+
     BoolVariable('CRIPPLE_HDD','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
-    
+
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
@@ -100,7 +100,7 @@ opts.AddVariables(
     BoolVariable('installer', 'Build the installer', 0),
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
-    
+
     ####################################
     # These options are NOT TO BE USED on the command line!
     # They're here because they need to be saved through runs.
@@ -139,7 +139,7 @@ if env['genflags']:
 
     if env['CC_NOCACHE'] == '':
         env['CC_NOCACHE'] = env['CC']
-    
+
     # Set the compilers if CROSS is not an empty string
     if env['CROSS'] != '':
         crossBase = env['CROSS']
@@ -150,7 +150,7 @@ if env['genflags']:
         env['CC_NOCACHE'] = crossBase + 'gcc'
         env['CXX'] = prefix + crossBase + 'g++'
         env['AS'] = prefix + crossBase + 'as'
-        
+
         # AR and LD never have the prefix added. They must run on the host.
         env['AR'] = crossBase + 'ar'
         env['LD'] = crossBase + 'gcc'
@@ -176,25 +176,25 @@ if env['genflags']:
         if re.match('i[3456]86',tmp.group(1)) != None:
             defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
             #^-- Should provide overloads for these...like machine=ARM_VOLITILE
-            
+
             env['ARCH_TARGET'] = 'X86'
         elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
             defines += ['X64']
-            
+
             env['ARCH_TARGET'] = 'X64'
         elif re.match('ppc|powerpc',tmp.group(1)) != None:
             defines += ['PPC']
-            
+
             env['ARCH_TARGET'] = 'PPC'
         elif re.match('arm',tmp.group(1)) != None:
             defines += ['ARM']
-            
+
             env['ARCH_TARGET'] = 'ARM'
 
     # Default to x86 if something went wrong
     else:
         env['ARCH_TARGET'] = 'X86'
-            
+
     # LIBGCC path
     if env['LIBGCC'] == '':
         # Because Windows is *gay* at running commands.getouput() properly...
@@ -204,17 +204,17 @@ if env['genflags']:
         if not os.path.exists(libgccPath):
             print "Error: libgcc path could not be determined. Use the LIBGCC option."
             Exit(1)
-        
+
         # Not out of the woods yet, Windows-specific hackery!
         # Only required if you use a MinGW-based cross-compiler (they're faster <3)
         if ':' in libgccPath:
             # Probably a Windows path... Colons really shouldn't be anywhere else
             drive = libgccPath[0:1]
             libgccPath = libgccPath[len('a:'):]
-            
+
             # Assume Cygwin. Someone's going to kill me over this.
             libgccPath = "/cygdrive/" + drive + libgccPath
-        
+
         env['LIBGCC'] = os.path.dirname(libgccPath)
 
     # NASM is used for X86 and X64 builds
@@ -237,10 +237,10 @@ if env['genflags']:
 
     if env['installer']:
         defines += ['INSTALLER']
-    
+
     if env['debugger']:
 		defines += ['DEBUGGER']
-    
+
     if env['CRIPPLE_HDD']:
         defines += ['CRIPPLE_HDD']
 
@@ -250,7 +250,7 @@ if env['genflags']:
     env['CPPDEFINES'] = []
     env['CPPDEFINES'] = [i for i in defines]
     #^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
-    
+
     # Don't regenerate until we really have to
     env['genflags'] = False
 

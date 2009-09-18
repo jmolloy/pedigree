@@ -38,12 +38,16 @@
 class AtaController : public Controller, public RequestQueue, public IrqHandler
 {
 public:
-  AtaController(Controller *pDev);
+  AtaController(Controller *pDev, int nController = 0);
   ~AtaController();
 
   virtual void getName(String &str)
   {
-    str = "ata";
+      TinyStaticString s;
+      s.clear();
+      s += "ata-";
+      s.append(m_nController);
+      str = String(static_cast<const char*>(s));
   }
 
   virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
@@ -57,6 +61,8 @@ public:
 private:
   AtaController(const AtaController&);
   void operator =(const AtaController&);
+
+  int m_nController;
 };
 
 #endif

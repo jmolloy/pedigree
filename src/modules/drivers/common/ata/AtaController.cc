@@ -18,8 +18,8 @@
 #include <machine/Machine.h>
 #include <processor/Processor.h>
 
-AtaController::AtaController(Controller *pDev) :
-  Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0)
+AtaController::AtaController(Controller *pDev, int nController) :
+  Controller(pDev), m_pCommandRegs(0), m_pControlRegs(0), m_nController(nController)
 {
   setSpecificType(String("ata-controller"));
 
