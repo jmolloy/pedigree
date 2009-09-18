@@ -1,0 +1,5 @@
+create trigger 'display-mode-selected-tui' after update of 'mode_id' on 'displays'
+when OLD.mode_id <> NEW.mode_id
+begin
+       update trigger_dumpzone set rubbish=PEDIGREE_CALLBACK('tuiModeChangedCallback');
+end;
