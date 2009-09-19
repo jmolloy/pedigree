@@ -228,11 +228,9 @@ PosixSubsystem::~PosixSubsystem()
     // Clean up memory mapped files (that haven't been unmapped...)
     for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
     {
-        uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
-        MemoryMappedFile *p = reinterpret_cast<MemoryMappedFile*>(it.value());
-
-        assert(p);
-        if(p->pFile)
+        //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
+        MemoryMappedFile *pFile = unmapFile(it.key());
+        if(pFile)
         {
             // It better handle files that've already been unmapped...
             MemoryMappedFileManager::instance().unmap(pFile);
