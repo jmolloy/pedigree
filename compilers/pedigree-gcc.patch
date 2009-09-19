@@ -25,7 +25,7 @@ diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 +  } while(0);
 +
 +#undef TARGET_VERSION
-+#define TARGET_VERSION fprintf(stderr, " (i386 pedigree)")
++#define TARGET_VERSION fprintf(stderr, " (i386/x86_64 pedigree)")
 +#undef STARTFILE_SPEC
 +#define STARTFILE_SPEC "%{!shared: \
 +                        %{!symbolic: \
@@ -51,11 +51,16 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
  *-*-elf)
    # Assume that newlib is being used and so __cxa_atexit is provided.
    default_use_cxa_atexit=yes
-@@ -1070,6 +1076,11 @@ hppa[12]*-*-hpux11*)
+@@ -1070,6 +1076,16 @@ hppa[12]*-*-hpux11*)
  	use_collect2=yes
  	gas=yes
  	;;
 +i[3-7]86-*-pedigree*)
++  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
++  tmake_file="i386/t-i386elf t-svr4"
++  use_fixproto=yes
++  ;;
++x86_64-*-pedigree*)
 +  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
 +  tmake_file="i386/t-i386elf t-svr4"
 +  use_fixproto=yes
@@ -81,11 +86,14 @@ diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/cro
 diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
 --- gcc-4.4.1-orig/libgcc/config.host	2009-04-17 21:58:42.000000000 +1000
 +++ gcc-4.4.1/libgcc/config.host	2009-08-17 16:51:35.312742600 +1000
-@@ -287,6 +287,9 @@ i[34567]86-*-netbsd*)
+@@ -287,6 +287,12 @@ i[34567]86-*-netbsd*)
  	;;
  x86_64-*-netbsd*)
  	;;
 +i[34567]86-*-pedigree*)
++	extra_parts="crtbegin.o crtend.o"
++	;;
++x86_64-*-pedigree*)
 +	extra_parts="crtbegin.o crtend.o"
 +	;;
  i[34567]86-*-openbsd2.*|i[34567]86-*openbsd3.[0123])
