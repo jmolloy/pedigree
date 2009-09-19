@@ -20,7 +20,7 @@ then
     exit
 fi
 
-for f in `find -name schema`
+for f in `find -name schema | tac`
 do
     sqlite3 build/config.db <$f
 done

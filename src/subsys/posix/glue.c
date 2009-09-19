@@ -862,11 +862,15 @@ int socketpair(int domain, int type, int protocol, int sock_vec[2])
     return -1;
 }
 
+#define INET_ADDR_INVALID   ((in_addr_t)(-1))
+
 int inet_addr(const char *cp)
 {
+    syslog(LOG_NOTICE, "[%d] inet_addr(%s)", getpid(), (cp ? cp : "<invalid>"));
+
     // Valid string?
     if(!cp || !*cp)
-        return 0;
+        return INET_ADDR_INVALID;
 
     // Reallocate the string so the memory can be modified
     char* tmp = (char*) malloc(strlen(cp) + 1);
@@ -884,7 +888,7 @@ int inet_addr(const char *cp)
         if(!isdigit(test) && (test != '.'))
         {
             free(tmp_ptr);
-            return 0;
+            return INET_ADDR_INVALID;
         }
     }
 
@@ -935,7 +939,7 @@ int inet_addr(const char *cp)
             // This shouldn't be reachable, but you never know
             case 1:
             default:
-                ret = 0;
+                ret = INET_ADDR_INVALID;
         }
 
         // All done
@@ -968,6 +972,8 @@ int inet_aton(const char *cp, struct in_addr *inp)
 
 struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
 {
+    syslog(LOG_NOTICE, "[%d] gethostbyaddr", getpid());
+
     static struct hostent ret;
     if (syscall4(POSIX_GETHOSTBYADDR, (int) addr, len, type, (int) &ret) != 0)
         return &ret;
@@ -976,6 +982,8 @@ struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
 
 struct hostent* gethostbyname(const char *name)
 {
+    syslog(LOG_NOTICE, "[%d] gethostbyname(%s)", getpid(), (name ? name : "<invalid>"));
+
     static struct hostent* ret = 0;
     if (ret == 0)
         ret = (struct hostent*) malloc(512);
@@ -1388,6 +1396,13 @@ void freeaddrinfo(struct addrinfo *ai)
 ///       Biggest improvement would be moving into the kernel
 int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res)
 {
+    syslog(LOG_NOTICE, "[%d] getaddrinfo(%s, %s, %x, %x)", getpid(),
+                                                           (nodename ? nodename : "<invalid>"),
+                                                           (servname ? servname : "<invalid>"),
+                                                           hints,
+                                                           res
+                                                           );
+
     // Validate incoming arguments
     if(!res)
     {

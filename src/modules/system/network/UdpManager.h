@@ -59,7 +59,7 @@ class UdpEndpoint : public ConnectionlessEndpoint
     /** Application interface */
     virtual int state() {return 0xff;} // 0xff signifies UDP
     virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard);
-    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost);
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost, int nTimeout = 30);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
     virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
     virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; };
@@ -84,8 +84,10 @@ class UdpEndpoint : public ConnectionlessEndpoint
     struct DataBlock
     {
       DataBlock() :
-        size(0), offset(0), ptr(0), remoteHost()
+        magic(0xdeadbeef), size(0), offset(0), ptr(0), remoteHost()
       {};
+
+      uint32_t magic; // 0xdeadbeef
 
       size_t size;
       size_t offset; // if we only do a partial read, this is filled

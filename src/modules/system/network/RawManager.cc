@@ -65,9 +65,23 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
   return -1;
 };
 
-int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::RemoteEndpoint* remoteHost)
+int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::RemoteEndpoint* remoteHost, int nTimeout)
 {
-  if(dataReady(bBlock, 0))
+  // Check for data to be ready. dataReady (acquire) takes one from the Semaphore,
+  // so using dataReady *again* to see if data is available is *wrong* unless
+  // the queue is empty.
+  bool bDataReady = false;
+  if(m_DataQueue.count())
+    bDataReady = true;
+  else if(bBlock)
+  {
+    if(!dataReady(true, nTimeout))
+      bDataReady = false;
+  }
+  else
+    bDataReady = false;
+
+  if(bDataReady)
   {
     DataBlock* ptr = m_DataQueue.popFront();
 
@@ -118,9 +132,10 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
     // Attempt to avoid setting up the timeout if possible
     if(m_DataQueueSize.tryAcquire())
         return true;
+    else if(!block)
+        return false;
 
     // Otherwise jump straight into blocking
-    bool timedOut = false;
     if(block)
     {
         if(tmout)
@@ -129,9 +144,9 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
             m_DataQueueSize.acquire();
 
         if(Processor::information().getCurrentThread()->wasInterrupted())
-            timedOut = true;
+            return false;
     }
-    return !timedOut;
+    return true;
 }
 
 void RawManager::receive(uintptr_t payload, size_t payloadSize, Endpoint::RemoteEndpoint* remoteHost, int type, Network* pCard)
