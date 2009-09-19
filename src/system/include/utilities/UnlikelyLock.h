@@ -17,6 +17,7 @@
 #ifndef UNLIKELY_LOCK_H
 #define UNLIKELY_LOCK_H
 
+#include <processor/Processor.h>
 #include <Atomic.h>
 
 /** \file UnlikelyLock.h
