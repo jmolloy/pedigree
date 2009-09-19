@@ -14,162 +14,197 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;
 
-; void PerProcessorScheduler::contextSwitch(uintptr_t&,uintptr_t&,uintptr_t&)
-global _ZN21PerProcessorScheduler13contextSwitchERmS0_RVm
-; void PerProcessorScheduler::launchThread(uintptr_t&,uintptr_t&,uintptr_t,uintptr_t,uintptr_t, uintptr_t)
-global _ZN21PerProcessorScheduler12launchThreadERmRVmmmmm
-; void PerProcessorScheduler::launchThread(uintptr_t&,uintptr_t&,SyscallState&)
-global _ZN21PerProcessorScheduler12launchThreadERmRVmR15X64SyscallState
-; void Processor::deleteThreadThenContextSwitch(Thread*,uintptr_t&)
-global _ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm
-
-; void PerProcessorScheduler::deleteThread(Thread*)
-extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
-; void Thread::threadExited()
-extern _ZN6Thread12threadExitedEv
+; bool Processor::saveState(SchedulerState &)
+global _ZN9Processor9saveStateER17X64SchedulerState
+; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
+global _ZN9Processor12restoreStateER17X64SchedulerStatePVm
+; void Processor::restoreState(volatile uintptr_t *, SyscallState &)
+global _ZN9Processor12restoreStateER16X64SyscallStatePVm
+; void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
+;                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+global _ZN9Processor10jumpKernelEPVmmmmmmm
+; void Processor::jumpUser(volatile uintptr_t *, uintptr_t, uintptr_t,
+;                          uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+global _ZN9Processor8jumpUserEPVmmmmmmm
+; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
+global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X64SchedulerState
 
 [bits 64]
 [section .text]
 
-; [rdx]    pCurrentThread->lock
-; [rsi]    pNextThread->state
-; [rdi]    pCurrentThread->state
-; [rsp+0]  <Return address>
-_ZN21PerProcessorScheduler13contextSwitchERmS0_RVm:
-    ; Push the two registers we need to save.
-    push   rbp
-    push   rbx
-    push   r12
-    push   r13
-    push   r14
-    push   r15
+; [rdi] State pointer.
+_ZN9Processor9saveStateER17X86SchedulerState:
+    ;; Save the stack pointer (without the return address)
+    mov     rax, rsp
+    add     rax, 8
 
-    ; Save the stack pointer to pCurrentThread->state.
-    mov    [rdi], rsp
+    ;; Save the return address.
+    mov     rdx, [rsp]
 
-    ; Switch stacks.
-    mov    rsp, [rsi]
+    mov     [rdi+0], r8
+    mov     [rdi+8], r9
+    mov     [rdi+16], r10
+    mov     [rdi+24], r11
+    mov     [rdi+32], r12
+    mov     [rdi+40], r13
+    mov     [rdi+48], r14
+    mov     [rdi+56], r15
+    mov     [rdi+64], rbx
+    mov     [rdi+72], rbp
+    mov     [rdi+80], rax
+    mov     [rdi+88], rdx
 
-    ; Unlock the current thread.
-    mov    qword [rdx], 1
-
-    ; Unsave registers and return.
-    pop    r15
-    pop    r14
-    pop    r13
-    pop    r12
-    pop    rbx
-    pop    rbp
+    ;; Return false.
+    xor     rax, rax
     ret
 
-; [rsi]    pNextThread->state
-; [rdi]    pThread
-; [rsp+0]  <Return address>
-_ZN21PerProcessorScheduler29deleteThreadThenContextSwitchEP6ThreadRm:
-    ; Switch stacks.
-    mov esp, [rsi]
+; [rsi] Lock.
+; [rdi] State pointer.
+_ZN9Processor12restoreStateER17X64SchedulerStatePVm:
+    ;; Reload all callee-save registers.
+    mov     r8, [rdi+0]
+    mov     r9, [rdi+8]
+    mov     r10, [rdi+16]
+    mov     r11, [rdi+24]
+    mov     r12, [rdi+32]
+    mov     r13, [rdi+40]
+    mov     r14, [rdi+48]
+    mov     r15, [rdi+56]
+    mov     rbx, [rdi+64]
+    mov     rbp, [rdi+72]
+    mov     rax, [rdi+80]
+    mov     rdx, [rdi+88]
 
-    ; Save rdi (pThread) first, in case deleteThread mashes it (it's caller-save)
-    mov r12, rdi
+    ;; Ignore lock if none given (rcx == 0).
+    cmp     rsi, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     qword [rsi], 1
+.no_lock:
 
-    ; Call PerProcessorScheduler::deleteThread on the old thread (param already in rdi)
-    call _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+    ;; Return true.
+    xor     rax, rax
+    inc     rax
 
-    ; Now do the actual task switch.
-    pop    r15
-    pop    r14
-    pop    r13
-    pop    r12
-    pop    rbx
-    pop    rbp
+    ;; No need to push anything on the stack, as everything here is register-call.
     ret
 
-; [r9]     bUsermode
-; [r8]     param
-; [rcx]    func
-; [rdx]    pNextThread->stack
-; [rsi]    pCurrentThread->lock
-; [rdi]    pCurrentThread->state
-; [rsp+0]  <Return address>
-_ZN21PerProcessorScheduler12launchThreadERmRVmmmmm:
-    cli
-    
-    ; Create a properly formed stack frame for contextSwitch.
-    push   rbp
-    push   rbx
-    push   r12
-    push   r13
-    push   r14
-    push   r15
-    
-    ; And set state to be the current stack pointer.
-    mov    [rdi], rsp
+; [rsi] Lock
+; [rdi] State pointer.
+_ZN9Processor12restoreStateER16X64SyscallStatePVm:
+    ;; The state pointer is on this thread's kernel stack, so change to it.
+    mov     rsp, rdi
 
-    ; We don't need the old stack any more - switch.
-    mov    rsp, rdx
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     rsi, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     qword [rsi], 1
+.no_lock:
 
-    ; Unlock the old thread.
-    mov    dword [rsi], 1
+;; Restore the registers
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     r10
+    pop     r9
+    pop     r8
+    pop     rbp
+    pop     rsi
+    pop     rdi
+    pop     rdx
+    pop     rbx
+    pop     rax
+    pop     r11
+    pop     rcx
+    pop     rsp
 
-    ; New stack frame.
-    xor    rbp, rbp
+    sysret
 
-    ; Set up the target stack, initially.
-    mov    rdi, r8		       ; Parameter in rdi.
-    mov    rsi, _ZN6Thread12threadExitedEv
-    push   rsi	                       ; Return address on the stack.
+; [rsp+0x8] param3
+; [rsp+0x0] return address
+; [r9]     param2
+; [r8]     param1
+; [rcx]    param0
+; [rdx]    stack
+; [rsi]    address
+; [rdi]    Lock
+_ZN9Processor10jumpKernelEPVmmmmmmm:
+    ;; Load the lock pointer, address and stack to scratch registers.
+    mov     r10, rdi
+    mov     rax, rsi
+    mov     r12, rdx
 
-    ; Jumping to user mode? go to .jump_to_user_mode.
-    cmp    r9, 0
-    jne    .jump_to_user_mode
+    ;; Load the parameters into regcall registers.
+    mov     rdi, rcx
+    mov     rsi, r8
+    mov     rdx, r9
+    mov     rcx, [rsp+8]
 
+    ;; Change stacks.
+    cmp     r12, 0
+    jz      .no_stack_change
+    mov     rsp, r12
+.no_stack_change:
+
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     r10, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     qword [r10], 1
+.no_lock:
+
+    ;; Push return address.
+    push    qword _ZN6Thread12threadExitedEv
+
+    ;; New stack frame.
+    xor     rbp, rbp
+    ;; Enable interrupts and jump.
     sti
-    jmp    rcx
+    jmp     rax
 
-.jump_to_user_mode:
-    ; Syscall return. There's nothing more needed. Stack is set up, and new RIP is in RCX.
+; [rsp+0x8] param3
+; [rsp+0x0] return address
+; [r9]     param2
+; [r8]     param1
+; [rcx]    param0
+; [rdx]    stack
+; [rsi]    address
+; [rdi]    Lock
+_ZN9Processor8jumpUserEPVmmmmmmm:
+    ;; Load the lock pointer, address and stack to scratch registers.
+    mov     r10, rdi
+    mov     rax, rsi
+    mov     r12, rdx
+
+    ;; Load the parameters into regcall registers.
+    mov     rdi, rcx
+    mov     rsi, r8
+    mov     rdx, r9
+    mov     r15, [rsp+8]    ; Note different register from calling convention: RCX get clobbered!
+
+    ;; Change stacks.
+    mov     rsp, r12
+
+    ;; Stack changed, now we can unlock the old thread.
+    cmp     r10, 0
+    jz      .no_lock
+    ;; Release lock.
+    mov     qword [r10], 1
+.no_lock:
+
+    ;; Push return address.
+    push    qword _ZN6Thread12threadExitedEv
+
+    ;; New stack frame.
+    xor     rbp, rbp
+    ;; RFLAGS: interrupts enabled.
+    mov     r11, 0x200
+    ;; Enable interrupts and jump.
+    sti
     sysret
-    
-; [rdx]    SyscallState (kernel stack)
-; [rsi]    pCurrentThread->lock
-; [rdi]    pCurrentThread->state
-; [rsp+0]  <Return address>
-_ZN21PerProcessorScheduler12launchThreadERmRVmR15X64SyscallState:
-    cli
 
-    ; Create a properly formed stack frame for contextSwitch.
-    push   rbp
-    push   rbx
-    push   r12
-    push   r13
-    push   r14
-    push   r15
-    
-    ; And set state to be the current stack pointer.
-    mov    [rdi], rsp
-
-    ; We don't need the old stack any more - switch.
-    mov    rsp, rdx
-
-    ; Unlock the old thread.
-    mov    dword [rsi], 1
-
-    ; At this point we prepare for the jump to the next task.
-    pop    r15
-    pop    r14
-    pop    r13
-    pop    r12
-    pop    r10
-    pop    r9	
-    pop    r8
-    pop    rbp
-    pop    rsi
-    pop    rdi
-    pop    rdx
-    pop    rbx
-    pop    rax
-    pop    r11
-    pop    rcx
-    pop    rsp
-
-    sysret
+_ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X64SchedulerState:
+    ;; TODO
+    int3

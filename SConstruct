@@ -173,8 +173,8 @@ if env['genflags']:
 
         if re.match('i[3456]86',tmp.group(1)) != None:
             defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN','BITS_32','KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
-            default_cflags += '-march=i486'
-            default_cxxflags += '-march=i486'
+            env['CFLAGS'] += ' -march=i486'
+            env['CXXFLAGS'] += ' -march=i486'
             env['ASFLAGS'] += '32'
             #^-- Should provide overloads for these...like machine=ARM_VOLITILE
 

@@ -93,13 +93,15 @@ if not len(posix_files) == 0:
     build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
 # TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
-glueFlags = ""
+glueFlags = "-fno-exceptions"
 if env['ARCH_TARGET'] == 'X64':
     glueFlags = "-mcmodel=small -fPIC " + glueFlags
     
 tmp_glue = tmp.Clone()
+tmp_glue['CFLAGS'] += ' ' + glueFlags + ' '
+tmp_glue['CXXFLAGS'] += ' ' + glueFlags + ' '
 
-tmp_glue.objects = [tmp.Object(i) for i in glue_files]
+tmp_glue.objects = [tmp_glue.Object(i) for i in glue_files]
 if not len(glue_files) == 0:
     build = tmp_glue.Program(glue_objname,tmp_glue.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
 
