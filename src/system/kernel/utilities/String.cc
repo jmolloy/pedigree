@@ -24,6 +24,8 @@ void String::assign(const String &x)
   reserve(m_Length + 1);
   if (m_Length)
     memcpy(m_Data, x.m_Data, m_Length + 1);
+  else
+    m_Data[0] = '\0';
 }
 void String::assign(const char *s)
 {
@@ -31,6 +33,8 @@ void String::assign(const char *s)
   reserve(m_Length + 1);
   if (m_Length)
     memcpy(m_Data, s, m_Length + 1);
+  else
+    m_Data[0] = '\0';
 }
 void String::reserve(size_t size)
 {
