@@ -22,6 +22,7 @@
 #include <utilities/Cache.h>
 #include <utilities/Tree.h>
 #include <process/Mutex.h>
+#include <utilities/UnlikelyLock.h>
 #include <LockGuard.h>
 #include "FatFile.h"
 
@@ -219,7 +220,8 @@ protected:
   uint8_t *m_pFatCache;
 
   /** FAT lock */
-  Mutex m_FatLock;
+  //Mutex m_FatLock;
+  UnlikelyLock m_FatLock;
 
   /** Root filesystem node. */
   File *m_pRoot;

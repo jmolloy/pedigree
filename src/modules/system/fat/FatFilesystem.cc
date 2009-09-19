@@ -48,7 +48,7 @@ bool isPowerOf2(uint32_t n)
 
 FatFilesystem::FatFilesystem() :
         m_Superblock(), m_Superblock16(), m_Superblock32(), m_FsInfo(), m_Type(FAT12), m_DataAreaStart(0),
-        m_RootDirCount(0), m_FatSector(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(false), m_pRoot(0),
+        m_RootDirCount(0), m_FatSector(0), m_RootDir(), m_BlockSize(0), m_pFatCache(0), m_FatLock(), m_pRoot(0),
         m_FatCache(), m_FreeClusterHint()
 {
 }
@@ -398,11 +398,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
 uint32_t FatFilesystem::findFreeCluster(bool bLock)
 {
-    // lock the FAT because we need to get an entry, then set it without having any
-    // interference.
-    if (bLock)
-        m_FatLock.acquire();
-
     size_t j;
     uint32_t clus;
     uint32_t totalSectors = m_Superblock.BPB_TotSec32;
@@ -412,8 +407,6 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
             totalSectors = m_Superblock.BPB_TotSec16;
         else
         {
-            if (bLock)
-                m_FatLock.release();
             return 0;
         }
     }
@@ -426,27 +419,13 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
         if ((clus & mask) == 0)
         {
             /// \todo For FAT32, update the FSInfo structure
-            setClusterEntry(j, eofValue(), false); // default to it being EOF - this means we can't allocate the same cluster twice
-            if (bLock)
-                m_FatLock.release();
-
-            // Clean out the cluster - anyone calling findFreeCluster wants to use the cluster
-            // for data, so cleaning it up first is always a good thing!
-            /// \note Not sure exactly *what* I was thinking here...
-            /*
-            uint8_t *tmpBuf = new uint8_t[m_BlockSize];
-            memset(tmpBuf, 0, m_BlockSize);
-            writeCluster(j, reinterpret_cast<uintptr_t>(tmpBuf));
-            delete [] tmpBuf;
-            */
+            setClusterEntry(j, eofValue(), false); // default to it being EOF - ie, pin the cluster
 
             // All done!
             m_FreeClusterHint = j + 1;
             return j;
         }
     }
-    if (bLock)
-        m_FatLock.release();
 
     FATAL("findFreeCluster returning zero!");
     return 0;
@@ -464,7 +443,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     }
 
     // we do so much work with the FAT here that locking is a necessity
-    LockGuard<Mutex> guard(m_FatLock);
+    // LockGuard<Mutex> guard(m_FatLock);
 
     int64_t fileSizeChange = 0;
     if ((location + size) > pFile->getSize())
@@ -798,8 +777,8 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
             break;
     }
 
-    if (bLock)
-        m_FatLock.acquire();
+    // Reading from the FAT - critical section
+    m_FatLock.enter();
 
     uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
@@ -819,6 +798,9 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
         m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, fatBlocks);
         m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
     }
+
+    // Leave the critical section
+    m_FatLock.leave();
 
     // read from cache
     fatOffset %= m_Superblock.BPB_BytsPerSec;
@@ -856,9 +838,6 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
             break;
     }
 
-    if (bLock)
-        m_FatLock.release();
-
     return ret;
 }
 
@@ -887,9 +866,6 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     }
 
     uint32_t ent = getClusterEntry(cluster, bLock);
-
-    if (bLock)
-        m_FatLock.acquire();
 
     uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
@@ -959,6 +935,9 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
     uint32_t fatSector = m_FatSector + (oldOffset / m_Superblock.BPB_BytsPerSec);
 
+    // Grab the FAT lock - we're updating it now
+    m_FatLock.acquire();
+
     // Write back to the FAT
     writeSectorBlock(fatSector, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks));
 
@@ -967,10 +946,10 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     if(m_Type == FAT12)
         m_FatCache.insert((oldOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
 
-    delete [] fatBlocks;
+    // All done with the update
+    m_FatLock.release();
 
-    if (bLock)
-        m_FatLock.release();
+    delete [] fatBlocks;
 
     // We're pedantic and as such we check things, but only if debugging
 #if defined(DEBUGGER) && defined(ADDITIONAL_CHECKS)
@@ -1214,7 +1193,7 @@ bool FatFilesystem::remove(File* parent, File* file)
     if (!parentDir->removeEntry(file))
         return false;
 
-    LockGuard<Mutex> guard(m_FatLock);
+    //LockGuard<Mutex> guard(m_FatLock);
 
     // Then, clean up the cluster chain
     uint32_t clus = file->getInode();
