@@ -47,13 +47,8 @@ public:
         // If we manage to enter the critical section then reenter and try and
         // acquire, we'll deadlock. Not good. Disable reentrancy by disabling
         // interrupts to guarantee liveness.
-        Processor::setInterrupts(false);
-
         if (m_Atomic >= 100000)
-        {
-            Processor::setInterrupts(true);
             return false;
-        }
 
         m_Atomic += 1;
 
@@ -62,7 +57,6 @@ public:
         if (m_Atomic >= 100000)
         {
             m_Atomic -= 1;
-            Processor::setInterrupts(true);
             return false;
         }
         
@@ -72,23 +66,35 @@ public:
     inline void leave()
     {
         m_Atomic -= 1;
-
-        Processor::setInterrupts(true);
     }
 
     /** Locks the lock. Will not return until all other threads have exited
         the critical region. */
-    inline void acquire()
+    inline bool acquire()
     {
+        Processor::setInterrupts(false);
+
         m_Atomic += 100000;
+
+        if (m_Atomic >= 200000)
+        {
+            // Someone already acquire()d... :(
+            m_Atomic -= 100000;
+            Processor::setInterrupts(true);
+            return false;
+        }
+
         while (m_Atomic > 100000)
             ;
+
+        return true;
     }
     /** Releases the lock. */
     inline void release()
     {
         // Reset counter to one.
         m_Atomic -= 100000;
+        Processor::setInterrupts(true);
     }
 
 private:
