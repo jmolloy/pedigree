@@ -30,9 +30,7 @@ defines = [
     #'SMBIOS',                  # Enable SMBIOS
     'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
     #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
-    'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH',
     'ADDITIONAL_CHECKS',
-    'BITS_32',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
     #'CRIPPLE_HDD',
@@ -46,11 +44,11 @@ if 'DEBUGGER' in defines:
 
 # Default CFLAGS
 #
-default_cflags = '-std=gnu99 -march=i486 -fno-builtin -nostdinc -nostdlib -ffreestanding -m32 -g0 -O3 '
+default_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O3 '
 
 # Default CXXFLAGS
 #
-default_cxxflags = '-std=gnu++98 -march=i486 -fno-builtin -nostdinc -nostdlib -ffreestanding -fno-rtti -fno-exceptions -m32 -g0 -O3 '
+default_cxxflags = '-std=gnu++98 -fno-builtin -nostdinc -nostdlib -ffreestanding -fno-rtti -fno-exceptions -g0 -O3 '
 
 # Entry level warning flags
 default_cflags += '-Wno-long-long '
@@ -174,13 +172,16 @@ if env['genflags']:
         env['ARCH_TARGET'] = tmp.group(1)
 
         if re.match('i[3456]86',tmp.group(1)) != None:
-            defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN']
+            defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN','BITS_32','KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
+            default_cflags += '-march=i486'
+            default_cxxflags += '-march=i486'
+            env['ASFLAGS'] += '32'
             #^-- Should provide overloads for these...like machine=ARM_VOLITILE
 
             env['ARCH_TARGET'] = 'X86'
         elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-            defines += ['X64']
-
+            defines += ['X64','X86_COMMON','LITTLE_ENDIAN','BITS_64']
+            env['ASFLAGS'] += '64'
             env['ARCH_TARGET'] = 'X64'
         elif re.match('ppc|powerpc',tmp.group(1)) != None:
             defines += ['PPC']

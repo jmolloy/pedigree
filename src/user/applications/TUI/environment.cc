@@ -71,12 +71,12 @@ void Syscall::respondToPending(size_t response, char *buffer, size_t sz)
 
 void Syscall::createConsole(size_t tabId, char *pName)
 {
-    syscall2(TUI_CREATE_CONSOLE, tabId, reinterpret_cast<int>(pName));
+    syscall2(TUI_CREATE_CONSOLE, tabId, reinterpret_cast<size_t>(pName));
 }
 
 void Syscall::setCtty(char *pName)
 {
-    syscall1(TUI_SET_CTTY, reinterpret_cast<int>(pName));
+    syscall1(TUI_SET_CTTY, reinterpret_cast<size_t>(pName));
 }
 
 void Syscall::setCurrentConsole(size_t tabId)

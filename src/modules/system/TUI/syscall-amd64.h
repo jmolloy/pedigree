@@ -18,51 +18,51 @@
 // Should only be included from ./syscall.h. This contains the syscall functions.
 //
 
-static int syscall0(int function)
+static long syscall0(long function)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("syscall" : "=a" (ret) : "0" (eax));
   return ret;
 }
 
-static int syscall1(int function, int p1)
+static long syscall1(long function, long p1)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1));
   return ret;
 }
 
-static int syscall2(int function, int p1, int p2)
+static long syscall2(long function, long p1, long p2)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2));
   return ret;
 }
 
-static int syscall3(int function, int p1, int p2, int p3)
+static long syscall3(long function, long p1, long p2, long p3)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3));
   return ret;
 }
 
-static int syscall4(int function, int p1, int p2, int p3, int p4)
+static long syscall4(long function, long p1, long p2, long p3, long p4)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3), "D" (p4));
   return ret;
 }
 
-static int syscall5(int function, int p1, int p2, int p3, int p4, int p5)
+static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
 {
-  int eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("mov %7, %%r8; \
-                syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5));
+  long eax = ((TUI_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  long ret;
+  asm volatile("mov %6, %%r8; \
+                syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5));
   return ret;
 }
