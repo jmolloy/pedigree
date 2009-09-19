@@ -114,8 +114,7 @@ public:
     }
 
     /** Delete all data from the file. */
-    virtual void truncate()
-    {}
+    virtual void truncate();
 
     size_t getSize();
     void setSize(size_t sz);

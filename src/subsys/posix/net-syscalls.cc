@@ -446,8 +446,9 @@ int posix_listen(int sock, int backlog)
 
     if(s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        if((ce->state() != Tcp::CLOSED) || (ce->state() != Tcp::UNKNOWN))
+        if((ce->state() != Tcp::CLOSED) && (ce->state() != Tcp::UNKNOWN))
         {
+            ERROR("State was " << static_cast<int>(ce->state()) << ".");
             SYSCALL_ERROR(InvalidArgument);
             return -1;
         }

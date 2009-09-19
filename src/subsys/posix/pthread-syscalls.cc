@@ -18,6 +18,7 @@
 #include <pthread-syscalls.h>
 #include <syscallError.h>
 #include "errors.h"
+#include "PosixSubsystem.h"
 
 extern "C"
 {
@@ -308,4 +309,191 @@ void pedigree_init_pthreads()
 {
     PT_NOTICE("init_pthreads");
     memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE2), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
+}
+
+void* posix_pthread_getspecific(pthread_key_t key)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
+    // Grab the current thread id
+    pthread_t threadId = posix_pthread_self();
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return 0;
+    }
+
+    // Grab the data
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    if(!data)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return 0;
+    }
+
+    // Return it
+    return data->buffer;
+}
+
+int posix_pthread_setspecific(pthread_key_t key, const void *buff)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the current thread id
+    pthread_t threadId = posix_pthread_self();
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return -1;
+    }
+
+    // Grab the data
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    if(!data)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Set it
+    data->buffer = const_cast<void*>(buff);
+
+    return 0;
+}
+
+int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the current thread id
+    pthread_t threadId = posix_pthread_self();
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return -1;
+    }
+
+    // Grab the next available key
+    size_t key = ~0UL;
+    for(size_t i = pThread->lastDataKey; i < pThread->nextDataKey; i++)
+    {
+        if(!pThread->m_ThreadKeys.test(i))
+        {
+            pThread->lastDataKey = i;
+            pThread->m_ThreadKeys.set(i);
+            key = i;
+            break;
+        }
+    }
+    if(key == ~0UL)
+    {
+        pThread->m_ThreadKeys.set(pThread->nextDataKey);
+        pThread->nextDataKey++;
+    }
+
+    // Create the data key
+    PosixSubsystem::PosixThreadKey *data = new PosixSubsystem::PosixThreadKey;
+    data->destructor = destructor;
+    data->buffer = 0;
+    pThread->addThreadData(key, data);
+
+    // Success!
+    *okey = key;
+    return 0;
+}
+
+key_destructor posix_pthread_key_destructor(pthread_key_t key)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
+    // Grab the current thread id
+    pthread_t threadId = posix_pthread_self();
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return 0;
+    }
+
+    // Grab the data
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    if(!data)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return 0;
+    }
+
+    return data->destructor;
+}
+
+int posix_pthread_key_delete(pthread_key_t key)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the current thread id
+    pthread_t threadId = posix_pthread_self();
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return -1;
+    }
+
+    // Grab the data
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    if(!data)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Remove the key from the thread
+    pThread->removeThreadData(key);
+
+    // It's now safe to let other calls use this key
+    pThread->lastDataKey = key;
+    pThread->m_ThreadKeys.clear(key);
+
+    // Destroy it
+    delete data;
+
+    return 0;
 }

@@ -111,8 +111,7 @@ static int nHandlers = 0;
 
 int ftruncate(int a, off_t b)
 {
-    STUBBED("ftruncate");
-    return -1;
+	return syscall2(POSIX_FTRUNCATE, a, (int) b);
 }
 
 char* getcwd(char *buf, unsigned long size)

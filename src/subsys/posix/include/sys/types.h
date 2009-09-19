@@ -423,7 +423,8 @@ typedef struct {
 } pthread_rwlockattr_t;
 #endif /* defined(_POSIX_READER_WRITER_LOCKS) */
 
-#if defined(_POSIX_THREADS)
+#ifndef _POSIX_THREAD_TYPES_DEFINED
+#define _POSIX_THREAD_TYPES_DEFINED
 // Pedigree pthread types
 typedef int pthread_t;
 typedef int pthread_cond_t;

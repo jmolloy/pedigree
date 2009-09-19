@@ -1014,15 +1014,15 @@ class SelectRun
             /// \todo This should keep looping until the timeout expires, this is currently just looping forever
             /// \todo These should each run concurrently, not one after the other...
             int numReady = 0;
-            // while(numReady == 0)
-            // {
+            while(numReady == 0)
+            {
                 for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
                 {
                     FileInfo *p = (*it);
                     if(p)
                         numReady += p->pFile->select(p->bCheckWrite, m_Timeout);
                 }
-            // }
+            }
 
             // Reset so we're ready for another round if needed
             deleteAll();
@@ -1623,6 +1623,64 @@ int posix_access(const char *name, int amode)
 
     /// \todo Proper permission checks. For now, the file exists, and you can do what you want with it.
     return 0;
+}
+
+int posix_ftruncate(int a, off_t b)
+{
+	F_NOTICE("ftruncate(" << a << ", " << b << ")");
+
+    // Grab the File pointer for this file
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(a);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    File *pFile = pFd->file;
+
+    // If we are to simply truncate, do so
+    if(b == 0)
+    {
+        pFile->truncate();
+        return 0;
+    }
+    else if(static_cast<size_t>(b) == pFile->getSize())
+        return 0;
+    // If we need to reduce the file size, do so
+    /// \todo Filesystems need to handle file resizes properly!
+    else if(static_cast<size_t>(b) < pFile->getSize())
+    {
+        pFile->setSize(b);
+        return 0;
+    }
+    // Otherwise, extend the file
+    else
+    {
+        size_t currSize = pFile->getSize();
+        size_t numExtraBytes = b - currSize;
+        NOTICE("Extending by " << numExtraBytes << " bytes");
+        uint8_t *nullBuffer = new uint8_t[numExtraBytes];
+        NOTICE("Got the buffer");
+        memset(nullBuffer, 0, numExtraBytes);
+        NOTICE("Zeroed the buffer");
+        pFile->write(currSize, numExtraBytes, reinterpret_cast<uintptr_t>(nullBuffer));
+        NOTICE("Deleting the buffer");
+        delete [] nullBuffer;
+        NOTICE("Complete");
+        return 0;
+    }
+
+    // Can't get here
+	return -1;
 }
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)

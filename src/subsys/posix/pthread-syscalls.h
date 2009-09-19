@@ -33,6 +33,7 @@
 #endif
 
 typedef void (*pthreadfn)(void*);
+typedef void (*key_destructor)(void*);
 
 int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadfn start_addr, void *arg);
 int posix_pthread_join(pthread_t thread, void **value_ptr);
@@ -51,6 +52,12 @@ int posix_pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 int posix_pthread_enter(uintptr_t blk);
 void posix_pthread_exit(void *ret);
+
+void* posix_pthread_getspecific(pthread_key_t key);
+int posix_pthread_setspecific(pthread_key_t key, const void *buff);
+int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor);
+int posix_pthread_key_delete(pthread_key_t key);
+key_destructor posix_pthread_key_destructor(pthread_key_t key);
 
 void pedigree_init_pthreads();
 

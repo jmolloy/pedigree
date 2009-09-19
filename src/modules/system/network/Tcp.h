@@ -105,18 +105,18 @@ public:
 
   enum TcpState
   {
-    LISTEN = 0,
-    SYN_SENT,
-    SYN_RECEIVED,
-    ESTABLISHED,
-    FIN_WAIT_1,
-    FIN_WAIT_2,
-    CLOSE_WAIT,
-    CLOSING,
-    LAST_ACK,
-    TIME_WAIT,
-    CLOSED,
-    UNKNOWN
+    LISTEN          = 0,
+    SYN_SENT        = 1,
+    SYN_RECEIVED    = 2,
+    ESTABLISHED     = 3,
+    FIN_WAIT_1      = 4,
+    FIN_WAIT_2      = 5,
+    CLOSE_WAIT      = 6,
+    CLOSING         = 7,
+    LAST_ACK        = 8,
+    TIME_WAIT       = 9,
+    CLOSED          = 10,
+    UNKNOWN         = 11
   };
   
   // provides a string representation of a given state

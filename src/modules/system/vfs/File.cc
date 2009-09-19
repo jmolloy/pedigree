@@ -102,3 +102,8 @@ void File::setSize(size_t sz)
 {
   m_Size = sz;
 }
+
+void File::truncate()
+{
+  m_pFilesystem->truncate(this);
+}
