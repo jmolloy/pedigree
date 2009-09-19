@@ -90,7 +90,7 @@ int h_errno; // required by networking code
 
 // #define MAXNAMLEN 255
 
-#define STUBBED(str) syscall1(POSIX_STUBBED, (int)(str)); \
+#define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
   errno = ENOSYS;
 
 #define NUM_ATFORK_HANDLERS 32 // (* 3)
@@ -111,27 +111,27 @@ static int nHandlers = 0;
 
 int ftruncate(int a, off_t b)
 {
-	return syscall2(POSIX_FTRUNCATE, a, (int) b);
+	return syscall2(POSIX_FTRUNCATE, a, (long) b);
 }
 
 char* getcwd(char *buf, unsigned long size)
 {
-    return (char *)syscall2(POSIX_GETCWD, (int) buf, (int) size);
+    return (char *)syscall2(POSIX_GETCWD, (long) buf, (long) size);
 }
 
 int mkdir(const char *p, mode_t mode)
 {
-    return (int)syscall2(POSIX_MKDIR, (int)p, mode);
+    return (long)syscall2(POSIX_MKDIR, (long)p, mode);
 }
 
 int close(int file)
 {
-    return (int)syscall1(POSIX_CLOSE, file);
+    return (long)syscall1(POSIX_CLOSE, file);
 }
 
 int _execve(char *name, char **argv, char **env)
 {
-    return (int)syscall3(POSIX_EXECVE, (int)name, (int)argv, (int)env);
+    return (long)syscall3(POSIX_EXECVE, (long)name, (long)argv, (long)env);
 }
 
 void _exit(int val)
@@ -142,7 +142,7 @@ void _exit(int val)
 
 int fork(void)
 {
-    return (int)syscall0(POSIX_FORK);
+    return (long)syscall0(POSIX_FORK);
 
     if(nHandlers)
     {
@@ -153,7 +153,7 @@ int fork(void)
         }
     }
 
-    int pid = (int)syscall0(POSIX_FORK);
+    int pid = (long)syscall0(POSIX_FORK);
 
     if(pid == 0)
     {
@@ -188,22 +188,22 @@ int vfork(void)
 
 int fstat(int file, struct stat *st)
 {
-    return (int)syscall2(POSIX_FSTAT, (int)file, (int)st);
+    return (long)syscall2(POSIX_FSTAT, (long)file, (long)st);
 }
 
 int getpid(void)
 {
-    return (int)syscall0(POSIX_GETPID);
+    return (long)syscall0(POSIX_GETPID);
 }
 
 int _isatty(int file)
 {
-    return (int) syscall1(POSIX_ISATTY, file);
+    return (long) syscall1(POSIX_ISATTY, file);
 }
 
 int link(const char *old, const char *_new)
 {
-    return (int)syscall2(POSIX_LINK, (int) old, (int) _new);
+    return (long)syscall2(POSIX_LINK, (long) old, (long) _new);
 }
 
 off_t lseek(int file, off_t ptr, int dir)
@@ -217,12 +217,12 @@ int open(const char *name, int flags, ...) // , mode_t mode)
     va_start(ap, flags);
     mode_t mode = va_arg(ap, mode_t);
     va_end(ap);
-    return (int)syscall3(POSIX_OPEN, (int)name, flags, mode);
+    return (long)syscall3(POSIX_OPEN, (long)name, flags, mode);
 }
 
 _ssize_t read(int file, void *ptr, size_t len)
 {
-    return (_ssize_t) syscall3(POSIX_READ, file, (int)ptr, len);
+    return (_ssize_t) syscall3(POSIX_READ, file, (long)ptr, len);
 }
 
 void *sbrk(ptrdiff_t incr)
@@ -232,7 +232,7 @@ void *sbrk(ptrdiff_t incr)
 
 int stat(const char *file, struct stat *st)
 {
-    return (int)syscall2(POSIX_STAT, (int)file, (int)st);
+    return (long)syscall2(POSIX_STAT, (long)file, (long)st);
 }
 
 #ifndef PPC_COMMON
@@ -253,7 +253,7 @@ int getrusage(int target, void *buf)
 
 int unlink(const char *name)
 {
-    return (int)syscall1(POSIX_UNLINK, (int)name);
+    return (long)syscall1(POSIX_UNLINK, (long)name);
 }
 
 int wait(int *status)
@@ -263,12 +263,12 @@ int wait(int *status)
 
 int waitpid(int pid, int *status, int options)
 {
-    return (int)syscall3(POSIX_WAITPID, pid, (int)status, options);
+    return (long)syscall3(POSIX_WAITPID, pid, (long)status, options);
 }
 
 _ssize_t write(int file, const void *ptr, size_t len)
 {
-    return (_ssize_t) syscall3(POSIX_WRITE, file, (int)ptr, len);
+    return (_ssize_t) syscall3(POSIX_WRITE, file, (long)ptr, len);
 }
 
 ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
@@ -315,13 +315,13 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 
 int lstat(const char *file, struct stat *st)
 {
-    return (int) syscall2(POSIX_LSTAT, (int)file, (int)st);
+    return (long) syscall2(POSIX_LSTAT, (long)file, (long)st);
 }
 
 DIR *opendir(const char *dir)
 {
     DIR *p = (DIR*) malloc(sizeof(DIR));
-    p->fd = syscall2(POSIX_OPENDIR, (int)dir, (int)&p->ent);
+    p->fd = syscall2(POSIX_OPENDIR, (long)dir, (long)&p->ent);
     if (p->fd < 0)
     {
         free(p);
@@ -335,7 +335,7 @@ struct dirent *readdir(DIR *dir)
     if (!dir)
         return 0;
 
-    if (syscall2(POSIX_READDIR, dir->fd, (int)&dir->ent) != -1)
+    if (syscall2(POSIX_READDIR, dir->fd, (long)&dir->ent) != -1)
         return &dir->ent;
     else
         return 0;
@@ -346,7 +346,7 @@ void rewinddir(DIR *dir)
     if (!dir)
         return;
 
-    syscall2(POSIX_REWINDDIR, dir->fd, (int)&dir->ent);
+    syscall2(POSIX_REWINDDIR, dir->fd, (long)&dir->ent);
 }
 
 int closedir(DIR *dir)
@@ -361,17 +361,17 @@ int closedir(DIR *dir)
 
 int rename(const char *old, const char *new)
 {
-    return (int)syscall2(POSIX_RENAME, (int) old, (int) new);
+    return (long)syscall2(POSIX_RENAME, (long) old, (long) new);
 }
 
 int tcgetattr(int fd, struct termios *p)
 {
-    return (int)syscall2(POSIX_TCGETATTR, fd, (int)p);
+    return (long)syscall2(POSIX_TCGETATTR, fd, (long)p);
 }
 
 int tcsetattr(int fd, int optional_actions, struct termios *p)
 {
-    return (int)syscall3(POSIX_TCSETATTR, fd, optional_actions, (int)p);
+    return (long)syscall3(POSIX_TCSETATTR, fd, optional_actions, (long)p);
 }
 
 int mkfifo(const char *_path, mode_t __mode)
@@ -395,7 +395,7 @@ int	sethostname(char *name, size_t len)
 
 int ioctl(int fd, int command, void *buf)
 {
-    return (int)syscall3(POSIX_IOCTL, fd, command, (int)buf);
+    return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);
 }
 
 int tcflow(int fd, int action)
@@ -418,19 +418,19 @@ int tcdrain(int fd)
 
 int gettimeofday(struct timeval *tv, void *tz)
 {
-    syscall2(POSIX_GETTIMEOFDAY, (int)tv, (int)tz);
+    syscall2(POSIX_GETTIMEOFDAY, (long)tv, (long)tz);
 
     return 0;
 }
 
 uid_t getuid(void)
 {
-    return (int)syscall0(POSIX_GETUID);
+    return (long)syscall0(POSIX_GETUID);
 }
 
 gid_t getgid(void)
 {
-    return (int)syscall0(POSIX_GETGID);
+    return (long)syscall0(POSIX_GETGID);
 }
 
 uid_t geteuid(void)
@@ -539,7 +539,7 @@ int utime(const char *path,const struct utimbuf *times)
 
 int access(const char *path, int amode)
 {
-    return (int) syscall2(POSIX_ACCESS, (int) path, amode);
+    return (long) syscall2(POSIX_ACCESS, (long) path, amode);
 }
 
 const char * const sys_errlist[] = {};
@@ -587,7 +587,7 @@ int select(int nfds, struct fd_set * readfds,
            struct fd_set * writefds, struct fd_set * errorfds,
            struct timeval * timeout)
 {
-    return (int)syscall5(POSIX_SELECT, nfds, (int)readfds, (int)writefds, (int)errorfds, (int)timeout);
+    return (long)syscall5(POSIX_SELECT, nfds, (long)readfds, (long)writefds, (long)errorfds, (long)timeout);
 }
 
 void setgrent(void)
@@ -622,7 +622,7 @@ void endpwent(void)
 
 struct passwd *getpwent(void)
 {
-    if (syscall3(POSIX_GETPWENT, (int)&g_passwd, g_passwd_num, (int)&g_passwd_str) != 0)
+    if (syscall3(POSIX_GETPWENT, (long)&g_passwd, g_passwd_num, (long)&g_passwd_str) != 0)
         return 0;
     g_passwd_num++;
     return &g_passwd;
@@ -630,14 +630,14 @@ struct passwd *getpwent(void)
 
 struct passwd *getpwuid(uid_t uid)
 {
-    if (syscall3(POSIX_GETPWENT, (int)&g_passwd, uid, (int)&g_passwd_str) != 0)
+    if (syscall3(POSIX_GETPWENT, (long)&g_passwd, uid, (long)&g_passwd_str) != 0)
         return 0;
     return &g_passwd;
 }
 
 struct passwd *getpwnam(const char *name)
 {
-    if (syscall3(POSIX_GETPWNAM, (int)&g_passwd, (int)name, (int)&g_passwd_str) != 0)
+    if (syscall3(POSIX_GETPWNAM, (long)&g_passwd, (long)name, (long)&g_passwd_str) != 0)
         return 0;
     return &g_passwd;
 }
@@ -645,27 +645,27 @@ struct passwd *getpwnam(const char *name)
 // Pedigree-specific function: login with given uid and password.
 int login(uid_t uid, char *password)
 {
-    return (int)syscall2(PEDIGREE_LOGIN, uid, (int)password);
+    return (long)syscall2(PEDIGREE_LOGIN, uid, (long)password);
 }
 
 int chdir(const char *path)
 {
-    return (int)syscall1(POSIX_CHDIR, (int)path);
+    return (long)syscall1(POSIX_CHDIR, (long)path);
 }
 
 int dup(int fileno)
 {
-    return (int)syscall1(POSIX_DUP, fileno);
+    return (long)syscall1(POSIX_DUP, fileno);
 }
 
 int dup2(int fildes, int fildes2)
 {
-    return (int)syscall2(POSIX_DUP2, fildes, fildes2);
+    return (long)syscall2(POSIX_DUP2, fildes, fildes2);
 }
 
 int pipe(int filedes[2])
 {
-    return (int)syscall1(POSIX_PIPE, (int) filedes);
+    return (long)syscall1(POSIX_PIPE, (long) filedes);
 }
 
 int fcntl(int fildes, int cmd, ...)
@@ -681,7 +681,7 @@ int fcntl(int fildes, int cmd, ...)
         case F_DUPFD:
         case F_SETFD:
         case F_SETFL:
-            args = (int*) malloc(sizeof(int));
+            args = (int*) malloc(sizeof(long));
             args[0] = va_arg(ap, int);
             num = 1;
             break;
@@ -689,13 +689,13 @@ int fcntl(int fildes, int cmd, ...)
         case F_SETLK:
         case F_SETLKW:
             args = (int*) malloc(sizeof(struct flock*));
-            args[0] = (int) va_arg(ap, struct flock*);
+            args[0] = (long) va_arg(ap, struct flock*);
             num = 1;
             break;
     };
     va_end(ap);
 
-    int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (int) args);
+    int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (long) args);
 
     if (args)
         free(args);
@@ -704,7 +704,7 @@ int fcntl(int fildes, int cmd, ...)
 
 int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
 {
-    return (int)syscall3(POSIX_SIGPROCMASK, how, (int) set, (int) oset);
+    return (long)syscall3(POSIX_SIGPROCMASK, how, (long) set, (long) oset);
 }
 
 int fchown(int fildes, uid_t owner, uid_t group)
@@ -723,32 +723,32 @@ int rmdir(const char *path)
 
 int socket(int domain, int type, int protocol)
 {
-    return (int)syscall3(POSIX_SOCKET, domain, type, protocol);
+    return (long)syscall3(POSIX_SOCKET, domain, type, protocol);
 }
 
 int connect(int sock, const struct sockaddr* address, size_t addrlen)
 {
-    return (int)syscall3(POSIX_CONNECT, sock, (int) address, (int) addrlen);
+    return (long)syscall3(POSIX_CONNECT, sock, (long) address, (long) addrlen);
 }
 
 ssize_t send(int sock, const void * buff, size_t bufflen, int flags)
 {
-    return (ssize_t)syscall4(POSIX_SEND, sock, (int) buff, (int) bufflen, flags);
+    return (ssize_t)syscall4(POSIX_SEND, sock, (long) buff, (long) bufflen, flags);
 }
 
 ssize_t recv(int sock, void * buff, size_t bufflen, int flags)
 {
-    return (ssize_t)syscall4(POSIX_RECV, sock, (int) buff, (int) bufflen, flags);
+    return (ssize_t)syscall4(POSIX_RECV, sock, (long) buff, (long) bufflen, flags);
 }
 
 int accept(int sock, struct sockaddr* remote_addr, size_t *addrlen)
 {
-    return (int)syscall3(POSIX_ACCEPT, sock, (int) remote_addr, (int) addrlen);
+    return (long)syscall3(POSIX_ACCEPT, sock, (long) remote_addr, (long) addrlen);
 }
 
 int bind(int sock, const struct sockaddr* local_addr, size_t addrlen)
 {
-    return (int)syscall3(POSIX_BIND, sock, (int) local_addr, (int) addrlen);
+    return (long)syscall3(POSIX_BIND, sock, (long) local_addr, (long) addrlen);
 }
 
 int getpeername(int sock, struct sockaddr* addr, size_t *addrlen)
@@ -779,7 +779,7 @@ int getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
 
 int listen(int sock, int backlog)
 {
-    return (int)syscall2(POSIX_LISTEN, sock, backlog);
+    return (long)syscall2(POSIX_LISTEN, sock, backlog);
 }
 
 struct special_send_recv_data
@@ -802,7 +802,7 @@ ssize_t recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockadd
     tmp->remote_addr = remote_addr;
     tmp->addrlen = addrlen;
 
-    int ret = syscall1(POSIX_RECVFROM, (int) tmp);
+    int ret = syscall1(POSIX_RECVFROM, (long) tmp);
 
     free(tmp);
 
@@ -831,7 +831,7 @@ ssize_t sendto(int sock, const void* buff, size_t bufflen, int flags, const stru
     tmp->remote_addr = (struct sockaddr*)remote_addr;
     tmp->addrlen = &addrlen;
 
-    int ret = syscall1(POSIX_SENDTO, (int) tmp);
+    int ret = syscall1(POSIX_SENDTO, (long) tmp);
 
     free(tmp);
 
@@ -846,7 +846,7 @@ int setsockopt(int sock, int level, int optname, const void* optvalue, unsigned 
 
 int shutdown(int sock, int how)
 {
-    return (int) syscall2(POSIX_SHUTDOWN, sock, how);
+    return (long) syscall2(POSIX_SHUTDOWN, sock, how);
 }
 
 int sockatmark(int sock)
@@ -974,7 +974,7 @@ struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
     syslog(LOG_NOTICE, "[%d] gethostbyaddr", getpid());
 
     static struct hostent ret;
-    if (syscall4(POSIX_GETHOSTBYADDR, (int) addr, len, type, (int) &ret) != 0)
+    if (syscall4(POSIX_GETHOSTBYADDR, (long) addr, len, type, (long) &ret) != 0)
         return &ret;
     return 0;
 }
@@ -989,7 +989,7 @@ struct hostent* gethostbyname(const char *name)
     if (ret == 0)
         return (struct hostent*) 0;
 
-    int success = syscall3(POSIX_GETHOSTBYNAME, (int) name, (int) ret, 512);
+    int success = syscall3(POSIX_GETHOSTBYNAME, (long) name, (long) ret, 512);
     if (success == 0)
     {
         ret->h_addr = ret->h_addr_list[0];
@@ -1097,7 +1097,7 @@ int getgrgid(void)
 
 int symlink(const char *path1, const char *path2)
 {
-    return (int) syscall2(POSIX_SYMLINK, (int)path1, (int) path2);
+    return (long) syscall2(POSIX_SYMLINK, (long)path1, (long) path2);
 }
 
 int fsync(int fd)
@@ -1120,7 +1120,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
 
 ssize_t readlink(const char* path, char* buf, size_t bufsize)
 {
-    return (int) syscall3(POSIX_READLINK, (int) path, (int) buf, bufsize);
+    return (long) syscall3(POSIX_READLINK, (long) path, (long) buf, bufsize);
 }
 
 int ftime(struct timeb *tp)
@@ -1155,7 +1155,7 @@ int siggetmask(void)
 
 int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
-    return (int)syscall3(POSIX_SIGACTION, sig, (int) act, (int) oact);
+    return (long)syscall3(POSIX_SIGACTION, sig, (long) act, (long) oact);
 }
 
 _sig_func_ptr signal(int s, _sig_func_ptr func)
@@ -1181,12 +1181,12 @@ _sig_func_ptr signal(int s, _sig_func_ptr func)
 
 int raise(int sig)
 {
-    return (int)syscall1(POSIX_RAISE, sig);
+    return (long)syscall1(POSIX_RAISE, sig);
 }
 
 int kill(pid_t pid, int sig)
 {
-    return (int)syscall2(POSIX_KILL, pid, sig);
+    return (long)syscall2(POSIX_KILL, pid, sig);
 }
 
 int sigpending(long* set)
@@ -1222,7 +1222,7 @@ void *dlopen(const char *file, int mode)
     void* p = (void*) malloc(sizeof(struct dlHandle));
     if (!p)
         return 0;
-    void* ret = (void*) syscall3(POSIX_DLOPEN, (int) file, mode, (int) p);
+    void* ret = (void*) syscall3(POSIX_DLOPEN, (long) file, mode, (long) p);
     if (ret)
         return ret;
     free(p);
@@ -1231,7 +1231,7 @@ void *dlopen(const char *file, int mode)
 
 void *dlsym(void* handle, const char* name)
 {
-    return (void*) syscall2(POSIX_DLSYM, (int) handle, (int) name);
+    return (void*) syscall2(POSIX_DLSYM, (long) handle, (long) name);
 }
 
 int dlclose(void *handle)
@@ -1250,7 +1250,7 @@ char *dlerror(void)
 
 int poll(struct pollfd fds[], unsigned int nfds, int timeout)
 {
-    return (int)syscall3(POSIX_POLL, (int)fds, nfds, timeout);
+    return (long)syscall3(POSIX_POLL, (long)fds, nfds, timeout);
 }
 
 #define HOST_NOT_FOUND    1
@@ -1558,12 +1558,12 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     t.fildes = fildes;
     t.off = off;
 
-    return (void*) syscall1(POSIX_MMAP, (int) &t);
+    return (void*) syscall1(POSIX_MMAP, (long) &t);
 }
 
 int munmap(void *addr, size_t len)
 {
-    return (int) syscall2(POSIX_MUNMAP, (int) addr, (int) len);
+    return (long) syscall2(POSIX_MUNMAP, (long) addr, (long) len);
 }
 
 int getgroups(int gidsetsize, gid_t grouplist[])
@@ -1610,7 +1610,7 @@ pid_t setsid(void)
 
 int setpgid(pid_t pid, pid_t pgid)
 {
-    return syscall2(POSIX_SETPGID, (int) pid, (int) pgid);
+    return syscall2(POSIX_SETPGID, (long) pid, (long) pgid);
 }
 
 pid_t getpgrp(void)
@@ -1692,27 +1692,27 @@ int getrusage(int who, struct rusage *r_usage)
 
 int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
-    return syscall2(POSIX_SIGALTSTACK, (int) stack, (int) oldstack);
+    return syscall2(POSIX_SIGALTSTACK, (long) stack, (long) oldstack);
 }
 
 int sem_close(sem_t *sem)
 {
-    return syscall1(POSIX_SEM_CLOSE, (int) sem);
+    return syscall1(POSIX_SEM_CLOSE, (long) sem);
 }
 
 int sem_destroy(sem_t *sem)
 {
-    return syscall1(POSIX_SEM_DESTROY, (int) sem);
+    return syscall1(POSIX_SEM_DESTROY, (long) sem);
 }
 
 int sem_getvalue(sem_t *sem, int *val)
 {
-    return syscall2(POSIX_SEM_GETVALUE, (int) sem, (int) val);
+    return syscall2(POSIX_SEM_GETVALUE, (long) sem, (long) val);
 }
 
 int sem_init(sem_t *sem, int pshared, unsigned value)
 {
-    return syscall3(POSIX_SEM_INIT, (int) sem, pshared, value);
+    return syscall3(POSIX_SEM_INIT, (long) sem, pshared, value);
 }
 
 sem_t *sem_open(const char *name, int mode, ...)
@@ -1723,17 +1723,17 @@ sem_t *sem_open(const char *name, int mode, ...)
 
 int sem_post(sem_t *sem)
 {
-    return syscall1(POSIX_SEM_POST, (int) sem);
+    return syscall1(POSIX_SEM_POST, (long) sem);
 }
 
 int sem_timedwait(sem_t *sem, const struct timespec *tm)
 {
-    return syscall2(POSIX_SEM_TIMEWAIT, (int) sem, (int) tm);
+    return syscall2(POSIX_SEM_TIMEWAIT, (long) sem, (long) tm);
 }
 
 int sem_trywait(sem_t *sem)
 {
-    return syscall1(POSIX_SEM_TRYWAIT, (int) sem);
+    return syscall1(POSIX_SEM_TRYWAIT, (long) sem);
 }
 
 int sem_unlink(const char *name)
@@ -1744,7 +1744,7 @@ int sem_unlink(const char *name)
 
 int sem_wait(sem_t *sem)
 {
-    return syscall1(POSIX_SEM_WAIT, (int) sem);
+    return syscall1(POSIX_SEM_WAIT, (long) sem);
 }
 
 int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
@@ -1767,12 +1767,12 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
 
 int pedigree_load_keymap(char *buf, size_t sz)
 {
-    return syscall2(PEDIGREE_LOAD_KEYMAP, (int)buf, (int)sz);
+    return syscall2(PEDIGREE_LOAD_KEYMAP, (long)buf, (long)sz);
 }
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
-    return syscall3(PEDIGREE_GET_MOUNT, (int) mount_buf, (int) info_buf, n);
+    return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
 }
 
 void closelog()
@@ -1794,7 +1794,7 @@ void syslog(int prio, const char *fmt, ...)
     va_list argptr;
     va_start(argptr, fmt);
     vsprintf(print_temp, fmt, argptr);
-    syscall2(POSIX_SYSLOG, (int) print_temp, prio);
+    syscall2(POSIX_SYSLOG, (long) print_temp, prio);
     va_end(argptr);
 }
 
@@ -1849,16 +1849,16 @@ void if_freenameindex(struct if_nameindex *nameindex)
 
 void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz)
 {
-    syscall4(PEDIGREE_CONFIG_GETCOLNAME, resultIdx, n, (int)buf, bufsz);
+    syscall4(PEDIGREE_CONFIG_GETCOLNAME, resultIdx, n, (long)buf, bufsz);
 }
 
 void pedigree_config_getstr_n(size_t resultIdx, size_t n, char *buf, size_t bufsz)
 {
-    syscall4(PEDIGREE_CONFIG_GETSTR_N, resultIdx, n, (int)buf, bufsz);
+    syscall4(PEDIGREE_CONFIG_GETSTR_N, resultIdx, n, (long)buf, bufsz);
 }
 void pedigree_config_getstr_s(size_t resultIdx, const char *col, char *buf, size_t bufsz)
 {
-    syscall4(PEDIGREE_CONFIG_GETSTR_S, resultIdx, (int)col, (int)buf, bufsz);
+    syscall4(PEDIGREE_CONFIG_GETSTR_S, resultIdx, (long)col, (long)buf, bufsz);
 }
 
 int pedigree_config_getnum_n(size_t resultIdx, size_t n)
@@ -1867,7 +1867,7 @@ int pedigree_config_getnum_n(size_t resultIdx, size_t n)
 }
 int pedigree_config_getnum_s(size_t resultIdx, const char *col)
 {
-    return syscall2(PEDIGREE_CONFIG_GETNUM_S, resultIdx, (int)col);
+    return syscall2(PEDIGREE_CONFIG_GETNUM_S, resultIdx, (long)col);
 }
 
 int pedigree_config_getbool_n(size_t resultIdx, size_t n)
@@ -1876,12 +1876,12 @@ int pedigree_config_getbool_n(size_t resultIdx, size_t n)
 }
 int pedigree_config_getbool_s(size_t resultIdx, const char *col)
 {
-    return syscall2(PEDIGREE_CONFIG_GETBOOL_S, resultIdx, (int)col);
+    return syscall2(PEDIGREE_CONFIG_GETBOOL_S, resultIdx, (long)col);
 }
 
 int pedigree_config_query(const char *query)
 {
-    return syscall1(PEDIGREE_CONFIG_QUERY, (int)query);
+    return syscall1(PEDIGREE_CONFIG_QUERY, (long)query);
 }
 
 void pedigree_config_freeresult(size_t resultIdx)
@@ -1911,5 +1911,5 @@ int pedigree_config_was_successful(size_t resultIdx)
 
 void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
 {
-    syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (int)buf, bufsz);
+    syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (long)buf, bufsz);
 }
