@@ -179,6 +179,95 @@ PosixSubsystem::~PosixSubsystem()
     // For sanity's sake, destroy any remaining descriptors
     m_FdLock.release();
     freeMultipleFds();
+
+    // Remove any POSIX threads that might still be lying around
+    for(Tree<size_t, PosixThread *>::Iterator it = m_Threads.begin(); it != m_Threads.end(); it++)
+    {
+        PosixThread *thread = reinterpret_cast<PosixThread *>(it.value());
+        assert(thread); // There shouldn't have ever been a null PosixThread in there
+
+        // If the thread is still running, it should be killed
+        if(!thread->isRunning.tryAcquire())
+        {
+            WARNING("PosixSubsystem object freed when a thread is still running?");
+            // Thread will just stay running, won't be deallocated or killed
+        }
+
+        // Clean up any thread-specific data
+        for(Tree<size_t, PosixThreadKey *>::Iterator it2 = thread->m_ThreadData.begin(); it2 != thread->m_ThreadData.end(); it2++)
+        {
+            PosixThreadKey *p = reinterpret_cast<PosixThreadKey *>(it.value());
+            assert(p);
+
+            /// \todo Call the destructor (need a way to call into userspace and return back here)
+            delete p;
+        }
+
+        thread->m_ThreadData.clear();
+    }
+
+    m_Threads.clear();
+
+    // Clean up synchronisation objects
+    for(Tree<size_t, PosixSyncObject *>::Iterator it = m_SyncObjects.begin(); it != m_SyncObjects.end(); it++)
+    {
+        PosixSyncObject *p = reinterpret_cast<PosixSyncObject *>(it.value());
+        assert(p);
+
+        if(p->pObject)
+        {
+            if(p->isMutex)
+                delete reinterpret_cast<Mutex*>(p->pObject);
+            else
+                delete reinterpret_cast<Semaphore*>(p->pObject);
+        }
+    }
+
+    m_SyncObjects.clear();
+
+    // Clean up memory mapped files (that haven't been unmapped...)
+    for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
+    {
+        uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
+        MemoryMappedFile *p = reinterpret_cast<MemoryMappedFile*>(it.value());
+
+        assert(p);
+        if(p->pFile)
+        {
+            // It better handle files that've already been unmapped...
+            MemoryMappedFileManager::instance().unmap(pFile);
+        }
+        else
+        {
+            WARNING("PosixSubsystem::~PosixSubsystem - unfreed anonymous memory maps still exist");
+            // Anonymous mmap, manually free the space
+            /*size_t pageSz = PhysicalMemoryManager::getPageSize();
+            size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
+
+            uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+
+            // Unmap!
+            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+            for (size_t i = 0; i < numPages; i++)
+            {
+                void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
+                if(va.isMapped(unmapAddr))
+                {
+                    // Unmap the virtual address
+                    physical_uintptr_t phys = 0;
+                    size_t flags = 0;
+                    va.getMapping(unmapAddr, phys, flags);
+                    va.unmap(reinterpret_cast<void*>(unmapAddr));
+
+                    // Free the physical page
+                    PhysicalMemoryManager::instance().freePage(phys);
+                }
+            }
+
+            // Free from the space allocator as well
+            m_pProcess->getSpaceAllocator().free(address, len);*/
+        }
+    }
 }
 
 void PosixSubsystem::exit(int code)

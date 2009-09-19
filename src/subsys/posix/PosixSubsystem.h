@@ -345,7 +345,7 @@ class PosixSubsystem : public Subsystem
 
                 /**
                  * Removes thread-specific data given a key (does *not* call the
-                 * the constructor.)
+                 * the destructor, or delete the storage.)
                  */
                 void removeThreadData(size_t key)
                 {
