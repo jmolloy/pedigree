@@ -18,7 +18,7 @@
 #include <utilities/assert.h>
 extern "C" void printf(const char *fmt, ...);
 Trie<void*>::Trie() :
-    m_pRoot(new Node(0))
+    m_pRoot(new Node(0)), m_nLongestPath(0), m_Lock(), m_RemovalCounter(0)
 {
 }
 
@@ -258,8 +258,8 @@ Trie<void*>::Iterator::Iterator(Trie<void*> *pParent) :
     }
 
     // Initialise by looking for the leftmost child.
-    m_pKey = new uint8_t[pParent->m_nLongestPath*2];
-    m_nMaxKeyLen = pParent->m_nLongestPath*2;
+    m_pKey = new uint8_t[/*pParent->m_nLongestPath*/256*2];
+    m_nMaxKeyLen = /*pParent->m_nLongestPath*/256*2;
 
     m_Value = m_pParent->m_pRoot->value;
 

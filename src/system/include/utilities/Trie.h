@@ -17,6 +17,7 @@
 #define TRIE_H
 
 #include <processor/types.h>
+#include <utilities/assert.h>
 #include <utilities/UnlikelyLock.h>
 
 template<class T>
@@ -105,6 +106,9 @@ public:
     }
 
 private:
+
+    Trie(const Trie<void*> &other);
+    Trie &operator = (const Trie<void*> &other);
 
     Node *m_pRoot;
     size_t m_nLongestPath;

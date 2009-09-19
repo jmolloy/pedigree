@@ -1,12 +1,18 @@
 diff -rupN binutils-2.19-orig/bfd/config.bfd binutils-2.19/bfd/config.bfd
 --- binutils-2.19-orig/bfd/config.bfd	2008-04-17 04:02:02.000000000 +1000
 +++ binutils-2.19/bfd/config.bfd	2009-03-12 14:38:32.555278700 +1000
-@@ -588,6 +588,9 @@ case "${targ}" in
+@@ -588,6 +588,15 @@ case "${targ}" in
      targ_selvecs="i386linux_vec bfd_efi_app_ia32_vec bfd_efi_bsdrv_ia32_vec bfd_efi_rtdrv_ia32_vec"
      targ64_selvecs=bfd_elf64_x86_64_vec
      ;;
 +  i[3-7]86-*-pedigree*)
 +    targ_defvec=bfd_elf32_i386_vec
++    ;;
++  amd64-*-pedigree*)
++    targ_defvec=bfd_elf64_x86_64_vec
++    ;;
++  x86_64-*-pedigree*)
++    targ_defvec=bfd_elf64_x86_64_vec
 +    ;;
  #ifdef BFD64
    x86_64-*-dicos*)
@@ -27,34 +33,38 @@ diff -rupN binutils-2.19-orig/config.sub binutils-2.19/config.sub
 diff -rupN binutils-2.19-orig/gas/configure.tgt binutils-2.19/gas/configure.tgt
 --- binutils-2.19-orig/gas/configure.tgt	2008-10-02 18:07:18.000000000 +1000
 +++ binutils-2.19/gas/configure.tgt	2009-03-12 14:39:16.000278700 +1000
-@@ -229,6 +229,7 @@ case ${generic_target} in
+@@ -229,5 +229,8 @@ case ${generic_target} in
    i386-*-*nt*)				fmt=coff em=pe ;;
    i386-*-chaos)				fmt=elf ;;
    i386-*-rdos*)				fmt=elf ;;
 +  i386-*-pedigree*)   fmt=elf ;;
- 
++  amd64-*-pedigree*)  fmt=elf ;;
++  x86_64-*-pedigree*) fmt=elf ;;
    i860-*-*)				fmt=elf endian=little ;;
  
 diff -rupN binutils-2.19-orig/ld/Makefile.in binutils-2.19/ld/Makefile.in
 --- binutils-2.19-orig/ld/Makefile.in	2008-09-09 18:02:20.000000000 +1000
 +++ binutils-2.19/ld/Makefile.in	2009-03-12 15:44:34.152278700 +1000
-@@ -1836,6 +1836,8 @@ eelf64ltsmip.c: $(srcdir)/emulparams/elf
+@@ -1836,6 +1836,10 @@ eelf64ltsmip.c: $(srcdir)/emulparams/elf
  eelf_i386.c: $(srcdir)/emulparams/elf_i386.sh \
    $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
  	${GENSCRIPTS} elf_i386 "$(tdir_elf_i386)"
 +epedigree_i386.c: $(srcdir)/emulparams/pedigree_i386.sh $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 +	${GENSCRIPTS} pedigree_i386 "$(tdir_pedigree_i386)"
++epedigree_x86_64.c: $(srcdir)/emulparams/pedigree_x86_64.sh $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} pedigree_x86_64 "$(tdir_pedigree_x86_64)"
  eelf_x86_64.c: $(srcdir)/emulparams/elf_x86_64.sh \
    $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
  	${GENSCRIPTS} elf_x86_64 "$(tdir_elf_x86_64)"
 diff -rupN binutils-2.19-orig/ld/configure.tgt binutils-2.19/ld/configure.tgt
 --- binutils-2.19-orig/ld/configure.tgt	2008-08-09 15:35:14.000000000 +1000
 +++ binutils-2.19/ld/configure.tgt	2009-03-12 14:40:37.383278700 +1000
-@@ -277,6 +277,7 @@ i[3-7]86-*-beos*)	targ_emul=elf_i386_be 
+@@ -277,6 +277,8 @@ i[3-7]86-*-beos*)	targ_emul=elf_i386_be 
  i[3-7]86-*-vxworks*)	targ_emul=elf_i386_vxworks ;;
  i[3-7]86-*-chaos)	targ_emul=elf_i386_chaos
  			;;
 +i[3-7]86-*-pedigree*)  targ_emul=pedigree_i386 ;;
++x86_64-*-pedigree*)    targ_emul=pedigree_x86_64 ;;
  i860-*-coff)		targ_emul=coff_i860 ;;
  i860-stardent-sysv4* | i860-stardent-elf*)
  			targ_emul=elf32_i860
@@ -75,3 +85,21 @@ diff -rupN binutils-2.19-orig/ld/emulparams/pedigree_i386.sh binutils-2.19/ld/em
 +GENERATE_PIE_SCRIPT=yes
 +NO_SMALL_DATA=yes
 +SEPARATE_GOTPLT=12
+
+diff -rupN binutils-2.19-orig/ld/emulparams/pedigree_i386.sh binutils-2.19/ld/emulparams/pedigree_x86_64.sh
+--- binutils-2.19-orig/ld/emulparams/pedigree_x86_64.sh	1970-01-01 10:00:00.000000000 +1000
++++ binutils-2.19/ld/emulparams/pedigree_x86_64.sh	2007-08-09 21:02:24.000000000 +1000
+@@ -0,0 +1,13 @@
++SCRIPT_NAME=elf
++OUTPUT_FORMAT="elf64-x86-64"
++TEXT_START_ADDR=0x08048000
++MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
++COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
++ARCH=i386:x86-64
++MACHINE=
++NOP=0x90909090
++TEMPLATE_NAME=elf32
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++NO_SMALL_DATA=yes
++SEPARATE_GOTPLT=24
