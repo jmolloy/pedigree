@@ -26,12 +26,13 @@
 /** An "Unlikely lock" is a lock which normally any number of threads can access
     concurrently, but when locked, all threads must exit and never reenter.
 
-    This is implemented as a simple counting semaphore that starts at 1. Any
-    thread can acquire by adding one to the semaphore, unless the semaphore is
-    zero. This is the "locked" state.
+    This is implemented as a simple counting semaphore that starts at zero. Any
+    thread can acquire by adding one to the semaphore. If a thread discovers that the
+    semaphore was over a threshold (100000), it decrements again and returns false.
 
-    The m_Lock member is a secondary lock, designed to stop possible starvation
-    of an acquire() call when it is innundated with enter() calls.
+    Thus, the lock can be acquired by adding 100000 to the atomic member, and waiting until
+    the atomic member's value drops to exactly 100000, at which point all threads will have
+    exited.
 */
 class UnlikelyLock
 {
@@ -48,23 +49,22 @@ public:
         // interrupts to guarantee liveness.
         Processor::setInterrupts(false);
 
-        // First check if the lock is taken.
-        if (m_Lock == false)
+        if (m_Atomic >= 100000)
         {
-            Processor::setInterrupts(false);
+            Processor::setInterrupts(true);
             return false;
         }
 
-        do
+        m_Atomic += 1;
+
+        // If the value was over the treshold - i.e. we're acquired, decrement 
+        // again and return.
+        if (m_Atomic >= 100000)
         {
-            size_t v = m_Atomic;
-            // Second check, if this is zero we NEVER succeed.
-            if (v == 0)
-            {
-                Processor::setInterrupts(true);
-                return false;
-            }
-        } while (m_Atomic.compareAndSwap(v, v+1) == false);
+            m_Atomic -= 1;
+            Processor::setInterrupts(true);
+            return false;
+        }
         
         return true;
     }
@@ -80,24 +80,19 @@ public:
         the critical region. */
     inline void acquire()
     {
-        m_Lock.compareAndSwap(false, true);
-        // Decrease the counter so it can get to zero.
-        m_Atomic -= 1;
-        while (m_Atomic > 0)
+        m_Atomic += 100000;
+        while (m_Atomic > 100000)
             ;
     }
     /** Releases the lock. */
     inline void release()
     {
         // Reset counter to one.
-        m_Atomic += 1;
-        // Unlock secondary lock.
-        m_Lock = false;
+        m_Atomic -= 100000;
     }
 
 private:
     Atomic<size_t> m_Atomic;
-    Atomic<bool>   m_Lock;
 };
 
 #endif
