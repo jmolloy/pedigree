@@ -141,6 +141,7 @@ int posix_fork(SyscallState &state)
         return -1;
     }
     pProcess->setSubsystem(pSubsystem);
+    pSubsystem->setProcess(pProcess);
 
     // Copy POSIX Process Group information if needed
     /// \todo Get a response on Stack Overflow and possibly put into the PosixProcess copy constructor

@@ -28,7 +28,27 @@ int h_errno; // required by networking code
 
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
-int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
+typedef void (*pthread_once_func_t)(void);
+int onceFunctions[32] = {0};
+
+int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
+{
+    if(!once_control || (*once_control > 32))
+    {
+        syslog(LOG_DEBUG, "[%d] pthread_once called with an invalid once_control (> 32)", getpid());
+        return -1;
+    }
+
+    if(!onceFunctions[*once_control])
+    {
+        init_routine();
+        onceFunctions[*once_control] = 1;
+    }
+
+    return 0;
+}
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void (*start_routine)(void*), void *arg)
 {
     return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
 }
@@ -281,4 +301,39 @@ int pthread_condattr_destroy(pthread_condattr_t *attr)
 int pthread_condattr_init(pthread_condattr_t *attr)
 {
     return 0;
+}
+
+void* pthread_getspecific(pthread_key_t key)
+{
+    return (void*) syscall1(POSIX_PTHREAD_GETSPECIFIC, key);
+}
+
+int pthread_setspecific(pthread_key_t key, const void *data)
+{
+    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (int) data);
+}
+
+int pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
+{
+    return syscall2(POSIX_PTHREAD_KEY_CREATE, (int) key, (int) destructor);
+}
+
+typedef void (*key_destructor)(void*);
+
+key_destructor pthread_key_destructor(pthread_key_t key)
+{
+    return (key_destructor) syscall1(POSIX_PTHREAD_KEY_DESTRUCTOR, key);
+}
+
+int pthread_key_delete(pthread_key_t key)
+{
+    /// \todo Need a way of calling userspace functions from the kernel, without
+    ///       creating a new specialisation of Event and an assembly stub for it
+    ///       to be able to return.
+    void *buff = pthread_getspecific(key);
+    pthread_setspecific(key, 0);
+    key_destructor a = pthread_key_destructor(key);
+    if(a)
+        a(buff);
+    return syscall1(POSIX_PTHREAD_KEY_DELETE, key);
 }

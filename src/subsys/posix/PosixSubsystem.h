@@ -304,11 +304,24 @@ class PosixSubsystem : public Subsystem
             }
         }
 
+        /** POSIX thread-specific data */
+        struct PosixThreadKey
+        {
+            /// Userspace function to be called when deleting the key
+            void (*destructor)(void*);
+
+            /// Buffer pointer
+            void *buffer;
+        };
+
         /** POSIX Thread information */
         class PosixThread
         {
             public:
-                PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false), isDetached(false) {};
+                PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false),
+                                isDetached(false), m_ThreadData(), m_ThreadKeys(), lastDataKey(0),
+                                nextDataKey(0)
+                {};
                 virtual ~PosixThread() {};
 
                 Thread *pThread;
@@ -317,6 +330,45 @@ class PosixSubsystem : public Subsystem
 
                 bool canReclaim;
                 bool isDetached;
+
+                /**
+                 * Links to POSIX thread keys (ie, thread-specific data)
+                 */
+                Tree<size_t, PosixThreadKey*> m_ThreadData;
+                ExtensibleBitmap m_ThreadKeys;
+
+                /** Grabs thread-specific data given a key */
+                PosixThreadKey *getThreadData(size_t key)
+                {
+                    return m_ThreadData.lookup(key);
+                }
+
+                /**
+                 * Removes thread-specific data given a key (does *not* call the
+                 * the destructor, or delete the storage.)
+                 */
+                void removeThreadData(size_t key)
+                {
+                    m_ThreadData.remove(key);
+                }
+
+                /**
+                 * Adds thread-specific data given a PosixThreadKey strcuture and a key.
+                 * \return false if the key already exists.
+                 */
+                bool addThreadData(size_t key, PosixThreadKey *info)
+                {
+                    if(m_ThreadData.lookup(key))
+                        return false;
+                    m_ThreadData.insert(key, info);
+                    return true;
+                }
+
+                /// Last data key that was allocated (for the bitmap)
+                size_t lastDataKey;
+
+                /// Next data key available
+                size_t nextDataKey;
 
             private:
                 PosixThread(const PosixThread &);

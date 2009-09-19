@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 
 #define _SS_MAXSIZE	128
 
@@ -25,8 +26,7 @@ struct msghdr
 {
   void*         msg_name;
   socklen_t     msg_namelen;
-  /* struct iovec* msg_iov; */
-  void*         msg_iov;
+  struct iovec* msg_iov;
   int32_t       msg_iovlen;
   void*         msg_control;
   socklen_t     msg_controllen;

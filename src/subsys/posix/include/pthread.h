@@ -1,11 +1,10 @@
 #ifndef __PTHREAD_H
 #define __PTHREAD_H
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef _POSIX_THREADS
+#define _POSIX_THREADS
 #endif
 
-#define _POSIX_THREADS
 #include <sys/types.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -42,8 +41,12 @@ extern "C" {
 #define PTHREAD_MUTEX_RECURSIVE         2
 #define PTHREAD_MUTEX_DEFAULT           3
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Base functionality
-int         _EXFUN(pthread_create, (pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg));
+int         _EXFUN(pthread_create, (pthread_t *thread, const pthread_attr_t *attr, void (*start_routine)(void*), void *arg));
 int         _EXFUN(pthread_join, (pthread_t thread, void **value_ptr));
 void        _EXFUN(pthread_exit, (void *value_ptr));
 int         _EXFUN(pthread_detach, (pthread_t thread));
@@ -54,9 +57,7 @@ int         _EXFUN(pthread_kill, (pthread_t thread, int sig));
 int         _EXFUN(pthread_sigmask, (int how, const sigset_t *set, sigset_t *oset));
 
 // Extended functionality
-/*
 int         _EXFUN(pthread_once, (pthread_once_t *, void (*)(void)));
-*/
 
 // Thread cancellation
 /*
@@ -79,12 +80,10 @@ int NOTIMPL _EXFUN(pthread_attr_getschedparam, (const pthread_attr_t *attr, stru
 int NOTIMPL _EXFUN(pthread_attr_setschedparam, (pthread_attr_t *attr, const struct sched_param *param));
 
 // Keys
-/*
 void*       _EXFUN(pthread_getspecific, (pthread_key_t));
 int         _EXFUN(pthread_setspecific, (pthread_key_t, const void *));
 int         _EXFUN(pthread_key_create, (pthread_key_t *, void (*)(void *)));
 int         _EXFUN(pthread_key_delete, (pthread_key_t));
-*/
 
 // Mutexes
 int         _EXFUN(pthread_mutex_init, (pthread_mutex_t *, const pthread_mutexattr_t *));

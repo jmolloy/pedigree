@@ -525,6 +525,7 @@ void pedigree_init_sigret()
     {
         pSubsystem = new PosixSubsystem();
         pProcess->setSubsystem(pSubsystem);
+        pSubsystem->setProcess(pProcess);
     }
 
     for(size_t i = 0; i < 32; i++)

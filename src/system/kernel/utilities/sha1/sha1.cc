@@ -426,10 +426,10 @@ void SHA1::ProcessMessageBlock()
      */
     for(t = 0; t < 16; t++)
     {
-        W[t] = ((unsigned) Message_Block[t * 4]) << 24;
-        W[t] |= ((unsigned) Message_Block[t * 4 + 1]) << 16;
-        W[t] |= ((unsigned) Message_Block[t * 4 + 2]) << 8;
-        W[t] |= ((unsigned) Message_Block[t * 4 + 3]);
+        W[t] = Message_Block[t * 4] << 24;
+        W[t] |= Message_Block[t * 4 + 1] << 16;
+        W[t] |= Message_Block[t * 4 + 2] << 8;
+        W[t] |= Message_Block[t * 4 + 3];
     }
 
     for(t = 16; t < 80; t++)

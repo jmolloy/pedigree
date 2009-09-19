@@ -42,7 +42,7 @@ posix_files = [
 glue_files = [
     'glue.c',
     'glue-sysconf.c',
-    'glue-fseek.c'
+    'glue-fseek.c',
 ]
 
 crt0_files = ['crt0.c']

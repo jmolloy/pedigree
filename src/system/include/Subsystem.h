@@ -20,6 +20,7 @@
 class Thread;
 
 #include <processor/state.h>
+class Process;
 
 /** The abstract base class for a generic application subsystem. This provides
   * a well-defined interface to the kernel that allows global behaviour to have
@@ -61,17 +62,17 @@ class Subsystem
 
         /** Default constructor */
         Subsystem() :
-            m_Type(None)
+            m_Type(None), m_pProcess(0)
         {}
 
         /** Copy constructor */
         Subsystem(const Subsystem &s) :
-            m_Type(s.m_Type)
+            m_Type(s.m_Type), m_pProcess(0)
         {}
 
         /** Parameterised constructor */
         Subsystem(SubsystemType type) :
-            m_Type(type)
+            m_Type(type), m_pProcess(0)
         {}
 
         /** Default destructor */
@@ -93,9 +94,23 @@ class Subsystem
             return m_Type;
         }
 
+        /** Sets the process that this subsystem is linked to. */
+        virtual void setProcess(Process *p)
+        {
+            if(!m_pProcess)
+                m_pProcess = p;
+            else
+                WARNING("An attempt was made to change the Process of a Subsystem!");
+        }
+
     protected:
 
         SubsystemType m_Type;
+
+        Process *m_pProcess;
+
+    private:
+        const Subsystem & operator = (const Subsystem&);
 };
 
 #endif
