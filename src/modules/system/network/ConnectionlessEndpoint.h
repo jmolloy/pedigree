@@ -66,7 +66,7 @@ public:
      * \param remoteHost on successful return, identifies the remote host
      * \returns -1 on failure, the number of bytes received otherwise
      */
-    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost)
+    virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost, int nTimeout = 30)
     {
         return -1;
     };

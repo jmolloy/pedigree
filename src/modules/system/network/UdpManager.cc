@@ -27,11 +27,33 @@ int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost
   return success ? nBytes : -1;
 };
 
-int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost)
+int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost, int nTimeout)
 {
-  if(dataReady(bBlock, 0))
+  // Check for data to be ready. dataReady (acquire) takes one from the Semaphore,
+  // so using dataReady *again* to see if data is available is *wrong* unless
+  // the queue is empty.
+  bool bDataReady = false;
+  if(m_DataQueue.count())
+    bDataReady = true;
+  else if(bBlock)
+  {
+    if(!dataReady(true, nTimeout))
+      bDataReady = false;
+  }
+  else
+    bDataReady = false;
+
+  if(bDataReady)
   {
     DataBlock* ptr = m_DataQueue.popFront();
+    if(ptr->magic != 0xdeadbeef)
+    {
+      // Bang! We've been overrun, impossible to recover.
+      ERROR("UDP packet information is corrupted - magic is not 0xdeadbeef!");
+      ERROR("The packet cannot be forwarded to the application *or* freed.");
+      delete ptr;
+      return 0; 
+    }
 
     size_t nBytes = maxSize;
     bool allRead = false;
@@ -105,9 +127,10 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
     // Attempt to avoid setting up the timeout if possible
     if(m_DataQueueSize.tryAcquire())
         return true;
+    else if(!block)
+        return false;
 
     // Otherwise jump straight into blocking
-    bool timedOut = false;
     if(block)
     {
         if(tmout)
@@ -116,9 +139,9 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
             m_DataQueueSize.acquire();
 
         if(Processor::information().getCurrentThread()->wasInterrupted())
-            timedOut = true;
+            return false;
     }
-    return !timedOut;
+    return true;
 }
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
