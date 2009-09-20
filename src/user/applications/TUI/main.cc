@@ -188,6 +188,11 @@ Font *g_BoldFont;
 
 int main (int argc, char **argv)
 {
+    if(getpid()>2)
+    {
+        printf("TUI is already running\n");
+        return 1;
+    }
     Display::ScreenMode mode;
     Syscall::getFb(&mode);
 
