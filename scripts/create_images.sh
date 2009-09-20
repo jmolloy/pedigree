@@ -40,6 +40,8 @@ if which losetup >/dev/null 2>&1; then
 
   # Floppy mounted - transfer files.
   sudo cp $SRCDIR/kernel/kernel $MOUNTPT/kernel
+  sudo gzip $MOUNTPT/kernel
+  sudo mv $MOUNTPT/kernel.gz $MOUNTPT/kernel
   sudo cp $SRCDIR/initrd.tar $MOUNTPT/initrd.tar
   sudo cp $SRCDIR/config.db $MOUNTPT/config.db
 
@@ -56,8 +58,8 @@ if which losetup >/dev/null 2>&1; then
   
   init;
 
-  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
-#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  sudo cp -a $SRCDIR/../images/x86/. $MOUNTPT/
+#  sudo svn export --force $SRCDIR/../images/x86 $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
@@ -94,9 +96,9 @@ if which losetup >/dev/null 2>&1; then
 
 #  OLD=$PWD
 
-#  sudo cp -a $SRCDIR/../images/i686-elf/. $MOUNTPT/
+#  sudo cp -a $SRCDIR/../images/x86/. $MOUNTPT/
   
-#  cd $SRCDIR/../images/i686-elf
+#  cd $SRCDIR/../images/x86
 #  tar -chf tmp.tar *
 #  ARCLOC=$PWD
 #  cd $OLD/$MOUNTPT
@@ -106,10 +108,10 @@ if which losetup >/dev/null 2>&1; then
   
 #  cd $OLD
   
-  #tar -cf tmp.tar $SRCDIR/../images/i686-elf/*
+  #tar -cf tmp.tar $SRCDIR/../images/x86/*
   #tar -xf tmp.tar $MOUNTPT
-  #sudo cp -r $SRCDIR/../images/i686-elf $MOUNTPT
-#  sudo svn export --force $SRCDIR/../images/i686-elf $MOUNTPT/
+  #sudo cp -r $SRCDIR/../images/x86 $MOUNTPT
+#  sudo svn export --force $SRCDIR/../images/x86 $MOUNTPT/
 #  sudo svn export --force $SRCDIR/../images/ppc-elf $MOUNTPT/
 
   # Create required directories.
@@ -167,7 +169,7 @@ elif which fartsandlove >/dev/null 2>&1; then # OS X
     
     OLD=$PWD
   
-    cd $SRCDIR/../images/i686-elf
+    cd $SRCDIR/../images/x86
     tar -chf tmp.tar *
     ARCLOC=$PWD
     cd $OLD/hddtmp2
@@ -227,8 +229,8 @@ elif which mcopy >/dev/null 2>&1; then
   mcopy -Do ./.pedigree-root C:/
   rm ./.pedigree-root
 
-  mcopy -Do -s $SRCDIR/../images/i686-elf/.bashrc C:/
-  mcopy -Do -s $SRCDIR/../images/i686-elf/* C:/
+  mcopy -Do -s $SRCDIR/../images/x86/.bashrc C:/
+  mcopy -Do -s $SRCDIR/../images/x86/* C:/
 
   mcopy -Do $SRCDIR/../scripts/termcap C:/etc
 
@@ -260,7 +262,7 @@ if which mkisofs > /dev/null 2>&1; then
 	boot/grub/menu.lst=$SRCDIR/../images/grub/menu.lst \
 	boot/kernel=$SRCDIR/kernel/kernel \
 	boot/initrd.tar=$SRCDIR/initrd.tar \
-	/=$SRCDIR/../images/i686-elf/ \
+	/=$SRCDIR/../images/x86/ \
 	/.pedigree-root=./.pedigree-root \
 	/libraries/libc.so=$SRCDIR/libc.so \
 	/libraries/libm.so=$SRCDIR/libm.so \

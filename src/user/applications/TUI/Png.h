@@ -18,7 +18,6 @@
 #define TUI_PNG_H
 
 #include "environment.h"
-#include "colourSpace.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>

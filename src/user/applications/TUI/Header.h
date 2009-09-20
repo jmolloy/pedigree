@@ -18,7 +18,6 @@
 #define HEADER_H
 
 #include "environment.h"
-#include "colourSpace.h"
 #include "Font.h"
 
 #define TAB_SELECTABLE 0x1

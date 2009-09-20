@@ -335,14 +335,14 @@
 #if defined(__GNUC__)
 # if defined(HAVE_STDINT_H)
 #   define SQLITE_INT_TO_PTR(X)  ((void*)(intptr_t)(X))
-#   define SQLITE_PTR_TO_INT(X)  ((int)(intptr_t)(X))
+#   define SQLITE_PTR_TO_INT(X)  ((long)(intptr_t)(X))
 # else
 #   define SQLITE_INT_TO_PTR(X)  ((void*)(X))
-#   define SQLITE_PTR_TO_INT(X)  ((int)(X))
+#   define SQLITE_PTR_TO_INT(X)  ((long)(X))
 # endif
 #else
-# define SQLITE_INT_TO_PTR(X)   ((void*)&((char*)0)[X])
-# define SQLITE_PTR_TO_INT(X)   ((int)(((char*)X)-(char*)0))
+# define SQLITE_INT_TO_PTR(X)   ((void*)X)
+# define SQLITE_PTR_TO_INT(X)   ((long)X)
 #endif
 
 
@@ -12475,7 +12475,6 @@ static int sqlite3MemSize(void *pPrior){ return 0; }
 static int sqlite3MemRoundup(int n){ return n; }
 static int sqlite3MemInit(void *NotUsed){ return SQLITE_OK; }
 static void sqlite3MemShutdown(void *NotUsed){ return; }
-
 /*
 ** This routine is the only routine in this file with external linkage.
 **
@@ -12493,6 +12492,7 @@ SQLITE_PRIVATE void sqlite3MemSetDefault(void){
      sqlite3MemShutdown,
      0
   };
+
   sqlite3_config(SQLITE_CONFIG_MALLOC, &defaultMethods);
 }
 
@@ -12640,6 +12640,7 @@ SQLITE_PRIVATE void sqlite3MemSetDefault(void){
      sqlite3MemShutdown,
      0
   };
+
   sqlite3_config(SQLITE_CONFIG_MALLOC, &defaultMethods);
 }
 
@@ -12991,7 +12992,8 @@ SQLITE_PRIVATE void sqlite3MemSetDefault(void){
      sqlite3MemShutdown,
      0
   };
-  sqlite3_config(SQLITE_CONFIG_MALLOC, &defaultMethods);
+
+  sqlite3_config(SQLITE_CONFIG_MALLOC,&defaultMethods);
 }
 
 /*
@@ -92935,6 +92937,7 @@ SQLITE_API int sqlite3_shutdown(void){
 ** threadsafe.  Failure to heed these warnings can lead to unpredictable
 ** behavior.
 */
+
 SQLITE_API int sqlite3_config(int op, ...){
   va_list ap;
   int rc = SQLITE_OK;

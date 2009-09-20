@@ -326,7 +326,7 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
         for (size_t i = 0; i < m_Superblock.s_blocks_per_group/8; i += sizeof(uint32_t))
         {
             // We can compare in 4-byte increments, to reduce the time spent looking for a block.
-            if (* reinterpret_cast<uint32_t*>(&buffer[i]) == ~0UL)
+            if (* reinterpret_cast<uint32_t*>(&buffer[i]) == ~0U)
                 continue;
 
             for (size_t j = 0; j < 4; j++)

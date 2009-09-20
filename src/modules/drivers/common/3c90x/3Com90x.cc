@@ -595,11 +595,11 @@ void Nic3C90x::receiveThread()
         // to find that out...
         // However, if the next is zero, the IRQ notified us of the *last* UPD in
         // the list. That needs to be handled properly too.
-        uint32_t currUpdPhys = reinterpret_cast<uint32_t>(m_PendingPackets.popFront());
-        uint32_t myNum;
+        uintptr_t currUpdPhys = reinterpret_cast<uintptr_t>(m_PendingPackets.popFront());
+        uintptr_t myNum;
         if (currUpdPhys != 0)
         {
-            uint32_t myOffset = (currUpdPhys - m_pUPD);
+            uintptr_t myOffset = (currUpdPhys - m_pUPD);
             myNum = (myOffset / sizeof(RXD)) - 1;
         }
         else

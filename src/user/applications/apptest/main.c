@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <pthread.h>
+//include <pthread.h>
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
@@ -47,11 +47,11 @@ int main(void)
     int whee;
     int* p = &whee;
  
-    if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
-    {
-        printf("Fail: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    }
+//    if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
+//    {
+//        printf("Fail: %s\n", strerror(errno));
+//        return EXIT_FAILURE;
+//    }
  
     /*for (i = 0; i < 20; i++)
     {
@@ -62,10 +62,10 @@ int main(void)
         // wait_thread();
     }*/
  
-    if (pthread_join(thread, NULL) != 0)
-    {
-        return EXIT_FAILURE;
-    }
+//    if (pthread_join(thread, NULL) != 0)
+//    {
+//        return EXIT_FAILURE;
+//    }
 
     printf("\nAnd now main() has waited for the thread to run.\n");
  

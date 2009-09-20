@@ -28,7 +28,8 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.cc")
+#    Glob("*.cc")
+     Glob("*.c")
 ]
 
 # Already-built object files to link
@@ -50,7 +51,7 @@ libraries = [
     'c',
     'm',
 #    'pthread',
-    'stdc++',
+#    'stdc++',
 ]
 
 # To add a library path add to the list below

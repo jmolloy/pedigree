@@ -65,7 +65,7 @@ default_cflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format 
 default_cxxflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
 
 # Default linker flags
-default_linkflags = '-T src/system/kernel/core/processor/x86/kernel.ld -nostdlib -nostdinc -nostartfiles'
+default_linkflags = '-nostdlib -nostdinc -nostartfiles'
 
 ####################################
 # Default build flags (Also used to auto-generate help)
@@ -131,6 +131,7 @@ env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
 env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
 env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
 env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
+env['PEDIGREE_IMAGES_DIR'] = 'images/' + env['ARCH_TARGET'].lower() + '/'
 
 # If we need to generate flags, do so
 if env['genflags']:
@@ -176,13 +177,19 @@ if env['genflags']:
             env['CFLAGS'] += ' -march=i486'
             env['CXXFLAGS'] += ' -march=i486'
             env['ASFLAGS'] += '32'
+            env['LINKFLAGS'] += ' -T src/system/kernel/core/processor/x86/kernel.ld '
             #^-- Should provide overloads for these...like machine=ARM_VOLITILE
 
+            env['PEDIGREE_IMAGES_DIR'] = 'images/x86/'
             env['ARCH_TARGET'] = 'X86'
         elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
             defines += ['X64','X86_COMMON','LITTLE_ENDIAN','BITS_64']
             env['ASFLAGS'] += '64'
+            env['PEDIGREE_IMAGES_DIR'] = 'images/x64/'
             env['ARCH_TARGET'] = 'X64'
+            env['CFLAGS'] += ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel'
+            env['CXXFLAGS'] += ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel'
+            env['LINKFLAGS'] += ' -T src/system/kernel/core/processor/x64/kernel.ld '
         elif re.match('ppc|powerpc',tmp.group(1)) != None:
             defines += ['PPC']
 
@@ -198,7 +205,7 @@ if env['genflags']:
 
     # LIBGCC path
     if env['LIBGCC'] == '':
-        # Because Windows is *gay* at running commands.getouput() properly...
+        # Because Windows is *gay* at running commands.getoutput() properly...
         stdout = os.popen(localisePrefix + env['CXX'] + ' --print-libgcc-file-name')
         libgccPath = stdout.read().strip()
         stdout.close()

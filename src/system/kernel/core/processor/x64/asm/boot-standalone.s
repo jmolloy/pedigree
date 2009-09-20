@@ -70,7 +70,9 @@ start:
   mov rax, pagedirectory1 - KERNEL_BASE
   mov rbx, pagetable0 - KERNEL_BASE + 0x03
   mov [rax], rbx
-
+  mov rbx, pagetable1 - KERNEL_BASE + 0x03
+  mov [rax+0x08], rbx
+        
   ; Map the kernel
   mov rax, pagetable0 - KERNEL_BASE + 0x08
   mov rbx, init
@@ -88,11 +90,11 @@ start:
 
   ; Map the page table for the stack
   mov rax, pagedirectory2 - KERNEL_BASE
-  mov rbx, pagetable1 - KERNEL_BASE + 0x03
+  mov rbx, pagetable2 - KERNEL_BASE + 0x03
   mov [rax + 0xFF8], rbx
 
   ; Map the kernel stack
-  mov rax, pagetable1 - KERNEL_BASE
+  mov rax, pagetable2 - KERNEL_BASE
   mov rbx, stack - KERNEL_BASE + 0x03
   mov [rax + 0xFF8], rbx
   add rbx, 4096
@@ -177,49 +179,53 @@ callmain:
     db 0x92
     dw 0
 
-[SECTION .asm.bss]
+[SECTION .asm.bss nobits]
 pml4:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory pointer table for 0-256GB
 pagedirectorypointer0:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory pointer table for the upmost 256GB
 pagedirectorypointer1:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory pointer table for the physical memory mapping
 pagedirectorypointer2:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory for the 0-1GB
 pagedirectory0:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory for the kernel code/data
 pagedirectory1:
-  times 4096 db 0
+  resb 4096
 
 ; Page directory for the kernel stack
 pagedirectory2:
-  times 4096 db 0
+  resb 4096
 
 ; Page directories for the physical memory mapping
 pagedirectory3:
-  times 4096 db 0
-  times 4096 db 0
-  times 4096 db 0
-  times 4096 db 0
+  resb 4096
+  resb 4096
+  resb 4096
+  resb 4096
 
-; Page table for the kernel code/data
+; Page table for the kernel code/data (0MB .. 2MB)
 pagetable0:
-  times 4096 db 0
+  resb 4096
+
+; Page table for the kernel code/data (2MB .. 4MB)
+pagetable1:
+  resb 4096
 
 ; Page table for the kernel stack
-pagetable1:
-  times 4096 db 0
-
+pagetable2:
+  resb 4096
+        
 ; The kernel stack
 stack:
-  times 32768 db 0
+  resb 32768

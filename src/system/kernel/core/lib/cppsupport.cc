@@ -125,28 +125,14 @@ void operator delete (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     if (p == 0) return;
-  uintptr_t up = reinterpret_cast<uintptr_t>(p);
-  if (up < 0xc0000000 || up > 0xd0000000)
-  {
-      ERROR_NOLOCK("Bad free " << Hex << up);
-      Processor::breakpoint();
-  }
-  SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+    SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
 void operator delete[] (void * p)
 {
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     if (p == 0) return;
-
-  uintptr_t up = reinterpret_cast<uintptr_t>(p);
-  if (up < 0xc0000000 || up > 0xd0000000)
-  {
-      ERROR_NOLOCK("Bad free " << Hex << up);
-      Processor::breakpoint();
-  }
-
-  SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+    SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
 void operator delete (void *p, void *q)

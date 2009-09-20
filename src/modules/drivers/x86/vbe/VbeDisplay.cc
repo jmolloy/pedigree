@@ -55,11 +55,13 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
   {
       str.sprintf("INSERT INTO 'display-modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
       pR = Config::instance().query(str);
+
       if (!pR->succeeded())
       {
           FATAL("VbeDisplay: Sql error: " << pR->errorMessage());
           return;
       }
+
       delete pR;
   }
 

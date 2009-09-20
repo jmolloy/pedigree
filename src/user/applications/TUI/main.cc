@@ -30,9 +30,6 @@
 
 #include <signal.h>
 
-//include "Xterm.h"
-//include "FreetypeXterm.h"
-
 #include "Terminal.h"
 
 #include "Font.h"

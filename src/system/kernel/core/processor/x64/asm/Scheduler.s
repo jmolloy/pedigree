@@ -19,7 +19,7 @@ global _ZN9Processor9saveStateER17X64SchedulerState
 ; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
 global _ZN9Processor12restoreStateER17X64SchedulerStatePVm
 ; void Processor::restoreState(volatile uintptr_t *, SyscallState &)
-global _ZN9Processor12restoreStateER16X64SyscallStatePVm
+global _ZN9Processor12restoreStateER15X64SyscallStatePVm
 ; void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
 ;                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
 global _ZN9Processor10jumpKernelEPVmmmmmmm
@@ -29,11 +29,16 @@ global _ZN9Processor8jumpUserEPVmmmmmmm
 ; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
 global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X64SchedulerState
 
+; void Thread::threadExited()
+extern _ZN6Thread12threadExitedEv
+; void PerProcessorScheduler::deleteThread(Thread *)
+extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+        
 [bits 64]
 [section .text]
 
 ; [rdi] State pointer.
-_ZN9Processor9saveStateER17X86SchedulerState:
+_ZN9Processor9saveStateER17X64SchedulerState:
     ;; Save the stack pointer (without the return address)
     mov     rax, rsp
     add     rax, 8
@@ -72,7 +77,7 @@ _ZN9Processor12restoreStateER17X64SchedulerStatePVm:
     mov     r15, [rdi+56]
     mov     rbx, [rdi+64]
     mov     rbp, [rdi+72]
-    mov     rax, [rdi+80]
+    mov     rsp, [rdi+80]
     mov     rdx, [rdi+88]
 
     ;; Ignore lock if none given (rcx == 0).
@@ -86,12 +91,13 @@ _ZN9Processor12restoreStateER17X64SchedulerStatePVm:
     xor     rax, rax
     inc     rax
 
-    ;; No need to push anything on the stack, as everything here is register-call.
+    ;; Push the return address on to the stack before returning.
+    push    rdx
     ret
 
 ; [rsi] Lock
 ; [rdi] State pointer.
-_ZN9Processor12restoreStateER16X64SyscallStatePVm:
+_ZN9Processor12restoreStateER15X64SyscallStatePVm:
     ;; The state pointer is on this thread's kernel stack, so change to it.
     mov     rsp, rdi
 
@@ -156,7 +162,8 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
 .no_lock:
 
     ;; Push return address.
-    push    qword _ZN6Thread12threadExitedEv
+    mov     r10, _ZN6Thread12threadExitedEv
+    push    r10
 
     ;; New stack frame.
     xor     rbp, rbp
@@ -195,7 +202,8 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
 .no_lock:
 
     ;; Push return address.
-    push    qword _ZN6Thread12threadExitedEv
+    mov     r10, _ZN6Thread12threadExitedEv
+    push    r10
 
     ;; New stack frame.
     xor     rbp, rbp

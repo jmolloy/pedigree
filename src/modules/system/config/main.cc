@@ -35,6 +35,11 @@ extern BootstrapStruct_t *g_pBootstrapInfo;
 uint8_t *g_pFile = 0;
 size_t g_FileSz = 0;
 
+extern "C" void log_(unsigned long a)
+{
+    NOTICE("Int: " << a);
+}
+
 extern "C" int atoi(const char *str)
 {
     return strtoul(str, 0, 10);
@@ -58,7 +63,7 @@ int xClose(sqlite3_file *file)
 int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     int ret = 0;
-    if (iOfst+iAmt >= g_FileSz)
+    if (iOfst+static_cast<unsigned int>(iAmt) >= g_FileSz)
     {
         memset(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
@@ -76,7 +81,7 @@ int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 
 int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
-    if (iOfst+iAmt >= g_FileSz)
+    if (iOfst+static_cast<unsigned int>(iAmt) >= g_FileSz)
     {
         uint8_t *tmp = new uint8_t[g_FileSz*2];
         memset(tmp, 0, g_FileSz*2);
@@ -390,10 +395,11 @@ void init()
     g_pFile = new uint8_t[sSize];
     memcpy(g_pFile, region.virtualAddress(), sSize);
     g_FileSz = sSize;
-
+    NOTICE("region.va: " << (uintptr_t)region.virtualAddress());
     sqlite3_initialize();
-
+    NOTICE("Initialize fin");
     int ret = sqlite3_open("root»/.pedigree-root", &g_pSqlite);
+    NOTICE("Open fin");
     if (ret)
     {
         FATAL("sqlite3 error: " << sqlite3_errmsg(g_pSqlite));

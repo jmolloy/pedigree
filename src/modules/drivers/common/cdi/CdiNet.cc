@@ -41,7 +41,7 @@ CdiNet::~CdiNet()
 {
 }
 
-bool CdiNet::send(uint32_t nBytes, uintptr_t buffer)
+bool CdiNet::send(size_t nBytes, uintptr_t buffer)
 {
     m_Device->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
 

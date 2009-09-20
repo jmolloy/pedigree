@@ -122,6 +122,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #if defined(X86_COMMON) || defined(PPC_COMMON)
   Machine::instance().initialiseDeviceTree();
 #endif
+
   // Initialise the kernel log.
   Log::instance().initialise();
 

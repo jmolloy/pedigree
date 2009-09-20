@@ -91,14 +91,30 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         'machine/x86_common/x86emu/ops2.c',
         'machine/x86_common/x86emu/prim_ops.c',
         'machine/x86_common/x86emu/sys.c',
-        Glob('core/processor/x86/*.cc'),
         Glob('core/processor/x86_common/*.cc'),
+    ]
+    include += ['machine/x86_common/x86_emu/x86emu/']
+
+if 'X86' in env['CPPDEFINES']:
+    files += [
+        Glob('core/processor/x86/*.cc'),
         'core/processor/x86/asm/boot-standalone.s',
         'core/processor/x86/asm/InterruptManager.s',
         'core/processor/x86/asm/Processor.s',
         'core/processor/x86/asm/Scheduler.s'
     ]
-    include += ['machine/x86_common/x86_emu/x86emu/']
+
+if 'X64' in env['CPPDEFINES']:
+    files += [
+        Glob('core/processor/x64/*.cc'),
+        'core/processor/x64/asm/boot-standalone.s',
+        'core/processor/x64/asm/InterruptManager.s',
+        'core/processor/x64/asm/SyscallManager.s',
+        'core/processor/x64/asm/Processor.s',
+        'core/processor/x64/asm/Scheduler.s',
+        'core/processor/x64/asm/gdt.s'
+    ]
+
 
 ####################################
 # You should never need to touch anything below this line.

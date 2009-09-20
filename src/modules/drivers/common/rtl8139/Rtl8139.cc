@@ -129,7 +129,7 @@ void Rtl8139::reset()
     NOTICE("RTL8139: Reset");
 }
 
-bool Rtl8139::send(uint32_t nBytes, uintptr_t buffer)
+bool Rtl8139::send(size_t nBytes, uintptr_t buffer)
 {
     if(nBytes > RTL_PACK_MAX)
     {

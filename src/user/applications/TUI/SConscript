@@ -11,6 +11,7 @@ tmp = env.Clone()
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
+imagesdir = "#" + env["PEDIGREE_IMAGES_DIR"]
 objname = appdir + '/TUI'
 
 # Part of the apps target
@@ -30,7 +31,6 @@ files = [
     'main.cc',
     'Font.cc',
     'Png.cc',
-    'colourSpace.cc',
     'Header.cc',
     '_Xterm.cc',
     'Terminal.cc',
@@ -55,15 +55,16 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'freetype-i686.a',
-    'libpng-i686.a',
-    'libz-i686.a',
+    'freetype.a',
+    'libpng.a',
+    'libz.a',
 ]
 
 # To add a library path add to the list below
 libpaths = [
     env['LIBGCC'],
     builddir,
+    imagesdir + 'libraries/',
     '.'
 ]
 
@@ -74,9 +75,6 @@ tmp['CPPPATH'] = [i for i in include]
 tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
-
-# tmp['CFLAGS'] += ' -DNEW_XTERM '
-# tmp['CXXFLAGS'] += ' -DNEW_XTERM '
 
 if not len(files) == 0:
     build = tmp.Program(objname,tmp.objects,LINKFLAGS='')

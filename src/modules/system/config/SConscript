@@ -48,7 +48,7 @@ tmp.objects = [tmp.Object(i) for i in files]
 tmp['CPPPATH'] = [i for i in include]
 tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
-tmp['CFLAGS']  ='-Os -g0 -nostdlib -nostdinc -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_DISABLE_LFS=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_FLOATING_POINT=1';
+tmp['CFLAGS']  ='-Os -g0 -nostdlib -nostdinc -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_DISABLE_LFS=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_FLOATING_POINT=1 -mno-sse -mcmodel=kernel';
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(files) == 0:

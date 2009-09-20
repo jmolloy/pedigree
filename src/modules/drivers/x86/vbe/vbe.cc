@@ -46,8 +46,8 @@ struct vbeModeInfo {
   char directcolor_attributes;
 
   // --- VBE 2.0 ---
-  int framebuffer;
-  int offscreen;
+  unsigned int framebuffer;
+  unsigned int offscreen;
   short sz_offscreen; // In KB.
 } __attribute__((packed));
 

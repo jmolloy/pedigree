@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "environment.h"
-#include "colourSpace.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
