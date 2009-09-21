@@ -361,9 +361,9 @@ bool PosixSubsystem::kill(Thread *pThread)
         Processor::setInterrupts(true);
     }
 
-    // Hang the thread
-    while(1)
-        Scheduler::instance().yield();
+    // Hang the thread - wtf, no!
+    //while(1)
+    //    Scheduler::instance().yield();
     return true;
 }
 
