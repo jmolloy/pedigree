@@ -16,6 +16,7 @@
 
 #include <processor/Processor.h>
 #include <processor/IoPortManager.h>
+#include <processor/PageFaultHandler.h>
 #include <process/initialiseMultitasking.h>
 #include "gdt.h"
 #include "SyscallManager.h"
@@ -55,6 +56,8 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
   // Initialise this processor's syscall handling
   X64SyscallManager::initialiseProcessor();
+
+  PageFaultHandler::instance().initialise();
 
   // Initialise the physical memory-management
   X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();

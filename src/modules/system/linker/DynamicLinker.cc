@@ -227,13 +227,13 @@ bool DynamicLinker::trap(uintptr_t address)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     uintptr_t v = address & ~(PhysicalMemoryManager::getPageSize()-1);
-
+    
     // Grab a physical page.
     physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
     // Map it into the address space.
-    if (!va.map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Write))
+    if (!va.map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Write|VirtualAddressSpace::Execute))
     {
-        WARNING("IMAGE: map() failed in ElfImage::trap()");
+        WARNING("IMAGE: map() failed in ElfImage::trap(): vaddr: " << v);
         return false;
     }
     

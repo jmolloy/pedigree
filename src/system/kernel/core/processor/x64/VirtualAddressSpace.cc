@@ -576,8 +576,9 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
 {
   if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
-    // Map the page
-    *tableEntry = physAddress | (flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+    // Map the page. Add the WRITE and USER flags so that these can be controlled
+    // on a page-granularity level.
+    *tableEntry = physAddress | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);
 
     // Zero the page directory pointer table
     memset(physicalAddress(reinterpret_cast<void*>(physAddress)),
