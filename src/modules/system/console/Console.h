@@ -28,7 +28,7 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 
-#define DEFAULT_FLAGS  (ConsoleManager::IMapCRToNL|ConsoleManager::ONLCausesNewline|ConsoleManager::LEcho|ConsoleManager::LEchoErase|ConsoleManager::LEchoNewline|ConsoleManager::LCookedMode)
+#define DEFAULT_FLAGS  (ConsoleManager::IMapCRToNL|ConsoleManager::ONLCausesCR|ConsoleManager::LEcho|ConsoleManager::LEchoErase|ConsoleManager::LEchoNewline|ConsoleManager::LCookedMode)
 
 /** This lets a Console become a first-class citizen of the VFS,
   * which means it can integrate seamlessly into select() calls
@@ -81,8 +81,8 @@ public:
         OPostProcess     = 16,
         OMapCRToNL       = 32,
         ONoCrAtCol0      = 64,
-        OMapNLToCR       = 128,
-        ONLCausesNewline = 256
+        OMapNLToCRNL     = 128,
+        ONLCausesCR      = 256
     };
     enum LAttribute
     {

@@ -66,8 +66,8 @@ int posix_tcgetattr(int fd, struct termios *p)
                ((flags&ConsoleManager::IStripToSevenBits)?ISTRIP:0);
   p->c_oflag = ((flags&ConsoleManager::OPostProcess)?OPOST:0) |
                ((flags&ConsoleManager::OMapCRToNL)?OCRNL:0) |
-               ((flags&ConsoleManager::OMapNLToCR)?ONLCR:0) |
-               ((flags&ConsoleManager::ONLCausesNewline)?ONLRET:0);
+               ((flags&ConsoleManager::OMapNLToCRNL)?ONLCR:0) |
+               ((flags&ConsoleManager::ONLCausesCR)?ONLRET:0);
   p->c_cflag = 0;
   p->c_lflag = ((flags&ConsoleManager::LEcho)?ECHO:0) |
       ((flags&ConsoleManager::LEchoErase)?ECHOE:0) |
@@ -103,20 +103,20 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
   }
 
   size_t flags = 0;
-  if (p->c_iflag&INLCR)  flags  |= ConsoleManager::IMapNLToCR;
-  if (p->c_iflag&ICRNL)  flags  |= ConsoleManager::IMapCRToNL;
-  if (p->c_iflag&IGNCR)  flags  |= ConsoleManager::IIgnoreCR;
+  if (p->c_iflag&INLCR)  flags |= ConsoleManager::IMapNLToCR;
+  if (p->c_iflag&ICRNL)  flags |= ConsoleManager::IMapCRToNL;
+  if (p->c_iflag&IGNCR)  flags |= ConsoleManager::IIgnoreCR;
   if (p->c_iflag&ISTRIP) flags |= ConsoleManager::IStripToSevenBits;
-  if (p->c_oflag&OPOST)  flags  |= ConsoleManager::OPostProcess;
-  if (p->c_oflag&OCRNL)  flags  |= ConsoleManager::OMapCRToNL;
-  if (p->c_oflag&ONLCR)  flags  |= ConsoleManager::OMapNLToCR;
-  if (p->c_oflag&ONLRET) flags |= ConsoleManager::ONLCausesNewline;
-  if (p->c_lflag&ECHO)   flags   |= ConsoleManager::LEcho;
-  if (p->c_lflag&ECHOE)  flags  |= ConsoleManager::LEchoErase;
-  if (p->c_lflag&ECHOK)  flags  |= ConsoleManager::LEchoKill;
+  if (p->c_oflag&OPOST)  flags |= ConsoleManager::OPostProcess;
+  if (p->c_oflag&OCRNL)  flags |= ConsoleManager::OMapCRToNL;
+  if (p->c_oflag&ONLCR)  flags |= ConsoleManager::OMapNLToCRNL;
+  if (p->c_oflag&ONLRET) flags |= ConsoleManager::ONLCausesCR;
+  if (p->c_lflag&ECHO)   flags |= ConsoleManager::LEcho;
+  if (p->c_lflag&ECHOE)  flags |= ConsoleManager::LEchoErase;
+  if (p->c_lflag&ECHOK)  flags |= ConsoleManager::LEchoKill;
   if (p->c_lflag&ECHONL) flags |= ConsoleManager::LEchoNewline;
   if (p->c_lflag&ICANON) flags |= ConsoleManager::LCookedMode;
-
+  NOTICE("TCSETATTR: " << Hex << flags);
   /// \todo Sanity checks.
   ConsoleManager::instance().setAttributes(pFd->file, flags);
 

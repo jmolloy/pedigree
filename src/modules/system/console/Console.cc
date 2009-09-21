@@ -170,12 +170,16 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
         {
             if (pC[i] == '\r' && (file->m_Flags & OMapCRToNL))
                 pC[i] = '\n';
-            else if (pC[i] == '\n' && (file->m_Flags & OMapNLToCR))
-                pC[i] = '\r';
+            else if (pC[i] == '\n' && (file->m_Flags & OMapNLToCRNL))
+            {
+                // We don't make the distinction between '\r\n' and '\n'.
+                pC[i] = '\n';
+                continue;
+            }
 
             // Lastly, after both mappings above have been done, we can
             // check if NL should cause a CR as well.
-            if (pC[i] == '\n' && (file->m_Flags & ONLCausesNewline) == 0)
+            if (pC[i] == '\n' && (file->m_Flags & ONLCausesCR) == 0)
                 pC[i] = '\xB'; // Use 'VT' - vertical tab.
         }
     }

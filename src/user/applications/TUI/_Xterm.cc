@@ -70,15 +70,15 @@ Xterm::~Xterm()
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-    //char str[64];
-    //sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
-    //log(str);
+    char str[64];
+    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
+    log(str);
 
     if(m_bChangingState)
     {
-        //char tmp32[128];
-        //sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-        //log(tmp32);
+        char tmp32[128];
+        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
+        log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
 
@@ -123,7 +123,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             case 'h':
-                // 1049l is the code to switch to the alternate window.
+                // 1049h is the code to switch to the alternate window.
                 if (m_Cmd.params[0] == 1049)
                 {
                   m_ActiveBuffer = 1;
