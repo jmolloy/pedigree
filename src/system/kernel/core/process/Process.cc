@@ -197,7 +197,7 @@ uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     bool b = Processor::information().getVirtualAddressSpace().map(phys,
                                                                    reinterpret_cast<void*> (j+0x40000000),
-                                                                   VirtualAddressSpace::Write);
+                                                                   VirtualAddressSpace::Write| VirtualAddressSpace::Execute);
     if (!b)
       WARNING("map() failed in init");
   }

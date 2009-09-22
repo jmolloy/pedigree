@@ -19,5 +19,36 @@
 
 sigret_stub:
   mov rax, 0x10066
-  int 0xff
+  syscall
 sigret_stub_end:
+
+[GLOBAL pthread_stub]
+[GLOBAL pthread_stub_end]
+[EXTERN pthread_exit]
+
+; void pthread_stub(size_t p1, size_t p2, size_t p3, size_t p4);
+pthread_stub:
+  int3
+  ; Call the entry function
+  mov rbx, 0
+  mov rax, 0x10051
+  syscall                       
+
+  ; First parameter: entry point.
+  mov rdi, rax
+
+  ; Second parameter: argument.
+  mov rdi, rsi
+  
+  ; Run the function
+  call rax
+  
+  ; Effectively, pthread_exit... We can't refer to libc functions from here,
+  ; as this code is copied to userspace at runtime.
+  mov rbx, rax
+  mov rax, 0x10050
+  syscall
+  
+  jmp $
+
+pthread_stub_end:

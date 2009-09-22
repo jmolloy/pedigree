@@ -210,6 +210,8 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     ;; RFLAGS: interrupts enabled.
     mov     r11, 0x200
     ;; Enable interrupts and jump.
+    mov     rcx, rax
+
     sti
     sysret
 

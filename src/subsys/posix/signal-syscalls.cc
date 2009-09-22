@@ -514,7 +514,7 @@ void pedigree_init_sigret()
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     Processor::information().getVirtualAddressSpace().map(phys,
             reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
-            VirtualAddressSpace::Write);
+                                                          VirtualAddressSpace::Write|VirtualAddressSpace::Execute);
     memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
 
     // Install default signal handlers
