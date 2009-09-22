@@ -25,47 +25,19 @@ from datetime import *
 ####################################
 defines = [
     'THREADS',                  # Enable threading
-    #'DEBUGGER',                # Enable the debugger
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     #'SMBIOS',                  # Enable SMBIOS
     'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
     #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
+                                # TODO: Should be a proper option... I'll do that soon. -Matt
     'ADDITIONAL_CHECKS',
     'KERNEL_STANDALONE',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-    #'CRIPPLE_HDD',
 ]
-
-if 'DEBUGGER' in defines:
-    defines += [
-#        'TRACK_LOCKS',
-#        'TRACK_PAGE_ALLOCATIONS',
-    ]
-
-# Default CFLAGS
-#
-default_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O3 '
-
-# Default CXXFLAGS
-#
-default_cxxflags = '-std=gnu++98 -fno-builtin -nostdinc -nostdlib -ffreestanding -fno-rtti -fno-exceptions -g0 -O3 '
-
-# Entry level warning flags
-default_cflags += '-Wno-long-long '
-default_cxxflags += '-Weffc++ -Wold-style-cast '
-
-# Extra warnings (common to C/C++)
-extra_warnings = '-Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
-default_cflags += '-Wnested-externs '
-default_cflags += extra_warnings
-default_cxxflags += extra_warnings
-
-# Turn off some stuff that kills the build
-default_cflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
-default_cxxflags += '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
-
-# Default linker flags
-default_linkflags = '-nostdlib -nostdinc -nostartfiles'
+    
+# Grab all the default flags for each architecture
+sys.path += ['./scripts']
+from defaultFlags import *
 
 ####################################
 # Default build flags (Also used to auto-generate help)
@@ -80,15 +52,15 @@ opts.AddVariables(
     ('AS','Sets the assembler to use.'),
     ('AR','Sets the archiver to use.'),
     ('LINK','Sets the linker to use.'),
-    ('CFLAGS','Sets the C compiler flags.',default_cflags),
-    ('CXXFLAGS','Sets the C++ compiler flags.',default_cxxflags),
-    ('ASFLAGS','Sets the assembler flags.','-f elf'),
-    ('LINKFLAGS','Sets the linker flags',default_linkflags),
+    ('CFLAGS','Sets the C compiler flags.',''),
+    ('CXXFLAGS','Sets the C++ compiler flags.',''),
+    ('ASFLAGS','Sets the assembler flags.',''),
+    ('LINKFLAGS','Sets the linker flags',''),
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
 
-    BoolVariable('CRIPPLE_HDD','Disable writing to hard disks at runtime.',1),
+    BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
 
     BoolVariable('verbose','Display verbose build output.',0),
@@ -98,6 +70,8 @@ opts.AddVariables(
     BoolVariable('installer', 'Build the installer', 0),
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
+    
+    BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -107,10 +81,9 @@ opts.AddVariables(
     ('ARCH_TARGET', 'Automatically generated architecture name (DO NOT USE)', ''),
 )
 
+# Copy the host environment and install our options
 env = Environment(options = opts, ENV = os.environ)
-#^-- Create a new environment object passing the options
 Help(opts.GenerateHelpText(env))
-#^-- Create the scons help text from the options we specified earlier
 
 # POSIX platform :)
 env.Platform('posix')
@@ -148,7 +121,9 @@ if env['genflags']:
         env['CC'] = prefix + crossBase + 'gcc'
         env['CC_NOCACHE'] = crossBase + 'gcc'
         env['CXX'] = prefix + crossBase + 'g++'
-        env['AS'] = prefix + crossBase + 'as'
+        
+        # AS will be setup soon
+        env['AS'] = ''
 
         # AR and LD never have the prefix added. They must run on the host.
         env['AR'] = crossBase + 'ar'
@@ -156,40 +131,26 @@ if env['genflags']:
         env['LINK'] = env['LD']
     env['LD'] = env['LINK']
 
-    ####################################
-    # Compiler/Target specific settings
-    ####################################
-    # Check to see if the compiler supports --fno-stack-protector
-    out = commands.getoutput('echo -e "int main(void) {return 0;}" | ' + localisePrefix + env['CC'] + ' -x c -fno-stack-protector -c -o /dev/null -')
-    if not 'unrecognized option' in out:
-        env['CXXFLAGS'] += ' -fno-stack-protector'
-        env['CFLAGS'] += ' -fno-stack-protector'
-
-    out = commands.getoutput(localisePrefix + env['CXX'] + ' -v')
-    #^-- The old script used --dumpmachine, which isn't always present
-    tmp = re.match('.*?Target: ([^\n]+)',out,re.S)
-
-    if tmp != None:
-        env['ARCH_TARGET'] = tmp.group(1)
-
+    tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
+    if(tmp != None):
         if re.match('i[3456]86',tmp.group(1)) != None:
-            defines +=  ['X86','X86_COMMON','LITTLE_ENDIAN','BITS_32','KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
-            env['CFLAGS'] += ' -march=i486'
-            env['CXXFLAGS'] += ' -march=i486'
-            env['ASFLAGS'] += '32'
-            env['LINKFLAGS'] += ' -T src/system/kernel/core/processor/x86/kernel.ld '
-            #^-- Should provide overloads for these...like machine=ARM_VOLITILE
-
-            env['PEDIGREE_IMAGES_DIR'] = 'images/x86/'
+            defines += default_defines['x86']
+            env['CFLAGS'] += default_cflags['x86']
+            env['CXXFLAGS'] += default_cxxflags['x86']
+            env['ASFLAGS'] += default_asflags['x86']
+            env['LINKFLAGS'] += default_linkflags['x86']
+            
+            env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
             env['ARCH_TARGET'] = 'X86'
         elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-            defines += ['X64','X86_COMMON','LITTLE_ENDIAN','BITS_64']
-            env['ASFLAGS'] += '64'
-            env['PEDIGREE_IMAGES_DIR'] = 'images/x64/'
+            defines += default_defines['x64']
+            env['CFLAGS'] += default_cflags['x64']
+            env['CXXFLAGS'] += default_cxxflags['x64']
+            env['ASFLAGS'] += default_asflags['x64']
+            env['LINKFLAGS'] += default_linkflags['x64']
+            
+            env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
             env['ARCH_TARGET'] = 'X64'
-            env['CFLAGS'] += ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel'
-            env['CXXFLAGS'] += ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel'
-            env['LINKFLAGS'] += ' -T src/system/kernel/core/processor/x64/kernel.ld '
         elif re.match('ppc|powerpc',tmp.group(1)) != None:
             defines += ['PPC']
 
@@ -198,73 +159,44 @@ if env['genflags']:
             defines += ['ARM']
 
             env['ARCH_TARGET'] = 'ARM'
+    if(tmp == None or env['ARCH_TARGET'] == ''):
+        print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
+        Exit(1)
 
-    # Default to x86 if something went wrong
-    else:
-        env['ARCH_TARGET'] = 'X86'
+    # Configure the assembler
+    if(env['AS'] == ''):
+        # NASM is used for X86 and X64 builds
+        if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+            crossPath = os.path.dirname(env['CC'])
+            env['AS'] = crossPath + "/nasm"
+        else:
+            if(env['CROSS'] == ''):
+                print "Error: Please set AS on the command line."
+                Exit(1)
+            env['AS'] = env['CROSS'] + "as"
 
-    # LIBGCC path
-    if env['LIBGCC'] == '':
-        # Because Windows is *gay* at running commands.getoutput() properly...
-        stdout = os.popen(localisePrefix + env['CXX'] + ' --print-libgcc-file-name')
-        libgccPath = stdout.read().strip()
-        stdout.close()
-        if not os.path.exists(libgccPath):
-            print "Error: libgcc path could not be determined. Use the LIBGCC option."
-            Exit(1)
-
-        # Not out of the woods yet, Windows-specific hackery!
-        # Only required if you use a MinGW-based cross-compiler (they're faster <3)
-        if ':' in libgccPath:
-            # Probably a Windows path... Colons really shouldn't be anywhere else
-            drive = libgccPath[0:1]
-            libgccPath = libgccPath[len('a:'):]
-
-            # Assume Cygwin. Someone's going to kill me over this.
-            libgccPath = "/cygdrive/" + drive + libgccPath
-
-        env['LIBGCC'] = os.path.dirname(libgccPath)
-
-    # NASM is used for X86 and X64 builds
-    if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-        crossPath = os.path.dirname(env['CC'])
-        env['AS'] = crossPath + '/nasm'
-
-    ####################################
-    # Some quirks
-    ####################################
-    defines += ['__UD_STANDALONE__']
-    #^-- Required no matter what.
-
-    if not env['warnings']:
+    # Extra build flags
+    if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:
         env['CXXFLAGS'] += ' -Werror'
         env['CFLAGS'] += ' -Werror'
 
-    if env['verbose_link']:
+    if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
         env['LINKFLAGS'] += ' --verbose'
+        
+    additionalDefines = ['installer', 'debugger', 'cripple_hdd']
+    for i in additionalDefines:
+        if(env[i] and not i in defines):
+            defines += [i.upper()]
 
-    if env['installer']:
-        defines += ['INSTALLER']
+    # Set the environment flags
+    env['CPPDEFINES'] = defines
 
-    if env['debugger']:
-		defines += ['DEBUGGER']
-
-    if env['CRIPPLE_HDD']:
-        defines += ['CRIPPLE_HDD']
-
-    ####################################
-    # Setup our build options
-    ####################################
-    env['CPPDEFINES'] = []
-    env['CPPDEFINES'] = [i for i in defines]
-    #^-- Stupid, I know, but again I plan on adding some preprocessing (AKA auto-options for architecutres)
-
-    # Don't regenerate until we really have to
+    # Don't regenerate this information until we really have to
     env['genflags'] = False
 
     # Save the cache, all the options are configured
-    opts.Save('options.cache',env)
-    #^-- Save the cache file over the old one
+    if(not env['nocache']):
+        opts.Save('options.cache', env)
 
 ####################################
 # Fluff up our build messages

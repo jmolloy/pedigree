@@ -17,7 +17,7 @@ def doLibm(builddir, inputLibmA, ar, cc, libgcc):
 
     shutil.copy(inputLibmA, tmpdir + "/libm.a")
     os.system(ar + " x libm.a")
-    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libm.so -L" + libgcc + " -o " + buildOut + ".so *.o -lgcc")
+    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libm.so -o " + buildOut + ".so *.o -lgcc")
     os.system(ar + " cru " + buildOut + ".a *.o")
 
     for i in os.listdir("."):
@@ -27,4 +27,4 @@ def doLibm(builddir, inputLibmA, ar, cc, libgcc):
     os.rmdir(tmpdir)
 
 import sys
-doLibm(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+doLibm(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], "") # sys.argv[5])

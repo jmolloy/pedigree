@@ -55,9 +55,9 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'freetype.a',
-    'libpng.a',
-    'libz.a',
+    'freetype',
+    'libpng',
+    'libz',
 ]
 
 # To add a library path add to the list below

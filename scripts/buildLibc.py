@@ -46,7 +46,7 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
         except:
             continue
 
-    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -L" + libgcc + " -o " + buildOut + ".so *.o -lgcc")
+    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.o -lgcc")
     os.system(ar + " cru " + buildOut + ".a *.o")
 
     for i in os.listdir("."):
@@ -56,4 +56,4 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
     os.rmdir(tmpdir)
 
 import sys
-doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])
+doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], "") # sys.argv[6])
