@@ -89,7 +89,7 @@ Elf::~Elf()
     delete m_pDynamicSymbolTable;
     delete m_pDynamicStringTable;
     delete m_pSectionHeaders;
-    delete m_pProgramHeaders;    
+    delete m_pProgramHeaders;
 }
 
 bool Elf::create(uint8_t *pBuffer, size_t length)
@@ -109,7 +109,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     }
 
     // Check the bit-length.
-    if (pHeader->ident[4] != 
+    if (pHeader->ident[4] !=
 #ifdef BITS_32
         1 /* ELFCLASS32 */
 #else
@@ -550,7 +550,7 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
                m_nDynamicSymbolTableSize)
         {
             const char *pStr = pStrtab + pSymbol->name;
-    
+
             SymbolTable::Binding binding;
             switch (ST_BIND(pSymbol->info))
             {
@@ -638,7 +638,7 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
 
 #if defined(PPC_COMMON) || defined(MIPS_COMMON)
             Processor::flushDCacheAndInvalidateICache(loadAddr, loadAddr+m_pProgramHeaders[i].filesz);
-#endif 
+#endif
         }
     }
 

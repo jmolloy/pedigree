@@ -106,7 +106,14 @@ class Iterator
     /** Dereference operator yields the element value */
     T &operator *()
     {
-      return m_Node->value;
+      // Verify that we actually have a valid node
+      if(m_Node)
+        return m_Node->value;
+      else
+      {
+        static T ret = 0;
+        return ret;
+      }
     }
     /** Dereference operator yields the element value */
     T &operator ->()

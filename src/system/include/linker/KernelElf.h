@@ -61,6 +61,8 @@ class KernelElf : public Elf
      *\return A pointer to a Elf class describing the loaded module. */
     Module *loadModule(uint8_t *pModule, size_t len);
 
+    void unloadModules();
+
     /** Looks up the address of the symbol with name 'pName' globally, that is throughout
      *  all modules and the kernel itself. */
     uintptr_t globalLookupSymbol(const char *pName);
@@ -68,7 +70,7 @@ class KernelElf : public Elf
 
     /** Returns the address space allocator for modules. */
     MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
-    
+
   private:
     /** Default constructor does nothing */
     KernelElf() INITIALISATION_ONLY;
@@ -93,8 +95,8 @@ class KernelElf : public Elf
 
     /** List of modules */
     Vector<Module*> m_Modules;
-    /** List of successfully loaded module names. */
-    Vector<char*> m_LoadedModules;
+    /** List of successfully loaded modules. */
+    Vector<Module*> m_LoadedModules;
     /** List of pending modules - modules whose dependencies have not yet been
         satisfied. */
     Vector<Module*> m_PendingModules;

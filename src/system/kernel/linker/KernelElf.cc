@@ -285,6 +285,49 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   return module;
 }
 
+void KernelElf::unloadModules()
+{
+    for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
+        it != m_LoadedModules.begin();
+        it--)
+    {
+        Module *module = *it;
+        NOTICE("KERNELELF: Unloading module " << module->name);
+
+        g_Progress --;
+        if (g_BootProgress)
+            g_BootProgress("moduleunload", g_Progress);
+
+        if(module->exit)
+            module->exit();
+
+        // Check for a destructors list and execute.
+        uintptr_t startDtors = module->elf.lookupSymbol("start_dtors");
+        uintptr_t endDtors = module->elf.lookupSymbol("end_dtors");
+
+        if (startDtors && endDtors)
+        {
+            uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startDtors);
+            while (iterator < reinterpret_cast<uintptr_t*>(endDtors))
+            {
+                void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+                fp();
+                iterator++;
+            }
+        }
+
+        m_SymbolTable.eraseByElf(&module->elf);
+
+        g_Progress --;
+        if (g_BootProgress)
+            g_BootProgress("moduleunloaded", g_Progress);
+
+        m_LoadedModules.erase(it);
+        //m_Modules.erase(it);
+        NOTICE("KERNELELF: Module " << module->name << " unloaded.");
+    }
+}
+
 bool KernelElf::moduleDependenciesSatisfied(Module *module)
 {
   int i = 0;
@@ -295,7 +338,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
     bool found = false;
     for (size_t j = 0; j < m_LoadedModules.count(); j++)
     {
-      if (!strcmp(m_LoadedModules[j], module->depends[i]))
+      if (!strcmp(m_LoadedModules[j]->name, module->depends[i]))
       {
         found = true;
         break;
@@ -309,7 +352,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
 
 void KernelElf::executeModule(Module *module)
 {
-  m_LoadedModules.pushBack(const_cast<char*>(module->name));
+  m_LoadedModules.pushBack(module);
 
   if (!module->elf.finaliseModule(module->buffer, module->buflen))
   {
@@ -334,7 +377,7 @@ void KernelElf::executeModule(Module *module)
 
   NOTICE("KERNELELF: Executing module " << module->name);
 
-  if (module)
+  if (module->entry)
     module->entry();
 
   NOTICE("KERNELELF: Module " << module->name << " finished executing");

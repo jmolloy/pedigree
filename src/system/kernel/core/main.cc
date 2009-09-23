@@ -30,6 +30,7 @@
 #include "cppsupport.h"                   // initialiseConstructors()
 
 #include <processor/Processor.h>          // Processor::initialise1(), Processor::initialise2()
+#include <processor/IoPort.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/KernelCoreSyscallManager.h>
 
@@ -189,4 +190,22 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     Processor::setInterrupts(true);
     Scheduler::instance().yield();
   }
+}
+
+void shutdown()
+{
+    /*IoPort *io = new IoPort("reset xD");
+    io->allocate(0x60, 5);
+    uint8_t tmp;
+    do {
+        tmp = io->read8(4);
+        if(tmp &1)
+            io->read8(0);
+    } while(tmp & 2);
+    io->write8(0xFE, 0);*/
+    //Processor::setInterrupts(false);
+    NOTICE("Halting...");
+    KernelElf::instance().unloadModules();
+    //asm volatile ("hlt");
+    while(1);
 }

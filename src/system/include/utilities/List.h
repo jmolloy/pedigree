@@ -117,13 +117,13 @@ class List<void*>
      *\return iterator pointing to the end of the List + 1 */
     inline Iterator end()
     {
-      return Iterator();
+      return Iterator(0);
     }
     /** Get a constant iterator pointing to the end of the List + 1
      *\return constant iterator pointing to the end of the List + 1 */
     inline ConstIterator end() const
     {
-      return ConstIterator();
+      return ConstIterator(0);
     }
     /** Get an iterator pointing to the reverse beginning of the List
      *\return iterator pointing to the reverse beginning of the List */
