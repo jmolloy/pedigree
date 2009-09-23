@@ -57,10 +57,12 @@ public:
 
   /** Copy constructor. */
   SymbolTable(const SymbolTable &symtab);
-  
+
 
   /** Insert a symbol into the table. */
   void insert(String name, Binding binding, Elf *pParent, uintptr_t value);
+
+  void eraseByElf(Elf *pParent);
 
   /** Looks up a symbol in the table, optionally outputting the
    *  binding value.

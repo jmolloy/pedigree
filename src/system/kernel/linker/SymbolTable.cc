@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ€hler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -62,6 +62,38 @@ void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t v
   }
 
   pList->pushBack (new Symbol(pParent, binding, value));
+}
+
+void SymbolTable::eraseByElf(Elf *pParent)
+{
+    for (RadixTree<SymbolList*>::Iterator tit = m_Tree.begin();
+            tit != m_Tree.end();
+            tit++)
+    {
+        // Verify that there's actually a valid list
+        if(!*tit)
+            continue;
+
+        SymbolList *pList = *tit;
+        for (SymbolList::Iterator it = pList->begin();
+            it != pList->end();
+            it++)
+        {
+            // Verify the symbol pointer
+            if(!*it)
+                continue;
+
+            Symbol *pSym = *it;
+            if (pSym->getParent() == pParent)
+            {
+                it = pList->erase(it);
+
+                /// \todo Epic quick hack, rewrite
+                if(*it == *pList->end())
+                break;
+            }
+        }
+    }
 }
 
 uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pBinding)

@@ -55,6 +55,7 @@ void progress(const char *text, uintptr_t progress)
 
     size_t w = (g_ProgressW * progress) / g_Total;
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
+    g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
 }
 
 void init()
