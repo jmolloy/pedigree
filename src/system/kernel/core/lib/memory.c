@@ -28,30 +28,30 @@ void *memset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 /** This function courtesy of Josh Cornutt - cheers! */
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
-{               
+{
     char *p1 = (char *)s1;
     const char *p2 = (const char *)s2;
 
     // Don't use SSE for now.
-#if 0    
+#if 0
     asm volatile("  prefetchnta 0(%0);  \
                     prefetchnta 32(%0); "
                  ::"r"(s1));
-#endif            
+#endif
     // check for bad usage of memcpy
     if(!n) return s1;
 
     // calculate the distance to the nearest natural boundary
-    char offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
+    size_t offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
 
-    size_t unused;    
+    size_t unused;
     // see if it's even worth aligning
     if(n <= sizeof(size_t))
     {
         asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n));
         return s1;
     }
-    
+
     n -= offset;
 
     // align p1 on a natural boundary
@@ -62,8 +62,8 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
     asm volatile("rep movsq;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 3));
 #elif defined(X86)
     asm volatile("rep movsl;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 2));
-#endif    
-    
+#endif
+
     // clean up the remaining bytes
     asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n % sizeof(size_t)));
 
@@ -87,13 +87,13 @@ void *memmove(void *s1, const void *s2, size_t n)
   {
     uint8_t *dest8 = (uint8_t*)s1 + n;
     const uint8_t *src8 = (const uint8_t*)s2 + n;
-    
+
     while ((((uintptr_t)dest8 - 1) % 4) != 0 && n != 0)
     {
       *--dest8 = *--src8;
       --n;
     }
-    
+
     uint32_t *dest32 = (uint32_t*)dest8;
     const uint32_t *src32 = (const uint32_t*)src8;
     while (n >= 4)
@@ -101,7 +101,7 @@ void *memmove(void *s1, const void *s2, size_t n)
       *--dest32 = *--src32;
       n -= 4;
     }
-    
+
     dest8 = (uint8_t*)dest32;
     src8 = (const uint8_t*)src32;
     while (n != 0)

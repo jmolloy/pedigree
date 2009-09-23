@@ -17,6 +17,7 @@
 #include <Log.h>
 #include <vfs/VFS.h>
 #include <vfs/Directory.h>
+#include "../../subsys/posix/PosixSubsystem.h"
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <Module.h>
@@ -201,6 +202,9 @@ void init()
     pProcess->setCwd(VFS::instance().find(String("root»/")));
     pProcess->setCtty(0);
 
+    PosixSubsystem *pSubsystem = new PosixSubsystem;
+    pProcess->setSubsystem(pSubsystem);
+
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
     lock.release();
@@ -209,9 +213,7 @@ void destroy()
 {
 }
 
-#if 0
-extern void shutdown();
-#endif
+extern void system_reset();
 
 void init_stage2()
 {
@@ -256,11 +258,11 @@ void init_stage2()
     pedigree_init_pthreads();
 
 #if 0
-    shutdown();
-#endif
-
+    system_reset();
+#else
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+#endif
 }
 
 MODULE_NAME("init");

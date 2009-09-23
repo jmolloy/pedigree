@@ -625,12 +625,15 @@ int posix_getgid()
     return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
 }
 
+
 int pedigree_login(int uid, const char *password)
 {
     // Grab the given user.
     User *pUser = UserManager::instance().getUser(uid);
     if (!pUser) return -1;
-
+    #if 0
+    pedigree_shutdown();
+    #endif
     if (pUser->login(String(password)))
         return 0;
     else
@@ -817,5 +820,21 @@ int posix_syslog(const char *msg, int prio)
     else
         NOTICE(msg);
 #endif
+    return 0;
+}
+
+extern void system_reset();
+
+int pedigree_shutdown()
+{
+    for(int i = Scheduler::instance().getNumProcesses()-1;i>=0;i--)
+    {
+        Process *proc = Scheduler::instance().getProcess(i);
+        PosixSubsystem *subsys = reinterpret_cast<PosixSubsystem*>(proc->getSubsystem());
+        subsys->kill(proc->getThread(0));
+        NOTICE("Sent KILL to process "<<proc->getId());
+    }
+    while(Scheduler::instance().getNumProcesses());
+    system_reset();
     return 0;
 }

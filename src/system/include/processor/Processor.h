@@ -132,6 +132,8 @@ class Processor
     inline static void breakpoint() ALWAYS_INLINE;
     /** Halt this processor */
     inline static void halt() ALWAYS_INLINE;
+    /** Reset this processor */
+    inline static void reset() ALWAYS_INLINE;
 
     /** Return the (total) number of breakpoints
      *\return (total) number of breakpoints */

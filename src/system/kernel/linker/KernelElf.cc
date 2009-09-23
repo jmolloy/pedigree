@@ -326,6 +326,31 @@ void KernelElf::unloadModules()
         //m_Modules.erase(it);
         NOTICE("KERNELELF: Module " << module->name << " unloaded.");
     }
+    m_LoadedModules.clear();
+    m_Modules.clear();
+
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+    size_t numPages = (MOD_LEN / pageSz) + (MOD_LEN % pageSz ? 1 : 0);
+
+    // Unmap!
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    for (size_t i = 0; i < numPages; i++)
+    {
+        void *unmapAddr = reinterpret_cast<void*>(MOD_START + (i * pageSz));
+        if(va.isMapped(unmapAddr))
+        {
+            // Unmap the virtual address
+            physical_uintptr_t phys = 0;
+            size_t flags = 0;
+            va.getMapping(unmapAddr, phys, flags);
+            va.unmap(reinterpret_cast<void*>(unmapAddr));
+
+            // Free the physical page
+            PhysicalMemoryManager::instance().freePage(phys);
+        }
+    }
+
+    m_ModuleAllocator.free(MOD_START, MOD_LEN);
 }
 
 bool KernelElf::moduleDependenciesSatisfied(Module *module)
