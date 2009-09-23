@@ -17,7 +17,11 @@
 #include <Module.h>
 #include <Log.h>
 #include <processor/Processor.h>
+#include <process/Process.h>
+#include <process/Scheduler.h>
 #include "PosixSyscallManager.h"
+#include "signal-syscalls.h"
+#include "system-syscalls.h"
 
 PosixSyscallManager g_PosixSyscallManager;
 

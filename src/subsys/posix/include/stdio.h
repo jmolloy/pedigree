@@ -182,7 +182,10 @@ int	_EXFUN(fprintf, (FILE *, const char *, ...)
 int	_EXFUN(fscanf, (FILE *, const char *, ...)
                _ATTRIBUTE ((__format__ (__scanf__, 2, 3))));
 int	_EXFUN(printf, (const char *, ...)
-               _ATTRIBUTE ((__format__ (__printf__, 1, 2))));
+_ATTRIBUTE ((__format__ (__printf__, 1, 2))));
+int _EXFUN(vsnprintf, (char *, size_t, const char *, __VALIST)
+_ATTRIBUTE ((__format__ (__printf__, 3, 0))));
+
 int	_EXFUN(scanf, (const char *, ...)
                _ATTRIBUTE ((__format__ (__scanf__, 1, 2))));
 int	_EXFUN(sscanf, (const char *, const char *, ...)

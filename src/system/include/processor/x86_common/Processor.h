@@ -19,12 +19,19 @@
 
 void Processor::breakpoint()
 {
-  asm volatile ("int $3");
+    asm volatile ("int $3");
 }
 
 void Processor::halt()
 {
-  asm volatile("hlt");
+    asm volatile("hlt");
+}
+
+void Processor::reset()
+{
+    // Load null IDT for now
+    size_t zero = 0x0;
+    asm volatile("lidt %0; int $3" ::"m"(zero));
 }
 
 #endif

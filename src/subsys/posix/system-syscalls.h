@@ -65,6 +65,7 @@ int posix_getpgrp();
 int posix_syslog(const char *msg, int prio);
 
 int pedigree_load_keymap(char *buffer, size_t len);
+int pedigree_shutdown();
 
 #endif
 
