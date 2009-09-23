@@ -131,7 +131,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
         va.getMapping(reinterpret_cast<void*>(state.getInstructionPointer()), physAddr, flags);
 
     // Page faults in usermode are usually useless to debug in the debugger (some exceptions exist)
-    if(!(flags & PFE_USER_MODE))
+    if(!(code & PFE_USER_MODE))
         Debugger::instance().start(state, sError);
   #endif
 
