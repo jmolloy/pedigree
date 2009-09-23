@@ -18,10 +18,11 @@
 #include <syscall.h>
 
 #include <stdio.h>
-
+extern void log();
 void *operator new (size_t size) throw()
 {
-  return malloc(size);
+  void *ret = malloc(size);
+  return ret;
 }
 void *operator new[] (size_t size) throw()
 {

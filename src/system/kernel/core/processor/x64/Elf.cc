@@ -128,6 +128,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             break;
         case R_X86_64_JUMP_SLOT:
         case R_X86_64_GLOB_DAT:
+
             result = S;
             break;
         case R_X86_64_RELATIVE:

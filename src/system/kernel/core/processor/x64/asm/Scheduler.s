@@ -126,6 +126,7 @@ _ZN9Processor12restoreStateER15X64SyscallStatePVm:
     pop     rcx
     pop     rsp
 
+    db 0x48
     sysret
 
 ; [rsp+0x8] param3
@@ -212,7 +213,7 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     ;; Enable interrupts and jump.
     mov     rcx, rax
 
-    sti
+    db 0x48
     sysret
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X64SchedulerState:

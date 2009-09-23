@@ -139,6 +139,10 @@ void X86CommonProcessorInformation::setKernelStack(uintptr_t stack)
     m_Tss->esp0 = stack;
   #else
     m_Tss->rsp0 = stack;
+    // Can't use Procesor::writeMachineSpecificRegister as Processor is
+    // undeclared here!
+    uint32_t eax = stack, edx = stack >> 32;
+    asm volatile("wrmsr" :: "a" (eax), "d" (edx), "c" (0xc0000102));
   #endif
 }
 

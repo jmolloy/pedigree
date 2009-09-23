@@ -47,6 +47,10 @@ interrupt_handler:
   push r14
   push r15
 
+  mov ax, 0x10
+  mov ss, ax
+  mov ds, ax
+        
   ; Create a new stackframe
   xor rbp, rbp
 
@@ -75,6 +79,7 @@ interrupt_handler:
 
   ; Remove the errorcode and the interrupt number from the stack
   add rsp, 0x10
+
   iretq
 
 ;##############################################################################

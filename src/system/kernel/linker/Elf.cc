@@ -883,11 +883,10 @@ uintptr_t Elf::applySpecificRelocation(uintptr_t off, SymbolTable *pSymtab, uint
     if (m_pPltRelaTable)
     {
         // For each relocation entry...
-        ElfRela_t *pRel = adjust_pointer(m_pPltRelaTable, off);
+        ElfRela_t pRel = m_pPltRelaTable[off];
+        applyRelocation(pRel, 0, pSymtab, loadBase, policy);
 
-        applyRelocation(*pRel, 0, pSymtab, loadBase, policy);
-
-        uintptr_t address = loadBase + pRel->offset;
+        uintptr_t address = loadBase + pRel.offset;
 
         return * reinterpret_cast<uintptr_t*> (address);
     }

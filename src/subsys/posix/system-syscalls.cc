@@ -100,7 +100,7 @@ long posix_sbrk(int delta)
 {
     long ret = reinterpret_cast<long>(
                    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-//    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
+    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
     if (ret == 0)
     {
         SYSCALL_ERROR(OutOfMemory);

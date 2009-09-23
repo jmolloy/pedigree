@@ -23,7 +23,7 @@ X64GdtManager X64GdtManager::m_Instance;
 void X64GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries
-  m_DescriptorCount = 5 + 2 * processorCount;
+  m_DescriptorCount = 7 + 2 * processorCount;
 
   // Allocate the GDT
   m_Gdt = new segment_descriptor[m_DescriptorCount];
@@ -32,17 +32,19 @@ void X64GdtManager::initialise(size_t processorCount)
   setSegmentDescriptor(0, 0, 0, 0, 0);
   setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
   setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
-  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code
-  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data
+  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code32
+  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data32
+  setSegmentDescriptor(5, 0, 0, 0xF8, 0x22); // User code64
+  setSegmentDescriptor(6, 0, 0, 0xF2, 0x22); // User data64
   for (size_t i = 0;i < processorCount;i++)
   {
     X64TaskStateSegment *Tss = new X64TaskStateSegment;
     initialiseTss(Tss);
-    setTssDescriptor(2 * i + 5, reinterpret_cast<uint64_t>(Tss));
+    setTssDescriptor(2 * i + 7, reinterpret_cast<uint64_t>(Tss));
 
     ProcessorInformation &processorInfo = Processor::information();
     processorInfo.setTss(Tss);
-    processorInfo.setTssSelector((2 * i + 5) << 3);
+    processorInfo.setTssSelector((2 * i + 7) << 3);
   }
 }
 void X64GdtManager::initialiseProcessor()

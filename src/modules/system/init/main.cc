@@ -205,7 +205,6 @@ void init()
 
     lock.release();
 }
-
 void destroy()
 {
 }

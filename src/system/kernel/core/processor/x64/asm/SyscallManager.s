@@ -70,6 +70,11 @@ syscall_handler:
   mov rdi, rsp
   call _ZN17X64SyscallManager7syscallER15X64SyscallState
 
+  cli
+
+  mov ax, 0x23
+  mov ds, ax
+        
   pop r15
   pop r14
   pop r13
@@ -87,4 +92,7 @@ syscall_handler:
   pop rcx
   pop rsp
 
+
+  db 0x48
   sysret
+        

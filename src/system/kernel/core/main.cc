@@ -175,7 +175,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // mapping of 0-4MB
   // NOTE: BootstrapStruct_t unusable after this point
 #ifdef X86_COMMON
-  /// \todo Reenable this, when the config system saves the config file.
   Processor::initialisationDone();
 #endif
 

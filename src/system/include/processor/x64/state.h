@@ -213,6 +213,7 @@ class X64SyscallState
     /** Get the n'th parameter for this syscall. */
     inline uintptr_t getSyscallParameter(size_t n) const;
     inline void setSyscallReturnValue(uintptr_t val);
+    inline void setSyscallErrno(uintptr_t val);
 
   private:
     /** The R15 general purpose register */
@@ -429,11 +430,11 @@ size_t X64SyscallState::getRegisterSize(size_t index) const
 
 size_t X64SyscallState::getSyscallService() const
 {
-  return ((m_Rax >> 32) & 0xFFFFFFFF);
+  return ((m_Rax >> 16) & 0xFFFF);
 }
 size_t X64SyscallState::getSyscallNumber() const
 {
-  return (m_Rax & 0xFFFFFFFF);
+  return (m_Rax & 0xFFFF);
 }
 uintptr_t X64SyscallState::getSyscallParameter(size_t n) const
 {
@@ -452,6 +453,10 @@ uintptr_t X64SyscallState::getSyscallParameter(size_t n) const
 void X64SyscallState::setSyscallReturnValue(uintptr_t val)
 {
   m_Rax = val;
+}
+void X64SyscallState::setSyscallErrno(uintptr_t val)
+{
+  m_Rbx = val;
 }
 
 

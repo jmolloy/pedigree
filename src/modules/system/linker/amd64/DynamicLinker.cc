@@ -39,9 +39,9 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
     return;
   }
   NOTICE("got: " << reinterpret_cast<uintptr_t>(got));
-  got++;                     // Go to GOT+4
+  got++;                     // Go to GOT+8
   *got = value&0xFFFFFFFF;   // Library ID
-  got++;                     // Got to GOT+8
+  got++;                     // Got to GOT+16
 
   // Check if the resolve function has been set already...
   if (*got == 0)
@@ -73,7 +73,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
     physical_uintptr_t physPage = PhysicalMemoryManager::instance().allocatePage();
     bool b = Processor::information().getVirtualAddressSpace().map(physPage,
                                                                    reinterpret_cast<void*> (resolveLocation),
-                                                                   VirtualAddressSpace::Write);
+                                                                   VirtualAddressSpace::Write|VirtualAddressSpace::Execute);
 
     if (!b)
     {
@@ -112,6 +112,6 @@ uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
     uintptr_t result = pElf->applySpecificRelocation(symIdx, m_pProgramElf->getSymbolTable(), loadBase);
     if(result == 0)
         result = pElf->applySpecificRelocation(symIdx, m_pProgramElf->getSymbolTable(), loadBase, SymbolTable::NotOriginatingElf);
-
+NOTICE("Resolve " << symIdx << ", lib: " << libraryId << "; " << result);
     return result;
 }

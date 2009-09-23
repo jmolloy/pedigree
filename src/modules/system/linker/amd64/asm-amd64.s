@@ -1,12 +1,21 @@
 [GLOBAL resolveSymbol]
 resolveSymbol:
-  pop rdx               ; First parameter - will go into rbx once that's saved.
-  pop rcx               ; Second parameter
+  pop r15
+  pop r14
+
   push rbx
-  mov rbx, rdx          ; First parameter.
+  push rdx
+  push rcx
+        
+  mov rbx, r15          ; First parameter.
+  mov rdx, r14          ; Second parameter.
 
   mov rax, 1            ; KernelCoreSyscallManager::link
+  mov r13, rsp
+  syscall               ; Syscall.
 
-  int 255               ; Syscall.
+  pop rcx
+  pop rdx
   pop rbx               ; Get rbx back.
+        
   jmp rax

@@ -58,14 +58,23 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
     LockGuard<Spinlock> lock(m_Instance.m_Lock);
     pHandler = m_Instance.m_pHandler[serviceNumber];
   }
-
+  
   if (LIKELY(pHandler != 0))
-    pHandler->syscall(syscallState);
+  {
+    syscallState.setSyscallReturnValue(pHandler->syscall(syscallState));
+    syscallState.setSyscallErrno(Processor::information().getCurrentThread()->getErrno());
+
+    if (Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
+    {
+      NOTICE("Unwind state exit, in interrupt handler");
+      Processor::information().getCurrentThread()->getParent()->getSubsystem()->exit(0);
+    }
+  }
 }
 
 uintptr_t X64SyscallManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
 {
-    uint64_t rax = (static_cast<uint64_t>(service) << 32) | static_cast<uint64_t>(function);
+    uint64_t rax = (static_cast<uint64_t>(service) << 16) | static_cast<uint64_t>(function);
     uint64_t ret;
     asm volatile("mov %6, %%r8; \
                   syscall" : "=a" (ret)
