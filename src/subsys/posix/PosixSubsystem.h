@@ -31,6 +31,30 @@ class File;
 class LockedFile;
 class MemoryMappedFile;
 
+// Grabs a subsystem for use.
+#define GRAB_POSIX_SUBSYSTEM(returnValue) \
+    PosixSubsystem *pSubsystem = 0; \
+    { \
+        Process *pProcess = Processor::information().getCurrentThread()->getParent(); \
+        pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem()); \
+        if(!pSubsystem) \
+        { \
+            ERROR("No subsystem for this process!"); \
+            return (returnValue); \
+        } \
+    }
+#define GRAB_POSIX_SUBSYSTEM_NORET \
+    PosixSubsystem *pSubsystem = 0; \
+    { \
+        Process *pProcess = Processor::information().getCurrentThread()->getParent(); \
+        pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem()); \
+        if(!pSubsystem) \
+        { \
+            ERROR("No subsystem for this process!"); \
+            return; \
+        } \
+    }
+
 /** A map linking full paths to (advisory) locked files */
 /// \todo Locking!
 extern RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
