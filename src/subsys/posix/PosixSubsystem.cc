@@ -275,7 +275,7 @@ void PosixSubsystem::exit(int code)
     Process *pProcess = pThread->getParent();
     if (pProcess->getExitStatus() == 0)
         pProcess->setExitStatus( (code&0xFF) << 8 );
-
+    
     // Exit called, but we could be at any nesting level in the event stack.
     // We have to propagate this exit() to all lower stack levels because they may have
     // semaphores and stuff open.
@@ -350,15 +350,15 @@ bool PosixSubsystem::kill(Thread *pThread)
 
     // Lock the signal handlers, so it's impossible for our signal handler to be pulled our
     // from beneath us by another CPU or something.
-    //LockGuard<Mutex> guard(m_SignalHandlersLock);
+    LockGuard<Mutex> guard(m_SignalHandlersLock);
 
     // Send SIGKILL
     SignalHandler *sig = getSignalHandler(9);
 
     if(sig && sig->pEvent)
     {
-        //Processor::setInterrupts(true);
         pThread->sendEvent(sig->pEvent);
+        Processor::setInterrupts(true);
     }
 
     // Hang the thread - wtf, no!

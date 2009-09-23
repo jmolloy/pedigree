@@ -631,7 +631,9 @@ int pedigree_login(int uid, const char *password)
     // Grab the given user.
     User *pUser = UserManager::instance().getUser(uid);
     if (!pUser) return -1;
+    #if 0
     pedigree_shutdown();
+    #endif
     if (pUser->login(String(password)))
         return 0;
     else
