@@ -51,10 +51,11 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
         return s1;
     }
     
+    n -= offset;
+
     // align p1 on a natural boundary
     asm volatile("rep movsb;":"=D"(p1), "=S"(p2):"D"(p1), "S"(p2), "c"(offset));
-    n -= offset;
-    
+
     // move in size_t size'd blocks
 #if defined(X64)
     asm volatile("rep movsq;":"=D"(p1), "=S"(p2):"D"(p1), "S"(p2), "c"(n >> 3));

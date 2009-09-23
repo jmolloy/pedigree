@@ -122,10 +122,10 @@ public:
       {
         FATAL("CACHE: Failed to create specific temporary memory region");
       }
-
       memcpy(reinterpret_cast<void*>(pItem),
              mr.convertPhysicalPointer<void*>(reinterpret_cast<physical_uintptr_t>(pT)),
              N);
+
       return true;
     }
 
@@ -155,7 +155,6 @@ public:
       memcpy(mr.convertPhysicalPointer<void*>(reinterpret_cast<physical_uintptr_t>(pT)),
              reinterpret_cast<void*>(pItem),
              N);
-  
       // Don't need to unregister the memory region - will destroy when it goes out of scope.
       m_Lock.release();
       return;
