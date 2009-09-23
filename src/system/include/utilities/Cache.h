@@ -159,7 +159,7 @@ public:
       m_Lock.release();
       return;
     }
-  
+    int i = 0;  
     physical_uintptr_t address = 0;
     // Item doesn't exist, so attempt to find some free space in the ready list.
     for (List<CachePage*>::Iterator it = m_ReadyPages.begin();
@@ -189,8 +189,9 @@ public:
         if (it == m_ReadyPages.end())
           break;
       }
+      i++;
     }
-  
+
     if (address == 0)
     {
       // No memory available, grab some more.

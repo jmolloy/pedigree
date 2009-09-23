@@ -197,6 +197,23 @@ void Thread::cullEvent(Event *pEvent)
     }
 }
 
+void Thread::cullEvent(size_t eventNumber)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+
+    for (List<Event*>::Iterator it = m_EventQueue.begin();
+         it != m_EventQueue.end();
+         it++)
+    {
+        if ((*it)->getNumber() == eventNumber)
+        {
+            it = m_EventQueue.erase(it);
+            if (it == m_EventQueue.end())
+                return;
+        }
+    }
+}
+
 Event *Thread::getNextEvent()
 {
     LockGuard<Spinlock> guard(m_Lock);

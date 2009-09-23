@@ -281,6 +281,9 @@ public:
     /** Walks the event queue, removing the event \p pEvent , if found. */
     void cullEvent(Event *pEvent);
 
+    /** Walks the event queue, removing the event with number \p eventNumber , if found. */
+    void cullEvent(size_t eventNumber);
+
     /** Grabs the first available unmasked event and pops it off the queue.
         This also pushes the inhibit mask stack.
 

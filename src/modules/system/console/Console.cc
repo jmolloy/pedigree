@@ -81,6 +81,21 @@ File* ConsoleManager::getConsole(String consoleName)
     return 0;
 }
 
+ConsoleFile *ConsoleManager::getConsoleFile(RequestQueue *pBackend)
+{
+    /// \todo Thread safety.
+    for (size_t i = 0; i < m_Consoles.count(); i++)
+    {
+        ConsoleFile *pC = m_Consoles[i];
+        if (pC->m_pBackEnd == pBackend)
+        {
+            return pC;
+        }
+    }
+    // Error - not found.
+    return 0;
+}
+
 bool ConsoleManager::isConsole(File* file)
 {
     return (file->getInode() == 0xdeadbeef);
@@ -139,6 +154,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
     {
+        NOTICE("input: " << (uint8_t)pC[i]);
         /// \note Turned this into a C++-style cast... I have no idea what this achieves. - Matt
         if (file->m_Flags & IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;

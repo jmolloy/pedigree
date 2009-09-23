@@ -20,6 +20,8 @@
 #include <processor/types.h>
 #include <utilities/String.h>
 #include <utilities/RadixTree.h>
+#include <process/Thread.h>
+#include <process/Event.h>
 
 #define FILE_UR 0001
 #define FILE_UW 0002
@@ -218,7 +220,24 @@ public:
         return 1;
     }
 
+    /** Causes the event pEvent to be dispatched to pThread when activity occurs
+        on this File. Activity includes the file becoming available for reading,
+        writing or erroring. */
+    void monitor(Thread *pThread, Event *pEvent)
+    {
+        m_Lock.acquire();
+        m_MonitorTargets.pushBack(new MonitorTarget(pThread, pEvent));
+        m_Lock.release();
+    }
+
+    /** Walks the monitor-target queue, removing all for \p pThread .*/
+    void cullMonitorTargets(Thread *pThread);
+
 protected:
+
+    /** Internal function to notify all registered MonitorTargets. */
+    void dataChanged();
+
     String m_Name;
     Time m_AccessedTime;
     Time m_ModifiedTime;
@@ -235,6 +254,19 @@ protected:
     size_t m_Uid;
     size_t m_Gid;
     uint32_t m_Permissions;
+
+    Mutex m_Lock;
+
+    struct MonitorTarget
+    {
+        MonitorTarget(Thread *pT, Event *pE) :
+            pThread(pT), pEvent(pE)
+        {}
+        Thread *pThread;
+        Event  *pEvent;
+    };
+
+    List<MonitorTarget*> m_MonitorTargets;
 };
 
 #endif

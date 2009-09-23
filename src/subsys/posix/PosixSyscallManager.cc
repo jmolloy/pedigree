@@ -30,6 +30,7 @@
 #include "sem-syscalls.h"
 #include "pthread-syscalls.h"
 #include "pedigree-syscalls.h"
+#include "select-syscalls.h"
 
 PosixSyscallManager::PosixSyscallManager()
 {

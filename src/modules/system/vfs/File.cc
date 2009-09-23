@@ -24,7 +24,7 @@
 File::File() :
   m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
   m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
-  m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0)
+  m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_Lock(), m_MonitorTargets()
 {
 }
 
@@ -106,4 +106,42 @@ void File::setSize(size_t sz)
 void File::truncate()
 {
   m_pFilesystem->truncate(this);
+}
+
+void File::dataChanged()
+{
+    LockGuard<Mutex> guard(m_Lock);
+
+    for (List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
+         it != m_MonitorTargets.end();
+         it++)
+    {
+        MonitorTarget *pMT = *it;
+
+        pMT->pThread->sendEvent(pMT->pEvent);
+        delete pMT;
+    }
+
+    m_MonitorTargets.clear();
+}
+
+void File::cullMonitorTargets(Thread *pThread)
+{
+    LockGuard<Mutex> guard(m_Lock);
+
+    for (List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
+         it != m_MonitorTargets.end();
+         it++)
+    {
+        MonitorTarget *pMT = *it;
+
+        if (pMT->pThread == pThread)
+        {
+            delete pMT;
+            m_MonitorTargets.erase(it);
+            it = m_MonitorTargets.begin();
+            if (it == m_MonitorTargets.end())
+                return;
+        }
+    }
 }

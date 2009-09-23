@@ -984,7 +984,7 @@ int posix_isatty(int fd)
     NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
 }
-
+#if 0
 /** SelectRun: performs a "select" call over a set of Files with a timeout. */
 class SelectRun
 {
@@ -1061,7 +1061,7 @@ class SelectRun
         /// Timeout - is a soft deadline
         uint32_t m_Timeout;
 };
-
+#endif
 /** poll: determine if a set of file descriptors are writable/readable.
  *
  *  Permits any number of descriptors, unlike select().
@@ -1131,7 +1131,7 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
     return numReady;
 }
 
-
+#if 0
 /** select: determine if a set of file descriptors is readable, writable, or has an error condition.
  *
  *  Each descriptor should be checked asynchronously, in order to quickly handle large numbers of
@@ -1161,7 +1161,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     if (timeout)
         timeoutSeconds = timeout->tv_sec + (timeout->tv_usec / 1000);
     run->setTimeout(timeoutSeconds);
-
+    if (timeoutSeconds > 0)
+        FATAL("Timeout! " << timeoutSeconds);
     // Setup the SelectRun object with all of the files
     for (int i = 0; i < nfds; i++)
     {
@@ -1184,6 +1185,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             {
                 SelectRun::FileInfo *f = new SelectRun::FileInfo;
                 f->pFile = pFd->file;
+                NOTICE("i: " << i);
                 f->bCheckWrite = false;
 
                 run->addFile(f);
@@ -1213,10 +1215,11 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 
     // Otherwise do the run
     int numReady = run->doRun();
+    F_NOTICE("    -> " << Dec << numReady << Hex);
     delete run;
     return numReady;
 }
-
+#endif
 int posix_fcntl(int fd, int cmd, int num, int* args)
 {
     if (num)

@@ -48,6 +48,11 @@ public:
     virtual ~ConsoleFile()
     {}
 
+    void dataIsReady()
+    {
+        dataChanged();
+    }
+
     /** Similar to POSIX's select() function */
     virtual int select(bool bWriting = false, int timeout = 0);
 
@@ -105,6 +110,7 @@ public:
     bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
 
     File* getConsole(String consoleName);
+    ConsoleFile *getConsoleFile(RequestQueue *pBackend);
 
     bool isConsole(File* file);
 

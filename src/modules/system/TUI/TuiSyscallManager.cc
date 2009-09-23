@@ -45,6 +45,7 @@ void callback(uint64_t key)
         return;
     }
     g_UserConsole->addAsyncRequest(TUI_CHAR_RECV, g_UserConsoleId, key);
+    ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
 }
 
 extern "C" void tuiModeChangedCallback()

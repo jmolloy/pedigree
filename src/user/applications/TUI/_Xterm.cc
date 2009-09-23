@@ -78,7 +78,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     {
         char tmp32[128];
         sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-        log(tmp32);
+//        log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
 

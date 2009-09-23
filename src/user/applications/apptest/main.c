@@ -7,7 +7,9 @@
 #include <stdint.h>
 
 #include <signal.h>
- 
+#include <sys/termios.h>
+#include <sys/time.h>
+
 static void wait_thread(void)
 {
     time_t start_time = time(NULL);
@@ -41,12 +43,12 @@ static void *thread_func(void *vptr_args)
  
 int main(void)
 {
-    int i;
+/*    int i;
     pthread_t thread;
 
     int whee;
     int* p = &whee;
- 
+*/
 //    if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
 //    {
 //        printf("Fail: %s\n", strerror(errno));
@@ -67,7 +69,24 @@ int main(void)
 //        return EXIT_FAILURE;
 //    }
 
-    printf("\nAnd now main() has waited for the thread to run.\n");
- 
+//    printf("\nAnd now main() has waited for the thread to run.\n");
+    struct termios t;
+    tcgetattr(0, &t);
+
+    struct termios oldt = t;
+    t.c_lflag &= ~(ECHO|ECHOE|ECHOK|ICANON|IEXTEN);
+    tcsetattr(0, 0, &t);
+
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(0, &fds);
+    struct timeval ts;
+    ts.tv_sec = 5;
+    ts.tv_usec = 0;
+    int ret = select(1, &fds, 0, 0, &ts);
+
+    tcsetattr(0, 0, &oldt);
+
+    printf("ret: %d\n", ret);
     return EXIT_SUCCESS;
 }
