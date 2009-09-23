@@ -208,7 +208,11 @@ void init()
 void destroy()
 {
 }
+
+#if 0
 extern void shutdown();
+#endif
+
 void init_stage2()
 {
     // Load initial program.
@@ -250,9 +254,13 @@ void init_stage2()
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
     pedigree_init_pthreads();
+
+#if 0
     shutdown();
+#endif
+
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-    //new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
 }
 
 MODULE_NAME("init");
