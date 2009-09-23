@@ -16,8 +16,14 @@ subdirs = [
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
-# Complete the build - image creation
+rootdir = env.Dir("#").abspath
+print rootdir
 builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+
+# Build the configuration database (no dependencies)
+configdb = env.File(builddir + '/config.db')
+
+# Complete the build - image creation
 floppyimg = env.File(builddir + '/floppy.img')
 
 # Disk images go after everything else
@@ -26,6 +32,8 @@ env.Depends(floppyimg, 'kernel')
 env.Depends(floppyimg, 'initrd')
 env.Depends(floppyimg, 'libs')
 env.Depends(floppyimg, 'apps')
+
+env.Command(configdb, None, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
 if env["installer"]:
     env.Command(floppyimg, None, '@echo Building disk images... && cd ' + builddir + ' && bash ../scripts/create_install.sh ' + builddir)
 else:
