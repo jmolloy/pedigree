@@ -16,9 +16,13 @@ objname = appdir + '/apptest'
 # Part of the apps target
 env.Alias("apps", objname)
 
-# Dependencies
-env.Depends(objname, "crt")
-env.Depends(objname, "libs")
+# We must be rebuilt if the CRT0 changes, but because libc/libm are shared
+# objects there's no need to rebuild if they change - we just require that
+# they exist when we build.
+env.Depends(objname, "crt0")
+env.Requires(objname, "libs")
+
+# Dependency on a static object - can't be a mere Requires.
 env.Depends(objname, "pthreads")
 
 # To include a new subdirectory just add to the list.

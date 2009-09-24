@@ -15,10 +15,11 @@ objname = appdir + '/config'
 
 env.Alias("apps", objname)
 
-# Dependencies
+# We must be rebuilt if the CRT0 changes, but because libc/libm are shared
+# objects there's no need to rebuild if they change - we just require that
+# they exist when we build.
 env.Depends(objname, "crt0")
-env.Depends(objname, "subsys")
-env.Depends(objname, "libs")
+env.Requires(objname, "libs")
 
 # To include a new subdirectory just add to the list.
 subdirs = [

@@ -156,7 +156,12 @@ int RequestQueue::work()
 
     Request *pReq = m_pRequestQueue;
     // Quick sanity check:
-    if (pReq == 0) panic("RequestQueue: Worker thread woken but no requests pending!");
+    if (pReq == 0)
+    {
+        if(Processor::information().getCurrentThread()->getUnwindState() == Thread::ReleaseBlockingThread)
+            continue;
+        panic("RequestQueue: Worker thread woken but no requests pending!");
+    }
     m_pRequestQueue = pReq->next;
 
     m_RequestQueueMutex.release();

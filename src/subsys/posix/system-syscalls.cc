@@ -827,14 +827,58 @@ extern void system_reset();
 
 int pedigree_shutdown()
 {
-    for(int i = Scheduler::instance().getNumProcesses()-1;i>=0;i--)
+    NOTICE("Shutdown: number of processes: " << Scheduler::instance().getNumProcesses());
+    for(int i = Scheduler::instance().getNumProcesses() - 1; i >= 0; i--)
     {
+        // Grab the process and subsystem. Don't grab a POSIX subsystem object,
+        // because we may be hitting native processes here.
         Process *proc = Scheduler::instance().getProcess(i);
-        PosixSubsystem *subsys = reinterpret_cast<PosixSubsystem*>(proc->getSubsystem());
-        subsys->kill(proc->getThread(0));
-        NOTICE("Sent KILL to process "<<proc->getId());
+        Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
+
+        // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilllldren.
+        if(proc == Processor::information().getCurrentThread()->getParent())
+            continue;
+
+        NOTICE("Before kill, number of processes: " << Scheduler::instance().getNumProcesses());
+        if(subsys)
+        {
+            NOTICE("Subsystem");
+            // If there's a subsystem, kill it that way.
+            /// \todo Proper KillReason
+            subsys->kill(Subsystem::Interrupted, proc->getThread(0));
+
+            // Subsystem::kill blocks until the process is killed
+            if (proc->getThread(0)->getStatus() == Thread::Zombie)
+            {
+                // Delete the process; it's been reaped good and proper.
+                NOTICE("Pid " << proc->getId() << " reaped");
+                delete proc;
+            }
+            else
+            {
+                WARNING("Kill event sent but process is not a zombie?");
+            }
+        }
+        else
+        {
+            NOTICE("Not subsystem");
+            // If no subsystem, outright kill the process without sending a signal
+            Scheduler::instance().removeProcess(proc);
+
+            /// \todo Process::kill() acts as if that process is already running.
+            ///       It needs to allow other Processes to call it without causing
+            ///       the calling thread to become a zombie.
+            //proc->kill();
+        }
+        NOTICE("After kill, number of processes: " << Scheduler::instance().getNumProcesses());
     }
-    while(Scheduler::instance().getNumProcesses());
+
+    NOTICE("Loop complete, number of processes: " << Scheduler::instance().getNumProcesses());
+
+    // Wait for every other process to die
+    while(Scheduler::instance().getNumProcesses() > 1) Scheduler::instance().yield();
+
+    // Reset the system
     system_reset();
     return 0;
 }

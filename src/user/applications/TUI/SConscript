@@ -17,9 +17,11 @@ objname = appdir + '/TUI'
 # Part of the apps target
 env.Alias("apps", objname)
 
-# Dependencies
-tmp.Depends(objname, env.Alias("crt0"))
-tmp.Depends(objname, env.Alias("libs"))
+# We must be rebuilt if the CRT0 changes, but because libc/libm are shared
+# objects there's no need to rebuild if they change - we just require that
+# they exist when we build.
+env.Depends(objname, "crt0")
+env.Requires(objname, "libs")
 
 # To include a new subdirectory just add to the list.
 subdirs = [

@@ -72,6 +72,7 @@ opts.AddVariables(
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
     
     BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
+    BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -230,37 +231,37 @@ if not env['verbose']:
 ## PEDIGREE_USER
 ## PEDIGREE_MACHINE
 ####################################
+if(env['genversion'] and not os.path.exists('src/system/kernel/Version.cc')):
+    # Grab the date (rather than using the `date' program)
+    env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
 
-# Grab the date (rather than using the `date' program)
-env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
+    # Use the OS to find out information about the user and computer name
+    env['PEDIGREE_USER'] = getpass.getuser()
+    env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
 
-# Use the OS to find out information about the user and computer name
-env['PEDIGREE_USER'] = getpass.getuser()
-env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
+    # Grab the git revision of the repo
+    gitpath = commands.getoutput("which git")
+    if os.path.exists(gitpath):
+        env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
+    else:
+        env['PEDIGREE_REVISION'] = "(unknown, git not found)"
 
-# Grab the git revision of the repo
-gitpath = commands.getoutput("which git")
-if os.path.exists(gitpath):
-    env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
-else:
-    env['PEDIGREE_REVISION'] = "(unknown, git not found)"
+    # Set the flags
+    env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
 
-# Set the flags
-env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
+    # Build the string of data to write
+    version_out = ''
+    version_out += 'const char *g_pBuildTime = "'     + env['PEDIGREE_BUILDTIME'] + '";\n'
+    version_out += 'const char *g_pBuildRevision = "' + env['PEDIGREE_REVISION']  + '";\n'
+    version_out += 'const char *g_pBuildFlags = "'    + env['PEDIGREE_FLAGS']     + '";\n'
+    version_out += 'const char *g_pBuildUser = "'     + env['PEDIGREE_USER']      + '";\n'
+    version_out += 'const char *g_pBuildMachine = "'  + env['PEDIGREE_MACHINE']   + '";\n'
+    version_out += 'const char *g_pBuildTarget = "'   + env['ARCH_TARGET']        + '";\n'
 
-# Build the string of data to write
-version_out = ''
-version_out += 'const char *g_pBuildTime = "'     + env['PEDIGREE_BUILDTIME'] + '";\n'
-version_out += 'const char *g_pBuildRevision = "' + env['PEDIGREE_REVISION']  + '";\n'
-version_out += 'const char *g_pBuildFlags = "'    + env['PEDIGREE_FLAGS']     + '";\n'
-version_out += 'const char *g_pBuildUser = "'     + env['PEDIGREE_USER']      + '";\n'
-version_out += 'const char *g_pBuildMachine = "'  + env['PEDIGREE_MACHINE']   + '";\n'
-version_out += 'const char *g_pBuildTarget = "'   + env['ARCH_TARGET']        + '";\n'
-
-# Write the file to disk (We *assume* src/system/kernel/)
-file = open('src/system/kernel/Version.cc','w')
-file.write(version_out)
-file.close()
+    # Write the file to disk (We *assume* src/system/kernel/)
+    file = open('src/system/kernel/Version.cc','w')
+    file.write(version_out)
+    file.close()
 
 ####################################
 # Progress through all our sub-directories
