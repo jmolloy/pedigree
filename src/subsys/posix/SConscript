@@ -78,7 +78,6 @@ libraries = [
 
 # To add a library path add to the list below
 libpaths = [
-    env['LIBGCC']
 ]
 
 ####################################
@@ -88,9 +87,7 @@ tmp['LIBS'] = [i for i in libraries]
 tmp['LIBPATH'] = [i for i in libpaths]
 #^-- Stupid way of doing it but I plan on adding processing.
 
-tmp.objects = [tmp.Object(i) for i in posix_files]
-if not len(posix_files) == 0:
-    build = tmp.Program(posix_objname,tmp.objects,LINKFLAGS='-nostdlib -r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
+tmp.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
 
 # TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
 glueFlags = "-fno-exceptions"
@@ -100,36 +97,25 @@ if env['ARCH_TARGET'] == 'X64':
 tmp_glue = tmp.Clone()
 tmp_glue['CFLAGS'] += ' ' + glueFlags + ' '
 tmp_glue['CXXFLAGS'] += ' ' + glueFlags + ' '
-
-tmp_glue.objects = [tmp_glue.Object(i) for i in glue_files]
-if not len(glue_files) == 0:
-    build = tmp_glue.Program(glue_objname,tmp_glue.objects,LINKFLAGS='-nostdlib -r ' + glueFlags)
+tmp_glue.Program(glue_objname, glue_files, LINKFLAGS='-nostdlib -r ' + glueFlags)
 
 tmp_crt0 = tmp.Clone()
 
 # No libraries needed for CRT0
 tmp_crt0['LIBS'] = ''
-tmp_crt0.objects = [tmp.Object(i) for i in crt0_files]
-if not len(crt0_files) == 0:
-    build = tmp_crt0.Program(crt0_objname,tmp_crt0.objects,LINKFLAGS='-nostdlib -r')
+tmp_crt0.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
     
 # CRTI
 tmp_crti = tmp.Clone()
-tmp_crti.objects = [tmp.Object(i) for i in crti_files]
-if not len(crti_files) == 0:
-    build = tmp_crti.Program(crti_objname,tmp_crti.objects,LINKFLAGS='-nostdlib -r')
+tmp_crti.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -r')
 
 # CRTN
 tmp_crtn = tmp.Clone()
-tmp_crtn.objects = [tmp.Object(i) for i in crtn_files]
-if not len(crtn_files) == 0:
-    build = tmp_crtn.Program(crtn_objname,tmp_crtn.objects,LINKFLAGS='-nostdlib -r')
+tmp_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread
 tmp_pthread = tmp.Clone()
-tmp_pthread.objects = [tmp.Object(i) for i in pthread_files]
-if not len(crtn_files) == 0:
-    build = tmp_pthread.Library(libpthread_objname, tmp_pthread.objects)
+tmp_pthread.Library(libpthread_objname, pthread_files)
 
 # Build libc/libm
 
@@ -155,40 +141,15 @@ buildInclude = tmp.Dir(builddir + '/include-posix')
 env.Alias("libs", [buildLibc, buildLibm])
 env.Alias("crt0", "crt")
 
-# TODO: Put into a script, clean up. This is kind of horrible.
+# libc will be rebuilt every time the glue files are modified, or whenever the
+# base libc.a file is changed.
+env.Command([buildLibc],
+            [glue_objname, baseLibc],
+            "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"]
+            )
 
-def doLibm(target, source, env):
-    builddir = '#' + env['BUILDDIR']
-    
-    buildDir = tmp.Dir(builddir)
-    buildLibc = tmp.File(builddir + '/libc.so')
-    buildLibm = tmp.File(builddir + '/libm.so')
-    buildLibcA = tmp.File(builddir + '/libc.a')
-    buildLibmA = tmp.File(builddir + '/libm.a')
-    
-    print "Building libm..."
-
-    tmpdir = tempfile.mkdtemp()
-
-    olddir = os.getcwd()
-    os.chdir(tmpdir)
-    shutil.copy(baseLibm.abspath, tmpdir + "/libm.a")
-
-    os.system(env['AR'] + " x libm.a")
-    os.system(env['CC_NOCACHE'] + " -nostdlib -shared -Wl,-shared -Wl,-soname,libm.so -L" + env['LIBGCC'] + " -o " + buildLibm.abspath + " *.o -lgcc")
-    os.system(env['AR'] + " cru " + buildLibmA.abspath + " *.o")
-
-    for i in os.listdir("."):
-        os.remove(i)
-
-    os.chdir(olddir)
-    os.rmdir(tmpdir)
-    
-    print "libm built!"
-
-#    builddir, inputLibcA, glue_name
-    
-env.Command([buildLibc], ["subsys", glue_objname], "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
-env.Command([buildLibm], ["subsys"], "@python " + base.abspath + "/scripts/buildLibm.py " + buildDir.abspath + " " + baseLibm.abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["LIBGCC"])
-
-# env.Command([buildLibc, buildLibm], "subsys", '@echo Building libc/libm... && perl ' + base.abspath + '/scripts/posixBlendLibc.pl ' + baseLibc.abspath + ' ' + baseLibm.abspath + ' ' + buildDir.abspath + '/src/subsys/posix/pedigree-glue.o ' + baseInclude.abspath + ' ' + tmp['CC'] + ' ' + tmp['AR'] + ' ' + buildDir.abspath + ' ' + tmp['LIBGCC'])
+# libm will only ever be rebuilt if the libm.a file changes
+env.Command([buildLibm],
+            [baseLibm],
+            "@python " + base.abspath + "/scripts/buildLibm.py " + buildDir.abspath + " " + baseLibm.abspath + " " + env["AR"] + " " + env["CC_NOCACHE"]
+            )

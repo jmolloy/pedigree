@@ -871,8 +871,6 @@ int pedigree_shutdown()
             //proc->kill();
         }
         NOTICE("After kill, number of processes: " << Scheduler::instance().getNumProcesses());
-
-        NOTICE("Sent KILL to process " << proc->getId());
     }
 
     NOTICE("Loop complete, number of processes: " << Scheduler::instance().getNumProcesses());
