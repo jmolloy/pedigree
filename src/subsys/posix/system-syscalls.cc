@@ -846,6 +846,18 @@ int pedigree_shutdown()
             // If there's a subsystem, kill it that way.
             /// \todo Proper KillReason
             subsys->kill(Subsystem::Interrupted, proc->getThread(0));
+
+            // Subsystem::kill blocks until the process is killed
+            if (proc->getThread(0)->getStatus() == Thread::Zombie)
+            {
+                // Delete the process; it's been reaped good and proper.
+                NOTICE("Pid " << proc->getId() << " reaped");
+                delete proc;
+            }
+            else
+            {
+                WARNING("Kill event sent but process is not a zombie?");
+            }
         }
         else
         {

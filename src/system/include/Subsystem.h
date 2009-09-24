@@ -82,7 +82,10 @@ class Subsystem
         /** Need to exit this process. */
         virtual void exit(int code);
 
-        /** A thread needs to be killed! */
+        /**
+         * A thread (or process, depending on implementation) needs to be killed!
+         * This *must* block until the thread/process ceases to exist.
+         */
         virtual bool kill(KillReason killReason, Thread *pThread = 0);
 
         /** A thread has thrown an exception! */
