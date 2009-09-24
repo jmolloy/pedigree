@@ -344,26 +344,23 @@ void PosixSubsystem::exit(int code)
     for (;;) asm volatile("xor %eax, %eax");
 }
 
-bool PosixSubsystem::kill(Thread *pThread)
+bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 {
     NOTICE("PosixSubsystem::kill");
 
-    // Lock the signal handlers, so it's impossible for our signal handler to be pulled our
-    // from beneath us by another CPU or something.
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
-
-    // Send SIGKILL
+    // Send SIGKILL. getSignalHandler handles all that locking shiz for us.
     SignalHandler *sig = getSignalHandler(9);
 
     if(sig && sig->pEvent)
     {
+        // Send the kill event
         pThread->sendEvent(sig->pEvent);
+
+        // Allow the event to run
         Processor::setInterrupts(true);
+        Scheduler::instance().yield();
     }
 
-    // Hang the thread - wtf, no!
-    //while(1)
-    //    Scheduler::instance().yield();
     return true;
 }
 

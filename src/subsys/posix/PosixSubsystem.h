@@ -129,7 +129,7 @@ class PosixSubsystem : public Subsystem
         virtual ~PosixSubsystem();
 
         /** A thread needs to be killed! */
-        virtual bool kill(Thread *pThread);
+        virtual bool kill(KillReason killReason, Thread *pThread);
 
         /** A thread has thrown an exception! */
         virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);
