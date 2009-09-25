@@ -69,7 +69,6 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
       if (m_Front == m_Back)
       {
         // We were woken with no data available. This means we must return now.
-        NOTICE("Pipe: woken with no data, assuming EOF.");
         return 0;
       }
 
@@ -99,12 +98,10 @@ uint64_t Pipe::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 
 void Pipe::increaseRefCount(bool bIsWriter)
 {
-  NOTICE("Pipe: increaseRefCount (" << bIsWriter << "): " << m_nWriters << " writers and " << m_nReaders << " readers currently.");
   if (bIsWriter)
   {
     if (m_bIsEOF)
     {
-      NOTICE("Pipe: reviving pipe because a writer joined again.");
       // Start the pipe again.
       m_bIsEOF = false;
       while (m_BufLen.tryAcquire()) ;
@@ -120,13 +117,11 @@ void Pipe::increaseRefCount(bool bIsWriter)
 
 void Pipe::decreaseRefCount(bool bIsWriter)
 {
-  NOTICE("Pipe: decreaseRefCount (" << bIsWriter << "): " << m_nWriters << " writers and " << m_nReaders << " readers currently.");
   if (bIsWriter)
   {
     m_nWriters --;
     if (m_nWriters == 0)
     {
-      NOTICE("Pipe: Setting EOF, because no writers left.");
       m_bIsEOF = true;
       if (m_Front == m_Back)
       {
@@ -143,7 +138,6 @@ void Pipe::decreaseRefCount(bool bIsWriter)
     // If we're anonymous, die completely.
     if (m_bIsAnonymous)
     {
-      NOTICE("Pipe: destroying.");
       delete this;
     }
   }
