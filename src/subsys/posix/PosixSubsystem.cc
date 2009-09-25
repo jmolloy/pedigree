@@ -270,7 +270,6 @@ PosixSubsystem::~PosixSubsystem()
 
 void PosixSubsystem::exit(int code)
 {
-    NOTICE("PosixSubsystem::exit");
     Thread *pThread = Processor::information().getCurrentThread();
 
     Process *pProcess = pThread->getParent();
@@ -283,7 +282,7 @@ void PosixSubsystem::exit(int code)
 
     // So, if we're not dealing with the lowest in the stack...
     if (pThread->getStateLevel() > 0)
-    {NOTICE("state level>0");
+    {
         // OK, we have other events running. They'll have to die first before we can do anything.
         pThread->setUnwindState(Thread::Exit);
 
@@ -297,7 +296,7 @@ void PosixSubsystem::exit(int code)
         Processor::information().getScheduler().eventHandlerReturned();
     }
     Processor::setInterrupts(false);
-    NOTICE("Proceeding with exit()!");
+
     // We're the lowest in the stack, so we can proceed with the exit function.
 
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -306,11 +305,11 @@ void PosixSubsystem::exit(int code)
         ERROR("No subsystem for one or both of the processes!");
         return;
     }
-    NOTICE("Deleting linker");
+
     delete pProcess->getLinker();
-    NOTICE("Unmapping all");
+
     MemoryMappedFileManager::instance().unmapAll();
-    NOTICE("Unmapped all");
+
     // If it's a POSIX process, remove group membership
     if(pProcess->getType() == Process::Posix)
     {
@@ -337,9 +336,9 @@ void PosixSubsystem::exit(int code)
 
     // Clean up the descriptor table
     pSubsystem->freeMultipleFds();
-    NOTICE("Got to kill()");
+
     pProcess->kill();
-    NOTICE("Got past kill()");
+
     // Should NEVER get here.
     /// \note asm volatile
     for (;;) asm volatile("xor %eax, %eax");
@@ -347,8 +346,6 @@ void PosixSubsystem::exit(int code)
 
 bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 {
-    NOTICE("PosixSubsystem::kill");
-
     // Send SIGKILL. getSignalHandler handles all that locking shiz for us.
     SignalHandler *sig = getSignalHandler(9);
 
@@ -357,7 +354,7 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
         size_t pid = pThread->getParent()->getId();
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
-        NOTICE("Sending event to " << pThread->getParent()->getId());
+
         // Allow the event to run
         Processor::setInterrupts(true);
     }

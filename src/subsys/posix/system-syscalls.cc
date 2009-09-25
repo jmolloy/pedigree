@@ -830,7 +830,7 @@ extern void system_reset();
 
 int pedigree_reboot()
 {
-    NOTICE("Shutdown: number of processes: " << Scheduler::instance().getNumProcesses());
+    WARNING("System shutting down...");
     for(int i = Scheduler::instance().getNumProcesses() - 1; i >= 0; i--)
     {
         // Grab the process and subsystem. Don't grab a POSIX subsystem object,
@@ -842,17 +842,14 @@ int pedigree_reboot()
         if(proc == Processor::information().getCurrentThread()->getParent())
             continue;
 
-        NOTICE("Before kill, number of processes: " << Scheduler::instance().getNumProcesses());
         if(subsys)
         {
-            NOTICE("Subsystem");
             // If there's a subsystem, kill it that way.
             /// \todo Proper KillReason
             subsys->kill(Subsystem::Interrupted, proc->getThread(0));
         }
         else
         {
-            NOTICE("Not subsystem");
             // If no subsystem, outright kill the process without sending a signal
             Scheduler::instance().removeProcess(proc);
 
@@ -861,10 +858,7 @@ int pedigree_reboot()
             ///       the calling thread to become a zombie.
             //proc->kill();
         }
-        NOTICE("After kill, number of processes: " << Scheduler::instance().getNumProcesses());
     }
-
-    NOTICE("Loop complete, number of processes: " << Scheduler::instance().getNumProcesses());
 
     // Wait for every other process to die or be in zombie state.
 
