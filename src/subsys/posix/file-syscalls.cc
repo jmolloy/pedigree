@@ -553,6 +553,7 @@ int posix_fstat(int fd, struct stat *st)
     F_NOTICE("fstat(" << Dec << fd << Hex << ")");
     if(!st)
     {
+        ERROR("Struct stat fail");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
@@ -569,6 +570,7 @@ int posix_fstat(int fd, struct stat *st)
     FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
     if (!pFd)
     {
+        ERROR("Error, no such FD!");
         // Error - no such file descriptor.
         return -1;
     }
@@ -952,6 +954,9 @@ int posix_dup2(int fd1, int fd2)
     FileDescriptor* f2 = new FileDescriptor(*f);
     pSubsystem->addFileDescriptor(fd2, f2);
 
+    // According to the spec, CLOEXEC is cleared on DUP.
+    f2->fdflags &= ~FD_CLOEXEC;
+
     return static_cast<int>(fd2);
 }
 
@@ -1262,6 +1267,9 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
                     FileDescriptor* f2 = new FileDescriptor(*f);
                     pSubsystem->addFileDescriptor(fd2, f2);
 
+                    // According to the spec, CLOEXEC is cleared on DUP.
+                    f2->fdflags &= ~FD_CLOEXEC;
+
                     return static_cast<int>(fd2);
                 }
             }
@@ -1272,6 +1280,9 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
                 // copy the descriptor
                 FileDescriptor* f2 = new FileDescriptor(*f);
                 pSubsystem->addFileDescriptor(fd2, f2);
+
+                // According to the spec, CLOEXEC is cleared on DUP.
+                f2->fdflags &= ~FD_CLOEXEC;
 
                 return static_cast<int>(fd2);
             }

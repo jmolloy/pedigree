@@ -882,8 +882,6 @@ int pedigree_reboot()
         Scheduler::instance().yield();
     }
 
-    NOTICE("Killing all");
-
     // All dead, reap them all.
     while (Scheduler::instance().getNumProcesses() > 1)
     {
