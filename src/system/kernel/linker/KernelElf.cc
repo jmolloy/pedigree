@@ -287,6 +287,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 
 void KernelElf::unloadModules()
 {
+    if (g_BootProgress)
+        g_BootProgress("unload", g_Progress);
+
     for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
         it != m_LoadedModules.begin();
         it--)

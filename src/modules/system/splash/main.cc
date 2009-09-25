@@ -41,6 +41,7 @@ static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
 
 static size_t g_Total = 0;
+static size_t g_Current = 0;
 
 void total(uintptr_t total)
 {
@@ -53,9 +54,15 @@ void progress(const char *text, uintptr_t progress)
     if (g_Total == 0)
         return;
 
+    if(!strcmp(text, "unload"))
+        g_pDisplay->setCurrentBuffer(g_pBuffer);
+
     size_t w = (g_ProgressW * progress) / g_Total;
-    g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
-    g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
+    if(g_Current <= progress)
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
+    else
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
+    g_Current = progress;
 }
 
 void init()

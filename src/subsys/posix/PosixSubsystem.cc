@@ -275,7 +275,7 @@ void PosixSubsystem::exit(int code)
     Process *pProcess = pThread->getParent();
     if (pProcess->getExitStatus() == 0)
         pProcess->setExitStatus( (code&0xFF) << 8 );
-    
+
     // Exit called, but we could be at any nesting level in the event stack.
     // We have to propagate this exit() to all lower stack levels because they may have
     // semaphores and stuff open.
@@ -358,7 +358,8 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
         // Allow the event to run
         Processor::setInterrupts(true);
-        Scheduler::instance().yield();
+        // Wait until the thread becomes zombie
+        while(pThread->getStatus() != Thread::Zombie) Scheduler::instance().yield();
     }
 
     return true;

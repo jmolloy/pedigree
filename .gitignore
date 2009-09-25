@@ -4,3 +4,4 @@ src/system/kernel/TAGS
 options.cache
 .sconsign.dblite
 compilers/dir
+scripts/defaultFlags.pyc
