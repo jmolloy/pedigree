@@ -413,7 +413,7 @@ int posix_waitpid(int pid, int *status, int options)
     }
     else
     {
-        //       SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ")");
+        //       SC_NOTICE("waitpid(pid=" < Dec << pid << Hex << ")");
     }
 
     // Don't care about process groups at the moment.
@@ -502,6 +502,11 @@ int posix_waitpid(int pid, int *status, int options)
 
         // Sleep...
         Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
+        if (Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
+        {
+            SC_NOTICE("Waitpid: exiting");
+            return -1;
+        }
     }
 
     return -1;
@@ -833,7 +838,7 @@ int pedigree_reboot()
         Process *proc = Scheduler::instance().getProcess(i);
         Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
 
-        // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilllldren.
+        // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilldren.
         if(proc == Processor::information().getCurrentThread()->getParent())
             continue;
 
@@ -844,18 +849,6 @@ int pedigree_reboot()
             // If there's a subsystem, kill it that way.
             /// \todo Proper KillReason
             subsys->kill(Subsystem::Interrupted, proc->getThread(0));
-
-            // Subsystem::kill blocks until the process is killed
-            if (proc->getThread(0)->getStatus() == Thread::Zombie)
-            {
-                // Delete the process; it's been reaped good and proper.
-                NOTICE("Pid " << proc->getId() << " reaped");
-                delete proc;
-            }
-            else
-            {
-                WARNING("Kill event sent but process is not a zombie?");
-            }
         }
         else
         {
@@ -873,8 +866,35 @@ int pedigree_reboot()
 
     NOTICE("Loop complete, number of processes: " << Scheduler::instance().getNumProcesses());
 
-    // Wait for every other process to die
-    while(Scheduler::instance().getNumProcesses() > 1) Scheduler::instance().yield();
+    // Wait for every other process to die or be in zombie state.
+
+    while (true)
+    {
+        Processor::setInterrupts(false);
+        if (Scheduler::instance().getNumProcesses() <= 1)
+            break;
+        bool allZombie = true;
+        for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+        {
+            if (Scheduler::instance().getProcess(i) == Processor::information().getCurrentThread()->getParent())
+                continue;
+            if (Scheduler::instance().getProcess(i)->getThread(0)->getStatus() != Thread::Zombie)
+                allZombie = false;
+        }
+
+        if (allZombie) break;
+        Processor::setInterrupts(true);
+        
+        Scheduler::instance().yield();
+    }
+
+    // All dead, reap them all.
+    while (Scheduler::instance().getNumProcesses() > 1)
+    {
+        if (Scheduler::instance().getProcess(0) == Processor::information().getCurrentThread()->getParent())
+            continue;
+        delete Scheduler::instance().getProcess(0);
+    }
 
     // Reset the system
     system_reset();

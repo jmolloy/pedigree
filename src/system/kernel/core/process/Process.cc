@@ -157,6 +157,7 @@ void Process::kill()
   if(m_pParent)
 	m_pParent->m_DeadThreads.release();
 
+  ERROR("Setting thread as zombie.");
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");

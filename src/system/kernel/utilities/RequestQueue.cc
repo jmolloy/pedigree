@@ -160,7 +160,8 @@ int RequestQueue::work()
     {
         if(Processor::information().getCurrentThread()->getUnwindState() == Thread::ReleaseBlockingThread)
             continue;
-        panic("RequestQueue: Worker thread woken but no requests pending!");
+        ERROR("Unwind state: " << (size_t)Processor::information().getCurrentThread()->getUnwindState());
+        FATAL("RequestQueue: Worker thread woken but no requests pending!");
     }
     m_pRequestQueue = pReq->next;
 

@@ -540,7 +540,7 @@ void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
     {
         for (size_t x = 0; x < m_Width; x++)
         {
-            if (!pOld || (pOld[y*m_Width+x] != pNew[y*m_Width+x]))
+//            if (!pOld || (pOld[y*m_Width+x] != pNew[y*m_Width+x]))
                 render(rect, 0, x, y);
         }
     }

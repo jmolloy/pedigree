@@ -270,6 +270,7 @@ PosixSubsystem::~PosixSubsystem()
 
 void PosixSubsystem::exit(int code)
 {
+    NOTICE("PosixSubsystem::exit");
     Thread *pThread = Processor::information().getCurrentThread();
 
     Process *pProcess = pThread->getParent();
@@ -282,7 +283,7 @@ void PosixSubsystem::exit(int code)
 
     // So, if we're not dealing with the lowest in the stack...
     if (pThread->getStateLevel() > 0)
-    {
+    {NOTICE("state level>0");
         // OK, we have other events running. They'll have to die first before we can do anything.
         pThread->setUnwindState(Thread::Exit);
 
@@ -353,13 +354,12 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
     if(sig && sig->pEvent)
     {
+        size_t pid = pThread->getParent()->getId();
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
-
+        NOTICE("Sending event to " << pThread->getParent()->getId());
         // Allow the event to run
         Processor::setInterrupts(true);
-        // Wait until the thread becomes zombie
-        while(pThread->getStatus() != Thread::Zombie) Scheduler::instance().yield();
     }
 
     return true;

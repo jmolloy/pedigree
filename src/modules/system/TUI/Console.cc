@@ -83,7 +83,13 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
     m_pReq = m_pRequestQueue;
     // Quick sanity check:
-    if (m_pReq == 0) panic("RequestQueue: Worker thread woken but no requests pending!");
+    if (m_pReq == 0)
+    {
+        if(Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
+            return 0;
+        ERROR("Unwind state: " << (size_t)Processor::information().getCurrentThread()->getUnwindState());
+        FATAL("RequestQueue: Worker thread woken but no requests pending!");
+    }
     m_pRequestQueue = m_pReq->next;
 
     m_RequestQueueMutex.release();
