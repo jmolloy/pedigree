@@ -116,7 +116,7 @@ initrdList += [builddir.abspath + '/subsystems/posix.o']
 
 initrd = ' '.join(initrdList)
 # BUG: "posix.o" is added to the initrd twice: could this be the cause?
-initrd += ' ' + builddir.abspath + '/subsystems/*'
+#initrd += ' ' + builddir.abspath + '/subsystems/*'
 
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")

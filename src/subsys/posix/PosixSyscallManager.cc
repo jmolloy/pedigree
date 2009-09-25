@@ -279,7 +279,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_SYSLOG:
             return posix_syslog(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
-		
+
 		case POSIX_FTRUNCATE:
 			return posix_ftruncate(static_cast<int>(p1), static_cast<off_t>(p2));
 
@@ -305,6 +305,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return pedigree_load_keymap(reinterpret_cast<char*>(p1), static_cast<size_t>(p2));
         case PEDIGREE_GET_MOUNT:
             return pedigree_get_mount(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
+        case PEDIGREE_REBOOT:
+            pedigree_reboot();
+            return 0;
         case PEDIGREE_CONFIG_GETCOLNAME:
             pedigree_config_getcolname(p1, p2, reinterpret_cast<char*>(p3), p4);
             return 0;

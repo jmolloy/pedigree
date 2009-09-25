@@ -1770,6 +1770,11 @@ int pedigree_load_keymap(char *buf, size_t sz)
     return syscall2(PEDIGREE_LOAD_KEYMAP, (long)buf, (long)sz);
 }
 
+void pedigree_reboot()
+{
+    syscall0(PEDIGREE_REBOOT);
+}
+
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);

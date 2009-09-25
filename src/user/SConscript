@@ -13,13 +13,14 @@ subdirs = [
     'applications/apptest',
     'applications/syscall-test',
     'applications/net-test',
-#    'applications/netconfig',
+#   'applications/netconfig',
     'applications/login',
     'applications/keymap',
     'applications/mount',
     'applications/TUI',
     'applications/config',
-    'applications/display-mode'
+    'applications/display-mode',
+    'applications/reboot'
 ]
 
 # Cleans a set of flags
