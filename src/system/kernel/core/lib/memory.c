@@ -15,6 +15,20 @@
  */
 #include <utilities/utility.h>
 
+#ifdef X86_COMMON
+void *memset(void *buf, int c, size_t n)
+{
+    char *p = (char *)buf;
+
+    // check for bad usage of memcpy
+    if(!n) return buf;
+
+    size_t unused;
+    // see if it's even worth aligning
+    asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(n), "a"(c));
+    return buf;
+}
+#else
 void *memset(void *buf, int c, size_t len)
 {
   unsigned char *tmp = (unsigned char *)buf;
@@ -24,6 +38,7 @@ void *memset(void *buf, int c, size_t len)
   }
   return buf;
 }
+#endif
 
 #ifdef X86_COMMON
 /** This function courtesy of Josh Cornutt - cheers! */
@@ -79,6 +94,67 @@ void *memcpy(void *dest, const void *src, size_t len)
 }
 #endif
 
+#ifdef X86_COMMON
+void *memmove(void *s1, const void *s2, size_t n)
+{
+    char *p1 = (char *)s1;
+    const char *p2 = (const char *)s2;
+
+    // Don't use SSE for now.
+#if 0
+    asm volatile("  prefetchnta 0(%0);  \
+                    prefetchnta 32(%0); "
+                 ::"r"(s1));
+#endif
+    // check for bad usage of memmove
+    if(!n) return s1;
+
+    size_t offset;
+    if (s1 <= s2)
+    {
+        asm volatile("cld");
+        // calculate the distance to the nearest natural boundary
+        offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
+    }
+    else
+    {
+        // Work backwards.
+        p1 += n;
+        p2 += n;
+        // calculate the distance to the nearest natural boundary
+        offset = ((size_t)p1+n) % sizeof(size_t);
+        asm volatile("std");
+    }
+
+    size_t unused;
+    // see if it's even worth aligning
+    if(n <= sizeof(size_t))
+    {
+        asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n));
+        return s1;
+    }
+
+    n -= offset;
+
+    // align p1 on a natural boundary
+    asm volatile("rep movsb;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(offset));
+
+    // move in size_t size'd blocks
+#if defined(X64)
+    asm volatile("rep movsq;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 3));
+#elif defined(X86)
+    asm volatile("rep movsl;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 2));
+#endif
+
+    // clean up the remaining bytes
+    asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n % sizeof(size_t)));
+
+    if (s1 > s2)
+        asm volatile("cld");
+
+    return s1;
+}
+#else
 void *memmove(void *s1, const void *s2, size_t n)
 {
   if (s1 <= s2)
@@ -112,3 +188,4 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   return s1;
 }
+#endif
