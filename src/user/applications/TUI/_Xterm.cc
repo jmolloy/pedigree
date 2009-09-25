@@ -28,26 +28,28 @@
 
 #define C_BRIGHT  8
 
-#define DEFAULT_FG 7
-#define DEFAULT_BG 0
+#include <pedigree_config.h>
 
-rgb_t g_Colours[] = { {0x00,0x00,0x00},
-                      {0xB0,0x22,0x22},
-                      {0x22,0xB0,0x22},
-                      {0xB0,0xB0,0x22},
-                      {0x22,0x22,0xB0},
-                      {0xB0,0x22,0xB0},
-                      {0x22,0xB0,0xB0},
-                      {0xB0,0xB0,0xB0} };
+rgb_t g_Colours[] = { {0x00,0x00,0x00,0},
+                      {0xB0,0x22,0x22,0},
+                      {0x22,0xB0,0x22,0},
+                      {0xB0,0xB0,0x22,0},
+                      {0x22,0x22,0xB0,0},
+                      {0xB0,0x22,0xB0,0},
+                      {0x22,0xB0,0xB0,0},
+                      {0xF0,0xF0,0xF0,0} };
 
-rgb_t g_BrightColours[] = { {0x33,0x33,0x33},
-                            {0xFF,0x33,0x33},
-                            {0x33,0xFF,0x33},
-                            {0xFF,0xFF,0x33},
-                            {0x33,0x33,0xFF},
-                            {0xFF,0x33,0xFF},
-                            {0x33,0xFF,0xFF},
-                            {0xFF,0xFF,0xFF} };
+rgb_t g_BrightColours[] = { {0x33,0x33,0x33,0},
+                            {0xFF,0x33,0x33,0},
+                            {0x33,0xFF,0x33,0},
+                            {0xFF,0xFF,0x33,0},
+                            {0x33,0x33,0xFF,0},
+                            {0xFF,0x33,0xFF,0},
+                            {0x33,0xFF,0xFF,0},
+                            {0xFF,0xFF,0xFF,0} };
+
+size_t g_DefaultFg = 0;
+size_t g_DefaultBg = 7;
 
 extern Font *g_NormalFont, *g_BoldFont;
 
@@ -55,6 +57,33 @@ Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLe
     m_ActiveBuffer(0), m_Cmd(), m_bChangingState(false), m_bContainedBracket(false),
     m_bContainedParen(false), m_SavedX(0), m_SavedY(0)
 {
+    int result = pedigree_config_query("select * from 'colour-scheme';");
+    if (result == -1)
+    {
+        log("Unable to query config!");
+        return;
+    }
+
+    char buf[256];
+    if (pedigree_config_was_successful(result) != 0)
+    {
+        pedigree_config_get_error_message(result, buf, 256);
+        log(buf);
+        return;
+    }
+
+    while (pedigree_config_nextrow(result) == 0)
+    {
+        memset (buf, 0, 256);
+        pedigree_config_getstr_n (result, 0, buf, 256);
+        log(buf);
+        if (!strcmp(buf, "xterm-bg"))
+            g_DefaultBg = pedigree_config_getnum_n (result, 1);
+        else if (!strcmp(buf, "xterm-fg"))
+            g_DefaultFg = pedigree_config_getnum_n (result, 1);
+    }
+    pedigree_config_freeresult(result);
+
     size_t width = nWidth / g_NormalFont->getWidth();
     size_t height = nHeight / g_NormalFont->getHeight();
 
@@ -266,8 +295,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         {
                             // Reset all attributes.
                             m_pWindows[m_ActiveBuffer]->setFlags(0);
-                            m_pWindows[m_ActiveBuffer]->setForeColour(DEFAULT_FG);
-                            m_pWindows[m_ActiveBuffer]->setBackColour(DEFAULT_BG);
+                            m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultFg);
+                            m_pWindows[m_ActiveBuffer]->setBackColour(g_DefaultBg);
                             break;
                         }
                         case 1:
@@ -412,7 +441,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
 Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(DEFAULT_FG), m_Bg(DEFAULT_BG), m_Flags(0), m_bLineRender(false)
+    m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bLineRender(false)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));

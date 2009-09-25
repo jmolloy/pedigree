@@ -17,7 +17,9 @@
 #ifndef PEDIGREE_CONFIG_H
 #define PEDIGREE_CONFIG_H
 
-#define size_t unsigned int
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz);
 
@@ -46,5 +48,9 @@ int pedigree_config_nextrow(size_t resultIdx);
 int pedigree_config_was_successful(size_t resultIdx);
 
 void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

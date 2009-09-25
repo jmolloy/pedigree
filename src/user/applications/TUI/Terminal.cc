@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 extern Header *g_pHeader;
+extern rgb_t g_MainBackgroundColour;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
@@ -32,8 +33,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pBuffer = Syscall::newBuffer();
     if (!m_pBuffer) log("Buffer not created correctly!");
 
-    rgb_t b = {0,0,0};
-    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, b);
+    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, g_MainBackgroundColour);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
@@ -86,8 +86,8 @@ void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
     m_pBuffer = Syscall::newBuffer();
     if (!m_pBuffer) log("Buffer not created correctly!");
     log("here0");
-    rgb_t b = {0,0,0};
-    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+m_OffsetLeft, nHeight+m_OffsetTop, b);
+
+    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+m_OffsetLeft, nHeight+m_OffsetTop, g_MainBackgroundColour);
     log("here1");
     m_pXterm->resize(nWidth, nHeight, m_pBuffer);
     log("here2");

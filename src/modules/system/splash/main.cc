@@ -20,6 +20,7 @@
 #include <utilities/assert.h>
 #include <machine/Display.h>
 #include <processor/Processor.h>
+#include <config/Config.h>
 
 #include "image.h"
 
@@ -77,6 +78,45 @@ void init()
     g_Width   = g_ScreenMode.width;
     g_Height  = g_ScreenMode.height;
 
+    Config::Result *pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='splash-background';");
+    if (!pResult)
+    {
+        ERROR("Error looking up background colour.");
+    }
+    else
+    {
+        g_Bg.r = pResult->getNum(0, static_cast<size_t>(0));
+        g_Bg.g = pResult->getNum(0, 1);
+        g_Bg.b = pResult->getNum(0, 2);
+        delete pResult;
+    }
+
+    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='border';");
+    if (!pResult)
+    {
+        ERROR("Error looking up border colour.");
+    }
+    else
+    {
+        g_ProgressBorderCol.r = pResult->getNum(0, static_cast<size_t>(0));
+        g_ProgressBorderCol.g = pResult->getNum(0, 1);
+        g_ProgressBorderCol.b = pResult->getNum(0, 2);
+        delete pResult;
+    }
+
+    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='fill';");
+    if (!pResult)
+    {
+        ERROR("Error looking up border colour.");
+    }
+    else
+    {
+        g_ProgressCol.r = pResult->getNum(0, static_cast<size_t>(0));
+        g_ProgressCol.g = pResult->getNum(0, 1);
+        g_ProgressCol.b = pResult->getNum(0, 2);
+        delete pResult;
+    }
+
     g_pDisplay->setCurrentBuffer(g_pBuffer);
     g_pDisplay->fillRectangle(g_pBuffer, 0, 0, g_Width, g_Height, g_Bg);
 
@@ -123,5 +163,5 @@ MODULE_NAME("splash");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("vbe");
+MODULE_DEPENDS("vbe", "config");
 #endif

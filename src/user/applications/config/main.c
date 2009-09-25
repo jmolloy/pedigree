@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define size_t unsigned int
+
 #include <pedigree_config.h>
 
 void usage()

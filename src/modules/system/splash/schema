@@ -1,0 +1,43 @@
+--
+-- Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+--
+-- Permission to use, copy, modify, and distribute this software for any
+-- purpose with or without fee is hereby granted, provided that the above
+-- copyright notice and this permission notice appear in all copies.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+-- WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+-- MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+-- ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+-- WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+-- ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+-- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+--
+
+create table 'colour-scheme' (
+       'name' varchar(255) primary key,
+       'r' integer,
+       'g' integer,
+       'b' integer);
+
+--
+-- Standard (orange-on-black) theme.
+--
+-- insert into 'colour-scheme' values ('background', 0,  0,  0  );
+-- insert into 'colour-scheme' values ('border',     150,80, 0  );
+-- insert into 'colour-scheme' values ('fill',       150,100,0  );
+-- insert into 'colour-scheme' values ('text',       255,255,255);
+-- insert into 'colour-scheme' values ('xterm-bg',   0,  0,  0  );
+-- insert into 'colour-scheme' values ('xterm-fg',   7,  0,  0  );
+
+--
+-- Blue on black.
+--
+insert into 'colour-scheme' values ('splash-background', 0,  0,  0  );
+insert into 'colour-scheme' values ('border',     60, 60, 150);
+insert into 'colour-scheme' values ('fill',       20, 20, 100);
+insert into 'colour-scheme' values ('selected-text',255,255,255);
+insert into 'colour-scheme' values ('text',       0,  0,  0  );
+insert into 'colour-scheme' values ('tui-background', 240,240,240);
+insert into 'colour-scheme' values ('xterm-bg',   7,  0,  0  );
+insert into 'colour-scheme' values ('xterm-fg',   0,  0,  0  );

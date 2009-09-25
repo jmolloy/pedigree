@@ -15,14 +15,15 @@
  */
 
 #include "Header.h"
+#include <pedigree_config.h>
 
-rgb_t g_BorderColour                = {150, 80, 0};
-rgb_t g_TabBackgroundColour         = {0, 0, 0};
-rgb_t g_TabTextColour               = {150, 100, 0};
-rgb_t g_SelectedTabBackgroundColour = {150, 100, 0};
-rgb_t g_SelectedTabTextColour       = {255, 255, 255};
-rgb_t g_TextColour                  = {255, 255, 255};
-rgb_t g_MainBackgroundColour        = {0, 0, 0};
+rgb_t g_BorderColour                = {150, 80, 0,0};
+rgb_t g_TabBackgroundColour         = {0, 0, 0,0};
+rgb_t g_TabTextColour               = {150, 100, 0,0};
+rgb_t g_SelectedTabBackgroundColour = {150, 100, 0,0};
+rgb_t g_SelectedTabTextColour       = {255, 255, 255,0};
+rgb_t g_TextColour                  = {255, 255, 255,0};
+rgb_t g_MainBackgroundColour        = {0, 0, 0,0};
 size_t g_FontSize = 16;
 
 Header::Header(size_t nWidth) :
@@ -31,6 +32,45 @@ Header::Header(size_t nWidth) :
 {
     m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
     g_FontSize = m_pFont->getHeight();
+
+    int result = pedigree_config_query("select * from 'colour-scheme';");
+    if (result == -1)
+    {
+        log("Unable to query config!");
+        return;
+    }
+
+    char buf[256];
+    if (pedigree_config_was_successful(result) != 0)
+    {
+        pedigree_config_get_error_message(result, buf, 256);
+        log(buf);
+        return;
+    }
+
+    while (pedigree_config_nextrow(result) == 0)
+    {
+        memset (buf, 0, 256);
+        pedigree_config_getstr_n (result, 0, buf, 256);
+        rgb_t rgb;
+        rgb.r = pedigree_config_getnum_n (result, 1);
+        rgb.g = pedigree_config_getnum_n (result, 2);
+        rgb.b = pedigree_config_getnum_n (result, 3);
+        rgb.a = 0;
+
+        if (!strcmp(buf, "border"))
+            g_BorderColour = rgb;
+        else if (!strcmp(buf, "fill"))
+            g_SelectedTabBackgroundColour = rgb;
+        else if (!strcmp(buf, "selected-text"))
+            g_SelectedTabTextColour = rgb;
+        else if (!strcmp(buf, "text"))
+            g_TextColour = rgb;
+        else if (!strcmp(buf, "tui-background"))
+            g_MainBackgroundColour = rgb;
+    }
+    pedigree_config_freeresult(result);
+
 }
 
 Header::~Header()
