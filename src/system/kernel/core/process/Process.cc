@@ -145,19 +145,27 @@ void Process::kill()
   // Kill all our threads except one, which exists in Zombie state.
   while (m_Threads.count() > 1)
   {
-    Thread *pThread = m_Threads[0];
-    if (pThread != Processor::information().getCurrentThread())
-    {
-        m_Threads.erase(m_Threads.begin());
-        delete pThread; // Calls Scheduler::remove and this::remove.
-    }
+      Thread *pThread = m_Threads[0];
+      if (pThread != Processor::information().getCurrentThread())
+      {
+          m_Threads.erase(m_Threads.begin());
+          delete pThread; // Calls Scheduler::remove and this::remove.
+      }
   }
 
   // Tell any threads that may be waiting for us to die.
-  if(m_pParent)
-	m_pParent->m_DeadThreads.release();
+  if (m_pParent)
+      m_pParent->m_DeadThreads.release();
+  else
+  {
+      // No parent: delete us then delete the thread.
+      delete this;
+      Processor::information().getScheduler().killCurrentThread();
+      // Should never get here.
+      FATAL("Process: should never get here");
+  }
 
-  ERROR("Setting thread as zombie.");
+
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");
