@@ -30,14 +30,14 @@ Display *g_pDisplay = 0;
 uintptr_t g_Framebuffer;
 size_t g_FbSize;
 
-VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_Allocator()
+VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
 
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum) :
     Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
-    m_Buffers(), m_Allocator()
+    m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
     String str;
     str.sprintf("DELETE FROM 'display-modes' where display_id = %d", displayNum);
@@ -121,6 +121,17 @@ bool VbeDisplay::setScreenMode(size_t modeId)
 bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
 {
     m_Mode = sm;
+
+    if (m_Mode.pf.nBpp == 16 &&
+        m_Mode.pf.pRed == 11 &&
+        m_Mode.pf.mRed == 5 &&
+        m_Mode.pf.pGreen == 5 &&
+        m_Mode.pf.mGreen == 6 &&
+        m_Mode.pf.pBlue == 0 &&
+        m_Mode.pf.mBlue == 5)
+        m_SpecialisedMode = Mode_16bpp_5r6g5b;
+    else
+        m_SpecialisedMode = Mode_Generic;
 
     // Invalidate all current buffers.
     for (Tree<rgb_t*,Buffer*>::Iterator it = m_Buffers.begin();
@@ -233,21 +244,34 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
         return;
     }
 
-    if (m_Mode.pf.nBpp == 16)
-    {
-//        updateBuffer_16bpp (pBuffer, x1, y1, x2, y2);
-//        return;
-    }
-    else if (m_Mode.pf.nBpp == 24)
-    {
-//        updateBuffer_24bpp (pBuffer, x1, y1, x2, y2);
-//       return;
-    }
-
     if (x1 == ~0UL) x1 = 0;
     if (x2 == ~0UL) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
     if (y2 == ~0UL) y2 = m_Mode.height-1;
+
+    if (m_SpecialisedMode == Mode_16bpp_5r6g5b)
+    {
+        unsigned int x, y;
+
+
+        unsigned int pitch = m_Mode.width;
+
+        for (y = y1; y <= y2; y++)
+        {
+            for (x = x1; x < x2; x++)
+            {
+                rgb_t *pRgb = pBuffer + pitch*y + x;
+                unsigned short r = (pRgb->r >> 3);
+                unsigned short g = (pRgb->g >> 2);
+                unsigned short b = (pRgb->b >> 3);
+                unsigned short a = (r<<11) | (g<<5) | b;
+                reinterpret_cast<uint16_t*>(pBuf->pFbBackbuffer)[pitch*y + x] = a;
+                reinterpret_cast<uint16_t*>(getFramebuffer())[pitch*y + x] = a;
+            }
+        }
+
+        return;
+    }
 
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
@@ -369,7 +393,20 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     size_t bytesPerPixel = m_Mode.pf.nBpp/8;
 
     size_t compiledColour = 0;
-    if (m_Mode.pf.nBpp == 15 || m_Mode.pf.nBpp == 16)
+    if (m_SpecialisedMode == Mode_16bpp_5r6g5b)
+    {
+        compiledColour = ((colour.r >> 3) << 11) |
+            ((colour.g >> 2) << 5) |
+            ((colour.b >> 3) << 0);
+        for (size_t i = y; i < y+height; i++)
+        {
+            dmemset(&pBuffer[i*m_Mode.width+x], *reinterpret_cast<uint32_t*>(&colour), width);
+            wmemset(&pFb[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
+            wmemset(&pFb2[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
+        }
+        return;
+    }
+    else
         // Bit of a dirty hack. Oh well.
         packColour(colour, 0, reinterpret_cast<uintptr_t>(&compiledColour));
 

@@ -36,10 +36,10 @@ class Display : public Device
 {
 public:
 
-    /** Describes a single RGB 24-bit pixel. */
+    /** Describes a single RGBA 32-bit pixel. */
     struct rgb_t
     {
-        uint8_t r, g, b;
+        uint8_t r, g, b, a;
     } PACKED;
 
     /** Describes the format of a pixel in a buffer. */

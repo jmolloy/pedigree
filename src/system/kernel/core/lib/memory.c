@@ -41,6 +41,57 @@ void *memset(void *buf, int c, size_t len)
 #endif
 
 #ifdef X86_COMMON
+void *wmemset(void *buf, int c, size_t n)
+{
+    char *p = (char *)buf;
+
+    // check for bad usage of memcpy
+    if(!n) return buf;
+
+    size_t unused;
+    // see if it's even worth aligning
+    asm volatile("rep stosw;":"=c"(unused):"D"(p), "c"(n), "a"(c));
+    return buf;
+}
+#else
+void *wmemset(void *buf, int c, size_t len)
+{
+  unsigned short *tmp = (unsigned short *)buf;
+  while(len--)
+  {
+    *tmp++ = c;
+  }
+  return buf;
+}
+#endif
+
+#ifdef X86_COMMON
+void *dmemset(void *buf, unsigned int c, size_t n)
+{
+    char *p = (char *)buf;
+
+    // check for bad usage of memcpy
+    if(!n) return buf;
+
+    size_t unused;
+    // see if it's even worth aligning
+    asm volatile("rep stosl;":"=c"(unused):"D"(p), "c"(n), "a"(c));
+    return buf;
+}
+#else
+void *dmemset(void *buf, unsigned int c, size_t len)
+{
+  unsigned int *tmp = (unsigned int *)buf;
+  while(len--)
+  {
+    *tmp++ = c;
+  }
+  return buf;
+}
+#endif
+
+
+#ifdef X86_COMMON
 /** This function courtesy of Josh Cornutt - cheers! */
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {

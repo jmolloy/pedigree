@@ -185,6 +185,7 @@ void entry()
     Display::ScreenMode *pSm = *it;
     NOTICE(Hex << pSm->id << "\t " << Dec << pSm->width << "x" << pSm->height << "x" << pSm->pf.nBpp << "\t " << Hex <<
            pSm->framebuffer);
+    NOTICE("    " << pSm->pf.mRed << "<<" << pSm->pf.pRed << "    " << pSm->pf.mGreen << "<<" << pSm->pf.pGreen << "    " << pSm->pf.mBlue << "<<" << pSm->pf.pBlue);
   }
   NOTICE("VBE: End of compatible display modes.");
 

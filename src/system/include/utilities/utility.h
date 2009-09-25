@@ -85,6 +85,8 @@ size_t strlen(const char *buf);
 int strcpy(char *dest, const char *src);
 int strncpy(char *dest, const char *src, int len);
 void *memset(void *buf, int c, size_t len);
+void *wmemset(void *buf, int c, size_t len);
+void *dmemset(void *buf, unsigned int c, size_t len);
 void *memcpy(void *dest, const void *src, size_t len);
 void *memmove(void *s1, const void *s2, size_t n);
 

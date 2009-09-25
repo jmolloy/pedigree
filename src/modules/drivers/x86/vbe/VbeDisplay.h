@@ -77,6 +77,13 @@ private:
 
     MemoryMappedIo *m_pFramebuffer;
 
+    /** Possible display modes that we have specialised code for. */
+    enum ModeType
+    {
+        Mode_16bpp_5r6g5b,
+        Mode_Generic
+    };
+
     /** Buffer format. */
     struct Buffer
     {
@@ -93,6 +100,9 @@ private:
     };
     /** Buffers. */
     Tree<rgb_t*, Buffer*> m_Buffers;
+
+    /** Mode. */
+    ModeType m_SpecialisedMode;
 
     /** Memory allocator for video memory. */
     MemoryAllocator m_Allocator;

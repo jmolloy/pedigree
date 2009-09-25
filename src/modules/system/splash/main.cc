@@ -32,10 +32,10 @@ static Display::rgb_t *g_pBuffer;
 static size_t g_Width = 0;
 static size_t g_Height = 0;
 
-static Display::rgb_t g_Bg = {0x00,0x00,0x00};
+static Display::rgb_t g_Bg = {0x00,0x00,0x00,0x00};
 
-static Display::rgb_t g_ProgressBorderCol = {150,80,0};
-static Display::rgb_t g_ProgressCol = {150,100,0};
+static Display::rgb_t g_ProgressBorderCol = {150,80,0,0x00};
+static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
 
 static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
