@@ -114,7 +114,8 @@ Thread::~Thread()
   // Remove us from the scheduler.
   Scheduler::instance().removeThread(this);
 
-  m_pParent->removeThread(this);
+  if (m_pParent)
+      m_pParent->removeThread(this);
 
   // TODO delete any pointer data.
 
@@ -127,7 +128,7 @@ Thread::~Thread()
         VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pKernelStack);
     else if(m_StateLevels[i].m_pAuxillaryStack)
         VirtualAddressSpace::getKernelAddressSpace().freeStack(m_StateLevels[i].m_pAuxillaryStack);
-    if (m_StateLevels[i].m_pUserStack)
+    if (m_StateLevels[i].m_pUserStack && m_pParent)
         // Can't use Processor::getCurrent.. as by the time we're called
         // we may have switched address spaces to allow the thread to die.
         m_pParent->getAddressSpace()->freeStack(m_StateLevels[i].m_pUserStack);

@@ -173,6 +173,9 @@ public:
     Process *getParent() const
     {return m_pParent;}
 
+    void setParent(Process *p)
+    {m_pParent = p;}
+
     /** Retrieves our current status. */
     Status getStatus() const
     {return m_Status;}

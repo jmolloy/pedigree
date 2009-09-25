@@ -62,8 +62,10 @@ Process::~Process()
   Scheduler::instance().removeProcess(this);
   Thread *pThread = m_Threads[0];
   m_Threads.erase(m_Threads.begin());
-  delete pThread; // Calls Scheduler::remove and this::remove.
-
+  if (pThread != Processor::information().getCurrentThread())
+      delete pThread; // Calls Scheduler::remove and this::remove.
+  else
+      pThread->setParent(0);
   delete m_pSubsystem;
 
   Spinlock lock;
@@ -158,8 +160,10 @@ void Process::kill()
       m_pParent->m_DeadThreads.release();
   else
   {
+      NOTICE("Deleting this");
       // No parent: delete us then delete the thread.
       delete this;
+
       Processor::information().getScheduler().killCurrentThread();
       // Should never get here.
       FATAL("Process: should never get here");
