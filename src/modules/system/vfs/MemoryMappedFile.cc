@@ -28,7 +28,7 @@ MemoryMappedFile::MemoryMappedFile(File *pFile) :
     if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
     {
         m_Extent = (m_Extent + PhysicalMemoryManager::getPageSize()) &
-                        ~(PhysicalMemoryManager::getPageSize()-1);
+            ~(PhysicalMemoryManager::getPageSize()-1);
     }
 }
 
@@ -169,7 +169,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     uint8_t *buffer = new uint8_t[PhysicalMemoryManager::getPageSize()];
 
     if (m_pFile->read(v-offset, PhysicalMemoryManager::getPageSize(),
-        reinterpret_cast<uintptr_t>(buffer)) == 0)
+                      reinterpret_cast<uintptr_t>(buffer)) == 0)
     {
         WARNING_NOLOCK("MemoryMappedFile: read() failed in trap()");
         WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << (v - offset) << ", reading a page.");

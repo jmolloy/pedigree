@@ -51,7 +51,7 @@ public:
 
     /** Returns true if the File is actually a symlink. */
     virtual bool isSymlink()
-        {return true;}
+    {return true;}
 
     /** Reads the contents of the file as a symbolic link and returns the contents in the given
         buffer.

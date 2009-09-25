@@ -23,8 +23,8 @@
 ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
-        File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
-        m_Name(), m_pBackEnd(0), m_Param(0), m_Flags(DEFAULT_FLAGS)
+    File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
+    m_Name(), m_pBackEnd(0), m_Param(0), m_Flags(DEFAULT_FLAGS)
 {
 }
 
@@ -33,14 +33,14 @@ int ConsoleFile::select(bool bWriting, int timeout)
 {
     bool ret = false;
     if(timeout == 0)
-       ret = ConsoleManager::instance().hasDataAvailable(this);
+        ret = ConsoleManager::instance().hasDataAvailable(this);
     else
         while(!(ret = ConsoleManager::instance().hasDataAvailable(this))) Scheduler::instance().yield();
     return (ret ? 1 : 0);
 }
 
 ConsoleManager::ConsoleManager() :
-  m_Consoles()
+    m_Consoles()
 {
 }
 

@@ -31,9 +31,9 @@
 #define DEFAULT_FLAGS  (ConsoleManager::IMapCRToNL|ConsoleManager::ONLCausesCR|ConsoleManager::LEcho|ConsoleManager::LEchoErase|ConsoleManager::LEchoNewline|ConsoleManager::LCookedMode)
 
 /** This lets a Console become a first-class citizen of the VFS,
-  * which means it can integrate seamlessly into select() calls
-  * and support a clean interface.
-  */
+ * which means it can integrate seamlessly into select() calls
+ * and support a clean interface.
+ */
 class ConsoleFile : public File
 {
 private:

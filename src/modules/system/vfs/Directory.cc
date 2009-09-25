@@ -17,14 +17,14 @@
 #include "Directory.h"
 
 Directory::Directory() :
-  File(), m_Cache(), m_bCachePopulated(false)
+    File(), m_Cache(), m_bCachePopulated(false)
 {
 }
 
 Directory::Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-           uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
-  File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
-  m_Cache(), m_bCachePopulated(false)
+                     uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
+    File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
+    m_Cache(), m_bCachePopulated(false)
 {
 }
 
@@ -34,22 +34,22 @@ Directory::~Directory()
 
 File* Directory::getChild(size_t n)
 {
-  if (!m_bCachePopulated)
-  {
-    cacheDirectoryContents();
-    m_bCachePopulated = true;
-  }
+    if (!m_bCachePopulated)
+    {
+        cacheDirectoryContents();
+        m_bCachePopulated = true;
+    }
 
-  unsigned int i = 0;
-  for (RadixTree<File*>::Iterator it = m_Cache.begin();
-       it != m_Cache.end();
-       it++)
-  {
-    if (i == n)
-      return *it;
-    i++;
-  }
+    unsigned int i = 0;
+    for (RadixTree<File*>::Iterator it = m_Cache.begin();
+         it != m_Cache.end();
+         it++)
+    {
+        if (i == n)
+            return *it;
+        i++;
+    }
 
-  // Not found.
-  return 0;
+    // Not found.
+    return 0;
 }

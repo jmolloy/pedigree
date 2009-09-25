@@ -38,100 +38,100 @@
 class VFS
 {
 public:
-  /** Structure matching aliases to filesystems.
-   * \todo Use a proper Map class for this. */
-  struct Alias
-  {
-    Alias() : alias(), fs(0) {}
-    String alias;
-    Filesystem *fs;
-  private:
-    Alias(const Alias&);
-    void operator =(const Alias&);
-  };
+    /** Structure matching aliases to filesystems.
+     * \todo Use a proper Map class for this. */
+    struct Alias
+    {
+        Alias() : alias(), fs(0) {}
+        String alias;
+        Filesystem *fs;
+    private:
+        Alias(const Alias&);
+        void operator =(const Alias&);
+    };
 
-  /** Callback type, called when a disk is mounted or unmounted. */
-  typedef void (*MountCallback)();
+    /** Callback type, called when a disk is mounted or unmounted. */
+    typedef void (*MountCallback)();
 
-  /** Constructor */
-  VFS();
-  /** Destructor */
-  ~VFS();
+    /** Constructor */
+    VFS();
+    /** Destructor */
+    ~VFS();
 
-  /** Returns the singleton VFS instance. */
-  static VFS &instance();
+    /** Returns the singleton VFS instance. */
+    static VFS &instance();
 
-  /** Mounts a Disk device as the alias "alias".
-      If alias is zero-length, the Filesystem is asked for its preferred name
-      (usually a volume name of some sort), and returned in "alias" */
-  bool mount(Disk *pDisk, String &alias);
+    /** Mounts a Disk device as the alias "alias".
+        If alias is zero-length, the Filesystem is asked for its preferred name
+        (usually a volume name of some sort), and returned in "alias" */
+    bool mount(Disk *pDisk, String &alias);
 
-  /** Adds an alias to an existing filesystem.
-   *\param pFs The filesystem to add an alias for.
-   *\param pAlias The alias to add. */
-  void addAlias(Filesystem *pFs, String alias);
-  void addAlias(String oldAlias, String newAlias);
+    /** Adds an alias to an existing filesystem.
+     *\param pFs The filesystem to add an alias for.
+     *\param pAlias The alias to add. */
+    void addAlias(Filesystem *pFs, String alias);
+    void addAlias(String oldAlias, String newAlias);
 
-  /** Gets a unique alias for a filesystem. */
-  String getUniqueAlias(String alias);
+    /** Gets a unique alias for a filesystem. */
+    String getUniqueAlias(String alias);
 
-  /** Does a given alias exist? */
-  bool aliasExists(String alias);
+    /** Does a given alias exist? */
+    bool aliasExists(String alias);
 
-  /** Obtains a list of all filesystem aliases */
-  inline List<Alias*> &getAliases()
-  {
-      return m_Aliases;
-  }
+    /** Obtains a list of all filesystem aliases */
+    inline List<Alias*> &getAliases()
+    {
+        return m_Aliases;
+    }
 
-  /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
-   *  the filesystem is destroyed.
-   *\param pAlias The alias to remove. */
-  void removeAlias(String alias);
+    /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
+     *  the filesystem is destroyed.
+     *\param pAlias The alias to remove. */
+    void removeAlias(String alias);
 
-  /** Removes all aliases from a filesystem - the filesystem is destroyed.
-   *\param pFs The filesystem to destroy. */
-  void removeAllAliases(Filesystem *pFs);
+    /** Removes all aliases from a filesystem - the filesystem is destroyed.
+     *\param pFs The filesystem to destroy. */
+    void removeAllAliases(Filesystem *pFs);
 
-  /** Looks up the Filesystem from a given alias.
-   *\param pAlias The alias to search for.
-   *\return The filesystem aliased by pAlias or 0 if none found. */
-  Filesystem *lookupFilesystem(String alias);
+    /** Looks up the Filesystem from a given alias.
+     *\param pAlias The alias to search for.
+     *\return The filesystem aliased by pAlias or 0 if none found. */
+    Filesystem *lookupFilesystem(String alias);
 
-  /** Attempts to obtain a File for a specific path. */
-  File *find(String path, File *pStartNode=0);
+    /** Attempts to obtain a File for a specific path. */
+    File *find(String path, File *pStartNode=0);
 
-  /** Attempts to create a file. */
-  bool createFile(String path, uint32_t mask, File *pStartNode=0);
+    /** Attempts to create a file. */
+    bool createFile(String path, uint32_t mask, File *pStartNode=0);
 
-  /** Attempts to create a directory. */
-  bool createDirectory(String path, File *pStartNode=0);
+    /** Attempts to create a directory. */
+    bool createDirectory(String path, File *pStartNode=0);
 
-  /** Attempts to create a symlink. */
-  bool createSymlink(String path, String value, File *pStartNode=0);
+    /** Attempts to create a symlink. */
+    bool createSymlink(String path, String value, File *pStartNode=0);
 
-  /** Attempts to remove a file/directory/symlink. WILL FAIL IF DIRECTORY NOT EMPTY */
-  bool remove(String path, File *pStartNode=0);
+    /** Attempts to remove a file/directory/symlink. WILL FAIL IF DIRECTORY NOT EMPTY */
+    bool remove(String path, File *pStartNode=0);
 
-  /** Adds a filesystem probe callback - this is called when a device is mounted. */
-  void addProbeCallback(Filesystem::ProbeCallback callback);
+    /** Adds a filesystem probe callback - this is called when a device is mounted. */
+    void addProbeCallback(Filesystem::ProbeCallback callback);
 
-  /** Adds a mount callback - the function is called when a disk is mounted or
-      unmounted. */
-  void addMountCallback(MountCallback callback);
-
-private:
-  /** The static instance object. */
-  static VFS m_Instance;
-
-  /** A static File object representing an invalid file */
-  static File* m_EmptyFile;
+    /** Adds a mount callback - the function is called when a disk is mounted or
+        unmounted. */
+    void addMountCallback(MountCallback callback);
 
 private:
-  List<Alias*> m_Aliases;
+    /** The static instance object. */
+    static VFS m_Instance;
 
-  List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
-  List<MountCallback*> m_MountCallbacks;
+    /** A static File object representing an invalid file */
+    static File* m_EmptyFile;
+
+private:
+    List<Alias*> m_Aliases;
+
+    List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
+    List<MountCallback*> m_MountCallbacks;
 };
 
 #endif

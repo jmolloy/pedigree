@@ -67,11 +67,11 @@ public:
 
     /** Mark this map for deletion when its reference count drops to zero - i.e. the underlying File has changed. */
     void markForDeletion()
-        {m_bMarkedForDeletion = true;}
+    {m_bMarkedForDeletion = true;}
 
     /** Increase the reference count. */
     void increaseRefCount()
-        {m_RefCount++;}
+    {m_RefCount++;}
 
     /** Decrease the reference count.
         \return True if the object should now be deleted, false otherwise.*/
@@ -83,7 +83,7 @@ public:
     }
 
     size_t getExtent()
-        {return m_Extent;}
+    {return m_Extent;}
 
     File *getFile()
     {
@@ -120,7 +120,7 @@ class MemoryMappedFileManager : public MemoryTrapHandler
 public:
     /** Singleton instance */
     static MemoryMappedFileManager &instance()
-        {return m_Instance;}
+    {return m_Instance;}
 
     /** Add a new mapping; Creates or gets from cache a new MemoryMappedFile. 
         \param pFile The VFS file to map.
