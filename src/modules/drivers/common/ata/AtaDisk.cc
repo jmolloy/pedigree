@@ -173,7 +173,7 @@ uint64_t AtaDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addRequest(ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location,
+    return pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location,
                                nBytes, static_cast<uint64_t> (buffer));
 }
 
@@ -181,7 +181,7 @@ uint64_t AtaDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addRequest(ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
+    return pParent->addRequest(0, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
                                nBytes, static_cast<uint64_t> (buffer));
 }
 
@@ -341,7 +341,7 @@ uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
     /// \note Note that the buffer passed is null. The internal write reads from cache (based
     ///       on the location parameter) when writing.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addAsyncRequest(ATA_CMD_WRITE2,
+    return pParent->addAsyncRequest(0, ATA_CMD_WRITE2,
             reinterpret_cast<uint64_t> (this), oldLoc, oldCount, 0);
 #endif
 

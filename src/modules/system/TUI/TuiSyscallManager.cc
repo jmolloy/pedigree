@@ -44,7 +44,8 @@ void callback(uint64_t key)
         WARNING("Key called with no console");
         return;
     }
-    g_UserConsole->addAsyncRequest(TUI_CHAR_RECV, g_UserConsoleId, key);
+    // Ensure this is sent with highest priority (0).
+    g_UserConsole->addAsyncRequest(0, TUI_CHAR_RECV, g_UserConsoleId, key);
     ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
 }
 
@@ -68,7 +69,7 @@ extern "C" void tuiModeChangedCallback()
     NOTICE("width: " << Hex << width << ", height: " << height << ", a: " << a);
     delete pResult;
 
-    g_UserConsole->addAsyncRequest(TUI_MODE_CHANGED, g_UserConsoleId, a);
+    g_UserConsole->addAsyncRequest(0, TUI_MODE_CHANGED, g_UserConsoleId, a);
 }
 
 TuiSyscallManager::TuiSyscallManager() :

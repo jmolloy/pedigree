@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <process/Mutex.h>
 
+#define REQUEST_QUEUE_NUM_PRIORITIES 4
+
 /** Implements a request queue, with one worker thread performing
  * all requests. All requests appear synchronous to the calling thread -
  * calling threads are blocked on mutexes (so they can be put to sleep) until
@@ -39,12 +41,13 @@ public:
     /** Destroys the queue, killing the worker thread (safely) */
     virtual void destroy();
 
-    /** Adds a request to the queue. Blocks until it finishes and returns the result. */
-    uint64_t addRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
+    /** Adds a request to the queue. Blocks until it finishes and returns the result.
+        \param priority The priority to attach to this request. Lower number is higher priority. */
+    uint64_t addRequest(size_t priority, uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
                         uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
     /** Adds an asynchronous request to the queue. Will not block. */
-    uint64_t addAsyncRequest(uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
+    uint64_t addAsyncRequest(size_t priority, uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
                              uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
 protected:
@@ -79,7 +82,7 @@ protected:
     int work();
 
     /** The request queue */
-    Request *m_pRequestQueue;
+    Request *m_pRequestQueue[REQUEST_QUEUE_NUM_PRIORITIES];
 
     /** The semaphore giving the number of items in the queue. */
     Semaphore m_RequestQueueSize;

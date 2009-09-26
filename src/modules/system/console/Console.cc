@@ -119,7 +119,7 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
 {
     /// \todo Sanity checking.
     ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
-    uint64_t nBytes =  file->m_pBackEnd->addRequest(CONSOLE_READ, file->m_Param, size, buffer);
+    uint64_t nBytes =  file->m_pBackEnd->addRequest(1, CONSOLE_READ, file->m_Param, size, buffer);
 
     // Perform cooked mode processing if required.
 #if 0
@@ -202,7 +202,7 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
 
     char *newbuf = new char[size];
     memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
-    uint64_t nBytes = file->m_pBackEnd->addAsyncRequest(CONSOLE_WRITE, file->m_Param, size, reinterpret_cast<uint64_t>(newbuf));
+    uint64_t nBytes = file->m_pBackEnd->addAsyncRequest(1, CONSOLE_WRITE, file->m_Param, size, reinterpret_cast<uint64_t>(newbuf));
 
     return size;
 }
@@ -211,21 +211,21 @@ int ConsoleManager::getCols(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETCOLS, pFile->m_Param));
+    return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETCOLS, pFile->m_Param));
 }
 
 int ConsoleManager::getRows(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(CONSOLE_GETROWS, pFile->m_Param));
+    return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETROWS, pFile->m_Param));
 }
 
 bool ConsoleManager::hasDataAvailable(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<bool>(pFile->m_pBackEnd->addRequest(CONSOLE_DATA_AVAILABLE, pFile->m_Param));
+    return static_cast<bool>(pFile->m_pBackEnd->addRequest(1, CONSOLE_DATA_AVAILABLE, pFile->m_Param));
 }
 
 void initConsole()

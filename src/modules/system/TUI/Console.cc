@@ -81,7 +81,14 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Get the first request from the queue.
     m_RequestQueueMutex.acquire();
 
-    m_pReq = m_pRequestQueue;
+    // Get the most important queue with data in.
+    /// \todo Stop possible starvation here.
+    size_t priority = 0;
+    for (priority = 0; priority < REQUEST_QUEUE_NUM_PRIORITIES-1; priority++)
+        if (m_pRequestQueue[priority])
+            break;
+
+    m_pReq = m_pRequestQueue[priority];
     // Quick sanity check:
     if (m_pReq == 0)
     {
@@ -90,7 +97,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         ERROR("Unwind state: " << (size_t)Processor::information().getCurrentThread()->getUnwindState());
         FATAL("RequestQueue: Worker thread woken but no requests pending!");
     }
-    m_pRequestQueue = m_pReq->next;
+    m_pRequestQueue[priority] = m_pReq->next;
 
     m_RequestQueueMutex.release();
 

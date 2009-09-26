@@ -25,7 +25,7 @@
 
 #include "newlib.h"
 
-#if 0
+#if 1
 #define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define F_NOTICE(x)

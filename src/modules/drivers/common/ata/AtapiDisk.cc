@@ -234,7 +234,7 @@ uint64_t AtapiDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(ATAPI_CMD_READ, reinterpret_cast<uint64_t> (this), location,
+  return pParent->addRequest(0, ATAPI_CMD_READ, reinterpret_cast<uint64_t> (this), location,
                              nBytes, static_cast<uint64_t> (buffer));
 }
 
@@ -242,7 +242,7 @@ uint64_t AtapiDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 {
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(ATAPI_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
+  return pParent->addRequest(0, ATAPI_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
                              nBytes, static_cast<uint64_t> (buffer));
 }
 

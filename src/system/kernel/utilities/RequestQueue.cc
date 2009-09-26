@@ -20,9 +20,11 @@
 #include <Log.h>
 
 RequestQueue::RequestQueue() :
-  m_pRequestQueue(0), m_RequestQueueSize(0),
+  m_RequestQueueSize(0),
   m_Stop(false), m_RequestQueueMutex(false), m_pThread(0)
 {
+    for (size_t i = 0; i < REQUEST_QUEUE_NUM_PRIORITIES; i++)
+        m_pRequestQueue[i] = 0;
 }
 
 RequestQueue::~RequestQueue()
@@ -47,8 +49,8 @@ void RequestQueue::destroy()
   m_RequestQueueSize.release();
 }
 
-uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
-                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
+uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
   // Create a new request object.
   Request *pReq = new Request();
@@ -59,11 +61,11 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
 
-  if (m_pRequestQueue == 0)
-    m_pRequestQueue = pReq;
+  if (m_pRequestQueue[priority] == 0)
+    m_pRequestQueue[priority] = pReq;
   else
   {
-    Request *p = m_pRequestQueue;
+    Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
       p = p->next;
     p->next = pReq;
@@ -104,8 +106,8 @@ uint64_t RequestQueue::addRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_
   return ret;
 }
 
-uint64_t RequestQueue::addAsyncRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
-                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
+uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                       uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
   // Create a new request object.
   Request *pReq = new Request();
@@ -116,11 +118,11 @@ uint64_t RequestQueue::addAsyncRequest(uint64_t p1, uint64_t p2, uint64_t p3, ui
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
 
-  if (m_pRequestQueue == 0)
-    m_pRequestQueue = pReq;
+  if (m_pRequestQueue[priority] == 0)
+    m_pRequestQueue[priority] = pReq;
   else
   {
-    Request *p = m_pRequestQueue;
+    Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
       p = p->next;
     p->next = pReq;
@@ -154,7 +156,14 @@ int RequestQueue::work()
     // Get the first request from the queue.
     m_RequestQueueMutex.acquire();
 
-    Request *pReq = m_pRequestQueue;
+    // Get the most important queue with data in.
+    /// \todo Stop possible starvation here.
+    size_t priority = 0;
+    for (priority = 0; priority < REQUEST_QUEUE_NUM_PRIORITIES-1; priority++)
+        if (m_pRequestQueue[priority])
+            break;
+
+    Request *pReq = m_pRequestQueue[priority];
     // Quick sanity check:
     if (pReq == 0)
     {
@@ -163,7 +172,7 @@ int RequestQueue::work()
         ERROR("Unwind state: " << (size_t)Processor::information().getCurrentThread()->getUnwindState());
         FATAL("RequestQueue: Worker thread woken but no requests pending!");
     }
-    m_pRequestQueue = pReq->next;
+    m_pRequestQueue[priority] = pReq->next;
 
     m_RequestQueueMutex.release();
 
