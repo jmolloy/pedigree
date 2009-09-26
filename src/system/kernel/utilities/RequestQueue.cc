@@ -131,7 +131,39 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
 
-  m_RequestQueueMutex.release();
+  // If the queue is too long, make this block.
+  if (m_RequestQueueSize.getValue() > REQUEST_QUEUE_MAX_QUEUE_SZ)
+  {
+      pReq->isAsync = false;
+
+      m_RequestQueueMutex.release();
+
+      // We are waiting on the worker thread - mark the thread as such.
+      Thread *pThread = Processor::information().getCurrentThread();
+      pThread->setBlockingThread(m_pThread);
+
+      // Wait for the request to be satisfied. This should sleep the thread.
+      pReq->mutex.acquire();
+
+      pThread->setBlockingThread(0);
+
+      if(pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
+      {
+          // The request was interrupted somehow. We cannot assume that pReq's
+          // contents are valid, so just return zero. The caller may have to redo
+          // their request.
+          // By releasing here, the worker thread can detect that the request was
+          // interrupted and clean up by itself.
+          NOTICE("RequestQueue::addRequest - interrupted");
+          pReq->mutex.release();
+          return 0;
+      }
+
+      // Delete the request structure.
+      delete pReq;
+  }
+  else
+      m_RequestQueueMutex.release();
 
   return 0;
 }
