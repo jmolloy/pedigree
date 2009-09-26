@@ -127,7 +127,7 @@ int main(int argc, char **argv)
             printf("\b \b");
         }
       }
-      else
+      else if (c != '\033')
       {
         username[i++] = c;
         printf("%c",c);

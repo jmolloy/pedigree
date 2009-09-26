@@ -20,7 +20,7 @@
 #include <process/Thread.h>
 #include "Rtc.h"
 
-#define INITIAL_RTC_HZ 1024
+#define INITIAL_RTC_HZ 512
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
 
