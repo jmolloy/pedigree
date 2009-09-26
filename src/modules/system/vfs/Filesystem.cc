@@ -192,7 +192,7 @@ File *Filesystem::findNode(File *pNode, String path)
         return 0;
     }
 
-    if (!strcmp(path, "."))
+    if (!strcmp(path, ".") || (!strcmp(path, "..") && pNode->m_pParent == 0))
     {
         return findNode(pNode, restOfPath);
     }
