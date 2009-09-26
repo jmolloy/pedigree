@@ -282,7 +282,7 @@ ssize_t posix_sendto(void* callInfo)
 
 ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
-    NOTICE("posix_recv");
+    //NOTICE("posix_recv");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());

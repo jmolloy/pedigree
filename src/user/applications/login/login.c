@@ -108,12 +108,14 @@ int main(int argc, char **argv)
     // Not running anything
     g_RunningPid = -1;
 
+    // Get username
+
     printf("Username: ");
     fflush(stdout);
     char c;
     char username[256];
     int i = 0;
-    
+
     struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
 
@@ -146,8 +148,42 @@ int main(int argc, char **argv)
       continue;
     }
 
+    // Get password
+
+    /*
     char *password = getpass("Password: ");
     fflush(stdout);
+    */
+
+    // Use own way - display *
+
+    printf("Password: ");
+    fflush(stdout);
+    char password[256];
+    i = 0;
+
+    tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
+
+    while ( i < 256 && (c=getchar()) != '\n' )
+    {
+        if(c == '\b')
+        {
+            if(i > 0)
+            {
+                password[--i] = '\0';
+                printf("\b \b");
+            }
+        }
+        else if (c != '\033')
+        {
+            password[i++] = c;
+            printf("*");
+        }
+    }
+    tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
+    printf("\n");
+
+    password[i] = '\0';
 
     // Perform login - this function is in glue.c.
     if(login(pw->pw_uid, password) != 0)
