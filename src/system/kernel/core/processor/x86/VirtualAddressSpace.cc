@@ -128,13 +128,17 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::allocateStack()
 {
-    return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+    void *st  = doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+
+    return st;
 }
 void *X86VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
         stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
-    return doAllocateStack(stackSz);
+    void *st  = doAllocateStack(stackSz);
+
+    return st;
 }
 void X86VirtualAddressSpace::freeStack(void *pStack)
 {
@@ -752,17 +756,6 @@ void X86KernelVirtualAddressSpace::unmap(void *virtualAddress)
 void *X86KernelVirtualAddressSpace::allocateStack()
 {
   void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
-
-  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
-  {
-    // TODO: Check return values
-    physical_uintptr_t page = physicalMemoryManager.allocatePage();
-
-    map(page,
-        adjust_pointer(pStack, - ((i + 1) * 0x1000)),
-        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
-  }
 
   return pStack;
 }

@@ -70,23 +70,23 @@ int main(void)
 //    }
 
 //    printf("\nAnd now main() has waited for the thread to run.\n");
-    struct termios t;
-    tcgetattr(0, &t);
 
-    struct termios oldt = t;
-    t.c_lflag &= ~(ECHO|ECHOE|ECHOK|ICANON|IEXTEN);
-    tcsetattr(0, 0, &t);
+    while (1)
+    {
+        printf("Press any key to fork and wait.");
 
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(0, &fds);
-    struct timeval ts;
-    ts.tv_sec = 5;
-    ts.tv_usec = 0;
-    int ret = select(1, &fds, 0, 0, &ts);
+        char c = getchar();
+        int n;
+        if ( (n=fork()) == 0 )
+        {
+            printf("Child\n");
+            return EXIT_SUCCESS;
+        }
+        else
+        {
+            wait();
+        }
+    }
 
-    tcsetattr(0, 0, &oldt);
-
-    printf("ret: %d\n", ret);
     return EXIT_SUCCESS;
 }
