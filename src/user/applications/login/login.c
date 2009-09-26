@@ -177,7 +177,7 @@ int main(int argc, char **argv)
         else if (c != '\033')
         {
             password[i++] = c;
-            printf("*");
+            printf("•");
         }
     }
     tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
