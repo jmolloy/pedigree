@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
+//
 #include "BootstrapInfo.h"
 
 #ifdef DEBUGGER
@@ -52,7 +52,9 @@
 #include <utilities/List.h>
 #include <utilities/RadixTree.h>
 #include <utilities/StaticString.h>
-
+void apmm()
+{
+}
 /** Output device for boot-time information. */
 BootIO bootIO;
 

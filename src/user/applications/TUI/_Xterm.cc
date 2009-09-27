@@ -16,6 +16,7 @@
 
 #include "_Xterm.h"
 #include "Font.h"
+#include "Terminal.h"
 
 #define C_BLACK   0
 #define C_RED     1
@@ -53,9 +54,9 @@ size_t g_DefaultBg = 7;
 
 extern Font *g_NormalFont, *g_BoldFont;
 
-Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop) :
+Xterm::Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, Terminal *pT) :
     m_ActiveBuffer(0), m_Cmd(), m_bChangingState(false), m_bContainedBracket(false),
-    m_bContainedParen(false), m_SavedX(0), m_SavedY(0)
+    m_bContainedParen(false), m_SavedX(0), m_SavedY(0), m_pT(pT), m_bFbMode(false)
 {
     int result = pedigree_config_query("select * from 'colour-scheme';");
     if (result == -1)
@@ -105,9 +106,9 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     if(m_bChangingState)
     {
-//        char tmp32[128];
-//        sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-//        log(tmp32);
+        //char tmp32[128];
+        //sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
+        //log(tmp32);
 
         if(utf32 == '?') return; // Useless character.
 
@@ -135,6 +136,29 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case '(':
                 m_bContainedParen = true;
                 break;
+
+            // Framebuffer stuff.
+            case '%':
+            {
+                m_bFbMode = true;
+                uintptr_t fb = reinterpret_cast<uintptr_t>(m_pWindows[0]->m_pFramebuffer);
+                fb += m_pWindows[0]->m_FbWidth*m_pWindows[0]->m_OffsetTop*sizeof(rgb_t);
+                char str[64];
+                sprintf(str, "%dx%d@%lx\n", m_pWindows[0]->m_FbWidth, m_pWindows[0]->m_Height*g_NormalFont->getHeight(), fb);
+                for (int i = 0; str[i] != 0; i++)
+                    m_pT->addToQueue(str[i]);
+                m_bChangingState = false;
+                break;
+            }
+            case 'u':
+            {
+                rect.point (m_Cmd.params[0], m_Cmd.params[1]);
+                rect.point (m_Cmd.params[0]+m_Cmd.params[2], m_Cmd.params[1]+m_Cmd.params[3]);
+                m_bChangingState = false;
+                break;
+            }
+                
+
             case '0':
             case '1':
             case '2':
@@ -148,6 +172,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (utf32-'0');
                 break;
             case ';':
+            case ',':
                 m_Cmd.cur_param++;
                 break;
 
@@ -382,6 +407,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     }
     else
     {
+//        if (m_bFbMode && utf32 != '\e')
+//            return;
         switch (utf32)
         {
             case '\x08':

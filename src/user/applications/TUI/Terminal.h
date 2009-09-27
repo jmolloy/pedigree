@@ -30,6 +30,7 @@
 class Terminal
 {
 public:
+    friend class Xterm;
     Terminal(char *pName, size_t nWidth, size_t nHeight,
              class Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
     ~Terminal();

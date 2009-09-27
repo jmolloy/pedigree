@@ -42,7 +42,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     Syscall::createConsole(tabId, pName);
 
 #ifndef NEW_XTERM
-    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop);
+    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop, this);
 #else
     Display::ScreenMode mode;
     mode.width = nWidth;
@@ -244,6 +244,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 
         // End UTF-8 -> UTF-32 conversion.
 #ifndef NEW_XTERM
+        
         m_pXterm->write(utf32, rect);
 #else
         rect.point(m_OffsetLeft,m_OffsetTop);

@@ -27,7 +27,7 @@
 class Xterm
 {
 public:
-    Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop);
+    Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, class Terminal *pT);
     ~Xterm();
 
     /** Writes the given UTF-32 character to the Xterm. */
@@ -214,6 +214,10 @@ private:
 
     /// Saved cursor position.
     uint32_t m_SavedX, m_SavedY;
+
+    class Terminal *m_pT;
+
+    bool m_bFbMode;
 };
 
 #endif
