@@ -15,6 +15,7 @@
  */
 
 #include "Directory.h"
+#include "Filesystem.h"
 
 Directory::Directory() :
     File(), m_Cache(), m_bCachePopulated(false)
@@ -39,12 +40,13 @@ File* Directory::getChild(size_t n)
         cacheDirectoryContents();
         m_bCachePopulated = true;
     }
-
+    NOTICE("Tryingtofindlol: " << (uintptr_t)this);
     unsigned int i = 0;
     for (RadixTree<File*>::Iterator it = m_Cache.begin();
          it != m_Cache.end();
          it++)
     {
+        NOTICE("FINDINGLOL");
         if (i == n)
             return *it;
         i++;
@@ -52,4 +54,9 @@ File* Directory::getChild(size_t n)
 
     // Not found.
     return 0;
+}
+
+void Directory::cacheDirectoryContents()
+{
+    m_pFilesystem->cacheDirectoryContents(this);
 }

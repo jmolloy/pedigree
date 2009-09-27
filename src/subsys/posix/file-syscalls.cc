@@ -727,13 +727,13 @@ int posix_opendir(const char *dir, dirent *ent)
     f->file = file;
     f->offset = 0;
     f->fd = fd;
-
-
+    NOTICE("Wpiigg2");
     file = Directory::fromFile(file)->getChild(0);
     if (file)
         ent->d_ino = file->getInode();
     else
     {
+        NOTICE("Epic fail!");
         // fail! no children!
         delete f;
         return -1;

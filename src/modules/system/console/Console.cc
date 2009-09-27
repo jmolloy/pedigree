@@ -225,7 +225,7 @@ bool ConsoleManager::hasDataAvailable(File* file)
 {
     /// \todo Sanity checking.
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<bool>(pFile->m_pBackEnd->addRequest(1, CONSOLE_DATA_AVAILABLE, pFile->m_Param));
+    return static_cast<bool>(pFile->m_pBackEnd->addRequest(1,CONSOLE_DATA_AVAILABLE, pFile->m_Param));
 }
 
 void initConsole()

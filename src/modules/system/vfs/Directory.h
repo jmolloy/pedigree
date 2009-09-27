@@ -59,7 +59,7 @@ public:
     File* getChild(size_t n);
 
     /** Load the directory's contents into the cache. */
-    virtual void cacheDirectoryContents() =0;
+    virtual void cacheDirectoryContents();
 
 public:
     /** Directory contents cache. */
