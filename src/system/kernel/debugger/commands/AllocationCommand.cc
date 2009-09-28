@@ -235,7 +235,7 @@ void AllocationCommand::allocatePage(physical_uintptr_t page)
     // Get a backtrace.
     Backtrace bt;
     bt.performBpBacktrace(0, 0);
-    
+
     Allocation *pA = new Allocation;
     pA->page = page;
     memcpy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));

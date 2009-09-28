@@ -28,8 +28,7 @@
 SlamCommand g_SlamCommand;
 
 SlamCommand::SlamCommand()
-    : DebuggerCommand(), Scrollable(), m_Allocations(), m_nLines(0), m_Tree(),
-      m_It(), m_nIdx(0)
+    : DebuggerCommand(), Scrollable(), m_Tree(), m_It(), m_nLines(0), m_nIdx(0), m_Lock(false)
 {
 }
 
@@ -45,39 +44,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
 {
 
   // How many lines do we have?
-  m_nLines = NUM_BT_FRAMES+1;
-
-  m_Tree.clear();
-
-  for (int i = 0; i < 32; i++)
-      SlamAllocator::instance().m_Caches[i].check(true);
-
-  // Perform preprocessing. Horrible O(n^2) algorithm.
-  for (Vector<SlamAllocation*>::Iterator it = m_Allocations.begin();
-       it != m_Allocations.end();
-       it++)
-  {
-      SlamAllocation *pA = *it;
-      // Create a checksum of the backtrace.
-      uintptr_t accum = 0;
-      for (int i = 0; i < NUM_BT_FRAMES; i++)
-          accum ^= pA->ra[i];
-
-      // Along with process ID...
-      accum += pA->pid<<16;
-
-      // Lookup the checksum.
-      SlamAllocation *pOther = m_Tree.lookup(accum);
-      if (pOther == 0)
-      {
-          pA->n = 1;
-          m_Tree.insert(accum, pA);
-      }
-      else
-      {
-          pOther->n ++;
-      }
-  }
+  m_nLines = NUM_SLAM_BT_FRAMES+1;
 
   m_It = m_Tree.begin();
   m_nIdx = 0;
@@ -99,7 +66,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
                               DebuggerIO::Green);
 
   // Write the correct text in the upper status line.
-  pScreen->drawString("Pedigree debugger - Page allocation resolver",
+  pScreen->drawString("Pedigree debugger - Slam allocation resolver",
                       0,
                       0,
                       DebuggerIO::White,
@@ -117,12 +84,13 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
 
   // Write some helper text in the lower status line.
   // TODO FIXME: Drawing this might screw the top status bar
-  pScreen->drawString("backspace: Page up. space: Page down. q: Quit. enter: Next allocation",
+  pScreen->drawString("q: Quit. backspace: Page up. space: Page down. enter: Next allocation. c: Clean.",
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
-  pScreen->drawString("backspace", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("space", pScreen->getHeight()-1, 20, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("q", pScreen->getHeight()-1, 38, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("q", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("backspace", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("space", pScreen->getHeight()-1, 29, DebuggerIO::Yellow, DebuggerIO::Green);
   pScreen->drawString("enter", pScreen->getHeight()-1, 47, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("c", pScreen->getHeight()-1, 71, DebuggerIO::Yellow, DebuggerIO::Green);
 
   // Main loop.
   bool bStop = false;
@@ -163,11 +131,15 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
             m_nIdx = 0;
         }
     }
+    else if (c == 'c')
+    {
+        m_Tree.clear();
+        m_It = m_Tree.begin();
+        m_nIdx = 0;
+    }
     else if (c == 'q')
       bStop = true;
   }
-
-  m_Allocations.clear();
 
   // HACK:: Serial connections will fill the screen with the last background colour used.
   //        Here we write a space with black background so the CLI screen doesn't get filled
@@ -202,10 +174,10 @@ const char *SlamCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Debu
   colour = DebuggerIO::White;
   uintptr_t symStart = 0;
 
-  const char *pSym = KernelElf::instance().globalLookupSymbol(pA->ra[index], &symStart);
+  const char *pSym = KernelElf::instance().globalLookupSymbol(pA->bt[index], &symStart);
   if (pSym == 0)
   {
-      Line.append(pA->ra[index], 16);
+      Line.append(pA->bt[index], 16);
   }
   else
   {
@@ -234,16 +206,61 @@ size_t SlamCommand::getLineCount()
   return m_nLines;
 }
 
-void SlamCommand::addAllocation(SlamAllocator::AllocHeader *head)
+void SlamCommand::addAllocation(uintptr_t *backtrace)
 {
-    SlamAllocation *pA = new SlamAllocation;
-    memcpy(&pA->ra, &head->backtrace, NUM_BT_FRAMES*sizeof(uintptr_t));
-
-    Process *pP = Processor::information().getCurrentThread()->getParent();
-    if (pP)
-        pA->pid = pP->getId();
+    if(m_Lock)
+        return;
+    m_Lock = true;
+    uintptr_t accum = 0;
+    size_t pid = -1;
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if (pProcess)
+        pid = pProcess->getId();
+    // Checksum it
+    for (int i = 0; i < NUM_SLAM_BT_FRAMES; i++)
+        accum ^= backtrace[i];
+    // Along with process ID...
+    accum += pid<<16;
+    // Lookup the checksum.
+    SlamAllocation *pOther = m_Tree.lookup(accum);
+    if (!pOther)
+    {
+        SlamAllocation *pAlloc = new SlamAllocation;
+        memcpy(&pAlloc->bt, backtrace, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+        pAlloc->n = 1;
+        pAlloc->pid = pid;
+        m_Tree.insert(accum, pAlloc);
+    }
     else
-        pA->pid = -1;
+        pOther->n ++;
+    m_Lock = false;
+}
 
-    m_Allocations.pushBack(pA);
+void SlamCommand::removeAllocation(uintptr_t *backtrace)
+{
+    if(m_Lock)
+        return;
+    m_Lock = true;
+    uintptr_t accum = 0;
+    size_t pid = -1;
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if (pProcess)
+        pid = pProcess->getId();
+    // Checksum it
+    for (int i = 0; i < NUM_SLAM_BT_FRAMES; i++)
+        accum ^= backtrace[i];
+    // Along with process ID...
+    accum += pid<<16;
+    // Lookup the checksum.
+    SlamAllocation *pAlloc = m_Tree.lookup(accum);
+    if (pAlloc)
+        //FATAL("No allocataion found to free!");
+    //else
+    {
+        if(pAlloc->n == 1)
+            m_Tree.remove(accum);
+        else
+            pAlloc->n--;
+    }
+    m_Lock = false;
 }

@@ -21,12 +21,11 @@
 #include <Scrollable.h>
 #include <utilities/Vector.h>
 #include <utilities/Tree.h>
-#include "../../core/lib/SlamAllocator.h"
 
 /** @addtogroup kerneldebuggercommands
  * @{ */
 
-#define NUM_BT_FRAMES 6
+#define NUM_SLAM_BT_FRAMES 10
 
 /**
  * Traces page allocations.
@@ -63,7 +62,9 @@ public:
         return NormalStaticString("slam-allocations");
     }
 
-    void addAllocation(SlamAllocator::AllocHeader *head);
+    void addAllocation(uintptr_t *backtrace);
+
+    void removeAllocation(uintptr_t *backtrace);
 
     //
     // Scrollable interface
@@ -75,15 +76,15 @@ public:
 private:
     struct SlamAllocation
     {
-        uintptr_t ra[NUM_BT_FRAMES];
+        uintptr_t bt[NUM_SLAM_BT_FRAMES];
         size_t n;
         size_t pid;
     };
-    Vector<SlamAllocation*> m_Allocations;
     Tree<size_t, SlamAllocation*> m_Tree;
     Tree<size_t, SlamAllocation*>::Iterator m_It;
     size_t m_nLines;
     size_t m_nIdx;
+    bool m_Lock;
 };
 
 extern SlamCommand g_SlamCommand;

@@ -26,6 +26,8 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
+#include <SlamCommand.h>
+
 extern void *dlmallocSbrk(ssize_t incr);
 
 /// Size of each slab in 4096-byte pages
@@ -62,7 +64,6 @@ extern void *dlmallocSbrk(ssize_t incr);
 #define VIGILANT_OVERRUN_CHECK          1
 
 #define VIGILANT_MAGIC                  0x1337cafe
-#define VIGILANT_NUM_BT                 6
 
 /// This will check EVERY object on EVERY alloc/free.
 /// It will cripple your performance.
@@ -104,9 +105,9 @@ public:
     /** Frees an object. */
     void free(uintptr_t object);
 
-    void trackSlab(uintptr_t slab);
-    void check(bool slamCommand);
 #if CRIPPLINGLY_VIGILANT
+    void trackSlab(uintptr_t slab);
+    void check();
 #endif
 
 private:
@@ -132,14 +133,13 @@ private:
     // the reap() function returns memory directly to the VMM. This
     // avoids needing to lock the free list on MP systems.
 
-    uintptr_t m_FirstSlab;
 #if CRIPPLINGLY_VIGILANT
+    uintptr_t m_FirstSlab;
 #endif
 };
 
 class SlamAllocator
 {
-    friend class SlamCommand;
     public:
         SlamAllocator();
         virtual ~SlamAllocator();
@@ -179,7 +179,7 @@ public:
 #endif
             size_t magic;
 #if VIGILANT_OVERRUN_CHECK
-            uintptr_t backtrace[VIGILANT_NUM_BT];
+            uintptr_t backtrace[NUM_SLAM_BT_FRAMES];
 #endif
 #endif
             SlamCache *cache;

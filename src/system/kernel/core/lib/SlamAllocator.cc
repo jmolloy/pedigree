@@ -31,8 +31,8 @@ SlamAllocator SlamAllocator::m_Instance;
 
 SlamCache::SlamCache() :
     m_ObjectSize(0), m_SlabSize(0)
-    ,m_FirstSlab()
 #if CRIPPLINGLY_VIGILANT
+    ,m_FirstSlab()
 #endif
 {
 }
@@ -81,9 +81,9 @@ uintptr_t SlamCache::allocate()
             if (N == 0)
             {
                 uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
-                    trackSlab(slab);
 #if CRIPPLINGLY_VIGILANT
                 if (SlamAllocator::instance().getVigilance())
+                    trackSlab(slab);
 #endif
                 return slab;
             }
@@ -97,9 +97,9 @@ uintptr_t SlamCache::allocate()
     else
     {
         uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
-            trackSlab(slab);
 #if CRIPPLINGLY_VIGILANT
         if (SlamAllocator::instance().getVigilance())
+            trackSlab(slab);
 #endif
         return slab;
     }
@@ -209,10 +209,8 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 }
 
 #if CRIPPLINGLY_VIGILANT
-
-#endif
 Spinlock rarp;
-void SlamCache::check(bool slamCommand)
+void SlamCache::check()
 {
     if (!Machine::instance().isInitialised() || Processor::m_Initialised != 2)
         return;
@@ -259,8 +257,6 @@ void SlamCache::check(bool slamCommand)
                     ERROR("Possible heap overrun: object starts at " << addr);
                     assert(false);
                 }
-                if(slamCommand)
-                    g_SlamCommand.addAllocation(pHead);
             }
         }
         if (numAlloced == maxPerSlab)
@@ -318,6 +314,7 @@ void SlamCache::trackSlab(uintptr_t slab)
         }
     }
 }
+#endif
 
 SlamAllocator::SlamAllocator() :
     m_bInitialised(false)
@@ -350,7 +347,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
         for (int i = 0; i < 32; i++)
-            m_Caches[i].check(false);
+            m_Caches[i].check();
 #endif
 
     // Return value.
@@ -391,27 +388,20 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
         foot->magic = VIGILANT_MAGIC;
 
 
-#if BOCHS_MAGIC_WATCHPOINTS
+    #if BOCHS_MAGIC_WATCHPOINTS
         /// \todo head->catcher should be used for underrun checking
         // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
         asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
-#endif
-  #if VIGILANT_OVERRUN_CHECK
-        /// \todo Fill in backtrace.
+    #endif
+    #if VIGILANT_OVERRUN_CHECK
         if (Processor::m_Initialised == 2)
         {
-            /*if (!g_AllocationCommand.isMallocing())
-            {
-                m_Lock.release();
-                g_AllocationCommand.allocatePage(ptr);
-                m_Lock.acquire();
-            }*/
             Backtrace bt;
             bt.performBpBacktrace(0, 0);
-            memcpy(&head->backtrace, bt.m_pReturnAddresses, VIGILANT_NUM_BT*sizeof(uintptr_t));
-            //FATAL("Backtrace: "<<(uint32_t)&head->backtrace);
+            memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+            g_SlamCommand.addAllocation(head->backtrace);
         }
-  #endif
+    #endif
 #endif
     }
 
@@ -438,7 +428,7 @@ void SlamAllocator::free(uintptr_t mem)
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
         for (int i = 0; i < 32; i++)
-            m_Caches[i].check(false);
+            m_Caches[i].check();
 #endif
 
     // Grab the header
@@ -450,10 +440,14 @@ void SlamAllocator::free(uintptr_t mem)
     assert(head->magic == VIGILANT_MAGIC);
     // Footer gets checked in SlamCache::free, as we don't know the object size.
 
-#if BOCHS_MAGIC_WATCHPOINTS
+    #if BOCHS_MAGIC_WATCHPOINTS
         /// \todo head->catcher should be used for underrun checking
         // asm volatile("xchg %%dx,%%dx" :: "a" (&head->catcher));
-#endif
+    #endif
+    #if VIGILANT_OVERRUN_CHECK
+        if (Processor::m_Initialised == 2)
+            g_SlamCommand.removeAllocation(head->backtrace);
+    #endif
 #endif
 
     // Free the memory
