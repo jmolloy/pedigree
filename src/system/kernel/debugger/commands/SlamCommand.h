@@ -65,6 +65,7 @@ public:
     void addAllocation(uintptr_t *backtrace);
 
     void removeAllocation(uintptr_t *backtrace);
+    void clean(){m_Tree.clear();};
 
     //
     // Scrollable interface

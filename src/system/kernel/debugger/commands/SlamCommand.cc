@@ -133,7 +133,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
     }
     else if (c == 'c')
     {
-        m_Tree.clear();
+        clean();
         m_It = m_Tree.begin();
         m_nIdx = 0;
     }
