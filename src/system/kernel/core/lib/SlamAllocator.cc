@@ -22,14 +22,17 @@
 #include <processor/Processor.h>
 #include <panic.h>
 
+#include <Backtrace.h>
+#include <SlamCommand.h>
+
 #define TEMP_MAGIC 0x67845753
 
 SlamAllocator SlamAllocator::m_Instance;
 
 SlamCache::SlamCache() :
     m_ObjectSize(0), m_SlabSize(0)
-#if CRIPPLINGLY_VIGILANT
     ,m_FirstSlab()
+#if CRIPPLINGLY_VIGILANT
 #endif
 {
 }
@@ -78,9 +81,9 @@ uintptr_t SlamCache::allocate()
             if (N == 0)
             {
                 uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
+                    trackSlab(slab);
 #if CRIPPLINGLY_VIGILANT
                 if (SlamAllocator::instance().getVigilance())
-                    trackSlab(slab);
 #endif
                 return slab;
             }
@@ -94,9 +97,9 @@ uintptr_t SlamCache::allocate()
     else
     {
         uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
+            trackSlab(slab);
 #if CRIPPLINGLY_VIGILANT
         if (SlamAllocator::instance().getVigilance())
-            trackSlab(slab);
 #endif
         return slab;
     }
@@ -206,8 +209,10 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 }
 
 #if CRIPPLINGLY_VIGILANT
+
+#endif
 Spinlock rarp;
-void SlamCache::check(int x)
+void SlamCache::check(bool slamCommand)
 {
     if (!Machine::instance().isInitialised() || Processor::m_Initialised != 2)
         return;
@@ -254,6 +259,8 @@ void SlamCache::check(int x)
                     ERROR("Possible heap overrun: object starts at " << addr);
                     assert(false);
                 }
+                if(slamCommand)
+                    g_SlamCommand.addAllocation(pHead);
             }
         }
         if (numAlloced == maxPerSlab)
@@ -311,7 +318,6 @@ void SlamCache::trackSlab(uintptr_t slab)
         }
     }
 }
-#endif
 
 SlamAllocator::SlamAllocator() :
     m_bInitialised(false)
@@ -344,7 +350,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
         for (int i = 0; i < 32; i++)
-            m_Caches[i].check(0);
+            m_Caches[i].check(false);
 #endif
 
     // Return value.
@@ -392,8 +398,21 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #endif
   #if VIGILANT_OVERRUN_CHECK
         /// \todo Fill in backtrace.
+        if (Processor::m_Initialised == 2)
+        {
+            /*if (!g_AllocationCommand.isMallocing())
+            {
+                m_Lock.release();
+                g_AllocationCommand.allocatePage(ptr);
+                m_Lock.acquire();
+            }*/
+            Backtrace bt;
+            bt.performBpBacktrace(0, 0);
+            memcpy(&head->backtrace, bt.m_pReturnAddresses, VIGILANT_NUM_BT*sizeof(uintptr_t));
+            //FATAL("Backtrace: "<<(uint32_t)&head->backtrace);
+        }
   #endif
-#endif  
+#endif
     }
 
 #if DEBUGGING_SLAB_ALLOCATOR
@@ -419,7 +438,7 @@ void SlamAllocator::free(uintptr_t mem)
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
         for (int i = 0; i < 32; i++)
-            m_Caches[i].check(1);
+            m_Caches[i].check(false);
 #endif
 
     // Grab the header

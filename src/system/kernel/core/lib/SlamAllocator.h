@@ -59,10 +59,10 @@ extern void *dlmallocSbrk(ssize_t incr);
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
-#define VIGILANT_OVERRUN_CHECK          0
+#define VIGILANT_OVERRUN_CHECK          1
 
 #define VIGILANT_MAGIC                  0x1337cafe
-#define VIGILANT_NUM_BT                 4
+#define VIGILANT_NUM_BT                 6
 
 /// This will check EVERY object on EVERY alloc/free.
 /// It will cripple your performance.
@@ -104,9 +104,9 @@ public:
     /** Frees an object. */
     void free(uintptr_t object);
 
-#if CRIPPLINGLY_VIGILANT
     void trackSlab(uintptr_t slab);
-    void check(int x);
+    void check(bool slamCommand);
+#if CRIPPLINGLY_VIGILANT
 #endif
 
 private:
@@ -122,7 +122,7 @@ private:
 
     uintptr_t getSlab();
     void freeSlab(uintptr_t slab);
-    
+
     Node *initialiseSlab(uintptr_t slab);
 
     size_t m_ObjectSize;
@@ -132,13 +132,14 @@ private:
     // the reap() function returns memory directly to the VMM. This
     // avoids needing to lock the free list on MP systems.
 
-#if CRIPPLINGLY_VIGILANT
     uintptr_t m_FirstSlab;
+#if CRIPPLINGLY_VIGILANT
 #endif
 };
 
 class SlamAllocator
 {
+    friend class SlamCommand;
     public:
         SlamAllocator();
         virtual ~SlamAllocator();
@@ -178,7 +179,7 @@ public:
 #endif
             size_t magic;
 #if VIGILANT_OVERRUN_CHECK
-            size_t backtrace[VIGILANT_NUM_BT];
+            uintptr_t backtrace[VIGILANT_NUM_BT];
 #endif
 #endif
             SlamCache *cache;

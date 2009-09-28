@@ -28,6 +28,7 @@
 #include <LogViewer.h>
 #include <Backtracer.h>
 #include <AllocationCommand.h>
+#include <SlamCommand.h>
 #include <utilities/utility.h>
 #include <StepCommand.h>
 #include <TraceCommand.h>
@@ -156,9 +157,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
 
 #if defined(THREADS)
-  size_t nCommands = 20;
+  size_t nCommands = 21;
 #else
-  size_t nCommands = 19;
+  size_t nCommands = 20;
 #endif
   DebuggerCommand *pCommands[] = {&syscallTracer,
                                   &disassembler,
@@ -178,6 +179,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 #endif
                                   &io,
                                   &g_AllocationCommand,
+                                  &g_SlamCommand,
                                   &lookup,
                                   &help,
                                   &g_LocksCommand,
