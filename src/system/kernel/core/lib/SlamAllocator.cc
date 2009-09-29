@@ -399,7 +399,8 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
             Backtrace bt;
             bt.performBpBacktrace(0, 0);
             memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
-            g_SlamCommand.addAllocation(head->backtrace);
+            head->requested = nBytes;
+            g_SlamCommand.addAllocation(head->backtrace, head->requested);
         }
     #endif
 #endif
@@ -446,7 +447,7 @@ void SlamAllocator::free(uintptr_t mem)
     #endif
     #if VIGILANT_OVERRUN_CHECK
         if (Processor::m_Initialised == 2)
-            g_SlamCommand.removeAllocation(head->backtrace);
+            g_SlamCommand.removeAllocation(head->backtrace, head->requested);
     #endif
 #endif
 

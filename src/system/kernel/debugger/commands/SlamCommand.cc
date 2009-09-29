@@ -23,7 +23,7 @@
 #include <linker/KernelElf.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>
-#include <Backtrace.h>
+#include <machine/Machine.h>
 
 SlamCommand g_SlamCommand;
 
@@ -42,9 +42,12 @@ void SlamCommand::autocomplete(const HugeStaticString &input, HugeStaticString &
 
 bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
+  bool bs = m_Lock;
+  m_Lock = true;
 
   // How many lines do we have?
   m_nLines = NUM_SLAM_BT_FRAMES+1;
+
 
   m_It = m_Tree.begin();
   m_nIdx = 0;
@@ -84,13 +87,13 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
 
   // Write some helper text in the lower status line.
   // TODO FIXME: Drawing this might screw the top status bar
-  pScreen->drawString("q: Quit. backspace: Page up. space: Page down. enter: Next allocation. c: Clean.",
+  pScreen->drawString("
+q: Quit. c: Clean. d: Dump to serial. enter: Next allocation.",
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawString("q", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("backspace", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("space", pScreen->getHeight()-1, 29, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("enter", pScreen->getHeight()-1, 47, DebuggerIO::Yellow, DebuggerIO::Green);
-  pScreen->drawString("c", pScreen->getHeight()-1, 71, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("c", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("d", pScreen->getHeight()-1, 19, DebuggerIO::Yellow, DebuggerIO::Green);
+  pScreen->drawString("enter", pScreen->getHeight()-1, 38, DebuggerIO::Yellow, DebuggerIO::Green);
 
   // Main loop.
   bool bStop = false;
@@ -137,6 +140,46 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
         m_It = m_Tree.begin();
         m_nIdx = 0;
     }
+    else if (c == 'd')
+    {
+        Machine::instance().getSerial(0)->write ("AllocDump {\n");
+        for(m_It = m_Tree.begin(); m_It != m_Tree.end(); m_It++)
+        {
+            SlamAllocation *pA = reinterpret_cast<SlamAllocation*>(m_It.value());
+            StaticString<512> str;
+            str.clear();
+            str += "Alloc {\nBacktrace [";
+            for (int i = 0; i < NUM_SLAM_BT_FRAMES; i++)
+            {
+                str += "0x";
+                str.append(pA->bt[i], 16);
+                str += "=\\";
+                uintptr_t symStart = 0;
+                const char *pSym = KernelElf::instance().globalLookupSymbol(pA->bt[i], &symStart);
+                if (pSym == 0)
+                {
+                    str.append(pA->bt[i], 16);
+                }
+                else
+                {
+                    LargeStaticString sym(pSym);
+                    static symbol_t symbol;
+                    demangle(sym, &symbol);
+                    str += static_cast<const char*>(symbol.name);
+                }
+                str.append("=\\, ");
+            }
+            str += "]\nNum ";
+            str.append(pA->n, 10);
+            str += "\nSz ";
+            str.append(pA->size, 10);
+            str += "\nPid ";
+            str.append(pA->pid, 10);
+            str += "\n}\n";
+            Machine::instance().getSerial(0)->write (str);
+    }
+    Machine::instance().getSerial(0)->write ("}\n");
+    }
     else if (c == 'q')
       bStop = true;
   }
@@ -146,6 +189,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
   //        by some random colour!
   pScreen->drawString(" ", 1, 0, DebuggerIO::White, DebuggerIO::Black);
   pScreen->enableCli();
+  m_Lock = bs;
   return bReturn;
 }
 
@@ -206,7 +250,7 @@ size_t SlamCommand::getLineCount()
   return m_nLines;
 }
 
-void SlamCommand::addAllocation(uintptr_t *backtrace)
+void SlamCommand::addAllocation(uintptr_t *backtrace, size_t requested)
 {
     if(m_Lock)
         return;
@@ -229,14 +273,18 @@ void SlamCommand::addAllocation(uintptr_t *backtrace)
         memcpy(&pAlloc->bt, backtrace, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
         pAlloc->n = 1;
         pAlloc->pid = pid;
+        pAlloc->size = requested;
         m_Tree.insert(accum, pAlloc);
     }
     else
+    {
+        pOther->size += requested;
         pOther->n ++;
+    }
     m_Lock = false;
 }
 
-void SlamCommand::removeAllocation(uintptr_t *backtrace)
+void SlamCommand::removeAllocation(uintptr_t *backtrace, size_t requested)
 {
     if(m_Lock)
         return;

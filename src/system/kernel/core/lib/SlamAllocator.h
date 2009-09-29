@@ -180,6 +180,7 @@ public:
             size_t magic;
 #if VIGILANT_OVERRUN_CHECK
             uintptr_t backtrace[NUM_SLAM_BT_FRAMES];
+            size_t requested;
 #endif
 #endif
             SlamCache *cache;
