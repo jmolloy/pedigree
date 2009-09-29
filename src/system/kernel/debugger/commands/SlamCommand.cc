@@ -87,8 +87,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
 
   // Write some helper text in the lower status line.
   // TODO FIXME: Drawing this might screw the top status bar
-  pScreen->drawString("
-q: Quit. c: Clean. d: Dump to serial. enter: Next allocation.",
+  pScreen->drawString("q: Quit. c: Clean. d: Dump to serial. enter: Next allocation.",
                       pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
   pScreen->drawString("q", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
   pScreen->drawString("c", pScreen->getHeight()-1, 9, DebuggerIO::Yellow, DebuggerIO::Green);
