@@ -64,7 +64,16 @@ DynamicLinker::~DynamicLinker()
 {
 //    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-//    delete m_pProgramElf;
+    for (Tree<uintptr_t,SharedObject*>::Iterator it = m_Objects.begin();
+         it != m_Objects.end();
+         it++)
+    {
+        SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
+        delete pSo;
+    }
+
+    /// \todo Can't be deleted until we have a viable copy constructor for Elf.
+    //delete m_pProgramElf;
 }
 
 bool DynamicLinker::loadProgram(File *pFile)
