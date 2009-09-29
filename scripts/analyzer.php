@@ -3,7 +3,7 @@
 $boxes = array();
 $links = array();
 $syms = array();
-preg_match_all('/Alloc \{\nBacktrace \[((?>0x[0-9a-f]*\=\\\[^\\\\\=]*=\\\, )*)\]\nNum (\d*)\nSz (\d*)\nPid \d*\n\}/', file_get_contents('log.txt'), $allocs, PREG_SET_ORDER);
+preg_match_all('/Alloc \{\nBacktrace \[((?>0x[0-9a-f]*\=\\\[^\\\\\=]*=\\\, )*)\]\nNum (\d*)\nSz (\d*)\n\}/', file_get_contents($_SERVER['argc']>1?$_SERVER['argv'][1]:"php://stdin"), $allocs, PREG_SET_ORDER);
 foreach($allocs as $alloc)
 {
     $bt = explode(", ", $alloc[1]);

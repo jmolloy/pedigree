@@ -156,9 +156,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
                 uintptr_t symStart = 0;
                 const char *pSym = KernelElf::instance().globalLookupSymbol(pA->bt[i], &symStart);
                 if (pSym == 0)
-                {
                     str.append(pA->bt[i], 16);
-                }
                 else
                 {
                     LargeStaticString sym(pSym);
@@ -166,18 +164,16 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
                     demangle(sym, &symbol);
                     str += static_cast<const char*>(symbol.name);
                 }
-                str.append("=\\, ");
+                str += "=\\, ";
             }
             str += "]\nNum ";
-            str.append(pA->n, 10);
+            str += pA->n;
             str += "\nSz ";
-            str.append(pA->size, 10);
-            str += "\nPid ";
-            str.append(pA->pid, 10);
+            str += pA->size;
             str += "\n}\n";
             Machine::instance().getSerial(0)->write (str);
-    }
-    Machine::instance().getSerial(0)->write ("}\n");
+        }
+        Machine::instance().getSerial(0)->write ("}\n");
     }
     else if (c == 'q')
       bStop = true;
@@ -208,8 +204,22 @@ const char *SlamCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Debu
       Line += m_nIdx;
       Line += "/";
       Line += m_Tree.count();
-      Line += ") PID: ";
-      Line += pA->pid;
+      Line += ") Size: ";
+      if(pA->size >= 1024*1024)
+      {
+          Line += (pA->size/(1024*1024));
+          Line += "MB";
+      }
+      else if(pA->size >= 1024)
+      {
+          Line += (pA->size/1024);
+          Line += "KB";
+      }
+      else
+      {
+          Line += pA->size;
+          Line += "B";
+      }
       return Line;
   }
   index--;
@@ -254,16 +264,13 @@ void SlamCommand::addAllocation(uintptr_t *backtrace, size_t requested)
     if(m_Lock)
         return;
     m_Lock = true;
+
     uintptr_t accum = 0;
-    size_t pid = -1;
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    if (pProcess)
-        pid = pProcess->getId();
+
     // Checksum it
     for (int i = 0; i < NUM_SLAM_BT_FRAMES; i++)
         accum ^= backtrace[i];
-    // Along with process ID...
-    accum += pid<<16;
+
     // Lookup the checksum.
     SlamAllocation *pOther = m_Tree.lookup(accum);
     if (!pOther)
@@ -271,7 +278,6 @@ void SlamCommand::addAllocation(uintptr_t *backtrace, size_t requested)
         SlamAllocation *pAlloc = new SlamAllocation;
         memcpy(&pAlloc->bt, backtrace, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
         pAlloc->n = 1;
-        pAlloc->pid = pid;
         pAlloc->size = requested;
         m_Tree.insert(accum, pAlloc);
     }
@@ -288,21 +294,16 @@ void SlamCommand::removeAllocation(uintptr_t *backtrace, size_t requested)
     if(m_Lock)
         return;
     m_Lock = true;
+
     uintptr_t accum = 0;
-    size_t pid = -1;
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    if (pProcess)
-        pid = pProcess->getId();
+
     // Checksum it
     for (int i = 0; i < NUM_SLAM_BT_FRAMES; i++)
         accum ^= backtrace[i];
-    // Along with process ID...
-    accum += pid<<16;
+
     // Lookup the checksum.
     SlamAllocation *pAlloc = m_Tree.lookup(accum);
     if (pAlloc)
-        //FATAL("No allocataion found to free!");
-    //else
     {
         if(pAlloc->n == 1)
             m_Tree.remove(accum);

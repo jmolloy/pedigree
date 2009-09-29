@@ -83,7 +83,6 @@ private:
     {
         uintptr_t bt[NUM_SLAM_BT_FRAMES];
         size_t n;
-        size_t pid;
         size_t size;
     };
     Tree<size_t, SlamAllocation*> m_Tree;
