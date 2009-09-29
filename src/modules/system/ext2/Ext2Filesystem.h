@@ -66,6 +66,9 @@ private:
     /** Reads a block of data from the disk. */
     bool readBlock(uint32_t block, uintptr_t buffer);
     bool writeBlock(uint32_t block, uintptr_t buffer);
+    /** Reads only 512 bytes, aligned, from a block and returns the buffer
+        given by the Disk. */
+    uintptr_t readSector(uint32_t block, size_t offset);
 
     uint32_t findFreeBlock(uint32_t inode);
     uint32_t findFreeInode();

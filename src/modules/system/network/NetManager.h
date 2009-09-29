@@ -67,6 +67,9 @@ class Socket : public File
       return *this;
     }
 
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
   public:
     Socket(int proto, Endpoint *p, Filesystem *pFs) :
       File(String("socket"), 0, 0, 0, 0, pFs, 0, 0), m_Endpoint(p), m_Protocol(proto)
@@ -200,12 +203,6 @@ public:
   {return 0;}
   virtual String getVolumeLabel()
   {return String("netman");}
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
 
 protected:
   virtual bool createFile(File* parent, String filename, uint32_t mask)

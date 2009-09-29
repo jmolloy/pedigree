@@ -47,17 +47,17 @@ public:
     str = str2;
   }
 
-  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+  virtual uintptr_t read(uint64_t location)
   {
     /// \todo bounds checking.
     Disk *pParent = static_cast<Disk*> (getParent());
-    return pParent->read(location+m_Start, nBytes, buffer);
+    return pParent->read(location+m_Start);
   }
 
-  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+  virtual void write(uint64_t location)
   {
     Disk *pParent = static_cast<Disk*> (getParent());
-    return pParent->write(location+m_Start, nBytes, buffer);
+    pParent->write(location+m_Start);
   }
 
   /** Returns the first byte of the parent disk that is in this partition. */

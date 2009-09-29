@@ -17,6 +17,7 @@
 
 #include <Log.h>
 #include <ServiceManager.h>
+#include <utilities/assert.h>
 
 #include <vfs/VFS.h>
 
@@ -29,7 +30,7 @@ extern "C" {
 };
 
 CdiDisk::CdiDisk(Disk* pDev, struct cdi_storage_device* device) :
-    Disk(), m_Device(device)
+    Disk(), m_Device(device), m_Cache()
 {
     setSpecificType(String("CDI Disk"));
 }
@@ -73,22 +74,27 @@ bool CdiDisk::initialise()
 }
 
 // These are the functions that others call - they add a request to the parent controller's queue.
-uint64_t CdiDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uintptr_t CdiDisk::read(uint64_t location)
 {
-    /// \todo Sector cache...
-    if(cdi_storage_read(m_Device, location, nBytes, reinterpret_cast<void*>(buffer)) != 0)
-        return 0;
-    else
-        return nBytes;
+    assert( (location % 512) == 0 );
+    uintptr_t buff = m_Cache.lookup(location);
+    if (!buff)
+    {
+        buff = m_Cache.insert(location);
+        if (cdi_storage_read(m_Device, location, 512, reinterpret_cast<void*>(buff)) != 0)
+            return 0;
+    }
+    return buff;
 }
 
-uint64_t CdiDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+void CdiDisk::write(uint64_t location)
 {
-    /// \todo Sector cache...
-    if(cdi_storage_write(m_Device, location, nBytes, reinterpret_cast<void*>(buffer)) != 0)
-        return 0;
-    else
-        return nBytes;
+    assert( (location % 512) == 0 );
+    uintptr_t buff = m_Cache.lookup(location);
+    assert(buff);
+
+    if (cdi_storage_write(m_Device, location, 512, reinterpret_cast<void*>(buff)) != 0)
+        return;
 }
 
 void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device)

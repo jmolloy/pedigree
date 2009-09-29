@@ -121,10 +121,10 @@ void init()
 //     FATAL("No disks found!");
     }
 
-    if (VFS::instance().find(String("raw»/")) == 0)
-    {
-        FATAL("No raw partition!");
-    }
+//    if (VFS::instance().find(String("raw»/")) == 0)
+//    {
+//        FATAL("No raw partition!");
+//    }
 
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
@@ -269,7 +269,8 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "rawfs");
+//MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "rawfs");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "users");
 #elif PPC_COMMON
 MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users");
 #endif

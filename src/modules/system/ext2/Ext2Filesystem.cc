@@ -50,11 +50,9 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     m_pDisk = pDisk;
 
     // Attempt to read the superblock.
-    uint8_t buffer[512];
-    m_pDisk->read(1024, 512,
-                  reinterpret_cast<uintptr_t> (buffer));
+    uintptr_t buff = m_pDisk->read(1024ULL);
 
-    memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
+    memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buff), sizeof(Superblock));
 
     // Read correctly?
     if (LITTLE_TO_HOST16(m_Superblock.s_magic) != 0xEF53)
@@ -83,8 +81,13 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
 
     // Load the group descriptor table.
     uint8_t *tmp = new uint8_t[gdSize];
-    m_pDisk->read(m_BlockSize*gdBlock, gdSize,
-                  reinterpret_cast<uintptr_t> (tmp));
+    for (size_t i = 0; i < gdSize; i += 512)
+    {
+        buff = m_pDisk->read(m_BlockSize*gdBlock+i);
+        memcpy(reinterpret_cast<void*>(tmp+i),
+               reinterpret_cast<void*>(buff),
+               512);
+    }
     m_pGroupDescriptors = reinterpret_cast<GroupDesc*> (tmp);
 
     return true;
@@ -287,9 +290,14 @@ bool Ext2Filesystem::readBlock(uint32_t block, uintptr_t buffer)
     }
     else
     {
-        m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block),
-                      m_BlockSize,
-                      buffer);
+        size_t spb = m_BlockSize / 512;
+        for (size_t i = 0; i < spb; i++)
+        {
+            uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block)+i*512);
+            memcpy(reinterpret_cast<void*>(buffer+i*512),
+                   reinterpret_cast<void*>(buff),
+                   512);
+        }
     }
     return true;
 }
@@ -303,11 +311,31 @@ bool Ext2Filesystem::writeBlock(uint32_t block, uintptr_t buffer)
         return false;
     }
 
-    m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block),
-                   m_BlockSize,
-                   buffer);
+    size_t spb = m_BlockSize / 512;
+    for (size_t i = 0; i < spb; i++)
+    {
+        uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block)+i*512);
+        memcpy(reinterpret_cast<void*>(buff),
+               reinterpret_cast<void*>(buffer+i*512),
+               512);
+    }
     return true;
 }
+
+uintptr_t Ext2Filesystem::readSector(uint32_t block, size_t offset)
+{
+    if (block == 0)
+    {
+        // Sparse file.
+        FATAL("Sparse file, find a way of dealing with this.");
+    }
+    else
+    {
+        return m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block)+offset);
+    }
+    return true;
+}
+
 
 uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
 {
@@ -433,9 +461,13 @@ Inode Ext2Filesystem::getInode(uint32_t inode)
     }
 
     uint8_t *buffer = new uint8_t[m_BlockSize];
-    m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
-                  reinterpret_cast<uintptr_t> (buffer));
-
+    for (size_t i = 0; i < m_BlockSize; i += 512)
+    {
+        uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock+i);
+        memcpy(buffer+i,
+               reinterpret_cast<void*>(buff),
+               512);
+    }
     Inode node = * reinterpret_cast<Inode*> (buffer+index*m_InodeSize);
 
     delete [] buffer;
@@ -460,18 +492,13 @@ bool Ext2Filesystem::setInode(uint32_t inode, Inode in)
         inodeTableBlock++;
     }
 
-    uint8_t *buffer = new uint8_t[m_BlockSize];
-    m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
-                  reinterpret_cast<uintptr_t> (buffer));
+    // What sector is it in?
+    size_t sector_idx = (index*m_InodeSize) / 512;
+    size_t sector_off = (index*m_InodeSize) % 512;
 
-    Inode *pInode = reinterpret_cast<Inode*> (buffer+index*m_InodeSize);
+    uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock + 512*sector_idx);
+    Inode *pInode = reinterpret_cast<Inode*> (buff+sector_off);
     *pInode = in;
-
-
-    m_pDisk->write(static_cast<uint64_t>(m_BlockSize)*inodeTableBlock, m_BlockSize,
-                   reinterpret_cast<uintptr_t> (buffer));
-
-    delete [] buffer;
 
     return true;
 }

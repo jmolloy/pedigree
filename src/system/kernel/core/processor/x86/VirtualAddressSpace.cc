@@ -331,7 +331,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     //
     // Also, we don't want to do this if the processor isn't initialised...
     VirtualAddressSpace &VAS = Processor::information().getVirtualAddressSpace();
-    if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_VIRTUAL_HEAP)
+    if (Processor::m_Initialised == 2 && virtualAddress >= KERNEL_SPACE_START)
     {
         for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
         {
@@ -618,7 +618,7 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
         if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
             continue;
 
-        if (i*1024*4096 >= KERNEL_SPACE_START)
+        if (reinterpret_cast<void*>(i*1024*4096) >= KERNEL_SPACE_START)
             continue;
 
         bool bDidSkip = false;

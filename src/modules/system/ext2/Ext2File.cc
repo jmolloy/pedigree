@@ -51,23 +51,15 @@ Ext2File::~Ext2File()
 {
 }
 
-uint64_t Ext2File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+uintptr_t Ext2File::sectorRead(uint64_t location)
 {
-    uint64_t ret = static_cast<Ext2Node*>(this)->read(location, size, buffer);
-    m_Size = m_nSize;
-    return ret;
-}
-
-uint64_t Ext2File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
-{
-    uint64_t ret = static_cast<Ext2Node*>(this)->write(location, size, buffer);
-    m_Size = m_nSize;
-    return ret;
+    return static_cast<Ext2Node*>(this)->sectorRead(location);
 }
 
 void Ext2File::truncate()
 {
     static_cast<Ext2Node*>(this)->truncate();
+    m_DataCache.clear();
     m_Size = m_nSize;
 }
 

@@ -28,8 +28,7 @@
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster) :
   AtaDisk(pDev, isMaster), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-  m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
-  m_SectorCache()
+  m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true)
 {
   m_pParent = pDev;
 }
@@ -230,24 +229,11 @@ bool AtapiDisk::initialise()
   return true;
 }
 
-uint64_t AtapiDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uint64_t AtapiDisk::doRead(uint64_t location)
 {
-  // Grab our parent.
-  AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(0, ATAPI_CMD_READ, reinterpret_cast<uint64_t> (this), location,
-                             nBytes, static_cast<uint64_t> (buffer));
-}
+  size_t nBytes = 4096;
+  uintptr_t buffer = m_Cache.insert(location&~0xFFFUL);
 
-uint64_t AtapiDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-{
-  // Grab our parent.
-  AtaController *pParent = static_cast<AtaController*> (m_pParent);
-  return pParent->addRequest(0, ATAPI_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
-                             nBytes, static_cast<uint64_t> (buffer));
-}
-
-uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-{
   if(!nBytes || !buffer)
   {
     ERROR("Bad arguments to AtapiDisk::doRead");
@@ -345,7 +331,7 @@ uint64_t AtapiDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
   return nBytes;
 }
 
-uint64_t AtapiDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uint64_t AtapiDisk::doWrite(uint64_t location)
 {
   return 0;
 }

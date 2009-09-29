@@ -95,13 +95,9 @@ public:
    * \return True if the device is present and was successfully initialised. */
   bool initialise();
 
-  // These are the functions that others call - they add a request to the parent controller's queue.
-  virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-  virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-
   // These are the internal functions that the controller calls when it is ready to process our request.
-  uint64_t doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-  uint64_t doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+  virtual uint64_t doRead(uint64_t location);
+  virtual uint64_t doWrite(uint64_t location);
 
   // Called by our controller when an IRQ has been received.
   // It may not actually apply to us!
@@ -186,9 +182,6 @@ private:
   /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
    * \todo A condvar would really be better here. */
   Mutex m_IrqReceived;
-
-  /** Sector cache. */
-  Cache<uint8_t*, 512> m_SectorCache;
 };
 
 #endif

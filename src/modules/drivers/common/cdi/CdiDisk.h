@@ -26,6 +26,7 @@
 #include <machine/IrqHandler.h>
 #include <process/Thread.h>
 #include <process/Semaphore.h>
+#include <utilities/Cache.h>
 
 #include "cdi/storage.h"
 
@@ -52,14 +53,15 @@ class CdiDisk : public Disk
         bool initialise();
 
         // These are the functions that others call - they add a request to the parent controller's queue.
-        virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-        virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+        virtual uintptr_t read(uint64_t location);
+        virtual void write(uint64_t location);
 
     private:
         CdiDisk(const CdiDisk&);
         const CdiDisk & operator = (const CdiDisk&);
 
         struct cdi_storage_device* m_Device;
+        Cache m_Cache;
 };
 
 #endif

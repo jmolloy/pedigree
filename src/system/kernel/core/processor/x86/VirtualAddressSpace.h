@@ -207,7 +207,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define KERNEL_SPACE_START 0xC0000000
+#define KERNEL_SPACE_START reinterpret_cast<void*>(0xC0000000)
 
 #define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*> (0x50000000)
 #define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
@@ -223,7 +223,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(0xFF3F6000)
-#define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x20000000
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x10000000
 #define KERNEL_STACK_SIZE 0x8000
 
 #endif

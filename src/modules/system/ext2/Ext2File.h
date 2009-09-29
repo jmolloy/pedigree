@@ -36,13 +36,14 @@ public:
     /** Destructor */
     virtual ~Ext2File();
 
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-
     void truncate();
 
     /** Updates inode attributes. */
     void fileAttributeChanged();
+
+protected:
+    /** Performs a read-to-cache. */
+    uintptr_t sectorRead(uint64_t location);
 };
 
 #endif

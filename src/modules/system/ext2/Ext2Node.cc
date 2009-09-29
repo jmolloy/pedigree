@@ -141,6 +141,18 @@ uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
     return size;
 }
 
+uintptr_t Ext2Node::sectorRead(uint64_t location)
+{
+    ensureLargeEnough(location+512);
+
+    size_t nBs = m_pExt2Fs->m_BlockSize;
+
+    uint32_t nBlock = location / nBs;
+
+    ensureBlockLoaded(nBlock);
+    return m_pExt2Fs->readSector(m_pBlocks[nBlock], location%nBs);
+}
+
 void Ext2Node::truncate()
 {
     for (size_t i = 0; i < m_nBlocks; i++)

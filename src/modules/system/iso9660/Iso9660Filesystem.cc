@@ -83,13 +83,14 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 
   // Read volume descriptors until the primary one is found
   // Sector 16 is the first sector on the disk
-  size_t tmpInt = 0;
   bool bFound = false;
   for(size_t i = 16; i < 256; i++)
   {
-    tmpInt = m_pDisk->read(i * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff));
-    if(!tmpInt || !(tmpInt == m_BlockSize))
-      return false;
+    for (int j = 0; j < m_BlockSize/512; j++)
+    {
+        uintptr_t buff = m_pDisk->read(i * m_BlockSize + j*(m_BlockSize/512));
+        memcpy(&tmpBuff[j*(m_BlockSize/512)], reinterpret_cast<void*>(buff), 512);
+    } 
 
     // Get the descriptor for this entry
     Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(&tmpBuff[0]);
@@ -245,7 +246,11 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   // Begin reading
   while(bytesToGo)
   {
-    m_pDisk->read(blockNum * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmp));
+    for (int j = 0; j < m_BlockSize/512; j++)
+    {
+        uintptr_t buff = m_pDisk->read(blockNum * m_BlockSize + j*(m_BlockSize/512));
+        memcpy(&tmp[j*(m_BlockSize/512)], reinterpret_cast<void*>(buff), 512);
+    } 
 
     size_t numToCopy = 0;
     if(bytesToGo < (m_BlockSize - offset))

@@ -22,12 +22,14 @@
 bool appleProbeDisk(Disk *pDisk)
 {
   // Read the second sector (512 bytes) of the disk into a buffer.
-  uint8_t buffer[512];
-  if (pDisk->read(512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+  uint8_t buff;
+  if ((buff=pDisk->read(512ULL)) == 0)
   {
     WARNING("Disk read failure during partition table search.");
     return false;
   }
+
+  uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
   ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
 
@@ -49,12 +51,12 @@ bool appleProbeDisk(Disk *pDisk)
   {
     if (i > 0) // We don't need to load anything in for the first pmap - already done!
     {
-      if (pDisk->read(512ULL+i*512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+      if ((buff=pDisk->read(512ULL+i*512ULL)) == 0)
       {
         WARNING("Disk read failure during partition table recognition.");
         return false;
       }
-      pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
+      pMap = reinterpret_cast<ApplePartitionMap*> (buff);
     }
 
     NOTICE("Detected partition '" << pMap->pmPartName << "', type '" << pMap->pmParType << "'");

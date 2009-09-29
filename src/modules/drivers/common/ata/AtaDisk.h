@@ -41,12 +41,12 @@ public:
     bool initialise();
 
     // These are the functions that others call - they add a request to the parent controller's queue.
-    virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-    virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    virtual uintptr_t read(uint64_t location);
+    virtual void write(uint64_t location);
 
     // These are the internal functions that the controller calls when it is ready to process our request.
-    uint64_t doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-    uint64_t doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+    virtual uint64_t doRead(uint64_t location);
+    virtual uint64_t doWrite(uint64_t location);
 
     // Internal write function, actually writes to the disk
     uint64_t internalWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer);
@@ -83,8 +83,9 @@ private:
      * \todo A condvar would really be better here. */
     Mutex m_IrqReceived;
 
+protected:
     /** Sector cache. */
-    Cache<uint8_t*, 512> m_SectorCache;
+    Cache m_Cache;
 };
 
 #endif

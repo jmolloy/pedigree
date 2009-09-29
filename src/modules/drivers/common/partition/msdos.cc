@@ -327,12 +327,14 @@ bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint
             pPartitions[i].start_lba = static_cast<uint32_t>(startLba & 0xFFFFFFFF);
 
             // Extended partition - read in 512 bytes and recurse.
-            uint8_t buffer[512];
-            if (pDisk->read(pPartitions[i].start_lba * 512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+            uintptr_t buff;
+            if ((buff = pDisk->read(pPartitions[i].start_lba * 512ULL)) == 0)
             {
                 WARNING("Couldn't read next sector for the extended partition.");
                 continue;
             }
+
+            uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
             // Is it a "valid" MBR?
             if(buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
@@ -381,12 +383,14 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
             uint64_t startLba = LITTLE_TO_HOST32(pPartitions[i].start_lba);
 
             // Extended partition - read in 512 bytes and recurse. The first sector will always be relative to this sector (zero).
-            uint8_t buffer[512];
-            if (pDisk->read(startLba * 512ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+            uintptr_t buff;
+            if ((buff=pDisk->read(startLba * 512ULL)) == 0)
             {
                 WARNING("Couldn't read next sector for the extended partition.");
                 continue;
             }
+
+            uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
             // Is it valid?
             if(buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
@@ -415,12 +419,14 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
 bool msdosProbeDisk(Disk *pDisk)
 {
     // Read the first sector (512 bytes) of the disk into a buffer.
-    uint8_t buffer[512];
-    if (pDisk->read(0ULL, 512ULL, reinterpret_cast<uintptr_t> (buffer)) != 512)
+    uintptr_t buff;
+    if ((buff=pDisk->read(0ULL)) == 0)
     {
         WARNING("Disk read failure during partition table search.");
         return false;
     }
+
+    uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
     // Check for the magic bytes.
     if (buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
