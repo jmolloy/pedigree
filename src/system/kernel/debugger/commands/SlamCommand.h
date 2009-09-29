@@ -62,9 +62,14 @@ public:
         return NormalStaticString("slam-allocations");
     }
 
-    void addAllocation(uintptr_t *backtrace);
+    void addAllocation(uintptr_t *backtrace, size_t requested);
 
-    void removeAllocation(uintptr_t *backtrace);
+    void removeAllocation(uintptr_t *backtrace, size_t requested);
+
+    void clean()
+    {
+        m_Tree.clear();
+    };
 
     //
     // Scrollable interface
@@ -79,6 +84,7 @@ private:
         uintptr_t bt[NUM_SLAM_BT_FRAMES];
         size_t n;
         size_t pid;
+        size_t size;
     };
     Tree<size_t, SlamAllocation*> m_Tree;
     Tree<size_t, SlamAllocation*>::Iterator m_It;

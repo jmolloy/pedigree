@@ -208,12 +208,13 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
         SlamAllocator::instance().setVigilance(false);
     }
 #endif
-#ifdef TRACK_PAGE_ALLOCATIONS
     if (scancode == 0x57) // F11
     {
+    #ifdef TRACK_PAGE_ALLOCATIONS
         g_AllocationCommand.checkpoint();
+    #endif
+        g_SlamCommand.clean();
     }
-#endif
     if (scancode == 0x58) // F12
     {
         LargeStaticString sError;

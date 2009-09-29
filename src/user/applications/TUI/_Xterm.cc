@@ -38,7 +38,8 @@ rgb_t g_Colours[] = { {0x00,0x00,0x00,0},
                       {0x22,0x22,0xB0,0},
                       {0xB0,0x22,0xB0,0},
                       {0x22,0xB0,0xB0,0},
-                      {0xF0,0xF0,0xF0,0} };
+                      {0xF0,0xF0,0xF0,0},
+                      {0xFF,0xFF,0xFF,0} };
 
 rgb_t g_BrightColours[] = { {0x33,0x33,0x33,0},
                             {0xFF,0x33,0x33,0},
@@ -157,7 +158,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_bChangingState = false;
                 break;
             }
-                
+
 
             case '0':
             case '1':
@@ -354,6 +355,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         case 35:
                         case 36:
                         case 37:
+                        case 38:
                             // Foreground.
                             m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i]-30);
                             break;
@@ -365,6 +367,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         case 45:
                         case 46:
                         case 47:
+                        case 48:
                             // Background.
                             m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i]-40);
                             break;
