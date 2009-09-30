@@ -32,6 +32,7 @@ env.Depends(floppyimg, 'kernel')
 env.Depends(floppyimg, 'initrd')
 env.Depends(floppyimg, 'libs')
 env.Depends(floppyimg, 'apps')
+env.Depends(floppyimg, configdb)
 
 env.Command(configdb, None, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
 if env["installer"]:

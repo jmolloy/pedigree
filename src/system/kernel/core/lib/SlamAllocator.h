@@ -61,7 +61,7 @@ extern void *dlmallocSbrk(ssize_t incr);
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
-#define VIGILANT_OVERRUN_CHECK          1
+#define VIGILANT_OVERRUN_CHECK          0
 
 #define VIGILANT_MAGIC                  0x1337cafe
 
