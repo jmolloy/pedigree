@@ -62,7 +62,7 @@ void UsbKeyboard::thread()
             m_bAltGr = modifiers&(1<<6);
             c = scancodeToCharacter(scancode);
         }
-        else if(timer->getTickCount()-tick<125)
+        else if(timer->getTickCount()-tick<125000)
             continue;
         if (c != 0)
         {

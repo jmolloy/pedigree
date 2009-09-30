@@ -74,7 +74,7 @@ class Timer
      *\param pEvent Event to dispatch.
      *\param alarmSecs Number of seconds to wait.
      */
-    virtual void addAlarm(class Event *pEvent, size_t alarmSecs) = 0;
+    virtual void addAlarm(class Event *pEvent, size_t alarmSecs, size_t alarmUsecs=0) = 0;
     /** Removes the event \p pEvent from the alarm queue.
      *\param pEvent Event to remove alarm for. */
     virtual void removeAlarm(class Event *pEvent) = 0;

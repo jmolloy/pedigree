@@ -39,7 +39,7 @@ class Rtc : public Timer,
     //
     virtual bool registerHandler(TimerHandler *handler);
     virtual bool unregisterHandler(TimerHandler *handler);
-    virtual void addAlarm(class Event *pEvent, size_t alarmSecs);
+    virtual void addAlarm(class Event *pEvent, size_t alarmSecs, size_t alarmUsecs=0);
     virtual void removeAlarm(class Event *pEvent);
     virtual size_t removeAlarm(class Event *pEvent, bool bRetZero);
     virtual size_t getYear();

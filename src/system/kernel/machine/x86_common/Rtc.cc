@@ -38,9 +38,9 @@ uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
 
-void Rtc::addAlarm(Event *pEvent, size_t alarmSecs)
+void Rtc::addAlarm(Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 {
-    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000+getTickCount(),
+    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000000+alarmUsecs+getTickCount(),
                               Processor::information().getCurrentThread());
     m_Alarms.pushBack(pAlarm);
 }
@@ -164,7 +164,7 @@ uint8_t Rtc::getSecond()
 }
 uint64_t Rtc::getTickCount()
 {
-  return m_TickCount / 1000000ULL;
+  return m_TickCount / 1000ULL;
 }
 
 bool Rtc::initialise()
@@ -303,7 +303,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     str += "K\n";
 
     pSerial->write(str);
-    
+
 #endif
 
     // Second has ticked, call any alarms.

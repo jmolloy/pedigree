@@ -44,12 +44,12 @@ Semaphore::~Semaphore()
     assert(magic == 0xdeadbaba);
 }
 
-void Semaphore::acquire(size_t n, size_t timeoutSecs)
+void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
 {
     assert(magic == 0xdeadbaba);
   // Spin 10 times in the case that the lock is about to be released on
   // multiprocessor systems, and just once for uniprocessor systems, so we don't
-  // go through the rigmarole of creating a timeout event if the lock is 
+  // go through the rigmarole of creating a timeout event if the lock is
   // available.
 #ifdef MULTIPROCESSOR
   for (int i = 0; i < 10; i++)
@@ -62,7 +62,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs)
   if (timeoutSecs != 0)
   {
       pEvent = new SemaphoreEvent();
-      Machine::instance().getTimer()->addAlarm(pEvent, timeoutSecs);
+      Machine::instance().getTimer()->addAlarm(pEvent, timeoutSecs, timeoutUsecs);
   }
 
   while (true)
