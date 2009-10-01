@@ -55,6 +55,16 @@ _ZN9Processor9saveStateER17X86SchedulerState:
     mov     [eax+16], ecx
     mov     [eax+20], edx
 
+    ;; Save FPU data(if used)
+    mov byte[eax+24], 0
+    mov     edx, cr0
+    and     edx, 8
+    cmp     edx, 8
+    je      .no_fpu
+    mov byte[eax+24], 1
+    fxsave  [eax+32]
+.no_fpu:
+
     ;; Return false.
     xor     eax, eax
     ret
@@ -66,6 +76,21 @@ _ZN9Processor12restoreStateER17X86SchedulerStatePVm:
     ;; Load the lock pointer.
     mov     ecx, [esp+8]
 
+    ;; Check for FPU use
+    cmp byte[eax+24], 1
+    je      .uses_fpu
+    mov     edx, cr0
+    or      edx, 8
+    mov     cr0, edx
+    jmp     .fin_fpu
+.uses_fpu:
+    mov     edx, cr0
+    and     edx, 0xfffffff7
+    mov     cr0, edx
+    mov     edx, [esp+4]
+    fxrstor [eax+32]
+.fin_fpu:
+
     ;; Reload all callee-save registers.
     mov     edi, [eax+0]
     mov     esi, [eax+4]
@@ -73,7 +98,6 @@ _ZN9Processor12restoreStateER17X86SchedulerStatePVm:
     mov     ebp, [eax+12]
     mov     esp, [eax+16]
     mov     edx, [eax+20]
-
     ;; Ignore lock if none given (ecx == 0).
     cmp     ecx, 0
     jz      .no_lock
