@@ -286,6 +286,27 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
 
   // Calculate the new time/date
   m_Nanosecond += delta;
+
+  // Check for alarms.
+  while (true)
+  {
+      bool bDispatched = false;
+      for (List<Alarm*>::Iterator it = m_Alarms.begin();
+      it != m_Alarms.end();
+      it++)
+      {
+          Alarm *pA = *it;
+          if ( pA->m_Time <= getTickCount() )
+          {
+              pA->m_pThread->sendEvent(pA->m_pEvent);
+              m_Alarms.erase(it);
+              bDispatched = true;
+              break;
+          }
+      }
+      if (!bDispatched)
+          break;
+  }
   if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
   {
     ++m_Second;
@@ -306,26 +327,6 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
 
 #endif
 
-    // Second has ticked, call any alarms.
-    while (true)
-    {
-        bool bDispatched = false;
-        for (List<Alarm*>::Iterator it = m_Alarms.begin();
-             it != m_Alarms.end();
-             it++)
-        {
-            Alarm *pA = *it;
-            if ( pA->m_Time <= getTickCount() )
-            {
-                pA->m_pThread->sendEvent(pA->m_pEvent);
-                m_Alarms.erase(it);
-                bDispatched = true;
-                break;
-            }
-        }
-        if (!bDispatched)
-            break;
-    }
 
     if (UNLIKELY(m_Second == 60))
     {
