@@ -34,14 +34,13 @@ NMFaultHandler NMFaultHandler::m_Instance;
 bool NMFaultHandler::initialise()
 {
     // Check for FPU and XSAVE
-    uint32_t eax, ebx, ecx, edx;
+    uint32_t eax, ebx, ecx, edx, cr0;
+    asm volatile ("mov %%cr0, %0" : "=r" (cr0));
     Processor::cpuid(1, 0, eax, ebx, ecx, edx);
     if(ecx & CPUID_FEAT_ECX_XSAVE && edx & CPUID_FEAT_EDX_FPU)
     {
         // Initialise the FPU and the TS bit
-        uint32_t cr0;
         uint16_t cw = 0x3f7;
-        asm volatile ("mov %%cr0, %0" : "=r" (cr0));
         cr0 = (cr0 | CR0_NE | CR0_MP) & ~(CR0_EM | CR0_TS);
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
         asm volatile ("finit");
@@ -52,6 +51,8 @@ bool NMFaultHandler::initialise()
         // Register the handler
         return InterruptManager::instance().registerInterruptHandler(NM_FAULT_EXCEPTION, this);
     }
+    cr0 |= CR0_TS;
+    asm volatile ("mov %0, %%cr0" :: "r" (cr0));
     return false;
 }
 
