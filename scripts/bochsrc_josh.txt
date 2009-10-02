@@ -20,6 +20,8 @@ ata0-master:  type=disk, path=./build/hdd_ext2.img, mode=flat, translation=auto
 ata0-slave:   type=disk, path=./build/hdd_fat16.img, mode=flat, translation=auto
 # ata0-slave:  type=cdrom, path=../images/install/pedigree-i386.iso, status=inserted
 
+com1: enabled=1, mode=file, dev="serial_josh.out"
+
 i440fxsupport: enabled=1, slot2=pcivga
 # , slot1=ne2k
 
