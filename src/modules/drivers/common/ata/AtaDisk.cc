@@ -22,12 +22,13 @@
 #include <processor/Processor.h>
 #include <panic.h>
 #include <machine/Machine.h>
+#include <utilities/assert.h>
 #include "AtaController.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
         Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-        m_IrqReceived(true), m_Cache()
+        m_IrqReceived(true), m_Cache(), m_nAlignPoints(0)
 {
     m_pParent = pDev;
 }
@@ -174,16 +175,27 @@ uintptr_t AtaDisk::read(uint64_t location)
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] <= location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
+
+    // Calculate the offset to get location on a page boundary.
+    ssize_t offs =  -((location - alignPoint) % 4096);
+
     // Create room in the cache.
     uintptr_t buffer;
-    if ( (buffer=m_Cache.lookup(location)) )
-        return buffer;
+    if ( (buffer=m_Cache.lookup(location+offs)) )
+    {
+        return buffer-offs;
+    }
 
-    pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location&~0xFFFUL);
+    pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location+offs);
 
     /// \todo Add speculative loading here.
 
-    return m_Cache.lookup(location);
+    return m_Cache.lookup(location+offs) - offs;
 }
 
 void AtaDisk::write(uint64_t location)
@@ -194,17 +206,32 @@ void AtaDisk::write(uint64_t location)
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] < location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
+
+    // Calculate the offset to get location on a page boundary.
+    ssize_t offs =  -((location - alignPoint) % 4096);
+
     // Find the cache page.
     uintptr_t buffer;
-    if ( !(buffer=m_Cache.lookup(location)) )
+    if ( !(buffer=m_Cache.lookup(location+offs)) )
         return;
 
-    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location&~0xFFFUL);
+    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+}
+
+void AtaDisk::align(uint64_t location)
+{
+    assert (m_nAlignPoints < 8);
+    m_AlignPoints[m_nAlignPoints++] = location;
 }
 
 uint64_t AtaDisk::doRead(uint64_t location)
 {
-    uintptr_t buffer = m_Cache.insert(location&~0xFFFUL);
+    uintptr_t buffer = m_Cache.insert(location);
 
     uint64_t nBytes = 4096;
 
@@ -307,7 +334,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
 uint64_t AtaDisk::doWrite(uint64_t location)
 {
-    if (location % 4096)
+    if (location % 512)
         panic("AtaDisk: write request not on a sector boundary!");
 
     // Safety check
@@ -315,7 +342,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     return 0;
 #endif
 
-    uintptr_t buffer = m_Cache.lookup(location&~0xFFFUL);
+    uintptr_t buffer = m_Cache.lookup(location);
 
     uintptr_t nBytes = 4096;
 

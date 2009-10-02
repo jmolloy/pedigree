@@ -20,18 +20,18 @@
 #include "Ext2File.h"
 #include "Ext2Symlink.h"
 
-Ext2Directory::Ext2Directory(String name, uintptr_t inode_num, Inode inode,
+Ext2Directory::Ext2Directory(String name, uintptr_t inode_num, Inode *inode,
                              Ext2Filesystem *pFs, File *pParent) :
-    Directory(name, LITTLE_TO_HOST32(inode.i_atime),
-              LITTLE_TO_HOST32(inode.i_mtime),
-              LITTLE_TO_HOST32(inode.i_ctime),
+    Directory(name, LITTLE_TO_HOST32(inode->i_atime),
+              LITTLE_TO_HOST32(inode->i_mtime),
+              LITTLE_TO_HOST32(inode->i_ctime),
               inode_num,
               static_cast<Filesystem*>(pFs),
-              LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
+              LITTLE_TO_HOST32(inode->i_size), /// \todo Deal with >4GB files here.
               pParent),
     Ext2Node(inode_num, inode, pFs)
 {
-    uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
+    uint32_t mode = LITTLE_TO_HOST32(inode->i_mode);
     uint32_t permissions = 0;
     if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
     if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
@@ -44,8 +44,8 @@ Ext2Directory::Ext2Directory(String name, uintptr_t inode_num, Inode inode,
     if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
     setPermissions(permissions);
-    setUid(LITTLE_TO_HOST16(inode.i_uid));
-    setGid(LITTLE_TO_HOST16(inode.i_gid));
+    setUid(LITTLE_TO_HOST16(inode->i_uid));
+    setGid(LITTLE_TO_HOST16(inode->i_gid));
 }
 
 Ext2Directory::~Ext2Directory()
@@ -71,10 +71,10 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     for (i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
-        m_pExt2Fs->readBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
-        pDir = reinterpret_cast<Dir*>(pBuffer);
+        uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
+        pDir = reinterpret_cast<Dir*>(buffer);
         while (pDir->d_inode != 0 &&
-               reinterpret_cast<uintptr_t>(pDir) < reinterpret_cast<uintptr_t>(pBuffer)+m_pExt2Fs->m_BlockSize)
+               reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize)
         {
             // What's the minimum length of this directory entry?
             size_t thisReclen = 4 + 2 + 1 + 1 + pDir->d_namelen;
@@ -142,12 +142,6 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     pDir->d_namelen = filename.length();
     memcpy(pDir->d_name, filename, filename.length());
 
-    // Write the block back to disk.
-    ensureBlockLoaded(i);
-    m_pExt2Fs->writeBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
-
-    delete [] pBuffer;
-
     // We're all good - add the directory to our cache.
     m_Cache.insert(filename, pFile);
 
@@ -164,19 +158,17 @@ bool Ext2Directory::removeEntry(Ext2Node *pFile)
 
 void Ext2Directory::cacheDirectoryContents()
 {
-    // Load in and scan the directory.
-    uint8_t *pBuffer = new uint8_t[m_pExt2Fs->m_BlockSize];
-
     uint32_t i;
     Dir *pDir;
     for (i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
-        m_pExt2Fs->readBlock(m_pBlocks[i], reinterpret_cast<uintptr_t>(pBuffer));
-        pDir = reinterpret_cast<Dir*>(pBuffer);
+        uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
+        pDir = reinterpret_cast<Dir*>(buffer);
 
-        while (pDir->d_inode != 0 &&
-               reinterpret_cast<uintptr_t>(pDir) < reinterpret_cast<uintptr_t>(pBuffer)+m_pExt2Fs->m_BlockSize)
+        while (reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize &&
+               pDir->d_inode != 0
+               )
         {
             char *filename = new char[pDir->d_namelen+1];
             memcpy(filename, pDir->d_name, pDir->d_namelen);
@@ -207,8 +199,6 @@ void Ext2Directory::cacheDirectoryContents()
             pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+LITTLE_TO_HOST16(pDir->d_reclen));
         }
     }
-
-    delete [] pBuffer;
 
     m_bCachePopulated = true;
 }

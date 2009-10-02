@@ -31,7 +31,7 @@ private:
     Ext2File& operator =(const Ext2File&);
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Ext2File(String name, uintptr_t inode_num, Inode inode,
+    Ext2File(String name, uintptr_t inode_num, Inode *inode,
              class Ext2Filesystem *pFs, File *pParent = 0);
     /** Destructor */
     virtual ~Ext2File();
@@ -43,7 +43,11 @@ public:
 
 protected:
     /** Performs a read-to-cache. */
-    uintptr_t sectorRead(uint64_t location);
+    uintptr_t readBlock(uint64_t location);
+    size_t getBlockSize()
+    {
+        return reinterpret_cast<Ext2Filesystem*>(m_pFilesystem)->m_BlockSize;
+    }
 };
 
 #endif

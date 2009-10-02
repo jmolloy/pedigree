@@ -69,6 +69,8 @@ DynamicLinker::~DynamicLinker()
          it++)
     {
         SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
+        /// \todo This should have been copy-constructed too!
+//        delete pSo->elf;
         delete pSo;
     }
 

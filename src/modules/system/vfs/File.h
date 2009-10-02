@@ -211,7 +211,14 @@ public:
 protected:
 
     /** Internal function to retrieve an aligned 512byte section of the file. */
-    virtual uintptr_t sectorRead(uint64_t location);
+    virtual uintptr_t readBlock(uint64_t location)
+    {
+        return 0;
+    }
+    /** Internal function to retrieve the block size returned by readBlock.
+        \note This must be constant throughout the life of the file. */
+    virtual size_t getBlockSize()
+    {return 1024;}
 
     /** Internal function to notify all registered MonitorTargets. */
     void dataChanged();

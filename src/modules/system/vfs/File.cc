@@ -45,20 +45,23 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
     if (location+size >= m_Size)
         size = m_Size-location;
 
+    size_t blockSize = getBlockSize();
+
     size_t n = 0;
     while (size)
     {
         if (location >= m_Size)
             return n;
 
-        uintptr_t block = location / 512;
-        uintptr_t offs  = location % 512;
-        uintptr_t sz    = (size+offs > 512) ? 512-offs : size;
+        uintptr_t block = location / blockSize;
+        uintptr_t offs  = location % blockSize;
+        uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
-        uintptr_t buff = m_DataCache.lookup(block*512);
+        uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
-            buff = sectorRead(block*512);
+            buff = readBlock(block*blockSize);
+            m_DataCache.insert(block*blockSize, buff);
         }
 
         memcpy(reinterpret_cast<void*>(buffer),
@@ -74,18 +77,19 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
 
 uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
+    size_t blockSize = getBlockSize();
+
     size_t n = 0;
     while (size)
     {
-        uintptr_t block = location / 512;
-        uintptr_t offs  = location % 512;
-        uintptr_t sz    = (size+offs > 512) ? 512-offs : size;
+        uintptr_t block = location / blockSize;
+        uintptr_t offs  = location % blockSize;
+        uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
-        uintptr_t buff = m_DataCache.lookup(block*512);
+        uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
-        {
-            buff = sectorRead(block*512);
-        }
+            buff = readBlock(block*blockSize);
+
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
                sz);
@@ -157,11 +161,6 @@ void File::setSize(size_t sz)
 
 void File::truncate()
 {
-}
-
-uintptr_t File::sectorRead(uint64_t location)
-{
-    return 0;
 }
 
 void File::dataChanged()

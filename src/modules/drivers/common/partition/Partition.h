@@ -51,12 +51,30 @@ public:
   {
     /// \todo bounds checking.
     Disk *pParent = static_cast<Disk*> (getParent());
+
+    if (!m_bAligned)
+    {
+        m_bAligned = true;
+        // Ensure that we get blocks aligned on our start position (which is 
+        // quite likely to not be on a 4096-byte boundary).
+        pParent->align(m_Start);
+    }
+
     return pParent->read(location+m_Start);
   }
 
   virtual void write(uint64_t location)
   {
     Disk *pParent = static_cast<Disk*> (getParent());
+
+    if (!m_bAligned)
+    {
+        m_bAligned = true;
+        // Ensure that we get blocks aligned on our start position (which is 
+        // quite likely to not be on a 4096-byte boundary).
+        pParent->align(m_Start);
+    }
+
     pParent->write(location+m_Start);
   }
 
@@ -79,6 +97,7 @@ private:
   String m_Type;
   uint64_t m_Start;
   uint64_t m_Length;
+  bool     m_bAligned;
 };
 
 #endif

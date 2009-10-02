@@ -19,18 +19,18 @@
 #include "Ext2Symlink.h"
 #include <syscallError.h>
 
-Ext2File::Ext2File(String name, uintptr_t inode_num, Inode inode,
+Ext2File::Ext2File(String name, uintptr_t inode_num, Inode *inode,
                    Ext2Filesystem *pFs, File *pParent) :
-    File(name, LITTLE_TO_HOST32(inode.i_atime),
-         LITTLE_TO_HOST32(inode.i_mtime),
-         LITTLE_TO_HOST32(inode.i_ctime),
+    File(name, LITTLE_TO_HOST32(inode->i_atime),
+         LITTLE_TO_HOST32(inode->i_mtime),
+         LITTLE_TO_HOST32(inode->i_ctime),
          inode_num,
          static_cast<Filesystem*>(pFs),
-         LITTLE_TO_HOST32(inode.i_size), /// \todo Deal with >4GB files here.
+         LITTLE_TO_HOST32(inode->i_size), /// \todo Deal with >4GB files here.
          pParent),
     Ext2Node(inode_num, inode, pFs)
 {
-    uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
+    uint32_t mode = LITTLE_TO_HOST32(inode->i_mode);
     uint32_t permissions = 0;
     if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
     if (mode & EXT2_S_IWUSR) permissions |= FILE_UW;
@@ -43,17 +43,17 @@ Ext2File::Ext2File(String name, uintptr_t inode_num, Inode inode,
     if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
     setPermissions(permissions);
-    setUid(LITTLE_TO_HOST16(inode.i_uid));
-    setGid(LITTLE_TO_HOST16(inode.i_gid));
+    setUid(LITTLE_TO_HOST16(inode->i_uid));
+    setGid(LITTLE_TO_HOST16(inode->i_gid));
 }
 
 Ext2File::~Ext2File()
 {
 }
 
-uintptr_t Ext2File::sectorRead(uint64_t location)
+uintptr_t Ext2File::readBlock(uint64_t location)
 {
-    return static_cast<Ext2Node*>(this)->sectorRead(location);
+    return static_cast<Ext2Node*>(this)->readBlock(location);
 }
 
 void Ext2File::truncate()

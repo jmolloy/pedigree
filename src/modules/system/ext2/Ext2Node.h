@@ -29,12 +29,12 @@ private:
     Ext2Node& operator =(const Ext2Node&);
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Ext2Node(uintptr_t inode_num, Inode inode, class Ext2Filesystem *pFs);
+    Ext2Node(uintptr_t inode_num, Inode *pInode, class Ext2Filesystem *pFs);
     /** Destructor */
     virtual ~Ext2Node();
 
     Inode *getInode()
-    {return &m_Inode;}
+    {return m_pInode;}
 
     uint32_t getInodeNumber()
     {return m_InodeNumber;}
@@ -45,9 +45,9 @@ public:
     uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
     uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
 
-    uintptr_t sectorRead(uint64_t location);
-
     void truncate();
+
+    uintptr_t readBlock(uint64_t location);
 
 protected:
     /** Ensures the inode is at least 'size' big. */
@@ -63,7 +63,7 @@ protected:
 
     bool setBlockNumber(size_t blockNum, uint32_t blockValue);
 
-    Inode m_Inode;
+    Inode *m_pInode;
     uint32_t m_InodeNumber;
     class Ext2Filesystem *m_pExt2Fs;
 

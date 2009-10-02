@@ -63,7 +63,8 @@ public:
         str = "Generic disk";
     }
 
-    /** Read 512 bytes from \p location on disk and return a pointer to it.
+    /** Read from \p location on disk and return a pointer to it. \p location must be 512 byte aligned. The pointer returned is
+     *  within a page of memory mapping 4096 bytes of disk area.
      * \param location The offset from the start of the device, in bytes, to start the read, must be multiple of 512.
      * \return Pointer to writable area of memory containing the data. If the data
      *         is written, the page is marked as dirty and may be written back
@@ -73,11 +74,19 @@ public:
         return ~0;
     }
 
-    /** Writes 512 bytes to \p location on disk. This function schedules a 
-     * cache writeback of the given location. The data to be written back is
+    /** This function schedules a cache writeback of the given location. The data to be written back is
      * fetched from the cache (pointer returned by \c read() ).
-     * \param location The offset from the start of the device, in bytes, to start the write. */
+     * \param location The offset from the start of the device, in bytes, to start the write. Must be 512byte aligned. */
     virtual void write(uint64_t location)
+    {
+        return;
+    }
+
+    /** Sets the page boundary alignment after a specific location on the disk. For example, if one has
+     *  a partition starting on byte 512, one will probably want 4096-byte reads to be aligned with this
+     *  (so reading 4096 bytes from byte 0 on the partition will create one page of cache and not span two).
+     *\todo Better documentation. */
+    virtual void align(uint64_t location)
     {
         return;
     }

@@ -37,7 +37,7 @@
 /** Functions that should always be inlined */
 #define ALWAYS_INLINE __attribute__((always_inline))
 /** Specific alignment for a type/variable */
-#define ALIGN(x) __attribute__((align(x)))
+#define ALIGN(x) __attribute__((aligned(x)))
 /** No padding for a type/variable */
 #define PACKED __attribute__((packed))
 /** The type may alias */

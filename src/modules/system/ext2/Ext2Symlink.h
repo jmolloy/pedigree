@@ -31,7 +31,7 @@ private:
     Ext2Symlink& operator =(const Ext2Symlink&);
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Ext2Symlink(String name, uintptr_t inode_num, Inode inode,
+    Ext2Symlink(String name, uintptr_t inode_num, Inode *inode,
                 class Ext2Filesystem *pFs, File *pParent = 0);
     /** Destructor */
     virtual ~Ext2Symlink();

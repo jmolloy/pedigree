@@ -42,9 +42,7 @@ uintptr_t Cache::lookup (uintptr_t key)
 {
     m_Lock.enter();
 
-    uintptr_t off = key % 4096;
-
-    CachePage *pPage = m_Pages.lookup(key&~0xFFFUL);
+    CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
         m_Lock.leave();
@@ -54,15 +52,14 @@ uintptr_t Cache::lookup (uintptr_t key)
     uintptr_t ptr = pPage->location;
    
     m_Lock.leave();
-    return ptr + off;
+    return ptr;
 }
 
 uintptr_t Cache::insert (uintptr_t key)
 {
     m_Lock.acquire();
 
-    uintptr_t off = key % 4096;
-    CachePage *pPage = m_Pages.lookup(key&~0xFFFUL);
+    CachePage *pPage = m_Pages.lookup(key);
 
     if (pPage)
     {
@@ -91,9 +88,9 @@ uintptr_t Cache::insert (uintptr_t key)
     pPage = new CachePage;
     pPage->location = location;
     pPage->refcnt = 1;
-    m_Pages.insert(key&~0xFFFUL, pPage);
+    m_Pages.insert(key, pPage);
 
     m_Lock.release();
 
-    return location + off;
+    return location;
 }

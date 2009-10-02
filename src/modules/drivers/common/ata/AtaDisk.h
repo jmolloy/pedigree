@@ -43,6 +43,7 @@ public:
     // These are the functions that others call - they add a request to the parent controller's queue.
     virtual uintptr_t read(uint64_t location);
     virtual void write(uint64_t location);
+    virtual void align(uint64_t location);
 
     // These are the internal functions that the controller calls when it is ready to process our request.
     virtual uint64_t doRead(uint64_t location);
@@ -86,6 +87,9 @@ private:
 protected:
     /** Sector cache. */
     Cache m_Cache;
+
+    uint64_t m_AlignPoints[8];
+    size_t m_nAlignPoints;
 };
 
 #endif

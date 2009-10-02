@@ -44,11 +44,6 @@ public:
     static Filesystem *probe(Disk *pDisk);
     virtual File* getRoot();
     virtual String getVolumeLabel();
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-    virtual void truncate(File *pFile);
-    virtual void fileAttributeChanged(File *pFile);
-    virtual void cacheDirectoryContents(File *pFile);
 
 protected:
     virtual bool createFile(File* parent, String filename, uint32_t mask);
@@ -64,25 +59,31 @@ private:
     void operator =(const Ext2Filesystem&);
 
     /** Reads a block of data from the disk. */
-    bool readBlock(uint32_t block, uintptr_t buffer);
-    bool writeBlock(uint32_t block, uintptr_t buffer);
-    /** Reads only 512 bytes, aligned, from a block and returns the buffer
-        given by the Disk. */
-    uintptr_t readSector(uint32_t block, size_t offset);
+    uintptr_t readBlock(uint32_t block);
 
     uint32_t findFreeBlock(uint32_t inode);
     uint32_t findFreeInode();
 
     void releaseBlock(uint32_t block);
 
-    Inode getInode(uint32_t num);
-    bool setInode(uint32_t num, Inode inode);
+    Inode *getInode(uint32_t num);
+
+    void ensureFreeBlockBitmapLoaded(size_t group);
+    void ensureFreeInodeBitmapLoaded(size_t group);
+    void ensureInodeTableLoaded(size_t group);
 
     /** Our superblock. */
-    Superblock m_Superblock;
+    Superblock *m_pSuperblock;
 
-    /** Group descriptors. */
-    GroupDesc *m_pGroupDescriptors;
+    /** Group descriptors, in a tree because each GroupDesc* may be in a different block. */
+    GroupDesc **m_pGroupDescriptors;
+
+    /** Inode tables, indexed by group descriptor. */
+    Vector<size_t> *m_pInodeTables;
+    /** Free inode bitmaps, indexed by group descriptor. */
+    Vector<size_t> *m_pInodeBitmaps;
+    /** Free block bitmaps, indexed by group descriptor. */
+    Vector<size_t> *m_pBlockBitmaps;
 
     /** Size of a block. */
     uint32_t m_BlockSize;
@@ -90,12 +91,11 @@ private:
     /** Size of an Inode. */
     uint32_t m_InodeSize;
 
+    /** Number of group descriptors. */
+    size_t m_nGroupDescriptors;
+
     /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
     Mutex m_WriteLock;
-
-    /** Is the superblock dirty? Does it need to be written back to disk? */
-    bool m_bSuperblockDirty;
-    bool m_bGroupDescriptorsDirty;
 
     /** The root filesystem node. */
     File *m_pRoot;
