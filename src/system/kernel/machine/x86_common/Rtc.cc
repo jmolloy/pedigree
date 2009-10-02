@@ -38,9 +38,9 @@ uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
 
-void Rtc::addAlarm(Event *pEvent, size_t alarmSecs)
+void Rtc::addAlarm(Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 {
-    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000+getTickCount(),
+    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000000+alarmUsecs+getTickCount(),
                               Processor::information().getCurrentThread());
     m_Alarms.pushBack(pAlarm);
 }
@@ -164,7 +164,7 @@ uint8_t Rtc::getSecond()
 }
 uint64_t Rtc::getTickCount()
 {
-  return m_TickCount / 1000000ULL;
+  return m_TickCount / 1000ULL;
 }
 
 bool Rtc::initialise()
@@ -286,6 +286,27 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
 
   // Calculate the new time/date
   m_Nanosecond += delta;
+
+  // Check for alarms.
+  while (true)
+  {
+      bool bDispatched = false;
+      for (List<Alarm*>::Iterator it = m_Alarms.begin();
+      it != m_Alarms.end();
+      it++)
+      {
+          Alarm *pA = *it;
+          if ( pA->m_Time <= getTickCount() )
+          {
+              pA->m_pThread->sendEvent(pA->m_pEvent);
+              m_Alarms.erase(it);
+              bDispatched = true;
+              break;
+          }
+      }
+      if (!bDispatched)
+          break;
+  }
   if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
   {
     ++m_Second;
@@ -303,29 +324,9 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     str += "K\n";
 
     pSerial->write(str);
-    
+
 #endif
 
-    // Second has ticked, call any alarms.
-    while (true)
-    {
-        bool bDispatched = false;
-        for (List<Alarm*>::Iterator it = m_Alarms.begin();
-             it != m_Alarms.end();
-             it++)
-        {
-            Alarm *pA = *it;
-            if ( pA->m_Time <= getTickCount() )
-            {
-                pA->m_pThread->sendEvent(pA->m_pEvent);
-                m_Alarms.erase(it);
-                bDispatched = true;
-                break;
-            }
-        }
-        if (!bDispatched)
-            break;
-    }
 
     if (UNLIKELY(m_Second == 60))
     {

@@ -58,8 +58,8 @@ x86_defines = general_x86_defines + x86_32_defines
 x64_defines = ['X64', 'BITS_64']
 
 # x64 CFLAGS and CXXFLAGS
-default_x64_cflags = ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel '
-default_x64_cxxflags = ' -m64 -mno-red-zone -mno-sse -mcmodel=kernel '
+default_x64_cflags = ' -m64 -mno-red-zone -mcmodel=kernel '
+default_x64_cxxflags = ' -m64 -mno-red-zone -mcmodel=kernel '
 
 # x64 assembler flags
 default_x64_asflags = '64'
@@ -78,9 +78,9 @@ x64_linkflags = generic_linkflags + default_x64_linkflags
 x64_defines = general_x86_defines + x64_defines
 
 #------------------------- Import Dictionaries -------------------------#
-default_cflags      = {'x86' : x86_cflags}
-default_cxxflags    = {'x86' : x86_cxxflags}
-default_asflags     = {'x86' : x86_asflags}
-default_linkflags   = {'x86' : x86_linkflags}
-default_imgdir      = {'x86' : default_x86_imgdir}
-default_defines     = {'x86' : x86_defines}
+default_cflags      = {'x86' : x86_cflags, 'x64' : x64_cflags }
+default_cxxflags    = {'x86' : x86_cxxflags, 'x64' : x64_cxxflags }
+default_asflags     = {'x86' : x86_asflags, 'x64' : x64_asflags }
+default_linkflags   = {'x86' : x86_linkflags, 'x64' : x64_linkflags }
+default_imgdir      = {'x86' : default_x86_imgdir, 'x64' : default_x64_imgdir }
+default_defines     = {'x86' : x86_defines, 'x64' : x64_defines }

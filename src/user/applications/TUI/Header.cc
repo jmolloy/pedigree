@@ -59,13 +59,19 @@ Header::Header(size_t nWidth) :
         rgb.a = 0;
 
         if (!strcmp(buf, "border"))
+        {
             g_BorderColour = rgb;
+            g_TabBackgroundColour = rgb;
+        }
         else if (!strcmp(buf, "fill"))
             g_SelectedTabBackgroundColour = rgb;
         else if (!strcmp(buf, "selected-text"))
             g_SelectedTabTextColour = rgb;
         else if (!strcmp(buf, "text"))
+        {
             g_TextColour = rgb;
+            g_TabTextColour = rgb;
+        }
         else if (!strcmp(buf, "tui-background"))
             g_MainBackgroundColour = rgb;
     }
@@ -91,7 +97,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
 
-    // Height = font size + 2 px top and bottom + border 1px = 
+    // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
     for (size_t i = m_nWidth*(g_FontSize+4); i < m_nWidth*(g_FontSize+5); i++)
     {
@@ -114,13 +120,13 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
         {
             // Add 5 pixels.
             offset += 5;
-            
+
             rgb_t foreColour = g_TextColour;
             if (pTab->flags & TAB_SELECTED)
                 foreColour = g_SelectedTabTextColour;
             else if (pTab->flags & TAB_SELECTABLE)
                 foreColour = g_TabTextColour;
-            
+
             rgb_t backColour = g_MainBackgroundColour;
             if (pTab->flags & TAB_SELECTED)
                 backColour = g_SelectedTabBackgroundColour;
@@ -148,7 +154,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     {
         offset += 5;
         // Render a right-double arrow.
-        offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);     
+        offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
 }
 

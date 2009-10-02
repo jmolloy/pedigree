@@ -245,9 +245,9 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
     }
 
     if (x1 == ~0UL) x1 = 0;
-    if (x2 == ~0UL) x2 = m_Mode.width-1;
+    if (x2 == ~0UL || x2 >= m_Mode.width) x2 = m_Mode.width-1;
     if (y1 == ~0UL) y1 = 0;
-    if (y2 == ~0UL) y2 = m_Mode.height-1;
+    if (y2 == ~0UL || y2 >= m_Mode.height) y2 = m_Mode.height-1;
 
     if (m_SpecialisedMode == Mode_16bpp_5r6g5b)
     {

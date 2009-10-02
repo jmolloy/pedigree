@@ -4,16 +4,19 @@
 //include <pthread.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdint.h>
+#include <math.h>
 
 #include <signal.h>
+#include <syslog.h>
 #include <sys/termios.h>
 #include <sys/time.h>
 
 static void wait_thread(void)
 {
     time_t start_time = time(NULL);
- 
+
     while (time(NULL) == start_time)
     {
         // do nothing except chew CPU slices for up to one second.
@@ -21,13 +24,13 @@ static void wait_thread(void)
 }
 
 volatile int whee = 0;
- 
+
 static void *thread_func(void *vptr_args)
 {
     int i;
 
     printf("Hello world from thread %d!\n", pthread_self());
- 
+
     for (i = 0; i < 80; i++)
     {
         //printf(" b\n");
@@ -37,10 +40,10 @@ static void *thread_func(void *vptr_args)
         //whee = 0;
         // wait_thread();
     }
- 
+
     return NULL;
 }
- 
+
 int main(void)
 {
 /*    int i;
@@ -54,7 +57,7 @@ int main(void)
 //        printf("Fail: %s\n", strerror(errno));
 //        return EXIT_FAILURE;
 //    }
- 
+
     /*for (i = 0; i < 20; i++)
     {
         while(whee);
@@ -63,7 +66,7 @@ int main(void)
         whee = 1;
         // wait_thread();
     }*/
- 
+
 //    if (pthread_join(thread, NULL) != 0)
 //    {
 //        return EXIT_FAILURE;
@@ -71,22 +74,57 @@ int main(void)
 
 //    printf("\nAnd now main() has waited for the thread to run.\n");
 
-    while (1)
-    {
-        printf("Press any key to fork and wait.");
+    //while (1)
+    //{
+        //printf("Press any key to fork and wait.\n");
 
-        char c = getchar();
+        //char c = getchar();
         int n;
         if ( (n=fork()) == 0 )
         {
-            printf("Child\n");
-            return EXIT_SUCCESS;
+            srand(getpid()*time(NULL));
+            unsigned int x = 0;
+            while(1)
+            {
+                unsigned int r = rand()%0xffff;
+                double m = sqrt((double)(r*r));
+                if(m != r)
+                {
+                    printf("Child Err, r = %u, m = %f, x = %u.\n", r, m, x);
+                    return EXIT_SUCCESS;
+                }
+                if(x>=0x100000)
+                {
+                    printf("Child Success, r = %u, m = %f, x = %u.\n", r, m, x);
+                    return EXIT_SUCCESS;
+                }
+                x++;
+            }
         }
         else
         {
-            wait();
+            srand(getpid()*time(NULL));
+            unsigned int x2 = 0;
+            while(1)
+            {
+                unsigned int r2 = rand()%0xffff;
+                float m2 = sqrtf((float)(r2*r2));
+                if(m2 != r2)
+                {
+                    printf("Parent Err, r = %u, m = %f, x = %u.\n", r2, m2, x2);
+                    wait();
+                    return EXIT_SUCCESS;
+                }
+                if(x2>=0x100000)
+                {
+                    printf("Parent Success, r = %u, m = %f, x = %u.\n", r2, m2, x2);
+                    wait();
+                    return EXIT_SUCCESS;
+                }
+                x2++;
+            }
         }
-    }
+    //}
 
     return EXIT_SUCCESS;
 }

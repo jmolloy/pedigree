@@ -82,12 +82,13 @@ opts.AddVariables(
     ('ARCH_TARGET', 'Automatically generated architecture name (DO NOT USE)', ''),
 )
 
-# Copy the host environment and install our options
-env = Environment(options = opts, ENV = os.environ)
+# Copy the host environment and install our options. If we use env.Platform()
+# after this point, the Platform() call will override ENV and we don't want that
+# or env['ENV']['PATH'] won't be the user's $PATH from the shell environment.
+# That specifically breaks the build on OS X when using tar from macports (which
+# is needed at least on OS X 10.5 as the OS X tar does not have --transform).
+env = Environment(options=opts, ENV=os.environ, platform='posix')
 Help(opts.GenerateHelpText(env))
-
-# POSIX platform :)
-env.Platform('posix')
 
 # Reset the suffixes
 env['OBJSUFFIX'] = '.obj'

@@ -21,6 +21,7 @@
 #include "VirtualAddressSpace.h"
 #include "../x86_common/PhysicalMemoryManager.h"
 #include <processor/PageFaultHandler.h>
+#include <processor/NMFaultHandler.h>
 #include <process/initialiseMultitasking.h>
 #include <SlabAllocator.h>
 
@@ -59,6 +60,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   X86InterruptManager::initialiseProcessor();
 
   PageFaultHandler::instance().initialise();
+  NMFaultHandler::instance().initialise();
 
   // Initialise the physical memory-management
   X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
@@ -95,5 +97,12 @@ void Processor::initialise2()
 
 void Processor::identify(HugeStaticString &str)
 {
-  str = "Rarcaken!!";
+  uint32_t eax, ebx, ecx, edx;
+  char ident[13];
+  cpuid(0, 0, eax, ebx, ecx, edx);
+  memcpy(ident, &ebx, 4);
+  memcpy(&ident[4], &edx, 4);
+  memcpy(&ident[8], &ecx, 4);
+  ident[12] = 0;
+  str = ident;
 }

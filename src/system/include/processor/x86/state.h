@@ -234,7 +234,9 @@ public:
     uint32_t ebp;
     uint32_t esp;
     uint32_t eip;
-};
+    uint32_t uses_fpu;
+    uint8_t fpu_data[512] ALIGN(16);
+} ALIGN(16);
 
 /** @} */
 
