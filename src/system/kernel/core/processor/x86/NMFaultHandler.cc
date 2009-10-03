@@ -50,6 +50,8 @@ NMFaultHandler NMFaultHandler::m_Instance;
 
 #define MXCSR_MASK          28
 
+static bool FXSR_Support, FPU_Support;
+
 static inline void _SetFPUControlWord(uint16_t cw)
 {
     // FLDCW = Load FPU Control Word
@@ -67,6 +69,8 @@ bool NMFaultHandler::initialise()
     
     if(edx & CPUID_FEAT_EDX_FPU)
     {
+        FPU_Support = true;
+    
         cr0 = (cr0 | CR0_NE | CR0_MP) & ~(CR0_EM | CR0_TS);
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
             
@@ -78,11 +82,16 @@ bool NMFaultHandler::initialise()
  
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
     }
+    else
+        FPU_Support = false;
           
     if(edx & CPUID_FEAT_EDX_FXSR)
     {
+        FXSR_Support = true;
         cr4 |= CR4_OSFXSR;          // set the FXSAVE/FXRSTOR support bit
     }
+    else
+        FXSR_Support = false;
     
     if(edx & CPUID_FEAT_EDX_SSE)
     {
@@ -137,37 +146,79 @@ void NMFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     //asm volatile("xchg %bx, %bx;");
     
     // if this task has never used SSE before, we need to init the state space
-    if(!(pCurrentState->flags & (1 << 1)))
+    if(FXSR_Support)
     {
-        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
-            asm volatile("fxrstor (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
-
-        asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
-        
-        pCurrentState->flags |= (1 << 1);
-    }
-    
-    // we don't need to save/restore if this is true!
-    if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner == (size_t)pCurrentState)
-        return;
-    
-    // if this is NULL, then no thread has ever been here before! :)
-    if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
-    {
-        // save the old owner's state
-        asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
-        
-        if((size_t)pCurrentState != 0)
+        if(!(pCurrentState->flags & (1 << 1)))
         {
-            // restore the new owner's state
-            asm volatile("fxrstor (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+                asm volatile("fxrstor (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+
+            asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            
+            pCurrentState->flags |= (1 << 1);
+        }
+        
+        // we don't need to save/restore if this is true!
+        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner == (size_t)pCurrentState)
+            return;
+        
+        // if this is NULL, then no thread has ever been here before! :)
+        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+        {
+            // save the old owner's state
+            asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            
+            if((size_t)pCurrentState != 0)
+            {
+                // restore the new owner's state
+                asm volatile("fxrstor (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            }
+        }
+        else
+        {
+            // if no owner is defined, skip the restoration process as there's no need
+            asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        }
+    }
+    else if(FPU_Support)
+    {
+        if(!(pCurrentState->flags & (1 << 1)))
+        {
+            if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+                asm volatile("frstor (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+
+            asm volatile("fsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            
+            pCurrentState->flags |= (1 << 1);
+        }
+        
+        // we don't need to save/restore if this is true!
+        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner == (size_t)pCurrentState)
+            return;
+        
+        // if this is NULL, then no thread has ever been here before! :)
+        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+        {
+            // save the old owner's state
+            asm volatile("fsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            
+            if((size_t)pCurrentState != 0)
+            {
+                // restore the new owner's state
+                asm volatile("frstor (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            }
+        }
+        else
+        {
+            // if no owner is defined, skip the restoration process as there's no need
+            asm volatile("fsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+            asm volatile("fsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
         }
     }
     else
     {
-        // if no owner is defined, skip the restoration process as there's no need
-        asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
-        asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        ERROR("FXSAVE and FSAVE are not supported");
     }
     
     // old/current = new
