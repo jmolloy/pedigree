@@ -118,7 +118,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
+//  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 
 #if defined(X86_COMMON) || defined(PPC_COMMON)
@@ -189,6 +189,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
+    Processor::information().getScheduler().schedule(Thread::Sleeping);
     Scheduler::instance().yield();
   }
 }

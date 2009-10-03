@@ -293,6 +293,8 @@ public:
         \note This is intended only to be called by PerProcessorScheduler. */
     Event *getNextEvent();
 
+    bool hasEvents();
+
     /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
      * if it is not being waited on the Thread is destroyed.

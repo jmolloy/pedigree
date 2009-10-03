@@ -34,4 +34,9 @@ void Processor::reset()
     asm volatile("lidt %0; int $3" ::"m"(zero));
 }
 
+void Processor::haltUntilInterrupt()
+{
+    asm volatile("sti; hlt; cli;");
+}
+
 #endif

@@ -164,6 +164,9 @@ class Processor
      *\return the debug status */
     static uintptr_t getDebugStatus();
 
+    /** Wait for an IRQ to fire. Possible HALT or low-power state. */
+    static inline void haltUntilInterrupt();
+
     /** Enable/Disable IRQs
      *\param[in] bEnable true to enable IRSs, false otherwise */
     static void setInterrupts(bool bEnable);
@@ -202,12 +205,12 @@ class Processor
      *\param[in] pAddress the specific virtual address
      *\todo Figure out if we want to flush the TLB of every processor or if
      *      this should be handled by the upper layers */
-#ifdef PPC_COMMON
-    inline
-#endif
+    #ifdef PPC_COMMON
+      inline
+    #endif
     static void invalidate(void *pAddress);
 
-    #if defined(X86)
+    #if defined(X86_COMMON)
       static physical_uintptr_t readCr3();
     #endif
 

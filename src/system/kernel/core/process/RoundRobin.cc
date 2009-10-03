@@ -17,6 +17,7 @@
 #if defined(THREADS)
 #include <process/RoundRobin.h>
 #include <process/Thread.h>
+#include <processor/Processor.h>
 #include <Log.h>
 #include <LockGuard.h>
 
