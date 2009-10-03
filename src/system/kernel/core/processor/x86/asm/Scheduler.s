@@ -37,6 +37,7 @@ extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 [bits 32]
 [section .text]
 
+
 _ZN9Processor9saveStateER17X86SchedulerState:
     ;; Load the state pointer.
     mov     eax, [esp+4]
@@ -62,7 +63,9 @@ _ZN9Processor9saveStateER17X86SchedulerState:
     cmp     edx, 8
     je      .no_fpu
     mov byte[eax+24], 1
-    fxsave  [eax+32]
+
+
+
 .no_fpu:
 
     ;; Return false.
@@ -88,7 +91,8 @@ _ZN9Processor12restoreStateER17X86SchedulerStatePVm:
     and     edx, 0xfffffff7
     mov     cr0, edx
     mov     edx, [esp+4]
-    fxrstor [eax+32]
+    
+    
 .fin_fpu:
 
     ;; Reload all callee-save registers.

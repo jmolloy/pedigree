@@ -30,7 +30,7 @@ NMFaultHandler NMFaultHandler::m_Instance;
 #define CR0_MP                  (1<<1)
 #define CR4_OSFXSR              (1 << 9)
 #define CR4_OSXMMEXCPT          (1 << 10)
-#define CPUID_FEAT_ECX_XSAVE    (1<<26)
+#define CPUID_FEAT_EDX_FXSR     (1<<24)
 #define CPUID_FEAT_EDX_FPU      (1<<0)
 #define CPUID_FEAT_EDX_SSE      (1<<25)
 
@@ -50,55 +50,78 @@ NMFaultHandler NMFaultHandler::m_Instance;
 
 #define MXCSR_MASK          28
 
+static inline void _SetFPUControlWord(uint16_t cw)
+{
+    // FLDCW = Load FPU Control Word
+    asm volatile("  fldcw %0;   "::"m"(cw)); 
+}
+
 bool NMFaultHandler::initialise()
 {
     // Check for FPU and XSAVE
     uint32_t eax, ebx, ecx, edx, cr0, cr4, mxcsr = 0;
+
     asm volatile ("mov %%cr0, %0" : "=r" (cr0));
+    asm volatile ("mov %%cr4, %0" : "=r" (cr4));
     Processor::cpuid(1, 0, eax, ebx, ecx, edx);
-    if(ecx & CPUID_FEAT_ECX_XSAVE && edx & CPUID_FEAT_EDX_FPU)
+    
+    if(edx & CPUID_FEAT_EDX_FPU)
     {
-        // Initialise the FPU and the TS bit
-        uint16_t cw = 0x3f7;
         cr0 = (cr0 | CR0_NE | CR0_MP) & ~(CR0_EM | CR0_TS);
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
+            
+        // init the FPU
         asm volatile ("finit");
-        asm volatile ("fldcw %0" :: "m" (cw));
-        cr0 |= CR0_TS;
+        
+        // set the FPU Control Word
+        _SetFPUControlWord(0x330);
+ 
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
-
-        // Register the handler
-        return InterruptManager::instance().registerInterruptHandler(NM_FAULT_EXCEPTION, this);
+    }
+          
+    if(edx & CPUID_FEAT_EDX_FXSR)
+    {
+        cr4 |= CR4_OSFXSR;          // set the FXSAVE/FXRSTOR support bit
     }
     
-    if(ecx & CPUID_FEAT_ECX_XSAVE && edx & CPUID_FEAT_EDX_SSE)
+    if(edx & CPUID_FEAT_EDX_SSE)
     {
-        asm volatile("mov %%cr4, %0;":"=r"(cr4));
-        
-        cr4 |= CR4_OSFXSR;          // set the FXSAVE/FXRSTOR support bit
         cr4 |= CR4_OSXMMEXCPT;      // set the SIMD floating-point exception handling bit
-        
         asm volatile("mov %0, %%cr4;"::"r"(cr4));
-        
+            
         // mask all exceptions
         mxcsr |= (MXCSR_PM | MXCSR_UM | MXCSR_OM | MXCSR_ZM | MXCSR_DM | MXCSR_IM);
-        
+            
         // set the rounding method 
         mxcsr |= (MXCSR_RC_TRUNCATE << MXCSR_RC);
-        
+            
         // write the control word
         asm volatile("stmxcsr %0;"::"m"(mxcsr));
     }
+    else
+        asm volatile("mov %0, %%cr4;"::"r"(cr4));
     
+    // Register the handler
+    InterruptManager::instance().registerInterruptHandler(NM_FAULT_EXCEPTION, this);
+        
+    // set the bit that causes a DeviceNotAvailable upon SSE, MMX, or FPU instruction execution
     cr0 |= CR0_TS;
     asm volatile ("mov %0, %%cr0" :: "r" (cr0));
     return false;
 }
 
+// old/current owner
+static X86SchedulerState *x87FPU_MMX_XMM_MXCSR_StateOwner = 0;
+static X86SchedulerState x87FPU_MMX_XMM_MXCSR_StateBlank;
 void NMFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
     // Check the TS bit
     uint32_t cr0;
+    
+    // new owner
+    Thread *pCurrentThread = Processor::information().getCurrentThread();
+    X86SchedulerState *pCurrentState = &pCurrentThread->state();
+    
     asm volatile ("mov %%cr0, %0" : "=r" (cr0));
     if(cr0 & CR0_TS)
     {
@@ -109,7 +132,46 @@ void NMFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     {
         FATAL_NOLOCK("NM: TS already disabled");
     }
+        
+    // bochs breakpoint
+    //asm volatile("xchg %bx, %bx;");
+    
+    // if this task has never used SSE before, we need to init the state space
+    if(!(pCurrentState->flags & (1 << 1)))
+    {
+        if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+            asm volatile("fxrstor (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
 
+        asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        
+        pCurrentState->flags |= (1 << 1);
+    }
+    
+    // we don't need to save/restore if this is true!
+    if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner == (size_t)pCurrentState)
+        return;
+    
+    // if this is NULL, then no thread has ever been here before! :)
+    if((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner != 0)
+    {
+        // save the old owner's state
+        asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateOwner->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        
+        if((size_t)pCurrentState != 0)
+        {
+            // restore the new owner's state
+            asm volatile("fxrstor (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        }
+    }
+    else
+    {
+        // if no owner is defined, skip the restoration process as there's no need
+        asm volatile("fxsave  (%0);"::"r"(((((size_t)pCurrentState->x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+        asm volatile("fxsave  (%0);"::"r"(((((size_t)x87FPU_MMX_XMM_MXCSR_StateBlank.x87FPU_MMX_XMM_MXCSR_State + 32) & ~15) + 16)));
+    }
+    
+    // old/current = new
+    x87FPU_MMX_XMM_MXCSR_StateOwner = pCurrentState;
 }
 
 NMFaultHandler::NMFaultHandler()

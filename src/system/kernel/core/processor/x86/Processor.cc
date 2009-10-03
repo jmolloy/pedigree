@@ -60,7 +60,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   X86InterruptManager::initialiseProcessor();
 
   PageFaultHandler::instance().initialise();
-  NMFaultHandler::instance().initialise();
 
   // Initialise the physical memory-management
   X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
@@ -69,6 +68,8 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // Initialise the I/O Manager
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);
+
+    NMFaultHandler::instance().initialise();
 
   m_Initialised = 1;
 }

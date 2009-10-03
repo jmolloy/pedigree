@@ -44,8 +44,54 @@ static void *thread_func(void *vptr_args)
     return NULL;
 }
 
+
 int main(void)
 {
+    int i;
+
+    // test multi-threaded FPU code
+    if ( fork() == 0 )
+    {
+        for(i = 0; i < 10; i++)
+        {
+            float f = i * 12.151;
+            printf("fork: %f\n", f);
+        }
+        
+        if ( fork() == 0 )
+        {
+            for(i = 0; i < 10; i++)
+            {
+                float f = i * 11.15135;
+                printf("fork-fork: %f\n", f);
+            }
+
+            return EXIT_SUCCESS;
+        }
+        else
+        {
+            for(i = 0; i < 10; i++)
+            {
+                float f = i * 1.1002;
+                printf("fork-parent: %f\n", f);
+            }
+            
+            return EXIT_SUCCESS;
+        }
+
+        return EXIT_SUCCESS;
+    }
+    else
+    {
+        for(i = 0; i < 10; i++)
+        {
+            float f = i * 15.151;
+            printf("parent: %f\n", f);
+        }
+        
+        return EXIT_SUCCESS;
+    }
+
 /*    int i;
     pthread_t thread;
 

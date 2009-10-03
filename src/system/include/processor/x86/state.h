@@ -225,7 +225,7 @@ class X86ProcessorState
 };
 
 /** x86 SchedulerState */
-class X86SchedulerState
+class __attribute__((aligned(16))) X86SchedulerState
 {
 public:
     uint32_t edi;
@@ -234,9 +234,13 @@ public:
     uint32_t ebp;
     uint32_t esp;
     uint32_t eip;
-    uint32_t uses_fpu;
-    uint8_t fpu_data[512] ALIGN(16);
-};
+    
+    // bit 0: Has FPU
+    // bit 1: Used SSE
+    uint32_t flags;
+    
+    uint8_t x87FPU_MMX_XMM_MXCSR_State[512+16] __attribute__((aligned(16)));
+} __attribute__((aligned(16)));
 
 /** @} */
 
