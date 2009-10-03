@@ -231,104 +231,112 @@ bool AtapiDisk::initialise()
 
 uint64_t AtapiDisk::doRead(uint64_t location)
 {
-  size_t nBytes = 4096;
-  uintptr_t buffer = m_Cache.insert(location&~0xFFFUL);
+    uintptr_t buffer = m_Cache.insert(location);
+    doRead2(location, buffer);
+    doRead2(location+2048, buffer+2048);
+    return buffer;
+}
 
-  if(!nBytes || !buffer)
-  {
-    ERROR("Bad arguments to AtapiDisk::doRead");
-    return 0;
-  }
+uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer)
+{
 
-  if(location > (m_BlockSize * m_NumBlocks))
-  {
-    WARNING("ATAPI: Attempted read beyond disk size");
-    return 0;
-  }
+    size_t nBytes = 2048;
 
-  size_t blockNum = location / m_BlockSize;
-  size_t numBlocks = nBytes / m_BlockSize;
-
-  if(m_Type == CdDvd)
-  {
-    // Read the TOC in order to get the data track.
-    // This is added to the block number to read the data
-    // off the disk properly.
-    struct ReadTocCommand
+    if(!nBytes || !buffer)
     {
-      uint8_t Opcode;
-      uint8_t Flags;
-      uint8_t Format;
-      uint8_t Rsvd[3];
-      uint8_t Track;
-      uint16_t AllocLen;
-      uint8_t Control;
-    } __attribute__((packed)) tocCommand;
-    memset(&tocCommand, 0, sizeof(ReadTocCommand));
-    tocCommand.Opcode = 0x43; // READ TOC command
-    tocCommand.AllocLen = HOST_TO_BIG16(m_BlockSize);
+        ERROR("Bad arguments to AtapiDisk::doRead");
+        return 0;
+    }
 
-    uint8_t *tmpBuff = new uint8_t[m_BlockSize];
-    PointerGuard<uint8_t> tmpBuffGuard(tmpBuff);
-    bool success = sendCommand(m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff), sizeof(ReadTocCommand), reinterpret_cast<uintptr_t>(&tocCommand));
+    if(location > (m_BlockSize * m_NumBlocks))
+    {
+        WARNING("ATAPI: Attempted read beyond disk size");
+        return 0;
+    }
+
+    size_t blockNum = location / m_BlockSize;
+    size_t numBlocks = nBytes / m_BlockSize;
+
+    if(m_Type == CdDvd)
+    {
+        // Read the TOC in order to get the data track.
+        // This is added to the block number to read the data
+        // off the disk properly.
+        struct ReadTocCommand
+        {
+            uint8_t Opcode;
+            uint8_t Flags;
+            uint8_t Format;
+            uint8_t Rsvd[3];
+            uint8_t Track;
+            uint16_t AllocLen;
+            uint8_t Control;
+        } __attribute__((packed)) tocCommand;
+        memset(&tocCommand, 0, sizeof(ReadTocCommand));
+        tocCommand.Opcode = 0x43; // READ TOC command
+        tocCommand.AllocLen = HOST_TO_BIG16(m_BlockSize);
+
+        uint8_t *tmpBuff = new uint8_t[m_BlockSize];
+        PointerGuard<uint8_t> tmpBuffGuard(tmpBuff);
+        bool success = sendCommand(m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff), sizeof(ReadTocCommand), reinterpret_cast<uintptr_t>(&tocCommand));
+        if(!success)
+        {
+            WARNING("Could not read the TOC!");
+            return 0;
+        }
+
+        uint16_t i;
+        bool bHaveTrack = false;
+        uint16_t bufLen = BIG_TO_HOST16(*reinterpret_cast<uint16_t*>(tmpBuff));
+        TocEntry *Toc = reinterpret_cast<TocEntry*>(tmpBuff + 4);
+        for(i = 0; i < (bufLen / 8); i++)
+        {
+            if(Toc[i].Flags == 0x14)
+            {
+                bHaveTrack = true;
+                break;
+            }
+        }
+
+        if(!bHaveTrack)
+        {
+            WARNING("ATAPI: CD does not have a data track!");
+            return 0;
+        }
+
+        uint32_t trackStart = BIG_TO_HOST32(Toc[i].TrackStart); // Start of the track, LBA
+        if((blockNum + trackStart) < blockNum)
+        {
+            WARNING("ATAPI TOC overflow");
+            return 0;
+        }
+
+        blockNum += trackStart;
+    }
+
+    // Read the data now
+    struct ReadCommand
+    {
+        uint8_t Opcode;
+        uint8_t Flags;
+        uint32_t StartLBA;
+        uint8_t Rsvd;
+        uint16_t BlockCount;
+        uint8_t Control;
+    } __attribute__((packed)) command;
+    memset(&command, 0, sizeof(ReadCommand));
+    command.Opcode = 0x28; // READ(10) command
+    command.StartLBA = HOST_TO_BIG32(blockNum);
+    command.BlockCount = HOST_TO_BIG16(numBlocks);
+
+    bool success = sendCommand(nBytes, buffer, sizeof(ReadCommand), reinterpret_cast<uintptr_t>(&command));
     if(!success)
     {
-      WARNING("Could not read the TOC!");
-      return 0;
+        WARNING("Read command failed on an ATAPI device");
+        return 0;
     }
 
-    uint16_t i;
-    bool bHaveTrack = false;
-    uint16_t bufLen = BIG_TO_HOST16(*reinterpret_cast<uint16_t*>(tmpBuff));
-    TocEntry *Toc = reinterpret_cast<TocEntry*>(tmpBuff + 4);
-    for(i = 0; i < (bufLen / 8); i++)
-    {
-      if(Toc[i].Flags == 0x14)
-      {
-        bHaveTrack = true;
-        break;
-      }
-    }
-
-    if(!bHaveTrack)
-    {
-      WARNING("ATAPI: CD does not have a data track!");
-      return 0;
-    }
-
-    uint32_t trackStart = BIG_TO_HOST32(Toc[i].TrackStart); // Start of the track, LBA
-    if((blockNum + trackStart) < blockNum)
-    {
-      WARNING("ATAPI TOC overflow");
-      return 0;
-    }
-
-    blockNum += trackStart;
-  }
-
-  // Read the data now
-  struct ReadCommand
-  {
-    uint8_t Opcode;
-    uint8_t Flags;
-    uint32_t StartLBA;
-    uint8_t Rsvd;
-    uint16_t BlockCount;
-    uint8_t Control;
-  } __attribute__((packed)) command;
-  memset(&command, 0, sizeof(ReadCommand));
-  command.Opcode = 0x28; // READ(10) command
-  command.StartLBA = HOST_TO_BIG32(blockNum);
-  command.BlockCount = HOST_TO_BIG16(numBlocks);
-
-  bool success = sendCommand(nBytes, buffer, sizeof(ReadCommand), reinterpret_cast<uintptr_t>(&command));
-  if(!success)
-  {
-    WARNING("Read command failed on an ATAPI device");
-    return 0;
-  }
-
-  return nBytes;
+    return nBytes;
 }
 
 uint64_t AtapiDisk::doWrite(uint64_t location)

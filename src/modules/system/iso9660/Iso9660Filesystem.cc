@@ -24,6 +24,7 @@
 #include <utilities/StaticString.h>
 #include <syscallError.h>
 
+#include <utilities/assert.h>
 #include <utilities/PointerGuard.h>
 
 #include "iso9660.h"
@@ -219,17 +220,6 @@ uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
   if(location > pFile->getSize())
     return 0; // Impossible
 
-  // Ensure we're not going to write beyond the end of the file
-  if((location + size) > pFile->getSize())
-    size = pFile->getSize() - location;
-
-  // Further sanity checks...
-  if(size == 0 || size >= pFile->getSize())
-    return 0;
-
-  size_t offset = location % m_BlockSize;
-  size_t bytesWritten = 0;
-  size_t bytesToGo = size;
   size_t blockSkip = location / m_BlockSize;
   size_t blockNum = LITTLE_TO_HOST32(rec.ExtentLocation_LE) + blockSkip;
   

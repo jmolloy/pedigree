@@ -97,6 +97,7 @@ public:
 
   // These are the internal functions that the controller calls when it is ready to process our request.
   virtual uint64_t doRead(uint64_t location);
+    virtual uint64_t doRead2(uint64_t location, uintptr_t buffer);
   virtual uint64_t doWrite(uint64_t location);
 
   // Called by our controller when an IRQ has been received.
@@ -145,7 +146,10 @@ private:
     if(m_Type == CdDvd)
       return 2048;
     else
+    {
+        FATAL("Uhhhhhhhh :(");
       return 512;
+    }
   }
 
   /** Gets the capacity of the disk (for internal use) */
