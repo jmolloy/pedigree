@@ -115,11 +115,10 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
     *flags = pFile->m_Flags;
 }
 
-uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Sanity checking.
-    ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
-    uint64_t nBytes =  file->m_pBackEnd->addRequest(1, CONSOLE_READ, file->m_Param, size, buffer);
+    uint64_t nBytes =  m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size, buffer);
 
     // Perform cooked mode processing if required.
 #if 0
@@ -154,16 +153,14 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
     {
-        NOTICE("input: " << (uint8_t)pC[i]);
-        /// \note Turned this into a C++-style cast... I have no idea what this achieves. - Matt
-        if (file->m_Flags & IStripToSevenBits)
+        if (m_Flags & ConsoleManager::IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
 
-        if (pC[i] == '\n' && (file->m_Flags & IMapNLToCR))
+        if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))
             pC[i] = '\r';
-        else if (pC[i] == '\r' && (file->m_Flags & IMapCRToNL))
+        else if (pC[i] == '\r' && (m_Flags & ConsoleManager::IMapCRToNL))
             pC[i] = '\n';
-        else if (pC[i] == '\r' && (file->m_Flags & IIgnoreCR))
+        else if (pC[i] == '\r' && (m_Flags & ConsoleManager::IIgnoreCR))
         {
             memmove(reinterpret_cast<void*>(buffer+i), reinterpret_cast<void*>(buffer+i+1), nBytes-i-1);
             i--; // Need to process this byte again, its contents have changed.
@@ -173,20 +170,17 @@ uint64_t ConsoleManager::read(File *pFile, uint64_t location, uint64_t size, uin
     return nBytes;
 }
 
-uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    /// \todo Sanity checking.
-    ConsoleFile *file = reinterpret_cast<ConsoleFile*>(pFile);
-
     // Post-process output if enabled.
-    if ((file->m_Flags & OPostProcess))
+    if ((m_Flags & ConsoleManager::OPostProcess))
     {
         char *pC = reinterpret_cast<char*>(buffer);
         for (size_t i = 0; i < size; i++)
         {
-            if (pC[i] == '\r' && (file->m_Flags & OMapCRToNL))
+            if (pC[i] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
                 pC[i] = '\n';
-            else if (pC[i] == '\n' && (file->m_Flags & OMapNLToCRNL))
+            else if (pC[i] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
             {
                 // We don't make the distinction between '\r\n' and '\n'.
                 pC[i] = '\n';
@@ -195,14 +189,14 @@ uint64_t ConsoleManager::write(File *pFile, uint64_t location, uint64_t size, ui
 
             // Lastly, after both mappings above have been done, we can
             // check if NL should cause a CR as well.
-            if (pC[i] == '\n' && (file->m_Flags & ONLCausesCR) == 0)
+            if (pC[i] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR) == 0)
                 pC[i] = '\xB'; // Use 'VT' - vertical tab.
         }
     }
 
     char *newbuf = new char[size];
     memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
-    uint64_t nBytes = file->m_pBackEnd->addAsyncRequest(1, CONSOLE_WRITE, file->m_Param, size, reinterpret_cast<uint64_t>(newbuf));
+    uint64_t nBytes = m_pBackEnd->addAsyncRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uint64_t>(newbuf));
 
     return size;
 }

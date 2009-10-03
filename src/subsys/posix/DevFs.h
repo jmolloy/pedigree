@@ -2,6 +2,20 @@
 #define DEVFS_H
 
 #include <vfs/Filesystem.h>
+#include <vfs/File.h>
+
+class NullFile : public File
+{
+public:
+    NullFile(String str, Filesystem *pParent) :
+        File(str, 0, 0, 0, 0, pParent, 0, 0)
+    {}
+    ~NullFile()
+    {}
+
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+};
 
 /** This class provides /dev/null */
 class NullFs : public Filesystem
@@ -25,7 +39,7 @@ public:
   File* getFile()
   {
     if (m_pNull) return m_pNull;
-    m_pNull = new File(String("/dev/null"), 0, 0, 0, 0, this, 0, 0);
+    m_pNull = new NullFile(String("/dev/null"), this);
     return m_pNull;
   }
 
@@ -34,8 +48,8 @@ public:
   virtual File* getRoot()
   {return 0;}
   virtual String getVolumeLabel()
-  {return String("consolemanager");}
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
+  {return String("nullfs");}
+  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
   {
     memset(reinterpret_cast<void*>(buffer), 0, size);
     return size;
@@ -44,12 +58,6 @@ public:
   {
     return size;
   }
-  virtual void truncate(File *pFile)
-  {}
-  virtual void fileAttributeChanged(File *pFile)
-  {}
-  virtual void cacheDirectoryContents(File *pFile)
-  {}
 
 protected:
   virtual bool createFile(File* parent, String filename, uint32_t mask)

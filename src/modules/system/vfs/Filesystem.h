@@ -85,25 +85,6 @@ public:
         return m_pDisk;
     }
 
-    //
-    // File interface.
-    //
-
-    /** A File calls this to pass up a read request. */
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) =0;
-
-    /** A File calls this to pass up a write request. */
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) =0;
-
-    /** A File calls this to pass up a request to truncate a file - remove all data. */
-    virtual void truncate(File *pFile) =0;
-
-    /** A File calls this to propagate a change in a file attribute. */
-    virtual void fileAttributeChanged(File *pFile) =0;
-
-    /** A File calls this to have all its children generated and put in its cache. */
-    virtual void cacheDirectoryContents(File *pFile) =0;
-
 protected:
     /** createFile calls this after it has parsed the string path. */
     virtual bool createFile(File* parent, String filename, uint32_t mask) =0;

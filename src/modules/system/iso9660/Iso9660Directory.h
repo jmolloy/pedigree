@@ -43,14 +43,6 @@ public:
   {}
   virtual ~Iso9660Directory() {};
 
-  uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer)
-  {return 0;}
-  uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer)
-  {return 0;}
-
-  void truncate()
-  {}
-
   virtual void cacheDirectoryContents()
   {
     Disk *myDisk = m_pFs->getDisk();
@@ -93,22 +85,14 @@ public:
     for(i = 0; i < numBlocks; i++)
     {
       // Read the block
-      uint8_t *block = new uint8_t[2048];
-      PointerGuard<uint8_t> blockGuard(block);
-      memset(block, 0, 2048);
-
-      if(myDisk->read((dirLoc + i) * 2048, 2048, reinterpret_cast<uintptr_t>(block)) == 0)
-      {
-        NOTICE("Couldn't read disk!");
-        return;
-      }
+      uintptr_t block = myDisk->read((dirLoc + i) * 2048);
 
       // Complete, so start reading entries
       size_t offset = 0;
       bool bLastHit = false;
       while(offset < 2048)
       {
-        Iso9660DirRecord *record = reinterpret_cast<Iso9660DirRecord*>(reinterpret_cast<uintptr_t>(block) + offset);
+        Iso9660DirRecord *record = reinterpret_cast<Iso9660DirRecord*>(block + offset);
         offset += record->RecLen;
 
         if(record->RecLen == 0)

@@ -53,7 +53,7 @@ class FileDisk : public Disk
         };
 
         FileDisk() :
-            m_pFile(0), m_Mode(Standard), m_PageCache(), m_MemRegion("FileDisk-Failed")
+            m_pFile(0), m_Mode(Standard), m_Cache(), m_MemRegion("FileDisk-Failed")
         {
             FATAL("I require a constructor with arguments!");
         }
@@ -71,8 +71,8 @@ class FileDisk : public Disk
 
         bool initialise();
 
-        virtual uint64_t read(uint64_t location, uint64_t nBytes, uintptr_t buffer);
-        virtual uint64_t write(uint64_t location, uint64_t nBytes, uintptr_t buffer);
+        virtual uintptr_t read(uint64_t location);
+        virtual void write(uint64_t location);
 
     private:
 
@@ -85,21 +85,8 @@ class FileDisk : public Disk
         /// Access mode
         AccessType m_Mode;
 
-        /** Pages that have been read.
-          * This code works on 4 KB pages in order to reduce
-          * disk access. This should provide a performance
-          * increase at a minimal expense as most reads are
-          * contiguous over at least a kilobyte of data.
-          *
-          * Always touched on writes, Standard access modes
-          * write here and then write the page to disk.
-          *
-          * \todo Maintain a dirty page list for Standard
-          *       modes, which a worker thread handles
-          *       in order to improve performance.
-          */
-        Tree<size_t, void*> m_PageCache;
-        
+        Cache m_Cache;
+
         // Our region of memory
         MemoryRegion m_MemRegion;
 };

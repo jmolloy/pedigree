@@ -24,6 +24,15 @@
 
 NetManager NetManager::m_Instance;
 
+uint64_t Socket::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    return reinterpret_cast<NetManager*>(m_pFilesystem)->read(this, location, size, buffer, bCanBlock);
+}
+uint64_t Socket::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    return reinterpret_cast<NetManager*>(m_pFilesystem)->write(this, location, size, buffer, bCanBlock);
+}
+
 void Socket::decreaseRefCount(bool bIsWriter)
 {
     if (bIsWriter)

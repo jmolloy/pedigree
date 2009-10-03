@@ -44,13 +44,11 @@ public:
   static Filesystem *probe(Disk *pDisk);
   virtual File* getRoot();
   virtual String getVolumeLabel();
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-  virtual void truncate(File *pFile);
-  virtual void fileAttributeChanged(File *pFile);
-  virtual void cacheDirectoryContents(File *pFile) {};
 
 protected:
+  uintptr_t readBlock(File *pFile, uint64_t location);
+  size_t getBlockSize()
+  {return 2048;}
 
   virtual bool createFile(File* parent, String filename, uint32_t mask);
   virtual bool createDirectory(File* parent, String filename);

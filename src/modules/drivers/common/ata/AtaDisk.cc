@@ -22,12 +22,13 @@
 #include <processor/Processor.h>
 #include <panic.h>
 #include <machine/Machine.h>
+#include <utilities/assert.h>
 #include "AtaController.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
         Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-        m_IrqReceived(true), m_SectorCache()
+        m_IrqReceived(true), m_Cache(), m_nAlignPoints(0)
 {
     m_pParent = pDev;
 }
@@ -169,47 +170,70 @@ bool AtaDisk::initialise()
     return true;
 }
 
-uint64_t AtaDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uintptr_t AtaDisk::read(uint64_t location)
 {
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location,
-                               nBytes, static_cast<uint64_t> (buffer));
-}
 
-uint64_t AtaDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-{
-    // Grab our parent.
-    AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addRequest(0, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location,
-                               nBytes, static_cast<uint64_t> (buffer));
-}
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] <= location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
 
-uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-{
-    if (location % 512)
-        panic("AtaDisk: read request not on a sector boundary!");
-    if (nBytes % 512)
-        panic("AtaDisk: read request length not a multiple of 512!");
+    // Calculate the offset to get location on a page boundary.
+    ssize_t offs =  -((location - alignPoint) % 4096);
 
-    // The original number of bytes to read
-    uint64_t origNBytes = nBytes;
-
-    // Do we have any of these sectors in cache?
-    // \bug Cache key is 32-bits long in x86, but the valid key range is 64 - lg(512) bits.
-    uint64_t end = location+nBytes;
-    for (uint64_t i = location; i < end; i += 512)
+    // Create room in the cache.
+    uintptr_t buffer;
+    if ( (buffer=m_Cache.lookup(location+offs)) )
     {
-        if (m_SectorCache.lookup(i/512, reinterpret_cast<uint8_t*> (buffer)))
-        {
-            buffer += 512;
-            location += 512;
-            nBytes -= 512;
-        }
-        else break;
+        return buffer-offs;
     }
 
-    if (nBytes == 0) return origNBytes;
+    pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location+offs);
+
+    /// \todo Add speculative loading here.
+
+    return m_Cache.lookup(location+offs) - offs;
+}
+
+void AtaDisk::write(uint64_t location)
+{
+    if (location % 512)
+        FATAL("AtaDisk: read request not on a sector boundary!");
+
+    // Grab our parent.
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
+
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] < location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
+
+    // Calculate the offset to get location on a page boundary.
+    ssize_t offs =  -((location - alignPoint) % 4096);
+
+    // Find the cache page.
+    uintptr_t buffer;
+    if ( !(buffer=m_Cache.lookup(location+offs)) )
+        return;
+
+    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+}
+
+void AtaDisk::align(uint64_t location)
+{
+    assert (m_nAlignPoints < 8);
+    m_AlignPoints[m_nAlignPoints++] = location;
+}
+
+uint64_t AtaDisk::doRead(uint64_t location)
+{
+    uintptr_t buffer = m_Cache.insert(location);
+
+    uint64_t nBytes = 4096;
 
     /// \todo DMA?
     // Grab our parent.
@@ -226,7 +250,6 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
 
     // How many sectors do we need to read?
     uint32_t nSectors = nBytes / 512;
-    if (nBytes%512) nSectors++;
 
     // Send drive select.
     if (m_SupportsLBA48)
@@ -304,69 +327,24 @@ uint64_t AtaDisk::doRead(uint64_t location, uint64_t nBytes, uintptr_t buffer)
             // We got the mutex, so an IRQ must have arrived.
             for (int j = 0; j < 256; j++)
                 *pTarget++ = commandRegs->read16(0);
-
-            // Store the sector in the sector cache.
-            m_SectorCache.insert(location/512+i, pSector);
         }
     }
-    return origNBytes;
+    return 0;
 }
 
-uint64_t AtaDisk::doWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uint64_t AtaDisk::doWrite(uint64_t location)
 {
     if (location % 512)
         panic("AtaDisk: write request not on a sector boundary!");
-    if (nBytes % 512)
-        panic("AtaDisk: write request length not a multiple of 512!");
 
-#ifndef CRIPPLE_HDD
-    uint64_t oldLoc = location, oldCount = nBytes;
-#endif
-
-    uint64_t origNBytes = nBytes;
-
-    uint64_t end = location+nBytes;
-    for (uint64_t i = location; i < end; i += 512)
-    {
-        m_SectorCache.insert(i/512, reinterpret_cast<uint8_t*> (buffer));
-
-        buffer += 512;
-        location += 512;
-        nBytes -= 512;
-    }
-
-    // When the hard disk is crippled, do not write any data to the disk...
-#ifndef CRIPPLE_HDD
-    // ... But otherwise, run the write routine asynchronously (this will actually perform the write)
-    /// \note Note that the buffer passed is null. The internal write reads from cache (based
-    ///       on the location parameter) when writing.
-    AtaController *pParent = static_cast<AtaController*> (m_pParent);
-    return pParent->addAsyncRequest(0, ATA_CMD_WRITE2,
-            reinterpret_cast<uint64_t> (this), oldLoc, oldCount, 0);
-#endif
-
-    // Data is now written to cache
-    return origNBytes;
-}
-
-uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t buffer)
-{
     // Safety check
 #ifdef CRIPPLE_HDD
     return 0;
 #endif
 
-    // Verify incoming arguments
-    if(buffer)
-    {
-        ERROR("ATA Internal Write: We got given a buffer!");
-        return 0;
-    }
-    if(!nBytes)
-    {
-        ERROR("ATA Internal Write: Invalid byte count!");
-        return 0;
-    }
+    uintptr_t buffer = m_Cache.lookup(location);
+
+    uintptr_t nBytes = 4096;
 
     /// \todo DMA?
     // Grab our parent.
@@ -391,6 +369,8 @@ uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t bu
     // Read the status 5 times as a delay for the drive to go about its business.
     for (int i = 0; i < 5; i++)
         commandRegs->read8(7);
+
+    uint16_t *tmp = reinterpret_cast<uint16_t*>(buffer);
 
     while (nSectors > 0)
     {
@@ -448,12 +428,7 @@ uint64_t AtaDisk::internalWrite(uint64_t location, uint64_t nBytes, uintptr_t bu
 
             // Grab the current sector
             uint8_t *currSector = new uint8_t[512];
-            uint16_t *tmp = reinterpret_cast<uint16_t*>(currSector);
-            if(!m_SectorCache.lookup((location / 512) + i, reinterpret_cast<uint8_t*> (currSector)))
-            {
-                delete [] currSector;
-                continue;
-            }
+
 
             // We got the mutex, so an IRQ must have arrived.
             for (int j = 0; j < 256; j++)

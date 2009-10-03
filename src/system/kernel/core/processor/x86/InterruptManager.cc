@@ -42,6 +42,7 @@ const char* g_ExceptionNames[] =
   "Stack Fault",
   "General Protection Fault",
   "Page Fault",
+  "Reserved: Interrupt 15",
   "FPU Floating-Point Error",
   "Alignment Check",
   "Machine-Check",

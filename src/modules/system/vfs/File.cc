@@ -24,7 +24,7 @@
 File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
-    m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_Lock(), m_MonitorTargets()
+    m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
 {
 }
 
@@ -32,7 +32,7 @@ File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
            uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
-    m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0)
+    m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
 {
 }
 
@@ -42,12 +42,68 @@ File::~File()
 
 uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    return m_pFilesystem->read(this, location, size, buffer, bCanBlock);
+    if (location+size >= m_Size)
+        size = m_Size-location;
+
+    size_t blockSize = getBlockSize();
+
+    size_t n = 0;
+    while (size)
+    {
+        if (location >= m_Size)
+            return n;
+
+        uintptr_t block = location / blockSize;
+        uintptr_t offs  = location % blockSize;
+        uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
+
+        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+        if (!buff)
+        {
+            buff = readBlock(block*blockSize);
+            m_DataCache.insert(block*blockSize, buff);
+        }
+
+        memcpy(reinterpret_cast<void*>(buffer),
+               reinterpret_cast<void*>(buff+offs),
+               sz);
+        location += sz;
+        buffer += sz;
+        size -= sz;
+        n += sz;
+    }
+    return n;
 }
 
 uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    return m_pFilesystem->write(this, location, size, buffer, bCanBlock);
+    size_t blockSize = getBlockSize();
+
+    size_t n = 0;
+    while (size)
+    {
+        uintptr_t block = location / blockSize;
+        uintptr_t offs  = location % blockSize;
+        uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
+
+        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+        if (!buff)
+            buff = readBlock(block*blockSize);
+
+        memcpy(reinterpret_cast<void*>(buff+offs),
+               reinterpret_cast<void*>(buffer),
+               sz);
+        location += sz;
+        buffer += sz;
+        size -= sz;
+        n += sz;
+    }
+    if (location >= m_Size)
+    {
+        m_Size = location;
+        fileAttributeChanged();
+    }
+    return n;
 }
 
 Time File::getCreationTime()
@@ -69,7 +125,7 @@ Time File::getAccessedTime()
 void File::setAccessedTime(Time t)
 {
     m_AccessedTime = t;
-    m_pFilesystem->fileAttributeChanged(this);
+    fileAttributeChanged();
 }
 
 Time File::getModifiedTime()
@@ -105,7 +161,6 @@ void File::setSize(size_t sz)
 
 void File::truncate()
 {
-    m_pFilesystem->truncate(this);
 }
 
 void File::dataChanged()

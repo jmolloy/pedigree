@@ -139,24 +139,15 @@ public:
         return false;
     }
 
-
     uintptr_t getInode()
-    {
-        return m_Inode;
-    }
+    {return m_Inode;}
     virtual void setInode(uintptr_t inode)
-    {
-        m_Inode = inode;
-    }
+    {m_Inode = inode;}
 
     Filesystem *getFilesystem()
-    {
-        return m_pFilesystem;
-    }
+    {return m_pFilesystem;}
     void setFilesystem(Filesystem *pFs)
-    {
-        m_pFilesystem = pFs;
-    }
+    {m_pFilesystem = pFs;}
 
     virtual void fileAttributeChanged()
     {}
@@ -178,37 +169,23 @@ public:
     }
 
     void setPermissions(uint32_t perms)
-    {
-        m_Permissions = perms;
-    }
+    {m_Permissions = perms;}
 
     uint32_t getPermissions()
-    {
-        return m_Permissions;
-    }
+    {return m_Permissions;}
 
     void setUid(size_t uid)
-    {
-        m_Uid = uid;
-    }
+    {m_Uid = uid;}
     size_t getUid()
-    {
-        return m_Uid;
-    }
+    {return m_Uid;}
 
     void setGid(size_t gid)
-    {
-        m_Gid = gid;
-    }
+    {m_Gid = gid;}
     size_t getGid()
-    {
-        return m_Gid;
-    }
+    {return m_Gid;}
 
     File *getParent()
-    {
-        return m_pParent;
-    }
+    {return m_pParent;}
 
     /** Similar to POSIX's select() function
      * \return 1 if ready for reading/writing, 0 otherwise
@@ -216,9 +193,7 @@ public:
      *       so be sure to override if that's not right
      */
     virtual int select(bool bWriting = false, int timeout = 0)
-    {
-        return 1;
-    }
+    {return 1;}
 
     /** Causes the event pEvent to be dispatched to pThread when activity occurs
         on this File. Activity includes the file becoming available for reading,
@@ -234,6 +209,16 @@ public:
     void cullMonitorTargets(Thread *pThread);
 
 protected:
+
+    /** Internal function to retrieve an aligned 512byte section of the file. */
+    virtual uintptr_t readBlock(uint64_t location)
+    {
+        return 0;
+    }
+    /** Internal function to retrieve the block size returned by readBlock.
+        \note This must be constant throughout the life of the file. */
+    virtual size_t getBlockSize()
+    {return 1024;}
 
     /** Internal function to notify all registered MonitorTargets. */
     void dataChanged();
@@ -254,6 +239,8 @@ protected:
     size_t m_Uid;
     size_t m_Gid;
     uint32_t m_Permissions;
+
+    Tree<size_t,size_t> m_DataCache;
 
     Mutex m_Lock;
 

@@ -24,6 +24,7 @@
 #include <utilities/StaticString.h>
 #include <syscallError.h>
 
+#include <utilities/assert.h>
 #include <utilities/PointerGuard.h>
 
 #include "iso9660.h"
@@ -78,21 +79,15 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
   m_BlockSize = 2048;
   m_BlockNumber = 0;
 
-  uint8_t *tmpBuff = new uint8_t[m_BlockSize];
-  PointerGuard<uint8_t> tmpBuffGuard(tmpBuff);
-
   // Read volume descriptors until the primary one is found
   // Sector 16 is the first sector on the disk
-  size_t tmpInt = 0;
   bool bFound = false;
   for(size_t i = 16; i < 256; i++)
   {
-    tmpInt = m_pDisk->read(i * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmpBuff));
-    if(!tmpInt || !(tmpInt == m_BlockSize))
-      return false;
+    uintptr_t buff = m_pDisk->read(i * m_BlockSize);
 
     // Get the descriptor for this entry
-    Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(&tmpBuff[0]);
+    Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(buff);
     if(strncmp(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
     {
       NOTICE("IDENT not correct for a descriptor, can't be an ISO9660 disk!");
@@ -102,12 +97,12 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
     // Is this a primary descriptor?
     if(vDesc->Type == PRIM_VOL_DESC)
     {
-      memcpy(&m_PrimaryVolDesc, tmpBuff, sizeof(Iso9660VolumeDescriptorPrimary));
+      memcpy(&m_PrimaryVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
     }
     else if(vDesc->Type == SUPP_VOL_DESC)
     {
-      memcpy(&m_SuppVolDesc, tmpBuff, sizeof(Iso9660VolumeDescriptorPrimary));
+      memcpy(&m_SuppVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
 
       // Figure out the Joliet level
@@ -210,11 +205,13 @@ String Iso9660Filesystem::getVolumeLabel()
   return String(static_cast<const char*>(str));
 }
 
-uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
 {
   // Sanity check.
   if (pFile->isDirectory())
     return 0;
+
+  size_t size = 2048;
 
   Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
   Iso9660DirRecord rec = file->getDirRecord();
@@ -223,55 +220,13 @@ uint64_t Iso9660Filesystem::read(File *pFile, uint64_t location, uint64_t size, 
   if(location > pFile->getSize())
     return 0; // Impossible
 
-  // Ensure we're not going to write beyond the end of the file
-  if((location + size) > pFile->getSize())
-    size = pFile->getSize() - location;
-
-  // Further sanity checks...
-  if(size == 0 || size >= pFile->getSize())
-    return 0;
-
-  uint8_t *dest = reinterpret_cast<uint8_t*>(buffer);
-  size_t offset = location % m_BlockSize;
-  size_t bytesWritten = 0;
-  size_t bytesToGo = size;
   size_t blockSkip = location / m_BlockSize;
   size_t blockNum = LITTLE_TO_HOST32(rec.ExtentLocation_LE) + blockSkip;
   
-  // Block-size buffer for disk input
-  uint8_t *tmp = new uint8_t[m_BlockSize];
-  PointerGuard<uint8_t> tmpGuard(tmp);
-
   // Begin reading
-  while(bytesToGo)
-  {
-    m_pDisk->read(blockNum * m_BlockSize, m_BlockSize, reinterpret_cast<uintptr_t>(tmp));
+  uintptr_t buff = m_pDisk->read(blockNum * m_BlockSize);
 
-    size_t numToCopy = 0;
-    if(bytesToGo < (m_BlockSize - offset))
-      numToCopy = bytesToGo;
-    else
-      numToCopy = (m_BlockSize - offset);
-
-    memcpy((dest + bytesWritten), (tmp + offset), numToCopy);
-    bytesWritten += numToCopy;
-    bytesToGo -= numToCopy;
-
-    offset = 0;
-    blockNum++;
-  }
-
-  return bytesWritten;
-}
-
-uint64_t Iso9660Filesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
-{
-  WARNING("Can't write to an ISO9660 filesystem");
-  return 0;
-}
-
-void Iso9660Filesystem::fileAttributeChanged(File *pFile)
-{
+  return buff;
 }
 
 char toUpper(char c)
@@ -288,10 +243,6 @@ char toLower(char c)
     return c; // special chars
   c -= ('A' - 'a');
   return c;
-}
-
-void Iso9660Filesystem::truncate(File *pFile)
-{
 }
 
 bool Iso9660Filesystem::createFile(File *parent, String filename, uint32_t mask)

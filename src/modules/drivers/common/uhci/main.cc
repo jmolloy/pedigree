@@ -36,6 +36,7 @@ void probeDevice(Device *pDev)
 
 void entry()
 {
+    return;
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeDevice);
 }
 

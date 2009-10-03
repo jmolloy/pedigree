@@ -1852,6 +1852,12 @@ void if_freenameindex(struct if_nameindex *nameindex)
     STUBBED("if_freenameindex");
 }
 
+int mprotect(void *addr, size_t len, int prot)
+{
+    STUBBED("mprotect");
+    return -1;
+}
+
 void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz)
 {
     syscall4(PEDIGREE_CONFIG_GETCOLNAME, resultIdx, n, (long)buf, bufsz);

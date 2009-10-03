@@ -49,6 +49,12 @@ public:
     return m_Dir;
   }
 
+protected:
+    virtual uintptr_t readBlock(uint64_t location);
+
+    size_t getBlockSize()
+    {return 2048;}
+
 private:
   // Our internal directory information (info about *this* directory, not the child)
   Iso9660DirRecord m_Dir;

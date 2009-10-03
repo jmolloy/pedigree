@@ -227,7 +227,8 @@ protected:
   File *m_pRoot;
 
   // FAT cache
-  Cache<uint8_t*, 512> m_FatCache;
+  //Cache<uint8_t*, 512> m_FatCache;
+  Tree<uintptr_t, uintptr_t> m_FatCache;
 
   /**
    * Hint for the free cluster code, to avoid searching the ENTIRE FAT each

@@ -21,14 +21,13 @@
 #include <ServiceManager.h>
 
 FileDisk::FileDisk(String file, AccessType mode) :
-    m_pFile(0), m_Mode(mode), m_PageCache(), m_MemRegion("FileDisk")
+    m_pFile(0), m_Mode(mode), m_Cache(), m_MemRegion("FileDisk")
 {
     m_pFile = VFS::instance().find(file);
     if(!m_pFile)
         WARNING("FileDisk: '" << file << "' doesn't exist...");
     else
     {
-        NOTICE("Initialising...");
         m_pFile->increaseRefCount(false);
 
         // Chat to the partition service and let it pick up that we're around now
@@ -63,125 +62,40 @@ bool FileDisk::initialise()
     return (m_pFile != 0);
 }
 
-uint64_t FileDisk::read(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+uintptr_t FileDisk::read(uint64_t location)
 {
+    if (location % 512)
+        FATAL("Read with location % 512.");
+
     if(!m_pFile)
         return 0;
 
     // Determine which page the read is in
-    uint64_t readPage = location / FILEDISK_PAGE_SIZE;
-    uint64_t pageOffset = location % FILEDISK_PAGE_SIZE;
+    uint64_t readPage = location & ~0xFFFUL;
+    uint64_t pageOffset = location % 4096;
 
-    // How many pages does the read cross?
-    uint64_t pageCount = nBytes / FILEDISK_PAGE_SIZE;
-    if(pageOffset || (nBytes % FILEDISK_PAGE_SIZE))
-        pageCount++;
+    uintptr_t buffer = m_Cache.lookup(location & ~0xFFFUL);
+    if (buffer)
+        return buffer;
 
-    // Read the data
-    uint8_t *dest = reinterpret_cast<uint8_t *>(buffer);
-    uint64_t startPage = readPage, numBytes = nBytes;
-    for(uint64_t n = 0; n < pageCount && numBytes > 0; n++)
-    {
-        // How many bytes are to be read during this round?
-        uint64_t nBytesToRead = (pageOffset + numBytes) > FILEDISK_PAGE_SIZE ? FILEDISK_PAGE_SIZE : numBytes;
 
-        // Look up in the cache
-        uint8_t *buff = 0;
-        if((buff = reinterpret_cast<uint8_t *>(m_PageCache.lookup(startPage + n))))
-        {
-            // Single copy, rather than multiple
-            memcpy(dest, buff + pageOffset, nBytesToRead);
-        }
-        else
-        {
-            // Allocate space for the page cache
-            /// \todo Is this correct? Are these pages still freeable, even if the mem region is updated?
-            if(!PhysicalMemoryManager::instance().allocateRegion(m_MemRegion, FILEDISK_PAGE_SIZE / PhysicalMemoryManager::instance().getPageSize(), 0, VirtualAddressSpace::Write, -1))
-            {
-                ERROR("FileDisk: Couldn't allocate space for a block\n");
-                return 0;
-            }
-            buff = reinterpret_cast<uint8_t*>(m_MemRegion.virtualAddress());
+    buffer = m_Cache.insert(readPage);    
 
-            // Read the data from the file itself
-            uint64_t sz = m_pFile->read((startPage + n) * FILEDISK_PAGE_SIZE, FILEDISK_PAGE_SIZE, reinterpret_cast<uintptr_t>(buff));
+    // Read the data from the file itself
+    uint64_t sz = m_pFile->read(readPage, 4096, buffer);
 
-            // Verify the size - it has to fit in with what we asked for
-            assert(sz <= FILEDISK_PAGE_SIZE);
-            assert(sz > 0);
-            
-            // Clean up the top of the buffer (just in case we don't read a full page)
-            if(FILEDISK_PAGE_SIZE - sz)
-                memset(buff + sz, 0, FILEDISK_PAGE_SIZE - sz);
-            
-            // All is well - copy into the buffer & insert to the page cache
-            memcpy(dest, buff + pageOffset, nBytesToRead);
-            m_PageCache.insert(startPage + n, buff);
-        }
+    // Verify the size - it has to fit in with what we asked for
+    assert(sz == 4096);
 
-        // Another page read
-        pageOffset = 0;
-        numBytes -= nBytesToRead;
-        dest += nBytesToRead;
-    }
-
-    return (nBytes - numBytes);
+    return buffer;
 }
 
-uint64_t FileDisk::write(uint64_t location, uint64_t nBytes, uintptr_t buffer)
+void FileDisk::write(uint64_t location)
 {
     if(!m_pFile)
-        return 0;
+        return;
 
-    // Determine which page the read is in
-    uint64_t writePage = location / FILEDISK_PAGE_SIZE;
-    uint64_t pageOffset = location % FILEDISK_PAGE_SIZE;
-
-    // How many pages does the read cross?
-    uint64_t pageCount = nBytes / FILEDISK_PAGE_SIZE;
-    if(pageOffset)
-        pageCount++;
-
-    // Read the data
-    uint8_t *src = reinterpret_cast<uint8_t *>(buffer);
-    uint64_t startPage = writePage, numBytes = nBytes;
-    for(uint64_t n = 0; n < pageCount && numBytes > 0; n++)
-    {
-        // How many bytes are to be written during this round?
-        uint64_t nBytesToWrite = numBytes > FILEDISK_PAGE_SIZE ? FILEDISK_PAGE_SIZE : numBytes;
-
-        // Look up in the cache
-        uint8_t *srcPage = src + (FILEDISK_PAGE_SIZE * n);
-        uint8_t *buff = 0;
-        buff = reinterpret_cast<uint8_t*>(m_PageCache.lookup(startPage + n));
-
-        if(!buff)
-        {
-            // Read into the cache...
-            uint8_t a = 0;
-            read((startPage + n) * FILEDISK_PAGE_SIZE, 1, reinterpret_cast<uintptr_t>(&a));
-
-            // Attempt the lookup again
-            buff = reinterpret_cast<uint8_t*>(m_PageCache.lookup(startPage + n));
-            assert(buff);
-        }
-
-        if(buff)
-        {
-            // Already have the page in the cache - copy this region
-            memcpy(buff + pageOffset, srcPage, nBytesToWrite);
-
-            // If we're not a RAM-only disk, write to the actual File
-            if(m_Mode != RamOnly)
-                m_pFile->write((startPage + n) * FILEDISK_PAGE_SIZE, FILEDISK_PAGE_SIZE, reinterpret_cast<uintptr_t>(buff));
-        }
-
-        // Another page read
-        pageOffset = 0;
-        numBytes -= nBytesToWrite;
-    }
-
-    return (nBytes - numBytes);
+    WARNING("FileDisk::write: Not implemented.");
 }
 
 void init()
