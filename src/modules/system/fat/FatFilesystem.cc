@@ -14,18 +14,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "FatFilesystem.h"
-#include <vfs/VFS.h>
-#include <Module.h>
-#include <utilities/utility.h>
 #include <Log.h>
-#include <utilities/List.h>
+#include <Module.h>
 #include <processor/Processor.h>
-#include <utilities/StaticString.h>
 #include <syscallError.h>
+#include <utilities/List.h>
+#include <utilities/StaticString.h>
+#include <utilities/assert.h>
+#include <utilities/utility.h>
+#include <vfs/VFS.h>
 
 #include "fat.h"
 #include "FatFile.h"
+#include "FatFilesystem.h"
 #include "FatDirectory.h"
 
 // helper functions
@@ -66,9 +67,8 @@ bool FatFilesystem::initialise(Disk *pDisk)
     m_pDisk = pDisk;
 
     // Attempt to read the superblock.
-    uint8_t buffer[512];
-    m_pDisk->read(0, 512,
-                  reinterpret_cast<uintptr_t> (buffer));
+    uint8_t *buffer = reinterpret_cast<uint8_t*>(m_pDisk->read(0));
+                      
 
     memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
 
@@ -737,8 +737,19 @@ bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    size_t sz = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
-    return sz == size;
+    assert(buffer);
+    size_t off = 0;
+    while (size)
+    {
+        size_t sz = (size > 512) ? 512 : size;
+        uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
+        memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(buff),
+               sz);
+        buffer += sz;
+        size -= sz;
+        off += sz;
+    }
+    return true;
 }
 
 bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
@@ -750,8 +761,19 @@ bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    size_t sz = m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec), size, buffer);
-    return sz == size;
+    assert(buffer);
+    size_t off = 0;
+    while (size)
+    {
+        size_t sz = (size > 512) ? 512 : size;
+        uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
+        memcpy(reinterpret_cast<void*>(buff), reinterpret_cast<void*>(buffer),
+               sz);
+        buffer += sz;
+        size -= sz;
+        off += sz;
+    }
+    return true;
 }
 
 uint32_t FatFilesystem::getSectorNumber(uint32_t cluster)
@@ -780,23 +802,26 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     // Reading from the FAT - critical section
     m_FatLock.enter();
 
-    uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
+    //uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
-    bool success;
-    success = m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec, fatBlocks);
-    if(success && (m_Type == FAT12))
-        success = m_FatCache.lookup((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
-    if(!success)
+    uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
+    if(fatBlocks && (m_Type == FAT12))
     {
+        FATAL("Oooer missus, work needed heres");
+        //fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec));
+    }
+    if(!fatBlocks)
+    {
+        fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
         if(!readSectorBlock(m_FatSector + (fatOffset / m_Superblock.BPB_BytsPerSec), m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks)))
         {
             ERROR("FAT: getClusterEntry: reading from the FAT failed");
-            delete [] fatBlocks;
+            //delete [] fatBlocks;
             return 0;
         }
 
-        m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, fatBlocks);
-        m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
+        m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, reinterpret_cast<uintptr_t>(fatBlocks));
+        m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(fatBlocks + m_Superblock.BPB_BytsPerSec));
     }
 
     // Leave the critical section
@@ -806,7 +831,8 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     fatOffset %= m_Superblock.BPB_BytsPerSec;
     uint32_t fatEntry = * reinterpret_cast<uint32_t*> (&fatBlocks[fatOffset]);
 
-    delete [] fatBlocks;
+    /// \todo
+    //delete [] fatBlocks;
 
     // calculate
     uint32_t ret = 0;
@@ -867,16 +893,19 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
     uint32_t ent = getClusterEntry(cluster, bLock);
 
-    uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
+//    uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
-    bool success;
-    success = m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec, fatBlocks);
-    if(success && (m_Type == FAT12))
-        success = m_FatCache.lookup((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
-    if(!success)
+    
+    uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
+    if(fatBlocks && (m_Type == FAT12))
+    {
+        FATAL("Ooer missus, work needed here");
+//        fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec));
+    }
+    if(!fatBlocks)
     {
         ERROR("FAT: setClusterEntry: getClusterEntry didn't read sectors from cache properly?");
-        delete [] fatBlocks;
+        //delete [] fatBlocks;
         return 0;
     }
 
@@ -942,14 +971,15 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     writeSectorBlock(fatSector, m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks));
 
     // Write back to the cache
-    m_FatCache.insert(oldOffset / m_Superblock.BPB_BytsPerSec, fatBlocks);
+    m_FatCache.insert(oldOffset / m_Superblock.BPB_BytsPerSec, reinterpret_cast<uintptr_t>(fatBlocks));
     if(m_Type == FAT12)
-        m_FatCache.insert((oldOffset / m_Superblock.BPB_BytsPerSec) + 1, fatBlocks + m_Superblock.BPB_BytsPerSec);
+        m_FatCache.insert((oldOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(fatBlocks + m_Superblock.BPB_BytsPerSec));
 
     // All done with the update
     m_FatLock.release();
 
-    delete [] fatBlocks;
+    ///\todo
+    //delete [] fatBlocks;
 
     // We're pedantic and as such we check things, but only if debugging
 #if defined(DEBUGGER) && defined(ADDITIONAL_CHECKS)

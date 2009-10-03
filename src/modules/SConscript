@@ -58,7 +58,7 @@ elif env['ARCH_TARGET'] == 'PPC':
 module_subdirs = [
     'vfs',
     'ext2',
-    #'fat',
+    'fat',
     'iso9660',
     'network',
     'dhcpclient',

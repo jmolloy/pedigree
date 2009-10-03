@@ -15,6 +15,7 @@
  */
 
 #include "FatFile.h"
+#include "FatFilesystem.h"
 
 FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
        uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus, uint32_t dirOffset, File *pParent) :
@@ -25,4 +26,13 @@ FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creatio
 
 FatFile::~FatFile()
 {
+}
+
+uintptr_t FatFile::readBlock(uint64_t location)
+{
+    /// \note Not freed. Watch out.
+    uintptr_t buffer = reinterpret_cast<uintptr_t>(new uint8_t[1024]);
+    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    pFs->read(this, location, 1024, buffer);
+    return buffer;
 }

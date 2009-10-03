@@ -53,6 +53,8 @@ public:
     m_DirOffset = custom;
   }
 
+  uintptr_t readBlock(uint64_t location);
+
 private:
   uint32_t m_DirClus;
   uint32_t m_DirOffset;
