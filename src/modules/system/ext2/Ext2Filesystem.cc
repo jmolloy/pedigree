@@ -258,7 +258,6 @@ bool Ext2Filesystem::remove(File* parent, File* file)
 
 uintptr_t Ext2Filesystem::readBlock(uint32_t block)
 {
-    NOTICE("ReadBlock");
     if (block == 0)
         return reinterpret_cast<uintptr_t>(g_pSparseBlock);
 
