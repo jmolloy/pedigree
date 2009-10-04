@@ -19,7 +19,7 @@ OFF=0
 HDIMG=hdd_ext2.img
 HDOFF=32256
 SRCDIR=$1
-HDFILES="apptest login syscall-test net-test netconfig TUI"
+HDFILES="apptest login syscall-test net-test netconfig TUI display-mode"
 
 init() {
     mkdir -p $MOUNTPT
