@@ -85,6 +85,12 @@ def buildImageLosetup(target, source, env):
                 prefix = '/libraries'
             
             otherPath = prefix + i.abspath.replace(search, '')
+            
+            # Clean out the last directory name if needed
+            if(os.path.isdir(i.abspath)):
+                otherPath = '/'.join(otherPath.split('/')[:-1])
+                if(len(otherPath) == 0 or otherPath[0] != '/'):
+                    otherPath = '/' + otherPath
         
         os.system("sudo cp -R " + i.path + " ./tmp" + otherPath)
         # shutil.copy(i.path, "./tmp" + otherPath)
