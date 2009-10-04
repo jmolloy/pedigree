@@ -109,6 +109,11 @@ env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
 env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
 env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
 
+def safeAppend(a, b):
+    if not b in a:
+        a += b
+    return a
+
 if env['CC_NOCACHE'] == '':
     env['CC_NOCACHE'] = env['CC']
 
@@ -134,20 +139,20 @@ env['LD'] = env['LINK']
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
     if re.match('i[3456]86',tmp.group(1)) != None:
-        defines += default_defines['x86']
-        env['CFLAGS'] += default_cflags['x86']
-        env['CXXFLAGS'] += default_cxxflags['x86']
-        env['ASFLAGS'] += default_asflags['x86']
-        env['LINKFLAGS'] += default_linkflags['x86']
+        defines = safeAppend(defines, default_defines)
+        env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x86'])
+        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x86'])
+        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x86'])
+        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['x86'])
         
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
     elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-        defines += default_defines['x64']
-        env['CFLAGS'] += default_cflags['x64']
-        env['CXXFLAGS'] += default_cxxflags['x64']
-        env['ASFLAGS'] += default_asflags['x64']
-        env['LINKFLAGS'] += default_linkflags['x64']
+        defines = safeAppend(defines, default_defines)
+        env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x64'])
+        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x64'])
+        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x64'])
+        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['x64'])
         
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
         env['ARCH_TARGET'] = 'X64'
