@@ -35,7 +35,7 @@
 #endif
 
 PerProcessorScheduler::PerProcessorScheduler() :
-    m_pSchedulingAlgorithm(0), m_bHalted(false)
+    m_pSchedulingAlgorithm(0)
 {
 }
 
@@ -70,44 +70,12 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     // This will also get the lock for the returned thread.
     Thread *pNextThread = m_pSchedulingAlgorithm->getNext();
 
-    /// \todo I'm not 100% about the MP-safety of the sti;hlt section as far as
-    /// locking goes.
-    if (!pNextThread)
+    if (pNextThread == 0)
     {
-        if (pLock)
-        {
-            // We cannot call ->release() here, because this lock was grabbed
-            // before we disabled interrupts, so it may re-enable interrupts.
-            // And that would be a very bad thing.
-            //
-            // We instead store the interrupt state of the spinlock, and manually
-            // unlock it.
-            if (pLock->m_bInterrupts)
-                bWasInterrupts = true;
-            pLock->m_Atom.m_Atom = 1;
-#ifdef TRACK_LOCKS
-            g_LocksCommand.lockReleased(pLock);
-#endif
-            pLock = 0;
-        }
+        // Nothing to switch to, just return.
         pCurrentThread->getLock().release();
-    }
-    while (pNextThread == 0)
-    {
-        if (nextStatus == Thread::Ready)
-        {
-            // Nothing to switch to, just return.
-            Processor::setInterrupts(bWasInterrupts);
-            return;
-        }
-        else
-        {
-            m_bHalted = true;
-            // Wait for interrupt.
-            Processor::haltUntilInterrupt();
-            m_bHalted = false;
-            pNextThread = m_pSchedulingAlgorithm->getNext();
-        }
+        Processor::setInterrupts(bWasInterrupts);
+        return;
     }
 
     // Now neither thread can be moved, we're safe to switch.
@@ -169,13 +137,6 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     if (!pEvent)
     {
         Processor::setInterrupts(bWasInterrupts);
-        return;
-    }
-
-    if (pThread->getStatus() == Thread::Running && m_bHalted)
-    {
-        // Ping the thread back to life.
-        pThread->setStatus(Thread::Ready);
         return;
     }
 
@@ -414,8 +375,7 @@ void PerProcessorScheduler::removeThread(Thread *pThread)
 
 void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
 {
-    if (!m_bHalted)
-        schedule();
+    schedule();
 
     // Check if the thread should exit.
     Thread *pThread = Processor::information().getCurrentThread();
