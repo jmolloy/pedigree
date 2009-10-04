@@ -51,7 +51,7 @@ line2="MTOOLS_NO_VFAT=0"
 line3="drive A: file=\"\" 1.44m mformat_only"
 line4="drive C: file=\"\" partition=1"
 
-mtsrc=$HOME/.mtoolsrc
+mtsrc="${HOME}/.mtoolsrc"
 
 gen_mtsrc () {
    echo "#MTSETUP" > $mtsrc
@@ -61,7 +61,7 @@ gen_mtsrc () {
 }
 
 # See if $mtsrc exists
-if [ -s $mtsrc ]
+if [ -s "${mtsrc}" ]
 then
    # Yes, it does.
    # Read first line and check if it is an MTSETUP file
