@@ -108,7 +108,6 @@ env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
 env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
 env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
 env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
-env['PEDIGREE_IMAGES_DIR'] = 'images/' + env['ARCH_TARGET'].lower() + '/'
 
 # If we need to generate flags, do so
 if env['genflags']:
