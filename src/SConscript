@@ -65,7 +65,8 @@ def buildImageLosetup(target, source, env):
     
     # I want to see the floppy removed soon
     if(not 'floppy' in outFile):
-        shutil.copy(builddir + "/config.db", "./tmp/.pedigree-root")
+        os.system("sudo cp " + builddir + "/config.db ./tmp/.pedigree-root")
+        # shutil.copy(builddir + "/config.db", "./tmp/.pedigree-root")
     
     # Copy each input file across
     for i in source:
