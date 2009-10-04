@@ -73,6 +73,8 @@ opts.AddVariables(
     
     BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
+    
+    BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -176,6 +178,13 @@ if env['genflags']:
                 print "Error: Please set AS on the command line."
                 Exit(1)
             env['AS'] = env['CROSS'] + "as"
+    
+    # Detect losetup presence
+    tmp = commands.getoutput("which losetup")
+    if(len(tmp) and not "no losetup" in tmp):
+        env['havelosetup'] = 1
+    else:
+        env['havelosetup'] = 0
 
     # Extra build flags
     if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:

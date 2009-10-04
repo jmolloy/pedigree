@@ -11,7 +11,7 @@ tmp = env.Clone()
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
-imagesdir = "#" + env["PEDIGREE_IMAGES_DIR"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = appdir + '/TUI'
 
 # Part of the apps target
@@ -66,17 +66,14 @@ libraries = [
 libpaths = [
     env['LIBGCC'],
     builddir,
-    imagesdir + 'libraries/',
+    imagesdir + 'libraries',
     '.'
 ]
 
 ####################################
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
-tmp.objects = [tmp.Object(i) for i in files] + [tmp.File(i) for i in objects]
-tmp['CPPPATH'] = [i for i in include]
-tmp['LIBS'] = [i for i in libraries]
-tmp['LIBPATH'] = [i for i in libpaths]
-#^-- Stupid way of doing it but I plan on adding processing.
 
-if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='')
+tmp['CPPPATH'] = include
+tmp['LIBS'] = libraries
+tmp['LIBPATH'] = libpaths
+tmp.Program(objname, files + objects, LINKFLAGS='')

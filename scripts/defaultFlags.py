@@ -43,7 +43,7 @@ default_x86_asflags = '32'
 default_x86_linkflags = ' -T src/system/kernel/core/processor/x86/kernel.ld '
 
 # x86 32-bit images directory
-default_x86_imgdir = 'images/x86/'
+default_x86_imgdir = '#/images/x86/'
 
 # x86 final variables
 x86_cflags = default_x86_cflags + generic_cflags + warning_flags + warning_flags_c + warning_flags_off
@@ -68,7 +68,7 @@ default_x64_asflags = '64'
 default_x64_linkflags = ' -T src/system/kernel/core/processor/x64/kernel.ld '
 
 # x64 images directory
-default_x64_imgdir = 'images/x64/'
+default_x64_imgdir = '#/images/x64/'
 
 # x64 final variables
 x64_cflags = default_x64_cflags + generic_cflags + warning_flags + warning_flags_c + warning_flags_off
