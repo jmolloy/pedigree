@@ -86,7 +86,7 @@ def buildImageLosetup(target, source, env):
             
             otherPath = prefix + i.abspath.replace(search, '')
         
-        os.system("sudo cp " + i.path + " ./tmp" + otherPath)
+        os.system("sudo cp -R " + i.path + " ./tmp" + otherPath)
         # shutil.copy(i.path, "./tmp" + otherPath)
     
     os.system("sudo umount ./tmp")
