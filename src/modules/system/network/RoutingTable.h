@@ -71,6 +71,26 @@ class Route
 
 #endif
 
+/**
+ * The Pedigree routing table supports three different ways to route packets:
+ * 1. Destination IP match
+ * 2. Destination subnet match
+ * 3. Complement of destination subnet match
+ *
+ * A destination IP match merely uses a specific interface if the IP to send a
+ *     a packet to matches the IP in the table. There is no substitution
+ *     performed at all.
+ * A destination subnet match uses a specific interface if the IP to send a
+ *     packet to is within the subnet defined in the table. No substitution is
+ *     performed at all.
+ * A complement of destination subnet match uses a specific interface if the IP
+ *     to send a packet to is *not* within the subnet defined in the table.
+ *     This substitutes the destination IP to that of a device that can route
+ *     the packets to the given subnet.
+ *
+ * All of these are stored in the routes table in the configuration database.
+ */
+
 /** Routing table implementation */
 class RoutingTable
 {

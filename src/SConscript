@@ -30,6 +30,7 @@ hddimg = env.File(builddir + '/hdd.img')
 
 env.Depends(hddimg, 'libs')
 env.Depends(hddimg, 'apps')
+env.Depends(hddimg, configdb)
 
 env.Command(configdb, None, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
 
