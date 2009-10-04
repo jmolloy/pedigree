@@ -20,6 +20,9 @@
 class Thread;
 class Processor;
 
+#define MAX_PRIORITIES 8
+#define DEFAULT_PRIORITY 1
+
 /**
  * Class providing an abstraction of a long term scheduling algorithm.
  */

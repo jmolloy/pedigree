@@ -40,7 +40,7 @@ public:
   
 private:
   typedef List<Thread*> ThreadList;
-  ThreadList m_List;
+  ThreadList m_pReadyQueues[MAX_PRIORITIES];
 
   Spinlock m_Lock;
 };

@@ -295,6 +295,11 @@ public:
 
     bool hasEvents();
 
+    void setPriority(size_t p)
+    {m_Priority = p;}
+    size_t getPriority()
+    {return m_Priority;}
+
     /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
      * if it is not being waited on the Thread is destroyed.
@@ -394,6 +399,9 @@ private:
     UnwindType m_UnwindState;
 
     class PerProcessorScheduler *m_pScheduler;
+
+    /** Thread priority: 0..MAX_PRIORITIES-1, 0 being highest. */
+    size_t m_Priority;
 };
 
 #endif

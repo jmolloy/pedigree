@@ -20,9 +20,10 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include <LockGuard.h>
+#include <utilities/assert.h>
 
 RoundRobin::RoundRobin() :
-  m_List(), m_Lock(false)
+  m_Lock(false)
 {
 }
 
@@ -38,15 +39,18 @@ void RoundRobin::removeThread(Thread *pThread)
 {
   LockGuard<Spinlock> guard(m_Lock);
 
-  for(ThreadList::Iterator it = m_List.begin();
-      it != m_List.end();
-      it++)
+  for (size_t i = 0; i < MAX_PRIORITIES; i++)
   {
-    if (*it == pThread)
-    {
-      m_List.erase (it);
-      return;
-    }
+      for(ThreadList::Iterator it = m_pReadyQueues[i].begin();
+          it != m_pReadyQueues[i].end();
+          it++)
+      {
+          if (*it == pThread)
+          {
+              m_pReadyQueues[i].erase (it);
+              return;
+          }
+      }
   }
 }
 
@@ -55,21 +59,28 @@ Thread *RoundRobin::getNext()
     LockGuard<Spinlock> guard(m_Lock);
 
     Thread *pThread = 0;
-    if (m_List.size())
-        pThread = m_List.popFront();
+    for (size_t i = 0; i < MAX_PRIORITIES; i++)
+    {
+        if (m_pReadyQueues[i].size())
+        {
+            pThread = m_pReadyQueues[i].popFront();
 
-    if (pThread)
-        pThread->getLock().acquire();
-
-    return pThread;
-
+            if (pThread)
+            {
+                pThread->getLock().acquire();
+                return pThread;
+            }
+        }
+    }
+    return 0;
 }
 
 void RoundRobin::threadStatusChanged(Thread *pThread)
 {
     if (pThread->getStatus() == Thread::Ready)
     {
-        m_List.pushBack(pThread);
+        assert (pThread->getPriority() < MAX_PRIORITIES);
+        m_pReadyQueues[pThread->getPriority()].pushBack(pThread);
     }
 }
 
