@@ -42,6 +42,7 @@
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
 #include <process/Scheduler.h>
+#include <process/SchedulingAlgorithm.h>
 
 #include <machine/Device.h>
 
@@ -184,12 +185,14 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   //Processor::breakpoint();
 #endif
 
+  Processor::information().getCurrentThread()->setPriority(MAX_PRIORITIES-1);
+
   // Try and create a mapping.
   for (;;)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
-    Scheduler::instance().yield();
+    Processor::halt();
   }
 }
 
