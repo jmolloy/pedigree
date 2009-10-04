@@ -14,15 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <utilities/Cache.h>
-#include <utilities/utility.h>
 #include <Log.h>
 #include <processor/VirtualAddressSpace.h>
+#include <utilities/Cache.h>
+#include <utilities/assert.h>
+#include <utilities/utility.h>
 
 MemoryAllocator Cache::m_Allocator;
 Spinlock Cache::m_AllocatorLock;
 static bool g_AllocatorInited = false;
-
 
 Cache::Cache() :
     m_Pages(), m_Lock()
@@ -50,6 +50,7 @@ uintptr_t Cache::lookup (uintptr_t key)
     }
 
     uintptr_t ptr = pPage->location;
+    pPage->refcnt ++;
    
     m_Lock.leave();
     return ptr;
@@ -93,4 +94,21 @@ uintptr_t Cache::insert (uintptr_t key)
     m_Lock.release();
 
     return location;
+}
+
+void Cache::release (uintptr_t key)
+{
+    m_Lock.enter();
+
+    CachePage *pPage = m_Pages.lookup(key);
+    if (!pPage)
+    {
+        m_Lock.leave();
+        return;
+    }
+
+    assert (pPage->refcnt);
+    pPage->refcnt --;
+   
+    m_Lock.leave();
 }

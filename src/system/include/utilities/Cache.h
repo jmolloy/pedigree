@@ -33,13 +33,15 @@ public:
     Cache();
     virtual ~Cache();
   
-    /** Looks for \p key . If found, returns the address of a 512byte section of memory. */
+    /** Looks for \p key , increasing \c refcnt by one if returned. */
     uintptr_t lookup (uintptr_t key);
 
-    /** Creates a cache entry with the given key. A zeroed 512byte section of memory, ready for
-        filling. */
+    /** Creates a cache entry with the given key. */
     uintptr_t insert (uintptr_t key);
   
+    /** Decreases \p key 's \c refcnt by one. */
+    void release(uintptr_t key);
+
     /** Attempts to "compact" the cache - (hopefully) reduces
      *  resource usage by throwing away items in a
      *  least-recently-used fashion. This is called in an

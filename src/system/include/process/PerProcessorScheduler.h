@@ -109,8 +109,6 @@ private:
 
     /** The current SchedulingAlgorithm */
     SchedulingAlgorithm *m_pSchedulingAlgorithm;
-
-    bool m_bHalted;
 };
 
 #endif

@@ -189,14 +189,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
-    Processor::information().getScheduler().schedule(Thread::Sleeping);
     Scheduler::instance().yield();
   }
 }
 
 void system_reset()
 {
-    NOTICE("Reseting...");
+    NOTICE("Resetting...");
     KernelElf::instance().unloadModules();
     Processor::reset();
 }
