@@ -61,7 +61,7 @@ def buildImageLosetup(target, source, env):
         shutil.copy(imageBase, outFile)
 
     os.mkdir("tmp")
-    os.system("sudo mount -o loop,offset=" + offset + " " + outFile + " ./tmp")
+    os.system("sudo mount -o loop,offset=" + str(offset) + " " + outFile + " ./tmp")
     
     # I want to see the floppy removed soon
     if(not 'floppy' in outFile):
