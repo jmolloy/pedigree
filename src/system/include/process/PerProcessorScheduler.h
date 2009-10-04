@@ -91,6 +91,8 @@ public:
 
     void removeThread(Thread *pThread);
 
+    void threadStatusChanged(Thread *pThread);
+
 private:
     /** Copy-constructor
      *  \note Not implemented - singleton class. */

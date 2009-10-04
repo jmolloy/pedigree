@@ -32,9 +32,6 @@ RoundRobin::~RoundRobin()
 
 void RoundRobin::addThread(Thread *pThread)
 {
-  LockGuard<Spinlock> guard(m_Lock);
-
-  m_List.pushBack(pThread);
 }
 
 void RoundRobin::removeThread(Thread *pThread)
@@ -51,35 +48,29 @@ void RoundRobin::removeThread(Thread *pThread)
       return;
     }
   }
-  ERROR ("RoundRobin::removeThread called for nonexistant thread " << Hex <<
-          reinterpret_cast<uintptr_t> (pThread));
 }
 
 Thread *RoundRobin::getNext()
 {
-  LockGuard<Spinlock> guard(m_Lock);
+    LockGuard<Spinlock> guard(m_Lock);
 
-  Thread *pThread = 0;
-  size_t i = 0;
-  size_t size = m_List.count();
-  do
-  {
-    pThread = m_List.popFront();
-    m_List.pushBack(pThread);
-    i++;
-  } while ((pThread->getStatus() != Thread::Ready) &&
-           (i < size));
+    Thread *pThread = 0;
+    if (m_List.size())
+        pThread = m_List.popFront();
 
-  if (pThread->getStatus() == Thread::Ready)
-  {
-      pThread->getLock().acquire();
-      return pThread;
-  }
-  return 0;
+    if (pThread)
+        pThread->getLock().acquire();
+
+    return pThread;
+
 }
 
 void RoundRobin::threadStatusChanged(Thread *pThread)
 {
+    if (pThread->getStatus() == Thread::Ready)
+    {
+        m_List.pushBack(pThread);
+    }
 }
 
 #endif

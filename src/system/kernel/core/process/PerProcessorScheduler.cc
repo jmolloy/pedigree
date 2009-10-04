@@ -382,3 +382,8 @@ void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
     if (pThread->getUnwindState() == Thread::Exit)
         pThread->getParent()->getSubsystem()->exit(0);
 }
+
+void PerProcessorScheduler::threadStatusChanged(Thread *pThread)
+{
+    m_pSchedulingAlgorithm->threadStatusChanged(pThread);
+}

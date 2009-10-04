@@ -25,7 +25,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack, bool semiUser) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
-    m_UnwindState(Continue)
+    m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler())
 {
   if (pParent == 0)
   {
@@ -72,7 +72,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
-    m_UnwindState(Continue)
+    m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler())
 {
   if (pParent == 0)
   {
@@ -88,7 +88,7 @@ Thread::Thread(Process *pParent) :
 Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
-    m_UnwindState(Continue)
+    m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler())
 {
   if (pParent == 0)
   {
@@ -138,7 +138,7 @@ Thread::~Thread()
 void Thread::setStatus(Thread::Status s)
 {
   m_Status = s;
-//  Scheduler::instance().threadStatusChanged(this);
+  m_pScheduler->threadStatusChanged(this);
 }
 
 void Thread::threadExited()

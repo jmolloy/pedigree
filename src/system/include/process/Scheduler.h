@@ -39,58 +39,60 @@ class Processor;
 class Scheduler
 {
 public:
-  /** Get the instance of the scheduler */
-  inline static Scheduler &instance() {return m_Instance;}
+    /** Get the instance of the scheduler */
+    inline static Scheduler &instance() {return m_Instance;}
 
-  /** Initialises the scheduler. */
-  bool initialise();
+    /** Initialises the scheduler. */
+    bool initialise();
 
-  /** Adds a thread to be load-balanced and accounted.
-      \param pThread The new thread.
-      \param PPSched The per-processor scheduler the thread will start on. */
-  void addThread(Thread *pThread, PerProcessorScheduler &PPSched);
-  /** Removes a thread from being load-balanced and accounted. */
-  void removeThread(Thread *pThread);
+    /** Adds a thread to be load-balanced and accounted.
+        \param pThread The new thread.
+        \param PPSched The per-processor scheduler the thread will start on. */
+    void addThread(Thread *pThread, PerProcessorScheduler &PPSched);
+    /** Removes a thread from being load-balanced and accounted. */
+    void removeThread(Thread *pThread);
   
-  /** Adds a process.
-   *  \note This is purely for enumeration purposes.
-   *  \return The ID that should be applied to this Process. */
-  size_t addProcess(Process *pProcess);
-  /** Removes a process.
-   *  \note This is purely for enumeration purposes. */
-  void removeProcess(Process *pProcess);
+    /** Adds a process.
+     *  \note This is purely for enumeration purposes.
+     *  \return The ID that should be applied to this Process. */
+    size_t addProcess(Process *pProcess);
+    /** Removes a process.
+     *  \note This is purely for enumeration purposes. */
+    void removeProcess(Process *pProcess);
   
-  /** Causes a manual reschedule. */
-  void yield();
+    /** Causes a manual reschedule. */
+    void yield();
 
-  /** Returns the number of processes currently in operation. */
-  size_t getNumProcesses();
+    /** Returns the number of processes currently in operation. */
+    size_t getNumProcesses();
   
-  /** Returns the n'th process currently in operation. */
-  Process *getProcess(size_t n);
+    /** Returns the n'th process currently in operation. */
+    Process *getProcess(size_t n);
+
+    void threadStatusChanged(Thread *pThread);
 
 private:
-  /** Default constructor
-   *  \note Private - singleton class. */
-  Scheduler();
-  /** Copy-constructor
-   *  \note Not implemented - singleton class. */
-  Scheduler(const Scheduler &);
-  /** Destructor
-   *  \note Private - singleton class. */
-  ~Scheduler();
-  /** Assignment operator
-   *  \note Not implemented - singleton class */
-  Scheduler &operator = (const Scheduler &);
+    /** Default constructor
+     *  \note Private - singleton class. */
+    Scheduler();
+    /** Copy-constructor
+     *  \note Not implemented - singleton class. */
+    Scheduler(const Scheduler &);
+    /** Destructor
+     *  \note Private - singleton class. */
+    ~Scheduler();
+    /** Assignment operator
+     *  \note Not implemented - singleton class */
+    Scheduler &operator = (const Scheduler &);
   
-  /** The Scheduler instance. */
-  static Scheduler m_Instance;
+    /** The Scheduler instance. */
+    static Scheduler m_Instance;
   
-  /** All the processes currently in operation, for enumeration purposes. */
-  List<Process*> m_Processes;
+    /** All the processes currently in operation, for enumeration purposes. */
+    List<Process*> m_Processes;
 
-  /** The next available process ID. */
-  Atomic<size_t> m_NextPid;
+    /** The next available process ID. */
+    Atomic<size_t> m_NextPid;
 
     /** Map of processor->thread mappings, for load-balance accounting. */
     Tree<PerProcessorScheduler*, List<Thread*>*> m_PTMap;

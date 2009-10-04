@@ -392,6 +392,8 @@ private:
     uintptr_t m_DebugStateAddress;
 
     UnwindType m_UnwindState;
+
+    class PerProcessorScheduler *m_pScheduler;
 };
 
 #endif
