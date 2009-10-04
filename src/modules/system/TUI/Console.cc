@@ -15,6 +15,7 @@
  */
 #include "Console.h"
 #include <panic.h>
+#include <utilities/assert.h>
 
 UserConsole::UserConsole() :
     RequestQueue(), m_pReq(0), m_pPendingReq(0)
@@ -68,7 +69,10 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         m_pReq->mutex.release();
 
         if (bAsync)
+        {
+            assert_heap_ptr_valid(m_pReq);
             delete m_pReq;
+        }
     }
 
     // Sleep on the queue length semaphore - wake when there's something to do.
@@ -99,6 +103,8 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     }
     m_pRequestQueue[priority] = m_pReq->next;
 
+    assert_heap_ptr_valid(m_pReq->next);
+
     m_RequestQueueMutex.release();
 
     // Perform the request.
@@ -112,7 +118,10 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (*sz > maxBuffSz) m_pReq->p3 = maxBuffSz;
         memcpy(buffer, reinterpret_cast<uint8_t*>(m_pReq->p4), m_pReq->p3);
         if (m_pReq->isAsync)
+        {
+            assert_heap_ptr_valid(reinterpret_cast<uint8_t*>(m_pReq->p4));
             delete [] reinterpret_cast<uint8_t*>(m_pReq->p4);
+        }
     }
     else if (command == TUI_CHAR_RECV || command == TUI_MODE_CHANGED)
     {

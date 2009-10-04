@@ -26,7 +26,9 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
+#ifdef DEBUGGER
 #include <SlamCommand.h>
+#endif
 
 extern void *dlmallocSbrk(ssize_t incr);
 
@@ -105,6 +107,8 @@ public:
     /** Frees an object. */
     void free(uintptr_t object);
 
+    bool isPointerValid(uintptr_t object);
+
 #if CRIPPLINGLY_VIGILANT
     void trackSlab(uintptr_t slab);
     void check();
@@ -148,6 +152,8 @@ class SlamAllocator
 
         uintptr_t allocate(size_t nBytes);
         void free(uintptr_t mem);
+
+        bool isPointerValid(uintptr_t mem);
 
         static SlamAllocator &instance()
         {

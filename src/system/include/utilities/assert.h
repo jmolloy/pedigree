@@ -25,12 +25,15 @@
  */
 #ifdef DEBUGGER
 #define assert(x) _assert(x, __FILE__, __LINE__, __PRETTY_FUNCTION__)
+#define assert_heap_ptr_valid(x) _assert(_assert_ptr_valid(reinterpret_cast<uintptr_t>(x)), __FILE__, __LINE__, __PRETTY_FUNCTION__)
 #else
 #define assert
+#define assert_heap_ptr_valid
 #endif
 
 /// Internal use only, the assert() macro passes the additional arguments automatically
 void _assert(bool b, const char *file, int line, const char *func);
+bool _assert_ptr_valid(uintptr_t x);
 
 /** @} */
 

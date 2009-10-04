@@ -143,6 +143,25 @@ void SlamCache::free(uintptr_t object)
 #endif
 }
 
+bool SlamCache::isPointerValid(uintptr_t object)
+{
+    Node *N = reinterpret_cast<Node*> (object);
+#if OVERRUN_CHECK
+    // Grab the footer and check it.
+    SlamAllocator::AllocFooter *pFoot = reinterpret_cast<SlamAllocator::AllocFooter*> (object+m_ObjectSize-sizeof(SlamAllocator::AllocFooter));
+    if (pFoot->magic != VIGILANT_MAGIC)
+        return false;
+#endif
+
+#if USING_MAGIC
+    // Possible double free?
+    if (N->magic == MAGIC_VALUE)
+        return false;
+#endif
+
+    return true;
+}
+
 Spinlock s;
 uintptr_t SlamCache::getSlab()
 {
@@ -453,4 +472,46 @@ void SlamAllocator::free(uintptr_t mem)
 
     // Free the memory
     head->cache->free(mem - sizeof(AllocHeader));
+}
+
+bool SlamAllocator::isPointerValid(uintptr_t mem)
+{
+#if DEBUGGING_SLAB_ALLOCATOR
+    NOTICE_NOLOCK("SlabAllocator::isPointerValid");
+#endif
+
+    // If we're not initialised, fix that
+    if(!m_bInitialised)
+        initialise();
+
+    // 0 is fine to free.
+    if (!mem) return true;
+
+#if CRIPPLINGLY_VIGILANT
+    if (m_bVigilant)
+        for (int i = 0; i < 32; i++)
+            m_Caches[i].check();
+#endif
+
+    // Grab the header
+    AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
+
+    // If the cache is null, then the pointer is corrupted.
+    if (head->cache == 0)
+        return false;
+
+#if OVERRUN_CHECK
+    if (head->magic != VIGILANT_MAGIC)
+        return false;
+    // Footer gets checked in SlamCache::free, as we don't know the object size.
+#endif
+
+    // Free the memory
+    head->cache->isPointerValid(mem - sizeof(AllocHeader));
+    return true;
+}
+
+bool _assert_ptr_valid(uintptr_t ptr)
+{
+    return SlamAllocator::instance().isPointerValid(ptr);
 }
