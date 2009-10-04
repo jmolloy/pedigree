@@ -139,7 +139,7 @@ env['LD'] = env['LINK']
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
     if re.match('i[3456]86',tmp.group(1)) != None:
-        defines = safeAppend(defines, default_defines)
+        defines = safeAppend(defines, default_defines['x86'])
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x86'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x86'])
         env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x86'])
@@ -148,7 +148,7 @@ if(tmp != None):
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
     elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-        defines = safeAppend(defines, default_defines)
+        defines = safeAppend(defines, default_defines['x64'])
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x64'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x64'])
         env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x64'])
@@ -189,11 +189,16 @@ else:
 
 # Extra build flags
 if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:
-    env['CXXFLAGS'] += ' -Werror'
-    env['CFLAGS'] += ' -Werror'
+    env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], ' -Werror')
+    env['CFLAGS'] = safeAppend(env['CFLAGS'], ' -Werror')
+else:
+    env['CXXFLAGS'] = env['CXXFLAGS'].replace('-Werror', '')
+    env['CFLAGS'] = env['CFLAGS'].replace('-Werror', '')
 
 if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
-    env['LINKFLAGS'] += ' --verbose'
+    env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], ' --verbose')
+else:
+    env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
 additionalDefines = ['installer', 'debugger', 'cripple_hdd']
 for i in additionalDefines:
