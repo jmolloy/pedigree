@@ -31,51 +31,30 @@ DeviceHashTree::~DeviceHashTree()
 
 void DeviceHashTree::fill(Device *root)
 {
-    static SHA1 mySha1;
     for(unsigned int i = 0; i < root->getNumChildren(); i++)
     {
         Device *pChild = root->getChild(i);
         if(pChild->getType() != Device::Root)
-        {
-            // Grab the device information
-            String name, dump;
-            pChild->getName(name);
-            pChild->dump(dump);
-            uint32_t a, b, c;
-            uint32_t bus = pChild->getPciBusPosition();
-            uint32_t dev = pChild->getPciDevicePosition();
-            uint32_t func = pChild->getPciFunctionNumber();
-            uint16_t devId = pChild->getPciDeviceId();
-
-            // Build the string to be hashed
-            NormalStaticString theString;
-            theString.clear();
-            theString += name;
-            theString += "-";
-            theString += dump;
-            theString += "-";
-            theString.append(bus);
-            theString += ".";
-            theString.append(dev);
-            theString += ".";
-            theString.append(func);
-
-            // Hash the string
-            mySha1.Reset();
-            mySha1.Input(static_cast<const char*>(theString), theString.length());
-            unsigned int digest[5];
-            mySha1.Result(digest);
-
-            // Only use 4 bytes of the hash
-            NOTICE("Device hash for `" << dump << "' is: " << digest[0] << ".");
-            m_DeviceTree.insert(digest[0], pChild);
-        }
+            add(pChild);
 
         if(pChild->getNumChildren())
             fill(pChild);
     }
 
     m_bInitialised = true;
+}
+
+void DeviceHashTree::add(Device *p)
+{
+    size_t hash = getHash(p);
+    if(m_DeviceTree.lookup(hash))
+        return;
+    
+    String dump;
+    p->dump(dump);
+
+    NOTICE("Device hash for `" << dump << "' is: " << hash << ".");
+    m_DeviceTree.insert(hash, p);
 }
 
 Device *DeviceHashTree::getDevice(uint32_t hash)
@@ -95,4 +74,41 @@ Device *DeviceHashTree::getDevice(String hash)
         /// \todo String -> int
         return m_DeviceTree.lookup(0);
     }
+}
+
+size_t DeviceHashTree::getHash(Device *pChild)
+{
+    static SHA1 mySha1;
+
+    // Grab the device information
+    String name, dump;
+    pChild->getName(name);
+    pChild->dump(dump);
+    uint32_t a, b, c;
+    uint32_t bus = pChild->getPciBusPosition();
+    uint32_t dev = pChild->getPciDevicePosition();
+    uint32_t func = pChild->getPciFunctionNumber();
+    uint16_t devId = pChild->getPciDeviceId();
+
+    // Build the string to be hashed
+    NormalStaticString theString;
+    theString.clear();
+    theString += name;
+    theString += "-";
+    theString += dump;
+    theString += "-";
+    theString.append(bus);
+    theString += ".";
+    theString.append(dev);
+    theString += ".";
+    theString.append(func);
+
+    // Hash the string
+    mySha1.Reset();
+    mySha1.Input(static_cast<const char*>(theString), theString.length());
+    unsigned int digest[5];
+    mySha1.Result(digest);
+    
+    // Only use 4 bytes of the hash
+    return digest[0];
 }

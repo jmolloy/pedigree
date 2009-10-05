@@ -161,6 +161,28 @@ class IpAddress
 
     /** Operators */
 
+    IpAddress operator + (IpAddress a)
+    {
+      if(a.getType() != m_Type || m_Type == IPv6 || a.getType() == IPv6)
+          return IpAddress();
+      else
+      {
+          IpAddress ret(getIp() + a.getIp());
+          return ret;
+      }
+    }
+
+    IpAddress operator & (IpAddress a)
+    {
+      if(a.getType() != m_Type || m_Type == IPv6 || a.getType() == IPv6)
+          return IpAddress();
+      else
+      {
+          IpAddress ret(getIp() & a.getIp());
+          return ret;
+      }
+    }
+
     IpAddress& operator = (IpAddress a)
     {
       if(a.getType() == IPv6)
@@ -186,10 +208,29 @@ class IpAddress
       }
     }
 
+    bool operator != (IpAddress a)
+    {
+      if(a.getType() == IPv4)
+        return (a.getIp() != getIp());
+      else
+      {
+        // probably use memcmp for IPv6... too lazy to check at the moment
+        return false;
+      }
+    }
+
     bool operator == (uint32_t a)
     {
       if(getType() == IPv4)
         return (a == getIp());
+      else
+        return false;
+    }
+
+    bool operator != (uint32_t a)
+    {
+      if(getType() != IPv4)
+        return (a != getIp());
       else
         return false;
     }

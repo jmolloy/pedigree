@@ -25,30 +25,26 @@
 
 Loopback Loopback::m_Instance;
 
-Loopback::Loopback() :
-  Network(), m_StationInfo()
+Loopback::Loopback() : Network(), m_StationInfo()
 {
-    NOTICE("Loopback init");
+    setSpecificType(String("Loopback-card"));
+    NetworkStack::instance().registerDevice(this);
 
-  setSpecificType(String("Loopback-card"));
-  NetworkStack::instance().registerDevice(this);
-  
-  m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
-  m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+    m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
+    m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
 
-  RoutingTable::instance().Add(m_StationInfo.ipv4, this);
+    RoutingTable::instance().Add(RoutingTable::DestIp, m_StationInfo.ipv4, IpAddress(), String(""), this);
 }
 
-Loopback::Loopback(Network* pDev) :
-  Network(pDev), m_StationInfo()
+Loopback::Loopback(Network* pDev) : Network(pDev), m_StationInfo()
 {
-  setSpecificType(String("Loopback-card"));
-  NetworkStack::instance().registerDevice(this);
-  
-  m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
-  m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+    setSpecificType(String("Loopback-card"));
+    NetworkStack::instance().registerDevice(this);
 
-  RoutingTable::instance().Add(m_StationInfo.ipv4, this);
+    m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
+    m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+
+    RoutingTable::instance().Add(RoutingTable::DestIp, m_StationInfo.ipv4, IpAddress(), String(""), this);
 }
 
 Loopback::~Loopback()
@@ -57,22 +53,22 @@ Loopback::~Loopback()
 
 bool Loopback::send(size_t nBytes, uintptr_t buffer)
 {
-  if(nBytes > 0xffff)
-  {
-    ERROR("Loopback: Attempt to send a packet with size > 64 KB");
-    return false;
-  }
-  NetworkStack::instance().receive(nBytes, buffer, this, 0);
-  return true;
+    if(nBytes > 0xffff)
+    {
+        ERROR("Loopback: Attempt to send a packet with size > 64 KB");
+        return false;
+    }
+    NetworkStack::instance().receive(nBytes, buffer, this, 0);
+    return true;
 }
 
 bool Loopback::setStationInfo(StationInfo info)
 {
-  // nothing here is modifiable
-  return true;
+    // Nothing here is modifiable
+    return true;
 }
 
 StationInfo Loopback::getStationInfo()
 {
-  return m_StationInfo;
+    return m_StationInfo;
 }

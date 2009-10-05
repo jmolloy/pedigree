@@ -152,36 +152,43 @@ void init()
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
-    // Build routing tables
-    File* routeConfig = VFS::instance().find(String("root»/config/routes"));
-    if (routeConfig)
+    // Build routing tables - try to find a default configuration that can
+    // connect to the outside world
+    IpAddress empty;
+    bool bRouteFound = false;
+    for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
     {
-        NOTICE("Loading route table from file");
-        /// \todo Write this...
-    }
-    else
-    {
-        // try to find a default configuration that can connect to the outside world
-        bool bRouteFound = false;
-        for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-        {
-            /// \todo Perhaps try and ping a remote host?
-            Network* card = NetworkStack::instance().getDevice(i);
-            StationInfo info = card->getStationInfo();
+        /// \todo Perhaps try and ping a remote host?
+        Network* card = NetworkStack::instance().getDevice(i);
+        StationInfo info = card->getStationInfo();
 
-            // If the device has a gateway, set it as the default and continue
-            if (!(info.gateway == 0) && !bRouteFound) /// \todo write operator !=
-            {
-                RoutingTable::instance().AddNamed(String("default"), card);
-                bRouteFound = true;
-//                break;
-            }
+        // Add to the hash tree, if not already done. This ensures the loopback
+        // device is definitely available as an interface.
+        DeviceHashTree::instance().add(card);
+
+        // If the device has a gateway, set it as the default and continue
+        if ((info.gateway != IpAddress()) && !bRouteFound)
+        {
+            RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), card);
+            bRouteFound = true;
+
+            // Additionally route the complement of its subnet to the gateway
+            RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
+                                         info.ipv4,
+                                         info.subnetMask,
+                                         info.gateway,
+                                         String(""),
+                                         card);
         }
 
-        // otherwise, just assume the default is interface zero
-        if (!bRouteFound)
-            RoutingTable::instance().AddNamed(String("default"), NetworkStack::instance().getDevice(0));
+        // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
+        if(info.ipv4 != Network::convertToIpv4(127, 0, 0, 1))
+            RoutingTable::instance().Add(RoutingTable::DestIpSub, info.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), card);
     }
+
+    // Otherwise, just assume the default is interface zero
+    if (!bRouteFound)
+        RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
 
     str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);

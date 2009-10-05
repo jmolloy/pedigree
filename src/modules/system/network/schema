@@ -13,9 +13,16 @@
 -- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 create table 'routes' (
-        'id' integer primary key,
-        'dest' integer,
-        'source' varchar(32),
+        'id' integer primary key autoincrement,
+        
+        -- Conventional IP match
+        'ipaddr' integer,
+        
+        -- Subnet match
+        'ipstart' integer,
+        'ipend' integer,
+        
+        'subip' integer,
+        'name' varchar(64),
         'type' integer,
-        'invsource' integer,
-        'iface' varchar(8));
+        'iface' integer);

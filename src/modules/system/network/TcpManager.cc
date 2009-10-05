@@ -73,7 +73,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPort, TcpEndpoint* endpoint, bool bBlock, Network* pCard)
 {
   if(!pCard)
-    pCard = RoutingTable::instance().DetermineRoute(remoteHost.ip);
+    pCard = RoutingTable::instance().DetermineRoute(&remoteHost.ip);
 
   if(!endpoint || !pCard)
     return 0;
@@ -318,10 +318,10 @@ void TcpManager::returnEndpoint(Endpoint* e)
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {
-  if(!pCard)
-    pCard = RoutingTable::instance().DefaultRoute();
+    if(!pCard)
+        pCard = RoutingTable::instance().DefaultRoute();
 
-  Endpoint* e;
+    Endpoint* e;
 
   /// \todo FIXME: Don't let multiple connections use the same local port!
 
@@ -337,5 +337,5 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 
     e = static_cast<Endpoint*>(tmp);
 
-  return e;
+    return e;
 }

@@ -208,9 +208,9 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
         {
             if (remoteIp.getIp() != 0)
             {
+                pCard = RoutingTable::instance().DetermineRoute(&remoteIp);
                 remoteHost.remotePort = p->getRemotePort();
                 remoteHost.ip = remoteIp;
-                pCard = RoutingTable::instance().DetermineRoute(remoteIp);
             }
         }
         else
@@ -218,6 +218,11 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
             pCard = RoutingTable::instance().DefaultRoute();
         }
 
+        if(!pCard)
+        {
+            ERROR("NetManager::write - couldn't find a route for this destination IP.");
+            return 0;
+        }
         return ce->send(size, buffer, remoteHost, false, pCard);
     }
     else

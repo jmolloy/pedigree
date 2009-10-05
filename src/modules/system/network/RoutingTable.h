@@ -22,6 +22,7 @@
 #include <utilities/RadixTree.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
+#include <config/Config.h>
 
 /** #define'd to keep out of compiles. It's currently only an idea, there's still so much
     to figure out before this sort of concept is ready to go */
@@ -74,12 +75,16 @@ class Route
 /**
  * The Pedigree routing table supports three different ways to route packets:
  * 1. Destination IP match
- * 2. Destination subnet match
- * 3. Complement of destination subnet match
+ * 2. Destination IP match with substitution
+ * 3. Destination subnet match
+ * 4. Complement of destination subnet match
+ * 5. Named route
  *
  * A destination IP match merely uses a specific interface if the IP to send a
  *     a packet to matches the IP in the table. There is no substitution
  *     performed at all.
+ * A destination IP match with substitution acts like a normal destination IP
+ *     match, except it also performs IP substitution.
  * A destination subnet match uses a specific interface if the IP to send a
  *     packet to is within the subnet defined in the table. No substitution is
  *     performed at all.
@@ -87,6 +92,7 @@ class Route
  *     to send a packet to is *not* within the subnet defined in the table.
  *     This substitutes the destination IP to that of a device that can route
  *     the packets to the given subnet.
+ * A named route is a route with a specific name, such as "default".
  *
  * All of these are stored in the routes table in the configuration database.
  */
@@ -94,62 +100,55 @@ class Route
 /** Routing table implementation */
 class RoutingTable
 {
-  public:
-    RoutingTable() :
-      m_Table()
-    {};
-    virtual ~RoutingTable()
-    {};
+    public:
 
-    static RoutingTable& instance()
-    {
-      return m_Instance;
-    }
+        enum Type
+        {
+            DestIp = 0,
+            DestIpSub,
+            DestSubnet,
+            DestSubnetComplement,
+            Named
+        };
 
-    /** Adds a route to the table */
-    void Add(IpAddress dest, Network* card)
-    {
-      m_Table.insert(dest.toString(), card);
-    }
+        RoutingTable();
+        virtual ~RoutingTable();
 
-    /** Adds a named route to the table */
-    void AddNamed(String route, Network* card)
-    {
-      m_Table.insert(route, card);
-    }
+        static RoutingTable& instance()
+        {
+            return m_Instance;
+        }
 
-    /** Removes a route from the table */
-    void Remove(IpAddress routeip)
-    {
-      m_Table.remove(routeip.toString());
-    }
+        /** Adds a route to the table */
+        void Add(Type type, IpAddress dest, IpAddress subIp, String meta, Network *card);
 
-    /** Determines the routing for a specific IP */
-    Network* DetermineRoute(IpAddress dest, bool bGiveDefault = true)
-    {
-      // look up the IP
-      Network* ret = 0;
-      if((ret = m_Table.lookup(dest.toString())))
-        return ret;
+        /** Adds a subnet-based route to the table */
+        void Add(Type type, IpAddress dest, IpAddress subnet, IpAddress subIp, String meta, Network *card);
 
-      // none found so try the default route if needed
-      if(bGiveDefault)
-        return m_Table.lookup(String("default"));
-      else
-        return 0;
-    }
+        /// \todo Functions to remove routes
 
-    /** Gets the default route */
-    Network* DefaultRoute()
-    {
-      return m_Table.lookup(String("default"));
-    }
-  
-  private:
+        /**
+         * Determines the routing for a specific IP
+         * \param ip A pointer to the IP to look for. A potential side effect
+         *           of this function is for this IP address to be overwritten.
+         * \param bGiveDefault If no match is found, return the default route.
+         * \return A pointer to the Network device to be used to transmit the
+         *         packet.
+         */
+        Network *DetermineRoute(IpAddress *ip, bool bGiveDefault = true);
 
-    static RoutingTable m_Instance;
+        /** Obtains a route by name rather than by address (assuming it has one) */
+        Network *DetermineRoute(String name, bool bGiveDefault = true);
 
-    RadixTree<Network*> m_Table;
+        /** Grabs the default route */
+        Network *DefaultRoute();
+
+    private:
+
+        static RoutingTable m_Instance;
+
+        /** Used to finalise the determined route */
+        Network *route(IpAddress *ip, Config::Result *pResult);
 };
 
 #endif

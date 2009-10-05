@@ -51,11 +51,19 @@ class DeviceHashTree
          */
         void fill(Device *root);
 
+        /**
+         * Adds a device, if it doesn't already exist
+         */
+        void add(Device *p);
+
         /** Gets a device from an integer hash */
         Device *getDevice(uint32_t hash);
 
         /** Gets a device from a string hash */
         Device *getDevice(String hash);
+
+        /** Grabs the hash for a given device */
+        size_t getHash(Device *p);
 
     private:
 

@@ -77,21 +77,6 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   // copy the payload into the packet
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
 
-  // send to the gateway if it's outside our subnet, but only if we have a subnet mask
-  if(me.subnetMask.getIp())
-  {
-    if((dest.getIp() & me.subnetMask.getIp()) != (me.ipv4.getIp() & me.subnetMask.getIp()))
-    {
-      if(me.gateway.getIp())
-        dest = me.gateway;
-      else
-      {
-        delete [] newPacket;
-        return false;
-      }
-    }
-  }
-
   // get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
   ///       it doesn't happen?
