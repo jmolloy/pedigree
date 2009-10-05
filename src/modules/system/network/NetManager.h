@@ -102,7 +102,10 @@ class Socket : public File
             }
             else
             {
-                return ce->dataReady(timeout > 0, timeout) ? 1 : 0;
+                NOTICE("Checking for data...");
+                bool ret = ce->dataReady(timeout > 0, timeout);
+                NOTICE("Data ready: " << ret << ".");
+                return ret ? 1 : 0;
             }
         }
         else if(m_Endpoint->getType() == Endpoint::ConnectionBased)
@@ -151,6 +154,12 @@ class Socket : public File
     }
 
     virtual void decreaseRefCount(bool bIsWriter);
+
+    /** Somehow the endpoint state changed - data came in, it d/c'd, whatever. */
+    virtual void endpointStateChanged()
+    {
+        dataChanged();
+    }
 
   private:
 

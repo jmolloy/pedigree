@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "NetManager.h"
 #include "TcpManager.h"
 #include <Log.h>
 #include <syscallError.h>
@@ -132,6 +133,12 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
         m_DataStream.append(m_ShadowDataStream.getBuffer(), shadowSize);
         m_ShadowDataStream.remove(0, shadowSize);
         nBytesRemoved += shadowSize;
+
+        // Data has arrived!
+        for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
+        {
+          (*it)->endpointStateChanged();
+        }
     }
 }
 

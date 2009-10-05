@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "NetManager.h"
 #include "RawManager.h"
 #include "NetManager.h"
 #include <Log.h>
@@ -70,8 +71,22 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
   // Check for data to be ready. dataReady (acquire) takes one from the Semaphore,
   // so using dataReady *again* to see if data is available is *wrong* unless
   // the queue is empty.
-  bool bDataReady = false;
-  if(m_DataQueue.count())
+  bool bDataReady = true;
+  if(bBlock)
+  {
+    if(nTimeout)
+      m_DataQueueSize.acquire(1, nTimeout);
+    else
+      m_DataQueueSize.acquire();
+
+    if(Processor::information().getCurrentThread()->wasInterrupted())
+      bDataReady = false;
+  }
+  else
+    bDataReady = m_DataQueueSize.tryAcquire();
+      
+      //dataReady(bBlock, nTimeout); // false;
+  /*if(m_DataQueue.count())
     bDataReady = true;
   else if(bBlock)
   {
@@ -79,7 +94,7 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
       bDataReady = false;
   }
   else
-    bDataReady = false;
+    bDataReady = false;*/
 
   if(bDataReady)
   {
@@ -125,13 +140,20 @@ void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Remo
 
   m_DataQueue.pushBack(newBlock);
   m_DataQueueSize.release();
+
+  // Data has arrived!
+  for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
+    (*it)->endpointStateChanged();
 }
 
 bool RawEndpoint::dataReady(bool block, uint32_t tmout)
 {
     // Attempt to avoid setting up the timeout if possible
     if(m_DataQueueSize.tryAcquire())
+    {
+        m_DataQueueSize.release();
         return true;
+    }
     else if(!block)
         return false;
 
@@ -146,6 +168,7 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
         if(Processor::information().getCurrentThread()->wasInterrupted())
             return false;
     }
+    m_DataQueueSize.release();
     return true;
 }
 

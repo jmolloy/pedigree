@@ -116,7 +116,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
 {
     // Investigate the timeout parameter.
     TimeoutType timeoutType;
-    size_t timeoutSecs = 0;
+    size_t timeoutSecs = 0, timeoutUSecs = 0;
     if (timeout == 0)
         timeoutType = InfiniteTimeout;
     else if (timeout->tv_sec == 0 && timeout->tv_usec == 0)
@@ -124,14 +124,15 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     else
     {
         timeoutType = SpecificTimeout;
-        timeoutSecs = timeout->tv_sec + timeout->tv_usec / 1000000;
+        timeoutSecs = timeout->tv_sec;
+        timeoutUSecs = timeout->tv_usec;
         /// \bug Unfortunately we don't sleep for under one second. So if we
         ///      end up with secs < 1, we set ourselves to ReturnImmediately.
-        if (timeoutSecs == 0)
-            timeoutType = ReturnImmediately;
+        //if (timeoutSecs == 0)
+        //    timeoutType = ReturnImmediately;
     }
 
-    F_NOTICE("select(" << Dec << nfds << ", ?, ?, ?, {" << static_cast<uintptr_t>(timeoutType) << ", " << timeoutSecs << "}" << Hex);
+    F_NOTICE("select(" << Dec << nfds << ", ?, ?, ?, {" << static_cast<uintptr_t>(timeoutType) << ", " << timeoutSecs << "})" << Hex);
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -207,7 +208,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
             // Has the file already got data in it?
             /// \todo Specify read/write/error to select and monitor.
-            if (pFd->file->select(false, 0))
+            if (pFd->file->select(true, 0))
             {
                 bWillReturnImmediately = true;
                 nRet ++;
@@ -229,7 +230,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 /// \note This is safe because the event above can only be 
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
-                if (pFd->file->select(false, 0))
+                if (pFd->file->select(true, 0))
                 {
                     bWillReturnImmediately = true;
                     nRet ++;
@@ -284,7 +285,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         // We wait on the semaphore 'sem': Its address has been given to all
         // the events and will be raised whenever an FD has action.
         assert(nRet == 0);
-        sem.acquire(1, timeoutSecs);
+        sem.acquire(1, timeoutSecs, timeoutUSecs);
         
         // Did we actually get the semaphore or did we timeout?
         if (!Processor::information().getCurrentThread()->wasInterrupted())

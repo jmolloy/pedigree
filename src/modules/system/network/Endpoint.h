@@ -20,6 +20,7 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <machine/Network.h>
+class Socket;
 
 // Forward declaration, because Endpoint is used by ProtocolManager
 class ProtocolManager;
@@ -63,13 +64,16 @@ public:
 
     /** Constructors and destructors */
     Endpoint() :
-            m_LocalPort(0), m_RemotePort(0), m_LocalIp(), m_RemoteIp(), m_Manager(0), m_bConnection(false)
+            m_Sockets(), m_LocalPort(0), m_RemotePort(0), m_LocalIp(), m_RemoteIp(),
+            m_Manager(0), m_bConnection(false)
     {};
     Endpoint(uint16_t local, uint16_t remote) :
-            m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(), m_Manager(0), m_bConnection(false)
+            m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(),
+            m_Manager(0), m_bConnection(false)
     {};
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
-            m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp), m_Manager(0), m_bConnection(false)
+            m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp),
+            m_Manager(0), m_bConnection(false)
     {};
     virtual ~Endpoint() {};
 
@@ -166,6 +170,30 @@ public:
     {
         return !m_bConnection;
     }
+    
+    /** Adds a socket to the internal list */
+    void AddSocket(Socket *s)
+    {
+        m_Sockets.pushBack(s);
+    }
+
+    /** Removes a socket from the internal list */
+    void RemoveSocket(Socket *s)
+    {
+        for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
+        {
+            if(*it == s)
+            {
+                m_Sockets.erase(it);
+                return;
+            }
+        }
+    }
+
+protected:
+
+    /** List of sockets linked to this Endpoint */
+    List<Socket *> m_Sockets;
 
 private:
 

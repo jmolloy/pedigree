@@ -40,6 +40,8 @@ void Socket::decreaseRefCount(bool bIsWriter)
     else
         m_nReaders --;
 
+    m_Endpoint->RemoveSocket(this);
+
     if (m_nReaders == 0 && m_nWriters == 0)
     {
         if (m_Endpoint)
@@ -81,6 +83,7 @@ File* NetManager::newEndpoint(int type, int protocol)
     {
         File *ret = new Socket(type, p, this);
         ret->increaseRefCount(false);
+        p->AddSocket(static_cast<Socket*>(ret));
         return ret;
     }
     else
