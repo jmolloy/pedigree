@@ -32,7 +32,10 @@ env.Depends(hddimg, 'libs')
 env.Depends(hddimg, 'apps')
 env.Depends(hddimg, configdb)
 
-env.Command(configdb, None, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
+configSchemas = []
+for i in os.walk(env.Dir("#src").abspath):
+    configSchemas += map(lambda x: i[0] + '/' + x, filter(lambda y: y == 'schema', i[2]))
+env.Command(configdb, configSchemas, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
 
 # TODO: If any of these commands fail, they WILL NOT STOP the build!
 
