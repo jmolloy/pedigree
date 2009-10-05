@@ -87,7 +87,11 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
-        buff = readBlock(block*blockSize);
+        if (!buff)
+        {
+            buff = readBlock(block*blockSize);
+            m_DataCache.insert(block*blockSize, buff);
+        }
 
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
