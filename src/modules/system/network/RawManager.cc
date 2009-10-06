@@ -72,21 +72,7 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
   // so using dataReady *again* to see if data is available is *wrong* unless
   // the queue is empty.
   bool bDataReady = true;
-  if(bBlock)
-  {
-    if(nTimeout)
-      m_DataQueueSize.acquire(1, nTimeout);
-    else
-      m_DataQueueSize.acquire();
-
-    if(Processor::information().getCurrentThread()->wasInterrupted())
-      bDataReady = false;
-  }
-  else
-    bDataReady = m_DataQueueSize.tryAcquire();
-      
-      //dataReady(bBlock, nTimeout); // false;
-  /*if(m_DataQueue.count())
+  if(m_DataQueue.count())
     bDataReady = true;
   else if(bBlock)
   {
@@ -94,7 +80,7 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
       bDataReady = false;
   }
   else
-    bDataReady = false;*/
+    bDataReady = false;
 
   if(bDataReady)
   {
@@ -150,10 +136,7 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
 {
     // Attempt to avoid setting up the timeout if possible
     if(m_DataQueueSize.tryAcquire())
-    {
-        m_DataQueueSize.release();
         return true;
-    }
     else if(!block)
         return false;
 
@@ -168,7 +151,6 @@ bool RawEndpoint::dataReady(bool block, uint32_t tmout)
         if(Processor::information().getCurrentThread()->wasInterrupted())
             return false;
     }
-    m_DataQueueSize.release();
     return true;
 }
 

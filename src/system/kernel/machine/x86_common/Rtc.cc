@@ -20,6 +20,8 @@
 #include <process/Thread.h>
 #include "Rtc.h"
 
+#include <linker/KernelElf.h>
+
 #define INITIAL_RTC_HZ 512
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
@@ -298,7 +300,11 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
           Alarm *pA = *it;
           if ( pA->m_Time <= getTickCount() )
           {
+              NOTICE("Dispatching alarm");
+              NOTICE("number = " << pA->m_pEvent->getHandlerAddress() << ".");
+              NOTICE("Symbol is " << KernelElf::instance().lookupSymbol(pA->m_pEvent->getHandlerAddress()) << ".");
               pA->m_pThread->sendEvent(pA->m_pEvent);
+
               m_Alarms.erase(it);
               bDispatched = true;
               break;

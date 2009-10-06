@@ -173,6 +173,10 @@ void Thread::sendEvent(Event *pEvent)
         // Interrupt the sleeping thread, there's an event firing
         m_Status = Ready;
         NOTICE("Set status");
+
+        // Notify the scheduler that we're now ready, so we get put into the
+        // scheduling algorithm's ready queue.
+        Scheduler::instance().threadStatusChanged(this);
     }
 }
 
