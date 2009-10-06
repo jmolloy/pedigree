@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 James Molloy, James Pritchett, Jšrg PfŠhler, Matthew Iselin
+# Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,7 @@ if which mcopy >/dev/null 2>&1; then
   rm -rf tmp
 
   sh $SRCDIR/../scripts/mtsetup.sh ./disk.img > /dev/null 2>&1
-  
+
   # Set the volume label to the installer image label
   mlabel -c C:INSRAMFS
 
