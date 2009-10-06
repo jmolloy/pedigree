@@ -50,6 +50,8 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
     IpAddress bottomOfRange = dest & subnet;
     IpAddress topOfRange = (dest & subnet) + invSubnet;
 
+    NOTICE("Adding " << (type == DestSubnetComplement ? "complement of " : "") << " subnet match for range " << bottomOfRange.toString() << "-" << topOfRange.toString());
+
     // Add to the database
     String str;
     size_t hash = DeviceHashTree::instance().getHash(card);

@@ -215,7 +215,6 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
 
     if (flags & VirtualAddressSpace::KernelMode)
     {
-        NOTICE("Dispatching kernel-mode event at " << handlerAddress << ".");
         void (*fn)(size_t) = reinterpret_cast<void (*)(size_t)>(handlerAddress);
         fn(addr);
         pThread->popState();

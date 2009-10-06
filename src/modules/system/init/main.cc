@@ -167,13 +167,16 @@ void init()
         DeviceHashTree::instance().add(card);
 
         // If the device has a gateway, set it as the default and continue
-        if ((info.gateway != empty) && !bRouteFound)
+        if ((info.gateway != empty))
         {
-            RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), card);
-            bRouteFound = true;
+            if(!bRouteFound)
+            {
+                RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), card);
+                bRouteFound = true;
+            }
 
             // Additionally route the complement of its subnet to the gateway
-            NOTICE("Adding a new route - complement of the subnet of " << info.ipv4.toString() << " that subs in " << info.gateway.toString() << ".");
+            NOTICE("Adding a new route - complement of the subnet of " << info.ipv4.toString() << " that subs in " << info.gateway.toString() << " [subnet=" << info.subnetMask.toString() << "].");
             RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
                                          info.ipv4,
                                          info.subnetMask,

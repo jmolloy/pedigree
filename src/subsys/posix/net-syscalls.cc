@@ -378,7 +378,6 @@ ssize_t posix_recvfrom(void* callInfo)
         *addrlen = sizeof(struct sockaddr_in);
     }
 
-    NOTICE("recvfrom returning " << ret << ".");
     return ret;
 }
 
