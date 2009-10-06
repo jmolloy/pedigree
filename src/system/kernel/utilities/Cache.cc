@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ uintptr_t Cache::lookup (uintptr_t key)
 
     uintptr_t ptr = pPage->location;
     pPage->refcnt ++;
-   
+
     m_Lock.leave();
     return ptr;
 }
@@ -109,6 +109,6 @@ void Cache::release (uintptr_t key)
 
     assert (pPage->refcnt);
     pPage->refcnt --;
-   
+
     m_Lock.leave();
 }

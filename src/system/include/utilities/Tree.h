@@ -63,13 +63,13 @@ class Tree<void*,void*>
             traverseNext();
           value = pNode;
         };
-        
+
         IteratorNode *next()
         {
           traverseNext();
-          
+
           value = pNode;
-          
+
           return this;
         }
         IteratorNode *previous()
@@ -85,19 +85,19 @@ class Tree<void*,void*>
                 traverseNext();
             value = pNode;
         }
-        
+
         Node* value;
-      
+
       private:
-        
+
         Node* pNode;
         Node* pPreviousNode;
-        
+
         void traverseNext()
         {
           if(pNode == 0)
             return;
-          
+
           if((pPreviousNode == pNode->parent) && pNode->leftChild)
           {
             pPreviousNode = pNode;
@@ -122,13 +122,13 @@ class Tree<void*,void*>
           }
         }
     };
-    
+
     //typedef void**        Iterator;
-    
+
     typedef ::TreeIterator<void*, IteratorNode> Iterator;
     /** Constant random-access iterator for the Tree */
     typedef void* const*  ConstIterator;
-    
+
     /** The default constructor, does nothing */
     Tree();
     /** The copy-constructor
@@ -202,10 +202,10 @@ class Tree<void*,void*>
 
     void traverseNode_Insert(Node *n);
     void traverseNode_Remove(Node *n);
-    
+
     Node *root;
     size_t nItems;
-    
+
     IteratorNode* m_Begin;
 };
 
@@ -308,7 +308,7 @@ class Tree<size_t,V*>
             return 0;
         }
     };*/
-    
+
     /// \todo Custom key/value implementations
     typedef Tree<void*,void*>::Iterator      Iterator;
     /** Contant random-access iterator for the Vector */
@@ -405,7 +405,7 @@ class Tree<size_t,size_t>
           else
             return 0;
         }
-        
+
         size_t value()
         {
           if(pNode)
@@ -413,7 +413,7 @@ class Tree<size_t,size_t>
           else
             return 0;
         }
-        
+
         size_t operator * ()
         {
           if(pNode)
@@ -422,7 +422,7 @@ class Tree<size_t,size_t>
             return 0;
         }
     };*/
-    
+
     /// \todo Custom key/value implementations
     typedef Tree<void*,void*>::Iterator      Iterator;
     /** Contant random-access iterator for the Vector */

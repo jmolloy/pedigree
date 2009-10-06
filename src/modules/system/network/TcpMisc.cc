@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,19 +37,19 @@ void TcpBuffer::remove(size_t offset, size_t nBytes)
     resize(offset);
     return;
   }
-  
-  // shift all the data after the removed space into 
+
+  // shift all the data after the removed space into
   uintptr_t destPtr = m_Buffer + offset;
   uintptr_t srcPtr = m_Buffer + offset + nBytes; // the end of all of our copy
   size_t copySize = m_BufferSize - nBytes - offset;
-  
+
   uint8_t* tmp = new uint8_t[copySize];
   memcpy(tmp, reinterpret_cast<void*>(srcPtr), copySize);
-  
+
   memcpy(reinterpret_cast<void*>(destPtr), tmp, copySize);
-  
+
   delete [] tmp;
-  
+
   // reduce the size of the buffer
   resize(m_BufferSize - nBytes);
 }
@@ -72,21 +72,21 @@ void TcpBuffer::resize(size_t n)
       m_BufferSize = 0;
       return;
     }
-    
+
     size_t oldSize = m_BufferSize;
     size_t newSize = n;
     size_t copySize = newSize;
-    
+
     uint8_t* newBuff = new uint8_t[newSize];
-    
+
     if(copySize > oldSize)
       copySize = oldSize;
-    
+
     memcpy(newBuff, reinterpret_cast<void*>(m_Buffer), copySize);
-    
+
     delete [] reinterpret_cast<uint8_t*>(m_Buffer);
     m_Buffer = reinterpret_cast<uintptr_t>(newBuff);
-    
+
     m_BufferSize = newSize;
   }
 }
@@ -110,17 +110,17 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
       size_t resizeBy = lastByteOffset - m_BufferSize;
       resize(m_BufferSize + resizeBy);
     }
-    
+
     // dump the data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);
   }
   else
-  {    
+  {
     size_t oldSize = m_BufferSize;
-    
+
     // we have to resize anyway now, no avoiding it
     resize(m_BufferSize + nBytes);
-        
+
     // shift the old data forward to make room for this
     if(oldSize && (oldSize > offset))
     {
@@ -128,10 +128,10 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
       size_t nBytesToShift = oldSize - offset;
       uintptr_t destPoint = m_Buffer + offset + nBytes; // right after the incoming data
       uintptr_t sourcePoint = m_Buffer + offset;
-      
+
       memcpy(reinterpret_cast<void*>(destPoint), reinterpret_cast<void*>(sourcePoint), nBytesToShift);
     }
-    
+
     // dump our data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);
   }
@@ -177,7 +177,7 @@ Tree<StateBlockHandle,void*>::Tree(const Tree &x) :
 {
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
-  
+
   m_Begin = new IteratorNode(root, 0);
 }
 
@@ -186,9 +186,9 @@ Tree<StateBlockHandle,void*> &Tree<StateBlockHandle,void*>::operator =(const Tre
   clear();
   // Traverse the tree, adding everything encountered.
   traverseNode_Insert(x.root);
-  
+
   m_Begin = new IteratorNode(root, 0);
-  
+
   return *this;
 }
 
@@ -198,7 +198,7 @@ size_t Tree<StateBlockHandle,void*>::count() const
 }
 
 void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
-{  
+{
   Node *n = new Node;
   n->key = key;
   n->element = value;
@@ -206,26 +206,26 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
   n->parent = 0;
   n->leftChild = 0;
   n->rightChild = 0;
-  
+
   bool inserted = false;
-  
+
   if (lookup(key))
   {
       delete n;
       return; // Key already in tree.
   }
-  
+
   if (root == 0)
   {
     root = n; // We are the root node.
-  
+
     m_Begin = new IteratorNode(root, 0);
   }
   else
   {
     // Traverse the tree.
     Node *currentNode = root;
-    
+
     while (!inserted)
     {
       if (key > currentNode->key)
@@ -251,7 +251,7 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
           currentNode = currentNode->leftChild;
       }
     }
-    
+
     // The value has been inserted, but has that messed up the balance of the tree?
     while (currentNode)
     {
@@ -261,7 +261,7 @@ void Tree<StateBlockHandle,void*>::insert(StateBlockHandle key, void *value)
       currentNode = currentNode->parent;
     }
   }
-  
+
   nItems++;
 }
 
@@ -298,10 +298,10 @@ void Tree<StateBlockHandle,void*>::remove(StateBlockHandle key)
     else
       n = n->rightChild;
   }
-  
+
   Node *orign = n;
   if (n == 0) return;
-  
+
   while (n->leftChild || n->rightChild) // While n is not a leaf.
   {
     size_t hl = height(n->leftChild);
@@ -349,7 +349,7 @@ void Tree<StateBlockHandle,void*>::clear()
   traverseNode_Remove(root);
   root = 0;
   nItems = 0;
-  
+
   delete m_Begin;
   m_Begin = 0;
 }
@@ -382,11 +382,11 @@ void Tree<StateBlockHandle,void*>::rotateLeft(Node *n)
 void Tree<StateBlockHandle,void*>::rotateRight(Node *n)
 {
   Node *y = n->leftChild;
-  
+
   n->leftChild = y->rightChild;
   if (y->rightChild != 0)
     y->rightChild->parent = n;
-  
+
   y->parent = n->parent;
   if (n->parent == 0)
     root = y;
@@ -394,28 +394,28 @@ void Tree<StateBlockHandle,void*>::rotateRight(Node *n)
     n->parent->leftChild = y;
   else
     n->parent->rightChild = y;
-  
+
   y->rightChild = n;
   n->parent = y;
 }
 
 size_t Tree<StateBlockHandle,void*>::height(Node *n)
 {
-  // Assumes: n's children's heights are up to date. Will always be true if balanceFactor 
+  // Assumes: n's children's heights are up to date. Will always be true if balanceFactor
   //          is called in a bottom-up fashion.
   if (n == 0) return 0;
-  
+
   size_t tempL = 0;
   size_t tempR = 0;
-  
+
   if (n->leftChild != 0)
     tempL = n->leftChild->height;
   if (n->rightChild != 0)
     tempR = n->rightChild->height;
-  
+
   tempL++; // Account for the height increase stepping up to us, its parent.
   tempR++;
-  
+
   if (tempL > tempR) // If one is actually bigger than the other, return that, else return the other.
   {
     n->height = tempL;

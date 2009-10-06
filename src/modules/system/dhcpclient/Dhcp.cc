@@ -194,7 +194,6 @@ void entry()
 #ifdef X64
     return;
 #endif
-    return;
   // retrieve DHCP addresses for all NICs in the system
   NOTICE("DHCP Client: Iterating through all devices");
   for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
@@ -208,9 +207,9 @@ void entry()
     // check that we should actually try this...
     if(info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1))
       continue; // loopback is already set
-    
+
     IpAddress broadcast(0xffffffff);
-    ConnectionlessEndpoint* e = 
+    ConnectionlessEndpoint* e =
         static_cast<ConnectionlessEndpoint *>(UdpManager::instance().getEndpoint(broadcast, 68, 67));
 
     #define BUFFSZ 2048

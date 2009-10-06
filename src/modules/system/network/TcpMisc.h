@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,9 +29,9 @@ class TcpBuffer
 {
   private:
     //
-    
+
   public:
-  
+
     TcpBuffer() :
       m_Buffer(0), m_BufferSize(0)
     {};
@@ -39,33 +39,33 @@ class TcpBuffer
     {
       resize(0);
     };
-    
+
     /** The current size of the buffer */
     inline size_t getSize()
     {
       return m_BufferSize;
     }
-    
+
     /** Removes from the buffer (if removes all, will destroy the buffer) */
     void remove(size_t offset, size_t nBytes);
-    
+
     /** Resizes the buffer (if set to zero, will destroy it) */
     void resize(size_t n = 0);
-    
+
     /** Returns a pointer to the buffer at a given offset */
     uintptr_t getBuffer(size_t offset = 0);
-    
+
     /** Inserts data at a given offset - DOES NOT OVERWRITE unless specified */
     void insert(uintptr_t buffer, size_t nBytes, size_t offset = 0, bool bOverwrite = false);
-    
+
     /** Appends data to the buffer */
     void append(uintptr_t buffer, size_t nBytes);
-  
+
   private:
-  
+
     /** The actual buffer itself */
     uintptr_t m_Buffer;
-    
+
     /** Current buffer size */
     size_t m_BufferSize;
 };
@@ -80,9 +80,9 @@ struct StateBlockHandle
   uint16_t localPort;
   uint16_t remotePort;
   Endpoint::RemoteEndpoint remoteHost;
-  
+
   bool listen;
-  
+
   bool operator == (StateBlockHandle a)
   {
     if(a.listen) // require the client to want listen sockets only
@@ -99,7 +99,7 @@ struct StateBlockHandle
     }
     return false;
   }
-  
+
   bool operator > (StateBlockHandle a)
   {
     return true;
@@ -121,14 +121,14 @@ template <>
 class Tree<StateBlockHandle,void*>
 {
   private:
-  
+
     /** Tree node. */
     struct Node
     {
       Node() :
         key(), element(0), leftChild(0), rightChild(0), parent(0), height(0)
       {};
-    
+
       StateBlockHandle key;
       void *element;
       struct Node *leftChild;
@@ -136,7 +136,7 @@ class Tree<StateBlockHandle,void*>
       struct Node *parent;
       size_t height;
     };
-    
+
   public:
     /** Random access iterator for the Tree.
       * \note Basically a full reimplementation due to the totally different Node type */
@@ -154,7 +154,7 @@ class Tree<StateBlockHandle,void*>
         {};
         virtual ~Iterator()
         {};
-        
+
         StateBlockHandle key()
         {
           if(pNode)
@@ -165,7 +165,7 @@ class Tree<StateBlockHandle,void*>
             return handle;
           }
         }
-        
+
         void* value()
         {
           if(pNode)
@@ -173,35 +173,35 @@ class Tree<StateBlockHandle,void*>
           else
             return 0;
         }
-        
+
         void operator ++ ()
         {
           traverseNext();
         }
-        
+
         void* operator * ()
         {
           // pNode will be null when we reach the end of the list
           return reinterpret_cast<void*>(pNode);
         }
-        
+
         Iterator& operator = (Iterator& it)
         {
           pNode = it.pNode;
           pPreviousNode = it.pPreviousNode;
-          
+
           return *(const_cast<Iterator*>(this));
         }
-      
+
       private:
         Node* pNode;
         Node* pPreviousNode;
-        
+
         void traverseNext()
         {
           if(pNode == 0)
             return;
-          
+
           if((pPreviousNode == pNode->parent) && pNode->leftChild)
           {
             pPreviousNode = pNode;
@@ -227,7 +227,7 @@ class Tree<StateBlockHandle,void*>
           }
         }
     };*/
-    
+
     class IteratorNode
     {
       public:
@@ -235,32 +235,32 @@ class Tree<StateBlockHandle,void*>
         {};
         IteratorNode(Node* node, Node* prev) : value(node), pNode(node), pPreviousNode(prev)
         {};
-        
+
         IteratorNode *next()
         {
           traverseNext();
-          
+
           value = pNode;
-          
+
           return this;
         }
         IteratorNode *previous()
         {
           return 0;
         }
-        
+
         Node* value;
-      
+
       private:
-        
+
         Node* pNode;
         Node* pPreviousNode;
-        
+
         void traverseNext()
         {
           if(pNode == 0)
             return;
-          
+
           if((pPreviousNode == pNode->parent) && pNode->leftChild)
           {
             pPreviousNode = pNode;
@@ -286,12 +286,12 @@ class Tree<StateBlockHandle,void*>
           }
         }
     };
-    
+
     typedef ::Iterator<void*, IteratorNode> Iterator;
     //typedef void**           Iterator;
     /** Contant random-access iterator for the Vector */
     typedef void** const*     ConstIterator;
-    
+
     /** The default constructor, does nothing */
     Tree();
     /** The copy-constructor
@@ -347,7 +347,7 @@ class Tree<StateBlockHandle,void*>
     }
 
   private:
-  
+
     void rotateLeft(Node *n);
     void rotateRight(Node *n);
     size_t height(Node *n);
@@ -360,9 +360,9 @@ class Tree<StateBlockHandle,void*>
     // root node
     Node *root;
     size_t nItems;
-    
+
     IteratorNode* m_Begin;
-    
+
     /** The actual container */
     //Tree<void*,void*> m_VoidTree;
 };

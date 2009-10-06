@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -53,7 +53,7 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpo
       ERROR("UDP packet information is corrupted - magic is not 0xdeadbeef!");
       ERROR("The packet cannot be forwarded to the application *or* freed.");
       delete ptr;
-      return 0; 
+      return 0;
     }
 
     size_t nBytes = maxSize;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,26 +40,26 @@ public:
   {
     str = "ne2k";
   }
-  
+
   virtual bool send(size_t nBytes, uintptr_t buffer);
-  
+
   virtual bool setStationInfo(StationInfo info);
-  
+
   virtual StationInfo getStationInfo();
-  
+
   // IRQ handler callback.
   virtual bool irq(irq_id_t number, InterruptState &state);
 
   IoBase *m_pBase;
-  
+
 private:
 
   void recv();
-  
+
   static int trampoline(void* p);
-  
+
   void receiveThread();
-  
+
   struct packet
   {
     uintptr_t ptr;
@@ -68,10 +68,10 @@ private:
 
   StationInfo m_StationInfo;
   uint8_t m_NextPacket;
-  
+
   Semaphore m_PacketQueueSize;
   List<packet*> m_PacketQueue;
-  
+
   Ne2k(const Ne2k&);
   void operator =(const Ne2k&);
 };

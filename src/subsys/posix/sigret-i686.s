@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2008 James Molloy, James Pritchett, Jörg Pfähler, Matthew Iselin
+; Copyright (c) 2008 James Molloy, James Pritchett, JÃ¶rg PfÃ¤hler, Matthew Iselin
 ;
 ; Permission to use, copy, modify, and distribute this software for any
 ; purpose with or without fee is hereby granted, provided that the above
@@ -59,23 +59,23 @@ pthread_stub:
   mov ebx, 0
   mov eax, 0x10051
   int 0xff
-  
+
   ; First parameter: entry point
   mov esi, [esp]
-  
+
   ; Second parameter: argument
   mov edi, [esp + 4]
   push edi
-  
+
   ; Run the function
   call esi
-  
+
   ; Effectively, pthread_exit... We can't refer to libc functions from here,
   ; as this code is copied to userspace at runtime.
   mov ebx, eax
   mov eax, 0x10050
   int 0xff
-  
+
   jmp $
 
 pthread_stub_end:

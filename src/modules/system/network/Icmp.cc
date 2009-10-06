@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,30 +36,30 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   size_t newSize = nBytes + sizeof(icmpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
-  
+
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packAddr);
   header->type = type;
   header->code = code;
   header->id = HOST_TO_BIG16(id);
   header->seq = HOST_TO_BIG16(seq);
-  
+
   if(nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(icmpHeader)), reinterpret_cast<void*>(payload), nBytes);
-  
+
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packAddr, newSize);
-  
+
   StationInfo me = pCard->getStationInfo();
   Ip::send(dest, me.ipv4, IP_ICMP, newSize, packAddr, pCard);
-  
+
   delete [] newPacket;
 }
 
 void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
-{  
+{
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ip::ipHeader));
-  
+
   // check the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
@@ -72,9 +72,9 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
     {
       case ICMP_ECHO_REQUEST:
         {
-      
+
         NOTICE("ICMP: Echo request");
-        
+
         // send the reply
         send(
           from,
@@ -90,9 +90,9 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
 
         }
         break;
-      
+
       default:
-      
+
         // Now that things can be moved out to user applications thanks to SOCK_RAW,
         // the kernel doesn't need to implement too much of the ICMP suite.
 

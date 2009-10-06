@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,7 +33,7 @@ public:
   Loopback();
   Loopback(Network* pDev);
   ~Loopback();
-  
+
   Loopback& instance()
   {
     return m_Instance;
@@ -43,19 +43,19 @@ public:
   {
     str = "Loopback";
   }
-  
+
   virtual bool send(size_t nBytes, uintptr_t buffer);
-  
+
   virtual bool setStationInfo(StationInfo info);
-  
+
   virtual StationInfo getStationInfo();
-  
+
 private:
-  
+
   static Loopback m_Instance;
 
   StationInfo m_StationInfo;
-  
+
   Loopback(const Loopback&);
   void operator =(const Loopback&);
 };

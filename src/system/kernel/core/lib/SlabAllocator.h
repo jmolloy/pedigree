@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -124,7 +124,7 @@ class SACache
 
         // Frees a block from this cache
         void free(uintptr_t blk);
-        
+
         // Initialises a slab for use in the cache
         SlabFooter *initialise(uintptr_t slab);
 

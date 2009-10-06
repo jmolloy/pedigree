@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@ void DeviceHashTree::add(Device *p)
     size_t hash = getHash(p);
     if(m_DeviceTree.lookup(hash))
         return;
-    
+
     String dump;
     p->dump(dump);
 
@@ -108,7 +108,7 @@ size_t DeviceHashTree::getHash(Device *pChild)
     mySha1.Input(static_cast<const char*>(theString), theString.length());
     unsigned int digest[5];
     mySha1.Result(digest);
-    
+
     // Only use 4 bytes of the hash
     return digest[0];
 }

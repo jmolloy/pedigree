@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -184,7 +184,7 @@ SACache::SlabFooter *SACache::initialise(uintptr_t slab)
         FATAL("Write me!");
 #endif
     }
-    
+
     return 0;
 }
 

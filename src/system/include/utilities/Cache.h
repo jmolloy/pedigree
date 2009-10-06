@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,13 +32,13 @@ public:
 
     Cache();
     virtual ~Cache();
-  
+
     /** Looks for \p key , increasing \c refcnt by one if returned. */
     uintptr_t lookup (uintptr_t key);
 
     /** Creates a cache entry with the given key. */
     uintptr_t insert (uintptr_t key);
-  
+
     /** Decreases \p key 's \c refcnt by one. */
     void release(uintptr_t key);
 
@@ -62,10 +62,10 @@ private:
 
     /** Key-item pairs. */
     Tree<uintptr_t, CachePage*> m_Pages;
-  
+
     /** Static MemoryAllocator to allocate virtual address space for all caches. */
     static MemoryAllocator m_Allocator;
-  
+
     /** Lock for using the allocator. */
     static Spinlock m_AllocatorLock;
 

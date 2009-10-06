@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,34 +34,34 @@ Ethernet::~Ethernet()
 }
 
 void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
-{  
+{
   // grab the header
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
 
   // dump this packet into the RAW sockets
   RawManager::instance().receive(packet, nBytes, 0, -1, pCard);
-  
+
   // what type is the packet?
   switch(BIG_TO_HOST16(ethHeader->type))
   {
     case ETH_ARP:
       //NOTICE("ARP packet!");
-      
+
       Arp::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
-      
+
       break;
-      
+
     case ETH_RARP:
       NOTICE("RARP packet!");
       break;
-      
+
     case ETH_IP:
       //NOTICE("IP packet!");
-      
+
       Ip::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
-      
+
       break;
-      
+
     default:
       NOTICE("Unknown ethernet packet!");
       break;
@@ -74,24 +74,24 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   size_t newSize = nBytes + sizeof(ethernetHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
-  
+
   // get the ethernet header pointer
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(newPacket);
-  
+
   // copy in the data
   StationInfo me = pCard->getStationInfo();
   memcpy(ethHeader->destMac, dest.getMac(), 6);
   memcpy(ethHeader->sourceMac, me.mac, 6);
   ethHeader->type = HOST_TO_BIG16(type);
-  
+
   // and then throw in the payload
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
-  
+
   // send it over the network
   pCard->send(newSize, packAddr);
 
   // and dump it into any raw sockets (note the -1 for protocol - this means WIRE level endpoints)
   // RawManager::instance().receive(packAddr, newSize, 0, -1, pCard);
-  
+
   delete [] newPacket;
 }
