@@ -167,7 +167,7 @@ void init()
         DeviceHashTree::instance().add(card);
 
         // If the device has a gateway, set it as the default and continue
-        if ((info.gateway != IpAddress()) && !bRouteFound)
+        if ((info.gateway != empty) && !bRouteFound)
         {
             RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), card);
             bRouteFound = true;
