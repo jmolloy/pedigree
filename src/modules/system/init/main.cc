@@ -183,6 +183,14 @@ void init()
                                          info.gateway,
                                          String(""),
                                          card);
+
+            // And the actual subnet that the card is on needs to route to... the card.
+            RoutingTable::instance().Add(RoutingTable::DestSubnet,
+                                         info.ipv4,
+                                         info.subnetMask,
+                                         empty,
+                                         String(""),
+                                         card);
         }
 
         // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
