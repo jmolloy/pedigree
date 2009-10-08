@@ -260,7 +260,7 @@ void entry()
 
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true) >= 0;
+      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
       if(!success)
       {
         WARNING("Couldn't send DHCP DISCOVER packet on interface " << i << "!");
@@ -370,7 +370,8 @@ void entry()
 
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true) >= 0;
+      remoteHost.ip = Network::convertToIpv4(dhcpServer.a1, dhcpServer.a2, dhcpServer.a3, dhcpServer.a4);
+      success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, false, pCard) >= 0;
       if(!success)
       {
         WARNING("Couldn't send DHCP REQUEST packet on interface " << i << "!");

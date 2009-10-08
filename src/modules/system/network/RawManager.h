@@ -67,7 +67,7 @@ class RawEndpoint : public ConnectionlessEndpoint
     virtual ~RawEndpoint();
 
     /** Injects the given buffer into the network stack */
-    virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast);
+    virtual int send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network *pCard = 0);
 
     /** Reads from the front of the packet queue. Will return truncated packets if maxSize < packet size. */
     virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::RemoteEndpoint* remoteHost, int nTimeout = 30);

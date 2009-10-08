@@ -61,17 +61,20 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
   return checksum;
 }
 
-bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast)
+bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network *pCard)
 {
-  // Grab the NIC to send on.
+  // Grab the NIC to send on, if we don't already have one.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
-  IpAddress tmp = dest;
-  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
   if(!pCard)
   {
-      WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
-      return false;
+      IpAddress tmp = dest;
+      Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+      if(!pCard)
+      {
+          WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
+          return false;
+      }
   }
 
   size_t newSize = nBytes + sizeof(udpHeader);

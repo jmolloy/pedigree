@@ -36,15 +36,18 @@ RawEndpoint::~RawEndpoint()
   }
 }
 
-int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast)
+int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network *pCard)
 {
   // Grab the NIC to send on.
-  IpAddress tmp = remoteHost.ip;
-  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
   if(!pCard)
   {
+    IpAddress tmp = remoteHost.ip;
+    Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+    if(!pCard)
+    {
       WARNING("RAW: Couldn't find a route for destination '" << remoteHost.ip.toString() << "'.");
       return false;
+    }
   }
 
   bool success = false;

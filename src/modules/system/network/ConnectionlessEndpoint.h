@@ -52,7 +52,7 @@ public:
      * \param broadcast broadcast over the network
      * \returns -1 on failure, the number of bytes sent otherwise
      */
-    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast)
+    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard = 0)
     {
         return -1;
     };
