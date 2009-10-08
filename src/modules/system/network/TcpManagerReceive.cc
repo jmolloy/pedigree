@@ -84,7 +84,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     /* Incoming segment while the state is CLOSED */
     case Tcp::CLOSED:
 
-      // if no RST, we need to send one
+      // If no RST, we need to send one
       if(!(header->flags & Tcp::RST))
       {
         uint32_t seq = 0;
@@ -103,7 +103,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           ack = BIG_TO_HOST32(header->seqnum) + 1;
           flags = Tcp::RST | Tcp::ACK;
         }
-        Tcp::send(from, handle.localPort, handle.remotePort, seq, ack, flags, window, 0, 0, pCard);
+        if(!Tcp::send(from, handle.localPort, handle.remotePort, seq, ack, flags, window, 0, 0))
+          WARNING("TCP: Sending RST due to incoming segment while in CLOSED state failed.");
       }
 
       delete stateBlock;
@@ -121,12 +122,13 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       }
       else if(header->flags & Tcp::ACK)
       {
-        // an ACK on a listen state is invalid
-        Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
+        // An ACK on a listen state is invalid
+        if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0))
+          WARNING("TCP: Sending RST due to ACK while in LISTEN state failed.");
       }
       else if(header->flags & Tcp::SYN)
       {
-        // create a new server state block for this incoming connection, and register the new client
+        // Create a new server state block for this incoming connection, and register the new client
         // connection ID with the listening endpoint
 
         size_t connId = getConnId();
@@ -134,8 +136,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         StateBlock* newStateBlock = new StateBlock;
         if(!newStateBlock)
         {
-          // if we don't get this new block, pretend we're notlistening
-          Tcp::send(from, handle.localPort, handle.remotePort, 0, stateBlock->seg_ack, Tcp::RST | Tcp::ACK, 0, 0, 0, pCard);
+          // If we don't get this new block, pretend we're not listening
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, 0, stateBlock->seg_ack, Tcp::RST | Tcp::ACK, 0, 0, 0))
+            WARNING("TCP: Couldn't ACK a SYN because no memory was available for a state block.");
           return;
         }
 
@@ -159,8 +162,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
         newStateBlock->currentState = Tcp::SYN_RECEIVED;
 
-        newStateBlock->pCard = pCard;
-
         newStateBlock->endpoint = stateBlock->endpoint;
 
         newStateBlock->numEndpointPackets = 0;
@@ -174,7 +175,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         if(!tmp)
         {
           delete newStateBlock;
-          Tcp::send(from, handle.localPort, handle.remotePort, 0, stateBlock->seg_ack, Tcp::RST | Tcp::ACK, 0, 0, 0, pCard);
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, 0, stateBlock->seg_ack, Tcp::RST | Tcp::ACK, 0, 0, 0))
+            WARNING("TCP: Couldn't ACK a SYN because no memory was available for a state block handle.");
           return;
         }
 
@@ -186,7 +188,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         // ACK the SYN
         IpAddress dest;
         dest = newStateBlock->remoteHost.ip;
-        Tcp::send(dest, newStateBlock->localPort, newStateBlock->remoteHost.remotePort, newStateBlock->iss, newStateBlock->rcv_nxt, Tcp::SYN | Tcp::ACK, newStateBlock->snd_wnd, 0, 0, pCard);
+        if(!Tcp::send(dest, newStateBlock->localPort, newStateBlock->remoteHost.remotePort, newStateBlock->iss, newStateBlock->rcv_nxt, Tcp::SYN | Tcp::ACK, newStateBlock->snd_wnd, 0, 0))
+          WARNING("TCP: Sending SYN/ACK failed");
       }
       else
       {
@@ -208,7 +211,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           // RST required
           if(!(header->flags & Tcp::RST))
           {
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
+            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0))
+              WARNING("TCP: Sending RST due to invalid ACK while in SYN_SENT state failed.");
             break;
           }
         }
@@ -225,7 +229,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       {
         if(header->flags & Tcp::ACK)
         {
-          // drop segment, we're closing NOW!
+          // Drop segment, we're closing NOW!
           stateBlock->currentState = Tcp::CLOSED;
           break;
         }
@@ -243,7 +247,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           {
             stateBlock->currentState = Tcp::ESTABLISHED;
 
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+              WARNING("TCP: Sending ACK due to SYN/ACK while in SYN_SENT state failed.");
 
             break;
           }
@@ -251,7 +256,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           {
             stateBlock->currentState = Tcp::SYN_RECEIVED;
 
-            Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->iss, stateBlock->rcv_nxt, Tcp::SYN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->iss, stateBlock->rcv_nxt, Tcp::SYN | Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+              WARNING("TCP: Sending SYN/ACK due to incorrect SYN/ACK while in SYN_SENT state failed.");
 
             break;
           }
@@ -272,31 +278,34 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
       if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd == 0)
       {
-        // unacceptable
+        // Unacceptable
         if(!(stateBlock->seg_seq == stateBlock->rcv_nxt))
         {
           NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 1.");
-          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK due to unacceptable ACK (1) while in post-SYN_SENT state failed.");
           break;
         }
       }
 
       if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd > 0)
       {
-        // unacceptable
+        // Unacceptable
         if(!(stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))
         {
           NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 2.");
-          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK due to unacceptable ACK (2) while in post-SYN_SENT state failed.");
           break;
         }
       }
 
-      // unacceptable
+      // Unacceptable
       if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd == 0)
       {
         NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 3.");
-        Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+        if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+          WARNING("TCP: Sending ACK due to unacceptable ACK (3) while in post-SYN_SENT state failed.");
         break;
       }
 
@@ -308,7 +317,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           (stateBlock->rcv_nxt <= (stateBlock->seg_seq + stateBlock->seg_len - 1) && (stateBlock->seg_seq + stateBlock->seg_len - 1) < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))))
         {
           NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 4.");
-          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK due to unacceptable ACK (4) while in post-SYN_SENT state failed.");
           break;
         }
       }
@@ -337,7 +347,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::LAST_ACK:
           case Tcp::TIME_WAIT:
 
-            // merely close (state change below)
+            // Merely close (state change below)
             break;
 
           default:
@@ -359,7 +369,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
       if(header->flags & Tcp::ACK)
       {
-        // remove all acked segments from the transmit queue
+        // Remove all acked segments from the transmit queue
         stateBlock->ackSegment();
 
         switch(stateBlock->currentState)
@@ -369,7 +379,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             if(!(stateBlock->snd_una <= stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt))
             {
               NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is an unacceptable segment ACK.");
-              Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
+              if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0))
+            WARNING("TCP: Sending ACK due to unacceptable segment ACK while in post-SYN_SENT state failed.");
               break;
             }
 
@@ -377,7 +388,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             TcpEndpoint* parent = stateBlock->endpoint;
             if(!parent)
             {
-              NOTICE("TCP State Block is in SYN_RECEIVED but has no parent endpoint!");
+              WARNING("TCP State Block is in SYN_RECEIVED but has no parent endpoint!");
               return;
             }
 
@@ -385,16 +396,15 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             if(!stateBlock->endpoint)
             {
               removeConn(connId);
-              Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0, pCard);
+              if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0))
+                WARNING("TCP: Sending RST due to no memory for incoming connection's endpoint");
               return;
             }
 
-            // ensure that the parent endpoint handles this properly
-            NOTICE("stateBlock->endpoint is " << reinterpret_cast<uintptr_t>(stateBlock->endpoint) << " and parent is " << reinterpret_cast<uintptr_t>(parent) << "...");
+            // Ensure that the parent endpoint handles this properly
             parent->addIncomingConnection(stateBlock->endpoint);
-            NOTICE("added incoming connection!");
 
-            // fall through otherwise
+            // Fall through otherwise
             stateBlock->currentState = Tcp::ESTABLISHED;
           }
 
@@ -405,9 +415,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           case Tcp::CLOSING:
 
             if(stateBlock->seg_ack < stateBlock->snd_una)
-              break; // dupe ack, just skip it and continue
+              break; // Dupe ack, just skip it and continue
 
-            // remove from retransmission queue any acknowledged packets...
+            // Remove from retransmission queue any acknowledged packets...
             //stateBlock->retransmitQueue.remove(stateBlock->snd_una - stateBlock->nRemovedFromRetransmit, stateBlock->seg_len);
             //stateBlock->nRemovedFromRetransmit += (stateBlock->seg_ack - stateBlock->snd_una);
 
@@ -415,7 +425,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             if(stateBlock->snd_una < stateBlock->seg_ack && stateBlock->seg_ack <= stateBlock->snd_nxt)
               stateBlock->snd_una = stateBlock->seg_ack;
 
-            // reset the retransmit timer
+            // Reset the retransmit timer
             stateBlock->resetTimer();
 
             if(stateBlock->snd_una >= stateBlock->snd_nxt)
@@ -423,9 +433,11 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
             if(stateBlock->seg_ack > stateBlock->snd_nxt)
             {
-              // ack the ack with the proper sequence number, because the remote TCP has ack'd data that hasn't been sent
-              Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->seg_seq, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-              alreadyAck = true;
+              // Ack the ack with the proper sequence number, because the remote TCP has ack'd data that hasn't been sent
+              if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->seg_seq, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+                WARNING("TCP: Sending ACK with proper sequence number (remote TCP ack'd data that we didn't send) failed.");
+              else
+                alreadyAck = true;
               break;
             }
 
@@ -515,8 +527,10 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           if(stateBlock->endpoint)
             stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
 
-          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-          alreadyAck = true;
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK for incoming data failed!");
+          else
+            alreadyAck = true;
 
           stateBlock->numEndpointPackets++;
         }
@@ -535,8 +549,10 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
         if(!alreadyAck)
         {
-          Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0, pCard);
-          alreadyAck = true;
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK to FIN failed.");
+          else
+            alreadyAck = true;
         }
 
         switch(stateBlock->currentState)

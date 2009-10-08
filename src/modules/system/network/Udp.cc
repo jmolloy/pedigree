@@ -23,6 +23,8 @@
 
 #include "UdpManager.h"
 
+#include "RoutingTable.h"
+
 Udp Udp::udpInstance;
 
 Udp::Udp()
@@ -59,8 +61,19 @@ uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
   return checksum;
 }
 
-bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network* pCard)
+bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast)
 {
+  // Grab the NIC to send on.
+  /// \note The NIC is grabbed here *as well as* IP because we need to use the
+  ///       NIC IP address for the checksum.
+  IpAddress tmp = dest;
+  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+  if(!pCard)
+  {
+      WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
+      return false;
+  }
+
   size_t newSize = nBytes + sizeof(udpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   memset(newPacket, 0, newSize);
@@ -73,10 +86,10 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   header->checksum = 0;
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
 
-  StationInfo me = pCard->getStationInfo();
-
   if(nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
+
+  StationInfo me = pCard->getStationInfo();
 
   IpAddress src;
   if(broadcast)
@@ -87,7 +100,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   header->checksum = 0;
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
 
-  bool success = Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
+  bool success = Ip::send(dest, src, IP_UDP, newSize, packAddr);
 
   delete [] newPacket;
   return success;

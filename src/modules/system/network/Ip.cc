@@ -31,6 +31,8 @@
 #include "RawManager.h"
 #include "Endpoint.h"
 
+#include "RoutingTable.h"
+
 Ip Ip::ipInstance;
 
 Ip::Ip() :
@@ -42,25 +44,39 @@ Ip::~Ip()
 {
 }
 
-bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard)
+bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet)
 {
-  // allocate space for the new packet with an IP header
+  // Grab the address to send to (as well as the NIC)
+  IpAddress realDest = dest;
+  Network* pCard = RoutingTable::instance().DetermineRoute(&realDest);
+  if(!pCard)
+  {
+      WARNING("IPv4: Couldn't find a route for destination '" << dest.toString() << "'.");
+      return false;
+  }
+
+  // Fill in the from address if it's not valid. Note that some protocols
+  // can't do this as they need the source address in the checksum.
+  if(from == Network::convertToIpv4(0, 0, 0, 0))
+  {
+    StationInfo me = pCard->getStationInfo();
+    from = me.ipv4;
+  }
+
+  // Allocate space for the new packet with an IP header
   size_t newSize = nBytes + sizeof(ipHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
 
-  // grab a pointer for the ip header
+  // Grab a pointer for the ip header
   ipHeader* header = reinterpret_cast<ipHeader*>(newPacket);
   memset(header, 0, sizeof(ipHeader));
 
-  // send the packet
-
-  StationInfo me = pCard->getStationInfo();
-
+  // Compose the IPv4 packet header
   header->id = Ip::instance().getNextId();
 
   header->ipDest = dest.getIp(); /// \todo IPv6
-  header->ipSrc = from.getIp(); //me.ipv4.getIp();
+  header->ipSrc = from.getIp();
 
   header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
 
@@ -77,7 +93,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   // copy the payload into the packet
   memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
 
-  // get the address to send to
+  // Get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
   ///       it doesn't happen?
   MacAddress destMac;
@@ -85,7 +101,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   if(dest == 0xffffffff)
     destMac.setMac(0xff);
   else
-    macValid = Arp::instance().getFromCache(dest, true, &destMac, pCard);
+    macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
   if(macValid)
     Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
 

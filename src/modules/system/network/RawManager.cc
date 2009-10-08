@@ -22,6 +22,8 @@
 
 #include "Ip.h"
 
+#include "RoutingTable.h"
+
 RawManager RawManager::manager;
 
 RawEndpoint::~RawEndpoint()
@@ -34,23 +36,32 @@ RawEndpoint::~RawEndpoint()
   }
 }
 
-int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
+int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint remoteHost, bool broadcast)
 {
+  // Grab the NIC to send on.
+  IpAddress tmp = remoteHost.ip;
+  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+  if(!pCard)
+  {
+      WARNING("RAW: Couldn't find a route for destination '" << remoteHost.ip.toString() << "'.");
+      return false;
+  }
+
   bool success = false;
   switch(m_Type)
   {
     case RAW_ICMP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_ICMP, nBytes, buffer, pCard);
+      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_ICMP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;
     case RAW_UDP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_UDP, nBytes, buffer, pCard);
+      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_UDP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;
     case RAW_TCP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_TCP, nBytes, buffer, pCard);
+      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_TCP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;

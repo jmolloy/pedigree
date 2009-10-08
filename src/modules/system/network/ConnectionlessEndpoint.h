@@ -50,10 +50,9 @@ public:
      * \param buffer the buffer to send
      * \param remoteHost identifies the remote host
      * \param broadcast broadcast over the network
-     * \param pCard NIC to send on
      * \returns -1 on failure, the number of bytes sent otherwise
      */
-    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network* pCard)
+    virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast)
     {
         return -1;
     };

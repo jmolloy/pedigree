@@ -284,7 +284,8 @@ IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
 
   m_DnsRequests.pushBack(req);
 
-  e->send(sizeof(DnsHeader) + sizeof(QuestionSecNameSuffix) + len + 1, buffLoc, remoteHost, false, pCard);
+  req->success = false;
+  e->send(sizeof(DnsHeader) + sizeof(QuestionSecNameSuffix) + len + 1, buffLoc, remoteHost, false);
 
   req->waitSem.acquire(1, 15);
 

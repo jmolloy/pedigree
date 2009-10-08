@@ -52,7 +52,7 @@ bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
         if (getLocalPort() == 0)
             return false;
     }
-    m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock, m_Card);
+    m_ConnId = TcpManager::instance().Connect(m_RemoteHost, getLocalPort(), this, bBlock);
     if (m_ConnId == 0)
         WARNING("TcpEndpoint::connect: got 0 for the connection id");
     return (m_ConnId != 0); /// \todo Error codes

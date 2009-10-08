@@ -26,8 +26,7 @@
 #include "TcpMisc.h"
 #include "Tcp.h"
 
-/// \todo This still uses the old Timeout method to handle the timeout. I need
-///       to figure out a better way of doing this.
+/// \todo Eventify.
 
 /// This is passed a given StateBlock and its sole purpose is to remove it
 /// from the system. It's called as a thread when the TIME_WAIT timeout expires
@@ -43,11 +42,11 @@ class StateBlock : public TimerHandler
 
     struct Segment
     {
-      uint32_t  seg_seq; // segment sequence number
-      uint32_t  seg_ack; // ack number
-      uint32_t  seg_len; // segment length
-      uint32_t  seg_wnd; // segment window
-      uint32_t  seg_up; // urgent pointer
+      uint32_t  seg_seq; // Segment sequence number
+      uint32_t  seg_ack; // Ack number
+      uint32_t  seg_len; // Segment length
+      uint32_t  seg_wnd; // Segment window
+      uint32_t  seg_up; // Urgent pointer
       uint8_t   flags;
 
       uintptr_t payload;
@@ -62,7 +61,7 @@ class StateBlock : public TimerHandler
       seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
       fin_ack(false), fin_seq(0),
       numEndpointPackets(0), /// \todo Remove, obsolete
-      waitState(0), pCard(0), endpoint(0), connId(0),
+      waitState(0), endpoint(0), connId(0),
       retransmitQueue(), nRemovedFromRetransmit(0),
       waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
       m_Nanoseconds(0), m_Seconds(0), m_Timeout(10)
@@ -84,7 +83,7 @@ class StateBlock : public TimerHandler
 
     Endpoint::RemoteEndpoint remoteHost;
 
-    // send sequence variables
+    // Send sequence variables
     uint32_t iss; // initial sender sequence number (CLIENT)
     uint32_t snd_nxt; // next send sequence number
     uint32_t snd_una; // send unack
@@ -93,13 +92,13 @@ class StateBlock : public TimerHandler
     uint32_t snd_wl1; // segment sequence number for last WND update
     uint32_t snd_wl2; // segment ack number for last WND update
 
-    // receive sequence variables
+    // Receive sequence variables
     uint32_t rcv_nxt; // receive next - what we're expecting perhaps?
     uint32_t rcv_wnd; // receive window ----> How much we want to receive methinks...
     uint32_t rcv_up; // receive urgent pointer
     uint32_t irs; // initial receiver sequence number (SERVER)
 
-    // segment variables
+    // Segment variables
     uint32_t seg_seq; // segment sequence number
     uint32_t seg_ack; // ack number
     uint32_t seg_len; // segment length
@@ -111,27 +110,24 @@ class StateBlock : public TimerHandler
     bool     fin_ack; // is ACK already set (for use with FIN bit checks)
     uint32_t fin_seq; // last FIN we sent had this sequence number
 
-    // number of packets we've deposited into our Endpoint
+    // Number of packets we've deposited into our Endpoint
     // (decremented when a packet is picked up by the receiver)
     uint32_t numEndpointPackets;
 
-    // waiting for something?
+    // Waiting for something?
     Semaphore waitState;
 
-    // the card which we use for all sending
-    Network* pCard;
-
-    // the endpoint applications use for this TCP connection
+    // The endpoint applications use for this TCP connection
     TcpEndpoint* endpoint;
 
     // the id of this specific connection
     size_t connId;
 
-    // retransmission queue
+    // Retransmission queue
     //TcpBuffer retransmitQueue;
     List<void*> retransmitQueue;
 
-    // number of bytes removed from the retransmit queue
+    // Number of bytes removed from the retransmit queue
     size_t nRemovedFromRetransmit;
 
     /// Handles a segment ack
@@ -198,8 +194,7 @@ class StateBlock : public TimerHandler
     {
       if(seg)
       {
-        Tcp::send(remoteHost.ip, localPort, remoteHost.remotePort, seg->seg_seq, rcv_nxt, seg->flags, seg->seg_wnd, seg->nBytes, seg->payload, pCard);
-        return true; /// \todo Tcp::send needs to return true or false!
+        return Tcp::send(remoteHost.ip, localPort, remoteHost.remotePort, seg->seg_seq, rcv_nxt, seg->flags, seg->seg_wnd, seg->nBytes, seg->payload);
       }
       return false;
     }
@@ -337,7 +332,7 @@ class StateBlock : public TimerHandler
       seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
       fin_ack(false), fin_seq(0),
       numEndpointPackets(0), /// \todo Remove, obsolete
-      waitState(0), pCard(0), endpoint(0), connId(0),
+      waitState(0), endpoint(0), connId(0),
       retransmitQueue(), nRemovedFromRetransmit(0),
       waitingForTimeout(false), didTimeout(false), timeoutWait(0), useWaitSem(true),
       m_Nanoseconds(0), m_Seconds(0), m_Timeout(10)

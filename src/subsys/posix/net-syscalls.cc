@@ -210,10 +210,9 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
         if (remoteIp.getIp() != 0)
         {
             Endpoint::RemoteEndpoint remoteHost;
-            Network *pCard = RoutingTable::instance().DetermineRoute(&remoteIp);
             remoteHost.remotePort = p->getRemotePort();
             remoteHost.ip = remoteIp;
-            ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, pCard);
+            ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false);
         }
     }
 
@@ -275,8 +274,7 @@ ssize_t posix_sendto(void* callInfo)
         const struct sockaddr_in* sin = reinterpret_cast<const struct sockaddr_in*>(address);
         remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
-        Network *pCard = RoutingTable::instance().DetermineRoute(&remoteHost.ip);
-        return ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false, pCard);
+        return ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false);
     }
 
     return -1;

@@ -45,7 +45,7 @@ public:
   void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends an ICMP packet */
-  static void send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network* pCard = 0);
+  static void send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload);
   
 private:
 

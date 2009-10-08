@@ -49,7 +49,7 @@ public:
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
   
   /** Sends an IP packet */
-  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network* pCard = 0);
+  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet);
 
 /*
 #elif _BYTE_ORDER == _LITTLE_ENDIAN

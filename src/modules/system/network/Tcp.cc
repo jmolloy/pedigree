@@ -23,6 +23,8 @@
 
 #include "TcpManager.h"
 
+#include "RoutingTable.h"
+
 Tcp Tcp::tcpInstance;
 
 Tcp::Tcp()
@@ -59,8 +61,19 @@ uint16_t Tcp::tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint
   return checksum;
 }
 
-bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload, Network* pCard)
+bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload)
 {
+  // Grab the NIC to send on.
+  /// \note The NIC is grabbed here *as well as* IP because we need to use the
+  ///       NIC IP address for the checksum.
+  IpAddress tmp = dest;
+  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+  if(!pCard)
+  {
+      WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
+      return false;
+  }
+
   size_t newSize = nBytes + sizeof(tcpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   if(!newPacket)
@@ -79,16 +92,15 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->winsize = HOST_TO_BIG16(window);
   header->urgptr = 0;
 
-  header->checksum = 0;
-
-  StationInfo me = pCard->getStationInfo();
-
   if(payload && nBytes)
     memcpy(reinterpret_cast<void*>(packAddr + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
+  StationInfo me = pCard->getStationInfo();
+
+  header->checksum = 0;
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
 
-  bool success = Ip::send(dest, me.ipv4, IP_TCP, newSize, packAddr, pCard);
+  bool success = Ip::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_TCP, newSize, packAddr);
 
   delete [] newPacket;
   return success;
