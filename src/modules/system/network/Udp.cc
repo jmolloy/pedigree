@@ -75,7 +75,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
       }
 
       IpAddress tmp = dest;
-      Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+      pCard = RoutingTable::instance().DetermineRoute(&tmp);
       if(!pCard)
       {
           WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
