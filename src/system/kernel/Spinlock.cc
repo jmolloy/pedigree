@@ -55,7 +55,8 @@ void Spinlock::acquire()
 
     // Break into the debugger, with the return address in EAX to make debugging easier
 #ifdef X86
-    asm volatile("mov %0, %%eax; mov %1, %%ebx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "r"(atom));
+      FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    // asm volatile("mov %0, %%eax; mov %1, %%ebx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "r"(atom));
 #endif
 #ifdef X64
     asm volatile("mov %0, %%rax; mov %1, %%rbx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "r"(atom));

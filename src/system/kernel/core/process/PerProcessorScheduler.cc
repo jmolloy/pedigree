@@ -68,7 +68,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 
     // Now attempt to get another thread to run.
     // This will also get the lock for the returned thread.
-    Thread *pNextThread = m_pSchedulingAlgorithm->getNext();
+    Thread *pNextThread = m_pSchedulingAlgorithm->getNext(pCurrentThread);
 
     if (pNextThread == 0)
     {
@@ -344,7 +344,7 @@ void PerProcessorScheduler::killCurrentThread()
 
     // Get another thread ready to schedule.
     // This will also get the lock for the returned thread.
-    Thread *pNextThread = m_pSchedulingAlgorithm->getNext();
+    Thread *pNextThread = m_pSchedulingAlgorithm->getNext(pThread);
 
     if (pNextThread == 0)
     {

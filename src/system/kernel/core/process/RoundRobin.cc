@@ -54,7 +54,7 @@ void RoundRobin::removeThread(Thread *pThread)
   }
 }
 
-Thread *RoundRobin::getNext()
+Thread *RoundRobin::getNext(Thread *pCurrentThread)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
@@ -67,7 +67,9 @@ Thread *RoundRobin::getNext()
 
             if (pThread)
             {
-                pThread->getLock().acquire();
+                // Sanity check
+                if(pThread != pCurrentThread)
+                    pThread->getLock().acquire();
                 return pThread;
             }
         }
@@ -80,6 +82,16 @@ void RoundRobin::threadStatusChanged(Thread *pThread)
     if (pThread->getStatus() == Thread::Ready)
     {
         assert (pThread->getPriority() < MAX_PRIORITIES);
+        
+        for(List<Thread*>::Iterator it = m_pReadyQueues[pThread->getPriority()].begin(); it != m_pReadyQueues[pThread->getPriority()].end(); ++it)
+        {
+            if((*it) == pThread)
+            {
+                WARNING("RoundRobin: A thread was already in this priority queue");
+                return;
+            }
+        }
+
         m_pReadyQueues[pThread->getPriority()].pushBack(pThread);
     }
 }

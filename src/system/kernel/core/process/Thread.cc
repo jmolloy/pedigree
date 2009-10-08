@@ -177,6 +177,7 @@ void Thread::sendEvent(Event *pEvent)
         // Notify the scheduler that we're now ready, so we get put into the
         // scheduling algorithm's ready queue.
         Scheduler::instance().threadStatusChanged(this);
+        NOTICE("Notified the scheduler that we've changed status");
     }
 }
 
