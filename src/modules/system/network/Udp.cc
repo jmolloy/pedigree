@@ -68,6 +68,12 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   ///       NIC IP address for the checksum.
   if(!pCard)
   {
+      if(!RoutingTable::instance().hasRoutes())
+      {
+          WARNING("UDP: No NIC given to send(), and no routes available in the routing table");
+          return false;
+      }
+
       IpAddress tmp = dest;
       Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
       if(!pCard)
@@ -94,16 +100,18 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
   StationInfo me = pCard->getStationInfo();
 
-  IpAddress src;
-  if(broadcast)
+  IpAddress src = me.ipv4;
+  if(broadcast || !RoutingTable::instance().hasRoutes())
     dest.setIp(0xffffffff); // 255.255.255.255
-  else
-    src = me.ipv4;
 
   header->checksum = 0;
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
 
-  bool success = Ip::send(dest, src, IP_UDP, newSize, packAddr);
+  bool success;
+  if(broadcast || !RoutingTable::instance().hasRoutes())
+    success = Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
+  else
+    success = Ip::send(dest, src, IP_UDP, newSize, packAddr);
 
   delete [] newPacket;
   return success;

@@ -44,15 +44,19 @@ Ip::~Ip()
 {
 }
 
-bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet)
+bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
-  // Grab the address to send to (as well as the NIC)
   IpAddress realDest = dest;
-  Network* pCard = RoutingTable::instance().DetermineRoute(&realDest);
+
+  // Grab the address to send to (as well as the NIC to send with)
   if(!pCard)
   {
+    pCard = RoutingTable::instance().DetermineRoute(&realDest);
+    if(!pCard)
+    {
       WARNING("IPv4: Couldn't find a route for destination '" << dest.toString() << "'.");
       return false;
+    }
   }
 
   // Fill in the from address if it's not valid. Note that some protocols

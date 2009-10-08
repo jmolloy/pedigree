@@ -42,7 +42,7 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
   if(!pCard)
   {
     IpAddress tmp = remoteHost.ip;
-    Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
+    pCard = RoutingTable::instance().DetermineRoute(&tmp);
     if(!pCard)
     {
       WARNING("RAW: Couldn't find a route for destination '" << remoteHost.ip.toString() << "'.");

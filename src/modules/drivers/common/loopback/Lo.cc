@@ -32,8 +32,6 @@ Loopback::Loopback() : Network(), m_StationInfo()
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
-
-    RoutingTable::instance().Add(RoutingTable::DestIp, m_StationInfo.ipv4, IpAddress(), String(""), this);
 }
 
 Loopback::Loopback(Network* pDev) : Network(pDev), m_StationInfo()
@@ -43,8 +41,6 @@ Loopback::Loopback(Network* pDev) : Network(pDev), m_StationInfo()
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
-
-    RoutingTable::instance().Add(RoutingTable::DestIp, m_StationInfo.ipv4, IpAddress(), String(""), this);
 }
 
 Loopback::~Loopback()

@@ -119,6 +119,11 @@ class RoutingTable
             return m_Instance;
         }
 
+        inline bool hasRoutes()
+        {
+            return m_bHasRoutes;
+        }
+
         /** Adds a route to the table */
         void Add(Type type, IpAddress dest, IpAddress subIp, String meta, Network *card);
 
@@ -146,6 +151,8 @@ class RoutingTable
     private:
 
         static RoutingTable m_Instance;
+
+        bool m_bHasRoutes;
 
         /** Used to finalise the determined route */
         Network *route(IpAddress *ip, Config::Result *pResult);

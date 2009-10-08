@@ -20,7 +20,7 @@
 
 RoutingTable RoutingTable::m_Instance;
 
-RoutingTable::RoutingTable()
+RoutingTable::RoutingTable() : m_bHasRoutes(false)
 {
 }
 
@@ -39,6 +39,8 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
     {
         ERROR("Routing table query failed: " << pResult->errorMessage());
     }
+
+    m_bHasRoutes = true;
 
     delete pResult;
 }
@@ -67,6 +69,8 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
     {
         ERROR("Routing table query failed: " << pResult->errorMessage());
     }
+
+    m_bHasRoutes = true;
 
     delete pResult;
 }
