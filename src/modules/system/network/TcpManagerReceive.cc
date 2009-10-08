@@ -619,6 +619,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   if(oldState != stateBlock->currentState)
   {
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused state change from " << Tcp::stateString(oldState) << " to " << Tcp::stateString(stateBlock->currentState) << ".");
+    stateBlock->endpoint->stateChanged(stateBlock->currentState);
     stateBlock->waitState.release();
   }
 

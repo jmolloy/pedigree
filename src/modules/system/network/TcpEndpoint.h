@@ -115,6 +115,9 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     /** Shuts down halves of the connection */
     virtual bool shutdown(ShutdownType what);
 
+    /** Notifies sockets on this Endpoint that the connection state has changed. */
+    void stateChanged(Tcp::TcpState newState);
+
   private:
 
     /** Copy constructors */
