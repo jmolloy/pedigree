@@ -17,7 +17,7 @@
 #include "TcpManager.h"
 #include "TcpMisc.h"
 #include "TcpStateBlock.h"
-
+#include <LockGuard.h>
 #include <Log.h>
 
 int stateBlockFree(void* p)
@@ -29,7 +29,9 @@ int stateBlockFree(void* p)
 
 void TcpBuffer::remove(size_t offset, size_t nBytes)
 {
-  // special case: removing from the end of the buffer
+  LockGuard<Mutex> guard(m_Lock);
+
+  // Special case: removing from the end of the buffer
   // this also works for removing the entire buffer,
   // because (0 + m_BufferSize) == m_BufferSize
   if((offset + nBytes) >= m_BufferSize)
@@ -38,19 +40,14 @@ void TcpBuffer::remove(size_t offset, size_t nBytes)
     return;
   }
 
-  // shift all the data after the removed space into
+  // Shift all the data after the removed space into
   uintptr_t destPtr = m_Buffer + offset;
   uintptr_t srcPtr = m_Buffer + offset + nBytes; // the end of all of our copy
   size_t copySize = m_BufferSize - nBytes - offset;
 
-  uint8_t* tmp = new uint8_t[copySize];
-  memcpy(tmp, reinterpret_cast<void*>(srcPtr), copySize);
+  memcpy(reinterpret_cast<void*>(destPtr), reinterpret_cast<void*>(srcPtr), copySize);
 
-  memcpy(reinterpret_cast<void*>(destPtr), tmp, copySize);
-
-  delete [] tmp;
-
-  // reduce the size of the buffer
+  // Reduce the size of the buffer
   resize(m_BufferSize - nBytes);
 }
 
@@ -59,7 +56,7 @@ void TcpBuffer::resize(size_t n)
   if(m_BufferSize == 0)
   {
     if(n == 0)
-      return; // already destroyed
+      return; // Already destroyed
     m_Buffer = reinterpret_cast<uintptr_t>(new uint8_t[n]);
     m_BufferSize = n;
   }
@@ -101,9 +98,11 @@ uintptr_t TcpBuffer::getBuffer(size_t offset)
 
 void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOverwrite)
 {
+  LockGuard<Mutex> guard(m_Lock);
+
   if(bOverwrite)
   {
-    // check the last byte's offset, try to avoid resizing
+    // Check the last byte's offset, try to avoid resizing
     size_t lastByteOffset = offset + nBytes;
     if(lastByteOffset > m_BufferSize)
     {
@@ -111,28 +110,28 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
       resize(m_BufferSize + resizeBy);
     }
 
-    // dump the data in
+    // Dump the data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);
   }
   else
   {
     size_t oldSize = m_BufferSize;
 
-    // we have to resize anyway now, no avoiding it
+    // We have to resize anyway now, no avoiding it
     resize(m_BufferSize + nBytes);
 
-    // shift the old data forward to make room for this
+    // Shift the old data forward to make room for this
     if(oldSize && (oldSize > offset))
     {
-      // firstly find out how many bytes to copy (ALL after offset)
+      // Firstly find out how many bytes to copy (ALL after offset)
       size_t nBytesToShift = oldSize - offset;
-      uintptr_t destPoint = m_Buffer + offset + nBytes; // right after the incoming data
+      uintptr_t destPoint = m_Buffer + offset + nBytes; // Right after the incoming data
       uintptr_t sourcePoint = m_Buffer + offset;
 
       memcpy(reinterpret_cast<void*>(destPoint), reinterpret_cast<void*>(sourcePoint), nBytesToShift);
     }
 
-    // dump our data in
+    // Dump our data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);
   }
 }

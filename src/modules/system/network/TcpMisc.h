@@ -19,38 +19,36 @@
 
 #include <utilities/Tree.h>
 #include <utilities/Iterator.h>
+#include <process/Mutex.h>
+#include <LockGuard.h>
 #include "Endpoint.h"
 
 #include <Log.h>
 
-/** A TCP "Buffer" (also known as a stream)
- \bug No locking here. */
+/** A TCP "Buffer" (also known as a stream) */
 class TcpBuffer
 {
-  private:
-    //
-
   public:
 
     TcpBuffer() :
-      m_Buffer(0), m_BufferSize(0)
+      m_Buffer(0), m_BufferSize(0), m_Lock(false)
     {};
     virtual ~TcpBuffer()
     {
+      LockGuard<Mutex> guard(m_Lock);
       resize(0);
     };
 
     /** The current size of the buffer */
     inline size_t getSize()
     {
+      // Locked so the size given is a valid representation
+      LockGuard<Mutex> guard(m_Lock);
       return m_BufferSize;
     }
 
     /** Removes from the buffer (if removes all, will destroy the buffer) */
     void remove(size_t offset, size_t nBytes);
-
-    /** Resizes the buffer (if set to zero, will destroy it) */
-    void resize(size_t n = 0);
 
     /** Returns a pointer to the buffer at a given offset */
     uintptr_t getBuffer(size_t offset = 0);
@@ -63,11 +61,17 @@ class TcpBuffer
 
   private:
 
+    /** Resizes the buffer (if set to zero, will destroy it) */
+    void resize(size_t n = 0);
+
     /** The actual buffer itself */
     uintptr_t m_Buffer;
 
     /** Current buffer size */
     size_t m_BufferSize;
+
+    /** Buffer lock */
+    Mutex m_Lock;
 };
 
 /** Connection state block handle */
