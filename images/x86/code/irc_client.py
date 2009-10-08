@@ -1,19 +1,11 @@
 import os
 import sys
 import socket
-#import threading
 import curses
 import curses.wrapper
 import select
 
-# stdscr = curses.initscr()
-
 def win(stdscr):
-
-    # curses.echo()
-    # curses.cbreak()
-
-    # stdscr.keypad(1)
     
     curses.cbreak()
     
@@ -29,11 +21,15 @@ def win(stdscr):
 
     server.setblocking(1)
     
-    server.connect(('10.0.0.1', 6667))
+    serv = sys.argv[1]
+    server.connect((serv, 6667))
 
     server.setblocking(0)
+    
+    mynick = sys.argv[2]
+    chan = sys.argv[3]
 
-    server.send("NICK pedigree\r\nUSER pedigree none none : 0 : 0\r\nJOIN #mattise\r\n")
+    server.send("NICK " + mynick + "\r\nUSER " + mynick + " none none : 0 : 0\r\nJOIN " + chan + "\r\n")
 
     title_win = curses.newwin(1, cols, 0, 0)
     recv_win = curses.newwin(rows - 2, cols, 1, 0)
@@ -50,7 +46,7 @@ def win(stdscr):
     send_win.nodelay(True)
     
     recv_win.standout()
-    recv_win.addstr(0, 1, "  pedigree on Freenode.net, in #mattise.  ", curses.color_pair(2))
+    recv_win.addstr(0, 1, "  " + mynick + " on " + serv + ", in " + chan + ".  ", curses.color_pair(2))
     recv_win.standend()
     send_win.addstr(0, 0, "> ")
 
@@ -71,6 +67,30 @@ def win(stdscr):
             obfuscated_thing = first_bit
         nickbit = obfuscated_thing.split("!")
         return nickbit[0]
+    
+    def chunks(s, length):
+        if(len(s) <= length):
+            yield s
+        else:
+            for i in range(0, len(s), length):
+                yield s[i:i+length]
+    
+    def writeline(window, curry, line):
+        # TODO: Handle oversized lines
+        colsPerLine = cols - 6
+        lines = list(chunks(line, colsPerLine))
+        for l in lines:
+            window.addstr(curry, 1, l)
+            curry += 1
+        
+        # Are we still out of bounds?
+        if(curry > (rows - 5)):
+            oldY = curry
+            curry = rows - 5
+            window.scroll(oldY - curry)
+        window.refresh()
+        
+        return curry
 
     def handle(data, client, window, curry):
     
@@ -90,8 +110,7 @@ def win(stdscr):
             if(s2[0].lower() == "ping"):
             
                 client.send("PONG wikiforall.net\r\n");
-                window.addstr(curry, x, "Received PING")
-                curry += 1
+                curry = writeline(window, curry, "Received PING")
                 
             elif(s2[1].lower() == "privmsg"):
                 nick = getnick(s2[0])
@@ -100,14 +119,12 @@ def win(stdscr):
                     msg = s2[2] + ": " + nick + ": " + s2[3][1:]
                 else:
                     msg = s2[2] + ": " + nick + ": " + s2[3]
-                window.addstr(curry, x, msg)
-                curry += (len(msg) / 80) + 1
+                curry = writeline(window, curry, msg)
                 
             elif(s2[1].lower() == "part"):
             
                 msg = ("%s parted in %s") % (getnick(s2[0]), s2[2])
-                window.addstr(curry, x, msg)
-                curry += 1
+                curry = writeline(window, curry, msg)
                 
             elif(s2[1].lower() == "join"):
 								if(len(s2[2]) == 0):
@@ -118,8 +135,7 @@ def win(stdscr):
 										chan = s2[2]
 								
 								msg = ("%s joined in %s") % (getnick(s2[0]), chan)
-								window.addstr(curry, x, msg)
-								curry += 1
+								curry = writeline(window, curry, msg)
 								
             elif(s2[1].lower() == "quit"):
                 if(s2[3][0] == ':'):
@@ -128,8 +144,7 @@ def win(stdscr):
                     quitmsg = s2[3]
                 
                 msg = ("%s quit in %s") % (getnick(s2[0]), chan)
-                window.addstr(curry, x, msg)
-                curry += 1
+                curry = writeline(window, curry, msg)
                 
             elif(s2[1].lower() == "topic"):
             
@@ -139,8 +154,7 @@ def win(stdscr):
                     topic = s2[3]
                 
                 msg = "topic change to '" + topic + "': changed by " + getnick(s2[0]) + " in " + s2[2]
-                window.addstr(curry, x, msg)
-                curry += (len(msg) / 80) + 1
+                curry = writeline(window, curry, msg)
             
             elif(s2[0].lower() == "notice"):
                 
@@ -149,23 +163,10 @@ def win(stdscr):
                 else:
                     notice = s2[2]
                 
-                window.addstr(curry, x, "NOTICE: " + s2[1] + notice)
-                curry += (len(notice) / 80) + 1
+                curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
             
             else:
-                window.addstr(curry, x, line)
-                curry += (len(line) / 80) + 1
-
-            if(curry >= (rows - 5)):
-              oldcurry = curry
-              curry = (rows - 5)
-              window.scroll(oldcurry - curry - 1)
-
-        if(curry >= (rows - 5)):
-          oldcurry = curry
-          curry = (rows - 5)
-          window.scroll(oldcurry - curry - 1)
-        window.refresh()
+                curry = writeline(window, curry, line)
         
         return curry
 
@@ -203,7 +204,7 @@ def win(stdscr):
 											  running = False
 											  break
 									  else:
-										  msg = "PRIVMSG #mattise :" + data
+										  msg = "PRIVMSG " + chan + " :" + data
 										  server.send(msg + "\r\n")
 										  y = handle([":pedigree!n=pedigree@202.63.42.160.static.rev.aanet.com.au " + msg], server, msg_win, y)
 									  send_win.erase()
@@ -231,15 +232,8 @@ def win(stdscr):
 						running = False
 						server.send("QUIT My IRC client just crashed :P\r\n")
 						break
-        # except:
-            # recv_win.addstr("FAIL")
-        #    pass
 
     server.close()
-
-    # curses.nocbreak()
-    # stdscr.keypad(0)
-    # curses.echo()
 
 curses.wrapper(win)
 
