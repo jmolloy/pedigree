@@ -35,7 +35,10 @@ class PointerGuard
     {
       // NOTICE("PointerGuard: Out-of-scope, deleting guarded pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
       if(m_Pointer)
+      {
         delete m_Pointer;
+        m_Pointer = 0;
+      }
     }
 
     /** Neither of these should be used, as they defeat the purpose (and will cause a dual

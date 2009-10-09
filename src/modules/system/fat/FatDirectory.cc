@@ -122,24 +122,31 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   size_t consecutiveFree = 0;
   while(true)
   {
-    for(offset = 0; offset < m_BlockSize; offset += sizeof(Dir))
+    // Look for space in the directory
+    /// \todo Some (sets of) entries will need to cross a cluster boundary
+    while(!spaceFound)
     {
-      if(buffer[offset] == 0 || buffer[offset] == 0xE5)
+      consecutiveFree = 0;
+      for(offset = 0; offset < m_BlockSize; offset += sizeof(Dir))
       {
-        consecutiveFree++;
-      }
-      else
-        consecutiveFree = 0;
+        if(buffer[offset] == 0 || buffer[offset] == 0xE5)
+        {
+          consecutiveFree++;
+        }
+        else
+          consecutiveFree = 0;
 
-      if(consecutiveFree == numRequired)
-      {
-        spaceFound = true;
+        if(consecutiveFree == numRequired)
+        {
+          spaceFound = true;
+          break;
+        }
+      }
+
+      // If space was found, quit
+      if(spaceFound)
         break;
-      }
-    }
 
-    if(!spaceFound)
-    {
       // Root Directory check:
       // If no space found for our file, and if not FAT32, the root directory is not resizeable so we have to fail
       if(m_Type != FAT32 && clus == 0)
@@ -163,7 +170,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       pFs->readCluster(clus, reinterpret_cast<uintptr_t>(buffer));
     }
-    else
+
     {
       // long filename entries first
       if(numRequired)
@@ -174,7 +181,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
         {
           // grab a pointer to the data
           DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
-          memset(lfn, 0, sizeof(DirLongFilename));
+          memset(lfn, 0xab, sizeof(DirLongFilename));
 
           if(i == 0)
             lfn->LDIR_Ord = 0x40 | (numRequired - 1);
@@ -225,7 +232,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
-      memset(ent, 0, sizeof(Dir));
+      memset(ent, 0xb0, sizeof(Dir));
       ent->DIR_Attr = type ? ATTR_DIRECTORY : 0;
 
       String shortFilename = pFs->convertFilenameTo(filename);

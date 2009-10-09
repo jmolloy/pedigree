@@ -1449,7 +1449,6 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
             return EAI_FAIL;
 
         // Not an IP... Try a DNS lookup
-        STUBBED(nodename);
         h = gethostbyname(nodename);
         if(!h)
         {

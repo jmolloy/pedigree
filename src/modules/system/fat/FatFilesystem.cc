@@ -305,10 +305,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
     // the inode of the file is the first cluster
     uint32_t clus = pFile->getInode();
     if (clus == 0)
-    {
-        WARNING("FAT: File has bad inode");
         return 0; // can't do it
-    }
 
     // validity checking
     if (static_cast<size_t>(location) >= pFile->getSize())
@@ -435,6 +432,8 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
 
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
+    NOTICE("FatFilesystem::write");
+
     // test whether the entire Filesystem is read-only.
     if (m_bReadOnly)
     {
@@ -1127,6 +1126,12 @@ void FatFilesystem::truncate(File *pFile)
 
 File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask, bool bDirectory, uint32_t dirClus)
 {
+    // Validate input
+    if(!parentDir->isDirectory())
+    {
+      return 0;
+    }
+
     FatFileInfo info;
     info.creationTime = 0;
     info.modifiedTime = 0;
@@ -1154,12 +1159,13 @@ File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask,
         );
     }
 
-    FatDirectory *parent = static_cast<FatDirectory *>(parentDir);
+    FatDirectory *parent = static_cast<FatDirectory *>(Directory::fromFile(parentDir));
     if (!parent->addEntry(filename, pFile, (bDirectory ? 1 : 0)))
     {
         delete pFile;
         return 0;
     }
+
     return pFile;
 }
 

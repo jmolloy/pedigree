@@ -90,7 +90,7 @@ class Socket : public File
     /** Similar to POSIX's select() function */
     virtual int select(bool bWriting = false, int timeout = 0)
     {
-        NOTICE("Socket::select(" << bWriting << ", " << Dec << timeout << Hex << ")");
+        // NOTICE("Socket::select(" << bWriting << ", " << Dec << timeout << Hex << ")");
 
         // Are we working with a connectionless endpoint?
         if(m_Endpoint->getType() == Endpoint::Connectionless)
