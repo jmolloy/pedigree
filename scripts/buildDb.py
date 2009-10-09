@@ -44,4 +44,4 @@ for match in m:
 sql = re.sub('create table (.|\n)*?;', '', sql)
 sql = re.sub('CREATE TABLE (.|\n)*?;', '', sql)
 
-os.popen('sqlite3 ./build/config.db', 'w').write(tables+sql)
+os.popen('sqlite3 ./build/config.db', 'w').write('begin;'+tables+sql+'commit;')

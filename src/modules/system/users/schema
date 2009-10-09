@@ -13,7 +13,6 @@
 -- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -- User & Groups tables
-begin;
 create table 'groups' (
        'gid' integer primary key,
        'name' varchar(64));
@@ -35,4 +34,3 @@ insert into 'users' values (NULL, 'root', 'Root User', 'administrators', '/', '/
 insert into 'users' values (NULL, 'james', 'James Molloy', 'users', '/users/james', '/applications/bash', 'james');
 insert into 'users' values (NULL, 'matt', 'Matt Iselin', 'users', '/users/matt', '/applications/bash', 'matt');
 insert into 'users' values (NULL, 'httpd', 'Http Daemon', 'httpd', '/', '/applications/apache/httpd', 'httpd');
-commit;

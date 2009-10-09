@@ -26,3 +26,16 @@ create table 'routes' (
         'name' varchar(64),
         'type' integer,
         'iface' integer);
+
+create table 'network-services' (
+        -- Service name
+        'name' varchar(64) unique,
+        -- Service port
+        'port' integer,
+        -- Service protocol
+        'proto' varchar(64));
+
+-- Some default services
+insert into 'network-services' values ('tftp', 69, 'udp');
+insert into 'network-services' values ('ftp', 21, 'tcp');
+insert into 'network-services' values ('http', 80, 'tcp');

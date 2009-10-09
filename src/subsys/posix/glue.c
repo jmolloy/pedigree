@@ -1001,13 +1001,20 @@ struct hostent* gethostbyname(const char *name)
 
 struct servent* getservbyname(const char *name, const char *proto)
 {
-    STUBBED("getservbyname");
-
     static struct servent se;
-    if (!strcmp(name, "tftp"))
-        se.s_port = 69;
-    else
+    char buf[256];
+
+    sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", name, proto);
+
+    int result = pedigree_config_query(buf);
+    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
         return 0;
+
+    se.s_port = pedigree_config_getnum_s(result, "port");
+    se.s_name = name;
+    se.s_proto = proto;
+
+    pedigree_config_freeresult(result);
 
     return &se;
 }
@@ -1019,8 +1026,24 @@ void endservent(void)
 
 struct servent* getservbyport(int port, const char *proto)
 {
-    STUBBED("setservbyport");
-    return 0;
+    static struct servent se;
+    char buf[256];
+
+    sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, proto);
+
+    int result = pedigree_config_query(buf);
+    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
+        return 0;
+
+    memset(buf, 0, 256);
+
+    se.s_name = pedigree_config_getstr_s(result, "name", buf, 256);
+    se.s_port = port;
+    se.s_proto = proto;
+
+    pedigree_config_freeresult(result);
+
+    return &se;
 }
 
 struct servent* getservent(void)
