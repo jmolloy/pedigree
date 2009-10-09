@@ -37,6 +37,8 @@ int h_errno; // required by networking code
 #include <sys/resource.h>
 #include <sys/statfs.h>
 
+#include <pedigree_config.h>
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
@@ -1001,18 +1003,44 @@ struct hostent* gethostbyname(const char *name)
 
 struct servent* getservbyname(const char *name, const char *proto)
 {
+    if(!name)
+        return 0;
+
     static struct servent se;
+    static int first = 1;
+    if(first)
+    {
+        se.s_name = 0;
+        se.s_aliases = 0;
+        se.s_proto = 0;
+        first = 0;
+    }
     char buf[256];
 
-    sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", name, proto);
+    if(proto)
+        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", name, proto);
+    else
+        sprintf(buf, "select * from 'network-services' where name = '%s'", name);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
         return 0;
 
+    if(se.s_name)
+        free(se.s_name);
+    if(se.s_proto)
+        free(se.s_proto);
+
+    se.s_name = (char*) malloc(64);
+    char *newProto = (char*) malloc(64);
+    if(proto)
+        strncpy(newProto, proto, 64);
+    else
+        pedigree_config_getstr_s(result, "proto", newProto, 64);
+
     se.s_port = pedigree_config_getnum_s(result, "port");
-    se.s_name = name;
-    se.s_proto = proto;
+    strncpy(se.s_name, name, 64);
+    se.s_proto = newProto;
 
     pedigree_config_freeresult(result);
 
@@ -1027,19 +1055,35 @@ void endservent(void)
 struct servent* getservbyport(int port, const char *proto)
 {
     static struct servent se;
+    static int first = 1;
+    if(first)
+    {
+        se.s_name = 0;
+        se.s_aliases = 0;
+        se.s_proto = 0;
+        first = 0;
+    }
     char buf[256];
 
-    sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, proto);
+    if(proto)
+        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, proto);
+    else
+        sprintf(buf, "select * from 'network-services' where port = %d", port);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
         return 0;
 
-    memset(buf, 0, 256);
+    se.s_name = (char*) malloc(64);
+    char *newProto = (char*) malloc(64);
+    if(proto)
+        strncpy(newProto, proto, 64);
+    else
+        pedigree_config_getstr_s(result, "proto", newProto, 64);
 
-    se.s_name = pedigree_config_getstr_s(result, "name", buf, 256);
+    pedigree_config_getstr_s(result, "name", se.s_name, 64);
     se.s_port = port;
-    se.s_proto = proto;
+    se.s_proto = newProto;
 
     pedigree_config_freeresult(result);
 
