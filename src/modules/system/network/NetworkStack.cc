@@ -24,7 +24,7 @@
 NetworkStack NetworkStack::stack;
 
 NetworkStack::NetworkStack() :
-  m_Children()
+  m_pLoopback(0), m_Children()
 {
   //
 }

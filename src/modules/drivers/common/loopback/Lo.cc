@@ -29,6 +29,7 @@ Loopback::Loopback() : Network(), m_StationInfo()
 {
     setSpecificType(String("Loopback-card"));
     NetworkStack::instance().registerDevice(this);
+    NetworkStack::instance().setLoopback(this);
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
@@ -38,6 +39,7 @@ Loopback::Loopback(Network* pDev) : Network(pDev), m_StationInfo()
 {
     setSpecificType(String("Loopback-card"));
     NetworkStack::instance().registerDevice(this);
+    NetworkStack::instance().setLoopback(this);
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));

@@ -53,9 +53,24 @@ public:
   /** Unregisters a given network device from the stack */
   void deRegisterDevice(Network *pDevice);
 
+  /** Sets the loopback device for the stack */
+  void setLoopback(Network *pCard)
+  {
+    m_pLoopback = pCard;
+  }
+
+  /** Gets the loopback device for the stack */
+  inline Network *getLoopback()
+  {
+    return m_pLoopback;
+  }
+
 private:
 
   static NetworkStack stack;
+
+  /** Loopback device */
+  Network *m_pLoopback;
 
   /** Network devices registered with the stack. */
   Vector<Network*> m_Children;

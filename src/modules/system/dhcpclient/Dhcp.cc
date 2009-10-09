@@ -284,8 +284,6 @@ void entry()
       }
       while((n = e->recv(reinterpret_cast<uintptr_t>(buff), BUFFSZ, false, &remoteHost)) > 0)
       {
-        NOTICE("recv returns");
-
         DhcpPacket* incoming = reinterpret_cast<DhcpPacket*>(buff);
 
         if(incoming->opcode != OP_BOOTREPLY)
@@ -293,7 +291,7 @@ void entry()
 
         myIpWillBe = incoming->yiaddr;
 
-        NOTICE("yiaddr = " << incoming->yiaddr << ", siaddr = " << incoming->siaddr << ".");
+        // NOTICE("yiaddr = " << incoming->yiaddr << ", siaddr = " << incoming->siaddr << ".");
 
         size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
         if(dhcpSizeWithoutOptions == 0)

@@ -134,7 +134,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
     switch(header->type)
     {
       case IP_ICMP:
-        NOTICE("IP: ICMP packet");
+        // NOTICE("IP: ICMP packet");
 
         RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
@@ -143,7 +143,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         break;
 
       case IP_UDP:
-        NOTICE("IP: UDP packet");
+        // NOTICE("IP: UDP packet");
 
         RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
@@ -152,7 +152,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         break;
 
       case IP_TCP:
-        NOTICE("IP: TCP packet");
+        // NOTICE("IP: TCP packet");
 
         RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 

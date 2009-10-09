@@ -30,6 +30,10 @@ RoutingTable::~RoutingTable()
 
 void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, Network *card)
 {
+    // Add to the hash tree, if not already done. This ensures the loopback
+    // device is definitely available as an interface.
+    DeviceHashTree::instance().add(card);
+
     // Add the route to the database directly
     String str;
     size_t hash = DeviceHashTree::instance().getHash(card);
@@ -40,6 +44,8 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
         ERROR("Routing table query failed: " << pResult->errorMessage());
     }
 
+    NOTICE("RoutingTable: Adding IP match route for " << dest.toString() << ", sub " << subIp.toString() << ".");
+
     m_bHasRoutes = true;
 
     delete pResult;
@@ -47,12 +53,16 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
 
 void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress subIp, String meta, Network *card)
 {
+    // Add to the hash tree, if not already done. This ensures the loopback
+    // device is definitely available as an interface.
+    DeviceHashTree::instance().add(card);
+
     // Invert the subnet to get an IP range
     IpAddress invSubnet(subnet.getIp() ^ 0xFFFFFFFF);
     IpAddress bottomOfRange = dest & subnet;
     IpAddress topOfRange = (dest & subnet) + invSubnet;
 
-    NOTICE("Adding " << (type == DestSubnetComplement ? "complement of " : "") << " subnet match for range " << bottomOfRange.toString() << "-" << topOfRange.toString());
+    NOTICE("RoutingTable: Adding " << (type == DestSubnetComplement ? "complement of " : "") << "subnet match for range " << bottomOfRange.toString() << "-" << topOfRange.toString());
 
     // Add to the database
     String str;
@@ -100,7 +110,6 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         ERROR("Routing table query failed: " << pResult->errorMessage());
     else if(pResult->rows())
     {
-        NOTICE("RoutingTable: Direct match found");
         return route(ip, pResult);
     }
     delete pResult;
@@ -112,7 +121,6 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         ERROR("Routing table query failed: " << pResult->errorMessage());
     else if(pResult->rows())
     {
-        NOTICE("RoutingTable: Subnet match found");
         return route(ip, pResult);
     }
     delete pResult;
@@ -124,7 +132,6 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         ERROR("Routing table query failed: " << pResult->errorMessage());
     else if(pResult->rows())
     {
-        NOTICE("RoutingTable: Subnet complement match found");
         return route(ip, pResult);
     }
     delete pResult;
@@ -146,7 +153,6 @@ Network *RoutingTable::DefaultRoute()
         ERROR("Routing table query failed: " << pResult->errorMessage());
     else if(pResult->rows())
     {
-        NOTICE("RoutingTable: Default route used");
         return route(0, pResult);
     }
     delete pResult;
