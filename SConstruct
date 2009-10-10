@@ -75,6 +75,8 @@ opts.AddVariables(
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
     
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
+    
+    BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -168,6 +170,9 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
     print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
     Exit(1)
 
+if(env['pacman']):
+    env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
+    
 # Configure the assembler
 if(env['AS'] == ''):
     # NASM is used for X86 and X64 builds

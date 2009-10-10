@@ -5,3 +5,4 @@ options.cache
 .sconsign.dblite
 compilers/dir
 scripts/defaultFlags.pyc
+images/local/*
