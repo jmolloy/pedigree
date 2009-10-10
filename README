@@ -18,6 +18,29 @@ the build.
 NOTE: This must be a full path. It cannot contain bash expansions such as
 environment variables or '~'.
 
+IMAGES DIRECTORY
+=======================
+
+The images/local directory allows you to use Pacman, Pedigree's package manager,
+to manage your hard disk image file set. To do so you will need a version of
+Pacman on your host (visit the Arch Linux website to find source packages).
+
+To manage the images/local directory you need to have the following in your
+pacman.conf (usually in /etc):
+
+RootDir     = /path/to/pedigree/root/images/local/
+DBPath      = /path/to/pedigree/root/images/local/support/pacman/db
+CacheDir    = /path/to/pedigree/root/images/local/support/pacman/cache
+LogFile     = /path/to/pedigree/root/images/local/support/pacman/log/pacman.log
+HoldPkg     = pacman pedigree-core pedigree-tui
+SyncFirst   = pacman pedigree-core pedigree-tui
+
+[pedigree-main]
+Server = http://www.theiselins.net/pedigree/pacman
+
+If all goes well, running "pacman -Sy" should synchronise the local working
+copy with the remote database and you'll be able to run "pacman -S <package>".
+
 ISSUES
 =======================
 
