@@ -31,12 +31,14 @@ class TcpBuffer
   public:
 
     TcpBuffer() :
-      m_Buffer(0), m_BufferSize(0), m_Lock(false)
-    {};
+      m_Buffer(0), m_BufferSize(0), m_Reader(0), m_Writer(0), m_Lock(false)
+    {
+      setSize(32768);
+    };
     virtual ~TcpBuffer()
     {
       LockGuard<Mutex> guard(m_Lock);
-      resize(0);
+      setSize(0);
     };
 
     /** The current size of the buffer */
@@ -66,6 +68,27 @@ class TcpBuffer
     /** Appends data to the buffer */
     void append(uintptr_t buffer, size_t nBytes, bool bBlock = true);
 
+    /** Writes data to the buffer */
+    size_t write(uintptr_t buffer, size_t nBytes);
+    /** Reads data from the buffer */
+    size_t read(uintptr_t buffer, size_t nBytes, bool bDoNotMove = false);
+
+    /** Gets the number of bytes of data in the buffer */
+    inline size_t getDataSize()
+    {
+        return m_DataSize;
+    }
+    /** Gets the size of the buffer */
+    inline size_t newgetSize()
+    {
+        return m_BufferSize;
+    }
+    /** Sets the size of the buffer (ie, resize) */
+    void setSize(size_t newBufferSize);
+
+    /** Retrieves the number of bytes remaining in the buffer */
+    size_t getRemainingSize();
+
   private:
 
     /** Resizes the buffer (if set to zero, will destroy it) */
@@ -76,6 +99,15 @@ class TcpBuffer
 
     /** Current buffer size */
     size_t m_BufferSize;
+
+    /** Data size */
+    size_t m_DataSize;
+
+    /** Reader offset */
+    size_t m_Reader;
+
+    /** Writer offset */
+    size_t m_Writer;
 
     /** Buffer lock */
     Mutex m_Lock;

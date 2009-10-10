@@ -80,7 +80,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     {
         // Lock the data stream so we don't end up with a nasty race where
         // another thread modifies or removes the buffer from us.
-        Mutex *lock = m_DataStream.getLock();
+        /*Mutex *lock = m_DataStream.getLock();
         lock->acquire();
 
         // Read off the front
@@ -101,7 +101,9 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 
         // We've read in this block
         lock->release();
-        return nBytes;
+        return nBytes;*/
+
+        return m_DataStream.read(buffer, maxSize, bPeek);
     }
 
     // no data is available - EOF?
@@ -129,21 +131,14 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
     // deposit, data that did not have the PSH flag can be pushed to the application
     // when we receive a FIN.
     if (nBytes && payload)
-        m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
-    if (push && m_ShadowDataStream.getSize())
+        m_ShadowDataStream.write(payload, nBytes);
+    if (push && m_ShadowDataStream.getDataSize())
     {
-        // Lock both buffers while we perform the transfer
-        Mutex *a = m_ShadowDataStream.getLock();
-        Mutex *b = m_DataStream.getLock();
-        b->acquire(); a->acquire();
-
-        // Take all the data OUT of the shadow stream, shove it into the user stream
-        size_t shadowSize = m_ShadowDataStream.getSize(false);
-        m_DataStream.append(m_ShadowDataStream.getBuffer(0, false), shadowSize, false);
-        m_ShadowDataStream.remove(0, shadowSize, false);
-        nBytesRemoved += shadowSize;
-
-        a->release(); b->release();
+        // Copy the buffer into the real data stream
+        size_t sz = m_ShadowDataStream.getDataSize();
+        uint8_t *buff = new uint8_t[sz];
+        sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
+        m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
 
         // Data has arrived!
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
@@ -163,7 +158,7 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
             bool ret = false;
             while (true)
             {
-                if (m_DataStream.getSize() != 0)
+                if (m_DataStream.getDataSize() != 0)
                 {
                     ret = true;
                     break;
@@ -172,7 +167,7 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
                 // If there's no more data in the stream, and we need to close, do it
                 // You'd think the above would handle this, but timing is an awful thing to assume
                 // Much testing has led to the addition of the stream size check
-                if (TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getSize() == 0))
+                if (TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2 && (m_DataStream.getDataSize() == 0))
                 {
                     break;
                 }
