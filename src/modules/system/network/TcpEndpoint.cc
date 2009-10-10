@@ -76,17 +76,19 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 
     bool queueReady = false;
     queueReady = dataReady(bBlock);
-
-    /// \bug Possible race condition if another thread reads the same buffer after we have the size.
-    /// \todo Needs either a Spinlock or access to the TcpBuffer lock to keep things safe.
     if (queueReady)
     {
+        // Lock the data stream so we don't end up with a nasty race where
+        // another thread modifies or removes the buffer from us.
+        Mutex *lock = m_DataStream.getLock();
+        lock->acquire();
+
         // Read off the front
-        uintptr_t front = m_DataStream.getBuffer();
+        uintptr_t front = m_DataStream.getBuffer(false);
 
         // How many bytes to read?
         size_t nBytes = maxSize;
-        size_t streamSize = m_DataStream.getSize();
+        size_t streamSize = m_DataStream.getSize(false);
         if (nBytes > streamSize)
             nBytes = streamSize;
 
@@ -95,9 +97,10 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
 
         // Remove from the buffer, we've read
         if(!bPeek)
-            m_DataStream.remove(0, nBytes);
+            m_DataStream.remove(0, nBytes, false);
 
         // We've read in this block
+        lock->release();
         return nBytes;
     }
 
@@ -129,11 +132,17 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
         m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
     if (push)
     {
+        // Lock both buffers while we perform the transfer
+        Mutex *a = m_ShadowDataStream.getLock();
+        Mutex *b = m_DataStream.getLock();
+        a->acquire(); b->acquire();
+
         // Take all the data OUT of the shadow stream, shove it into the user stream
-        size_t shadowSize = m_ShadowDataStream.getSize();
-        m_DataStream.append(m_ShadowDataStream.getBuffer(), shadowSize);
-        m_ShadowDataStream.remove(0, shadowSize);
+        size_t shadowSize = m_ShadowDataStream.getSize(false);
+        m_DataStream.append(m_ShadowDataStream.getBuffer(false), shadowSize, false);
+        m_ShadowDataStream.remove(0, shadowSize, false);
         nBytesRemoved += shadowSize;
+        b->release(); a->release();
 
         // Data has arrived!
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)

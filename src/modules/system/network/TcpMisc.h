@@ -40,24 +40,31 @@ class TcpBuffer
     };
 
     /** The current size of the buffer */
-    inline size_t getSize()
+    inline size_t getSize(bool bLock = true)
     {
       // Locked so the size given is a valid representation
-      LockGuard<Mutex> guard(m_Lock);
+      if(bLock)
+        LockGuard<Mutex> guard(m_Lock);
       return m_BufferSize;
     }
 
+    /** Grabs a reference to our buffer lock */
+    Mutex* getLock()
+    {
+        return &m_Lock;
+    }
+
     /** Removes from the buffer (if removes all, will destroy the buffer) */
-    void remove(size_t offset, size_t nBytes);
+    void remove(size_t offset, size_t nBytes, bool bLock = true);
 
     /** Returns a pointer to the buffer at a given offset */
-    uintptr_t getBuffer(size_t offset = 0);
+    uintptr_t getBuffer(size_t offset = 0, bool bLock = true);
 
     /** Inserts data at a given offset - DOES NOT OVERWRITE unless specified */
-    void insert(uintptr_t buffer, size_t nBytes, size_t offset = 0, bool bOverwrite = false);
+    void insert(uintptr_t buffer, size_t nBytes, size_t offset = 0, bool bOverwrite = false, bool bLock = true);
 
     /** Appends data to the buffer */
-    void append(uintptr_t buffer, size_t nBytes);
+    void append(uintptr_t buffer, size_t nBytes, bool bBlock = true);
 
   private:
 

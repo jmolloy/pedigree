@@ -27,9 +27,10 @@ int stateBlockFree(void* p)
   return 0;
 }
 
-void TcpBuffer::remove(size_t offset, size_t nBytes)
+void TcpBuffer::remove(size_t offset, size_t nBytes, bool bLock)
 {
-  LockGuard<Mutex> guard(m_Lock);
+  if(bLock)
+    LockGuard<Mutex> guard(m_Lock);
 
   // Special case: removing from the end of the buffer
   // this also works for removing the entire buffer,
@@ -88,17 +89,21 @@ void TcpBuffer::resize(size_t n)
   }
 }
 
-uintptr_t TcpBuffer::getBuffer(size_t offset)
+uintptr_t TcpBuffer::getBuffer(size_t offset, bool bLock)
 {
+  if(bLock)
+    LockGuard<Mutex> guard(m_Lock);
+  
   if(m_BufferSize == 0)
     return 0;
   else
     return m_Buffer + offset;
 }
 
-void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOverwrite)
+void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOverwrite, bool bLock)
 {
-  LockGuard<Mutex> guard(m_Lock);
+  if(bLock)
+    LockGuard<Mutex> guard(m_Lock);
 
   if(bOverwrite)
   {
@@ -136,9 +141,9 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
   }
 }
 
-void TcpBuffer::append(uintptr_t buffer, size_t nBytes)
+void TcpBuffer::append(uintptr_t buffer, size_t nBytes, bool bLock)
 {
-  insert(buffer, nBytes, m_BufferSize, false);
+  insert(buffer, nBytes, m_BufferSize, false, bLock);
 }
 
 //
