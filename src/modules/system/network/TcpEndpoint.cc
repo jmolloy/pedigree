@@ -84,7 +84,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
         lock->acquire();
 
         // Read off the front
-        uintptr_t front = m_DataStream.getBuffer(false);
+        uintptr_t front = m_DataStream.getBuffer(0, false);
 
         // How many bytes to read?
         size_t nBytes = maxSize;
@@ -130,19 +130,20 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
     // when we receive a FIN.
     if (nBytes && payload)
         m_ShadowDataStream.insert(payload, nBytes, sequenceNumber - nBytesRemoved, false);
-    if (push)
+    if (push && m_ShadowDataStream.getSize())
     {
         // Lock both buffers while we perform the transfer
         Mutex *a = m_ShadowDataStream.getLock();
         Mutex *b = m_DataStream.getLock();
-        a->acquire(); b->acquire();
+        b->acquire(); a->acquire();
 
         // Take all the data OUT of the shadow stream, shove it into the user stream
         size_t shadowSize = m_ShadowDataStream.getSize(false);
-        m_DataStream.append(m_ShadowDataStream.getBuffer(false), shadowSize, false);
+        m_DataStream.append(m_ShadowDataStream.getBuffer(0, false), shadowSize, false);
         m_ShadowDataStream.remove(0, shadowSize, false);
         nBytesRemoved += shadowSize;
-        b->release(); a->release();
+
+        a->release(); b->release();
 
         // Data has arrived!
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)

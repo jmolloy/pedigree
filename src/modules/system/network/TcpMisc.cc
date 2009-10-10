@@ -30,7 +30,7 @@ int stateBlockFree(void* p)
 void TcpBuffer::remove(size_t offset, size_t nBytes, bool bLock)
 {
   if(bLock)
-    LockGuard<Mutex> guard(m_Lock);
+    m_Lock.acquire();
 
   // Special case: removing from the end of the buffer
   // this also works for removing the entire buffer,
@@ -38,6 +38,8 @@ void TcpBuffer::remove(size_t offset, size_t nBytes, bool bLock)
   if((offset + nBytes) >= m_BufferSize)
   {
     resize(offset);
+    if(bLock)
+      m_Lock.release();
     return;
   }
 
@@ -50,6 +52,9 @@ void TcpBuffer::remove(size_t offset, size_t nBytes, bool bLock)
 
   // Reduce the size of the buffer
   resize(m_BufferSize - nBytes);
+
+  if(bLock)
+    m_Lock.release();
 }
 
 void TcpBuffer::resize(size_t n)
@@ -92,18 +97,20 @@ void TcpBuffer::resize(size_t n)
 uintptr_t TcpBuffer::getBuffer(size_t offset, bool bLock)
 {
   if(bLock)
-    LockGuard<Mutex> guard(m_Lock);
+    m_Lock.acquire();
   
-  if(m_BufferSize == 0)
-    return 0;
-  else
-    return m_Buffer + offset;
+  uintptr_t ret = 0;
+  if(m_BufferSize != 0)
+    ret = m_Buffer + offset;
+  if(bLock)
+    m_Lock.release();
+  return ret;
 }
 
 void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOverwrite, bool bLock)
 {
   if(bLock)
-    LockGuard<Mutex> guard(m_Lock);
+    m_Lock.acquire();
 
   if(bOverwrite)
   {
@@ -139,6 +146,9 @@ void TcpBuffer::insert(uintptr_t buffer, size_t nBytes, size_t offset, bool bOve
     // Dump our data in
     memcpy(reinterpret_cast<void*>(m_Buffer + offset), reinterpret_cast<void*>(buffer), nBytes);
   }
+
+  if(bLock)
+    m_Lock.release();
 }
 
 void TcpBuffer::append(uintptr_t buffer, size_t nBytes, bool bLock)
