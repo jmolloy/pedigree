@@ -77,34 +77,35 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     bool queueReady = false;
     queueReady = dataReady(bBlock);
 
+    /// \bug Possible race condition if another thread reads the same buffer after we have the size.
+    /// \todo Needs either a Spinlock or access to the TcpBuffer lock to keep things safe.
     if (queueReady)
     {
-        // read off the front
+        // Read off the front
         uintptr_t front = m_DataStream.getBuffer();
 
-        // how many bytes to read
+        // How many bytes to read?
         size_t nBytes = maxSize;
-        if (nBytes > m_DataStream.getSize())
-            nBytes = m_DataStream.getSize();
+        size_t streamSize = m_DataStream.getSize();
+        if (nBytes > streamSize)
+            nBytes = streamSize;
 
-        // if we're merely peeking, return the theoretical maximum number of
-        // bytes readable
-        if (bPeek)
-            return nBytes;
-
-        // copy
+        // Copy
         memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
 
-        // remove from the buffer, we've read
-        m_DataStream.remove(0, nBytes);
+        // Remove from the buffer, we've read
+        if(!bPeek)
+            m_DataStream.remove(0, nBytes);
 
-        // we've read in this block
+        // We've read in this block
         return nBytes;
     }
 
     // no data is available - EOF?
     if (TcpManager::instance().getState(m_ConnId) > Tcp::FIN_WAIT_2)
+    {
         return 0;
+    }
     else
     {
         SYSCALL_ERROR(NoMoreProcesses);

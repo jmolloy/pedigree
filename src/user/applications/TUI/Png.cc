@@ -112,6 +112,7 @@ void Png::render(rgb_t *pFb, size_t x, size_t y, size_t width, size_t height)
             rgb.r = m_pRowPointers[r][c*3+0];
             rgb.g = m_pRowPointers[r][c*3+1];
             rgb.b = m_pRowPointers[r][c*3+2];
+            rgb.a = 255;
             
             pFb[(r+y)*width + (c+x)] = rgb;
         }

@@ -282,7 +282,7 @@ ssize_t posix_sendto(void* callInfo)
 
 ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
-    //NOTICE("posix_recv");
+    NOTICE("posix_recv");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -293,9 +293,12 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
 
@@ -317,7 +320,6 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
         Endpoint::RemoteEndpoint remoteHost;
         ret = ce->recv(reinterpret_cast<uintptr_t>(buff), bufflen, blocking, &remoteHost);
     }
-
     return ret;
 }
 
