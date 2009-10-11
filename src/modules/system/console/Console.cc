@@ -62,7 +62,7 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
     pConsole->m_Param = param;
 
     m_Consoles.pushBack(pConsole);
-    
+
     return true;
 }
 
@@ -121,34 +121,34 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     uint64_t nBytes =  m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size, buffer);
 
     // Perform cooked mode processing if required.
-#if 0
-    if (file->m_Flags & (LCookedMode|LEcho))
+
+    if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
         char *pC = reinterpret_cast<char*>(buffer);
         for (size_t i = 0; i < nBytes; i++)
         {
             // If Echo or EchoNewline
-            if (pC[i] == '\n' && ((file->m_Flags & LEcho) ||
-                                  ((file->m_Flags & LEchoNewline) && file->m_Flags & LCookedMode)))
-                write(file, location, 1, buffer+i);
+            if (pC[i] == '\n' && ((m_Flags & ConsoleManager::LEcho) ||
+                                  ((m_Flags & ConsoleManager::LEchoNewline) && m_Flags & ConsoleManager::LCookedMode)))
+                write(location, 1, buffer+i);
 
-            else if (pC[i] == '\x08' && (file->m_Flags & LEchoErase) &&
-                     (file->m_Flags & LCookedMode))
+            else if (pC[i] == '\x08' && (m_Flags & ConsoleManager::LEchoErase) &&
+                     (m_Flags & ConsoleManager::LCookedMode))
             {
                 // If EchoErase in cooked mode, we must not only echo the
                 // erase, but also chomp the erase character itself.
                 char buf[3] = {'\x08', ' ', '\x08'};
-                write(file, location, 3, reinterpret_cast<uintptr_t>(buf));
+                write(location, 3, reinterpret_cast<uintptr_t>(buf));
                 memmove(reinterpret_cast<void*>(buffer+i), reinterpret_cast<void*>(buffer+i+1), nBytes-i-1);
                 i--; // Need to process this byte again, its contents have changed.
                 nBytes--;
             }
 
-            else if (file->m_Flags & LEcho)
-                write(file, location, nBytes, buffer);
+            else if (m_Flags & ConsoleManager::LEcho)
+                write(location, 1, buffer+i);
         }
     }
-#endif
+
     // Perform input processing.
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
@@ -173,7 +173,7 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     // Post-process output if enabled.
-    if ((m_Flags & ConsoleManager::OPostProcess))
+    if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
         char *pC = reinterpret_cast<char*>(buffer);
         for (size_t i = 0; i < size; i++)
@@ -181,15 +181,12 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
             if (pC[i] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
                 pC[i] = '\n';
             else if (pC[i] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
-            {
                 // We don't make the distinction between '\r\n' and '\n'.
                 pC[i] = '\n';
-                continue;
-            }
 
             // Lastly, after both mappings above have been done, we can
             // check if NL should cause a CR as well.
-            if (pC[i] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR) == 0)
+            else if (pC[i] == '\n' && !(m_Flags & ConsoleManager::ONLCausesCR))
                 pC[i] = '\xB'; // Use 'VT' - vertical tab.
         }
     }
