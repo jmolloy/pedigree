@@ -174,8 +174,8 @@ def buildCdImage(target, source, env):
                  boot/grub/menu.lst=" + pathToGrub + "/menu.lst \
                  boot/kernel=" + source[2].abspath + " \
                  boot/initrd.tar=" + source[1].abspath + " \
-                /hdd.img=" + source[3].abspath + " \
-                /.pedigree-root=" + configDb)
+                /livedisk.img=" + source[3].abspath + "\
+                .pedigree-root=" + configDb)
 
     os.remove("./stage2_eltorito")
 

@@ -68,7 +68,6 @@ bool FatFilesystem::initialise(Disk *pDisk)
 
     // Attempt to read the superblock.
     uint8_t *buffer = reinterpret_cast<uint8_t*>(m_pDisk->read(0));
-                      
 
     memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
 
@@ -81,7 +80,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
         {
             String devName;
             pDisk->getName(devName);
-            ERROR("FAT: Superblock not found on device " << devName);
+            ERROR("FAT: Superblock not found on device " << devName << " [" << m_Superblock.BS_jmpBoot[0] << ", " << m_Superblock.BS_jmpBoot[2] << "]");
             return false;
         }
     }

@@ -157,6 +157,9 @@ void VFS::removeAlias(String alias)
                     mc();
                 }
             }
+
+            // Only ever one alias
+            break;
         }
     }
 }

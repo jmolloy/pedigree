@@ -46,6 +46,7 @@
 #include <config/MemoryBackend.h>
 
 #include <machine/DeviceHashTree.h>
+#include <lodisk/LoDisk.h>
 
 extern void pedigree_init_sigret();
 extern void pedigree_init_pthreads();
@@ -125,6 +126,25 @@ void init()
 //    {
 //        FATAL("No raw partition!");
 //    }
+
+    // Are we running a live CD?
+    /// \todo Use the configuration manager to determine if we're running a live CD or
+    ///       not, to avoid the potential for conflicts here.
+    if(VFS::instance().find(String("root»/livedisk.img")))
+    {
+        FileDisk *pRamDisk = new FileDisk(String("root»/livedisk.img"), FileDisk::RamOnly);
+        if(pRamDisk && pRamDisk->initialise())
+        {
+            pRamDisk->setParent(&Device::root());
+            Device::root().addChild(pRamDisk);
+
+            // Mount it in the VFS
+            VFS::instance().removeAlias(String("root"));
+            findDisks(pRamDisk);
+        }
+        else
+            delete pRamDisk;
+    }
 
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
