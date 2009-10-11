@@ -1015,12 +1015,18 @@ struct servent* getservbyname(const char *name, const char *proto)
         se.s_proto = 0;
         first = 0;
     }
-    char buf[256];
+    char buf[256], *escName = pedigree_config_escape_string(name), *escProto;
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", pedigree_config_escape_string(name), pedigree_config_escape_string(proto));
+    {
+        escProto = pedigree_config_escape_string(proto);
+        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", escName, escProto);
+        free(escProto);
+    }
     else
-        sprintf(buf, "select * from 'network-services' where name = '%s'", pedigree_config_escape_string(name));
+        sprintf(buf, "select * from 'network-services' where name = '%s'", escName);
+
+    free(escName);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
