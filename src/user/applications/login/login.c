@@ -109,39 +109,10 @@ int main(int argc, char **argv)
     g_RunningPid = -1;
 
     // Get username
-
     printf("Username: ");
-    fflush(stdout);
-    char c;
-    char username[256];
-    int i = 0;
-
-    struct termios curt;
-    tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
-
-    while ( i < 256 && (c=getchar()) != '\n' )
-    {
-      if(c == '\b')
-      {
-        if(i > 0)
-        {
-            username[--i] = '\0';
-            printf("\b \b");
-        }
-      }
-      else if (c != '\033')
-      {
-        username[i++] = c;
-        printf("%c",c);
-      }
-    }
-    tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
-    printf("\n");
-
-    username[i] = '\0';
-
+    char buffer[256];
+    char* username = gets(buffer);
     struct passwd *pw = getpwnam(username);
-
     if (!pw)
     {
       printf("Unknown user: `%s'\n", username);
@@ -159,9 +130,10 @@ int main(int argc, char **argv)
 
     printf("Password: ");
     fflush(stdout);
-    char password[256];
-    i = 0;
+    char password[256], c;
+    int i = 0;
 
+    struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
 
     while ( i < 256 && (c=getchar()) != '\n' )
