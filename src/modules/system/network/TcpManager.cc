@@ -216,7 +216,7 @@ void TcpManager::Disconnect(size_t connectionId)
   }
   else
   {
-    NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but isn't valid state!");
+      NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but isn't valid state [" << Tcp::stateString(stateBlock->currentState) << "]!");
   }
 }
 

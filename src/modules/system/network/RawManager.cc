@@ -124,11 +124,11 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
     return 0;
 };
 
-void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost)
+size_t RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost)
 {
   /// \note Perhaps nBytes should also have an upper limit check?
   if(!nBytes || !payload)
-    return;
+    return 0;
   uint8_t* data = new uint8_t[nBytes];
   memcpy(data, reinterpret_cast<void*>(payload), nBytes);
 
@@ -144,6 +144,7 @@ void RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Remo
   // Data has arrived!
   for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
     (*it)->endpointStateChanged();
+  return nBytes;
 }
 
 bool RawEndpoint::dataReady(bool block, uint32_t tmout)

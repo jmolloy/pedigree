@@ -76,7 +76,7 @@ class RawEndpoint : public ConnectionlessEndpoint
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
 
     /** Deposits a packet into this endpoint */
-    virtual void depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost);
+    virtual size_t depositPacket(size_t nBytes, uintptr_t payload, Endpoint::RemoteEndpoint* remoteHost);
 
     /** What type is this endpoint? */
     inline Type getRawType()

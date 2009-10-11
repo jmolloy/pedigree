@@ -99,15 +99,15 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpo
     return 0;
 };
 
-void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
+size_t UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
 {
   /// \note Perhaps nBytes should also have an upper limit check?
   if(!nBytes || !payload)
-    return;
+    return 0;
 
   // Do not accept a payload if our receiver is shut down
   if(!m_bCanRecv)
-    return;
+    return 0;
 
   // Otherwise, grab the data block and add it to the queue
   uint8_t* data = new uint8_t[nBytes];
@@ -127,6 +127,9 @@ void UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoin
   {
     (*it)->endpointStateChanged();
   }
+
+  // Data added now
+  return nBytes;
 }
 
 bool UdpEndpoint::dataReady(bool block, uint32_t tmout)

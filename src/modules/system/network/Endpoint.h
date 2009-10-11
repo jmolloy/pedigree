@@ -139,8 +139,9 @@ public:
     };
 
     /** <Protocol>Manager functionality */
-    virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
+    virtual size_t depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
     {
+        return 0;
     }
 
     /** All endpoint types must provide a shutdown() method that shuts part of the socket */

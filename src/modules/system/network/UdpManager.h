@@ -65,7 +65,7 @@ class UdpEndpoint : public ConnectionlessEndpoint
     virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; };
 
     /** UdpManager functionality - called to deposit data into our local buffer */
-    virtual void depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost);
+    virtual size_t depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost);
 
     /** Shutdown on a UDP endpoint merely disables via software the ability to send/recv */
     virtual bool shutdown(ShutdownType what)

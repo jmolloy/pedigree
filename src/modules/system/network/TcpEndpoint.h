@@ -95,7 +95,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     }
 
     /** TcpManager functionality - called to deposit data into our local buffer */
-    virtual void depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
+    virtual size_t depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
 
     /** Setters */
     void setCard(Network* pCard)

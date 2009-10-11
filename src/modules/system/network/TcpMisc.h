@@ -56,18 +56,6 @@ class TcpBuffer
         return &m_Lock;
     }
 
-    /** Removes from the buffer (if removes all, will destroy the buffer) */
-    void remove(size_t offset, size_t nBytes, bool bLock = true);
-
-    /** Returns a pointer to the buffer at a given offset */
-    uintptr_t getBuffer(size_t offset = 0, bool bLock = true);
-
-    /** Inserts data at a given offset - DOES NOT OVERWRITE unless specified */
-    void insert(uintptr_t buffer, size_t nBytes, size_t offset = 0, bool bOverwrite = false, bool bLock = true);
-
-    /** Appends data to the buffer */
-    void append(uintptr_t buffer, size_t nBytes, bool bBlock = true);
-
     /** Writes data to the buffer */
     size_t write(uintptr_t buffer, size_t nBytes);
     /** Reads data from the buffer */
@@ -87,12 +75,12 @@ class TcpBuffer
     void setSize(size_t newBufferSize);
 
     /** Retrieves the number of bytes remaining in the buffer */
-    size_t getRemainingSize();
+    inline size_t getRemainingSize()
+    {
+        return m_BufferSize - m_DataSize;
+    }
 
   private:
-
-    /** Resizes the buffer (if set to zero, will destroy it) */
-    void resize(size_t n = 0);
 
     /** The actual buffer itself */
     uintptr_t m_Buffer;

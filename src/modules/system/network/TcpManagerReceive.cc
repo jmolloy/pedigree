@@ -520,17 +520,23 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       {
         if(stateBlock->seg_len)
         {
-          stateBlock->rcv_nxt += stateBlock->seg_len;
-          stateBlock->rcv_wnd -= stateBlock->seg_len;
-
           NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload)));
           if(stateBlock->endpoint)
-            stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
+          {
+            size_t winChange = stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
+            stateBlock->rcv_nxt += winChange;
+            if(winChange > stateBlock->rcv_wnd)
+            {
+                WARNING("TCP: incoming data was larger than rcv_wind");
+                winChange = stateBlock->rcv_wnd;
+            }
+            stateBlock->rcv_wnd -= winChange;
 
-          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
-            WARNING("TCP: Sending ACK for incoming data failed!");
-          else
-            alreadyAck = true;
+            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->rcv_wnd, 0, 0))
+              WARNING("TCP: Sending ACK for incoming data failed!");
+            else
+              alreadyAck = true;
+          }
 
           stateBlock->numEndpointPackets++;
         }

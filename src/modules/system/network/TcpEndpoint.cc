@@ -118,12 +118,12 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     }
 };
 
-void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
+size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
 {
     if (nBytes > 0xFFFF)
     {
         WARNING("Dud length passed to depositPayload!");
-        return;
+        return 0;
     }
 
     // If there's data to add to the shadow stream, add it now. Then, if the PUSH flag
@@ -145,7 +145,13 @@ void TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequ
         {
           (*it)->endpointStateChanged();
         }
+
+        // Return the number of bytes that applications now have access to
+        return sz;
     }
+
+    // If we're here, the window shouldn't change at all
+    return 0;
 }
 
 bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
