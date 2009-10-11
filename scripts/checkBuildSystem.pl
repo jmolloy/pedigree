@@ -27,7 +27,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'name' => 'Nasm',
                   'filename' => "nasm-$nasm_version.tar.bz2",
                   'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
-                  'arch' => 'i686-elf amd64-elf'} );
+                  'arch' => 'i686-pedigree i686-elf amd64-elf'} );
 
 my @patch = ( {'cwd' => "gcc-$gcc_version",
                'name' => "Gcc pedigree target patch",
@@ -46,8 +46,8 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'configure' => "--prefix=\$PREFIX",
                  'make' => "",
                  'install' => 'install',
-                 'arch' => 'i686-elf amd64-elf',
-                 'test' => './bin/nasm' }, 
+                 'arch' => 'i686-pedigree i686-elf amd64-elf',
+                 'test' => './bin/nasm' },
 		{'dir' => "binutils-$binutils_version",
                  'name' => "Binutils",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls",
