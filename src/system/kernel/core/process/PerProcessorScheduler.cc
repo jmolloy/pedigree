@@ -72,6 +72,10 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 
     if (pNextThread == 0)
     {
+        // If we're supposed to be sleeping, this isn't a good place to be
+        if(nextStatus == Thread::Sleeping)
+            FATAL("No threads to switch to and the current thread is supposed to be sleeping now!");
+
         // Nothing to switch to, just return.
         pCurrentThread->getLock().release();
         Processor::setInterrupts(bWasInterrupts);
