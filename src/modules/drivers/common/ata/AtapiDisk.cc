@@ -94,8 +94,22 @@ bool AtapiDisk::initialise()
   }
   else
   {
-    WARNING("NON-ATAPI device, skipping");
-    return false;
+    if(commandRegs->read8(4) == 0x14 &&
+      commandRegs->read8(5) == 0xeb)
+    {
+      // Run IDENTIFY PACKET DEVICE instead
+      commandRegs->write8(0xA1, 7);
+      status = commandRegs->read8(7);
+
+      // Poll until BSY is clear and either ERR or DRQ are set
+      while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+        status = commandRegs->read8(7);
+    }
+    else
+    {
+        WARNING("NON-ATAPI device, skipping");
+        return false;
+    }
   }
 
   // If ERR was set we had an err0r.
