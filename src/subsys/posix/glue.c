@@ -1018,9 +1018,9 @@ struct servent* getservbyname(const char *name, const char *proto)
     char buf[256];
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", name, proto);
+        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", pedigree_config_escape_string(name), pedigree_config_escape_string(proto));
     else
-        sprintf(buf, "select * from 'network-services' where name = '%s'", name);
+        sprintf(buf, "select * from 'network-services' where name = '%s'", pedigree_config_escape_string(name));
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
@@ -1066,9 +1066,9 @@ struct servent* getservbyport(int port, const char *proto)
     char buf[256];
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, proto);
+        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", pedigree_config_escape_string(port), pedigree_config_escape_string(proto));
     else
-        sprintf(buf, "select * from 'network-services' where port = %d", port);
+        sprintf(buf, "select * from 'network-services' where port = %d", pedigree_config_escape_string(port));
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
@@ -1989,4 +1989,28 @@ int pedigree_config_was_successful(size_t resultIdx)
 void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
 {
     syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (long)buf, bufsz);
+}
+
+char *pedigree_config_escape_string(char *str)
+{
+    char *buf = (char *)malloc(strlen(str)*2+1), *it = str;
+    int i = 0;
+    while(*it)
+    {
+        if(*it == '\'')
+        {
+            buf[i] = '\'';
+            buf[i+1] = '\'';
+            i+=2;
+        }
+        else
+        {
+            buf[i] = *it;
+            i++;
+        }
+        it++;
+    }
+    buf[i] = '\0';
+
+    return buf;
 }
