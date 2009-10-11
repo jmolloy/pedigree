@@ -429,7 +429,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             // Grab the current sector
             uint8_t *currSector = new uint8_t[512];
 
-
             // We got the mutex, so an IRQ must have arrived.
             for (int j = 0; j < 256; j++)
                 commandRegs->write16(*tmp++, 0);
