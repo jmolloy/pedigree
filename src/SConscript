@@ -27,10 +27,12 @@ configdb = env.File(builddir + '/config.db')
 # Complete the build - image creation
 floppyimg = env.File(builddir + '/floppy.img')
 hddimg = env.File(builddir + '/hdd.img')
+cdimg = env.File(builddir + '/pedigree.iso')
 
 env.Depends(hddimg, 'libs')
 env.Depends(hddimg, 'apps')
 env.Depends(hddimg, configdb)
+env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
 
 configSchemas = []
 for i in os.walk(env.Dir("#src").abspath):
@@ -159,6 +161,24 @@ def buildImageMtools(target, source, env):
         
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
+def buildCdImage(target, source, env):
+    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    pathToGrub = env.Dir("#images/grub").abspath
+    configDb = source[0].abspath
+    shutil.copy(pathToGrub + "/stage2_eltorito", ".")
+    
+    os.system("mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
+                 -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
+                 -boot-info-table -o " + target[0].path + " -V 'PEDIGREE' \
+                 boot/grub/stage2_eltorito=./stage2_eltorito \
+                 boot/grub/menu.lst=" + pathToGrub + "/menu.lst \
+                 boot/kernel=" + source[2].abspath + " \
+                 boot/initrd.tar=" + source[1].abspath + " \
+                /hdd.img=" + source[3].abspath + " \
+                /.pedigree-root=" + configDb)
+
+    os.remove("./stage2_eltorito")
+
 if env["installer"]:
     print "Oops, installer images aren't built yet. Tell pcmattman to write Python scripts"
     print "to build these images, please."
@@ -199,3 +219,6 @@ else:
     
     # Build the hard disk image
     env.Command(hddimg, fileList, buildImage)
+    
+    # Build the live CD ISO
+    env.Command(cdimg, [configdb, builddir + '/initrd.tar', builddir + '/kernel/kernel', hddimg], buildCdImage)
