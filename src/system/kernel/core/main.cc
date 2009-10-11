@@ -76,7 +76,7 @@ void apMain()
 }
 
 /** A processor idle function. */
-int idle(void *)
+/*int idle(void *)
 {
   NOTICE("Idle " << Processor::information().getCurrentThread()->getId());
   Processor::setInterrupts(true);
@@ -85,6 +85,36 @@ int idle(void *)
     Scheduler::instance().yield();
   }
   return 0;
+}*/
+
+/** Loads all kernel modules */
+int loadModules(void *inf)
+{
+    BootstrapStruct_t bsInf = *static_cast<BootstrapStruct_t*>(inf);
+
+    /// \note We have to do this before we call Processor::initialisationDone() otherwise the
+    ///       BootstrapStruct_t might already be unmapped
+    Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
+
+    size_t nFiles = initrd.getNumFiles();
+    for (size_t i = 0; i < nFiles; i++)
+    {
+        if (g_BootProgressTotal)
+            g_BootProgressTotal(nFiles*2); // Each file has to be preloaded and executed.
+
+        // Load file.
+        KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
+                                         initrd.getFileSize(i));
+    }
+
+    // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
+    // mapping of 0-4MB
+    // NOTE: BootstrapStruct_t unusable after this point
+    #ifdef X86_COMMON
+        Processor::initialisationDone();
+    #endif
+    
+    return 0;
 }
 
 /** Kernel entry point. */
@@ -119,7 +149,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2();
 
-//  new Thread(Processor::information().getCurrentThread()->getParent(), &idle, 0, 0);
   Processor::setInterrupts(true);
 
 #if defined(X86_COMMON) || defined(PPC_COMMON)
@@ -159,27 +188,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   g_LocksCommand.setReady();
 #endif
 
-  /// \note We have to do this before we call Processor::initialisationDone() otherwise the
-  ///       BootstrapStruct_t might already be unmapped
-  Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
-
-  size_t nFiles = initrd.getNumFiles();
-  for (size_t i = 0; i < nFiles; i++)
-  {
-      if (g_BootProgressTotal)
-          g_BootProgressTotal(nFiles*2); // Each file has to be preloaded and executed.
-
-    // Load file.
-    KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
-                                     initrd.getFileSize(i));
-  }
-
-  // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
-  // mapping of 0-4MB
-  // NOTE: BootstrapStruct_t unusable after this point
-#ifdef X86_COMMON
-  Processor::initialisationDone();
-#endif
+  new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
 
 #ifdef DEBUGGER_RUN_AT_START
   //Processor::breakpoint();

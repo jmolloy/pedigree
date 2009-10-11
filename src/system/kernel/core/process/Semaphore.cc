@@ -65,7 +65,6 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
       Machine::instance().getTimer()->addAlarm(pEvent, timeoutSecs, timeoutUsecs);
   }
 
-  bool bAlreadyAcquired = false;
   while (true)
   {
     Thread *pThread = Processor::information().getCurrentThread();
@@ -79,16 +78,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
       return;
     }
 
-    /// \bug On one of my test systems, the sleep(&m_BeingModified) line returns without the Semaphore
-    ///      being released OR the lock being released. This ends up with a deadlock right here because
-    ///      the lock is already acquired at this stage.
-    ///      I know there's a solution to this that doesn't involve this hack, but I'm not certain what
-    ///      that is at this stage. -Matt
-    if(!bAlreadyAcquired)
-    {
-        m_BeingModified.acquire();
-        bAlreadyAcquired = true;
-    }
+    m_BeingModified.acquire();
 
     // To avoid a race condition, check again here after we've disabled interrupts.
     // This stops the condition where the lock is released after tryAcquire returns false,
