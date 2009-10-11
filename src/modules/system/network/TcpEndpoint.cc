@@ -188,7 +188,7 @@ bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
     }
     else
     {
-        return (m_DataStream.getSize() != 0);
+        return (m_DataStream.getDataSize() != 0);
     }
 };
 

@@ -31,6 +31,12 @@ size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
 {
     LockGuard<Mutex> guard(m_Lock);
 
+    // Validation
+    if(!m_Buffer || !m_BufferSize)
+        return 0;
+    if(nBytes > m_BufferSize)
+        nBytes = m_BufferSize;
+
     // Can we just write the whole thing?
     if((m_Writer + nBytes) < m_BufferSize)
     {
@@ -52,7 +58,7 @@ size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
         if(numOverlapBytes >= m_Reader && m_Reader != 0)
             numOverlapBytes = m_Reader - 1;
         // Has the reader position progressed, at all?
-        else if(m_Reader == 0)
+        else if(m_Reader == 0 && m_DataSize == 0)
             numOverlapBytes = 0;
 
         // Copy the normal bytes
@@ -79,16 +85,22 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
 {
     LockGuard<Mutex> guard(m_Lock);
 
+    // Validation
+    if(!m_Buffer || !m_BufferSize)
+        return 0;
+    if(nBytes > m_BufferSize)
+        nBytes = m_BufferSize;
+
     // Can we just read the whole thing?
     if((m_Reader + nBytes) < m_BufferSize)
     {
         // Limit the number of bytes to the writer position
         if(m_Writer == 0 && m_Reader == 0)
             return 0; // No data to read
-        else if(m_Writer == m_Reader)
+        else if(m_Writer == m_Reader && m_DataSize == 0) // If there's data, the writer has wrapped around
             return 0; // Reader == Writer, no data
-        else if((m_Reader + nBytes) > m_Writer)
-            nBytes = m_Writer - m_Reader;
+        else if(nBytes > m_DataSize)
+            nBytes = m_DataSize;
         if(!nBytes)
             return 0; // No data?
 
@@ -105,9 +117,34 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
     }
     else
     {
-        /// \todo Writer wrap handling
-        NOTICE("TcpBuffer: wrap used but not implemented");
-        return 0;
+        // This read will wrap around to the beginning
+        size_t numNormalBytes = m_BufferSize - m_Writer;
+        size_t numOverlapBytes = (m_Writer + nBytes) % m_BufferSize;
+
+        // Does the read overlap the write position?
+        if(numOverlapBytes >= m_Writer && m_Writer != 0)
+            numOverlapBytes = m_Writer - 1;
+        // If the writer's sitting at position 0, don't overlap
+        else if(m_Writer == 0)
+            numOverlapBytes = 0;
+
+        // Copy the normal bytes
+        if(numNormalBytes)
+            memcpy(reinterpret_cast<void*>(buffer),
+                   reinterpret_cast<void*>(m_Buffer+m_Reader),
+                   numNormalBytes);
+        if(numOverlapBytes)
+            memcpy(reinterpret_cast<void*>(buffer),
+                   reinterpret_cast<void*>(m_Buffer),
+                   numOverlapBytes);
+
+        // Update the writer position, if needed
+        if(numOverlapBytes)
+            m_Reader = numOverlapBytes;
+
+        // Return the number of bytes written
+        m_DataSize -= numNormalBytes + numOverlapBytes;
+        return numNormalBytes + numOverlapBytes;
     }
 }
 
@@ -123,12 +160,6 @@ void TcpBuffer::setSize(size_t newBufferSize)
         m_BufferSize = newBufferSize;
         m_Buffer = reinterpret_cast<uintptr_t>(new uint8_t[newBufferSize]);
     }
-}
-
-size_t getRemainingSize()
-{
-    /// \todo Write
-    return 0;
 }
 
 //

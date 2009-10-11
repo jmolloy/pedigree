@@ -67,7 +67,7 @@ class TcpBuffer
         return m_DataSize;
     }
     /** Gets the size of the buffer */
-    inline size_t newgetSize()
+    inline size_t getSize()
     {
         return m_BufferSize;
     }
