@@ -118,14 +118,14 @@ bool DynamicLinker::loadProgram(File *pFile)
         File *pFile = VFS::instance().find(filename);
         if (!pFile)
         {
-            ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' not found!");
+            ERROR("DynamicLinker: Dependency `" << filename << "' not found!");
             return false;
         }
         while (pFile && pFile->isSymlink())
             pFile = Symlink::fromFile(pFile)->followLink();
         if (!pFile || !loadObject(pFile))
         {
-            ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' failed to load!");
+            ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
             return false;
         }
     }
