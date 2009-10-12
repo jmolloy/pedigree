@@ -59,9 +59,7 @@ void searchNode(Device *pDev)
       {
         /// \todo Problem with String::operator== - fix.
         if (!strcmp(pChild->addresses()[j]->m_Name, "command"))
-        {
           foundCommand = true;
-        }
         if (!strcmp(pChild->addresses()[j]->m_Name, "control"))
           foundControl = true;
       }

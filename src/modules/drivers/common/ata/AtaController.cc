@@ -44,17 +44,22 @@ AtaController::AtaController(Controller *pDev, int nController) :
   bool masterInitialised = pMaster->initialise();
   bool slaveInitialised = pSlave->initialise();
 
-  // Only add a child disk if it initialised properly.
+  NOTICE("AtaController installing IRQ " << getInterruptNumber() << ".");
+  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
+
+  // Initialise potential ATAPI disks (add as children before initialising so they get IRQs)
   if (masterInitialised)
     addChild(pMaster);
   else
   {
     delete pMaster;
     AtapiDisk *pMasterAtapi = new AtapiDisk(this, true);
+    addChild(pMasterAtapi);
     if(!pMasterAtapi->initialise())
+    {
+      removeChild(pMasterAtapi);
       delete pMasterAtapi;
-    else
-      addChild(pMasterAtapi);
+    }
   }
 
   if (slaveInitialised)
@@ -63,13 +68,14 @@ AtaController::AtaController(Controller *pDev, int nController) :
   {
     delete pSlave;
     AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false);
+    addChild(pSlaveAtapi);
     if(!pSlaveAtapi->initialise())
+    {
+      removeChild(pSlaveAtapi);
       delete pSlaveAtapi;
-    else
-      addChild(pSlaveAtapi);
+    }
   }
 
-  Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
   initialise();
 
 }
@@ -95,7 +101,13 @@ bool AtaController::irq(irq_id_t number, InterruptState &state)
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
     AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
-    pDisk->irqReceived();
+    if(pDisk->isAtapi())
+    {
+        AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);
+        pAtapiDisk->irqReceived();
+    }
+    else
+        pDisk->irqReceived();
   }
   return false; // Keep the IRQ disabled - level triggered.
 }

@@ -104,6 +104,12 @@ public:
   // It may not actually apply to us!
   void irqReceived();
 
+  // Is this an ATAPI device?
+  inline virtual bool isAtapi()
+  {
+    return true;
+  }
+
   // Obtains the type of this ATAPI device
   inline AtapiType getAtapiType()
   {

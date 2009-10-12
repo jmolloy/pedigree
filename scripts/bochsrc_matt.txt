@@ -1,7 +1,7 @@
 megs: 1024
-romimage: file="C:/program files/bochs-2.4/BIOS-bochs-latest"
-vgaromimage: file="C:/program files/bochs-2.4/VGABIOS-lgpl-latest"
-floppya: 1_44=floppy.img, status=inserted
+romimage: file="C:/program files (x86)/bochs-2.4.1/BIOS-bochs-latest"
+vgaromimage: file="C:/program files (x86)/bochs-2.4.1/VGABIOS-lgpl-latest"
+floppya: 1_44=build/floppy.img, status=inserted
 boot: a
 log: bochsout.txt
 mouse: enabled=0
@@ -16,8 +16,8 @@ vga: extension=vbe
 com1: enabled=1, mode=file, dev=serial.txt
 
 #ata0-master: type=disk, path=hdd_16h_63spt_100c.img, mode=flat, cylinders=100, heads=16, spt=63, translation=auto
-ata0-master:  type=disk, path=hdd_fat16.img, mode=flat, translation=auto
-# ata0-slave:  type=cdrom, path=../images/install/pedigree-i386.iso, status=inserted
+ata0-master:  type=disk, path=build/hdd.img, mode=flat, translation=auto
+ata0-slave:  type=cdrom, path=build/pedigree.iso, status=inserted
 
 i440fxsupport: enabled=1, slot2=pcivga
 # , slot1=ne2k

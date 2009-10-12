@@ -56,6 +56,12 @@ public:
     // It may not actually apply to us!
     void irqReceived();
 
+    // Is this an ATAPI device?
+    inline virtual bool isAtapi()
+    {
+      return false;
+    }
+
 private:
     /** Sets the drive up for reading from address 'n' in LBA28 mode. */
     void setupLBA28(uint64_t n, uint32_t nSectors);

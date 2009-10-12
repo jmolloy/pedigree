@@ -60,9 +60,6 @@ bool AtapiDisk::initialise()
   for (int i = 0; i < 5; i++)
     commandRegs->read8(7);
 
-  // Disable IRQs, for the moment.
-//   controlRegs->write8(0x01, 6);
-
   // Send IDENTIFY.
   uint8_t status = commandRegs->read8(7);
   commandRegs->write8(0xEC, 7);
@@ -390,19 +387,42 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   if(nPackBytes & 0x1)
     nPackBytes++;
 
+  // Wait for BSY and DRQ to be zero before selecting the device
+  uint8_t status = commandRegs->read8(7);
+  while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
+
+  // Select the device to transmit to
+  uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+  commandRegs->write8(devSelect, 6);
+
+  // Wait for it to be selected
+  status = commandRegs->read8(7);
+  while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
+
+  // Verify that it's the correct device
+  if(commandRegs->read8(6) != devSelect)
+  {
+      WARNING("ATAPI: Device was not selected");
+      return false;
+  }
+
   // PACKET command
-  commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6);
   commandRegs->write8(0, 1); // no overlap, no DMA
   commandRegs->write8(0, 2); // tag = 0
   commandRegs->write8(0, 3); // n/a for PACKET command
-  commandRegs->write8((nRespBytes == 0) ? 0x2 : (nRespBytes & 0xFF), 4); // byte count limit
+  commandRegs->write8(nRespBytes & 0xFF, 4); // byte count limit
   commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
   commandRegs->write8(0xA0, 7);
+  // NOTICE("nRespBytes = " << nRespBytes << ".");
 
   // Wait for the busy bit to be cleared before continuing
-  uint8_t status = commandRegs->read8(7);
+  status = commandRegs->read8(7);
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
+
+    // 8-bit write to 01f7 = a0
 
   // Error?
   if(status & 0x01)
@@ -411,11 +431,14 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     return false;
   }
 
+  Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
+
   // Transmit the command (padded as needed)
   for(size_t i = 0; i < (m_PacketSize / 2); i++)
     commandRegs->write16(tmpPacket[i], 0);
 
   // Wait for the busy bit to be cleared once again
+  m_IrqReceived.acquire();
   status = commandRegs->read8(7);
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
