@@ -66,6 +66,15 @@ public:
     RequestQueue *m_pBackEnd;
     uintptr_t m_Param;
     size_t m_Flags;
+
+    /** Input line buffer (for canonical mode) */
+    uint8_t m_LineBuffer[LINEBUFFER_MAXIMUM];
+
+    /** Size of the input line buffer */
+    size_t m_LineBufferSize;
+
+    /** Location of the first newline in the line buffer. ~0 if none present. */
+    size_t m_LineBufferFirstNewline;
 };
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.

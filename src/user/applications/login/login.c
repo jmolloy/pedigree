@@ -134,7 +134,7 @@ int main(int argc, char **argv)
     int i = 0;
 
     struct termios curt;
-    tcgetattr(0, &curt); curt.c_lflag &= ~ECHO; tcsetattr(0, TCSANOW, &curt);
+    tcgetattr(0, &curt); curt.c_lflag &= ~(ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
 
     while ( i < 256 && (c=getchar()) != '\n' )
     {
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
             printf("•");
         }
     }
-    tcgetattr(0, &curt); curt.c_lflag |= ECHO; tcsetattr(0, TCSANOW, &curt);
+    tcgetattr(0, &curt); curt.c_lflag |= (ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
     printf("\n");
 
     password[i] = '\0';
