@@ -119,7 +119,7 @@ bool AtapiDisk::initialise()
     return false;
   }
 
-  // Read the dAtapi.
+  // Read the data.
   for (int i = 0; i < 256; i++)
   {
     m_pIdent[i] = commandRegs->read16(0);
@@ -204,7 +204,10 @@ bool AtapiDisk::initialise()
 
   // Grab the capacity of the disk for future reference
   if(!getCapacityInternal(&m_NumBlocks, &m_BlockSize))
+  {
+    WARNING("Couldn't get internal capacity on ATAPI device!");
     return false;
+  }
 
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;
@@ -419,7 +422,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
 
   if(status & 0x1)
   {
-    WARNING("ATAPI sendCommand failed after sending command packet");
+    WARNING("ATAPI sendCommand failed after sending command packet [status=" << status << "]");
     return false;
   }
 

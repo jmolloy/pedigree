@@ -19,6 +19,12 @@
 
 #include <vfs/File.h>
 
+#if 1
+#define N_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
+#else
+#define N_NOTICE(x)
+#endif
+
 int posix_socket(int domain, int type, int protocol);
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen);
 

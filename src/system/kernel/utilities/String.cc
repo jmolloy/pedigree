@@ -22,7 +22,7 @@ void String::assign(const String &x)
 {
   m_Length = x.length();
   reserve(m_Length + 1);
-  if (m_Length)
+  if (m_Length && x.m_Data)
     memcpy(m_Data, x.m_Data, m_Length + 1);
   else
     m_Data[0] = '\0';

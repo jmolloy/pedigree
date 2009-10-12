@@ -192,7 +192,6 @@ void init()
             }
 
             // Additionally route the complement of its subnet to the gateway
-            NOTICE("Adding a new route - complement of the subnet of " << info.ipv4.toString() << " that subs in " << info.gateway.toString() << " [subnet=" << info.subnetMask.toString() << "].");
             RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
                                          info.ipv4,
                                          info.subnetMask,
@@ -210,14 +209,10 @@ void init()
         }
 
         // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
-        NOTICE("IP: " << info.ipv4.toString() << ", comparison: " << (info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1)) << ".");
         if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
             RoutingTable::instance().Add(RoutingTable::DestIpSub, info.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
         else
-        {
-            NOTICE("FAIL");
             RoutingTable::instance().Add(RoutingTable::DestIp, info.ipv4, empty, String(""), card);
-        }
     }
 
     // Otherwise, just assume the default is interface zero

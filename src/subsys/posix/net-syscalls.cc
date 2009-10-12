@@ -38,7 +38,7 @@
 
 int posix_socket(int domain, int type, int protocol)
 {
-    NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
+    N_NOTICE("socket(" << domain << ", " << type << ", " << protocol << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -93,7 +93,7 @@ int posix_socket(int domain, int type, int protocol)
 
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 {
-    NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
+    N_NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -178,7 +178,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 
 ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
-    NOTICE("posix_send");
+    N_NOTICE("posix_send");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -231,7 +231,7 @@ struct special_send_recv_data
 
 ssize_t posix_sendto(void* callInfo)
 {
-    NOTICE("posix_sendto");
+    N_NOTICE("posix_sendto");
 
     /// \todo Ugly - constructor would be nicer.
     special_send_recv_data* tmp = reinterpret_cast<special_send_recv_data*>(callInfo);
@@ -282,7 +282,7 @@ ssize_t posix_sendto(void* callInfo)
 
 ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
-    NOTICE("posix_recv");
+    N_NOTICE("posix_recv");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -325,7 +325,7 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 
 ssize_t posix_recvfrom(void* callInfo)
 {
-    NOTICE("posix_recvfrom");
+    N_NOTICE("posix_recvfrom");
 
     /// \todo Ugly - constructor would be nicer.
     special_send_recv_data* tmp = reinterpret_cast<special_send_recv_data*>(callInfo);
@@ -383,7 +383,7 @@ ssize_t posix_recvfrom(void* callInfo)
 
 int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 {
-    NOTICE("posix_bind");
+    N_NOTICE("posix_bind");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -419,7 +419,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 
 int posix_listen(int sock, int backlog)
 {
-    NOTICE("posix_listen");
+    N_NOTICE("posix_listen");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -463,7 +463,7 @@ int posix_listen(int sock, int backlog)
 
 int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 {
-    NOTICE("posix_accept");
+    N_NOTICE("posix_accept");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -511,13 +511,13 @@ int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 
 int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
 {
-    NOTICE("gethostbyaddr");
+    N_NOTICE("gethostbyaddr");
     return -1;
 }
 
 int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
-    NOTICE("gethostbyname");
+    N_NOTICE("gethostbyname");
 
     // sanity checks
     if (!hostinfo || !offset)
@@ -594,7 +594,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 
 int posix_shutdown(int socket, int how)
 {
-    NOTICE("posix_shutdown");
+    N_NOTICE("posix_shutdown");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());

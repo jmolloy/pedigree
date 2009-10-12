@@ -28,6 +28,8 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 
+#define LINEBUFFER_MAXIMUM 2048
+
 #define DEFAULT_FLAGS  (ConsoleManager::IMapCRToNL|ConsoleManager::OMapCRToNL|ConsoleManager::ONLCausesCR|ConsoleManager::LEcho|ConsoleManager::LEchoErase|ConsoleManager::LEchoNewline|ConsoleManager::LCookedMode)
 
 /** This lets a Console become a first-class citizen of the VFS,

@@ -118,10 +118,49 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
 uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Sanity checking.
-    uint64_t nBytes =  m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size, buffer);
+    // Read what we must from the console
+    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size, buffer);
+    if(!nBytes)
+        return 0;
 
+    // Handle temios local modes
+    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+    {
+        // Grab char access to the buffer
+        char *pC = reinterpret_cast<char*>(buffer);
+
+        // Number of bytes we copied
+        uint64_t nBytesCopied = 0;
+
+        // Iterate over the buffer
+        for(size_t i = 0; i < nBytes; i++)
+        {
+            // Handle incoming newline
+            if(pC[i] == '\n')
+            {
+                // Only echo the newline if we are supposed to
+                if((m_Flags & ConsoleManager::LEcho)
+                   ||
+                   (m_Flags & (ConsoleManager::LEchoNewline | ConsoleManager::LCookedMode)))
+                {
+                    write(location, 1, buffer + i);
+                }
+            }
+            else if(pC[i] == '\x08')
+            {
+                /// \todo Handle ECHOE if ICANON is set
+            }
+            else if(m_Flags & ConsoleManager::LEcho)
+            {
+                // Write the character to the console
+                /// \todo ISIG handling, special characters
+                write(location, 1, buffer + i);
+            }
+        }
+    }
+
+#if 0
     // Perform cooked mode processing if required.
-
     if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
         char *pC = reinterpret_cast<char*>(buffer);
@@ -148,6 +187,7 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 write(location, 1, buffer+i);
         }
     }
+#endif
 
     // Perform input processing.
     char *pC = reinterpret_cast<char*>(buffer);
