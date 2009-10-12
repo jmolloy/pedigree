@@ -203,6 +203,7 @@ void entry()
   g_pDisplays[g_nDisplays] = pDisplay;
 
   // Does the display already exist in the database?
+  bool bDelayedInsert = false;
   size_t mode_id = 0;
   String str;
   str.sprintf("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
@@ -225,12 +226,7 @@ void entry()
   else if (pResult->succeeded())
   {
       delete pResult;
-      mode_id = 0x117;
-      str.sprintf("INSERT INTO displays VALUES (%d,%d,%d)", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay), 0x117);
-      pResult = Config::instance().query(str);
-      if (!pResult->succeeded())
-          FATAL("Display insert failed: " << pResult->errorMessage());
-      delete pResult;
+      bDelayedInsert = true;
   }
   else
   {
@@ -240,8 +236,30 @@ void entry()
 
   g_nDisplays++;
 
-  pDisplay->setScreenMode(mode_id);
+  bool switchedSuccessfully = true;
+  if(!pDisplay->setScreenMode(mode_id))
+  {
+      // Attempt to fall back to 800x600
+      if(!pDisplay->setScreenMode(mode_id = 0x114))
+      {
+          // Finally try and fall back to 640x480
+          if(!pDisplay->setScreenMode(mode_id = 0x111))
+          {
+              ERROR("Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480.");
+              switchedSuccessfully = false;
+          }
+      }
+  }
 
+  // Insert into the display table if it worked out
+  if(switchedSuccessfully && bDelayedInsert)
+  {
+      str.sprintf("INSERT INTO displays VALUES (%d,%d,%d)", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay), mode_id);
+      pResult = Config::instance().query(str);
+      if (!pResult->succeeded())
+          FATAL("Display insert failed: " << pResult->errorMessage());
+      delete pResult;
+  }
 
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());

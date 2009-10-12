@@ -45,10 +45,16 @@ public:
 
   virtual void cacheDirectoryContents()
   {
+    if(!m_pFs)
+    {
+        ERROR("ISO9660: m_pFs is null!");
+        return;
+    }
+      
     Disk *myDisk = m_pFs->getDisk();
 
     // Grab our parent (will always be a directory)
-    Iso9660Directory *pParentDir = reinterpret_cast<Iso9660Directory*>(m_pParent->getParent());
+    Iso9660Directory *pParentDir = reinterpret_cast<Iso9660Directory*>(m_pParent);
     if(pParentDir == 0)
     {
       // Root directory, . and .. should redirect to this directory
