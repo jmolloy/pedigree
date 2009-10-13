@@ -231,9 +231,12 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 {
                     if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEchoErase))
                     {
-                        char buf[3] = {'\x08', ' ', '\x08'};
-                        write(location, 3, reinterpret_cast<uintptr_t>(buf));
-                        m_LineBufferSize--;
+                        if(m_LineBufferSize)
+                        {
+                            char buf[3] = {'\x08', ' ', '\x08'};
+                            write(location, 3, reinterpret_cast<uintptr_t>(buf));
+                            m_LineBufferSize--;
+                        }
                     }
                 }
                 else
