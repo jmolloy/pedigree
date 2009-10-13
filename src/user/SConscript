@@ -20,7 +20,8 @@ subdirs = [
     'applications/TUI',
     'applications/config',
     'applications/display-mode',
-    'applications/reboot'
+    'applications/reboot',
+    'applications/sudo'
 ]
 
 # Cleans a set of flags

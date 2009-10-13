@@ -167,7 +167,7 @@ void Thread::sendEvent(Event *pEvent)
     LockGuard<Spinlock> guard(m_Lock);
 
     m_EventQueue.pushBack(pEvent);
-    NOTICE("Sending event");
+    NOTICE("Sending event: " << pEvent->getNumber() << ".");
     if (m_Status == Sleeping)
     {
         // Interrupt the sleeping thread, there's an event firing

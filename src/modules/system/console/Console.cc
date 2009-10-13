@@ -119,6 +119,8 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 {
     /// \todo Sanity checking.
 
+    NOTICE("ConsoleFile::read");
+
     // Determine how many bytes to read from the console (can the request be completely
     // fulfilled by our line buffer?)
     if(m_Flags & ConsoleManager::LCookedMode)
@@ -176,6 +178,12 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
         // Number of bytes added to the application buffer
         uint64_t nBytesAdded = 0;
 
+        // Offset into the destination buffer (for when canonical mode isn't active but ECHO is)
+        uint64_t destBuffOffset = 0;
+
+        // Destination buffer, char-style
+        char *destBuffer = reinterpret_cast<char*>(buffer);
+
         // Iterate over the buffer
         while(!bAppBufferComplete)
         {
@@ -221,6 +229,8 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                             // Application buffer has already been filled, let future runs know where the limit is
                             m_LineBufferFirstNewline = m_LineBufferSize - 1;
                         }
+                        else if(!(m_Flags & ConsoleManager::LCookedMode))
+                            destBuffer[destBuffOffset++] = readBuffer[i];
 
                         // Ignore the \n if one is present
                         if(readBuffer[i+1] == '\n')
@@ -231,11 +241,17 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 {
                     if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEchoErase))
                     {
-                        if(m_LineBufferSize)
+                        if((m_Flags & ConsoleManager::LCookedMode) && m_LineBufferSize)
                         {
                             char buf[3] = {'\x08', ' ', '\x08'};
                             write(location, 3, reinterpret_cast<uintptr_t>(buf));
                             m_LineBufferSize--;
+                        }
+                        else if((!(m_Flags & ConsoleManager::LCookedMode)) && destBuffOffset)
+                        {
+                            char buf[3] = {'\x08', ' ', '\x08'};
+                            write(location, 3, reinterpret_cast<uintptr_t>(buf));
+                            destBuffOffset--;
                         }
                     }
                 }
@@ -249,6 +265,8 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                     // Add to the buffer
                     if(m_Flags & ConsoleManager::LCookedMode)
                         m_LineBuffer[m_LineBufferSize++] = readBuffer[i];
+                    else
+                        destBuffer[destBuffOffset++] = readBuffer[i];
                 }
             }
 
@@ -261,12 +279,39 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                     return 0;
                 }
             }
+            else if((!bAppBufferComplete && (m_Flags & ConsoleManager::LCookedMode)) && m_LineBufferSize == size)
+            {
+                // We can now fulfill the request
+                uint64_t realSize = size;
+                if(realSize > m_LineBufferSize)
+                    realSize = m_LineBufferSize;
+                if(m_LineBufferFirstNewline < realSize)
+                {
+                    realSize = m_LineBufferFirstNewline;
+                    m_LineBufferFirstNewline = ~0UL;
+                }
+                memcpy(reinterpret_cast<void*>(buffer), m_LineBuffer, realSize);
+
+                // And now move the buffer over the space we just consumed
+                uint64_t nConsumedBytes = m_LineBufferSize - realSize;
+                if(nConsumedBytes) // If zero, the buffer was consumed completely
+                    memcpy(m_LineBuffer, &m_LineBuffer[size], nConsumedBytes);
+
+                // Reduce the buffer size now
+                nBytesAdded += realSize;
+                m_LineBufferSize -= realSize;
+
+                break;
+            }
             else
                 break;
         }
 
         // Fill in the number of bytes we copied into the application buffer
-        nBytes = nBytesAdded;
+        if(m_Flags & ConsoleManager::LCookedMode)
+            nBytes = nBytesAdded;
+        else
+            nBytes = destBuffOffset;
     }
     else
         memcpy(reinterpret_cast<void*>(buffer), readBuffer, nBytes);
@@ -291,6 +336,8 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
             i--; // Need to process this byte again, its contents have changed.
         }
     }
+
+    NOTICE("ConsoleFile::read returns");
 
     return nBytes;
 }
