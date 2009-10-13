@@ -55,17 +55,25 @@ bool AtaDisk::initialise()
     // Start IDENTIFY command.
     //
 
-    // Send drive select.
-    commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
-    // Read the status 5 times as a delay for the drive to go about its business.
-    for (int i = 0; i < 5; i++)
-        commandRegs->read8(7);
+    // Wait for BSY and DRQ to be zero before selecting the device
+    uint8_t status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
+
+    // Select the device to transmit to
+    uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    commandRegs->write8(devSelect, 6);
+
+    // Wait for it to be selected
+    status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
 
     // Disable IRQs, for the moment.
 //   controlRegs->write8(0x01, 6);
 
     // Send IDENTIFY.
-    uint8_t status = commandRegs->read8(7);
+    status = commandRegs->read8(7);
     commandRegs->write8(0xEC, 7);
 
     // Read status register.
@@ -251,15 +259,24 @@ uint64_t AtaDisk::doRead(uint64_t location)
     // How many sectors do we need to read?
     uint32_t nSectors = nBytes / 512;
 
-    // Send drive select.
-    if (m_SupportsLBA48)
-        commandRegs->write8( (m_IsMaster)?0x40:0x50, 6 );
-    else
-        commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
+    // Wait for BSY and DRQ to be zero before selecting the device
+    uint8_t status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
 
-    // Read the status 5 times as a delay for the drive to go about its business.
-    for (int i = 0; i < 5; i++)
-        commandRegs->read8(7);
+    // Select the device to transmit to
+    uint8_t devSelect;
+    if (m_SupportsLBA48)
+        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+    else
+        devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    NOTICE("devSelect: " << devSelect << ".");
+    commandRegs->write8(devSelect, 6);
+
+    // Wait for it to be selected
+    status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
 
     while (nSectors > 0)
     {
@@ -360,15 +377,23 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     uint32_t nSectors = nBytes / 512;
     if (nBytes%512) nSectors++;
 
-    // Send drive select.
-    if (m_SupportsLBA48)
-        commandRegs->write8( (m_IsMaster)?0x40:0x50, 6 );
-    else
-        commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
+    // Wait for BSY and DRQ to be zero before selecting the device
+    uint8_t status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
 
-    // Read the status 5 times as a delay for the drive to go about its business.
-    for (int i = 0; i < 5; i++)
-        commandRegs->read8(7);
+    // Select the device to transmit to
+    uint8_t devSelect;
+    if (m_SupportsLBA48)
+        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+    else
+        devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    commandRegs->write8(devSelect, 6);
+
+    // Wait for it to be selected
+    status = commandRegs->read8(7);
+    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+    status = commandRegs->read8(7);
 
     uint16_t *tmp = reinterpret_cast<uint16_t*>(buffer);
 

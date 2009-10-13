@@ -372,7 +372,6 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
             // Lastly, after both mappings above have been done, we can
             // check if NL should cause a CR as well.
-//            else if (pC[i] == '\n' && !(m_Flags & ConsoleManager::ONLCausesCR))
             if (pC[i] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR) == 0)
                 pC[i] = '\xB'; // Use 'VT' - vertical tab.
         }
