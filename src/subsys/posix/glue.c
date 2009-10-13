@@ -1999,7 +1999,8 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
 
 char *pedigree_config_escape_string(const char *str)
 {
-    char *buf = (char *)malloc(strlen(str)*2+1), *it = str;
+    char *buf = (char*)malloc(strlen(str)*2+1);
+    const char *it = str;
     int i = 0;
     while(*it)
     {

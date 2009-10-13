@@ -117,10 +117,11 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
 
 uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    /// \todo Sanity checking.
+    // Ensure we're safe to go
+    if(!size || !buffer)
+        return 0;
 
-    NOTICE("ConsoleFile::read");
-
+#if 1
     // Determine how many bytes to read from the console (can the request be completely
     // fulfilled by our line buffer?)
     if(m_Flags & ConsoleManager::LCookedMode)
@@ -160,8 +161,11 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     }
 
     // Read what we must from the console
-    char *readBuffer = new char[size];
-    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size - m_LineBufferSize, reinterpret_cast<uintptr_t>(readBuffer));
+    uint64_t realReadSize = size;
+    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+        realReadSize -= m_LineBufferSize;
+    char *readBuffer = new char[realReadSize];
+    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, realReadSize, reinterpret_cast<uintptr_t>(readBuffer));
     if(!nBytes)
     {
         delete [] readBuffer;
@@ -210,7 +214,7 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                                 realSize = m_LineBufferFirstNewline;
                                 m_LineBufferFirstNewline = ~0UL;
                             }
-                            memcpy(reinterpret_cast<void*>(buffer), m_LineBuffer, realSize);
+                            memcpy(reinterpret_cast<void*>(buffer + nBytesAdded), m_LineBuffer, realSize);
 
                             // And now move the buffer over the space we just consumed
                             uint64_t nConsumedBytes = m_LineBufferSize - realSize;
@@ -319,6 +323,14 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     // Done with the read buffer now
     delete [] readBuffer;
 
+#else
+    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size, buffer);
+    if(!nBytes)
+    {
+        return 0;
+    }
+#endif
+
     // Perform input processing.
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
@@ -337,15 +349,14 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
         }
     }
 
-    NOTICE("ConsoleFile::read returns");
-
     return nBytes;
 }
 
 uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     // Post-process output if enabled.
-    if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+    //if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+    if(m_Flags & ConsoleManager::OPostProcess)
     {
         char *pC = reinterpret_cast<char*>(buffer);
         for (size_t i = 0; i < size; i++)
@@ -353,12 +364,16 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
             if (pC[i] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
                 pC[i] = '\n';
             else if (pC[i] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
+            {
                 // We don't make the distinction between '\r\n' and '\n'.
                 pC[i] = '\n';
+                continue;
+            }
 
             // Lastly, after both mappings above have been done, we can
             // check if NL should cause a CR as well.
-            else if (pC[i] == '\n' && !(m_Flags & ConsoleManager::ONLCausesCR))
+//            else if (pC[i] == '\n' && !(m_Flags & ConsoleManager::ONLCausesCR))
+            if (pC[i] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR) == 0)
                 pC[i] = '\xB'; // Use 'VT' - vertical tab.
         }
     }
