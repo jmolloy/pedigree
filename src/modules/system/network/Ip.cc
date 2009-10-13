@@ -58,6 +58,8 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
       return false;
     }
   }
+  if(!pCard->isConnected())
+    return false; // NIC isn't active
 
   // Fill in the from address if it's not valid. Note that some protocols
   // can't do this as they need the source address in the checksum.

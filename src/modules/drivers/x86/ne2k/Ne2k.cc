@@ -371,3 +371,10 @@ bool Ne2k::irq(irq_id_t number, InterruptState &state)
 
   return true;
 }
+
+bool Ne2k::isConnected()
+{
+    // The NE2K chip doesn't support detecting the link state, so we have to
+    // just assume the link is active.
+    return true;
+}

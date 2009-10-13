@@ -438,6 +438,12 @@ public:
     return info; // not to be trusted
   }
 
+  /** Is this device actually connected to a network? */
+  virtual bool isConnected()
+  {
+      return true;
+  }
+
   /** Converts an IPv4 address into an integer */
   static uint32_t convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 

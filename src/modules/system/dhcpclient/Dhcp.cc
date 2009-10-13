@@ -200,7 +200,7 @@ void entry()
   {
     NOTICE("DHCP Client: Configuring card " << Dec << i << Hex << ".");
     Network* pCard = NetworkStack::instance().getDevice(i);
-    if(!pCard)
+    if(!pCard || !pCard->isConnected())
       ERROR("DHCP Client: Card " << Dec << i << Hex << " is invalid.");
     StationInfo info = pCard->getStationInfo();
 

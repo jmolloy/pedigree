@@ -70,6 +70,9 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
 
 void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress dest, uint16_t type)
 {
+  if(!pCard || !pCard->isConnected())
+    return; // NIC isn't active
+
   // allocate space for the new packet with an ethernet header
   size_t newSize = nBytes + sizeof(ethernetHeader);
   uint8_t* newPacket = new uint8_t[newSize];

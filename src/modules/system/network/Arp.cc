@@ -36,6 +36,8 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
   // ensure the IP given is valid
   if(ip.getType() == IpAddress::IPv6)
     return false; // ARP isn't for IPv6
+  if(!pCard->isConnected())
+    return false; // NIC isn't active
 
   // do we have an entry for it yet?
   arpEntry* arpEnt;

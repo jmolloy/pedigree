@@ -52,6 +52,8 @@ public:
 
   IoBase *m_pBase;
 
+  bool isConnected();
+
 private:
 
   void recv();

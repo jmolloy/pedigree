@@ -210,6 +210,12 @@ void Dns::mainThread()
 
 IpAddress* Dns::hostToIp(String hostname, size_t& nIps, Network* pCard)
 {
+  if(!pCard || !pCard->isConnected())
+  {
+    nIps = 0;
+    return 0;
+  }
+
   // check the DNS cache
   for(List<DnsEntry*>::Iterator it = m_DnsCache.begin(); it!= m_DnsCache.end(); it++)
   {
