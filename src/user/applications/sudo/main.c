@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ï»¿/*
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         else if (c != '\033')
         {
             password[i++] = c;
-            printf("•");
+            printf("â€¢");
         }
     }
     tcgetattr(0, &curt); curt.c_lflag |= (ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
