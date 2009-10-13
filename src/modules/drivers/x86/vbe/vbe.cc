@@ -237,7 +237,7 @@ void entry()
   g_nDisplays++;
 
   bool switchedSuccessfully = true;
-  if(!pDisplay->setScreenMode(mode_id))
+  if(!pDisplay->setScreenMode(mode_id = 0x117))
   {
       // Attempt to fall back to 800x600
       if(!pDisplay->setScreenMode(mode_id = 0x114))

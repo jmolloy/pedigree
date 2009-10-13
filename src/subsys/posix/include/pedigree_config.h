@@ -49,7 +49,7 @@ int pedigree_config_was_successful(size_t resultIdx);
 
 void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen);
 
-char *pedigree_config_escape_string(char *str);
+char *pedigree_config_escape_string(const char *str);
 
 #ifdef __cplusplus
 }

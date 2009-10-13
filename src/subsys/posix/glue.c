@@ -1072,9 +1072,9 @@ struct servent* getservbyport(int port, const char *proto)
     char buf[256];
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", pedigree_config_escape_string(port), pedigree_config_escape_string(proto));
+        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, pedigree_config_escape_string(proto));
     else
-        sprintf(buf, "select * from 'network-services' where port = %d", pedigree_config_escape_string(port));
+        sprintf(buf, "select * from 'network-services' where port = %d", port);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
@@ -1997,7 +1997,7 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
     syscall3(PEDIGREE_CONFIG_GET_ERROR_MESSAGE, resultIdx, (long)buf, bufsz);
 }
 
-char *pedigree_config_escape_string(char *str)
+char *pedigree_config_escape_string(const char *str)
 {
     char *buf = (char *)malloc(strlen(str)*2+1), *it = str;
     int i = 0;
