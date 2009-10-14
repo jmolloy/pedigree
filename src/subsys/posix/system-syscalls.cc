@@ -98,9 +98,10 @@ static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uin
 
 long posix_sbrk(int delta)
 {
+    SC_NOTICE("sbrk(" << delta << ")");
     long ret = reinterpret_cast<long>(
                    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-//    SC_NOTICE("sbrk(" << delta << ") -> " << ret);
+    SC_NOTICE("    -> " << ret);
     if (ret == 0)
     {
         SYSCALL_ERROR(OutOfMemory);

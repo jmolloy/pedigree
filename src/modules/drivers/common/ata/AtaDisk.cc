@@ -270,7 +270,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
         devSelect = (m_IsMaster) ? 0x40 : 0x50;
     else
         devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
-    NOTICE("devSelect: " << devSelect << ".");
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected

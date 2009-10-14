@@ -215,6 +215,13 @@ off_t lseek(int file, off_t ptr, int dir)
 
 int open(const char *name, int flags, ...) // , mode_t mode)
 {
+    // Try to handle invalid arguments early, before we go to the effort of the
+    // system call...
+    if(!name)
+    {
+        errno = EINVAL;
+        return -1;
+    }
     va_list ap;
     va_start(ap, flags);
     mode_t mode = va_arg(ap, mode_t);
@@ -224,6 +231,15 @@ int open(const char *name, int flags, ...) // , mode_t mode)
 
 _ssize_t read(int file, void *ptr, size_t len)
 {
+    if(file < 0)
+    {
+        errno = EBADF;
+        return -1;
+    }
+    if(!ptr)
+        return 0;
+    if(len == 0)
+        return 0;
     return (_ssize_t) syscall3(POSIX_READ, file, (long)ptr, len);
 }
 
