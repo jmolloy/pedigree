@@ -42,7 +42,7 @@ extern "C"
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { posix_write(1, msg, strlen(msg)); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
 
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";

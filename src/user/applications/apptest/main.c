@@ -47,6 +47,10 @@ static void *thread_func(void *vptr_args)
 
 int main(void)
 {
+    printf("Exploding!\n");
+    *((int*) 0) = 1234;
+    return 0;
+
     int i;
 
     // test multi-threaded FPU code

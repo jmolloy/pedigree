@@ -127,12 +127,12 @@ FileDescriptor::~FileDescriptor()
 
 /// \todo Copy the MemoryMappedFiles tree
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
-    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(false), m_FdMap(), m_NextFd(s.m_NextFd),
+    Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
     m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
 {
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
-    LockGuard<Mutex> guardParent(s.m_SignalHandlersLock);
+    m_SignalHandlersLock.acquire();
+    s.m_SignalHandlersLock.enter();
 
     // Copy all signal handlers
     sigHandlerTree &parentHandlers = s.m_SignalHandlers;
@@ -147,6 +147,9 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
         myHandlers.insert(key, newSig);
     }
+    
+    s.m_SignalHandlersLock.leave();
+    m_SignalHandlersLock.release();
 }
 
 PosixSubsystem::~PosixSubsystem()
@@ -157,7 +160,7 @@ PosixSubsystem::~PosixSubsystem()
     m_FdLock.acquire();
 
     // Modifying signal handlers, ensure that they are not in use
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    m_SignalHandlersLock.acquire();
 
     // Destroy all signal handlers
     sigHandlerTree &myHandlers = m_SignalHandlers;
@@ -175,6 +178,8 @@ PosixSubsystem::~PosixSubsystem()
 
     // And now that the signals are destroyed, remove them from the Tree
     myHandlers.clear();
+
+    m_SignalHandlersLock.release();
 
     // For sanity's sake, destroy any remaining descriptors
     m_FdLock.release();
@@ -281,7 +286,10 @@ void PosixSubsystem::exit(int code)
     // semaphores and stuff open.
 
     // So, if we're not dealing with the lowest in the stack...
-    if (pThread->getStateLevel() > 0)
+    /// \note If we're at state level one, we're potentially running as a thread that has
+    ///       had an event sent to it from another process. If this is changed to > 0, it
+    ///       is impossible to return to a shell when a segfault occurs in an app.
+    if (pThread->getStateLevel() > 1)
     {
         // OK, we have other events running. They'll have to die first before we can do anything.
         pThread->setUnwindState(Thread::Exit);
@@ -298,13 +306,6 @@ void PosixSubsystem::exit(int code)
     Processor::setInterrupts(false);
 
     // We're the lowest in the stack, so we can proceed with the exit function.
-
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for one or both of the processes!");
-        return;
-    }
 
     delete pProcess->getLinker();
 
@@ -335,7 +336,7 @@ void PosixSubsystem::exit(int code)
     }
 
     // Clean up the descriptor table
-    pSubsystem->freeMultipleFds();
+    freeMultipleFds();
 
     pProcess->kill();
 
@@ -357,6 +358,7 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
         // Allow the event to run
         Processor::setInterrupts(true);
+        Scheduler::instance().yield();
     }
 
     return true;
@@ -364,30 +366,26 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
 void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, InterruptState &state)
 {
-    NOTICE("PosixSubsystem::threadException");
-
-    // Lock the signal handlers, so it's impossible for our signal handler to be pulled our
-    // from beneath us by another CPU or something.
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    NOTICE_NOLOCK("PosixSubsystem::threadException");
 
     // What was the exception?
     SignalHandler *sig = 0;
     switch(eType)
     {
         case PageFault:
-            NOTICE("    (Page fault)");
+            NOTICE_NOLOCK("    (Page fault)");
             // Send SIGSEGV
             sig = getSignalHandler(11);
             break;
         case InvalidOpcode:
-            NOTICE("    (Invalid opcode)");
+            NOTICE_NOLOCK("    (Invalid opcode)");
             // Send SIGILL
             sig = getSignalHandler(4);
             break;
         default:
-            NOTICE("    (Unknown)");
+            NOTICE_NOLOCK("    (Unknown)");
             // Unknown exception
-            ERROR("Unknown exception type in threadException - POSIX subsystem");
+            ERROR_NOLOCK("Unknown exception type in threadException - POSIX subsystem");
             break;
     }
 
@@ -398,15 +396,15 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         Processor::setInterrupts(false);
 
         pThread->sendEvent(sig->pEvent);
-        Processor::information().getScheduler().checkEventState(state.getStackPointer());
 
         Processor::setInterrupts(bWasInterrupts);
+        Scheduler::instance().yield();
     }
 }
 
 void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
 {
-    LockGuard<Mutex> guard(m_SignalHandlersLock);
+    m_SignalHandlersLock.acquire();
 
     sig %= 32;
     if(handler)
@@ -427,6 +425,8 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
 
         m_SignalHandlers.insert(sig, handler);
     }
+
+    m_SignalHandlersLock.release();
 }
 
 

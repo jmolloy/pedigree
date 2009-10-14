@@ -64,6 +64,8 @@ Thread *RoundRobin::getNext(Thread *pCurrentThread)
         if (m_pReadyQueues[i].size())
         {
             pThread = m_pReadyQueues[i].popFront();
+            if(pThread == pCurrentThread)
+                continue;
 
             if (pThread)
             {

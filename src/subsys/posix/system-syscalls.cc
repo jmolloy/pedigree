@@ -98,10 +98,10 @@ static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uin
 
 long posix_sbrk(int delta)
 {
-    SC_NOTICE("sbrk(" << delta << ")");
+    //SC_NOTICE("sbrk(" << delta << ")");
     long ret = reinterpret_cast<long>(
                    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
-    SC_NOTICE("    -> " << ret);
+    //SC_NOTICE("    -> " << ret);
     if (ret == 0)
     {
         SYSCALL_ERROR(OutOfMemory);
@@ -521,6 +521,8 @@ int posix_exit(int code)
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
 
     pSubsystem->exit(code);
+
+    NOTICE("balls");
 
     // Should NEVER get here.
     /// \note asm volatile

@@ -24,6 +24,7 @@
 
 #include <utilities/Tree.h>
 #include <utilities/RadixTree.h>
+#include <utilities/UnlikelyLock.h>
 #include <utilities/ExtensibleBitmap.h>
 #include <LockGuard.h>
 
@@ -110,7 +111,7 @@ class PosixSubsystem : public Subsystem
 
         /** Default constructor */
         PosixSubsystem() :
-            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(false),
+            Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
             m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
@@ -120,7 +121,7 @@ class PosixSubsystem : public Subsystem
 
         /** Parameterised constructor */
         PosixSubsystem(SubsystemType type) :
-            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(false),
+            Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
             m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
@@ -222,9 +223,10 @@ class PosixSubsystem : public Subsystem
         /** Gets a signal handler */
         SignalHandler* getSignalHandler(size_t sig)
         {
-            LockGuard<Mutex> guard(m_SignalHandlersLock);
-
-            return reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
+            m_SignalHandlersLock.enter();
+            SignalHandler *ret = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
+            m_SignalHandlersLock.leave();
+            return ret;
         }
 
         void exit(int code);
@@ -426,7 +428,7 @@ class PosixSubsystem : public Subsystem
         Tree<size_t, SignalHandler*> m_SignalHandlers;
 
         /** A lock for access to the signal handlers tree */
-        Mutex m_SignalHandlersLock;
+        UnlikelyLock m_SignalHandlersLock;
 
         /**
          * The file descriptor map. Maps number to pointers, the type of which is decided

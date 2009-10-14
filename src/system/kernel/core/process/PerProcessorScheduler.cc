@@ -69,12 +69,11 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     // Now attempt to get another thread to run.
     // This will also get the lock for the returned thread.
     Thread *pNextThread = m_pSchedulingAlgorithm->getNext(pCurrentThread);
-
     if (pNextThread == 0)
     {
         // If we're supposed to be sleeping, this isn't a good place to be
-        if(nextStatus == Thread::Sleeping)
-            FATAL("No threads to switch to and the current thread is supposed to be sleeping now!");
+        if(nextStatus != Thread::Ready)
+            FATAL("No threads to switch to and the current thread is leaving the ready state!");
 
         // Nothing to switch to, just return.
         pCurrentThread->getLock().release();
