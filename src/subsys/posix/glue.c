@@ -422,7 +422,23 @@ int gethostname(char *name, size_t len)
 
 int	sethostname(char *name, size_t len)
 {
-    STUBBED("sethostname");
+    if(len > 255)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Need to add permission and name checking
+
+    const char *query = "UPDATE 'network-generic' SET `value`= '%s' WHERE `key` = 'hostname'";
+    char *buffer = (char*)malloc(strlen(query) + len + 1);
+    
+    sprintf(buffer,query,name);
+    
+    pedigree_config_query(buffer);
+
+    free(buffer);
+    
     return 0;
 }
 
