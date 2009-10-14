@@ -404,6 +404,9 @@ int gethostname(char *name, size_t len)
 {
     int result;
 
+    if(!name || !len)
+        return -1;
+
     result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname'");
     if(result == -1 || pedigree_config_numrows(result) == 0){
         strncpy(name,"pedigree",len);
@@ -422,7 +425,7 @@ int gethostname(char *name, size_t len)
 
 int	sethostname(char *name, size_t len)
 {
-    if(len > 255)
+    if(!name || len > 255 || !len)
     {
         errno = EINVAL;
         return -1;
