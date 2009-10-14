@@ -35,7 +35,14 @@ create table 'network-services' (
         -- Service protocol
         'proto' varchar(64));
 
+create table 'network-generic' (
+	-- Key/Value pairs
+	'key' varchar(255) unique,
+	'value' varchar(255));
+
 -- Some default services
 insert into 'network-services' values ('tftp', 69, 'udp');
 insert into 'network-services' values ('ftp', 21, 'tcp');
 insert into 'network-services' values ('http', 80, 'tcp');
+
+insert into 'network-generic' values ('hostname', 'pedigree-foster');

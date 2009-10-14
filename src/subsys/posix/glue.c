@@ -402,8 +402,21 @@ int mkfifo(const char *_path, mode_t __mode)
 
 int gethostname(char *name, size_t len)
 {
-    STUBBED("gethostname");
-    strcpy(name, "pedigree");
+    int result;
+
+    result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname'");
+    if(result == -1 || pedigree_config_numrows(result) == 0){
+        strcpy(name, "pedigree"); //I can already see the #PF...
+        return 0;
+    }
+
+    if(pedigree_config_nextrow(result) == 0){
+        pedigree_config_getstr_s(result,"value",name,len);
+        return 0;
+    }
+
+    strcpy(name, "pedigree"); //...and another #PF
+
     return 0;
 }
 
