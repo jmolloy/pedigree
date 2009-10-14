@@ -130,6 +130,7 @@ int _EXFUN(tcsetattr, (int, int, struct termios *));
 int _EXFUN(tcflow, (int fd, int action));
 int _EXFUN(tcflush, (int fd, int queue_selector));
 int _EXFUN(tcdrain, (int fd));
+int _EXFUN(tcsendbreak, (int fildes, int duration));
 
 #ifdef __cplusplus
 };

@@ -10,6 +10,9 @@ extern "C" {
 #define WNOHANG 1
 #define WUNTRACED 2
 
+#define WCONTINUED  4
+#define WSTOPEED    8
+
 /* A status looks like:
       <2 bytes info> <2 bytes code>
 

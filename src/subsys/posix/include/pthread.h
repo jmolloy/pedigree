@@ -60,8 +60,8 @@ int         _EXFUN(pthread_sigmask, (int how, const sigset_t *set, sigset_t *ose
 int         _EXFUN(pthread_once, (pthread_once_t *, void (*)(void)));
 
 // Thread cancellation
+int NOTIMPL _EXFUN(pthread_cancel, (pthread_t));
 /*
-int         _EXFUN(pthread_cancel, (pthread_t));
 void        _EXFUN(pthread_cleanup_push, (void (*)(void *), void *));
 void        _EXFUN(pthread_cleanup_pop, (int));
 int         _EXFUN(pthread_setcancelstate, (int, int *));

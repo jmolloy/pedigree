@@ -11,8 +11,16 @@
 
 _BEGIN_STD_C
 
+// gettext uses this for handling SIGFPE, which isn't yet forwarded to
+// applications.
+///todo Proper code for sigjmp
+typedef int sigjmp_buf;
+
 void	_EXFUN(longjmp,(jmp_buf __jmpb, int __retval));
-int	_EXFUN(setjmp,(jmp_buf __jmpb));
+int	    _EXFUN(setjmp,(jmp_buf __jmpb));
+
+int     _EXFUN(sigsetjmp, (sigjmp_buf env, int savemask));
+void    _EXFUN(siglongjmp, (sigjmp_buf env, int val));
 
 _END_STD_C
 

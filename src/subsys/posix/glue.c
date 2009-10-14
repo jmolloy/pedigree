@@ -37,6 +37,8 @@ int h_errno; // required by networking code
 #include <sys/resource.h>
 #include <sys/statfs.h>
 
+#include <setjmp.h>
+
 #include <pedigree_config.h>
 
 #define BS8(x) (x)
@@ -2036,4 +2038,27 @@ char *pedigree_config_escape_string(const char *str)
     buf[i] = '\0';
 
     return buf;
+}
+
+int tcsendbreak(int fildes, int duration)
+{
+    STUBBED("tcsendbreak");
+    return 0;
+}
+
+int pthread_cancel(pthread_t thread)
+{
+    STUBBED("pthread_cancel");
+    return -1;
+}
+
+int sigsetjmp(sigjmp_buf env, int savemask)
+{
+    STUBBED("sigsetjmp");
+    return -1;
+}
+
+void siglongjmp(sigjmp_buf env, int val)
+{
+    STUBBED("siglongjmp");
 }
