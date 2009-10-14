@@ -406,7 +406,7 @@ int gethostname(char *name, size_t len)
 
     result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname'");
     if(result == -1 || pedigree_config_numrows(result) == 0){
-        strcpy(name, "pedigree"); //I can already see the #PF...
+        strncpy(name,"pedigree",len);
         return 0;
     }
 
@@ -415,7 +415,7 @@ int gethostname(char *name, size_t len)
         return 0;
     }
 
-    strcpy(name, "pedigree"); //...and another #PF
+    strncpy(name,"pedigree",len);
 
     return 0;
 }
@@ -431,12 +431,14 @@ int	sethostname(char *name, size_t len)
     // Need to add permission and name checking
 
     const char *query = "UPDATE 'network-generic' SET `value`= '%s' WHERE `key` = 'hostname'";
-    char *buffer = (char*)malloc(strlen(query) + len + 1);
+    char *tmp    = pedigree_config_escape_string(name);
+    char *buffer = (char*)malloc(strlen(query) + strlen(tmp) + 1);
     
-    sprintf(buffer,query,name);
+    sprintf(buffer,query,tmp);
     
     pedigree_config_query(buffer);
 
+    free(tmp);
     free(buffer);
     
     return 0;
