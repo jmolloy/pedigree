@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/config.h>
+#include <syslog.h>
 
 // Ensure errno is usable
 #define errno (*__errno())
@@ -14,6 +15,8 @@ extern int *__errno (void);
 
 long sysconf (int name)
 {
+  syslog(LOG_NOTICE, "[%d] sysconf(%d)", getpid(), name);
+
   switch (name)
     {
     case _SC_AIO_LISTIO_MAX:

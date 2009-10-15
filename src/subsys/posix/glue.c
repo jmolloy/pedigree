@@ -2096,3 +2096,15 @@ void siglongjmp(sigjmp_buf env, int val)
 {
     STUBBED("siglongjmp");
 }
+
+char *basename(char *path)
+{
+    static char bad[2] = {'.', 0};
+    if(!path)
+        return bad;
+    char *p = strrchr(path, '/');
+    if(!p)
+        return path;
+    else
+        return p;
+}
