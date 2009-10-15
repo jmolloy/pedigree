@@ -291,6 +291,7 @@ void PosixSubsystem::exit(int code)
     ///       is impossible to return to a shell when a segfault occurs in an app.
     if (pThread->getStateLevel() > 1)
     {
+        NOTICE("State level: " << pThread->getStateLevel() << ".");
         // OK, we have other events running. They'll have to die first before we can do anything.
         pThread->setUnwindState(Thread::Exit);
 
@@ -298,6 +299,7 @@ void PosixSubsystem::exit(int code)
         while (pBlockingThread)
         {
             pBlockingThread->setUnwindState(Thread::ReleaseBlockingThread);
+            pBlockingThread->setStatus(Thread::Running);
             pBlockingThread = pBlockingThread->getBlockingThread();
         }
 

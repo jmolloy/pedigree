@@ -19,6 +19,8 @@
 #include <panic.h>
 #include <Log.h>
 
+#include <utilities/assert.h>
+
 RequestQueue::RequestQueue() :
   m_RequestQueueSize(0),
   m_Stop(false), m_RequestQueueMutex(false), m_pThread(0)
@@ -124,9 +126,20 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   {
     Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
+    {
+      if(p == pReq)
+        return 0;
       p = p->next;
-    p->next = pReq;
+    }
+    if(p != pReq)
+      p->next = pReq;
+    else
+      return 0;
   }
+
+  NOTICE_NOLOCK("addAsyncRequest: added " << reinterpret_cast<uintptr_t>(pReq) << ".");
+  
+  assert_heap_ptr_valid(pReq);
 
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();

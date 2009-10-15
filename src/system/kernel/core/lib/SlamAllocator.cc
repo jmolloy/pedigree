@@ -150,13 +150,19 @@ bool SlamCache::isPointerValid(uintptr_t object)
     // Grab the footer and check it.
     SlamAllocator::AllocFooter *pFoot = reinterpret_cast<SlamAllocator::AllocFooter*> (object+m_ObjectSize-sizeof(SlamAllocator::AllocFooter));
     if (pFoot->magic != VIGILANT_MAGIC)
+    {
+        WARNING_NOLOCK("isPointerValid: footer vigilant magic wrong [" << pFoot->magic << "]");
         return false;
+    }
 #endif
 
 #if USING_MAGIC
     // Possible double free?
     if (N->magic == MAGIC_VALUE)
+    {
+        WARNING_NOLOCK("isPointerValid: double free?");
         return false;
+    }
 #endif
 
     return true;
@@ -498,11 +504,17 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
 
     // If the cache is null, then the pointer is corrupted.
     if (head->cache == 0)
+    {
+        WARNING_NOLOCK("isPointerValid: null cache");
         return false;
+    }
 
 #if OVERRUN_CHECK
     if (head->magic != VIGILANT_MAGIC)
+    {
+        WARNING_NOLOCK("isPointerValid: vigilant magic wrong [" << head->magic << "]");
         return false;
+    }
     // Footer gets checked in SlamCache::free, as we don't know the object size.
 #endif
 

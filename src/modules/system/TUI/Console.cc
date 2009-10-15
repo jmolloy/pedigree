@@ -28,12 +28,17 @@ UserConsole::~UserConsole()
 
 void UserConsole::requestPending()
 {
+    // This stops a race where m_pReq is used or changed between setting
+    // m_pPendingReq and setting m_pReq to zero.
+    m_RequestQueueMutex.acquire();
     m_pPendingReq = m_pReq;
     m_pReq = 0;
+    m_RequestQueueMutex.release();
 }
 
 void UserConsole::respondToPending(size_t response, char *buffer, size_t sz)
 {
+    m_RequestQueueMutex.acquire();
     if (m_pPendingReq)
     {
         m_pPendingReq->ret = response;
@@ -50,10 +55,14 @@ void UserConsole::respondToPending(size_t response, char *buffer, size_t sz)
             delete m_pPendingReq;
     }
     m_pPendingReq = 0;
+    m_RequestQueueMutex.release();
 }
 
 size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz, size_t *terminalId)
 {
+    // Lock m_pReq. Any use of the RequestQueue will *probably* end up with a
+    // change of m_pReq, so stop anyone from accessing the queue.
+    m_RequestQueueMutex.acquire();
     if (m_pReq)
     {
         m_pReq->ret = responseToLast;
@@ -72,8 +81,10 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         {
             assert_heap_ptr_valid(m_pReq);
             delete m_pReq;
+            m_pReq = 0;
         }
     }
+    m_RequestQueueMutex.release();
 
     // Sleep on the queue length semaphore - wake when there's something to do.
     m_RequestQueueSize.acquire();
@@ -104,6 +115,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     m_pRequestQueue[priority] = m_pReq->next;
 
     assert_heap_ptr_valid(m_pReq->next);
+    assert_heap_ptr_valid(m_pReq);
 
     m_RequestQueueMutex.release();
 
@@ -129,5 +141,6 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         *sz = 8;
     }
 
+    NOTICE("Returning " << command << ".");
     return command;
 }

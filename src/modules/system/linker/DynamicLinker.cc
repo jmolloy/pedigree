@@ -96,6 +96,9 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
         {
             FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
             MemoryMappedFileManager::instance().unmap(pMmFile);
+
+            delete m_pProgramElf;
+            m_pProgramElf = 0;
             return false;
         }
 
@@ -103,6 +106,9 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
         {
             ERROR("DynamicLinker: Main program ELF failed to load: `" << fileName << "'");
             MemoryMappedFileManager::instance().unmap(pMmFile);
+
+            delete m_pProgramElf;
+            m_pProgramElf = 0;
             return false;
         }
 
@@ -114,6 +120,14 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
         {
             FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
             MemoryMappedFileManager::instance().unmap(pMmFile);
+
+            if(!bDryRun)
+            {
+                delete m_pProgramElf;
+                m_pProgramElf = 0;
+            }
+            else
+                delete programElf;
             return false;
         }
     }
@@ -141,6 +155,13 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
         if (!pFile)
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' not found!");
+            if(!bDryRun)
+            {
+                delete m_pProgramElf;
+                m_pProgramElf = 0;
+            }
+            else
+                delete programElf;
             return false;
         }
         while (pFile && pFile->isSymlink())
@@ -148,6 +169,13 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
         if (!pFile || !loadObject(pFile, bDryRun))
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
+            if(!bDryRun)
+            {
+                delete m_pProgramElf;
+                m_pProgramElf = 0;
+            }
+            else
+                delete programElf;
             return false;
         }
 
@@ -179,12 +207,14 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!pElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
         {
             ERROR("DynamicLinker: ELF creation failed for file `" << pFile->getName() << "'");
+            delete pElf;
             return false;
         }
 
         if (!pElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), loadBase, m_pProgramElf->getSymbolTable(), false, &size))
         {
             ERROR("DynamicLinker: ELF allocate failed for file `" << pFile->getName() << "'");
+            delete pElf;
             return false;
         }
 
@@ -197,6 +227,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!pElf->createNeededOnly(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
         {
             ERROR("DynamicLinker: ELF creation failed for file `" << pFile->getName() << "'");
+            delete pElf;
             return false;
         }
     }
@@ -224,6 +255,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!_pFile)
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' not found!");
+            delete pElf;
             return false;
         }
         while (_pFile && _pFile->isSymlink())
@@ -231,6 +263,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!_pFile || !loadObject(_pFile, bDryRun))
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
+            delete pElf;
             return false;
         }
 

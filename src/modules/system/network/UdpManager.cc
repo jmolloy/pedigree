@@ -156,6 +156,9 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
 {
+  if(!pCard)
+    return;
+  
   // is there an endpoint for this port?
   ConnectionlessEndpoint* e;
   StationInfo cardInfo = pCard->getStationInfo();
