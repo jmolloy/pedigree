@@ -22,6 +22,7 @@
 #include <process/Process.h>
 #include <utilities/Tree.h>
 #include <utilities/List.h>
+#include <utilities/RadixTree.h>
 #include <processor/state.h>
 #include <vfs/File.h>
 #include <vfs/MemoryMappedFile.h>
@@ -39,17 +40,24 @@ public:
     /** Creates a new DynamicLinker from another. Copies all mappings. */
     DynamicLinker(DynamicLinker &other);
 
+    /** Checks dependencies for a given program. Returns true if
+        all dependencies are available and loadable, false if not. */
+    bool checkDependencies(File *pFile)
+    {
+        return loadProgram(pFile, true);
+    }
+
     /** Loads the main program. This must be an ELF file, and the
         linker will also load all library dependencies. If any of
         these loads fails, false is returned.
         \param pFile The ELF file. */
-    bool loadProgram(File *pFile);
+    bool loadProgram(File *pFile, bool bDryRun = false);
 
     /** Loads a shared object into this address space (along with
         any dependencies.
         \param pFile The ELF object to load.
         \return True if the ELF and all dependencies was loaded successfully. */
-    bool loadObject(File *pFile);
+    bool loadObject(File *pFile, bool bDryRun = false);
 
     /** Callback given to KernelCoreSyscallManager to resolve PLT relocations lazily. */
     static uintptr_t resolvePlt(SyscallState &state);
@@ -91,6 +99,7 @@ private:
     uintptr_t m_ProgramStart;
     size_t m_ProgramSize;
     uintptr_t m_ProgramBuffer;
+    RadixTree<void*> m_LoadedObjects;
 
     Tree<uintptr_t, SharedObject*> m_Objects;
 };

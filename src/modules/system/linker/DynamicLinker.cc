@@ -39,7 +39,7 @@ uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 }
 
 DynamicLinker::DynamicLinker() :
-    m_pProgramElf(0), m_ProgramStart(0), m_ProgramSize(0), m_ProgramBuffer(0), m_Objects()
+    m_pProgramElf(0), m_ProgramStart(0), m_ProgramSize(0), m_ProgramBuffer(0), m_LoadedObjects(), m_Objects()
 {
   
 }
@@ -47,7 +47,7 @@ DynamicLinker::DynamicLinker() :
 DynamicLinker::DynamicLinker(DynamicLinker &other) :
     m_pProgramElf(other.m_pProgramElf), m_ProgramStart(other.m_ProgramStart),
     m_ProgramSize(other.m_ProgramSize), m_ProgramBuffer(other.m_ProgramBuffer),
-    m_Objects()
+    m_LoadedObjects(other.m_LoadedObjects), m_Objects()
 {
     for (Tree<uintptr_t,SharedObject*>::Iterator it = other.m_Objects.begin();
          it != other.m_Objects.end();
@@ -78,7 +78,7 @@ DynamicLinker::~DynamicLinker()
     //delete m_pProgramElf;
 }
 
-bool DynamicLinker::loadProgram(File *pFile)
+bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
 {
     NOTICE("LoadProgram: " << reinterpret_cast<uintptr_t>(pFile));
     uintptr_t buffer;
@@ -87,31 +87,53 @@ bool DynamicLinker::loadProgram(File *pFile)
     String fileName;
     pFile->getName(fileName);
 
-    m_pProgramElf = new Elf();
-    if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+    Elf *programElf = new Elf();
+
+    if(!bDryRun)
     {
-        FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
-        MemoryMappedFileManager::instance().unmap(pMmFile);
-        return false;
+        m_pProgramElf = programElf;
+        if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+        {
+            FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
+            MemoryMappedFileManager::instance().unmap(pMmFile);
+            return false;
+        }
+
+        if (!m_pProgramElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), m_ProgramStart, 0, false, &m_ProgramSize))
+        {
+            ERROR("DynamicLinker: Main program ELF failed to load: `" << fileName << "'");
+            MemoryMappedFileManager::instance().unmap(pMmFile);
+            return false;
+        }
+
+        m_ProgramBuffer = buffer;
+    }
+    else
+    {
+        if (!programElf->createNeededOnly(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+        {
+            FATAL("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
+            MemoryMappedFileManager::instance().unmap(pMmFile);
+            return false;
+        }
     }
 
-    if (!m_pProgramElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), m_ProgramStart, 0, false, &m_ProgramSize))
-    {
-        ERROR("DynamicLinker: Main program ELF failed to load: `" << fileName << "'");
-        MemoryMappedFileManager::instance().unmap(pMmFile);
-        return false;
-    }
-
-    m_ProgramBuffer = buffer;
-
-    List<char*> &dependencies = m_pProgramElf->neededLibraries();
+    List<char*> &dependencies = programElf->neededLibraries();
 
     // Load all dependencies
-    /// \todo Check for cyclic dependencies.
     for (List<char*>::Iterator it = dependencies.begin();
          it != dependencies.end();
          it++)
     {
+        // Extreme validation
+        if(!*it)
+            continue;
+        if(m_LoadedObjects.lookup(String(*it)))
+        {
+            WARNING("Object `" << *it << "' has already been loaded");
+            continue;
+        }
+
         String filename;
         filename += "root»/libraries/";
         filename += *it;
@@ -123,19 +145,27 @@ bool DynamicLinker::loadProgram(File *pFile)
         }
         while (pFile && pFile->isSymlink())
             pFile = Symlink::fromFile(pFile)->followLink();
-        if (!pFile || !loadObject(pFile))
+        if (!pFile || !loadObject(pFile, bDryRun))
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
             return false;
         }
+
+        // Success! Add the filename of the library (NOT WITH LIBRARIES DIRECTORY)
+        // to the known loaded objects list.
+        if(!bDryRun)
+            m_LoadedObjects.insert(String(*it), reinterpret_cast<void*>(1));
     }
 
-    initPlt(m_pProgramElf, 0);
+    if(!bDryRun)
+        initPlt(m_pProgramElf, 0);
+    else
+        delete programElf;
 
     return true;
 }
 
-bool DynamicLinker::loadObject(File *pFile)
+bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
 {
     uintptr_t buffer;
     size_t size;
@@ -143,49 +173,77 @@ bool DynamicLinker::loadObject(File *pFile)
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
 
     Elf *pElf = new Elf();
-    if (!pElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+
+    if(!bDryRun)
     {
-        ERROR("DynamicLinker: ELF creation failed for file `" << pFile->getName() << "'");
-        return false;
-    }
+        if (!pElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+        {
+            ERROR("DynamicLinker: ELF creation failed for file `" << pFile->getName() << "'");
+            return false;
+        }
 
-    if (!pElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), loadBase, m_pProgramElf->getSymbolTable(), false, &size))
+        if (!pElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), loadBase, m_pProgramElf->getSymbolTable(), false, &size))
+        {
+            ERROR("DynamicLinker: ELF allocate failed for file `" << pFile->getName() << "'");
+            return false;
+        }
+
+        SharedObject *pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
+
+        m_Objects.insert(loadBase, pSo);
+    }
+    else
     {
-        ERROR("DynamicLinker: ELF allocate failed for file `" << pFile->getName() << "'");
-        return false;
+        if (!pElf->createNeededOnly(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
+        {
+            ERROR("DynamicLinker: ELF creation failed for file `" << pFile->getName() << "'");
+            return false;
+        }
     }
-
-    SharedObject *pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
-
-    m_Objects.insert(loadBase, pSo);
 
     List<char*> &dependencies = pElf->neededLibraries();
 
     // Load all dependencies
-    /// \todo Check for cyclic dependencies.
     for (List<char*>::Iterator it = dependencies.begin();
          it != dependencies.end();
          it++)
     {
+        // Extreme validation
+        if(!*it)
+            continue;
+        if(m_LoadedObjects.lookup(String(*it)))
+        {
+            WARNING("Object `" << *it << "' has already been loaded");
+            continue;
+        }
+
         String filename;
         filename += "root»/libraries/";
         filename += *it;
         File *_pFile = VFS::instance().find(filename);
         if (!_pFile)
         {
-            ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' not found!");
+            ERROR("DynamicLinker: Dependency `" << filename << "' not found!");
             return false;
         }
         while (_pFile && _pFile->isSymlink())
             _pFile = Symlink::fromFile(_pFile)->followLink();
-        if (!_pFile || !loadObject(_pFile))
+        if (!_pFile || !loadObject(_pFile, bDryRun))
         {
-            ERROR("DynamicLinker: Dependency `" << pFile->getName() << "' failed to load!");
+            ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
             return false;
         }
+
+        // Success! Add the filename of the library (NOT WITH LIBRARIES DIRECTORY)
+        // to the known loaded objects list.
+        if(!bDryRun)
+            m_LoadedObjects.insert(String(*it), reinterpret_cast<void*>(1));
     }
 
-    initPlt(pElf, loadBase);
+    if(!bDryRun)
+        initPlt(pElf, loadBase);
+    else
+        delete pElf;
 
     return true;
 }

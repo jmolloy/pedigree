@@ -159,6 +159,10 @@ public:
      * to a contiguous region of memory containing an ELF object. */
     bool create(uint8_t *pBuffer, size_t length);
 
+    /** Merely loads "needed libraries" and then returns success or
+     *  failure. */
+    bool createNeededOnly(uint8_t *pBuffer, size_t length);
+
     /** Maps memory at a specified address, loads code there and applies relocations only for the .modinfo section.
      * Intended use is for loading kernel modules only, there is no provision for dynamic relocations. */
     bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymbolTableCopy=0);

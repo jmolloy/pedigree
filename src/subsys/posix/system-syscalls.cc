@@ -205,8 +205,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    pProcess->getSpaceAllocator().clear();
-    pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
     {
@@ -299,21 +297,33 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
     }
 
+    DynamicLinker *pOldLinker = pProcess->getLinker();
+    DynamicLinker *pLinker = new DynamicLinker();
+
+    // Can we load the new image? Check before we clean out the last ELF image...
+    if(!pLinker->checkDependencies(file))
+    {
+        delete pLinker;
+        SYSCALL_ERROR(ExecFormatError);
+        return -1;
+    }
+
+    // Now that dependencies are definitely available and the program will
+    // actually load, we can set up the Process object
     pProcess->description() = String(name);
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     save_string_array(argv, savedArgv);
     save_string_array(env, savedEnv);
 
+    pProcess->getSpaceAllocator().clear();
+    pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
+
     // Get rid of all the crap from the last elf image.
     /// \todo Preserve anonymous mmaps etc.
-
     MemoryMappedFileManager::instance().unmapAll();
 
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
-
-    DynamicLinker *pOldLinker = pProcess->getLinker();
-    DynamicLinker *pLinker = new DynamicLinker();
 
     // Set the new linker now before we loadProgram, else we could trap and
     // have a linker mismatch.
@@ -321,12 +331,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     if (!pLinker->loadProgram(file))
     {
+        NOTICE("Load failed in execve");
         pProcess->setLinker(pOldLinker);
         delete pLinker;
         SYSCALL_ERROR(ExecFormatError);
         return -1;
     }
     delete pOldLinker;
+
+    NOTICE("Load success");
 
     // Close all FD_CLOEXEC descriptors.
     pSubsystem->freeMultipleFds(true);
@@ -521,8 +534,6 @@ int posix_exit(int code)
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
 
     pSubsystem->exit(code);
-
-    NOTICE("balls");
 
     // Should NEVER get here.
     /// \note asm volatile

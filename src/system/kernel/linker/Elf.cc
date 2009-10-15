@@ -92,6 +92,89 @@ Elf::~Elf()
     delete m_pProgramHeaders;
 }
 
+bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
+{
+    NOTICE("Elf::createNeededOnly: buffer at " << Hex << reinterpret_cast<uintptr_t>(pBuffer) << ", len " << length);
+    // The main header will be at pBuffer[0].
+    ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
+
+    // Check the ident.
+    if ( (pHeader->ident[1] != 'E') ||
+         (pHeader->ident[2] != 'L') ||
+         (pHeader->ident[3] != 'F') ||
+         (pHeader->ident[0] != 127) )
+    {
+        ERROR("ELF file: ident check failed!");
+        return false;
+    }
+
+    // Check the bit-length.
+    if (pHeader->ident[4] !=
+#ifdef BITS_32
+        1 /* ELFCLASS32 */
+#else
+        2 /* ELFCLASS64 */
+#endif
+        )
+    {
+        ERROR("ELF file: wrong bit length!");
+    }
+
+    // Attempt to load in some program headers, if they exist.
+    if (pHeader->phnum > 0)
+    {
+        m_nProgramHeaders = pHeader->phnum;
+        m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
+        memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
+
+        size_t nDynamicStringTableSize = 0;
+
+        // Look for the dynamic program header.
+        for (size_t i = 0; i < m_nProgramHeaders; i++)
+        {
+            if (m_pProgramHeaders[i].type == PT_DYNAMIC)
+            {
+                ElfProgramHeader_t *pDynamic = &m_pProgramHeaders[i];
+                ElfDyn_t *pDyn = reinterpret_cast<ElfDyn_t*> (&pBuffer[pDynamic->offset]);
+
+                // Cycle through all dynamic entries until the NULL entry.
+                while (pDyn->tag != DT_NULL)
+                {
+                    switch (pDyn->tag)
+                    {
+                        case DT_NEEDED:
+                            m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
+                        case DT_STRTAB:
+                            m_pDynamicStringTable = reinterpret_cast<char*> (pDyn->un.ptr);
+                            break;
+                        case DT_STRSZ:
+                            nDynamicStringTableSize = pDyn->un.val;
+                            break;
+                    }
+
+                    pDyn++;
+                }
+            }
+        }
+
+        if (m_pDynamicStringTable)
+        {
+            m_pDynamicStringTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicStringTable, nDynamicStringTableSize);
+
+            // Make sure the string references to needed libraries actually work as pointers...
+            for (List<char*>::Iterator it = m_NeededLibraries.begin();
+                 it != m_NeededLibraries.end();
+                 it++)
+            {
+                *it = *it + reinterpret_cast<uintptr_t>(m_pDynamicStringTable);
+            }
+        }
+    }
+
+    // Success.
+    return true;
+}
+
 bool Elf::create(uint8_t *pBuffer, size_t length)
 {
     NOTICE("Elf::create: buffer at " << Hex << reinterpret_cast<uintptr_t>(pBuffer) << ", len " << length);

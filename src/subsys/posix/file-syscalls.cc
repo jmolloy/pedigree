@@ -761,9 +761,10 @@ int posix_readdir(int fd, dirent *ent)
     }
 
     FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
-    if (!pFd)
+    if (!pFd || !pFd->file)
     {
         // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
 

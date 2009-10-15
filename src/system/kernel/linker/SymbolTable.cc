@@ -24,12 +24,16 @@ SymbolTable::SymbolTable(Elf *pElf) :
 
 SymbolTable::~SymbolTable()
 {
+  if(!m_Tree.count())
+    return;
   for (RadixTree<SymbolList*>::Iterator it = m_Tree.begin();
         it != m_Tree.end();
         it++)
   {
     if (*it)
     {
+      if(!((*it)->count()))
+        continue;
       for (SymbolList::Iterator it2 = (*it)->begin();
             it2 != (*it)->end();
             it2++)
