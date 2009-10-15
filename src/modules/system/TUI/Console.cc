@@ -141,6 +141,5 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         *sz = 8;
     }
 
-    NOTICE("Returning " << command << ".");
     return command;
 }

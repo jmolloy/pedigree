@@ -137,8 +137,6 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
       return 0;
   }
 
-  NOTICE_NOLOCK("addAsyncRequest: added " << reinterpret_cast<uintptr_t>(pReq) << ".");
-  
   assert_heap_ptr_valid(pReq);
 
   // Increment the number of items on the request queue.

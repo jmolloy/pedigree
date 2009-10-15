@@ -289,7 +289,7 @@ void PosixSubsystem::exit(int code)
     /// \note If we're at state level one, we're potentially running as a thread that has
     ///       had an event sent to it from another process. If this is changed to > 0, it
     ///       is impossible to return to a shell when a segfault occurs in an app.
-    if (pThread->getStateLevel() > 1)
+    if (pThread->getStateLevel() > 0)
     {
         NOTICE("State level: " << pThread->getStateLevel() << ".");
         // OK, we have other events running. They'll have to die first before we can do anything.
@@ -304,6 +304,10 @@ void PosixSubsystem::exit(int code)
         }
 
         Processor::information().getScheduler().eventHandlerReturned();
+    }
+    else
+    {
+        NOTICE("State level NOT > 0");
     }
     Processor::setInterrupts(false);
 
