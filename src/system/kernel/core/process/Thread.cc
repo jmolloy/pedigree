@@ -150,10 +150,19 @@ void Thread::threadExited()
 
 void Thread::allocateStackAtLevel(size_t stateLevel)
 {
+    if(stateLevel >= MAX_NESTED_EVENTS)
+        stateLevel = MAX_NESTED_EVENTS - 1;
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
 //    if(m_StateLevels[stateLevel].m_pUserStack == 0)
 //        m_StateLevels[stateLevel].m_pUserStack = m_pParent->getAddressSpace()->allocateStack();
+}
+
+void *Thread::getKernelStack()
+{
+    if(m_nStateLevel >= MAX_NESTED_EVENTS)
+        FATAL("m_nStateLevel > MAX_NESTED_EVENTS: " << m_nStateLevel << "...");
+    return m_StateLevels[m_nStateLevel].m_pKernelStack;
 }
 
 void Thread::setKernelStack()

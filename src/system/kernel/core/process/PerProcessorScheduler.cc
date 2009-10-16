@@ -85,6 +85,16 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     pCurrentThread->setStatus(nextStatus);
     pNextThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pNextThread);
+
+    // Should *never* happen
+    if(pLock && (pNextThread->getStateLevel() == reinterpret_cast<uintptr_t>(pLock)))
+        FATAL("STATE LEVEL = LOCK PASSED TO SCHEDULER: " << pNextThread->getStateLevel() << "/" << reinterpret_cast<uintptr_t>(pLock) << "!");
+
+#if 0
+    NOTICE_NOLOCK("pLock: " << reinterpret_cast<uintptr_t>(pLock) << ", pNextThread: " << reinterpret_cast<uintptr_t>(pNextThread) << ", pCurrentThread: " << reinterpret_cast<uintptr_t>(pCurrentThread) << ".");
+#endif
+
+    // Load the new kernel stack into the TSS and switch address spaces
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
 
@@ -150,7 +160,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
     {
-        ERROR("checkEventState: Handler address not mapped!");
+        ERROR_NOLOCK("checkEventState: Handler address not mapped!");
         //eventHandlerReturned();
         return;
     }
@@ -162,7 +172,6 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     va.getMapping(reinterpret_cast<void*>(handlerAddress), page, flags);
     if(!(flags & VirtualAddressSpace::KernelMode))
     {
-      NOTICE("Handler not in kernel, userstack = " << userStack << ".");
       if(userStack != 0)
         va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
       if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
@@ -180,7 +189,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
           if(flags & VirtualAddressSpace::KernelMode)
           {
-              NOTICE("User stack for event in checkEventState is the kernel's!");
+              NOTICE_NOLOCK("User stack for event in checkEventState is the kernel's!");
               pThread->sendEvent(pEvent);
               Processor::setInterrupts(bWasInterrupts);
               return;

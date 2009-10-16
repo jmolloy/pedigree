@@ -186,6 +186,11 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
 Font *g_NormalFont;
 Font *g_BoldFont;
 
+void sigint(int)
+{
+    syslog(LOG_NOTICE, "TUI sent SIGINT, oops!");
+}
+
 int main (int argc, char **argv)
 {
     if(getpid()>2)
@@ -193,6 +198,9 @@ int main (int argc, char **argv)
         printf("TUI is already running\n");
         return 1;
     }
+
+    signal(SIGINT, sigint);
+
     Display::ScreenMode mode;
     Syscall::getFb(&mode);
 
@@ -286,22 +294,9 @@ int main (int argc, char **argv)
 
                 if (c == '\n') c = '\r';
 
-                // CTRL + key, here only for quick and easy testing
-                /****** NOTE: BELOW IS TEMPORARY, WILL MOVE ******/
+                // CTRL + key -> unprintable characters
                 if ( (c & Keyboard::Ctrl) && !(c & Keyboard::Special))
-                {
                     c &= 0x1F;
-
-                    if(c < 0x1F)
-                    {
-                        if(c == 0x3)
-                        {
-                            kill(g_pCurrentTerm->term->getPid(), SIGINT);
-                            break;
-                        }
-                    }
-                }
-                /****** NOTE: ABOVE IS TEMPORARY, WILL MOVE ******/
 
                 if(checkCommand(c, rect2))
                     Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);

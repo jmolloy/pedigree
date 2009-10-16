@@ -289,9 +289,8 @@ void PosixSubsystem::exit(int code)
     /// \note If we're at state level one, we're potentially running as a thread that has
     ///       had an event sent to it from another process. If this is changed to > 0, it
     ///       is impossible to return to a shell when a segfault occurs in an app.
-    if (pThread->getStateLevel() > 0)
+    if (pThread->getStateLevel() > 1)
     {
-        NOTICE("State level: " << pThread->getStateLevel() << ".");
         // OK, we have other events running. They'll have to die first before we can do anything.
         pThread->setUnwindState(Thread::Exit);
 
@@ -299,15 +298,10 @@ void PosixSubsystem::exit(int code)
         while (pBlockingThread)
         {
             pBlockingThread->setUnwindState(Thread::ReleaseBlockingThread);
-            pBlockingThread->setStatus(Thread::Running);
             pBlockingThread = pBlockingThread->getBlockingThread();
         }
 
         Processor::information().getScheduler().eventHandlerReturned();
-    }
-    else
-    {
-        NOTICE("State level NOT > 0");
     }
     Processor::setInterrupts(false);
 
@@ -354,7 +348,7 @@ void PosixSubsystem::exit(int code)
 bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 {
     // Send SIGKILL. getSignalHandler handles all that locking shiz for us.
-    SignalHandler *sig = getSignalHandler(9);
+    SignalHandler *sig = getSignalHandler(killReason == Interrupted ? 2 : 9);
 
     if(sig && sig->pEvent)
     {

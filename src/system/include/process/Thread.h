@@ -189,10 +189,7 @@ public:
     {return m_ExitCode;}
 
     /** Retrieves a pointer to the top of the Thread's kernel stack. */
-    void *getKernelStack()
-    {
-        return m_StateLevels[m_nStateLevel].m_pKernelStack;
-    }
+    void *getKernelStack();
 
     /** Returns the Thread's ID. */
     size_t getId()

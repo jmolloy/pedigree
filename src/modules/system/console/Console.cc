@@ -335,6 +335,21 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
     {
+        if(pC[i] < 0x1F)
+        {
+            if(pC[i] == 0x3)
+            {
+                Thread *pThread = Processor::information().getCurrentThread();
+                Process *pProcess = pThread->getParent();
+                Subsystem *pSubsystem = pProcess->getSubsystem();
+
+                NOTICE("SIGINT");
+                pSubsystem->kill(Subsystem::Interrupted, pThread);
+
+                continue;
+            }
+        }
+
         if (m_Flags & ConsoleManager::IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
 
