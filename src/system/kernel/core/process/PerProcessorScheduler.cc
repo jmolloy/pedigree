@@ -30,6 +30,8 @@
 #include <panic.h>
 #include <Log.h>
 
+#include <utilities/assert.h>
+
 #ifdef TRACK_LOCKS
 #include <LocksCommand.h>
 #endif
@@ -89,10 +91,6 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
     // Should *never* happen
     if(pLock && (pNextThread->getStateLevel() == reinterpret_cast<uintptr_t>(pLock)))
         FATAL("STATE LEVEL = LOCK PASSED TO SCHEDULER: " << pNextThread->getStateLevel() << "/" << reinterpret_cast<uintptr_t>(pLock) << "!");
-
-#if 0
-    NOTICE_NOLOCK("pLock: " << reinterpret_cast<uintptr_t>(pLock) << ", pNextThread: " << reinterpret_cast<uintptr_t>(pNextThread) << ", pCurrentThread: " << reinterpret_cast<uintptr_t>(pCurrentThread) << ".");
-#endif
 
     // Load the new kernel stack into the TSS and switch address spaces
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );

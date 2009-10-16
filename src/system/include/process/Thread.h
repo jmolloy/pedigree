@@ -106,13 +106,14 @@ public:
         \return A reference to the previous state. */
     SchedulerState &pushState()
     {
-        if (m_nStateLevel >= MAX_NESTED_EVENTS)
+        if ((m_nStateLevel + 1) >= MAX_NESTED_EVENTS)
         {
             ERROR("Thread: Max nested events!");
             /// \todo Take some action here - possibly kill the thread?
-            return m_StateLevels[m_nStateLevel].m_State;
+            return m_StateLevels[MAX_NESTED_EVENTS - 1].m_State;
         }
         m_nStateLevel++;
+        NOTICE("New state level: " << m_nStateLevel << "...");
         m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
         allocateStackAtLevel(m_nStateLevel);
 
@@ -128,6 +129,7 @@ public:
         if (m_nStateLevel == 0)
         {
             ERROR("Thread: popStack() called with state level 0!");
+            return;
         }
         m_nStateLevel --;
 

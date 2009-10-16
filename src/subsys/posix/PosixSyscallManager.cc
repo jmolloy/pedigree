@@ -64,7 +64,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
 
-    //NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
+    // NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
 
     // We're interruptible.
     Processor::setInterrupts(true);
