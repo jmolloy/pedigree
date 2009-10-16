@@ -41,12 +41,7 @@ void sigint(int sig)
     }
     else
     {
-        // Do not kill us
-        /// \todo Can't be killed because the console read request still exists - exit() needs
-        ///       to actually cancel all pending requests as well! In the meantime this will have
-        ///       to suffice...
-        printf("foff");
-        exit(0);
+        // Do not kill us!
     }
 }
 

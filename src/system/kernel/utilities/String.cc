@@ -29,9 +29,12 @@ void String::assign(const String &x)
 }
 void String::assign(const char *s)
 {
-  m_Length = strlen(s);
+  if(!s)
+    m_Length = 0;
+  else
+    m_Length = strlen(s);
   reserve(m_Length + 1);
-  if (m_Length)
+  if (m_Length && s)
     memcpy(m_Data, s, m_Length + 1);
   else
     m_Data[0] = '\0';
