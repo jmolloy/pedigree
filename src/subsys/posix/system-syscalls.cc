@@ -165,11 +165,9 @@ int posix_fork(SyscallState &state)
     }
 
     // Register with the dynamic linker.
-    NOTICE("HERE");
     DynamicLinker *oldLinker = pProcess->getLinker();
     DynamicLinker *newLinker = new DynamicLinker(*oldLinker);
     pProcess->setLinker(newLinker);
-    NOTICE("THERE");
 
     MemoryMappedFileManager::instance().clone(pProcess);
 
@@ -180,11 +178,9 @@ int posix_fork(SyscallState &state)
     state.setSyscallReturnValue(0);
 
     // Create a new thread for the new process.
-    NOTICE("New thread");
     new Thread(pProcess, state);
 
     // Parent returns child ID.
-    NOTICE("YAY");
     return pProcess->getId();
 }
 
@@ -337,15 +333,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     if (!pLinker->loadProgram(file))
     {
-        NOTICE("Load failed in execve");
         pProcess->setLinker(pOldLinker);
         delete pLinker;
         SYSCALL_ERROR(ExecFormatError);
         return -1;
     }
     delete pOldLinker;
-
-    NOTICE("Load success");
 
     // Close all FD_CLOEXEC descriptors.
     pSubsystem->freeMultipleFds(true);

@@ -63,13 +63,17 @@ void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
                 continue;
 
             // We now have a list, but we're not going to iterate...
-            size_t nItems = (*it)->count();
-            for(size_t i = 0; i < nItems; i++)
+            List<Symbol*> *newList = new List<Symbol*>;
+            for(List<Symbol*>::Iterator it2 = (*it)->begin();
+                it2 != (*it)->end();
+                it2++)
             {
-                Symbol *pSymbol = (*it)->popFront();
+                Symbol *pSymbol = (*it2);
                 Symbol *pNewSymbol = new Symbol(pNewElf, pSymbol->getBinding(), pSymbol->getValue());
-                (*it)->pushBack(pNewSymbol);
+                newList->pushBack(pNewSymbol);
             }
+
+            *it = newList;
         }
     }
 }

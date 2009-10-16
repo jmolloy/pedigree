@@ -23,12 +23,12 @@
 #include <linker/KernelElf.h>
 #include <process/Process.h>
 
-/** Helper function: copies data into a new buffer given a certain number of objects */
+/** Helper function: copies data into a new buffer given a certain number of bytes */
 template <typename T>
-T *copy(T *buff, size_t numObjects)
+T *copy(T *buff, size_t numBytes)
 {
-    T *ret = new T[numObjects];
-    memcpy(ret, buff, numObjects * sizeof(T));
+    T *ret = new T[numBytes / sizeof(T)];
+    memcpy(ret, buff, numBytes);
     return ret;
 }
 
@@ -135,7 +135,6 @@ Elf::Elf(const Elf &elf) :
     m_SymbolTable(this),
     m_InitFunc(elf.m_InitFunc),
     m_FiniFunc(elf.m_FiniFunc)
-
 {
     // Copy the symbol table
     m_pSymbolTable = copy(elf.m_pSymbolTable, m_nSymbolTableSize);
@@ -166,10 +165,10 @@ Elf::Elf(const Elf &elf) :
     m_pDynamicStringTable = copy(elf.m_pDynamicStringTable, m_nDynamicStringTableSize);
 
     // Copy the section headers
-    m_pSectionHeaders = copy(elf.m_pSectionHeaders, m_nSectionHeaders);
+    m_pSectionHeaders = copy(elf.m_pSectionHeaders, m_nSectionHeaders * sizeof(ElfSectionHeader_t));
 
     // Copy the program headers
-    m_pProgramHeaders = copy(elf.m_pProgramHeaders, m_nProgramHeaders);
+    m_pProgramHeaders = copy(elf.m_pProgramHeaders, m_nProgramHeaders * sizeof(ElfProgramHeader_t));
 
     // Copy needed libraries info, modifying pointers as we go
     intptr_t diff = reinterpret_cast<uintptr_t>(m_pDynamicStringTable) - reinterpret_cast<uintptr_t>(elf.m_pDynamicStringTable);

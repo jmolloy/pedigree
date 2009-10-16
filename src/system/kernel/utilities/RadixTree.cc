@@ -38,6 +38,7 @@ RadixTree<void*>::RadixTree(const RadixTree &x) :
     clear();
     delete m_pRoot;
     m_pRoot = cloneNode (x.m_pRoot, 0);
+    m_nItems = x.m_nItems;
 }
 
 RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
@@ -45,6 +46,7 @@ RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
     clear();
     delete m_pRoot;
     m_pRoot = cloneNode (x.m_pRoot, 0);
+    m_nItems = x.m_nItems;
     return *this;
 }
 
@@ -327,8 +329,6 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
     if (!pNode)
         return 0;
 
-    m_nItems = 0;
-
     Node *n = new Node();
     n->setKey(pNode->m_pKey);
     n->setValue(pNode->value);
@@ -340,7 +340,6 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
         {
             if (pNode->m_pChildren[i]->p[j] == 0) continue;
             n->addChild(cloneNode(pNode->m_pChildren[i]->p[j], n));
-            m_nItems++;
         }
     }
 
@@ -352,6 +351,7 @@ void RadixTree<void*>::clear()
     delete m_pRoot;
     m_pRoot = new Node();
     m_pRoot->setKey(nullKey);
+    m_nItems = 0;
 }
 
 //
