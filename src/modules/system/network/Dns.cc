@@ -188,11 +188,57 @@ void Dns::mainThread()
               }
             }
             break;
-
-          /** CNAME */
-          case 0x0005:
+            /** NS */
+            case 0x0002:
             {
-              WARNING("TODO: DNS CNAME records --> Hostent aliases");
+                WARNING("TODO: NS Records");
+            }
+            break;
+            /** CNAME */
+            case 0x0005:
+            {
+                WARNING("TODO: DNS CNAME records --> Hostent aliases");
+            }
+            break;
+            /** SOA */
+            case 0x0006:
+            {
+                WARNING("TODO: SOA Records");
+            }
+            break;
+            /* WKS */
+            case 0x000B:
+            {
+                WARNING("TODO: WKS Records");
+            }
+            break;
+            /* PTR */
+            case 0x000C:
+            {
+                WARNING("TODO: PTR Records");
+            }
+            break;
+            /* MX */
+            case 0x000F:
+            {
+                WARNING("TODO: MX Records");
+            }
+            break;
+            /* SRV */
+            case 0x0021:
+            {
+                WARNING("TODO: SRV Records");
+            }
+            break;
+            /* A6 */
+            case 0x0026:
+            {
+                WARNING("TODO: A6 Records");
+            }
+            break;
+            default:
+            {
+                WARNING("Unknown record type returned from DNS server")
             }
             break;
         }
