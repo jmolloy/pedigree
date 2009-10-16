@@ -58,6 +58,9 @@ public:
   /** Copy constructor. */
   SymbolTable(const SymbolTable &symtab);
 
+  /** Copies the symbol table */
+  void copyTable(Elf *pNewElf, const SymbolTable &newSymtab);
+
 
   /** Insert a symbol into the table. */
   void insert(String name, Binding binding, Elf *pParent, uintptr_t value);

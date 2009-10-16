@@ -161,6 +161,7 @@ int fork(void)
 
     if(pid == 0)
     {
+        syslog(LOG_NOTICE, "fork returns as child");
         if(nHandlers)
         {
             for(int i = 0; i < nHandlers; i++)
@@ -172,6 +173,7 @@ int fork(void)
     }
     else if(pid > 0)
     {
+        syslog(LOG_NOTICE, "fork returns as parent");
         if(nHandlers)
         {
             for(int i = 0; i < nHandlers; i++)

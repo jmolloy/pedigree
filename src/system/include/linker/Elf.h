@@ -155,6 +155,9 @@ public:
     /** Destructor.*/
     virtual ~Elf();
 
+    /** The copy-constructor */
+    Elf(const Elf &);
+
     /** Constructs an Elf object, and assumes the given pointer to be
      * to a contiguous region of memory containing an ELF object. */
     bool create(uint8_t *pBuffer, size_t length);
@@ -359,7 +362,9 @@ protected:
     ElfSymbol_t          *m_pSymbolTable;
     size_t                m_nSymbolTableSize;
     char                 *m_pStringTable;
+    size_t                m_nStringTableSize;
     char                 *m_pShstrtab;
+    size_t                m_nShstrtabSize;
     uintptr_t            *m_pGotTable; // Global offset table.
     ElfRel_t             *m_pRelTable; // Dynamic REL relocations.
     ElfRela_t            *m_pRelaTable; // Dynamic RELA relocations.
@@ -373,6 +378,7 @@ protected:
     ElfSymbol_t          *m_pDynamicSymbolTable;
     size_t                m_nDynamicSymbolTableSize;
     char                 *m_pDynamicStringTable;
+    size_t                m_nDynamicStringTableSize;
     ElfSectionHeader_t   *m_pSectionHeaders;
     size_t                m_nSectionHeaders;
     ElfProgramHeader_t   *m_pProgramHeaders;
@@ -385,9 +391,6 @@ protected:
     uintptr_t             m_FiniFunc;
 
 private:
-    /** The copy-constructor
-     *\note currently not implemented */
-    Elf(const Elf &);
     /** The assignment operator
      *\note currently not implemented */
     Elf &operator = (const Elf &);

@@ -24,10 +24,14 @@ libpthread_objname = builddir + '/libpthread.a'
 crti_objname = kerneldir + '/crti.o'
 crtn_objname = kerneldir + '/crtn.o'
 
+libc_objname = builddir + '/libc.so'
+
 env.Alias("crt", [crt0_objname, crti_objname, crtn_objname])
 env.Alias("subsys", posix_objname)
 env.Alias("subsys", glue_objname)
 env.Alias("pthreads", libpthread_objname)
+
+env.Depends(libc_objname, glue_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [

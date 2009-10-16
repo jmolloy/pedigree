@@ -29,6 +29,8 @@
 #include <panic.h>
 #include <utilities/assert.h>
 
+// #define USE_ELF_COPY_CONSTRUCTOR
+
 DLTrapHandler DLTrapHandler::m_Instance;
 
 uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
@@ -49,13 +51,22 @@ DynamicLinker::DynamicLinker(DynamicLinker &other) :
     m_ProgramSize(other.m_ProgramSize), m_ProgramBuffer(other.m_ProgramBuffer),
     m_LoadedObjects(other.m_LoadedObjects), m_Objects()
 {
+#ifdef USE_ELF_COPY_CONSTRUCTOR
+    m_pProgramElf = new Elf(*other.m_pProgramElf);
+#endif
     for (Tree<uintptr_t,SharedObject*>::Iterator it = other.m_Objects.begin();
          it != other.m_Objects.end();
          it++)
     {
         uintptr_t key = reinterpret_cast<uintptr_t>(it.key());
         SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
-        m_Objects.insert(key, new SharedObject(pSo->elf, pSo->file, pSo->buffer,
+        m_Objects.insert(key, new SharedObject(
+#ifdef USE_ELF_COPY_CONSTRUCTOR
+                                               new Elf(*pSo->elf),
+#else
+                                               pSo->elf,
+#endif
+                                               pSo->file, pSo->buffer,
                                                pSo->address, pSo->size));
     }
 }
@@ -69,13 +80,15 @@ DynamicLinker::~DynamicLinker()
          it++)
     {
         SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
-        /// \todo This should have been copy-constructed too!
-//        delete pSo->elf;
+#ifdef USE_ELF_COPY_CONSTRUCTOR
+        delete pSo->elf;
+#endif
         delete pSo;
     }
 
-    /// \todo Can't be deleted until we have a viable copy constructor for Elf.
-    //delete m_pProgramElf;
+#ifdef USE_ELF_COPY_CONSTRUCTOR
+    delete m_pProgramElf;
+#endif
 }
 
 bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
@@ -91,6 +104,9 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
 
     if(!bDryRun)
     {
+#ifdef USE_ELF_COPY_CONSTRUCTOR
+        delete m_pProgramElf;
+#endif
         m_pProgramElf = programElf;
         if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
         {

@@ -165,7 +165,11 @@ int posix_fork(SyscallState &state)
     }
 
     // Register with the dynamic linker.
-    pProcess->setLinker(new DynamicLinker(*pProcess->getLinker()));
+    NOTICE("HERE");
+    DynamicLinker *oldLinker = pProcess->getLinker();
+    DynamicLinker *newLinker = new DynamicLinker(*oldLinker);
+    pProcess->setLinker(newLinker);
+    NOTICE("THERE");
 
     MemoryMappedFileManager::instance().clone(pProcess);
 
@@ -176,9 +180,11 @@ int posix_fork(SyscallState &state)
     state.setSyscallReturnValue(0);
 
     // Create a new thread for the new process.
+    NOTICE("New thread");
     new Thread(pProcess, state);
 
     // Parent returns child ID.
+    NOTICE("YAY");
     return pProcess->getId();
 }
 

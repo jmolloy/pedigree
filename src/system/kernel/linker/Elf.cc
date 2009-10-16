@@ -23,6 +23,15 @@
 #include <linker/KernelElf.h>
 #include <process/Process.h>
 
+/** Helper function: copies data into a new buffer given a certain number of objects */
+template <typename T>
+T *copy(T *buff, size_t numObjects)
+{
+    T *ret = new T[numObjects];
+    memcpy(ret, buff, numObjects * sizeof(T));
+    return ret;
+}
+
 /** Helper function: iterates through all program headers given to find where pCurrent resides, then copies that data into a new
     buffer and returns it.*/
 template<typename T>
@@ -48,7 +57,9 @@ Elf::Elf() :
     m_pSymbolTable(0),
     m_nSymbolTableSize(0),
     m_pStringTable(0),
+    m_nStringTableSize(0),
     m_pShstrtab(0),
+    m_nShstrtabSize(0),
     m_pGotTable(0),
     m_pRelTable(0),
     m_pRelaTable(0),
@@ -62,6 +73,7 @@ Elf::Elf() :
     m_pDynamicSymbolTable(0),
     m_nDynamicSymbolTableSize(0),
     m_pDynamicStringTable(0),
+    m_nDynamicStringTableSize(0),
     m_pSectionHeaders(0),
     m_nSectionHeaders(0),
     m_pProgramHeaders(0),
@@ -80,7 +92,7 @@ Elf::~Elf()
     delete m_pSymbolTable;
     delete m_pStringTable;
     delete m_pShstrtab;
-    delete m_pGotTable;
+    // delete m_pGotTable;
     delete m_pRelTable;
     delete m_pRelaTable;
     delete m_pPltRelTable;
@@ -90,6 +102,86 @@ Elf::~Elf()
     delete m_pDynamicStringTable;
     delete m_pSectionHeaders;
     delete m_pProgramHeaders;
+}
+
+Elf::Elf(const Elf &elf) :
+    m_pSymbolTable(0),
+    m_nSymbolTableSize(elf.m_nSymbolTableSize),
+    m_pStringTable(),
+    m_nStringTableSize(elf.m_nStringTableSize),
+    m_pShstrtab(0),
+    m_nShstrtabSize(elf.m_nShstrtabSize),
+    m_pGotTable(elf.m_pGotTable),
+    m_pRelTable(0),
+    m_pRelaTable(0),
+    m_nRelTableSize(elf.m_nRelTableSize),
+    m_nRelaTableSize(elf.m_nRelaTableSize),
+    m_pPltRelTable(0),
+    m_pPltRelaTable(0),
+    m_bUsesRela(elf.m_bUsesRela),
+    m_pDebugTable(0),
+    m_nDebugTableSize(elf.m_nDebugTableSize),
+    m_pDynamicSymbolTable(0),
+    m_nDynamicSymbolTableSize(elf.m_nDynamicSymbolTableSize),
+    m_pDynamicStringTable(0),
+    m_nDynamicStringTableSize(elf.m_nDynamicStringTableSize),
+    m_pSectionHeaders(0),
+    m_nSectionHeaders(elf.m_nSectionHeaders),
+    m_pProgramHeaders(0),
+    m_nProgramHeaders(elf.m_nProgramHeaders),
+    m_nPltSize(elf.m_nPltSize),
+    m_nEntry(elf.m_nEntry),
+    m_NeededLibraries(elf.m_NeededLibraries),
+    m_SymbolTable(this),
+    m_InitFunc(elf.m_InitFunc),
+    m_FiniFunc(elf.m_FiniFunc)
+
+{
+    // Copy the symbol table
+    m_pSymbolTable = copy(elf.m_pSymbolTable, m_nSymbolTableSize);
+
+    // Copy the string table, somehow?
+    m_pStringTable = copy(elf.m_pStringTable, m_nStringTableSize);
+
+    // Copy the section header string table, somehow?
+    m_pShstrtab = copy(elf.m_pShstrtab, m_nShstrtabSize);
+
+    // Copy the REL and RELA tables
+    m_pRelTable = copy(elf.m_pRelTable, m_nRelTableSize);
+    m_pRelaTable = copy(elf.m_pRelaTable, m_nRelaTableSize);
+
+    // Copy the PLT
+    if(m_bUsesRela)
+        m_pPltRelaTable = copy(elf.m_pPltRelaTable, m_nPltSize);
+    else
+        m_pPltRelTable = copy(elf.m_pPltRelTable, m_nPltSize);
+
+    // Copy the debug table
+    m_pDebugTable = copy(elf.m_pDebugTable, m_nDebugTableSize);
+
+    // Copy the dynamic symbol table
+    m_pDynamicSymbolTable = copy(elf.m_pDynamicSymbolTable, m_nDynamicSymbolTableSize);
+
+    // Copy the dynamic string table, somehow?
+    m_pDynamicStringTable = copy(elf.m_pDynamicStringTable, m_nDynamicStringTableSize);
+
+    // Copy the section headers
+    m_pSectionHeaders = copy(elf.m_pSectionHeaders, m_nSectionHeaders);
+
+    // Copy the program headers
+    m_pProgramHeaders = copy(elf.m_pProgramHeaders, m_nProgramHeaders);
+
+    // Copy needed libraries info, modifying pointers as we go
+    intptr_t diff = reinterpret_cast<uintptr_t>(m_pDynamicStringTable) - reinterpret_cast<uintptr_t>(elf.m_pDynamicStringTable);
+    for (List<char*>::Iterator it = m_NeededLibraries.begin();
+         it != m_NeededLibraries.end();
+         it++)
+    {
+        *it = *it + diff;
+    }
+
+    // Copy symbol table
+    m_SymbolTable.copyTable(this, elf.m_SymbolTable);
 }
 
 bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
@@ -212,9 +304,9 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     ElfSectionHeader_t *pShstrtab = &m_pSectionHeaders[pHeader->shstrndx];
 
     // Load the section header string table.
-    m_pShstrtab = new char[pShstrtab->size];
-
-    memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], pShstrtab->size);
+    m_nShstrtabSize = pShstrtab->size;
+    m_pShstrtab = new char[m_nShstrtabSize];
+    memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], m_nShstrtabSize);
 
     ElfSectionHeader_t *pSymbolTable=0, *pStringTable=0;
     // Go through each section header, trying to find .symtab.
@@ -234,7 +326,6 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     else
     {
         m_nSymbolTableSize = pSymbolTable->size;
-
         m_pSymbolTable = new ElfSymbol_t[m_nSymbolTableSize/sizeof(ElfSymbol_t)];
         memcpy (reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
     }
@@ -245,8 +336,9 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     }
     else
     {
-        m_pStringTable = new char[pStringTable->size];
-        memcpy (reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], pStringTable->size);
+        m_nStringTableSize = pStringTable->size;
+        m_pStringTable = new char[m_nStringTableSize];
+        memcpy (reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], m_nStringTableSize);
     }
 
     // Attempt to load in some program headers, if they exist.
@@ -256,7 +348,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
         memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
-        size_t nDynamicStringTableSize = 0;
+        //size_t nDynamicStringTableSize = 0;
 
         // Look for the dynamic program header.
         for (size_t i = 0; i < m_nProgramHeaders; i++)
@@ -284,7 +376,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                             //m_nDynamicSymbolTableSize = pDyn->un.val;
                             break;
                         case DT_STRSZ:
-                            nDynamicStringTableSize = pDyn->un.val;
+                            m_nDynamicStringTableSize = pDyn->un.val;
                             break;
                         case DT_RELA:
                             m_pRelaTable = reinterpret_cast<ElfRela_t*> (pDyn->un.ptr);
@@ -342,7 +434,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
             m_pDynamicSymbolTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicSymbolTable, m_nDynamicSymbolTableSize);
         if (m_pDynamicStringTable)
         {
-            m_pDynamicStringTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicStringTable, nDynamicStringTableSize);
+            m_pDynamicStringTable = elfCopy(pBuffer, m_pProgramHeaders, m_nProgramHeaders, m_pDynamicStringTable, m_nDynamicStringTableSize);
 
             // Make sure the string references to needed libraries actually work as pointers...
             for (List<char*>::Iterator it = m_NeededLibraries.begin();

@@ -45,6 +45,35 @@ SymbolTable::~SymbolTable()
   }
 }
 
+void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
+{
+    // Copy the initial tree (which will copy mere pointers to the lists)
+    m_Tree = newSymtab.m_Tree;
+
+    // Iterate over the tree and copy the lists pointer-by-pointer
+    if(!m_Tree.count())
+        return;
+    for (RadixTree<SymbolList*>::Iterator it = newSymtab.m_Tree.begin();
+        it != newSymtab.m_Tree.end();
+        it++)
+    {
+        if (*it)
+        {
+            if(!((*it)->count()))
+                continue;
+
+            // We now have a list, but we're not going to iterate...
+            size_t nItems = (*it)->count();
+            for(size_t i = 0; i < nItems; i++)
+            {
+                Symbol *pSymbol = (*it)->popFront();
+                Symbol *pNewSymbol = new Symbol(pNewElf, pSymbol->getBinding(), pSymbol->getValue());
+                (*it)->pushBack(pNewSymbol);
+            }
+        }
+    }
+}
+
 void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t value)
 {
   SymbolList *pList = m_Tree.lookup(name);

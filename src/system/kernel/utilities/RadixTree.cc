@@ -327,6 +327,8 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
     if (!pNode)
         return 0;
 
+    m_nItems = 0;
+
     Node *n = new Node();
     n->setKey(pNode->m_pKey);
     n->setValue(pNode->value);
@@ -338,6 +340,7 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
         {
             if (pNode->m_pChildren[i]->p[j] == 0) continue;
             n->addChild(cloneNode(pNode->m_pChildren[i]->p[j], n));
+            m_nItems++;
         }
     }
 
