@@ -46,6 +46,7 @@ void sigint(int sig)
         ///       to actually cancel all pending requests as well! In the meantime this will have
         ///       to suffice...
         printf("foff");
+        exit(0);
     }
 }
 
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
 
   // New process group for job control. We'll ignore SIGINT for now
   /// \todo Perhaps restart the process on SIGINT?
-  signal(SIGINT, SIG_IGN);
+  signal(SIGINT, sigint);
   setsid();
 
   // Grab the greeting if one exists.

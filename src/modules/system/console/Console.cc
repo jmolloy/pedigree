@@ -259,6 +259,20 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                         }
                     }
                 }
+                else if(readBuffer[i] < 0x1F)
+                {
+                    // Signals must also be handled here because we may be buffering text
+                    // and that may cause the signal to be delayed.
+                    if(readBuffer[i] == 0x3)
+                    {
+                        Thread *pThread = Processor::information().getCurrentThread();
+                        Process *pProcess = pThread->getParent();
+                        Subsystem *pSubsystem = pProcess->getSubsystem();
+
+                        NOTICE("SIGINT: canonical/echo");
+                        pSubsystem->kill(Subsystem::Interrupted, pThread);
+                    }
+                }
                 else
                 {
                     // Write the character to the console
@@ -343,7 +357,6 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 Process *pProcess = pThread->getParent();
                 Subsystem *pSubsystem = pProcess->getSubsystem();
 
-                NOTICE("SIGINT");
                 pSubsystem->kill(Subsystem::Interrupted, pThread);
 
                 continue;
