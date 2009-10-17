@@ -238,7 +238,7 @@ void Dns::mainThread()
             break;
             default:
             {
-                WARNING("Unknown record type returned from DNS server")
+                WARNING("Unknown record type returned from DNS server");
             }
             break;
         }
