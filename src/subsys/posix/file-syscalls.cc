@@ -439,33 +439,13 @@ char* posix_getcwd(char* buf, size_t maxlen)
     if (buf == 0)
         return 0;
 
-    HugeStaticString str;
-    HugeStaticString tmp;
-    str.clear();
-    tmp.clear();
-
     File* curr = GET_CWD();
-    if (curr->getParent() != 0)
-        str = curr->getName();
+    String str = curr->getFullPath();
 
-    File* f = curr;
-    while ((f = f->getParent()))
-    {
-        // This feels a bit weird considering the while loop's subject...
-        if (f->getParent())
-        {
-            tmp = str;
-            str = f->getName();
-            str += "/";
-            str += tmp;
-        }
-    }
-
-    tmp = str;
-    str = "/";
-    str += tmp;
-
-    strcpy(buf, static_cast<const char*>(str));
+    size_t maxLength = str.length();
+    if(maxLength > maxlen)
+        maxLength = maxlen;
+    strncpy(buf, static_cast<const char*>(str), maxlen);
 
     return buf;
 }
