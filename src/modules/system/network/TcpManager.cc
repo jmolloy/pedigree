@@ -186,7 +186,7 @@ void TcpManager::Disconnect(size_t connectionId)
   dest = stateBlock->remoteHost.ip;
 
   // no FIN received yet
-  if(stateBlock->currentState == Tcp::ESTABLISHED)
+  if(stateBlock->currentState >= Tcp::ESTABLISHED && stateBlock->currentState <= Tcp::FIN_WAIT_2)
   {
     stateBlock->fin_seq = stateBlock->snd_nxt;
 

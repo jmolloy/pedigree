@@ -34,8 +34,22 @@ size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
     // Validation
     if(!m_Buffer || !m_BufferSize)
         return 0;
+
+    // Is the buffer full?
+    if(m_DataSize >= m_BufferSize)
+        return 0;
+
+    // If adding this data will cause an overflow, limit the write
+    if((nBytes + m_DataSize) > m_BufferSize)
+        nBytes = m_BufferSize - m_DataSize;
+
+    // If there's still too many bytes, restrict further
     if(nBytes > m_BufferSize)
         nBytes = m_BufferSize;
+
+    // If however there's no more room, we can't write
+    if(!nBytes)
+        return 0;
 
     // Can we just write the whole thing?
     if((m_Writer + nBytes) < m_BufferSize)
@@ -85,11 +99,21 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
 {
     LockGuard<Mutex> guard(m_Lock);
 
-    // Validation
+    // Verify that we will actually be able to read this data
     if(!m_Buffer || !m_BufferSize)
         return 0;
+
+    // Do not read past the end of the allocated buffer
     if(nBytes > m_BufferSize)
         nBytes = m_BufferSize;
+
+    // And do not read more than the data that is already in the buffer
+    if(nBytes > m_DataSize)
+        nBytes = m_DataSize;
+
+    // If either of these checks cause nBytes to be zero, just return
+    if(!nBytes)
+        return 0;
 
     // Can we just read the whole thing?
     if((m_Reader + nBytes) < m_BufferSize)
@@ -143,7 +167,10 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
             m_Reader = numOverlapBytes;
 
         // Return the number of bytes written
-        m_DataSize -= numNormalBytes + numOverlapBytes;
+        if((numNormalBytes + numOverlapBytes) > m_DataSize)
+            m_DataSize = 0;
+        else
+            m_DataSize -= numNormalBytes + numOverlapBytes;
         return numNormalBytes + numOverlapBytes;
     }
 }

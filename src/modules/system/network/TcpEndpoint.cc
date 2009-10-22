@@ -130,11 +130,17 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
     // is set, copy the shadow stream into the main stream. By allowing a zero-byte
     // deposit, data that did not have the PSH flag can be pushed to the application
     // when we receive a FIN.
+    size_t ret = 0;
     if (nBytes && payload)
-        m_ShadowDataStream.write(payload, nBytes);
+        ret = m_ShadowDataStream.write(payload, nBytes);
     if (push && m_ShadowDataStream.getDataSize())
     {
         // Copy the buffer into the real data stream
+        /// \bug Caveat here: If the shadow stream read is successful, but the write
+        ///      to the data stream is not, the data will be lost without any method
+        ///      of regaining access to it! The shadow stream needs to be read without
+        ///      removing bytes from it initially, and then if all goes well the bytes
+        ///      that were written to the data stream should be removed.
         size_t sz = m_ShadowDataStream.getDataSize();
         uint8_t *buff = new uint8_t[sz];
         sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
@@ -145,13 +151,9 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
         {
           (*it)->endpointStateChanged();
         }
-
-        // Return the number of bytes that applications now have access to
-        return sz;
     }
 
-    // If we're here, the window shouldn't change at all
-    return 0;
+    return ret;
 }
 
 bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
