@@ -120,6 +120,12 @@ int ftruncate(int a, off_t b)
 
 char* getcwd(char *buf, unsigned long size)
 {
+    // Because the developers of bash can't be assed following a specification,
+    // we have to make this dirty hack so that getcwd with a null buffer works.
+    // Even though that's technically unspecified behaviour that should be an
+    // error condition.
+    if(!buf)
+        buf = (char*) malloc(size ? size : PATH_MAX);
     return (char *)syscall2(POSIX_GETCWD, (long) buf, (long) size);
 }
 
@@ -146,8 +152,6 @@ void _exit(int val)
 
 int fork(void)
 {
-    return (long)syscall0(POSIX_FORK);
-
     if(nHandlers)
     {
         for(int i = 0; i < nHandlers; i++)
@@ -235,13 +239,20 @@ _ssize_t read(int file, void *ptr, size_t len)
 {
     if(file < 0)
     {
+        syslog(LOG_NOTICE, "[%d] read: bad file given\n", getpid());
         errno = EBADF;
         return -1;
     }
     if(!ptr)
+    {
+        syslog(LOG_NOTICE, "[%d] read: bad buffer given\n", getpid());
         return 0;
+    }
     if(len == 0)
+    {
+        syslog(LOG_NOTICE, "[%d] read: bad length given\n", getpid());
         return 0;
+    }
     return (_ssize_t) syscall3(POSIX_READ, file, (long)ptr, len);
 }
 
@@ -344,9 +355,11 @@ DIR *opendir(const char *dir)
     p->fd = syscall2(POSIX_OPENDIR, (long)dir, (long)&p->ent);
     if (p->fd < 0)
     {
+        syslog(LOG_NOTICE, "opendir failed");
         free(p);
         return 0;
     }
+    syslog(LOG_NOTICE, "opendir succeeded");
     return p;
 }
 

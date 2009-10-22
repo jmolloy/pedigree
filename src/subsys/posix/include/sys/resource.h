@@ -33,6 +33,7 @@ struct rlimit {
     rlim_t rlim_curr;
     rlim_t rlim_max;
 };
+#define rlim_cur rlim_curr
 
 int _EXFUN(getrlimit, (int resource, struct rlimit *rlp));
 int _EXFUN(setrlimit, (int resource, const struct rlimit *rlp));

@@ -296,6 +296,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         name = static_cast<const char*>(*newFname);
 
         // And reload the file, now that we're loading a new application
+        NOTICE("New name: " << *newFname << "...");
         file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
     }
 

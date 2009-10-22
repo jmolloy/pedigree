@@ -12,6 +12,19 @@ extern "C" {
 #define __need_ptrdiff_t
 #include <stddef.h>
 
+#define _POSIX_VERSION      200112L
+#define _POSIX2_VERSION     200112L
+#define _POSIX2_C_VERSION   199209L
+#define _XOPEN_VERSION      500
+#define _XOPEN_XCU_VERSION  -1
+
+#define _POSIX_THREADS
+#define _POSIX_THREAD_ATTR_STACKADDR
+#define _POSIX_THREAD_ATTR_STACKSIZE
+
+// #define _POSIX_SEMAPHORES
+// #define _POSIX_MAPPED_FILES
+
 extern char **environ;
 
 void	_EXFUN(_exit, (int __status ) _ATTRIBUTE ((noreturn)));

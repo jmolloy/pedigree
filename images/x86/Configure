@@ -104,15 +104,16 @@ if test -d c:/. || ( uname -a | grep -i 'os\(/\|\)2' ) 2>&1 >/dev/null ; then
 fi
 
 : Proper PATH setting
-paths='/bin /usr/bin /usr/local/bin /usr/ucb /usr/local /usr/lbin'
-paths="$paths /opt/bin /opt/local/bin /opt/local /opt/lbin"
-paths="$paths /usr/5bin /etc /usr/gnu/bin /usr/new /usr/new/bin /usr/nbin"
-paths="$paths /opt/gnu/bin /opt/new /opt/new/bin /opt/nbin"
-paths="$paths /sys5.3/bin /sys5.3/usr/bin /bsd4.3/bin /bsd4.3/usr/ucb"
-paths="$paths /bsd4.3/usr/bin /usr/bsd /bsd43/bin /opt/ansic/bin /usr/ccs/bin"
-paths="$paths /etc /usr/lib /usr/ucblib /lib /usr/ccs/lib"
-paths="$paths /sbin /usr/sbin /usr/libexec"
-paths="$paths /system/gnu_library/bin"
+: paths='/bin /usr/bin /usr/local/bin /usr/ucb /usr/local /usr/lbin'
+: paths="$paths /opt/bin /opt/local/bin /opt/local /opt/lbin"
+: paths="$paths /usr/5bin /etc /usr/gnu/bin /usr/new /usr/new/bin /usr/nbin"
+: paths="$paths /opt/gnu/bin /opt/new /opt/new/bin /opt/nbin"
+: paths="$paths /sys5.3/bin /sys5.3/usr/bin /bsd4.3/bin /bsd4.3/usr/ucb"
+: paths="$paths /bsd4.3/usr/bin /usr/bsd /bsd43/bin /opt/ansic/bin /usr/ccs/bin"
+: paths="$paths /etc /usr/lib /usr/ucblib /lib /usr/ccs/lib"
+: paths="$paths /sbin /usr/sbin /usr/libexec"
+: paths="$paths /system/gnu_library/bin"
+paths='/applications'
 
 for p in $paths
 do
@@ -1277,7 +1278,7 @@ loclibpth="/usr/local/lib /opt/local/lib /usr/gnu/lib"
 loclibpth="$loclibpth /opt/gnu/lib /usr/GNU/lib /opt/GNU/lib"
 
 : general looking path for locating libraries
-glibpth="/lib /usr/lib $xlibpth"
+glibpth="/libraries /lib /usr/lib $xlibpth"
 glibpth="$glibpth /usr/ccs/lib /usr/ucblib /usr/local/lib"
 test -f /usr/shlib/libc.so && glibpth="/usr/shlib $glibpth"
 test -f /shlib/libc.so     && glibpth="/shlib $glibpth"
@@ -1302,7 +1303,7 @@ defvoidused=15
 
 : Possible local include directories to search.
 : Set locincpth to "" in a hint file to defeat local include searches.
-locincpth="/usr/local/include /opt/local/include /usr/gnu/include"
+locincpth="/include /usr/local/include /opt/local/include /usr/gnu/include"
 locincpth="$locincpth /opt/gnu/include /usr/GNU/include /opt/GNU/include"
 :
 : no include file wanted by default
@@ -1399,6 +1400,7 @@ if `$sh -c '#' >/dev/null 2>&1`; then
 			exit 1
 		fi
 	fi
+
 	echo "#!$xcat" >sharp
 	$eunicefix sharp
 	chmod +x sharp
@@ -3862,6 +3864,7 @@ test "X$gfpthkeep" != Xy && gfpth=""
 EOSC
 
 : determine root of directory hierarchy where package will be installed.
+prefix="/"
 case "$prefix" in
 '')
 	dflt=`./loc . /usr/local /usr/local /local /opt /usr`
@@ -3953,8 +3956,10 @@ fi
 fn=d~
 rp='What installation prefix should I use for installing files?'
 . ./getfile
-installprefix="$ans"
-installprefixexp="$ansexp"
+installprefix="/"
+installprefixexp=""
+#installprefix="$ans"
+#installprefixexp="$ansexp"
 
 : Perform the prefixexp/installprefixexp correction if necessary
 cat <<EOS >installprefix

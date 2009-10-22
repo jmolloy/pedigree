@@ -194,6 +194,8 @@ int posix_open(const char *name, int flags, int mode)
       return -1;
     }
 
+    F_NOTICE("    -> " << fd);
+
     return static_cast<int> (fd);
 }
 
@@ -475,12 +477,14 @@ int posix_stat(const char *name, struct stat *st)
     // verify the filename - don't try to open a dud file (otherwise we'll open the cwd)
     if (name[0] == 0)
     {
+        F_NOTICE("    -> Doesn't exist");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
 
     if(!st)
     {
+        F_NOTICE("    -> Invalid argument");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
@@ -492,6 +496,7 @@ int posix_stat(const char *name, struct stat *st)
         file = VFS::instance().find(String(name), GET_CWD());
     if (!file)
     {
+        F_NOTICE("    -> Not found by VFS");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -502,6 +507,7 @@ int posix_stat(const char *name, struct stat *st)
     if (!file)
     {
         // Error - not found.
+        F_NOTICE("    -> Symlink traversal failed");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -545,6 +551,7 @@ int posix_stat(const char *name, struct stat *st)
     st->st_blksize = 1;
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
+    F_NOTICE("    -> Success");
     return 0;
 }
 
@@ -553,7 +560,6 @@ int posix_fstat(int fd, struct stat *st)
     F_NOTICE("fstat(" << Dec << fd << Hex << ")");
     if(!st)
     {
-        ERROR("Struct stat fail");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
@@ -578,14 +584,17 @@ int posix_fstat(int fd, struct stat *st)
     int mode = 0;
     if (ConsoleManager::instance().isConsole(pFd->file))
     {
+        F_NOTICE("    -> S_IFCHR");
         mode = S_IFCHR;
     }
     else if (pFd->file->isDirectory())
     {
+        F_NOTICE("    -> S_IFDIR");
         mode = S_IFDIR;
     }
     else
     {
+        F_NOTICE("    -> S_IFREG");
         mode = S_IFREG;
     }
 
@@ -599,9 +608,12 @@ int posix_fstat(int fd, struct stat *st)
     if (permissions & FILE_OR) mode |= S_IROTH;
     if (permissions & FILE_OW) mode |= S_IWOTH;
     if (permissions & FILE_OX) mode |= S_IXOTH;
+    F_NOTICE("    -> " << mode);
 
     st->st_dev   = static_cast<short>(reinterpret_cast<uintptr_t>(pFd->file->getFilesystem()));
+    F_NOTICE("    -> " << st->st_dev);
     st->st_ino   = static_cast<short>(pFd->file->getInode());
+    F_NOTICE("    -> " << st->st_ino);
     st->st_mode  = mode;
     st->st_nlink = 1;
     st->st_uid   = pFd->file->getUid();
@@ -614,6 +626,7 @@ int posix_fstat(int fd, struct stat *st)
     st->st_blksize = 1;
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
+    F_NOTICE("Success");
     return 0;
 }
 
@@ -730,7 +743,21 @@ int posix_opendir(const char *dir, dirent *ent)
 
     file = Directory::fromFile(file)->getChild(0);
     if (file)
+    {
         ent->d_ino = file->getInode();
+
+        // Some applications consider a null inode to mean "bad file" which is
+        // a horrible assumption for them to make. Because the presence of a file
+        // is indicated by more effective means (ie, successful return from
+        // readdir) this just appeases the applications which aren't portably
+        // written.
+        if(ent->d_ino == 0)
+            ent->d_ino = 0x7fff; // Signed, don't want this to turn negative
+
+        // Copy the filename across
+        strncpy(ent->d_name, static_cast<const char*>(file->getName()), MAXNAMLEN);
+        NOTICE("ent->d_ino = " << ent->d_ino << ", filename: " << file->getName() << ".");
+    }
     else
     {
         NOTICE("Epic fail!");

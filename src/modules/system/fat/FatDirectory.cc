@@ -237,6 +237,8 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       String shortFilename = pFs->convertFilenameTo(filename);
       memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
+      ent->DIR_FstClusLO = pFile->getInode() & 0xFFFF;
+      ent->DIR_FstClusHI = (pFile->getInode() >> 16) & 0xFFFF;
 
       pFs->writeDirectoryPortion(clus, buffer);
 

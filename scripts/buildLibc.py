@@ -35,8 +35,8 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
     shutil.copy(inputLibcA, tmpdir + "/libc.a")
     os.system(ar + " x libc.a")
 
-    glue = builddir + "/src/subsys/posix/" + glue_name
-    shutil.copy(glue, tmpdir + "/" + glue_name)
+    glue = glue_name
+    shutil.copy(glue, tmpdir + "/" + os.path.basename(glue_name))
 
     objs_to_remove = ["init", "getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty", "basename"]
 

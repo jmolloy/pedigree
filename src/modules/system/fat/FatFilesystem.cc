@@ -1144,12 +1144,17 @@ File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask,
         pFile = new FatDirectory(filename, dirClus, this, parentDir, info);
     else
     {
+        // Deviation from the spec here: Because the 'inode' is used for fstat,
+        // we can't leave it at zero or else all newly created files without
+        // data will look the same!
+        uint32_t clus = findFreeCluster();
+        setClusterEntry(clus, eofValue());
         pFile = new FatFile(
             filename,
             0,
             0,
             0,
-            0,
+            clus,
             this,
             0,
             0xdeadbeef, // Sentinel values that'll throw an error if they're used
@@ -1222,7 +1227,7 @@ bool FatFilesystem::createSymlink(File* parent, String filename, String value)
 
 bool FatFilesystem::remove(File* parent, File* file)
 {
-    FatDirectory *parentDir = static_cast<FatDirectory *>(parent);
+    FatDirectory *parentDir = static_cast<FatDirectory *>(Directory::fromFile(parent));
 
     // Firstly, remove from the directory itself
     if (!parentDir->removeEntry(file))

@@ -18,7 +18,7 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 
 # Change to then name of this module
 posix_objname = subsysdir + '/posix.o'
-glue_objname = 'pedigree-glue.o'
+glue_objname = builddir + '/pedigree-glue.o'
 crt0_objname = kerneldir + '/crt0.o'
 libpthread_objname = builddir + '/libpthread.a'
 crti_objname = kerneldir + '/crti.o'
@@ -149,7 +149,7 @@ env.Alias("crt0", "crt")
 # base libc.a file is changed.
 env.Command([buildLibc],
             [glue_objname, baseLibc],
-            "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + glue_objname + " " + env["AR"] + " " + env["CC_NOCACHE"]
+            "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + tmp.File(glue_objname).abspath + " " + env["AR"] + " " + env["CC_NOCACHE"]
             )
 
 # libm will only ever be rebuilt if the libm.a file changes
