@@ -355,11 +355,9 @@ DIR *opendir(const char *dir)
     p->fd = syscall2(POSIX_OPENDIR, (long)dir, (long)&p->ent);
     if (p->fd < 0)
     {
-        syslog(LOG_NOTICE, "opendir failed");
         free(p);
         return 0;
     }
-    syslog(LOG_NOTICE, "opendir succeeded");
     return p;
 }
 
