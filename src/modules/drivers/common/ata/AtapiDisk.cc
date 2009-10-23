@@ -25,6 +25,9 @@
 #include <utilities/PointerGuard.h>
 #include "AtaController.h"
 
+/// \todo Make portable
+/// \todo GET MEDIA STATUS to find out if there's actually media!
+
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster) :
   AtaDisk(pDev, isMaster), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
