@@ -31,7 +31,7 @@ class TcpBuffer
   public:
 
     TcpBuffer() :
-      m_Buffer(0), m_BufferSize(0), m_Reader(0), m_Writer(0), m_Lock(false)
+      m_Buffer(0), m_BufferSize(0), m_DataSize(0), m_Reader(0), m_Writer(0), m_Lock(false)
     {
       setSize(32768);
     };
@@ -40,21 +40,6 @@ class TcpBuffer
       LockGuard<Mutex> guard(m_Lock);
       setSize(0);
     };
-
-    /** The current size of the buffer */
-    inline size_t getSize(bool bLock = true)
-    {
-      // Locked so the size given is a valid representation
-      if(bLock)
-        LockGuard<Mutex> guard(m_Lock);
-      return m_BufferSize;
-    }
-
-    /** Grabs a reference to our buffer lock */
-    Mutex* getLock()
-    {
-        return &m_Lock;
-    }
 
     /** Writes data to the buffer */
     size_t write(uintptr_t buffer, size_t nBytes);
@@ -69,6 +54,8 @@ class TcpBuffer
     /** Gets the size of the buffer */
     inline size_t getSize()
     {
+      // Locked so the size given is a valid representation
+        LockGuard<Mutex> guard(m_Lock);
         return m_BufferSize;
     }
     /** Sets the size of the buffer (ie, resize) */

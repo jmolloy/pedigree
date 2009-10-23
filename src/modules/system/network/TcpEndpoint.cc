@@ -142,6 +142,11 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
         ///      removing bytes from it initially, and then if all goes well the bytes
         ///      that were written to the data stream should be removed.
         size_t sz = m_ShadowDataStream.getDataSize();
+        if(sz > m_ShadowDataStream.getSize())
+        {
+            ERROR("Shadow data stream has potentially been corrupted: " << sz << ", " << m_ShadowDataStream.getSize() << "!");
+            return 0;
+        }
         uint8_t *buff = new uint8_t[sz];
         sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
         m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
