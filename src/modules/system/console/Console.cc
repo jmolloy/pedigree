@@ -288,6 +288,26 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 }
             }
 
+            // We appear to have hit the top of the line buffer!
+            if(m_LineBufferSize >= LINEBUFFER_MAXIMUM)
+            {
+                // Our best bet is to return early, giving the application what we can of the line buffer
+                size_t numBytesToRemove = nBytes > m_LineBufferSize ? nBytes : m_LineBufferSize;
+
+                // Copy the buffer across
+                memcpy(reinterpret_cast<void*>(buffer), m_LineBuffer, numBytesToRemove);
+
+                // And now move the buffer over the space we just consumed
+                uint64_t nConsumedBytes = m_LineBufferSize - numBytesToRemove;
+                if(nConsumedBytes) // If zero, the buffer was consumed completely
+                    memcpy(m_LineBuffer, &m_LineBuffer[numBytesToRemove], nConsumedBytes);
+
+                // Reduce the buffer size now
+                nBytesAdded += numBytesToRemove;
+                m_LineBufferSize -= numBytesToRemove;
+                break;
+            }
+
             if((!bAppBufferComplete && (m_Flags & ConsoleManager::LCookedMode)) && (nBytesAdded < size))
             {
                 uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_READ, m_Param, size - m_LineBufferSize, reinterpret_cast<uintptr_t>(readBuffer));

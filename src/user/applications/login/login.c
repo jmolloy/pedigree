@@ -105,6 +105,7 @@ int main(int argc, char **argv)
     g_RunningPid = -1;
 
     // Get username
+    /// \todo Possible buffer overflow attack here
     printf("Username: ");
     char buffer[256];
     char* username = gets(buffer);
@@ -116,11 +117,6 @@ int main(int argc, char **argv)
     }
 
     // Get password
-
-    /*
-    char *password = getpass("Password: ");
-    fflush(stdout);
-    */
 
     // Use own way - display *
 
