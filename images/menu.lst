@@ -4,7 +4,7 @@
 timeout 3
 
 title  Pedigree
-root   (fd0)
-kernel /kernel
-module /initrd.tar
-module /config.db
+root   (hd0,0)
+kernel /boot/kernel
+module /boot/initrd.tar
+module /boot/config.db

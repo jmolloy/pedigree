@@ -50,10 +50,7 @@ def buildImageLosetup(target, source, env):
     
     outFile = target[0].path
     imageBase = source[0].path
-    if('floppy' in outFile):
-        offset = 0
-    else:
-        offset = 32256
+    offset = 32256
     source = source[1:]
     
     # Copy the base image to the destination, overwriting any image that
@@ -69,37 +66,38 @@ def buildImageLosetup(target, source, env):
     os.mkdir("tmp")
     os.system("sudo mount -o loop,rw,offset=" + str(offset) + " " + outFile + " ./tmp")
     
-    # I want to see the floppy removed soon
-    if(not 'floppy' in outFile):
-        os.system("sudo cp " + builddir + "/config.db ./tmp/.pedigree-root")
-        # shutil.copy(builddir + "/config.db", "./tmp/.pedigree-root")
+    # Perhaps the menu.lst should refer to .pedigree-root :)
+    os.system("sudo cp " + builddir + "/config.db ./tmp/.pedigree-root")
+
+    # Copy the kernel, initrd, and configuration database
+    for i in source[0:3]:
+        os.system("sudo cp " + i.abspath + " ./tmp/boot/")
+    source = source[3:]
     
     # Copy each input file across
     for i in source:
         otherPath = ''
-        if(not 'floppy' in outFile):
-            search, prefix = imagedir, ''
-            
-            # Applications
-            if appsdir in i.abspath:
-                search = appsdir
-                prefix = '/applications'
-            
-            # Additional Libraries
-            elif builddir in i.abspath:
-                search = builddir
-                prefix = '/libraries'
-            
-            otherPath = prefix + i.abspath.replace(search, '')
-            
-            # Clean out the last directory name if needed
-            if(os.path.isdir(i.abspath)):
-                otherPath = '/'.join(otherPath.split('/')[:-1])
-                if(len(otherPath) == 0 or otherPath[0] != '/'):
-                    otherPath = '/' + otherPath
+        search, prefix = imagedir, ''
+        
+        # Applications
+        if appsdir in i.abspath:
+            search = appsdir
+            prefix = '/applications'
+        
+        # Additional Libraries
+        elif builddir in i.abspath:
+            search = builddir
+            prefix = '/libraries'
+        
+        otherPath = prefix + i.abspath.replace(search, '')
+        
+        # Clean out the last directory name if needed
+        if(os.path.isdir(i.abspath)):
+            otherPath = '/'.join(otherPath.split('/')[:-1])
+            if(len(otherPath) == 0 or otherPath[0] != '/'):
+                otherPath = '/' + otherPath
         
         os.system("sudo cp -R " + i.path + " ./tmp" + otherPath)
-        # shutil.copy(i.path, "./tmp" + otherPath)
     
     os.system("sudo umount ./tmp")
     
@@ -132,33 +130,30 @@ def buildImageMtools(target, source, env):
     mtsetup = env.File("#/scripts/mtsetup.sh").abspath
     os.system("sh " + mtsetup + " " + outFile + " > /dev/null 2>&1")
     
-    # This is a horrible way of doing it, but I'd like to see the floppy
-    # image removed soon *anyway*.
     destDrive = " C:"
-    if('floppy' in outFile):
-        destDrive = " A:/"
-    else:
-        shutil.copy(builddir + "/config.db", ".pedigree-root")
-        os.system("mcopy -Do .pedigree-root C:/ > /dev/null 2>&1; rm -f .pedigree-root")
+    os.system("mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
+    
+    # Copy the kernel, initrd, and configuration database
+    for i in source[0:3]:
+        os.system("mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
+    source = source[3:]
     
     # Copy each input file across
     for i in source:
         otherPath = ''
-        if(not 'floppy' in outFile):
-            search, prefix = imagedir, ''
-            
-            # Applications
-            if appsdir in i.abspath:
-                search = appsdir
-                prefix = '/applications'
-            
-            # Additional Libraries
-            elif builddir in i.abspath:
-                search = builddir
-                prefix = '/libraries'
-            
-            otherPath = prefix + i.abspath.replace(search, '')
+        search, prefix = imagedir, ''
         
+        # Applications
+        if appsdir in i.abspath:
+            search = appsdir
+            prefix = '/applications'
+        
+        # Additional Libraries
+        elif builddir in i.abspath:
+            search = builddir
+            prefix = '/libraries'
+        
+        otherPath = prefix + i.abspath.replace(search, '')
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
 def buildCdImage(target, source, env):
@@ -192,6 +187,9 @@ else:
     else:
         fileList += ["#/images/hdd_fat16.tar.gz"]
         buildImage = buildImageMtools
+    
+    # /boot directory
+    fileList += [builddir + '/kernel/kernel', builddir + '/initrd.tar', configdb]
         
     for root, dirs, files in os.walk(imagedir):
         # Add directory names first
@@ -213,9 +211,9 @@ else:
 
     # Floppy image ahoy!
     # TODO: Move into the hard disk image, to keep things simple.
-    env.Command(floppyimg,
-                ['#/images/floppy_fat.img', builddir + '/kernel/kernel', builddir + '/initrd.tar', configdb],
-                buildImage)
+    #env.Command(floppyimg,
+    #            ['#/images/floppy_fat.img', builddir + '/kernel/kernel', builddir + '/initrd.tar', configdb],
+    #            buildImage)
     
     # Build the hard disk image
     env.Command(hddimg, fileList, buildImage)
