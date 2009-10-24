@@ -519,23 +519,24 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
     N_NOTICE("gethostbyname");
 
-    // sanity checks
-    if (!hostinfo || !offset)
+    // Sanity checks
+    if (!hostinfo || !offset || !name)
         return -1;
 
-    // lookups can be done on the default interface
+    // Lookups can be done on the default interface
     Network* pCard = RoutingTable::instance().DefaultRoute();
 
-    // do the lookup
-    size_t num = 0;
-    IpAddress* ips = Dns::instance().hostToIp(String(name), num, pCard);
-    if (!num)
+    // Do the lookup
+    Dns::HostInfo host;
+    int lookup = Dns::instance().hostToIp(String(name), host, pCard);
+    if(lookup == -1)
     {
-        NOTICE("No IPs found");
+        /// \todo Try other interfaces!
+        N_NOTICE("gethostbyname: no IPs found for '" << name << "'.");
         return -1;
     }
 
-    // grab the passed hostent
+    // Grab the passed hostent
     struct hostent
     {
         char* h_name;
@@ -550,44 +551,74 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 
     memset(hostinfo, 0, offset);
 
-    // copy the hostname
-    char* hostName = reinterpret_cast<char*>(userBlock);
-    strcpy(hostName, name);
-    userBlock += strlen(name) + 1;
+    // Copy the hostname
+    entry->h_name = reinterpret_cast<char*>(userBlock);
+    strncpy(entry->h_name, static_cast<const char*>(host.hostname), host.hostname.length());
+    userBlock += host.hostname.length() + 1;
 
-    /// \todo Aliases
-    char** aliases = reinterpret_cast<char**>(0);
-
-    // address list
-    char** addrList = reinterpret_cast<char**>(userBlock);
-    userBlock += sizeof(char*) * (num + 1); // null terminated list
-
-    // make sure we don't overflow the buffer
+    // Make sure we don't overflow the buffer
     if (userBlock < endBlock)
     {
-        // load each IP into the buffer
-        for (size_t i = 0; i < num; i++)
+        // Create room for all the pointers to aliases
+        uintptr_t aliasPointerBlock = userBlock;
+        entry->h_aliases = reinterpret_cast<char**>(userBlock);
+        userBlock += sizeof(char*) * (host.aliases.count() + 1);
+
+        // Copy aliases across
+        int nAlias = 0;
+        for(List<String*>::Iterator it = host.aliases.begin();
+            it != host.aliases.end() && userBlock < endBlock;
+            it++)
         {
-            uint32_t ip = ips[i].getIp();
+            if(!(*it))
+                continue;
 
-            char tmp[] = {ip & 0xff, (ip & 0xff00) >> 8, (ip & 0xff0000) >> 16, (ip & 0xff000000) >> 24};
-            char* ipBlock = reinterpret_cast<char*>(userBlock);
-            memcpy(ipBlock, tmp, 4);
+            entry->h_aliases[nAlias] = reinterpret_cast<char*>(userBlock);
+            strncpy(entry->h_aliases[nAlias], static_cast<const char*>(*(*it)), (*it)->length());
+            userBlock += (*it)->length() + 1;
 
-            addrList[i] = ipBlock;
-
-            userBlock += 4;
-            if (userBlock >= endBlock)
-                break;
+            delete *it;
+            nAlias++;
         }
     }
+    else
+        WARNING("gethostbyname: couldn't add aliases for '" << name << "', out of room in the userspace buffer");
 
-    // build the real hostent
-    entry->h_name = hostName;
-    entry->h_aliases = aliases;
-    entry->h_addrtype = AF_INET;
-    entry->h_length = 4;
-    entry->h_addr_list = addrList;
+    // Make sure we don't overflow the buffer
+    if (userBlock < endBlock)
+    {
+        // Finally add the IP list
+        char** addrList = reinterpret_cast<char**>(userBlock);
+        userBlock += sizeof(char*) * (host.addresses.count() + 1); // Null terminated list
+
+        // Load each IP into the buffer
+        int nIp = 0;
+        for(List<IpAddress*>::Iterator it = host.addresses.begin();
+            it != host.addresses.end() && userBlock < endBlock;
+            it++)
+        {
+            if(!(*it))
+                continue;
+
+            // Copy the IP across
+            uint32_t ip = (*it)->getIp();
+            char* ipBlock = reinterpret_cast<char*>(userBlock);
+            memcpy(ipBlock, &ip, 4);
+
+            // Add this to the array
+            addrList[nIp++] = ipBlock;
+            userBlock += 4;
+
+            delete *it;
+        }
+
+        // Add the address list to the hostent structure
+        entry->h_addrtype = AF_INET;
+        entry->h_length = 4;
+        entry->h_addr_list = addrList;
+    }
+    else
+        WARNING("gethostbyname: couldn't add IP addresses for '" << name << "', out of room in the userspace buffer");
 
     return 0;
 }

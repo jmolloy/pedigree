@@ -52,6 +52,19 @@ public:
   Dns(const Dns& ent);
   virtual ~Dns();
   
+  /** Information about a host (based on a specific hostname) */
+  struct HostInfo
+  {
+      /// Hostname for this host, based on our request (probably a CNAME)
+      String hostname;
+
+      /// Aliases for this host (A records)
+      List<String*> aliases;
+
+      /// IP addresses for this host
+      List<IpAddress*> addresses;
+  };
+  
   /** For access to the stack without declaring an instance of it */
   static Dns& instance()
   {
@@ -68,7 +81,7 @@ public:
   void initialise();
   
   /** Requests a lookup for a hostname */
-  IpAddress* hostToIp(String hostname, size_t& nIps, Network* pCard = 0);
+  int hostToIp(String hostname, HostInfo& ret, Network* pCard = 0);
   
   /** Operator = is invalid */
   Dns& operator = (const Dns& ent)
@@ -133,61 +146,52 @@ private:
   };
   
   /// a DNS request we've sent
-  class DnsRequest : public TimerHandler
+  class DnsRequest
   {
     public:
       DnsRequest() :
-        entry(0), id(0), waitSem(0), m_Timeout(30), success(false), m_Nanoseconds(0), m_Seconds(0)
+        hostname(), aliases(), addresses(), id(0), waitSem(0),
+        success(false), callerLeft(false)
       {};
       DnsRequest(const DnsRequest& ent) :
-        entry(ent.entry), id(ent.id), waitSem(0), m_Timeout(ent.m_Timeout),
-        success(ent.success), m_Nanoseconds(ent.m_Nanoseconds), m_Seconds(ent.m_Seconds)
+        hostname(ent.hostname), aliases(ent.aliases), addresses(ent.addresses), id(ent.id),
+        waitSem(0), success(ent.success), callerLeft(ent.callerLeft)
       {};
       
-      DnsEntry* entry;
+      /// Hostname for this host, based on our request (probably a CNAME)
+      String hostname;
+
+      /// Aliases for this host (A records)
+      List<String*> aliases;
+
+      /// IP addresses for this host
+      List<IpAddress*> addresses;
+
+      /// DNS request ID
       uint16_t id;
       
+      /// Semaphore used to wake up the caller thread when this request completes
       Semaphore waitSem;
       
-      uint32_t m_Timeout; // defaults to 30 seconds
-      
+      /// Whether or not the request succeeded (possibly redundant now)
       bool success;
-      
-      void timer(uint64_t delta, InterruptState &state)
-      {
-        if(UNLIKELY(m_Seconds < m_Timeout))
-        {
-          m_Nanoseconds += delta;
-          if(UNLIKELY(m_Nanoseconds >= 1000000000ULL))
-          {
-            ++m_Seconds;
-            m_Nanoseconds -= 1000000000ULL;
-          }
-          
-          if(UNLIKELY(m_Seconds >= m_Timeout))
-          {
-            success = false;
-            waitSem.release();
-          }
-        }
-      }
+
+      // Whether or not the caller left. If true, the request handler needs to
+      // free the request rather than waking up the calling thread.
+      bool callerLeft;
       
       DnsRequest& operator = (const DnsRequest& ent)
       {
-        entry = ent.entry;
+        hostname = ent.hostname;
+        aliases = ent.aliases;
+        addresses = ent.addresses;
         id = ent.id;
-//        waitSem(0);
-        m_Timeout = ent.m_Timeout;
         success = ent.success;
-        m_Nanoseconds = ent.m_Nanoseconds;
-        m_Seconds = ent.m_Seconds;
+        callerLeft = ent.callerLeft;
         return *this;
       }
       
     private:
-    
-      uint64_t m_Nanoseconds;
-      uint64_t m_Seconds;
   };
   
   /// DNS cache (not a Tree because we can't look up an IpAddress object)
