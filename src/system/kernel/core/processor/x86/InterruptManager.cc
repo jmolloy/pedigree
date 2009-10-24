@@ -242,6 +242,10 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
         ERROR_NOLOCK("CS: " << tss->cs << ", DS: " << tss->ds << ", ES: " << tss->es << ".");
         ERROR_NOLOCK("FS: " << tss->fs << ", GS: " << tss->gs << ", SS: " << tss->ss << ".");
 
+        uint32_t cr2;
+        asm volatile("mov %%cr2, %%eax" : "=a" (cr2));
+        NOTICE_NOLOCK("Possible #PF at address " << cr2 << ".");
+
         // Unrecoverable fault
         interruptState.setInstructionPointer(tss->eip);
         interruptState.setBasePointer(tss->ebp);

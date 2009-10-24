@@ -181,6 +181,19 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
               userStack = reinterpret_cast<uintptr_t>(va.allocateStack());
               pThread->setStateUserStack(reinterpret_cast<void*>(userStack));
           }
+          else
+          {
+              // Verify that the stack is mapped
+              if(!va.isMapped(reinterpret_cast<void*>(userStack)))
+              {
+                  /// \todo This is a quickfix for a bigger problem. I imagine
+                  ///       it has something to do with calling execve directly
+                  ///       without fork, meaning the memory is cleaned up but
+                  ///       the state level stack information is *not*.
+                  userStack = reinterpret_cast<uintptr_t>(va.allocateStack());
+                  pThread->setStateUserStack(reinterpret_cast<void*>(userStack));
+              }
+          }
       }
       else
       {

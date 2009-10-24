@@ -23,6 +23,8 @@
 #include <LockGuard.h>
 #include "VirtualAddressSpace.h"
 
+#include <Log.h>
+
 //
 // Page Table/Directory entry flags
 //
