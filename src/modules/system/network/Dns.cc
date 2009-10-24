@@ -25,6 +25,66 @@
 Dns Dns::dnsInstance;
 uint16_t Dns::m_NextId = 0;
 
+String qnameLabelHelper(char *buff, size_t &len, uintptr_t buffLoc)
+{
+    String ret;
+    size_t retLen = 0;
+    char *locbuff = buff;
+
+    // Current offset within this section
+    size_t currOffset = 0;
+
+    // Current size of this section
+    size_t sectionSize = *locbuff++;
+
+    // Keep reading until we hit a zero-sized section
+    while(true)
+    {
+        retLen++;
+
+        // Read in the character at this specific position
+        char c = *locbuff++;
+
+        // If it's null, then this is the beginning of a zero-sized section, so
+        // break from the loop: we're done.
+        if(!c)
+            break;
+        // If the top two bits are set, then it's an inline pointer (FUN)
+        else if((c & 0xC0) == 0xC0)
+        {
+            // The rest of this read comes from *that* location!
+            char offset = *locbuff++;
+            locbuff = reinterpret_cast<char*>(buffLoc + offset);
+            ret += ".";
+
+            // Prepare to read the next part of the hostname
+            currOffset = 0;
+            sectionSize = *locbuff++;
+            continue;
+        }
+
+        // Otherwise, check to see if we're at the end of the section
+        if(currOffset++ == sectionSize)
+        {
+            ret += ".";
+            sectionSize = c;
+            currOffset = 0;
+        }
+        else
+        {
+            char s[2] = {c, 0};
+            ret += s;
+        }
+      }
+
+      // Count the last section size byte
+      retLen++;
+
+      // All done!
+      len = retLen;
+      return ret;
+}
+
 Dns::Dns() :
   m_DnsCache(), m_DnsRequests(), m_Endpoint(0)
 {
@@ -100,52 +160,34 @@ void Dns::mainThread()
       if(!bFound)
         continue;
 
+      uint16_t qCount = BIG_TO_HOST16(head->qCount);
       uint16_t ansCount = BIG_TO_HOST16(head->aCount);
       uint16_t nameCount = BIG_TO_HOST16(head->nCount);
       uint16_t addCount = BIG_TO_HOST16(head->dCount);
 
-      // read the hostname to find the start of the question and answer structures
-      String hostname;
-      char* tmp = reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader));
-
-      size_t hostLen = 0;
-      size_t currOffset = 0;
-      size_t secSize = *tmp++;
-      while(true)
+      // Read in each question section
+      size_t ansOffset = sizeof(DnsHeader);
+      for(uint16_t question = 0; question < qCount; question++)
       {
-        hostLen++;
+          // Read in the string (have to do this to get the size... bah). Note
+          // that the NAME field for a QUESTION section will never be a pointer,
+          // unlike the ANSWER section below.
+          size_t nameLength = 0;
+          String tmp = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + ansOffset), nameLength, buffLoc);
 
-        // Read the character at this position
-        char c = *tmp++;
-
-        // If zero, then we are complete
-        if(c == 0)
-          break;
-
-        // If the current offset equals the last section size,
-        // reset the current offset and grab the next section size
-        if(currOffset++ == secSize)
-        {
-          hostname += ".";
-          secSize = c;
-          currOffset = 0;
-        }
-        else
-        {
-            char s[2];
-            s[0] = c;
-            s[1] = 0;
-            hostname += s;
-        }
+          // Add to the offset. We don't really care about the suffix at the
+          // moment as we're mainly doing this to get to the answer section.
+          ansOffset += nameLength + sizeof(QuestionSecNameSuffix);
       }
 
-      // null byte
-      hostLen++;
+      // read the hostname to find the start of the question and answer structures
+      /*size_t hostLen = 0;
+      String hostname = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), hostLen);
       req->entry->hostname = hostname;
 
-      NOTICE("Obtained hostname " << hostname << " len " << hostLen << ".");
+      NOTICE("Obtained hostname " << hostname << " len " << hostLen << ".");*/
 
-      uintptr_t structStart = buffLoc + sizeof(DnsHeader) + hostLen + sizeof(QuestionSecNameSuffix);
+      uintptr_t structStart = buffLoc + ansOffset; // + hostLen + sizeof(QuestionSecNameSuffix);
       uintptr_t ansStart = structStart;
 
       req->entry->ip = 0;
@@ -155,14 +197,23 @@ void Dns::mainThread()
       for(uint16_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);
-        if(BIG_TO_HOST16(ans->name) & 0x2)
+        if(BIG_TO_HOST16(ans->name) & 0xC000)
         {
-          // stores an offset to the name for this entry
-          NOTICE("Is an offset - " << (BIG_TO_HOST16(ans->name) - 2) << " bytes");
+          // This is an offset within the DNS packet to the string
+          size_t len = 0;
+          size_t offset = BIG_TO_HOST16(ans->name) - 0xC000;
+          String name = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + offset), len, buffLoc);
+          NOTICE("Got: " << name << ", len " << len << ".");
         }
         else
         {
-          // apparently this is actually meant to be a proper name component? weird....
+          // This is a name component within the answer section
+          size_t len = 0;
+          String name = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + ansStart), len, buffLoc);
+          NOTICE("Got: " << name << ", len " << len << ".");
+
+          // Update the answer pointer so the rest of the structure comes across properly
+          ans = reinterpret_cast<DnsAnswer*>((ansStart + len) - sizeof(ans->name));
         }
 
         switch(BIG_TO_HOST16(ans->type))
@@ -170,6 +221,10 @@ void Dns::mainThread()
           /** A Record */
           case 0x0001:
             {
+              /// \todo A record -> h_aliases in hostent
+              /// \todo Each IP address we pick up from an A record should go
+              ///       into the h_addr_list in hostent
+              NOTICE("A Record");
               if(BIG_TO_HOST16(ans->length) == 4)
               {
                 IpAddress* newList = new IpAddress[req->entry->numIps + 1];
@@ -197,7 +252,8 @@ void Dns::mainThread()
             /** CNAME */
             case 0x0005:
             {
-                WARNING("TODO: DNS CNAME records --> Hostent aliases");
+                /// \todo CNAME -> h_name in hostent
+                WARNING("TODO: DNS CNAME records");
             }
             break;
             /** SOA */
@@ -245,7 +301,6 @@ void Dns::mainThread()
 
         ansStart += sizeof(DnsAnswer) + BIG_TO_HOST16(ans->length);
       }
-
 
       m_DnsCache.pushBack(req->entry);
       req->success = true;
