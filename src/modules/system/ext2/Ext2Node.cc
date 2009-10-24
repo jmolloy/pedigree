@@ -122,7 +122,6 @@ uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
         else
         {
             // Create a buffer for the block.
-            uint8_t *pBuf = new uint8_t[nBs];
             ensureBlockLoaded(nBlock);
             uintptr_t buf = m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
             // memcpy the relevant block area.

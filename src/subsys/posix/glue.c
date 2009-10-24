@@ -1573,16 +1573,19 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     ret->ai_family = PF_INET;
 
     // Attempt to turn the node name into an IP
-    int ip = 0;
+    in_addr_t ip = 0;
     if(nodename)
         ip = inet_addr(nodename);
     else
         ip = inet_addr("127.0.0.1");
     struct hostent *h;
-    if(ip == -1)
+    if(ip == ((in_addr_t)(-1)))
     {
         if(!nodename)
+        {
+            free(ret);
             return EAI_FAIL;
+        }
 
         // Not an IP... Try a DNS lookup
         h = gethostbyname(nodename);

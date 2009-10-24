@@ -351,6 +351,10 @@ char sparse_buff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
     }
     fprintf(stream, "\";\n\n#endif\n");
 
+    free(header_guard);
+
+    fclose(stream);
+
     printf("Compiled keymap header file written to `%s'.\n", fname);
 }
 

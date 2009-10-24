@@ -105,11 +105,6 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
         return -1;
     }
 
-    // Build the information structure to pass to the pthread entry function
-    pthreadInfoBlock *dat = new pthreadInfoBlock;
-    dat->entry = reinterpret_cast<void*>(start_addr);
-    dat->arg = arg;
-
     // Allocate a stack for this thread
     void *stack = Processor::information().getVirtualAddressSpace().allocateStack(stackSize);
     if(!stack)
@@ -118,6 +113,11 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
         SYSCALL_ERROR(OutOfMemory);
         return -1;
     }
+
+    // Build the information structure to pass to the pthread entry function
+    pthreadInfoBlock *dat = new pthreadInfoBlock;
+    dat->entry = reinterpret_cast<void*>(start_addr);
+    dat->arg = arg;
 
     // Create the thread
     Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), stack, true);

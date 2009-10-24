@@ -77,7 +77,7 @@ void *UsbDevice::getDescriptor(uint8_t des, uint8_t subdes, uint16_t size)
         in(buff, size);
         return buff;
     }
-    delete buff;
+    delete [] buff;
     return 0;
 }
 

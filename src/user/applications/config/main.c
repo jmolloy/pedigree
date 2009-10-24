@@ -44,7 +44,6 @@ int main(int argc, char **argv)
         return 0;
     }
 
-
     // Print out the result set.
     int cols = pedigree_config_numcols(result);
     
@@ -90,7 +89,9 @@ int main(int argc, char **argv)
         printf("\n");
     }
 
+    free(col_lens);
+
     pedigree_config_freeresult(result);
 
-    exit(0);
+    return 0;
 }
