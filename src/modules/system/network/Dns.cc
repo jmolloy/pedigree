@@ -191,6 +191,7 @@ void Dns::mainThread()
       uintptr_t ansStart = buffLoc + ansOffset;
 
       // http://www.zytrax.com/books/dns/ch15/ for future reference
+      bool hostnameFilled = false;
       for(uint16_t answer = 0; answer < (ansCount + nameCount + addCount); answer++)
       {
         DnsAnswer* ans = reinterpret_cast<DnsAnswer*>(ansStart);
@@ -242,7 +243,11 @@ void Dns::mainThread()
             case 0x0005:
             {
                 // Set the CNAME
-                req->hostname = *qname;
+                if(!hostnameFilled)
+                {
+                    req->hostname = *qname;
+                    hostnameFilled = true;
+                }
             }
             break;
             /** SOA */
@@ -293,6 +298,13 @@ void Dns::mainThread()
             delete qname;
 
         ansStart += sizeof(DnsAnswer) + BIG_TO_HOST16(ans->length);
+      }
+
+      // If no hostname was filled, take one from the aliases (if possible)
+      if(!hostnameFilled)
+      {
+          if(req->aliases.count())
+              req->hostname = *(*(req->aliases.begin()));
       }
 
       if(req->callerLeft)

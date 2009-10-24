@@ -53,18 +53,6 @@ int main(int argc, char *argv[])
         return error;
     }
 
-    // Verify that the command to run actually exists
-    if(0) // !iRunShell)
-    {
-        struct stat st;
-        error = stat(argv[nStart], &st);
-        if(error == -1)
-        {
-            fprintf(stderr, "sudo: can't run command: %s\n", strerror(errno));
-            return errno;
-        }
-    }
-
     // Grab the root user's pw structure
     struct passwd *pw = getpwnam("root");
     if(!pw)
@@ -79,6 +67,9 @@ int main(int argc, char *argv[])
 
     struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~(ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
+
+    printf("[sudo] Enter password: ");
+    fflush(stdout);
 
     while ( i < 256 && (c=getchar()) != '\n' )
     {

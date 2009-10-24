@@ -26,6 +26,8 @@
 #include "ConnectionBasedEndpoint.h"
 #include "Endpoint.h"
 #include "TcpMisc.h"
+class TcpManager;
+class StateBlock;
 
 /**
  * The Pedigree network stack - TCP Endpoint
@@ -35,38 +37,40 @@
  */
 class TcpEndpoint : public ConnectionBasedEndpoint
 {
+  friend class StateBlock;
+  friend class TcpManager;
   public:
 
     /** Constructors and destructors */
     TcpEndpoint() :
       ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(),
-      m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
-      m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false)
+      nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false),
+      m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
     TcpEndpoint(uint16_t local, uint16_t remote) :
       ConnectionBasedEndpoint(local, remote), m_Card(0), m_ConnId(0),
-      m_RemoteHost(), m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
-      m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false)
+      m_RemoteHost(), nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
+      m_IncomingConnectionCount(0), m_bConnected(false),
+      m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
-      m_ConnId(0), m_RemoteHost(), m_DataStream(), nBytesRemoved(0),
-      m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false)
+      m_ConnId(0), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
+      m_IncomingConnections(), m_IncomingConnectionCount(0), m_bConnected(false),
+      m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
-      m_ConnId(connId), m_RemoteHost(), m_DataStream(), nBytesRemoved(0),
-      m_ShadowDataStream(), m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false)
+      m_ConnId(connId), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
+      m_IncomingConnections(), m_IncomingConnectionCount(0), m_bConnected(false),
+      m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
@@ -122,10 +126,9 @@ class TcpEndpoint : public ConnectionBasedEndpoint
 
     /** Copy constructors */
     TcpEndpoint(const TcpEndpoint& s) :
-      ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(),
-      m_DataStream(), nBytesRemoved(0), m_ShadowDataStream(),
-      m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false)
+      ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(), nBytesRemoved(0),
+      m_Listening(false), m_IncomingConnections(), m_IncomingConnectionCount(0),
+      m_bConnected(false), m_DataStream(), m_ShadowDataStream()
     {
       // shouldn't be called
       ERROR("Tcp: TcpEndpoint copy constructor has been called.");
@@ -146,16 +149,8 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     /** The host we're connected to at the moment */
     RemoteEndpoint m_RemoteHost;
 
-    /** The incoming data stream */
-    TcpBuffer m_DataStream;
-
     /** Number of bytes we've removed off the front of the (shadow) data stream */
     size_t nBytesRemoved;
-
-    /** Shadow incoming data stream - actually receives the bytes from the stack until PUSH flag is set
-      * or the buffer fills up, or the connection starts closing.
-      */
-    TcpBuffer m_ShadowDataStream;
 
     /** Listen endpoint? */
     bool m_Listening;
@@ -166,6 +161,16 @@ class TcpEndpoint : public ConnectionBasedEndpoint
 
     /** Is there a connection active? */
     bool m_bConnected;
+
+  protected:
+
+    /** The incoming data stream */
+    TcpBuffer m_DataStream;
+
+    /** Shadow incoming data stream - actually receives the bytes from the stack until PUSH flag is set
+      * or the buffer fills up, or the connection starts closing.
+      */
+    TcpBuffer m_ShadowDataStream;
 };
 
 #endif

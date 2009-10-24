@@ -106,7 +106,7 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   stateBlock->iss = getNextSequenceNumber();
   stateBlock->snd_nxt = stateBlock->iss + 1;
   stateBlock->snd_una = stateBlock->iss;
-  stateBlock->snd_wnd = 16384;
+  stateBlock->snd_wnd = endpoint->m_ShadowDataStream.getSize();
   stateBlock->snd_up = 0;
   stateBlock->snd_wl1 = stateBlock->snd_wl2 = 0;
 
@@ -242,7 +242,9 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
      */
     return -1; // When we SHUT_WR, we send FIN meaning no more data from us.
 
-  NOTICE("Sending segment");
+  // Restrict the buffer size if the receiver's buffer is too small.
+  if(nBytes > stateBlock->rcv_wnd)
+      nBytes = stateBlock->rcv_wnd;
 
   stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
 

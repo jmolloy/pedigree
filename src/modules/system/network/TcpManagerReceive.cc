@@ -530,9 +530,9 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
                 WARNING("TCP: incoming data was larger than rcv_wind");
                 winChange = stateBlock->rcv_wnd;
             }
-            stateBlock->rcv_wnd -= winChange;
+            stateBlock->snd_wnd -= winChange;
 
-            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->rcv_wnd, 0, 0))
+            if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
               WARNING("TCP: Sending ACK for incoming data failed!");
             else
               alreadyAck = true;
