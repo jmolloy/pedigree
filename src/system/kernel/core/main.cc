@@ -196,12 +196,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   Processor::information().getCurrentThread()->setPriority(MAX_PRIORITIES-1);
 
-  // Try and create a mapping.
+  // This will run when nothing else is available to run
   for (;;)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
-    Processor::halt();
+    Scheduler::instance().yield();
   }
 }
 
