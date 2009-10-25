@@ -447,14 +447,14 @@ int	sethostname(char *name, size_t len)
     const char *query = "UPDATE 'network-generic' SET `value`= '%s' WHERE `key` = 'hostname'";
     char *tmp    = pedigree_config_escape_string(name);
     char *buffer = (char*)malloc(strlen(query) + strlen(tmp) + 1);
-    
+
     sprintf(buffer,query,tmp);
-    
+
     pedigree_config_query(buffer);
 
     free(tmp);
     free(buffer);
-    
+
     return 0;
 }
 
@@ -1557,9 +1557,7 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     static struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     if(servname)
-    {
-        addr.sin_port = htons(atoi(servname));
-    }
+        addr.sin_port = atoi(servname);
 
     // Fill the basics of the return pointer
     if(hints)
