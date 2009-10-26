@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 // PID of the process we're running
 int g_RunningPid = -1;
@@ -37,11 +38,13 @@ void sigint(int sig)
     if(g_RunningPid != -1)
     {
         // Pass it down to the running program
+        syslog(LOG_NOTICE, "SIGINT -> %d", g_RunningPid);
         kill(g_RunningPid, SIGINT);
     }
     else
     {
         // Do not kill us!
+        syslog(LOG_NOTICE, "SIGINT ignored");
     }
 }
 
@@ -159,7 +162,7 @@ int main(int argc, char **argv)
     {
       // Logged in successfully - launch the shell.
       int pid;
-      if ( (pid=fork()) == 0)
+      if ( (g_RunningPid=pid=fork()) == 0)
       {
         // Child...
         g_RunningPid = -1;

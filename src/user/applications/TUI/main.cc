@@ -23,10 +23,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <errno.h>
 
 #include "environment.h"
 #include <syscall.h>
 #include <syslog.h>
+
+#include <pthread.h>
 
 #include <signal.h>
 
@@ -66,6 +69,7 @@ TerminalList *g_pCurrentTerm = 0;
 Header *g_pHeader = 0;
 size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
+size_t g_nLastResponse = 0;
 
 void modeChanged(size_t width, size_t height)
 {
@@ -191,6 +195,62 @@ void sigint(int)
     syslog(LOG_NOTICE, "TUI sent SIGINT, oops!");
 }
 
+/**
+ * This is the TUI input handler. It is registered with the kernel at startup
+ * and handles every keypress that occurs, via an Event sent from the kernel's
+ * InputManager object.
+ * \todo Possible race condition with pT, pending requests, and the queue.
+ */
+void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
+{
+    uint64_t c = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
+
+    /** Add the key to the terminal queue */
+
+    Terminal *pT = g_pCurrentTerm->term;
+
+    DirtyRectangle rect2;
+
+    if (c == '\n') c = '\r';
+
+    // CTRL + key -> unprintable characters
+    if((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
+        c &= 0x1F;
+
+    if(checkCommand(c, rect2))
+        Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+    else
+        pT->addToQueue(c);
+    rect2.reset();
+    if(!pT->hasPendingRequest() && pT->queueLength() > 0)
+        sz = pT->getPendingRequestSz();
+
+    /** We now have a key on our queue, can we complete a write? */
+
+    char *buffer = new char[sz + 1];
+    char str[64];
+    size_t i = 0;
+    while (i < sz)
+    {
+        char c = pT->getFromQueue();
+        if (c)
+        {
+            buffer[i++] = c;
+            continue;
+        }
+        else break;
+    }
+    g_nLastResponse = i;
+    if (pT->hasPendingRequest())
+    {
+        Syscall::respondToPending(g_nLastResponse, buffer, sz);
+        pT->setHasPendingRequest(false, 0);
+    }
+    delete [] buffer;
+
+    syscall0(TUI_EVENT_RETURNED);
+}
+
 int main (int argc, char **argv)
 {
     if(getpid()>2)
@@ -198,6 +258,8 @@ int main (int argc, char **argv)
         printf("TUI is already running\n");
         return 1;
     }
+
+    syscall1(TUI_INPUT_REGISTER_CALLBACK, reinterpret_cast<uintptr_t>(input_handler));
 
     signal(SIGINT, sigint);
 
@@ -230,11 +292,10 @@ int main (int argc, char **argv)
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
     char str[64];
-    size_t lastResponse = 0;
     size_t tabId;
     while (true)
     {
-        size_t cmd = Syscall::nextRequest(lastResponse, buffer, &sz, maxBuffSz, &tabId);
+        size_t cmd = Syscall::nextRequest(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
         //sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
         //log(str);
 
@@ -282,40 +343,9 @@ int main (int argc, char **argv)
                 buffer[sz] = '\0';
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
-                lastResponse = sz;
+                g_nLastResponse = sz;
                 Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
                 break;
-            }
-
-            case TUI_CHAR_RECV:
-            {
-                DirtyRectangle rect2;
-                uint64_t c = * reinterpret_cast<uint64_t*>(buffer);
-
-                if (c == '\n') c = '\r';
-
-                // CTRL + key -> unprintable characters
-                if ( (c & Keyboard::Ctrl) && !(c & Keyboard::Special))
-                {
-                    c &= 0x1F;
-                    /*
-                    if(c == 0x3)
-                    {
-                        kill(g_pCurrentTerm->term->getPid(), SIGINT);
-                        break;
-                    }
-                    */
-                }
-
-                if(checkCommand(c, rect2))
-                    Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
-                else
-                    pT->addToQueue(c);
-                rect2.reset();
-                if (!pT->hasPendingRequest() || pT->queueLength() == 0)
-                    break;
-                sz = pT->getPendingRequestSz();
-                // Fall through.
             }
 
             case CONSOLE_READ:
@@ -332,25 +362,25 @@ int main (int argc, char **argv)
                     }
                     else break;
                 }
-                lastResponse = i;
+                g_nLastResponse = i;
                 if (pT->hasPendingRequest())
                 {
-                    Syscall::respondToPending(lastResponse, buffer, sz);
+                    Syscall::respondToPending(g_nLastResponse, buffer, sz);
                     pT->setHasPendingRequest(false, 0);
                 }
                 break;
             }
 
             case CONSOLE_DATA_AVAILABLE:
-                lastResponse = (pT->queueLength() > 0);
+                g_nLastResponse = (pT->queueLength() > 0);
                 break;
 
             case CONSOLE_GETROWS:
-                lastResponse = pT->getRows();
+                g_nLastResponse = pT->getRows();
                 break;
 
             case CONSOLE_GETCOLS:
-                lastResponse = pT->getCols();
+                g_nLastResponse = pT->getCols();
                 break;
 
             default:

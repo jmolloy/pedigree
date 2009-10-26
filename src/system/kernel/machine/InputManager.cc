@@ -18,6 +18,56 @@
 #include <LockGuard.h>
 #include <Log.h>
 
+#include <process/Event.h>
+
+class InputEvent : public Event
+{
+    public:
+        InputEvent(InputManager::CallbackType type, uint64_t key, uintptr_t handlerAddress) :
+                    Event(handlerAddress, true),
+                    m_Type(type),
+                    m_Key(key)
+        {};
+        virtual ~InputEvent()
+        {};
+
+        virtual size_t serialize(uint8_t *pBuffer)
+        {
+            pBuffer[0] = static_cast<uint8_t>(m_Type);
+            *(reinterpret_cast<uint64_t*>(&pBuffer[1])) = m_Key;
+            return sizeof(uint8_t) + sizeof(uint64_t);
+        }
+
+        static bool unserialize(uint8_t *pBuffer, Event &event)
+        {
+            /// \todo How to do this?
+            /*
+            InputEvent *ev = static_cast<InputEvent*>(&event);
+            ev->m_Type = static_cast<InputManager::CallbackType>(pBuffer[0]);
+            ev->m_Key = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
+            */
+            return true;
+        }
+
+        virtual inline size_t getNumber()
+        {
+            return EventNumbers::InputEvent;
+        }
+
+        inline InputManager::CallbackType getType()
+        {
+            return m_Type;
+        }
+
+        inline uint64_t getKey()
+        {
+            return m_Key;
+        }
+    private:
+        InputManager::CallbackType m_Type;
+        uint64_t m_Key;
+};
+
 InputManager InputManager::m_Instance;
 
 InputManager::InputManager() :
@@ -46,16 +96,15 @@ void InputManager::keyPressed(uint64_t key)
     m_KeyQueueSize.release();
 }
 
-void InputManager::installCallback(CallbackType type, callback_t callback)
+void InputManager::installCallback(CallbackType type, callback_t callback, Thread *pThread)
 {
     LockGuard<Spinlock> guard(m_QueueLock);
     if(type == Key)
     {
-        m_KeyCallbacks.pushBack(
-                    reinterpret_cast<void*>(
-                    reinterpret_cast<uint32_t>(callback)
-                    )
-        );
+        CallbackItem *item = new CallbackItem;
+        item->func = callback;
+        item->pThread = pThread;
+        m_KeyCallbacks.pushBack(item);
     }
 }
 
@@ -78,16 +127,19 @@ void InputManager::mainThread()
         uint64_t key = m_KeyQueue.popFront();
         m_QueueLock.release();
 
-        for(List<void*>::Iterator it = m_KeyCallbacks.begin();
+        for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
             it != m_KeyCallbacks.end();
             it++)
         {
-            /// \todo I'd love to see a direct call to userspace at some point,
-            ///       which would totally revolutionise the way the TUI works.
             if(*it)
             {
-                callback_t f = reinterpret_cast<callback_t>(*it);
-                f(key);
+                Thread *pThread = (*it)->pThread;
+                if(!pThread)
+                    pThread = Processor::information().getCurrentThread();
+                callback_t func = (*it)->func;
+                
+                InputEvent *pEvent = new InputEvent(Key, key, reinterpret_cast<uintptr_t>(func));
+                pThread->sendEvent(pEvent);
             }
         }
     }

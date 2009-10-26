@@ -29,6 +29,8 @@ namespace EventNumbers
     const size_t TimedTask        = 35;
     const size_t SelectEvent      = 36;
 
+    const size_t InputEvent       = 37;
+
     const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
 }
 

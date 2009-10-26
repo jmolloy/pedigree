@@ -56,6 +56,21 @@ void callback(uint64_t key)
     ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
 }
 
+void pedigree_event_return()
+{
+    // Return to the old code
+    Processor::information().getScheduler().eventHandlerReturned();
+
+    FATAL("event_return: should never get here");
+}
+
+void pedigree_input_register_callback(uintptr_t func)
+{
+    InputManager::instance().installCallback(InputManager::Key,
+                                             reinterpret_cast<void (*)(uint64_t)>(func),
+                                             Processor::information().getCurrentThread());
+}
+
 extern "C" void tuiModeChangedCallback()
 {
     if (!g_UserConsole)
@@ -93,7 +108,7 @@ void TuiSyscallManager::initialise()
     m_pDisplay = g_pDisplay;
 
     SyscallManager::instance().registerSyscallHandler(TUI, this);
-    InputManager::instance().installCallback(InputManager::Key, callback);
+    // InputManager::instance().installCallback(InputManager::Key, callback);
 }
 
 uintptr_t TuiSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
@@ -232,6 +247,12 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
                                       pReq->h, *reinterpret_cast<Display::rgb_t*>(pReq->c));
             break;
         }
+        case TUI_EVENT_RETURNED:
+            pedigree_event_return();
+            break;
+        case TUI_INPUT_REGISTER_CALLBACK:
+            pedigree_input_register_callback(static_cast<uintptr_t>(p1));
+            break;
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
     return 0;

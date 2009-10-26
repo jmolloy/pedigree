@@ -59,7 +59,7 @@ libraries = [
     'm',
     'freetype',
     'libpng',
-    'libz',
+    'libz'
 ]
 
 # To add a library path add to the list below

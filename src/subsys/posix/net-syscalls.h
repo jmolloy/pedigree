@@ -19,7 +19,7 @@
 
 #include <vfs/File.h>
 
-#if 1
+#if 0
 #define N_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define N_NOTICE(x)

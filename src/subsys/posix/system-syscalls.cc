@@ -49,6 +49,7 @@
 #include <PosixProcess.h>
 
 #include <users/UserManager.h>
+#include <machine/InputManager.h>
 //
 // Syscalls pertaining to system operations.
 //

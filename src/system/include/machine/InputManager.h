@@ -59,7 +59,7 @@ class InputManager
         void keyPressed(uint64_t key);
 
         /// Installs a callback for a specific item
-        void installCallback(CallbackType type, callback_t callback);
+        void installCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
 
         /// Thread trampoline
         static int trampoline(void *ptr);
@@ -70,6 +70,19 @@ class InputManager
     private:
         /// Static instance
         static InputManager m_Instance;
+
+        /// Item in the callback list. This stores information that may be needed
+        /// to create and send an Event for a userspace callback.
+        struct CallbackItem
+        {
+            /// The handler function
+            callback_t func;
+
+            /// Thread to send an Event to. If null, the Event will be sent to the
+            /// current thread, which is only valid for kernel callbacks (as there
+            /// will be no address space switch for a call to a kernel function).
+            Thread *pThread;
+        };
 
         /// Key press queue
         List<uint64_t> m_KeyQueue;
@@ -85,7 +98,7 @@ class InputManager
 
         /// Callback list
         /// \todo When more callback types are created, add handling for them
-        List<void*> m_KeyCallbacks;
+        List<CallbackItem*> m_KeyCallbacks;
 
         /// Thread object for our worker thread
         Thread *m_pThread;

@@ -48,7 +48,7 @@ int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
     return 0;
 }
 
-int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void (*start_routine)(void*), void *arg)
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
     return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
 }
