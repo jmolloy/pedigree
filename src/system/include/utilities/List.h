@@ -49,7 +49,118 @@ struct _ListNode_t
 };
 
 template<class T>
-class List;
+class List
+{
+  /** The data structure of the list's nodes */
+  typedef _ListNode_t<T> node_t;
+  public:
+    /** Type of the bidirectional iterator */
+    typedef ::Iterator<T, node_t>            Iterator;
+    /** Type of the constant bidirectional iterator */
+    typedef typename Iterator::Const         ConstIterator;
+    /** Type of the reverse iterator */
+    typedef typename Iterator::Reverse       ReverseIterator;
+    /** Type of the constant reverse iterator */
+    typedef typename Iterator::ConstReverse  ConstReverseIterator;
+
+    /** Default constructor, does nothing */
+    List();
+    /** Copy-constructor
+     *\param[in] x reference object */
+    List(const List &x);
+    /** Destructor, deallocates memory */
+    ~List();
+
+    /** Assignment operator
+     *\param[in] x the object that should be copied */
+    List &operator = (const List &x);
+
+    /** Get the number of elements we reserved space for
+     *\return number of elements we reserved space for */
+    size_t size() const;
+    /** Get the number of elements in the List */
+    size_t count() const;
+    /** Add a value to the end of the List
+     *\param[in] value the value that should be added */
+    void pushBack(T value);
+    /** Remove the last element from the List
+     *\return the previously last element */
+    T popBack();
+    /** Add a value to the front of the List
+     *\param[in] value the value that should be added */
+    void pushFront(T value);
+    /** Remove the first element in the List
+     *\return the previously first element */
+    T popFront();
+    /** Erase an element
+     *\param[in] iterator the iterator that points to the element */
+    Iterator erase(Iterator &Iter);
+
+    /** Get an iterator pointing to the beginning of the List
+     *\return iterator pointing to the beginning of the List */
+    inline Iterator begin()
+    {
+      return Iterator(m_First);
+    }
+    /** Get a constant iterator pointing to the beginning of the List
+     *\return constant iterator pointing to the beginning of the List */
+    inline ConstIterator begin() const
+    {
+      return ConstIterator(m_First);
+    }
+    /** Get an iterator pointing to the end of the List + 1
+     *\return iterator pointing to the end of the List + 1 */
+    inline Iterator end()
+    {
+      return Iterator(0);
+    }
+    /** Get a constant iterator pointing to the end of the List + 1
+     *\return constant iterator pointing to the end of the List + 1 */
+    inline ConstIterator end() const
+    {
+      return ConstIterator(0);
+    }
+    /** Get an iterator pointing to the reverse beginning of the List
+     *\return iterator pointing to the reverse beginning of the List */
+    inline ReverseIterator rbegin()
+    {
+      return ReverseIterator(m_Last);
+    }
+    /** Get a constant iterator pointing to the reverse beginning of the List
+     *\return constant iterator pointing to the reverse beginning of the List */
+    inline ConstReverseIterator rbegin() const
+    {
+      return ConstReverseIterator(m_Last);
+    }
+    /** Get an iterator pointing to the reverse end of the List + 1
+     *\return iterator pointing to the reverse end of the List + 1 */
+    inline ReverseIterator rend()
+    {
+      return ReverseIterator();
+    }
+    /** Get a constant iterator pointing to the reverse end of the List + 1
+     *\return constant iterator pointing to the reverse end of the List + 1 */
+    inline ConstReverseIterator rend() const
+    {
+      return ConstReverseIterator();
+    }
+
+    /** Remove all elements from the List */
+    void clear();
+    /** Copy the content of a List into this List
+     *\param[in] x the reference List */
+    void assign(const List &x);
+
+  private:
+    /** The number of Nodes/Elements in the List */
+    size_t m_Count;
+    /** Pointer to the first Node in the List */
+    node_t *m_First;
+    /** Pointer to the last Node in the List */
+    node_t *m_Last;
+
+    uint32_t m_Magic;
+};
 
 /** List template specialisation for void*
  *\brief List template specialisation for void* */

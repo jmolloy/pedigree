@@ -261,16 +261,10 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 }
                 else if(readBuffer[i] < 0x1F)
                 {
-                    // Signals must also be handled here because we may be buffering text
-                    // and that may cause the signal to be delayed.
                     if(readBuffer[i] == 0x3)
                     {
-                        Thread *pThread = Processor::information().getCurrentThread();
-                        Process *pProcess = pThread->getParent();
-                        Subsystem *pSubsystem = pProcess->getSubsystem();
-
-                        NOTICE("SIGINT: canonical/echo");
-                        pSubsystem->kill(Subsystem::Interrupted, pThread);
+                        Process *p = Processor::information().getCurrentThread()->getParent();
+                        p->getSubsystem()->kill(Subsystem::Interrupted);
                     }
                 }
                 else
@@ -369,22 +363,18 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     char *pC = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < nBytes; i++)
     {
+        if (m_Flags & ConsoleManager::IStripToSevenBits)
+            pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
+
         if(pC[i] < 0x1F)
         {
             if(pC[i] == 0x3)
             {
-                Thread *pThread = Processor::information().getCurrentThread();
-                Process *pProcess = pThread->getParent();
-                Subsystem *pSubsystem = pProcess->getSubsystem();
-
-                pSubsystem->kill(Subsystem::Interrupted, pThread);
-
-                continue;
+                Thread *t = Processor::information().getCurrentThread();
+                Process *p = t->getParent();
+                p->getSubsystem()->kill(Subsystem::Interrupted, t);
             }
         }
-
-        if (m_Flags & ConsoleManager::IStripToSevenBits)
-            pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
 
         if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))
             pC[i] = '\r';

@@ -20,6 +20,7 @@
 #include <process/Scheduler.h>
 #include <machine/Machine.h>
 #include <machine/Keyboard.h>
+#include <machine/InputManager.h>
 #include <console/Console.h>
 #include <Log.h>
 #include <Module.h>
@@ -37,6 +38,11 @@ TuiSyscallManager g_TuiSyscallManager;
 extern Display *g_pDisplay;
 extern Display::ScreenMode g_ScreenMode;
 
+/// \todo Key presses should go to the TUI immediately, rather than going onto
+///       the request queue and waiting for it to complete a write to the
+///       screen. At the moment things like CTRL-C are not handled until after
+///       a write is complete, which is usually alright, but can cause CTRL-C
+///       to appear to simply not work at all.
 void callback(uint64_t key)
 {
     if (!g_UserConsole)
@@ -44,6 +50,7 @@ void callback(uint64_t key)
         WARNING("Key called with no console");
         return;
     }
+
     // Ensure this is sent with highest priority (0).
     g_UserConsole->addAsyncRequest(0, TUI_CHAR_RECV, g_UserConsoleId, key);
     ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
@@ -86,7 +93,7 @@ void TuiSyscallManager::initialise()
     m_pDisplay = g_pDisplay;
 
     SyscallManager::instance().registerSyscallHandler(TUI, this);
-    Machine::instance().getKeyboard()->registerCallback(&callback);
+    InputManager::instance().installCallback(InputManager::Key, callback);
 }
 
 uintptr_t TuiSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)

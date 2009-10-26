@@ -17,6 +17,7 @@
 #include "Keyboard.h"
 #include <machine/Machine.h>
 #include <utilities/utility.h>
+#include <machine/InputManager.h>
 
 #ifdef DEBUGGER
   #include <Debugger.h>
@@ -227,8 +228,8 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
         m_Buffer[m_BufEnd++] = c;
         m_BufEnd = m_BufEnd%BUFLEN;
         m_BufLength.release(1);
-        if (m_Callback)
-            m_Callback(c);
+
+        InputManager::instance().keyPressed(c);
     }
 
     return true;

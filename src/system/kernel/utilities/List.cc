@@ -19,6 +19,156 @@
 #include <processor/Processor.h>
 
 //
+// List<T> implementation
+//
+
+template <typename T>
+List<T>::List()
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+{
+}
+
+template <typename T>
+List<T>::List(const List &x)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+{
+  assign(x);
+}
+template <typename T>
+List<T>::~List()
+{
+    if (m_Magic != 0x1BADB002)
+    {
+        FATAL("List: bad magic.");
+    }
+    clear();
+}
+
+template <typename T>
+List<T> &List<T>::operator = (const List &x)
+{
+  assign(x);
+  return *this;
+}
+
+template <typename T>
+size_t List<T>::size() const
+{
+  return m_Count;
+}
+template <typename T>
+size_t List<T>::count() const
+{
+  return m_Count;
+}
+template <typename T>
+void List<T>::pushBack(T value)
+{
+  node_t *newNode = new node_t;
+  newNode->m_Next = 0;
+  newNode->m_Previous = m_Last;
+  newNode->value = value;
+
+  if (m_Last == 0)
+    m_First = newNode;
+  else
+    m_Last->m_Next = newNode;
+
+  m_Last = newNode;
+  ++m_Count;
+}
+template <typename T>
+T List<T>::popBack()
+{
+  node_t *node = m_Last;
+  m_Last = m_Last->m_Previous;
+  if (m_Last != 0)
+    m_Last->m_Next = 0;
+  else
+    m_First = 0;
+  --m_Count;
+
+  T value = node->value;
+  delete node;
+  return value;
+}
+template <typename T>
+void List<T>::pushFront(T value)
+{
+  node_t *newNode = new node_t;
+  newNode->m_Next = m_First;
+  newNode->m_Previous = 0;
+  newNode->value = value;
+
+  if (m_First == 0)
+    m_Last = newNode;
+  else
+    m_First->m_Previous = newNode;
+
+  m_First = newNode;
+  ++m_Count;
+}
+template <typename T>
+T List<T>::popFront()
+{
+  node_t *node = m_First;
+  m_First = m_First->m_Next;
+  if (m_First != 0)
+    m_First->m_Previous = 0;
+  else
+    m_Last = 0;
+  --m_Count;
+
+  T value = node->value;
+  delete node;
+  return value;
+}
+template <typename T>
+typename List<T>::Iterator List<T>::erase(Iterator &Iter)
+{
+  node_t *Node = Iter.__getNode();
+  if (Node->m_Previous == 0)
+    m_First = Node->m_Next;
+  else
+    Node->m_Previous->m_Next = Node->m_Next;
+  if (Node->m_Next == 0)
+    m_Last = Node->m_Previous;
+  else
+    Node->m_Next->m_Previous = Node->m_Previous;
+  --m_Count;
+
+  Iterator tmp(Node->m_Next);
+  delete Node;
+  return tmp;
+}
+
+template <typename T>
+void List<T>::clear()
+{
+  node_t *cur = m_First;
+  for (size_t i = 0;i < m_Count;i++)
+  {
+    node_t *tmp = cur;
+    cur = cur->m_Next;
+    delete tmp;
+  }
+
+  m_Count = 0;
+  m_First = 0;
+  m_Last = 0;
+}
+template <typename T>
+void List<T>::assign(const List &x)
+{
+  if (m_Count != 0)clear();
+
+  ConstIterator Cur(x.begin());
+  ConstIterator End(x.end());
+  for (;Cur != End;++Cur)
+    pushBack(*Cur);
+}
+
+//
 // List<void*> implementation
 //
 
@@ -158,3 +308,4 @@ void List<void*>::assign(const List &x)
 // Explicitly instantiate List<void*>
 //
 template class List<void*>;
+template class List<uint64_t>;

@@ -30,6 +30,9 @@ enum Service_t
   /** Service number for the TUI module subsystem
    * \note If you change this, ensure you change src/system/modules/TUI/syscall.h! */
   TUI = 2,
+
+  /** Service number for the native subsystem */
+  native = 3,
   
   /** The number of syscall service numbers */
   serviceEnd

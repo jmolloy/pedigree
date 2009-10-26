@@ -296,7 +296,16 @@ int main (int argc, char **argv)
 
                 // CTRL + key -> unprintable characters
                 if ( (c & Keyboard::Ctrl) && !(c & Keyboard::Special))
+                {
                     c &= 0x1F;
+                    /*
+                    if(c == 0x3)
+                    {
+                        kill(g_pCurrentTerm->term->getPid(), SIGINT);
+                        break;
+                    }
+                    */
+                }
 
                 if(checkCommand(c, rect2))
                     Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);

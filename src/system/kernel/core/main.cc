@@ -53,6 +53,9 @@
 #include <utilities/List.h>
 #include <utilities/RadixTree.h>
 #include <utilities/StaticString.h>
+
+#include <machine/InputManager.h>
+
 void apmm()
 {
 }
@@ -157,6 +160,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the kernel log.
   Log::instance().initialise();
+
+  // Initialise the input manager
+  InputManager::instance().initialise();
 
   // Initialise the boot output.
   bootIO.initialise();

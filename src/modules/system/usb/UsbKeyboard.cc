@@ -25,6 +25,7 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbKeyboard.h>
 #include <usb/UsbManager.h>
+#include <machine/InputManager.h>
 
 UsbKeyboard::UsbKeyboard(UsbDevice *dev) :
 UsbDevice(dev), m_bDebugState(true), m_bShift(false), m_bCtrl(false), m_bAlt(false), m_bAltGr(false),
@@ -69,8 +70,7 @@ void UsbKeyboard::thread()
             m_Buffer[m_BufEnd++] = c;
             m_BufEnd = m_BufEnd%BUFLEN;
             m_BufLength.release(1);
-            if (m_Callback)
-                m_Callback(c);
+            InputManager::instance().keyPressed(c);
         }
         tick = timer->getTickCount();
     }
