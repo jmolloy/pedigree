@@ -93,6 +93,13 @@ public:
         return m_Pid;
     }
 
+    /** Cancels the current write operation (used by SIGINT handling) */
+    void cancel()
+    {
+        if(m_WriteInProgress)
+            m_Cancel = 1;
+    }
+
 private:
     Terminal(const Terminal &);
     Terminal &operator = (const Terminal &);
@@ -121,6 +128,9 @@ private:
     int m_Pid;
 
     size_t m_OffsetLeft, m_OffsetTop;
+
+    int m_Cancel;
+    bool m_WriteInProgress;
 };
 
 #endif

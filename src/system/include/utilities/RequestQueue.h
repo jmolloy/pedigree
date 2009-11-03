@@ -71,6 +71,7 @@ protected:
         Mutex mutex;
         bool isAsync;
         Request *next;
+        Thread *pThread;
     private:
         Request(const Request&);
         void operator =(const Request&);

@@ -132,6 +132,15 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
     m_RequestQueueMutex.release();
 
+    // Verify that it's still valid to run the request
+    /// \todo Racy as hell. What happens if the Thread object is freed? Needs a
+    ///       better solution than this...
+    if(m_pReq->pThread && (m_pReq->pThread->getStatus() == Thread::Zombie))
+    {
+        WARNING("UserConsole: request made with a zombie thread");
+        return 0;
+    }
+
     // Perform the request.
     size_t command = m_pReq->p1;
     *sz = static_cast<size_t>(m_pReq->p3);

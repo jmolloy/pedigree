@@ -359,8 +359,8 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
         pThread->sendEvent(sig->pEvent);
 
         // Allow the event to run
-        Processor::setInterrupts(true);
-        Scheduler::instance().yield();
+        //Processor::setInterrupts(true);
+        //Scheduler::instance().yield();
     }
 
     return true;

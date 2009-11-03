@@ -42,5 +42,6 @@ struct vid_req_t
 
 #define TUI_EVENT_RETURNED             15
 #define TUI_INPUT_REGISTER_CALLBACK    16
+#define TUI_STOP_REQUEST_QUEUE 17
 
 #endif

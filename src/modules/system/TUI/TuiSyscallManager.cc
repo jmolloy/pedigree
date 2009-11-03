@@ -254,6 +254,10 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         case TUI_INPUT_REGISTER_CALLBACK:
             pedigree_input_register_callback(static_cast<uintptr_t>(p1));
             break;
+        case TUI_STOP_REQUEST_QUEUE:
+            NOTICE("Breaking from the request queue block now...");
+            g_UserConsole->stopCurrentBlock();
+            break;
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
     return 0;

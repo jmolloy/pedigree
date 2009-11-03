@@ -263,11 +263,13 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
                 }
                 else if(readBuffer[i] < 0x1F)
                 {
+                    /*
                     if(readBuffer[i] == 0x3)
                     {
                         Process *p = Processor::information().getCurrentThread()->getParent();
                         p->getSubsystem()->kill(Subsystem::Interrupted);
                     }
+                    */
                 }
                 else
                 {
@@ -370,12 +372,14 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 
         if(pC[i] < 0x1F)
         {
+            /*
             if(pC[i] == 0x3)
             {
                 Thread *t = Processor::information().getCurrentThread();
                 Process *p = t->getParent();
                 p->getSubsystem()->kill(Subsystem::Interrupted, t);
             }
+            */
         }
 
         if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))

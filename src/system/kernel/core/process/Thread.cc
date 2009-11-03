@@ -239,6 +239,12 @@ Event *Thread::getNextEvent()
     for (size_t i = 0; i < m_EventQueue.count(); i++)
     {
         Event *e = m_EventQueue.popFront();
+        if(!e)
+        {
+            ERROR("A null event was in a thread's event queue!");
+            continue;
+        }
+
         if (m_StateLevels[m_nStateLevel].m_InhibitMask.test(e->getNumber()) ||
             (e->getSpecificNestingLevel() != ~0UL &&
              e->getSpecificNestingLevel() != m_nStateLevel))

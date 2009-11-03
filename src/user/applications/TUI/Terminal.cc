@@ -27,7 +27,7 @@ extern rgb_t g_MainBackgroundColour;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
-    m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop)
+    m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(false)
 {
     // Create a new backbuffer.
     m_pBuffer = Syscall::newBuffer();
@@ -189,7 +189,8 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 {
     m_pXterm->hideCursor(rect);
 
-    while (*pStr || m_WriteBufferLen)
+    m_WriteInProgress = true;
+    while (!m_Cancel && (*pStr || m_WriteBufferLen))
     {
         // Fill the buffer.
         while (*pStr)
@@ -252,6 +253,10 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         m_pXterm->write(static_cast<uint8_t>(utf32&0xFF));
 #endif
     }
+
+    if(m_Cancel)
+        m_Cancel = 0;
+    m_WriteInProgress = false;
 
     m_pXterm->showCursor(rect);
 }

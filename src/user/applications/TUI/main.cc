@@ -215,7 +215,16 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
 
     // CTRL + key -> unprintable characters
     if((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
+    {
         c &= 0x1F;
+        if(c == 0x3)
+        {
+            kill(g_pCurrentTerm->term->getPid(), SIGINT);
+            syscall0(TUI_STOP_REQUEST_QUEUE);
+            g_pCurrentTerm->term->cancel();
+            // syscall0(TUI_EVENT_RETURNED);
+        }
+    }
 
     if(checkCommand(c, rect2))
     {

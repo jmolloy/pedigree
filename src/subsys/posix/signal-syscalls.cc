@@ -271,10 +271,11 @@ int doThreadKill(Thread *p, int sig)
         return -1;
     }
     PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
-
-    // Fire the event
-    if (signalHandler->pEvent)
+    if (signalHandler && signalHandler->pEvent)
+    {
+        // Fire the event
         p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+    }
 
     return 0;
 }
@@ -335,6 +336,9 @@ int posix_kill(int pid, int sig)
         SYSCALL_ERROR(NoSuchProcess);
         return -1;
     }
+
+    // Yield to allow the events to be propagated across the process(es)
+    Scheduler::instance().yield();
 
     return 0;
 }
