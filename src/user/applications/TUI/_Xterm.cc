@@ -788,10 +788,22 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     Syscall::bitBlit(m_pFramebuffer, 0, top2_px, 0, top_px, m_FbWidth, (m_Height-n)*g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, 0, bottom2_px, m_FbWidth, n*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
-    if (m_pView == m_pInsert)
-        m_pView += n*m_Width;
+    bool bViewEqual = (m_pView == m_pInsert);
+    memmove(m_pInsert, &m_pInsert[n*m_Width], ((m_Width * m_Height) - (n * m_Width)) * sizeof(TermChar));
+    if(bViewEqual)
+        m_pView = m_pInsert;
 
-    m_pInsert += n*m_Width;
+    // Blank out the remainder after moving the buffer
+    for(size_t i = ((m_Width * m_Height) - (n * m_Width)); i < (m_Width * m_Height); i++)
+    {
+        TermChar blank;
+        blank.fore = m_Fg;
+        blank.back = m_Bg;
+        blank.utf32 = ' ';
+        blank.flags = 0;
+        m_pView[i] = blank;
+    }
+    //m_pInsert += n*m_Width;
 
     // Have we gone off the end of the scroll area?
     if (m_pInsert + m_Height*m_Width >= (m_pBuffer+m_BufferLength))
@@ -834,6 +846,8 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
             blank.flags = 0;
             for (size_t i = m_BufferLength-m_Width*m_Height; i < m_BufferLength; i++)
                 m_pBuffer[i] = blank;
+
+            m_BufferLength += m_Width*m_Height;
         }
     }
 }

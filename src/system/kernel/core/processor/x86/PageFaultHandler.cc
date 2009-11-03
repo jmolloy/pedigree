@@ -104,7 +104,9 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   //  Extract error code information
   static LargeStaticString sCode;
   sCode.clear();
-  sCode.append("Details: ");
+  sCode.append("Details: PID=");
+  sCode.append(Processor::information().getCurrentThread()->getParent()->getId());
+  sCode.append(" ");
 
   if(!(code & PFE_PAGE_PRESENT)) sCode.append("NOT ");
   sCode.append("PRESENT | ");
