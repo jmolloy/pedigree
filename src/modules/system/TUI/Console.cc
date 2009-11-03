@@ -32,7 +32,8 @@ void UserConsole::requestPending()
     // m_pPendingReq and setting m_pReq to zero.
     m_RequestQueueMutex.acquire();
     m_pPendingReq = m_pReq;
-    m_pReq = 0;
+    if(m_pReq)
+        m_pReq = m_pReq->next; // 0;
     m_RequestQueueMutex.release();
 }
 
@@ -53,9 +54,18 @@ void UserConsole::respondToPending(size_t response, char *buffer, size_t sz)
 
         if (m_pPendingReq->isAsync)
             delete m_pPendingReq;
+        m_pPendingReq = m_pPendingReq->next;
     }
-    m_pPendingReq = 0;
     m_RequestQueueMutex.release();
+}
+
+void UserConsole::stopCurrentBlock()
+{
+    if(!m_RequestQueueSize.getValue())
+    {
+        m_Stop = 1;
+        m_RequestQueueSize.release();
+    }
 }
 
 size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz, size_t *terminalId)
@@ -91,7 +101,10 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
     // Check why we were woken - is m_Stop set? If so, quit.
     if (m_Stop)
+    {
+      m_Stop = 0;
       return 0;
+    }
 
     // Get the first request from the queue.
     m_RequestQueueMutex.acquire();

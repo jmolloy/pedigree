@@ -37,6 +37,9 @@ public:
     /** Respond to the previously set pending request. */
     void respondToPending(size_t response, char *buffer, size_t sz);
 
+    /** Stops the current block for a request, if necessary */
+    void stopCurrentBlock();
+
 private:
     virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
     {return 0;}

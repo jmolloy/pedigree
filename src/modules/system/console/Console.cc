@@ -63,6 +63,8 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
 
     m_Consoles.pushBack(pConsole);
 
+    NOTICE("Registerd a console: " << consoleName << ".");
+
     return true;
 }
 

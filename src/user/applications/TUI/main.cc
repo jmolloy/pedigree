@@ -225,7 +225,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
     if(!pT->hasPendingRequest() && pT->queueLength() > 0)
         sz = pT->getPendingRequestSz();
 
-    /** We now have a key on our queue, can we complete a write? */
+    /** We now have a key on our queue, can we complete a read? */
 
     char *buffer = new char[sz + 1];
     char str[64];
@@ -296,8 +296,10 @@ int main (int argc, char **argv)
     while (true)
     {
         size_t cmd = Syscall::nextRequest(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
-        //sprintf(str, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-        //log(str);
+        // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
+
+        if(cmd == 0)
+            continue;
 
         if (cmd == TUI_MODE_CHANGED)
         {
@@ -344,7 +346,7 @@ int main (int argc, char **argv)
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 g_nLastResponse = sz;
-                Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+                Syscall::updateBuffer(pT->getBuffer(), rect2);
                 break;
             }
 

@@ -193,6 +193,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         }
         case TUI_SET_CURRENT_CONSOLE:
         {
+            g_UserConsole->stopCurrentBlock();
             g_UserConsoleId = p1;
             g_UserConsole = g_Consoles[p1];
             break;

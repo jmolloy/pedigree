@@ -128,13 +128,17 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
     while (p->next != 0)
     {
       if(p == pReq)
+      {
         return 0;
+      }
       p = p->next;
     }
     if(p != pReq)
       p->next = pReq;
     else
+    {
       return 0;
+    }
   }
 
   assert_heap_ptr_valid(pReq);
