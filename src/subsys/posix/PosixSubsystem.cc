@@ -349,6 +349,8 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 {
     // Send SIGKILL. getSignalHandler handles all that locking shiz for us.
     SignalHandler *sig = getSignalHandler(killReason == Interrupted ? 2 : 9);
+    if(!pThread)
+        pThread = Processor::information().getCurrentThread();
 
     if(sig && sig->pEvent)
     {
