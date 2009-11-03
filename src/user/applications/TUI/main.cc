@@ -218,7 +218,10 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
         c &= 0x1F;
 
     if(checkCommand(c, rect2))
+    {
         Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+        syscall0(TUI_EVENT_RETURNED);
+    }
     else
         pT->addToQueue(c);
     rect2.reset();
