@@ -77,17 +77,14 @@ uintptr_t FileDisk::read(uint64_t location)
     uintptr_t buffer = m_Cache.lookup(readPage);
 
     if (buffer)
-        return buffer;
+        return buffer + pageOffset;
 
     buffer = m_Cache.insert(readPage);
 
     // Read the data from the file itself
     uint64_t sz = m_pFile->read(readPage, 4096, buffer);
 
-    // Verify the size - it has to fit in with what we asked for
-    assert(sz == 4096);
-
-    return buffer;
+    return buffer + pageOffset;
 }
 
 void FileDisk::write(uint64_t location)

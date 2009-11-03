@@ -55,10 +55,10 @@ extern BootIO bootIO;
 
 void init_stage2();
 
+static bool bRootMounted = false;
 static bool probeDisk(Disk *pDisk)
 {
     String alias; // Null - gets assigned by the filesystem.
-    static bool bRootMounted = false;
     if (VFS::instance().mount(pDisk, alias))
     {
         // For mount message
@@ -140,6 +140,7 @@ void init()
 
             // Mount it in the VFS
             VFS::instance().removeAlias(String("root"));
+            bRootMounted = false;
             findDisks(pRamDisk);
         }
         else
