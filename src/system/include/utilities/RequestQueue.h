@@ -18,9 +18,11 @@
 #define REQUEST_QUEUE_H
 
 #include <processor/types.h>
-#include <process/Thread.h>
+//#include <process/Thread.h>
 #include <process/Semaphore.h>
 #include <process/Mutex.h>
+
+class Thread;
 
 #define REQUEST_QUEUE_NUM_PRIORITIES 4
 #define REQUEST_QUEUE_MAX_QUEUE_SZ   32
@@ -31,6 +33,7 @@
  * their request is complete. */
 class RequestQueue
 {
+    friend class Thread;
 public:
     /** Creates a new RequestQueue. */
     RequestQueue();
@@ -70,8 +73,9 @@ protected:
         uint64_t ret;
         Mutex mutex;
         bool isAsync;
-        Request *next;
+        bool bReject;
         Thread *pThread;
+        Request *next;
     private:
         Request(const Request&);
         void operator =(const Request&);

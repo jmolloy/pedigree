@@ -24,6 +24,7 @@
 #include <process/Event.h>
 
 #include <utilities/List.h>
+#include <utilities/RequestQueue.h>
 #include <utilities/ExtensibleBitmap.h>
 
 class Processor;
@@ -299,6 +300,40 @@ public:
     size_t getPriority()
     {return m_Priority;}
 
+    /** Adds a request to the Thread's pending request list */
+    void addRequest(RequestQueue::Request *req)
+    {
+        m_PendingRequests.pushBack(req);
+    }
+
+    /** Removes a request from the Thread's pending request list */
+    void removeRequest(RequestQueue::Request *req)
+    {
+        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+            it != m_PendingRequests.end();
+            it++)
+        {
+            if(req == *it)
+            {
+                m_PendingRequests.erase(it);
+                return;
+            }
+        }
+    }
+
+    /** An unexpected exit has occurred, perform cleanup */
+    void unexpectedExit()
+    {
+        NOTICE_NOLOCK("unexpectedExit");
+        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+            it != m_PendingRequests.end();
+            it++)
+        {
+            NOTICE_NOLOCK("Setting a request to be rejected");
+            (*it)->bReject = true;
+        }
+    }
+
     /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
      * if it is not being waited on the Thread is destroyed.
@@ -401,6 +436,9 @@ private:
 
     /** Thread priority: 0..MAX_PRIORITIES-1, 0 being highest. */
     size_t m_Priority;
+
+    /** List of requests pending on this Thread */
+    List<RequestQueue::Request*> m_PendingRequests;
 };
 
 #endif

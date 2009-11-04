@@ -59,7 +59,9 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
   pReq->isAsync = false;
   pReq->next = 0;
+  pReq->bReject = false;
   pReq->pThread = Processor::information().getCurrentThread();
+  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -104,6 +106,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   uintptr_t ret = pReq->ret;
 
   // Delete the request structure.
+  Processor::information().getCurrentThread()->removeRequest(pReq);
   delete pReq;
 
   return ret;
@@ -117,7 +120,9 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
   pReq->isAsync = true;
   pReq->next = 0;
+  pReq->bReject = false;
   pReq->pThread = Processor::information().getCurrentThread();
+  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -172,11 +177,13 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
           // By releasing here, the worker thread can detect that the request was
           // interrupted and clean up by itself.
           NOTICE("RequestQueue::addRequest - interrupted");
+          pReq->pThread->removeRequest(pReq);
           pReq->mutex.release();
           return 0;
       }
 
       // Delete the request structure.
+      pReq->pThread->removeRequest(pReq);
       delete pReq;
   }
   else
@@ -226,11 +233,9 @@ int RequestQueue::work()
     m_RequestQueueMutex.release();
 
     // Verify that it's still valid to run the request
-    /// \todo Racy as hell. What happens if the Thread object is freed? Needs a
-    ///       better solution than this...
-    if(pReq->pThread && (pReq->pThread->getStatus() == Thread::Zombie))
+    if(pReq->bReject)
     {
-        WARNING("RequestQueue: request made with a zombie thread");
+        WARNING("RequestQueue: request rejected");
         if(pReq->isAsync)
             delete pReq;
         continue;
@@ -244,6 +249,7 @@ int RequestQueue::work()
         // and grab the next request from the queue. The calling thread has long since stopped
         // caring about whether we're done or not.
         NOTICE("RequestQueue::work - caller interrupted");
+        pReq->pThread->removeRequest(pReq);
         delete pReq;
         continue;
     }
@@ -265,7 +271,10 @@ int RequestQueue::work()
 
     // If the request was asynchronous, destroy the request structure.
     if (bAsync)
+    {
+        pReq->pThread->removeRequest(pReq);
         delete pReq;
+    }
   }
   return 0;
 }

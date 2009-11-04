@@ -275,6 +275,9 @@ int doThreadKill(Thread *p, int sig)
     {
         // Fire the event
         p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+
+        /// \todo Some signals aren't an exit condition!
+        p->unexpectedExit();
     }
 
     return 0;

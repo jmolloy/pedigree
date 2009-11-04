@@ -90,6 +90,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (bAsync)
         {
             assert_heap_ptr_valid(m_pReq);
+            m_pReq->pThread->removeRequest(m_pReq);
             delete m_pReq;
             m_pReq = 0;
         }
@@ -139,7 +140,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Verify that it's still valid to run the request
     /// \todo Racy as hell. What happens if the Thread object is freed? Needs a
     ///       better solution than this...
-    if(m_pReq->pThread && (m_pReq->pThread->getStatus() == Thread::Zombie))
+    /*if(m_pReq->pThread && (m_pReq->pThread->getStatus() == Thread::Zombie))
     {
         // If it's an XTerm sequence, let it through to the TUI.
         // This lets curses shutdown work even after the writing thread exits.
@@ -153,6 +154,13 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         {
             NOTICE("UserConsole: zombie thread request being allowed through");
         }
+    }*/
+
+    // Verify that it's still valid to run the request
+    if(m_pReq->bReject)
+    {
+        WARNING("UserConsole: request rejected");
+        return 0;
     }
 
     *terminalId = m_pReq->p2;

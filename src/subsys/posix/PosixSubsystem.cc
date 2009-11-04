@@ -358,6 +358,9 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
 
+        NOTICE("Sending unexpected exit event to thread");
+        pThread->unexpectedExit();
+
         // Allow the event to run
         //Processor::setInterrupts(true);
         //Scheduler::instance().yield();
@@ -398,6 +401,7 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         Processor::setInterrupts(false);
 
         pThread->sendEvent(sig->pEvent);
+        pThread->unexpectedExit();
 
         Processor::setInterrupts(bWasInterrupts);
         Scheduler::instance().yield();
