@@ -17,6 +17,7 @@
 #include "_Xterm.h"
 #include "Font.h"
 #include "Terminal.h"
+#include <syslog.h>
 
 #define C_BLACK   0
 #define C_RED     1
@@ -107,9 +108,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     if(m_bChangingState)
     {
-        //char tmp32[128];
-        //sprintf(tmp32, "XTerm: Command '%c'\n", utf32);
-        //log(tmp32);
+        // syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
 
         if(utf32 == '?') return; // Useless character.
 
@@ -934,6 +933,8 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "eraseScreen");
+
     // One good fillRect should do the job nicely.
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
@@ -948,10 +949,12 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
-    size_t l = m_OffsetLeft+m_CursorX*g_NormalFont->getWidth();
+    syslog(LOG_NOTICE, "eraseEOL");
+
+    size_t l = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
 
     // Again, one fillRect should do it.
-    Syscall::fillRect(m_pFramebuffer, l, m_OffsetTop+m_CursorY*g_NormalFont->getHeight(), m_FbWidth-l, g_NormalFont->getHeight(), g_Colours[m_Bg]);
+    Syscall::fillRect(m_pFramebuffer, l, m_OffsetTop+ (m_CursorY * g_NormalFont->getHeight()), m_FbWidth-l, g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < m_Width; col++)
@@ -962,100 +965,99 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "eraseSOL");
 
-    int32_t row = static_cast<int32_t>(m_CursorY);
-    for(int32_t col = static_cast<int32_t>(m_CursorX); col >= 0; col--)
-    {
-        g_NormalFont->render(m_pFramebuffer,
-                             static_cast<uint32_t>(' '),
-                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                             g_Colours[m_Fg],
-                             g_Colours[m_Bg]
-        );
-    }
-    rect.point(m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point((m_CursorX * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-}
-
-void Xterm::Window::eraseLine(DirtyRectangle &rect)
-{
+    // Again, one fillRect should do it.
+    Syscall::fillRect(m_pFramebuffer,
+                      m_OffsetLeft,
+                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+                      m_CursorX * g_NormalFont->getWidth(),
+                      g_NormalFont->getHeight(),
+                      g_Colours[m_Bg]);
 
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_CursorX; col++)
     {
-        g_NormalFont->render(m_pFramebuffer,
-                             static_cast<uint32_t>(' '),
-                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                             g_Colours[m_Fg],
-                             g_Colours[m_Bg]
-        );
+        setChar(' ', col, row);
     }
-    rect.point(m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
+}
+
+void Xterm::Window::eraseLine(DirtyRectangle &rect)
+{
+    syslog(LOG_NOTICE, "eraseLine");
+
+    // Again, one fillRect should do it.
+    Syscall::fillRect(m_pFramebuffer,
+                      m_OffsetLeft,
+                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+                      m_FbWidth - m_OffsetLeft,
+                      g_NormalFont->getHeight(),
+                      g_Colours[m_Bg]);
+
+    size_t row = m_CursorY;
+    for(size_t col = 0; col < m_Width; col++)
+    {
+        setChar(' ', col, row);
+    }
 }
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "eraseChars");
+
+    // Again, one fillRect should do it.
+    size_t left = m_CursorX * g_NormalFont->getWidth();
+    if((m_CursorX + n) > m_Width)
+        n = m_Width - m_CursorX;
+    size_t width = n * g_NormalFont->getWidth();
+    Syscall::fillRect(m_pFramebuffer,
+                      m_OffsetLeft,
+                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+                      n * g_NormalFont->getWidth(),
+                      g_NormalFont->getHeight(),
+                      g_Colours[m_Bg]);
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < (m_CursorX + n); col++)
     {
-        g_NormalFont->render(m_pFramebuffer,
-                             static_cast<uint32_t>(' '),
-                             (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                             g_Colours[m_Fg],
-                             g_Colours[m_Bg]
-        );
+        setChar(' ', col, row);
     }
-    rect.point((m_CursorX * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point(((m_CursorX + n) * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
 }
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "eraseUp");
 
-    for(int32_t row = static_cast<int32_t>(m_CursorY); row >= 0; row--)
+    Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * m_CursorY, g_Colours[m_Bg]);
+
+    for(size_t row = 0; row < m_CursorY; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
         {
-            g_NormalFont->render(m_pFramebuffer,
-                                 static_cast<uint32_t>(' '),
-                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                                 g_Colours[m_Fg],
-                                 g_Colours[m_Bg]
-            );
+            setChar(' ', col, row);
         }
     }
-    rect.point(m_OffsetLeft, m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
 }
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "eraseDown");
+
+    size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
+    Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, top, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg]);
 
     for(size_t row = m_CursorY; row < m_Height; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
         {
-            g_NormalFont->render(m_pFramebuffer,
-                                 static_cast<uint32_t>(' '),
-                                 (col * g_NormalFont->getWidth()) + m_OffsetLeft,
-                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                                 g_Colours[m_Fg],
-                                 g_Colours[m_Bg]
-            );
+            setChar(' ', col, row);
         }
     }
-    rect.point(m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_Height * g_NormalFont->getHeight()) + m_OffsetTop);
 }
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "deleteCharacters");
 
     // Start of the delete region
     size_t deleteStart = m_CursorX;
@@ -1066,60 +1068,24 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     // Number of characters to shift
     size_t numChars = m_Width - deleteEnd;
 
-    // Shift all the characters across
-    size_t row = m_CursorY;
-    for(size_t off = 0; off < numChars; off++)
+    // Shift all the characters across from the end of the delete area to the start.
+    memmove(&m_pBuffer[(m_CursorY * m_Width) + deleteStart], &m_pBuffer[(m_CursorY * m_Width) + deleteEnd], numChars * sizeof(TermChar));
+
+    // Now that the characters have been shifted, clear the space after the region we copied
+    size_t left = m_OffsetLeft + ((m_Width - n) * g_NormalFont->getWidth());
+    size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
+    Syscall::fillRect(m_pFramebuffer, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg]);
+
+    // Update the moved section
+    size_t row = m_CursorY, col = 0;
+    for(col = deleteStart; col < (m_Width - n); col++)
     {
-        // Positions for each side of the copy
-        size_t destX = deleteStart + off;
-        size_t srcX = deleteEnd + off;
-
-        // Move the character
-        TermChar c = m_pView[(row * m_Width) + srcX];
-        m_pView[(row * m_Width) + destX] = c;
-
-        // Render to the framebuffer
-        if(c.flags & XTERM_INVERSE)
-        {
-            g_NormalFont->render(m_pFramebuffer,
-                                 c.utf32,
-                                 (destX * g_NormalFont->getWidth()) + m_OffsetLeft,
-                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                                 g_Colours[c.back],
-                                 g_Colours[c.fore]
-            );
-        }
-        else
-        {
-            g_NormalFont->render(m_pFramebuffer,
-                                 c.utf32,
-                                 (destX * g_NormalFont->getWidth()) + m_OffsetLeft,
-                                 (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                                 g_Colours[c.fore],
-                                 g_Colours[c.back]
-            );
-        }
+        render(rect, 0, col, row);
     }
 
-    // Remove the last cells that weren't affected
-    for(size_t i = (m_Width - n); i < m_Width; i++)
+    // And then update the cleared section
+    for(col = (m_Width - n); col < m_Width; col++)
     {
-        // Blank this cell
-        TermChar c;
-        c.utf32 = static_cast<uint32_t>(' ');
-        c.back = c.fore = c.flags = 0;
-        m_pView[(row * m_Width) + i] = c;
-
-        // And then render to the framebuffer
-        g_NormalFont->render(m_pFramebuffer,
-                             c.utf32,
-                             (i * g_NormalFont->getWidth()) + m_OffsetLeft,
-                             (row * g_NormalFont->getHeight()) + m_OffsetTop,
-                             g_Colours[c.fore],
-                             g_Colours[c.back]
-        );
+        setChar(' ', col, row);
     }
-
-    rect.point((deleteStart * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
-    rect.point((m_Width * g_NormalFont->getWidth()) + m_OffsetLeft, (m_CursorY * g_NormalFont->getHeight()) + m_OffsetTop);
 }

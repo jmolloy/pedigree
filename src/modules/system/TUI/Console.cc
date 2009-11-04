@@ -132,18 +132,28 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
     m_RequestQueueMutex.release();
 
+    // Perform the request.
+    size_t command = m_pReq->p1;
+    *sz = static_cast<size_t>(m_pReq->p3);
+
     // Verify that it's still valid to run the request
     /// \todo Racy as hell. What happens if the Thread object is freed? Needs a
     ///       better solution than this...
     if(m_pReq->pThread && (m_pReq->pThread->getStatus() == Thread::Zombie))
     {
-        WARNING("UserConsole: request made with a zombie thread");
-        return 0;
+        // If it's an XTerm sequence, let it through to the TUI.
+        // This lets curses shutdown work even after the writing thread exits.
+        uint8_t *test = reinterpret_cast<uint8_t*>(m_pReq->p4);
+        if(test[0] != '\e')
+        {
+            WARNING("UserConsole: request made with a zombie thread");
+            return 0;
+        }
+        else
+        {
+            NOTICE("UserConsole: zombie thread request being allowed through");
+        }
     }
-
-    // Perform the request.
-    size_t command = m_pReq->p1;
-    *sz = static_cast<size_t>(m_pReq->p3);
 
     *terminalId = m_pReq->p2;
 
