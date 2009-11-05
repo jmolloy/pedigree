@@ -280,6 +280,11 @@ void PosixSubsystem::exit(int code)
     Process *pProcess = pThread->getParent();
     if (pProcess->getExitStatus() == 0)
         pProcess->setExitStatus( (code&0xFF) << 8 );
+    if(code)
+    {
+        NOTICE("Sending unexpected exit event to thread");
+        pThread->unexpectedExit();
+    }
 
     // Exit called, but we could be at any nesting level in the event stack.
     // We have to propagate this exit() to all lower stack levels because they may have
@@ -358,12 +363,9 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
 
-        NOTICE("Sending unexpected exit event to thread");
-        pThread->unexpectedExit();
-
         // Allow the event to run
-        //Processor::setInterrupts(true);
-        //Scheduler::instance().yield();
+        Processor::setInterrupts(true);
+        Scheduler::instance().yield();
     }
 
     return true;
@@ -401,7 +403,6 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         Processor::setInterrupts(false);
 
         pThread->sendEvent(sig->pEvent);
-        pThread->unexpectedExit();
 
         Processor::setInterrupts(bWasInterrupts);
         Scheduler::instance().yield();

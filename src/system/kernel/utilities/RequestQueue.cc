@@ -106,7 +106,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   uintptr_t ret = pReq->ret;
 
   // Delete the request structure.
-  Processor::information().getCurrentThread()->removeRequest(pReq);
+  pReq->pThread->removeRequest(pReq);
   delete pReq;
 
   return ret;

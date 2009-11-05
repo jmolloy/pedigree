@@ -219,10 +219,20 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
         c &= 0x1F;
         if(c == 0x3)
         {
+            // Send the kill signal
             kill(g_pCurrentTerm->term->getPid(), SIGINT);
+
+            // Awaken and stop the RequestQueue if it's blocking
             syscall0(TUI_STOP_REQUEST_QUEUE);
+
+            // Cancel the current write operation, if any
             g_pCurrentTerm->term->cancel();
-            // syscall0(TUI_EVENT_RETURNED);
+
+            // Return early.
+            // This stops a read request being fulfilled for a process which is
+            // actually being killed (which kind of blows up).
+            // However, with this return, CTRL-C in bash ends up behaving weirdly.
+            syscall0(TUI_EVENT_RETURNED);
         }
     }
 

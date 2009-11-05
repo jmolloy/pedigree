@@ -37,9 +37,7 @@ void sigint(int sig)
     // If we're in the background...
     if(g_RunningPid != -1)
     {
-        // Pass it down to the running program
-        syslog(LOG_NOTICE, "SIGINT -> %d", g_RunningPid);
-        kill(g_RunningPid, SIGINT);
+        // Ignore, but don't log (running program)
     }
     else
     {
