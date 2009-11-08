@@ -219,14 +219,14 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
         c &= 0x1F;
         if(c == 0x3)
         {
-            // Send the kill signal
-            kill(g_pCurrentTerm->term->getPid(), SIGINT);
-
             // Awaken and stop the RequestQueue if it's blocking
             syscall0(TUI_STOP_REQUEST_QUEUE);
 
             // Cancel the current write operation, if any
             g_pCurrentTerm->term->cancel();
+
+            // Send the kill signal
+            kill(g_pCurrentTerm->term->getPid(), SIGINT);
 
             // Return early.
             // This stops a read request being fulfilled for a process which is
@@ -273,6 +273,181 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
     syscall0(TUI_EVENT_RETURNED);
 }
 
+/** This handles all read requests coming in from other applications */
+void read_handler(uint8_t* pBuffer)
+{
+    // syslog(LOG_NOTICE, "read_handler");
+
+    size_t requestType = 0, requestId = 0, maxSz = 0, tabId = 0;
+    char *buff = 0;
+
+    size_t offset = 0;
+
+    memcpy(&requestType, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&buff, &pBuffer[offset], sizeof(uintptr_t));
+    offset += sizeof(uintptr_t);
+
+    memcpy(&maxSz, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&requestId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&tabId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    size_t ret = 0;
+
+    Terminal *pT = 0;
+    TerminalList *pTL = g_pTermList;
+    while (pTL)
+    {
+        if (pTL->term->getTabId() == tabId)
+        {
+            pT = pTL->term;
+            break;
+        }
+        pTL = pTL->next;
+    }
+    if (pT == 0)
+        syslog(LOG_NOTICE, "TUI: Completely unrecognised terminal ID %ld, aborting.", tabId);
+    else
+    {
+        size_t i = 0;
+        while (i < maxSz)
+        {
+            char c = pT->getFromQueue();
+            if (c)
+                buff[i++] = c;
+            else if(i)
+                break;
+        }
+
+        ret = i;
+    }
+
+    syscall2(TUI_REQUEST_RETURN, requestId, ret);
+}
+
+/** This handles all write requests coming in from other applications */
+void write_handler(uint8_t *pBuffer)
+{
+    // syslog(LOG_NOTICE, "write_handler");
+
+    size_t requestType = 0, requestId = 0, maxSz = 0, tabId = 0;
+    char *buff = 0;
+
+    size_t offset = 0;
+
+    memcpy(&requestType, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&buff, &pBuffer[offset], sizeof(uintptr_t));
+    offset += sizeof(uintptr_t);
+
+    memcpy(&maxSz, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&requestId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&tabId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    size_t ret = 0;
+
+    Terminal *pT = 0;
+    TerminalList *pTL = g_pTermList;
+    while (pTL)
+    {
+        if (pTL->term->getTabId() == tabId)
+        {
+            pT = pTL->term;
+            break;
+        }
+        pTL = pTL->next;
+    }
+    if (pT == 0)
+        syslog(LOG_NOTICE, "TUI: Completely unrecognised terminal ID %ld, aborting.", tabId);
+    else
+    {
+        DirtyRectangle rect2;
+        buff[maxSz] = '\0';
+        pT->write(buff, rect2);
+        Syscall::updateBuffer(pT->getBuffer(), rect2);
+        ret = maxSz;
+    }
+
+    syscall2(TUI_REQUEST_RETURN, requestId, ret);
+}
+
+/** This handles all miscellaneous requests coming in from other applications */
+void misc_handler(uint8_t *pBuffer)
+{
+    // syslog(LOG_NOTICE, "misc_handler");
+
+    size_t requestType = 0, requestId = 0, maxSz = 0, tabId = 0;
+    char *buff = 0;
+
+    size_t offset = 0;
+
+    memcpy(&requestType, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&buff, &pBuffer[offset], sizeof(uintptr_t));
+    offset += sizeof(uintptr_t);
+
+    memcpy(&maxSz, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&requestId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    memcpy(&tabId, &pBuffer[offset], sizeof(size_t));
+    offset += sizeof(size_t);
+
+    size_t ret = 0;
+
+    Terminal *pT = 0;
+    TerminalList *pTL = g_pTermList;
+    while (pTL)
+    {
+        if (pTL->term->getTabId() == tabId)
+        {
+            pT = pTL->term;
+            break;
+        }
+        pTL = pTL->next;
+    }
+    if (pT == 0)
+        syslog(LOG_NOTICE, "TUI: Completely unrecognised terminal ID %ld, aborting.", tabId);
+    else
+    {
+        switch(requestType)
+        {
+            case CONSOLE_DATA_AVAILABLE:
+                ret = (pT->queueLength() > 0);
+                break;
+
+            case CONSOLE_GETROWS:
+                ret = pT->getRows();
+                break;
+
+            case CONSOLE_GETCOLS:
+                ret = pT->getCols();
+                break;
+
+            default:
+                syslog(LOG_NOTICE, "TUI: Unknown misc request: %d", requestType);
+                break;
+        };
+    }
+
+    syscall2(TUI_REQUEST_RETURN, requestId, ret);
+}
+
 int main (int argc, char **argv)
 {
     if(getpid()>2)
@@ -306,6 +481,10 @@ int main (int argc, char **argv)
 
     DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
+    syscall3(TUI_INSTALL_EVENT_HANDLERS, reinterpret_cast<uintptr_t>(read_handler),
+                                         reinterpret_cast<uintptr_t>(write_handler),
+                                         reinterpret_cast<uintptr_t>(misc_handler));
+
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 
@@ -317,104 +496,7 @@ int main (int argc, char **argv)
     size_t tabId;
     while (true)
     {
-        size_t cmd = Syscall::nextRequest(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
-        // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-
-        if(cmd == 0)
-            continue;
-
-        if (cmd == TUI_MODE_CHANGED)
-        {
-            uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
-            syslog(LOG_ALERT, "u: %llx", u);
-            modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
-
-            continue;
-        }
-
-        Terminal *pT = 0;
-        TerminalList *pTL = g_pTermList;
-        while (pTL)
-        {
-            if (pTL->term->getTabId() == tabId)
-            {
-                pT = pTL->term;
-                break;
-            }
-            pTL = pTL->next;
-        }
-        if (pT == 0)
-        {
-            sprintf(str, "Completely unrecognised terminal ID %ld, aborting.", tabId);
-            log (str);
-            continue;
-        }
-
-        // If the current terminal's queue is empty, set the request
-        // pending further input.
-        if (cmd == CONSOLE_READ && pT->queueLength() == 0)
-        {
-            pT->setHasPendingRequest(true, sz);
-            Syscall::requestPending();
-            continue;
-        }
-
-        switch(cmd)
-        {
-            case CONSOLE_WRITE:
-            {
-                DirtyRectangle rect2;
-                buffer[sz] = '\0';
-                buffer[maxBuffSz] = '\0';
-                pT->write(buffer, rect2);
-                g_nLastResponse = sz;
-                Syscall::updateBuffer(pT->getBuffer(), rect2);
-                break;
-            }
-
-            case CONSOLE_READ:
-            {
-                char str[64];
-                size_t i = 0;
-                while (i < sz)
-                {
-                    char c = pT->getFromQueue();
-                    if (c)
-                    {
-                        buffer[i++] = c;
-                        continue;
-                    }
-                    else break;
-                }
-                g_nLastResponse = i;
-                if (pT->hasPendingRequest())
-                {
-                    Syscall::respondToPending(g_nLastResponse, buffer, sz);
-                    pT->setHasPendingRequest(false, 0);
-                }
-                break;
-            }
-
-            case CONSOLE_DATA_AVAILABLE:
-                g_nLastResponse = (pT->queueLength() > 0);
-                break;
-
-            case CONSOLE_GETROWS:
-                g_nLastResponse = pT->getRows();
-                break;
-
-            case CONSOLE_GETCOLS:
-                g_nLastResponse = pT->getCols();
-                break;
-
-            default:
-            {
-                char str[64];
-                sprintf(str, "Unknown command: %x", cmd);
-                log(str);
-            }
-        }
-
+        syscall0(TUI_YIELD);
     }
 
     return 0;

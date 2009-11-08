@@ -40,7 +40,7 @@ extern "C"
 
 /// \todo These are ok initially, but it'll all have to change at some point
 
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { NOTICE_NOLOCK("SIGNAL " << errcode << "."); posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
 
@@ -275,6 +275,12 @@ int doThreadKill(Thread *p, int sig)
     {
         // Fire the event
         p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
+
+        // Switch to that context in order to handle the event
+        /*bool bWasInterrupts = Processor::getInterrupts();
+        Processor::setInterrupts(false);
+        Processor::information().getScheduler().schedule(Thread::Ready, p);
+        Processor::setInterrupts(bWasInterrupts);*/
     }
 
     return 0;

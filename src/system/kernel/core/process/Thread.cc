@@ -179,17 +179,17 @@ void Thread::sendEvent(Event *pEvent)
     LockGuard<Spinlock> guard(m_Lock);
 
     m_EventQueue.pushBack(pEvent);
-    NOTICE("Sending event: " << pEvent->getNumber() << ".");
+    // NOTICE("Sending event: " << pEvent->getNumber() << ".");
     if (m_Status == Sleeping)
     {
         // Interrupt the sleeping thread, there's an event firing
         m_Status = Ready;
-        NOTICE("Set status");
+        // NOTICE("Set status");
 
         // Notify the scheduler that we're now ready, so we get put into the
         // scheduling algorithm's ready queue.
         Scheduler::instance().threadStatusChanged(this);
-        NOTICE("Notified the scheduler that we've changed status");
+        // NOTICE("Notified the scheduler that we've changed status");
     }
 }
 

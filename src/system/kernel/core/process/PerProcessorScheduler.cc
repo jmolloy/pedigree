@@ -58,7 +58,7 @@ void PerProcessorScheduler::initialise(Thread *pThread)
     Machine::instance().getSchedulerTimer()->registerHandler(this);
 }
 
-void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
+void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThread, Spinlock *pLock)
 {
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
@@ -70,17 +70,27 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Spinlock *pLock)
 
     // Now attempt to get another thread to run.
     // This will also get the lock for the returned thread.
-    Thread *pNextThread = m_pSchedulingAlgorithm->getNext(pCurrentThread);
-    if (pNextThread == 0)
+    Thread *pNextThread;
+    if(!pNewThread)
     {
-        // If we're supposed to be sleeping, this isn't a good place to be
-        if(nextStatus != Thread::Ready)
-            FATAL("No threads to switch to and the current thread is leaving the ready state!");
+        pNextThread = m_pSchedulingAlgorithm->getNext(pCurrentThread);
+        if (pNextThread == 0)
+        {
+            // If we're supposed to be sleeping, this isn't a good place to be
+            if(nextStatus != Thread::Ready)
+                FATAL("No threads to switch to and the current thread is leaving the ready state!");
 
-        // Nothing to switch to, just return.
-        pCurrentThread->getLock().release();
-        Processor::setInterrupts(bWasInterrupts);
-        return;
+            // Nothing to switch to, just return.
+            pCurrentThread->getLock().release();
+            Processor::setInterrupts(bWasInterrupts);
+            return;
+        }
+    }
+    else
+    {
+        pNextThread = pNewThread;
+        if(pNextThread != pCurrentThread)
+            pNextThread->getLock().acquire();
     }
 
     // Now neither thread can be moved, we're safe to switch.

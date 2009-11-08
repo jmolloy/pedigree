@@ -185,21 +185,25 @@ char Terminal::getFromQueue()
         return 0;
 }
 
+#include <syslog.h>
 void Terminal::write(char *pStr, DirtyRectangle &rect)
 {
     m_pXterm->hideCursor(rect);
 
     m_WriteInProgress = true;
+    syslog(LOG_NOTICE, "Beginning write...");
     while (!m_Cancel && (*pStr || m_WriteBufferLen))
     {
         // Fill the buffer.
-        while (*pStr)
+        while (*pStr && !m_Cancel)
         {
             if (m_WriteBufferLen < 4)
                 m_pWriteBuffer[m_WriteBufferLen++] = *pStr++;
             else
                 break;
         }
+        if(m_Cancel) // Check break point from above loop
+            break;
         // Begin UTF-8 -> UTF-32 conversion.
         /// \todo Add some checking - every successive byte should start with 0b10.
         uint32_t utf32;
@@ -253,6 +257,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         m_pXterm->write(static_cast<uint8_t>(utf32&0xFF));
 #endif
     }
+    syslog(LOG_NOTICE, "Completed write [%scancelled]...", m_Cancel ? "" : "not ");
 
     if(m_Cancel)
         m_Cancel = 0;

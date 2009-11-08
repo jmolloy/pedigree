@@ -16,11 +16,14 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <processor/types.h>
 #include <vfs/VFS.h>
 #include <vfs/File.h>
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
+
+class UserConsole;
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
@@ -64,7 +67,8 @@ public:
     virtual int select(bool bWriting = false, int timeout = 0);
 
     String m_Name;
-    RequestQueue *m_pBackEnd;
+    //RequestQueue *m_pBackEnd;
+    UserConsole *m_pBackEnd;
     uintptr_t m_Param;
     size_t m_Flags;
 

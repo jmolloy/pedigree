@@ -47,6 +47,10 @@ static void *thread_func(void *vptr_args)
 
 int main(void)
 {
+    printf("CTRL-C test <3\n");
+    char tmp[32];
+    read(1, tmp, 1);
+
     printf("Exploding!\n");
     *((int*) 0) = 1234;
     return 0;

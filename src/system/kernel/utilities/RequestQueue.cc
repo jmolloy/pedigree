@@ -88,9 +88,11 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   // Wait for the request to be satisfied. This should sleep the thread.
   pReq->mutex.acquire();
 
-  pThread->setBlockingThread(0);
+  // Don't use the Thread object if it may be already freed
+  if(!pReq->bReject)
+      pThread->setBlockingThread(0);
 
-  if(pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
+  if(pReq->bReject || pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
   {
       // The request was interrupted somehow. We cannot assume that pReq's
       // contents are valid, so just return zero. The caller may have to redo
@@ -169,7 +171,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 
       pThread->setBlockingThread(0);
 
-      if(pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
+      if(pReq->bReject || pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
       {
           // The request was interrupted somehow. We cannot assume that pReq's
           // contents are valid, so just return zero. The caller may have to redo

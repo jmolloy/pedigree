@@ -44,9 +44,10 @@ public:
     /** Picks another thread to run, if there is one, and switches to it.
         \param nextStatus The thread status to assign the current thread when
                           it is swapped.
+        \param pNewThread Overrides the next thread to switch to.
         \param pLock      Optional lock to release when the thread is safely
                           locked. */
-    void schedule(Thread::Status nextStatus=Thread::Ready, Spinlock *pLock=0);
+    void schedule(Thread::Status nextStatus=Thread::Ready, Thread *pNewThread = 0, Spinlock *pLock=0);
 
     /** Looks for event handlers to run, and if found, dispatches one.
         \param userStack The stack to use if the event has a user-mode handler. Usually obtained
@@ -83,7 +84,7 @@ public:
               any thread. */
     inline void sleep(Spinlock *pLock=0)
     {
-        schedule(Thread::Sleeping, pLock);
+        schedule(Thread::Sleeping, 0, pLock);
     }
 
     /** TimerHandler callback. */

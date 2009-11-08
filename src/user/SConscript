@@ -1,4 +1,4 @@
-####################################
+﻿####################################
 # SCons build system for Pedigree
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
 ####################################
@@ -21,7 +21,11 @@ subdirs = [
     'applications/config',
     'applications/display-mode',
     'applications/reboot',
-    'applications/sudo'
+    'applications/sudo',
+    
+    # BSD ports sit in their own directory so that they are distinct from our
+    # Pedigree-specific code.
+    'applications/bsd-apps'
 ]
 
 # Cleans a set of flags

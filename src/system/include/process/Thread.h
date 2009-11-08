@@ -114,7 +114,7 @@ public:
             return m_StateLevels[MAX_NESTED_EVENTS - 1].m_State;
         }
         m_nStateLevel++;
-        NOTICE("New state level: " << m_nStateLevel << "...");
+        // NOTICE("New state level: " << m_nStateLevel << "...");
         m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
         allocateStackAtLevel(m_nStateLevel);
 
@@ -331,6 +331,7 @@ public:
         {
             NOTICE_NOLOCK("Setting a request to be rejected");
             (*it)->bReject = true;
+            (*it)->mutex.release();
         }
     }
 

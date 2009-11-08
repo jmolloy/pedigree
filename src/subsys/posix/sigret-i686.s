@@ -24,14 +24,23 @@ sigret_stub:
   add esp, 4
 
   ; Grab the serialised data, read the first byte for the signal number
-  mov edi, [esp]
-  mov esi, [esp + 4]
-  cmp esi, 0
-  jz .justRun
+  ;mov edi, [esp]
+  ;mov esi, [esp + 4]
+  ;cmp esi, 0
+  ;jz .justRun
 
-  xor ebx, ebx
-  mov byte bl, [esi]
-  push ebx
+  ;xor ebx, ebx
+  ;mov byte bl, [esi]
+  ;push ebx
+  
+  ; Handler address
+  mov edi, [esp]
+  
+  ; Push the serialized buffer
+  mov esi, [esp + 4]
+  push esi
+  
+  ; TODO: Push the handler address too and call a common stub of some sort...
 
 .justRun:
   ; Run the handler
