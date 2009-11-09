@@ -319,14 +319,32 @@ int posix_kill(int pid, int sig)
         {
             ProcessGroup *pGroup = pPosixProcess->getProcessGroup();
 
-            // Iterate over the group and recurse.
+            // Create a temporary list that contains all the PosixProcess
+            // objects that we'll be sending signals too. This is because
+            // we can't rely on the state of the real list as objects may
+            // be removed from it as a result of this signal.
+            List<PosixProcess*> tmpList;
+            NOTICE_NOLOCK("Iterating over group members #1");
             for(List<PosixProcess *>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
             {
                 // Do not send it to ourselves
                 PosixProcess *member = *it;
                 if(member)
+                    tmpList.pushBack(member);
+            }
+
+            // Now we can safely send the signals
+            NOTICE_NOLOCK("Iterating over group members #2");
+            for(List<PosixProcess *>::Iterator it = tmpList.begin(); it != tmpList.end(); it++)
+            {
+                // Do not send it to ourselves
+                NOTICE_NOLOCK("iterator: " << reinterpret_cast<uintptr_t>(*it) << "...");
+                PosixProcess *member = *it;
+                NOTICE_NOLOCK("safe pointer");
+                if(member)
                     doProcessKill(member, sig);
             }
+            NOTICE("Done");
         }
         else
         {
@@ -346,6 +364,7 @@ int posix_kill(int pid, int sig)
     // Yield to allow the events to be propagated across the process(es)
     Scheduler::instance().yield();
 
+    NOTICE("posix_kill returns");
     return 0;
 }
 
