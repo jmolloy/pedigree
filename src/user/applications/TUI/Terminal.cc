@@ -27,7 +27,7 @@ extern rgb_t g_MainBackgroundColour;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
-    m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(false)
+    m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
 {
     // Create a new backbuffer.
     m_pBuffer = Syscall::newBuffer();
@@ -190,6 +190,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 {
     m_pXterm->hideCursor(rect);
 
+    bool bWasAlreadyRunning = m_WriteInProgress;
     m_WriteInProgress = true;
     syslog(LOG_NOTICE, "Beginning write...");
     while (!m_Cancel && (*pStr || m_WriteBufferLen))
@@ -249,7 +250,6 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 
         // End UTF-8 -> UTF-32 conversion.
 #ifndef NEW_XTERM
-        
         m_pXterm->write(utf32, rect);
 #else
         rect.point(m_OffsetLeft,m_OffsetTop);
@@ -259,9 +259,12 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
     }
     syslog(LOG_NOTICE, "Completed write [%scancelled]...", m_Cancel ? "" : "not ");
 
-    if(m_Cancel)
-        m_Cancel = 0;
-    m_WriteInProgress = false;
+    if(!bWasAlreadyRunning)
+    {
+        if(m_Cancel)
+            m_Cancel = 0;
+        m_WriteInProgress = false;
+    }
 
     m_pXterm->showCursor(rect);
 }

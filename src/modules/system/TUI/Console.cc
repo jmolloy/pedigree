@@ -37,7 +37,10 @@ uint64_t UserConsole::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
 
+    NOTICE("[" << pProcess->getId() << "]    addRequest(" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5 << ")");
+
     m_RequestQueueMutex.acquire();
+    pThread->addSpinlock(&m_RequestQueueMutex);
 
     // Prepare the request information structure
     TuiRequest *pReq = new TuiRequest;
@@ -98,7 +101,6 @@ uint64_t UserConsole::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint
     TuiRequestEvent *pEvent = new TuiRequestEvent(pReq->reqType, pReq->buffer, pReq->bufferSize, pReq->id, p2, handlerAddress);
 
     // Send it and then acquire the mutex to wait for it to complete
-    m_RequestQueueMutex.release();
     m_pTuiThread->sendEvent(pEvent);
     pReq->mutex.acquire();
 
@@ -144,6 +146,9 @@ uint64_t UserConsole::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint
 
     /// \todo Handle unusual exit cases
     delete pReq;
+    pThread->removeSpinlock(&m_RequestQueueMutex);
+    m_RequestQueueMutex.release();
+
     return ret;
 }
 
@@ -211,8 +216,8 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (bAsync)
         {
             assert_heap_ptr_valid(m_pReq);
-            if(!m_pReq->bReject)
-                m_pReq->pThread->removeRequest(m_pReq);
+//            if(!m_pReq->bReject)
+//                m_pReq->pThread->removeRequest(m_pReq);
             delete m_pReq;
             m_pReq = 0;
         }

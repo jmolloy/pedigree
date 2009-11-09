@@ -219,8 +219,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
         c &= 0x1F;
         if(c == 0x3)
         {
-            // Awaken and stop the RequestQueue if it's blocking
-            syscall0(TUI_STOP_REQUEST_QUEUE);
+            syslog(LOG_NOTICE, "TUI: got ctrl-c");
 
             // Cancel the current write operation, if any
             g_pCurrentTerm->term->cancel();
@@ -243,6 +242,8 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
     }
     else
         pT->addToQueue(c);
+    
+#if 0
     rect2.reset();
     if(!pT->hasPendingRequest() && pT->queueLength() > 0)
         sz = pT->getPendingRequestSz();
@@ -269,6 +270,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
         pT->setHasPendingRequest(false, 0);
     }
     delete [] buffer;
+#endif
 
     syscall0(TUI_EVENT_RETURNED);
 }
@@ -374,8 +376,10 @@ void write_handler(uint8_t *pBuffer)
     else
     {
         DirtyRectangle rect2;
+
         buff[maxSz] = '\0';
         pT->write(buff, rect2);
+
         Syscall::updateBuffer(pT->getBuffer(), rect2);
         ret = maxSz;
     }

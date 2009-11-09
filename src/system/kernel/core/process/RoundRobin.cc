@@ -89,7 +89,7 @@ void RoundRobin::threadStatusChanged(Thread *pThread)
         {
             if((*it) == pThread)
             {
-                WARNING("RoundRobin: A thread was already in this priority queue");
+                // WARNING("RoundRobin: A thread was already in this priority queue");
                 return;
             }
         }

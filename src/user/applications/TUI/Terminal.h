@@ -18,6 +18,8 @@
 #define TERMINAL_H
 
 #include "environment.h"
+#include <syscall.h>
+#include <syslog.h>
 
 #ifndef NEW_XTERM
 # include "_Xterm.h"
@@ -97,7 +99,9 @@ public:
     void cancel()
     {
         if(m_WriteInProgress)
+        {
             m_Cancel = 1;
+        }
     }
 
 private:
@@ -129,8 +133,8 @@ private:
 
     size_t m_OffsetLeft, m_OffsetTop;
 
-    int m_Cancel;
-    bool m_WriteInProgress;
+    volatile char m_Cancel;
+    volatile bool m_WriteInProgress;
 };
 
 #endif

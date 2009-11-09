@@ -26,7 +26,7 @@ class TuiRequestEvent : public Event
 {
     public:
         TuiRequestEvent(size_t req, uintptr_t buff, size_t maxSz, size_t reqId, size_t tabId, uintptr_t handlerAddress) :
-            Event(handlerAddress, true), m_Req(req), m_Buff(buff),
+            Event(handlerAddress, true, req == CONSOLE_READ ? ~0 : 0), m_Req(req), m_Buff(buff),
             m_MaxSz(maxSz), m_ReqId(reqId), m_TabId(tabId)
         {};
         virtual ~TuiRequestEvent()
@@ -118,7 +118,6 @@ public:
         TuiRequest *pReq = m_ActiveRequests.lookup(reqId);
         if(pReq)
         {
-            NOTICE("Waking up a request");
             pReq->returnValue = returnVal;
             pReq->mutex.release();
         }

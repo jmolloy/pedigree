@@ -300,22 +300,22 @@ public:
     size_t getPriority()
     {return m_Priority;}
 
-    /** Adds a request to the Thread's pending request list */
-    void addRequest(RequestQueue::Request *req)
+    /** Adds a Spinlock to the Thread's locked spinlock list */
+    void addSpinlock(Spinlock *req)
     {
-        m_PendingRequests.pushBack(req);
+        m_LockedSpinlocks.pushBack(req);
     }
 
-    /** Removes a request from the Thread's pending request list */
-    void removeRequest(RequestQueue::Request *req)
+    /** Removes a Spinlock from the Thread's locked spinlock list */
+    void removeSpinlock(Spinlock *req)
     {
-        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-            it != m_PendingRequests.end();
+        for(List<Spinlock*>::Iterator it = m_LockedSpinlocks.begin();
+            it != m_LockedSpinlocks.end();
             it++)
         {
             if(req == *it)
             {
-                m_PendingRequests.erase(it);
+                m_LockedSpinlocks.erase(it);
                 return;
             }
         }
@@ -325,14 +325,22 @@ public:
     void unexpectedExit()
     {
         NOTICE_NOLOCK("unexpectedExit");
-        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-            it != m_PendingRequests.end();
+        for(List<Spinlock*>::Iterator it = m_LockedSpinlocks.begin();
+            it != m_LockedSpinlocks.end();
             it++)
         {
-            NOTICE_NOLOCK("Setting a request to be rejected");
-            (*it)->bReject = true;
-            (*it)->mutex.release();
+            NOTICE_NOLOCK("Releasing a locked spinlock");
+            (*it)->release();
         }
+
+        // Clear out the pending events so that we don't accidentally
+        // have any of them called while we're trying to exit.
+        NOTICE_NOLOCK("Clearing " << m_EventQueue.count() << " events");
+        m_EventQueue.clear();
+
+        // And automatically drop back to state level zero
+        /// \todo Clean up stacks on the way
+        m_nStateLevel = 0;
     }
 
     /**
@@ -438,8 +446,11 @@ private:
     /** Thread priority: 0..MAX_PRIORITIES-1, 0 being highest. */
     size_t m_Priority;
 
-    /** List of requests pending on this Thread */
-    List<RequestQueue::Request*> m_PendingRequests;
+    /**
+     * List of locked spinlocks associated with this thread that should be
+     * unlocked in case of an unexpected exit.
+     */
+    List<Spinlock*> m_LockedSpinlocks;
 };
 
 #endif

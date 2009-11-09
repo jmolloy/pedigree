@@ -277,10 +277,10 @@ int doThreadKill(Thread *p, int sig)
         p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
 
         // Switch to that context in order to handle the event
-        /*bool bWasInterrupts = Processor::getInterrupts();
+        bool bWasInterrupts = Processor::getInterrupts();
         Processor::setInterrupts(false);
         Processor::information().getScheduler().schedule(Thread::Ready, p);
-        Processor::setInterrupts(bWasInterrupts);*/
+        Processor::setInterrupts(bWasInterrupts);
     }
 
     return 0;
