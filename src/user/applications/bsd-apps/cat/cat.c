@@ -1,4 +1,4 @@
-﻿/*	$OpenBSD: cat.c,v 1.20 2009/10/27 23:59:19 deraadt Exp $	*/
+/*	$OpenBSD: cat.c,v 1.20 2009/10/27 23:59:19 deraadt Exp $	*/
 /*	$NetBSD: cat.c,v 1.11 1995/09/07 06:12:54 jtc Exp $	*/
 
 /*
