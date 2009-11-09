@@ -77,6 +77,8 @@ opts.AddVariables(
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
     
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
+    
+    BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -205,7 +207,7 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
 else:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd']
+additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]

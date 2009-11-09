@@ -217,6 +217,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
     if((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
     {
         c &= 0x1F;
+#ifdef ENABLE_CTRLC
         if(c == 0x3)
         {
             syslog(LOG_NOTICE, "TUI: got ctrl-c");
@@ -233,6 +234,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
             // However, with this return, CTRL-C in bash ends up behaving weirdly.
             syscall0(TUI_EVENT_RETURNED);
         }
+#endif
     }
 
     if(checkCommand(c, rect2))
