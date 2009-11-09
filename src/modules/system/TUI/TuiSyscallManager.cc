@@ -56,12 +56,6 @@ void callback(uint64_t key)
     ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
 }
 
-void install_handlers(uintptr_t readHandler, uintptr_t writeHandler, uintptr_t miscHandler)
-{
-    NOTICE("TUI: installing handlers: r=" << readHandler << ", w=" << writeHandler << ", m=" << miscHandler << ".");
-    g_UserConsole->setupHandlers(readHandler, writeHandler, miscHandler);
-}
-
 void pedigree_event_return()
 {
     // Return to the old code
@@ -263,17 +257,6 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         case TUI_STOP_REQUEST_QUEUE:
             NOTICE("Breaking from the request queue block now...");
             g_UserConsole->stopCurrentBlock();
-            break;
-        case TUI_YIELD:
-            Scheduler::instance().yield();
-            break;
-        case TUI_INSTALL_EVENT_HANDLERS:
-            install_handlers(p1, p2, p3);
-            break;
-        case TUI_REQUEST_RETURN:
-            NOTICE("Request #" << p1 << " returned " << p2);
-            g_UserConsole->setReturnValue(p1, p2);
-            pedigree_event_return();
             break;
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }

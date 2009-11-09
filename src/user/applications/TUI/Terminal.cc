@@ -192,6 +192,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 
     bool bWasAlreadyRunning = m_WriteInProgress;
     m_WriteInProgress = true;
+    //syslog(LOG_NOTICE, "Beginning write of '%s'...", pStr);
     syslog(LOG_NOTICE, "Beginning write...");
     while (!m_Cancel && (*pStr || m_WriteBufferLen))
     {

@@ -16,140 +16,14 @@
 #include "Console.h"
 #include <panic.h>
 #include <utilities/assert.h>
-#include <processor/PhysicalMemoryManager.h>
 
 UserConsole::UserConsole() :
-    RequestQueue(), m_pReq(0), m_pPendingReq(0), m_TuiReadHandler(0), m_TuiWriteHandler(0), m_TuiMiscHandler(0),
-    m_pTuiThread(0), m_NextRequestID(), m_ActiveRequests()
+    RequestQueue(), m_pReq(0), m_pPendingReq(0)
 {
 }
 
 UserConsole::~UserConsole()
 {
-}
-
-uint64_t UserConsole::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                                  uint64_t p6, uint64_t p7, uint64_t p8)
-{
-    if(!m_TuiReadHandler)
-        FATAL("UserConsole: TUI hasn't registered yet!");
-
-    Thread *pThread = Processor::information().getCurrentThread();
-    Process *pProcess = pThread->getParent();
-
-    // NOTICE("[" << pProcess->getId() << "]    addRequest(" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5 << ")");
-
-    m_RequestQueueMutex.acquire();
-    pThread->addSpinlock(&m_RequestQueueMutex);
-
-    // Prepare the request information structure
-    TuiRequest *pReq = new TuiRequest;
-    pReq->id = m_NextRequestID++;
-
-    // Decide what to do about the buffer.
-    uintptr_t handlerAddress = 0, virtualBase = 0;
-    if(p1 == CONSOLE_READ || p1 == CONSOLE_WRITE)
-    {
-        // Because we're playing with buffers here, we need to switch to the TUI
-        // address space and map in the buffer.
-        VirtualAddressSpace &oldVa = Processor::information().getVirtualAddressSpace();
-        Processor::switchAddressSpace(*m_pTuiThread->getParent()->getAddressSpace());
-        
-        // We need a buffer. A read needs to write to the buffer, and a write
-        // needs to read from it, so we need to allocate some memory for the
-        // TUI to use.
-        size_t pgSize = PhysicalMemoryManager::instance().getPageSize();
-        size_t nPages = (p3 / pgSize) + 1;
-
-        m_pTuiThread->getParent()->getSpaceAllocator().allocate(p3, virtualBase);
-        for(size_t i = 0; i < nPages; i++)
-        {
-            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-            Processor::information().getVirtualAddressSpace().map(phys,
-                                                                  reinterpret_cast<void*> (virtualBase + (i * pgSize)),
-                                                                  VirtualAddressSpace::Write);
-        }
-
-        pReq->buffer = virtualBase;
-        pReq->bufferSize = p3;
-
-        if(p1 == CONSOLE_READ)
-            handlerAddress = m_TuiReadHandler;
-        else if(p1 == CONSOLE_WRITE)
-        {
-            memcpy(reinterpret_cast<uint8_t*>(virtualBase), reinterpret_cast<uint8_t*>(p4), p3);
-            handlerAddress = m_TuiWriteHandler;
-        }
-
-        Processor::switchAddressSpace(oldVa);
-    }
-    else
-    {
-        // No buffer needed
-        pReq->buffer = pReq->bufferSize = 0;
-        handlerAddress = m_TuiMiscHandler;
-    }
-
-    // Set up the rest of the request
-    pReq->returnValue = 0;
-    pReq->reqType = p1;
-
-    // Add this to our tree
-    m_ActiveRequests.insert(pReq->id, pReq);
-
-    // Create the event to send to the TUI
-    TuiRequestEvent *pEvent = new TuiRequestEvent(pReq->reqType, pReq->buffer, pReq->bufferSize, pReq->id, p2, handlerAddress);
-
-    // Send it and then acquire the mutex to wait for it to complete
-    m_pTuiThread->sendEvent(pEvent);
-    pReq->mutex.acquire();
-
-    // Copy the buffer now, if needed
-    size_t ret = pReq->returnValue;
-
-    // If there was a buffer created, use it (if needed) and free it
-    if(virtualBase)
-    {
-        // Because we're playing with buffers here, we need to switch to the TUI
-        // address space and map in the buffer.
-        VirtualAddressSpace &oldVa = Processor::information().getVirtualAddressSpace();
-        Processor::switchAddressSpace(*m_pTuiThread->getParent()->getAddressSpace());
-
-        // Copy the buffer of read bytes first (if there are any)
-        if(p1 == CONSOLE_READ && ret > 0)
-        {
-            if(ret > p3)
-                ret = p3;
-            memcpy(reinterpret_cast<uint8_t*>(p4), reinterpret_cast<uint8_t*>(virtualBase), ret);
-        }
-
-        // And then free the pages
-        size_t pgSize = PhysicalMemoryManager::instance().getPageSize();
-        size_t nPages = (p3 / pgSize) + 1;
-        for(size_t i = 0; i < nPages; i++)
-        {
-            size_t flags;
-            physical_uintptr_t phys;
-            void *addr = reinterpret_cast<void*>(virtualBase + (i * pgSize));
-            if(Processor::information().getVirtualAddressSpace().isMapped(addr))
-            {
-                Processor::information().getVirtualAddressSpace().getMapping(addr, phys, flags);
-                Processor::information().getVirtualAddressSpace().unmap(addr);
-                PhysicalMemoryManager::instance().freePage(phys);
-            }
-        }
-
-        m_pTuiThread->getParent()->getSpaceAllocator().free(virtualBase, p3);
-
-        Processor::switchAddressSpace(oldVa);
-    }
-
-    /// \todo Handle unusual exit cases
-    delete pReq;
-    pThread->removeSpinlock(&m_RequestQueueMutex);
-    m_RequestQueueMutex.release();
-
-    return ret;
 }
 
 void UserConsole::requestPending()
@@ -159,7 +33,7 @@ void UserConsole::requestPending()
     m_RequestQueueMutex.acquire();
     m_pPendingReq = m_pReq;
     if(m_pReq)
-        m_pReq = m_pReq->next;
+        m_pReq = m_pReq->next; // 0;
     m_RequestQueueMutex.release();
 }
 
@@ -216,8 +90,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (bAsync)
         {
             assert_heap_ptr_valid(m_pReq);
-//            if(!m_pReq->bReject)
-//                m_pReq->pThread->removeRequest(m_pReq);
+            m_pReq->pThread->removeRequest(m_pReq);
             delete m_pReq;
             m_pReq = 0;
         }
@@ -265,11 +138,28 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     *sz = static_cast<size_t>(m_pReq->p3);
 
     // Verify that it's still valid to run the request
+    /// \todo Racy as hell. What happens if the Thread object is freed? Needs a
+    ///       better solution than this...
+    /*if(m_pReq->pThread && (m_pReq->pThread->getStatus() == Thread::Zombie))
+    {
+        // If it's an XTerm sequence, let it through to the TUI.
+        // This lets curses shutdown work even after the writing thread exits.
+        uint8_t *test = reinterpret_cast<uint8_t*>(m_pReq->p4);
+        if(test[0] != '\e')
+        {
+            WARNING("UserConsole: request made with a zombie thread");
+            return 0;
+        }
+        else
+        {
+            NOTICE("UserConsole: zombie thread request being allowed through");
+        }
+    }*/
+
+    // Verify that it's still valid to run the request
     if(m_pReq->bReject)
     {
         WARNING("UserConsole: request rejected");
-        m_pReq->ret = 0;
-        m_pReq->mutex.release();
         return 0;
     }
 

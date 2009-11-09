@@ -27,7 +27,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_LockedSpinlocks()
+    m_PendingRequests()
 {
   if (pParent == 0)
   {
@@ -75,7 +75,7 @@ Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_LockedSpinlocks()
+    m_PendingRequests()
 {
   if (pParent == 0)
   {
@@ -92,7 +92,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_LockedSpinlocks()
+    m_PendingRequests()
 {
   if (pParent == 0)
   {
@@ -179,17 +179,17 @@ void Thread::sendEvent(Event *pEvent)
     LockGuard<Spinlock> guard(m_Lock);
 
     m_EventQueue.pushBack(pEvent);
-    // NOTICE("Sending event: " << pEvent->getNumber() << ".");
+    NOTICE("Sending event: " << pEvent->getNumber() << ".");
     if (m_Status == Sleeping)
     {
         // Interrupt the sleeping thread, there's an event firing
         m_Status = Ready;
-        // NOTICE("Set status");
+        NOTICE("Set status");
 
         // Notify the scheduler that we're now ready, so we get put into the
         // scheduling algorithm's ready queue.
         Scheduler::instance().threadStatusChanged(this);
-        // NOTICE("Notified the scheduler that we've changed status");
+        NOTICE("Notified the scheduler that we've changed status");
     }
 }
 

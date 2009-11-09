@@ -17,7 +17,6 @@
 #include "Console.h"
 #include <vfs/VFS.h>
 #include <Module.h>
-#include <TUI/Console.h>
 
 #include <process/Scheduler.h>
 
@@ -59,7 +58,7 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
     ConsoleFile *pConsole = new ConsoleFile(consoleName, this);
 
     pConsole->m_Name = consoleName;
-    pConsole->m_pBackEnd = static_cast<UserConsole*>(backEnd);
+    pConsole->m_pBackEnd = backEnd;
     pConsole->m_Param = param;
 
     m_Consoles.pushBack(pConsole);
@@ -424,7 +423,7 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
     char *newbuf = new char[size];
     memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
-    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uintptr_t>(newbuf));
+    uint64_t nBytes = m_pBackEnd->addAsyncRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uint64_t>(newbuf));
 
     return size;
 }

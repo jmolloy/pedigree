@@ -114,7 +114,7 @@ public:
             return m_StateLevels[MAX_NESTED_EVENTS - 1].m_State;
         }
         m_nStateLevel++;
-        // NOTICE("New state level: " << m_nStateLevel << "...");
+        NOTICE("New state level: " << m_nStateLevel << "...");
         m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
         allocateStackAtLevel(m_nStateLevel);
 
@@ -300,22 +300,22 @@ public:
     size_t getPriority()
     {return m_Priority;}
 
-    /** Adds a Spinlock to the Thread's locked spinlock list */
-    void addSpinlock(Spinlock *req)
+    /** Adds a request to the Thread's pending request list */
+    void addRequest(RequestQueue::Request *req)
     {
-        m_LockedSpinlocks.pushBack(req);
+        m_PendingRequests.pushBack(req);
     }
 
-    /** Removes a Spinlock from the Thread's locked spinlock list */
-    void removeSpinlock(Spinlock *req)
+    /** Removes a request from the Thread's pending request list */
+    void removeRequest(RequestQueue::Request *req)
     {
-        for(List<Spinlock*>::Iterator it = m_LockedSpinlocks.begin();
-            it != m_LockedSpinlocks.end();
+        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+            it != m_PendingRequests.end();
             it++)
         {
             if(req == *it)
             {
-                m_LockedSpinlocks.erase(it);
+                m_PendingRequests.erase(it);
                 return;
             }
         }
@@ -325,22 +325,13 @@ public:
     void unexpectedExit()
     {
         NOTICE_NOLOCK("unexpectedExit");
-        for(List<Spinlock*>::Iterator it = m_LockedSpinlocks.begin();
-            it != m_LockedSpinlocks.end();
+        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+            it != m_PendingRequests.end();
             it++)
         {
-            NOTICE_NOLOCK("Releasing a locked spinlock");
-            (*it)->release();
+            NOTICE_NOLOCK("Setting a request to be rejected");
+            (*it)->bReject = true;
         }
-
-        // Clear out the pending events so that we don't accidentally
-        // have any of them called while we're trying to exit.
-        NOTICE_NOLOCK("Clearing " << m_EventQueue.count() << " events");
-        m_EventQueue.clear();
-
-        // And automatically drop back to state level zero
-        /// \todo Clean up stacks on the way
-        m_nStateLevel = 0;
     }
 
     /**
@@ -446,11 +437,8 @@ private:
     /** Thread priority: 0..MAX_PRIORITIES-1, 0 being highest. */
     size_t m_Priority;
 
-    /**
-     * List of locked spinlocks associated with this thread that should be
-     * unlocked in case of an unexpected exit.
-     */
-    List<Spinlock*> m_LockedSpinlocks;
+    /** List of requests pending on this Thread */
+    List<RequestQueue::Request*> m_PendingRequests;
 };
 
 #endif
