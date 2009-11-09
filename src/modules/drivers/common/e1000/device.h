@@ -39,6 +39,8 @@
 
 enum {
     REG_CTL             =    0x0,
+    REG_STATUS          =    0x8,
+    REG_EECD            =   0x10,
     REG_EEPROM_READ     =   0x14, /* EERD */
     REG_VET             =   0x38, /* VLAN */
 
@@ -99,6 +101,28 @@ enum {
 enum {
     EEPROM_OFS_MAC      = 0x0,
 };
+
+enum {
+    EECD_SK             = 1,
+    EECD_CS             = 2,
+    EECD_DI             = 4,
+    EECD_DO             = 8,
+    EECD_EE_REQ         = 64,
+    EECD_EE_GNT         = 128,
+    EECD_EE_PRES        = 256,
+    EECD_EE_SIZE        = 512,
+    EECD_EE_ABITS       = 1024,
+    EECD_EE_TYPE        = 8192
+};
+
+#define UWIRE_OP_ERASE      0x4
+#define UWIRE_OP_WRITE      0x5
+#define UWIRE_OP_READ       0x6
+
+#define EECD_FWE(x)         ((x) << 4)
+#define EECD_FWE_DISABLED   EECD_FWE(1)
+#define EECD_FWE_ENABLED    EECD_FWE(2)
+
 
 #define RAH_VALID   (1 << 31) /* AV */
 

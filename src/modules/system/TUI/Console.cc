@@ -37,7 +37,7 @@ uint64_t UserConsole::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
 
-    NOTICE("[" << pProcess->getId() << "]    addRequest(" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5 << ")");
+    // NOTICE("[" << pProcess->getId() << "]    addRequest(" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5 << ")");
 
     m_RequestQueueMutex.acquire();
     pThread->addSpinlock(&m_RequestQueueMutex);

@@ -45,14 +45,161 @@
 static void e1000_handle_interrupt(struct cdi_device* device);
 static uint64_t get_mac_address(struct e1000_device* device);
 
+// Direct EEPROM manipulation: write data
+static void e1000_eeprom_uwire_out(struct e1000_device* device, uint16_t data, uint16_t len)
+{
+    uint32_t mask = 1 << (len - 1);
+    uint32_t eecd = reg_inl(device, REG_EECD) & ~(EECD_DO | EECD_SK);
+
+    do
+    {
+        if(data & mask)
+            eecd |= EECD_DI;
+        else
+            eecd |= ~(EECD_DI);
+
+        reg_outl(device, REG_EECD, eecd);
+        reg_inl(device, REG_STATUS);
+        cdi_sleep_ms(50);
+
+        reg_outl(device, REG_EECD, eecd | EECD_SK);
+        reg_inl(device, REG_STATUS);
+        cdi_sleep_ms(50);
+
+        reg_outl(device, REG_EECD, eecd);
+        reg_inl(device, REG_STATUS);
+        cdi_sleep_ms(50);
+
+        mask >>= 1;
+    }
+    while(mask);
+
+    reg_outl(device, REG_EECD, eecd & ~(EECD_DI));
+    reg_inl(device, REG_STATUS);
+}
+
+// Direct EEPROM manipulation: read data
+static uint16_t e1000_eeprom_uwire_in(struct e1000_device* device, uint16_t len)
+{
+    uint32_t data = 0;
+    uint32_t eecd = reg_inl(device, REG_EECD) & ~(EECD_DO | EECD_DI);
+    uint16_t i;
+
+    for(i = 0; i < len; i++)
+    {
+        data <<= 1;
+
+        reg_outl(device, REG_EECD, eecd | EECD_SK);
+        reg_inl(device, REG_STATUS);
+        cdi_sleep_ms(50);
+
+        eecd = reg_inl(device, REG_EECD) & ~(EECD_DI);
+        if(eecd & EECD_DO)
+            data |= 1;
+
+        reg_outl(device, REG_EECD, eecd | EECD_SK);
+        reg_inl(device, REG_STATUS);
+        cdi_sleep_ms(50);
+    }
+
+    return data;
+}
+
+// Direct EEPROM manipulation: read from EEPROM
+static int32_t e1000_eeprom_uwire_read(struct e1000_device* device, uint16_t offset)
+{
+    uint32_t eecd = reg_inl(device, REG_EECD);
+    uint32_t i;
+    if(eecd & EECD_EE_TYPE)
+    {
+        printf("e1000: EERD timeout, and SPI not supported\n");
+        return -1;
+    }
+
+    uint32_t abits = (eecd & EECD_EE_SIZE) ? 8 : 6;
+
+    eecd |= EECD_EE_REQ;
+    reg_outl(device, REG_EECD, eecd);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    for(i = 0; i < 128; i++)
+    {
+        cdi_sleep_ms(50);
+        eecd = reg_inl(device, REG_EECD);
+        if(eecd & EECD_EE_GNT)
+            break;
+    }
+
+    if(!(eecd & EECD_EE_GNT))
+    {
+        printf("e1000: couldn't get access to the EEPROM\n");
+        return -1;
+    }
+
+    eecd &= ~(EECD_DI | EECD_SK);
+    reg_outl(device, REG_EECD, eecd);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    eecd |= EECD_CS;
+    reg_outl(device, REG_EECD, eecd);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    e1000_eeprom_uwire_out(device, UWIRE_OP_READ, 3);
+    e1000_eeprom_uwire_out(device, offset, abits);
+    uint16_t ret = e1000_eeprom_uwire_in(device, 16);
+
+    eecd &= ~(EECD_CS | EECD_DI | EECD_SK);
+    reg_outl(device, REG_EECD, eecd);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    reg_outl(device, REG_EECD, eecd | EECD_SK);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    reg_outl(device, REG_EECD, eecd & ~EECD_EE_REQ);
+    reg_inl(device, REG_STATUS);
+    cdi_sleep_ms(50);
+
+    return ret >> 16;
+}
+
+static int32_t e1000_eeprom_eerd_read(struct e1000_device* device, uint16_t offset)
+{
+    uint32_t eerd; int i;
+    reg_outl(device, REG_EEPROM_READ, (offset << 8) | EERD_START);
+
+    for(i = 0; i < 128; i++)
+    {
+        eerd = reg_inl(device, REG_EEPROM_READ);
+        if(!(eerd & EERD_DONE))
+            cdi_sleep_ms(50);
+    }
+
+    if(!(eerd & EERD_DONE))
+        return -1;
+    return eerd >> 16;
+}
+
 static uint16_t e1000_eeprom_read(struct e1000_device* device, uint16_t offset)
 {
-    uint32_t eerd;
+    int32_t eerd = e1000_eeprom_eerd_read(device, offset);
+    if(eerd == -1)
+    {
+        eerd = e1000_eeprom_uwire_read(device, offset);
+        if(eerd == -1)
+        {
+            printf("e1000: couldn't read the EEPROM\n");
+            return 0;
+        }
+    }
+    
+    // printf("eerd = %x\n", eerd);
 
-    reg_outl(device, REG_EEPROM_READ, (offset << 8) | EERD_START);
-    while (((eerd = reg_inl(device, REG_EEPROM_READ)) & EERD_DONE) == 0);
-    printf("eerd = %8x\n", eerd);
-    return (eerd >> 16);
+    return (uint16_t) eerd;
 }
 
 static void reset_nic(struct e1000_device* netcard)
@@ -99,6 +246,11 @@ static void reset_nic(struct e1000_device* netcard)
 
     // MAC-Filter
     mac = get_mac_address(netcard);
+    if(mac == 0)
+    {
+        printf("e1000: got null mac, eeprom fail?\n");
+        return;
+    }
     reg_outl(netcard, REG_RECV_ADDR_LIST, mac & 0xFFFFFFFF);
     reg_outl(netcard, REG_RECV_ADDR_LIST + 4,
         ((mac >> 32) & 0xFFFF) | RAH_VALID);

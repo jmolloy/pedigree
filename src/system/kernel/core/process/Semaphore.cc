@@ -59,7 +59,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
 
   // If we have a timeout, create the event and register it.
   Event *pEvent = 0;
-  if (timeoutSecs != 0)
+  if (timeoutSecs || timeoutUsecs)
   {
       pEvent = new SemaphoreEvent();
       Machine::instance().getTimer()->addAlarm(pEvent, timeoutSecs, timeoutUsecs);
