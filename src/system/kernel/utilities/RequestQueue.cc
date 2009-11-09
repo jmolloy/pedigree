@@ -252,7 +252,6 @@ int RequestQueue::work()
         // caring about whether we're done or not.
         NOTICE("RequestQueue::work - caller interrupted");
         pReq->pThread->removeRequest(pReq);
-        delete pReq;
         continue;
     }
     switch (Processor::information().getCurrentThread()->getUnwindState())

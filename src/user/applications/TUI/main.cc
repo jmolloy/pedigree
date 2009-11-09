@@ -204,6 +204,8 @@ void sigint(int)
 void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
 {
     uint64_t c = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
+    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
+        return;
 
     /** Add the key to the terminal queue */
 
