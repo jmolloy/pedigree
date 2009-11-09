@@ -21,11 +21,7 @@ subdirs = [
     'applications/config',
     'applications/display-mode',
     'applications/reboot',
-    'applications/sudo',
-    
-    # BSD ports sit in their own directory so that they are distinct from our
-    # Pedigree-specific code.
-    'applications/bsd-apps'
+    'applications/sudo'
 ]
 
 # Cleans a set of flags

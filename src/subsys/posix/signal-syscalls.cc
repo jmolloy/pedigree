@@ -40,7 +40,7 @@ extern "C"
 
 /// \todo These are ok initially, but it'll all have to change at some point
 
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { NOTICE_NOLOCK("SIGNAL " << errcode << "."); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
 
@@ -324,7 +324,6 @@ int posix_kill(int pid, int sig)
             // we can't rely on the state of the real list as objects may
             // be removed from it as a result of this signal.
             List<PosixProcess*> tmpList;
-            NOTICE_NOLOCK("Iterating over group members #1");
             for(List<PosixProcess *>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
             {
                 // Do not send it to ourselves
@@ -334,17 +333,13 @@ int posix_kill(int pid, int sig)
             }
 
             // Now we can safely send the signals
-            NOTICE_NOLOCK("Iterating over group members #2");
             for(List<PosixProcess *>::Iterator it = tmpList.begin(); it != tmpList.end(); it++)
             {
                 // Do not send it to ourselves
-                NOTICE_NOLOCK("iterator: " << reinterpret_cast<uintptr_t>(*it) << "...");
                 PosixProcess *member = *it;
-                NOTICE_NOLOCK("safe pointer");
                 if(member)
                     doProcessKill(member, sig);
             }
-            NOTICE("Done");
         }
         else
         {
@@ -364,7 +359,6 @@ int posix_kill(int pid, int sig)
     // Yield to allow the events to be propagated across the process(es)
     Scheduler::instance().yield();
 
-    NOTICE("posix_kill returns");
     return 0;
 }
 

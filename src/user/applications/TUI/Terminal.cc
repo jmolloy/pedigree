@@ -192,8 +192,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 
     bool bWasAlreadyRunning = m_WriteInProgress;
     m_WriteInProgress = true;
-    //syslog(LOG_NOTICE, "Beginning write of '%s'...", pStr);
-    syslog(LOG_NOTICE, "Beginning write...");
+    //syslog(LOG_NOTICE, "Beginning write...");
     while (!m_Cancel && (*pStr || m_WriteBufferLen))
     {
         // Fill the buffer.
@@ -258,7 +257,7 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
         m_pXterm->write(static_cast<uint8_t>(utf32&0xFF));
 #endif
     }
-    syslog(LOG_NOTICE, "Completed write [%scancelled]...", m_Cancel ? "" : "not ");
+    //syslog(LOG_NOTICE, "Completed write [%scancelled]...", m_Cancel ? "" : "not ");
 
     if(!bWasAlreadyRunning)
     {
