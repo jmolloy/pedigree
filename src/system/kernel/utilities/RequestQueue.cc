@@ -61,7 +61,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   pReq->next = 0;
   pReq->bReject = false;
   pReq->pThread = Processor::information().getCurrentThread();
-  // pReq->pThread->addRequest(pReq);
+  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -108,7 +108,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   uintptr_t ret = pReq->ret;
 
   // Delete the request structure.
-  // pReq->pThread->removeRequest(pReq);
+  pReq->pThread->removeRequest(pReq);
   delete pReq;
 
   return ret;
@@ -124,7 +124,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->next = 0;
   pReq->bReject = false;
   pReq->pThread = Processor::information().getCurrentThread();
-  // pReq->pThread->addRequest(pReq);
+  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -179,13 +179,13 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
           // By releasing here, the worker thread can detect that the request was
           // interrupted and clean up by itself.
           NOTICE("RequestQueue::addRequest - interrupted");
-          // pReq->pThread->removeRequest(pReq);
+          pReq->pThread->removeRequest(pReq);
           pReq->mutex.release();
           return 0;
       }
 
       // Delete the request structure.
-      // pReq->pThread->removeRequest(pReq);
+      pReq->pThread->removeRequest(pReq);
       delete pReq;
   }
   else
@@ -251,7 +251,7 @@ int RequestQueue::work()
         // and grab the next request from the queue. The calling thread has long since stopped
         // caring about whether we're done or not.
         NOTICE("RequestQueue::work - caller interrupted");
-        // pReq->pThread->removeRequest(pReq);
+        pReq->pThread->removeRequest(pReq);
         delete pReq;
         continue;
     }
@@ -274,7 +274,7 @@ int RequestQueue::work()
     // If the request was asynchronous, destroy the request structure.
     if (bAsync)
     {
-        // pReq->pThread->removeRequest(pReq);
+        pReq->pThread->removeRequest(pReq);
         delete pReq;
     }
   }

@@ -331,6 +331,7 @@ public:
         {
             NOTICE_NOLOCK("Setting a request to be rejected");
             (*it)->bReject = true;
+            (*it)->mutex.release();
         }
     }
 

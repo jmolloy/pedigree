@@ -63,7 +63,7 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
 
     m_Consoles.pushBack(pConsole);
 
-    NOTICE("Registerd a console: " << consoleName << ".");
+    NOTICE("Registered a console: " << consoleName << ".");
 
     return true;
 }
@@ -423,7 +423,8 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
     char *newbuf = new char[size];
     memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
-    uint64_t nBytes = m_pBackEnd->addAsyncRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uint64_t>(newbuf));
+    /* Async */
+    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uint64_t>(newbuf));
 
     return size;
 }
