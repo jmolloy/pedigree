@@ -1,1 +1,14 @@
+Welcome to the Pedigree Foster release.
+
+-------------------------------------------------------------------------------
+NOTE: This is a *pre-release* build of Foster. There may still be significant
+bugs which are being worked on, and the quality of this build may not directly
+reflect the quality of the final release. 
+-------------------------------------------------------------------------------
+
+Known issues:
+ - Applications such as the IRC client and 'seatris' have rendering problems
+
+Please report any issues on http://www.pedigree-project.org.
+
 Login with user "james", "matt" or "root", with a password equal to the username.
