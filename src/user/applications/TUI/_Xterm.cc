@@ -108,7 +108,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     if(m_bChangingState)
     {
-        // syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
+        syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
 
         if(utf32 == '?') return; // Useless character.
 
@@ -418,7 +418,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             case '\n':
-                m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
+                m_pWindows[m_ActiveBuffer]->cursorDown(1, rect); //AndLeftToMargin(rect);
                 break;
 
             case '\t':

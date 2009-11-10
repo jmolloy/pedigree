@@ -400,31 +400,47 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 {
     // Post-process output if enabled.
     //if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
-    if(m_Flags & ConsoleManager::OPostProcess)
+    char *tmpBuff = new char[size];
+    size_t realSize = size;
+    if(m_Flags & (ConsoleManager::OPostProcess|ConsoleManager::LEcho))
     {
         char *pC = reinterpret_cast<char*>(buffer);
-        for (size_t i = 0; i < size; i++)
+        for (size_t i = 0, j = 0; j < size; j++)
         {
-            if (pC[i] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
-                pC[i] = '\n';
-            else if (pC[i] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
+            bool bInsert = true;
+            if (pC[j] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
             {
-                // We don't make the distinction between '\r\n' and '\n'.
-                pC[i] = '\n';
+                tmpBuff[i++] = '\n';
+                bInsert = false;
+            }
+            else if (pC[j] == '\n' && (m_Flags & (ConsoleManager::OMapNLToCRNL|ConsoleManager::ONLCausesCR)))
+            {
+                realSize++;
+                char *newBuff = new char[realSize];
+                memcpy(newBuff, tmpBuff, i);
+                delete [] tmpBuff;
+                tmpBuff = newBuff;
+
+                // Map the newline to a \r\n
+                tmpBuff[i++] = '\r';
+                tmpBuff[i++] = '\n';
+
+                bInsert = false;
                 continue;
             }
 
-            // Lastly, after both mappings above have been done, we can
-            // check if NL should cause a CR as well.
-            if (pC[i] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR) == 0)
-                pC[i] = '\xB'; // Use 'VT' - vertical tab.
+            if(bInsert)
+            {
+                tmpBuff[i++] = pC[j];
+            }
         }
     }
+    else
+        memcpy(tmpBuff, reinterpret_cast<char*>(buffer), size);
 
-    char *newbuf = new char[size];
-    memcpy(newbuf, reinterpret_cast<void*>(buffer), size);
     /* Async */
-    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_WRITE, m_Param, size, reinterpret_cast<uint64_t>(newbuf));
+    uint64_t nBytes = m_pBackEnd->addRequest(1, CONSOLE_WRITE, m_Param, realSize, reinterpret_cast<uint64_t>(tmpBuff));
+    delete [] tmpBuff;
 
     return size;
 }
