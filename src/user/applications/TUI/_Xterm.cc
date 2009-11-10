@@ -108,7 +108,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
     if(m_bChangingState)
     {
-        syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
+        // syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
 
         if(utf32 == '?') return; // Useless character.
 

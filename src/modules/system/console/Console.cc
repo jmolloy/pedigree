@@ -398,11 +398,11 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 
 uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    // Post-process output if enabled.
-    //if (m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     char *tmpBuff = new char[size];
     size_t realSize = size;
-    if(m_Flags & (ConsoleManager::OPostProcess|ConsoleManager::LEcho))
+
+    // Post-process output if enabled.
+    if(m_Flags & (ConsoleManager::OPostProcess))
     {
         char *pC = reinterpret_cast<char*>(buffer);
         for (size_t i = 0, j = 0; j < size; j++)

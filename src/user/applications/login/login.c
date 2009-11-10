@@ -83,6 +83,13 @@ int main(int argc, char **argv)
   signal(SIGINT, sigint);
   setsid();
 
+  // Turn on output processing if it's not already on (we depend on it)
+  struct termios curt;
+  tcgetattr(1, &curt);
+  if(!(curt.c_oflag & OPOST))
+      curt.c_oflag |= OPOST;
+  tcsetattr(1, TCSANOW, &curt);
+
   // Grab the greeting if one exists.
   FILE *stream = fopen("root»/config/greeting", "r");
   if (stream)
@@ -126,7 +133,6 @@ int main(int argc, char **argv)
     char password[256], c;
     int i = 0;
 
-    struct termios curt;
     tcgetattr(0, &curt); curt.c_lflag &= ~(ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
 
     while ( i < 256 && (c=getchar()) != '\n' )
