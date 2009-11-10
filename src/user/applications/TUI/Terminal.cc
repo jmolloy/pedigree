@@ -271,6 +271,9 @@ void Terminal::write(char *pStr, DirtyRectangle &rect)
 
 void Terminal::addToQueue(char c)
 {
+    // Don't allow keys to be pressed past the buffer's size
+    if(m_Len >= 256)
+        return;
     m_pQueue[m_Len++] = c;
 }
 
