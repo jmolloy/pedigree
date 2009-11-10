@@ -181,7 +181,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
         }
 
         size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig), nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig)); //, nLevel);
         SG_NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ").");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
@@ -305,6 +305,23 @@ int posix_kill(int pid, int sig)
             break;
     }
 
+    // Does its subsystem exist?
+    if(!p->getSubsystem())
+    {
+        // Hasn't initialised yet!
+        /// \todo SYSCALL_ERROR of some sort
+        WARNING("posix_kill called on a process without a subsystem");
+        return -1;
+    }
+
+    // Ok, so we have a subsystem, but is it a POSIX one?
+    Subsystem *pGenericSubsystem = p->getSubsystem();
+    if(pGenericSubsystem->getType() != Subsystem::Posix)
+    {
+        WARNING("posix_kill called on a non-POSIX process");
+        return -1;
+    }
+
     // If it does, handle the kill request
     if (p)
     {
@@ -326,16 +343,34 @@ int posix_kill(int pid, int sig)
             List<PosixProcess*> tmpList;
             for(List<PosixProcess *>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
             {
-                // Do not send it to ourselves
                 PosixProcess *member = *it;
                 if(member)
+                {
+                    // Verify that the subsystem is valid
+                    if(!p->getSubsystem())
+                    {
+                        // Hasn't initialised yet!
+                        /// \todo SYSCALL_ERROR of some sort
+                        WARNING("posix_kill: a process in this process group did not have a subsystem, signal not being sent");
+                        continue;
+                    }
+
+                    // Ok, so we have a subsystem, but is it a POSIX one?
+                    Subsystem *pGenericSubsystem = p->getSubsystem();
+                    if(pGenericSubsystem->getType() != Subsystem::Posix)
+                    {
+                        WARNING("posix_kill: a process in this process group had a subsystem, but it wasn't a POSIX one, signal not being sent");
+                        return -1;
+                    }
+
+                    // It seems to be all in order. doThreadKill will determine if the signal handler is valid.
                     tmpList.pushBack(member);
+                }
             }
 
             // Now we can safely send the signals
             for(List<PosixProcess *>::Iterator it = tmpList.begin(); it != tmpList.end(); it++)
             {
-                // Do not send it to ourselves
                 PosixProcess *member = *it;
                 if(member)
                     doProcessKill(member, sig);
@@ -561,8 +596,10 @@ void pedigree_init_sigret()
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
 
         size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, i, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, i); //, nLevel);
 
         pSubsystem->setSignalHandler(i, sigHandler);
     }
+
+    SG_NOTICE("Creating initial set of signal handlers is complete");
 }

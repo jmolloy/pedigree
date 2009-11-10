@@ -73,7 +73,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Lock m_pReq. Any use of the RequestQueue will *probably* end up with a
     // change of m_pReq, so stop anyone from accessing the queue.
     m_RequestQueueMutex.acquire();
-    if (m_pReq)
+    if (m_pReq && !m_pReq->bReject)
     {
         m_pReq->ret = responseToLast;
 
@@ -92,9 +92,14 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
             assert_heap_ptr_valid(m_pReq);
             m_pReq->pThread->removeRequest(m_pReq);
             delete m_pReq;
-            m_pReq = 0;
         }
+
+        // Avoid using this request again if possible (it will probably be freed
+        // by the thread that was waiting on the Semaphore if it wasn't async,
+        // and it was just freed by us if it was async).
+        m_pReq = 0;
     }
+
     m_RequestQueueMutex.release();
 
     // Sleep on the queue length semaphore - wake when there's something to do.
@@ -121,6 +126,8 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Quick sanity check:
     if (m_pReq == 0)
     {
+        m_RequestQueueMutex.release();
+
         if(Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
             return 0;
         ERROR("Unwind state: " << (size_t)Processor::information().getCurrentThread()->getUnwindState());

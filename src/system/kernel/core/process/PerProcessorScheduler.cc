@@ -168,8 +168,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
     {
-        ERROR_NOLOCK("checkEventState: Handler address not mapped!");
-        //eventHandlerReturned();
+        ERROR_NOLOCK("checkEventState: Handler address " << handlerAddress << " not mapped!");
+        Processor::setInterrupts(bWasInterrupts);
         return;
     }
 

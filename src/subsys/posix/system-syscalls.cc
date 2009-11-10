@@ -118,6 +118,10 @@ int posix_fork(SyscallState &state)
 
     Processor::setInterrupts(false);
 
+    // Inhibit signals to the parent
+    for(int sig = 0; sig < 32; sig++)
+        Processor::information().getCurrentThread()->inhibitEvent(sig, true);
+
     // Create a new process.
     Process *pParentProcess = Processor::information().getCurrentThread()->getParent();
     PosixProcess *pProcess = new PosixProcess(pParentProcess);
@@ -140,6 +144,10 @@ int posix_fork(SyscallState &state)
         delete pProcess;
 
         SYSCALL_ERROR(OutOfMemory);
+
+        // Allow signals again, something went wrong
+        for(int sig = 0; sig < 32; sig++)
+            Processor::information().getCurrentThread()->inhibitEvent(sig, false);
         return -1;
     }
     pProcess->setSubsystem(pSubsystem);
@@ -155,12 +163,12 @@ int posix_fork(SyscallState &state)
         // Do not adopt leadership status.
         if(p->getGroupMembership() == PosixProcess::Leader)
         {
-            NOTICE("fork parent was a group leader.");
+            SC_NOTICE("fork parent was a group leader.");
             pProcess->setGroupMembership(PosixProcess::Member);
         }
         else
         {
-            NOTICE("fork parent had status " << static_cast<int>(p->getGroupMembership()) << "...");
+            SC_NOTICE("fork parent had status " << static_cast<int>(p->getGroupMembership()) << "...");
             pProcess->setGroupMembership(p->getGroupMembership());
         }
     }
@@ -177,6 +185,10 @@ int posix_fork(SyscallState &state)
 
     // Child returns 0.
     state.setSyscallReturnValue(0);
+
+    // Allow signals to the parent again
+    for(int sig = 0; sig < 32; sig++)
+        Processor::information().getCurrentThread()->inhibitEvent(sig, false);
 
     // Create a new thread for the new process.
     new Thread(pProcess, state);
@@ -320,6 +332,10 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     save_string_array(argv, savedArgv);
     save_string_array(env, savedEnv);
 
+    // Inhibit all signals from coming in while we trash the address space...
+    for(int sig = 0; sig < 32; sig++)
+        Processor::information().getCurrentThread()->inhibitEvent(sig, true);
+
     pProcess->getSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(0x00100000, 0x80000000);
 
@@ -338,6 +354,10 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         pProcess->setLinker(pOldLinker);
         delete pLinker;
         SYSCALL_ERROR(ExecFormatError);
+
+        // Allow signals again, even though the address space is in a completely undefined state now
+        for(int sig = 0; sig < 32; sig++)
+            pProcess->getThread(0)->inhibitEvent(sig, false);
         return -1;
     }
     delete pOldLinker;
@@ -416,6 +436,10 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.m_R7 = pState.m_R7;
     state.m_R8 = pState.m_R8;
 #endif
+
+    // Allow signals again now that everything's loaded
+    for(int sig = 0; sig < 32; sig++)
+        Processor::information().getCurrentThread()->inhibitEvent(sig, false);
 
     return 0;
 }
