@@ -408,12 +408,16 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
         for (size_t i = 0, j = 0; j < size; j++)
         {
             bool bInsert = true;
+
+            // OCRNL: Map CR to NL on output
             if (pC[j] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
             {
                 tmpBuff[i++] = '\n';
-                bInsert = false;
+                continue;
             }
-            else if (pC[j] == '\n' && (m_Flags & (ConsoleManager::OMapNLToCRNL|ConsoleManager::ONLCausesCR)))
+
+            // ONLCR: Map NL to CR-NL on output
+            else if (pC[j] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
             {
                 realSize++;
                 char *newBuff = new char[realSize];
@@ -421,12 +425,21 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
                 delete [] tmpBuff;
                 tmpBuff = newBuff;
 
-                // Map the newline to a \r\n
+                // Add the newline and the caused carriage return
                 tmpBuff[i++] = '\r';
                 tmpBuff[i++] = '\n';
 
-                bInsert = false;
                 continue;
+            }
+
+            // ONLRET: NL performs CR function
+            if(pC[j] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR))
+            {
+                /// \note The documentation for ONLRET is total rubbish... It *seems* just like ONLCR!
+                ///       Or is it supposed to map '\n' to '\r'? Other documents seem to point to a
+                ///       newline "key" instead of "character" - what a mess!
+                ///       So for now, I'm going to hope this doesn't break anything, but it's just
+                ///       going to make newlines a line feed.
             }
 
             if(bInsert)

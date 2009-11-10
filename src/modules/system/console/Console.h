@@ -32,7 +32,7 @@
 
 #define DEFAULT_FLAGS  (ConsoleManager::OPostProcess | \
                         ConsoleManager::IMapCRToNL | \
-                        ConsoleManager::ONLCausesCR | \
+                        ConsoleManager::OMapNLToCRNL | \
                         ConsoleManager::LEcho | \
                         ConsoleManager::LEchoErase | \
                         ConsoleManager::LEchoKill | \

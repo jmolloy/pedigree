@@ -75,13 +75,13 @@ int posix_tcgetattr(int fd, struct termios *p)
       ((flags&ConsoleManager::LEchoNewline)?ECHONL:0) |
       ((flags&ConsoleManager::LCookedMode)?ICANON:0);
 
-  NOTICE("posix_tcgetattr(" << fd << ", {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
+  F_NOTICE("posix_tcgetattr returns {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
   return 0;
 }
 
 int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
 {
-  NOTICE("posix_tcsetattr(" << fd << ", " << optional_actions << ", {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
+  F_NOTICE("posix_tcsetattr(" << fd << ", " << optional_actions << ", {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
 
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
