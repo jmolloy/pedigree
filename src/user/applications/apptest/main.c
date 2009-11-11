@@ -1,17 +1,18 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-//include <pthread.h>
-#include <errno.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <errno.h>
 #include <math.h>
+#include <time.h>
 
-#include <signal.h>
-#include <syslog.h>
 #include <sys/termios.h>
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <pthread.h>
+#include <signal.h>
+#include <syslog.h>
 
 static void wait_thread(void)
 {
@@ -159,6 +160,7 @@ int main(void)
         {
             srand(getpid()*time(NULL));
             unsigned int x2 = 0;
+            int meh = 0;
             while(1)
             {
                 unsigned int r2 = rand()%0xffff;
@@ -166,13 +168,13 @@ int main(void)
                 if(m2 != r2)
                 {
                     printf("Parent Err, r = %u, m = %f, x = %u.\n", r2, m2, x2);
-                    wait();
+                    wait(&meh);
                     return EXIT_SUCCESS;
                 }
                 if(x2>=0x100000)
                 {
                     printf("Parent Success, r = %u, m = %f, x = %u.\n", r2, m2, x2);
-                    wait();
+                    wait(&meh);
                     return EXIT_SUCCESS;
                 }
                 x2++;

@@ -3,7 +3,7 @@
 #------------------------- All Architectures -------------------------#
 
 # Generic entry-level flags (that everyone should have)
-generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O2 '
+generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O3 '
 generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-rtti -fno-exceptions '
 
 # Warning flags (that force us to write betterish code)

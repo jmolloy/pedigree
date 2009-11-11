@@ -466,6 +466,12 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     }
 }
 
+void Xterm::renderAll(DirtyRectangle &rect)
+{
+    rect.point(0, 0);
+    rect.point(getCols() * g_NormalFont->getWidth(), getRows() * g_NormalFont->getHeight());
+}
+
 Xterm::Window::Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
     m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bLineRender(false)

@@ -64,8 +64,8 @@ struct TerminalList
 };
 
 size_t sz;
-TerminalList *g_pTermList = 0;
-TerminalList *g_pCurrentTerm = 0;
+TerminalList * volatile g_pTermList = 0;
+TerminalList * volatile g_pCurrentTerm = 0;
 Header *g_pHeader = 0;
 size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
@@ -101,14 +101,18 @@ void modeChanged(size_t width, size_t height)
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
+    syslog(LOG_NOTICE, "selectTerminal");
     if (g_pCurrentTerm)
         g_pCurrentTerm->term->setActive(false, rect);
 
     g_pCurrentTerm = pTL;
     g_pHeader->select(pTL->term->getTabId());
+    g_pHeader->render(pTL->term->getBuffer(), rect);
     g_pCurrentTerm->term->setActive(true, rect);
 
     Syscall::setCurrentConsole(pTL->term->getTabId());
+
+    Syscall::updateBuffer(pTL->term->getBuffer(), rect);
 }
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
@@ -159,6 +163,7 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
         memcpy(str, reinterpret_cast<char*>(&k), 4);
         str[4] = 0;
 
+#ifdef MULTIPLE_CONSOLES
         if (!strcmp(str, "left"))
         {
             if (g_pCurrentTerm->prev)
@@ -183,6 +188,7 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
             addTerminal(pStr, rect);
             return true;
         }
+#endif
     }
     return false;
 }
@@ -364,7 +370,10 @@ int main (int argc, char **argv)
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 g_nLastResponse = sz;
-                Syscall::updateBuffer(pT->getBuffer(), rect2);
+                
+                // Only update the buffer if we're writing to the current terminal
+                if(pT == g_pCurrentTerm->term)
+                    Syscall::updateBuffer(pT->getBuffer(), rect2);
                 break;
             }
 

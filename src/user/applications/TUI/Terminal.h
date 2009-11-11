@@ -85,6 +85,11 @@ public:
         return m_pXterm->getCols();
     }
 
+    void redrawAll(DirtyRectangle &rect)
+    {
+        m_pXterm->renderAll(rect);
+    }
+
     rgb_t *getBuffer()
     {
         return m_pBuffer;
