@@ -879,13 +879,18 @@ int posix_chdir(const char *path)
     F_NOTICE("chdir(" << path << ")");
 
     File *dir = VFS::instance().find(String(path), GET_CWD());
-    if (dir)
+    if (dir && dir->isDirectory())
     {
         Processor::information().getCurrentThread()->getParent()->setCwd(dir);
 
         char tmp[1024];
         posix_getcwd(tmp, 1024);
         return 0;
+    }
+    else if(dir && !dir->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
     }
     else
     {
