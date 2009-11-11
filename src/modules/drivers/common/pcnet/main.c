@@ -95,6 +95,7 @@ static int pcnet_driver_init(int argc, char* argv[])
             memset(device, 0, sizeof(struct pcnet_device));
 
             device->pci = dev;
+            device->net.dev.pDev = dev->pDev;
             cdi_list_push(driver.net.drv.devices, device);
         } else {
             cdi_pci_device_destroy(dev);

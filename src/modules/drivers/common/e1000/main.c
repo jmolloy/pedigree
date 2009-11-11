@@ -96,6 +96,7 @@ static void e1000_driver_init()
 
             device->phys = phys_device;
             device->pci = dev;
+            device->net.dev.pDev = dev->pDev;
             cdi_list_push(driver.net.drv.devices, device);
         } else {
             cdi_pci_device_destroy(dev);

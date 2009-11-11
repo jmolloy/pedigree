@@ -81,8 +81,6 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
 {
     Network* pDev = reinterpret_cast<Network*>(void_pdev);
 
-    WARNING("cdi_cpp_net_register");
-
     // Create a new CdiNet node
     CdiNet *pCdiNet = new CdiNet(pDev, device);
 
@@ -99,9 +97,5 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    WARNING("cdi_net_receive " << *reinterpret_cast<uint8_t*>(buffer) << "; size = " << size);
-    WARNING("cdi_net_receive buffer at " << reinterpret_cast<uintptr_t>(buffer));
-
     NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.pDev), 0);
-    WARNING("cdi_net_receive done");
 }

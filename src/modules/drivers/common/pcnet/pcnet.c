@@ -98,7 +98,9 @@ void pcnet_init_device(struct cdi_device* device)
     pcnet_start(netcard);
 
     // Netzwerkkarte registrieren
+    printf("init...");
     cdi_net_device_init((struct cdi_net_device*) device);
+    printf("done");
 
     DEBUG_MSG("Fertig initialisiert");
 }
