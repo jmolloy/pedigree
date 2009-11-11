@@ -161,7 +161,7 @@ void Ext2Node::truncate()
 
     m_nSize = 0;
     m_nBlocks = 0;
-  
+
     m_pInode->i_size = 0;
     m_pInode->i_blocks = 0;
 }
@@ -351,8 +351,10 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         // Set the correct entry.
         pBlock[indirectIdx] = HOST_TO_LITTLE32(blockValue);
 
+        /// This causes a assertion failed in SlamAllocator when copying some file on a ext2 volume
+        /// (eddyb)
         // Done.
-        delete [] pBlock;
+        //delete [] pBlock;
     }
     else
     {
