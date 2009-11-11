@@ -11,9 +11,9 @@ def win(stdscr):
 
     rows, cols = stdscr.getmaxyx()
     curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_WHITE)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     socket.setdefaulttimeout(120.0)
 
@@ -196,46 +196,55 @@ def win(stdscr):
 
     myhostname = socket.gethostname()
     while 1:
-				try:
-						ch = send_win.getch()
-						if(ch != -1):
-							if(chr(ch) == '\n'):
-							    if(len(data) > 0):
-									  if(data[0] == "/"):
-										  server.send(data[1:] + "\r\n")
+        try:
+            ch = send_win.getch()
+            if(ch != -1):
+                if(chr(ch) == '\n'):
+                    if(len(data) > 0):
+                        if(data[0] == "/"):
+                            if(data[1:3] == "me"):
+                                k = data.split(" ", 2);
+                                if(len(k) < 2):
+                                    y = handle(["Usage: /me <action>"], server, msg_win, y)
+                                    continue
+                                else:
+                                    server.send("PRIVMSG " + chan + " :" + chr(1) + "ACTION " + k[1] + chr(1) + "\r\n")
+                                    y = handle(["***" + mynick + " " + k[1]], server, msg_win, y)
+                                    continue
+                            server.send(data[1:] + "\r\n")
 
-										  if(data[1:5] == "QUIT" or data[1:5] == "quit"):
-											  running = False
-											  break
-									  else:
-										  msg = "PRIVMSG " + chan + " :" + data
-										  server.send(msg + "\r\n")
-										  y = handle([":" + mynick + "!n=" + mynick + "@" + myhostname + " " + msg], server, msg_win, y)
-									  send_win.erase()
-									  send_win.addstr(0, 0, "> ")
-									  data = ""
-							elif(ch == 0x7F or ch == 0x08):
-								send_win.addstr(send_y, 2 + len(data) - 1, " ")
-								data = data[0:-1]
-								send_win.erase()
-								send_win.addstr(0, 0, "> " + data)
-							else:
-								data += chr(ch)
-								send_win.addstr(send_y, send_x, data)
+                        if(data[1:5] == "QUIT" or data[1:5] == "quit"):
+                            running = False
+                            break
+                        else:
+                            msg = "PRIVMSG " + chan + " :" + data
+                            server.send(msg + "\r\n")
+                            y = handle([":" + mynick + "!n=" + mynick + "@" + myhostname + " " + msg], server, msg_win, y)
+                        send_win.erase()
+                        send_win.addstr(0, 0, "> ")
+                        data = ""
+                elif(ch == 0x7F or ch == 0x08):
+                    send_win.addstr(send_y, 2 + len(data) - 1, " ")
+                    data = data[0:-1]
+                    send_win.erase()
+                    send_win.addstr(0, 0, "> " + data)
+                else:
+                    data += chr(ch)
+                    send_win.addstr(send_y, send_x, data)
 
-						send_win.refresh()
+            send_win.refresh()
 
-						try:
-							readbuffer += server.recv(1024)
-							splitted = readbuffer.split("\n")
-							readbuffer = splitted.pop()
-							y = handle(splitted, server, msg_win, y)
-						except:
-							pass
-				except KeyboardInterrupt:
-						running = False
-						server.send("QUIT My IRC client just crashed :P\r\n")
-						break
+            try:
+                readbuffer += server.recv(1024)
+                splitted = readbuffer.split("\n")
+                readbuffer = splitted.pop()
+                y = handle(splitted, server, msg_win, y)
+            except:
+                pass
+        except KeyboardInterrupt:
+                running = False
+                server.send("QUIT My IRC client just crashed :P\r\n")
+                break
 
     server.close()
 if(len(sys.argv) < 4):
