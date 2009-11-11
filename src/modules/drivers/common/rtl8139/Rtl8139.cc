@@ -1,18 +1,18 @@
 /*
-* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
-*
-* Permission to use, copy, modify, and distribute this software for any
-* purpose with or without fee is hereby granted, provided that the above
-* copyright notice and this permission notice appear in all copies.
-*
-* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITRTLSS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-* ACTION OF CONTRACT, RTLGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-* OR IN CONRTLCTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-*/
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITRTLSS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, RTLGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONRTLCTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #include "Rtl8139.h"
 #include "Rtl8139Constants.h"
 #include <Log.h>
@@ -24,8 +24,8 @@
 
 
 Rtl8139::Rtl8139(Network* pDev) :
-Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_InRx(false), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
-m_pRxBuffPhys(0), m_pTxBuffPhys(0), m_RxBuffMR("rtl8139-rxbuffer"), m_TxBuffMR("rtl8139-txbuffer")
+    Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_RxLock(false), TxLock(), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
+    m_pRxBuffPhys(0), m_pTxBuffPhys(0), m_RxBuffMR("rtl8139-rxbuffer"), m_TxBuffMR("rtl8139-txbuffer")
 {
     setSpecificType(String("rtl8139-card"));
 
@@ -125,17 +125,20 @@ void Rtl8139::reset()
     // enable all good irqs
     m_pBase->write16(RTL_IMR_RXOK | RTL_IMR_RXERR, RTL_IMR);
     m_pBase->write16(0xffff, RTL_ISR);
-    m_InRx = false;
+    m_RxLock = false;
     NOTICE("RTL8139: Reset");
 }
 
 bool Rtl8139::send(size_t nBytes, uintptr_t buffer)
 {
+    LockGuard<Spinlock> guard(TxLock);
+
     if(nBytes > RTL_PACK_MAX)
     {
         ERROR("RTL8139: Attempt to send a packet with size > 64 KB");
         return false;
     }
+
     // copy to the buffer and pad the packet
     memcpy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
     for(int i = nBytes;i < RTL_BUFF_SIZE;i++)
@@ -145,20 +148,21 @@ bool Rtl8139::send(size_t nBytes, uintptr_t buffer)
     m_pBase->write32(static_cast<uint32_t>(m_pTxBuffPhys), RTL_TXADDR0 + m_TxCurr * 4);
     m_pBase->write32(0x3F0000 | (nBytes & 0x1FFF), RTL_TXSTS0 + m_TxCurr * 4);
 
-    // next descriptor, or go to 0 if over 4
+    // next descriptor, or go to 0 if 4 or more
     m_TxCurr++;
     m_TxCurr %= 4;
-    // success!
     return true;
 }
 
 void Rtl8139::recv()
 {
-    while(m_InRx);
-    m_InRx = true;
-    // rxPacket-the addr of the start of the packet; get the status and the lenght, both at the beginning of the packet
+    while(m_RxLock);
+    m_RxLock = true;
+
+    // get the address of the start of the packet;
     uintptr_t rxPacket = reinterpret_cast<uintptr_t>(m_pRxBuffVirt + m_RxCurr);
     uint16_t status = *(reinterpret_cast<uint16_t *>(rxPacket));
+    // get the status and the lenght, both at the beginning of the packet
     uint16_t length = *(reinterpret_cast<uint16_t *>(rxPacket+2));
 
     // if bad packet, reset
@@ -195,7 +199,8 @@ void Rtl8139::recv()
 
     // send the packet to the stack
     NetworkStack::instance().receive(length-4, reinterpret_cast<uintptr_t>(packBuff), this, 0);
-    m_InRx = false;
+
+    m_RxLock = false;
 }
 
 bool Rtl8139::setStationInfo(StationInfo info)
