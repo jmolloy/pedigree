@@ -46,6 +46,7 @@ def win(stdscr):
     send_win.nodelay(True)
 
     recv_win.standout()
+    # TODO: It's possible to join multiple channels. Reflect this in the header.
     recv_win.addstr(0, 1, "  " + mynick + " on " + serv + ", in " + chan + ".  ", curses.color_pair(2))
     recv_win.standend()
     send_win.addstr(0, 0, "> ")
@@ -127,15 +128,15 @@ def win(stdscr):
                 curry = writeline(window, curry, msg)
 
             elif(s2[1].lower() == "join"):
-								if(len(s2[2]) == 0):
-										chan = "unknown"
-								elif(s2[2][0] == ':'):
-										chan = s2[2][1:]
-								else:
-										chan = s2[2]
+                if(len(s2[2]) == 0):
+                    chan = "unknown"
+                elif(s2[2][0] == ':'):
+                    chan = s2[2][1:]
+                else:
+                    chan = s2[2]
 
-								msg = ("%s joined in %s") % (getnick(s2[0]), chan)
-								curry = writeline(window, curry, msg)
+                msg = ("%s joined in %s") % (getnick(s2[0]), chan)
+                curry = writeline(window, curry, msg)
 
             elif(s2[1].lower() == "quit"):
                 if(s2[3][0] == ':'):
@@ -158,17 +159,15 @@ def win(stdscr):
 
             elif(s2[0].lower() == "notice"):
 
-                # if(s2[2][0] == ':'):
-                #     notice = s2[2][1:]
-                # else:
-                #     notice = s2[2]
+                if(s2[2][0] == ':'):
+                    notice = s2[2][1:]
+                else:
+                    notice = s2[2]
 
-                # curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
-                pass
+                curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
 
             else:
-                # curry = writeline(window, curry, line)
-                pass
+                curry = writeline(window, curry, line)
 
         return curry
 
@@ -180,9 +179,11 @@ def win(stdscr):
 
     y = 0
     x = 0
+    
+    readbuffer = ""
 
     try:
-      readbuffer = server.recv(1024)
+      readbuffer += server.recv(1024)
       splitted = readbuffer.split("\n")
       readbuffer = splitted.pop()
       y = handle(splitted, server, msg_win, y)
@@ -193,6 +194,7 @@ def win(stdscr):
     send_x = 2
     send_y = 0
 
+    myhostname = socket.gethostname()
     while 1:
 				try:
 						ch = send_win.getch()
@@ -208,7 +210,7 @@ def win(stdscr):
 									  else:
 										  msg = "PRIVMSG " + chan + " :" + data
 										  server.send(msg + "\r\n")
-										  y = handle([":pedigree!n=pedigree@202.63.42.160.static.rev.aanet.com.au " + msg], server, msg_win, y)
+										  y = handle([":" + mynick + "!n=" + mynick + "@" + myhostname + " " + msg], server, msg_win, y)
 									  send_win.erase()
 									  send_win.addstr(0, 0, "> ")
 									  data = ""
@@ -224,7 +226,7 @@ def win(stdscr):
 						send_win.refresh()
 
 						try:
-							readbuffer = server.recv(1024)
+							readbuffer += server.recv(1024)
 							splitted = readbuffer.split("\n")
 							readbuffer = splitted.pop()
 							y = handle(splitted, server, msg_win, y)

@@ -932,7 +932,8 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
     // One good fillRect should do the job nicely.
-    Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
+    syslog(LOG_NOTICE, "eraseScreen: %d, %d, %d", m_OffsetLeft, m_FbWidth, m_Width * g_NormalFont->getWidth());
+    Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth-m_OffsetLeft, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     for(size_t row = 0; row < m_Height; row++)
     {
@@ -994,14 +995,14 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
     // Again, one fillRect should do it.
-    size_t left = m_CursorX * g_NormalFont->getWidth();
+    size_t left = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
     if((m_CursorX + n) > m_Width)
         n = m_Width - m_CursorX;
     size_t width = n * g_NormalFont->getWidth();
     Syscall::fillRect(m_pFramebuffer,
-                      m_OffsetLeft,
+                      left,
                       m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
-                      n * g_NormalFont->getWidth(),
+                      width,
                       g_NormalFont->getHeight(),
                       g_Colours[m_Bg]);
 

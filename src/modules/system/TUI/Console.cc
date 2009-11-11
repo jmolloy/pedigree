@@ -90,7 +90,8 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         if (bAsync)
         {
             assert_heap_ptr_valid(m_pReq);
-            m_pReq->pThread->removeRequest(m_pReq);
+            if(m_pReq->pThread)
+                m_pReq->pThread->removeRequest(m_pReq);
             delete m_pReq;
         }
 
@@ -151,7 +152,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         // ncurses applications to shutdown without leaving their interface
         // plastered across the TUI.
         char *buff = reinterpret_cast<char*>(m_pReq->p4);
-        if(buff[0] != '\e')
+        if(!buff || buff[0] != '\e')
         {
             WARNING("UserConsole: request rejected");
             return 0;
