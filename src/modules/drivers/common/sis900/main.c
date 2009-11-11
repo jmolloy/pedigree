@@ -29,23 +29,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cdi/net.h"
 #include "cdi/pci.h"
 #include "cdi/misc.h"
 
 #include "device.h"
-
-
-struct module_options {
-    uint32_t ip;
-};
-
-#ifdef TYNDUR
-uint32_t string_to_ip(char* ip);
-#endif
-
-static void process_parameter(struct module_options* options, char* param);
 
 struct sis900_driver {
     struct cdi_net_driver net;
@@ -68,9 +58,7 @@ int init_sis900(int argc, char* argv[])
     sis900_driver_init(argc, argv);
     cdi_driver_register((struct cdi_driver*) &driver);
 
-//#ifdef CDI_STANDALONE
     cdi_run_drivers();
-//#endif
 
     return 0;
 }
@@ -80,12 +68,6 @@ int init_sis900(int argc, char* argv[])
  */
 static void sis900_driver_init(int argc, char* argv[])
 {
-    struct module_options options = {
-        // TODO Auf 0 setzen und am Ende prüfen und ggf. einfach was
-        // freies suchen
-        .ip = 0x0b01a8c0
-    };
-
     // Konstruktor der Vaterklasse
     cdi_net_driver_init((struct cdi_net_driver*) &driver);
     
@@ -97,19 +79,12 @@ static void sis900_driver_init(int argc, char* argv[])
     driver.net.drv.init_device     = sis900_init_device;
     driver.net.drv.remove_device   = sis900_remove_device;
 
-    // Parameter verarbeiten
-    int i;
-#ifdef TYNDUR
-    for (i = 1; i < argc; i++) {
-        process_parameter(&options, argv[i]);
-    }
-#endif
-
     // Passende PCI-Geraete suchen
     cdi_list_t pci_devices = cdi_list_create();
     cdi_pci_get_all_devices(pci_devices);
 
     struct cdi_pci_device* dev;
+    int i;
     for (i = 0; (dev = cdi_list_get(pci_devices, i)); i++) {
         if ((dev->vendor_id == 0x1039) && (dev->device_id == 0x0900)) {
             void* phys_device;
@@ -121,10 +96,6 @@ static void sis900_driver_init(int argc, char* argv[])
 
             device->phys = phys_device;
             device->pci = dev;
-            device->net.dev.pDev = dev->pDev;
-#ifdef TYNDUR
-            device->net.ip = options.ip;
-#endif
             cdi_list_push(driver.net.drv.devices, device);
         } else {
             cdi_pci_device_destroy(dev);
@@ -136,21 +107,6 @@ static void sis900_driver_init(int argc, char* argv[])
 
     cdi_list_destroy(pci_devices);
 }
-
-#ifdef TYNDUR
-static void process_parameter(struct module_options* options, char* param)
-{
-    printf("sis900-Parameter: %s\n", param);
-
-    if (strncmp(param, "ip=", 3) == 0) {
-        uint32_t ip = string_to_ip(&param[3]);
-        printf("IP-Adresse: %08x\n", ip);
-        options->ip = ip;
-    } else {
-        printf("Unbekannter Parameter %s\n", param);
-    }
-}
-#endif
 
 /**
  * Deinitialisiert die Datenstrukturen fuer den sis900-Treiber

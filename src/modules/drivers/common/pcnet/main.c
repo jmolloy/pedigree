@@ -12,13 +12,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *     This product includes software developed by the tyndur Project
- *     and its contributors.
- * 4. Neither the name of the tyndur Project nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -35,6 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cdi/net.h"
 #include "cdi/pci.h"
@@ -52,10 +46,6 @@ static struct {
 
 static const char* driver_name = "pcnet";
 
-// FIXME: LOST-spezifisch
-uint32_t string_to_ip(char* ip);
-
-static void process_parameter(struct module_options* options, char* param);
 static int pcnet_driver_init(int argc, char* argv[]);
 static void pcnet_driver_destroy(struct cdi_driver* driver);
 
@@ -77,12 +67,6 @@ int init_pcnet(int argc, char* argv[])
 
 static int pcnet_driver_init(int argc, char* argv[])
 {
-    struct module_options options = {
-        // TODO Auf 0 setzen und am Ende pr�fen und ggf. einfach was
-        // freies suchen
-        .ip = 0x0b01a8c0
-    };
-
     // TODO Auf pci-Service warten
     // TODO Auf tcpip-Service warten
 
@@ -97,17 +81,12 @@ static int pcnet_driver_init(int argc, char* argv[])
     driver.net.drv.init_device     = pcnet_init_device;
     driver.net.drv.remove_device   = pcnet_remove_device;
 
-    // Parameter verarbeiten
-    int i;
-    for (i = 1; i < argc; i++) {
-        process_parameter(&options, argv[i]);
-    }
-
     // Passende PCI-Geraete suchen
     cdi_list_t pci_devices = cdi_list_create();
     cdi_pci_get_all_devices(pci_devices);
 
     struct cdi_pci_device* dev;
+    int i;
     for (i = 0; (dev = cdi_list_get(pci_devices, i)); i++) {
         if ((dev->vendor_id == VENDOR_ID) && (dev->device_id == DEVICE_ID)) {
             struct pcnet_device* device;
@@ -116,10 +95,6 @@ static int pcnet_driver_init(int argc, char* argv[])
             memset(device, 0, sizeof(struct pcnet_device));
 
             device->pci = dev;
-#ifdef TYNDUR
-            device->net.ip = options.ip;
-#endif
-            device->net.dev.pDev = dev->pDev;
             cdi_list_push(driver.net.drv.devices, device);
         } else {
             cdi_pci_device_destroy(dev);
@@ -129,22 +104,6 @@ static int pcnet_driver_init(int argc, char* argv[])
     cdi_list_destroy(pci_devices);
 
     return 0;
-}
-
-
-static void process_parameter(struct module_options* options, char* param)
-{
-#ifdef TYNDUR
-    printf("pcnet-Parameter: %s\n", param);
-
-    if (strncmp(param, "ip=", 3) == 0) {
-        uint32_t ip = string_to_ip(&param[3]);
-        printf("IP-Adresse: %08x\n", ip);
-        options->ip = ip;
-    } else {
-        printf("Unbekannter Parameter %s\n", param);
-    }
-#endif
 }
 
 /**

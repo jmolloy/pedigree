@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cdi/net.h"
 #include "cdi/pci.h"
@@ -36,9 +37,9 @@
 
 #include "device.h"
 
-static struct e1000_driver {
+struct e1000_driver {
     struct cdi_net_driver net;
-} driver;
+};
 
 static struct e1000_driver driver;
 static const char* driver_name = "e1000";
@@ -57,9 +58,7 @@ int init_e1000(void)
     e1000_driver_init();
     cdi_driver_register((struct cdi_driver*) &driver);
 
-//#ifdef CDI_STANDALONE
     cdi_run_drivers();
-//#endif
 
     return 0;
 }
@@ -97,7 +96,6 @@ static void e1000_driver_init()
 
             device->phys = phys_device;
             device->pci = dev;
-            device->net.dev.pDev = dev->pDev;
             cdi_list_push(driver.net.drv.devices, device);
         } else {
             cdi_pci_device_destroy(dev);

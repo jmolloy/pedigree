@@ -26,10 +26,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "cdi.h"
 #include "cdi/misc.h"
@@ -37,7 +38,7 @@
 #include "device.h"
 #include "e1000_io.h"
 
-#define DEBUG
+#undef DEBUG
 
 #define PHYS(netcard, field) \
     ((uintptr_t) netcard->phys + offsetof(struct e1000_device, field))
@@ -45,161 +46,14 @@
 static void e1000_handle_interrupt(struct cdi_device* device);
 static uint64_t get_mac_address(struct e1000_device* device);
 
-// Direct EEPROM manipulation: write data
-static void e1000_eeprom_uwire_out(struct e1000_device* device, uint16_t data, uint16_t len)
-{
-    uint32_t mask = 1 << (len - 1);
-    uint32_t eecd = reg_inl(device, REG_EECD) & ~(EECD_DO | EECD_SK);
-
-    do
-    {
-        if(data & mask)
-            eecd |= EECD_DI;
-        else
-            eecd |= ~(EECD_DI);
-
-        reg_outl(device, REG_EECD, eecd);
-        reg_inl(device, REG_STATUS);
-        cdi_sleep_ms(50);
-
-        reg_outl(device, REG_EECD, eecd | EECD_SK);
-        reg_inl(device, REG_STATUS);
-        cdi_sleep_ms(50);
-
-        reg_outl(device, REG_EECD, eecd);
-        reg_inl(device, REG_STATUS);
-        cdi_sleep_ms(50);
-
-        mask >>= 1;
-    }
-    while(mask);
-
-    reg_outl(device, REG_EECD, eecd & ~(EECD_DI));
-    reg_inl(device, REG_STATUS);
-}
-
-// Direct EEPROM manipulation: read data
-static uint16_t e1000_eeprom_uwire_in(struct e1000_device* device, uint16_t len)
-{
-    uint32_t data = 0;
-    uint32_t eecd = reg_inl(device, REG_EECD) & ~(EECD_DO | EECD_DI);
-    uint16_t i;
-
-    for(i = 0; i < len; i++)
-    {
-        data <<= 1;
-
-        reg_outl(device, REG_EECD, eecd | EECD_SK);
-        reg_inl(device, REG_STATUS);
-        cdi_sleep_ms(50);
-
-        eecd = reg_inl(device, REG_EECD) & ~(EECD_DI);
-        if(eecd & EECD_DO)
-            data |= 1;
-
-        reg_outl(device, REG_EECD, eecd | EECD_SK);
-        reg_inl(device, REG_STATUS);
-        cdi_sleep_ms(50);
-    }
-
-    return data;
-}
-
-// Direct EEPROM manipulation: read from EEPROM
-static int32_t e1000_eeprom_uwire_read(struct e1000_device* device, uint16_t offset)
-{
-    uint32_t eecd = reg_inl(device, REG_EECD);
-    uint32_t i;
-    if(eecd & EECD_EE_TYPE)
-    {
-        printf("e1000: EERD timeout, and SPI not supported\n");
-        return -1;
-    }
-
-    uint32_t abits = (eecd & EECD_EE_SIZE) ? 8 : 6;
-
-    eecd |= EECD_EE_REQ;
-    reg_outl(device, REG_EECD, eecd);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    for(i = 0; i < 128; i++)
-    {
-        cdi_sleep_ms(50);
-        eecd = reg_inl(device, REG_EECD);
-        if(eecd & EECD_EE_GNT)
-            break;
-    }
-
-    if(!(eecd & EECD_EE_GNT))
-    {
-        printf("e1000: couldn't get access to the EEPROM\n");
-        return -1;
-    }
-
-    eecd &= ~(EECD_DI | EECD_SK);
-    reg_outl(device, REG_EECD, eecd);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    eecd |= EECD_CS;
-    reg_outl(device, REG_EECD, eecd);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    e1000_eeprom_uwire_out(device, UWIRE_OP_READ, 3);
-    e1000_eeprom_uwire_out(device, offset, abits);
-    uint16_t ret = e1000_eeprom_uwire_in(device, 16);
-
-    eecd &= ~(EECD_CS | EECD_DI | EECD_SK);
-    reg_outl(device, REG_EECD, eecd);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    reg_outl(device, REG_EECD, eecd | EECD_SK);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    reg_outl(device, REG_EECD, eecd & ~EECD_EE_REQ);
-    reg_inl(device, REG_STATUS);
-    cdi_sleep_ms(50);
-
-    return ret >> 16;
-}
-
-static int32_t e1000_eeprom_eerd_read(struct e1000_device* device, uint16_t offset)
-{
-    uint32_t eerd; int i;
-    reg_outl(device, REG_EEPROM_READ, (offset << 8) | EERD_START);
-
-    for(i = 0; i < 128; i++)
-    {
-        eerd = reg_inl(device, REG_EEPROM_READ);
-        if(!(eerd & EERD_DONE))
-            cdi_sleep_ms(50);
-    }
-
-    if(!(eerd & EERD_DONE))
-        return -1;
-    return eerd >> 16;
-}
-
 static uint16_t e1000_eeprom_read(struct e1000_device* device, uint16_t offset)
 {
-    int32_t eerd = e1000_eeprom_eerd_read(device, offset);
-    if(eerd == -1)
-    {
-        eerd = e1000_eeprom_uwire_read(device, offset);
-        if(eerd == -1)
-        {
-            printf("e1000: couldn't read the EEPROM\n");
-            return 0;
-        }
-    }
-    
-    // printf("eerd = %x\n", eerd);
+    uint32_t eerd;
 
-    return (uint16_t) eerd;
+    reg_outl(device, REG_EEPROM_READ, (offset << 8) | EERD_START);
+    while (((eerd = reg_inl(device, REG_EEPROM_READ)) & EERD_DONE) == 0);
+    printf("eerd = %8x\n", eerd);
+    return (eerd >> 16);
 }
 
 static void reset_nic(struct e1000_device* netcard)
@@ -246,11 +100,6 @@ static void reset_nic(struct e1000_device* netcard)
 
     // MAC-Filter
     mac = get_mac_address(netcard);
-    if(mac == 0)
-    {
-        printf("e1000: got null mac, eeprom fail?\n");
-        return;
-    }
     reg_outl(netcard, REG_RECV_ADDR_LIST, mac & 0xFFFFFFFF);
     reg_outl(netcard, REG_RECV_ADDR_LIST + 4,
         ((mac >> 32) & 0xFFFF) | RAH_VALID);
@@ -317,14 +166,14 @@ void e1000_init_device(struct cdi_device* device)
     }
 
     // Karte initialisieren
-    printf("e1000: IRQ %d, MMIO an %x  Revision:%d\n",
+    printf("e1000: IRQ %d, MMIO an %p  Revision:%d\n",
         netcard->pci->irq, netcard->mem_base, netcard->revision);
 
     printf("e1000: Fuehre Reset der Karte durch\n");
     reset_nic(netcard);
 
     netcard->net.mac = get_mac_address(netcard);
-    printf("e1000: MAC-Adresse: %012llx\n", netcard->net.mac);
+    printf("e1000: MAC-Adresse: %012llx\n", (uint64_t) netcard->net.mac);
 
     cdi_net_device_init((struct cdi_net_device*) device);
 }
@@ -361,7 +210,7 @@ void e1000_send_packet(struct cdi_net_device* device, void* data, size_t size)
 
     // Head auslesen
     head = reg_inl(netcard, REG_TXDESC_HEAD);
-    if (netcard->tx_cur_buffer == ((int) head)) {
+    if (netcard->tx_cur_buffer == (int) head) {
         printf("e1000: Kein Platz in der Sendewarteschlange!\n");
         return;
     }
@@ -398,7 +247,7 @@ static void e1000_handle_interrupt(struct cdi_device* device)
 
         uint32_t head = reg_inl(netcard, REG_RXDESC_HEAD);
 
-        while (netcard->rx_cur_buffer != ((int) head)) {
+        while (netcard->rx_cur_buffer != (int) head) {
 
             size_t size = netcard->rx_desc[netcard->rx_cur_buffer].length;
             uint8_t status = netcard->rx_desc[netcard->rx_cur_buffer].status;
@@ -436,7 +285,7 @@ static void e1000_handle_interrupt(struct cdi_device* device)
             netcard->rx_cur_buffer %= RX_BUFFER_NUM;
         }
 
-        if (netcard->rx_cur_buffer == ((int) head)) {
+        if (netcard->rx_cur_buffer == (int) head) {
             reg_outl(netcard, REG_RXDESC_TAIL,
                 (head + RX_BUFFER_NUM - 1) % RX_BUFFER_NUM);
         } else {
@@ -446,6 +295,8 @@ static void e1000_handle_interrupt(struct cdi_device* device)
     } else if (icr & ICR_TRANSMIT) {
         // Nichts zu tun
     } else {
+#ifdef DEBUG
         printf("e1000: Unerwarteter Interrupt.\n");
+#endif
     }
 }

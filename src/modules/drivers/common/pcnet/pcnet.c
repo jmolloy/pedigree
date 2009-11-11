@@ -12,13 +12,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *     This product includes software developed by the tyndur Project
- *     and its contributors.
- * 4. Neither the name of the tyndur Project nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -37,11 +30,8 @@
 #include "cdi/io.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
-
-#ifdef TYNDUR
-#include <syscall.h>
-#endif
 
 static void pcnet_handle_interrupt(struct cdi_device* device);
 static void pcnet_reset(struct pcnet_device *netcard);
@@ -122,8 +112,6 @@ void pcnet_remove_device(struct cdi_device* device)
 void pcnet_send_packet
     (struct cdi_net_device* device, void* data, size_t size)
 {
-//    p();
-
     struct pcnet_device *netcard = (struct pcnet_device*) device;
 
     if (netcard->last_transmit_descriptor > 7)netcard->last_transmit_descriptor = 0;
@@ -144,14 +132,10 @@ void pcnet_send_packet
     
     ++netcard->last_transmit_descriptor;
     if (netcard->last_transmit_descriptor == 8)netcard->last_transmit_descriptor = 0;
-
-//    v();
 }
 
 static void pcnet_handle_interrupt(struct cdi_device* device)
 {
-//    p();
-
     struct pcnet_device* netcard = (struct pcnet_device*) device;
 
     if (netcard->init_wait_for_irq == 1)
@@ -160,7 +144,6 @@ static void pcnet_handle_interrupt(struct cdi_device* device)
         pcnet_write_csr(netcard, CSR_STATUS, csr0);
         DEBUG_MSG("Interrupt (wait for irq)");
         netcard->init_wait_for_irq = 0;
-//        v();
         return;
     }
 
@@ -220,8 +203,6 @@ static void pcnet_handle_interrupt(struct cdi_device* device)
         // Clear the interrupt request
         pcnet_write_csr(netcard, CSR_STATUS, STATUS_INTERRUPT_ENABLE | STATUS_RECEIVE_INTERRUPT);
     }
-
-//    v();
 }
 
 static void pcnet_reset(struct pcnet_device *netcard)
@@ -231,7 +212,7 @@ static void pcnet_reset(struct pcnet_device *netcard)
     cdi_sleep_ms(10);
 
     // Set software style to PCnet-PCI 32bit
-    pcnet_write_bcr(netcard, BCR_SOFTWARE_STYLE, 0x02);
+    pcnet_write_bcr(netcard, BCR_SOFTWARE_STYLE, 0x0102);
 
     DEBUG_MSG("Reset");
 }
@@ -255,12 +236,12 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
     }
 
     #ifdef DEBUG
-        printf("pcnet: descriptor region at 0x%x virtual and 0x%x physical\n", virt_desc_region, phys_desc_region);
+        printf("pcnet: descriptor region at 0x%p virtual and 0x%p physical\n", virt_desc_region, phys_desc_region);
     #endif
     netcard->receive_descriptor = virt_desc_region;
-    netcard->transmit_descriptor = (void*) ((char*) virt_desc_region + (2 * 1024));
+    netcard->transmit_descriptor = (struct transmit_descriptor*) (((char*)virt_desc_region) + 2 * 1024);
     netcard->phys_receive_descriptor = phys_desc_region;
-    netcard->phys_transmit_descriptor = (char*) phys_desc_region + (2 * 1024);
+    netcard->phys_transmit_descriptor = (void*) (((char*)phys_desc_region) + 2 * 1024);
 
     // Fill the initialization block
     // NOTE: Transmit and receive buffer contain 8 entries
@@ -276,7 +257,7 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
     netcard->initialization_block->physical_address = netcard->net.mac;
 
     #ifdef DEBUG
-        printf("pcnet: initialization block at 0x%x virtual and 0x%x physical\n",
+        printf("pcnet: initialization block at 0x%p virtual and 0x%p physical\n",
                netcard->initialization_block,
                netcard->phys_initialization_block);
     #endif
@@ -294,7 +275,7 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
             return;
         }
         netcard->receive_buffer[2 * i] = virt_buffer;
-        netcard->receive_buffer[2 * i + 1] = (char*) virt_buffer + 2048;
+        netcard->receive_buffer[2 * i + 1] = ((char*)virt_buffer) + 2048;
         netcard->receive_descriptor[2 * i].address = (uint32_t) phys_buffer;
         netcard->receive_descriptor[2 * i].flags = DESCRIPTOR_OWN | 0xF7FF;
         netcard->receive_descriptor[2 * i].flags2 = 0;
@@ -310,7 +291,7 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
             return;
         }
         netcard->transmit_buffer[2 * i] = virt_buffer;
-        netcard->transmit_buffer[2 * i + 1] = (char*) virt_buffer + 2048;
+        netcard->transmit_buffer[2 * i + 1] = ((char*)virt_buffer) + 2048;
         netcard->transmit_descriptor[2 * i].address = (uint32_t) phys_buffer;
         netcard->transmit_descriptor[2 * i + 1].address = (uint32_t) phys_buffer + 2048;
     }
@@ -326,7 +307,9 @@ void pcnet_dev_init(struct pcnet_device *netcard, int promiscuous)
     pcnet_write_csr(netcard, CSR_STATUS, STATUS_INIT | STATUS_INTERRUPT_ENABLE);
     
     // Wait until initialization completed, NOTE: see pcnet_handle_interrupt()
-    while (netcard->init_wait_for_irq != 0);
+    int irq = cdi_wait_irq(netcard->pci->irq, 1000);
+    if(irq < 0 || netcard->init_wait_for_irq == 1)
+        printf("pcnet: waiting for IRQ failed: %d\n", irq);
     
     // CSR4 Enable transmit auto-padding and receive automatic padding removal
     // TODO DMAPLUS? 

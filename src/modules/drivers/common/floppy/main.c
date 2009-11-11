@@ -102,7 +102,6 @@ static int floppy_driver_init(struct floppy_driver* driver)
 
         // Geraet nur eintragen wenn es existiert
         if (floppy_device_probe(device) != 0) {
-            printf("Registering device %s\n", device->dev.dev.name);
             cdi_list_push(driver->storage.drv.devices, device);
         } else {
             free(device);

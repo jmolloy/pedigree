@@ -123,7 +123,7 @@ static int floppy_read_data(struct floppy_device* device, uint8_t* dest)
     // Wenn der Controller beschaeftigt ist, wird ein bisschen gewartet und
     // danach nochmal probiert
     for (i = 0; i < FLOPPY_READ_DATA_TRIES(device); i++) {
-        msr = floppy_read_byte(device, FLOPPY_REG_MSR); //FLOPPY_REG_DSR);
+        msr = floppy_read_byte(device, FLOPPY_REG_DSR);
 
         // Pruefen ob der Kontroller bereit ist, und Daten zum abholen
         // bereitliegen.
@@ -149,7 +149,7 @@ static int floppy_write_data(struct floppy_device* device, uint8_t data)
     // Wenn der Controller beschaeftigt ist, wird ein bisschen gewartet und
     // danach nochmal probiert
     for (i = 0; i < FLOPPY_WRITE_DATA_TRIES(device); i++) {
-        msr = floppy_read_byte(device, FLOPPY_REG_MSR); // FLOPPY_REG_DSR);
+        msr = floppy_read_byte(device, FLOPPY_REG_DSR);
 
         // Pruefen ob der Kontroller bereit ist, Daten von uns zu akzeptieren
         if ((msr & (FLOPPY_MSR_RQM | FLOPPY_MSR_DIO)) == (FLOPPY_MSR_RQM)) {
@@ -529,7 +529,7 @@ static int floppy_drive_sector_read(struct floppy_device* device, uint32_t lba,
     floppy_write_data(device, 0xFF);
 
     if (device->controller->use_dma == 0) {
-        printf("PIOread");
+        puts("PIOread");
         // Mit PIO
         size_t bytes_done = 0;
         
@@ -712,7 +712,7 @@ int floppy_device_probe(struct floppy_device* device)
     else if(device->id == 1){
         return (t & 0xF);
     }
-    
+
     return 0;
 }
 

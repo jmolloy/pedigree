@@ -26,20 +26,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
-
-#ifdef TYNDUR
-#include <syscall.h>
-#endif
+#include <string.h>
+#include <stdlib.h>
 
 #include "cdi.h"
 #include "cdi/misc.h"
 
 #include "device.h"
 #include "sis900_io.h"
+
+#ifdef TYNDUR
+#include <syscall.h>
+#endif
+
 
 #undef DEBUG
 

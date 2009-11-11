@@ -43,7 +43,7 @@ static struct cdi_device* driver_irq_device[IRQ_COUNT] = { NULL };
  * Array, das die jeweilige Anzahl an aufgerufenen Interrupts seit dem
  * cdi_reset_wait_irq speichert.
  */
-static Mutex irqCountLock;
+static Spinlock irqCountLock;
 static Semaphore *driver_irq_count[IRQ_COUNT] = {0};
 // static volatile uint8_t driver_irq_count[IRQ_COUNT] = { 0 };
 
@@ -151,11 +151,22 @@ int cdi_wait_irq(uint8_t irq, uint32_t timeout)
         return -2;
     }
 
-    LockGuard<Mutex> lock(irqCountLock);
+    Semaphore *pSem;
 
-    if(driver_irq_count[irq])
     {
-        driver_irq_count[irq]->acquire(1, (timeout / 1000) + 1);
+        LockGuard<Spinlock> lock(irqCountLock);
+
+        pSem = driver_irq_count[irq];
+        if(!pSem)
+        {
+            pSem = new Semaphore(0);
+            driver_irq_count[irq] = pSem;
+        }
+    }
+
+    if(pSem)
+    {
+        pSem->acquire(1, 0, timeout * 1000);
         if(Processor::information().getCurrentThread()->wasInterrupted())
             return -3;
         else
