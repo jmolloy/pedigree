@@ -147,8 +147,15 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     // Verify that it's still valid to run the request
     if(m_pReq->bReject)
     {
-        WARNING("UserConsole: request rejected");
-        return 0;
+        // We have to allow escape codes through as they are needed to allow
+        // ncurses applications to shutdown without leaving their interface
+        // plastered across the TUI.
+        char *buff = reinterpret_cast<char*>(m_pReq->p4);
+        if(buff[0] != '\e')
+        {
+            WARNING("UserConsole: request rejected");
+            return 0;
+        }
     }
 
     *terminalId = m_pReq->p2;

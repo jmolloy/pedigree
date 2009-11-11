@@ -158,15 +158,17 @@ def win(stdscr):
 
             elif(s2[0].lower() == "notice"):
 
-                if(s2[2][0] == ':'):
-                    notice = s2[2][1:]
-                else:
-                    notice = s2[2]
+                # if(s2[2][0] == ':'):
+                #     notice = s2[2][1:]
+                # else:
+                #     notice = s2[2]
 
-                curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
+                # curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
+                pass
 
             else:
-                curry = writeline(window, curry, line)
+                # curry = writeline(window, curry, line)
+                pass
 
         return curry
 

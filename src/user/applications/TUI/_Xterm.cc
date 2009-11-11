@@ -231,7 +231,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 else
                 {
                     // Else, it's a scroll downwards command.
-                    m_pWindows[m_ActiveBuffer]->scrollDown(1, rect);
+                    //m_pWindows[m_ActiveBuffer]->scrollDown(1, rect);
                 }
                 m_bChangingState = false;
                 break;
@@ -398,9 +398,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
             default:
             {
-                char tmp[128];
-                sprintf(tmp, "Unhandled XTerm escape code: %d/%c.", utf32, utf32);
-                log(tmp);
+                syslog(LOG_NOTICE, "XTerm: unhandled escape code: %d/%c", utf32, utf32);
 
                 m_bChangingState = false;
             }
@@ -763,7 +761,7 @@ void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
     Syscall::bitBlit(m_pFramebuffer, 0, top1_y, 0, top2_y, m_FbWidth, bottom2_y-top2_y);
     Syscall::fillRect(m_pFramebuffer, 0, top1_y, m_FbWidth, top2_y-top1_y, g_Colours[m_Bg]);
 
-    memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
+    memmove(&m_pBuffer[(m_ScrollStart+n)*m_Width], &m_pBuffer[((m_ScrollStart))*m_Width], ((m_ScrollEnd+1)-n-m_ScrollStart)*m_Width*sizeof(TermChar));
 
     TermChar blank;
     blank.fore = m_Fg;
@@ -933,8 +931,6 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseScreen");
-
     // One good fillRect should do the job nicely.
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
@@ -949,8 +945,6 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseEOL");
-
     size_t l = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
 
     // Again, one fillRect should do it.
@@ -965,8 +959,6 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseSOL");
-
     // Again, one fillRect should do it.
     Syscall::fillRect(m_pFramebuffer,
                       m_OffsetLeft,
@@ -984,8 +976,6 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseLine");
-
     // Again, one fillRect should do it.
     Syscall::fillRect(m_pFramebuffer,
                       m_OffsetLeft,
@@ -1003,8 +993,6 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseChars");
-
     // Again, one fillRect should do it.
     size_t left = m_CursorX * g_NormalFont->getWidth();
     if((m_CursorX + n) > m_Width)
@@ -1026,8 +1014,6 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseUp");
-
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * m_CursorY, g_Colours[m_Bg]);
 
     for(size_t row = 0; row < m_CursorY; row++)
@@ -1041,8 +1027,6 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "eraseDown");
-
     size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, top, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg]);
 
@@ -1057,8 +1041,6 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "deleteCharacters");
-
     // Start of the delete region
     size_t deleteStart = m_CursorX;
 
