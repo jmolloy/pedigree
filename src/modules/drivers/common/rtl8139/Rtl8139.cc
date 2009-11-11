@@ -24,7 +24,7 @@
 
 
 Rtl8139::Rtl8139(Network* pDev) :
-    Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_RxLock(false), TxLock(), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
+    Network(pDev), m_pBase(0), m_StationInfo(), m_RxCurr(0), m_TxCurr(0), m_RxLock(false), m_TxLock(), m_pRxBuffVirt(0), m_pTxBuffVirt(0),
     m_pRxBuffPhys(0), m_pTxBuffPhys(0), m_RxBuffMR("rtl8139-rxbuffer"), m_TxBuffMR("rtl8139-txbuffer")
 {
     setSpecificType(String("rtl8139-card"));
@@ -131,7 +131,7 @@ void Rtl8139::reset()
 
 bool Rtl8139::send(size_t nBytes, uintptr_t buffer)
 {
-    LockGuard<Spinlock> guard(TxLock);
+    LockGuard<Spinlock> guard(m_TxLock);
 
     if(nBytes > RTL_PACK_MAX)
     {
