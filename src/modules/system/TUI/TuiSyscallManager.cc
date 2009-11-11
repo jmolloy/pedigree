@@ -132,8 +132,6 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     // We're interruptible.
     Processor::setInterrupts(true);
 
-    static Display::rgb_t* currentBuffer = 0;
-
     switch (state.getSyscallNumber())
     {
         case TUI_NEXT_REQUEST:
@@ -211,9 +209,6 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
             if (!m_pDisplay) return 0;
 
-            NOTICE("Setting buffer: " << p1 << "...");
-
-            currentBuffer = reinterpret_cast<Display::rgb_t*>(p1);
             m_pDisplay->setCurrentBuffer(reinterpret_cast<Display::rgb_t*>(p1));
             break;
         }
@@ -222,14 +217,6 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             if (!m_pDisplay) return 0;
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
 
-            NOTICE("Updating buffer: " << p1 << ", " << reinterpret_cast<uintptr_t>(pReq->buffer) << "/" << reinterpret_cast<uintptr_t>(currentBuffer) << "...");
-
-            // Don't update the buffer if it's not the current one
-            if(currentBuffer && (reinterpret_cast<uintptr_t>(pReq->buffer) != reinterpret_cast<uintptr_t>(currentBuffer)))
-            {
-                WARNING("Attempt to update buffer that wasn't the current one");
-                break;
-            }
             m_pDisplay->updateBuffer(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
                                      pReq->y2);
             break;

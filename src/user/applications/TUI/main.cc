@@ -370,10 +370,7 @@ int main (int argc, char **argv)
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 g_nLastResponse = sz;
-                
-                // Only update the buffer if we're writing to the current terminal
-                if(pT == g_pCurrentTerm->term)
-                    Syscall::updateBuffer(pT->getBuffer(), rect2);
+                Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
                 break;
             }
 
