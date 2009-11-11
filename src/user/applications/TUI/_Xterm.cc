@@ -932,7 +932,6 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
     // One good fillRect should do the job nicely.
-    syslog(LOG_NOTICE, "eraseScreen: %d, %d, %d", m_OffsetLeft, m_FbWidth, m_Width * g_NormalFont->getWidth());
     Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth-m_OffsetLeft, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     for(size_t row = 0; row < m_Height; row++)

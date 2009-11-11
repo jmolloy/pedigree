@@ -142,8 +142,8 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
     else
     {
         // This read will wrap around to the beginning
-        size_t numNormalBytes = m_BufferSize - m_Writer;
-        size_t numOverlapBytes = (m_Writer + nBytes) % m_BufferSize;
+        size_t numNormalBytes = m_BufferSize - m_Reader;
+        size_t numOverlapBytes = (m_Reader + nBytes) % m_BufferSize;
 
         // Does the read overlap the write position?
         if(numOverlapBytes >= m_Writer && m_Writer != 0)
@@ -158,7 +158,7 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
                    reinterpret_cast<void*>(m_Buffer+m_Reader),
                    numNormalBytes);
         if(numOverlapBytes)
-            memcpy(reinterpret_cast<void*>(buffer),
+            memcpy(reinterpret_cast<void*>(buffer + numNormalBytes),
                    reinterpret_cast<void*>(m_Buffer),
                    numOverlapBytes);
 
@@ -185,7 +185,7 @@ void TcpBuffer::setSize(size_t newBufferSize)
     if(newBufferSize)
     {
         m_BufferSize = newBufferSize;
-        m_Buffer = reinterpret_cast<uintptr_t>(new uint8_t[newBufferSize]);
+        m_Buffer = reinterpret_cast<uintptr_t>(new uint8_t[newBufferSize + 1]);
     }
 }
 
