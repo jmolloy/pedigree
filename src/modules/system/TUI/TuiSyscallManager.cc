@@ -129,8 +129,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
 
-    // We're interruptible.
-    Processor::setInterrupts(true);
+    static uintptr_t currBuff = 0;
 
     switch (state.getSyscallNumber())
     {
@@ -209,6 +208,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
             if (!m_pDisplay) return 0;
 
+            currBuff = p1;
             m_pDisplay->setCurrentBuffer(reinterpret_cast<Display::rgb_t*>(p1));
             break;
         }
@@ -217,8 +217,15 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             if (!m_pDisplay) return 0;
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
 
-            m_pDisplay->updateBuffer(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
-                                     pReq->y2);
+            if(currBuff && (reinterpret_cast<uintptr_t>(pReq->buffer) != currBuff))
+            {
+                WARNING("updateBuffer called on a buffer which is not currently active");
+            }
+            else
+            {
+                m_pDisplay->updateBuffer(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
+                                         pReq->y2);
+            }
             break;
         }
         case TUI_VID_KILL_BUFFER:
@@ -234,8 +241,15 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
 
             vid_req_t *pReq = reinterpret_cast<vid_req_t*>(p1);
 
-            m_pDisplay->bitBlit(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
-                                pReq->y2, pReq->w, pReq->h);
+            if(currBuff && (reinterpret_cast<uintptr_t>(pReq->buffer) != currBuff))
+            {
+                WARNING("bitBlit called on a buffer which is not currently active");
+            }
+            else
+            {
+                m_pDisplay->bitBlit(reinterpret_cast<Display::rgb_t*>(pReq->buffer), pReq->x, pReq->y, pReq->x2,
+                                    pReq->y2, pReq->w, pReq->h);
+            }
             break;
         }
         case TUI_VID_FILL_RECT:

@@ -101,17 +101,19 @@ void modeChanged(size_t width, size_t height)
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
-    syslog(LOG_NOTICE, "selectTerminal");
     if (g_pCurrentTerm)
         g_pCurrentTerm->term->setActive(false, rect);
 
     g_pCurrentTerm = pTL;
-    g_pHeader->select(pTL->term->getTabId());
-    g_pHeader->render(pTL->term->getBuffer(), rect);
-    g_pCurrentTerm->term->setActive(true, rect);
-
     Syscall::setCurrentConsole(pTL->term->getTabId());
 
+    g_pCurrentTerm->term->setActive(true, rect);
+
+    g_pHeader->select(pTL->term->getTabId());
+    g_pHeader->render(pTL->term->getBuffer(), rect);
+
+
+    pTL->term->redrawAll(rect);
     Syscall::updateBuffer(pTL->term->getBuffer(), rect);
 }
 
