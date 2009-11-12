@@ -112,8 +112,7 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
     g_pHeader->select(pTL->term->getTabId());
     g_pHeader->render(pTL->term->getBuffer(), rect);
 
-
-    pTL->term->redrawAll(rect);
+    //pTL->term->redrawAll(rect);
     Syscall::updateBuffer(pTL->term->getBuffer(), rect);
 }
 
@@ -185,9 +184,12 @@ bool checkCommand(uint64_t key, DirtyRectangle &rect)
         else if (!strcmp(str, "ins"))
         {
             // Create a new terminal.
-            char *pStr = new char[64];
-            sprintf(pStr, "Console%ld", nextConsoleNum++);
-            addTerminal(pStr, rect);
+            if(nextConsoleNum < 6)
+            {
+                char *pStr = new char[64];
+                sprintf(pStr, "Console%ld", nextConsoleNum++);
+                addTerminal(pStr, rect);
+            }
             return true;
         }
 #endif

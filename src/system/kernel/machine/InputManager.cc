@@ -24,7 +24,7 @@ class InputEvent : public Event
 {
     public:
         InputEvent(InputManager::CallbackType type, uint64_t key, uintptr_t handlerAddress) :
-                    Event(handlerAddress, true),
+                    Event(handlerAddress, true, 0),
                     m_Type(type),
                     m_Key(key)
         {};
