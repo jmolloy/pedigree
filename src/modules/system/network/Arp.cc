@@ -90,6 +90,8 @@ void Arp::send(IpAddress req, Network* pCard)
   request->ipSrc = cardInfo.ipv4.getIp();
   request->ipDest = req.getIp();
 
+  NOTICE("arp who-has " << req.toString() << " tell " << cardInfo.ipv4.toString());
+
   memcpy(request->hwSrc, cardInfo.mac, 6);
   memset(request->hwDest, 0xff, 6); // broadcast
 
@@ -156,6 +158,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     // reply
     else if(BIG_TO_HOST16(header->opcode) == ARP_OP_REPLY)
     {
+      NOTICE("arp " << IpAddress(header->ipSrc).toString() << " is at " << sourceMac.toString());
+
       // add to our local cache, if needed
       if(m_ArpCache.lookup(header->ipSrc) == 0)
       {

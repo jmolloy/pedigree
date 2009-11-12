@@ -347,6 +347,18 @@ class MacAddress
       return getMac();
     }
 
+    String toString()
+    {
+        NormalStaticString str;
+        for(int i = 0; i < 6; i++)
+        {
+            str.append(m_Mac[i], 16, 2, '0');
+            if(i < 5)
+                str += ":";
+        }
+        return String(static_cast<const char*>(str));
+    }
+
   private:
 
     uint8_t   m_Mac[6];
