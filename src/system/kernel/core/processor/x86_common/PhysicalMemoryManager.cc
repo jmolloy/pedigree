@@ -330,7 +330,12 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
     while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
     {
-        if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
+        // Only map if the variable fits into a uintptr_t - no overflow!
+        if((MemoryMap->address) > ((uintptr_t) -1))
+        {
+            WARNING("Memory region " << MemoryMap->address << " not used.");
+        }
+        else if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
         MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
