@@ -217,6 +217,13 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
     if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
         return;
 
+    // Verify the key - don't accept anything that isn't actually UTF32
+    // (even when there are flags set on the key).
+    if((c & 0xFFFFFFFF) >= 0x10FFFF16ULL)
+    {
+        syscall0(TUI_EVENT_RETURNED);
+    }
+
     /** Add the key to the terminal queue */
 
     Terminal *pT = g_pCurrentTerm->term;

@@ -116,7 +116,11 @@ int main(int argc, char **argv)
     /// \todo Possible buffer overflow attack here
     printf("Username: ");
     char buffer[256];
-    char* username = gets(buffer);
+    char* username = 0;
+    //do
+    //{
+        username = gets(buffer);
+    //} while(username == 0);
     struct passwd *pw = getpwnam(username);
     if (!pw)
     {
@@ -137,7 +141,11 @@ int main(int argc, char **argv)
 
     while ( i < 256 && (c=getchar()) != '\n' )
     {
-        if(c == '\b')
+        if(!c)
+        {
+            continue;
+        }
+        else if(c == '\b')
         {
             if(i > 0)
             {

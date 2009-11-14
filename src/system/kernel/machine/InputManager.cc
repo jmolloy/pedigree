@@ -127,6 +127,12 @@ void InputManager::mainThread()
         uint64_t key = m_KeyQueue.popFront();
         m_QueueLock.release();
 
+        // Don't send the key to applications if it was zero
+        if(!key)
+            continue;
+
+        NOTICE_NOLOCK("Sending key " << key << " to applications...");
+
         for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
             it != m_KeyCallbacks.end();
             it++)
