@@ -117,6 +117,9 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
 
 void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
+  if(!packet || !nBytes)
+      return;
+
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
 

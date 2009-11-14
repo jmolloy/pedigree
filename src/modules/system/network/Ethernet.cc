@@ -35,6 +35,9 @@ Ethernet::~Ethernet()
 
 void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
+  if(!packet || !nBytes)
+      return;
+
   // grab the header
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
 

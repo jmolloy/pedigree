@@ -108,6 +108,9 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
 void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
+  if(!packet || !nBytes)
+      return;
+
   // grab the IP header to find the size, so we can skip options and get to the TCP header
   Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs

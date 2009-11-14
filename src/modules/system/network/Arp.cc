@@ -107,6 +107,9 @@ void Arp::send(IpAddress req, Network* pCard)
 
 void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
+  if(!packet || !nBytes)
+      return;
+
   // grab the header
   arpHeader* header = reinterpret_cast<arpHeader*>(packet + offset);
 

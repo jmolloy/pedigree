@@ -56,6 +56,9 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
 
 void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
+  if(!packet || !nBytes)
+      return;
+
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ip::ipHeader));
 
