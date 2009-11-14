@@ -131,8 +131,6 @@ void InputManager::mainThread()
         if(!key)
             continue;
 
-        NOTICE_NOLOCK("Sending key " << key << " to applications...");
-
         for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
             it != m_KeyCallbacks.end();
             it++)
