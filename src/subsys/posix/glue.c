@@ -1030,8 +1030,12 @@ char* inet_ntoa(struct in_addr addr)
 int inet_aton(const char *cp, struct in_addr *inp)
 {
     int ip = inet_addr(cp);
-    inp->s_addr = ip;
-    return ip;
+    if(ip != INET_ADDR_INVALID)
+    {
+        inp->s_addr = ip;
+        return ip;
+    }
+    return 0;
 }
 
 struct hostent* gethostbyaddr(const void *addr, unsigned long len, int type)
