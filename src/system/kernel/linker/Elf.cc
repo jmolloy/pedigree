@@ -186,6 +186,9 @@ Elf::Elf(const Elf &elf) :
 bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
 {
     NOTICE("Elf::createNeededOnly: buffer at " << Hex << reinterpret_cast<uintptr_t>(pBuffer) << ", len " << length);
+    if(!pBuffer || !length)
+        return false;
+
     // The main header will be at pBuffer[0].
     ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
 

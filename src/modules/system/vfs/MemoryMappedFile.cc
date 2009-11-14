@@ -49,6 +49,11 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 {
     LockGuard<Mutex> guard(m_Lock);
 
+    // Verify that we're not trying to memory map an empty file
+    /// \todo It's ok to do so if write is enabled!
+    if(m_Extent <= 1)
+        return false;
+
     if (!pProcess)
         pProcess = Processor::information().getCurrentThread()->getParent();
 
