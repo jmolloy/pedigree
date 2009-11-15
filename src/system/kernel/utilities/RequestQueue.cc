@@ -85,6 +85,15 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   Thread *pThread = Processor::information().getCurrentThread();
   pThread->setBlockingThread(m_pThread);
 
+  if(pReq->bReject)
+  {
+      // Hmm, in the time the RequestQueueMutex was being acquired, we got
+      // pre-empted, and then an unexpected exit event happened. The request
+      // is to be rejected, so don't acquire the mutex at all.
+      delete pReq;
+      return 0;
+  }
+
   // Wait for the request to be satisfied. This should sleep the thread.
   pReq->mutex.acquire();
 
@@ -100,6 +109,8 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
       // By releasing here, the worker thread can detect that the request was
       // interrupted and clean up by itself.
       NOTICE("RequestQueue::addRequest - interrupted");
+      if(pReq->bReject)
+          delete pReq; // Safe to delete, unexpected exit condition
       pReq->mutex.release();
       return 0;
   }
