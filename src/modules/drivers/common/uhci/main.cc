@@ -22,7 +22,9 @@
 #include <usb/UsbConstants.h>
 #include "UHCI.h"
 
-void probeDevice(Device *pDev)
+bool g_GotEHCI = false;
+
+void probeUHCI(Device *pDev)
 {
     NOTICE("UHCI found");
 
@@ -34,10 +36,18 @@ void probeDevice(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pUHCI);
 }
 
+void probeEHCI(Device *pDev)
+{
+    NOTICE("EHCI found, disabling check for UHCI");
+    g_GotEHCI = true;
+}
+
 void entry()
 {
-    return;
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeDevice);
+    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEHCI);
+    // One EHCI means a few companion UHCIs, and we don't want those
+    if(!g_GotEHCI)
+        Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUHCI);
 }
 
 void exit()
