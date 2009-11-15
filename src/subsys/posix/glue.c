@@ -299,6 +299,12 @@ int waitpid(int pid, int *status, int options)
 
 _ssize_t write(int file, const void *ptr, size_t len)
 {
+    if(file < 0)
+    {
+        syslog(LOG_NOTICE, "[%d] write: bad file given\n", getpid());
+        errno = EBADF;
+        return -1;
+    }
     return (_ssize_t) syscall3(POSIX_WRITE, file, (long)ptr, len);
 }
 
@@ -1029,7 +1035,7 @@ char* inet_ntoa(struct in_addr addr)
 
 int inet_aton(const char *cp, struct in_addr *inp)
 {
-    int ip = inet_addr(cp);
+    in_addr_t ip = inet_addr(cp);
     if(ip != INET_ADDR_INVALID)
     {
         inp->s_addr = ip;
