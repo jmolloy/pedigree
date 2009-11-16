@@ -138,9 +138,13 @@ void InputManager::mainThread()
             if(*it)
             {
                 Thread *pThread = (*it)->pThread;
-                if(!pThread)
-                    pThread = Processor::information().getCurrentThread();
                 callback_t func = (*it)->func;
+                if(!pThread)
+                {
+                    /// \todo Verify that the callback is in fact in the kernel
+                    func(key);
+                    continue;
+                }
                 
                 InputEvent *pEvent = new InputEvent(Key, key, reinterpret_cast<uintptr_t>(func));
                 pThread->sendEvent(pEvent);
