@@ -204,6 +204,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
 
     Elf *pElf = new Elf();
+    SharedObject *pSo = 0;
 
     if(!bDryRun)
     {
@@ -221,7 +222,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
             return false;
         }
 
-        SharedObject *pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
+        pSo = new SharedObject(pElf, pMmFile, buffer, loadBase, size);
 
         m_Objects.insert(loadBase, pSo);
     }
@@ -258,6 +259,11 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!_pFile)
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' not found!");
+            if(!bDryRun)
+            {
+                m_Objects.remove(loadBase);
+                delete pSo;
+            }
             delete pElf;
             return false;
         }
@@ -266,6 +272,11 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
         if (!_pFile || !loadObject(_pFile, bDryRun))
         {
             ERROR("DynamicLinker: Dependency `" << filename << "' failed to load!");
+            if(!bDryRun)
+            {
+                m_Objects.remove(loadBase);
+                delete pSo;
+            }
             delete pElf;
             return false;
         }
