@@ -23,7 +23,11 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <syslog.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 
 // PID of the process we're running
 int g_RunningPid = -1;
@@ -112,19 +116,31 @@ int main(int argc, char **argv)
     // Not running anything
     g_RunningPid = -1;
 
+    // This handles the case where a bad character goes into the stream and is
+    // impossible to get out. Everything else I've tried does not work...
+    fclose(stdin);
+    int fd = open("/dev/tty", 0);
+    dup2(fd, 0);
+    stdin = fdopen(fd, "r");
+
     // Get username
-    /// \todo Possible buffer overflow attack here
     printf("Username: ");
+
     char buffer[256];
-    char* username = 0;
-    //do
-    //{
-        username = gets(buffer);
-    //} while(username == 0);
+    char *username = fgets(buffer, 256, stdin);
+    if(!username)
+    {
+      printf("\nUnknown user: `%s'\n", username);
+      continue;
+    }
+
+    // Knock off the newline character
+    username[strlen(username)-1] = '\0';
+
     struct passwd *pw = getpwnam(username);
     if (!pw)
     {
-      printf("Unknown user: `%s'\n", username);
+      printf("\nUnknown user: `%s'\n", username);
       continue;
     }
 
@@ -138,7 +154,6 @@ int main(int argc, char **argv)
     int i = 0;
 
     tcgetattr(0, &curt); curt.c_lflag &= ~(ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
-
     while ( i < 256 && (c=getchar()) != '\n' )
     {
         if(!c)
