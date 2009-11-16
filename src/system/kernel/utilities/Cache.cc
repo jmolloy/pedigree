@@ -19,10 +19,53 @@
 #include <utilities/Cache.h>
 #include <utilities/assert.h>
 #include <utilities/utility.h>
+#include <machine/Timer.h>
+#include <machine/Machine.h>
 
 MemoryAllocator Cache::m_Allocator;
 Spinlock Cache::m_AllocatorLock;
 static bool g_AllocatorInited = false;
+
+CacheManager CacheManager::m_Instance;
+
+CacheManager::CacheManager() : m_Caches()
+{
+}
+
+CacheManager::~CacheManager()
+{
+}
+
+void CacheManager::registerCache(Cache *pCache)
+{
+    NOTICE("Registering cache " << reinterpret_cast<uintptr_t>(pCache) << "...");
+    m_Caches.pushBack(pCache);
+}
+void CacheManager::unregisterCache(Cache *pCache)
+{
+    NOTICE("Unregistering cache " << reinterpret_cast<uintptr_t>(pCache) << "...");
+    for(List<Cache*>::Iterator it = m_Caches.begin();
+        it != m_Caches.end();
+        it++)
+    {
+        if((*it) == pCache)
+        {
+            m_Caches.erase(it);
+            return;
+        }
+    }
+}
+
+void CacheManager::compactAll()
+{
+    NOTICE_NOLOCK("Compacting all caches");
+    for(List<Cache*>::Iterator it = m_Caches.begin();
+        it != m_Caches.end();
+        it++)
+    {
+        (*it)->compact();
+    }
+}
 
 Cache::Cache() :
     m_Pages(), m_Lock()
@@ -32,10 +75,35 @@ Cache::Cache() :
         m_Allocator.free(0xE0000000, 0x10000000);
         g_AllocatorInited = true;
     }
+
+    CacheManager::instance().registerCache(this);
 }
 
 Cache::~Cache()
 {
+    m_Lock.acquire();
+
+    // Clean up existing cache pages
+    for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+        it != m_Pages.end();
+        it++)
+    {
+        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+        if(va.isMapped(reinterpret_cast<void*>(page->location)))
+        {
+            physical_uintptr_t phys;
+            size_t flags;
+            va.getMapping(reinterpret_cast<void*>(page->location), phys, flags);
+            PhysicalMemoryManager::instance().freePage(phys);
+        }
+
+        m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);
+    }
+
+    m_Lock.release();
+
+    CacheManager::instance().unregisterCache(this);
 }
 
 uintptr_t Cache::lookup (uintptr_t key)
@@ -85,10 +153,12 @@ uintptr_t Cache::insert (uintptr_t key)
         FATAL("Map failed in Cache::insert())");
     }
 
+    Timer &timer = *Machine::instance().getTimer();
 
     pPage = new CachePage;
     pPage->location = location;
     pPage->refcnt = 1;
+    pPage->timeAllocated = timer.getUnixTimestamp();
     m_Pages.insert(key, pPage);
 
     m_Lock.release();
@@ -111,4 +181,63 @@ void Cache::release (uintptr_t key)
     pPage->refcnt --;
 
     m_Lock.leave();
+}
+
+void Cache::compact()
+{
+    m_Lock.acquire();
+
+    Timer &timer = *Machine::instance().getTimer();
+    uint32_t now = timer.getUnixTimestamp();
+
+    // For erasing later
+    List<void*> m_PagesToErase;
+
+    // Iterate through all pages, checking if any are over the time threshold
+    bool bPagesFreed = false;
+    for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+        it != m_Pages.end();
+        it++)
+    {
+        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
+            m_PagesToErase.pushBack(reinterpret_cast<void*>(page->location));
+    }
+
+    // If no pages were added to the free list, we need to use a count threshold
+    if(!m_PagesToErase.count())
+    {
+        int i = 0;
+        for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+            it != m_Pages.end();
+            it++)
+        {
+            CachePage *page = reinterpret_cast<CachePage*>(it.value());
+            m_PagesToErase.pushBack(reinterpret_cast<void*>(page->location));
+
+            if(i++ >= CACHE_NUM_THRESHOLD)
+                break;
+        }
+    }
+
+    // We should have pages to erase now...
+    while(m_PagesToErase.count())
+    {
+        void *page = m_PagesToErase.popFront();
+        if(!page)
+            break;
+
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+        if(va.isMapped(page))
+        {
+            physical_uintptr_t phys;
+            size_t flags;
+            va.getMapping(page, phys, flags);
+            PhysicalMemoryManager::instance().freePage(phys);
+        }
+
+        m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);
+    }
+
+    m_Lock.release();
 }

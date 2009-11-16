@@ -25,6 +25,39 @@
 
 #include <processor/PhysicalMemoryManager.h>
 
+/// The age at which a cache page is considered "old" and can be evicted
+/// This is expressed in seconds.
+#define CACHE_AGE_THRESHOLD 10
+
+/// In the case where no pages are old enough, this is the number of pages that
+/// will be force-freed.
+#define CACHE_NUM_THRESHOLD 2
+
+// Forward declaration of Cache so CacheManager can be defined first
+class Cache;
+
+/** Provides a clean abstraction to a set of data caches. */
+class CacheManager
+{
+    public:
+        CacheManager();
+        virtual ~CacheManager();
+
+        static CacheManager &instance()
+        {
+            return m_Instance;
+        }
+
+        void registerCache(Cache *pCache);
+        void unregisterCache(Cache *pCache);
+
+        void compactAll();
+    private:
+        static CacheManager m_Instance;
+
+        List<Cache*> m_Caches;
+};
+
 /** Provides an abstraction of a data cache. */
 class Cache
 {
@@ -47,17 +80,22 @@ public:
      *  least-recently-used fashion. This is called in an
      *  emergency "physical memory getting full" situation by the
      *  PMM. */
-    void compact ()
-    {
-        /// \todo Do this.
-    }
+    void compact ();
 
 private:
 
     struct CachePage
     {
+        /// The location of this page in memory
         uintptr_t location;
+
+        /// Reference count to handle release() being called with multiple
+        /// threads having access to the page.
         size_t refcnt;
+
+        /// The time at which this page was allocated. This is used by
+        /// compact() to determine the best pages to evict.
+        uint32_t timeAllocated;
     };
 
     /** Key-item pairs. */

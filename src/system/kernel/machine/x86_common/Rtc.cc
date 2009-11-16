@@ -19,6 +19,7 @@
 #include <process/Event.h>
 #include <process/Thread.h>
 #include "Rtc.h"
+#include <utilities/Cache.h>
 
 #define INITIAL_RTC_HZ 512
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))

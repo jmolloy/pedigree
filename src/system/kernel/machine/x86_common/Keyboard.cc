@@ -313,7 +313,6 @@ uint64_t X86Keyboard::scancodeToCharacter(uint8_t scancode)
             pTableEntry = getTableEntry(0, false, false, false, false, false, scancode);
             if (!pTableEntry)
             {
-                NOTICE_NOLOCK("unable to convert scancode to character");
                 m_bEscape = false;
                 return 0;
             }

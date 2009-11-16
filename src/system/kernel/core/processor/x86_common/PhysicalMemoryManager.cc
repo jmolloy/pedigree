@@ -21,6 +21,7 @@
 #include <processor/Processor.h>
 #include "PhysicalMemoryManager.h"
 #include <LockGuard.h>
+#include <utilities/Cache.h>
 
 #if defined(X86)
 #include "../x86/VirtualAddressSpace.h"
@@ -44,7 +45,23 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
     LockGuard<Spinlock> guard(m_Lock);
 
-    physical_uintptr_t ptr = m_PageStack.allocate(0);
+    physical_uintptr_t ptr;
+
+    ptr = m_PageStack.allocate(0);
+    if(!ptr)
+    {
+        // Release the lock: compacting caches needs to free pages.
+        m_Lock.release();
+        CacheManager::instance().compactAll();
+        m_Lock.acquire();
+
+        ptr = m_PageStack.allocate(0);
+        if(!ptr)
+        {
+            m_Lock.release();
+            FATAL_NOLOCK("Out of physical memory!");
+        }
+    }
 
 #if defined(TRACK_PAGE_ALLOCATIONS)             
     if (Processor::m_Initialised == 2)
@@ -57,9 +74,6 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         }
     }
 #endif
-
-    if (ptr == 0)
-        FATAL("Out of physical memory!");
 
     return ptr;
 }

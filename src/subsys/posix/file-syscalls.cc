@@ -736,11 +736,9 @@ int posix_opendir(const char *dir, dirent *ent)
 
         // Copy the filename across
         strncpy(ent->d_name, static_cast<const char*>(file->getName()), MAXNAMLEN);
-        NOTICE("ent->d_ino = " << ent->d_ino << ", filename: " << file->getName() << ".");
     }
     else
     {
-        NOTICE("Epic fail!");
         // fail! no children!
         delete f;
         return -1;
