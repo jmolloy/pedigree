@@ -885,7 +885,7 @@ int pedigree_reboot()
         {
             // If there's a subsystem, kill it that way.
             /// \todo Proper KillReason
-            subsys->kill(Subsystem::Interrupted, proc->getThread(0));
+            subsys->kill(Subsystem::Unknown, proc->getThread(0));
         }
         else
         {
@@ -917,7 +917,7 @@ int pedigree_reboot()
 
         if (allZombie) break;
         Processor::setInterrupts(true);
-        
+
         Scheduler::instance().yield();
     }
 
