@@ -24,6 +24,7 @@
 #include <machine/Machine.h>
 #include <utilities/assert.h>
 #include "AtaController.h"
+#include "AtaDisk.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :

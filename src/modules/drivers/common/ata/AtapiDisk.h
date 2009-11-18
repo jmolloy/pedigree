@@ -22,7 +22,10 @@
 #include <machine/Controller.h>
 #include <process/Mutex.h>
 #include <utilities/Cache.h>
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
 #include "AtaDisk.h"
+#include "BusMasterIde.h"
 
 /** An ATAPI disk device. Most read/write commands get channeled upstream
  * to the controller, as it has to multiplex between multiple disks. */
@@ -97,7 +100,7 @@ public:
 
   // These are the internal functions that the controller calls when it is ready to process our request.
   virtual uint64_t doRead(uint64_t location);
-    virtual uint64_t doRead2(uint64_t location, uintptr_t buffer);
+  virtual uint64_t doRead2(uint64_t location, uintptr_t buffer);
   virtual uint64_t doWrite(uint64_t location);
 
   // Called by our controller when an IRQ has been received.
@@ -192,6 +195,24 @@ private:
   /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
    * \todo A condvar would really be better here. */
   Mutex m_IrqReceived;
+
+  /** PRD table lock (only used when grabbing the offset) */
+  Spinlock m_PrdTableLock;
+
+  /** PRD table (virtual) */
+  PhysicalRegionDescriptor *m_PrdTable;
+
+  /** Last used offset into the PRD table (so we can run multiple ops at once) */
+  size_t m_LastPrdTableOffset;
+
+  /** PRD table (physical) */
+  physical_uintptr_t m_PrdTablePhys;
+
+  /** MemoryRegion for the PRD table */
+  MemoryRegion m_PrdTableMemRegion;
+
+  /** Can we do DMA? */
+  bool m_bDma;
 };
 
 #endif

@@ -25,6 +25,7 @@
 #include <utilities/PointerGuard.h>
 #include "AtaController.h"
 #include "BusMasterIde.h"
+#include "AtapiDisk.h"
 
 /// \todo Make portable
 /// \todo GET MEDIA STATUS to find out if there's actually media!
@@ -32,7 +33,9 @@
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster) :
   AtaDisk(pDev, isMaster), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-  m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true)
+  m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
+  m_PrdTableLock(), m_PrdTable(0), m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("atapi-prdtable"),
+  m_bDma(true)
 {
   m_pParent = pDev;
 }
@@ -86,6 +89,7 @@ bool AtapiDisk::initialise()
       commandRegs->read8(5) == 0xeb)
   {
     // Run IDENTIFY PACKET DEVICE instead
+    commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
     commandRegs->write8(0xA1, 7);
     status = commandRegs->read8(7);
 
@@ -243,6 +247,33 @@ bool AtapiDisk::initialise()
     WARNING("Pedigree currently only supports CD/DVD and block ATAPI devices.");
     return false;
   }
+  
+  // Any form of DMA support?
+  if(m_pIdent[49] & (1 << 8))
+  {
+      // We have a definite ATAPI device, set up the PRD and all that now
+      if(!PhysicalMemoryManager::instance().allocateRegion(m_PrdTableMemRegion,
+                                                           1,
+                                                           PhysicalMemoryManager::continuous,
+                                                           VirtualAddressSpace::Write,
+                                                           -1))
+      {
+          ERROR("ATAPI: Couldn't allocate PRD table. Continuing without DMA support.");
+          m_bDma = false;
+      }
+      else
+      {
+          /// \todo Store the type of DMA supported by this device
+          m_PrdTable = reinterpret_cast<PhysicalRegionDescriptor *>(m_PrdTableMemRegion.virtualAddress());
+          m_PrdTablePhys = m_PrdTableMemRegion.physicalAddress();
+          NOTICE("ATAPI: PRD table at v=" << reinterpret_cast<uintptr_t>(m_PrdTableMemRegion.virtualAddress()) << ", p=" << m_PrdTablePhys << ".");
+      }
+  }
+  else
+  {
+      NOTICE("ATAPI: Device does not support DMA");
+      m_bDma = false;
+  }
 
   NOTICE("Detected ATAPI device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
   return true;
@@ -250,9 +281,13 @@ bool AtapiDisk::initialise()
 
 uint64_t AtapiDisk::doRead(uint64_t location)
 {
-    uintptr_t buffer = m_Cache.insert(location);
-    doRead2(location, buffer);
-    doRead2(location+2048, buffer+2048);
+    uintptr_t buffer = m_Cache.lookup(location);
+    if(!buffer)
+    {
+        buffer = m_Cache.insert(location);
+        doRead2(location, buffer);
+        doRead2(location+2048, buffer+2048);
+    }
     return buffer;
 }
 
@@ -413,20 +448,17 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   }
 
   // PACKET command
-  commandRegs->write8(0, 1); // no overlap, no DMA
+  commandRegs->write8(0 /*(m_bDma ? 1 : 0)*/, 1); // no overlap, DMA if supported
   commandRegs->write8(0, 2); // tag = 0
   commandRegs->write8(0, 3); // n/a for PACKET command
   commandRegs->write8(nRespBytes & 0xFF, 4); // byte count limit
   commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
   commandRegs->write8(0xA0, 7);
-  // NOTICE("nRespBytes = " << nRespBytes << ".");
 
   // Wait for the busy bit to be cleared before continuing
   status = commandRegs->read8(7);
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
-
-    // 8-bit write to 01f7 = a0
 
   // Error?
   if(status & 0x01)

@@ -13,8 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef ATA_ATA_CONTROLLER_H
-#define ATA_ATA_CONTROLLER_H
+
+#ifndef ATA_CONTROLLER_H
+#define ATA_CONTROLLER_H
 
 #include <processor/types.h>
 #include <machine/Device.h>
@@ -24,42 +25,50 @@
 #include <processor/IoPort.h>
 #include <utilities/RequestQueue.h>
 #include <machine/IrqHandler.h>
-#include "AtaDisk.h"
-#include "AtapiDisk.h"
+#include <Log.h>
 
 #define ATA_CMD_READ  0
 #define ATA_CMD_WRITE 1
 
-/** The controller for up to two AtaDisks. This uses a background thread
- * and a request queue. */
+/** Base class for an ATA controller. */
 class AtaController : public Controller, public RequestQueue, public IrqHandler
 {
 public:
-  AtaController(Controller *pDev, int nController = 0);
-  ~AtaController();
+    AtaController(Controller *pDev, int nController = 0) :
+        Controller(pDev), m_nController(nController)
+    {
+        setSpecificType(String("ata-controller"));
 
-  virtual void getName(String &str)
-  {
-      TinyStaticString s;
-      s.clear();
-      s += "ata-";
-      s.append(m_nController);
-      str = String(static_cast<const char*>(s));
-  }
+        // Ensure we have no stupid children lying around.
+        m_Children.clear();
 
-  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
-                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
+        // Initialise the RequestQueue
+        initialise();
+    }
+    ~AtaController()
+    {
+    }
 
-  // IRQ handler callback.
-  virtual bool irq(irq_id_t number, InterruptState &state);
+    virtual void getName(String &str) = 0;
 
-  IoBase *m_pCommandRegs;
-  IoBase *m_pControlRegs;
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8) = 0;
+
+    // IRQ handler callback.
+    virtual bool irq(irq_id_t number, InterruptState &state)
+    {
+        NOTICE("AtaController: irq" << Dec << number << Hex << " ignored");
+        return false;
+    }
+
+    IoBase *m_pCommandRegs;
+    IoBase *m_pControlRegs;
 private:
-  AtaController(const AtaController&);
-  void operator =(const AtaController&);
+    AtaController(const AtaController&);
+    void operator =(const AtaController&);
 
-  int m_nController;
+protected:
+    int m_nController;
 };
 
 #endif

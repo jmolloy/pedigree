@@ -18,7 +18,7 @@
 #define BUSMASTERIDE_H
 
 /** The Physical Region Descriptor structure */
-struct PhysicalRegionDescriptor
+typedef struct
 {
     // First bit = zero
     uint32_t physAddr;
@@ -28,7 +28,7 @@ struct PhysicalRegionDescriptor
 
     // Last bit = EOT
     uint16_t rsvdEot;
-} __attribute__((packed));
+} __attribute__((packed)) PhysicalRegionDescriptor;
 
 /** Bus Master IDE Registers */
 enum BusMasterIdeRegs
