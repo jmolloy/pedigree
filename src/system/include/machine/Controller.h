@@ -31,6 +31,10 @@ public:
     Device(pDev)
   {
   }
+  Controller(Device *pDev) :
+    Device(pDev)
+  {
+  }
   virtual ~Controller()
   {
   }

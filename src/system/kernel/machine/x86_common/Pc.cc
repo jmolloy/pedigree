@@ -30,6 +30,7 @@
 #include <machine/Bus.h>
 #include <machine/Disk.h>
 #include <machine/Controller.h>
+#include <machine/Pci.h>
 
 Pc Pc::m_Instance;
 
@@ -166,8 +167,8 @@ void Pc::initialiseDeviceTree()
   Device::root().addChild(pIsa);
   pIsa->setParent(&Device::root());
 
-  // TODO:: probe PCI devices.
-
+  // Initialise the PCI interface
+  PciBus::instance().initialise();
 }
 
 Serial *Pc::getSerial(size_t n)

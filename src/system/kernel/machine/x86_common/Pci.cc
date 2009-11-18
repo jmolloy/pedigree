@@ -15,21 +15,20 @@
  */
 
 #include <Log.h>
-#include <Module.h>
 #include <processor/types.h>
 #include <machine/Machine.h>
 #include <machine/Device.h>
 #include <machine/Bus.h>
 #include <processor/IoPort.h>
 #include <utilities/utility.h>
-#include "../pci.h"
+#include <machine/Pci.h>
 
 #define CONFIG_ADDRESS 0
 #define CONFIG_DATA    4
 
 #define MAX_BUS 4
 
-IoPort configSpace("PCI config space");
+static IoPort configSpace("PCI config space");
 
 union ConfigAddress {
   struct
@@ -46,6 +45,14 @@ union ConfigAddress {
 };
 
 PciBus PciBus::m_Instance;
+
+PciBus::PciBus()
+{
+}
+
+PciBus::~PciBus()
+{
+}
 
 void PciBus::initialise()
 {
@@ -66,11 +73,25 @@ void PciBus::initialise()
 uint32_t PciBus::readConfigSpace(Device *pDev, uint8_t offset)
 {
     ConfigAddress addr;
-    addr.raw = 0;
+    memset(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = pDev->getPciFunctionNumber();
-    addr.device = pDev->getPciDeviceId();
+    addr.device = pDev->getPciDevicePosition();
     addr.bus = pDev->getPciBusPosition();
+    addr.enable = 1;
+
+    configSpace.write32(addr.raw, CONFIG_ADDRESS);
+    return configSpace.read32(CONFIG_DATA);
+}
+
+uint32_t PciBus::readConfigSpace(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
+{
+    ConfigAddress addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.offset = offset;
+    addr.function = function;
+    addr.device = device;
+    addr.bus = bus;
     addr.enable = 1;
 
     configSpace.write32(addr.raw, CONFIG_ADDRESS);
@@ -80,11 +101,25 @@ uint32_t PciBus::readConfigSpace(Device *pDev, uint8_t offset)
 void PciBus::writeConfigSpace(Device *pDev, uint8_t offset, uint32_t data)
 {
     ConfigAddress addr;
-    addr.raw = 0;
+    memset(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = pDev->getPciFunctionNumber();
-    addr.device = pDev->getPciDeviceId();
+    addr.device = pDev->getPciDevicePosition();
     addr.bus = pDev->getPciBusPosition();
+    addr.enable = 1;
+
+    configSpace.write32(addr.raw, CONFIG_ADDRESS);
+    configSpace.write32(data, CONFIG_DATA);
+}
+
+void PciBus::writeConfigSpace(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset, uint32_t data)
+{
+    ConfigAddress addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.offset = offset;
+    addr.function = function;
+    addr.device = device;
+    addr.bus = bus;
     addr.enable = 1;
 
     configSpace.write32(addr.raw, CONFIG_ADDRESS);

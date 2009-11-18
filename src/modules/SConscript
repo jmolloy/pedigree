@@ -10,9 +10,6 @@ Import(['env'])
 driver_common_subdirs = [
     # DMA
     'dma',
-    
-    # Common PCI interface
-    'pci-common',
 
     # Pedigree-specific disk I/O
     'ata',

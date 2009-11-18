@@ -22,6 +22,7 @@
 #include <machine/Bus.h>
 #include <processor/IoPort.h>
 #include <utilities/utility.h>
+#include <machine/Pci.h>
 #include "pci_list.h"
 
 #define CONFIG_ADDRESS 0
@@ -72,36 +73,12 @@ struct ConfigSpace
   uint8_t  max_latency;
 } __attribute__((packed));
 
-uint32_t readConfig (ConfigAddress addr)
-{
-  // Ensure the enable bit is set.
-  addr.enable = 1;
-  // And that the always0 bits are zero - duh.
-  addr.always0 = 0;
-
-  configSpace.write32(addr.raw, CONFIG_ADDRESS);
-  // And read back the result.
-  return configSpace.read32(CONFIG_DATA);
-}
-
-void writeConfig (ConfigAddress addr, uint32_t value)
-{
-  // Ensure the enable bit is set.
-  addr.enable = 1;
-  // And that the always0 bits are zero - duh.
-  addr.always0 = 0;
-
-  configSpace.write32(addr.raw, CONFIG_ADDRESS);
-  configSpace.write32(value, CONFIG_DATA);
-}
-
-void readConfigSpace (ConfigAddress addr, ConfigSpace *pCs)
+void readConfigSpace (Device *pDev, ConfigSpace *pCs)
 {
   uint32_t *pCs32 = reinterpret_cast<uint32_t*> (pCs);
   for (unsigned int i = 0; i < sizeof(ConfigSpace)/4; i++)
   {
-    addr.offset = i;
-    pCs32[i] = readConfig(addr);
+    pCs32[i] = PciBus::instance().readConfigSpace(pDev, i);
   }
 }
 
@@ -127,61 +104,44 @@ const char *getDevice (uint16_t vendor, uint16_t device)
 
 void entry()
 {
-  if (!configSpace.allocate(0xCF8, 8))
-  {
-    ERROR("PCI: Config space - unable to allocate IO port!");
-    return;
-  }
-
-  configSpace.write32(0x80000000, CONFIG_ADDRESS);
-  if (configSpace.read32(CONFIG_ADDRESS) != 0x80000000)
-  {
-    ERROR("PCI: Controller not detected.");
-    return;
-  }
-
-  // For every possible device, perform a probe.
-  ConfigAddress ca;
-  memset(&ca, 0, sizeof(ca));
-
-  for (int i = 0; i < MAX_BUS; i++)
+  for (int iBus = 0; iBus < MAX_BUS; iBus++)
   {
     // Firstly add the ISA bus.
     char *str = new char[256];
-    sprintf(str, "PCI #%d", i);
+    sprintf(str, "PCI #%d", iBus);
     Bus *pBus = new Bus(str);
     pBus->setSpecificType(String("pci"));
 
-    for (int j = 0; j < 32; j++)
+    for (int iDevice = 0; iDevice < 32; iDevice++)
     {
       bool bIsMultifunc = false;
-      for (int k = 0; k < 8; k++)
+      for (int iFunc = 0; iFunc < 8; iFunc++)
       {
-        if (k > 0 && !bIsMultifunc)
+        if (iFunc > 0 && !bIsMultifunc)
             break;
-        ca.bus = i;
-        ca.device = j;
-        ca.function = k;
-        ca.offset = 0;
-        uint32_t vendorAndDeviceId = readConfig (ca);
 
+        Device *pDevice = new Device();
+        pDevice->setPciPosition(iBus, iDevice, iFunc);
+
+        uint32_t vendorAndDeviceId = PciBus::instance().readConfigSpace(pDevice, 0);
         if ( (vendorAndDeviceId & 0xFFFF) == 0xFFFF || (vendorAndDeviceId & 0xFFFF) == 0 )
+        {
+          delete pDevice;
           break;
+        }
 
         ConfigSpace cs;
-        readConfigSpace(ca, &cs);
+        readConfigSpace(pDevice, &cs);
 
         if (cs.header_type & 0x80)
             bIsMultifunc = true;
 
-        NOTICE("PCI: " << Dec << ca.bus << ":" << ca.device << ":" << ca.function << "\t Vendor:" << Hex << cs.vendor << " Device:" << cs.device);
+        NOTICE("PCI: " << Dec << iBus << ":" << iDevice << ":" << iFunc << "\t Vendor:" << Hex << cs.vendor << " Device:" << cs.device);
 
-        Device *pDevice = new Device();
         char c[256];
         sprintf(c, "%s - %s", getDevice(cs.vendor, cs.device), getVendor(cs.vendor));
         pDevice->setSpecificType(String(c));
         pDevice->setPciIdentifiers(cs.class_code, cs.subclass, cs.vendor, cs.device, cs.progif);
-        pDevice->setPciPosition(ca.bus, ca.device, ca.function);
 
         for (int l = 0; l < 6; l++)
         {
@@ -195,12 +155,11 @@ void entry()
 
           // Write the BAR with FFFFFFFF to discover the size of mapping that the device requires.
           ConfigAddress ca2;
-          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
-          writeConfig (ca2, 0xFFFFFFFF);
-          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
-          uint32_t mask = readConfig (ca2);
-          ca2.bus = i; ca2.device = j; ca2.function = k; ca2.offset = (0x10 + l*4) >> 2;
-          writeConfig(ca2, cs.bar[l]);
+
+          uint8_t offset = (0x10 + l*4) >> 2;
+          PciBus::instance().writeConfigSpace(pDevice, offset, 0xFFFFFFFF);
+          uint32_t mask = PciBus::instance().readConfigSpace(pDevice, offset);
+          PciBus::instance().writeConfigSpace(pDevice, offset, cs.bar[l]);
 
           // Now work out how much space is required to fill that mask.
           // Assume it doesn't need 4GB of space...

@@ -20,6 +20,7 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/IoBase.h>
+#include <Log.h>
 #ifdef OPENFIRMWARE
 #include <machine/openfirmware/OpenFirmware.h>
 #endif
@@ -134,42 +135,42 @@ public:
     m_ProgInterface = progIf;
   }
   /** Returns the PCI class code. */
-  uint8_t getPciClassCode()
+  inline uint8_t getPciClassCode()
   {
     return m_ClassCode;
   }
   /** Returns the PCI subclass code. */
-  uint8_t getPciSubclassCode()
+  inline uint8_t getPciSubclassCode()
   {
     return m_SubclassCode;
   }
   /** Returns the PCI vendor ID. */
-  uint16_t getPciVendorId()
+  inline uint16_t getPciVendorId()
   {
     return m_VendorId;
   }
   /** Returns the PCI device ID. */
-  uint16_t getPciDeviceId()
+  inline uint16_t getPciDeviceId()
   {
     return m_DeviceId;
   }
   /** Returns the PCI programming interface. */
-  uint8_t getPciProgInterface()
+  inline uint8_t getPciProgInterface()
   {
     return m_ProgInterface;
   }
   /** Returns the PCI bus position for this device. */
-  uint32_t getPciBusPosition()
+  inline uint32_t getPciBusPosition()
   {
     return m_PciBusPos;
   }
   /** Returns the PCI device position on the bus for this device. */
-  uint32_t getPciDevicePosition()
+  inline uint32_t getPciDevicePosition()
   {
     return m_PciDevicePos;
   }
   /** Returns the PCI Function number for this device. */
-  uint32_t getPciFunctionNumber()
+  inline uint32_t getPciFunctionNumber()
   {
     return m_PciFunctionNum;
   }
