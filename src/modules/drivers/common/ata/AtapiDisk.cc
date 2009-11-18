@@ -24,6 +24,7 @@
 #include <machine/Machine.h>
 #include <utilities/PointerGuard.h>
 #include "AtaController.h"
+#include "BusMasterIde.h"
 
 /// \todo Make portable
 /// \todo GET MEDIA STATUS to find out if there's actually media!
