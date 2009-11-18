@@ -88,7 +88,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     uint32_t busMasterIfaceAddr = PciBus::instance().readConfigSpace(pDev, 8);
     busMasterIfaceAddr &= 0xFFFF000F;
     busMasterIfaceAddr |= bar4->m_Address & 0xFFF0;
-    NOTICE("    - Bus master interface base register at " << bar4);
+    NOTICE("    - Bus master interface base register at " << bar4->m_Address);
     PciBus::instance().writeConfigSpace(pDev, 8, busMasterIfaceAddr);
 
     // Read the command register and then enable I/O space. We do this so that

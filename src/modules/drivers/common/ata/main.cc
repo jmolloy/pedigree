@@ -57,6 +57,42 @@ void probePiixController(Device *pDev)
   delete pDev;
 }
 
+/// Removes the ISA ATA controllers added early in boot
+void removeIsaAta(Device *pDev)
+{
+    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    {
+        Device *dev = pDev->getChild(i);
+        String name;
+        dev->getName(name);
+        if(dev->getType() == Device::Controller)
+        {
+            // Get its addresses, and search for "command" and "control".
+            bool foundCommand = false;
+            bool foundControl = false;
+            for (unsigned int j = 0; j < dev->addresses().count(); j++)
+            {
+                /// \todo Problem with String::operator== - fix.
+                if (!strcmp(dev->addresses()[j]->m_Name, "command"))
+                    foundCommand = true;
+                if (!strcmp(dev->addresses()[j]->m_Name, "control"))
+                    foundControl = true;
+            }
+            if (foundCommand && foundControl)
+            {
+                pDev->removeChild(i);
+                delete dev;
+
+                // This leaves i one item too far - easily fixed.
+                i--;
+            }
+        }
+
+        // Recurse and keep probing
+        removeIsaAta(dev);
+    }
+}
+
 void searchNode(Device *pDev, bool bFallBackISA)
 {
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
@@ -76,6 +112,16 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 (pChild->getPciDeviceId() == 0x7111)) &&   // PIIX3
                 (pChild->getPciFunctionNumber() == 1))     // IDE Controller
             {
+                // Right, we found a PIIX controller. Let's remove the ATA
+                // controllers that are created early in the boot (ISA) now
+                // so that when we probe the controller we don't run into used
+                // ports.
+                if(!bPiixControllerFound)
+                {
+                    NOTICE("Removing ISA ATA controllers");
+                    removeIsaAta(&Device::root());
+                }
+
                 probePiixController(pChild);
                 bPiixControllerFound = true;
             }
