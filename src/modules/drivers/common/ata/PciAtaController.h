@@ -13,3 +13,55 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#ifndef PCI_ATA_CONTROLLER_H
+#define PCI_ATA_CONTROLLER_H
+
+#include <processor/types.h>
+#include <machine/Device.h>
+#include <machine/Disk.h>
+#include <machine/Controller.h>
+#include <processor/IoBase.h>
+#include <processor/IoPort.h>
+#include <utilities/RequestQueue.h>
+#include <machine/IrqHandler.h>
+#include "AtaController.h"
+#include "AtaDisk.h"
+#include "AtapiDisk.h"
+
+#define ATA_CMD_READ  0
+#define ATA_CMD_WRITE 1
+
+/** Class for a PCI-based IDE controller. */
+class PciAtaController : public AtaController
+{
+public:
+    PciAtaController(Controller *pDev, int nController = 0);
+    ~PciAtaController();
+
+    virtual void getName(String &str)
+    {
+        TinyStaticString s;
+        s.clear();
+        s += "pci-ata-";
+        s.append(m_nController);
+        str = String(static_cast<const char*>(s));
+    }
+
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
+
+    // IRQ handler callback.
+    virtual bool irq(irq_id_t number, InterruptState &state);
+
+    IoBase *m_pCommandRegs;
+    IoBase *m_pControlRegs;
+private:
+    PciAtaController(const PciAtaController&);
+    void operator =(const PciAtaController&);
+
+protected:
+    int m_nController;
+};
+
+#endif

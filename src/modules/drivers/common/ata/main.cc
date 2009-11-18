@@ -44,7 +44,17 @@ void probeIsaDevice(Controller *pDev)
 
 void probePiixController(Device *pDev)
 {
-    //
+  // Create a new AtaController device node.
+  Controller *pDevController = new Controller(pDev);
+  PciAtaController *pController = new PciAtaController(pDevController, nController++);
+
+  // Replace pDev with pController.
+  pController->setParent(pDev->getParent());
+  pDev->getParent()->replaceChild(pDev, pController);
+
+  // And now we must delete pDev because of the unique way we do this - it's
+  // actually totally useless at this stage, and it's been replaced.
+  delete pDev;
 }
 
 void searchNode(Device *pDev, bool bFallBackISA)
@@ -52,7 +62,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
     static bool bPiixControllerFound = false;
-    /*for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
 
@@ -66,14 +76,18 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 (pChild->getPciFunctionNumber() == 1))     // IDE Controller
             {
                 NOTICE("PIIX IDE controller found");
-                probePiixController(pChild);
-                bPiixControllerFound = true;
+
+                /// \todo We need full access to the PCI configuration space here
+
+                ERROR("PIIX IDE not supported yet");
+                //probePiixController(pChild);
+                //bPiixControllerFound = true;
             }
         }
 
         // Recurse.
         searchNode(pChild, false);
-    }*/
+    }
 
     // No PIIX controller found, fall back to ISA
     /// \todo Could also fall back to ICH?

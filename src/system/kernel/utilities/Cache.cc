@@ -38,12 +38,10 @@ CacheManager::~CacheManager()
 
 void CacheManager::registerCache(Cache *pCache)
 {
-    NOTICE("Registering cache " << reinterpret_cast<uintptr_t>(pCache) << "...");
     m_Caches.pushBack(pCache);
 }
 void CacheManager::unregisterCache(Cache *pCache)
 {
-    NOTICE("Unregistering cache " << reinterpret_cast<uintptr_t>(pCache) << "...");
     for(List<Cache*>::Iterator it = m_Caches.begin();
         it != m_Caches.end();
         it++)
