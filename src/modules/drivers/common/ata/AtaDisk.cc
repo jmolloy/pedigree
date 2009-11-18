@@ -27,9 +27,10 @@
 #include "AtaDisk.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
-AtaDisk::AtaDisk(AtaController *pDev, bool isMaster) :
+AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs) :
         Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-        m_IrqReceived(true), m_Cache(), m_nAlignPoints(0)
+        m_IrqReceived(true), m_Cache(), m_nAlignPoints(0), m_CommandRegs(commandRegs),
+        m_ControlRegs(controlRegs)
 {
     m_pParent = pDev;
 }
@@ -45,9 +46,9 @@ bool AtaDisk::initialise()
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
     // Commented out - unused variable.
-    //IoBase *controlRegs = pParent->m_pControlRegs;
+    //IoBase *controlRegs = m_ControlRegs;
 
     // Drive spin-up
     commandRegs->write8(0x00, 6);
@@ -249,9 +250,9 @@ uint64_t AtaDisk::doRead(uint64_t location)
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
 #ifndef PPC_COMMON
-    IoBase *controlRegs = pParent->m_pControlRegs;
+    IoBase *controlRegs = m_ControlRegs;
 #endif
 
     // Get the buffer in pointer form.
@@ -368,9 +369,9 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
 #ifndef PPC_COMMON
-    IoBase *controlRegs = pParent->m_pControlRegs;
+    IoBase *controlRegs = m_ControlRegs;
 #endif
 
     // How many sectors do we need to read?
@@ -477,9 +478,9 @@ void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
     // Unused variable.
-    //IoBase *controlRegs = pParent->m_pControlRegs;
+    //IoBase *controlRegs = m_ControlRegs;
 
     commandRegs->write8(static_cast<uint8_t>(nSectors&0xFF), 2);
 
@@ -505,9 +506,9 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
     // Unused variable.
-    //IoBase *controlRegs = pParent->m_pControlRegs;
+    //IoBase *controlRegs = m_ControlRegs;
 
     // Get the sector number of the address.
     n /= 512;
@@ -536,7 +537,7 @@ bool AtaDisk::sendPacket(size_t nBytes, uintptr_t packet)
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = pParent->m_pCommandRegs;
+    IoBase *commandRegs = m_CommandRegs;
 
     // PACKET command
     commandRegs->write8(0, 1); // no overlap, no DMA

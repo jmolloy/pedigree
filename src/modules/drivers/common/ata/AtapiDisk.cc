@@ -31,8 +31,8 @@
 /// \todo GET MEDIA STATUS to find out if there's actually media!
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
-AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster) :
-  AtaDisk(pDev, isMaster), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
+AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs) :
+  AtaDisk(pDev, isMaster, commandRegs, controlRegs), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
   m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
   m_PrdTableLock(), m_PrdTable(0), m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("atapi-prdtable"),
   m_bDma(true)
@@ -50,9 +50,9 @@ bool AtapiDisk::initialise()
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
-  IoBase *commandRegs = pParent->m_pCommandRegs;
+  IoBase *commandRegs = m_CommandRegs;
   // Commented out - unused variable.
-  //IoBase *controlRegs = pParent->m_pControlRegs;
+  //IoBase *controlRegs = m_ControlRegs;
 
   // Drive spin-up
   commandRegs->write8(0x00, 6);
@@ -414,7 +414,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
-  IoBase *commandRegs = pParent->m_pCommandRegs;
+  IoBase *commandRegs = m_CommandRegs;
 
   // Temporary storage, so we can save cycles later
   uint16_t *tmpPacket = new uint16_t[m_PacketSize / 2];

@@ -45,8 +45,8 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   }
 
   // Create two disks - master and slave.
-  AtaDisk *pMaster = new AtaDisk(this, true);
-  AtaDisk *pSlave = new AtaDisk(this, false);
+  AtaDisk *pMaster = new AtaDisk(this, true, m_pCommandRegs, m_pControlRegs);
+  AtaDisk *pSlave = new AtaDisk(this, false, m_pCommandRegs, m_pControlRegs);
 
   // Try and initialise the disks.
   bool masterInitialised = pMaster->initialise();
@@ -60,7 +60,7 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   else
   {
     delete pMaster;
-    AtapiDisk *pMasterAtapi = new AtapiDisk(this, true);
+    AtapiDisk *pMasterAtapi = new AtapiDisk(this, true, m_pCommandRegs, m_pControlRegs);
     addChild(pMasterAtapi);
     if(!pMasterAtapi->initialise())
     {
@@ -74,7 +74,7 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   else
   {
     delete pSlave;
-    AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false);
+    AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false, m_pCommandRegs, m_pControlRegs);
     addChild(pSlaveAtapi);
     if(!pSlaveAtapi->initialise())
     {

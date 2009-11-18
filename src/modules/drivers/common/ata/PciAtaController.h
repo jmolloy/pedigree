@@ -60,6 +60,22 @@ private:
     PciAtaController(const PciAtaController&);
     void operator =(const PciAtaController&);
 
+    enum
+    {
+        UnknownController,
+        PIIX,
+        PIIX3,
+        PIIX4,
+        ICH,
+        ICH0,
+        ICH2,
+        ICH3,
+        ICH4,
+        ICH5
+    } m_PciControllerType;
+
+    void diskHelper(bool master, IoBase *cmd, IoBase *ctl);
+
 protected:
     int m_nController;
 };

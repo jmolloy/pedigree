@@ -70,18 +70,14 @@ void searchNode(Device *pDev, bool bFallBackISA)
         if(pChild->getPciVendorId() == 0x8086)
         {
             // Okay, the vendor is right, but is it the right device?
+            /// \todo ICH controller
             if(((pChild->getPciDeviceId() == 0x1230) ||    // PIIX
                 (pChild->getPciDeviceId() == 0x7010) ||    // PIIX3
                 (pChild->getPciDeviceId() == 0x7111)) &&   // PIIX3
                 (pChild->getPciFunctionNumber() == 1))     // IDE Controller
             {
-                NOTICE("PIIX IDE controller found");
-
-                /// \todo We need full access to the PCI configuration space here
-
-                ERROR("PIIX IDE not supported yet");
-                //probePiixController(pChild);
-                //bPiixControllerFound = true;
+                probePiixController(pChild);
+                bPiixControllerFound = true;
             }
         }
 
