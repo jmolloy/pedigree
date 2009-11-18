@@ -78,7 +78,7 @@ bool AtapiDisk::initialise()
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
 
-  // Check for an AtapiPI device
+  // Check for an ATAPI device
   if(commandRegs->read8(2) == 0x01 &&
       commandRegs->read8(3) == 0x01 &&
       commandRegs->read8(4) == 0x14 &&
@@ -98,6 +98,7 @@ bool AtapiDisk::initialise()
       commandRegs->read8(5) == 0xeb)
     {
       // Run IDENTIFY PACKET DEVICE instead
+      commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6 );
       commandRegs->write8(0xA1, 7);
       status = commandRegs->read8(7);
 
@@ -115,7 +116,7 @@ bool AtapiDisk::initialise()
   // If ERR was set we had an err0r.
   if (status & 0x1)
   {
-    WARNING("ATAPI drive errored on IDENTIFY!");
+    WARNING("ATAPI drive errored on IDENTIFY [status=" << status << "]!");
     return false;
   }
 
@@ -256,7 +257,6 @@ uint64_t AtapiDisk::doRead(uint64_t location)
 
 uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer)
 {
-
     size_t nBytes = 2048;
 
     if(!nBytes || !buffer)
