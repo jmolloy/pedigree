@@ -81,7 +81,7 @@ private:
   } __attribute__((packed));
 
 public:
-  AtapiDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs);
+  AtapiDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster = 0);
   ~AtapiDisk();
 
   virtual void getName(String &str)
@@ -197,7 +197,7 @@ private:
   Mutex m_IrqReceived;
 
   /** PRD table lock (only used when grabbing the offset) */
-  Spinlock m_PrdTableLock;
+  Mutex m_PrdTableLock;
 
   /** PRD table (virtual) */
   PhysicalRegionDescriptor *m_PrdTable;

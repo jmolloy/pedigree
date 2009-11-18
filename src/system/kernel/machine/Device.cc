@@ -55,6 +55,7 @@ Device::Device (Device *p) : m_Addresses(), m_Children(), m_pParent(0), m_Interr
   {
     Address *pa = p->m_Addresses[i];
     Address *a = new Address(pa->m_Name, pa->m_Address, pa->m_Size, pa->m_IsIoSpace, pa->m_Padding);
+    NOTICE("address=" << reinterpret_cast<uintptr_t>(a) << ", m_Io=" << reinterpret_cast<uintptr_t>(a->m_Io));
     m_Addresses.pushBack(a);
   }
 }
@@ -111,7 +112,10 @@ void Device::removeChild(size_t n)
       it++, i++)
   {
     if (i == n)
+    {
       it = m_Children.erase(it);
+      break;
+    }
   }
 }
 /** Removes the given Device from this device's child list. */

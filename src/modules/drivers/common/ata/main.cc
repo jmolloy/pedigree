@@ -118,7 +118,6 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 // ports.
                 if(!bPiixControllerFound)
                 {
-                    NOTICE("Removing ISA ATA controllers");
                     removeIsaAta(&Device::root());
                 }
 

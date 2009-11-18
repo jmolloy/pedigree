@@ -79,9 +79,11 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     
     // Find BAR4 (BusMaster registers)
     Device::Address *bar4 = 0;
-    for(size_t i = 0; i < pDev->addresses().count(); i++)
-        if(!strcmp(static_cast<const char *>(pDev->addresses()[i]->m_Name), "bar4"))
-            bar4 = pDev->addresses()[i];
+    for(size_t i = 0; i < addresses().count(); i++)
+    {
+        if(!strcmp(static_cast<const char *>(addresses()[i]->m_Name), "bar4"))
+            bar4 = addresses()[i];
+    }
 
     // Read the BusMaster interface base address register and tell it where we
     // would like to talk to it (BAR4).
@@ -113,7 +115,9 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     IoPort *slaveControl = new IoPort("pci-ide-slave-ctl");
     IoBase *busMaster = 0;
     if(bDma)
+    {
         busMaster = bar4->m_Io;
+    }
 
     // By default, this is the port layout we can expect for the system
     /// \todo ICH will have "native mode" to worry about
@@ -131,22 +135,22 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // And finally, create disks
     /// \todo Give them the Bus Master register base so they can do their work
-    diskHelper(true, masterCommand, masterControl);
-    diskHelper(false, masterCommand, masterControl);
-    diskHelper(true, slaveCommand, slaveControl);
-    diskHelper(false, slaveCommand, slaveControl);
+    diskHelper(true, masterCommand, masterControl, busMaster);
+    diskHelper(false, masterCommand, masterControl, busMaster);
+    diskHelper(true, slaveCommand, slaveControl, busMaster);
+    diskHelper(false, slaveCommand, slaveControl, busMaster);
 }
 PciAtaController::~PciAtaController()
 {
 }
 
-void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl)
+void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, IoBase *dma)
 {
-    AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl);
+    AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl, dma);
     if(!pDisk->initialise())
     {
         delete pDisk;
-        AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl);
+        AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
         addChild(pAtapiDisk);
         if(!pAtapiDisk->initialise())
         {

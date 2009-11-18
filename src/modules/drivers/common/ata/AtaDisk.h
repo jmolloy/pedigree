@@ -28,7 +28,7 @@
 class AtaDisk : public Disk
 {
 public:
-    AtaDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs);
+    AtaDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster = 0);
     ~AtaDisk();
 
     virtual void getName(String &str)
@@ -97,9 +97,10 @@ protected:
     uint64_t m_AlignPoints[8];
     size_t m_nAlignPoints;
 
-    /** Command and control registers for this disk */
+    /** Command, control, and DMA registers for this disk */
     IoBase *m_CommandRegs;
     IoBase *m_ControlRegs;
+    IoBase *m_BusMaster;
 };
 
 #endif

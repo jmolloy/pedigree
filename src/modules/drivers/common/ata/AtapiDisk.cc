@@ -31,10 +31,10 @@
 /// \todo GET MEDIA STATUS to find out if there's actually media!
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
-AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs) :
-  AtaDisk(pDev, isMaster, commandRegs, controlRegs), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-  m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
-  m_PrdTableLock(), m_PrdTable(0), m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("atapi-prdtable"),
+AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster) :
+  AtaDisk(pDev, isMaster, commandRegs, controlRegs, busMaster), m_IsMaster(isMaster), m_SupportsLBA28(true),
+  m_SupportsLBA48(false), m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
+  m_PrdTableLock(false), m_PrdTable(0), m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("atapi-prdtable"),
   m_bDma(true)
 {
   m_pParent = pDev;
@@ -204,6 +204,42 @@ bool AtapiDisk::initialise()
   {
     m_SupportsLBA48 = /*true*/ false;
   }
+  
+  // Any form of DMA support?
+  if(m_pIdent[49] & (1 << 8))
+  {
+      // Check that we have a bus master device to use
+      if(m_BusMaster)
+      {
+          // We have a definite ATAPI device, set up the PRD and all that now
+          if(!PhysicalMemoryManager::instance().allocateRegion(m_PrdTableMemRegion,
+                                                               1,
+                                                               PhysicalMemoryManager::continuous,
+                                                               VirtualAddressSpace::Write,
+                                                               -1))
+          {
+              ERROR("ATAPI: Couldn't allocate PRD table. Continuing without DMA support.");
+              m_bDma = false;
+          }
+          else
+          {
+              /// \todo Store the type of DMA supported by this device
+              m_PrdTable = reinterpret_cast<PhysicalRegionDescriptor *>(m_PrdTableMemRegion.virtualAddress());
+              m_PrdTablePhys = m_PrdTableMemRegion.physicalAddress();
+              NOTICE("ATAPI: PRD table at v=" << reinterpret_cast<uintptr_t>(m_PrdTableMemRegion.virtualAddress()) << ", p=" << m_PrdTablePhys << ".");
+          }
+      }
+      else
+      {
+          WARNING("ATAPI: Device supports DMA, but the controller does not.");
+          m_bDma = false;
+      }
+  }
+  else
+  {
+      NOTICE("ATAPI: Device does not support DMA");
+      m_bDma = false;
+  }
 
   // Packet size?
   m_PacketSize = ((m_pIdent[0] & 0x0003) == 0) ? 12 : 16;
@@ -246,33 +282,6 @@ bool AtapiDisk::initialise()
     /// \todo Testing needs to be done on more than just CD/DVD and block devices...
     WARNING("Pedigree currently only supports CD/DVD and block ATAPI devices.");
     return false;
-  }
-  
-  // Any form of DMA support?
-  if(m_pIdent[49] & (1 << 8))
-  {
-      // We have a definite ATAPI device, set up the PRD and all that now
-      if(!PhysicalMemoryManager::instance().allocateRegion(m_PrdTableMemRegion,
-                                                           1,
-                                                           PhysicalMemoryManager::continuous,
-                                                           VirtualAddressSpace::Write,
-                                                           -1))
-      {
-          ERROR("ATAPI: Couldn't allocate PRD table. Continuing without DMA support.");
-          m_bDma = false;
-      }
-      else
-      {
-          /// \todo Store the type of DMA supported by this device
-          m_PrdTable = reinterpret_cast<PhysicalRegionDescriptor *>(m_PrdTableMemRegion.virtualAddress());
-          m_PrdTablePhys = m_PrdTableMemRegion.physicalAddress();
-          NOTICE("ATAPI: PRD table at v=" << reinterpret_cast<uintptr_t>(m_PrdTableMemRegion.virtualAddress()) << ", p=" << m_PrdTablePhys << ".");
-      }
-  }
-  else
-  {
-      NOTICE("ATAPI: Device does not support DMA");
-      m_bDma = false;
   }
 
   NOTICE("Detected ATAPI device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
@@ -416,6 +425,60 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
 
+  // If DMA is enabled, set that up now
+  bool bDmaSetup = false;
+  if(m_bDma && nRespBytes)
+  {
+      // Grab the PRD table lock
+      m_PrdTableLock.acquire();
+
+      // Grab the physical address of the buffer we've been given
+      VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+      if(va.isMapped(reinterpret_cast<void*>(respBuff)))
+      {
+          physical_uintptr_t phys = 0;
+          size_t flags = 0;
+          va.getMapping(reinterpret_cast<void*>(respBuff), phys, flags);
+          phys += (respBuff & 0xFFF);
+
+          // Add it to the PRD - ensuring that we stick to the 64K limit
+          size_t nRemainingBytes = nRespBytes;
+          size_t currOffset = 0;
+          int i = 0;
+          while(nRemainingBytes)
+          {
+              NOTICE("m_PrdTable[" << Dec << i << Hex << "].physAddr = " << (phys + currOffset) << ";");
+              m_PrdTable[i].physAddr = phys + currOffset;
+              NOTICE("m_PrdTable[" << Dec << i << Hex << "].byteCount = " << (nRemainingBytes & 0xFFFF) << ";");
+              m_PrdTable[i].byteCount = nRemainingBytes & 0xFFFF;
+              currOffset += (nRemainingBytes) & 0xFFFF;
+              nRemainingBytes -= (nRemainingBytes) & 0xFFFF;
+
+              if(!nRemainingBytes)
+                  m_PrdTable[i].rsvdEot = 0x8000;
+              else
+                  m_PrdTable[i].rsvdEot = 0;
+              i++;
+          }
+
+          NOTICE("Set up " << i << " PRDs, " << Dec << currOffset << Hex << " bytes");
+
+          // Wait for no other DMA command to be running
+          uint8_t statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+          while(statusReg & 0x01)
+              statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+          statusReg = 0x60;
+          m_BusMaster->write8(statusReg, BusMasterIde::SecondaryStatus);
+
+          // Save our PRD physical address
+          m_BusMaster->write32(m_PrdTablePhys, BusMasterIde::SecondaryPrdTableAddr);
+
+          bDmaSetup = true;
+      }
+
+      m_PrdTableLock.release();
+  }
+
   // Temporary storage, so we can save cycles later
   uint16_t *tmpPacket = new uint16_t[m_PacketSize / 2];
   PointerGuard<uint16_t> tmpGuard(tmpPacket);
@@ -448,23 +511,57 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   }
 
   // PACKET command
-  commandRegs->write8(0 /*(m_bDma ? 1 : 0)*/, 1); // no overlap, DMA if supported
-  commandRegs->write8(0, 2); // tag = 0
-  commandRegs->write8(0, 3); // n/a for PACKET command
-  commandRegs->write8(nRespBytes & 0xFF, 4); // byte count limit
-  commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
+  if((m_pIdent[62] & (1 << 15)) && m_bDma && bDmaSetup) // Device requires DMADIR for Packet DMA commands
+      commandRegs->write8((bWrite ? 1 : 5), 1); // Transfer to host, DMA
+  else if(m_bDma && bDmaSetup)
+      commandRegs->write8(1, 1); // No overlap, DMA
+  else
+    commandRegs->write8(0, 1); // No overlap, no DMA
+  commandRegs->write8(0, 2); // Tag = 0
+  commandRegs->write8(0, 3); // N/A for PACKET command
+  if(m_bDma && bDmaSetup)
+  {
+      commandRegs->write8(0, 4); // Byte count limit = 0 for DMA
+      commandRegs->write8(0, 5);
+  }
+  else
+  {
+      commandRegs->write8(nRespBytes & 0xFF, 4); // Byte count limit
+      commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
+  }
   commandRegs->write8(0xA0, 7);
 
-  // Wait for the busy bit to be cleared before continuing
+  // Wait for the device to be ready to accept the command packet
   status = commandRegs->read8(7);
-  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
-    status = commandRegs->read8(7);
+  while(((status & 0x80) != 0) && ((status & 0x9) == 0))
+         /*
+         ! // This is "right" according to the spec, but it makes QEMU die :(
+         ((status & 0x80) == 0) && // BSY cleared to zero
+         ((status & 0x20) == 0) && // DMRD cleared to zero
+         ((status & 0x08) == 1) && // DRQ set to one
+         ((status & 0x01) == 0)))  // CHK cleared to zero
+         */
+  {
+      status = commandRegs->read8(7);
+  }
 
   // Error?
   if(status & 0x01)
   {
     ERROR("ATAPI Packet command error [status=" << status << "]!");
     return false;
+  }
+
+  // Start the DMA command, if needed
+  if(bDmaSetup)
+  {
+      uint8_t cmdReg = 0;
+      cmdReg = m_BusMaster->read8(BusMasterIde::SecondaryCommand);
+      if(cmdReg & 0x1)
+          ERROR("ATAPI: Start/Stop Bus Master was already set!");
+      else
+          cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 0x8 : 0);
+      m_BusMaster->write8(cmdReg, BusMasterIde::SecondaryCommand);
   }
 
   Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
@@ -474,7 +571,42 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     commandRegs->write16(tmpPacket[i], 0);
 
   // Wait for the busy bit to be cleared once again
-  m_IrqReceived.acquire();
+  while(true)
+  {
+    m_IrqReceived.acquire();
+    if(m_bDma && bDmaSetup)
+    {
+        // Check first that an IRQ has fired for us. If not, keep waiting.
+        uint8_t statusReg = m_BusMaster->read8(BusMasterIde::PrimaryStatus);
+        statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+        uint8_t clearReg = 0;
+        if(statusReg & 0x4)
+        {
+            bool bError = false;
+            clearReg |= 0x4;
+
+            // Yes, the device fired this interrupt. Error?
+            if(statusReg & 0x2)
+            {
+                WARNING("ATAPI: DMA transfer failed");
+                clearReg |= 0x2;
+                bError = true;
+            }
+
+            uint8_t cmdReg = m_BusMaster->read8(BusMasterIde::SecondaryCommand);
+            m_BusMaster->write8((cmdReg & 0xFE), BusMasterIde::SecondaryCommand);
+
+            m_BusMaster->write8(clearReg, BusMasterIde::SecondaryStatus);
+
+            if(bError)
+                return false;
+            else
+                break;
+        }
+    }
+    else
+        break;
+  }
   status = commandRegs->read8(7);
   while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
     status = commandRegs->read8(7);
@@ -490,31 +622,34 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     return true;
 
   // Read in the data, if we need to
-  size_t realSz = commandRegs->read8(4) | (commandRegs->read8(5) << 8);
-  uint16_t *dest = reinterpret_cast<uint16_t*>(respBuff);
-  if(nRespBytes)
+  if(!m_bDma && !bDmaSetup)
   {
-    size_t sizeToRead = ((realSz > nRespBytes) ? nRespBytes : realSz) / 2;
-    for(size_t i = 0; i < sizeToRead; i++)
-    {
-      if(bWrite)
-        commandRegs->write16(dest[i], 0);
-      else
-        dest[i] = commandRegs->read16(0);
-    }
-  }
+      size_t realSz = commandRegs->read8(4) | (commandRegs->read8(5) << 8);
+      uint16_t *dest = reinterpret_cast<uint16_t*>(respBuff);
+      if(nRespBytes)
+      {
+        size_t sizeToRead = ((realSz > nRespBytes) ? nRespBytes : realSz) / 2;
+        for(size_t i = 0; i < sizeToRead; i++)
+        {
+          if(bWrite)
+            commandRegs->write16(dest[i], 0);
+          else
+            dest[i] = commandRegs->read16(0);
+        }
+      }
 
-  // Discard unread data (or write pretend data)
-  if(realSz > nRespBytes)
-  {
-    NOTICE("sendCommand has to read beyond provided buffer [" << realSz << " is bigger than " << nRespBytes << "]");
-    for(size_t i = nRespBytes; i < realSz; i += 2)
-    {
-      if(bWrite)
-        commandRegs->write16(0xFFFF, 0);
-      else
-        commandRegs->read16(0);
-    }
+      // Discard unread data (or write pretend data)
+      if(realSz > nRespBytes)
+      {
+        NOTICE("sendCommand has to read beyond provided buffer [" << realSz << " is bigger than " << nRespBytes << "]");
+        for(size_t i = nRespBytes; i < realSz; i += 2)
+        {
+          if(bWrite)
+            commandRegs->write16(0xFFFF, 0);
+          else
+            commandRegs->read16(0);
+        }
+      }
   }
 
   // Complete
@@ -619,5 +754,7 @@ bool AtapiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
   *blockNumber = BIG_TO_HOST32(capacity.LBA);
   uint32_t blockSz = BIG_TO_HOST32(capacity.BlockSize);
   *blockSize = blockSz ? blockSz : defaultBlockSize();
+
+  NOTICE("Internal capacity: " << *blockNumber << ", " << *blockSize << ".");
   return true;
 }

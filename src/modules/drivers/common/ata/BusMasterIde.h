@@ -31,19 +31,22 @@ typedef struct
 } __attribute__((packed)) PhysicalRegionDescriptor;
 
 /** Bus Master IDE Registers */
-enum BusMasterIdeRegs
+namespace BusMasterIde
 {
-    PrimaryCommand          = 0,    // R/W
-    DeviceSpecific1         = 1,    // --
-    PrimaryStatus           = 2,    // R/W/C
-    DeviceSpecific2         = 3,    // --
-    PrimaryPrdTableAddr     = 4,    // R/W
-    SecondaryCommand        = 8,    // R/W
-    DeviceSpecific3         = 9,    // --
-    SecondaryStatus         = 10,   // R/W
-    DeviceSpecific4         = 11,   // --
-    SecondaryPrdTableAddr   = 12,   // R/W
-};
+    enum BusMasterIdeRegs
+    {
+        PrimaryCommand          = 0,    // R/W
+        DeviceSpecific1         = 1,    // --
+        PrimaryStatus           = 2,    // R/W/C
+        DeviceSpecific2         = 3,    // --
+        PrimaryPrdTableAddr     = 4,    // R/W
+        SecondaryCommand        = 8,    // R/W
+        DeviceSpecific3         = 9,    // --
+        SecondaryStatus         = 10,   // R/W
+        DeviceSpecific4         = 11,   // --
+        SecondaryPrdTableAddr   = 12,   // R/W
+    };
+}
 
 /** Command register format */
 typedef union

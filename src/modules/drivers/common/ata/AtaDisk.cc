@@ -27,10 +27,10 @@
 #include "AtaDisk.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
-AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs) :
+AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster) :
         Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
         m_IrqReceived(true), m_Cache(), m_nAlignPoints(0), m_CommandRegs(commandRegs),
-        m_ControlRegs(controlRegs)
+        m_ControlRegs(controlRegs), m_BusMaster(busMaster)
 {
     m_pParent = pDev;
 }

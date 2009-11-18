@@ -74,7 +74,7 @@ private:
         ICH5
     } m_PciControllerType;
 
-    void diskHelper(bool master, IoBase *cmd, IoBase *ctl);
+    void diskHelper(bool master, IoBase *cmd, IoBase *ctl, IoBase *dma);
 
 protected:
     int m_nController;
