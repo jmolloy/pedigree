@@ -129,15 +129,13 @@ enum Modifier
   Flush
 };
 
-// Function pointer to output boot progress -
-// Description, current progress, total progress.
-typedef void (*BootProgressFn)(const char *, uintptr_t);
-// Function pointer to set total progress -
-// Total progress.
-typedef void (*BootProgressTotalFn)(uintptr_t);
+// Function pointer to update boot progress -
+// Description.
+typedef void (*BootProgressUpdateFn)(const char *);
 
-extern BootProgressFn g_BootProgress;
-extern BootProgressTotalFn g_BootProgressTotal;
+extern size_t g_BootProgressCurrent;
+extern size_t g_BootProgressTotal;
+extern BootProgressUpdateFn g_BootProgressUpdate;
 
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
@@ -146,6 +144,9 @@ extern BootProgressTotalFn g_BootProgressTotal;
  *      the entries from the log (within the debugger's log viewer for example). */
 class Log
 {
+private:
+  /** Output callback function type */
+  typedef void (*OutputCallback)(const char *);
 public:
   /** Severity level of the log entry */
   enum SeverityLevel
@@ -165,8 +166,14 @@ public:
   inline static Log &instance()
     {return m_Instance;}
 
-   /** Initialises the Log. */
+   /** Initialises the Log */
   void initialise();
+
+  /** Installs an output callback */
+  void installCallback(OutputCallback callback);
+
+  /** Removes an output callback */
+  void removeCallback(OutputCallback callback);
 
   /** Adds an entry to the log.
    *\param[in] str the null-terminated ASCII string that should be added */
@@ -263,6 +270,15 @@ private:
 
   /** If we should output to serial */
   bool m_EchoToSerial;
+
+  struct OutputCallbackItem
+  {
+      /** The handler function */
+      OutputCallback func;
+  };
+
+  /** Output callback list */
+  List<OutputCallbackItem*> m_OutputCallbacks;
 
   /** The Log instance (singleton class) */
   static Log m_Instance;

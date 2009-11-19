@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,6 +60,9 @@ class InputManager
 
         /// Installs a callback for a specific item
         void installCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
+
+        /// Removes a callback for a specific item
+        void removeCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
 
         /// Thread trampoline
         static int trampoline(void *ptr);

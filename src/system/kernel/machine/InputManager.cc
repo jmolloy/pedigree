@@ -108,6 +108,27 @@ void InputManager::installCallback(CallbackType type, callback_t callback, Threa
     }
 }
 
+void InputManager::removeCallback(CallbackType type, callback_t callback, Thread *pThread)
+{
+    LockGuard<Spinlock> guard(m_QueueLock);
+    if(type == Key)
+    {
+        for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
+            it != m_KeyCallbacks.end();
+            it++)
+        {
+            if(*it)
+            {
+                if((pThread == (*it)->pThread) && (callback == (*it)->func))
+                {
+                    m_KeyCallbacks.erase(it);
+                    return;
+                }
+            }
+        }
+    }
+}
+
 int InputManager::trampoline(void *ptr)
 {
     InputManager *p = reinterpret_cast<InputManager *>(ptr);
@@ -145,7 +166,7 @@ void InputManager::mainThread()
                     func(key);
                     continue;
                 }
-                
+
                 InputEvent *pEvent = new InputEvent(Key, key, reinterpret_cast<uintptr_t>(func));
                 pThread->sendEvent(pEvent);
             }

@@ -33,7 +33,7 @@ create table 'colour-scheme' (
 --
 -- Blue on black.
 --
-insert into 'colour-scheme' values ('splash-background', 0,  0,  0  );
+insert into 'colour-scheme' values ('splash-background', 255, 255, 255);
 insert into 'colour-scheme' values ('border',     60, 60, 150);
 insert into 'colour-scheme' values ('fill',       20, 20, 100);
 insert into 'colour-scheme' values ('selected-text',255,255,255);

@@ -19,10 +19,12 @@
 
 #include <utilities/assert.h>
 #include <machine/Display.h>
+#include <machine/InputManager.h>
 #include <processor/Processor.h>
 #include <config/Config.h>
 
 #include "image.h"
+#include "font.h"
 
 #ifdef X86_COMMON
 extern Display *g_pDisplay;
@@ -41,29 +43,127 @@ static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
 static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
 
-static size_t g_Total = 0;
-static size_t g_Current = 0;
+static size_t g_Previous = 0;
+static bool g_LogMode = false;
+static size_t g_LogX = 0;
+static size_t g_LogY = 0;
 
-void total(uintptr_t total)
+void printChar(char c)
 {
-    g_Total = total;
+    if(c == '\t')
+        g_LogX = (g_LogX + 8) & ~7;
+    else if(c == '\r')
+        g_LogX = 0;
+    else if(c == '\n')
+    {
+        g_LogX = 0;
+        g_LogY++;
+    }
+    else if(c >= ' ')
+    {
+        for(size_t i = 0;i<FONT_HEIGHT;i++)
+        {
+            for(size_t j = 0;j<FONT_WIDTH;j++)
+            {
+                if(font_data[c*FONT_HEIGHT+i] & (1<<(FONT_WIDTH-j)))
+                {
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].r = 0;
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].g = 0;
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].b = 0;
+                }
+            }
+        }
+        g_pDisplay->updateBuffer(g_pBuffer, g_LogX*FONT_WIDTH, g_LogY*FONT_HEIGHT, g_LogX*FONT_WIDTH+FONT_WIDTH, g_LogY*FONT_HEIGHT+FONT_HEIGHT);
+        g_LogX++;
+    }
+
+    if(g_LogX >= g_Width/FONT_WIDTH)
+    {
+        g_LogX = 0;
+        g_LogY++;
+    }
+
+    if(g_LogY >= g_Height/FONT_HEIGHT)
+    {
+        size_t diff = g_LogY - g_Height/FONT_HEIGHT + 1;
+        g_pDisplay->bitBlit(g_pBuffer, 0, diff*FONT_HEIGHT, 0, 0, g_Width, (g_Height/FONT_HEIGHT-diff)*FONT_HEIGHT);
+        g_pDisplay->fillRectangle(g_pBuffer, 0, (g_Height/FONT_HEIGHT-diff)*FONT_HEIGHT, g_Width, diff*FONT_HEIGHT, g_Bg);
+        g_LogY = g_Height/FONT_HEIGHT-diff;
+    }
 }
 
-void progress(const char *text, uintptr_t progress)
+void printString(const char *str)
+{
+    for(size_t i = 0;i<strlen(str);i++)
+        printChar(str[i]);
+}
+
+void keyCallback(uint64_t key)
+{
+    if(key == '\e' && !g_LogMode)
+    {
+        NOTICE("Enabling log...");
+        g_LogMode = true;
+        g_pDisplay->fillRectangle(g_pBuffer, 0, 0, g_Width, g_Height, g_Bg);
+
+        String str;
+        Log &log = Log::instance();
+        for(size_t i = 0;i < log.getStaticEntryCount();i++)
+        {
+            const Log::StaticLogEntry &entry = log.getStaticEntry(i);
+            str += "(";
+            switch (entry.type)
+            {
+                case Log::Notice:
+                    str += "NN";
+                    break;
+                case Log::Warning:
+                    str += "WW";
+                    break;
+                case Log::Error:
+                    str += "EE";
+                    break;
+                case Log::Fatal:
+                    str += "FF";
+                    break;
+            }
+
+            str += ") ";
+            str += entry.str;
+            str += "\n";
+        }
+        printString(str);
+        log.installCallback(printString);
+    }
+}
+
+void progress(const char *text)
 {
     // Calculate percentage.
-    if (g_Total == 0)
+    if (g_BootProgressTotal == 0)
         return;
 
+    if(g_BootProgressCurrent == g_BootProgressTotal)
+    {
+        Log::instance().removeCallback(printString);
+        InputManager::instance().removeCallback(InputManager::Key, keyCallback);
+    }
+
+    // Check if we should refresh screen
     if(!strcmp(text, "unload"))
         g_pDisplay->setCurrentBuffer(g_pBuffer);
 
-    size_t w = (g_ProgressW * progress) / g_Total;
-    if(g_Current <= progress)
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
+    // Check if we are in log mode
+    if(g_LogMode)
+        return;
+
+    size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
+    size_t wPrev = (g_ProgressW * g_Previous) / g_BootProgressTotal;
+    if(g_Previous <= g_BootProgressCurrent)
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+wPrev, g_ProgressY, w-wPrev, g_ProgressH, g_ProgressCol);
     else
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
-    g_Current = progress;
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, wPrev-w, g_ProgressH, g_Bg);
+    g_Previous = g_BootProgressCurrent;
 }
 
 void init()
@@ -122,7 +222,7 @@ void init()
 
     size_t x, y;
     size_t origx = x = (g_Width - width) / 2;
-    size_t origy = y = (g_Height - height) / 4;
+    size_t origy = y = (g_Height - height) / 3;
 
     char *data = header_data;
     for (size_t i = 0; i < width*height; i++)
@@ -151,8 +251,8 @@ void init()
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-2, g_ProgressY-2, g_ProgressW+4, g_ProgressH+4, g_ProgressBorderCol);
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
 
-    g_BootProgress = &progress;
-    g_BootProgressTotal = &total;
+    g_BootProgressUpdate = &progress;
+    InputManager::instance().installCallback(InputManager::Key, keyCallback);
 }
 
 void destroy()

@@ -25,8 +25,14 @@
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
 Log Log::m_Instance;
-BootProgressFn g_BootProgress = 0;
-BootProgressTotalFn g_BootProgressTotal = 0;
+BootProgressUpdateFn g_BootProgressUpdate = 0;
+size_t g_BootProgressTotal = 0;
+size_t g_BootProgressCurrent = 0;
+
+void outputSerial(const char* str)
+{
+    Machine::instance().getSerial(0)->write(str);
+}
 
 Log::Log () :
     m_Lock(),
@@ -68,6 +74,30 @@ void Log::initialise ()
                 m_EchoToSerial = true;
                 break;
             }
+        }
+    }
+    if(m_EchoToSerial)
+        installCallback(outputSerial);
+}
+
+void Log::installCallback(OutputCallback callback)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+    OutputCallbackItem *item = new OutputCallbackItem;
+    item->func = callback;
+    m_OutputCallbacks.pushBack(item);
+}
+void Log::removeCallback(OutputCallback callback)
+{
+    LockGuard<Spinlock> guard(m_Lock);
+    for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
+        it != m_OutputCallbacks.end();
+        it++)
+    {
+        if(*it && ((*it)->func == callback))
+        {
+            m_OutputCallbacks.erase(it);
+            return;
         }
     }
 }
@@ -137,25 +167,34 @@ Log &Log::operator<< (Modifier type)
         m_StaticLog[m_StaticEntryEnd] = m_Buffer;
         m_StaticEntryEnd = (m_StaticEntryEnd+1) % LOG_ENTRIES;
 
-        if (Machine::instance().isInitialised() == true && m_EchoToSerial == true)
+        for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
+            it != m_OutputCallbacks.end();
+            it++)
         {
-            switch (m_Buffer.type)
+            if(*it)
             {
-                case Notice:
-                    Machine::instance().getSerial(0)->write("(NN) ");
-                    break;
-                case Warning:
-                    Machine::instance().getSerial(0)->write("(WW) ");
-                    break;
-                case Error:
-                    Machine::instance().getSerial(0)->write("(EE) ");
-                    break;
-                case Fatal:
-                    Machine::instance().getSerial(0)->write("(FF) ");
-                    break;
+                OutputCallback func = (*it)->func;
+                if(func)
+                {
+                    switch (m_Buffer.type)
+                    {
+                        case Notice:
+                            func("(NN) ");
+                            break;
+                        case Warning:
+                            func("(WW) ");
+                            break;
+                        case Error:
+                            func("(EE) ");
+                            break;
+                        case Fatal:
+                            func("(FF) ");
+                            break;
+                    }
+                    func(static_cast<const char*>(m_Buffer.str));
+                    func("\n");
+                }
             }
-            Machine::instance().getSerial(0)->write ( static_cast<const char *> (m_Buffer.str) );
-            Machine::instance().getSerial(0)->write ("\n");
         }
 
     }
