@@ -174,7 +174,7 @@ void entry()
           uintptr_t s = (cs.bar[l]&0xFFFFFFF0);
 
           NOTICE("PCI:     BAR" << Dec << l << Hex << ": " << s << ".." << (s + size) << " (" << io << ")");
-          Device::Address *pAddress = new Device::Address(String(c), cs.bar[l]&0xFFFFFFF0, size, (cs.bar[l]&0x1) == 0x1));
+          Device::Address *pAddress = new Device::Address(String(c), cs.bar[l]&0xFFFFFFF0, size, (cs.bar[l]&0x1) == 0x1);
           pDevice->addresses().pushBack(pAddress);
         }
 
