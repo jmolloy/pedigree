@@ -178,6 +178,7 @@ bool AtaDisk::initialise()
     }
   
     // Any form of DMA support?
+#if 0
     if(m_pIdent[49] & (1 << 8))
     {
       // Check that we have a bus master device to use
@@ -212,6 +213,9 @@ bool AtaDisk::initialise()
         NOTICE("ATA: Device does not support DMA");
         m_bDma = false;
     }
+#else
+    m_bDma = false;
+#endif
 
     NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
     return true;
@@ -350,6 +354,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         bool bDmaSetup = false;
         if(m_bDma)
         {
+#if 0
             // Grab the physical address of the buffer we've been given
             VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
             if(va.isMapped(reinterpret_cast<void*>(buffer)))
@@ -413,6 +418,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 ERROR("ATA: buffer was not mapped!");
                 return 0;
             }
+#endif
         }
 
         // Make sure the IrqReceived mutex is locked.
@@ -423,6 +429,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         // Enable IRQs.
         Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
 
+#if 0
         if(m_bDma && bDmaSetup)
         {
             if (m_SupportsLBA48)
@@ -447,6 +454,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         }
         else
         {
+#endif
             if (m_SupportsLBA48)
             {
                 // Send command "read sectors EXT"
@@ -457,7 +465,9 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 // Send command "read sectors with retry"
                 commandRegs->write8(0x20, 7);
             }
+#if 0
         }
+#endif
 
         // Acquire the 'outstanding IRQ' mutex.
         while(true)
@@ -469,6 +479,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 WARNING("ATA: Timed out while waiting for IRQ");
                 return 0;
             }
+#if 0
             else if(m_bDma && bDmaSetup)
             {
                 // Check first that an IRQ has fired for us. If not, keep waiting.
@@ -499,6 +510,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 }
             }
             else
+#endif
                 break;
         }
 

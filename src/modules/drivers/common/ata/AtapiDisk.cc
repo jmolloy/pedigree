@@ -205,6 +205,7 @@ bool AtapiDisk::initialise()
   }
   
   // Any form of DMA support?
+#if 0
   if(m_pIdent[49] & (1 << 8))
   {
       // Check that we have a bus master device to use
@@ -239,6 +240,9 @@ bool AtapiDisk::initialise()
       NOTICE("ATAPI: Device does not support DMA");
       m_bDma = false;
   }
+#else
+  m_bDma = false;
+#endif
 
   // Packet size?
   m_PacketSize = ((m_pIdent[0] & 0x0003) == 0) ? 12 : 16;
@@ -316,8 +320,6 @@ uint64_t AtapiDisk::doRead(uint64_t location)
             doRead2(location, buffer, chunkSize);
         }
     }
-    else
-        NOTICE("Avoiding a disk read at [" << location << ", buff=" << buffer << "]");
     return buffer;
 }
 
@@ -450,6 +452,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   bool bDmaSetup = false;
   if(m_bDma && nRespBytes)
   {
+#if 0
       // Grab the physical address of the buffer we've been given
       VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
       if(va.isMapped(reinterpret_cast<void*>(respBuff)))
@@ -513,6 +516,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
           ERROR("ATAPI: Response buffer was not mapped!");
           return 0;
       }
+#endif
   }
 
   // Temporary storage, so we can save cycles later
@@ -591,6 +595,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   // Start the DMA command, if needed
   if(bDmaSetup)
   {
+#if 0
       uint8_t cmdReg = 0;
       cmdReg = m_BusMaster->read8(BusMasterIde::Command);
       if(cmdReg & 0x1)
@@ -598,6 +603,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
       else
           cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 0x8 : 0);
       m_BusMaster->write8(cmdReg, BusMasterIde::Command);
+#endif
   }
 
   Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
@@ -612,6 +618,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     m_IrqReceived.acquire();
     if(m_bDma && bDmaSetup)
     {
+#if 0
         // Check first that an IRQ has fired for us. If not, keep waiting.
         uint8_t statusReg = m_BusMaster->read8(BusMasterIde::Status);
         uint8_t clearReg = 0;
@@ -638,6 +645,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
             else
                 break;
         }
+#endif
     }
     else
         break;
