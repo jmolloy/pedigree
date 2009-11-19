@@ -56,7 +56,6 @@ void CacheManager::unregisterCache(Cache *pCache)
 
 void CacheManager::compactAll()
 {
-    NOTICE_NOLOCK("Compacting all caches");
     for(List<Cache*>::Iterator it = m_Caches.begin();
         it != m_Caches.end();
         it++)
@@ -141,6 +140,7 @@ uintptr_t Cache::insert (uintptr_t key)
 
     if (!succeeded)
     {
+        m_Lock.release();
         FATAL("Cache: out of address space.");
         return 0;
     }
@@ -162,6 +162,64 @@ uintptr_t Cache::insert (uintptr_t key)
     m_Lock.release();
 
     return location;
+}
+
+uintptr_t Cache::insert (uintptr_t key, size_t size)
+{
+    m_Lock.acquire();
+
+    if(size % 4096)
+    {
+        WARNING("Cache::insert called with a size that isn't page-aligned");
+        size &= ~0xFFF;
+    }
+
+    size_t nPages = size / 4096;
+
+    // Already allocated buffer?
+    CachePage *pPage = m_Pages.lookup(key);
+    if (pPage)
+    {
+        m_Lock.release();
+        return pPage->location;
+    }
+
+    // Nope, so let's allocate this block
+    m_AllocatorLock.acquire();
+    uintptr_t location;
+    bool succeeded = m_Allocator.allocate(size, location);
+    m_AllocatorLock.release();
+
+    if (!succeeded)
+    {
+        m_Lock.release();
+        ERROR("Cache: can't allocate " << Dec << size << Hex << " bytes.");
+        return 0;
+    }
+
+    uintptr_t returnLocation = location;
+    for(size_t page = 0; page < nPages; page++)
+    {
+        uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        if (!Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(location), VirtualAddressSpace::Write|VirtualAddressSpace::KernelMode))
+        {
+            FATAL("Map failed in Cache::insert())");
+        }
+
+        Timer &timer = *Machine::instance().getTimer();
+
+        pPage = new CachePage;
+        pPage->location = location;
+        pPage->refcnt = 1;
+        pPage->timeAllocated = timer.getUnixTimestamp();
+        m_Pages.insert(key + (page * 4096), pPage);
+
+        location += 4096;
+    }
+
+    m_Lock.release();
+
+    return returnLocation;
 }
 
 void Cache::release (uintptr_t key)

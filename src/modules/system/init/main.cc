@@ -57,11 +57,6 @@ extern BootIO bootIO;
 
 void init_stage2();
 
-void keyHandler(uint64_t key)
-{
-    NOTICE("Yay, key!");
-}
-
 static bool bRootMounted = false;
 static bool probeDisk(Disk *pDisk)
 {
@@ -122,8 +117,6 @@ void hashesoneoneone(Device *pDev)
 void init()
 {
     static HugeStaticString str;
-
-    InputManager::instance().installCallback(InputManager::Key, keyHandler);
 
     // Mount all available filesystems.
     if (!findDisks(&Device::root()))

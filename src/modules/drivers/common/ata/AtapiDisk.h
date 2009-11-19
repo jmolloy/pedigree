@@ -100,7 +100,7 @@ public:
 
   // These are the internal functions that the controller calls when it is ready to process our request.
   virtual uint64_t doRead(uint64_t location);
-  virtual uint64_t doRead2(uint64_t location, uintptr_t buffer);
+  virtual uint64_t doRead2(uint64_t location, uintptr_t buffer, size_t buffSize);
   virtual uint64_t doWrite(uint64_t location);
 
   // Called by our controller when an IRQ has been received.

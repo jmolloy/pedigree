@@ -293,16 +293,38 @@ uint64_t AtapiDisk::doRead(uint64_t location)
     uintptr_t buffer = m_Cache.lookup(location);
     if(!buffer)
     {
-        buffer = m_Cache.insert(location);
-        doRead2(location, buffer);
-        doRead2(location+2048, buffer+2048);
+        if(!m_bDma)
+        {
+            buffer = m_Cache.insert(location);
+            doRead2(location, buffer, 4096);
+        }
+        else
+        {
+            // If we're using DMA, read a good big chunk of the disk
+            size_t chunkSize = 65536;
+            buffer = m_Cache.insert(location, chunkSize);
+            if(!buffer)
+            {
+                chunkSize = 4096;
+                buffer = m_Cache.insert(location);
+                if(!buffer)
+                {
+                    ERROR("ATAPI: doRead couldn't get a buffer to use");
+                    return 0;
+                }
+            }
+
+            doRead2(location, buffer, chunkSize);
+        }
     }
+    else
+        NOTICE("Avoiding a disk read at [" << location << ", buff=" << buffer << "]");
     return buffer;
 }
 
-uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer)
+uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer, size_t buffSize)
 {
-    size_t nBytes = 2048;
+    size_t nBytes = buffSize;
 
     if(!nBytes || !buffer)
     {
@@ -429,30 +451,38 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   bool bDmaSetup = false;
   if(m_bDma && nRespBytes)
   {
-      // Grab the PRD table lock
-      m_PrdTableLock.acquire();
-
       // Grab the physical address of the buffer we've been given
       VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
       if(va.isMapped(reinterpret_cast<void*>(respBuff)))
       {
-          physical_uintptr_t phys = 0;
-          size_t flags = 0;
-          va.getMapping(reinterpret_cast<void*>(respBuff), phys, flags);
-          phys += (respBuff & 0xFFF);
+          // Grab the PRD table lock
+          m_PrdTableLock.acquire();
 
-          // Add it to the PRD - ensuring that we stick to the 64K limit
+          // Add it to the PRD table - ensuring that we stick to the 64K limit per PRD
           size_t nRemainingBytes = nRespBytes;
           size_t currOffset = 0;
           int i = 0;
           while(nRemainingBytes)
           {
-              NOTICE("m_PrdTable[" << Dec << i << Hex << "].physAddr = " << (phys + currOffset) << ";");
-              m_PrdTable[i].physAddr = phys + currOffset;
-              NOTICE("m_PrdTable[" << Dec << i << Hex << "].byteCount = " << (nRemainingBytes & 0xFFFF) << ";");
-              m_PrdTable[i].byteCount = nRemainingBytes & 0xFFFF;
-              currOffset += (nRemainingBytes) & 0xFFFF;
-              nRemainingBytes -= (nRemainingBytes) & 0xFFFF;
+              physical_uintptr_t phys = currOffset;
+              size_t flags = 0;
+              va.getMapping(reinterpret_cast<void*>(respBuff + currOffset), phys, flags);
+              if(i == 0)
+                phys += (respBuff & 0xFFF);
+
+              m_PrdTable[i].physAddr = phys;
+
+              size_t transferSize = nRemainingBytes;
+              if(transferSize > 4096)
+                  transferSize = 4096 - ((i == 0) ? (respBuff & 0xFFF) : 0);
+#if 0
+              NOTICE("m_PrdTable[" << Dec << i << Hex << "].physAddr = " << phys << ";");
+              NOTICE("m_PrdTable[" << Dec << i << Hex << "].byteCount = " << transferSize << ";");
+#endif
+              m_PrdTable[i].byteCount = transferSize;
+
+              currOffset += transferSize;
+              nRemainingBytes -= transferSize;
 
               if(!nRemainingBytes)
                   m_PrdTable[i].rsvdEot = 0x8000;
@@ -461,7 +491,9 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
               i++;
           }
 
+#if 0
           NOTICE("Set up " << i << " PRDs, " << Dec << currOffset << Hex << " bytes");
+#endif
 
           // Wait for no other DMA command to be running
           uint8_t statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
@@ -474,9 +506,14 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
           m_BusMaster->write32(m_PrdTablePhys, BusMasterIde::SecondaryPrdTableAddr);
 
           bDmaSetup = true;
-      }
 
-      m_PrdTableLock.release();
+          m_PrdTableLock.release();
+      }
+      else
+      {
+          ERROR("ATAPI: Response buffer was not mapped!");
+          return 0;
+      }
   }
 
   // Temporary storage, so we can save cycles later

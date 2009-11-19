@@ -71,6 +71,12 @@ public:
 
     /** Creates a cache entry with the given key. */
     uintptr_t insert (uintptr_t key);
+    
+    /** Creates a bunch of cache entries to fill a specific size. Note that
+     *  this is just a monster allocation of a virtual address - the physical
+     *  pages are NOT CONTIGUOUS.
+     */
+    uintptr_t insert (uintptr_t key, size_t size);
 
     /** Decreases \p key 's \c refcnt by one. */
     void release(uintptr_t key);
