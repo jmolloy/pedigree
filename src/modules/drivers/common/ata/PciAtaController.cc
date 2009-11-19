@@ -113,10 +113,25 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     IoPort *slaveCommand = new IoPort("pci-ide-slave-cmd");
     IoPort *masterControl = new IoPort("pci-ide-master-ctl");
     IoPort *slaveControl = new IoPort("pci-ide-slave-ctl");
-    IoBase *busMaster = 0;
+
+    /// \todo Bus master registerss may be memory mapped...
+    IoPort *busMasterMaster = 0;
+    IoPort *busMasterSlave = 0;
     if(bDma)
     {
-        busMaster = bar4->m_Io;
+        uintptr_t addr = bar4->m_Address;
+
+        // Okay, now delete the BAR's IoBase. We're not going to use it again,
+        // and we need the ports.
+        delete bar4->m_Io;
+        bar4->m_Io = 0;
+
+        busMasterMaster = new IoPort("pci-ide-busmaster-primary");
+        if(!busMasterMaster->allocate(addr, 8))
+            ERROR("Couldn't allocate primary BusMaster ports");
+        busMasterSlave = new IoPort("pci-ide-busmaster-secondary");
+        if(!busMasterSlave->allocate(addr + 8, 8))
+            ERROR("Couldn't allocate secondary BusMaster ports");
     }
 
     // By default, this is the port layout we can expect for the system
@@ -135,10 +150,10 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // And finally, create disks
     /// \todo Give them the Bus Master register base so they can do their work
-    diskHelper(true, masterCommand, masterControl, busMaster);
-    diskHelper(false, masterCommand, masterControl, busMaster);
-    diskHelper(true, slaveCommand, slaveControl, busMaster);
-    diskHelper(false, slaveCommand, slaveControl, busMaster);
+    diskHelper(true, masterCommand, masterControl, busMasterMaster);
+    diskHelper(false, masterCommand, masterControl, busMasterMaster);
+    diskHelper(true, slaveCommand, slaveControl, busMasterSlave);
+    diskHelper(false, slaveCommand, slaveControl, busMasterSlave);
 }
 PciAtaController::~PciAtaController()
 {

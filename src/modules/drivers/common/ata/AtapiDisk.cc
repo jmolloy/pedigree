@@ -496,14 +496,14 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
 #endif
 
           // Wait for no other DMA command to be running
-          uint8_t statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+          uint8_t statusReg = m_BusMaster->read8(BusMasterIde::Status);
           while(statusReg & 0x01)
-              statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+              statusReg = m_BusMaster->read8(BusMasterIde::Status);
           statusReg = 0x60;
-          m_BusMaster->write8(statusReg, BusMasterIde::SecondaryStatus);
+          m_BusMaster->write8(statusReg, BusMasterIde::Status);
 
           // Save our PRD physical address
-          m_BusMaster->write32(m_PrdTablePhys, BusMasterIde::SecondaryPrdTableAddr);
+          m_BusMaster->write32(m_PrdTablePhys, BusMasterIde::PrdTableAddr);
 
           bDmaSetup = true;
 
@@ -593,12 +593,12 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   if(bDmaSetup)
   {
       uint8_t cmdReg = 0;
-      cmdReg = m_BusMaster->read8(BusMasterIde::SecondaryCommand);
+      cmdReg = m_BusMaster->read8(BusMasterIde::Command);
       if(cmdReg & 0x1)
           ERROR("ATAPI: Start/Stop Bus Master was already set!");
       else
           cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 0x8 : 0);
-      m_BusMaster->write8(cmdReg, BusMasterIde::SecondaryCommand);
+      m_BusMaster->write8(cmdReg, BusMasterIde::Command);
   }
 
   Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
@@ -614,8 +614,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     if(m_bDma && bDmaSetup)
     {
         // Check first that an IRQ has fired for us. If not, keep waiting.
-        uint8_t statusReg = m_BusMaster->read8(BusMasterIde::PrimaryStatus);
-        statusReg = m_BusMaster->read8(BusMasterIde::SecondaryStatus);
+        uint8_t statusReg = m_BusMaster->read8(BusMasterIde::Status);
         uint8_t clearReg = 0;
         if(statusReg & 0x4)
         {
@@ -630,10 +629,10 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
                 bError = true;
             }
 
-            uint8_t cmdReg = m_BusMaster->read8(BusMasterIde::SecondaryCommand);
-            m_BusMaster->write8((cmdReg & 0xFE), BusMasterIde::SecondaryCommand);
+            uint8_t cmdReg = m_BusMaster->read8(BusMasterIde::Command);
+            m_BusMaster->write8((cmdReg & 0xFE), BusMasterIde::Command);
 
-            m_BusMaster->write8(clearReg, BusMasterIde::SecondaryStatus);
+            m_BusMaster->write8(clearReg, BusMasterIde::Status);
 
             if(bError)
                 return false;
@@ -792,6 +791,5 @@ bool AtapiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
   uint32_t blockSz = BIG_TO_HOST32(capacity.BlockSize);
   *blockSize = blockSz ? blockSz : defaultBlockSize();
 
-  NOTICE("Internal capacity: " << *blockNumber << ", " << *blockSize << ".");
   return true;
 }

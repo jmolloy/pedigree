@@ -35,16 +35,11 @@ namespace BusMasterIde
 {
     enum BusMasterIdeRegs
     {
-        PrimaryCommand          = 0,    // R/W
-        DeviceSpecific1         = 1,    // --
-        PrimaryStatus           = 2,    // R/W/C
-        DeviceSpecific2         = 3,    // --
-        PrimaryPrdTableAddr     = 4,    // R/W
-        SecondaryCommand        = 8,    // R/W
-        DeviceSpecific3         = 9,    // --
-        SecondaryStatus         = 10,   // R/W
-        DeviceSpecific4         = 11,   // --
-        SecondaryPrdTableAddr   = 12,   // R/W
+        Command         = 0,    // R/W
+        DeviceSpecific1 = 1,    // --
+        Status          = 2,    // R/W/C
+        DeviceSpecific2 = 3,    // --
+        PrdTableAddr    = 4     // R/W
     };
 }
 

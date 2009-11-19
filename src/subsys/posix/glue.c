@@ -1306,8 +1306,6 @@ int sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 
 _sig_func_ptr signal(int s, _sig_func_ptr func)
 {
-    syslog(LOG_NOTICE, "signal -> sigaction");
-
     // Obtain the old mask for the sigaction structure, fill it in with default arguments
     // and pass on to sigaction
     static struct sigaction act;
