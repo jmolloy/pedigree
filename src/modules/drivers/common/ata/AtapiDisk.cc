@@ -34,8 +34,7 @@
 AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster) :
   AtaDisk(pDev, isMaster, commandRegs, controlRegs, busMaster), m_IsMaster(isMaster), m_SupportsLBA28(true),
   m_SupportsLBA48(false), m_Type(None), m_NumBlocks(0), m_BlockSize(0), m_PacketSize(0), m_Removable(true), m_IrqReceived(true),
-  m_PrdTableLock(false), m_PrdTable(0), m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("atapi-prdtable"),
-  m_bDma(true)
+  m_PrdTableMemRegion("atapi-prdtable")
 {
   m_pParent = pDev;
 }

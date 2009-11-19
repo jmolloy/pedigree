@@ -196,23 +196,8 @@ private:
    * \todo A condvar would really be better here. */
   Mutex m_IrqReceived;
 
-  /** PRD table lock (only used when grabbing the offset) */
-  Mutex m_PrdTableLock;
-
-  /** PRD table (virtual) */
-  PhysicalRegionDescriptor *m_PrdTable;
-
-  /** Last used offset into the PRD table (so we can run multiple ops at once) */
-  size_t m_LastPrdTableOffset;
-
-  /** PRD table (physical) */
-  physical_uintptr_t m_PrdTablePhys;
-
   /** MemoryRegion for the PRD table */
   MemoryRegion m_PrdTableMemRegion;
-
-  /** Can we do DMA? */
-  bool m_bDma;
 };
 
 #endif

@@ -200,6 +200,10 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
     uintptr_t returnLocation = location;
     for(size_t page = 0; page < nPages; page++)
     {
+        pPage = m_Pages.lookup(key + (page * 4096));
+        if(pPage)
+            continue; // Don't overwrite existing buffers
+
         uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         if (!Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(location), VirtualAddressSpace::Write|VirtualAddressSpace::KernelMode))
         {

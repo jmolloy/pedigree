@@ -22,6 +22,9 @@
 #include <machine/Controller.h>
 #include <process/Mutex.h>
 #include <utilities/Cache.h>
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
+#include "BusMasterIde.h"
 
 /** An ATA disk device. Most read/write commands get channeled upstream
  * to the controller, as it has to multiplex between multiple disks. */
@@ -101,6 +104,24 @@ protected:
     IoBase *m_CommandRegs;
     IoBase *m_ControlRegs;
     IoBase *m_BusMaster;
+
+    /** PRD table lock (only used when grabbing the offset) */
+    Mutex m_PrdTableLock;
+
+    /** PRD table (virtual) */
+    PhysicalRegionDescriptor *m_PrdTable;
+
+    /** Last used offset into the PRD table (so we can run multiple ops at once) */
+    size_t m_LastPrdTableOffset;
+
+    /** PRD table (physical) */
+    physical_uintptr_t m_PrdTablePhys;
+
+    /** MemoryRegion for the PRD table */
+    MemoryRegion m_PrdTableMemRegion;
+
+    /** Can we do DMA? */
+    bool m_bDma;
 };
 
 #endif

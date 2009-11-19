@@ -164,14 +164,15 @@ void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, IoBase 
     AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl, dma);
     if(!pDisk->initialise())
     {
-        delete pDisk;
+        /*delete pDisk;
         AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
         addChild(pAtapiDisk);
         if(!pAtapiDisk->initialise())
         {
             removeChild(pAtapiDisk);
             delete pAtapiDisk;
-        }
+        }*/
+        delete pDisk;
     }
     else
         addChild(pDisk);
