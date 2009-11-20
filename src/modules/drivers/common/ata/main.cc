@@ -101,7 +101,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
-
+#if 0
         // Look for a PIIX controller
         if(pChild->getPciVendorId() == 0x8086)
         {
@@ -125,7 +125,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 bPiixControllerFound = true;
             }
         }
-
+#endif
         // Recurse.
         searchNode(pChild, false);
     }

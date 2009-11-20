@@ -23,6 +23,9 @@
 
 KernelElf KernelElf::m_Instance;
 
+typedef void (*BootProgressCallback)(const char*, size_t);
+BootProgressCallback g_BootProgress = 0;
+
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
   #if defined(X86_COMMON)
