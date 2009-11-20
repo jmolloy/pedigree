@@ -167,36 +167,37 @@ Log &Log::operator<< (Modifier type)
         m_StaticLog[m_StaticEntryEnd] = m_Buffer;
         m_StaticEntryEnd = (m_StaticEntryEnd+1) % LOG_ENTRIES;
 
-        for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
-            it != m_OutputCallbacks.end();
-            it++)
+        if(m_OutputCallbacks.count())
         {
-            if(*it)
+            // We have output callbacks installed. Build the string we'll pass
+            // to each callback *now* and then send it.
+            HugeStaticString str;
+            switch(m_Buffer.type)
             {
-                OutputCallback func = (*it)->func;
-                if(func)
-                {
-                    switch (m_Buffer.type)
-                    {
-                        case Notice:
-                            func("(NN) ");
-                            break;
-                        case Warning:
-                            func("(WW) ");
-                            break;
-                        case Error:
-                            func("(EE) ");
-                            break;
-                        case Fatal:
-                            func("(FF) ");
-                            break;
-                    }
-                    func(static_cast<const char*>(m_Buffer.str));
-                    func("\n");
-                }
+                case Notice:
+                    str = "(NN) ";
+                    break;
+                case Warning:
+                    str = "(WW) ";
+                    break;
+                case Error:
+                    str = "(EE) ";
+                    break;
+                case Fatal:
+                    str = "(FF) ";
+                    break;
+            }
+            str += m_Buffer.str;
+            str += "\n";
+
+            for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
+                it != m_OutputCallbacks.end();
+                it++)
+            {
+                if(*it)
+                    (*it)->func(static_cast<const char*>(str));
             }
         }
-
     }
 
     return *this;
