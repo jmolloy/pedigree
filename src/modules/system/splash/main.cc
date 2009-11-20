@@ -23,6 +23,8 @@
 #include <processor/Processor.h>
 #include <config/Config.h>
 
+#include <LockGuard.h>
+
 #include "image.h"
 #include "font.h"
 
@@ -43,17 +45,26 @@ static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
 
 static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
+static size_t g_LogBoxX, g_LogBoxY;
+static size_t g_LogX, g_LogY;
+static size_t g_LogW, g_LogH;
 
 static size_t g_Total = 0;
 static size_t g_Current = 0;
 static size_t g_Previous = 0;
 static bool g_LogMode = false;
-static size_t g_LogX = 0;
-static size_t g_LogY = 0;
+/*static size_t g_LogX = 0;
+static size_t g_LogY = 0;*/
+
+Mutex g_PrintLock(false);
 
 void printChar(char c)
 {
-    if(c == '\t')
+    LockGuard<Mutex> guard(g_PrintLock);
+
+    if(!c)
+        return;
+    else if(c == '\t')
         g_LogX = (g_LogX + 8) & ~7;
     else if(c == '\r')
         g_LogX = 0;
@@ -68,30 +79,33 @@ void printChar(char c)
         {
             for(size_t j = 0;j<FONT_WIDTH;j++)
             {
-                if(font_data[c*FONT_HEIGHT+i] & (1<<(FONT_WIDTH-j)))
+                if(font_data[(c*FONT_HEIGHT)+i] & (1<<(FONT_WIDTH-j)))
                 {
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].r = g_Fg.r;
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].g = g_Fg.g;
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].b = g_Fg.b;
+                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].r = g_Fg.r;
+                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].g = g_Fg.g;
+                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].b = g_Fg.b;
                 }
             }
         }
-        g_pDisplay->updateBuffer(g_pBuffer, g_LogX*FONT_WIDTH, g_LogY*FONT_HEIGHT, g_LogX*FONT_WIDTH+FONT_WIDTH, g_LogY*FONT_HEIGHT+FONT_HEIGHT);
+        g_pDisplay->updateBuffer(g_pBuffer, g_LogBoxX+g_LogX*FONT_WIDTH, g_LogBoxY+g_LogY*FONT_HEIGHT, g_LogBoxX+g_LogX*FONT_WIDTH+FONT_WIDTH, g_LogBoxY+g_LogY*FONT_HEIGHT+FONT_HEIGHT);
         g_LogX++;
     }
 
-    if(g_LogX >= g_Width/FONT_WIDTH)
+    if(g_LogX >= g_LogW/FONT_WIDTH)
     {
         g_LogX = 0;
         g_LogY++;
     }
 
-    if(g_LogY >= g_Height/FONT_HEIGHT)
+    // Overflowed the view?
+    if(g_LogY >= (g_LogH/FONT_HEIGHT))
     {
-        size_t diff = g_LogY - g_Height/FONT_HEIGHT + 1;
-        g_pDisplay->bitBlit(g_pBuffer, 0, diff*FONT_HEIGHT, 0, 0, g_Width, (g_Height/FONT_HEIGHT-diff)*FONT_HEIGHT);
-        g_pDisplay->fillRectangle(g_pBuffer, 0, (g_Height/FONT_HEIGHT-diff)*FONT_HEIGHT, g_Width, diff*FONT_HEIGHT, g_Bg);
-        g_LogY = g_Height/FONT_HEIGHT-diff;
+        // By how much?
+        size_t diff = g_LogY - g_LogH/FONT_HEIGHT + 1;
+
+        g_pDisplay->bitBlit(g_pBuffer, g_LogBoxX, g_LogBoxY + (diff*FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW, ((g_LogH/FONT_HEIGHT)-diff)*FONT_HEIGHT);
+        g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY + ((g_LogH/FONT_HEIGHT)-diff)*FONT_HEIGHT, g_LogW - g_LogBoxX, diff*FONT_HEIGHT, g_Bg);
+        g_LogY = g_LogH/FONT_HEIGHT-diff;
     }
 }
 
@@ -105,44 +119,17 @@ void keyCallback(uint64_t key)
 {
     if(key == '\e' && !g_LogMode)
     {
-        NOTICE("Enabling log...");
+        // Because we edit the dimensions of the screen, we can't let a print
+        // continue while we run here.
+        LockGuard<Mutex> guard(g_PrintLock);
+
         g_LogMode = true;
-        g_pDisplay->fillRectangle(g_pBuffer, 0, 0, g_Width, g_Height, g_Bg);
 
-        Log &log = Log::instance();
-        
-        // Print the last 5 log entries
-        size_t start = 0;
-        if(log.getStaticEntryCount() > 5)
-            start = log.getStaticEntryCount() - 5;
-
-        String str;
-        for(size_t i = start; i < log.getStaticEntryCount() ; i++)
-        {
-            const Log::StaticLogEntry &entry = log.getStaticEntry(i);
-            str += "(";
-            switch (entry.type)
-            {
-                case Log::Notice:
-                    str += "NN";
-                    break;
-                case Log::Warning:
-                    str += "WW";
-                    break;
-                case Log::Error:
-                    str += "EE";
-                    break;
-                case Log::Fatal:
-                    str += "FF";
-                    break;
-            }
-
-            str += ") ";
-            str += entry.str;
-            str += "\n";
-        }
-        printString(str);
-        log.installCallback(printString);
+        g_LogY += (g_LogBoxY / FONT_HEIGHT);
+        g_LogX = (g_LogBoxX / FONT_WIDTH);
+        g_LogBoxX = g_LogBoxY = 0;
+        g_LogW = g_Width;
+        g_LogH = g_Height;
     }
 }
 
@@ -167,7 +154,6 @@ void progress(const char *text, uintptr_t progress)
     if(!strcmp(text, "unload"))
         g_pDisplay->setCurrentBuffer(g_pBuffer);
 
-    // Check if we are in log mode
     if(g_LogMode)
         return;
 
@@ -272,10 +258,23 @@ void init()
     g_ProgressY = (g_Height / 4) * 3;
     g_ProgressH = 15;
 
+    g_LogBoxX = 0;
+    g_LogBoxY = g_ProgressY + (g_ProgressH * 2);
+    g_LogW = g_Width;
+    g_LogH = g_Height - g_LogBoxY;
+    g_LogX = g_LogY = 0;
+
+    // Draw a border around the log area
+    g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_Fg);
+    g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_Bg);
+
     // Draw empty progress bar. Easiest way to draw a nonfilled rect?
     // draw two filled rects.
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-2, g_ProgressY-2, g_ProgressW+4, g_ProgressH+4, g_ProgressBorderCol);
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
+
+    Log &log = Log::instance();
+    log.installCallback(printString);
 
     g_BootProgress = &progress;
     g_BootProgressTotal = &total;
