@@ -36,6 +36,7 @@ static size_t g_Width = 0;
 static size_t g_Height = 0;
 
 static Display::rgb_t g_Bg = {0x00,0x00,0x00,0x00};
+static Display::rgb_t g_Fg = {0xFF,0xFF,0xFF,0xFF};
 
 static Display::rgb_t g_ProgressBorderCol = {150,80,0,0x00};
 static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
@@ -43,6 +44,8 @@ static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
 static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
 
+static size_t g_Total = 0;
+static size_t g_Current = 0;
 static size_t g_Previous = 0;
 static bool g_LogMode = false;
 static size_t g_LogX = 0;
@@ -67,9 +70,9 @@ void printChar(char c)
             {
                 if(font_data[c*FONT_HEIGHT+i] & (1<<(FONT_WIDTH-j)))
                 {
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].r = 0;
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].g = 0;
-                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].b = 0;
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].r = g_Fg.r;
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].g = g_Fg.g;
+                    g_pBuffer[(g_LogY*FONT_HEIGHT + i)*g_Width + g_LogX*FONT_WIDTH + j].b = g_Fg.b;
                 }
             }
         }
@@ -106,9 +109,15 @@ void keyCallback(uint64_t key)
         g_LogMode = true;
         g_pDisplay->fillRectangle(g_pBuffer, 0, 0, g_Width, g_Height, g_Bg);
 
-        String str;
         Log &log = Log::instance();
-        for(size_t i = 0;i < log.getStaticEntryCount();i++)
+        
+        // Print the last 5 log entries
+        size_t start = 0;
+        if(log.getStaticEntryCount() > 5)
+            start = log.getStaticEntryCount() - 5;
+
+        String str;
+        for(size_t i = start; i < log.getStaticEntryCount() ; i++)
         {
             const Log::StaticLogEntry &entry = log.getStaticEntry(i);
             str += "(";
@@ -137,13 +146,18 @@ void keyCallback(uint64_t key)
     }
 }
 
-void progress(const char *text)
+void total(uintptr_t total)
+{
+    g_Total = total;
+}
+
+void progress(const char *text, uintptr_t progress)
 {
     // Calculate percentage.
-    if (g_BootProgressTotal == 0)
+    if (g_Total == 0)
         return;
 
-    if(g_BootProgressCurrent == g_BootProgressTotal)
+    if((progress + 1) >= g_Total)
     {
         Log::instance().removeCallback(printString);
         InputManager::instance().removeCallback(InputManager::Key, keyCallback);
@@ -157,13 +171,12 @@ void progress(const char *text)
     if(g_LogMode)
         return;
 
-    size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
-    size_t wPrev = (g_ProgressW * g_Previous) / g_BootProgressTotal;
-    if(g_Previous <= g_BootProgressCurrent)
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+wPrev, g_ProgressY, w-wPrev, g_ProgressH, g_ProgressCol);
+    size_t w = (g_ProgressW * progress) / g_Total;
+    if(g_Current <= progress)
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
     else
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, wPrev-w, g_ProgressH, g_Bg);
-    g_Previous = g_BootProgressCurrent;
+        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
+    g_Current = progress;
 }
 
 void init()
@@ -188,6 +201,19 @@ void init()
         g_Bg.r = pResult->getNum(0, static_cast<size_t>(0));
         g_Bg.g = pResult->getNum(0, 1);
         g_Bg.b = pResult->getNum(0, 2);
+        delete pResult;
+    }
+
+    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='splash-foreground';");
+    if (!pResult)
+    {
+        ERROR("Error looking up foreground colour.");
+    }
+    else
+    {
+        g_Fg.r = pResult->getNum(0, static_cast<size_t>(0));
+        g_Fg.g = pResult->getNum(0, 1);
+        g_Fg.b = pResult->getNum(0, 2);
         delete pResult;
     }
 
@@ -251,7 +277,8 @@ void init()
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-2, g_ProgressY-2, g_ProgressW+4, g_ProgressH+4, g_ProgressBorderCol);
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
 
-    g_BootProgressUpdate = &progress;
+    g_BootProgress = &progress;
+    g_BootProgressTotal = &total;
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
 }
 

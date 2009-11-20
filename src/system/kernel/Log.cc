@@ -25,9 +25,10 @@
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
 Log Log::m_Instance;
-BootProgressUpdateFn g_BootProgressUpdate = 0;
-size_t g_BootProgressTotal = 0;
-size_t g_BootProgressCurrent = 0;
+BootProgressUpdateFn g_BootProgress = 0;
+BootProgressTotalFn g_BootProgressTotal = 0;
+//size_t g_BootProgressTotal = 0;
+//size_t g_BootProgressCurrent = 0;
 
 void outputSerial(const char* str)
 {

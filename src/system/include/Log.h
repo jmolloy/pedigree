@@ -131,11 +131,11 @@ enum Modifier
 
 // Function pointer to update boot progress -
 // Description.
-typedef void (*BootProgressUpdateFn)(const char *);
+typedef void (*BootProgressUpdateFn)(const char *, uintptr_t);
+typedef void (*BootProgressTotalFn)(uintptr_t);
 
-extern size_t g_BootProgressCurrent;
-extern size_t g_BootProgressTotal;
-extern BootProgressUpdateFn g_BootProgressUpdate;
+extern BootProgressUpdateFn g_BootProgress;
+extern BootProgressTotalFn g_BootProgressTotal;
 
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
