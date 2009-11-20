@@ -27,7 +27,7 @@
 #include "AtaDisk.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
-AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster) :
+AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
         Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
         m_IrqReceived(true), m_Cache(), m_nAlignPoints(0), m_CommandRegs(commandRegs),
         m_ControlRegs(controlRegs), m_BusMaster(busMaster), m_PrdTableLock(false), m_PrdTable(0),
@@ -176,46 +176,19 @@ bool AtaDisk::initialise()
     {
         m_SupportsLBA48 = true;
     }
-  
+
+
     // Any form of DMA support?
-#if 0
-    if(m_pIdent[49] & (1 << 8))
-    {
-      // Check that we have a bus master device to use
-      if(m_BusMaster)
-      {
-          // We have a definite ATAPI device, set up the PRD and all that now
-          if(!PhysicalMemoryManager::instance().allocateRegion(m_PrdTableMemRegion,
-                                                               1,
-                                                               PhysicalMemoryManager::continuous,
-                                                               VirtualAddressSpace::Write,
-                                                               -1))
-          {
-              ERROR("ATA: Couldn't allocate PRD table. Continuing without DMA support.");
-              m_bDma = false;
-          }
-          else
-          {
-              /// \todo Store the type of DMA supported by this device
-              m_PrdTable = reinterpret_cast<PhysicalRegionDescriptor *>(m_PrdTableMemRegion.virtualAddress());
-              m_PrdTablePhys = m_PrdTableMemRegion.physicalAddress();
-              NOTICE("ATA: PRD table at v=" << reinterpret_cast<uintptr_t>(m_PrdTableMemRegion.virtualAddress()) << ", p=" << m_PrdTablePhys << ".");
-          }
-      }
-      else
-      {
-          WARNING("ATA: Device supports DMA, but the controller does not.");
-          m_bDma = false;
-      }
-    }
-    else
+    if(!(m_pIdent[49] & (1 << 8)))
     {
         NOTICE("ATA: Device does not support DMA");
         m_bDma = false;
     }
-#else
-    m_bDma = false;
-#endif
+    else if(!m_BusMaster)
+    {
+        NOTICE("ATA: Controller does not support DMA");
+        m_bDma = false;
+    }
 
     NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
     return true;
@@ -348,79 +321,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
         controlRegs->write8(0x08, 6);
 #endif
 
-        // If DMA is enabled, set that up now
-        /// \todo Definitely need a BusMaster class to keep this stuff out of
-        ///       the individual drivers.
-        bool bDmaSetup = false;
-        if(m_bDma)
-        {
-#if 0
-            // Grab the physical address of the buffer we've been given
-            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-            if(va.isMapped(reinterpret_cast<void*>(buffer)))
-            {
-                // Grab the PRD table lock
-                m_PrdTableLock.acquire();
-
-                // Add it to the PRD table - ensuring that we stick to the 64K limit per PRD
-                size_t nRemainingBytes = nBytes;
-                size_t currOffset = 0;
-                int i = 0;
-                while(nRemainingBytes)
-                {
-                    physical_uintptr_t phys = 0;
-                    size_t flags = 0;
-                    va.getMapping(reinterpret_cast<void*>(buffer + currOffset), phys, flags);
-                    if(i == 0)
-                        phys += (buffer & 0xFFF);
-
-                    m_PrdTable[i].physAddr = phys;
-
-                    size_t transferSize = nRemainingBytes;
-                    if(transferSize > 4096)
-                        transferSize = 4096 - ((i == 0) ? (buffer & 0xFFF) : 0);
-#if 0
-                    NOTICE("m_PrdTable[" << Dec << i << Hex << "].physAddr = " << phys << ";");
-                    NOTICE("m_PrdTable[" << Dec << i << Hex << "].byteCount = " << transferSize << ";");
-#endif
-                    m_PrdTable[i].byteCount = transferSize;
-
-                    currOffset += transferSize;
-                    nRemainingBytes -= transferSize;
-
-                    if(!nRemainingBytes)
-                        m_PrdTable[i].rsvdEot = 0x8000;
-                    else
-                        m_PrdTable[i].rsvdEot = 0;
-                    i++;
-                }
-
-#if 0
-                NOTICE("Set up " << i << " PRDs, " << Dec << currOffset << Hex << " bytes");
-#endif
-
-                // Wait for no other DMA command to be running
-                uint8_t statusReg = m_BusMaster->read8(BusMasterIde::Status);
-                while(statusReg & 0x01)
-                  statusReg = m_BusMaster->read8(BusMasterIde::Status);
-                statusReg = 0x60;
-                m_BusMaster->write8(statusReg, BusMasterIde::Status);
-
-                // Save our PRD physical address
-                m_BusMaster->write32(m_PrdTablePhys, BusMasterIde::PrdTableAddr);
-
-                bDmaSetup = true;
-
-                m_PrdTableLock.release();
-            }
-            else
-            {
-                ERROR("ATA: buffer was not mapped!");
-                return 0;
-            }
-#endif
-        }
-
         // Make sure the IrqReceived mutex is locked.
         m_IrqReceived.tryAcquire();
 
@@ -429,10 +329,10 @@ uint64_t AtaDisk::doRead(uint64_t location)
         // Enable IRQs.
         Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
 
-#if 0
-        if(m_bDma && bDmaSetup)
+        bool bDmaSetup = false;
+        if(m_bDma)
         {
-            if (m_SupportsLBA48)
+            if (!m_SupportsLBA48)
             {
                 // Send command "read DMA"
                 commandRegs->write8(0xC8, 7);
@@ -443,18 +343,11 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 commandRegs->write8(0x25, 7);
             }
 
-            // Start the DMA command, if needed
-            uint8_t cmdReg = 0;
-            cmdReg = m_BusMaster->read8(BusMasterIde::Command);
-            if(cmdReg & 0x1)
-                ERROR("ATA: Start/Stop Bus Master was already set!");
-            else
-                cmdReg = (cmdReg & 0xF6) | 0x1;
-            m_BusMaster->write8(cmdReg, BusMasterIde::Command);
+            // Start the DMA command
+            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToRead * 512, false);
         }
         else
         {
-#endif
             if (m_SupportsLBA48)
             {
                 // Send command "read sectors EXT"
@@ -465,9 +358,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 // Send command "read sectors with retry"
                 commandRegs->write8(0x20, 7);
             }
-#if 0
         }
-#endif
 
         // Acquire the 'outstanding IRQ' mutex.
         while(true)
@@ -479,30 +370,14 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 WARNING("ATA: Timed out while waiting for IRQ");
                 return 0;
             }
-#if 0
             else if(m_bDma && bDmaSetup)
             {
-                // Check first that an IRQ has fired for us. If not, keep waiting.
-                uint8_t statusReg = m_BusMaster->read8(BusMasterIde::Status);
-                uint8_t clearReg = 0;
-                if(statusReg & 0x4)
+                if(m_BusMaster->hasInterrupt())
                 {
-                    bool bError = false;
-                    clearReg |= 0x4;
-
-                    // Yes, the device fired this interrupt. Error?
-                    if(statusReg & 0x2)
-                    {
-                        WARNING("ATA: DMA transfer failed");
-                        clearReg |= 0x2;
-                        bError = true;
-                    }
-
-                    uint8_t cmdReg = m_BusMaster->read8(BusMasterIde::Command);
-                    m_BusMaster->write8((cmdReg & 0xFE), BusMasterIde::Command);
-
-                    m_BusMaster->write8(clearReg, BusMasterIde::Status);
-
+                    // commandComplete effectively resets the device state, so we need
+                    // to get the error register first.
+                    bool bError = m_BusMaster->hasError();
+                    m_BusMaster->commandComplete();
                     if(bError)
                         return 0;
                     else
@@ -510,7 +385,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 }
             }
             else
-#endif
                 break;
         }
 
@@ -620,35 +494,83 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         // Enable IRQs.
         Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
 
-        if (m_SupportsLBA48)
+        bool bDmaSetup = false;
+        if(m_bDma)
         {
-            // Send command "write sectors EXT"
-            commandRegs->write8(0x34, 7);
+            if (!m_SupportsLBA48)
+            {
+                // Send command "write DMA"
+                commandRegs->write8(0xCA, 7);
+            }
+            else
+            {
+                // Send command "read write EXT"
+                commandRegs->write8(0x35, 7);
+            }
+
+            // Start the DMA command
+            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToWrite * 512, true);
         }
         else
         {
-            // Send command "write sectors with retry"
-            commandRegs->write8(0x30, 7);
+            if (m_SupportsLBA48)
+            {
+                // Send command "write sectors EXT"
+                commandRegs->write8(0x34, 7);
+            }
+            else
+            {
+                // Send command "write sectors with retry"
+                commandRegs->write8(0x30, 7);
+            }
         }
 
         // Acquire the 'outstanding IRQ' mutex.
-        m_IrqReceived.acquire();
-
-        for (int i = 0; i < nSectorsToWrite; i++)
+        while(true)
         {
-            // Wait until !BUSY
-            while (commandRegs->read8(7) & 0x80)
-                ;
+            m_IrqReceived.acquire(1, 10);
+            if(Processor::information().getCurrentThread()->wasInterrupted())
+            {
+                // Interrupted! Fail! Assume nothing read so far.
+                WARNING("ATA: Timed out while waiting for IRQ");
+                return 0;
+            }
+            else if(m_bDma && bDmaSetup)
+            {
+                if(m_BusMaster->hasInterrupt())
+                {
+                    // commandComplete effectively resets the device state, so we need
+                    // to get the error register first.
+                    bool bError = m_BusMaster->hasError();
+                    m_BusMaster->commandComplete();
+                    if(bError)
+                        return 0;
+                    else
+                        break;
+                }
+            }
+            else
+                break;
+        }
 
-            // Grab the current sector
-            uint8_t *currSector = new uint8_t[512];
+        if(!m_bDma && !bDmaSetup)
+        {
+            for (int i = 0; i < nSectorsToWrite; i++)
+            {
+                // Wait until !BUSY
+                while (commandRegs->read8(7) & 0x80)
+                    ;
 
-            // We got the mutex, so an IRQ must have arrived.
-            for (int j = 0; j < 256; j++)
-                commandRegs->write16(*tmp++, 0);
+                // Grab the current sector
+                uint8_t *currSector = new uint8_t[512];
 
-            // Delete used memory
-            delete [] currSector;
+                // We got the mutex, so an IRQ must have arrived.
+                for (int j = 0; j < 256; j++)
+                    commandRegs->write16(*tmp++, 0);
+
+                // Delete used memory
+                delete [] currSector;
+            }
         }
     }
 

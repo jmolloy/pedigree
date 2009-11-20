@@ -1,4 +1,3 @@
 #!/bin/bash
 
 qemu-system-x86_64 -hda ./build/hdd.img $*
-#qemu-system-x86_64 -cdrom ./build/pedigree.iso $*

@@ -28,6 +28,7 @@
 #include "AtaController.h"
 #include "AtaDisk.h"
 #include "AtapiDisk.h"
+#include "BusMasterIde.h"
 
 #define ATA_CMD_READ  0
 #define ATA_CMD_WRITE 1
@@ -74,7 +75,7 @@ private:
         ICH5
     } m_PciControllerType;
 
-    void diskHelper(bool master, IoBase *cmd, IoBase *ctl, IoBase *dma);
+    void diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMasterIde *dma);
 
 protected:
     int m_nController;

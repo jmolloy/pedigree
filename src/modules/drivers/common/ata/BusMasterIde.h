@@ -23,6 +23,12 @@
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 
+/**
+ * If set to 1, the BusMasterIde object will log fairly verbosely (outcome of
+ * each DMA transfer).
+ */
+#define BUSMASTER_VERBOSE_LOGGING 0
+
 /** The Physical Region Descriptor structure */
 typedef struct
 {
@@ -136,6 +142,20 @@ class BusMasterIde
          *  method; this merely provides notification that the transfer failed
          */
         bool hasError();
+
+        /** \brief Called by drivers when a command completes
+         *
+         *  The interface requires that we reset the command register's start
+         *  bit upon command completion or failure. However, we don't want to
+         *  do that in hasInterrupt or hasError because that may leave the
+         *  interface in an unknown state. This function allows driver code to
+         *  reset this bit at a convenient time.
+         *
+         *  \note This effectively resets the interface. That means the return
+         *        values from hasInterrupt and hasError will both be invalid
+         *        after calling this function.
+         */
+        void commandComplete();
     private:
         /** Internal I/O base */
         IoBase *m_pBase;

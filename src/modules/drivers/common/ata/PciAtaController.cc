@@ -115,8 +115,10 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     IoPort *slaveControl = new IoPort("pci-ide-slave-ctl");
 
     /// \todo Bus master registerss may be memory mapped...
-    IoPort *busMasterMaster = 0;
-    IoPort *busMasterSlave = 0;
+    IoPort *bar4_a = 0;
+    IoPort *bar4_b = 0;
+    BusMasterIde *primaryBusMaster = 0;
+    BusMasterIde *secondaryBusMaster = 0;
     if(bDma)
     {
         uintptr_t addr = bar4->m_Address;
@@ -126,12 +128,47 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         delete bar4->m_Io;
         bar4->m_Io = 0;
 
-        busMasterMaster = new IoPort("pci-ide-busmaster-primary");
-        if(!busMasterMaster->allocate(addr, 8))
+        bar4_a = new IoPort("pci-ide-busmaster-primary");
+        if(!bar4_a->allocate(addr, 8))
+        {
             ERROR("Couldn't allocate primary BusMaster ports");
-        busMasterSlave = new IoPort("pci-ide-busmaster-secondary");
-        if(!busMasterSlave->allocate(addr + 8, 8))
+            delete bar4_a;
+            bar4_a = 0;
+        }
+
+        bar4_b = new IoPort("pci-ide-busmaster-secondary");
+        if(!bar4_b->allocate(addr + 8, 8))
+        {
             ERROR("Couldn't allocate secondary BusMaster ports");
+            delete bar4_b;
+            bar4_b = 0;
+        }
+
+        // Create the BusMasterIde objects
+        if(bar4_a)
+        {
+            primaryBusMaster = new BusMasterIde;
+            if(!primaryBusMaster->initialise(bar4_a))
+            {
+                ERROR("Couldn't initialise primary BusMaster IDE interface");
+                delete primaryBusMaster;
+                delete bar4_a;
+
+                primaryBusMaster = 0;
+            }
+        }
+        if(bar4_b)
+        {
+            secondaryBusMaster = new BusMasterIde;
+            if(!secondaryBusMaster->initialise(bar4_b))
+            {
+                ERROR("Couldn't initialise secondary BusMaster IDE interface");
+                delete secondaryBusMaster;
+                delete bar4_b;
+
+                secondaryBusMaster = 0;
+            }
+        }
     }
 
     // By default, this is the port layout we can expect for the system
@@ -150,29 +187,28 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // And finally, create disks
     /// \todo Give them the Bus Master register base so they can do their work
-    diskHelper(true, masterCommand, masterControl, busMasterMaster);
-    diskHelper(false, masterCommand, masterControl, busMasterMaster);
-    diskHelper(true, slaveCommand, slaveControl, busMasterSlave);
-    diskHelper(false, slaveCommand, slaveControl, busMasterSlave);
+    diskHelper(true, masterCommand, masterControl, primaryBusMaster);
+    diskHelper(false, masterCommand, masterControl, primaryBusMaster);
+    diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster);
+    diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster);
 }
 PciAtaController::~PciAtaController()
 {
 }
 
-void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, IoBase *dma)
+void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMasterIde *dma)
 {
     AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl, dma);
     if(!pDisk->initialise())
     {
-        /*delete pDisk;
+        delete pDisk;
         AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
         addChild(pAtapiDisk);
         if(!pAtapiDisk->initialise())
         {
             removeChild(pAtapiDisk);
             delete pAtapiDisk;
-        }*/
-        delete pDisk;
+        }
     }
     else
         addChild(pDisk);

@@ -45,7 +45,7 @@ bool BusMasterIde::initialise(IoBase *pBase)
     // Deviation from convention a bit here... The controller creating the
     // IoBase for us to use will split the port range into Primary/Secondary
     // ranges, which simplifies driver code.
-    if(pBase->size() != 6)
+    if(pBase->size() != 8)
         return false;
 
     // Right, it seems the I/O base checks out... Try and allocate some memory
@@ -99,7 +99,8 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
             // 65,536 bytes, but by using only 4096-byte regions it is possible
             // to avoid the contiguous physical RAM requirement).
             physical_uintptr_t physPage = 0; size_t flags = 0;
-            va.getMapping(reinterpret_cast<void*>(buffer), physPage, flags);
+            va.getMapping(reinterpret_cast<void*>(buffer + currOffset), physPage, flags);
+            // NOTICE("v=" << (buffer + currOffset) << ", p=" << physPage);
 
             // Add in whatever offset into the page we may have in the buffer
             // parameter.
@@ -108,17 +109,21 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
                 pageOffset = (buffer & 0xFFF);
 
             // Install into the PRD table now
+            // NOTICE("PRD[" << Dec << i << Hex << "].addr=" << (physPage + pageOffset) << ".");
             m_PrdTable[m_LastPrdTableOffset + i].physAddr = physPage + pageOffset;
 
             // Determine the transfer size we should use
             size_t transferSize = nRemainingBytes;
             if(transferSize > 4096)
                 transferSize = 4096 - pageOffset;
+            // NOTICE("PRD[" << Dec << i << Hex << "].size=" << transferSize << ".");
             m_PrdTable[m_LastPrdTableOffset + i].byteCount = transferSize & 0xFFFF;
 
             // Complete the PRD entry after determining the next offset
+            // NOTICE("BEFORE: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
             currOffset += transferSize;
             nRemainingBytes -= transferSize;
+            // NOTICE("AFTER: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
             if(!nRemainingBytes)
                 m_PrdTable[m_LastPrdTableOffset + i].rsvdEot = 0x8000; // End-of-table?
             else
@@ -149,6 +154,8 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
             cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 8 : 0);
             m_pBase->write8(cmdReg, BusMasterIde::Command);
         }
+
+        return true;
     }
     else
         return false; // Buffer not mapped - nothing we can do!
@@ -161,7 +168,8 @@ bool BusMasterIde::hasInterrupt()
         return false;
 
     // Easy check here
-    return (m_pBase->read8(Status) & 0x4);
+    uint8_t statusReg = m_pBase->read8(Status);
+    return (statusReg & 0x4);
 }
 
 bool BusMasterIde::hasError()
@@ -171,5 +179,56 @@ bool BusMasterIde::hasError()
         return false;
 
     // Easy check here
-    return (m_pBase->read8(Status) & 0x1);
+    uint8_t statusReg = m_pBase->read8(Status);
+    return (statusReg & 0x1);
+}
+
+void BusMasterIde::commandComplete()
+{
+    // Sanity check
+    if(!m_pBase)
+        return;
+
+    // Read the status register to dump information about the command completion
+    uint8_t statusReg = m_pBase->read8(Status);
+#if BUSMASTER_VERBOSE_LOGGING
+    if((statusReg & 0x1) && (!(statusReg & 0x4)))
+    {
+        // DMA transfer in progress. Abort the transfer.
+        NOTICE("BusMasterIde: aborting transfer in progress");
+    }
+    else if((!(statusReg & 0x1)) && (statusReg & 0x4))
+    {
+        // IDE device triggered an interrupt, successful transfer
+        NOTICE("BusMasterIde: successful transfer, exact transfer size");
+    }
+    else if((statusReg & 0x1) && (statusReg & 0x4))
+    {
+        // IDE device triggered an interrupt, successful transfer
+        NOTICE("BusMasterIde: successful transfer, more buffer space than needed");
+    }
+    else
+    {
+        // Error condition
+        NOTICE("Status register = " << statusReg << ".");
+        if(!(statusReg & 0x1))
+        {
+            NOTICE("BusMasterIde: not enough buffer space provided");
+        }
+        else
+        {
+            NOTICE("BusMasterIde: device/controller signalled an error");
+        }
+    }
+#endif
+
+    // Whatever happened, we need to reset state
+    uint8_t cmdReg = m_pBase->read8(Command);
+    m_pBase->write8(cmdReg & 0xF6, Command);
+
+    // And ack whatever's in the status register too
+    m_pBase->write8(statusReg, Status);
+
+    // This transfer is now complete.
+    m_LastPrdTableOffset = 0;
 }

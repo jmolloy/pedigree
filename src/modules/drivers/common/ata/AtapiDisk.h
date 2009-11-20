@@ -81,8 +81,8 @@ private:
   } __attribute__((packed));
 
 public:
-  AtapiDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, IoBase *busMaster = 0);
-  ~AtapiDisk();
+  AtapiDisk(class AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster = 0);
+  virtual ~AtapiDisk();
 
   virtual void getName(String &str)
   {
