@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
