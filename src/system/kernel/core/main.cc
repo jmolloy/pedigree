@@ -100,11 +100,10 @@ int loadModules(void *inf)
     Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
 
     size_t nFiles = initrd.getNumFiles();
+    g_BootProgressTotal = nFiles*2; // Each file has to be preloaded and executed.
     for (size_t i = 0; i < nFiles; i++)
     {
         // Load file.
-        if(g_BootProgressTotal)
-            g_BootProgressTotal(nFiles * 2); // Each file has to be preloaded and executed.
         KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                          initrd.getFileSize(i));
     }

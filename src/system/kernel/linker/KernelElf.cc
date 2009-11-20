@@ -181,8 +181,6 @@ KernelElf::~KernelElf()
 #endif
 #define MOD_LEN 0x400000
 
-static size_t g_Progress = 0;
-
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 {
   // The module memory allocator requires dynamic memory - this isn't initialised until after our constructor
@@ -239,9 +237,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
   DEBUG("KERNELELF: Preloaded module " << module->name);
 
-  g_Progress ++;
-  if (g_BootProgress)
-      g_BootProgress("moduleload", g_Progress);
+  g_BootProgressCurrent ++;
+  if (g_BootProgressUpdate)
+      g_BootProgressUpdate("moduleload");
 
   m_Modules.pushBack(module);
 
@@ -250,9 +248,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
   {
     executeModule(module);
 
-    g_Progress ++;
-    if (g_BootProgress)
-        g_BootProgress("moduleexec", g_Progress);
+    g_BootProgressCurrent ++;
+    if (g_BootProgressUpdate)
+        g_BootProgressUpdate("moduleexec");
 
     // Now check if we've allowed any currently pending modules to load.
     bool somethingLoaded = true;
@@ -266,9 +264,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
         if (moduleDependenciesSatisfied(*it))
         {
           executeModule(*it);
-          g_Progress ++;
-          if (g_BootProgress)
-              g_BootProgress("moduleexec", g_Progress);
+          g_BootProgressCurrent ++;
+          if (g_BootProgressUpdate)
+              g_BootProgressUpdate("moduleexec");
 
           m_PendingModules.erase(it);
           somethingLoaded = true;
@@ -287,8 +285,8 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len)
 
 void KernelElf::unloadModules()
 {
-    if (g_BootProgress)
-        g_BootProgress("unload", g_Progress);
+    if (g_BootProgressUpdate)
+        g_BootProgressUpdate("unload");
 
     for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
         it != m_LoadedModules.begin();
@@ -297,9 +295,9 @@ void KernelElf::unloadModules()
         Module *module = *it;
         NOTICE("KERNELELF: Unloading module " << module->name);
 
-        g_Progress --;
-        if (g_BootProgress)
-            g_BootProgress("moduleunload", g_Progress);
+        g_BootProgressCurrent --;
+        if (g_BootProgressUpdate)
+            g_BootProgressUpdate("moduleunload");
 
         if(module->exit)
             module->exit();
@@ -321,9 +319,9 @@ void KernelElf::unloadModules()
 
         m_SymbolTable.eraseByElf(&module->elf);
 
-        g_Progress --;
-        if (g_BootProgress)
-            g_BootProgress("moduleunloaded", g_Progress);
+        g_BootProgressCurrent --;
+        if (g_BootProgressUpdate)
+            g_BootProgressUpdate("moduleunloaded");
 
         m_LoadedModules.erase(it);
         //m_Modules.erase(it);

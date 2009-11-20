@@ -49,12 +49,8 @@ static size_t g_LogBoxX, g_LogBoxY;
 static size_t g_LogX, g_LogY;
 static size_t g_LogW, g_LogH;
 
-static size_t g_Total = 0;
-static size_t g_Current = 0;
 static size_t g_Previous = 0;
 static bool g_LogMode = false;
-/*static size_t g_LogX = 0;
-static size_t g_LogY = 0;*/
 
 Mutex g_PrintLock(false);
 
@@ -133,18 +129,13 @@ void keyCallback(uint64_t key)
     }
 }
 
-void total(uintptr_t total)
-{
-    g_Total = total;
-}
-
-void progress(const char *text, uintptr_t progress)
+void progress(const char *text)
 {
     // Calculate percentage.
-    if (g_Total == 0)
+    if(g_BootProgressTotal == 0)
         return;
 
-    if((progress + 1) >= g_Total)
+    if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(printString);
         InputManager::instance().removeCallback(InputManager::Key, keyCallback);
@@ -157,12 +148,12 @@ void progress(const char *text, uintptr_t progress)
     if(g_LogMode)
         return;
 
-    size_t w = (g_ProgressW * progress) / g_Total;
-    if(g_Current <= progress)
+    size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
+    if(g_Previous <= g_BootProgressCurrent)
         g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
     else
         g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
-    g_Current = progress;
+    g_Previous = g_BootProgressCurrent;
 }
 
 void init()
@@ -276,8 +267,7 @@ void init()
     Log &log = Log::instance();
     log.installCallback(printString);
 
-    g_BootProgress = &progress;
-    g_BootProgressTotal = &total;
+    g_BootProgressUpdate = &progress;
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
 }
 
