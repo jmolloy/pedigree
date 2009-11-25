@@ -292,25 +292,38 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         String str(&tmpBuff[2]); // Skip #!
         additionalArgv = str.tokenise(' ');
 
-        String *newFname = 0;
+	if(additionalArgv.begin() == additionalArgv.end()) {
+		NOTICE("Invalid shebang");
+		SYSCALL_ERROR(ExecFormatError);
+		return -1;
+	}
 
+        String *newFname = *additionalArgv.begin();
+
+	// Prepend the tokenized shebang line argv
+	// argv will look like: interpreter-path additional-shebang-options script-name old-argv
         for (List<String*>::Iterator it = additionalArgv.begin();
              it != additionalArgv.end();
              it++)
         {
-            if (it == additionalArgv.begin())
-                newFname = *it;
             savedArgv.pushBack(*it);
         }
 
-        if (newFname == 0)
-            FATAL("Algorithmic error in execve.");
+	// Replace the old argv[0] with the script name, this is what Linux does
+	// ### is it safe to write to argv?
+	argv[0] = name;
 
         name = static_cast<const char*>(*newFname);
 
         // And reload the file, now that we're loading a new application
         NOTICE("New name: " << *newFname << "...");
         file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
+        if (!file)
+        {
+            // Error - not found.
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
     }
 
     DynamicLinker *pOldLinker = pProcess->getLinker();
