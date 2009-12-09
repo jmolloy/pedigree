@@ -20,20 +20,6 @@ import string
 import getpass
 from socket import gethostname
 from datetime import *
-####################################
-# Add an option here to have it defined
-####################################
-defines = [
-    'THREADS',                  # Enable threading
-    'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
-    #'SMBIOS',                  # Enable SMBIOS
-    'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
-    #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
-                                # TODO: Should be a proper option... I'll do that soon. -Matt
-    'ADDITIONAL_CHECKS',
-    'KERNEL_STANDALONE',
-    'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
-]
     
 # Grab all the default flags for each architecture
 sys.path += ['./scripts']
@@ -144,7 +130,7 @@ env['LD'] = env['LINK']
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
     if re.match('i[3456]86',tmp.group(1)) != None:
-        defines = safeAppend(defines, default_defines['x86'])
+        defines = default_defines['x86']
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x86'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x86'])
         env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x86'])
@@ -153,7 +139,7 @@ if(tmp != None):
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
     elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
-        defines = safeAppend(defines, default_defines['x64'])
+        defines = default_defines['x64']
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x64'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x64'])
         env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['x64'])

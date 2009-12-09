@@ -22,6 +22,19 @@ generic_asflags = '-f elf'
 # Generic link flags (that everyone should have)
 generic_linkflags = '-nostdlib -nostdinc -nostartfiles'
 
+# Generic defines
+generic_defines = [
+    'THREADS',                  # Enable threading
+    'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
+    #'SMBIOS',                  # Enable SMBIOS
+    'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
+    #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
+                                # TODO: Should be a proper option... I'll do that soon. -Matt
+    'ADDITIONAL_CHECKS',
+    'KERNEL_STANDALONE',
+    'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
+]
+
 #------------------------- x86 (+x64) -------------------------#
 
 # x86 defines - udis86 uses __UD_STANDALONE__
@@ -50,7 +63,7 @@ x86_cflags = default_x86_cflags + generic_cflags + warning_flags + warning_flags
 x86_cxxflags = default_x86_cxxflags + generic_cxxflags + warning_flags + warning_flags_cxx + warning_flags_off
 x86_asflags = generic_asflags + default_x86_asflags
 x86_linkflags = generic_linkflags + default_x86_linkflags
-x86_defines = general_x86_defines + x86_32_defines
+x86_defines = generic_defines + general_x86_defines + x86_32_defines
 
 #---------- x86_64 ----------#
 
@@ -75,7 +88,7 @@ x64_cflags = default_x64_cflags + generic_cflags + warning_flags + warning_flags
 x64_cxxflags = default_x64_cxxflags + generic_cxxflags + warning_flags + warning_flags_cxx + warning_flags_off
 x64_asflags = generic_asflags + default_x64_asflags
 x64_linkflags = generic_linkflags + default_x64_linkflags
-x64_defines = general_x86_defines + x64_defines
+x64_defines = generic_defines + general_x86_defines + x64_defines
 
 #------------------------- Import Dictionaries -------------------------#
 default_cflags      = {'x86' : x86_cflags, 'x64' : x64_cflags }

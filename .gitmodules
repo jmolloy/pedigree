@@ -1,0 +1,3 @@
+[submodule "src/modules/drivers/cdi"]
+	path = src/modules/drivers/cdi
+	url = git://git.tyndur.org/cdi.git
