@@ -18,6 +18,16 @@
 #include "cdi/storage.h"
 
 /**
+ * External prototype for this function so that we don't pollute the CDI header
+ */
+extern "C" {
+void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device);
+
+int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos, size_t size, void* dest);
+int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos, size_t size, void* src);
+};
+
+/**
  * Initialisiert die Datenstrukturen fuer einen Massenspeichertreiber
  */
 void cdi_storage_driver_init(struct cdi_storage_driver* driver)
@@ -50,7 +60,7 @@ void cdi_storage_driver_register(struct cdi_storage_driver* driver)
 void cdi_storage_device_init(struct cdi_storage_device* device)
 {
     device->dev.type = CDI_STORAGE;
-    cdi_cpp_disk_register(device->dev.pDev, device);
+    cdi_cpp_disk_register(device->dev.backdev, device);
 }
 
 /**

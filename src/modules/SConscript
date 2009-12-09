@@ -26,9 +26,12 @@ driver_common_subdirs = [
     # Pedigree-specific USB drivers
     'uhci',
 
-    # CDI framwork
+    # CDI framework (NOT the drivers)
     'cdi',
+]
 
+# CDI drivers
+cdi_drivers = [
     # CDI NIC drivers
     'e1000',
     'pcnet',
@@ -37,6 +40,7 @@ driver_common_subdirs = [
     # CDI Disk drivers
     # 'floppy' # Needs millisecond granularity in cdi_sleep_ms...
 ]
+env['cdi_driver_list'] = cdi_drivers
 
 # Architecture-specific drivers
 if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
@@ -84,6 +88,7 @@ drivers += ['drivers/common/' + i for i in driver_common_subdirs]
 modules = ['system/' + i for i in module_subdirs]
 
 SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
+SConscript(['drivers/SConscript-cdi'],exports = ['env'])
 SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
 
 # Ready to generate the initrd...
@@ -109,14 +114,13 @@ if "splash" in module_subdirs:
 
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
+initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in cdi_drivers]
 initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in module_subdirs]
 
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
 
 initrd = ' '.join(initrdList)
-# BUG: "posix.o" is added to the initrd twice: could this be the cause?
-#initrd += ' ' + builddir.abspath + '/subsystems/*'
 
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")

@@ -31,7 +31,7 @@ include = [
     '#/src/modules/system',
     '#/src/modules/drivers/common',
     '#/src/modules/drivers/common/cdi/include',
-#    '#/src/subsys/posix/include/',
+    '#/src/modules/drivers/cdi/include',
     '.'
 ]
 

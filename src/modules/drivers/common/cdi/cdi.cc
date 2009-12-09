@@ -33,11 +33,16 @@ void cdi_init(void)
 static void cdi_destroy(void) 
 {
     struct cdi_driver* driver;
-    int i;
+    struct cdi_device* device;
+    int i, j;
 
     for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
-        if (driver->destroy) {
-            driver->destroy(driver);
+        for (j = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(driver->devices, j))); j++) {
+            device->driver = driver;
+
+            if (driver->remove_device) {
+                driver->remove_device(device);
+            }
         }
     }
 }

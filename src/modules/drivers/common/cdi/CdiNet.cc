@@ -87,7 +87,7 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     // Replace pDev with pCdiNet
     pCdiNet->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pCdiNet);
-    device->dev.pDev = reinterpret_cast<void*>(pCdiNet);
+    device->dev.backdev = reinterpret_cast<void*>(pCdiNet);
 }
 
 
@@ -97,5 +97,5 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.pDev), 0);
+    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.backdev), 0);
 }

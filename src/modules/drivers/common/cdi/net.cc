@@ -8,6 +8,7 @@
  * http://sam.zoy.org/projects/COPYING.WTFPL for more details.
  */  
 
+#include <stdint.h>
 #include "cdi/lists.h"
 #include "cdi/net.h"
 
@@ -64,12 +65,7 @@ void cdi_net_device_init(struct cdi_net_device* device)
     cdi_list_push(netcard_list, device);
 
     // Beim tcpip Modul registrieren
-    cdi_cpp_net_register(device->dev.pDev, device);
-/* TODO
-    register_netcard(device->number,
-                     device->mac,
-                     device->ip);
-*/
+    cdi_cpp_net_register(device->dev.backdev, device);
 
     ++netcard_highest_id;
 }

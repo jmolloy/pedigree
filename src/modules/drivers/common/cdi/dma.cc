@@ -39,7 +39,7 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
     handle->channel = channel;
     handle->mode = mode;
     handle->length = length;
-    handle->buffer = handle->realbuffer = buffer;
+    handle->buffer = handle->meta.realbuffer = buffer;
 
     MemoryRegion* region = new MemoryRegion("isa-dma");
     size_t page_size = PhysicalMemoryManager::instance().getPageSize();
@@ -57,7 +57,7 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
     }
 
     // Add the region to the handle
-    handle->region = reinterpret_cast<void*>(region);
+    handle->meta.region = reinterpret_cast<void*>(region);
     handle->buffer = reinterpret_cast<void*>(region->virtualAddress());
     memset(handle->buffer, 0, handle->length);
 
@@ -79,7 +79,7 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
 int cdi_dma_read(struct cdi_dma_handle* handle)
 {
     // Copy the memory across
-    memcpy(handle->realbuffer, handle->buffer, handle->length);
+    memcpy(handle->meta.realbuffer, handle->buffer, handle->length);
     return 0;
 }
 
@@ -91,7 +91,7 @@ int cdi_dma_read(struct cdi_dma_handle* handle)
 int cdi_dma_write(struct cdi_dma_handle* handle)
 {
     // Copy the memory across
-    memcpy(handle->buffer, handle->realbuffer, handle->length);
+    memcpy(handle->buffer, handle->meta.realbuffer, handle->length);
     return 0;
 }
 
@@ -103,7 +103,7 @@ int cdi_dma_write(struct cdi_dma_handle* handle)
 int cdi_dma_close(struct cdi_dma_handle* handle)
 {
     // Grab the region from the handle and free it
-    MemoryRegion* region = reinterpret_cast<MemoryRegion*>(handle->region);
+    MemoryRegion* region = reinterpret_cast<MemoryRegion*>(handle->meta.region);
     delete region;
 
     return 0;

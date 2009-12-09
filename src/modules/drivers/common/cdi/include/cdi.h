@@ -15,17 +15,21 @@
 #define _CDI_H_
 
 #include <stdint.h>
-#include <Module.h>
 
+#include "cdi-osdep.h"
 #include "cdi/lists.h"
-
-#undef CDI_STANDALONE
 
 typedef enum {
     CDI_UNKNOWN         = 0,
     CDI_NETWORK         = 1,
     CDI_STORAGE         = 2,
     CDI_SCSI            = 3,
+    CDI_VIDEO           = 4,
+    CDI_AUDIO           = 5,
+    CDI_AUDIO_MIXER     = 6,
+    CDI_USB_HCD         = 7,
+    CDI_USB             = 8,
+    CDI_FILESYSTEM      = 9,
 } cdi_device_type_t;
 
 struct cdi_driver;
@@ -34,11 +38,7 @@ struct cdi_device {
     const char*         name;
     struct cdi_driver*  driver;
 
-    // tyndur-spezifisch
     void*               backdev;
-
-    // Pedigree specific
-    void*               pDev;
 };
 
 struct cdi_driver {
@@ -49,26 +49,29 @@ struct cdi_driver {
     void (*init_device)(struct cdi_device* device);
     void (*remove_device)(struct cdi_device* device);
 
-    void (*destroy)(struct cdi_driver* driver);
+    int (*init)(void);
+    int (*destroy)(void);
 };
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * Muss vor dem ersten Aufruf einer anderen CDI-Funktion aufgerufen werden.
  * Initialisiert interne Datenstruktur der Implementierung fuer das jeweilige
- * Betriebssystem.
+ * Betriebssystem und startet anschliessend alle Treiber.
  *
  * Ein wiederholter Aufruf bleibt ohne Effekt.
  */
 void cdi_init(void);
 
 /**
- * Fuehrt alle registrierten Treiber aus. Nach dem Aufruf dieser Funktion 
- * duerfen keine weiteren Befehle ausgefuehrt werden, da nicht definiert ist,
- * ob und wann die Funktion zurueckkehrt.
+ * Diese Funktion wird von Treibern aufgerufen, nachdem ein neuer Treiber
+ * hinzugefuegt worden ist.
+ *
+ * Sie registriert typischerweise die neu hinzugefuegten Treiber und/oder
+ * Geraete beim Betriebssystem und startet damit ihre Ausfuehrung.
+ *
+ * Nach dem Aufruf dieser Funktion duerfen vom Treiber keine weiteren Befehle
+ * ausgefuehrt werden, da nicht definiert ist, ob und wann die Funktion
+ * zurueckkehrt.
  */
 void cdi_run_drivers(void);
 
@@ -90,10 +93,6 @@ void cdi_driver_destroy(struct cdi_driver* driver);
  * @param driver Zu registierender Treiber
  */
 void cdi_driver_register(struct cdi_driver* driver);
-
-#ifdef __cplusplus
-}; // extern "C"
-#endif
 
 #endif
 

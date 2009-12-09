@@ -111,7 +111,7 @@ void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device)
         delete pCdiDisk;
         return;
     }
-    device->dev.pDev = reinterpret_cast<void*>(pCdiDisk);
+    device->dev.backdev = reinterpret_cast<void*>(pCdiDisk);
 
     // Insert into the tree, properly
     pCdiDisk->setParent(&Device::root());

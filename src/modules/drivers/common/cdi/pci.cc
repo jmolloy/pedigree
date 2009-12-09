@@ -19,7 +19,6 @@ extern "C" {
 #include "cdi/lists.h"
 #include "cdi/pci.h"
 
-
 static void add_child_devices(cdi_list_t list, Device *pDev)
 {
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
@@ -36,7 +35,7 @@ static void add_child_devices(cdi_list_t list, Device *pDev)
         dev->class_id = pChild->getPciClassCode();
         dev->subclass_id = pChild->getPciSubclassCode();
         dev->irq = pChild->getInterruptNumber();
-        dev->pDev = reinterpret_cast<void*>(pChild);
+        dev->meta.backdev = reinterpret_cast<void*>(pChild);
 
         // Add BARs
         Vector<Device::Address*> addresses = pChild->addresses();
@@ -71,37 +70,6 @@ void cdi_pci_get_all_devices(cdi_list_t list)
 {
     Device *pDev = &Device::root();
     add_child_devices(list, pDev);
-
-
-/* TODO
-    servmgr_need("pci");
-
-    io_resource_t* dir_res = directory_open("pci:/devices/");
-    
-    if (dir_res == NULL) {
-        fprintf(stderr, "Konnte pci:/devices/ nicht oeffnen\n");
-        return;
-    }
-
-    io_direntry_t* direntry;
-    while ((direntry = directory_read(dir_res))) {
-        if (direntry->type == IO_DIRENTRY_FILE) {
-            struct cdi_pci_device* device;
-            char* buffer = NULL;
-            asprintf(&buffer, "pci:/devices/%s", direntry->name);
-
-            device = read_pci_device(buffer);
-            if (device != NULL) {
-                cdi_list_push(list, device);
-            }
-
-            free(buffer);
-        }
-        free(direntry);
-    }
-
-    directory_close(dir_res);
-*/
 }
 
 /**
