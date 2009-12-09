@@ -98,37 +98,42 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
             // entry covers a 4096-byte region of memory (it can cover up to
             // 65,536 bytes, but by using only 4096-byte regions it is possible
             // to avoid the contiguous physical RAM requirement).
-            physical_uintptr_t physPage = 0; size_t flags = 0;
-            va.getMapping(reinterpret_cast<void*>(buffer + currOffset), physPage, flags);
-            // NOTICE("v=" << (buffer + currOffset) << ", p=" << physPage);
+            if(va.isMapped(reinterpret_cast<void*>(buffer + currOffset)))
+            {
+                physical_uintptr_t physPage = 0; size_t flags = 0;
+                va.getMapping(reinterpret_cast<void*>(buffer + currOffset), physPage, flags);
+                // NOTICE("v=" << (buffer + currOffset) << ", p=" << physPage);
 
-            // Add in whatever offset into the page we may have in the buffer
-            // parameter.
-            size_t pageOffset = 0;
-            if(i == 0)
-                pageOffset = (buffer & 0xFFF);
+                // Add in whatever offset into the page we may have in the buffer
+                // parameter.
+                size_t pageOffset = 0;
+                if(i == 0)
+                    pageOffset = (buffer & 0xFFF);
 
-            // Install into the PRD table now
-            // NOTICE("PRD[" << Dec << i << Hex << "].addr=" << (physPage + pageOffset) << ".");
-            m_PrdTable[m_LastPrdTableOffset + i].physAddr = physPage + pageOffset;
+                // Install into the PRD table now
+                // NOTICE("PRD[" << Dec << i << Hex << "].addr=" << (physPage + pageOffset) << ".");
+                m_PrdTable[m_LastPrdTableOffset + i].physAddr = physPage + pageOffset;
 
-            // Determine the transfer size we should use
-            size_t transferSize = nRemainingBytes;
-            if(transferSize > 4096)
-                transferSize = 4096 - pageOffset;
-            // NOTICE("PRD[" << Dec << i << Hex << "].size=" << transferSize << ".");
-            m_PrdTable[m_LastPrdTableOffset + i].byteCount = transferSize & 0xFFFF;
+                // Determine the transfer size we should use
+                size_t transferSize = nRemainingBytes;
+                if(transferSize > 4096)
+                    transferSize = 4096 - pageOffset;
+                // NOTICE("PRD[" << Dec << i << Hex << "].size=" << transferSize << ".");
+                m_PrdTable[m_LastPrdTableOffset + i].byteCount = transferSize & 0xFFFF;
 
-            // Complete the PRD entry after determining the next offset
-            // NOTICE("BEFORE: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
-            currOffset += transferSize;
-            nRemainingBytes -= transferSize;
-            // NOTICE("AFTER: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
-            if(!nRemainingBytes)
-                m_PrdTable[m_LastPrdTableOffset + i].rsvdEot = 0x8000; // End-of-table?
+                // Complete the PRD entry after determining the next offset
+                // NOTICE("BEFORE: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
+                currOffset += transferSize;
+                nRemainingBytes -= transferSize;
+                // NOTICE("AFTER: Current offset = " << currOffset << ", remaining bytes: " << nRemainingBytes);
+                if(!nRemainingBytes)
+                    m_PrdTable[m_LastPrdTableOffset + i].rsvdEot = 0x8000; // End-of-table?
+                else
+                    m_PrdTable[m_LastPrdTableOffset + i].rsvdEot = 0;
+                i++;
+            }
             else
-                m_PrdTable[m_LastPrdTableOffset + i].rsvdEot = 0;
-            i++;
+                FATAL("BusMasterIde: Part of the incoming buffer was not mapped!");
         }
 
         // If we added an entry, remove the EOT from any previous PRD that was

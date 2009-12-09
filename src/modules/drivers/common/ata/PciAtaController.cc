@@ -100,6 +100,19 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     commandReg = (commandReg & ~(0x5)) | 0x5;
     PciBus::instance().writeConfigSpace(pDev, 1, commandReg);
 
+    // Fiddle with the IDE timing registers
+    uint32_t ideTiming = PciBus::instance().readConfigSpace(pDev, 0x10);
+    /*ideTiming = 0;
+    ideTiming |= 1;
+    ideTiming |= 2;
+    ideTiming |= 4;
+    ideTiming |= 8;
+    ideTiming |= (2 << 12) | (1 << 8);
+    */
+    ideTiming = 0xCCE0 | (3 << 4) | 4;
+    ideTiming |= (ideTiming << 16);
+    PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
+
     // The controller must be able to perform BusMaster IDE DMA transfers, or
     // else we have to fall back to PIO transfers.
     bool bDma = false;

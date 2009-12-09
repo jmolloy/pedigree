@@ -204,7 +204,8 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
         pPage = m_Pages.lookup(key + (page * 4096));
         if(pPage)
         {
-            return 0; // Don't overwrite existing buffers
+            bOverlap = true;
+            continue; // Don't overwrite existing buffers
         }
 
         uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
@@ -225,6 +226,9 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
     }
 
     m_Lock.release();
+
+    if(bOverlap)
+        return false;
 
     return returnLocation;
 }

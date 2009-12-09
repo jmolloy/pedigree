@@ -218,7 +218,18 @@ uintptr_t AtaDisk::read(uint64_t location)
         return buffer-offs;
     }
 
+#if 0
+    Timer &timer = *Machine::instance().getTimer();
+    uint64_t now = timer.getTickCount();
+    NOTICE("Started read request at " << Dec << now << Hex);
+#endif
+
     pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location+offs);
+
+#if 0
+    uint64_t end = timer.getTickCount();
+    NOTICE("Ended read request at " << Dec << end << " [" << (end - now) << " seconds]");
+#endif
 
     /// \todo Add speculative loading here.
 
@@ -259,7 +270,12 @@ void AtaDisk::align(uint64_t location)
 uint64_t AtaDisk::doRead(uint64_t location)
 {
     uint64_t nBytes = 4096;
-    uintptr_t buffer = m_Cache.insert(location);
+    uintptr_t buffer = m_Cache.insert(location, nBytes);
+    if(!buffer)
+    {
+        nBytes = 4096;
+        m_Cache.insert(location);
+    }
 
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
