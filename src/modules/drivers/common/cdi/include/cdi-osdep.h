@@ -33,12 +33,42 @@
  * \endenglish
  */
 #define CDI_DRIVER(name, drvobj, deps...) \
-    void mod_entry() {(drvobj).drv.init();} \
-    void mod_exit() {(drvobj).drv.destroy();} \
+    void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((drvobj).drv);} \
+    void mod_exit() {(drvobj).drv.destroy(); cdi_pedigree_walk_dev_list_destroy((drvobj).drv);} \
     MODULE_NAME(name); \
     MODULE_ENTRY(mod_entry); \
     MODULE_EXIT(mod_exit); \
     MODULE_DEPENDS("cdi" deps);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * \english
+ * This function walks the list of devices stored by a driver and initialises
+ * each one. It is called when the module is executed, directly after driver
+ * initialisation.
+ *
+ * @param driver Driver struct containing the list of devices and function
+ *               pointers.
+ */
+void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev);
+
+/**
+ * \english
+ * This function walks the list of devices stored by a driver and destroys
+ * each one. It is called when the module is unloaded, right before driver
+ * destruction.
+ *
+ * @param driver Driver struct containing the list of devices and function
+ *               pointers.
+ */
+void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev);
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 /**
  * \english

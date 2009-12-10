@@ -10,7 +10,10 @@
 
 //#include <stdlib.h>
 
+#include <Module.h>
+
 #include "cdi.h"
+#include "cdi-osdep.h"
 #include "cdi/lists.h"
 
 static cdi_list_t drivers = NULL;
@@ -27,23 +30,43 @@ void cdi_init(void)
     drivers = cdi_list_create();
 }
 
+void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev)
+{
+    struct cdi_driver* driver = &dev;
+    struct cdi_device* device;
+    int i;
+    for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(dev.devices, i))); i++) {
+        device->driver = driver;
+
+        if (driver->init_device) {
+            driver->init_device(device);
+        }
+    }
+}
+
+void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
+{
+    struct cdi_driver* driver = &dev;
+    struct cdi_device* device;
+    int i;
+    for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(dev.devices, i))); i++) {
+        device->driver = driver;
+
+        if (driver->remove_device) {
+            driver->remove_device(device);
+        }
+    }
+}
+
 /**
  * Wird bei der Deinitialisierung aufgerufen
  */
 static void cdi_destroy(void) 
 {
     struct cdi_driver* driver;
-    struct cdi_device* device;
-    int i, j;
-
+    int i;
     for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
-        for (j = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(driver->devices, j))); j++) {
-            device->driver = driver;
-
-            if (driver->remove_device) {
-                driver->remove_device(device);
-            }
-        }
+        cdi_pedigree_walk_dev_list_destroy(*driver);
     }
 }
 
@@ -56,16 +79,9 @@ void cdi_run_drivers(void)
 {
     // Geraete initialisieren
     struct cdi_driver* driver;
-    struct cdi_device* device;
-    int i, j;
+    int i;
     for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
-        for (j = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(driver->devices, j))); j++) {
-            device->driver = driver;
-
-            if (driver->init_device) {
-                driver->init_device(device);
-            }
-        }
+        cdi_pedigree_walk_dev_list_init(*driver);
     }
 }
 

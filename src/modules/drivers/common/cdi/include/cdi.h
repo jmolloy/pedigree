@@ -16,7 +16,6 @@
 
 #include <stdint.h>
 
-#include "cdi-osdep.h"
 #include "cdi/lists.h"
 
 typedef enum {
