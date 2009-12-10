@@ -11,13 +11,12 @@ Jörg Pfähler (bluecode)
 James Pritchett (Tyler-Osdev)
 
 == Current core team ===================================================
-James Molloy (JamesM)
+Eduard Burtescu (eddyb)
 Matthew Iselin (pcmattman)
 
 == Developers (those with commit access) ===============================
 Alex Smith (AlexExtreme)
-Tyler Kennedy (TkTech)
-Eduard Burtescu (eddyb)
+Rich Edelman (quok)
 
 == List of Contributors ================================================
 The following people have provided patches or other generous services to
@@ -31,9 +30,8 @@ the project.
    + Initial CDI implementation
    + Ports of CDI e1000, pcnet, and sis900 drivers
  - Tyler Kennedy
-   + Provides the pedigree-project.org server
    + Facilitated most of the migration to SCons
  - Josh Cornutt
    + Provided optimised mem* routines
  - Rich Edelman
-   + Provides git mirroring
+   + Provides the pedigree-project.org server
