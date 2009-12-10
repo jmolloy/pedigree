@@ -29,79 +29,84 @@
 
 class Module
 {
-public:
-  Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
-  Elf elf;
-  const char *name;
-  void (*entry)();
-  void (*exit)();
-  const char **depends;
-  uint8_t *buffer;
-  size_t buflen;
-protected:
-  Module(const Module &);
-  Module &operator = (const Module &);
+    public:
+        Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
+        Elf elf;
+        const char *name;
+        void (*entry)();
+        void (*exit)();
+        const char **depends;
+        uint8_t *buffer;
+        size_t buflen;
+    protected:
+        Module(const Module &);
+        Module &operator = (const Module &);
 };
 
 class KernelElf : public Elf
 {
-  public:
-    /** Get the class instance
-     *\return reference to the class instance */
-    inline static KernelElf &instance()
-      {return m_Instance;}
+    public:
+        /** Get the class instance
+        *\return reference to the class instance */
+        inline static KernelElf &instance()
+        {return m_Instance;}
 
-    /** Extracts the symbol and string tables from the given BootstrapInfo class. */
-    bool initialise(const BootstrapStruct_t &pBootstrap) INITIALISATION_ONLY;
+        /** Extracts the symbol and string tables from the given BootstrapInfo class. */
+        bool initialise(const BootstrapStruct_t &pBootstrap) INITIALISATION_ONLY;
 
-    /** Treats the given pointer as an ELF partially linked object file
-     *  and loads it, relocates it and links it.
-     *\param pModule A pointer to an ELF module/driver.
-     *\param len The length of pModule, in bytes.
-     *\return A pointer to a Elf class describing the loaded module. */
-    Module *loadModule(uint8_t *pModule, size_t len);
+        /** Treats the given pointer as an ELF partially linked object file
+        *  and loads it, relocates it and links it.
+        *\param pModule A pointer to an ELF module/driver.
+        *\param len The length of pModule, in bytes.
+        *\param silent If true will not update the boot progress(default is false).
+        *\return A pointer to a Elf class describing the loaded module. */
+        Module *loadModule(uint8_t *pModule, size_t len, bool silent=false);
 
-    void unloadModules();
+        /** Returns true if a module with the specified name has benn loaded. */
+        bool moduleIsLoaded(char *name);
 
-    /** Looks up the address of the symbol with name 'pName' globally, that is throughout
-     *  all modules and the kernel itself. */
-    uintptr_t globalLookupSymbol(const char *pName);
-    const char *globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
+        /** Unloads all loaded modules. */
+        void unloadModules();
 
-    /** Returns the address space allocator for modules. */
-    MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
+        /** Looks up the address of the symbol with name 'pName' globally, that is throughout
+        *  all modules and the kernel itself. */
+        uintptr_t globalLookupSymbol(const char *pName);
+        const char *globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
 
-  private:
-    /** Default constructor does nothing */
-    KernelElf() INITIALISATION_ONLY;
-    /** Destructor does nothing */
-    ~KernelElf();
-    /** Copy-constructor
-     *\note NOT implemented (singleton class) */
-    KernelElf(const KernelElf &);
-    /** Assignment operator
-     *\note NOT implemented (singleton class) */
-    KernelElf &operator = (const KernelElf &);
+        /** Returns the address space allocator for modules. */
+        MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
 
-    bool moduleDependenciesSatisfied(Module *module);
-    void executeModule(Module *module);
+    private:
+        /** Default constructor does nothing */
+        KernelElf() INITIALISATION_ONLY;
+        /** Destructor does nothing */
+        ~KernelElf();
+        /** Copy-constructor
+        *\note NOT implemented (singleton class) */
+        KernelElf(const KernelElf &);
+        /** Assignment operator
+        *\note NOT implemented (singleton class) */
+        KernelElf &operator = (const KernelElf &);
 
-    #if defined(X86_COMMON)
-      MemoryRegion m_AdditionalSections;
-    #endif
+        bool moduleDependenciesSatisfied(Module *module);
+        void executeModule(Module *module);
 
-    /** Instance of the KernelElf class */
-    static KernelElf m_Instance;
+        #if defined(X86_COMMON)
+        MemoryRegion m_AdditionalSections;
+        #endif
 
-    /** List of modules */
-    Vector<Module*> m_Modules;
-    /** List of successfully loaded modules. */
-    Vector<Module*> m_LoadedModules;
-    /** List of pending modules - modules whose dependencies have not yet been
-        satisfied. */
-    Vector<Module*> m_PendingModules;
-    /** Memory allocator for modules - where they can be loaded. */
-    MemoryAllocator m_ModuleAllocator;
+        /** Instance of the KernelElf class */
+        static KernelElf m_Instance;
+
+        /** List of modules */
+        Vector<Module*> m_Modules;
+        /** List of successfully loaded modules. */
+        Vector<Module*> m_LoadedModules;
+        /** List of pending modules - modules whose dependencies have not yet been
+            satisfied. */
+        Vector<Module*> m_PendingModules;
+        /** Memory allocator for modules - where they can be loaded. */
+        MemoryAllocator m_ModuleAllocator;
 };
 
 /** @} */

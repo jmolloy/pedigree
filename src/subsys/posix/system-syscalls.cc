@@ -30,6 +30,7 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 #include <linker/Elf.h>
+#include <linker/KernelElf.h>
 #include <vfs/File.h>
 #include <vfs/Symlink.h>
 #include <vfs/VFS.h>
@@ -281,6 +282,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
                 break;
             }
         }
+
         if (!found)
         {
             // Parameter error.
@@ -292,16 +294,16 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         String str(&tmpBuff[2]); // Skip #!
         additionalArgv = str.tokenise(' ');
 
-	if(additionalArgv.begin() == additionalArgv.end()) {
-		NOTICE("Invalid shebang");
-		SYSCALL_ERROR(ExecFormatError);
-		return -1;
-	}
+        if(additionalArgv.begin() == additionalArgv.end()) {
+            NOTICE("Invalid shebang");
+            SYSCALL_ERROR(ExecFormatError);
+            return -1;
+        }
 
         String *newFname = *additionalArgv.begin();
 
-	// Prepend the tokenized shebang line argv
-	// argv will look like: interpreter-path additional-shebang-options script-name old-argv
+        // Prepend the tokenized shebang line argv
+        // argv will look like: interpreter-path additional-shebang-options script-name old-argv
         for (List<String*>::Iterator it = additionalArgv.begin();
              it != additionalArgv.end();
              it++)
@@ -309,9 +311,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             savedArgv.pushBack(*it);
         }
 
-	// Replace the old argv[0] with the script name, this is what Linux does
-	// ### is it safe to write to argv?
-	argv[0] = name;
+        // Replace the old argv[0] with the script name, this is what Linux does
+        // ### is it safe to write to argv?
+        argv[0] = name;
 
         name = static_cast<const char*>(*newFname);
 
@@ -945,4 +947,42 @@ int pedigree_reboot()
     // Reset the system
     system_reset();
     return 0;
+}
+
+// Module handling functions
+
+// Load a module
+int pedigree_module_load(char *_file)
+{
+    // Attempt to find the file, first!
+    File* file = VFS::instance().find(String(_file), Processor::information().getCurrentThread()->getParent()->getCwd());
+    if (!file)
+    {
+        // Error - not found.
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
+
+    if (file->isDirectory())
+    {
+        // Error - is directory.
+        SYSCALL_ERROR(IsADirectory);
+        return -1;
+    }
+
+    // Map the module in the memory
+    uintptr_t buffer;
+    MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, buffer);
+    Module *mod = KernelElf::instance().loadModule(reinterpret_cast<uint8_t *>(buffer), file->getSize(), true);
+    MemoryMappedFileManager::instance().unmap(pMmFile);
+    return 0;
+}
+
+// Check if a module is loaded
+int pedigree_module_is_loaded(char *name)
+{
+    return (KernelElf::instance().moduleIsLoaded(name)?1:0);
 }

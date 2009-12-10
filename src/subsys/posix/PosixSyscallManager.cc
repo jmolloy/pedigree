@@ -341,6 +341,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_CONFIG_GET_ERROR_MESSAGE:
             pedigree_config_get_error_message(p1, reinterpret_cast<char*>(p2), p3);
             return 0;
+        case PEDIGREE_MODULE_LOAD:
+            return pedigree_module_load(reinterpret_cast<char*>(p1));
+        case PEDIGREE_MODULE_IS_LOADED:
+            return pedigree_module_is_loaded(reinterpret_cast<char*>(p1));
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

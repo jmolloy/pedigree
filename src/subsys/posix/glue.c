@@ -95,7 +95,7 @@ int h_errno; // required by networking code
 // #define MAXNAMLEN 255
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
-  errno = ENOSYS;
+    errno = ENOSYS;
 
 #define NUM_ATFORK_HANDLERS 32 // (* 3)
 
@@ -1924,6 +1924,16 @@ void pedigree_reboot()
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
+}
+
+int pedigree_module_load(char *file)
+{
+    return syscall1(PEDIGREE_MODULE_LOAD, (long)file);
+}
+
+int pedigree_module_is_loaded(char *name)
+{
+    return syscall1(PEDIGREE_MODULE_IS_LOADED, (long)name);
 }
 
 void closelog()

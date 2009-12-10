@@ -67,5 +67,8 @@ int posix_syslog(const char *msg, int prio);
 int pedigree_load_keymap(char *buffer, size_t len);
 int pedigree_reboot();
 
+int pedigree_module_load(char *file);
+int pedigree_module_is_loaded(char *name);
+
 #endif
 
