@@ -160,7 +160,8 @@ def buildCdImage(target, source, env):
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     pathToGrub = env.Dir("#images/grub").abspath
     configDb = source[0].abspath
-    shutil.copy(pathToGrub + "/stage2_eltorito", ".")
+    stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
+    shutil.copy(pathToGrub + "/" + stage2_eltorito, "./stage2_eltorito")
     
     os.system("mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
                  -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
