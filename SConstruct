@@ -66,6 +66,8 @@ opts.AddVariables(
     
     BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
+    
+    BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
@@ -194,7 +196,7 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
 else:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles']
+additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
