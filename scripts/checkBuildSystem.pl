@@ -27,7 +27,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'name' => 'Nasm',
                   'filename' => "nasm-$nasm_version.tar.bz2",
                   'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
-                  'arch' => 'i686-pedigree i686-elf amd64-elf'} );
+                  'arch' => 'i686-pedigree amd64-pedigree i686-elf amd64-elf'} );
 
 my @patch = ( {'cwd' => "gcc-$gcc_version",
                'name' => "Gcc pedigree target patch",
@@ -46,9 +46,9 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'configure' => "--prefix=\$PREFIX",
                  'make' => "",
                  'install' => 'install',
-                 'arch' => 'i686-pedigree i686-elf amd64-elf',
+                 'arch' => 'i686-pedigree amd64-pedigree i686-elf amd64-elf',
                  'test' => './bin/nasm' },
-		{'dir' => "binutils-$binutils_version",
+                {'dir' => "binutils-$binutils_version",
                  'name' => "Binutils",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls",
                  'make' => "all",
@@ -60,7 +60,7 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
-                 'arch' => 'i686-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
+                 'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc (mips)",
@@ -88,7 +88,7 @@ $ENV{ASFLAGS} = "";
 my $prefix = `pwd`;
 chomp $prefix;
 
-die "Please use target 'i686-pedigree'." unless $target eq 'i686-pedigree';
+die "Please use target '[arch]-pedigree'." unless $target =~ /(i686|x86_64)/; # '*-pedigree';
 
 # Firstly, find out where to store the compilers.
 unless (-l "./compilers/dir") {
@@ -209,7 +209,7 @@ print "Complete; linking crt*.o...\n";
 `ln -s $prefix/build/kernel/crt0.o ./compilers/dir/lib/gcc/$target/$gcc_version/crt0.o`;
 `ln -s $prefix/build/kernel/crti.o ./compilers/dir/lib/gcc/$target/$gcc_version/crti.o`;
 `ln -s $prefix/build/kernel/crtn.o ./compilers/dir/lib/gcc/$target/$gcc_version/crtn.o`;
-`ln -s $prefix/build/include-posix ./compilers/dir/$target/include`;
+`ln -s $prefix/src/subsys/posix/include ./compilers/dir/$target/include`;
 print "Done.\n";
 
 `rm -rf ./compilers/dir/build_tmp`;
