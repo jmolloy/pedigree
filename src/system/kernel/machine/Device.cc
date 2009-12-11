@@ -233,11 +233,11 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
   }
   else
   {
-    /// \todo getPageSize()
-    uint32_t numPages = s / 4096;
-    if (s%4096) numPages++;
+    size_t pageSize = PhysicalMemoryManager::getPageSize();
+    uint32_t numPages = s / pageSize;
+    if (s%pageSize) numPages++;
 
-    MemoryMappedIo *io = new MemoryMappedIo(m_Name, a%4096, pad);
+    MemoryMappedIo *io = new MemoryMappedIo(m_Name, a%pageSize, pad);
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (!physicalMemoryManager.allocateRegion(*io,
                                         numPages,
