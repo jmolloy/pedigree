@@ -10,13 +10,13 @@ tmp = env.Clone()
 
 # Change to then name of this module
 moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
-objname = moduledir + '/network.o'
+objname = moduledir + '/network-stack.o'
 
 env.Alias("modules", objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")

@@ -22,11 +22,11 @@
 #include <vfs/File.h>
 #include <vfs/VFS.h>
 #include <machine/Network.h>
-#include <network/NetManager.h>
-#include <network/NetworkStack.h>
-#include <network/RoutingTable.h>
-#include <network/Dns.h>
-#include <network/Tcp.h>
+#include <network-stack/NetManager.h>
+#include <network-stack/NetworkStack.h>
+#include <network-stack/RoutingTable.h>
+#include <network-stack/Dns.h>
+#include <network-stack/Tcp.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>

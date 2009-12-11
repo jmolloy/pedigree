@@ -15,12 +15,12 @@
  */
 
 #include "NetManager.h"
-#include <network/Endpoint.h>
-#include <network/UdpManager.h>
-#include <network/TcpManager.h>
-#include <network/RawManager.h>
-#include <network/RoutingTable.h>
-#include <network/ConnectionBasedEndpoint.h>
+#include <network-stack/Endpoint.h>
+#include <network-stack/UdpManager.h>
+#include <network-stack/TcpManager.h>
+#include <network-stack/RawManager.h>
+#include <network-stack/RoutingTable.h>
+#include <network-stack/ConnectionBasedEndpoint.h>
 
 NetManager NetManager::m_Instance;
 

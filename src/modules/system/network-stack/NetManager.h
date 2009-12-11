@@ -23,10 +23,10 @@
 #include <utilities/Vector.h>
 #include <process/Scheduler.h>
 
-#include <network/ConnectionlessEndpoint.h>
-#include <network/ConnectionBasedEndpoint.h>
-#include <network/Endpoint.h>
-#include <network/Tcp.h>
+#include <network-stack/ConnectionlessEndpoint.h>
+#include <network-stack/ConnectionBasedEndpoint.h>
+#include <network-stack/Endpoint.h>
+#include <network-stack/Tcp.h>
 
 #define NETMAN_TYPE_UDP    1
 #define NETMAN_TYPE_TCP    2

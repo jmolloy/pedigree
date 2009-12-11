@@ -251,8 +251,8 @@ MODULE_NAME("installer");
 MODULE_ENTRY(&init_install);
 MODULE_EXIT(&destroy_install);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "lodisk");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "network-stack", "users", "lodisk");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users", "lodisk");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users", "lodisk");
 #endif
 

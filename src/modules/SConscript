@@ -64,7 +64,7 @@ module_subdirs = [
     'ext2',
     'fat',
     'iso9660',
-    'network',
+    'network-stack',
     'dhcpclient',
     'console',
     'TUI',

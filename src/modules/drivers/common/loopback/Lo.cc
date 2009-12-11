@@ -18,10 +18,10 @@
 #include <Log.h>
 #include <machine/Machine.h>
 #include <machine/Network.h>
-#include <network/NetworkStack.h>
+#include <network-stack/NetworkStack.h>
 #include <processor/Processor.h>
 
-#include <network/RoutingTable.h>
+#include <network-stack/RoutingTable.h>
 
 Loopback Loopback::m_Instance;
 

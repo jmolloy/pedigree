@@ -47,4 +47,4 @@ void exit()
 MODULE_NAME("ne2k");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("NetworkStack");
+MODULE_DEPENDS("network-stack");

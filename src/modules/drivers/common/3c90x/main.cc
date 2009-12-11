@@ -80,4 +80,4 @@ void exit()
 MODULE_NAME("3c90x");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("NetworkStack");
+MODULE_DEPENDS("network-stack");

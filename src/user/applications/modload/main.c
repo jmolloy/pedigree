@@ -34,9 +34,14 @@ int load_module(char *name)
         return -1;
     // Grab the name and dependencies symbols
     ElfSymbol_t *name_sym = elf_get_symbol(elf, "g_pModuleName"), *deps_sym = elf_get_symbol(elf, "g_pDepends");
-    if(!name_sym || !deps_sym)
+    if(!name_sym)
     {
-        printf("One or more symbols not found!\n");
+        printf("g_pModuleName symbol not found!\n");
+        return -1;
+    }
+    if(!deps_sym)
+    {
+        printf("g_pDepends symbols not found!\n");
         return -1;
     }
     char *modname = (char*)elf_relptr(elf, name_sym, *SYM_PTR(elf, name_sym));

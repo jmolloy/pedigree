@@ -16,9 +16,9 @@
 
 #include <Module.h>
 #include <Log.h>
-#include <network/NetworkStack.h>
-#include <network/UdpManager.h>
-#include <network/ConnectionlessEndpoint.h>
+#include <network-stack/NetworkStack.h>
+#include <network-stack/UdpManager.h>
+#include <network-stack/ConnectionlessEndpoint.h>
 
 #include <processor/Processor.h>
 
@@ -522,4 +522,4 @@ void exit()
 MODULE_NAME("dhcpclient");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("NetworkStack");
+MODULE_DEPENDS("network-stack");

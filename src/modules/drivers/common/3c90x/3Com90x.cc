@@ -63,12 +63,12 @@
 #include <Log.h>
 #include <machine/Machine.h>
 #include <machine/Network.h>
-#include <network/NetworkStack.h>
+#include <network-stack/NetworkStack.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
 #include <machine/IrqManager.h>
 
-#include <network/Ethernet.h>
+#include <network-stack/Ethernet.h>
 
 int Nic3C90x::issueCommand(int cmd, int param)
 {

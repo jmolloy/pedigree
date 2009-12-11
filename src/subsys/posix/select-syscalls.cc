@@ -32,8 +32,8 @@
 #include <vfs/Directory.h>
 #include <vfs/VFS.h>
 #include <console/Console.h>
-#include <network/NetManager.h>
-#include <network/Tcp.h>
+#include <network-stack/NetManager.h>
+#include <network-stack/Tcp.h>
 #include <utilities/utility.h>
 #include <utilities/TimedTask.h>
 

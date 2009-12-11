@@ -20,7 +20,7 @@
 #include <vfs/VFS.h>
 #include <vfs/File.h>
 #include <vfs/Filesystem.h>
-#include <network/TcpMisc.h>
+#include <network-stack/TcpMisc.h>
 
 int posix_pipe(int filedes[2]);
 

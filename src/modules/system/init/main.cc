@@ -35,8 +35,8 @@
 
 #include <kernel/core/BootIO.h>
 
-#include <network/NetworkStack.h>
-#include <network/RoutingTable.h>
+#include <network-stack/NetworkStack.h>
+#include <network-stack/RoutingTable.h>
 
 #include <users/UserManager.h>
 
@@ -308,9 +308,9 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-//MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "NetworkStack", "users", "rawfs");
+//MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "network-stack", "users", "rawfs");
 MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "users");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "NetworkStack", "users");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users");
 #endif
 
