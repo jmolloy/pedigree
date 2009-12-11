@@ -83,6 +83,9 @@ if env['installer']:
 else:
     module_subdirs += ['init']
 
+# No difference yet, load all modules
+initrd_modules = module_subdirs
+
 drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
 drivers += ['drivers/common/' + i for i in driver_common_subdirs]
 modules = ['system/' + i for i in module_subdirs]
@@ -112,10 +115,18 @@ if "splash" in module_subdirs:
     initrdList += [builddir.abspath + '/modules/splash.o']
     module_subdirs.remove("splash")
 
+# Add all drivers.
+# TODO: Installation should detect hardware and install a custom initrd with
+# 		only the necessary drivers to boot up (and then drivers should be
+#		loaded on-demand or something)
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
 initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in cdi_drivers]
-initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in module_subdirs]
+
+# Only some modules are actually needed for the actual boot of the system
+# The rest can be loaded via some form of autoload mechanism (run in the init
+# module perhaps?) or on demand via modload.
+initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules]
 
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
