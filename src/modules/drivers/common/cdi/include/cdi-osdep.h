@@ -13,6 +13,8 @@
 
 #include <Module.h>
 
+struct cdi_driver;
+
 /**
  * \german
  * Muss fuer jeden CDI-Treiber genau einmal verwendet werden, um ihn bei der

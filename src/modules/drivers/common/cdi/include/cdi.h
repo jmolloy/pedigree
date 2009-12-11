@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include "cdi/lists.h"
+#include "cdi-osdep.h"
 
 typedef enum {
     CDI_UNKNOWN         = 0,
