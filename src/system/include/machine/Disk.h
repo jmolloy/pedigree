@@ -82,10 +82,14 @@ public:
         return;
     }
 
-    /** Sets the page boundary alignment after a specific location on the disk. For example, if one has
-     *  a partition starting on byte 512, one will probably want 4096-byte reads to be aligned with this
-     *  (so reading 4096 bytes from byte 0 on the partition will create one page of cache and not span two).
-     *\todo Better documentation. */
+    /** \brief Sets the page boundary alignment after a specific location on the disk.
+     *
+     * For example, if one has a partition starting on byte 512, one will
+     * probably want 4096-byte reads to be aligned with this (so reading 4096
+     * bytes from byte 0 on the partition will create one page of cache and not
+     * span two).
+     * \todo Better documentation.
+     */
     virtual void align(uint64_t location)
     {
         return;

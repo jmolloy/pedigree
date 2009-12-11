@@ -205,52 +205,36 @@ void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t 
 Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
   m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad)
 {
-#ifdef KERNEL_PROCESSOR_NO_PORT_IO
-  // In this case, IO accesses go through MemoryMappedIo too.
-  /// \todo getPageSize()
-  uint32_t numPages = s / 4096;
-  if (s%4096) numPages++;
-
-  MemoryMappedIo *pIo = new MemoryMappedIo(m_Name, a%4096, pad);
-  PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  if (!physicalMemoryManager.allocateRegion(*pIo,
-                                       numPages,
-                                       PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
-                                       PhysicalMemoryManager::force,
-                                       VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
-                                         VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
-                                       a))
-  {
-    ERROR("Device::Address - allocateRegion failed!");
-  }
-  m_Io = pIo;
-#else
-  if (m_IsIoSpace)
-  {
-    IoPort *pIo = new IoPort(m_Name);
-    pIo->allocate(a, s);
-    m_Io = pIo;
-  }
-  else
-  {
-    size_t pageSize = PhysicalMemoryManager::getPageSize();
-    uint32_t numPages = s / pageSize;
-    if (s%pageSize) numPages++;
-
-    MemoryMappedIo *io = new MemoryMappedIo(m_Name, a%pageSize, pad);
-    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-    if (!physicalMemoryManager.allocateRegion(*io,
-                                        numPages,
-                                        PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
-                                        PhysicalMemoryManager::force,
-                                        VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
-                                        VirtualAddressSpace::WriteThrough,
-                                        a))
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+    if (m_IsIoSpace)
     {
-      ERROR("Device::Address - allocateRegion failed!");
+        IoPort *pIo = new IoPort(m_Name);
+        pIo->allocate(a, s);
+        m_Io = pIo;
     }
-    m_Io = io;
-  }
+    else
+    {
+#else
+        // In this case, IO accesses go through MemoryMappedIo too.
+        size_t pageSize = PhysicalMemoryManager::getPageSize();
+        uint32_t numPages = s / pageSize;
+        if (s%pageSize) numPages++;
+
+        MemoryMappedIo *pIo = new MemoryMappedIo(m_Name, a%pageSize, pad);
+        PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+        if (!physicalMemoryManager.allocateRegion(*pIo,
+                                                    numPages,
+                                                    PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
+                                                    PhysicalMemoryManager::force,
+                                                    VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
+                                                    VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
+                                                    a))
+        {
+            ERROR("Device::Address - allocateRegion failed!");
+        }
+        m_Io = pIo;
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+    }
 #endif
 }
 
