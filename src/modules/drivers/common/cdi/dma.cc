@@ -25,9 +25,6 @@
 #error ISA DMA not supported on non-x86 architectures. TODO: FIXME
 #endif
 
-/// \todo Read the OSDev wiki. For the first time, ever, I'm actually going to implement
-///       DMA myself. About time too! http://wiki.osdev.org/DMA
-
 /**
  * Initialisiert einen Transport per DMA
  *
