@@ -71,8 +71,8 @@ Device *DeviceHashTree::getDevice(String hash)
         return 0;
     else
     {
-        /// \todo String -> int
-        return m_DeviceTree.lookup(0);
+        uint32_t inthash = strtoul(static_cast<const char*>(hash), 0, 16);
+        return m_DeviceTree.lookup(inthash);
     }
 }
 
