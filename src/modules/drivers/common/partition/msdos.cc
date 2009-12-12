@@ -18,11 +18,14 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include "Partition.h"
+#include <Spinlock.h>
 
 // Partition number for a DOS extended partition (another partition table)
 const uint8_t g_ExtendedPartitionNumber = 5;
 // Partition number for an empty partition.
 const uint8_t g_EmptyPartitionNumber = 0;
+
+Spinlock g_Lock;
 
 const char *g_pPartitionTypes[256] = {
     "Empty",
@@ -288,10 +291,12 @@ static int gNextPartition = 0;
 
 void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
 {
+    LockGuard<Spinlock> guard(g_Lock);
+
     // Look up the partition string.
     const char *pStr = g_pPartitionTypes[pPartitions[i].type];
     NormalStaticString sstr("(");
-    sstr += gNextPartition++; /// \todo Might need locking?
+    sstr += gNextPartition++;
     sstr += ") ";
     sstr += pStr;
     String str(sstr);
