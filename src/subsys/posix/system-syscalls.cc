@@ -866,6 +866,12 @@ NOTICE("stl: " << Hex << sparseTreeLoc  <<", dl: " << dataLoc << ", stz: " << sp
 
 int posix_syslog(const char *msg, int prio)
 {
+    if(Processor::information().getCurrentThread()->getParent()->getId() <= 1)
+    {
+        if(prio <= LOG_CRIT)
+            FATAL(msg);
+    }
+
     if(prio <= LOG_ERR)
         ERROR(msg);
     else if(prio == LOG_WARNING)

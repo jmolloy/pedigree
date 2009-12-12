@@ -300,11 +300,17 @@ int main (int argc, char **argv)
     g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf",
                             true, g_nWidth);
     if (!g_NormalFont)
-        log("Error: Font not loaded! (1)");
+    {
+        syslog(LOG_EMERG, "Error: Font 'DejaVuSansMono.ttf' loaded!");
+        return 0;
+    }
     g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf",
                           true, g_nWidth);
-    if (!g_NormalFont)
-        log("Error: Font not loaded! (2)");
+    if (!g_BoldFont)
+    {
+        syslog(LOG_EMERG, "Error: Font 'DejaVuSansMono-Bold.ttf' not loaded!");
+        return 0;
+    }
 
     g_pHeader =  new Header(g_nWidth);
 

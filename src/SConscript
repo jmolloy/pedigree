@@ -166,9 +166,6 @@ def buildImageMtools(target, source, env):
             prefix = '/libraries'
         
         otherPath = prefix + i.abspath.replace(search, '')
-        print i.path
-        print destDrive
-        print otherPath
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
 def buildCdImage(target, source, env):
