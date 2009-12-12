@@ -176,7 +176,6 @@ public:
     return false;
   }
 
-  // TODO
   int intValue(int nBase=0) const
   {
     const char *pEnd;
