@@ -26,12 +26,11 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   // Initialise our ports.
   for (unsigned int i = 0; i < m_Addresses.count(); i++)
   {
-    /// \todo String operator== problem here.
-    if (!strcmp(m_Addresses[i]->m_Name, "command") || !strcmp(m_Addresses[i]->m_Name, "bar0"))
+    if (m_Addresses[i]->m_Name == "command" || m_Addresses[i]->m_Name == "bar0")
     {
       m_pCommandRegs = m_Addresses[i]->m_Io;
     }
-    if (!strcmp(m_Addresses[i]->m_Name, "control") || !strcmp(m_Addresses[i]->m_Name, "bar1"))
+    if (m_Addresses[i]->m_Name == "control" || m_Addresses[i]->m_Name == "bar1")
     {
       m_pControlRegs = m_Addresses[i]->m_Io;
     }

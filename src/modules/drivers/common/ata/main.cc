@@ -73,9 +73,9 @@ void removeIsaAta(Device *pDev)
             for (unsigned int j = 0; j < dev->addresses().count(); j++)
             {
                 /// \todo Problem with String::operator== - fix.
-                if (!strcmp(dev->addresses()[j]->m_Name, "command"))
+                if (dev->addresses()[j]->m_Name == "command")
                     foundCommand = true;
-                if (!strcmp(dev->addresses()[j]->m_Name, "control"))
+                if (dev->addresses()[j]->m_Name == "control")
                     foundControl = true;
             }
             if (foundCommand && foundControl)
@@ -98,10 +98,10 @@ void searchNode(Device *pDev, bool bFallBackISA)
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
     static bool bPiixControllerFound = false;
+#if 0
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
-#if 0
         // Look for a PIIX controller
         if(pChild->getPciVendorId() == 0x8086)
         {
@@ -125,10 +125,10 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 bPiixControllerFound = true;
             }
         }
-#endif
         // Recurse.
         searchNode(pChild, false);
     }
+#endif
 
     // No PIIX controller found, fall back to ISA
     /// \todo Could also fall back to ICH?
@@ -150,9 +150,9 @@ void searchNode(Device *pDev, bool bFallBackISA)
                 for (unsigned int j = 0; j < pChild->addresses().count(); j++)
                 {
                     /// \todo Problem with String::operator== - fix.
-                    if (!strcmp(pChild->addresses()[j]->m_Name, "command"))
+                    if (pChild->addresses()[j]->m_Name == "command")
                         foundCommand = true;
-                    if (!strcmp(pChild->addresses()[j]->m_Name, "control"))
+                    if (pChild->addresses()[j]->m_Name == "control")
                         foundControl = true;
                 }
                 if (foundCommand && foundControl)

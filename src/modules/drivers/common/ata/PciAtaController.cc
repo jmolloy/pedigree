@@ -199,7 +199,6 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 
     // And finally, create disks
-    /// \todo Give them the Bus Master register base so they can do their work
     diskHelper(true, masterCommand, masterControl, primaryBusMaster);
     diskHelper(false, masterCommand, masterControl, primaryBusMaster);
     diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster);

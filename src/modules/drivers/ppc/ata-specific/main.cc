@@ -12,21 +12,21 @@ static void searchNode(Device *pDev)
     Device *pChild = pDev->getChild(i);
 
     /// \todo also convert to Controllers.
-    if (!strcmp(pChild->getSpecificType(), "pci-ide"))
+    if (pChild->getSpecificType() == "pci-ide")
     {
       // We've found a native-pci ATA device.
 
       // BAR0 is the command register address, BAR1 is the control register address.
       for (int j = 0; j < pChild->addresses().count(); j++)
       {
-        if (!strcmp(pChild->addresses()[j]->m_Name, "bar0"))
+        if (pChild->addresses()[j]->m_Name == "bar0")
           pChild->addresses()[j]->m_Name = String("command");
-        if (!strcmp(pChild->addresses()[j]->m_Name, "bar1"))
+        if (pChild->addresses()[j]->m_Name == "bar1")
           pChild->addresses()[j]->m_Name = String("control");
       }
     }
 
-    if (!strcmp(pChild->getSpecificType(), "ata"))
+    if (pChild->getSpecificType() == "ata")
     {
       OFDevice dev (pChild->getOFHandle());
       NormalStaticString compatible;
@@ -43,7 +43,7 @@ static void searchNode(Device *pDev)
         
         for (unsigned int j = 0; j < pChild->getParent()->addresses().count(); j++)
         {
-          if (!strcmp(pChild->getParent()->addresses()[j]->m_Name, "bar0"))
+          if (pChild->getParent()->addresses()[j]->m_Name == "bar0")
           {
             reg += pChild->getParent()->addresses()[j]->m_Address;
             break;
