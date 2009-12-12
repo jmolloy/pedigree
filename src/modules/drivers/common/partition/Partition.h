@@ -49,7 +49,12 @@ public:
 
   virtual uintptr_t read(uint64_t location)
   {
-    /// \todo bounds checking.
+    // Ensure the read does not begin past the end of our partition
+    if(location > m_Length)
+        return 0;
+    else if((location + 0x1000) > m_Length)
+        return 0;
+
     Disk *pParent = static_cast<Disk*> (getParent());
 
     if (!m_bAligned)
@@ -65,6 +70,12 @@ public:
 
   virtual void write(uint64_t location)
   {
+    // Ensure the read does not begin past the end of our partition
+    if(location > m_Length)
+        return;
+    else if((location + 0x1000) > m_Length)
+        return;
+
     Disk *pParent = static_cast<Disk*> (getParent());
 
     if (!m_bAligned)
