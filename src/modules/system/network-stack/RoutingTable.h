@@ -24,54 +24,6 @@
 #include <machine/Network.h>
 #include <config/Config.h>
 
-/** #define'd to keep out of compiles. It's currently only an idea, there's still so much
-    to figure out before this sort of concept is ready to go */
-#define UNUSUAL_ROUTING_METHOD 0
-
-#if UNUSUAL_ROUTING_METHOD
-
-/** A specific route */
-class Route
-{
-  public:
-    Route() : m_Type(SUBNET)
-    {};
-    virtual ~Route()
-    {};
-
-    /** Defines the type of a route.
-      * SUBNET means this uses the subnet mask to determine destination
-      * RANGE means the route defines a range of IPs
-      * IP means a single IP address
-      */
-    enum RouteType
-    {
-      SUBNET = 0,
-      IP
-    };
-
-    /** Gets this route's card */
-    Network* getCard(IpAddress incoming)
-    {
-      switch(m_Type)
-      {
-        case SUBNET:
-          if(incoming.getIp() & 
-      return 0;
-    }
-
-  private:
-
-    RouteType m_Type;
-
-    Network* m_Card;
-
-    IpAddress m_Subnet;
-    IpAddress m_Ip;
-};
-
-#endif
-
 /**
  * The Pedigree routing table supports three different ways to route packets:
  * 1. Destination IP match

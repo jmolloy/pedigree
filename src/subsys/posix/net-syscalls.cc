@@ -104,9 +104,12 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
     if(p->getType() == Endpoint::ConnectionBased)
@@ -133,6 +136,16 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     bool blocking = !((f->flflags & O_NONBLOCK) == O_NONBLOCK);
 
     Endpoint::RemoteEndpoint remoteHost;
+
+    /// \bug Assuming _in here...
+    struct sockaddr_in* address_in = reinterpret_cast<struct sockaddr_in*>(address);
+    IpAddress dest(address_in->sin_addr.s_addr);
+    Network *iface = RoutingTable::instance().DetermineRoute(&dest);
+    if(!iface || !iface->isConnected())
+    {
+        // Can't use this interface...
+        return false;
+    }
 
     /// \todo Other protocols
     bool success = false;
@@ -169,7 +182,9 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         success = true;
     }
     else if (s->getProtocol() == NETMAN_TYPE_RAW)
-        success = true; /// \todo If the interface is down, fail
+    {
+        success = true;
+    }
 
     NOTICE("posix_connect returns");
 
@@ -189,9 +204,12 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
 
@@ -251,9 +269,12 @@ ssize_t posix_sendto(void* callInfo)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
 
@@ -345,9 +366,12 @@ ssize_t posix_recvfrom(void* callInfo)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
 
@@ -394,9 +418,12 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
     Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
-        return -1; /// \todo SYSCALL_ERROR of some sort
 
     Endpoint* p = s->getEndpoint();
     if (p)
@@ -640,7 +667,7 @@ int posix_shutdown(int socket, int how)
     if (!s)
     {
         SYSCALL_ERROR(BadFileDescriptor);
-        return -1; /// \todo SYSCALL_ERROR of some sort
+        return -1;
     }
 
     Endpoint *e = s->getEndpoint();

@@ -155,7 +155,6 @@ int posix_fork(SyscallState &state)
     pSubsystem->setProcess(pProcess);
 
     // Copy POSIX Process Group information if needed
-    /// \todo Get a response on Stack Overflow and possibly put into the PosixProcess copy constructor
     if(pParentProcess->getType() == Process::Posix)
     {
         PosixProcess *p = static_cast<PosixProcess*>(pParentProcess);

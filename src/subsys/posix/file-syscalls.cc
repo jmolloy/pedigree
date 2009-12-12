@@ -773,7 +773,11 @@ int posix_readdir(int fd, dirent *ent)
         return -1;
     }
 
-    /// \todo Sanity checks.
+    if(!pFd->file->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
+    }
     File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
     if (!file)
         return -1;
@@ -1000,84 +1004,7 @@ int posix_isatty(int fd)
     NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
 }
-#if 0
-/** SelectRun: performs a "select" call over a set of Files with a timeout. */
-class SelectRun
-{
-    public:
 
-        /// Information structure to make the Files list more useful
-        struct FileInfo
-        {
-            File *pFile;
-            bool bCheckWrite;
-        };
-
-        /// Default Constructor
-        SelectRun(uint32_t timeout = 15) : m_Files(), m_Timeout(timeout)
-        {};
-
-        /// Destructor
-        virtual ~SelectRun()
-        {
-            deleteAll();
-        };
-
-        /// Performs the actual run
-        int doRun()
-        {
-            // Check each File in the list
-            /// \todo This should keep looping until the timeout expires, this is currently just looping forever
-            /// \todo These should each run concurrently, not one after the other...
-            int numReady = 0;
-            while(numReady == 0)
-            {
-                for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
-                {
-                    FileInfo *p = (*it);
-                    if(p)
-                        numReady += p->pFile->select(p->bCheckWrite, m_Timeout);
-                }
-            }
-
-            // Reset so we're ready for another round if needed
-            deleteAll();
-            return numReady;
-        }
-
-        /// Adds a file to the internal record
-        void addFile(FileInfo *p)
-        {
-            m_Files.pushBack(p);
-        }
-
-        /// Sets the timeout
-        void setTimeout(uint32_t t)
-        {
-            m_Timeout = t;
-        }
-
-    private:
-
-        /// Deletes all internal FileInfo structures
-        void deleteAll()
-        {
-            for(List<FileInfo*>::Iterator it = m_Files.begin(); it != m_Files.end(); it++)
-            {
-                FileInfo *p = (*it);
-                if(p)
-                    delete p;
-            }
-            m_Files.clear();
-        }
-
-        /// Internal record of Files that we are checking
-        List<FileInfo*> m_Files;
-
-        /// Timeout - is a soft deadline
-        uint32_t m_Timeout;
-};
-#endif
 /** poll: determine if a set of file descriptors are writable/readable.
  *
  *  Permits any number of descriptors, unlike select().
@@ -1147,95 +1074,6 @@ int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
     return numReady;
 }
 
-#if 0
-/** select: determine if a set of file descriptors is readable, writable, or has an error condition.
- *
- *  Each descriptor should be checked asynchronously, in order to quickly handle large numbers of
- *  descriptors, and also to ensure that if the timeout condition expires the select() call returns.
- *
- *  The File::select function is used to direct the ugly details to the individual File. This allows
- *  things such as sockets to still use their very net-specific code without polluting select().
- */
-int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
-{
-    F_NOTICE("select(" << Dec << nfds << Hex << ")");
-
-    // Grab the subsystem for this process
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-
-    // This is the worker for this run
-    SelectRun *run = new SelectRun;
-
-    // Get the timeout
-    uint32_t timeoutSeconds = 0;
-    if (timeout)
-        timeoutSeconds = timeout->tv_sec + (timeout->tv_usec / 1000);
-    run->setTimeout(timeoutSeconds);
-    if (timeoutSeconds > 0)
-        FATAL("Timeout! " << timeoutSeconds);
-    // Setup the SelectRun object with all of the files
-    for (int i = 0; i < nfds; i++)
-    {
-        // valid fd?
-        FileDescriptor *pFd = 0;
-        if ((readfds && FD_ISSET(i, readfds)) || (writefds && FD_ISSET(i, writefds)))
-        {
-            pFd = pSubsystem->getFileDescriptor(i);
-            if (!pFd)
-            {
-                // Error - no such file descriptor.
-                ERROR("select: no such file descriptor (" << Dec << i << ")");
-                return -1;
-            }
-        }
-
-        if (readfds)
-        {
-            if (FD_ISSET(i, readfds))
-            {
-                SelectRun::FileInfo *f = new SelectRun::FileInfo;
-                f->pFile = pFd->file;
-                NOTICE("i: " << i);
-                f->bCheckWrite = false;
-
-                run->addFile(f);
-            }
-        }
-        if (writefds)
-        {
-            if (FD_ISSET(i, writefds))
-            {
-                SelectRun::FileInfo *f = new SelectRun::FileInfo;
-                f->pFile = pFd->file;
-                f->bCheckWrite = true;
-
-                run->addFile(f);
-            }
-        }
-    }
-
-    // No descriptors but a timeout instead? Sleep.
-    if(!nfds && timeoutSeconds)
-    {
-        Semaphore sem(0);
-        sem.acquire(1, timeoutSeconds);
-        delete run;
-        return 0;
-    }
-
-    // Otherwise do the run
-    int numReady = run->doRun();
-    F_NOTICE("    -> " << Dec << numReady << Hex);
-    delete run;
-    return numReady;
-}
-#endif
 int posix_fcntl(int fd, int cmd, int num, int* args)
 {
     if (num)
@@ -1423,8 +1261,6 @@ void *posix_mmap(void *p)
     off_t off = map_info->off;
 
     F_NOTICE("addr=" << reinterpret_cast<uintptr_t>(addr) << ", len=" << len << ", prot=" << prot << ", flags=" << flags << ", fildes=" << fd << ", off=" << off << ".");
-
-    /// \todo Check args...
 
     // Get the File object to map
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
