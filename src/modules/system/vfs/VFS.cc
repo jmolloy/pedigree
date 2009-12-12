@@ -68,30 +68,18 @@ bool VFS::mount(Disk *pDisk, String &alias)
 
 void VFS::addAlias(Filesystem *pFs, String alias)
 {
+    if(!pFs)
+        return;
+
     pFs->m_nAliases++;
-    Alias *pA = new Alias;
-    pA->alias = alias;
-    pA->fs = pFs;
-    m_Aliases.pushBack(pA);
+    m_Aliases.insert(alias, pFs);
 }
 
 void VFS::addAlias(String oldAlias, String newAlias)
 {
-    for (List<Alias*>::Iterator it = m_Aliases.begin();
-         it != m_Aliases.end();
-         it++)
-    {
-        if (!strcmp(oldAlias, (*it)->alias))
-        {
-            Filesystem *pFs = (*it)->fs;
-            pFs->m_nAliases++;
-            Alias *pA = new Alias;
-            pA->alias = newAlias;
-            pA->fs = pFs;
-            m_Aliases.pushBack(pA);
-            return;
-        }
-    }
+    Filesystem *pFs = m_Aliases.lookup(oldAlias);
+    if(pFs)
+        m_Aliases.insert(newAlias, pFs);
 }
 
 String VFS::getUniqueAlias(String alias)
@@ -120,61 +108,26 @@ String VFS::getUniqueAlias(String alias)
 
 bool VFS::aliasExists(String alias)
 {
-    for (List<Alias*>::Iterator it = m_Aliases.begin();
-         it != m_Aliases.end();
-         it++)
-    {
-        if (!strcmp(static_cast<const char*>(alias), static_cast<const char *>((*it)->alias)))
-        {
-            return true; // alias exists!
-        }
-    }
-    return false; // doesn't exist
+    return (m_Aliases.lookup(alias) != 0);
 }
 
 void VFS::removeAlias(String alias)
 {
-    for (List<Alias*>::Iterator it = m_Aliases.begin();
-         it != m_Aliases.end();
-         it++)
-    {
-        if (alias == (*it)->alias)
-        {
-            Filesystem *pFs = (*it)->fs;
-            Alias *pA = *it;
-            m_Aliases.erase(it);
-            delete pA;
-
-            pFs->m_nAliases--;
-            if (pFs->m_nAliases == 0)
-            {
-                delete pFs;
-                for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
-                     it != m_MountCallbacks.end();
-                     it++)
-                {
-                    MountCallback mc = *(*it);
-                    mc();
-                }
-            }
-
-            // Only ever one alias
-            break;
-        }
-    }
+    m_Aliases.remove(alias);
 }
 
 void VFS::removeAllAliases(Filesystem *pFs)
 {
-    for (List<Alias*>::Iterator it = m_Aliases.begin();
+    if(!pFs)
+        return;
+
+    for (RadixTree<Filesystem*>::Iterator it = m_Aliases.begin();
          it != m_Aliases.end();
          it++)
     {
-        if (pFs == (*it)->fs)
+        if (pFs == (*it))
         {
-            Alias *pA = *it;
             it = m_Aliases.erase(it);
-            delete pA;
         }
     }
     delete pFs;
@@ -182,16 +135,7 @@ void VFS::removeAllAliases(Filesystem *pFs)
 
 Filesystem *VFS::lookupFilesystem(String alias)
 {
-    for (List<Alias*>::Iterator it = m_Aliases.begin();
-         it != m_Aliases.end();
-         it++)
-    {
-        if (!strcmp(alias, (*it)->alias))
-        {
-            return (*it)->fs;
-        }
-    }
-    return 0;
+    return m_Aliases.lookup(alias);
 }
 
 File *VFS::find(String path, File *pStartNode)

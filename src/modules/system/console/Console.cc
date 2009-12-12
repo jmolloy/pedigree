@@ -109,7 +109,7 @@ bool ConsoleManager::isConsole(File* file)
 void ConsoleManager::setAttributes(File* file, size_t flags)
 {
     // \todo Sanity checking of the flags.
-    if(!pFile)
+    if(!file)
         return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     pFile->m_Flags = flags;
@@ -117,7 +117,7 @@ void ConsoleManager::setAttributes(File* file, size_t flags)
 
 void ConsoleManager::getAttributes(File* file, size_t *flags)
 {
-    if(!pFile || !flags)
+    if(!file || !flags)
         return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     *flags = pFile->m_Flags;

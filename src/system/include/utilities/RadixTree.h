@@ -169,6 +169,17 @@ public:
     /** Clear the tree. */
     void clear();
 
+
+    /** Erase one Element */
+    Iterator erase(Iterator iter)
+    {
+        Node *iterNode = iter.__getNode();
+        Node *next = iterNode->next();
+        remove(String(reinterpret_cast<const char*>(iterNode->getKey())));
+        Iterator ret(next);
+        return ret;
+    }
+
     /** Get an iterator pointing to the beginning of the List
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
@@ -254,6 +265,10 @@ public:
     inline void remove(String key)
     {
         m_VoidRadixTree.remove(key);
+    }
+    Iterator erase(Iterator iter)
+    {
+        return m_VoidRadixTree.erase(iter.__getIterator());
     }
 
     /** Get an iterator pointing to the beginning of the RadixTree

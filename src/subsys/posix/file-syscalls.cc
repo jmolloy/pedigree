@@ -1712,6 +1712,9 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     NOTICE("pedigree_get_mount(" << Dec << n << Hex << ")");
 
+    /// \todo Get the list of Alias strings from the RadixTree somehow.
+
+    /*
     List<VFS::Alias*> myAliases = VFS::instance().getAliases();
     size_t i = 0;
     for(List<VFS::Alias*>::Iterator it = myAliases.begin(); it != myAliases.end() && i <= n; it++, i++)
@@ -1734,5 +1737,6 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
             return 0;
         }
     }
+    */
     return -1;
 }

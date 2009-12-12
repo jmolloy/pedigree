@@ -38,18 +38,6 @@
 class VFS
 {
 public:
-    /** Structure matching aliases to filesystems.
-     * \todo Use a proper Map class for this. */
-    struct Alias
-    {
-        Alias() : alias(), fs(0) {}
-        String alias;
-        Filesystem *fs;
-    private:
-        Alias(const Alias&);
-        void operator =(const Alias&);
-    };
-
     /** Callback type, called when a disk is mounted or unmounted. */
     typedef void (*MountCallback)();
 
@@ -79,7 +67,7 @@ public:
     bool aliasExists(String alias);
 
     /** Obtains a list of all filesystem aliases */
-    inline List<Alias*> &getAliases()
+    inline RadixTree<Filesystem*> &getAliases()
     {
         return m_Aliases;
     }
@@ -128,7 +116,8 @@ private:
     static File* m_EmptyFile;
 
 private:
-    List<Alias*> m_Aliases;
+    RadixTree<Filesystem*> m_Aliases;
+    // List<Alias*> m_Aliases;
 
     List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
     List<MountCallback*> m_MountCallbacks;
