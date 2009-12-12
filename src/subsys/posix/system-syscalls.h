@@ -47,7 +47,6 @@ int posix_getpwent(passwd *pw, int n, char *str);
 int posix_getpwnam(passwd *pw, const char *name, char *str);
 int posix_getuid();
 int posix_getgid();
-int pedigree_login(int uid, const char *password);
 
 size_t posix_alarm(uint32_t seconds);
 int posix_sleep(uint32_t seconds);
@@ -63,12 +62,6 @@ int posix_setpgid(int pid, int pgid);
 int posix_getpgrp();
 
 int posix_syslog(const char *msg, int prio);
-
-int pedigree_load_keymap(char *buffer, size_t len);
-int pedigree_reboot();
-
-int pedigree_module_load(char *file);
-int pedigree_module_is_loaded(char *name);
 
 #endif
 

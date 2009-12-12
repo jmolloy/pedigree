@@ -8,7 +8,8 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'posix'
+    'posix',
+    'pedigree-c'
 ]
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

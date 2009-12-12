@@ -33,6 +33,9 @@ enum Service_t
 
   /** Service number for the native subsystem */
   native = 3,
+
+  /** Pedigree C calls (NOT the native subsystem) */
+  pedigree_c = 4,
   
   /** The number of syscall service numbers */
   serviceEnd

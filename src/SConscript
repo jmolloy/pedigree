@@ -31,6 +31,7 @@ cdimg = env.File(builddir + '/pedigree.iso')
 
 env.Depends(hddimg, 'libs')
 env.Depends(hddimg, 'apps')
+env.Depends(hddimg, 'initrd')
 env.Depends(hddimg, configdb)
 env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
 

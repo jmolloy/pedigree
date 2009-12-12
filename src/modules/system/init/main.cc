@@ -294,6 +294,7 @@ void init_stage2()
 
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
+
     pedigree_init_pthreads();
 
 #if 0
@@ -308,9 +309,8 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-//MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "network-stack", "users", "rawfs");
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "users");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "vbe", "users", "pedigree-c");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users");
+MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c");
 #endif
 

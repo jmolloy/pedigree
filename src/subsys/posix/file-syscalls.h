@@ -78,6 +78,4 @@ int posix_access(const char *name, int amode);
 
 int posix_ftruncate(int a, off_t b);
 
-int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
-
 #endif

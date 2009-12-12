@@ -29,7 +29,6 @@
 #include "signal-syscalls.h"
 #include "sem-syscalls.h"
 #include "pthread-syscalls.h"
-#include "pedigree-syscalls.h"
 #include "select-syscalls.h"
 
 PosixSyscallManager::PosixSyscallManager()
@@ -43,7 +42,6 @@ PosixSyscallManager::~PosixSyscallManager()
 void PosixSyscallManager::initialise()
 {
     SyscallManager::instance().registerSyscallHandler(posix, this);
-    pedigree_config_init();
 }
 
 uintptr_t PosixSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
@@ -293,58 +291,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             WARNING("Using stubbed function '" << buf << "'");
             return 0;
 
-            // Pedigree system calls, called from POSIX applications
-        case PEDIGREE_LOGIN:
-            return pedigree_login(static_cast<int>(p1), reinterpret_cast<const char *>(p2));
+        // POSIX-specific Pedigree system calls
         case PEDIGREE_SIGRET:
             return pedigree_sigret();
         case PEDIGREE_INIT_SIGRET:
             pedigree_init_sigret();
             return 0;
-        case PEDIGREE_LOAD_KEYMAP:
-            return pedigree_load_keymap(reinterpret_cast<char*>(p1), static_cast<size_t>(p2));
-        case PEDIGREE_GET_MOUNT:
-            return pedigree_get_mount(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
-        case PEDIGREE_REBOOT:
-            pedigree_reboot();
-            return 0;
-        case PEDIGREE_CONFIG_GETCOLNAME:
-            pedigree_config_getcolname(p1, p2, reinterpret_cast<char*>(p3), p4);
-            return 0;
-        case PEDIGREE_CONFIG_GETSTR_N:
-            pedigree_config_getstr(p1, p2, reinterpret_cast<char*>(p3), p4);
-            return 0;
-        case PEDIGREE_CONFIG_GETSTR_S:
-            pedigree_config_getstr(p1, reinterpret_cast<const char*>(p2), reinterpret_cast<char*>(p3), p4);
-            return 0;
-        case PEDIGREE_CONFIG_GETNUM_N:
-            return pedigree_config_getnum(p1, p2);
-        case PEDIGREE_CONFIG_GETNUM_S:
-            return pedigree_config_getnum(p1, reinterpret_cast<const char*>(p2));
-        case PEDIGREE_CONFIG_GETBOOL_N:
-            return pedigree_config_getbool(p1, p2);
-        case PEDIGREE_CONFIG_GETBOOL_S:
-            return pedigree_config_getbool(p1, reinterpret_cast<const char*>(p2));
-        case PEDIGREE_CONFIG_QUERY:
-            return pedigree_config_query(reinterpret_cast<const char*>(p1));
-        case PEDIGREE_CONFIG_FREERESULT:
-            pedigree_config_freeresult(p1);
-            return 0;
-        case PEDIGREE_CONFIG_NUMCOLS:
-            return pedigree_config_numcols(p1);
-        case PEDIGREE_CONFIG_NUMROWS:
-            return pedigree_config_numrows(p1);
-        case PEDIGREE_CONFIG_NEXTROW:
-            return pedigree_config_nextrow(p1);
-        case PEDIGREE_CONFIG_WAS_SUCCESSFUL:
-            return pedigree_config_was_successful(p1);
-        case PEDIGREE_CONFIG_GET_ERROR_MESSAGE:
-            pedigree_config_get_error_message(p1, reinterpret_cast<char*>(p2), p3);
-            return 0;
-        case PEDIGREE_MODULE_LOAD:
-            return pedigree_module_load(reinterpret_cast<char*>(p1));
-        case PEDIGREE_MODULE_IS_LOADED:
-            return pedigree_module_is_loaded(reinterpret_cast<char*>(p1));
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

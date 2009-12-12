@@ -82,6 +82,7 @@ libraries = [
 
 # To add a library path add to the list below
 libpaths = [
+	builddir
 ]
 
 ####################################
@@ -101,6 +102,7 @@ if env['ARCH_TARGET'] == 'X64':
 tmp_glue = tmp.Clone()
 tmp_glue['CFLAGS'] += ' ' + glueFlags + ' '
 tmp_glue['CXXFLAGS'] += ' ' + glueFlags + ' '
+tmp_glue['LIBS'] += ['pedigree-c']
 tmp_glue.Program(glue_objname, glue_files, LINKFLAGS='-nostdlib -r ' + glueFlags)
 
 tmp_crt0 = tmp.Clone()
@@ -111,10 +113,12 @@ tmp_crt0.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
     
 # CRTI
 tmp_crti = tmp.Clone()
+tmp_crti['LIBS'] = ''
 tmp_crti.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -r')
 
 # CRTN
 tmp_crtn = tmp.Clone()
+tmp_crtn['LIBS'] = ''
 tmp_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread

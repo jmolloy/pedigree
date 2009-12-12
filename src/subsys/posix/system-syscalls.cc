@@ -417,7 +417,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
     pedigree_init_sigret();
+    NOTICE("a");
     pedigree_init_pthreads();
+    NOTICE("b");
 
     class RunInitEvent : public Event
     {
@@ -433,15 +435,19 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     uintptr_t initLoc = elf->getInitFunc();
     if (initLoc)
     {
+        NOTICE("initLoc active: " << initLoc);
+
         RunInitEvent *ev = new RunInitEvent(initLoc);
         // Poke the initLoc so we know it's mapped in!
         volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
         volatile uintptr_t tmp = * vInitLoc;
         *vInitLoc = tmp; // GCC can't ignore a write.
         asm volatile("" :::"memory"); // Memory barrier.
+        NOTICE("Calling it");
         Processor::information().getCurrentThread()->sendEvent(ev);
         // Yield, so the code gets run before we return.
         Scheduler::instance().yield();
+        NOTICE("Here");
     }
 
     /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
