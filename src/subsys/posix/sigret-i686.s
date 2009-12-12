@@ -47,7 +47,7 @@ sigret_stub:
   call edi
 
   ; Return to the kernel
-  mov eax, 0x10066
+  mov eax, 0x10065
   int 0xff
 
   jmp $
