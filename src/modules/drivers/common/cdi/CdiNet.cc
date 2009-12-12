@@ -17,7 +17,7 @@
 
 #include <Log.h>
 #include <machine/Network.h>
-#include <network/NetworkStack.h>
+#include <network-stack/NetworkStack.h>
 
 // Prototypes in the extern "C" block to ensure that they are not mangled
 extern "C" {
