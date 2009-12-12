@@ -21,6 +21,7 @@
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
+#include <Spinlock.h>
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
@@ -165,6 +166,7 @@ protected:
 private:
     Vector<ConsoleFile*> m_Consoles;
     static ConsoleManager m_Instance;
+    Spinlock m_Lock;
 };
 
 #endif

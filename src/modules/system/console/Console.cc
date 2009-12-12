@@ -40,7 +40,7 @@ int ConsoleFile::select(bool bWriting, int timeout)
 }
 
 ConsoleManager::ConsoleManager() :
-    m_Consoles()
+    m_Consoles(), m_Lock()
 {
 }
 
@@ -61,7 +61,10 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
     pConsole->m_pBackEnd = backEnd;
     pConsole->m_Param = param;
 
-    m_Consoles.pushBack(pConsole);
+    {
+        LockGuard<Spinlock> guard(m_Lock);
+        m_Consoles.pushBack(pConsole);
+    }
 
     NOTICE("Registered a console: " << consoleName << ".");
 
@@ -70,11 +73,11 @@ bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, 
 
 File* ConsoleManager::getConsole(String consoleName)
 {
-    /// \todo Thread safety.
+    LockGuard<Spinlock> guard(m_Lock);
     for (size_t i = 0; i < m_Consoles.count(); i++)
     {
         ConsoleFile *pC = m_Consoles[i];
-        if (!strcmp(static_cast<const char*>(pC->m_Name), static_cast<const char*>(consoleName)))
+        if (pC->m_Name == consoleName)
         {
             return pC;
         }
@@ -85,7 +88,7 @@ File* ConsoleManager::getConsole(String consoleName)
 
 ConsoleFile *ConsoleManager::getConsoleFile(RequestQueue *pBackend)
 {
-    /// \todo Thread safety.
+    LockGuard<Spinlock> guard(m_Lock);
     for (size_t i = 0; i < m_Consoles.count(); i++)
     {
         ConsoleFile *pC = m_Consoles[i];
@@ -105,14 +108,17 @@ bool ConsoleManager::isConsole(File* file)
 
 void ConsoleManager::setAttributes(File* file, size_t flags)
 {
-    // \todo Sanity checking.
+    // \todo Sanity checking of the flags.
+    if(!pFile)
+        return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     pFile->m_Flags = flags;
 }
 
 void ConsoleManager::getAttributes(File* file, size_t *flags)
 {
-    // \todo Sanity checking.
+    if(!pFile || !flags)
+        return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     *flags = pFile->m_Flags;
 }
@@ -175,7 +181,6 @@ uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, b
     }
 
     // Handle temios local modes
-    /// \todo Handle overflow of the line buffer
     if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
         // Whether or not the application buffer has already been filled
@@ -460,21 +465,24 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
 int ConsoleManager::getCols(File* file)
 {
-    /// \todo Sanity checking.
+    if(!file)
+        return 0;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETCOLS, pFile->m_Param));
 }
 
 int ConsoleManager::getRows(File* file)
 {
-    /// \todo Sanity checking.
+    if(!file)
+        return 0;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETROWS, pFile->m_Param));
 }
 
 bool ConsoleManager::hasDataAvailable(File* file)
 {
-    /// \todo Sanity checking.
+    if(!file)
+        return false;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
 
     // If there's data in the line buffer, we're able to read
