@@ -214,7 +214,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
     }
     else
     {
-#else
+#endif
         // In this case, IO accesses go through MemoryMappedIo too.
         size_t pageSize = PhysicalMemoryManager::getPageSize();
         uint32_t numPages = s / pageSize;
