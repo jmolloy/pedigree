@@ -42,6 +42,7 @@ class String
     inline String &operator += (const char *s);
 
     inline bool operator == (const String &s);
+    inline bool operator == (const char *s);
 
     inline size_t length() const;
     inline size_t size() const;
@@ -150,6 +151,16 @@ bool String::operator == (const String &s)
     return false;
   else
     return !strcmp(m_Data, s.m_Data);
+}
+
+bool String::operator == (const char *s)
+{
+  if (m_Data == 0 && s == 0)
+    return true;
+  else if (m_Data == 0 || s == 0)
+    return false;
+  else
+    return !strcmp(m_Data, s);
 }
 
 size_t String::length() const
