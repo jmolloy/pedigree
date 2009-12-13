@@ -50,8 +50,6 @@ void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
     struct cdi_device* device;
     int i;
     for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(dev.devices, i))); i++) {
-        device->driver = driver;
-
         if (driver->remove_device) {
             driver->remove_device(device);
         }
@@ -63,11 +61,7 @@ void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
  */
 static void cdi_destroy(void) 
 {
-    struct cdi_driver* driver;
-    int i;
-    for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
-        cdi_pedigree_walk_dev_list_destroy(*driver);
-    }
+    // Drivers are already destroyed by the module exit function
 }
 
 /**

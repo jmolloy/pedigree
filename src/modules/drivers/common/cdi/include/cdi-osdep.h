@@ -36,7 +36,7 @@ struct cdi_driver;
  */
 #define CDI_DRIVER(name, drvobj, deps...) \
     void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((drvobj).drv);} \
-    void mod_exit() {(drvobj).drv.destroy(); cdi_pedigree_walk_dev_list_destroy((drvobj).drv);} \
+    void mod_exit() {cdi_pedigree_walk_dev_list_destroy((drvobj).drv); (drvobj).drv.destroy();} \
     MODULE_NAME(name); \
     MODULE_ENTRY(mod_entry); \
     MODULE_EXIT(mod_exit); \
