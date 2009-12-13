@@ -19,6 +19,8 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 # This is output as a subsystem module
 native_userlib_objname = subsysdir + '/native.o'
 
+env.Alias("subsys", native_userlib_objname)
+
 # To include a new subdirectory just add to the list.
 subdirs = [
     

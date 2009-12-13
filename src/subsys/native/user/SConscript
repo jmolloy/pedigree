@@ -20,6 +20,8 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 # the implementation of the native subsystem classes.
 native_userlib_objname = builddir + '/libpedigree.a'
 
+env.Alias("libs", native_userlib_objname)
+
 # To include a new subdirectory just add to the list.
 subdirs = [
     
