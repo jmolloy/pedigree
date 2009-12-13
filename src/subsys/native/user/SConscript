@@ -1,0 +1,53 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os
+import shutil
+import tempfile
+Import(['env'])
+
+tmp = env.Clone()
+
+# Build directories
+builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+
+# We output a single library, which applications link against to gain access to
+# the implementation of the native subsystem classes.
+native_userlib_objname = builddir + '/libpedigree.a'
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+    
+]
+
+lib_files = [
+    Glob("*.cc")
+]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    '../include',
+    '#/src/system/include',
+    '#/src/modules/system',
+    '.'
+]
+
+# To add a library add to the list below
+libraries = [
+    'gcc'
+]
+
+# To add a library path add to the list below
+libpaths = [
+]
+
+####################################
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
+tmp['CPPPATH'] = include
+tmp['LIBS'] = libraries
+tmp.Library(native_userlib_objname, lib_files)

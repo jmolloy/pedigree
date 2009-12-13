@@ -1,0 +1,9 @@
+This is the Pedigree native C++ subsystem for user applications. Its purpose is
+to provide a C++-style API as an alternative to the C-style POSIX API, as well
+as providing a base for future expansion in a Pedigree-specific way.
+
+-- Directory Layout --
+
+./include               <-- Common include files
+./kernel                <-- Kernel-side files (specifically, the kernel module)
+./user                  <-- User-side files (libpedigree.a)

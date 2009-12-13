@@ -1,0 +1,63 @@
+/*
+* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+*
+* Permission to use, copy, modify, and distribute this software for any
+* purpose with or without fee is hereby granted, provided that the above
+* copyright notice and this permission notice appear in all copies.
+*
+* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
+#include <processor/SyscallManager.h>
+#include <processor/Processor.h>
+#include <process/Scheduler.h>
+#include <Log.h>
+
+#include "NativeSyscallManager.h"
+#include <syscallNumbers.h>
+
+NativeSyscallManager::NativeSyscallManager()
+{
+}
+
+NativeSyscallManager::~NativeSyscallManager()
+{
+}
+
+void NativeSyscallManager::initialise()
+{
+    SyscallManager::instance().registerSyscallHandler(native, this);
+}
+
+uintptr_t NativeSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+{
+    if (function >= serviceEnd)
+    {
+        ERROR("NativeSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
+        return 0;
+    }
+    return SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
+}
+
+uintptr_t NativeSyscallManager::syscall(SyscallState &state)
+{
+    uintptr_t p1 = state.getSyscallParameter(0);
+    uintptr_t p2 = state.getSyscallParameter(1);
+    uintptr_t p3 = state.getSyscallParameter(2);
+    uintptr_t p4 = state.getSyscallParameter(3);
+    uintptr_t p5 = state.getSyscallParameter(4);
+
+    // We're interruptible.
+    Processor::setInterrupts(true);
+
+    switch (state.getSyscallNumber())
+    {
+        default: ERROR ("NativeSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
+    }
+}

@@ -13,13 +13,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef PEDIGREEC_SYSCALL_MANAGER_H
-#define PEDIGREEC_SYSCALL_MANAGER_H
+#ifndef NATIVE_SYSCALL_MANAGER_H
+#define NATIVE_SYSCALL_MANAGER_H
 
 #include <processor/types.h>
 #include <processor/SyscallHandler.h>
 
-class PedigreeCSyscallManager : public SyscallHandler
+class NativeSyscallManager : public SyscallHandler
 {
 public:
   void initialise();
@@ -31,17 +31,17 @@ public:
   virtual uintptr_t syscall(SyscallState &state);
 
   /** The constructor */
-  PedigreeCSyscallManager();
+  NativeSyscallManager();
   /** The destructor */
-  virtual ~PedigreeCSyscallManager();
+  virtual ~NativeSyscallManager();
 
 private:
   /** The copy-constructor
    *\note Not implemented (singleton) */
-  PedigreeCSyscallManager(const PedigreeCSyscallManager &);
+  NativeSyscallManager(const NativeSyscallManager &);
   /** The copy-constructor
    *\note Not implemented (singleton) */
-  PedigreeCSyscallManager &operator = (const PedigreeCSyscallManager &);
+  NativeSyscallManager &operator = (const NativeSyscallManager &);
 };
 
 #endif
