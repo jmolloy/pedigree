@@ -309,8 +309,8 @@ MODULE_NAME("init");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c");
+MODULE_DEPENDS("vfs", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c");
 #elif PPC_COMMON
-MODULE_DEPENDS("VFS", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c");
+MODULE_DEPENDS("vfs", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c");
 #endif
 

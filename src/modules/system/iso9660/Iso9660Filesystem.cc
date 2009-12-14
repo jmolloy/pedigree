@@ -222,7 +222,7 @@ uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
 
   size_t blockSkip = location / m_BlockSize;
   size_t blockNum = LITTLE_TO_HOST32(rec.ExtentLocation_LE) + blockSkip;
-  
+
   // Begin reading
   uintptr_t buff = m_pDisk->read(blockNum * m_BlockSize);
 
@@ -336,4 +336,4 @@ void destroyIso9660()
 MODULE_NAME("iso9660");
 MODULE_ENTRY(&initIso9660);
 MODULE_EXIT(&destroyIso9660);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

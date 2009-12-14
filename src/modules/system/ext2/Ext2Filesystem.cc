@@ -70,7 +70,7 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
 
     // Calculate the block size.
     m_BlockSize = 1024 << LITTLE_TO_HOST32(m_pSuperblock->s_log_block_size);
-    
+
     // More than 4096 bytes per block and we're a little screwed atm.
     assert(m_BlockSize <= 4096);
 
@@ -284,7 +284,7 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
             // Calculate block index.
             size_t idx = i / (m_BlockSize*8);
             size_t off = i % (m_BlockSize*8);
-            
+
             // Grab the specific block.
             /// \todo Endianness - to ensure correct operation, must ptr be
             /// little endian?
@@ -332,7 +332,7 @@ uint32_t Ext2Filesystem::findFreeInode()
             // Calculate block index.
             size_t idx = i / (m_BlockSize*8);
             size_t off = i % (m_BlockSize*8);
-            
+
             // Grab the specific block.
             /// \todo Endianness - to ensure correct operation, must ptr be
             /// little endian?
@@ -385,7 +385,7 @@ Inode *Ext2Filesystem::getInode(uint32_t inode)
     uintptr_t block = list[blockNum];
 
     return reinterpret_cast<Inode*> (block+blockOff);
-}    
+}
 
 void Ext2Filesystem::ensureFreeBlockBitmapLoaded(size_t group)
 {
@@ -459,4 +459,4 @@ void destroyExt2()
 MODULE_NAME("ext2");
 MODULE_ENTRY(&initExt2);
 MODULE_EXIT(&destroyExt2);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

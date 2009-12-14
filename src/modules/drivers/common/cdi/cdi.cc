@@ -2,11 +2,11 @@
  * Copyright (c) 2007 Kevin Wolf
  *
  * This program is free software. It comes without any warranty, to
- * the extent permitted by applicable law. You can redistribute it 
- * and/or modify it under the terms of the Do What The Fuck You Want 
+ * the extent permitted by applicable law. You can redistribute it
+ * and/or modify it under the terms of the Do What The Fuck You Want
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/projects/COPYING.WTFPL for more details.
- */  
+ */
 
 //#include <stdlib.h>
 
@@ -59,13 +59,13 @@ void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
 /**
  * Wird bei der Deinitialisierung aufgerufen
  */
-static void cdi_destroy(void) 
+static void cdi_destroy(void)
 {
     // Drivers are already destroyed by the module exit function
 }
 
 /**
- * Fuehrt alle registrierten Treiber aus. Nach dem Aufruf dieser Funktion 
+ * Fuehrt alle registrierten Treiber aus. Nach dem Aufruf dieser Funktion
  * duerfen keine weiteren Befehle ausgefuehrt werden, da nicht definiert ist,
  * ob und wann die Funktion zurueckkehrt.
  */
@@ -108,4 +108,4 @@ void cdi_driver_register(struct cdi_driver* driver)
 MODULE_NAME("cdi");
 MODULE_ENTRY(&cdi_init);
 MODULE_EXIT(&cdi_destroy);
-MODULE_DEPENDS("network-stack", "VFS");
+MODULE_DEPENDS("dma", "network-stack", "vfs");

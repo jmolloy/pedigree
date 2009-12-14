@@ -337,7 +337,7 @@ void destroyVFS()
 {
 }
 
-MODULE_NAME("VFS");
+MODULE_NAME("vfs");
 MODULE_ENTRY(&initVFS);
 MODULE_EXIT(&destroyVFS);
 MODULE_DEPENDS(0);

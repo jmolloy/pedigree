@@ -25,7 +25,7 @@ void exit()
 
 }
 
-MODULE_NAME("lonet");
+MODULE_NAME("loopback");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
 MODULE_DEPENDS("network-stack");

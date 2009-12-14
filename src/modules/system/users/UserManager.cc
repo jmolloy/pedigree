@@ -16,9 +16,9 @@
 
 #include "UserManager.h"
 #include <Module.h>
-#include <vfs/VFS.h>
 #include <utilities/utility.h>
 #include <process/Process.h>
+#include <processor/Processor.h>
 #include <config/Config.h>
 
 UserManager UserManager::m_Instance;
@@ -183,4 +183,4 @@ void destroy()
 MODULE_NAME("users");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS(0);

@@ -116,4 +116,4 @@ void destroy()
 MODULE_NAME("rawfs");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

@@ -22,7 +22,8 @@ subdirs = [
     'applications/display-mode',
     'applications/reboot',
     'applications/sudo',
-    'applications/modload'
+    'applications/modload',
+    'applications/modlist'
 ]
 
 # Cleans a set of flags

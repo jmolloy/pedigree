@@ -41,7 +41,7 @@ uintptr_t DynamicLinker::resolvePlt(SyscallState &state)
 DynamicLinker::DynamicLinker() :
     m_pProgramElf(0), m_ProgramStart(0), m_ProgramSize(0), m_ProgramBuffer(0), m_LoadedObjects(), m_Objects()
 {
-  
+
 }
 
 DynamicLinker::DynamicLinker(DynamicLinker &other) :
@@ -343,7 +343,7 @@ bool DynamicLinker::trap(uintptr_t address)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     uintptr_t v = address & ~(PhysicalMemoryManager::getPageSize()-1);
-    
+
     // Grab a physical page.
     physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
     // Map it into the address space.
@@ -352,7 +352,7 @@ bool DynamicLinker::trap(uintptr_t address)
         WARNING("IMAGE: map() failed in ElfImage::trap(): vaddr: " << v);
         return false;
     }
-    
+
     // Now that it's mapped, load the ELF region.
     if (pElf->load(reinterpret_cast<uint8_t*>(buffer), size, offset, m_pProgramElf->getSymbolTable(), v,
                      v+PhysicalMemoryManager::getPageSize()) == false)
@@ -398,4 +398,4 @@ void destroy()
 MODULE_NAME("linker");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

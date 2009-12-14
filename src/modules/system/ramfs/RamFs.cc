@@ -158,4 +158,4 @@ void destroy()
 MODULE_NAME("ramfs");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&destroy);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

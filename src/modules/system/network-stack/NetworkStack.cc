@@ -88,4 +88,4 @@ void exit()
 MODULE_NAME("network-stack");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");

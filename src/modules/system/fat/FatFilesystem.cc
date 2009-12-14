@@ -893,7 +893,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
 //    uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
-    
+
     uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
     if(fatBlocks && (m_Type == FAT12))
     {
@@ -1272,4 +1272,4 @@ void destroyFat()
 MODULE_NAME("fat");
 MODULE_ENTRY(&initFat);
 MODULE_EXIT(&destroyFat);
-MODULE_DEPENDS("VFS");
+MODULE_DEPENDS("vfs");
