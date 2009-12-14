@@ -505,5 +505,5 @@ void destroyConsole()
 MODULE_NAME("console");
 MODULE_ENTRY(&initConsole);
 MODULE_EXIT(&destroyConsole);
-MODULE_DEPENDS(0);
+MODULE_DEPENDS("VFS");
 

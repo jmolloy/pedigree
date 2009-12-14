@@ -289,8 +289,7 @@ MODULE_NAME("TUI");
 MODULE_ENTRY(&init);
 MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-// Why is uhci here?!
-MODULE_DEPENDS("console", "uhci", "vbe");
+MODULE_DEPENDS("console", "vbe");
 #else
-MODULE_DEPENDS("console", "uhci");
+MODULE_DEPENDS("console");
 #endif
