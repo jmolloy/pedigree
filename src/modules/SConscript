@@ -83,13 +83,15 @@ if env['installer']:
 else:
     module_subdirs += ['init']
 
+# No difference yet, load all modules
+initrd_modules = module_subdirs
 
 drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
 drivers += ['drivers/common/' + i for i in driver_common_subdirs]
 modules = ['system/' + i for i in module_subdirs]
 
 SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
-#SConscript(['drivers/SConscript-cdi'],exports = ['env'])
+SConscript(['drivers/SConscript-cdi'],exports = ['env'])
 SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
 
 # Ready to generate the initrd...
@@ -113,48 +115,18 @@ if "splash" in module_subdirs:
     initrdList += [builddir.abspath + '/modules/splash.o']
     module_subdirs.remove("splash")
 
-# The mandatory modules and drivers
-module_mandatory = [
-    'vfs',
-    'ext2',
-    'fat',
-    'iso9660',
-    'network-stack',
-    'dhcpclient',
-    'console',
-    'TUI',
-    'linker',
-    'users',
-    #'ramfs',
-    #'rawfs',
-    'lodisk',
-    'splash',
-    'config',
-    'init',
-    'installer'
-]
-driver_mandatory = [
-    'ata',
-    'partition',
-    'loopback',
-    #'3c90x',
-    #'rtl8139',
-    'pci',
-    #'ne2k',
-    'vbe'
-]
-# Load only the modules and drivers that are mandatory
-
 # Add all drivers.
 # TODO: Installation should detect hardware and install a custom initrd with
 # 		only the necessary drivers to boot up (and then drivers should be
 #		loaded on-demand or something)
-initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in filter(lambda x: x in driver_mandatory, (driver_arch_subdirs + driver_common_subdirs + cdi_drivers))]
+initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
+initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
+initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in cdi_drivers]
 
 # Only some modules are actually needed for the actual boot of the system
 # The rest can be loaded via some form of autoload mechanism (run in the init
 # module perhaps?) or on demand via modload.
-initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in filter(lambda x: x in module_mandatory, module_subdirs)]
+initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules]
 
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']

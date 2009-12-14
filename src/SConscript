@@ -233,7 +233,8 @@ else:
     fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/apps')]
 
     # Add modules and drivers to the input list
-    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/modules'), [i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/drivers')]
+    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/modules')]
+    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/drivers')]
 
     # Add libraries
     fileList += [builddir + '/libc.so', builddir + '/libm.so']
