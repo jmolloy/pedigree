@@ -127,6 +127,7 @@ if env['CROSS'] != '':
 
     # AR and LD never have the prefix added. They must run on the host.
     env['AR'] = crossBase + 'ar'
+    env['RANLIB'] = crossBase + 'ranlib'
     env['LD'] = crossBase + 'gcc'
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
