@@ -3,34 +3,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
-#define MODULE_FMT "root»/system/modules/%s.o"
+/// \todo Put the path to the module directory in the configuration database
+#define MODULE_DIR "root»/system/modules"
 
 extern int pedigree_module_is_loaded(char *name);
 
+/// \todo Options to show all modules (default), only loaded modules, and only
+///       unloaded modules.
 int main(int argc, char **argv)
 {
-    DIR *dp;
-    struct dirent *ep;
-    char *moddir = dirname(strdup(MODULE_FMT)), *modsufix = &(basename(strdup(MODULE_FMT))[3]);
-    int modsufixlen = strlen(modsufix);
-    dp = opendir(moddir);
-
+    DIR *dp = opendir(MODULE_DIR);
     if(!dp)
     {
-        printf("Couldn't open the directory %s!\n", moddir);
+        printf("Couldn't open the directory %s: %s.\n", MODULE_DIR, strerror(errno));
         return -1;
     }
-    printf("Modules found in %s:\n", moddir);
-    while(ep = readdir(dp))
+
+    struct dirent *ep;
+    while((ep = readdir(dp)))
     {
-        if(strlen(ep->d_name)>modsufixlen && !strcmp(&(ep->d_name[strlen(ep->d_name)-modsufixlen]), modsufix))
+        char *filename = ep->d_name;
+
+        char *suffix = strrchr(filename, '.') + 1;
+        if(suffix && !stricmp(suffix, "o"))
         {
-            ep->d_name[strlen(ep->d_name)-modsufixlen] = 0;
-            printf("   %s%s\n", pedigree_module_is_loaded(ep->d_name)?"\e[32m*\e[0m":" ", ep->d_name);
+            *(suffix - 1) = '\0';
+            printf("%-32s%s", filename, pedigree_module_is_loaded(filename) ? "[loaded]" : "");
+            printf("\n");
         }
     }
-    printf("\e[32m* loaded modules\e[0m\n");
     closedir(dp);
     return 0;
 }
