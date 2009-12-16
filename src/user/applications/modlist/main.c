@@ -26,8 +26,9 @@ int main(int argc, char **argv)
     {
         char *filename = ep->d_name;
 
-        char *suffix = strrchr(filename, '.') + 1;
-        if(suffix && !stricmp(suffix, "o"))
+        char *lastPeriod = strrchr(filename, '.');
+        char *suffix = lastPeriod + 1;
+        if(lastPeriod && !stricmp(suffix, "o"))
         {
             *(suffix - 1) = '\0';
             printf("%-32s%s", filename, pedigree_module_is_loaded(filename) ? "[loaded]" : "");
