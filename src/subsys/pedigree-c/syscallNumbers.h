@@ -41,5 +41,7 @@
 #define PEDIGREE_CONFIG_GET_ERROR_MESSAGE   21
 
 #define PEDIGREE_MODULE_LOAD                22
-#define PEDIGREE_MODULE_IS_LOADED           23
+#define PEDIGREE_MODULE_UNLOAD              23
+#define PEDIGREE_MODULE_IS_LOADED           24
+#define PEDIGREE_MODULE_GET_DEPENDING       25
 #endif

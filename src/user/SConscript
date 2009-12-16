@@ -23,6 +23,7 @@ subdirs = [
     'applications/reboot',
     'applications/sudo',
     'applications/modload',
+    'applications/modunload',
     'applications/modlist'
 ]
 

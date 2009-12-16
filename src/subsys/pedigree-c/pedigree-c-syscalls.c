@@ -42,14 +42,24 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
 }
 
-int pedigree_module_load(char *file)
+void pedigree_module_load(char *file)
 {
-    return syscall1(PEDIGREE_MODULE_LOAD, (long)file);
+    syscall1(PEDIGREE_MODULE_LOAD, (long)file);
+}
+
+void pedigree_module_unload(char *name)
+{
+    syscall1(PEDIGREE_MODULE_UNLOAD, (long)name);
 }
 
 int pedigree_module_is_loaded(char *name)
 {
     return syscall1(PEDIGREE_MODULE_IS_LOADED, (long)name);
+}
+
+int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
+{
+    return syscall3(PEDIGREE_MODULE_GET_DEPENDING, (long)name, (long)buf, bufsz);
 }
 
 void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz)

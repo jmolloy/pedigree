@@ -148,252 +148,252 @@ typedef  int64_t Elf_Sxword;
  */
 class Elf
 {
-public:
-    /** Default constructor - loads no data. */
-    Elf();
+    public:
+        /** Default constructor - loads no data. */
+        Elf();
 
-    /** Destructor.*/
-    virtual ~Elf();
+        /** Destructor.*/
+        virtual ~Elf();
 
-    /** The copy-constructor */
-    Elf(const Elf &);
+        /** The copy-constructor */
+        Elf(const Elf &);
 
-    /** Constructs an Elf object, and assumes the given pointer to be
-     * to a contiguous region of memory containing an ELF object. */
-    bool create(uint8_t *pBuffer, size_t length);
+        /** Constructs an Elf object, and assumes the given pointer to be
+        * to a contiguous region of memory containing an ELF object. */
+        bool create(uint8_t *pBuffer, size_t length);
 
-    /** Merely loads "needed libraries" and then returns success or
-     *  failure. */
-    bool createNeededOnly(uint8_t *pBuffer, size_t length);
+        /** Merely loads "needed libraries" and then returns success or
+        *  failure. */
+        bool createNeededOnly(uint8_t *pBuffer, size_t length);
 
-    /** Maps memory at a specified address, loads code there and applies relocations only for the .modinfo section.
-     * Intended use is for loading kernel modules only, there is no provision for dynamic relocations. */
-    bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymbolTableCopy=0);
+        /** Maps memory at a specified address, loads code there and applies relocations only for the .modinfo section.
+        * Intended use is for loading kernel modules only, there is no provision for dynamic relocations. */
+        bool loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_t &loadSize, SymbolTable *pSymbolTableCopy=0);
 
-    /** Finalises a module - applies all relocations except those in the .modinfo section. At this point it is
-     * assumed that all of this module's dependencies have been loaded.
-     *
-     * The load base must be given again for reentrancy reasons. */
-    bool finaliseModule(uint8_t *pBuffer, uintptr_t length);
+        /** Finalises a module - applies all relocations except those in the .modinfo section. At this point it is
+        * assumed that all of this module's dependencies have been loaded.
+        *
+        * The load base must be given again for reentrancy reasons. */
+        bool finaliseModule(uint8_t *pBuffer, uintptr_t length);
 
-    /** Performs the prerequisite allocation for any normal ELF file - library or executable.
-     * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
-     * filled however.
-     * \note If bAllocate is false, the memory will NOT be allocated. */
-    bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab=0, bool bAllocate=true, size_t *pSize=0);
-  
-    /** Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file
-     * is loaded (memory copied and relocated) but this can be changed using the nStart and nEnd
-     * parameters. This allows for lazy loading.
-     * \note PLT relocations are not performed here - they are defined in a different section to the standard REL
-     * and RELA entries, so must be done specifically (via applySpecificRelocation). */
-    bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
+        /** Performs the prerequisite allocation for any normal ELF file - library or executable.
+        * For a library, this allocates loadBase, and allocates memory for the entire object - this is not
+        * filled however.
+        * \note If bAllocate is false, the memory will NOT be allocated. */
+        bool allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab=0, bool bAllocate=true, size_t *pSize=0);
+
+        /** Loads (part) of a 'normal' file. This could be an executable or a library. By default the entire file
+        * is loaded (memory copied and relocated) but this can be changed using the nStart and nEnd
+        * parameters. This allows for lazy loading.
+        * \note PLT relocations are not performed here - they are defined in a different section to the standard REL
+        * and RELA entries, so must be done specifically (via applySpecificRelocation). */
+        bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
 
 
-    /** Returns a list of required libraries before this object will load. */
-    List<char*> &neededLibraries();
+        /** Returns a list of required libraries before this object will load. */
+        List<char*> &neededLibraries();
 
-    /** Returns the virtual address of the last byte to be written. Used to calculate the
-     * sbrk memory breakpoint. */
-    uintptr_t getLastAddress();
+        /** Returns the virtual address of the last byte to be written. Used to calculate the
+        * sbrk memory breakpoint. */
+        uintptr_t getLastAddress();
 
-    uintptr_t getInitFunc() {return m_InitFunc;}
-    uintptr_t getFiniFunc() {return m_FiniFunc;}
+        uintptr_t getInitFunc() {return m_InitFunc;}
+        uintptr_t getFiniFunc() {return m_FiniFunc;}
 
-    /** Returns the name of the symbol which contains 'addr', and also the starting address
-     * of that symbol in 'startAddr' if startAddr != 0.
-     * \param[in] addr The address to look up.
-     * \param[out] startAddr The starting address of the found symbol (optional).
-     * \return The symbol name, as a C string. */
-    const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
+        /** Returns the name of the symbol which contains 'addr', and also the starting address
+        * of that symbol in 'startAddr' if startAddr != 0.
+        * \param[in] addr The address to look up.
+        * \param[out] startAddr The starting address of the found symbol (optional).
+        * \return The symbol name, as a C string. */
+        const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
 
-    /** Returns the start address of the symbol with name 'pName'. */
-    uintptr_t lookupSymbol(const char *pName);
+        /** Returns the start address of the symbol with name 'pName'. */
+        uintptr_t lookupSymbol(const char *pName);
 
-    /** Same as lookupSymbol, but acts on the dynamic symbol table instead of the normal one. */
-    uintptr_t lookupDynamicSymbolAddress(const char *str, uintptr_t loadBase);
-  
-    /** Applies the n'th relocation in the relocation table. Used by PLT entries. */
-    uintptr_t applySpecificRelocation(uintptr_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy = SymbolTable::LocalFirst);
+        /** Same as lookupSymbol, but acts on the dynamic symbol table instead of the normal one. */
+        uintptr_t lookupDynamicSymbolAddress(const char *str, uintptr_t loadBase);
 
-    /** Gets the address of the global offset table.
-     * \return Address of the GOT, or 0 if none was found. */
-    uintptr_t getGlobalOffsetTable();
+        /** Applies the n'th relocation in the relocation table. Used by PLT entries. */
+        uintptr_t applySpecificRelocation(uintptr_t off, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy = SymbolTable::LocalFirst);
 
-    /** Returns the size of the Procedure Linkage table. */
-    size_t getPltSize ();
+        /** Gets the address of the global offset table.
+        * \return Address of the GOT, or 0 if none was found. */
+        uintptr_t getGlobalOffsetTable();
 
-    /**  Adds all the symbols in this Elf into the given symbol table, adjusted by loadBase.
-     * 
-     * \param pSymtab  Symbol table to populate.
-     * \param loadBase Offset to adjust each value by. */
-    void populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase);
+        /** Returns the size of the Procedure Linkage table. */
+        size_t getPltSize ();
 
-    SymbolTable *getSymbolTable()
-    {
-        return &m_SymbolTable;
-    }
+        /**  Adds all the symbols in this Elf into the given symbol table, adjusted by loadBase.
+        *
+        * \param pSymtab  Symbol table to populate.
+        * \param loadBase Offset to adjust each value by. */
+        void populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase);
 
-    /** Returns the entry point of the file. */
-    uintptr_t getEntryPoint();
-
-    uintptr_t debugFrameTable();
-    uintptr_t debugFrameTableLength();
-
-protected:
-
-    struct ElfHeader_t
-    {
-        uint8_t  ident[16];
-        Elf_Half type;
-        Elf_Half machine;
-        Elf_Word version;
-        Elf_Addr entry;
-        Elf_Off  phoff;
-        Elf_Off  shoff;
-        Elf_Word flags;
-        Elf_Half ehsize;
-        Elf_Half phentsize;
-        Elf_Half phnum;
-        Elf_Half shentsize;
-        Elf_Half shnum;
-        Elf_Half shstrndx;
-    } PACKED;
-
-    struct ElfProgramHeader_t
-    {
-        Elf_Word type;
-#ifdef BITS_64
-        Elf_Word flags;
-#endif
-        Elf_Off offset;
-        Elf_Addr vaddr;
-        Elf_Addr paddr;
-        Elf_Xword filesz;
-        Elf_Xword memsz;
-#ifndef BITS_64
-        Elf_Word flags;
-#endif
-        Elf_Xword align;
-    } PACKED;
-
-    struct ElfSectionHeader_t
-    {
-        Elf_Word name;
-        Elf_Word type;
-        Elf_Xword flags;
-        Elf_Addr addr;
-        Elf_Off offset;
-        Elf_Xword size;
-        Elf_Word link;
-        Elf_Word info;
-        Elf_Xword addralign;
-        Elf_Xword entsize;
-    } PACKED;
-
-    struct ElfSymbol_t
-    {
-        Elf_Word name;
-#ifdef BITS_64
-        uint8_t  info;
-        uint8_t  other;
-        Elf_Half shndx;
-#endif
-        Elf_Addr value;
-        Elf_Xword size;
-#ifndef BITS_64
-        uint8_t  info;
-        uint8_t  other;
-        Elf_Half shndx;
-#endif
-    } PACKED;
-
-    struct ElfDyn_t
-    {
-        Elf_Sxword tag;
-        union
+        SymbolTable *getSymbolTable()
         {
-            Elf_Xword val;
-            Elf_Addr ptr;
-        } un;
-    } PACKED;
+            return &m_SymbolTable;
+        }
 
-    struct ElfRel_t
-    {
-        Elf_Addr offset;
-        Elf_Xword info;
-    } PACKED;
+        /** Returns the entry point of the file. */
+        uintptr_t getEntryPoint();
 
-    struct ElfRela_t
-    {
-        Elf_Addr offset;
-        Elf_Xword info;
-        Elf_Sxword addend;
-    } PACKED;
+        uintptr_t debugFrameTable();
+        uintptr_t debugFrameTableLength();
 
-private:
+    protected:
 
-    bool relocate(uint8_t *pBuffer, uintptr_t length);
-    bool relocateModinfo(uint8_t *pBuffer, uintptr_t length);
-  
-    /**
-     * Applies one relocation. This overload performs a relocation without addend (REL).
-     * \param rel The relocation entry to apply.
-     * \param pSh A pointer to the section that the relocation entry refers to.
-     * \param pSymtab The symbol table to use for lookups.
-     * \param loadBase For a relocatable object, the address at which it is loaded.
-     * \param policy Lookup policy.
-     * \note Defined in core/processor/.../Elf.cc
-     */
-    bool applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
+        struct ElfHeader_t
+        {
+            uint8_t  ident[16];
+            Elf_Half type;
+            Elf_Half machine;
+            Elf_Word version;
+            Elf_Addr entry;
+            Elf_Off  phoff;
+            Elf_Off  shoff;
+            Elf_Word flags;
+            Elf_Half ehsize;
+            Elf_Half phentsize;
+            Elf_Half phnum;
+            Elf_Half shentsize;
+            Elf_Half shnum;
+            Elf_Half shstrndx;
+        } PACKED;
 
-    /**
-     * Applies one relocation. This overload performs a relocation with addend (RELA).
-     * \param rel The relocation entry to apply.
-     * \param pSh A pointer to the section that the relocation entry refers to.
-     * \param pSymtab The symbol table to use for lookups.
-     * \param loadBase For a relocatable object, the address at which it is loaded.
-     * \param policy Lookup policy.
-     * \note Defined in core/processor/.../Elf.cc
-     */
-    bool applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
+        struct ElfProgramHeader_t
+        {
+            Elf_Word type;
+            #ifdef BITS_64
+            Elf_Word flags;
+            #endif
+            Elf_Off offset;
+            Elf_Addr vaddr;
+            Elf_Addr paddr;
+            Elf_Xword filesz;
+            Elf_Xword memsz;
+            #ifndef BITS_64
+            Elf_Word flags;
+            #endif
+            Elf_Xword align;
+        } PACKED;
 
-protected:
-    ElfSymbol_t          *m_pSymbolTable;
-    size_t                m_nSymbolTableSize;
-    char                 *m_pStringTable;
-    size_t                m_nStringTableSize;
-    char                 *m_pShstrtab;
-    size_t                m_nShstrtabSize;
-    uintptr_t            *m_pGotTable; // Global offset table.
-    ElfRel_t             *m_pRelTable; // Dynamic REL relocations.
-    ElfRela_t            *m_pRelaTable; // Dynamic RELA relocations.
-    size_t                m_nRelTableSize;
-    size_t                m_nRelaTableSize;
-    ElfRel_t             *m_pPltRelTable;
-    ElfRela_t            *m_pPltRelaTable;
-    bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
-    uint8_t              *m_pDebugTable;
-    size_t                m_nDebugTableSize;
-    ElfSymbol_t          *m_pDynamicSymbolTable;
-    size_t                m_nDynamicSymbolTableSize;
-    char                 *m_pDynamicStringTable;
-    size_t                m_nDynamicStringTableSize;
-    ElfSectionHeader_t   *m_pSectionHeaders;
-    size_t                m_nSectionHeaders;
-    ElfProgramHeader_t   *m_pProgramHeaders;
-    size_t                m_nProgramHeaders;
-    size_t                m_nPltSize;
-    uintptr_t             m_nEntry;
-    List<char*>           m_NeededLibraries;
-    SymbolTable           m_SymbolTable;
-    uintptr_t             m_InitFunc;
-    uintptr_t             m_FiniFunc;
+        struct ElfSectionHeader_t
+        {
+            Elf_Word name;
+            Elf_Word type;
+            Elf_Xword flags;
+            Elf_Addr addr;
+            Elf_Off offset;
+            Elf_Xword size;
+            Elf_Word link;
+            Elf_Word info;
+            Elf_Xword addralign;
+            Elf_Xword entsize;
+        } PACKED;
 
-private:
-    /** The assignment operator
-     *\note currently not implemented */
-    Elf &operator = (const Elf &);
+        struct ElfSymbol_t
+        {
+            Elf_Word name;
+            #ifdef BITS_64
+            uint8_t  info;
+            uint8_t  other;
+            Elf_Half shndx;
+            #endif
+            Elf_Addr value;
+            Elf_Xword size;
+            #ifndef BITS_64
+            uint8_t  info;
+            uint8_t  other;
+            Elf_Half shndx;
+            #endif
+        } PACKED;
+
+        struct ElfDyn_t
+        {
+            Elf_Sxword tag;
+            union
+            {
+                Elf_Xword val;
+                Elf_Addr ptr;
+            } un;
+        } PACKED;
+
+        struct ElfRel_t
+        {
+            Elf_Addr offset;
+            Elf_Xword info;
+        } PACKED;
+
+        struct ElfRela_t
+        {
+            Elf_Addr offset;
+            Elf_Xword info;
+            Elf_Sxword addend;
+        } PACKED;
+
+    private:
+
+        bool relocate(uint8_t *pBuffer, uintptr_t length);
+        bool relocateModinfo(uint8_t *pBuffer, uintptr_t length);
+
+        /**
+        * Applies one relocation. This overload performs a relocation without addend (REL).
+        * \param rel The relocation entry to apply.
+        * \param pSh A pointer to the section that the relocation entry refers to.
+        * \param pSymtab The symbol table to use for lookups.
+        * \param loadBase For a relocatable object, the address at which it is loaded.
+        * \param policy Lookup policy.
+        * \note Defined in core/processor/.../Elf.cc
+        */
+        bool applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
+
+        /**
+        * Applies one relocation. This overload performs a relocation with addend (RELA).
+        * \param rel The relocation entry to apply.
+        * \param pSh A pointer to the section that the relocation entry refers to.
+        * \param pSymtab The symbol table to use for lookups.
+        * \param loadBase For a relocatable object, the address at which it is loaded.
+        * \param policy Lookup policy.
+        * \note Defined in core/processor/.../Elf.cc
+        */
+        bool applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab=0, uintptr_t loadBase=0, SymbolTable::Policy policy = SymbolTable::LocalFirst);
+
+    protected:
+        ElfSymbol_t          *m_pSymbolTable;
+        size_t                m_nSymbolTableSize;
+        char                 *m_pStringTable;
+        size_t                m_nStringTableSize;
+        char                 *m_pShstrtab;
+        size_t                m_nShstrtabSize;
+        uintptr_t            *m_pGotTable; // Global offset table.
+        ElfRel_t             *m_pRelTable; // Dynamic REL relocations.
+        ElfRela_t            *m_pRelaTable; // Dynamic RELA relocations.
+        size_t                m_nRelTableSize;
+        size_t                m_nRelaTableSize;
+        ElfRel_t             *m_pPltRelTable;
+        ElfRela_t            *m_pPltRelaTable;
+        bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
+        uint8_t              *m_pDebugTable;
+        size_t                m_nDebugTableSize;
+        ElfSymbol_t          *m_pDynamicSymbolTable;
+        size_t                m_nDynamicSymbolTableSize;
+        char                 *m_pDynamicStringTable;
+        size_t                m_nDynamicStringTableSize;
+        ElfSectionHeader_t   *m_pSectionHeaders;
+        size_t                m_nSectionHeaders;
+        ElfProgramHeader_t   *m_pProgramHeaders;
+        size_t                m_nProgramHeaders;
+        size_t                m_nPltSize;
+        uintptr_t             m_nEntry;
+        List<char*>           m_NeededLibraries;
+        SymbolTable           m_SymbolTable;
+        uintptr_t             m_InitFunc;
+        uintptr_t             m_FiniFunc;
+
+    private:
+        /** The assignment operator
+        *\note currently not implemented */
+        Elf &operator = (const Elf &);
 };
 
 /** @} */

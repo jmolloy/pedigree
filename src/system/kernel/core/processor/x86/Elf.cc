@@ -82,7 +82,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
     }
     S = pSymtab->lookup(String(pStr), this, policy);
 
-    if (S == 0)
+    if (S == 0 && strlen(pStr))
       WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
     // This is a weak relocation, but it was undefined.
     else if(S == ~0UL)

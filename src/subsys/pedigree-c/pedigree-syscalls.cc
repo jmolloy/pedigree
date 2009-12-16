@@ -15,7 +15,13 @@
  */
 #include "pedigree-syscalls.h"
 #include <config/Config.h>
+#include <linker/KernelElf.h>
+#include <vfs/File.h>
+#include <vfs/MemoryMappedFile.h>
+#include <vfs/Symlink.h>
+#include <vfs/VFS.h>
 #include <Log.h>
+#include <syscallError.h>
 
 #define MAX_RESULTS 32
 static Config::Result *g_Results[MAX_RESULTS];
@@ -142,4 +148,58 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen)
     if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
         return;
     strncpy(buf, g_Results[resultIdx]->errorMessage(), buflen);
+}
+
+// Module handling functions
+
+// Load a module
+void pedigree_module_load(char *_file)
+{
+    // Attempt to find the file, first!
+    File* file = VFS::instance().find(String(_file), Processor::information().getCurrentThread()->getParent()->getCwd());
+    if (!file)
+    {
+        // Error - not found.
+        SYSCALL_ERROR(DoesNotExist);
+        return;
+    }
+
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
+
+    if (file->isDirectory())
+    {
+        // Error - is directory.
+        SYSCALL_ERROR(IsADirectory);
+        return;
+    }
+
+    // Map the module in the memory
+    uintptr_t buffer;
+    MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, buffer);
+    KernelElf::instance().loadModule(reinterpret_cast<uint8_t *>(buffer), file->getSize(), true);
+    MemoryMappedFileManager::instance().unmap(pMmFile);
+}
+
+// Unload a module
+void pedigree_module_unload(char *name)
+{
+    KernelElf::instance().unloadModule(name, true);
+}
+
+// Check if a module is loaded
+int pedigree_module_is_loaded(char *name)
+{
+    return (KernelElf::instance().moduleIsLoaded(name)?1:0);
+}
+
+// Get the first module that depends on the specified module
+int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
+{
+    char *dep = KernelElf::instance().getDependingModule(name);
+    if(dep)
+        strncpy(buf, dep, bufsz);
+    else
+        return 0;
+    return 1;
 }

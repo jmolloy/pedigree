@@ -38,6 +38,8 @@ class Module
         const char **depends;
         uint8_t *buffer;
         size_t buflen;
+        uintptr_t loadBase;
+        size_t loadSize;
     protected:
         Module(const Module &);
         Module &operator = (const Module &);
@@ -62,11 +64,18 @@ class KernelElf : public Elf
         *\return A pointer to a Elf class describing the loaded module. */
         Module *loadModule(uint8_t *pModule, size_t len, bool silent=false);
 
-        /** Returns true if a module with the specified name has benn loaded. */
-        bool moduleIsLoaded(char *name);
+        /** Unloads the specified module. */
+        void unloadModule(char *name, bool silent=false);
+        void unloadModule(Vector<Module*>::Iterator it, bool silent=false);
 
         /** Unloads all loaded modules. */
         void unloadModules();
+
+        /** Returns true if a module with the specified name has been loaded. */
+        bool moduleIsLoaded(char *name);
+
+        /** Returns the name of the first module that have the specified module as dependency. */
+        char *getDependingModule(char *name);
 
         /** Looks up the address of the symbol with name 'pName' globally, that is throughout
         *  all modules and the kernel itself. */

@@ -53,8 +53,10 @@ int pedigree_login(int uid, const char *password);
 int pedigree_load_keymap(char *buffer, size_t len);
 int pedigree_reboot();
 
-int pedigree_module_load(char *file);
+void pedigree_module_load(char *file);
+void pedigree_module_unload(char *name);
 int pedigree_module_is_loaded(char *name);
+int pedigree_module_get_depending(char *name, char *buf, size_t bufsz);
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 

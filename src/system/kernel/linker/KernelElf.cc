@@ -199,8 +199,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
         return 0;
     }
 
-    uintptr_t loadBase = 0;
-    if (!module->elf.loadModule(pModule, len, loadBase, &m_SymbolTable))
+    if (!module->elf.loadModule(pModule, len, module->loadBase, module->loadSize, &m_SymbolTable))
     {
         FATAL ("Module load failed (2)");
         delete module;
@@ -280,74 +279,67 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     return module;
 }
 
-bool KernelElf::moduleIsLoaded(char *name)
+void KernelElf::unloadModule(char *name, bool silent)
 {
     for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
         it != m_LoadedModules.end();
         it++)
     {
-        Module *module = *it;
-        if(!strcmp(module->name, name))
-            return true;
+        if(!strcmp((*it)->name, name))
+        {
+            unloadModule(it, silent);
+            return;
+        }
     }
-    return false;
+    ERROR("KERNELELF: Module " << name << " not found");
 }
 
-void KernelElf::unloadModules()
+void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent)
 {
-    if (g_BootProgressUpdate)
-        g_BootProgressUpdate("unload");
+    Module *module = *it;
+    NOTICE("KERNELELF: Unloading module " << module->name);
 
-    for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
-        it != m_LoadedModules.begin();
-        it--)
+    g_BootProgressCurrent --;
+    if (g_BootProgressUpdate && !silent)
+        g_BootProgressUpdate("moduleunload");
+
+    if(module->exit)
+        module->exit();
+
+    // Check for a destructors list and execute.
+    uintptr_t startDtors = module->elf.lookupSymbol("start_dtors");
+    uintptr_t endDtors = module->elf.lookupSymbol("end_dtors");
+
+    if (startDtors && endDtors)
     {
-        Module *module = *it;
-        NOTICE("KERNELELF: Unloading module " << module->name);
-
-        g_BootProgressCurrent --;
-        if (g_BootProgressUpdate)
-            g_BootProgressUpdate("moduleunload");
-
-        if(module->exit)
-            module->exit();
-
-        // Check for a destructors list and execute.
-        uintptr_t startDtors = module->elf.lookupSymbol("start_dtors");
-        uintptr_t endDtors = module->elf.lookupSymbol("end_dtors");
-
-        if (startDtors && endDtors)
+        uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startDtors);
+        while (iterator < reinterpret_cast<uintptr_t*>(endDtors))
         {
-            uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startDtors);
-            while (iterator < reinterpret_cast<uintptr_t*>(endDtors))
-            {
-                void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
-                fp();
-                iterator++;
-            }
+            void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+            fp();
+            iterator++;
         }
-
-        m_SymbolTable.eraseByElf(&module->elf);
-
-        g_BootProgressCurrent --;
-        if (g_BootProgressUpdate)
-            g_BootProgressUpdate("moduleunloaded");
-
-        m_LoadedModules.erase(it);
-        //m_Modules.erase(it);
-        NOTICE("KERNELELF: Module " << module->name << " unloaded.");
     }
-    m_LoadedModules.clear();
-    m_Modules.clear();
+
+    m_SymbolTable.eraseByElf(&module->elf);
+
+    g_BootProgressCurrent --;
+    if (g_BootProgressUpdate && !silent)
+        g_BootProgressUpdate("moduleunloaded");
+
+    m_LoadedModules.erase(it);
+    //m_Modules.erase(it);
+
+    NOTICE("KERNELELF: Module " << module->name << " unloaded.");
 
     size_t pageSz = PhysicalMemoryManager::getPageSize();
-    size_t numPages = (MOD_LEN / pageSz) + (MOD_LEN % pageSz ? 1 : 0);
+    size_t numPages = (module->loadSize / pageSz) + (module->loadSize % pageSz ? 1 : 0);
 
     // Unmap!
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     for (size_t i = 0; i < numPages; i++)
     {
-        void *unmapAddr = reinterpret_cast<void*>(MOD_START + (i * pageSz));
+        void *unmapAddr = reinterpret_cast<void*>(module->loadBase + (i * pageSz));
         if(va.isMapped(unmapAddr))
         {
             // Unmap the virtual address
@@ -361,15 +353,61 @@ void KernelElf::unloadModules()
         }
     }
 
-    m_ModuleAllocator.free(MOD_START, MOD_LEN);
+    m_ModuleAllocator.free(module->loadBase, module->loadSize);
+}
+
+void KernelElf::unloadModules()
+{
+    if (g_BootProgressUpdate)
+        g_BootProgressUpdate("unload");
+
+    for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
+        it != m_LoadedModules.begin();
+        it--)
+        unloadModule(it);
+
+    m_LoadedModules.clear();
+    m_Modules.clear();
+}
+
+bool KernelElf::moduleIsLoaded(char *name)
+{
+    for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
+        it != m_LoadedModules.end();
+        it++)
+    {
+        Module *module = *it;
+        if(!strcmp(module->name, name))
+            return true;
+    }
+    return false;
+}
+
+char *KernelElf::getDependingModule(char *name)
+{
+    for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
+        it != m_LoadedModules.end();
+        it++)
+    {
+        Module *module = *it;
+        if(module->depends == 0) continue;
+        int i = 0;
+        while(module->depends[i])
+        {
+            if(!strcmp(module->depends[i], name))
+                return const_cast<char*>(module->name);
+            i++;
+        }
+    }
+    return 0;
 }
 
 bool KernelElf::moduleDependenciesSatisfied(Module *module)
 {
     int i = 0;
-    if (module->depends == 0) return true;
+    if (!module->depends) return true;
 
-    while (module->depends[i] != 0)
+    while (module->depends[i])
     {
         bool found = false;
         for (size_t j = 0; j < m_LoadedModules.count(); j++)
@@ -380,7 +418,8 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
                 break;
             }
         }
-        if (!found){return false;}
+        if (!found)
+            return false;
         i++;
     }
     return true;

@@ -104,9 +104,15 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             pedigree_config_get_error_message(p1, reinterpret_cast<char*>(p2), p3);
             return 0;
         case PEDIGREE_MODULE_LOAD:
-            return pedigree_module_load(reinterpret_cast<char*>(p1));
+            pedigree_module_load(reinterpret_cast<char*>(p1));
+            return 0;
+        case PEDIGREE_MODULE_UNLOAD:
+            pedigree_module_unload(reinterpret_cast<char*>(p1));
+            return 0;
         case PEDIGREE_MODULE_IS_LOADED:
             return pedigree_module_is_loaded(reinterpret_cast<char*>(p1));
+        case PEDIGREE_MODULE_GET_DEPENDING:
+            return pedigree_module_get_depending(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), p3);
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

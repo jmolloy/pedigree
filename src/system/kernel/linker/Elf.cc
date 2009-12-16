@@ -462,22 +462,22 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     return true;
 }
 
-bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymbolTableCopy)
+bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_t &loadSize, SymbolTable *pSymbolTableCopy)
 {
     // Run through the sections to calculate the size required.
-    uintptr_t size = 0;
+    loadSize = 0;
     for (size_t i = 0; i < m_nSectionHeaders; i++)
     {
         if (m_pSectionHeaders[i].flags & SHF_ALLOC)
         {
-            size += m_pSectionHeaders[i].addr; // If .addr is set, add it as an offset.
+            loadSize += m_pSectionHeaders[i].addr; // If .addr is set, add it as an offset.
             // Ensure the alignment is as required.
-            while ( (size % m_pSectionHeaders[i].addralign) != 0) size ++;
-            size += m_pSectionHeaders[i].size;
+            while ( (loadSize % m_pSectionHeaders[i].addralign) != 0) loadSize ++;
+            loadSize += m_pSectionHeaders[i].size;
         }
     }
-
-    if (!KernelElf::instance().getModuleAllocator().allocate((size+0x1000)&0xFFFFF000, loadBase))
+    loadSize = (loadSize+0x1000)&0xFFFFF000;
+    if (!KernelElf::instance().getModuleAllocator().allocate(loadSize, loadBase))
     {
         return false;
     }
