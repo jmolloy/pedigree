@@ -67,6 +67,7 @@ int load_module(char *name)
     if(pedigree_module_is_loaded(modname))
         return 0;
     printf("Module %s couldn't been loaded\n", modname);
+    return -1;
 }
 
 int main(int argc, char **argv)

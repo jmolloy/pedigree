@@ -75,7 +75,7 @@ typedef struct Elf_t
     ElfSymbol_t *symtab;
     size_t symtabsz;
     char *strtab;
-    size_t strtabsz
+    size_t strtabsz;
 } Elf_t;
 
 #define SYM_PTR(elf, sym) ((uint32_t*)&(elf->buffer[sym->value + elf->section_headers[sym->shndx].offset]))
