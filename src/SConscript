@@ -240,7 +240,7 @@ else:
     fileList += [builddir + '/libc.so', builddir + '/libm.so']
 
     # Build the hard disk image
-    env.Command(hddimg, fileList, buildImage)
+    env.Command(hddimg, fileList, Action(buildImage, None))
 
     # Build the live CD ISO
-    env.Command(cdimg, [configdb, builddir + '/initrd.tar', builddir + '/kernel/kernel', hddimg], buildCdImage)
+    env.Command(cdimg, [configdb, builddir + '/initrd.tar', builddir + '/kernel/kernel', hddimg], Action(buildCdImage, None))
