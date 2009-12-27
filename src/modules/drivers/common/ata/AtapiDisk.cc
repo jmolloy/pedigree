@@ -82,10 +82,15 @@ bool AtapiDisk::initialise()
     status = commandRegs->read8(7);
 
   // Check for an ATAPI device
-  if(commandRegs->read8(2) == 0x01 &&
-      commandRegs->read8(3) == 0x01 &&
-      commandRegs->read8(4) == 0x14 &&
-      commandRegs->read8(5) == 0xeb)
+  uint8_t m1 = commandRegs->read8(2);
+  uint8_t m2 = commandRegs->read8(3);
+  uint8_t m3 = commandRegs->read8(4);
+  uint8_t m4 = commandRegs->read8(5);
+  NOTICE("ATA 'magic registers': " << m1 << ", " << m2 << ", " << m3 << ", " << m4);
+  if(m1 == 0x01 &&
+     m2 == 0x01 &&
+     m3 == 0x14 &&
+     m4 == 0xeb)
   {
     // Run IDENTIFY PACKET DEVICE instead
     commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
@@ -98,8 +103,8 @@ bool AtapiDisk::initialise()
   }
   else
   {
-    if(commandRegs->read8(4) == 0x14 &&
-      commandRegs->read8(5) == 0xeb)
+    if(m3 == 0x14 &&
+       m4 == 0xeb)
     {
       // Run IDENTIFY PACKET DEVICE instead
       commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6 );
