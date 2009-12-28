@@ -61,7 +61,7 @@ bool AtaDisk::initialise()
     // Wait for BSY and DRQ to be zero before selecting the device
     uint8_t status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);
+        status = commandRegs->read8(7);
 
     // Select the device to transmit to
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;

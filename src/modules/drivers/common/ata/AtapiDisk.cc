@@ -51,7 +51,7 @@ bool AtapiDisk::initialise()
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
   // Commented out - unused variable.
-  //IoBase *controlRegs = m_ControlRegs;
+  IoBase *controlRegs = m_ControlRegs;
 
   // Drive spin-up
   commandRegs->write8(0x00, 6);
@@ -223,6 +223,34 @@ bool AtapiDisk::initialise()
 
   // Packet size?
   m_PacketSize = ((m_pIdent[0] & 0x0003) == 0) ? 12 : 16;
+
+  // Check that there's actually media to use. If not, we bail...
+  /// \todo Support inserting and ejecting media at runtime
+  commandRegs->write8(0xDA, 7); // GET MEDIA STATUS
+  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    status = commandRegs->read8(7);
+  if(status & 0x1)
+  {
+      // We have information in the error register
+      uint8_t err = commandRegs->read8(1);
+
+      // Error?
+      if(err & 0x4)
+      {
+          WARNING("ATAPI: GET MEDIA STATUS command failed!");
+          return false;
+      }
+      else if(err & 2)
+      {
+          WARNING("ATAPI: No media present in the drive - aborting.");
+          WARNING("       TODO: handle media changes/insertions/removal properly");
+          return false;
+      }
+      else
+      {
+          NOTICE("ATAPI: Media status: " << err << ".");
+      }
+  }
 
   // Grab the capacity of the disk for future reference
   if(!getCapacityInternal(&m_NumBlocks, &m_BlockSize))

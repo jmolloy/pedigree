@@ -159,7 +159,7 @@ void Pc::initialiseDeviceTree()
   Controller *pAtaSlave = new Controller();
   pAtaMaster->setSpecificType(String("ata"));
   pAtaSlave->addresses().pushBack(new Device::Address(String("command"), 0x170, 8, true));
-  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x376, 8, true));
+  pAtaSlave->addresses().pushBack(new Device::Address(String("control"), 0x370, 8, true));
   pAtaSlave->setInterruptNumber(15);
   pIsa->addChild(pAtaSlave);
   pAtaSlave->setParent(pIsa);

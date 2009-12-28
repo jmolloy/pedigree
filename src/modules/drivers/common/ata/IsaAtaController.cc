@@ -43,6 +43,33 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
       return;
   }
 
+  // Perform a software reset.
+  m_pControlRegs->write8(0x04, 6); // Assert SRST
+  Semaphore dammitWeNeedABloodySleepFunction(0); // We really do!
+  dammitWeNeedABloodySleepFunction.acquire(1, 0, 5000);
+
+  m_pControlRegs->write8(0, 6); // Negate SRST
+  Semaphore dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne(0); // We really do!
+  dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne.acquire(1, 0, 5000);
+
+  // Poll until BSY is clear. Until BSY is clear, no other bits in the
+  // alternate status register are considered valid.
+  uint8_t status = 0;
+  while(1) // ((status&0xC0) != 0) && ((status&0x9) == 0) )
+  {
+    status = m_pControlRegs->read8(6);
+    if(status & 0x80)
+        continue;
+    else if(status & 0x1)
+    {
+        NOTICE("Error during ATA software reset, status = " << status);
+        return;
+    }
+    else
+        break;
+
+  }
+
   // Create two disks - master and slave.
   AtaDisk *pMaster = new AtaDisk(this, true, m_pCommandRegs, m_pControlRegs);
   AtaDisk *pSlave = new AtaDisk(this, false, m_pCommandRegs, m_pControlRegs);
