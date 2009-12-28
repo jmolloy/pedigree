@@ -232,6 +232,11 @@ StationInfo Rtl8139::getStationInfo()
     return m_StationInfo;
 }
 
+bool Rtl8139::isConnected()
+{
+    return !(m_pBase->read8(RTL_MSR)&RTL_MSR_LINK);
+}
+
 bool Rtl8139::irq(irq_id_t number, InterruptState &state)
 {
     while(true)

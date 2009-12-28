@@ -182,6 +182,8 @@ def buildImageMtools(target, source, env):
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
 def buildCdImage(target, source, env):
+    print "Building " + os.path.basename(target[0].path) + "..."
+
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     pathToGrub = env.Dir("#images/grub").abspath
     configDb = source[0].abspath

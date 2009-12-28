@@ -87,7 +87,7 @@ bool AtaDisk::initialise()
         return false;
 
     // Poll until BSY is clear and either ERR or DRQ are set
-    while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    while((status&0x80) || !(status&0x9))
         status = commandRegs->read8(7);
 
     // If ERR was set we had an err0r.
@@ -676,7 +676,7 @@ bool AtaDisk::sendPacket(size_t nBytes, uintptr_t packet)
 
     // Wait for the busy bit to be cleared before continuing
     uint8_t status = commandRegs->read8(7);
-    while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    while((status&0x80) || !(status&0x9))
         status = commandRegs->read8(7);
 
     // Error?
@@ -692,7 +692,7 @@ bool AtaDisk::sendPacket(size_t nBytes, uintptr_t packet)
         commandRegs->write16(commandPacket[i], 0);
 
     // Wait for the busy bit to be cleared once again
-    while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    while((status&0x80) || !(status&0x9))
         status = commandRegs->read8(7);
 
     // Complete

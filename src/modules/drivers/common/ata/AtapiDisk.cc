@@ -78,7 +78,7 @@ bool AtapiDisk::initialise()
     return false;
 
   // Poll until BSY is clear and either ERR or DRQ are set
-  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+  while((status&0x80) || !(status&0x9))
     status = commandRegs->read8(7);
 
   // Check for an ATAPI device
@@ -87,10 +87,7 @@ bool AtapiDisk::initialise()
   uint8_t m3 = commandRegs->read8(4);
   uint8_t m4 = commandRegs->read8(5);
   NOTICE("ATA 'magic registers': " << m1 << ", " << m2 << ", " << m3 << ", " << m4);
-  if(m1 == 0x01 &&
-     m2 == 0x01 &&
-     m3 == 0x14 &&
-     m4 == 0xeb)
+  if(m1 == 0x01 && m2 == 0x01 && m3 == 0x14 && m4 == 0xeb)
   {
     // Run IDENTIFY PACKET DEVICE instead
     commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
@@ -98,13 +95,12 @@ bool AtapiDisk::initialise()
     status = commandRegs->read8(7);
 
     // Poll until BSY is clear and either ERR or DRQ are set
-    while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+    while((status&0x80) || !(status&0x9))
       status = commandRegs->read8(7);
   }
   else
   {
-    if(m3 == 0x14 &&
-       m4 == 0xeb)
+    if(m3 == 0x14 && m4 == 0xeb)
     {
       // Run IDENTIFY PACKET DEVICE instead
       commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6 );
@@ -112,7 +108,7 @@ bool AtapiDisk::initialise()
       status = commandRegs->read8(7);
 
       // Poll until BSY is clear and either ERR or DRQ are set
-      while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+      while((status&0x80) || !(status&0x9))
         status = commandRegs->read8(7);
     }
     else
@@ -208,7 +204,7 @@ bool AtapiDisk::initialise()
   {
     m_SupportsLBA48 = /*true*/ false;
   }
-  
+
   // Any form of DMA support?
   if(!(m_pIdent[49] & (1 << 8)))
   {
@@ -227,7 +223,8 @@ bool AtapiDisk::initialise()
   // Check that there's actually media to use. If not, we bail...
   /// \todo Support inserting and ejecting media at runtime
   commandRegs->write8(0xDA, 7); // GET MEDIA STATUS
-  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+  status = commandRegs->read8(7);
+  while((status&0x80) || !(status&0x9))
     status = commandRegs->read8(7);
   if(status & 0x1)
   {
@@ -235,12 +232,12 @@ bool AtapiDisk::initialise()
       uint8_t err = commandRegs->read8(1);
 
       // Error?
-      if(err & 0x4)
+      /*if(err & 0x4)
       {
           WARNING("ATAPI: GET MEDIA STATUS command failed!");
           return false;
       }
-      else if(err & 2)
+      else */if(err & 2)
       {
           WARNING("ATAPI: No media present in the drive - aborting.");
           WARNING("       TODO: handle media changes/insertions/removal properly");
@@ -444,7 +441,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
 
   // Wait for BSY and DRQ to be zero before selecting the device
   uint8_t status = commandRegs->read8(7);
-  while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+  while((status&0x80) || (status&0x8))
     status = commandRegs->read8(7);
 
   // Select the device to transmit to
@@ -453,7 +450,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
 
   // Wait for it to be selected
   status = commandRegs->read8(7);
-  while (((status & 0x80) != 0) && ((status & 0x8) == 0))
+  while((status&0x80) || (status&0x8))
     status = commandRegs->read8(7);
 
   // Verify that it's the correct device
@@ -486,7 +483,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
 
   // Wait for the device to be ready to accept the command packet
   status = commandRegs->read8(7);
-  while(((status & 0x80) != 0) && ((status & 0x9) == 0))
+  while((status&0x80) || !(status&0x9))
          /*
          ! // This is "right" according to the spec, but it makes QEMU die :(
          ((status & 0x80) == 0) && // BSY cleared to zero
@@ -540,7 +537,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
         break;
   }
   status = commandRegs->read8(7);
-  while ( ((status&0x80) != 0) && ((status&0x9) == 0) )
+  while(status&0x80)
     status = commandRegs->read8(7);
 
   if(status & 0x1)

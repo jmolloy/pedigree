@@ -74,7 +74,8 @@ enum Rtl8139Constants {
     RTL_CFG9346_LOCK = 0x00,    // Lock BMCR registers
     RTL_CFG9346_UNLOCK = 0xC0,  // Unlock BMCR registers
 
-    RTL_MSR_RXFCE = 0x40,       // Rx FLow Control Enable bit
+    RTL_MSR_RXFCE = 0x40,       // Rx Flow Control Enable bit
+    RTL_MSR_LINK = 0x4,         // Inverse of Link Status bit
 
     RTL_BMCR_SPEED = 0x2000,    // Speed(100Mbps/10Mbps) bit
     RTL_BMCR_ANE = 0x1000,      // Auto Negotiation Enable bit
@@ -82,7 +83,7 @@ enum Rtl8139Constants {
 
     RTL_BUFF_SIZE = 0x10000,    // The size of the Rx and Tx buffers
 
-    RTL_PACK_MAX = 0xFFFF,     // The maximal size of a packet
+    RTL_PACK_MAX = 0xFFFF,      // The maximal size of a packet
     RTL_PACK_MIN = 0x16,        // The minimal size of a packet
 };
 

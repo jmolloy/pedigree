@@ -48,6 +48,8 @@ class Rtl8139 : public Network, public IrqHandler
 
         virtual StationInfo getStationInfo();
 
+        virtual bool isConnected();
+
         // IRQ handler callback.
         virtual bool irq(irq_id_t number, InterruptState &state);
 
