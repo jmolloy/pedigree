@@ -20,6 +20,8 @@
 #include <LocksCommand.h>
 #endif
 
+#include <Log.h>
+
 #include <panic.h>
 
 void Spinlock::acquire()
