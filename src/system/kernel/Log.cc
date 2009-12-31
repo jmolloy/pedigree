@@ -21,6 +21,7 @@
 #include <machine/Machine.h>
 #include <utilities/utility.h>
 #include <processor/Processor.h>
+#include <LockGuard.h>
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
