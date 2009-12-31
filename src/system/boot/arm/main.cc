@@ -1,6 +1,6 @@
 #include "Elf32.h"
 
-#include "autogen.h"
+// #include "autogen.h"
 
 #define LOAD_ADDR 0x00100000
 extern int memset(void *buf, int c, size_t len);
@@ -103,13 +103,12 @@ void writeHex(unsigned int n)
 
 }
 
-extern "C" int __start();
-extern "C" int start()
+extern "C" void __start();
+extern "C" void start()
 {
   // setup stack space (put the top of the stack at the bottom of this binary)
   // and jump to the C++ entry
-  asm volatile( "mov sp,$0x10000; mov ip, sp" );
-  asm volatile( "b __start" );
+  asm volatile("mov sp,$0x10000; mov ip, sp; b __start");
   for( ;; );
 }
 
@@ -168,7 +167,7 @@ uint32_t arm_get_cpsr()
 
 void memcpy(void *dest, const void *src, size_t len);
 
-extern "C" int __start()
+extern "C" void __start()
 {
   // 8 entries in the table, plus the literal table holding offsets of C handlers
   memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
@@ -185,6 +184,7 @@ extern "C" int __start()
   
   writeStr( "complete\r\n" );
 
+  /*
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
   elf.writeSections();
@@ -203,13 +203,15 @@ extern "C" int __start()
   {
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
+  */
 
   writeStr( "[ARMBOOT] That's boot-tastic! I'm gonna start main() now\r\n" );
+  
+  while(1);
 
-  main(&bs);
+  // main(&bs);
   
   writeStr( "[ARMBOOT] main() returned!\r\n" );
   
   while (1);
-  return 0;
 }

@@ -21,7 +21,8 @@
  *\date   Sun May 10 16:16:56 2009
  *\brief  A task to be performed with a soft deadline timeout. */
 
-
+#if 0 // Obsoleted
+ 
 #include <process/Thread.h>
 #include <processor/state.h>
 #include <processor/types.h>
@@ -255,3 +256,4 @@ class TimedTask
 
 #endif
 
+#endif

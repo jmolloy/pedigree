@@ -15,7 +15,9 @@
  */
 
 #include <utilities/TimeoutGuard.h>
+#ifdef THREADS
 #include <process/Thread.h>
+#endif
 #include <process/PerProcessorScheduler.h>
 #include <processor/Processor.h>
 #include <machine/Timer.h>
@@ -26,7 +28,8 @@
 TimeoutGuard::TimeoutGuard(size_t timeoutSecs) :
     m_pEvent(0), m_bTimedOut(false), m_State(), m_nLevel(0), m_Lock()
 {
-    if (timeoutSecs)
+#ifdef THREADS
+    if(timeoutSecs)
     {
         Thread *pThread = Processor::information().getCurrentThread();
         
@@ -38,10 +41,14 @@ TimeoutGuard::TimeoutGuard(size_t timeoutSecs) :
         // Generate the SchedulerState to restore to.
         Processor::saveState(m_State);
     }
+#else
+    WARNING("TimeoutGuard: TimeoutGuard needs thread support");
+#endif
 }
 
 TimeoutGuard::~TimeoutGuard()
 {
+#ifdef THREADS
     // Stop any interrupts - now we know that we can't be preempted by
     // our own event handler.
     LockGuard<Spinlock> guard(m_Lock);
@@ -55,20 +62,24 @@ TimeoutGuard::~TimeoutGuard()
         delete m_pEvent;
         m_pEvent = 0;
     }
+#endif
 }
 
 void TimeoutGuard::cancel()
 {
+#ifdef THREADS
     // Called by TimeoutGuardEvent.
     m_bTimedOut = true;
 
     m_pEvent = 0;
 
     Processor::restoreState(m_State);
+#endif
 }
 
 static void guardEventFired(uint8_t *pBuffer)
 {
+#ifdef THREADS
     NOTICE("GuardEventFired");
     TimeoutGuard::TimeoutGuardEvent e;
     if (!TimeoutGuard::TimeoutGuardEvent::unserialize(pBuffer, e))
@@ -78,6 +89,7 @@ static void guardEventFired(uint8_t *pBuffer)
     }
     e.m_pTarget->cancel();
     NOTICE("Cancel finished");
+#endif
 }
 
 TimeoutGuard::TimeoutGuardEvent::TimeoutGuardEvent(TimeoutGuard *pTarget, size_t specificNestingLevel) :

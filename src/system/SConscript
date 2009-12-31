@@ -6,11 +6,9 @@
 import os.path
 Import(['env'])
 
-# To include a new subdirectory just add to the list.
-subdirs = [
-    'common',
-    'kernel',
-    'boot'
-]
+subdirs = ['boot']
+
+if not env['ARCH_TARGET'] == 'ARM':
+    subdirs += ['common', 'kernel']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

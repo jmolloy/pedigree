@@ -14,8 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if 0 // Obsoleted
+
 #include <utilities/TimedTask.h>
+#ifdef THREADS
 #include <process/Thread.h>
+#endif
 #include <process/PerProcessorScheduler.h>
 #include <processor/Processor.h>
 #include <machine/Timer.h>
@@ -62,3 +66,5 @@ bool TimedTask::TimedTaskEvent::unserialize(uint8_t *pBuffer, TimedTaskEvent &ev
     event.m_pTarget = reinterpret_cast<TimedTask*> (pBufferSize_t[1]);
     return true;
 }
+
+#endif

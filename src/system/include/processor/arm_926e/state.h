@@ -124,6 +124,23 @@ class ARM926EInterruptState
 typedef ARM926EInterruptState ARM926ESyscallState;
 typedef ARM926EInterruptState ARM926EProcessorState;
 
+class __attribute__((aligned(16))) ARM926ESchedulerState
+{
+public:
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebx;
+    uint32_t ebp;
+    uint32_t esp;
+    uint32_t eip;
+    
+    // bit 0: Has FPU
+    // bit 1: Used SSE
+    uint32_t flags;
+    
+    uint8_t x87FPU_MMX_XMM_MXCSR_State[512+16] __attribute__((aligned(16)));
+} __attribute__((aligned(16)));
+
 /** @} */
 
 //

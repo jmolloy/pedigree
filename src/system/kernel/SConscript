@@ -29,7 +29,6 @@ files = [
     'Subsystem.cc',
     'ServiceManager.cc',
     'Service.cc',
-    Glob('debugger/libudis86/*.c'),
     Glob('utilities/*.cc'),
     Glob('utilities/sha1/*.cc'),
     Glob('machine/*.cc'),
@@ -95,6 +94,8 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         'machine/x86_common/x86emu/sys.c',
         Glob('core/processor/x86_common/*.cc'),
     ]
+    if 'DEBUGGER' in env['CPPDEFINES']:
+        files += [Glob('debugger/libudis86/*.c')]
     include += ['machine/x86_common/x86_emu/x86emu/']
 
 if env['ARCH_TARGET'] == 'X86':
@@ -117,9 +118,12 @@ if env['ARCH_TARGET'] == 'X64':
         'core/processor/x64/asm/gdt.s'
     ]
 
+for i in include:
+    print env.Dir(i).abspath
 tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
 tmpEnvironment.Program(objname, files)

@@ -157,8 +157,13 @@ if(tmp != None):
 
         env['ARCH_TARGET'] = 'PPC'
     elif re.match('arm',tmp.group(1)) != None:
-        defines += ['ARM']
+        defines = default_defines['arm']
+        env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['arm'])
+        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['arm'])
+        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['arm'])
+        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['arm'])
 
+        env['PEDIGREE_IMAGES_DIR'] = default_imgdir['arm']
         env['ARCH_TARGET'] = 'ARM'
 if(tmp == None or env['ARCH_TARGET'] == ''):
     print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"

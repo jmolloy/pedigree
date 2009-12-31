@@ -88,7 +88,7 @@ $ENV{ASFLAGS} = "";
 my $prefix = `pwd`;
 chomp $prefix;
 
-die "Please use target '[arch]-pedigree'." unless $target =~ /(i686|x86_64)/; # '*-pedigree';
+die "Please use target '[arch]-pedigree'." unless $target =~ /(i686|x86_64|arm)/; # '*-pedigree';
 
 # Firstly, find out where to store the compilers.
 unless (-l "./compilers/dir") {

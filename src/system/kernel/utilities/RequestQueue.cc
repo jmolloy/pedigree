@@ -40,6 +40,8 @@ void RequestQueue::initialise()
   m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
                        reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
                        reinterpret_cast<void*> (this));
+#else
+  WARNING("RequestQueue: This build does not support threads");
 #endif
 }
 
@@ -54,6 +56,7 @@ void RequestQueue::destroy()
 uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
+#ifdef THREADS
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
@@ -123,11 +126,17 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   delete pReq;
 
   return ret;
+#else
+  return executeRequest(p1, p2, p3, p4, p5, p6, p7, p8);
+#endif
 }
 
 uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
+#ifndef THREADS
+  return addRequest(priority, p1, p2, p3, p4, p5, p6, p7, p8);
+#else
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
@@ -203,6 +212,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
       m_RequestQueueMutex.release();
 
   return 0;
+#endif
 }
 
 int RequestQueue::trampoline(void *p)
@@ -213,6 +223,7 @@ int RequestQueue::trampoline(void *p)
 
 int RequestQueue::work()
 {
+#ifdef THREADS
   while (true)
   {
     // Sleep on the queue length semaphore - wake when there's something to do.
@@ -288,5 +299,6 @@ int RequestQueue::work()
         delete pReq;
     }
   }
+#endif
   return 0;
 }
