@@ -72,9 +72,12 @@ uintptr_t SlamCache::allocate()
 
     if (m_PartialLists[thisCpu] != 0)
     {
+        Atomic<partialListType> atom(m_PartialLists[thisCpu]);
         Node *N =0, *pNext =0;
         do
         {
+            m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+        
             N = const_cast<Node*>(m_PartialLists[thisCpu]);
             pNext = N->next;
 
@@ -87,7 +90,11 @@ uintptr_t SlamCache::allocate()
 #endif
                 return slab;
             }
-        } while (!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
+        } while (!atom.compareAndSwap(N, pNext));
+        // __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
+        
+        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+        
 #if USING_MAGIC
         N->magic = TEMP_MAGIC;
 #endif
@@ -130,13 +137,19 @@ void SlamCache::free(uintptr_t object)
     N->magic = MAGIC_VALUE;
     N->prev = 0;
 #endif
+
+    Atomic<partialListType> atom(m_PartialLists[thisCpu]);
     Node *pPartialPointer =0;
     do
     {
+        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
         pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
         N->next = pPartialPointer;
-    } while (!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
+    } while (!atom.compareAndSwap(pPartialPointer, N));
+    //__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
 
+    m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+    
 #if USING_MAGIC
     if (pPartialPointer)
         pPartialPointer->prev = N;
@@ -215,12 +228,18 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     if (pFirst)
     {
         // We now need to do two atomic updates.
+        Atomic<partialListType> atom(m_PartialLists[thisCpu]);
         Node *pPartialPointer =0;
         do
         {
+            m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+            
             pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
             pLast->next = pPartialPointer;
-        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
+        } while(!atom.compareAndSwap(pPartialPointer, pFirst));
+        //__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
+        
+        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
 
 #if USING_MAGIC
         if (pPartialPointer)

@@ -17,6 +17,8 @@
 #ifndef MUTEX_H
 #define MUTEX_H
 
+#ifdef THREADS
+
 #include <process/Semaphore.h>
 
 /**
@@ -30,5 +32,7 @@ public:
   /** Destructor */
   ~Mutex();
 };
+
+#endif
 
 #endif

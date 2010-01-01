@@ -17,6 +17,8 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#ifdef THREADS
+
 #include <Log.h>
 
 #include <processor/state.h>
@@ -439,5 +441,7 @@ private:
     /** List of requests pending on this Thread */
     List<RequestQueue::Request*> m_PendingRequests;
 };
+
+#endif
 
 #endif

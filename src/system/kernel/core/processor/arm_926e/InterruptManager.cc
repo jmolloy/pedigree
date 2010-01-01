@@ -127,6 +127,17 @@ bool ARM926EInterruptManager::registerSyscallHandler(Service_t Service, SyscallH
   m_SyscallHandler[Service] = handler;
   return true;
 }
+
+uintptr_t ARM926EInterruptManager::syscall(Service_t service,
+                                            uintptr_t function,
+                                            uintptr_t p1, uintptr_t p2,
+                                            uintptr_t p3, uintptr_t p4,
+                                            uintptr_t p5)
+{
+    /// \todo Software interrupt
+    return 0;
+}
+
 //extern "C" void mips32_exception(void);
 void ARM926EInterruptManager::initialiseProcessor()
 {

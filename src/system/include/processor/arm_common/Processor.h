@@ -27,4 +27,9 @@ void Processor::breakpoint()
   //
 }
 
+void Processor::reset()
+{
+  //
+}
+
 #endif

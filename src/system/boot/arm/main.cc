@@ -1,6 +1,6 @@
 #include "Elf32.h"
 
-// #include "autogen.h"
+#include "autogen.h"
 
 #define LOAD_ADDR 0x00100000
 extern int memset(void *buf, int c, size_t len);
@@ -173,18 +173,14 @@ extern "C" void __start()
   memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
   
   // TODO: remove this when happy with relevant code
-  /*writeStr( "about to do software interrupt\r\n" );
+  /*
+  writeStr( "about to do software interrupt\r\n" );
   asm volatile( "swi #1" );
   writeStr( "swi done and returned\r\n" );
+  */
   
-  *((uint32_t*) 0x100) = 0; //0xdeadbeef;
-  void (*fn)();
-  fn = (void(*)()) 0x100;
-  fn();*/
-  
-  writeStr( "complete\r\n" );
+  writeStr("Loading kernel...\r\n");
 
-  /*
   Elf32 elf("kernel");
   elf.load((uint8_t*)file, 0);
   elf.writeSections();
@@ -203,15 +199,12 @@ extern "C" void __start()
   {
     elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
   }
-  */
 
-  writeStr( "[ARMBOOT] That's boot-tastic! I'm gonna start main() now\r\n" );
+  writeStr("Kernel loaded, jumping to entry point...\r\n");
   
-  while(1);
-
-  // main(&bs);
+  main(&bs);
   
-  writeStr( "[ARMBOOT] main() returned!\r\n" );
+  writeStr("Kernel returned\r\n");
   
   while (1);
 }

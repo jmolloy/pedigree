@@ -18,7 +18,6 @@
 #define REQUEST_QUEUE_H
 
 #include <processor/types.h>
-//#include <process/Thread.h>
 #include <process/Semaphore.h>
 #include <process/Mutex.h>
 
@@ -67,14 +66,20 @@ protected:
     class Request
     {
     public:
-        Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),mutex(true),isAsync(false),bReject(false),pThread(0),next(0) {}
+        Request() : p1(0),p2(0),p3(0),p4(0),p5(0),p6(0),p7(0),p8(0),ret(0),
+#ifdef THREADS
+                    mutex(true),pThread(0),
+#endif
+                    isAsync(false),bReject(false),next(0) {}
         ~Request() {}
         uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
         uint64_t ret;
+#ifdef THREADS
         Mutex mutex;
+        Thread *pThread;
+#endif
         bool isAsync;
         bool bReject;
-        Thread *pThread;
         Request *next;
     private:
         Request(const Request&);
@@ -90,16 +95,18 @@ protected:
     /** The request queue */
     Request *m_pRequestQueue[REQUEST_QUEUE_NUM_PRIORITIES];
 
-    /** The semaphore giving the number of items in the queue. */
-    Semaphore m_RequestQueueSize;
-
     /** True if the worker thread should cleanup and stop. */
     volatile bool m_Stop;
 
     /** Mutex to be held when the request queue is being changed. */
     Spinlock m_RequestQueueMutex;
 
+#ifdef THREADS
+    /** The semaphore giving the number of items in the queue. */
+    Semaphore m_RequestQueueSize;
+    
     Thread *m_pThread;
+#endif
 };
 
 #endif

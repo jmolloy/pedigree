@@ -63,6 +63,15 @@ class Arm926EVirtualAddressSpace : public VirtualAddressSpace
     bool mapPageStructures(physical_uintptr_t physicalAddress,
                            void *virtualAddress,
                            size_t flags);
+    
+
+    /** Clone this VirtualAddressSpace. That means that we copy-on-write-map the application
+     *  image. */
+    virtual VirtualAddressSpace *clone() {return 0;};
+
+    /** Undo a clone() - this happens when an application is Exec()'d - we destroy all mappings
+        not in the kernel address space so the space is 'clean'.*/
+    virtual void revertToKernelAddressSpace() {};
 
   protected:
     /** The destructor does nothing */

@@ -85,4 +85,3 @@ void Processor::setSingleStep(bool bEnable, InterruptState &state)
   /// \todo Implement
   ERROR("Single step unavailable on ARM.");
 }
-

@@ -64,6 +64,15 @@ public:
    * \return True if caps lock is currently on.
    */
   virtual bool capsLock() {return false;}
+  
+  virtual void setDebugState(bool enableDebugState) {};
+  virtual bool getDebugState() {return false;};
+  
+  typedef void (*KeyPressedCallback)(uint64_t);
+  virtual void registerCallback(KeyPressedCallback callback) {};
+  
+  virtual uint64_t getCharacter() {return 0;};
+  virtual uint64_t getCharacterNonBlock() {return 0;};
 
 };
 

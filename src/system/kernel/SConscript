@@ -42,10 +42,10 @@ files = [
 ]
 
 if 'DEBUGGER' in env['CPPDEFINES']:
-	files += [
-		Glob('debugger/*.cc'),
-		Glob('debugger/commands/*.cc'),
-	]
+    files += [
+        Glob('debugger/*.cc'),
+        Glob('debugger/commands/*.cc')
+    ]
 else:
 	files += [
 		Glob('debugger/panic.cc'),
@@ -98,6 +98,20 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         files += [Glob('debugger/libudis86/*.c')]
     include += ['machine/x86_common/x86_emu/x86emu/']
 
+if 'ARM_VERSATILE' in env['CPPDEFINES']:
+    files += [
+        Glob('machine/arm_versatile/*.cc'),
+        ]
+    include += ['machine/arm_versatile']
+
+if 'ARM926E' in env['CPPDEFINES']:
+    files += [Glob('core/processor/arm_926e/*.cc')]
+    files += [Glob('core/processor/arm_926e/asm/*.S')]
+
+if env['ARCH_TARGET'] == 'ARM':
+    files += ['boot-arm.cc']
+    files += [Glob('core/processor/arm_common/*.cc')]
+
 if env['ARCH_TARGET'] == 'X86':
     files += [
         Glob('core/processor/x86/*.cc'),
@@ -118,8 +132,6 @@ if env['ARCH_TARGET'] == 'X64':
         'core/processor/x64/asm/gdt.s'
     ]
 
-for i in include:
-    print env.Dir(i).abspath
 tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths

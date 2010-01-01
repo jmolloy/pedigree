@@ -70,6 +70,20 @@ void Trie<void*>::insert(uint8_t *pKey, void *pValue)
                 pTmpChild->parent = pNode;
             }
 
+            Atomic<volatile Node *> atom(pNode->children[k]);
+            if(atom.compareAndSwap(0, pTmpChild))
+            {
+                pNode->children[k] = static_cast<volatile Node *>(atom);
+                
+                // CAS succeeded, ensure that pTmpChild is not deleted.
+                pChild = pTmpChild;
+                pTmpChild = 0;
+                break;
+            }
+            else
+                pNode->children[k] = static_cast<volatile Node *>(atom);
+            
+            /*
             if (__sync_bool_compare_and_swap(&pNode->children[k], 0, pTmpChild))
             {
                 // CAS succeeded, ensure that pTmpChild is not deleted.
@@ -77,6 +91,7 @@ void Trie<void*>::insert(uint8_t *pKey, void *pValue)
                 pTmpChild = 0;
                 break;
             }
+            */
             // CAS failed, drop through and repeat.
         }
 

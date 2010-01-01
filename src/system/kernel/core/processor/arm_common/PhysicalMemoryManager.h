@@ -58,6 +58,9 @@ class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** The ArmCommonPhysicalMemoryManager class instance */
     static ArmCommonPhysicalMemoryManager m_Instance;
+    
+    /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
+    virtual void unmapRegion(MemoryRegion *pRegion) {};
 };
 
 /** @} */

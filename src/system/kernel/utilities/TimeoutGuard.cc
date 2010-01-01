@@ -17,8 +17,8 @@
 #include <utilities/TimeoutGuard.h>
 #ifdef THREADS
 #include <process/Thread.h>
-#endif
 #include <process/PerProcessorScheduler.h>
+#endif
 #include <processor/Processor.h>
 #include <machine/Timer.h>
 #include <machine/Machine.h>
@@ -26,7 +26,11 @@
 #include <Log.h>
 
 TimeoutGuard::TimeoutGuard(size_t timeoutSecs) :
-    m_pEvent(0), m_bTimedOut(false), m_State(), m_nLevel(0), m_Lock()
+    m_pEvent(0), m_bTimedOut(false),
+#ifdef THREADS
+    m_State(),
+#endif
+    m_nLevel(0), m_Lock()
 {
 #ifdef THREADS
     if(timeoutSecs)

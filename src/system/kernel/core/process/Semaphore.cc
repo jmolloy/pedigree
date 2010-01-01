@@ -14,6 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/// \note The implementation of Semaphore is removed when threads are disabled
+///       but the definition of Semaphore is left intact. This reduces the
+///       number of #ifdef's required around the place and also throws an error
+///       when Semaphores are compiled in a non-threaded environment.
+#ifdef THREADS
+ 
 #include <Log.h>
 #include <machine/Machine.h>
 #include <machine/Timer.h>
@@ -159,3 +165,5 @@ ssize_t Semaphore::getValue()
 {
     return static_cast<ssize_t>(m_Counter);
 }
+
+#endif

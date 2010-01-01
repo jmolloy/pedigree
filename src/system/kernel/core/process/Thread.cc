@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef THREADS
+
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
@@ -258,3 +260,5 @@ Event *Thread::getNextEvent()
 
     return 0;
 }
+
+#endif

@@ -8,7 +8,8 @@ Import(['env'])
 
 subdirs = ['boot']
 
-if not env['ARCH_TARGET'] == 'ARM':
+#if not env['ARCH_TARGET'] == 'ARM':
+if(1):
     subdirs += ['common', 'kernel']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

@@ -29,3 +29,8 @@ char ArmVersatileVga::read()
 void ArmVersatileVga::write(char c)
 {
 }
+
+bool ArmVersatileVga::setMode (int mode)
+{
+    return false;
+}

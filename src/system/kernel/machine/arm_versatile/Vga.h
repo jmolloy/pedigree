@@ -39,7 +39,7 @@ class ArmVersatileVga : public Vga
       * \param nBpp Only applicable for graphics modes - the number of bits per pixel.
       * \return True on success, false on failure.
     */
-    bool setMode (size_t nCols, size_t nRows, bool bIsText, size_t nBpp=0) { return false; };
+    virtual bool setMode (int mode);
     
     /**
       * Sets the largest possible text mode.

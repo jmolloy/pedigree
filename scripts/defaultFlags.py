@@ -92,7 +92,7 @@ x64_defines = generic_defines + general_x86_defines + x64_defines
 
 # ARM defines
 # TODO: Fix this to support other ARM chips and boards
-general_arm_defines = ['ARM_COMMON', 'LITTLE_ENDIAN', 'ARM926E', 'ARM_VERSATILE']
+general_arm_defines = ['ARM_COMMON', 'LITTLE_ENDIAN', 'ARM926E', 'ARM_VERSATILE', 'BITS_32']
 
 # ARM CFLAGS and CXXFLAGS
 default_arm_cflags = ' '

@@ -666,6 +666,7 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
 
 bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab, bool bAllocate, size_t *pSize)
 {
+#ifdef THREADS
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
     // Scan the segments to find the size.
@@ -781,6 +782,10 @@ bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolT
     }
 
     return true;
+#else
+    ERROR("Elf::allocate: no thread or process support, cannot allocate memory");
+    return false;
+#endif
 }
 
 bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab, uintptr_t nStart, uintptr_t nEnd)

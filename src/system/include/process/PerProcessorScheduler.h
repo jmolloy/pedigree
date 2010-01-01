@@ -17,6 +17,8 @@
 #ifndef PERPROCESSORSCHEDULER_H
 #define PERPROCESSORSCHEDULER_H
 
+#ifdef THREADS
+
 #include <processor/types.h>
 #include <processor/state.h>
 #include <machine/TimerHandler.h>
@@ -113,5 +115,7 @@ private:
     /** The current SchedulingAlgorithm */
     SchedulingAlgorithm *m_pSchedulingAlgorithm;
 };
+
+#endif
 
 #endif

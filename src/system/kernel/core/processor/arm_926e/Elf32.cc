@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Elf.h>
+#include <linker/Elf.h>
 #include <Log.h>
-#include <KernelElf.h>
+#include <linker/KernelElf.h>
 
 // http://www.caldera.com/developers/devspecs/abi386-4.pdf
 
@@ -32,55 +32,73 @@
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh)
+bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   // Section not loaded?
-  if (pSh->addr == 0)
+  if (pSh && pSh->addr == 0)
     return true; // Not a fatal error.
-  
+
   // Get the address of the unit to be relocated.
-  uint32_t address = pSh->addr + rel.offset;
+  uint32_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
   // Addend is the value currently at the given address.
   uint32_t A = * reinterpret_cast<uint32_t*> (address);
-  
+
   // 'Place' is the address.
   uint32_t P = address;
+
   // Symbol location.
   uint32_t S = 0;
-  ElfSymbol_t *pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable->addr);
+  ElfSymbol_t *pSymbols = 0;
+  if (!m_pDynamicSymbolTable)
+    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
+  else
+    pSymbols = m_pDynamicSymbolTable;
+
+  const char *pStringTable = 0;
+  if (!m_pDynamicStringTable)
+    pStringTable = reinterpret_cast<const char *> (m_pStringTable);
+  else
+    pStringTable = m_pDynamicStringTable;
 
   // If this is a section header, patch straight to it.
-  if (ELF32_ST_TYPE(pSymbols[ELF32_R_SYM(rel.info)].info) == 3)
+  if (pSymbols && ST_TYPE(pSymbols[R_SYM(rel.info)].info) == 3)
   {
     // Section type - the name will be the name of the section header it refers to.
-    int shndx = pSymbols[ELF32_R_SYM(rel.info)].shndx;
+    int shndx = pSymbols[R_SYM(rel.info)].shndx;
     ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
     S = pSh->addr;
   }
-  else
+  else if (R_TYPE(rel.info) != R_386_RELATIVE) // Relative doesn't need a symbol!
   {
-    const char *pStr = reinterpret_cast<const char *> (m_pStringTable->addr) +
-                         pSymbols[ELF32_R_SYM(rel.info)].name;
-    NOTICE("Relocating symbol \"" << pStr << "\"");
-    S = KernelElf::instance().globalLookupSymbol(pStr);
-    if (S == 0)
+    const char *pStr = pStringTable + pSymbols[R_SYM(rel.info)].name;
+
+    if (pSymtab == 0)
+      pSymtab = KernelElf::instance().getSymbolTable();
+
+    if (R_TYPE(rel.info) == R_386_COPY)
     {
-      // Maybe we couldn't find the symbol because it's a symbol in this file.
-      // This is the case when f.x. a constant in .rodata wants to point to a symbol
-      // in .text - like a function pointer.
-      S = lookupSymbol(pStr);
+      policy = SymbolTable::NotOriginatingElf;
     }
+    S = pSymtab->lookup(String(pStr), this, policy);
+
+    if (S == 0 && strlen(pStr))
+      WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
+    // This is a weak relocation, but it was undefined.
+    else if(S == ~0UL)
+      WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
   }
-  
-  if (S == 0)
-    return false;
-  
+
+  if (S == 0 && (R_TYPE(rel.info) != R_386_RELATIVE))
+      return false;
+  if (S == ~0UL)
+    S = 0; // undefined
+
   // Base address
-  uint32_t B = m_LoadBase;
-  
+  uint32_t B = loadBase;
+
   uint32_t result = A; // Currently the result is the addend.
-  switch (ELF32_R_TYPE(rel.info))
+  switch (R_TYPE(rel.info))
   {
     case R_386_NONE:
       break;
@@ -90,8 +108,18 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh)
     case R_386_PC32:
       result = S + A - P;
       break;
+    case R_386_JMP_SLOT:
+    case R_386_GLOB_DAT:
+      result = S;
+      break;
+    case R_386_COPY:
+      result = * reinterpret_cast<uintptr_t*> (S);
+      break;
+    case R_386_RELATIVE:
+      result = B + A;
+      break;
     default:
-      ERROR ("Relocation not supported: " << Dec << ELF32_R_TYPE(rel.info));
+      ERROR ("Relocation not supported: " << Dec << R_TYPE(rel.info));
   }
 
   // Write back the result.
@@ -100,7 +128,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh)
   return true;
 }
 
-bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh)
+bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
   ERROR("The ARM architecture does not use RELA entries!");
   return false;

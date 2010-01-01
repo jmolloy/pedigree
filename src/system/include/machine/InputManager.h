@@ -81,17 +81,16 @@ class InputManager
             /// The handler function
             callback_t func;
 
+#ifdef THREADS
             /// Thread to send an Event to. If null, the Event will be sent to the
             /// current thread, which is only valid for kernel callbacks (as there
             /// will be no address space switch for a call to a kernel function).
             Thread *pThread;
+#endif
         };
 
         /// Key press queue
         List<uint64_t> m_KeyQueue;
-
-        /// Key press queue Semaphore
-        Semaphore m_KeyQueueSize;
 
         /// Spinlock for work on queues.
         /// \note Using a Spinlock here because a lot of our work will happen
@@ -103,8 +102,13 @@ class InputManager
         /// \todo When more callback types are created, add handling for them
         List<CallbackItem*> m_KeyCallbacks;
 
+#ifdef THREADS
+        /// Key press queue Semaphore
+        Semaphore m_KeyQueueSize;
+        
         /// Thread object for our worker thread
         Thread *m_pThread;
+#endif
 };
 
 #endif

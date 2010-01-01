@@ -74,7 +74,9 @@ void apMain()
   Processor::setInterrupts(true);
   for (;;)
   {
+#ifdef THREADS
     Scheduler::instance().yield();
+#endif
   }
 }
 
@@ -188,24 +190,37 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
+#ifdef ARM_COMMON
+  NOTICE("ARM build now boots properly. Now hanging forever...");
+  while(1);
+#endif
+
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();
 #endif
 
+#ifdef THREADS
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
+#else
+  loadModules(&bsInf);
+#endif
 
 #ifdef DEBUGGER_RUN_AT_START
   //Processor::breakpoint();
 #endif
 
+#ifdef THREADS
   Processor::information().getCurrentThread()->setPriority(MAX_PRIORITIES-1);
+#endif
 
   // This will run when nothing else is available to run
   for (;;)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
+#ifdef THREADS
     Scheduler::instance().yield();
+#endif
   }
 }
 

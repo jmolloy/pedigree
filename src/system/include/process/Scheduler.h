@@ -17,6 +17,8 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#ifdef THREADS
+
 #include <process/PerProcessorScheduler.h>
 #include <processor/types.h>
 #include <processor/state.h>
@@ -100,5 +102,7 @@ private:
     /** Map of thread->processor mappings. */
     Tree<Thread*, PerProcessorScheduler*> m_TPMap;
 };
+
+#endif
 
 #endif

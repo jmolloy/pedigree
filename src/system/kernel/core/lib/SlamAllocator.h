@@ -120,9 +120,11 @@ private:
 
 #ifdef MULTIPROCESSOR
     ///\todo MAX_CPUS
-    Node *m_PartialLists[255];
+    typedef Node *partialListType;
+    partialListType m_PartialLists[255];
 #else
-    volatile Node *m_PartialLists[1];
+    typedef volatile Node *partialListType;
+    partialListType m_PartialLists[1];
 #endif
 
     uintptr_t getSlab();

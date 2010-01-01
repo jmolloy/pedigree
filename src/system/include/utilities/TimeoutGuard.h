@@ -90,7 +90,9 @@ private:
     bool m_bTimedOut;
 
     /** Saved state. */
+#ifdef THREADS
     SchedulerState m_State;
+#endif
 
     /** Saved nesting level. */
     size_t m_nLevel;

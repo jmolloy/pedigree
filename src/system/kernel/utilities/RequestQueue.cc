@@ -22,8 +22,10 @@
 #include <utilities/assert.h>
 
 RequestQueue::RequestQueue() :
-  m_RequestQueueSize(0),
-  m_Stop(false), m_RequestQueueMutex(false), m_pThread(0)
+  m_Stop(false), m_RequestQueueMutex(false)
+#ifdef THREADS
+  , m_RequestQueueSize(0), m_pThread(0)
+#endif
 {
     for (size_t i = 0; i < REQUEST_QUEUE_NUM_PRIORITIES; i++)
         m_pRequestQueue[i] = 0;
@@ -47,10 +49,12 @@ void RequestQueue::initialise()
 
 void RequestQueue::destroy()
 {
+#ifdef THREADS
   // Cause the worker thread to stop.
   m_Stop = true;
   // Post to the queue length semaphore to ensure the worker thread wakes up.
   m_RequestQueueSize.release();
+#endif
 }
 
 uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,

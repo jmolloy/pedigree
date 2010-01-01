@@ -4,7 +4,6 @@ OUTPUT_ARCH(arm)
 ENTRY(start)
 SECTIONS
 {
-
     . = 0x00100000;
     .text :
     {

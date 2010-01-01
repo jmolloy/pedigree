@@ -16,6 +16,8 @@
 
 #include <process/Mutex.h>
 
+#ifdef THREADS
+
 // NOTE, this is in its own file purely so that a vtable can be generated.
 Mutex::Mutex(bool bLocked) :
     Semaphore(bLocked ? 0 : 1)
@@ -25,3 +27,5 @@ Mutex::Mutex(bool bLocked) :
 Mutex::~Mutex()
 {
 }
+
+#endif

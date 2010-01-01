@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef THREADS
+
 #include <process/PerProcessorScheduler.h>
 #include <process/Thread.h>
 #include <process/SchedulingAlgorithm.h>
@@ -420,3 +422,5 @@ void PerProcessorScheduler::threadStatusChanged(Thread *pThread)
 {
     m_pSchedulingAlgorithm->threadStatusChanged(pThread);
 }
+
+#endif

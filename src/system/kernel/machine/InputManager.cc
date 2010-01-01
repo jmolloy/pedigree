@@ -71,7 +71,10 @@ class InputEvent : public Event
 InputManager InputManager::m_Instance;
 
 InputManager::InputManager() :
-    m_KeyQueue(), m_KeyQueueSize(0), m_QueueLock(), m_KeyCallbacks(), m_pThread(0)
+    m_KeyQueue(), m_QueueLock(), m_KeyCallbacks()
+#ifdef THREADS
+    , m_KeyQueueSize(0), m_pThread(0)
+#endif
 {
 }
 
@@ -86,14 +89,30 @@ void InputManager::initialise()
     m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
                            reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
                            reinterpret_cast<void*> (this));
+#else
+    WARNING("InputManager: No thread support, no worker thread will be active");
 #endif
 }
 
 void InputManager::keyPressed(uint64_t key)
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_QueueLock);
     m_KeyQueue.pushBack(key);
     m_KeyQueueSize.release();
+#else
+    // No need for locking, as no threads exist
+    for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
+        it != m_KeyCallbacks.end();
+        it++)
+    {
+        if(*it)
+        {
+            callback_t func = (*it)->func;
+            func(key);
+        }
+    }
+#endif
 }
 
 void InputManager::installCallback(CallbackType type, callback_t callback, Thread *pThread)
@@ -103,7 +122,9 @@ void InputManager::installCallback(CallbackType type, callback_t callback, Threa
     {
         CallbackItem *item = new CallbackItem;
         item->func = callback;
+#ifdef THREADS
         item->pThread = pThread;
+#endif
         m_KeyCallbacks.pushBack(item);
     }
 }
@@ -119,7 +140,11 @@ void InputManager::removeCallback(CallbackType type, callback_t callback, Thread
         {
             if(*it)
             {
-                if((pThread == (*it)->pThread) && (callback == (*it)->func))
+                if(
+#ifdef THREADS
+                    (pThread == (*it)->pThread) &&
+#endif
+                    (callback == (*it)->func))
                 {
                     m_KeyCallbacks.erase(it);
                     return;
@@ -138,6 +163,7 @@ int InputManager::trampoline(void *ptr)
 
 void InputManager::mainThread()
 {
+#ifdef THREADS
     while(true)
     {
         m_KeyQueueSize.acquire();
@@ -172,4 +198,5 @@ void InputManager::mainThread()
             }
         }
     }
+#endif
 }
