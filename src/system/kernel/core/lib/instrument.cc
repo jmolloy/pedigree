@@ -22,7 +22,11 @@ extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)
   __attribute__((no_instrument_function));
 
+#ifdef X86_COMMON
 #define OUT(c) asm volatile ("outb %%al, %%dx" :: "d"(0x2f8), "a"(c))
+#else
+#define OUT(C)
+#endif
 
 extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 {
