@@ -143,6 +143,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().initialise();
 #endif
 
+#ifdef ARM_COMMON
+  NOTICE("ARM build now boots properly. Now hanging forever...");
+  while(1);
+#endif
+
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
 
@@ -189,11 +194,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
-#ifdef ARM_COMMON
-  NOTICE("ARM build now boots properly. Now hanging forever...");
-  while(1);
-#endif
 
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();

@@ -55,7 +55,7 @@ inline void writeChar(char c)
 #else
   #error No valid ARM board!
 #endif
-  *p = static_cast<unsigned int>(c);
+  *p = c;
   asm volatile("" ::: "memory");
 #ifndef SERIAL_IS_FILE
   *p = 0;

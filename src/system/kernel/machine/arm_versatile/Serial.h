@@ -40,13 +40,15 @@ class ArmVersatileSerial : public Serial
     
     struct serial
     {
-      uint32_t dr;
+      volatile uint32_t dr;
     } PACKED;
     
     /**
      * The serial device's registers.
      */
-    volatile serial *m_pRegs;
+    // volatile serial *m_pRegs;
+    
+    // uintptr_t tmp;
 };
 
 #endif
