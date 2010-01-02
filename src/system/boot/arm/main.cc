@@ -117,6 +117,11 @@ extern "C" void arm_swint_handler()
 {
   // what was the interrupt number?
   uint32_t intnum = 1; //*((uint32_t*) (linkreg-4));
+  asm volatile("mov %0, lr" : "=r" (intnum));
+  
+  writeStr("Link register: ");
+  writeHex(intnum);
+  writeStr("\r\n");
   
   writeStr( "softint\r\n" );
   
@@ -173,11 +178,9 @@ extern "C" void __start()
   memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
   
   // TODO: remove this when happy with relevant code
-  /*
   writeStr( "about to do software interrupt\r\n" );
   asm volatile( "swi #1" );
   writeStr( "swi done and returned\r\n" );
-  */
   
   writeStr("Loading kernel...\r\n");
 

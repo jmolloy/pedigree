@@ -17,6 +17,8 @@
 #ifndef THREADSCOMMAND_H
 #define THREADSCOMMAND_H
 
+#ifdef THREADS
+
 #include <DebuggerCommand.h>
 #include <Scrollable.h>
 #include <process/Thread.h>
@@ -80,5 +82,7 @@ private:
 };
 
 /** @} */
+
+#endif
 
 #endif

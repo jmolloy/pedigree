@@ -19,20 +19,26 @@
 extern void writeStr(const char *str);
 int strncpy(char *dest, const char *src, int len)
 {
+  int i = 0;
   while (*src && len)
   {
     *dest++ = *src++;
     len--;
+    i++;
   }
   *dest = '\0';
+  return i;
 }
 int memset(void *buf, int c, size_t len)
 {
+  int i = 0;
   unsigned char *tmp = (unsigned char *)buf;
   while(len--)
   {
     *tmp++ = c;
+    i++;
   }
+  return i;
 }
 
 void memcpy(void *dest, const void *src, size_t len)
@@ -177,11 +183,14 @@ bool Elf32::writeSections()
                         m_pSectionHeaders[i].size);
       }
     }
-  } 
+  }
+  
+  return true;
 }
 
 unsigned int Elf32::getLastAddress()
 {
+    return 0;
 }
 
 const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
@@ -223,14 +232,17 @@ const char *Elf32::lookupSymbol(unsigned int addr, unsigned int *startAddr)
 
 uint32_t Elf32::lookupDynamicSymbolAddress(uint32_t off)
 {
+    return 0;
 }
 
 char *Elf32::lookupDynamicSymbolName(uint32_t off)
 {
+    return 0;
 }
 
 uint32_t Elf32::getGlobalOffsetTable()
 {
+    return 0;
 }
 
 uint32_t Elf32::getEntryPoint()

@@ -85,3 +85,8 @@ void Processor::setSingleStep(bool bEnable, InterruptState &state)
   /// \todo Implement
   ERROR("Single step unavailable on ARM.");
 }
+
+void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
+{
+  ERROR("ARM has no address space support yet");
+}
