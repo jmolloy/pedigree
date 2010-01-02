@@ -13,6 +13,7 @@ kerneldir = Dir("#" + env["PEDIGREE_BUILD_KERNEL"]).abspath
 objname = builddir + '/bootloader'
 
 env.Alias("kernel", objname)
+env.Depends(objname, kerneldir + "/kernel")
 
 # To include a new subdirectory just add to the list.
 subdirs = [

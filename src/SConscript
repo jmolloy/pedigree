@@ -9,13 +9,10 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'system',
-#    'subsys',
-#    'modules',
-#    'user'
+    'system'
 ]
 
-if env['ARCH_TARGET'] in ['X86', 'X64']:
+if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
     subdirs += ['subsys', 'modules', 'user']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
@@ -31,12 +28,6 @@ configdb = env.File(builddir + '/config.db')
 floppyimg = env.File(builddir + '/floppy.img')
 hddimg = env.File(builddir + '/hdd.img')
 cdimg = env.File(builddir + '/pedigree.iso')
-
-env.Depends(hddimg, 'libs')
-env.Depends(hddimg, 'apps')
-env.Depends(hddimg, 'initrd')
-env.Depends(hddimg, configdb)
-env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
 
 configSchemas = []
 for i in os.walk(env.Dir("#src").abspath):
@@ -205,10 +196,19 @@ def buildCdImage(target, source, env):
 
     os.remove("./stage2_eltorito")
 
-if env["installer"]:
+if not env['ARCH_TARGET'] in ["X86", "X64", "PPC"]:
+    print "No hard disk image being built, architecture doesn't need one."
+elif env["installer"]:
     print "Oops, installer images aren't built yet. Tell pcmattman to write Python scripts"
     print "to build these images, please."
 else:
+    # Define dependencies
+    env.Depends(hddimg, 'libs')
+    env.Depends(hddimg, 'apps')
+    env.Depends(hddimg, 'initrd')
+    env.Depends(hddimg, configdb)
+    env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
+
     fileList = []
 
     # Build the disk images (whichever are the best choice for this system)

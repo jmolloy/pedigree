@@ -46,19 +46,24 @@ struct BootstrapStruct_t
   uint32_t vbe_interface_len;
 } __attribute__((packed));
 
-void writeChar(char c)
+inline void writeChar(char c)
 {
 #if defined( ARM_VERSATILE )
-  unsigned int *p = reinterpret_cast<unsigned int*>(0x101f1000);
+  volatile char *p = reinterpret_cast<volatile char*>(0x101f1000);
 #elif defined( ARM_INTEGRATOR )
-  unsigned int *p = reinterpret_cast<unsigned int*>(0x16000000);
+  volatile char *p = reinterpret_cast<volatile char*>(0x16000000);
 #else
   #error No valid ARM board!
 #endif
   *p = static_cast<unsigned int>(c);
+  asm volatile("" ::: "memory");
+#ifndef SERIAL_IS_FILE
+  *p = 0;
+  asm volatile("" ::: "memory");
+#endif
 }
 
-void writeStr(const char *str)
+inline void writeStr(const char *str)
 {
   char c;
   while ((c = *str++))
@@ -121,6 +126,9 @@ extern "C" void arm_swint_handler()
   
   writeStr("Link register: ");
   writeHex(intnum);
+  writeHex(0xdeadbeef);
+  writeChar(':');
+  
   writeStr("\r\n");
   
   writeStr( "softint\r\n" );
