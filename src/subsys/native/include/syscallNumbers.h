@@ -17,4 +17,6 @@
 #ifndef SYSCALL_NUMBERS_H
 #define SYSCALL_NUMBERS_H
 
+#define NATIVE_USERSPACE_TO_KERNEL      1
+
 #endif

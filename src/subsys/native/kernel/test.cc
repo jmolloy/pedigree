@@ -32,4 +32,5 @@ void Test::serialise(uintptr_t *buffer, size_t &length)
 void Test::unserialise(uintptr_t buffer, size_t &length)
 {
     /// \todo Figure out what to do with/from the buffer
+    writeLog(reinterpret_cast<const char*>(buffer), length);
 }
