@@ -9,8 +9,12 @@ Import(['env'])
 # To include a new subdirectory just add to the list.
 subdirs = [
     'posix',
-    'pedigree-c',
-    'native'
+    'pedigree-c'
 ]
+
+# Currently the native API is only supported on x86 (not x86-64 or other
+# architectures).
+if env['ARCH_TARGET'] == 'X86':
+    subdirs += ['native']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

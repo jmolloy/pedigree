@@ -131,7 +131,8 @@ initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
 initrdList += [builddir.abspath + '/subsystems/pedigree-c.o']
-initrdList += [builddir.abspath + '/subsystems/native.o']
+if env['ARCH_TARGET'] == 'X86':
+    initrdList += [builddir.abspath + '/subsystems/native.o']
 
 initrd = ' '.join(initrdList)
 

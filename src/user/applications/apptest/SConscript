@@ -38,15 +38,17 @@ objects = [
 ]
 
 # To include a new directory for includes, just add it to the list
-include = [
-    '#/src/subsys/native/include',
-    '.'
-]
+if env['ARCH_TARGET'] == 'X86':
+    include = ['#/src/subsys/native/include']
+else:
+    include = ['#/src/subsys/posix/include']
+include += ['.']
 
 # To add a library add to the list below
-libraries = [
-    'pedigree'
-]
+if env['ARCH_TARGET'] == 'X86':
+    libraries = ['pedigree']
+else:
+    libraries = ['c', 'm', 'gcc']
 
 # To add a library path add to the list below
 libpaths = [
