@@ -17,13 +17,19 @@
 #include <test.h>
 #include <Log.h>
 
+#include <native-protocol.h>
+
 void Test::writeLog(const char *text, size_t len)
 {
-    /// \todo Userspace -> kernel request here
+    message = text;
+    msglen = len;
+    _syscall(this, 0);
 }
 
 void Test::serialise(uintptr_t *buffer, size_t &length)
 {
+    *buffer = reinterpret_cast<uintptr_t>(message);
+    length = msglen;
 }
 
 void Test::unserialise(uintptr_t buffer, size_t &length)

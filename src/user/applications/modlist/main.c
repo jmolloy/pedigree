@@ -11,13 +11,8 @@
 
 extern int pedigree_module_is_loaded(char *name);
 
-/// \todo Options to show all modules (default), only loaded modules, and only
-///       unloaded modules.
 int main(int argc, char **argv)
 {
-    /*extern char *optarg;
-    extern int optind, optopt;*/
-
     int listAll = 0, listLoaded = 0, listUnloaded = 0, c = 0, err = 0;
     while((c = getopt(argc, argv, "aluh")) != -1)
     {

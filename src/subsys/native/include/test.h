@@ -34,7 +34,7 @@ investigate other methods of integrating into the event system.
 class Test : public Object
 {
     public:
-        Test()
+        Test() : message(0), msglen(0)
         {};
         virtual ~Test()
         {};
@@ -46,6 +46,8 @@ class Test : public Object
         void unserialise(uintptr_t buffer, size_t &length);
 
     private:
+        const char *message;
+        size_t msglen;
 };
 
 #endif

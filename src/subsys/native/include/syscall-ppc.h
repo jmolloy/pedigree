@@ -21,14 +21,14 @@
 /// \todo add errno.
 static int syscall0(int function)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   asm volatile("sc" : "=r" (r3) : "r" (r3));
   return r3;
 }
 
 static int syscall1(int function, int p1)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   register unsigned int r4 __asm__ ("r6") = p1;
   asm volatile("sc" : "=r" (r3) : "r" (r3), "r"(r4));
   return r3;
@@ -36,7 +36,7 @@ static int syscall1(int function, int p1)
 
 static int syscall2(int function, int p1, int p2)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   register unsigned int r4 __asm__ ("r6") = p1;
   register unsigned int r5 __asm__ ("r7") = p2;
   asm volatile("sc" : "=r" (r3) : "r" (r3), "r" (r4), "r" (r5));
@@ -45,7 +45,7 @@ static int syscall2(int function, int p1, int p2)
 
 static int syscall3(int function, int p1, int p2, int p3)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   register unsigned int r4 __asm__ ("r6") = p1;
   register unsigned int r5 __asm__ ("r7") = p2;
   register unsigned int r6 __asm__ ("r8") = p3;
@@ -55,7 +55,7 @@ static int syscall3(int function, int p1, int p2, int p3)
 
 static int syscall4(int function, int p1, int p2, int p3, int p4)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   register unsigned int r4 __asm__ ("r6") = p1;
   register unsigned int r5 __asm__ ("r7") = p2;
   register unsigned int r6 __asm__ ("r8") = p3;
@@ -66,7 +66,7 @@ static int syscall4(int function, int p1, int p2, int p3, int p4)
 
 static int syscall5(int function, int p1, int p2, int p3, int p4, int p5)
 {
-  register unsigned int r3 __asm__ ("r3") = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+  register unsigned int r3 __asm__ ("r3") = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   register unsigned int r4 __asm__ ("r6") = p1;
   register unsigned int r5 __asm__ ("r7") = p2;
   register unsigned int r6 __asm__ ("r8") = p3;

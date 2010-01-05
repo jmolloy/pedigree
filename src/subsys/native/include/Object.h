@@ -17,7 +17,7 @@
 #ifndef _PEDIGREE_OBJECT_H
 #define _PEDIGREE_OBJECT_H
 
-#include <processor/types.h>
+#include <types.h>
 
 /** Object is merely the base class for all native subsystem objects. */
 class Object

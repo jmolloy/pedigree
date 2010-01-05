@@ -22,9 +22,6 @@ env.Alias("apps", objname)
 env.Depends(objname, "crt0")
 env.Requires(objname, "libs")
 
-# Dependency on a static object - can't be a mere Requires.
-env.Depends(objname, "pthreads")
-
 # To include a new subdirectory just add to the list.
 subdirs = [
 
@@ -32,8 +29,7 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-#    Glob("*.cc")
-     Glob("*.c")
+    Glob("*.cc")
 ]
 
 # Already-built object files to link
@@ -43,26 +39,18 @@ objects = [
 
 # To include a new directory for includes, just add it to the list
 include = [
-    '#/src/subsys/posix/include/c++/4.3.2',
-    '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree',
-    '#/src/subsys/posix/include',
+    '#/src/subsys/native/include',
     '.'
 ]
 
 # To add a library add to the list below
 libraries = [
-    'gcc',
-    'c',
-    'm',
-#    'pthread',
-#    'stdc++',
+    'pedigree'
 ]
 
 # To add a library path add to the list below
 libpaths = [
-    env['LIBGCC'],
-    builddir,
-    '#/images/i686-elf/libraries'
+    builddir
 ]
 
 ####################################
