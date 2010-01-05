@@ -136,7 +136,6 @@ if(len(env['CC']) > 0 and env['LIBGCC'] == ''):
     a = os.popen(env['CC'] + ' --print-libgcc-file-name')
     env['LIBGCC'] = os.path.dirname(a.read())
     a.close()
-print env['LIBGCC']
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):

@@ -141,7 +141,6 @@ elif env['ARCH_TARGET'] == 'PPC':
 base = tmp.Dir("#")
 baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")
 baseLibm = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libm.a")
-print baseLibc.path
 baseInclude = tmp.Dir("#src/subsys/posix/include")
 
 buildDir = tmp.Dir(builddir)
