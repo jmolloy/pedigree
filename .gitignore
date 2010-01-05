@@ -4,5 +4,13 @@ src/system/kernel/TAGS
 options.cache
 .sconsign.dblite
 compilers/dir
-scripts/defaultFlags.pyc
+scripts/*.pyc
 images/local/*
+Debug
+Release
+compilers*
+docs/doxygen/*
+*.sln
+*.suo
+*.vcproj*
+*.ncb

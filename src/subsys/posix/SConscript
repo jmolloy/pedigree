@@ -100,13 +100,10 @@ glueFlags = "-fno-exceptions"
 if env['ARCH_TARGET'] == 'X64':
     glueFlags = " -fPIC " + glueFlags
 
-print glueFlags
-
 tmp_glue = tmp.Clone()
 tmp_glue['CFLAGS'] = tmp_glue['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_glue['CXXFLAGS'] = tmp_glue['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_glue['CFLAGS'] = glueFlags + ' ' + tmp_glue['CFLAGS']
-print tmp_glue['CFLAGS']
 tmp_glue['CXXFLAGS'] += ' ' + glueFlags + ' '
 tmp_glue['LIBS'] += ['pedigree-c']
 tmp_glue['LD'] = tmp_glue['LINK'] = tmp_glue['LD'].replace('gcc', 'ld')
