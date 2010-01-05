@@ -132,6 +132,12 @@ if env['CROSS'] != '':
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
 
+if(len(env['CC']) > 0 and env['LIBGCC'] == ''):
+    a = os.popen(env['CC'] + ' --print-libgcc-file-name')
+    env['LIBGCC'] = os.path.dirname(a.read())
+    a.close()
+print env['LIBGCC']
+
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
     if re.match('i[3456]86',tmp.group(1)) != None:
