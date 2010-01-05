@@ -97,10 +97,15 @@ tmp.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LS
 # TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
 glueFlags = "-fno-exceptions"
 if env['ARCH_TARGET'] == 'X64':
-    glueFlags = "-mcmodel=small -fPIC " + glueFlags
-    
+    glueFlags = " -fPIC " + glueFlags
+
+print glueFlags
+
 tmp_glue = tmp.Clone()
+tmp_glue['CFLAGS'] = tmp_glue['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_glue['CXXFLAGS'] = tmp_glue['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_glue['CFLAGS'] += ' ' + glueFlags + ' '
+print tmp_glue['CFLAGS']
 tmp_glue['CXXFLAGS'] += ' ' + glueFlags + ' '
 tmp_glue['LIBS'] += ['pedigree-c']
 tmp_glue.Program(glue_objname, glue_files, LINKFLAGS='-nostdlib -r ' + glueFlags)
@@ -137,6 +142,7 @@ elif env['ARCH_TARGET'] == 'PPC':
 base = tmp.Dir("#")
 baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")
 baseLibm = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libm.a")
+print baseLibc.path
 baseInclude = tmp.Dir("#src/subsys/posix/include")
 
 buildDir = tmp.Dir(builddir)
