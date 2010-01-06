@@ -115,7 +115,6 @@ Ne2k::Ne2k(Network* pDev) :
   m_pBase->write8(0x22, NE_CMD);
 
   NetworkStack::instance().registerDevice(this);
-  NOTICE("ne2k card: " << reinterpret_cast<uintptr_t>(this));
 }
 
 Ne2k::~Ne2k()
@@ -124,7 +123,6 @@ Ne2k::~Ne2k()
 
 bool Ne2k::send(size_t nBytes, uintptr_t buffer)
 {
-    NOTICE("ne2k: transmitting " << nBytes << " bytes at address " << buffer);
   if(nBytes > 0xffff)
   {
     ERROR("NE2K: Attempt to send a packet with size > 64 KB");

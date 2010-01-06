@@ -273,10 +273,7 @@ void entry()
       uint32_t myIpWillBe = 0;
       DhcpOptionServerIdent dhcpServer;
 
-      /// \bug X64 hangs here, before "recv returns".
-
       int n = 0;
-      NOTICE("Waiting for data on the endpoint...");
       if(e->dataReady(true) == false)
       {
         WARNING("Did not receive a reply to DHCP DISCOVER (timed out), interface " << i << "!");
