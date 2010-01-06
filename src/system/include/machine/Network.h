@@ -431,10 +431,7 @@ public:
   /** Sends a given packet through the device.
    * \param nBytes The number of bytes to send.
    * \param buffer A buffer with the packet to send */
-  virtual bool send(uint32_t nBytes, uintptr_t buffer)
-  {
-    return false; // failed by default
-  }
+  virtual bool send(size_t nBytes, uintptr_t buffer) = 0;
 
   /** Sets station information (such as IP addresses)
    * \param info The information to set as the station info */
