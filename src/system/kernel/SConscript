@@ -138,4 +138,5 @@ tmpEnvironment['LIBPATH'] = libpaths
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
+tmpEnvironment['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
 tmpEnvironment.Program(objname, files)

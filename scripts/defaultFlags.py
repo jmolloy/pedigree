@@ -82,8 +82,8 @@ default_x64_linkflags = ' -T src/system/kernel/core/processor/x64/kernel.ld '
 default_x64_imgdir = '#/images/x64/'
 
 # x64 final variables
-x64_cflags = default_x64_cflags + generic_cflags + warning_flags + warning_flags_c + warning_flags_off
-x64_cxxflags = default_x64_cxxflags + generic_cxxflags + warning_flags + warning_flags_cxx + warning_flags_off
+x64_cflags = default_x64_cflags + generic_cflags.replace("-O3", "-O0") + warning_flags + warning_flags_c + warning_flags_off
+x64_cxxflags = default_x64_cxxflags + generic_cxxflags.replace("-O3", "-O0") + warning_flags + warning_flags_cxx + warning_flags_off
 x64_asflags = generic_asflags + default_x64_asflags
 x64_linkflags = generic_linkflags + default_x64_linkflags
 x64_defines = generic_defines + general_x86_defines + x64_defines

@@ -192,7 +192,7 @@ DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
 void entry()
 {
 #ifdef X64
-    return;
+    //return;
 #endif
   // retrieve DHCP addresses for all NICs in the system
   NOTICE("DHCP Client: Iterating through all devices");
@@ -260,7 +260,7 @@ void entry()
 
       // throw into the send buffer and send it out
       memcpy(buff, &dhcp, sizeof(dhcp));
-      bool success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
+      bool success = e->send(/*(sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset*/ sizeof(dhcp), reinterpret_cast<uintptr_t>(buff), remoteHost, true, pCard) >= 0;
       if(!success)
       {
         WARNING("Couldn't send DHCP DISCOVER packet on interface " << i << "!");
@@ -276,6 +276,7 @@ void entry()
       /// \bug X64 hangs here, before "recv returns".
 
       int n = 0;
+      NOTICE("Waiting for data on the endpoint...");
       if(e->dataReady(true) == false)
       {
         WARNING("Did not receive a reply to DHCP DISCOVER (timed out), interface " << i << "!");

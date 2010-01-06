@@ -34,7 +34,7 @@ class Ne2k : public Network, public IrqHandler
 {
 public:
   Ne2k(Network* pDev);
-  ~Ne2k();
+  virtual ~Ne2k();
 
   virtual void getName(String &str)
   {

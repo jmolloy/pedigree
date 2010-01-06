@@ -183,8 +183,9 @@ def buildCdImage(target, source, env):
     configDb = source[0].abspath
     stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
     shutil.copy(pathToGrub + "/" + stage2_eltorito, "./stage2_eltorito")
+    print stage2_eltorito
 
-    os.system("mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
+    cmd = "mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
                  -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
                  -boot-info-table -o " + target[0].path + " -V 'PEDIGREE' \
                  boot/grub/stage2_eltorito=./stage2_eltorito \
@@ -192,7 +193,9 @@ def buildCdImage(target, source, env):
                  boot/kernel=" + source[2].abspath + " \
                  boot/initrd.tar=" + source[1].abspath + " \
                 /livedisk.img=" + source[3].abspath + "\
-                .pedigree-root=" + configDb)
+                .pedigree-root=" + configDb
+    print cmd
+    os.system(cmd)
 
     os.remove("./stage2_eltorito")
 
