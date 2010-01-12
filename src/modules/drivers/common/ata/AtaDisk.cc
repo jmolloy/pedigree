@@ -25,6 +25,7 @@
 #include <utilities/assert.h>
 #include "AtaController.h"
 #include "AtaDisk.h"
+#include "ata-common.h"
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
@@ -59,16 +60,19 @@ bool AtaDisk::initialise()
     //
 
     // Wait for BSY and DRQ to be zero before selecting the device
-    uint8_t status = commandRegs->read8(7);
+    /// \todo Move every other set of ATA wait loops to ataWait, then rename
+    ///       this to status, not statusNew.
+    AtaStatus statusNew = ataWait(commandRegs);
+    /*uint8_t status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-        status = commandRegs->read8(7);
+        status = commandRegs->read8(7);*/
 
     // Select the device to transmit to
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    status = commandRegs->read8(7);
+    uint8_t status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
     status = commandRegs->read8(7);
 
