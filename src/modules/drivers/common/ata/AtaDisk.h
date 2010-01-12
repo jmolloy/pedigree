@@ -70,8 +70,6 @@ private:
     void setupLBA28(uint64_t n, uint32_t nSectors);
     /** Sets the drive up for reading from address 'n' in LBA48 mode. */
     void setupLBA48(uint64_t n, uint32_t nSectors);
-    /** Sends a command packet (ATAPI) */
-    bool sendPacket(size_t nBytes, uintptr_t packet);
 
     /** Is this the master device on the bus? */
     bool m_IsMaster;

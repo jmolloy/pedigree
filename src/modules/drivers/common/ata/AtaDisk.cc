@@ -59,43 +59,34 @@ bool AtaDisk::initialise()
     // Start IDENTIFY command.
     //
 
-    // Wait for BSY and DRQ to be zero before selecting the device
-    /// \todo Move every other set of ATA wait loops to ataWait, then rename
-    ///       this to status, not statusNew.
-    AtaStatus statusNew = ataWait(commandRegs);
-    /*uint8_t status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-        status = commandRegs->read8(7);*/
+    AtaStatus status;
+
+    // Wait for the drive before requesting a device change
+    ataWait(commandRegs);
 
     // Select the device to transmit to
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    uint8_t status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);
+    ataWait(commandRegs);
 
     // Disable IRQs, for the moment.
-//   controlRegs->write8(0x01, 6);
+    //controlRegs->write8(0x01, 6);
 
     // Send IDENTIFY.
-    status = commandRegs->read8(7);
+    commandRegs->read8(7);
     commandRegs->write8(0xEC, 7);
 
     // Read status register.
-    status = commandRegs->read8(7);
-
-    if (status == 0)
-        // Device does not exist.
+    status = ataWait(commandRegs);
+    
+    // Check that the device actually exists
+    if (status.__reg_contents == 0)
         return false;
 
-    // Poll until BSY is clear and either ERR or DRQ are set
-    while((status&0x80) || !(status&0x9))
-        status = commandRegs->read8(7);
-
-    // If ERR was set we had an err0r.
-    if (status & 0x1)
+    // If ERR was set we had an error
+    if (status.reg.err)
     {
         WARNING("ATA drive errored on IDENTIFY!");
         return false;
@@ -107,7 +98,7 @@ bool AtaDisk::initialise()
         m_pIdent[i] = commandRegs->read16(0);
     }
 
-    status = commandRegs->read8(7);
+    commandRegs->read8(7);
 
     // Interpret the data.
 
@@ -297,9 +288,11 @@ uint64_t AtaDisk::doRead(uint64_t location)
     uint32_t nSectors = nBytes / 512;
 
     // Wait for BSY and DRQ to be zero before selecting the device
-    uint8_t status = commandRegs->read8(7);
+    AtaStatus status;
+    ataWait(commandRegs);
+    /*uint8_t status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);
+    status = commandRegs->read8(7);*/
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -310,9 +303,10 @@ uint64_t AtaDisk::doRead(uint64_t location)
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    status = commandRegs->read8(7);
+    ataWait(commandRegs);
+    /*status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-        status = commandRegs->read8(7);
+        status = commandRegs->read8(7);*/
 
     while (nSectors > 0)
     {
@@ -413,8 +407,14 @@ uint64_t AtaDisk::doRead(uint64_t location)
             for (int i = 0; i < nSectorsToRead; i++)
             {
                 // Wait until !BUSY
-                while (commandRegs->read8(7) & 0x80)
-                    ;
+                status = ataWait(commandRegs);
+                if(status.reg.err)
+                {
+                    // Ka-boom! Something went wrong :(
+                    /// \todo What's the best way to handle this?
+                    WARNING("ATA: read failed during data transfer");
+                    return 0;
+                }
 
                 // Mark the start of the sector.
                 uint8_t *pSector = reinterpret_cast<uint8_t*> (pTarget);
@@ -426,7 +426,14 @@ uint64_t AtaDisk::doRead(uint64_t location)
         }
         else
         {
-            /// \todo Check status register for command success
+            // Check for an error during the DMA command
+            status = ataWait(commandRegs);
+            if(status.reg.err)
+            {
+                /// \todo What's the best way to handle this?
+                WARNING("ATA: read failed during DMA data transfer");
+                return 0;
+            }
         }
     }
     return 0;
@@ -461,9 +468,11 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     if (nBytes%512) nSectors++;
 
     // Wait for BSY and DRQ to be zero before selecting the device
-    uint8_t status = commandRegs->read8(7);
+    AtaStatus status;
+    ataWait(commandRegs);
+    /*uint8_t status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);
+    status = commandRegs->read8(7);*/
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -474,9 +483,10 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    status = commandRegs->read8(7);
+    ataWait(commandRegs);
+    /*status = commandRegs->read8(7);
     while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);
+    status = commandRegs->read8(7);*/
 
     uint16_t *tmp = reinterpret_cast<uint16_t*>(buffer);
 
@@ -578,8 +588,14 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             for (int i = 0; i < nSectorsToWrite; i++)
             {
                 // Wait until !BUSY
-                while (commandRegs->read8(7) & 0x80)
-                    ;
+                status = ataWait(commandRegs);
+                if(status.reg.err)
+                {
+                    // Ka-boom! Something went wrong :(
+                    /// \todo What's the best way to handle this?
+                    WARNING("ATA: read failed during data transfer");
+                    return 0;
+                }
 
                 // Grab the current sector
                 uint8_t *currSector = new uint8_t[512];
@@ -590,6 +606,17 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
                 // Delete used memory
                 delete [] currSector;
+            }
+        }
+        else
+        {
+            // Check for an error during the DMA command
+            status = ataWait(commandRegs);
+            if(status.reg.err)
+            {
+                /// \todo What's the best way to handle this?
+                WARNING("ATA: read failed during DMA data transfer");
+                return 0;
             }
         }
     }
@@ -658,47 +685,4 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
     commandRegs->write8(lba1, 3);
     commandRegs->write8(lba2, 4);
     commandRegs->write8(lba3, 5);
-}
-
-/** \note I'm pretty sure this is correct. Time will tell I guess! */
-bool AtaDisk::sendPacket(size_t nBytes, uintptr_t packet)
-{
-    // Grab our parent.
-    AtaController *pParent = static_cast<AtaController*> (m_pParent);
-
-    // Grab our parent's IoPorts for command and control accesses.
-    IoBase *commandRegs = m_CommandRegs;
-
-    // PACKET command
-    commandRegs->write8(0, 1); // no overlap, no DMA
-    commandRegs->write8(0, 2); // tag = 0
-    commandRegs->write8(0, 3); // n/a for PACKET command
-    commandRegs->write8((nBytes & 0xFF), 4); // byte count limit
-    commandRegs->write8(((nBytes >> 8) & 0xFF), 5);
-    commandRegs->write8((m_IsMaster)?0xA0:0xB0, 6);
-    commandRegs->write8(0xA0, 7); // the command itself
-
-    // Wait for the busy bit to be cleared before continuing
-    uint8_t status = commandRegs->read8(7);
-    while((status&0x80) || !(status&0x9))
-        status = commandRegs->read8(7);
-
-    // Error?
-    if (status & 0x01)
-    {
-        ERROR("ATAPI Packet command error [status=" << status << "]!");
-        return false;
-    }
-
-    // Transmit the command
-    uint16_t *commandPacket = reinterpret_cast<uint16_t*>(packet);
-    for (size_t i = 0; i < 6; i++)
-        commandRegs->write16(commandPacket[i], 0);
-
-    // Wait for the busy bit to be cleared once again
-    while((status&0x80) || !(status&0x9))
-        status = commandRegs->read8(7);
-
-    // Complete
-    return (!(status & 0x01));
 }

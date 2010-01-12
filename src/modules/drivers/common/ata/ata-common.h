@@ -42,16 +42,29 @@ typedef union
 inline AtaStatus ataWait(IoBase *pBase)
 {
     // Grab the status register first (of course)
+    AtaStatus ret;
     uint8_t status = pBase->read8(7);
+    if(status == 0)
+    {
+        ret.__reg_contents = status;
+        return ret;
+    }
 
     // Wait for BSY to be unset. Until BSY is unset, no other bits in the
     // register are considered valid.
     while(status & 0x80)
         status = pBase->read8(7);
 
+    // Just to be complete, make sure DRQ is also clear
+    while(status & 0x4)
+        status = pBase->read8(7);
+
+    // And now verify that DRDY or ERR are asserted (or both!)
+    while(!(status & 0x40) && !(status & 0x1))
+        status = pBase->read8(7);
+
     // Okay, BSY is unset now. The drive is no longer busy, it is up to the
     // caller to read the status and verify further bits (eg, ERR)
-    AtaStatus ret;
     ret.__reg_contents = status;
     return ret;
 }
