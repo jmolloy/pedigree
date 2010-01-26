@@ -99,18 +99,29 @@ private:
 
   static Ip ipInstance;
 
+  /// An actual fragment
+  struct fragment
+  {
+      char *data;
+      size_t length;
+  };
+
   /// Stores all the segments for an IPv4 fragmented packet.
   /// In its own type so that it can be extended in the future as needed.
   struct fragmentWrapper
   {
       /// Map of offsets to actual buffers
-      Tree<size_t, char *> fragments;
+      Tree<size_t, fragment *> fragments;
   };
 
   /// Identifies an IPv4 packet by linking the ID and IP together
   class Ipv4Identifier
   {
     public:
+        Ipv4Identifier() : m_Id(0), m_Ip(IpAddress::IPv4)
+        {
+        }
+
         Ipv4Identifier(uint16_t id, IpAddress ip) : m_Id(id), m_Ip(ip)
         {
         }
@@ -141,10 +152,6 @@ private:
         }
 
     private:
-        Ipv4Identifier() : m_Id(0), m_Ip(IpAddress::IPv4)
-        {
-        }
-
         /// ID for all ipv4 packets in this identification block
         uint16_t m_Id;
 

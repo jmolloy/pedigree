@@ -125,7 +125,14 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
 
-  /// \todo Handle fragmentation!
+  // Store the addresses for the packet data
+  uintptr_t packetAddress = packet + offset;
+  size_t packetSize = nBytes - offset;
+  bool wasFragment = false;
+
+  // Find the offset of the data section of this packet
+  size_t dataOffset = offset;
+  offset += header->header_len * 4;
 
   // Verify the checksum
   uint16_t checksum = header->checksum;
@@ -141,21 +148,82 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
     // Determine if the packet is part of a fragment
     if((header->frag_offset != 0) || (header->flags & IP_FLAG_MF))
     {
-        /// \todo Totally incomplete. Not even close to being even started.
-        NOTICE("IP packet was part of a fragment, ignoring");
+        // Find the size of the data section of this packet
+        size_t dataLength = nBytes - offset;
+        dataLength -= header->header_len * 4;
+        
+        // Grab the fragment block for this combination of IP and ID
+        Ipv4Identifier id(BIG_TO_HOST16(header->id), from);
+        fragmentWrapper *p = m_Fragments.lookup(id);
+
+        // Do we need to create a new wrapper?
+        if(!p)
+        {
+            p = new fragmentWrapper;
+            m_Fragments.insert(id, p);
+        }
+
+        // Insert this fragment to the list
+        if(dataLength)
+        {
+            char *buff = new char[dataLength];
+            memcpy(buff, reinterpret_cast<void*>(packet + offset + dataOffset), dataLength);
+
+            fragment *f = new fragment;
+            f->data = buff;
+            f->length = dataLength;
+            p->fragments.insert(BIG_TO_HOST16(header->frag_offset), f);
+        }
 
         // Was this the last one?
         if(header->frag_offset && !(header->flags & IP_FLAG_MF))
         {
             // Yes, collate the fragments and send to the upper layers
+            size_t copyOffset = (header->header_len * 4);
+            size_t fullLength = BIG_TO_HOST16(header->frag_offset) + dataLength + copyOffset;
+            char *buff = new char[fullLength];
+
+            // Iterate through the fragment list, copying data into the buffer as we go
+            for(Tree<size_t, fragment*>::Iterator it = p->fragments.begin();
+                it!= p->fragments.end();
+                it++)
+            {
+                // Copy this one in
+                size_t offset = it.key();
+                fragment *f = it.value();
+                if(f)
+                {
+                    char *data = f->data;
+                    if(data && offset < fullLength)
+                    {
+                        memcpy(buff + (copyOffset + offset), data, f->length);
+                        delete data;
+                    }
+                    delete f;
+                }
+            }
+
+            // Dump the header into the packet now
+            memcpy(buff, header, header->header_len * 4);
+
+            // Clean up now that we're done
+            delete p;
+            m_Fragments.remove(id);
+
+            // Fall through to the handling of a conventional packet
+            packetAddress = reinterpret_cast<uintptr_t>(buff);
+            packetSize = fullLength;
+            wasFragment = true;
         }
         else
         {
-            // No, wait for more fragments
+            // Do not handle an incomplete packet, wait for another one to arrive
             return;
         }
-
-        return;
+    }
+    else
+    {
+        wasFragment = false;
     }
 
     switch(header->type)
@@ -163,33 +231,42 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
       case IP_ICMP:
         // NOTICE("IP: ICMP packet");
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
+        /// \todo fix
+        // RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
         // icmp needs the ip header as well
-        Icmp::instance().receive(from, nBytes, packet, pCard, offset);
+        Icmp::instance().receive(from, nBytes, packetAddress, pCard, 0);
         break;
 
       case IP_UDP:
         // NOTICE("IP: UDP packet");
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
+        /// \todo fix
+        //RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well
-        Udp::instance().receive(from, nBytes, packet, pCard, offset);
+        Udp::instance().receive(from, nBytes, packetAddress, pCard, 0);
         break;
 
       case IP_TCP:
         // NOTICE("IP: TCP packet");
 
-        RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
+        /// \todo fix
+        //RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 
         // tcp needs the ip header as well
-        Tcp::instance().receive(from, nBytes, packet, pCard, offset);
+        Tcp::instance().receive(from, nBytes, packetAddress, pCard, 0);
         break;
 
       default:
         NOTICE("IP: Unknown packet type");
         break;
+    }
+    
+
+    if(wasFragment)
+    {
+        delete reinterpret_cast<char*>(packetAddress);
     }
   }
   else
