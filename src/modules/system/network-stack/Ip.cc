@@ -130,10 +130,6 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
   size_t packetSize = nBytes - offset;
   bool wasFragment = false;
 
-  // Find the offset of the data section of this packet
-  size_t dataOffset = offset;
-  offset += header->header_len * 4;
-
   // Verify the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
@@ -151,6 +147,10 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         // Find the size of the data section of this packet
         size_t dataLength = nBytes - offset;
         dataLength -= header->header_len * 4;
+
+        // Find the offset of the data section of this packet
+        size_t dataOffset = offset;
+        offset += header->header_len * 4;
         
         // Grab the fragment block for this combination of IP and ID
         Ipv4Identifier id(BIG_TO_HOST16(header->id), from);
@@ -232,7 +232,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
         // NOTICE("IP: ICMP packet");
 
         /// \todo fix
-        // RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
+        RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
         // icmp needs the ip header as well
         Icmp::instance().receive(from, nBytes, packetAddress, pCard, 0);
@@ -241,8 +241,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
       case IP_UDP:
         // NOTICE("IP: UDP packet");
 
-        /// \todo fix
-        //RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
+        RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well
         Udp::instance().receive(from, nBytes, packetAddress, pCard, 0);
@@ -251,8 +250,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
       case IP_TCP:
         // NOTICE("IP: TCP packet");
 
-        /// \todo fix
-        //RawManager::instance().receive(packet + offset, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
+        RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 
         // tcp needs the ip header as well
         Tcp::instance().receive(from, nBytes, packetAddress, pCard, 0);
