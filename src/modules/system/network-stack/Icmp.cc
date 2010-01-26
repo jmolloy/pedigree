@@ -49,7 +49,7 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packAddr, newSize);
 
-  Ip::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, newSize, packAddr);
+  Ipv4::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, newSize, packAddr);
 
   delete [] newPacket;
 }
@@ -60,12 +60,12 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
       return;
 
   // grab the header
-  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ip::ipHeader));
+  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ipv4::ipHeader));
 
   // check the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
-  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), nBytes - offset - sizeof(Ip::ipHeader));
+  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), nBytes - offset - sizeof(Ipv4::ipHeader));
   header->checksum = checksum;
   if(checksum == calcChecksum)
   {
@@ -85,8 +85,8 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
           BIG_TO_HOST16(header->id),
           BIG_TO_HOST16(header->seq),
           // *ugh* - these two lines are awful!
-          nBytes - offset - sizeof(Ip::ipHeader) - sizeof(icmpHeader),
-          packet + offset + sizeof(Ip::ipHeader) + sizeof(icmpHeader)
+          nBytes - offset - sizeof(Ipv4::ipHeader) - sizeof(icmpHeader),
+          packet + offset + sizeof(Ipv4::ipHeader) + sizeof(icmpHeader)
         );
 
         }

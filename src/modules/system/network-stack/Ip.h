@@ -46,17 +46,16 @@
 #define IP_FLAG_MF      (1 << 2)
 
 /**
- * The Pedigree network stack - IP layer
- * \todo IPv6
+ * The Pedigree network stack - IPv4 layer
  */
-class Ip
+class Ipv4
 {
 public:
-  Ip();
-  virtual ~Ip();
+  Ipv4();
+  virtual ~Ipv4();
   
   /** For access to the stack without declaring an instance of it */
-  static Ip& instance()
+  static Ipv4& instance()
   {
     return ipInstance;
   }
@@ -97,7 +96,7 @@ public:
   
 private:
 
-  static Ip ipInstance;
+  static Ipv4 ipInstance;
 
   /// An actual fragment
   struct fragment

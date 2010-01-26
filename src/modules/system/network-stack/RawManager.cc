@@ -54,17 +54,17 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
   switch(m_Type)
   {
     case RAW_ICMP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_ICMP, nBytes, buffer);
+      success = Ipv4::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_ICMP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;
     case RAW_UDP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_UDP, nBytes, buffer);
+      success = Ipv4::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_UDP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;
     case RAW_TCP:
-      success = Ip::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_TCP, nBytes, buffer);
+      success = Ipv4::send(remoteHost.ip, pCard->getStationInfo().ipv4, IP_TCP, nBytes, buffer);
       if(success)
         return static_cast<int>(nBytes);
       break;

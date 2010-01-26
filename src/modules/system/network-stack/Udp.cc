@@ -101,6 +101,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   StationInfo me = pCard->getStationInfo();
 
   IpAddress src = me.ipv4;
+  /// \todo IPv4ism, also, not the right broadcast address
   if(broadcast || !RoutingTable::instance().hasRoutes())
     dest.setIp(0xffffffff); // 255.255.255.255
 
@@ -109,9 +110,9 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
   bool success;
   if(broadcast || !RoutingTable::instance().hasRoutes())
-    success = Ip::send(dest, src, IP_UDP, newSize, packAddr, pCard);
+    success = Ipv4::send(dest, src, IP_UDP, newSize, packAddr, pCard);
   else
-    success = Ip::send(dest, src, IP_UDP, newSize, packAddr);
+    success = Ipv4::send(dest, src, IP_UDP, newSize, packAddr);
 
   delete [] newPacket;
   return success;
@@ -123,7 +124,7 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
       return;
 
   // grab the IP header to find the size, so we can skip options and get to the UDP header
-  Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
+  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
 
   // check if this packet is for us, or if it's a broadcast

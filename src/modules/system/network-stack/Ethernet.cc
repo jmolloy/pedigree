@@ -61,7 +61,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
     case ETH_IP:
       //NOTICE("IP packet!");
 
-      Ip::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
+      Ipv4::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
 
       break;
 

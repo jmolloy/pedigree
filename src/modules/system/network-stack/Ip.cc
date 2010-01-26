@@ -33,18 +33,18 @@
 
 #include "RoutingTable.h"
 
-Ip Ip::ipInstance;
+Ipv4 Ipv4::ipInstance;
 
-Ip::Ip() :
+Ipv4::Ipv4() :
   m_NextIdLock(), m_IpId(0), m_Fragments()
 {
 }
 
-Ip::~Ip()
+Ipv4::~Ipv4()
 {
 }
 
-bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
+bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
   IpAddress realDest = dest;
 
@@ -79,7 +79,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   memset(header, 0, sizeof(ipHeader));
 
   // Compose the IPv4 packet header
-  header->id = Ip::instance().getNextId();
+  header->id = Ipv4::instance().getNextId();
 
   header->ipDest = dest.getIp();
   header->ipSrc = from.getIp();
@@ -115,7 +115,7 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   return macValid;
 }
 
-void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
   // Verify the inputs. Drivers may directly dump this information on us so
   // we cannot ever be too sure.

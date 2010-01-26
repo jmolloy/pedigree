@@ -100,7 +100,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->checksum = 0;
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
 
-  bool success = Ip::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_TCP, newSize, packAddr);
+  bool success = Ipv4::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_TCP, newSize, packAddr);
 
   delete [] newPacket;
   return success;
@@ -112,7 +112,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
       return;
 
   // grab the IP header to find the size, so we can skip options and get to the TCP header
-  Ip::ipHeader* ip = reinterpret_cast<Ip::ipHeader*>(packet + offset);
+  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
 
   // check if this packet is for us, or if it's a broadcast
