@@ -36,7 +36,7 @@
 Ip Ip::ipInstance;
 
 Ip::Ip() :
-  m_IpId(0)
+  m_NextIdLock(), m_IpId(0), m_Fragments()
 {
 }
 

@@ -21,6 +21,8 @@
 #include <processor/types.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
+#include <LockGuard.h>
+#include <Spinlock.h>
 
 #include "NetworkStack.h"
 #include "Ethernet.h"
@@ -65,18 +67,6 @@ public:
   /** Sends an IP packet */
   static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
 
-/*
-#elif _BYTE_ORDER == _LITTLE_ENDIAN
-	uint32_t	ip_hl:4,
-		ip_v:4;
-#elif _BYTE_ORDER == _BIG_ENDIAN
-	uint32_t	ip_v:4,
-		ip_hl:4;
-#else
-*/
-
-
-  /// \todo Needs to support IPv6 as well - protocolSize here is assumed to be 4
   struct ipHeader
   {
 #ifdef LITTLE_ENDIAN
@@ -86,7 +76,6 @@ public:
     uint32_t ipver : 4;
     uint32_t header_len : 4;
 #endif
-//    uint8_t   verlen;
     uint8_t   tos;
     uint16_t  len;
     uint16_t  id;
@@ -102,14 +91,75 @@ public:
   /** Gets the next IP Packet ID */
   uint16_t getNextId()
   {
+    LockGuard<Spinlock> guard(m_NextIdLock);
     return m_IpId++;
   }
   
 private:
 
   static Ip ipInstance;
+
+  /// Stores all the segments for an IPv4 fragmented packet.
+  /// In its own type so that it can be extended in the future as needed.
+  struct fragmentWrapper
+  {
+      /// Map of offsets to actual buffers
+      Tree<size_t, char *> fragments;
+  };
+
+  /// Identifies an IPv4 packet by linking the ID and IP together
+  class Ipv4Identifier
+  {
+    public:
+        Ipv4Identifier(uint16_t id, IpAddress ip) : m_Id(id), m_Ip(ip)
+        {
+        }
+
+        inline uint16_t getId()
+        {
+            return m_Id;
+        }
+
+        inline IpAddress &getIp()
+        {
+            return m_Ip;
+        }
+
+        inline bool operator < (Ipv4Identifier &a)
+        {
+            return (m_Id < a.m_Id);
+        }
+
+        inline bool operator > (Ipv4Identifier &a)
+        {
+            return (m_Id > a.m_Id);
+        }
+
+        inline bool operator == (Ipv4Identifier &a)
+        {
+            return ((m_Id == a.m_Id) && (m_Ip == a.m_Ip));
+        }
+
+    private:
+        Ipv4Identifier() : m_Id(0), m_Ip(IpAddress::IPv4)
+        {
+        }
+
+        /// ID for all ipv4 packets in this identification block
+        uint16_t m_Id;
+
+        /// The IP address the ID is linked to
+        IpAddress m_Ip;
+  };
+
+  /// Lock for the "Next ID" variable
+  Spinlock m_NextIdLock;
   
+  /// Next ID to use for an IPv4 packet
   uint16_t m_IpId;
+
+  /// Maps IP packet IDs to fragment blocks
+  Tree<Ipv4Identifier, fragmentWrapper *> m_Fragments;
 
 };
 
