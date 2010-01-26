@@ -29,18 +29,14 @@
  *  tree.
  * \brief A key/value dictionary. */
 template<class K, class E>
-class Tree;
-
-/** Tree specialisation for void* */
-template<>
-class Tree<void*,void*>
+class Tree
 {
   private:
     /** Tree node. */
     struct Node
     {
-      void *key;
-      void *element;
+      K key;
+      E element;
       struct Node *leftChild;
       struct Node *rightChild;
       struct Node *parent;
@@ -125,39 +121,218 @@ class Tree<void*,void*>
 
     //typedef void**        Iterator;
 
-    typedef ::TreeIterator<void*, IteratorNode> Iterator;
+    typedef ::TreeIterator<E, IteratorNode, &IteratorNode::previous, &IteratorNode::next, K> Iterator;
     /** Constant random-access iterator for the Tree */
-    typedef void* const*  ConstIterator;
+    typedef E const*  ConstIterator;
 
     /** The default constructor, does nothing */
-    Tree();
+    Tree() :
+        root(0), nItems(0), m_Begin(0)
+    {
+    }
+
     /** The copy-constructor
      *\param[in] x the reference object to copy */
-    Tree(const Tree &x);
+    Tree(const Tree &x) :
+        root(0), nItems(0), m_Begin(0)
+    {
+        traverseNode_Insert(x.root);
+        m_Begin = new IteratorNode(root, 0, nItems);
+    }
+
     /** The destructor, deallocates memory */
-    ~Tree();
+    ~Tree()
+    {
+        delete m_Begin;
+    }
 
     /** The assignment operator
      *\param[in] x the object that should be copied */
-    Tree &operator = (const Tree &x);
+    Tree &operator = (const Tree &x)
+    {
+        clear();
+        // Traverse the tree, adding everything encountered.
+        traverseNode_Insert(x.root);
+
+        m_Begin = new IteratorNode(root, 0, nItems);
+
+        return *this;
+    }
 
     /** Get the number of elements in the Tree
      *\return the number of elements in the Tree */
-    size_t count() const;
+    size_t count() const
+    {
+        return nItems;
+    }
+
     /** Add an element to the Tree.
      *\param[in] key the key
      *\param[in] value the element */
-    void insert(void *key, void *value);
+    void insert(K key, E value)
+    {
+        Node *n = new Node;
+        n->key = key;
+        n->element = value;
+        n->height = 0;
+        n->parent = 0;
+        n->leftChild = 0;
+        n->rightChild = 0;
+
+        bool inserted = false;
+
+        if (lookup(key))
+        {
+            delete n;
+            return; // Key already in tree.
+        }
+
+        if (root == 0)
+        {
+            root = n; // We are the root node.
+
+            m_Begin = new IteratorNode(root, 0, nItems);
+        }
+        else
+        {
+            // Traverse the tree.
+            Node *currentNode = root;
+
+            while (!inserted)
+            {
+                if (key > currentNode->key)
+                {
+                    if (currentNode->rightChild == 0) // We have found our insert point.
+                    {
+                        currentNode->rightChild = n;
+                        n->parent = currentNode;
+                        inserted = true;
+                    }
+                    else
+                        currentNode = currentNode->rightChild;
+                }
+                else
+                {
+                    if (currentNode->leftChild == 0) // We have found our insert point.
+                    {
+                        currentNode->leftChild = n;
+                        n->parent = currentNode;
+                        inserted = true;
+                    }
+                    else
+                        currentNode = currentNode->leftChild;
+                }
+            }
+
+            // The value has been inserted, but has that messed up the balance of the tree?
+            while (currentNode)
+            {
+                int b = balanceFactor(currentNode);
+                if ( (b<-1) || (b>1) )
+                    rebalanceNode(currentNode);
+                currentNode = currentNode->parent;
+            }
+        }
+
+        nItems++;
+    }
+
     /** Attempts to find an element with the given key.
      *\return the element found, or NULL if not found. */
-    void *lookup(void *key);
+    E lookup(K key)
+    {
+        Node *n = root;
+        while (n != 0)
+        {
+            if (n->key == key)
+                return n->element;
+            else if (n->key > key)
+                n = n->leftChild;
+            else
+                n = n->rightChild;
+        }
+        return 0;
+    }
+
     /** Attempts to remove an element with the given key. */
-    void remove(void *key);
+    void remove(K key)
+    {
+        Node *n = root;
+        while (n != 0)
+        {
+            if (n->key == key)
+                break;
+            else if (n->key > key)
+                n = n->leftChild;
+            else
+                n = n->rightChild;
+        }
+
+        Node *orign = n;
+        if (n == 0) return;
+
+        while (n->leftChild || n->rightChild) // While n is not a leaf.
+        {
+            size_t hl = height(n->leftChild);
+            size_t hr = height(n->rightChild);
+            if (hl == 0)
+                rotateLeft(n); // N is now a leaf.
+            else if (hr == 0)
+                rotateRight(n); // N is now a leaf.
+            else if (hl <= hr)
+            {
+                rotateRight(n);
+                rotateLeft(n); // These are NOT inverse operations - rotateRight changes n's position.
+            }
+            else
+            {
+                rotateLeft(n);
+                rotateRight(n);
+            }
+        }
+
+        // N is now a leaf, so can be easily pruned.
+        if (n->parent == 0)
+            root = 0;
+        else
+        {
+            if (n->parent->leftChild == n)
+                n->parent->leftChild = 0;
+            else
+                n->parent->rightChild = 0;
+        }
+
+        // Work our way up the path, balancing.
+        while (n)
+        {
+            int b = balanceFactor(n);
+            if ( (b < -1) || (b > 1) )
+                rebalanceNode(n);
+            n = n->parent;
+        }
+
+        delete orign;
+        nItems--;
+    }
 
     /** Clear the Vector */
-    void clear();
+    void clear()
+    {
+        traverseNode_Remove(root);
+        root = 0;
+        nItems = 0;
+
+        delete m_Begin;
+        m_Begin = 0;
+    }
+
     /** Erase one Element */
-    Iterator erase(Iterator iter);
+    Iterator erase(Iterator iter)
+    {
+        /// \todo Implement
+        static Iterator ret(0);
+        return ret;
+    }
 
     /** Get an iterator pointing to the beginning of the Vector
      *\return iterator pointing to the beginning of the Vector */
@@ -194,20 +369,138 @@ class Tree<void*,void*>
     }
 
   private:
-    void rotateLeft(Node *n);
-    void rotateRight(Node *n);
-    size_t height(Node *n);
-    int balanceFactor(Node *n);
-    void rebalanceNode(Node *n);
+    void rotateLeft(Node *n)
+    {
+        // See Cormen,Lieserson,Rivest&Stein  pp-> 278 for pseudocode.
+        Node *y = n->rightChild;            // Set Y.
 
-    void traverseNode_Insert(Node *n);
-    void traverseNode_Remove(Node *n);
+        n->rightChild = y->leftChild;       // Turn Y's left subtree into N's right subtree.
+        if (y->leftChild != 0)
+            y->leftChild->parent = n;
+
+        y->parent = n->parent;              // Link Y's parent to N's parent.
+        if (n->parent == 0)
+            root = y;
+        else if (n == n->parent->leftChild)
+            n->parent->leftChild = y;
+        else
+            n->parent->rightChild = y;
+        y->leftChild = n;
+        n->parent = y;
+    }
+
+    void rotateRight(Node *n)
+    {
+        Node *y = n->leftChild;
+
+        n->leftChild = y->rightChild;
+        if (y->rightChild != 0)
+            y->rightChild->parent = n;
+
+        y->parent = n->parent;
+        if (n->parent == 0)
+            root = y;
+        else if (n == n->parent->leftChild)
+            n->parent->leftChild = y;
+        else
+            n->parent->rightChild = y;
+
+        y->rightChild = n;
+        n->parent = y;
+    }
+
+    size_t height(Node *n)
+    {
+        // Assumes: n's children's heights are up to date. Will always be true if balanceFactor 
+        //          is called in a bottom-up fashion.
+        if (n == 0) return 0;
+
+        size_t tempL = 0;
+        size_t tempR = 0;
+
+        if (n->leftChild != 0)
+            tempL = n->leftChild->height;
+        if (n->rightChild != 0)
+            tempR = n->rightChild->height;
+
+        tempL++; // Account for the height increase stepping up to us, its parent.
+        tempR++;
+
+        if (tempL > tempR) // If one is actually bigger than the other, return that, else return the other.
+        {
+            n->height = tempL;
+            return tempL;
+        }
+        else
+        {
+            n->height = tempR;
+            return tempR;
+        }
+    }
+
+    int balanceFactor(Node *n)
+    {
+        return static_cast<int>(height(n->rightChild)) - static_cast<int>(height(n->leftChild));
+    }
+
+    void rebalanceNode(Node *n)
+    {
+        // This way of choosing which rotation to do took me AGES to find...
+        // See http://www.cmcrossroads.com/bradapp/ftp/src/libs/C++/AvlTrees.html
+        int balance = balanceFactor(n);
+        if (balance < -1) // If it's left imbalanced, we need a right rotation.
+        {
+            if (balanceFactor(n->leftChild) > 0) // If its left child is right heavy...
+            {
+                // We need a RL rotation - left rotate n's left child, then right rotate N.
+                rotateLeft(n->leftChild);
+                rotateRight(n);
+            }
+            else
+            {
+                // RR rotation will do.
+                rotateRight(n);
+            }
+        }
+        else if (balance > 1)
+        {
+            if (balanceFactor(n->rightChild) < 0) // If its right child is left heavy...
+            {
+                // We need a LR rotation; Right rotate N's right child, then left rotate N.
+                rotateRight(n->rightChild);
+                rotateLeft(n);
+            }
+            else
+            {
+                // LL rotation.
+                rotateLeft(n);
+            }
+        }
+    }
+
+    void traverseNode_Insert(Node *n)
+    {
+        if (!n) return;
+        insert(n->key, n->element);
+        traverseNode_Insert(n->leftChild);
+        traverseNode_Insert(n->rightChild);
+    }
+
+    void traverseNode_Remove(Node *n)
+    {
+        if (!n) return;
+        traverseNode_Remove(n->leftChild);
+        traverseNode_Remove(n->rightChild);
+        delete n;
+    }
 
     Node *root;
     size_t nItems;
 
     IteratorNode* m_Begin;
 };
+
+#if 0
 
 /** Tree template specialisation for key pointers and element pointers. Just forwards to the
  * void* template specialisation of Tree.
@@ -502,6 +795,8 @@ class Tree<size_t,size_t>
     /** The actual container */
     Tree<void*,void*> m_VoidTree;
 };
+
+#endif
 
 /** @} */
 

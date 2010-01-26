@@ -138,7 +138,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
          it != m_Buffers.end();
          it++)
     {
-        Buffer *pBuf = reinterpret_cast<Buffer*>(it.value());
+        Buffer *pBuf = it.value();
         pBuf->valid = false;
     }
 

@@ -81,14 +81,14 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
   // Compose the IPv4 packet header
   header->id = Ip::instance().getNextId();
 
-  header->ipDest = dest.getIp(); /// \todo IPv6
+  header->ipDest = dest.getIp();
   header->ipSrc = from.getIp();
 
   header->len = HOST_TO_BIG16(sizeof(ipHeader) + nBytes);
 
   header->type = type;
 
-  header->ttl = 64; /// \note Perhaps this could be customisable one day?
+  header->ttl = 128;
 
   header->ipver = 4; // IPv4, offset is 5 DWORDs
   header->header_len = 5;
@@ -117,7 +117,9 @@ bool Ip::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintp
 
 void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
-  if(!packet || !nBytes)
+  // Verify the inputs. Drivers may directly dump this information on us so
+  // we cannot ever be too sure.
+  if(!packet || !nBytes || !pCard)
       return;
 
   // grab the header
@@ -125,7 +127,7 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
 
   /// \todo Handle fragmentation!
 
-  // check the checksum :D
+  // Verify the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
   uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), sizeof(ipHeader));
@@ -135,6 +137,26 @@ void Ip::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offse
     IpAddress from(header->ipSrc);
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
+
+    // Determine if the packet is part of a fragment
+    if((header->frag_offset != 0) || (header->flags & IP_FLAG_MF))
+    {
+        /// \todo Totally incomplete. Not even close to being even started.
+        NOTICE("IP packet was part of a fragment, ignoring");
+
+        // Was this the last one?
+        if(header->frag_offset && !(header->flags & IP_FLAG_MF))
+        {
+            // Yes, collate the fragments and send to the upper layers
+        }
+        else
+        {
+            // No, wait for more fragments
+            return;
+        }
+
+        return;
+    }
 
     switch(header->type)
     {

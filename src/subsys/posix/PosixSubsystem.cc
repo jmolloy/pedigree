@@ -139,7 +139,7 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     sigHandlerTree &myHandlers = m_SignalHandlers;
     for(sigHandlerTree::Iterator it = parentHandlers.begin(); it != parentHandlers.end(); it++)
     {
-        size_t key = reinterpret_cast<size_t>(it.key());
+        size_t key = it.key();
         void *value = it.value();
         if(!value)
             continue;
@@ -497,10 +497,10 @@ bool PosixSubsystem::copyDescriptors(PosixSubsystem *pSubsystem)
     FdMap &map = pSubsystem->m_FdMap;
     for(FdMap::Iterator it = map.begin(); it != map.end(); it++)
     {
-        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(it.value());
+        FileDescriptor *pFd = it.value();
         if(!pFd)
             continue;
-        size_t newFd = reinterpret_cast<size_t>(it.key());
+        size_t newFd = it.key();
 
         FileDescriptor *pNewFd = new FileDescriptor(*pFd);
 
@@ -534,8 +534,8 @@ void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iL
     FdMap &map = m_FdMap;
     for(FdMap::Iterator it = map.begin(); it != map.end(); it++)
     {
-        size_t Fd = reinterpret_cast<size_t>(it.key());
-        FileDescriptor *pFd = reinterpret_cast<FileDescriptor*>(it.value());
+        size_t Fd = it.key();
+        FileDescriptor *pFd = it.value();
         if(!pFd)
             continue;
 

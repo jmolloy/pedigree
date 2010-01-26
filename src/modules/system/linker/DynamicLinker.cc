@@ -54,8 +54,8 @@ DynamicLinker::DynamicLinker(DynamicLinker &other) :
          it != other.m_Objects.end();
          it++)
     {
-        uintptr_t key = reinterpret_cast<uintptr_t>(it.key());
-        SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
+        uintptr_t key = it.key();
+        SharedObject *pSo = it.value();
         m_Objects.insert(key, new SharedObject(new Elf(*pSo->elf),
                                                pSo->file, pSo->buffer,
                                                pSo->address, pSo->size));

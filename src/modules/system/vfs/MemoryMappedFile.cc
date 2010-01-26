@@ -39,7 +39,7 @@ MemoryMappedFile::~MemoryMappedFile()
          it != m_Mappings.end();
          it++)
     {
-        uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
+        uintptr_t p = it.value();
         PhysicalMemoryManager::instance().freePage(p);
     }
     m_Mappings.clear();
@@ -91,8 +91,8 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
          it != m_Mappings.end();
          it++)
     {
-        uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
-        uintptr_t p = reinterpret_cast<uintptr_t>(it.value());
+        uintptr_t v = it.key() + address;
+        uintptr_t p = it.value();
 
         if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | VirtualAddressSpace::Write))
         {
@@ -121,7 +121,7 @@ void MemoryMappedFile::unload(uintptr_t address)
          it != m_Mappings.end();
          it++)
     {
-        uintptr_t v = reinterpret_cast<uintptr_t>(it.key()) + address;
+        uintptr_t v = it.key() + address;
 
         if (va.isMapped(reinterpret_cast<void*>(v)))
         {
@@ -133,7 +133,7 @@ void MemoryMappedFile::unload(uintptr_t address)
 
             // If we forked and copied this page, we want to delete the second copy.
             // So, if the physical mapping is not what we have on record, free it.
-            if (p != reinterpret_cast<uintptr_t>(it.value()))
+            if (p != it.value())
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
