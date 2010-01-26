@@ -215,20 +215,20 @@ unsigned long strtoul(const char *nptr, char **endptr, int base)
   return (acc);
 }
 
-char *strrchr(const char *str, char target)
+const char *strrchr(const char *str, int target)
 {
   int i;
   for (i = strlen(str); i >= 0; i--)
     if (str[i] == target)
-      return (char*)&str[i];
-  return (char*)0;
+      return (const char*)&str[i];
+  return (const char*)0;
 }
 
-char *strchr(const char *str, char target)
+const char *strchr(const char *str, int target)
 {
   size_t i;
   for (i = 0; i < strlen(str); i++)
     if (str[i] == target)
-      return (char*)&str[i];
-  return (char*)0;
+      return (const char*)&str[i];
+  return (const char*)0;
 }

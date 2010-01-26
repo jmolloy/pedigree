@@ -95,8 +95,8 @@ int strncmp(const char *p1, const char *p2, int n);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, int n);
 
-char *strchr(const char *str, char target);
-char *strrchr(const char *str, char target);
+const char *strchr(const char *str, int target);
+const char *strrchr(const char *str, int target);
 
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 
