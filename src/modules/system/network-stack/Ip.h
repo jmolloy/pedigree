@@ -34,16 +34,16 @@
 #define IP_UDP   0x11
 #define IP_TCP   0x06
 
-#define IP_FLAG_RSVD    (1 << 0)
+#define IP_FLAG_RSVD    (1 << 3)
 
 /// If used, this specifies to software at each hop that the packet must not
 /// be fragmented. This means it will drop packets that are too small for a
 /// link's MTU, even if that link is between two hosts on the Internet.
-#define IP_FLAG_DF      (1 << 1)
+#define IP_FLAG_DF      (1 << 2)
 
 /// More fragments flag: this means the packet is part of a set of packets
 /// that are to be reassembled by the IPv4 code.
-#define IP_FLAG_MF      (1 << 2)
+#define IP_FLAG_MF      (1 << 1)
 
 /**
  * The Pedigree network stack - IPv4 layer
@@ -78,8 +78,7 @@ public:
     uint8_t   tos;
     uint16_t  len;
     uint16_t  id;
-    uint32_t  flags : 3;
-    uint32_t  frag_offset : 13;
+    uint16_t  frag_offset;
     uint8_t   ttl;
     uint8_t   type;
     uint16_t  checksum;
@@ -109,6 +108,12 @@ private:
   /// In its own type so that it can be extended in the future as needed.
   struct fragmentWrapper
   {
+      /// Original IPv4 header to be applied to the packet during reassembly
+      char *originalIpHeader;
+
+      /// Original IPv4 header length
+      size_t originalIpHeaderLen;
+
       /// Map of offsets to actual buffers
       Tree<size_t, fragment *> fragments;
   };

@@ -149,7 +149,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 
     if(header->checksum != calcChecksum)
     {
-      WARNING("TCP Checksum failed on incoming packet. Header checksum is " << header->checksum << " and calculated is " << calcChecksum << "!");
+      WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << " and calculated is " << calcChecksum << "!");
       return;
     }
   }

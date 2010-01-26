@@ -141,9 +141,16 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
 
+    uint16_t flags = (BIG_TO_HOST16(header->frag_offset) & 0xF000) >> 12;
+    uint16_t frag_offset = BIG_TO_HOST16(header->frag_offset) & ~0xF000;
+
     // Determine if the packet is part of a fragment
-    if((header->frag_offset != 0) || (header->flags & IP_FLAG_MF))
+    if((frag_offset != 0) || (flags & IP_FLAG_MF))
     {
+        WARNING("IPv4: An incoming packet was part of a fragment. If this");
+        WARNING("message shows up repeatedly you may have a network link");
+        WARNING("with an inappropriate MTU.");
+
         // Find the size of the data section of this packet
         size_t dataLength = nBytes - offset;
         dataLength -= header->header_len * 4;
@@ -161,6 +168,12 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         {
             p = new fragmentWrapper;
             m_Fragments.insert(id, p);
+
+            size_t headerLen = header->header_len * 4;
+            char *buff = new char[headerLen];
+            memcpy(buff, header, headerLen);
+            p->originalIpHeader = buff;
+            p->originalIpHeaderLen = headerLen;
         }
 
         // Insert this fragment to the list
@@ -172,14 +185,14 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
             fragment *f = new fragment;
             f->data = buff;
             f->length = dataLength;
-            p->fragments.insert(BIG_TO_HOST16(header->frag_offset), f);
+            p->fragments.insert(frag_offset, f);
         }
 
         // Was this the last one?
-        if(header->frag_offset && !(header->flags & IP_FLAG_MF))
+        if(header->frag_offset && !(flags & IP_FLAG_MF))
         {
             // Yes, collate the fragments and send to the upper layers
-            size_t copyOffset = (header->header_len * 4);
+            size_t copyOffset = p->originalIpHeaderLen;
             size_t fullLength = BIG_TO_HOST16(header->frag_offset) + dataLength + copyOffset;
             char *buff = new char[fullLength];
 
@@ -204,7 +217,8 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
             }
 
             // Dump the header into the packet now
-            memcpy(buff, header, header->header_len * 4);
+            /// \todo Verify the buffer and length
+            memcpy(buff, p->originalIpHeader, p->originalIpHeaderLen);
 
             // Clean up now that we're done
             delete p;
@@ -231,7 +245,6 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
       case IP_ICMP:
         // NOTICE("IP: ICMP packet");
 
-        /// \todo fix
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
         // icmp needs the ip header as well
