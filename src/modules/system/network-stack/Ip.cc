@@ -193,7 +193,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         {
             // Yes, collate the fragments and send to the upper layers
             size_t copyOffset = p->originalIpHeaderLen;
-            size_t fullLength = BIG_TO_HOST16(header->frag_offset) + dataLength + copyOffset;
+            size_t fullLength = frag_offset + dataLength + copyOffset;
             char *buff = new char[fullLength];
 
             // Iterate through the fragment list, copying data into the buffer as we go
