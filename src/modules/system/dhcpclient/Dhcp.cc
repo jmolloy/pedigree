@@ -208,6 +208,17 @@ void entry()
     if(info.ipv4.getIp() == Network::convertToIpv4(127, 0, 0, 1))
       continue; // loopback is already set
 
+    /// \note Used for tests in an environment where DHCP isn't available
+#if 0
+    info.ipv4.setIp(Network::convertToIpv4(192, 168, 0, 2));
+    info.subnetMask.setIp(Network::convertToIpv4(255, 255, 255, 0));
+    info.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1));
+    info.dnsServers = new IpAddress(Network::convertToIpv4(192, 168, 0, 1));
+    info.nDnsServers = 1;
+    pCard->setStationInfo(info);
+    continue;
+#endif
+
     IpAddress broadcast(0xffffffff);
     ConnectionlessEndpoint* e =
         static_cast<ConnectionlessEndpoint *>(UdpManager::instance().getEndpoint(broadcast, 68, 67));

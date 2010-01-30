@@ -142,7 +142,12 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     remoteHost.ip = from;
 
     uint16_t flags = (BIG_TO_HOST16(header->frag_offset) & 0xF000) >> 12;
-    uint16_t frag_offset = BIG_TO_HOST16(header->frag_offset) & ~0xF000;
+    uint16_t frag_offset = (BIG_TO_HOST16(header->frag_offset) & ~0xF000) * 8;
+
+    /// \note This implementation of IP fragmentation makes many assumptions,
+    ///       the most important of which is that the fragments come in with
+    ///       some sort of order. If the last fragment comes in too early, the
+    ///       packet will not be reassembled properly.
 
     // Determine if the packet is part of a fragment
     if((frag_offset != 0) || (flags & IP_FLAG_MF))
@@ -152,12 +157,12 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         WARNING("with an inappropriate MTU.");
 
         // Find the size of the data section of this packet
-        size_t dataLength = nBytes - offset;
+        size_t dataLength = BIG_TO_HOST16(header->len);
         dataLength -= header->header_len * 4;
 
         // Find the offset of the data section of this packet
         size_t dataOffset = offset;
-        offset += header->header_len * 4;
+        dataOffset += header->header_len * 4;
         
         // Grab the fragment block for this combination of IP and ID
         Ipv4Identifier id(BIG_TO_HOST16(header->id), from);
@@ -180,7 +185,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         if(dataLength)
         {
             char *buff = new char[dataLength];
-            memcpy(buff, reinterpret_cast<void*>(packet + offset + dataOffset), dataLength);
+            memcpy(buff, reinterpret_cast<void*>(packet + dataOffset), dataLength);
 
             fragment *f = new fragment;
             f->data = buff;
@@ -202,14 +207,14 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
                 it++)
             {
                 // Copy this one in
-                size_t offset = it.key();
+                size_t fragment_offset = it.key();
                 fragment *f = it.value();
                 if(f)
                 {
                     char *data = f->data;
-                    if(data && offset < fullLength)
+                    if(data && fragment_offset < fullLength)
                     {
-                        memcpy(buff + (copyOffset + offset), data, f->length);
+                        memcpy(buff + (copyOffset + fragment_offset), data, f->length);
                         delete data;
                     }
                     delete f;
@@ -219,6 +224,10 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
             // Dump the header into the packet now
             /// \todo Verify the buffer and length
             memcpy(buff, p->originalIpHeader, p->originalIpHeaderLen);
+
+            // Adjust the IP header a bit
+            ipHeader *iphdr = reinterpret_cast<ipHeader*>(buff);
+            iphdr->len = HOST_TO_BIG16(frag_offset + dataLength);
 
             // Clean up now that we're done
             delete p;
