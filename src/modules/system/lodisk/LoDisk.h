@@ -73,6 +73,7 @@ class FileDisk : public Disk
 
         virtual uintptr_t read(uint64_t location);
         virtual void write(uint64_t location);
+        virtual void align(uint64_t location);
 
     private:
 
@@ -89,6 +90,9 @@ class FileDisk : public Disk
 
         // Our region of memory
         MemoryRegion m_MemRegion;
+
+        uint64_t m_AlignPoints[8];
+        size_t m_nAlignPoints;
 };
 
 #endif

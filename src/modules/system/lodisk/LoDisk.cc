@@ -21,7 +21,7 @@
 #include <ServiceManager.h>
 
 FileDisk::FileDisk(String file, AccessType mode) :
-    m_pFile(0), m_Mode(mode), m_Cache(), m_MemRegion("FileDisk")
+    m_pFile(0), m_Mode(mode), m_Cache(), m_MemRegion("FileDisk"), m_nAlignPoints(0)
 {
     m_pFile = VFS::instance().find(file);
     if(!m_pFile)
@@ -70,9 +70,16 @@ uintptr_t FileDisk::read(uint64_t location)
     if(!m_pFile)
         return 0;
 
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] <= location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
+    alignPoint %= 4096;
+
     // Determine which page the read is in
-    uint64_t readPage = location & ~0xFFFUL;
-    uint64_t pageOffset = location % 4096;
+    uint64_t readPage = ((location - alignPoint) & ~0xFFFUL) + alignPoint;
+    uint64_t pageOffset = (location - alignPoint) % 4096;
 
     uintptr_t buffer = m_Cache.lookup(readPage);
 
@@ -93,6 +100,12 @@ void FileDisk::write(uint64_t location)
         return;
 
     WARNING("FileDisk::write: Not implemented.");
+}
+
+void FileDisk::align(uint64_t location)
+{
+    assert (m_nAlignPoints < 8);
+    m_AlignPoints[m_nAlignPoints++] = location;
 }
 
 void init()
