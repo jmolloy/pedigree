@@ -28,62 +28,71 @@
  *\todo provide documentation */
 class String
 {
-  public:
-    /** The default constructor does nothing */
-    inline String();
-    inline explicit String(const char *s);
-    inline String(const String &x);
-    inline ~String();
+    public:
+        /** The default constructor does nothing */
+        inline String();
+        inline explicit String(const char *s);
+        inline String(const String &x);
+        inline ~String();
 
-    inline String &operator = (const String &x);
-    inline String &operator = (const char *s);
-    inline operator const char *() const;
-    inline String &operator += (const String &x);
-    inline String &operator += (const char *s);
+        inline String &operator = (const String &x);
+        inline String &operator = (const char *s);
+        inline operator const char *() const;
+        inline String &operator += (const String &x);
+        inline String &operator += (const char *s);
 
-    inline bool operator == (const String &s);
-    inline bool operator == (const char *s);
+        inline bool operator == (const String &s);
+        inline bool operator == (const char *s);
 
-    inline size_t length() const;
-    inline size_t size() const;
+        inline size_t length() const;
+        inline size_t size() const;
 
-    /** Given a character index, return the index of the next character, interpreting
-        the string as UTF-8 encoded. */
-    inline size_t nextCharacter(size_t c);
+        /** Given a character index, return the index of the next character, interpreting
+            the string as UTF-8 encoded. */
+        inline size_t nextCharacter(size_t c);
 
-    /** Removes the last character from the string. */
-    void chomp();
+        /** Removes the last character from the string. */
+        void chomp();
 
-    /** Splits the string at the given offset - the front portion will be kept in this string,
-     *  the back portion (including the character at 'offset' will be returned in a new string. */
-    String split(size_t offset);
+        /** Removes the whitespace from the both ends of the string. */
+        void strip();
 
-    List<String*> tokenise(char token);
+        /** Removes the whitespace from the start of the string. */
+        void lstrip();
 
-    /** Converts a UTF-32 character to its UTF-8 representation.
-     *\param[in] utf32 Input UTF-32 character.
-     *\param[out] utf8 Pointer to a buffer at least 4 bytes long.
-     *\return The number of bytes in the UTF-8 string. */
-    static size_t Utf32ToUtf8(uint32_t utf32, char *utf8)
-    {
-        *utf8 = utf32&0x7f;
-        return 1;
-    }
+        /** Removes the whitespace from the end of the string. */
+        void rstrip();
 
-    void sprintf(const char *format, ...);
+        /** Splits the string at the given offset - the front portion will be kept in this string,
+         *  the back portion (including the character at 'offset' will be returned in a new string. */
+        String split(size_t offset);
 
-    void assign(const String &x);
-    void assign(const char *s);
-    void reserve(size_t size);
-    void free();
+        List<String*> tokenise(char token);
 
-  private:
-    /** Pointer to the zero-terminated ASCII string */
-    char *m_Data;
-    /** The string's length */
-    size_t m_Length;
-    /** The size of the reserved space for the string */
-    size_t m_Size;
+        /** Converts a UTF-32 character to its UTF-8 representation.
+         *\param[in] utf32 Input UTF-32 character.
+         *\param[out] utf8 Pointer to a buffer at least 4 bytes long.
+         *\return The number of bytes in the UTF-8 string. */
+        static size_t Utf32ToUtf8(uint32_t utf32, char *utf8)
+        {
+            *utf8 = utf32&0x7f;
+            return 1;
+        }
+
+        void sprintf(const char *format, ...);
+
+        void assign(const String &x);
+        void assign(const char *s);
+        void reserve(size_t size);
+        void free();
+
+    private:
+        /** Pointer to the zero-terminated ASCII string */
+        char *m_Data;
+        /** The string's length */
+        size_t m_Length;
+        /** The size of the reserved space for the string */
+        size_t m_Size;
 };
 
 /** @} */
@@ -92,90 +101,90 @@ class String
 // Part of the implementation
 //
 String::String()
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
 }
 String::String(const char *s)
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
-  assign(s);
+    assign(s);
 }
 String::String(const String &x)
-  : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0)
 {
-  assign(x);
+    assign(x);
 }
 String::~String()
 {
-  free();
+    free();
 }
 
 String &String::operator = (const String &x)
 {
-  assign(x);
-  return *this;
+    assign(x);
+    return *this;
 }
 String &String::operator = (const char *s)
 {
-  assign(s);
-  return *this;
+    assign(s);
+    return *this;
 }
 String::operator const char *() const
 {
-  if (m_Data == 0)
-    return "";
-  else
-    return m_Data;
+    if (m_Data == 0)
+        return "";
+    else
+        return m_Data;
 }
 
 String &String::operator += (const String &x)
 {
-  reserve(x.length()+m_Length+1);
-  memcpy(&m_Data[m_Length], x.m_Data, x.length()+1);
-  m_Length += x.length();
-  return *this;
+    reserve(x.length()+m_Length+1);
+    memcpy(&m_Data[m_Length], x.m_Data, x.length()+1);
+    m_Length += x.length();
+    return *this;
 }
 String &String::operator += (const char *s)
 {
-  reserve(strlen(s)+m_Length+1);
-  memcpy(&m_Data[m_Length], s, strlen(s)+1);
-  m_Length += strlen(s);
-  return *this;
+    reserve(strlen(s)+m_Length+1);
+    memcpy(&m_Data[m_Length], s, strlen(s)+1);
+    m_Length += strlen(s);
+    return *this;
 }
 
 bool String::operator == (const String &s)
 {
-  if (m_Data == 0 && s.m_Data == 0)
-    return true;
-  else if (m_Data == 0 || s.m_Data == 0)
-    return false;
-  else
-    return !strcmp(m_Data, s.m_Data);
+    if (m_Data == 0 && s.m_Data == 0)
+        return true;
+    else if (m_Data == 0 || s.m_Data == 0)
+        return false;
+    else
+        return !strcmp(m_Data, s.m_Data);
 }
 
 bool String::operator == (const char *s)
 {
-  if (m_Data == 0 && s == 0)
-    return true;
-  else if (m_Data == 0 || s == 0)
-    return false;
-  else
-    return !strcmp(m_Data, s);
+    if (m_Data == 0 && s == 0)
+        return true;
+    else if (m_Data == 0 || s == 0)
+        return false;
+    else
+        return !strcmp(m_Data, s);
 }
 
 size_t String::length() const
 {
-  return m_Length;
+    return m_Length;
 }
 size_t String::size() const
 {
-  return m_Size;
+    return m_Size;
 }
 
 size_t String::nextCharacter(size_t c)
 {
-  // TODO handle multibyte chars.
-  return c+1;
+    // TODO handle multibyte chars.
+    return c+1;
 }
 
 #endif
