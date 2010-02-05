@@ -81,6 +81,7 @@ private:
     enum ModeType
     {
         Mode_16bpp_5r6g5b,
+        Mode_24bpp_8r8g8b,
         Mode_Generic
     };
 

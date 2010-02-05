@@ -130,6 +130,8 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
         m_Mode.pf.pBlue == 0 &&
         m_Mode.pf.mBlue == 5)
         m_SpecialisedMode = Mode_16bpp_5r6g5b;
+    else if (m_Mode.pf.nBpp == 24)
+        m_SpecialisedMode = Mode_24bpp_8r8g8b;
     else
         m_SpecialisedMode = Mode_Generic;
 
@@ -267,6 +269,31 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
                 unsigned short a = (r<<11) | (g<<5) | b;
                 reinterpret_cast<uint16_t*>(pBuf->pFbBackbuffer)[pitch*y + x] = a;
                 reinterpret_cast<uint16_t*>(getFramebuffer())[pitch*y + x] = a;
+            }
+        }
+
+        return;
+    }
+
+    if (m_SpecialisedMode == Mode_24bpp_8r8g8b)
+    {
+        unsigned int x, y, i;
+
+        uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
+        uint8_t *pFb2 = pBuf->pFbBackbuffer;
+
+        for (y = y1; y <= y2; y++)
+        {
+            for (x = x1; x < x2; x++)
+            {
+                rgb_t *pRgb = pBuffer + m_Mode.width*y + x;
+                i = (y*m_Mode.width + x) * 3;
+                pFb[i + 0] = pRgb->b;
+                pFb[i + 1] = pRgb->g;
+                pFb[i + 2] = pRgb->r;
+                pFb2[i + 0] = pRgb->b;
+                pFb2[i + 1] = pRgb->g;
+                pFb2[i + 2] = pRgb->r;
             }
         }
 
@@ -427,12 +454,12 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
                     break;
                 }
                 case 24:
-                    pFb[ (i*m_Mode.width + j) * 3 + 0] = colour.r;
+                    pFb[ (i*m_Mode.width + j) * 3 + 0] = colour.b;
                     pFb[ (i*m_Mode.width + j) * 3 + 1] = colour.g;
-                    pFb[ (i*m_Mode.width + j) * 3 + 2] = colour.b;
-                    pFb2[ (i*m_Mode.width + j) * 3 + 0] = colour.r;
+                    pFb[ (i*m_Mode.width + j) * 3 + 2] = colour.r;
+                    pFb2[ (i*m_Mode.width + j) * 3 + 0] = colour.b;
                     pFb2[ (i*m_Mode.width + j) * 3 + 1] = colour.g;
-                    pFb2[ (i*m_Mode.width + j) * 3 + 2] = colour.b;
+                    pFb2[ (i*m_Mode.width + j) * 3 + 2] = colour.r;
                     break;
                 default:
                     WARNING("VbeDisplay: Pixel format not handled in fillRectangle.");
@@ -483,9 +510,9 @@ void VbeDisplay::packColour(rgb_t colour, size_t idx, uintptr_t pFb)
         case 24:
         {
             rgb_t *pFbRgb = reinterpret_cast<rgb_t*>(pFb);
-            pFbRgb[idx].r = static_cast<uint32_t>(r);
+            pFbRgb[idx].r = static_cast<uint32_t>(b);
             pFbRgb[idx].g = static_cast<uint32_t>(g);
-            pFbRgb[idx].b = static_cast<uint32_t>(b);
+            pFbRgb[idx].b = static_cast<uint32_t>(r);
             break;
         }
         case 32:

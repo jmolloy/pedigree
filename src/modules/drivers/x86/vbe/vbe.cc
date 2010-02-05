@@ -239,17 +239,17 @@ void entry()
   NOTICE("Switching display mode...");
 
   bool switchedSuccessfully = true;
-  if(!pDisplay->setScreenMode(mode_id = 0x117))
+  if(!pDisplay->setScreenMode(mode_id = 0x118))
   {
       NOTICE("vbe: Falling back to 800x600");
 
       // Attempt to fall back to 800x600
-      if(!pDisplay->setScreenMode(mode_id = 0x114))
+      if(!pDisplay->setScreenMode(mode_id = 0x115))
       {
           NOTICE("vbe: Falling back to 640x480");
 
           // Finally try and fall back to 640x480
-          if(!pDisplay->setScreenMode(mode_id = 0x111))
+          if(!pDisplay->setScreenMode(mode_id = 0x112))
           {
               ERROR("Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480.");
               switchedSuccessfully = false;
