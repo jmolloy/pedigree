@@ -76,24 +76,28 @@ void String::strip()
 
 void String::lstrip()
 {
+    // Sanity check...
+    if(!m_Data)
+        return;
+    
     if(m_Data[0] != ' ')
         return;
 
-    size_t n = m_Length;
-    while(n > 0 && m_Data[m_Length - n] == ' ')
-        n--;
+    size_t n = 0; //m_Length;
+    while(n < m_Length && m_Data[n] == ' ')
+        n++;
 
-    char *tmp = m_Data;
-    m_Data = new char [n];
-    memcpy(m_Data, &tmp[m_Length - n], n);
-    m_Data[n] = '\0';
-    delete []tmp;
-    m_Size = n + 1;
-    m_Length = n;
+    // Move the data to cover up the whitespace and avoid reallocating m_Data
+    m_Length -= n;
+    memmove(m_Data, (m_Data + n), m_Length);
 }
 
 void String::rstrip()
 {
+    // Sanity check...
+    if(!m_Data)
+        return;
+
     if(m_Data[m_Length - 1] != ' ')
         return;
 
@@ -101,12 +105,9 @@ void String::rstrip()
     while(n > 0 && m_Data[n - 1] == ' ')
         n--;
 
-    char *tmp = m_Data;
-    m_Data = new char [n + 1];
-    memcpy(m_Data, tmp, n);
-    m_Data[n] = '\0';
-    delete []tmp;
-    m_Size = n + 1;
+    // m_Size is still valid - it's the size of the buffer. m_Length is now
+    // updated to contain the proper length of the string, but the buffer is
+    // not reallocated.
     m_Length = n;
 }
 
