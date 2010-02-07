@@ -83,13 +83,14 @@ void String::lstrip()
     if(m_Data[0] != ' ')
         return;
 
-    size_t n = 0; //m_Length;
+    size_t n = 0;
     while(n < m_Length && m_Data[n] == ' ')
         n++;
 
     // Move the data to cover up the whitespace and avoid reallocating m_Data
     m_Length -= n;
     memmove(m_Data, (m_Data + n), m_Length);
+    m_Data[m_Length] = 0;
 }
 
 void String::rstrip()
@@ -109,6 +110,7 @@ void String::rstrip()
     // updated to contain the proper length of the string, but the buffer is
     // not reallocated.
     m_Length = n;
+    m_Data[m_Length] = 0;
 }
 
 List<String*> String::tokenise(char token)
