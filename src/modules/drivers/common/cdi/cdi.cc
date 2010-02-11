@@ -39,7 +39,7 @@ void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev)
         device->driver = driver;
 
         if (driver->init_device) {
-            driver->init_device(device);
+            driver->init_device(device->bus_data);
         }
     }
 }

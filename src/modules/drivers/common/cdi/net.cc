@@ -6,7 +6,7 @@
  * and/or modify it under the terms of the Do What The Fuck You Want 
  * To Public License, Version 2, as published by Sam Hocevar. See
  * http://sam.zoy.org/projects/COPYING.WTFPL for more details.
- */  
+ */
 
 #include <stdint.h>
 #include "cdi/lists.h"
@@ -74,7 +74,7 @@ void cdi_net_device_init(struct cdi_net_device* device)
  * Gibt die Netzwerkkarte mit der uebergebenen Geraetenummer
  * zureck
  */
-struct cdi_net_device* cdi_net_get_device(int num) 
+struct cdi_net_device* cdi_net_get_device(int num)
 {
     for (size_t i = 0; i < cdi_list_size(netcard_list); i++)
     {

@@ -32,7 +32,6 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos, size_t si
  */
 void cdi_storage_driver_init(struct cdi_storage_driver* driver)
 {
-    driver->drv.type = CDI_STORAGE;
     cdi_driver_init(reinterpret_cast<struct cdi_driver*>(driver));
 }
 
@@ -59,7 +58,6 @@ void cdi_storage_driver_register(struct cdi_storage_driver* driver)
  */
 void cdi_storage_device_init(struct cdi_storage_device* device)
 {
-    device->dev.type = CDI_STORAGE;
     cdi_cpp_disk_register(device->dev.backdev, device);
 }
 

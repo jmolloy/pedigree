@@ -43,7 +43,8 @@ CdiNet::~CdiNet()
 
 bool CdiNet::send(size_t nBytes, uintptr_t buffer)
 {
-    m_Device->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
+    /// \todo Figure out how to get a cdi_net_driver struct to this class
+    // m_Device->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
 
     return true;
 }

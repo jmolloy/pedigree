@@ -6706,7 +6706,7 @@ PCI_DEVTABLE	PciDevTable [] =
 	{ 0x11A9, 0x4240, "AMCC S5933Q", "pci matchmaker 9622qac" } ,
 	{ 0x11AB, 0x0146, "GT-64010/A", "System Ctrlr for R4xxx/5000 Family CPUs" } ,
 	{ 0x11AB, 0x11AB, "88E8055 PCI-E", "Gigabit Ethernet Controler" } ,
-	{ 0x11AB, 0x11AB-4632, "88E8055", "Marvell Yukon 88E8055 PCI-E Gigabit Ethernet Controller" } ,
+	{ 0x11AB, 0x11AB, "88E8055", "Marvell Yukon 88E8055 PCI-E Gigabit Ethernet Controller" } ,
 	{ 0x11AB, 0x13F8, "W8300", "802.11 Adapter" } ,
 	{ 0x11AB, 0x1fa6, "88W8300", "The Libertas WLAN 802.11b/g" } ,
 	{ 0x11AB, 0x1FA7, "00000000", "Libertas WLAN 802.11b/g" } ,

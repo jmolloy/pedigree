@@ -30,7 +30,7 @@ include = [
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/modules/drivers/common',
-    '#/src/modules/drivers/common/cdi/include',
+    './include',
     '#/src/modules/drivers/cdi/include',
     '.'
 ]

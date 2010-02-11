@@ -8,8 +8,8 @@
  * http://sam.zoy.org/projects/COPYING.WTFPL for more details.
  */
 
-#ifndef _PEDIGREE_CDI_OSDEP_H_
-#define _PEDIGREE_CDI_OSDEP_H_
+#ifndef _CDI_OSDEP_H_
+#define _CDI_OSDEP_H_
 
 #include <Module.h>
 
