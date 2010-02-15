@@ -31,6 +31,7 @@ static CdiIrqHandler cdi_irq_handler;
 #include "cdi/misc.h"
 #include "cdi/cmos.h"
 #include "cdi/io.h"
+#include "cdi/mem.h"
 
 /** Anzahl der verfuegbaren IRQs */
 #define IRQ_COUNT           0x10
@@ -177,63 +178,184 @@ int cdi_wait_irq(uint8_t irq, uint32_t timeout)
 }
 }
 
-
 /**
- * Reserviert physisch zusammenhaengenden Speicher.
+ * \german
+ * Reserviert einen Speicherbereich.
  *
- * @param size Groesse des benoetigten Speichers in Bytes
- * @param vaddr Pointer, in den die virtuelle Adresse des reservierten
- * Speichers geschrieben wird.
- * @param paddr Pointer, in den die physische Adresse des reservierten
- * Speichers geschrieben wird.
+ * @param size Größe des Speicherbereichs in Bytes
+ * @param flags Flags, die zusätzliche Anforderungen beschreiben
  *
- * @return 0 wenn der Speicher erfolgreich reserviert wurde, -1 sonst
+ * @return Eine cdi_mem_area bei Erfolg, NULL im Fehlerfall
+ * \endgerman
+ * \english
+ * Allocates a memory area.
+ *
+ * @param size Size of the memory area in bytes
+ * @param flags Flags that describe additional requirements
+ *
+ * @return A cdi_mem_area on success, NULL on failure
+ * \endenglish
  */
-int cdi_alloc_phys_mem(size_t size, void** vaddr, void** paddr)
+struct cdi_mem_area* cdi_mem_alloc(size_t size, cdi_mem_flags_t flags)
 {
-    MemoryRegion* region = new MemoryRegion("cdi");
-    size_t page_size = PhysicalMemoryManager::instance().getPageSize();
+    /// \todo Incorrectly assumes many flags won't be set
 
-    if (!PhysicalMemoryManager::instance().allocateRegion(
-        *region, (size + page_size - 1) / page_size,
+    MemoryRegion* region = new MemoryRegion("cdi");
+    size_t pageSize = PhysicalMemoryManager::getPageSize();
+
+    if(!PhysicalMemoryManager::instance().allocateRegion(
+        *region, (size + (pageSize - 1)) / pageSize,
         PhysicalMemoryManager::continuous, VirtualAddressSpace::Write, -1))
     {
-        WARNING("cdi: Couldn't allocate physical memory!");
-        return -1;
+        WARNING("cdi: cdi_mem_alloc: couldn't allocate memory");
+        delete region;
+        return 0;
     }
 
-    *vaddr = region->virtualAddress();
-    *paddr = reinterpret_cast<void*>(region->physicalAddress());
-
-    return 0;
+    struct cdi_mem_area *ret = new struct cdi_mem_area;
+    ret->size = size;
+    ret->vaddr = region->virtualAddress();
+    ret->paddr.num = 1;
+    ret->paddr.items = new struct cdi_mem_sg_item;
+    ret->paddr.items->start = region->physicalAddress();
+    ret->paddr.items->size = size;
+    ret->osdep.pMemRegion = reinterpret_cast<void*>(region);
+    return ret;
 }
 
 /**
- * Reserviert physisch zusammenhaengenden Speicher an einer definierten Adresse.
+ * \german
+ * Reserviert physisch zusammenhägenden Speicher an einer definierten Adresse
  *
- * @param size Groesse des benoetigten Speichers in Bytes
- * @param paddr Physikalische Adresse des angeforderten Speicherbereichs
+ * @param paddr Physische Adresse des angeforderten Speicherbereichs
+ * @param size Größe des benötigten Speichers in Bytes
  *
- * @return Virtuelle Adresse, wenn Speicher reserviert wurde, sonst 0
+ * @return Eine cdi_mem_area bei Erfolg, NULL im Fehlerfall
+ * \endgerman
+ * \english
+ * Reserves physically contiguous memory at a defined address
+ *
+ * @param paddr Physical address of the requested memory aread
+ * @param size Size of the requested memory area in bytes
+ *
+ * @return A cdi_mem_area on success, NULL on failure
+ * \endenglish
  */
-void* cdi_alloc_phys_addr(size_t size, uintptr_t paddr)
+struct cdi_mem_area* cdi_mem_map(uintptr_t paddr, size_t size)
 {
     MemoryRegion* region = new MemoryRegion("cdi");
-    size_t page_size = PhysicalMemoryManager::instance().getPageSize();
-    void* vaddr;
+    size_t pageSize = PhysicalMemoryManager::getPageSize();
 
-    if (!PhysicalMemoryManager::instance().allocateRegion(
-        *region, (size + page_size - 1) / page_size,
+    if(!PhysicalMemoryManager::instance().allocateRegion(
+        *region, (size + (pageSize - 1)) / pageSize,
         PhysicalMemoryManager::continuous, VirtualAddressSpace::Write,
         paddr))
     {
-        WARNING("cdi: Couldn't allocate physical address!");
-        return NULL;
+        WARNING("cdi: cdi_mem_map: couldn't allocate memory");
+        delete region;
+        return 0;
     }
 
-    vaddr = region->virtualAddress();
+    struct cdi_mem_area *ret = new struct cdi_mem_area;
+    ret->size = size;
+    ret->vaddr = region->virtualAddress();
+    ret->paddr.num = 1;
+    ret->paddr.items = new struct cdi_mem_sg_item;
+    ret->paddr.items->start = region->physicalAddress();
+    ret->paddr.items->size = size;
+    ret->osdep.pMemRegion = reinterpret_cast<void*>(region);
+    return ret;
+}
 
-    return vaddr;
+/**
+ * \german
+ * Gibt einen durch cdi_mem_alloc oder cdi_mem_map reservierten Speicherbereich
+ * frei
+ * \endgerman
+ * \english
+ * Frees a memory area that was previously allocated by cdi_mem_alloc or
+ * cdi_mem_map
+ * \endenglish
+ */
+void cdi_mem_free(struct cdi_mem_area* p)
+{
+    if(p)
+    {
+        MemoryRegion *mem = reinterpret_cast<MemoryRegion *>(p->osdep.pMemRegion);
+        delete mem;
+        delete p;
+    }
+}
+
+/**
+ * \german
+ * Gibt einen Speicherbereich zurück, der dieselben Daten wie @a p beschreibt,
+ * aber mindestens die gegebenen Flags gesetzt hat.
+ *
+ * Diese Funktion kann denselben virtuellen und physischen Speicherbereich wie
+ * @p benutzen oder sogar @p selbst zurückzugeben, solange der gemeinsam
+ * benutzte Speicher erst dann freigegeben wird, wenn sowohl @a p als auch der
+ * Rückgabewert durch cdi_mem_free freigegeben worden sind.
+ *
+ * Ansonsten wird ein neuer Speicherbereich reserviert und (außer wenn das
+ * Flag CDI_MEM_NOINIT gesetzt ist) die Daten werden aus @a p in den neu
+ * reservierten Speicher kopiert.
+ * \endgerman
+ * \english
+ * Returns a memory area that describes the same data as @a p does, but for
+ * which at least the given flags are set.
+ *
+ * This function may use the same virtual and physical memory areas as used in
+ * @a p, or it may even return @a p itself. In this case it must ensure that
+ * the commonly used memory is only freed when both @a p and the return value
+ * of this function have been freed by cdi_mem_free.
+ *
+ * Otherwise, a new memory area is allocated and data is copied from @a p into
+ * the newly allocated memory (unless CDI_MEM_NOINIT is set).
+ * \endenglish
+ */
+struct cdi_mem_area* cdi_mem_require_flags(struct cdi_mem_area* p,
+    cdi_mem_flags_t flags)
+{
+    // Pretend the memory area matches the given flags
+    /// \todo Fundamentally wrong
+    return p;
+}
+
+/**
+ * \german
+ * Kopiert die Daten von @a src nach @a dest. Beide Speicherbereiche müssen
+ * gleich groß sein.
+ *
+ * Das bedeutet nicht unbedingt eine physische Kopie: Wenn beide
+ * Speicherbereiche auf denselben physischen Speicher zeigen, macht diese
+ * Funktion nichts. Sie kann auch andere Methoden verwenden, um den Speicher
+ * effektiv zu kopieren, z.B. durch geeignetes Ummappen von Pages.
+ *
+ * @return 0 bei Erfolg, -1 sonst
+ * \endgerman
+ * \english
+ * Copies data from @a src to @a dest. Both memory areas must be of the same
+ * size.
+ *
+ * This does not necessarily involve a physical copy: If both memory areas
+ * point to the same physical memory, this function does nothing. It can also
+ * use other methods to achieve the same visible effect, e.g. by remapping
+ * pages.
+ *
+ * @return 0 on success, -1 otherwise
+ * \endenglish
+ */
+int cdi_mem_copy(struct cdi_mem_area* dest, struct cdi_mem_area* src)
+{
+    if(dest && src && dest->size == src->size)
+    {
+        if(dest->vaddr != src->vaddr)
+            memcpy(dest->vaddr, src->vaddr, src->size);
+        return 0;
+    }
+    else
+        return -1;
 }
 
 /**

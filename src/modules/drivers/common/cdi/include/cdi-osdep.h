@@ -94,6 +94,19 @@ typedef struct
 } cdi_dma_osdep;
 
 /**
+ * \german
+ * OS-spezifische Daten fuer Speicherbereiche
+ * \endgerman
+ * \english
+ * OS-specific data for memory areas.
+ * \endenglish
+ */
+typedef struct {
+    /// A MemoryRegion on the kernel heap
+    void *pMemRegion;
+} cdi_mem_osdep;
+
+/**
  * Tyndur-specific, handling that here until it's fixed
  */
 struct FILE
