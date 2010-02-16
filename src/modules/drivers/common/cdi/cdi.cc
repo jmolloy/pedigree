@@ -11,14 +11,67 @@
 //#include <stdlib.h>
 
 #include <Module.h>
+#include <machine/Device.h>
 
-#include "cdi.h"
-#include "cdi-osdep.h"
-#include "cdi/lists.h"
+#include <cdi.h>
+#include <cdi-osdep.h>
+#include <cdi/lists.h>
+#include <cdi/pci.h>
 
 static cdi_list_t drivers = NULL;
+static cdi_list_t devices = NULL;
 
 static void cdi_destroy(void);
+
+void iterateDeviceTree(Device *root)
+{
+    for(size_t i = 0; i < root->getNumChildren(); i++)
+    {
+        Device *p = root->getChild(i);
+
+        struct cdi_pci_device *dev = new struct cdi_pci_device;
+        dev->bus_data.bus_type = CDI_PCI;
+
+        dev->bus = p->getPciBusPosition();
+        dev->dev = p->getPciDevicePosition();
+        dev->function = p->getPciFunctionNumber();
+
+        dev->vendor_id = p->getPciVendorId();
+        dev->device_id = p->getPciDeviceId();
+
+        dev->class_id = p->getPciClassCode();
+        dev->subclass_id = p->getPciSubclassCode();
+        dev->interface_id = p->getPciProgInterface();
+
+        dev->rev_id = 0; /// \todo Implement into Device
+        
+        dev->irq = p->getInterruptNumber();
+
+        dev->resources = cdi_list_create();
+        for(size_t j = 0; j < p->addresses().count(); j++)
+        {
+            Device::Address *addr = p->addresses()[j];
+            struct cdi_pci_resource *res = new struct cdi_pci_resource;
+            if(addr->m_IsIoSpace)
+                res->type = CDI_PCI_IOPORTS;
+            else
+                res->type = CDI_PCI_MEMORY;
+            res->start = addr->m_Address;
+            res->length = addr->m_Size;
+            res->index = j;
+            res->address = reinterpret_cast<void*>(res->start);
+            
+            cdi_list_push(dev->resources, res);
+        }
+
+        dev->meta.backdev = reinterpret_cast<void *>(p);
+
+        cdi_list_push(devices, dev);
+
+        if(p->getNumChildren())
+            iterateDeviceTree(p);
+    }
+}
 
 /**
  * Muss vor dem ersten Aufruf einer anderen CDI-Funktion aufgerufen werden.
@@ -28,18 +81,33 @@ static void cdi_destroy(void);
 void cdi_init(void)
 {
     drivers = cdi_list_create();
+    devices = cdi_list_create();
+
+    // Iterate the device tree and add cdi_bus_data structs to the device list
+    // for each found device.
+    Device *root = &Device::root();
+    iterateDeviceTree(root);
 }
 
 void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev)
 {
     struct cdi_driver* driver = &dev;
-    struct cdi_device* device;
+    struct cdi_bus_data* device;
     int i;
-    for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(dev.devices, i))); i++) {
-        device->driver = driver;
-
+    for (i = 0; (device = reinterpret_cast<struct cdi_bus_data*>(cdi_list_get(devices, i))); i++) {
         if (driver->init_device) {
-            driver->init_device(device->bus_data);
+            cdi_device_type_t type = device->bus_type;
+            NOTICE("calling init_device");
+            struct cdi_device *p = driver->init_device(device);
+            if(p)
+            {
+                NOTICE("woot");
+                if(type == CDI_PCI)
+                {
+                    NOTICE("PCI device type");
+                    p->backdev = reinterpret_cast<struct cdi_pci_device*>(device)->meta.backdev;
+                }
+            }
         }
     }
 }
@@ -49,7 +117,7 @@ void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
     struct cdi_driver* driver = &dev;
     struct cdi_device* device;
     int i;
-    for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(dev.devices, i))); i++) {
+    for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(devices, i))); i++) {
         if (driver->remove_device) {
             driver->remove_device(device);
         }

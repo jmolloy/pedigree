@@ -9,13 +9,16 @@
  */
 
 #include <stdint.h>
-#include "cdi/lists.h"
-#include "cdi/net.h"
+#include <cdi/lists.h>
+#include <cdi/net.h>
+#include <Log.h>
 
 static unsigned long netcard_highest_id = 0;
 static cdi_list_t netcard_list;
 // FIXME: Sollten wahrscheinlich pro device sein und nicht nur pro driver
 static cdi_list_t ethernet_packet_receivers;
+
+static bool bListsDefined = false;
 
 typedef unsigned long dword;
 
@@ -39,8 +42,12 @@ void cdi_net_driver_init(struct cdi_net_driver* driver)
     driver->drv.type = CDI_NETWORK;
     cdi_driver_init(reinterpret_cast<struct cdi_driver*>(driver));
     
-    netcard_list = cdi_list_create();
-    ethernet_packet_receivers = cdi_list_create();
+    if(!bListsDefined)
+    {
+        netcard_list = cdi_list_create();
+        ethernet_packet_receivers = cdi_list_create();
+        bListsDefined = true;
+    }
 
 //    register_message_handler(RPC_ETHERNET_SEND_PACKET, rpc_send_packet);
 //    register_message_handler(RPC_ETHERNET_REGISTER_RECEIVER, rpc_register_receiver);
@@ -65,7 +72,9 @@ void cdi_net_device_init(struct cdi_net_device* device)
     cdi_list_push(netcard_list, device);
 
     // Beim tcpip Modul registrieren
+    NOTICE("Registering device...");
     cdi_cpp_net_register(device->dev.backdev, device);
+    NOTICE("Done");
 
     ++netcard_highest_id;
 }

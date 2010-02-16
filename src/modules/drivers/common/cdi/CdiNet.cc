@@ -23,18 +23,23 @@
 extern "C" {
     void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device);
     void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size);
+    struct cdi_net_device* cdi_net_get_device(int num);
 };
 
 CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
     Network(pDev), m_Device(device), m_StationInfo()
 {
+    NOTICE("1");
     setSpecificType(String("CDI NIC"));
 
     /// \todo Check endianness - *should* be fine, but we'll see...
     uint64_t mac = m_Device->mac;
+    NOTICE("2");
     m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(&mac), false);
 
+    NOTICE("3");
     NetworkStack::instance().registerDevice(this);
+    NOTICE("4");
 }
 
 CdiNet::~CdiNet()
@@ -43,10 +48,15 @@ CdiNet::~CdiNet()
 
 bool CdiNet::send(size_t nBytes, uintptr_t buffer)
 {
-    /// \todo Figure out how to get a cdi_net_driver struct to this class
-    // m_Device->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
-
-    return true;
+    NOTICE("CdiNet::send(" << Dec << nBytes << Hex << ")");
+    struct cdi_net_driver *driver = reinterpret_cast<struct cdi_net_driver *>(m_Device->dev.driver);
+    if(driver)
+    {
+        NOTICE("Sending!");
+        driver->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
+        return true;
+    }
+    return false;
 }
 
 StationInfo CdiNet::getStationInfo()
@@ -83,12 +93,16 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     Network* pDev = reinterpret_cast<Network*>(void_pdev);
 
     // Create a new CdiNet node
+    NOTICE("a - " << reinterpret_cast<uintptr_t>(pDev) << ", " << reinterpret_cast<uintptr_t>(device) << "...");
     CdiNet *pCdiNet = new CdiNet(pDev, device);
 
     // Replace pDev with pCdiNet
+    NOTICE("b");
     pCdiNet->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pCdiNet);
+    NOTICE("c");
     device->dev.backdev = reinterpret_cast<void*>(pCdiNet);
+    NOTICE("d");
 }
 
 
