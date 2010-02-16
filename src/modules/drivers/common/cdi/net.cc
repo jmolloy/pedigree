@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <cdi/lists.h>
 #include <cdi/net.h>
+#include <cdi/pci.h>
 #include <Log.h>
 
 static unsigned long netcard_highest_id = 0;
@@ -72,9 +73,15 @@ void cdi_net_device_init(struct cdi_net_device* device)
     cdi_list_push(netcard_list, device);
 
     // Beim tcpip Modul registrieren
-    NOTICE("Registering device...");
-    cdi_cpp_net_register(device->dev.backdev, device);
-    NOTICE("Done");
+    void *pDev = 0;
+    cdi_device_type_t type = device->dev.bus_data->bus_type;
+    if(type == CDI_PCI)
+    {
+        pDev = reinterpret_cast<struct cdi_pci_device*>(device->dev.bus_data)->meta.backdev;
+    }
+    if(!pDev)
+        return;
+    cdi_cpp_net_register(pDev, device);
 
     ++netcard_highest_id;
 }

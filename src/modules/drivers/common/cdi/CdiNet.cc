@@ -93,16 +93,12 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     Network* pDev = reinterpret_cast<Network*>(void_pdev);
 
     // Create a new CdiNet node
-    NOTICE("a - " << reinterpret_cast<uintptr_t>(pDev) << ", " << reinterpret_cast<uintptr_t>(device) << "...");
     CdiNet *pCdiNet = new CdiNet(pDev, device);
 
     // Replace pDev with pCdiNet
-    NOTICE("b");
     pCdiNet->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pCdiNet);
-    NOTICE("c");
     device->dev.backdev = reinterpret_cast<void*>(pCdiNet);
-    NOTICE("d");
 }
 
 

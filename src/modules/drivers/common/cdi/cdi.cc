@@ -96,18 +96,7 @@ void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev)
     int i;
     for (i = 0; (device = reinterpret_cast<struct cdi_bus_data*>(cdi_list_get(devices, i))); i++) {
         if (driver->init_device) {
-            cdi_device_type_t type = device->bus_type;
-            NOTICE("calling init_device");
             struct cdi_device *p = driver->init_device(device);
-            if(p)
-            {
-                NOTICE("woot");
-                if(type == CDI_PCI)
-                {
-                    NOTICE("PCI device type");
-                    p->backdev = reinterpret_cast<struct cdi_pci_device*>(device)->meta.backdev;
-                }
-            }
         }
     }
 }
