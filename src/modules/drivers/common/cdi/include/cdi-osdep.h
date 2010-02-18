@@ -35,8 +35,8 @@ struct cdi_driver;
  * \endenglish
  */
 #define CDI_DRIVER(name, drvobj, deps...) \
-    void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((drvobj).drv);} \
-    void mod_exit() {cdi_pedigree_walk_dev_list_destroy((drvobj).drv); (drvobj).drv.destroy();} \
+    void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((struct cdi_driver*)&(drvobj));} \
+    void mod_exit() {cdi_pedigree_walk_dev_list_destroy((struct cdi_driver*)&(drvobj)); (drvobj).drv.destroy();} \
     MODULE_NAME(name); \
     MODULE_ENTRY(mod_entry); \
     MODULE_EXIT(mod_exit); \
@@ -55,7 +55,7 @@ extern "C" {
  * @param driver Driver struct containing the list of devices and function
  *               pointers.
  */
-void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev);
+void cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev);
 
 /**
  * \english
@@ -66,7 +66,7 @@ void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev);
  * @param driver Driver struct containing the list of devices and function
  *               pointers.
  */
-void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev);
+void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver *dev);
 
 #ifdef __cplusplus
 }; // extern "C"

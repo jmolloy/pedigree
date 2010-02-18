@@ -89,21 +89,25 @@ void cdi_init(void)
     iterateDeviceTree(root);
 }
 
-void cdi_pedigree_walk_dev_list_init(struct cdi_driver dev)
+void cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev)
 {
-    struct cdi_driver* driver = &dev;
+    struct cdi_driver* driver = dev;
     struct cdi_bus_data* device;
     int i;
     for (i = 0; (device = reinterpret_cast<struct cdi_bus_data*>(cdi_list_get(devices, i))); i++) {
         if (driver->init_device) {
             struct cdi_device *p = driver->init_device(device);
+            if(p)
+            {
+                p->driver = driver;
+            }
         }
     }
 }
 
-void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver dev)
+void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver *dev)
 {
-    struct cdi_driver* driver = &dev;
+    struct cdi_driver* driver = dev;
     struct cdi_device* device;
     int i;
     for (i = 0; (device = reinterpret_cast<struct cdi_device*>(cdi_list_get(devices, i))); i++) {
@@ -132,7 +136,7 @@ void cdi_run_drivers(void)
     struct cdi_driver* driver;
     int i;
     for (i = 0; (driver = reinterpret_cast<struct cdi_driver*>(cdi_list_get(drivers, i))); i++) {
-        cdi_pedigree_walk_dev_list_init(*driver);
+        cdi_pedigree_walk_dev_list_init(driver);
     }
 }
 

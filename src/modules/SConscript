@@ -20,7 +20,7 @@ driver_common_subdirs = [
 
     # Pedigree-specific NICs
     '3c90x',
-    'rtl8139',
+    # 'rtl8139',
     'loopback',
 
     # Pedigree-specific USB drivers
@@ -35,6 +35,7 @@ cdi_drivers = [
     # CDI NIC drivers
     'e1000',
     'pcnet',
+    'rtl8139',
     'sis900',
 
     # CDI Disk drivers
@@ -48,6 +49,7 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     driver_arch_subdirs = [
         'pci',
         'ne2k',
+        'ps2mouse',
         'vbe'
     ]
 elif env['ARCH_TARGET'] == 'PPC':

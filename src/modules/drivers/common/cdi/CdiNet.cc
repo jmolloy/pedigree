@@ -29,17 +29,13 @@ extern "C" {
 CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
     Network(pDev), m_Device(device), m_StationInfo()
 {
-    NOTICE("1");
     setSpecificType(String("CDI NIC"));
 
     /// \todo Check endianness - *should* be fine, but we'll see...
     uint64_t mac = m_Device->mac;
-    NOTICE("2");
     m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(&mac), false);
 
-    NOTICE("3");
     NetworkStack::instance().registerDevice(this);
-    NOTICE("4");
 }
 
 CdiNet::~CdiNet()
@@ -48,11 +44,9 @@ CdiNet::~CdiNet()
 
 bool CdiNet::send(size_t nBytes, uintptr_t buffer)
 {
-    NOTICE("CdiNet::send(" << Dec << nBytes << Hex << ")");
     struct cdi_net_driver *driver = reinterpret_cast<struct cdi_net_driver *>(m_Device->dev.driver);
     if(driver)
     {
-        NOTICE("Sending!");
         driver->send_packet(m_Device, reinterpret_cast<void*>(buffer), nBytes);
         return true;
     }
