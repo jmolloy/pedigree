@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <sys/termios.h>
 #include <sys/signal.h>
+#include <sys/select.h>
 #include <sys/uio.h>
 
 #include <time.h>

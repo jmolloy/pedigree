@@ -7,16 +7,13 @@
 
 #include <_ansi.h>
 #include <sys/types.h>
+#include <sys/select.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef _WINSOCK_H
-struct timeval {
-  time_t      tv_sec;
-  suseconds_t tv_usec;
-};
 
 struct timezone {
   int tz_minuteswest;
@@ -32,11 +29,6 @@ struct timezone {
 #define ITIMER_REAL     0
 #define ITIMER_VIRTUAL  1
 #define ITIMER_PROF     2
-
-struct  itimerval {
-  struct  timeval it_interval;
-  struct  timeval it_value;
-};
 
 /* BSD time macros used by RTEMS code */
 //#if defined (__rtems__) || defined (__CYGWIN__)
@@ -76,11 +68,6 @@ int _EXFUN(utimes, (const char *__path, const struct timeval *__tvp));
 int _EXFUN(getitimer, (int __which, struct itimerval *__value));
 int _EXFUN(setitimer, (int __which, const struct itimerval *__value,
 					struct itimerval *__ovalue));
-
-/* The spec says this should be here?
- * http://www.opengroup.org/onlinepubs/007908775/xsh/select.html
- */
-int _EXFUN(select, (int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout));
 
 #ifdef __cplusplus
 }
