@@ -14,9 +14,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _SYSLOG_H
-#define _SYSLOG_H
+#ifndef _SYS_REBOOT_H
+#define _SYS_REBOOT_H
 
-#include <sys/syslog.h>
+#include <unistd.h>
+
+#define RB_AUTOBOOT         1
+#define RB_HALT             2
+#define RB_RECONFIG         4
+#define RB_NORECONFIGBOOT   8
+#define RB_NOSYNC           16
+
+_BEGIN_STD_C
+
+/// \todo In Pedigree, howto is currently ignored
+int _EXFUN(reboot, (int howto));
+
+_END_STD_C
 
 #endif

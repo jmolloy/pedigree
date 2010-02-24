@@ -12,6 +12,7 @@ _BEGIN_STD_C
 #define TIOCGWINSZ  0x1000  /* Get console window size. */
 #define TIOCSWINSZ  0x1001  /* Set console window size. */
 #define TIOCPKT     0x1002
+#define TIOCSCTTY   0x1003  /* Set controlling tty. */
 
 #define FIONREAD    0x2000  /* Number of bytes available to read */
 #define FIONBIO     0x2001  /* Non-blocking? */

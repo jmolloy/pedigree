@@ -63,6 +63,7 @@ typedef unsigned int tcflag_t;
 # define PARODD 001000
 
 // Defines for the c_lflag attribute of termios.
+#define ECHOKE  0000001
 #define ECHO    0000010
 #define ECHOE   0000020
 #define ECHOK   0000040
@@ -70,6 +71,7 @@ typedef unsigned int tcflag_t;
 #define ICANON  0000002
 #define IEXTEN  0000400 /* anybody know *what* this does?! */
 #define ECHOCTL 0001000
+#define ECHOPRT 0002000
 
 #define ISIG    0000001
 #define NOFLSH  0000200

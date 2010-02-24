@@ -2017,3 +2017,19 @@ char *basename(char *path)
     else
         return p;
 }
+
+int reboot(int howto)
+{
+    /// \todo Check permissions, throw EPERM if can't reboot the system
+    pedigree_reboot();
+
+    // Technically we shouldn't actually get here...
+    syslog(LOG_ERR, "pedigree_reboot returned?\n");
+    return 0;
+}
+
+pid_t tcgetpgrp(int fildes)
+{
+    STUBBED("tcgetpgrp");
+    return -1;
+}
