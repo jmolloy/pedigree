@@ -109,7 +109,7 @@ void init_install()
 
     if (VFS::instance().find(String("raw»/")) == 0)
     {
-        FATAL("No raw partition!");
+        // FATAL("No raw partition!");
     }
 
     // Setup the RAMFS for the mount table before the real HDDs. Doing it early
@@ -133,6 +133,17 @@ void init_install()
         FATAL("Couldn't create mount table in the RAMFS");
     File* mountTab = VFS::instance().find(String("root»/mount.tab"));
 
+    RadixTree<Filesystem*> myAliases = VFS::instance().getAliases();
+    NormalStaticString myMounts;
+    for(RadixTree<Filesystem*>::Iterator it = myAliases.begin();
+        it != myAliases.end();
+        it++)
+    {
+        //
+    }
+
+
+    /*
     List<VFS::Alias*> myAliases = VFS::instance().getAliases();
     NormalStaticString myMounts;
     for (List<VFS::Alias*>::Iterator i = myAliases.begin(); i != myAliases.end(); i++)
@@ -152,6 +163,7 @@ void init_install()
         myMounts += alias;
         myMounts += '\n';
     }
+    */
 
     // Write to the file
     mountTab->write(0, myMounts.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(myMounts)));
