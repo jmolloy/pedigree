@@ -201,9 +201,9 @@ def buildCdImage(target, source, env):
 
 if not env['ARCH_TARGET'] in ["X86", "X64", "PPC"]:
     print "No hard disk image being built, architecture doesn't need one."
-elif env["installer"]:
-    print "Oops, installer images aren't built yet. Tell pcmattman to write Python scripts"
-    print "to build these images, please."
+#elif env["installer"]:
+#    print "Oops, installer images aren't built yet. Tell pcmattman to write Python scripts"
+#    print "to build these images, please."
 else:
     # Define dependencies
     env.Depends(hddimg, 'libs')
