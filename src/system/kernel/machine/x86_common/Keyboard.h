@@ -101,7 +101,8 @@ private:
     /**
      * The IO port through which to access the keyboard.
      */
-    IoPort m_Port;
+    IoBase *m_pBase;
+    //IoPort m_Port;
 
     /**
      * Circular input buffer.

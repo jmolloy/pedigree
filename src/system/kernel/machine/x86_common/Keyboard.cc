@@ -18,6 +18,7 @@
 #include <machine/Machine.h>
 #include <utilities/utility.h>
 #include <machine/InputManager.h>
+#include <machine/Device.h>
 
 #ifdef DEBUGGER
   #include <Debugger.h>
@@ -45,7 +46,8 @@ X86Keyboard::X86Keyboard(uint32_t portBase) :
     m_bCtrl(false), m_bAlt(false), m_bAltGr(false),
     m_Combinator(0), m_bEscape(false),
     m_bCapsLock(false),
-    m_Port("PS/2 Keyboard controller"),
+    //m_Port("PS/2 Keyboard controller"),
+    m_pBase(0),
     m_BufStart(0), m_BufEnd(0), m_BufLength(0),
     m_IrqId(0), m_Callback(0)
 {
@@ -55,9 +57,36 @@ X86Keyboard::~X86Keyboard()
 {
 }
 
+IoBase *findPs2(Device *base)
+{
+    for (unsigned int i = 0; i < base->getNumChildren(); i++)
+    {
+        Device *pChild = base->getChild(i);
+
+        // Check that this device actually has IO regions
+        if(pChild->addresses().count() > 0)
+            if(pChild->addresses()[0]->m_Name == "ps2-base")
+                return pChild->addresses()[0]->m_Io;
+        
+        // If the device is a PS/2 base, we won't get here. So recurse.
+        if(pChild->getNumChildren())
+        {
+            IoBase *p = findPs2(pChild);
+            if(p)
+                return p;
+        }
+    }
+    return 0;
+}
+
 void X86Keyboard::initialise()
 {
-    m_Port.allocate(0x60/*portBase*/, 5);
+    m_pBase = findPs2(&Device::root());
+    if(!m_pBase)
+    {
+        // Handle the impossible case properly.
+        FATAL("X86Keyboard: Could not find the PS/2 base ports in the device tree");
+    }
 
     // Register the irq
     IrqManager &irqManager = *Machine::instance().getIrqManager();
@@ -79,12 +108,12 @@ char X86Keyboard::getChar()
         do
         {
             // Get the keyboard's status byte.
-            status = m_Port.read8(4);
+            status = m_pBase->read8(4);
         }
         while ( !(status & 0x01) ); // Spin until there's a key ready.
 
         // Get the scancode for the pending keystroke.
-        scancode = m_Port.read8(0);
+        scancode = m_pBase->read8(0);
 
         uint64_t c = scancodeToCharacter(scancode);
         if ((c&Keyboard::Special) || ((c&0xFFFFFFFF) > 0x7f)) return 0;
@@ -121,12 +150,12 @@ char X86Keyboard::getCharNonBlock()
     {
         uint8_t scancode, status;
         // Get the keyboard's status byte.
-        status = m_Port.read8(4);
+        status = m_pBase->read8(4);
         if (!(status & 0x01))
             return 0;
 
         // Get the scancode for the pending keystroke.
-        scancode = m_Port.read8(0);
+        scancode = m_pBase->read8(0);
 
         uint64_t c = scancodeToCharacter(scancode);
         if ((c&Keyboard::Special) || ((c&0xFFFFFFFF) > 0x7f)) return 0;
@@ -190,12 +219,12 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
     if (m_bDebugState) return true;
 
     // Get the keyboard's status byte.
-    status = m_Port.read8(4);
+    status = m_pBase->read8(4);
     if (!(status & 0x01))
         return true;
 
     // Get the scancode for the pending keystroke.
-    scancode = m_Port.read8(0);
+    scancode = m_pBase->read8(0);
 
     uint64_t c = scancodeToCharacter(scancode);
 #ifdef DEBUGGER

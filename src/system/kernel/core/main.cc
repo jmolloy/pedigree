@@ -133,6 +133,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
+
+#if defined(X86_COMMON) || defined(PPC_COMMON)
+  Machine::instance().initialiseDeviceTree();
+#endif
+
   machine.initialise();
 
   // Initialise the Kernel Elf class
@@ -158,10 +163,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Processor::initialise2();
 
   Processor::setInterrupts(true);
-
-#if defined(X86_COMMON) || defined(PPC_COMMON)
-  Machine::instance().initialiseDeviceTree();
-#endif
 
   // Initialise the kernel log.
   Log::instance().initialise();

@@ -164,6 +164,14 @@ void Pc::initialiseDeviceTree()
   pIsa->addChild(pAtaSlave);
   pAtaSlave->setParent(pIsa);
 
+  // PS/2
+  Controller *pPs2Base = new Controller();
+  pPs2Base->setSpecificType(String("ps2"));
+  pPs2Base->addresses().pushBack(new Device::Address(String("ps2-base"), 0x60, 5, true));
+  pPs2Base->setInterruptNumber(1); // 12 for mouse, handled by the driver
+  pIsa->addChild(pPs2Base);
+  pPs2Base->setParent(pIsa);
+
   Device::root().addChild(pIsa);
   pIsa->setParent(&Device::root());
 
