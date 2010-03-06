@@ -43,6 +43,8 @@ struct sockaddr_in
 
 #define INADDR_ANY        0
 #define INADDR_BROADCAST  0xffffffff
+#define INADDR_LOOPBACK   0x0100007f /// \todo endianness
+#define INADDR_LOCALHOST  INADDR_LOOPBACK
 
 #define INET_ADDRSTRLEN   16
 

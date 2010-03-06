@@ -2033,3 +2033,15 @@ pid_t tcgetpgrp(int fildes)
     STUBBED("tcgetpgrp");
     return -1;
 }
+
+int initgroups(const char *user, gid_t group)
+{
+    STUBBED("initgroups");
+    return 0;
+}
+
+int setgroups(int ngroups, const gid_t *gidset)
+{
+    STUBBED("setgroups");
+    return 0;
+}
