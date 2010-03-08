@@ -47,6 +47,11 @@
 #define TUI_MODE_CHANGED 98
 #define TUI_CHAR_RECV   99
 
+#define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
+#define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
+
+#define FONT_SIZE           12
+
 void log(char *c)
 {
     syscall1(TUI_LOG, reinterpret_cast<size_t>(c));
@@ -297,18 +302,18 @@ int main (int argc, char **argv)
     g_nWidth = mode.width;
     g_nHeight = mode.height;
 
-    g_NormalFont = new Font(12, "/system/fonts/DejaVuSansMono.ttf",
+    g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);
     if (!g_NormalFont)
     {
-        syslog(LOG_EMERG, "Error: Font 'DejaVuSansMono.ttf' loaded!");
+        syslog(LOG_EMERG, "Error: Font '%s' not loaded!", NORMAL_FONT_PATH);
         return 0;
     }
-    g_BoldFont = new Font(12, "/system/fonts/DejaVuSansMono-Bold.ttf",
+    g_BoldFont = new Font(FONT_SIZE, BOLD_FONT_PATH,
                           true, g_nWidth);
     if (!g_BoldFont)
     {
-        syslog(LOG_EMERG, "Error: Font 'DejaVuSansMono-Bold.ttf' not loaded!");
+        syslog(LOG_EMERG, "Error: Font '%s' not loaded!", BOLD_FONT_PATH);
         return 0;
     }
 
