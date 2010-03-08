@@ -19,6 +19,8 @@
 
 #include <machine/Device.h>
 #include <machine/IrqHandler.h>
+#include <Spinlock.h>
+#include <process/Semaphore.h>
 
 class Ps2Mouse : public Device, public IrqHandler
 {
@@ -26,7 +28,7 @@ class Ps2Mouse : public Device, public IrqHandler
         Ps2Mouse(Device *pDev);
         virtual ~Ps2Mouse();
 
-        virtual void initialise(IoBase *pBase);
+        virtual bool initialise(IoBase *pBase);
 
         virtual void getName(String &str)
         {
@@ -80,6 +82,12 @@ class Ps2Mouse : public Device, public IrqHandler
 
         /// Index into the data buffer
         size_t m_BufferIndex;
+
+        /// Lock for the mouse data buffer
+        Spinlock m_BufferLock;
+
+        /// IRQ wait semaphore
+        Semaphore m_IrqWait;
 
         Ps2Mouse(const Ps2Mouse&);
         void operator = (const Ps2Mouse&);

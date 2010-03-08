@@ -49,7 +49,7 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     driver_arch_subdirs = [
         'pci',
         'ne2k',
-        #'ps2mouse',
+        'ps2mouse',
         'vbe'
     ]
 elif env['ARCH_TARGET'] == 'PPC':

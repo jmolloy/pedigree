@@ -18,17 +18,58 @@
 #include "Ps2Mouse.h"
 
 // Global static object for the PS/2 mouse we'll be working with
-static Ps2Mouse g_Ps2Mouse;
+static Ps2Mouse *g_Ps2Mouse = 0;
+
+Device *findPs2Mouse(Device *base)
+{
+    for (unsigned int i = 0; i < base->getNumChildren(); i++)
+    {
+        Device *pChild = base->getChild(i);
+
+        // Check that this device actually has IO regions
+        if(pChild->addresses().count() > 0)
+            if(pChild->addresses()[0]->m_Name == "ps2-base")
+                return pChild;
+        
+        // If the device is a PS/2 base, we won't get here. So recurse.
+        if(pChild->getNumChildren())
+        {
+            Device *p = findPs2Mouse(pChild);
+            if(p)
+                return p;
+        }
+    }
+    return 0;
+}
 
 void entry()
 {
+    Device *root = &Device::root();
+    Device *pDevice = findPs2Mouse(root);
+    if(pDevice)
+    {
+        g_Ps2Mouse = new Ps2Mouse(pDevice);
+
+        if(g_Ps2Mouse->initialise(pDevice->addresses()[0]->m_Io))
+        {
+            g_Ps2Mouse->setParent(root);
+            root->addChild(g_Ps2Mouse);
+        }
+        else
+        {
+            delete g_Ps2Mouse;
+            g_Ps2Mouse = 0;
+        }
+    }
 }
 
-void exit()
+void unload()
 {
+    if(g_Ps2Mouse)
+        delete g_Ps2Mouse;
 }
 
 MODULE_NAME("ps2mouse");
 MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("");
+MODULE_EXIT(&unload);
+MODULE_DEPENDS(0);
