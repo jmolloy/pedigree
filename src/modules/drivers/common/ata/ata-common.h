@@ -56,7 +56,7 @@ inline AtaStatus ataWait(IoBase *pBase)
         status = pBase->read8(7);
 
     // Just to be complete, make sure DRQ is also clear
-    while(status & 0x4)
+    while(status & 0x8)
         status = pBase->read8(7);
 
     // And now verify that DRDY or ERR are asserted (or both!)
