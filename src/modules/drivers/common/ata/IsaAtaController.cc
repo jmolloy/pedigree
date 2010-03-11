@@ -37,7 +37,7 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   }
 
   // Look for a floating bus
-  if(m_pCommandRegs->read8(7) == 0xFF)
+  if(m_pControlRegs->read8(6) == 0xFF || m_pCommandRegs->read8(7) == 0xFF)
   {
       // No devices on this controller
       return;

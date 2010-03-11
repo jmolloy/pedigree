@@ -55,13 +55,18 @@ inline AtaStatus ataWait(IoBase *pBase)
     while(status & 0x80)
         status = pBase->read8(7);
 
-    // Just to be complete, make sure DRQ is also clear
-    while(status & 0x8)
-        status = pBase->read8(7);
+    // We no longer check DRQ as some commands depend on DRQ being set.
+    // For example, a data transfe uses DRQ to say data is available for
+    // reading.
 
-    // And now verify that DRDY or ERR are asserted (or both!)
-    while(!(status & 0x40) && !(status & 0x1))
-        status = pBase->read8(7);
+    // And now verify that DRDY or ERR are asserted (or both!), but only
+    // if DRQ is not set. DRDY will never be set if DRQ is set, and ERR
+    // will come out in the return value even if DRQ is set.
+    if(!(status & 0x8))
+    {
+        while(!(status & 0x40) && !(status & 0x1))
+            status = pBase->read8(7);
+    }
 
     // Okay, BSY is unset now. The drive is no longer busy, it is up to the
     // caller to read the status and verify further bits (eg, ERR)

@@ -53,16 +53,7 @@ bool AtaDisk::initialise()
     //IoBase *controlRegs = m_ControlRegs;
 
     // Drive spin-up
-    commandRegs->write8(0x00, 6);
-
-    //
-    // Start IDENTIFY command.
-    //
-
-    AtaStatus status;
-
-    // Wait for the drive before requesting a device change
-    ataWait(commandRegs);
+    //commandRegs->write8(0x00, 6);
 
     // Select the device to transmit to
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
@@ -70,6 +61,18 @@ bool AtaDisk::initialise()
 
     // Wait for it to be selected
     ataWait(commandRegs);
+
+    // DEVICE RESET
+    commandRegs->write8(8, 7);
+
+    // Wait for the drive to reset before requesting a device change
+    ataWait(commandRegs);
+
+    //
+    // Start IDENTIFY command.
+    //
+
+    AtaStatus status;
 
     // Disable IRQs, for the moment.
     //controlRegs->write8(0x01, 6);
@@ -290,9 +293,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
     // Wait for BSY and DRQ to be zero before selecting the device
     AtaStatus status;
     ataWait(commandRegs);
-    /*uint8_t status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);*/
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -304,9 +304,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
     // Wait for it to be selected
     ataWait(commandRegs);
-    /*status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-        status = commandRegs->read8(7);*/
 
     while (nSectors > 0)
     {
@@ -470,9 +467,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     // Wait for BSY and DRQ to be zero before selecting the device
     AtaStatus status;
     ataWait(commandRegs);
-    /*uint8_t status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);*/
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -484,9 +478,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
     // Wait for it to be selected
     ataWait(commandRegs);
-    /*status = commandRegs->read8(7);
-    while (((status & 0x80) != 0) && ((status & 0x8) == 0))
-    status = commandRegs->read8(7);*/
 
     uint16_t *tmp = reinterpret_cast<uint16_t*>(buffer);
 

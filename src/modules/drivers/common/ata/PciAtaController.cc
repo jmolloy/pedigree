@@ -102,13 +102,6 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // Fiddle with the IDE timing registers
     uint32_t ideTiming = PciBus::instance().readConfigSpace(pDev, 0x10);
-    /*ideTiming = 0;
-    ideTiming |= 1;
-    ideTiming |= 2;
-    ideTiming |= 4;
-    ideTiming |= 8;
-    ideTiming |= (2 << 12) | (1 << 8);
-    */
     ideTiming = 0xCCE0 | (3 << 4) | 4;
     ideTiming |= (ideTiming << 16);
     PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
@@ -116,7 +109,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     // The controller must be able to perform BusMaster IDE DMA transfers, or
     // else we have to fall back to PIO transfers.
     bool bDma = false;
-    if(pDev->getPciProgInterface() == 0x80)
+    if(pDev->getPciProgInterface() & 0x80)
     {
         NOTICE("    - This is a DMA capable controller");
         bDma = true;
@@ -204,6 +197,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster);
     diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster);
 }
+
 PciAtaController::~PciAtaController()
 {
 }
@@ -215,7 +209,9 @@ void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMast
     {
         delete pDisk;
         AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
+
         addChild(pAtapiDisk);
+
         if(!pAtapiDisk->initialise())
         {
             removeChild(pAtapiDisk);

@@ -44,8 +44,24 @@ void probeIsaDevice(Controller *pDev)
 
 void probePiixController(Device *pDev)
 {
+  static uint8_t interrupt = 14;
+
   // Create a new AtaController device node.
   Controller *pDevController = new Controller(pDev);
+  if(pDevController->getInterruptNumber() == 0xFF)
+  {
+      // No valid interrupt, handle
+      pDevController->setInterruptNumber(interrupt);
+      if(interrupt < 15)
+          interrupt++;
+      else
+      {
+          ERROR("PCI IDE: Controller found with no IRQ and IRQs 14 and 15 are already allocated");
+          delete pDevController;
+
+          return;
+      }
+  }
   PciAtaController *pController = new PciAtaController(pDevController, nController++);
 
   // Replace pDev with pController.
@@ -109,7 +125,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
             /// \todo ICH controller
             if(((pChild->getPciDeviceId() == 0x1230) ||    // PIIX
                 (pChild->getPciDeviceId() == 0x7010) ||    // PIIX3
-                (pChild->getPciDeviceId() == 0x7111)) &&   // PIIX3
+                (pChild->getPciDeviceId() == 0x7111)) &&   // PIIX4
                 (pChild->getPciFunctionNumber() == 1))     // IDE Controller
             {
                 // Right, we found a PIIX controller. Let's remove the ATA

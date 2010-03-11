@@ -26,6 +26,7 @@
 #include "AtaController.h"
 #include "BusMasterIde.h"
 #include "AtapiDisk.h"
+#include "ata-common.h"
 
 /// \todo Make portable
 /// \todo GET MEDIA STATUS to find out if there's actually media!
@@ -54,17 +55,24 @@ bool AtapiDisk::initialise()
   IoBase *controlRegs = m_ControlRegs;
 
   // Drive spin-up
-  commandRegs->write8(0x00, 6);
+  // commandRegs->write8(0x00, 6);
+
+  // Select the device to transmit to
+  uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+  commandRegs->write8(devSelect, 6);
+
+  // Wait for it to be selected
+  ataWait(commandRegs);
+
+  // DEVICE RESET
+  commandRegs->write8(8, 7);
+
+  // Wait for the drive to reset before requesting a device change
+  ataWait(commandRegs);
 
   //
   // Start IDENTIFY command.
   //
-
-  // Send drive select.
-  commandRegs->write8( (m_IsMaster)?0xA0:0xB0, 6 );
-  // Read the status 5 times as a delay for the drive to go about its business.
-  for (int i = 0; i < 5; i++)
-    commandRegs->read8(7);
 
   // Send IDENTIFY.
   uint8_t status = commandRegs->read8(7);
@@ -86,7 +94,9 @@ bool AtapiDisk::initialise()
   uint8_t m2 = commandRegs->read8(3);
   uint8_t m3 = commandRegs->read8(4);
   uint8_t m4 = commandRegs->read8(5);
+#ifdef DEBUG
   NOTICE("ATA 'magic registers': " << m1 << ", " << m2 << ", " << m3 << ", " << m4);
+#endif
   if(m1 == 0x01 && m2 == 0x01 && m3 == 0x14 && m4 == 0xeb)
   {
     // Run IDENTIFY PACKET DEVICE instead
@@ -423,11 +433,14 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     return false;
   }
 
+  AtaStatus status;
+
   // Grab our parent.
   AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
+  IoBase *controlRegs = m_ControlRegs;
 
   // Temporary storage, so we can save cycles later
   uint16_t *tmpPacket = new uint16_t[m_PacketSize / 2];
@@ -439,19 +452,15 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   if(nPackBytes & 0x1)
     nPackBytes++;
 
-  // Wait for BSY and DRQ to be zero before selecting the device
-  uint8_t status = commandRegs->read8(7);
-  while((status&0x80) || (status&0x8))
-    status = commandRegs->read8(7);
+  // Wait for the device to finish any outstanding operations
+  status = ataWait(commandRegs);
 
   // Select the device to transmit to
   uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
   commandRegs->write8(devSelect, 6);
 
   // Wait for it to be selected
-  status = commandRegs->read8(7);
-  while((status&0x80) || (status&0x8))
-    status = commandRegs->read8(7);
+  status = ataWait(commandRegs);
 
   // Verify that it's the correct device
   if(commandRegs->read8(6) != devSelect)
@@ -482,6 +491,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   commandRegs->write8(0xA0, 7);
 
   // Wait for the device to be ready to accept the command packet
+#if 0
   status = commandRegs->read8(7);
   while((status&0x80) || !(status&0x9))
          /*
@@ -494,11 +504,13 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   {
       status = commandRegs->read8(7);
   }
+#endif
+  status = ataWait(commandRegs);
 
   // Error?
-  if(status & 0x01)
+  if(status.reg.err)
   {
-    ERROR("ATAPI Packet command error [status=" << status << "]!");
+    ERROR("ATAPI Packet command error [status=" << status.__reg_contents << "]!");
     return false;
   }
 
@@ -508,6 +520,11 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   {
       bDmaSetup = m_BusMaster->begin(respBuff, nRespBytes, bWrite);
   }
+
+  // Ensure interrupts are actually enabled now.
+  /// \todo Find the module that's being naughty and disabling interrupts
+  bool oldInterrupts = Processor::getInterrupts();
+  Processor::setInterrupts(true);
 
   Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
 
@@ -536,18 +553,18 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     else
         break;
   }
-  status = commandRegs->read8(7);
-  while(status&0x80)
-    status = commandRegs->read8(7);
+  Processor::setInterrupts(oldInterrupts);
+  
+  status = ataWait(commandRegs);
 
-  if(status & 0x1)
+  if(status.reg.err)
   {
-    WARNING("ATAPI sendCommand failed after sending command packet [status=" << status << "]");
+    WARNING("ATAPI sendCommand failed after sending command packet [status=" << status.__reg_contents << "]");
     return false;
   }
 
   // Check for DRQ, if not set, there's nothing to read
-  if(!(status & 0x8))
+  if(!status.reg.drq)
     return true;
 
   // Read in the data, if we need to
@@ -582,8 +599,8 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   }
 
   // Complete
-  status = commandRegs->read8(7);
-  return (!(status & 0x01));
+  uint8_t endStatus = commandRegs->read8(7);
+  return (!(endStatus & 0x01));
 }
 
 bool AtapiDisk::readSense(uintptr_t buff)
