@@ -238,18 +238,20 @@ void entry()
 
   NOTICE("Switching display mode...");
 
+  /// \todo Desired mode should be in the configuration database with a fallback to
+  ///       a default if the desired mode cannot be entered.
   bool switchedSuccessfully = true;
-  if(!pDisplay->setScreenMode(mode_id = 0x118))
+  if(!pDisplay->setScreenMode(mode_id = 0x117)) // 0x118 for 24-bit
   {
       NOTICE("vbe: Falling back to 800x600");
 
       // Attempt to fall back to 800x600
-      if(!pDisplay->setScreenMode(mode_id = 0x115))
+      if(!pDisplay->setScreenMode(mode_id = 0x114)) // 0x115 for 24-bit
       {
           NOTICE("vbe: Falling back to 640x480");
 
           // Finally try and fall back to 640x480
-          if(!pDisplay->setScreenMode(mode_id = 0x112))
+          if(!pDisplay->setScreenMode(mode_id = 0x111)) // 0x112 for 24-bit
           {
               ERROR("Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480.");
               switchedSuccessfully = false;
