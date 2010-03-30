@@ -165,6 +165,18 @@ struct DhcpOptionServerIdent
   uint8_t a4;
 } __attribute__((packed));
 
+/** Defines the Parameter Request DHCP option (code=55) */
+#define DHCP_PARAMREQUEST 55
+struct DhcpOptionParamRequest
+{
+  DhcpOptionParamRequest() :
+    code(DHCP_PARAMREQUEST), len(0)
+  {};
+
+  uint8_t code;
+  uint8_t len; // Following this are len bytes, each a valid DHCP option code.
+} __attribute__((packed));
+
 /** Defines the End DHCP option (code=0xff) */
 #define DHCP_MSGEND   0xff
 struct DhcpOptionEnd
@@ -260,6 +272,7 @@ void entry()
 
       DhcpOptionMagicCookie cookie;
       DhcpOptionMsgType msgTypeOpt;
+      DhcpOptionParamRequest paramRequest;
       DhcpOptionEnd endOpt;
 
       msgTypeOpt.opt = DISCOVER;
@@ -267,6 +280,16 @@ void entry()
       size_t byteOffset = 0;
       byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
       byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
+      
+      // Want a subnet mask, router, and DNS server(s)
+      const uint8_t paramsWanted[] = {1, 3, 6};
+      
+      paramRequest.len = sizeof paramsWanted;
+      
+      byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
+      memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+      byteOffset += sizeof paramsWanted;
+      
       byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
       // throw into the send buffer and send it out
@@ -360,6 +383,8 @@ void entry()
       currentState = REQUEST_SENT;
 
       DhcpOptionAddrReq addrReq;
+      
+      paramRequest.len = sizeof paramsWanted;
 
       addrReq.a4 = (myIpWillBe & 0xFF000000) >> 24;
       addrReq.a3 = (myIpWillBe & 0x00FF0000) >> 16;
@@ -373,6 +398,11 @@ void entry()
       byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
       byteOffset = addOption(&addrReq, sizeof(addrReq), byteOffset, dhcp.options);
       byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, dhcp.options);
+      
+      byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
+      memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+      byteOffset += sizeof paramsWanted;
+      
       byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
       // throw into the send buffer and send it out
@@ -434,6 +464,7 @@ void entry()
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
         {
           opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
+          NOTICE("ACK opt=" << Dec << opt->code << Hex << "/" << opt->code << ".");
           if(opt->code == DHCP_MSGEND)
             break;
           else if(opt->code == DHCP_MSGTYPE)
