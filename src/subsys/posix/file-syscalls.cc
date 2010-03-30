@@ -1279,7 +1279,7 @@ void *posix_mmap(void *p)
     if(!f)
     {
         // Anonymous mmap instead?
-        if(flags & MAP_ANON)
+        if(flags & (MAP_ANON | MAP_SHARED))
         {
             // Allocation information
             VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -1335,7 +1335,7 @@ void *posix_mmap(void *p)
                     return 0;
                 }
             }
-            else if(flags & MAP_ANON)
+            else if(flags & (MAP_ANON | MAP_SHARED))
             {
                 // Anonymous mapping - get an address from the space allocator
                 if(!pProcess->getSpaceAllocator().allocate(len, mapAddress))
