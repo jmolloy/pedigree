@@ -162,7 +162,7 @@ void Process::kill()
   {
       NOTICE("Deleting this");
       // No parent: delete us then delete the thread.
-      delete this;
+      // delete this;
 
       Processor::information().getScheduler().killCurrentThread();
       // Should never get here.
