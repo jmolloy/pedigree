@@ -1223,13 +1223,29 @@ void setprotoent(int stayopen)
     STUBBED("setprotoent");
 }
 
-int getgrnam(void)
+struct group *getgrnam(const char *name)
 {
     STUBBED("getgrnam");
-    return 0;
+    
+    /// \todo HACK HACK HACKITY HACK SO VERY HACKY. Yeah, this is for Apache.
+    /// Also it's going to leak memory everywhere, and use it really badly.
+    
+    static struct group ret;
+    
+    ret.gr_name = (char*) malloc(128);
+    strcpy(ret.gr_name, name);
+    
+    ret.gr_gid = 3; // httpd
+    
+    ret.gr_mem = (char**) malloc(8);
+    ret.gr_mem[0] = (char*) malloc(128);
+    strcpy(ret.gr_mem[0], "httpd");
+    ret.gr_mem[1] = 0;
+    
+    return &ret;
 }
 
-int getgrgid(void)
+struct group *getgrgid(gid_t id)
 {
     STUBBED("getgrgid");
     return 0;
