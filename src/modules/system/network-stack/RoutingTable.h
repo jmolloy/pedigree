@@ -105,6 +105,8 @@ class RoutingTable
         static RoutingTable m_Instance;
 
         bool m_bHasRoutes;
+        
+        Mutex m_TableLock;
 
         /** Used to finalise the determined route */
         Network *route(IpAddress *ip, Config::Result *pResult);

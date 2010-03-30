@@ -17,10 +17,11 @@
 #include "RoutingTable.h"
 #include <config/Config.h>
 #include <machine/DeviceHashTree.h>
+#include <LockGuard.h>
 
 RoutingTable RoutingTable::m_Instance;
 
-RoutingTable::RoutingTable() : m_bHasRoutes(false)
+RoutingTable::RoutingTable() : m_bHasRoutes(false), m_TableLock(false)
 {
 }
 
@@ -30,6 +31,8 @@ RoutingTable::~RoutingTable()
 
 void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, Network *card)
 {
+    LockGuard<Mutex> guard(m_TableLock);
+    
     // Add to the hash tree, if not already done. This ensures the loopback
     // device is definitely available as an interface.
     DeviceHashTree::instance().add(card);
@@ -53,6 +56,8 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
 
 void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress subIp, String meta, Network *card)
 {
+    LockGuard<Mutex> guard(m_TableLock);
+    
     // Add to the hash tree, if not already done. This ensures the loopback
     // device is definitely available as an interface.
     DeviceHashTree::instance().add(card);
@@ -102,6 +107,8 @@ Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
 
 Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
 {
+    LockGuard<Mutex> guard(m_TableLock);
+    
     // Build a query to search for a direct match
     String str;
     str.sprintf("SELECT * FROM routes WHERE ipaddr=%d", ip->getIp());
@@ -146,6 +153,9 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
 
 Network *RoutingTable::DefaultRoute()
 {
+    // If already locked, will return false, so we don't unlock (DetermineRoute calls this function)
+    bool bLocked = m_TableLock.tryAcquire();
+    
     String str;
     str.sprintf("SELECT * FROM routes WHERE name='default'");
     Config::Result *pResult = Config::instance().query(str);
@@ -153,9 +163,15 @@ Network *RoutingTable::DefaultRoute()
         ERROR("Routing table query failed: " << pResult->errorMessage());
     else if(pResult->rows())
     {
+        if(bLocked)
+            m_TableLock.release();
         return route(0, pResult);
     }
+        
     delete pResult;
+    
+    if(bLocked)
+        m_TableLock.release();
 
     return 0;
 }
