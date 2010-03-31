@@ -20,13 +20,14 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <machine/Network.h>
+#include <utilities/RequestQueue.h>
 
 /**
  * The Pedigree network stack
  * This function is the base for receiving packets, and provides functionality
  * for keeping track of network devices in the system.
  */
-class NetworkStack
+class NetworkStack : public RequestQueue
 {
 public:
   NetworkStack();
@@ -68,6 +69,11 @@ public:
 private:
 
   static NetworkStack stack;
+  
+  /** Callback - classes are expected to inherit and override this function. It's called when a
+      request needs to be executed (by the worker thread). */
+  virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                  uint64_t p6, uint64_t p7, uint64_t p8);
 
   /** Loopback device */
   Network *m_pLoopback;
