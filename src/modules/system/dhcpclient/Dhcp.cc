@@ -464,7 +464,9 @@ void entry()
         while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
         {
           opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
+#ifdef DEBUG
           NOTICE("ACK opt=" << Dec << opt->code << Hex << "/" << opt->code << ".");
+#endif
           if(opt->code == DHCP_MSGEND)
             break;
           else if(opt->code == DHCP_MSGTYPE)
