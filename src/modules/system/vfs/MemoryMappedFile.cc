@@ -21,9 +21,9 @@
 
 MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
-MemoryMappedFile::MemoryMappedFile(File *pFile) :
+MemoryMappedFile::MemoryMappedFile(File *pFile, size_t extentOverride) :
     m_pFile(pFile), m_Mappings(), m_bMarkedForDeletion(false),
-    m_Extent(pFile->getSize() + 1), m_RefCount(0), m_Lock()
+    m_Extent(extentOverride ? extentOverride : pFile->getSize() + 1), m_RefCount(0), m_Lock()
 {
     if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
     {
@@ -200,7 +200,7 @@ MemoryMappedFileManager::~MemoryMappedFileManager()
 {
 }
 
-MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
+MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride)
 {
     m_CacheLock.acquire();
 
@@ -222,7 +222,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address)
     // or (b) the file was out of date.
     if (!pMmFile)
     {
-        pMmFile = new MemoryMappedFile(pFile);
+        pMmFile = new MemoryMappedFile(pFile, sizeOverride);
         m_Cache.insert(pFile, pMmFile);
     }
 

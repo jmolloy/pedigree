@@ -47,7 +47,7 @@ class MemoryMappedFile
 {
 public:
     /** Constructor - to be called from MemoryMappedFileManager only! */
-    MemoryMappedFile(File *pFile);
+    MemoryMappedFile(File *pFile, size_t extentOverride = 0);
 
     /** Destructor */
     virtual ~MemoryMappedFile();
@@ -126,7 +126,7 @@ public:
         \param pFile The VFS file to map.
         \param [out] address The address the file gets mapped to. 
         \return A pointer to a MemoryMappedFile object representing the mapped file. */
-    MemoryMappedFile *map(File *pFile, uintptr_t &address);
+    MemoryMappedFile *map(File *pFile, uintptr_t &address, size_t sizeOverride = 0);
 
     /** Remove a specific mapping from this address space.
         \param pFile The MemoryMappedFile to remove the mapping for. */
