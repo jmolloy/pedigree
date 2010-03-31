@@ -59,14 +59,29 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
   if(!packet || !nBytes)
       return;
 
+  // grab the IP header to find the size, so we can skip options and get to the TCP header
+  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
+  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
+  size_t payloadSize = BIG_TO_HOST16(ip->len) - ipHeaderSize;
+  
   // grab the header
-  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + sizeof(Ipv4::ipHeader));
+  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + ipHeaderSize);
+
+#ifdef DEBUG_ICMP  
+  NOTICE("ICMP type=" << header->type << ", code=" << header->code << ", checksum=" << header->checksum);
+  NOTICE("ICMP id=" << header->id << ", seq=" << header->seq);
+#endif
 
   // check the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
-  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), nBytes - offset - sizeof(Ipv4::ipHeader));
+  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), payloadSize); //nBytes - offset - sizeof(Ipv4::ipHeader));
   header->checksum = checksum;
+
+#ifdef DEBUG_ICMP
+  NOTICE("ICMP calculated checksum is " << calcChecksum << ", packet checksum = " << checksum);
+#endif
+  
   if(checksum == calcChecksum)
   {
     // what's come in?
