@@ -90,7 +90,9 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
       case ICMP_ECHO_REQUEST:
         {
 
+#ifdef DEBUG_ICMP
         NOTICE("ICMP: Echo request");
+#endif
 
         // send the reply
         send(
@@ -99,9 +101,8 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
           header->code,
           BIG_TO_HOST16(header->id),
           BIG_TO_HOST16(header->seq),
-          // *ugh* - these two lines are awful!
-          nBytes - offset - sizeof(Ipv4::ipHeader) - sizeof(icmpHeader),
-          packet + offset + sizeof(Ipv4::ipHeader) + sizeof(icmpHeader)
+          payloadSize - sizeof(icmpHeader),
+          packet + offset + ipHeaderSize + sizeof(icmpHeader)
         );
 
         }
