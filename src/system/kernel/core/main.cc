@@ -219,6 +219,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
+    
+    asm volatile ("hlt");
+    
 #ifdef THREADS
     Scheduler::instance().yield();
 #endif
