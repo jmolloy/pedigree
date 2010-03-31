@@ -23,12 +23,15 @@
 Arp Arp::arpInstance;
 
 Arp::Arp() :
-  m_ArpCache(), m_ArpRequests()
+  RequestQueue(), m_ArpCache(), m_ArpRequests()
 {
+    // By now threading should be active, as we're a module.
+    initialise();
 }
 
 Arp::~Arp()
 {
+    destroy();
 }
 
 bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard)
@@ -55,13 +58,8 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 
   // push this onto the list
   m_ArpRequests.pushBack(req);
-
-  // send the request
-  send(req->destIp, pCard);
-
-  // wait for the reply
-  req->waitSem.acquire(1, 15);
-  bool success = req->success;
+  
+  bool success = addRequest(0, reinterpret_cast<uint64_t>(req), reinterpret_cast<uint64_t>(pCard));
 
   // if sucessful, load into the passed MacAddress
   // callers should check the return value to ensure this is valid
@@ -103,6 +101,21 @@ void Arp::send(IpAddress req, Network* pCard)
   Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(request), pCard, destMac, ETH_ARP);
 
   delete request;
+}
+
+uint64_t Arp::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                             uint64_t p6, uint64_t p7, uint64_t p8)
+{
+  ArpRequest* req = reinterpret_cast<ArpRequest*>(p1);
+  Network *pCard = reinterpret_cast<Network*>(p2);
+  
+  // Send the request
+  req->success = false;
+  send(req->destIp, pCard);
+
+  // Wait for the reply
+  req->waitSem.acquire(1, 15);
+  return req->success ? 1 : 0;
 }
 
 void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
