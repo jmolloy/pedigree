@@ -300,7 +300,7 @@ void Cache::compact()
             physical_uintptr_t phys;
             size_t flags;
             va.getMapping(page, phys, flags);
-            PhysicalMemoryManager::instance().freePage(phys);
+            PhysicalMemoryManager::instance().freePageUnlocked(phys);
         }
 
         m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);

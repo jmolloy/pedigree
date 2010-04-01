@@ -30,6 +30,8 @@
  *\brief Implementation of the PhysicalMemoryManager for common x86 */
 class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 {
+  friend class CacheManager;
+  friend class Cache;
   public:
     /** Get the X86CommonPhysicalMemoryManager instance
      *\return instance of the X86CommonPhysicalMemoryManager */
@@ -73,6 +75,10 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     X86CommonPhysicalMemoryManager &operator = (const X86CommonPhysicalMemoryManager &);
 
     void unmapRegion(MemoryRegion *pRegion);
+    
+    /** Same as freePage, but without the lock. Will panic if the lock is unlocked.
+      * \note Use in the wrong place and you die. */
+    virtual void freePageUnlocked(physical_uintptr_t page);
 
     /** The actual page stack contains is a Stack of the pages with the constraints
      *  below4GB and below64GB and those pages without address size constraints.

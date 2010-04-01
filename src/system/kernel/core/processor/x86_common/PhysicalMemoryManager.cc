@@ -50,10 +50,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     ptr = m_PageStack.allocate(0);
     if(!ptr)
     {
-        // Release the lock: compacting caches needs to free pages.
-        m_Lock.release();
         CacheManager::instance().compactAll();
-        m_Lock.acquire();
 
         ptr = m_PageStack.allocate(0);
         if(!ptr)
@@ -91,6 +88,25 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
             m_Lock.release();
             g_AllocationCommand.freePage(page);
             m_Lock.acquire();
+        }
+    }
+#endif
+}
+void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
+{
+    if(!m_Lock.acquired())
+        FATAL("X86CommonPhysicalMemoryManager::freePageUnlocked called without an acquired lock");
+
+    m_PageStack.free(page);
+
+    // g_AllocationCommand.freePage uses our lock.
+    
+#if 0 // defined(TRACK_PAGE_ALLOCATIONS)             
+    if (Processor::m_Initialised == 2)
+    {
+        if (!g_AllocationCommand.isMallocing())
+        {
+            g_AllocationCommand.freePage(page);
         }
     }
 #endif

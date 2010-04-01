@@ -30,6 +30,8 @@ class MemoryRegion;
  *  functions to allocate and free pages. */
 class PhysicalMemoryManager
 {
+  friend class CacheManager;
+  friend class Cache;
   public:
     /** MemoryRegion can access our unmapRegion function. */
     friend class MemoryRegion;
@@ -135,6 +137,10 @@ class PhysicalMemoryManager
     /** The copy-constructor
      *\note Not implemented (singleton) */
     PhysicalMemoryManager &operator = (const PhysicalMemoryManager &);
+    
+    /** Same as freePage, but without the lock. Will panic if the lock is unlocked.
+      * \note Use in the wrong place and you die. */
+    virtual void freePageUnlocked(physical_uintptr_t page) = 0;
 
     /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
     virtual void unmapRegion(MemoryRegion *pRegion) = 0;
