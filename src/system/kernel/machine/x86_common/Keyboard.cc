@@ -195,6 +195,10 @@ void X86Keyboard::setDebugState(bool enableDebugState)
     if (m_bDebugState)
     {
         irqManager.enable(1, false);
+        
+        // Disable the PS/2 mouse
+        m_pBase->write8(0xD4, 4);
+        m_pBase->write8(0xF5, 4);
 
         // Zero the buffer.
         while (m_BufLength.tryAcquire(1)) ;
@@ -204,6 +208,10 @@ void X86Keyboard::setDebugState(bool enableDebugState)
     else
     {
         irqManager.enable(1, true);
+        
+        // Enable the PS/2 mouse
+        m_pBase->write8(0xD4, 4);
+        m_pBase->write8(0xF4, 4);
     }
 }
 
