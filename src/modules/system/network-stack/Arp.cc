@@ -184,7 +184,6 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
         ent->mac = sourceMac;
         ent->ip.setIp(header->ipSrc);
         m_ArpCache.insert(header->ipSrc, ent);
-        //m_ArpCache.pushBack(ent);
       }
 
       // search all the requests we've made, trigger the first we find
