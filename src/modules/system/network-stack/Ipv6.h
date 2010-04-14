@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_IP_H
-#define MACHINE_IP_H
+#ifndef MACHINE_IPV6_H
+#define MACHINE_IPV6_H
 
 #include <utilities/String.h>
 #include <utilities/Vector.h>
@@ -29,6 +29,8 @@
 
 /// \todo Move to a proper utilities header, called RingBuffer or something
 #include "TcpMisc.h"
+
+#include "IpCommon.h"
 
 /**
  * The Pedigree network stack - IPv4 layer

@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef MACHINE_IP_H
-#define MACHINE_IP_H
+#ifndef MACHINE_IPV4_H
+#define MACHINE_IPV4_H
 
 #include <utilities/String.h>
 #include <utilities/Vector.h>
@@ -30,9 +30,7 @@
 /// \todo Move to a proper utilities header, called RingBuffer or something
 #include "TcpMisc.h"
 
-#define IP_ICMP  0x01 
-#define IP_UDP   0x11
-#define IP_TCP   0x06
+#include "IpCommon.h"
 
 #define IP_FLAG_RSVD    (1 << 3)
 
