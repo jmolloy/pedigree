@@ -35,40 +35,20 @@ class NetworkFilter
             return m_Instance;
         }
         
-        /** Passes a Level 1 packet to filter callbacks.
+        /** Passes a Level n packet to filter callbacks.
           * Level 1 is the lowest level, handling for example Ethernet frames.
-          * \param packet Packet buffer, can be modified by callbacks
-          * \param size Size of the packet. Can NOT be modified by callbacks
-          * \return False if the packet has been rejected, true otherwise.
-          */
-        bool filterLevel1(uintptr_t packet, size_t sz);
-        
-        /** Passes a Level 2 packet to filter callbacks.
           * Level 2 handles the Level 1 payload. ARP, IP, and other low-level
-          * protocols are handled here.
-          * \param packet Packet buffer, can be modified by callbacks
-          * \param size Size of the packet. Can NOT be modified by callbacks
-          * \return False if the packet has been rejected, true otherwise.
-          */
-        bool filterLevel2(uintptr_t packet, size_t sz);
-        
-        /** Passes a Level 3 packet to filter callbacks.
+          *         protocols are handled here.
           * Level 3 handles the Level 2 payload. TCP, UDP, ICMP, etc...
-          * \param packet Packet buffer, can be modified by callbacks
-          * \param size Size of the packet. Can NOT be modified by callbacks
-          * \return False if the packet has been rejected, true otherwise.
-          */
-        bool filterLevel3(uintptr_t packet, size_t sz);
-        
-        /** Passes a Level 4 packet to filter callbacks.
           * Level 4 handles the Level 3 payload. Specific application protocols
           * such as FTP, DNS.
+          * \param level Level of callback to call
           * \param packet Packet buffer, can be modified by callbacks
           * \param size Size of the packet. Can NOT be modified by callbacks
           * \return False if the packet has been rejected, true otherwise.
           */
-        bool filterLevel4(uintptr_t packet, size_t sz);
-        
+        bool filter(size_t level, uintptr_t packet, size_t sz);
+
         /** Installs a callback for a specific level.
           * \return An identifier which can be passed to removeCallback to
           *         uninstall the callback, or ((size_t) -1) if unable to install.
@@ -83,6 +63,6 @@ class NetworkFilter
         static NetworkFilter m_Instance;
         
         /// Level -> Callback list mapping
-        Tree<size_t, List<bool (*)(uintptr_t, size_t)> > m_Callbacks;
+        Tree<size_t, List<void*>* > m_Callbacks;
 };
 
