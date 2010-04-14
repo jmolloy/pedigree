@@ -24,6 +24,8 @@
 
 #include "RoutingTable.h"
 
+#include "Filter.h"
+
 RawManager RawManager::manager;
 
 RawEndpoint::~RawEndpoint()

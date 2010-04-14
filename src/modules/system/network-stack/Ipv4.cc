@@ -33,6 +33,8 @@
 
 #include "RoutingTable.h"
 
+#include "Filter.h"
+
 Ipv4 Ipv4::ipInstance;
 
 Ipv4::Ipv4() :
@@ -121,6 +123,11 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
   // we cannot ever be too sure.
   if(!packet || !nBytes || !pCard)
       return;
+
+  // Check for filtering
+  /// \todo Add statistics to NICs
+  if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
+    return;
 
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);

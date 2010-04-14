@@ -20,6 +20,8 @@
 #include <Log.h>
 #include <processor/Processor.h>
 
+#include "Filter.h"
+
 Arp Arp::arpInstance;
 
 Arp::Arp() :
@@ -80,7 +82,7 @@ void Arp::send(IpAddress req, Network* pCard)
   request->hwType = HOST_TO_BIG16(0x0001); // ethernet
   request->hwSize = 6;
 
-  request->protocol = HOST_TO_BIG16(ETH_IP);
+  request->protocol = HOST_TO_BIG16(ETH_IPV4);
   request->protocolSize = 4;
 
   request->opcode = HOST_TO_BIG16(ARP_OP_REQUEST);
@@ -122,6 +124,11 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
 {
   if(!packet || !nBytes)
       return;
+
+  // Check for filtering
+  /// \todo Add statistics to NICs
+  if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
+    return;
 
   // grab the header
   arpHeader* header = reinterpret_cast<arpHeader*>(packet + offset);

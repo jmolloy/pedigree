@@ -42,6 +42,9 @@ class NetworkFilter
           * Level 3 handles the Level 2 payload. TCP, UDP, ICMP, etc...
           * Level 4 handles the Level 3 payload. Specific application protocols
           * such as FTP, DNS.
+          * \todo Callbacks should be able to return a code which requests a
+          *       specific response, such as ICMP Unreachable or something,
+          *       rather than just dropping the packet.
           * \param level Level of callback to call
           * \param packet Packet buffer, can be modified by callbacks
           * \param size Size of the packet. Can NOT be modified by callbacks

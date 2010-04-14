@@ -21,6 +21,8 @@
 #include "Ethernet.h"
 #include "Ipv4.h"
 
+#include "Filter.h"
+
 Icmp Icmp::icmpInstance;
 
 Icmp::Icmp()
@@ -63,6 +65,11 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
   Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
   size_t payloadSize = BIG_TO_HOST16(ip->len) - ipHeaderSize;
+
+  // Check for filtering
+  /// \todo Add statistics to NICs
+  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+    return;
   
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + ipHeaderSize);

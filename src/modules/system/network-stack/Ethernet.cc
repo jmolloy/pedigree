@@ -21,6 +21,9 @@
 #include <Module.h>
 #include <Log.h>
 
+
+#include "Filter.h"
+
 Ethernet Ethernet::ethernetInstance;
 
 Ethernet::Ethernet()
@@ -37,6 +40,11 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
 {
   if(!packet || !nBytes)
       return;
+  
+  // Check for filtering
+  /// \todo Add statistics to NICs
+  if(!NetworkFilter::instance().filter(1, packet, nBytes))
+    return; // Drop the packet.
 
   // grab the header
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);

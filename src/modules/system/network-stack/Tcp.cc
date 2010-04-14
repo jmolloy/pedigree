@@ -25,6 +25,8 @@
 
 #include "RoutingTable.h"
 
+#include "Filter.h"
+
 Tcp Tcp::tcpInstance;
 
 Tcp::Tcp()
@@ -114,6 +116,11 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // grab the IP header to find the size, so we can skip options and get to the TCP header
   Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
+
+  // Check for filtering
+  /// \todo Add statistics to NICs
+  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+    return;
 
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();
