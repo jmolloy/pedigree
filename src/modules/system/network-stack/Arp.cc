@@ -128,7 +128,10 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
+  {
+    pCard->droppedPacket();
     return;
+  }
 
   // grab the header
   arpHeader* header = reinterpret_cast<arpHeader*>(packet + offset);
@@ -212,6 +215,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     else
     {
       WARNING("Arp: Unknown ARP opcode: " << BIG_TO_HOST16(header->opcode));
+      pCard->badPacket();
     }
   }
 }

@@ -42,9 +42,11 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       return;
   
   // Check for filtering
-  /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(1, packet, nBytes))
+  {
+    pCard->droppedPacket();
     return; // Drop the packet.
+  }
 
   // grab the header
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet + offset);
@@ -75,6 +77,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
 
     default:
       NOTICE("Unknown ethernet packet!");
+      pCard->badPacket();
       break;
   }
 }

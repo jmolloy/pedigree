@@ -127,7 +127,10 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
+  {
+    pCard->droppedPacket();
     return;
+  }
 
   // grab the header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet + offset);
@@ -287,6 +290,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
       default:
         NOTICE("IP: Unknown packet type");
+        pCard->badPacket();
         break;
     }
     
@@ -297,5 +301,8 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     }
   }
   else
+  {
     NOTICE("IP: Checksum invalid!");
+    pCard->badPacket();
+  }
 }

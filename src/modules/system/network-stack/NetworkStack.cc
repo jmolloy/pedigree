@@ -65,6 +65,8 @@ void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint
 {
   if(!packet || !nBytes)
       return;
+      
+  pCard->gotPacket();
   
   // Some cards might be giving us a DMA address or something, so we copy
   // before passing on to the worker thread...

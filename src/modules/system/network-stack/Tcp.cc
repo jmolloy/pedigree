@@ -120,7 +120,10 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  {
+    pCard->droppedPacket();
     return;
+  }
 
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();
@@ -157,12 +160,14 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     if(header->checksum != calcChecksum)
     {
       WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << " and calculated is " << calcChecksum << "!");
+      pCard->badPacket();
       return;
     }
   }
   else
   {
       WARNING("TCP Packet arrived on port " << Dec << BIG_TO_HOST16(header->dest_port) << Hex << " without a checksum.");
+      pCard->badPacket();
       return; // must have a checksum
   }
 

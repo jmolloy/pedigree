@@ -69,7 +69,10 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  {
+    pCard->droppedPacket();
     return;
+  }
   
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + ipHeaderSize);
@@ -124,4 +127,6 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
         break;
     }
   }
+  else
+    pCard->badPacket();
 }

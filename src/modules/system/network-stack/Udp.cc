@@ -103,7 +103,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   StationInfo me = pCard->getStationInfo();
 
   IpAddress src = me.ipv4;
-  /// \todo IPv4ism, also, not the right broadcast address
+  /// \todo IPv4ism, also, not the right broadcast address for most subnets
   if(broadcast || !RoutingTable::instance().hasRoutes())
     dest.setIp(0xffffffff); // 255.255.255.255
 
@@ -132,7 +132,10 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  {
+    pCard->droppedPacket();
     return;
+  }
 
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();
@@ -164,6 +167,7 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     if(header->checksum != calcChecksum)
     {
       WARNING("UDP Checksum failed on incoming packet!");
+      pCard->badPacket();
       return;
     }
   }
@@ -171,3 +175,4 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // either no checksum, or calculation was successful, either way go on to handle it
   UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
 }
+

@@ -130,6 +130,19 @@ public:
 
   /** Calculates a checksum */
   static uint16_t calculateChecksum(uintptr_t buffer, size_t nBytes);
+  
+  /** Packet statistics */
+  
+  /// Called when a packet is picked up by the system, regardless of if it's
+  /// eventually bad or dropped
+  virtual void gotPacket() = 0;
+  
+  /// Called when a packet is dropped by the system
+  virtual void droppedPacket() = 0;
+  
+  /// Called when a packet is determined to be "bad" by the system (ie, invalid
+  /// checksum).
+  virtual void badPacket() = 0;
 
 };
 

@@ -67,6 +67,25 @@ class Nic3C90x : public Network, public IrqHandler
         void receiveThread();
 
         void reset();
+                
+        /// Called when a packet is picked up by the system
+        void gotPacket()
+        {
+            m_StationInfo.nPackets++;
+        }
+          
+        /// Called when a packet is dropped by the system
+        void droppedPacket()
+        {
+            m_StationInfo.nDropped++;
+        }
+          
+        /// Called when a packet is determined to be "bad" by the system (ie, invalid
+        /// checksum).
+        void badPacket()
+        {
+            m_StationInfo.nBad++;
+        }
 
         StationInfo m_StationInfo;
 
