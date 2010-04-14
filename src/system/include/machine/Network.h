@@ -34,10 +34,14 @@ class StationInfo
 {
   public:
     StationInfo() :
-      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServers(0), nDnsServers(0), mac()
+      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServers(0),
+      nDnsServers(0), mac(), nPackets(0), nDropped(0), nBad(0)
     {};
     StationInfo(const StationInfo& info) :
-      ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask), gateway(info.gateway), dnsServers(info.dnsServers), nDnsServers(info.nDnsServers), mac(info.mac)
+      ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask),
+      gateway(info.gateway), dnsServers(info.dnsServers),
+      nDnsServers(info.nDnsServers), mac(info.mac),
+      nPackets(info.nPackets), nDropped(info.nDropped), nBad(info.nBad)
     {};
     virtual ~StationInfo() {};
 
@@ -51,6 +55,10 @@ class StationInfo
     size_t      nDnsServers;
 
     MacAddress  mac; // MAC address
+    
+    size_t nPackets;    /// Number of packets passed through the interface
+    size_t nDropped;    /// Number of packets dropped by the filter
+    size_t nBad;        /// Number of packets dropped because they were invalid
 
     StationInfo& operator = (const StationInfo& info)
     {
