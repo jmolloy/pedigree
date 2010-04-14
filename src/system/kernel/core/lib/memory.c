@@ -239,4 +239,19 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   return s1;
 }
+
+int memcmp(const void *p1, const void *p2, size_t len)
+{
+    size_t i = len - 1;
+    const char* a = (const char*) p1;
+    const char* b = (const char*) p2;
+    for(; i >= 0; i--)
+    {
+        if(a[i] < b[i])
+            return -1;
+        else if(a[i] > b[i])
+            return 1;
+    }
+    return 0;
+}
 #endif

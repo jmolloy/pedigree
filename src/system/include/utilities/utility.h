@@ -89,6 +89,7 @@ void *wmemset(void *buf, int c, size_t len);
 void *dmemset(void *buf, unsigned int c, size_t len);
 void *memcpy(void *dest, const void *src, size_t len);
 void *memmove(void *s1, const void *s2, size_t n);
+int memcmp(const void *p1, const void *p2, size_t len);
 
 int strcmp(const char *p1, const char *p2);
 int strncmp(const char *p1, const char *p2, int n);
