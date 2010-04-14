@@ -19,7 +19,7 @@
 #include <Log.h>
 
 #include "Ethernet.h"
-#include "Ip.h"
+#include "Ipv4.h"
 
 Icmp Icmp::icmpInstance;
 

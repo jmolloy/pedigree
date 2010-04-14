@@ -20,7 +20,7 @@
 #include <Log.h>
 #include <syscallError.h>
 
-#include "Ip.h"
+#include "Ipv4.h"
 
 #include "RoutingTable.h"
 

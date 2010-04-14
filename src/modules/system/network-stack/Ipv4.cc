@@ -14,15 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "Ip.h"
+#include "Ipv4.h"
 #include <Module.h>
 #include <Log.h>
 
-// protocols we use in IP
+// Protocols we use in IPv4
 #include "Ethernet.h"
 #include "Arp.h"
 
-// child protocols of IP
+// Child protocols of IPv4
 #include "Icmp.h"
 #include "Udp.h"
 #include "Tcp.h"
@@ -109,7 +109,7 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   else
     macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
   if(macValid)
-    Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IP);
+    Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IPV4);
 
   delete [] newPacket;
   return macValid;

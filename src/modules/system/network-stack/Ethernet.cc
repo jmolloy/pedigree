@@ -16,7 +16,7 @@
 
 #include "Ethernet.h"
 #include "Arp.h"
-#include "Ip.h"
+#include "Ipv4.h"
 #include "RawManager.h"
 #include <Module.h>
 #include <Log.h>
@@ -58,7 +58,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       NOTICE("RARP packet!");
       break;
 
-    case ETH_IP:
+    case ETH_IPV4:
       //NOTICE("IP packet!");
 
       Ipv4::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));

@@ -24,7 +24,8 @@
 
 #define ETH_ARP   0x0806
 #define ETH_RARP  0x8035
-#define ETH_IP    0x0800
+#define ETH_IPV4  0x0800
+#define ETH_IPV6  0x86DD
 
 /**
  * The Pedigree network stack - Ethernet layer
