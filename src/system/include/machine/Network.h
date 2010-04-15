@@ -78,7 +78,7 @@ public:
     m_SpecificType = "Generic Network Device";
   }
   Network(Network *pDev) :
-    Device(pDev)
+    Device(pDev), m_StationInfo()
   {
   }
   virtual ~Network()
@@ -135,14 +135,26 @@ public:
   
   /// Called when a packet is picked up by the system, regardless of if it's
   /// eventually bad or dropped
-  virtual void gotPacket() = 0;
+  virtual void gotPacket()
+  {
+    m_StationInfo.nPackets++;
+  }
   
   /// Called when a packet is dropped by the system
-  virtual void droppedPacket() = 0;
+  virtual void droppedPacket()
+  {
+    m_StationInfo.nDropped++;
+  }
   
   /// Called when a packet is determined to be "bad" by the system (ie, invalid
   /// checksum).
-  virtual void badPacket() = 0;
+  virtual void badPacket()
+  {
+    m_StationInfo.nBad++;
+  }
+
+protected:
+  StationInfo m_StationInfo;
 
 };
 

@@ -295,7 +295,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
 }
 
 Nic3C90x::Nic3C90x(Network* pDev) :
-        Network(pDev), m_pBase(0), m_StationInfo(), m_isBrev(0), m_CurrentWindow(0),
+        Network(pDev), m_pBase(0), m_isBrev(0), m_CurrentWindow(0),
         m_pRxBuffVirt(0), m_pTxBuffVirt(0), m_pRxBuffPhys(0), m_pTxBuffPhys(0),
         m_RxBuffMR("3c90x-rxbuffer"), m_TxBuffMR("3c90x-txbuffer"),
         m_pDPD(0), m_DPDMR("3c90x-dpd"), m_pUPD(0), m_UPDMR("3c90x-upd"),

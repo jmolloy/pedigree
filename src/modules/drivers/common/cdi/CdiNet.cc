@@ -27,7 +27,7 @@ extern "C" {
 };
 
 CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
-    Network(pDev), m_Device(device), m_StationInfo()
+    Network(pDev), m_Device(device)
 {
     setSpecificType(String("CDI NIC"));
 

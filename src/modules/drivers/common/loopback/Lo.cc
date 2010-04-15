@@ -25,7 +25,7 @@
 
 Loopback Loopback::m_Instance;
 
-Loopback::Loopback() : Network(), m_StationInfo()
+Loopback::Loopback() : Network()
 {
     setSpecificType(String("Loopback-card"));
     NetworkStack::instance().registerDevice(this);
@@ -35,7 +35,7 @@ Loopback::Loopback() : Network(), m_StationInfo()
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
 }
 
-Loopback::Loopback(Network* pDev) : Network(pDev), m_StationInfo()
+Loopback::Loopback(Network* pDev) : Network(pDev)
 {
     setSpecificType(String("Loopback-card"));
     NetworkStack::instance().registerDevice(this);
