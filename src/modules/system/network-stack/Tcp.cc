@@ -114,6 +114,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
       return;
 
   // grab the IP header to find the size, so we can skip options and get to the TCP header
+  /// \todo Argh, IPv4-specific!
   Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
   size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
 
@@ -127,7 +128,9 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();
-  if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
+  if(cardInfo.ipv4.getIp() != ip->ipDest &&
+     ip->ipDest != 0xffffffff &&
+     cardInfo.broadcast.getIp() != ip->ipDest)
   {
     // not for us (depending on future requirements, we may need to implement a "catch-all"
     // flag in the same way as UDP)

@@ -34,14 +34,18 @@ extern BootIO bootIO;
 class StationInfo
 {
   public:
+    // Broadcast address defaults to 255.255.255.255, as we may need to
+    // broadcast without a known IPv4 address (and therefore no known network
+    // or broadcast address).
     StationInfo() :
-      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), gateway(), dnsServers(0),
-      nDnsServers(0), mac(), nPackets(0), nDropped(0), nBad(0)
+      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), broadcast(0xFFFFFFFF),
+      gateway(), gatewayIpv6(IpAddress::IPv6), dnsServers(0), nDnsServers(0),
+      mac(), nPackets(0), nDropped(0), nBad(0)
     {};
     StationInfo(const StationInfo& info) :
       ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask),
-      gateway(info.gateway), dnsServers(info.dnsServers),
-      nDnsServers(info.nDnsServers), mac(info.mac),
+      broadcast(info.broadcast), gateway(info.gateway), gatewayIpv6(info.gatewayIpv6),
+      dnsServers(info.dnsServers), nDnsServers(info.nDnsServers), mac(info.mac),
       nPackets(info.nPackets), nDropped(info.nDropped), nBad(info.nBad)
     {};
     virtual ~StationInfo() {};

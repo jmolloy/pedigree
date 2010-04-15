@@ -103,9 +103,9 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   StationInfo me = pCard->getStationInfo();
 
   IpAddress src = me.ipv4;
-  /// \todo IPv4ism, also, not the right broadcast address for most subnets
+  /// \todo IPv4ism, incorrect for IPv6
   if(broadcast || !RoutingTable::instance().hasRoutes())
-    dest.setIp(0xffffffff); // 255.255.255.255
+    dest = me.broadcast;
 
   header->checksum = 0;
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);

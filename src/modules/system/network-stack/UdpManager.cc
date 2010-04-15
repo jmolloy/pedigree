@@ -172,7 +172,7 @@ void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint
       passOn = e->acceptAnyAddress();
 
     // Not to us, but accepting any address?
-    if(to.getIp() != cardInfo.ipv4.getIp())
+    else if(to.getIp() != cardInfo.ipv4.getIp())
       passOn = e->acceptAnyAddress();
 
     // To us!

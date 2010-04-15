@@ -65,11 +65,9 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
 
   // Fill in the from address if it's not valid. Note that some protocols
   // can't do this as they need the source address in the checksum.
+  StationInfo me = pCard->getStationInfo();
   if(from == Network::convertToIpv4(0, 0, 0, 0))
-  {
-    StationInfo me = pCard->getStationInfo();
     from = me.ipv4;
-  }
 
   // Allocate space for the new packet with an IP header
   size_t newSize = nBytes + sizeof(ipHeader);
@@ -106,7 +104,7 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   ///       it doesn't happen?
   MacAddress destMac;
   bool macValid = true;
-  if(dest == 0xffffffff)
+  if(dest == me.broadcast)
     destMac.setMac(0xff);
   else
     macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
