@@ -16,3 +16,49 @@
  
 #include <network/IpAddress.h>
 
+String IpAddress::toString()
+{
+    if(m_Type == IPv4)
+    {
+        NormalStaticString str;
+        str.clear();
+        str.append(m_Ipv4 & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 8) & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 16) & 0xff);
+        str += ".";
+        str.append((m_Ipv4 >> 24) & 0xff);
+        return String(static_cast<const char*>(str));
+    }
+    else
+    {
+        NormalStaticString str;
+        str.clear();
+        bool bZeroComp = false;
+        for(size_t i = 0; i < 16; i++)
+        {
+            if(i && ((i % 2) == 0))
+            {
+                if(!bZeroComp)
+                    str += ":";
+                
+                // Zero-compression
+                if(!m_Ipv6[i] && !m_Ipv6[i+1])
+                {
+                    i++;
+                    bZeroComp = true;
+                    continue;
+                }
+                else if(bZeroComp)
+                {
+                    str += ":";
+                    bZeroComp = false;
+                }
+            }
+            str.append(m_Ipv6[i], 16, 2);
+        }
+        return String(static_cast<const char*>(str));
+    }
+    return String("");
+}
