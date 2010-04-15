@@ -36,12 +36,18 @@ String IpAddress::toString()
         NormalStaticString str;
         str.clear();
         bool bZeroComp = false;
+        bool alreadyZeroComp = false; // Compression can only come once.
+                                      // Naive algorithm, compresses first zeroes
+                                      // but not the largest set.
         for(size_t i = 0; i < 16; i++)
         {
             if(i && ((i % 2) == 0))
             {
                 if(!bZeroComp)
                     str += ":";
+                
+                if(alreadyZeroComp)
+                    continue;
                 
                 // Zero-compression
                 if(!m_Ipv6[i] && !m_Ipv6[i+1])
@@ -54,6 +60,7 @@ String IpAddress::toString()
                 {
                     str += ":";
                     bZeroComp = false;
+                    alreadyZeroComp = true;
                 }
             }
             str.append(m_Ipv6[i], 16, 2);
