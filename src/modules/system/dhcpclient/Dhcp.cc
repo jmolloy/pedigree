@@ -521,10 +521,14 @@ void entry()
 
       // set it up
       StationInfo host;
-      host.ipv4.setIp(Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4));
+      
+      uint32_t ipv4 = Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4);
+      uint32_t subnet = Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4);
+      
+      host.ipv4.setIp(ipv4);
 
       if(subnetMaskSet)
-        host.subnetMask.setIp(Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4));
+        host.subnetMask.setIp(subnet);
       else
       {
         NOTICE("Subnet mask fail");
@@ -547,6 +551,17 @@ void entry()
         host.dnsServers = 0;
         host.nDnsServers = 0;
       }
+      
+      // The number of hosts we can get on this network is found by swapping
+      // bits in the subnet mask (ie, 255.255.255.0 becomes 0.0.0.255).
+      uint32_t numHosts = subnet ^ 0xFFFFFFFF;
+      
+      // Then we take the IP we've been given, AND against the subnet to get the
+      // bottom of the IP range, and then add the number of hosts to find the
+      // broadcast address.
+      uint32_t broadcast = (ipv4 & subnet) + numHosts;
+      host.broadcast.setIp(broadcast);
+      
       pCard->setStationInfo(host);
       NOTICE("DHCP completed.");
       UdpManager::instance().returnEndpoint(e);

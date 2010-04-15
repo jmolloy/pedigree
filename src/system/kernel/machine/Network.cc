@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 James Molloy, Jörg Pfähler, Matthew Iselin,
+ *                    Heights College
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +24,31 @@
 uint32_t Network::convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
   return a | (b << 8) | (c << 16) | (d << 24);
+}
+
+IpAddress Network::convertToIpv4(
+        uint8_t a, uint8_t b,
+        uint8_t c, uint8_t d,
+        uint8_t e, uint8_t f,
+        uint8_t g, uint8_t h,
+        uint8_t i, uint8_t j,
+        uint8_t k, uint8_t l,
+        uint8_t m, uint8_t n,
+        uint8_t o, uint8_t p
+)
+{
+    uint8_t temp[16] = {
+                            a, b,
+                            c, d,
+                            e, f,
+                            g, h,
+                            i, j,
+                            k, l,
+                            m, n,
+                            o, p
+    };
+    IpAddress ipv6(temp);
+    return temp;
 }
 
 uint16_t Network::calculateChecksum(uintptr_t buffer, size_t nBytes)

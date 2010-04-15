@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 James Molloy, Jörg Pfähler, Matthew Iselin,
+ *                    Heights College
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -46,12 +47,14 @@ class StationInfo
     virtual ~StationInfo() {};
 
     IpAddress   ipv4;
-    IpAddress   ipv6; // not compulsory
+    IpAddress   ipv6; // Not compulsory
 
     IpAddress   subnetMask;
+    IpAddress   broadcast; /// Automatically calculated?
     IpAddress   gateway;
+    IpAddress   gatewayIpv6;
 
-    IpAddress*  dnsServers;
+    IpAddress*  dnsServers; /// Can contain IPv6 addresses.
     size_t      nDnsServers;
 
     MacAddress  mac; // MAC address
@@ -127,6 +130,18 @@ public:
 
   /** Converts an IPv4 address into an integer */
   static uint32_t convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+  
+  /** Converts an IPv6 address into an IpAddress object */
+  static IpAddress convertToIpv4(
+                                    uint8_t a, uint8_t b,
+                                    uint8_t c, uint8_t d,
+                                    uint8_t e, uint8_t f,
+                                    uint8_t g, uint8_t h,
+                                    uint8_t i, uint8_t j,
+                                    uint8_t k, uint8_t l,
+                                    uint8_t m, uint8_t n,
+                                    uint8_t o, uint8_t p
+  );
 
   /** Calculates a checksum */
   static uint16_t calculateChecksum(uintptr_t buffer, size_t nBytes);
