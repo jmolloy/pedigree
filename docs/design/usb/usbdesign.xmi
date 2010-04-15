@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMI verified="false" xmi.version="1.2" timestamp="2010-04-15T17:01:16" xmlns:UML="http://schema.omg.org/spec/UML/1.3" >
+<XMI verified="false" xmi.version="1.2" timestamp="2010-04-15T21:13:07" xmlns:UML="http://schema.omg.org/spec/UML/1.3" >
  <XMI.header>
   <XMI.documentation>
    <XMI.exporter>umbrello uml modeller http://uml.sf.net</XMI.exporter>
@@ -37,7 +37,11 @@
         <UML:Generalization xmi.idref="WiqDrut7jaBe" />
        </UML:GeneralizableElement.generalization>
       </UML:Class>
-      <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="tauXlWYdAs7H" name="UsbController" />
+      <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="tauXlWYdAs7H" name="UsbController" >
+       <UML:GeneralizableElement.generalization>
+        <UML:Generalization xmi.idref="Zs3tQclLKyRp" />
+       </UML:GeneralizableElement.generalization>
+      </UML:Class>
       <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="L2YghsQwvbLr" name="UsbHiSpeedHub" >
        <UML:GeneralizableElement.generalization>
         <UML:Generalization xmi.idref="JKZJo9ITHnEn" />
@@ -45,11 +49,10 @@
       </UML:Class>
       <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="2W6yNetsPNR0" name="EhciController" >
        <UML:GeneralizableElement.generalization>
-        <UML:Generalization xmi.idref="VJ8mc8LJpBjj" />
         <UML:Generalization xmi.idref="kiF2lAGQ0Uby" />
+        <UML:Generalization xmi.idref="VJ8mc8LJpBjj" />
        </UML:GeneralizableElement.generalization>
       </UML:Class>
-      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="2W6yNetsPNR0" xmi.id="VJ8mc8LJpBjj" parent="tauXlWYdAs7H" name="" />
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="2W6yNetsPNR0" xmi.id="kiF2lAGQ0Uby" parent="L2YghsQwvbLr" name="" />
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="L2YghsQwvbLr" xmi.id="JKZJo9ITHnEn" parent="F5BRvPJ74u9y" name="" />
       <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="Cm0x4P5nri37" name="UsbDevice" >
@@ -65,6 +68,7 @@
        <UML:GeneralizableElement.generalization>
         <UML:Generalization xmi.idref="WrncqYH8gXrN" />
         <UML:Generalization xmi.idref="MAZxMYPUlqXM" />
+        <UML:Generalization xmi.idref="Qf5ZbS88QkyI" />
        </UML:GeneralizableElement.generalization>
       </UML:Class>
       <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="lpGFg4Trjx5Y" name="UsbMultifunctionDevice" >
@@ -78,6 +82,7 @@
        <UML:GeneralizableElement.generalization>
         <UML:Generalization xmi.idref="TAjWiFWR8ynf" />
         <UML:Generalization xmi.idref="ZRoUUEAMbE0U" />
+        <UML:Generalization xmi.idref="rz8Fj4XO84CH" />
        </UML:GeneralizableElement.generalization>
       </UML:Class>
       <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="sOuNKA950PLe" name="UsbMassStorage" >
@@ -86,6 +91,7 @@
         <UML:Generalization xmi.idref="nMrdMu8cPcHv" />
         <UML:Generalization xmi.idref="tPZeF6zWF5gZ" />
         <UML:Generalization xmi.idref="u4ynJ0KC2vma" />
+        <UML:Generalization xmi.idref="hTQnq71gtdF9" />
        </UML:GeneralizableElement.generalization>
       </UML:Class>
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="Y0ltULZMNcQa" xmi.id="TAjWiFWR8ynf" parent="Cm0x4P5nri37" name="" />
@@ -125,10 +131,27 @@
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="jZJYEuz8uocB" xmi.id="Kslob0HeY3Er" parent="2VOjwQFSIrUV" name="" />
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="Cm0x4P5nri37" xmi.id="qL8PMKEnVaid" parent="2VOjwQFSIrUV" name="" />
       <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="sOuNKA950PLe" xmi.id="u4ynJ0KC2vma" parent="BPZ1zdbrQbbB" name="" />
+      <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="lj311DIuqsKD" name="Controller" >
+       <UML:GeneralizableElement.generalization>
+        <UML:Generalization xmi.idref="3MwNIOAyX1hh" />
+       </UML:GeneralizableElement.generalization>
+      </UML:Class>
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="tauXlWYdAs7H" xmi.id="Zs3tQclLKyRp" parent="lj311DIuqsKD" name="" />
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="lj311DIuqsKD" xmi.id="3MwNIOAyX1hh" parent="Z39hj5qlA3zZ" name="" />
+      <UML:Class visibility="public" isSpecification="false" namespace="Logical View" isAbstract="false" isLeaf="false" isRoot="false" xmi.id="75n9nTCRD8vN" name="UsbHumanInterface" >
+       <UML:GeneralizableElement.generalization>
+        <UML:Generalization xmi.idref="p5px90EW6NhG" />
+       </UML:GeneralizableElement.generalization>
+      </UML:Class>
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="s136FIxLUwIo" xmi.id="Qf5ZbS88QkyI" parent="75n9nTCRD8vN" name="" />
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="Y0ltULZMNcQa" xmi.id="rz8Fj4XO84CH" parent="75n9nTCRD8vN" name="" />
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="75n9nTCRD8vN" xmi.id="p5px90EW6NhG" parent="Cm0x4P5nri37" name="" />
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="sOuNKA950PLe" xmi.id="hTQnq71gtdF9" parent="BPZ1zdbrQbbB" name="" />
+      <UML:Generalization discriminator="" visibility="public" isSpecification="false" namespace="Logical View" child="2W6yNetsPNR0" xmi.id="VJ8mc8LJpBjj" parent="tauXlWYdAs7H" name="" />
      </UML:Namespace.ownedElement>
      <XMI.extension xmi.extender="umbrello" >
       <diagrams>
-       <diagram showopsig="1" linecolor="#ff0000" snapx="10" showattribassocs="1" snapy="10" linewidth="0" showattsig="1" showpubliconly="1" showpackage="1" showstereotype="1" name="Possible USB Design 2" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" canvasheight="813" canvaswidth="1536" localid="" snapcsgrid="0" showgrid="0" showops="1" usefillcolor="1" fillcolor="#ffff00" zoom="100" xmi.id="cPPwPuFeK1dd" documentation="" showscope="1" snapgrid="0" showatts="1" type="1" >
+       <diagram showopsig="1" linecolor="#ff0000" snapx="10" showattribassocs="1" snapy="10" linewidth="0" showattsig="1" showpubliconly="1" showpackage="1" showstereotype="1" name="Possible USB Design 2" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" canvasheight="813" canvaswidth="1365" localid="" snapcsgrid="0" showgrid="0" showops="1" usefillcolor="1" fillcolor="#ffff00" zoom="100" xmi.id="cPPwPuFeK1dd" documentation="" showscope="1" snapgrid="0" showatts="1" type="1" >
         <widgets>
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="506" showattsigs="601" showstereotype="1" y="146" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="64" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="F5BRvPJ74u9y" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="26" showattsigs="601" showstereotype="1" y="200" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="104" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="tauXlWYdAs7H" showscope="1" height="29" showopsigs="601" />
@@ -213,7 +236,7 @@
            <endpoint endx="91" endy="444" />
           </linepath>
          </assocwidget>
-         <assocwidget indexa="1" indexb="2" widgetaid="lpGFg4Trjx5Y" linecolor="none" totalcounta="2" xmi.id="NQ8HrTqPrUdg" widgetbid="Cm0x4P5nri37" totalcountb="4" type="500" linewidth="none" >
+         <assocwidget indexa="1" indexb="3" widgetaid="lpGFg4Trjx5Y" linecolor="none" totalcounta="2" xmi.id="NQ8HrTqPrUdg" widgetbid="Cm0x4P5nri37" totalcountb="4" type="500" linewidth="none" >
           <linepath>
            <startpoint startx="682" starty="554" />
            <endpoint endx="682" endy="672" />
@@ -237,7 +260,7 @@
            <endpoint endx="689" endy="433" />
           </linepath>
          </assocwidget>
-         <assocwidget indexa="3" indexb="1" widgetaid="Cm0x4P5nri37" linecolor="none" totalcounta="4" xmi.id="qL8PMKEnVaid" widgetbid="2VOjwQFSIrUV" totalcountb="2" type="500" linewidth="none" >
+         <assocwidget indexa="4" indexb="1" widgetaid="Cm0x4P5nri37" linecolor="none" totalcounta="4" xmi.id="qL8PMKEnVaid" widgetbid="2VOjwQFSIrUV" totalcountb="2" type="500" linewidth="none" >
           <linepath>
            <startpoint startx="704" starty="672" />
            <endpoint endx="704" endy="433" />
@@ -245,17 +268,17 @@
          </assocwidget>
         </associations>
        </diagram>
-       <diagram showopsig="1" linecolor="#ff0000" snapx="10" showattribassocs="1" snapy="10" linewidth="0" showattsig="1" showpubliconly="1" showpackage="1" showstereotype="1" name="Possible USB Design 1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" canvasheight="796" canvaswidth="1348" localid="" snapcsgrid="0" showgrid="0" showops="1" usefillcolor="1" fillcolor="#ffff00" zoom="100" xmi.id="Pvs0I0ZYHW9H" documentation="" showscope="1" snapgrid="0" showatts="1" type="1" >
+       <diagram showopsig="1" linecolor="#ff0000" snapx="10" showattribassocs="1" snapy="10" linewidth="0" showattsig="1" showpubliconly="1" showpackage="1" showstereotype="1" name="Possible USB Design 1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" canvasheight="813" canvaswidth="1365" localid="" snapcsgrid="0" showgrid="0" showops="1" usefillcolor="1" fillcolor="#ffff00" zoom="100" xmi.id="Pvs0I0ZYHW9H" documentation="" showscope="1" snapgrid="0" showatts="1" type="1" >
         <widgets>
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="476" showattsigs="601" showstereotype="1" y="170" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="64" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="F5BRvPJ74u9y" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="42" showattsigs="601" showstereotype="1" y="234" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="104" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="tauXlWYdAs7H" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="476" showattsigs="601" showstereotype="1" y="170" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="64" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="F5BRvPJ74u9y" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="42" showattsigs="601" showstereotype="1" y="234" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="104" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="tauXlWYdAs7H" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="259" showattsigs="601" showstereotype="1" y="108" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="121" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="L2YghsQwvbLr" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="41" showattsigs="601" showstereotype="1" y="115" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="106" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="2W6yNetsPNR0" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="545" showattsigs="601" showstereotype="1" y="571" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="81" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Cm0x4P5nri37" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="68" showattsigs="601" showstereotype="1" y="395" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="55" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Z39hj5qlA3zZ" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="690" showattsigs="601" showstereotype="1" y="174" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="80" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="s136FIxLUwIo" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="41" showattsigs="601" showstereotype="1" y="115" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="106" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="2W6yNetsPNR0" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="545" showattsigs="601" showstereotype="1" y="571" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="81" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Cm0x4P5nri37" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="68" showattsigs="601" showstereotype="1" y="395" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="55" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Z39hj5qlA3zZ" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="690" showattsigs="601" showstereotype="1" y="174" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="80" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="s136FIxLUwIo" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="764" showattsigs="601" showstereotype="1" y="571" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="173" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="lpGFg4Trjx5Y" showscope="1" height="29" showopsigs="601" />
-         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="683" showattsigs="601" showstereotype="1" y="263" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="101" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Y0ltULZMNcQa" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="683" showattsigs="601" showstereotype="1" y="263" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="101" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Y0ltULZMNcQa" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="764" showattsigs="601" showstereotype="1" y="386" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="124" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="sOuNKA950PLe" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="453" showattsigs="601" showstereotype="1" y="270" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="118" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="gSQBKqRyie4f" showscope="1" height="29" showopsigs="601" />
          <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="543" showattsigs="601" showstereotype="1" y="401" showattributes="1" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" width="65" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="jZJYEuz8uocB" showscope="1" height="29" showopsigs="601" />
@@ -383,13 +406,13 @@
         </widgets>
         <messages/>
         <associations>
-         <assocwidget indexa="1" indexb="1" widgetaid="BPZ1zdbrQbbB" linecolor="none" totalcounta="2" xmi.id="I1U6K4CZtSKZ" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
+         <assocwidget indexa="1" indexb="2" widgetaid="BPZ1zdbrQbbB" linecolor="none" totalcounta="2" xmi.id="I1U6K4CZtSKZ" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
           <linepath>
            <startpoint startx="595" starty="514" />
            <endpoint endx="312" endy="426" />
           </linepath>
          </assocwidget>
-         <assocwidget indexa="1" indexb="2" widgetaid="Cm0x4P5nri37" linecolor="none" totalcounta="2" xmi.id="ZlIsfFdr1dp3" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
+         <assocwidget indexa="1" indexb="1" widgetaid="Cm0x4P5nri37" linecolor="none" totalcounta="2" xmi.id="ZlIsfFdr1dp3" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
           <linepath>
            <startpoint startx="594" starty="337" />
            <endpoint endx="312" endy="397" />
@@ -405,6 +428,113 @@
           <linepath>
            <startpoint startx="892" starty="436" />
            <endpoint endx="634" endy="514" />
+          </linepath>
+         </assocwidget>
+        </associations>
+       </diagram>
+       <diagram showopsig="1" linecolor="#ff0000" snapx="10" showattribassocs="1" snapy="10" linewidth="0" showattsig="1" showpubliconly="1" showpackage="1" showstereotype="1" name="Possible USB Design 3 (proposed solution)" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" canvasheight="813" canvaswidth="1365" localid="" snapcsgrid="0" showgrid="0" showops="1" usefillcolor="1" fillcolor="#ffff00" zoom="100" xmi.id="KBHvfaRPfDRD" documentation="" showscope="1" snapgrid="0" showatts="1" type="1" >
+        <widgets>
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="374" showattsigs="601" showstereotype="1" y="247" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="64" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="F5BRvPJ74u9y" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="42" showattsigs="601" showstereotype="1" y="234" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="104" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="tauXlWYdAs7H" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="259" showattsigs="601" showstereotype="1" y="108" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="121" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="L2YghsQwvbLr" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="41" showattsigs="601" showstereotype="1" y="115" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="106" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="2W6yNetsPNR0" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="496" showattsigs="601" showstereotype="1" y="363" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="81" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Cm0x4P5nri37" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="42" showattsigs="601" showstereotype="1" y="406" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="55" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Z39hj5qlA3zZ" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="538" showattsigs="601" showstereotype="1" y="98" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="80" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="s136FIxLUwIo" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="819" showattsigs="601" showstereotype="1" y="416" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="173" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="lpGFg4Trjx5Y" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="875" showattsigs="601" showstereotype="1" y="107" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="101" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="Y0ltULZMNcQa" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="610" showattsigs="601" showstereotype="1" y="543" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="124" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="sOuNKA950PLe" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="277" showattsigs="601" showstereotype="1" y="475" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="39" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="BPZ1zdbrQbbB" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="49" showattsigs="601" showstereotype="1" y="314" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="78" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="lj311DIuqsKD" showscope="1" height="29" showopsigs="601" />
+         <classwidget linecolor="none" usesdiagramfillcolor="1" linewidth="none" showoperations="1" usesdiagramusefillcolor="1" showpubliconly="1" showpackage="1" x="682" showattsigs="601" showstereotype="1" y="222" showattributes="1" font="DejaVu Sans,9,-1,0,75,0,0,0,0,0" width="146" isinstance="0" usefillcolor="1" fillcolor="none" xmi.id="75n9nTCRD8vN" showscope="1" height="29" showopsigs="601" />
+         <floatingtext linecolor="none" usesdiagramfillcolor="1" linewidth="none" usesdiagramusefillcolor="1" x="72" showstereotype="1" y="347" text="virtual" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" pretext="" role="700" width="46" isinstance="0" posttext="" usefillcolor="1" fillcolor="none" xmi.id="zOQKWwEugt2z" height="19" />
+         <floatingtext linecolor="none" usesdiagramfillcolor="1" linewidth="none" usesdiagramusefillcolor="1" x="448" showstereotype="1" y="372" text="virtual" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" pretext="" role="700" width="46" isinstance="0" posttext="" usefillcolor="1" fillcolor="none" xmi.id="zOQKWwEugt2z" height="19" />
+         <floatingtext linecolor="none" usesdiagramfillcolor="1" linewidth="none" usesdiagramusefillcolor="1" x="228" showstereotype="1" y="472" text="virtual" font="DejaVu Sans,9,-1,0,50,0,0,0,0,0" pretext="" role="700" width="46" isinstance="0" posttext="" usefillcolor="1" fillcolor="none" xmi.id="zOQKWwEugt2z" height="19" />
+        </widgets>
+        <messages/>
+        <associations>
+         <assocwidget indexa="1" indexb="1" widgetaid="2W6yNetsPNR0" linecolor="none" totalcounta="2" xmi.id="VJ8mc8LJpBjj" widgetbid="tauXlWYdAs7H" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="104" starty="144" />
+           <endpoint endx="104" endy="234" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="2W6yNetsPNR0" linecolor="none" totalcounta="2" xmi.id="kiF2lAGQ0Uby" widgetbid="L2YghsQwvbLr" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="147" starty="115" />
+           <endpoint endx="259" endy="115" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="L2YghsQwvbLr" linecolor="none" totalcounta="2" xmi.id="JKZJo9ITHnEn" widgetbid="F5BRvPJ74u9y" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="380" starty="137" />
+           <endpoint endx="380" endy="247" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="Cm0x4P5nri37" linecolor="none" totalcounta="2" xmi.id="ZlIsfFdr1dp3" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="496" starty="392" />
+           <endpoint endx="97" endy="406" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="2" widgetaid="BPZ1zdbrQbbB" linecolor="none" totalcounta="2" xmi.id="I1U6K4CZtSKZ" widgetbid="Z39hj5qlA3zZ" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="277" starty="475" />
+           <endpoint endx="97" endy="435" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="lpGFg4Trjx5Y" linecolor="none" totalcounta="2" xmi.id="NQ8HrTqPrUdg" widgetbid="Cm0x4P5nri37" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="819" starty="416" />
+           <endpoint endx="577" endy="392" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="F5BRvPJ74u9y" linecolor="none" totalcounta="2" xmi.id="QkZPNORMGGFr" widgetbid="Cm0x4P5nri37" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="438" starty="276" />
+           <endpoint endx="496" endy="363" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="sOuNKA950PLe" linecolor="none" totalcounta="2" xmi.id="ajmGFdbvaZ4w" widgetbid="Cm0x4P5nri37" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="610" starty="543" />
+           <endpoint endx="577" endy="392" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="tauXlWYdAs7H" linecolor="none" totalcounta="2" xmi.id="Zs3tQclLKyRp" widgetbid="lj311DIuqsKD" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="62" starty="263" />
+           <endpoint endx="62" endy="314" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="lj311DIuqsKD" linecolor="none" totalcounta="2" xmi.id="3MwNIOAyX1hh" widgetbid="Z39hj5qlA3zZ" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="68" starty="343" />
+           <endpoint endx="68" endy="406" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="s136FIxLUwIo" linecolor="none" totalcounta="2" xmi.id="Qf5ZbS88QkyI" widgetbid="75n9nTCRD8vN" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="618" starty="127" />
+           <endpoint endx="682" endy="222" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="2" widgetaid="Y0ltULZMNcQa" linecolor="none" totalcounta="2" xmi.id="rz8Fj4XO84CH" widgetbid="75n9nTCRD8vN" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="875" starty="136" />
+           <endpoint endx="828" endy="222" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="2" widgetaid="75n9nTCRD8vN" linecolor="none" totalcounta="2" xmi.id="p5px90EW6NhG" widgetbid="Cm0x4P5nri37" totalcountb="3" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="682" starty="251" />
+           <endpoint endx="577" endy="363" />
+          </linepath>
+         </assocwidget>
+         <assocwidget indexa="1" indexb="1" widgetaid="sOuNKA950PLe" linecolor="none" totalcounta="2" xmi.id="hTQnq71gtdF9" widgetbid="BPZ1zdbrQbbB" totalcountb="2" type="500" linewidth="none" >
+          <linepath>
+           <startpoint startx="610" starty="543" />
+           <endpoint endx="316" endy="504" />
           </linepath>
          </assocwidget>
         </associations>
@@ -428,14 +558,16 @@
   </UML:Model>
  </XMI.content>
  <XMI.extensions xmi.extender="umbrello" >
-  <docsettings viewid="cjJgCCmMNhPi" uniqueid="q0UXCeHY1yvk" documentation="" />
+  <docsettings viewid="KBHvfaRPfDRD" uniqueid="zOQKWwEugt2z" documentation="" />
   <listview>
    <listitem open="1" type="800" label="Views" >
     <listitem open="1" type="801" id="Logical View" >
      <listitem open="0" type="807" id="Pvs0I0ZYHW9H" label="Possible USB Design 1" />
      <listitem open="0" type="807" id="cPPwPuFeK1dd" label="Possible USB Design 2" />
+     <listitem open="0" type="807" id="KBHvfaRPfDRD" label="Possible USB Design 3 (proposed solution)" />
      <listitem open="0" type="807" id="cjJgCCmMNhPi" label="Virtual Inheritance USB Design" />
      <listitem open="0" type="807" id="Aa0sAvOBnp1F" label="Why UsbDevice as a generic base doesn't work" />
+     <listitem open="1" type="813" id="lj311DIuqsKD" />
      <listitem open="1" type="813" id="Z39hj5qlA3zZ" />
      <listitem open="1" type="813" id="BPZ1zdbrQbbB" />
      <listitem open="1" type="813" id="2W6yNetsPNR0" />
@@ -445,6 +577,7 @@
      <listitem open="1" type="813" id="jZJYEuz8uocB" />
      <listitem open="1" type="813" id="L2YghsQwvbLr" />
      <listitem open="1" type="813" id="F5BRvPJ74u9y" />
+     <listitem open="1" type="813" id="75n9nTCRD8vN" />
      <listitem open="1" type="813" id="gSQBKqRyie4f" />
      <listitem open="1" type="813" id="Y0ltULZMNcQa" />
      <listitem open="1" type="813" id="sOuNKA950PLe" />
