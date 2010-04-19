@@ -59,7 +59,8 @@ libraries = [
     'm',
     'freetype',
     'libpng',
-    'libz'
+    'libz',
+    'supc++'
 ]
 
 # To add a library path add to the list below

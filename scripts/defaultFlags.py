@@ -4,7 +4,10 @@
 
 # Generic entry-level flags (that everyone should have)
 generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O2 '
-generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-rtti -fno-exceptions '
+generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-exceptions '
+
+# -fno-rtti
+
 #generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=c++0x') + ' -fno-rtti -fno-exceptions '
 
 # Warning flags (that force us to write betterish code)

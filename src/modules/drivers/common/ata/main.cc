@@ -172,7 +172,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
                         foundControl = true;
                 }
                 if (foundCommand && foundControl)
-                    probeIsaDevice(reinterpret_cast<Controller*> (pChild));
+                    probeIsaDevice(dynamic_cast<Controller*> (pChild));
             }
 
             // Recurse.

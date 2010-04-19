@@ -33,6 +33,9 @@ extern BootIO bootIO;
 /** Station information - basically information about this station, per NIC */
 class StationInfo
 {
+    /// \todo Rework to hold all the information we need for ipv4 and ipv6
+    ///       intelligently.
+    
   public:
     // Broadcast address defaults to 255.255.255.255, as we may need to
     // broadcast without a known IPv4 address (and therefore no known network
@@ -77,7 +80,7 @@ class StationInfo
 /**
  * A network device (sends/receives packets on a network)
  */
-class Network : public Device
+class Network : public virtual Device
 {
 public:
   Network()

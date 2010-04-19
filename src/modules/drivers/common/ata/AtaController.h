@@ -45,7 +45,7 @@ public:
         // Initialise the RequestQueue
         initialise();
     }
-    ~AtaController()
+    virtual ~AtaController()
     {
     }
 

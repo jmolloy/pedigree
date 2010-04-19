@@ -21,16 +21,16 @@
 /**
  * A controller is a hub that controls multiple devices.
  */
-class Controller : public Device
+class Controller : public virtual Device
 {
 public:
   Controller()
   {
   }
-  Controller(Controller *pDev) :
+  /*Controller(Controller *pDev) :
     Device(pDev)
   {
-  }
+  }*/
   Controller(Device *pDev) :
     Device(pDev)
   {

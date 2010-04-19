@@ -21,7 +21,7 @@
 /**
  * A disk is a random access fixed size block device.
  */
-class Disk : public Device
+class Disk : public virtual Device
 {
 public:
 

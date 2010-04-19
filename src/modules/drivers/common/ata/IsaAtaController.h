@@ -34,7 +34,7 @@ class IsaAtaController : public AtaController /* public Controller, public Reque
 {
 public:
   IsaAtaController(Controller *pDev, int nController = 0);
-  ~IsaAtaController();
+  virtual ~IsaAtaController();
 
   virtual void getName(String &str)
   {

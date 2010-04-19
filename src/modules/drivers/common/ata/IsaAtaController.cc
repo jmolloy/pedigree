@@ -19,21 +19,30 @@
 #include <processor/Processor.h>
 
 IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
-  AtaController(pDev, nController)
+  Device(pDev), AtaController(pDev, nController)
 {
   setSpecificType(String("ata-controller"));
 
   // Initialise our ports.
+  bool bPortsFound = false;
   for (unsigned int i = 0; i < m_Addresses.count(); i++)
   {
     if (m_Addresses[i]->m_Name == "command" || m_Addresses[i]->m_Name == "bar0")
     {
       m_pCommandRegs = m_Addresses[i]->m_Io;
+      bPortsFound = true;
     }
     if (m_Addresses[i]->m_Name == "control" || m_Addresses[i]->m_Name == "bar1")
     {
       m_pControlRegs = m_Addresses[i]->m_Io;
+      bPortsFound = true;
     }
+  }
+  
+  if(!bPortsFound)
+  {
+    ERROR("ISA ATA: No addresses found for this controller");
+    return;
   }
 
   // Look for a floating bus
@@ -42,6 +51,11 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
       // No devices on this controller
       return;
   }
+  
+  m_Children.clear();
+  
+  // Set up the RequestQueue
+  initialise();
 
   // Perform a software reset.
   m_pControlRegs->write8(0x04, 6); // Assert SRST
@@ -130,10 +144,10 @@ bool IsaAtaController::irq(irq_id_t number, InterruptState &state)
 {
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
-    AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
+    AtaDisk *pDisk = dynamic_cast<AtaDisk*> (getChild(i));
     if(pDisk->isAtapi())
     {
-        AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);
+        AtapiDisk *pAtapiDisk = dynamic_cast<AtapiDisk*>(pDisk);
         pAtapiDisk->irqReceived();
     }
     else

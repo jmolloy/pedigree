@@ -30,7 +30,7 @@ extern "C" {
 };
 
 CdiDisk::CdiDisk(Disk* pDev, struct cdi_storage_device* device) :
-    Disk(), m_Device(device), m_Cache()
+    Device(pDev), Disk(pDev), m_Device(device), m_Cache()
 {
     setSpecificType(String("CDI Disk"));
 }

@@ -33,11 +33,13 @@ include = [
 
 # To add a library add to the list below
 libraries = [
-    'gcc'
+    'gcc',
+    'supc++'
 ]
 
 # To add a library path add to the list below
 libpaths = [
+    '#',
     env['LIBGCC']
 ]
 

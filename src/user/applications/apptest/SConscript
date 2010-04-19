@@ -46,9 +46,9 @@ include += ['.']
 
 # To add a library add to the list below
 if env['ARCH_TARGET'] == 'X86':
-    libraries = ['pedigree']
+    libraries = ['pedigree', 'supc++']
 else:
-    libraries = ['c', 'm', 'gcc']
+    libraries = ['c', 'm', 'gcc', 'supc++']
 
 # To add a library path add to the list below
 libpaths = [
