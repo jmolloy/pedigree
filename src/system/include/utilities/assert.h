@@ -25,7 +25,13 @@
  */
 #ifdef DEBUGGER
 #define assert(x) _assert(x, __FILE__, __LINE__, __PRETTY_FUNCTION__)
+
+#ifndef USE_DEBUG_ALLOCATOR
 #define assert_heap_ptr_valid(x) _assert(_assert_ptr_valid(reinterpret_cast<uintptr_t>(x)), __FILE__, __LINE__, __PRETTY_FUNCTION__)
+#else
+#define assert_heap_ptr_valid
+#endif
+
 #else
 #define assert
 #define assert_heap_ptr_valid

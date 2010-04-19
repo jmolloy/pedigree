@@ -25,10 +25,6 @@
 
 #include "SlamAllocator.h"
 
-/// The debug allocator cannot free memory and is designed to find overflows and
-/// underflows only.
-// #define USE_DEBUG_ALLOCATOR
-
 /// If the debug allocator is enabled, this switches it into underflow detection
 /// mode.
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS

@@ -35,6 +35,8 @@ generic_defines = [
                                 # TODO: Should be a proper option... I'll do that soon. -Matt
     'ADDITIONAL_CHECKS',
     'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
+    'USE_DEBUG_ALLOCATOR',      # The debug allocator cannot free memory and is designed to find overflows and
+                                # underflows only. Defining this **DISABLES** SlamAllocator allocations.
 ]
 
 #------------------------- x86 (+x64) -------------------------#
