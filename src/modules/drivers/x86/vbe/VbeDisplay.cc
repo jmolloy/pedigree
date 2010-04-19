@@ -144,6 +144,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
         pBuf->valid = false;
     }
 
+    bool bFramebufferFound = false;
     for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
         it != m_Addresses.end();
         it++)
@@ -153,8 +154,15 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
         if (address <= m_Mode.framebuffer && (address+size) > m_Mode.framebuffer)
         {
             m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
+            bFramebufferFound = true;
             break;
         }
+    }
+    
+    if(!bFramebufferFound)
+    {
+        ERROR("No PCI MMIO region found for the desired video mode.");
+        return false;
     }
 
     // SET SuperVGA VIDEO MODE - AX=4F02h, BX=new mode
