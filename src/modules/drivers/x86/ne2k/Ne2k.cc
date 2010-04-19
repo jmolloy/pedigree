@@ -233,11 +233,11 @@ void Ne2k::recv()
     m_pBase->write8(0x0a, NE_CMD);
 
     // read the packet
-    int i, words = (length) / 2;
+    int i, words = length / 2;
     for(i = 0; i < words; ++i)
       packBuffer[i] = m_pBase->read16(NE_DATA);
     if(length & 1)
-      packBuffer[i] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
+      tmp[i * 2] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
 
     // check status once again
     while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
