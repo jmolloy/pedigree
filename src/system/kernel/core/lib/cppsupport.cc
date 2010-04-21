@@ -101,8 +101,17 @@ extern "C" void *realloc(void *p, size_t sz)
         return 0;
     }
     
+#ifdef USE_DEBUG_ALLOCATOR
+    size_t copySize = *(reinterpret_cast<size_t*>(reinterpret_cast<uintptr_t>(p) - sizeof(size_t)));
+    if(copySize > sz)
+        copySize = sz;
+#else
+    size_t copySize = sz;
+#endif
+    
+    /// \note If sz > p's original size, this may fail.
     void *tmp = malloc(sz);
-    memcpy(tmp, p, sz);
+    memcpy(tmp, p, copySize);
     free(p);
 
     return tmp;
@@ -113,6 +122,8 @@ void *operator new (size_t size) throw()
 #ifdef USE_DEBUG_ALLOCATOR
 
     /// \todo underflow flag
+    
+    size += sizeof(size_t);
     
     // Full size of the region to allocate
     size_t nPages = ((size / 0x1000) + 1);
@@ -130,7 +141,7 @@ void *operator new (size_t size) throw()
     allocLock.release();
     
     // We return a block just before the unmapped region
-    uintptr_t ret = overflowBase - size;
+    uintptr_t ret = overflowBase - (size - sizeof(size_t));
     
     // Map in the pages we actually want to access
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -144,8 +155,10 @@ void *operator new (size_t size) throw()
                 VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write
         );
         if(!success)
-            FATAL("Debug allocator - mapping failed!");
+            FATAL_NOLOCK("Debug allocator - mapping failed!");
     }
+    
+    *reinterpret_cast<size_t*>(overflowBase - size) = size - sizeof(size_t);
     
     // NOTICE("debug allocator returning " << ret);
     
@@ -164,6 +177,8 @@ void *operator new[] (size_t size) throw()
     
     /// \todo underflow flag
     
+    size += sizeof(size_t);
+    
     // Full size of the region to allocate
     size_t nPages = ((size / 0x1000) + 1);
     size_t realSize = nPages * 0x1000;
@@ -180,7 +195,7 @@ void *operator new[] (size_t size) throw()
     allocLock.release();
     
     // We return a block just before the unmapped region
-    uintptr_t ret = overflowBase - size;
+    uintptr_t ret = overflowBase - (size - sizeof(size_t));
     
     // Map in the pages we actually want to access
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -194,8 +209,10 @@ void *operator new[] (size_t size) throw()
                 VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write
         );
         if(!success)
-            FATAL("Debug allocator - mapping failed!");
+            FATAL_NOLOCK("Debug allocator - mapping failed!");
     }
+    
+    *reinterpret_cast<size_t*>(overflowBase - size) = size - sizeof(size_t);
     
     // NOTICE("debug allocator returning " << ret);
     
