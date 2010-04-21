@@ -83,9 +83,10 @@ void Log::initialise ()
 
 void Log::installCallback(OutputCallback callback)
 {
-    LockGuard<Spinlock> guard(m_Lock);
     OutputCallbackItem *item = new OutputCallbackItem;
     item->func = callback;
+    
+    LockGuard<Spinlock> guard(m_Lock);
     m_OutputCallbacks.pushBack(item);
 }
 void Log::removeCallback(OutputCallback callback)
