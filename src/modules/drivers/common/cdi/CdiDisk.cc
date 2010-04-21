@@ -50,8 +50,12 @@ bool CdiDisk::initialise()
         NOTICE("It does, attempting to inform the partitioner of our presence...");
         if(pService)
         {
-            if(pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(this), sizeof(CdiDisk)))
+            if(pService->serve(ServiceFeatures::touch, 
+                               reinterpret_cast<void*>(static_cast<Disk*>(this)), 
+                               sizeof(*static_cast<Disk*>(this))))
+            {
                 NOTICE("Successful.");
+            }
             else
             {
                 ERROR("Failed.");

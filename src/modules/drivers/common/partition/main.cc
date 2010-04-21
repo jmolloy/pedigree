@@ -86,7 +86,7 @@ bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dat
         // We only provide Touch services
         if(type & ServiceFeatures::touch)
         {
-            Disk *pDisk = reinterpret_cast<Disk *>(pData);
+            Disk *pDisk = static_cast<Disk *>(pData);
             return probeDevice(pDisk);
         }
     }
