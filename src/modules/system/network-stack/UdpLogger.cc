@@ -14,3 +14,37 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "UdpLogger.h"
+#include <network/IpAddress.h>
+#include "NetworkStack.h"
+#include "UdpManager.h"
+#include "RoutingTable.h"
+
+UdpLogger::~UdpLogger()
+{
+    if(m_pEndpoint)
+    {
+        UdpManager::instance().returnEndpoint(m_pEndpoint);
+        m_pEndpoint = 0;
+    }
+}
+
+bool UdpLogger::initialise(IpAddress remote, uint16_t port)
+{
+    if(m_pEndpoint)
+        return true;
+        
+    m_LoggingServer.ip = remote;
+    m_LoggingServer.remotePort = port;
+    
+    m_pEndpoint = static_cast<ConnectionlessEndpoint*>(UdpManager::instance().getEndpoint(remote, 0, port));
+    return (m_pEndpoint != 0);
+}
+
+void UdpLogger::callback(const char *str)
+{
+    if(!m_pEndpoint)
+        return;
+    
+    m_pEndpoint->send(strlen(str), reinterpret_cast<uintptr_t>(str), m_LoggingServer, false);
+}
+

@@ -37,6 +37,7 @@
 
 #include <network-stack/NetworkStack.h>
 #include <network-stack/RoutingTable.h>
+#include <network-stack/UdpLogger.h>
 
 #include <users/UserManager.h>
 
@@ -221,6 +222,14 @@ void init()
     // Otherwise, just assume the default is interface zero
     if (!bRouteFound)
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
+        
+#if 0
+    // Routes installed, start the UDP logger
+    UdpLogger *logger = new UdpLogger();
+    logger->initialise(IpAddress(Network::convertToIpv4(192, 168, 0, 1)));
+    
+    Log::instance().installCallback(logger);
+#endif
 
     str += "Loading init program (root»/applications/login)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
