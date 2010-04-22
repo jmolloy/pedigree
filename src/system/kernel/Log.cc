@@ -89,8 +89,32 @@ void Log::initialise ()
 
 void Log::installCallback(LogCallback *callback)
 {
-    LockGuard<Spinlock> guard(m_Lock);
-    m_OutputCallbacks.pushBack(callback);
+    {
+        LockGuard<Spinlock> guard(m_Lock);
+        m_OutputCallbacks.pushBack(callback);
+    }
+    
+    // Call the callback for the existing, flushed, log entries
+    size_t entry = m_StaticEntryStart;
+    while(1)
+    {
+        entry = (entry + 1) % LOG_ENTRIES;
+        if(entry == m_StaticEntryEnd)
+            break;
+        else
+        {
+            // Process the buffer - specifically, need to handle newlines
+            String buffer(static_cast<const char*>(m_StaticLog[entry].str));
+            List<String*> lines = buffer.tokenise('\n');
+            for(List<String*>::Iterator it = lines.begin(); it != lines.end(); it++)
+            {
+                // Sigh, the tokenise removes all our newlines, and we can't edit
+                // the String referenced by the iterator...
+                callback->callback(static_cast<const char*>(*(*it)));
+                callback->callback("\n");
+            }
+        }
+    }
 }
 void Log::removeCallback(LogCallback *callback)
 {
