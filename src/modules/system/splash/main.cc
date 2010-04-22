@@ -111,6 +111,19 @@ void printString(const char *str)
         printChar(str[i]);
 }
 
+class StreamingScreenLogger : public Log::LogCallback
+{
+    public:
+        /// printString is used directly as well as in this callback object,
+        /// therefore we simply redirect to it.
+        void callback(const char *str)
+        {
+            printString(str);
+        }
+};
+
+static StreamingScreenLogger g_StreamLogger;
+
 void keyCallback(uint64_t key)
 {
     if(key == '\e' && !g_LogMode)
@@ -137,7 +150,7 @@ void progress(const char *text)
 
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
-        Log::instance().removeCallback(printString);
+        Log::instance().removeCallback(&g_StreamLogger);
         InputManager::instance().removeCallback(InputManager::Key, keyCallback);
     }
 
@@ -265,7 +278,7 @@ void init()
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
 
     Log &log = Log::instance();
-    log.installCallback(printString);
+    log.installCallback(&g_StreamLogger);
 
     g_BootProgressUpdate = &progress;
     InputManager::instance().installCallback(InputManager::Key, keyCallback);

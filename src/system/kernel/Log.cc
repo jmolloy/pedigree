@@ -30,10 +30,16 @@ BootProgressUpdateFn g_BootProgressUpdate = 0;
 size_t g_BootProgressTotal = 0;
 size_t g_BootProgressCurrent = 0;
 
-void outputSerial(const char* str)
+class SerialLogger : public Log::LogCallback
 {
-    Machine::instance().getSerial(0)->write(str);
-}
+    public:
+        void callback(const char* str)
+        {
+            Machine::instance().getSerial(0)->write(str);
+        }
+};
+
+static SerialLogger g_SerialCallback;
 
 Log::Log () :
     m_Lock(),
@@ -78,25 +84,22 @@ void Log::initialise ()
         }
     }
     if(m_EchoToSerial)
-        installCallback(outputSerial);
+        installCallback(&g_SerialCallback);
 }
 
-void Log::installCallback(OutputCallback callback)
+void Log::installCallback(LogCallback *callback)
 {
-    OutputCallbackItem *item = new OutputCallbackItem;
-    item->func = callback;
-    
     LockGuard<Spinlock> guard(m_Lock);
-    m_OutputCallbacks.pushBack(item);
+    m_OutputCallbacks.pushBack(callback);
 }
-void Log::removeCallback(OutputCallback callback)
+void Log::removeCallback(LogCallback *callback)
 {
     LockGuard<Spinlock> guard(m_Lock);
-    for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
+    for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
         it != m_OutputCallbacks.end();
         it++)
     {
-        if(*it && ((*it)->func == callback))
+        if(*it == callback)
         {
             m_OutputCallbacks.erase(it);
             return;
@@ -192,12 +195,12 @@ Log &Log::operator<< (Modifier type)
             str += m_Buffer.str;
             str += "\n";
 
-            for(List<OutputCallbackItem*>::Iterator it = m_OutputCallbacks.begin();
+            for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
                 it != m_OutputCallbacks.end();
                 it++)
             {
                 if(*it)
-                    (*it)->func(static_cast<const char*>(str));
+                    (*it)->callback(static_cast<const char*>(str));
             }
         }
     }

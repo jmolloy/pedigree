@@ -144,10 +144,15 @@ extern BootProgressUpdateFn g_BootProgressUpdate;
  *      the entries from the log (within the debugger's log viewer for example). */
 class Log
 {
-private:
-  /** Output callback function type */
-  typedef void (*OutputCallback)(const char *);
 public:
+
+  /** Output callback function type. Inherit and implement callback to use. */
+  class LogCallback
+  {
+    public:
+      virtual void callback(const char *) = 0;
+  };
+
   /** Severity level of the log entry */
   enum SeverityLevel
   {
@@ -170,10 +175,10 @@ public:
   void initialise();
 
   /** Installs an output callback */
-  void installCallback(OutputCallback callback);
+  void installCallback(LogCallback *callback);
 
   /** Removes an output callback */
-  void removeCallback(OutputCallback callback);
+  void removeCallback(LogCallback *callback);
 
   /** Adds an entry to the log.
    *\param[in] str the null-terminated ASCII string that should be added */
@@ -271,14 +276,8 @@ private:
   /** If we should output to serial */
   bool m_EchoToSerial;
 
-  struct OutputCallbackItem
-  {
-      /** The handler function */
-      OutputCallback func;
-  };
-
   /** Output callback list */
-  List<OutputCallbackItem*> m_OutputCallbacks;
+  List<LogCallback*> m_OutputCallbacks;
 
   /** The Log instance (singleton class) */
   static Log m_Instance;
