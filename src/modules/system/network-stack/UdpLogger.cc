@@ -37,7 +37,16 @@ bool UdpLogger::initialise(IpAddress remote, uint16_t port)
     m_LoggingServer.remotePort = port;
     
     m_pEndpoint = static_cast<ConnectionlessEndpoint*>(UdpManager::instance().getEndpoint(remote, 0, port));
-    return (m_pEndpoint != 0);
+    
+    if(!m_pEndpoint)
+        return false;
+    
+    // Will perform an ARP lookup, which will fill the ARP cache. This is done
+    // before the callback is actually installed (after we return) because ARP
+    // writes to the log, which calls the callback (and then hangs on ARP)
+    callback("UDP logger now active");
+    
+    return true;
 }
 
 void UdpLogger::callback(const char *str)
