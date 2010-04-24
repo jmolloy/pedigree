@@ -96,13 +96,11 @@ bool Pic::initialise()
 Pic::Pic()
   : m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
 {
-  asm volatile ("outb %%al, %%dx" : : "a" ('z'), "d" (0x3F8));
   for (size_t i = 0;i < 16;i++)
   {
     m_Handler[i] = 0;
     m_HandlerEdge[i] = false;
   }
-  asm volatile ("outb %%al, %%dx" : : "a" ('a'), "d" (0x3F8));
 }
 
 void Pic::interrupt(size_t interruptNumber, InterruptState &state)
