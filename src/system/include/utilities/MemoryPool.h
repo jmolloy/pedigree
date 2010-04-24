@@ -30,6 +30,7 @@ class MemoryPool
 {
     public:
         MemoryPool();
+        MemoryPool(const char *poolName);
         virtual ~MemoryPool();
 
         /// Initialises the pool, preparing it for use

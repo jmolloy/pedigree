@@ -218,7 +218,7 @@ void Ne2k::recv()
     length -= 3;
 
     // packet buffer
-    uint8_t* tmp = new uint8_t[length];
+    uint8_t* tmp = reinterpret_cast<uint8_t*>(NetworkStack::instance().getMemPool().allocate());
     uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
     memset(tmp, 0, length);
 
@@ -250,13 +250,13 @@ void Ne2k::recv()
     // push onto the queue
     packet* p = new packet;
     p->ptr = reinterpret_cast<uintptr_t>(packBuffer);
-    p->len = (i * 2) + ((length & 1) ? 1 : 0); //length;
+    p->len = (i * 2) + ((length & 1) ? 1 : 0);
 
 #ifdef NE2K_NO_THREADS
 
     NetworkStack::instance().receive(p->len, p->ptr, this, 0);
 
-    delete packBuffer;
+    NetworkStack::instance().getMemPool().free(p->ptr);
     delete p;
 
 #else
@@ -293,7 +293,7 @@ void Ne2k::receiveThread()
     NetworkStack::instance().receive(p->len, p->ptr, this, 0);
 
     // destroy the buffer now that it's handled
-    delete packBuffer;
+    NetworkStack::instance().getMemPool().free(p->ptr);
     delete p;
   }
 }

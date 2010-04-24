@@ -25,9 +25,15 @@
 NetworkStack NetworkStack::stack;
 
 NetworkStack::NetworkStack() :
-  RequestQueue(), m_pLoopback(0), m_Children()
+  RequestQueue(), m_pLoopback(0), m_Children(), m_MemPool("network-pool")
 {
   initialise();
+
+  // Try 16 MB, then 8 MB, then 4 MB, then give up
+  if(!m_MemPool.initialise(4096, 1600))
+      if(!m_MemPool.initialise(2048, 1600))
+        if(!m_MemPool.initialise(1024, 1600))
+            ERROR("Couldn't get a valid buffer pool for networking use");
 }
 
 NetworkStack::~NetworkStack()

@@ -24,6 +24,12 @@ MemoryPool::MemoryPool() :
 {
 }
 
+MemoryPool::MemoryPool(const char *poolName) :
+    m_BlockSemaphore(0), m_BufferSize(1024), m_Pool(poolName),
+        m_bInitialised(false), m_AllocBitmap()
+{
+}
+
 MemoryPool::~MemoryPool()
 {
     // Free all the buffers
@@ -72,6 +78,9 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
 
 uintptr_t MemoryPool::allocate()
 {
+    if(!m_bInitialised)
+        return 0;
+
     /// \bug Race if another allocate() call occurs between the acquire and the doer
     m_BlockSemaphore.acquire();
     return allocateDoer();
@@ -79,6 +88,9 @@ uintptr_t MemoryPool::allocate()
 
 uintptr_t MemoryPool::allocateNow()
 {
+    if(!m_bInitialised)
+        return 0;
+
     if(m_BlockSemaphore.tryAcquire())
         return allocateDoer();
     else

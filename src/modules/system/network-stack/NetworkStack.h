@@ -21,6 +21,7 @@
 #include <processor/types.h>
 #include <machine/Network.h>
 #include <utilities/RequestQueue.h>
+#include <utilities/MemoryPool.h>
 
 /**
  * The Pedigree network stack
@@ -66,6 +67,12 @@ public:
     return m_pLoopback;
   }
 
+  /** Grabs the memory pool for networking use */
+  inline MemoryPool &getMemPool()
+  {
+      return m_MemPool;
+  }
+
 private:
 
   static NetworkStack stack;
@@ -80,6 +87,9 @@ private:
 
   /** Network devices registered with the stack. */
   Vector<Network*> m_Children;
+
+  /** Networking memory pool */
+  MemoryPool m_MemPool;
 };
 
 #endif
