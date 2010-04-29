@@ -100,18 +100,13 @@ extern "C" void *realloc(void *p, size_t sz)
         free(p);
         return 0;
     }
-    
-#ifdef USE_DEBUG_ALLOCATOR
-    size_t copySize = *(reinterpret_cast<size_t*>(reinterpret_cast<uintptr_t>(p) - sizeof(size_t)));
-    if(copySize > sz)
-        copySize = sz;
-#else
-    size_t copySize = sz;
-#endif
+
+    // Don't attempt to read past the end of the source buffer if we can help it
+    size_t copySz = SlamAllocator::instance().allocSize(reinterpret_cast<uintptr_t>(p));
     
     /// \note If sz > p's original size, this may fail.
     void *tmp = malloc(sz);
-    memcpy(tmp, p, copySize);
+    memcpy(tmp, p, copySz);
     free(p);
 
     return tmp;
@@ -120,49 +115,74 @@ extern "C" void *realloc(void *p, size_t sz)
 void *operator new (size_t size) throw()
 {
 #ifdef USE_DEBUG_ALLOCATOR
-
+    
     /// \todo underflow flag
+
+    // Grab the size of the SlamAllocator header and footer
+    size_t slamHeader = SlamAllocator::instance().headerSize();
+    size_t slamFooter = SlamAllocator::instance().footerSize();
+
+    // Find the number of pages we need for this allocation. Make sure that
+    // we get a full page for our allocation if we need it.
+    size_t nPages = ((size + slamHeader + slamFooter) / 0x1000) + 2;
+    size_t blockSize = nPages * 0x1000;
+
+    // Allocate the space
+    uintptr_t ret = SlamAllocator::instance().allocate(blockSize);
+
+    //NOTICE_NOLOCK("ret = " << ret << " [" << (ret + blockSize) << "]");
+
+    // Calculate the offset at which we will return a data pointer
+    uintptr_t unmapAddress = (ret & ~0xFFF) + (blockSize - 0x1000);
+    //NOTICE_NOLOCK("unmap address is " << unmapAddress);
+    uintptr_t dataPointer = unmapAddress - (size + slamFooter);
+    //NOTICE_NOLOCK("Data pointer at " << dataPointer << ", size = " << size << " [" << blockSize << "]");
+
+    // Okay, now the header and footer are at completely incorrect locations.
+    // Let's resolve that now.
+    void *header = reinterpret_cast<void*>(ret - slamHeader);
+    void *targetLoc = reinterpret_cast<void*>(dataPointer - slamHeader);
+
+    //NOTICE_NOLOCK("old header at " << reinterpret_cast<uintptr_t>(header));
+    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
+
+    memcpy(targetLoc, header, slamHeader);
+    void *footer = reinterpret_cast<void*>(ret + blockSize);
+    targetLoc = reinterpret_cast<void*>(unmapAddress - slamFooter);
+
+    //NOTICE_NOLOCK("old footer at " << reinterpret_cast<uintptr_t>(footer));
+    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
+
+    memcpy(targetLoc, footer, slamFooter);
+
+    //FATAL_NOLOCK("k");
+
+
+    /// \todo unmap a page for overflow checks
+
+    // All done, return the address
+    return reinterpret_cast<void*>(dataPointer);
     
-    size += sizeof(size_t);
+#if 0
     
-    // Full size of the region to allocate
-    size_t nPages = ((size / 0x1000) + 1);
-    size_t realSize = nPages * 0x1000;
-    
-    allocLock.acquire();
-    
-    // Find the base of the unmapped region (overflow check)
-    uintptr_t currBase = heapBase;
-    uintptr_t overflowBase = currBase + realSize;
-    
-    // Update the base of the heap
-    heapBase = overflowBase + 0x1000;
-    
-    allocLock.release();
-    
-    // We return a block just before the unmapped region
-    uintptr_t ret = overflowBase - (size - sizeof(size_t));
-    
-    // Map in the pages we actually want to access
+    // Make the last page non-writable (but allow it to be read)
+    /// \todo Flag for this behaviour - perhaps want to look for read overflows too?
+    physical_uintptr_t phys = 0; size_t flags = 0;
+    void *remapStart = reinterpret_cast<void*>(remapPoint);
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    for(size_t i = 0; i < nPages; i++)
+    /*
+    if(va.isMapped(remapStart)) // Pedantically check for mapping
     {
-        physical_uintptr_t page = PhysicalMemoryManager::instance().allocatePage();
-        // NOTICE("Mapping " << (currBase + (i * 0x1000)) << " to " << page);
-        bool success = va.map(
-                page,
-                reinterpret_cast<void*>(currBase + (i * 0x1000)),
-                VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write
-        );
-        if(!success)
-            FATAL_NOLOCK("Debug allocator - mapping failed!");
+        va.getMapping(remapStart, phys, flags);
+        va.unmap(remapStart);
+        va.map(phys, remapStart, VirtualAddressSpace::KernelMode);
     }
-    
-    *reinterpret_cast<size_t*>(overflowBase - size) = size - sizeof(size_t);
-    
-    // NOTICE("debug allocator returning " << ret);
-    
-    return reinterpret_cast<void*>(ret);
+    */
+
+    // NOTICE_NOLOCK("sz=" << size << ", alloc=" << ret << ", ptr=" << dataPointer << ", remap=" << remapPoint);
+    return reinterpret_cast<void*>(dataPointer);
+
+#endif
 
 #elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
@@ -176,47 +196,51 @@ void *operator new[] (size_t size) throw()
 #ifdef USE_DEBUG_ALLOCATOR
     
     /// \todo underflow flag
-    
-    size += sizeof(size_t);
-    
-    // Full size of the region to allocate
-    size_t nPages = ((size / 0x1000) + 1);
-    size_t realSize = nPages * 0x1000;
-    
-    allocLock.acquire();
-    
-    // Find the base of the unmapped region (overflow check)
-    uintptr_t currBase = heapBase;
-    uintptr_t overflowBase = currBase + realSize;
-    
-    // Update the base of the heap
-    heapBase = overflowBase + 0x1000;
-    
-    allocLock.release();
-    
-    // We return a block just before the unmapped region
-    uintptr_t ret = overflowBase - (size - sizeof(size_t));
-    
-    // Map in the pages we actually want to access
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    for(size_t i = 0; i < nPages; i++)
-    {
-        physical_uintptr_t page = PhysicalMemoryManager::instance().allocatePage();
-        // NOTICE("Mapping " << (currBase + (i * 0x1000)) << " to " << page);
-        bool success = va.map(
-                page,
-                reinterpret_cast<void*>(currBase + (i * 0x1000)),
-                VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write
-        );
-        if(!success)
-            FATAL_NOLOCK("Debug allocator - mapping failed!");
-    }
-    
-    *reinterpret_cast<size_t*>(overflowBase - size) = size - sizeof(size_t);
-    
-    // NOTICE("debug allocator returning " << ret);
-    
-    return reinterpret_cast<void*>(ret);
+
+    // Grab the size of the SlamAllocator header and footer
+    size_t slamHeader = SlamAllocator::instance().headerSize();
+    size_t slamFooter = SlamAllocator::instance().footerSize();
+
+    // Find the number of pages we need for this allocation. Make sure that
+    // we get a full page for our allocation if we need it.
+    size_t nPages = ((size + slamHeader + slamFooter) / 0x1000) + 2;
+    size_t blockSize = nPages * 0x1000;
+
+    // Allocate the space
+    uintptr_t ret = SlamAllocator::instance().allocate(blockSize);
+
+    //NOTICE_NOLOCK("ret = " << ret << " [" << (ret + blockSize) << "]");
+
+    // Calculate the offset at which we will return a data pointer
+    uintptr_t unmapAddress = (ret & ~0xFFF) + (blockSize - 0x1000);
+    //NOTICE_NOLOCK("unmap address is " << unmapAddress);
+    uintptr_t dataPointer = unmapAddress - (size + slamFooter);
+    //NOTICE_NOLOCK("Data pointer at " << dataPointer << ", size = " << size << " [" << blockSize << "]");
+
+    // Okay, now the header and footer are at completely incorrect locations.
+    // Let's resolve that now.
+    void *header = reinterpret_cast<void*>(ret - slamHeader);
+    void *targetLoc = reinterpret_cast<void*>(dataPointer - slamHeader);
+
+    //NOTICE_NOLOCK("old header at " << reinterpret_cast<uintptr_t>(header));
+    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
+
+    memcpy(targetLoc, header, slamHeader);
+    void *footer = reinterpret_cast<void*>(ret + blockSize);
+    targetLoc = reinterpret_cast<void*>(unmapAddress - slamFooter);
+
+    //NOTICE_NOLOCK("old footer at " << reinterpret_cast<uintptr_t>(footer));
+    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
+
+    memcpy(targetLoc, footer, slamFooter);
+
+    //FATAL_NOLOCK("k");
+
+
+    /// \todo unmap a page for overflow checks
+
+    // All done, return the address
+    return reinterpret_cast<void*>(dataPointer);
 
 #elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
@@ -236,6 +260,14 @@ void *operator new[] (size_t size, void* memory) throw()
 void operator delete (void * p)
 {
 #ifdef USE_DEBUG_ALLOCATOR
+    if(p == 0) return;
+
+    // The pointer will be offset into the first page, so make sure that it's
+    // properly aligned against a page boundary so we can free it. Maybe.
+    uintptr_t temp = reinterpret_cast<uintptr_t>(p);
+    temp = (temp & ~0xFFF) + 0x8; /// \bug Hard-coded size of SlamAllocator header
+    SlamAllocator::instance().free(temp);
+
     return;
 #endif
 
@@ -247,6 +279,14 @@ void operator delete (void * p)
 void operator delete[] (void * p)
 {
 #ifdef USE_DEBUG_ALLOCATOR
+    if(p == 0) return;
+
+    // The pointer will be offset into the first page, so make sure that it's
+    // properly aligned against a page boundary so we can free it. Maybe.
+    uintptr_t temp = reinterpret_cast<uintptr_t>(p);
+    temp = (temp & ~0xFFF) + 0x8; /// \bug Hard-coded size of SlamAllocator header
+    SlamAllocator::instance().free(temp);
+
     return;
 #endif
 
