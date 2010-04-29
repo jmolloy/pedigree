@@ -109,6 +109,11 @@ public:
 
     bool isPointerValid(uintptr_t object);
 
+    inline size_t objectSize()
+    {
+        return m_ObjectSize;
+    }
+
 #if CRIPPLINGLY_VIGILANT
     void trackSlab(uintptr_t slab);
     void check();
@@ -157,10 +162,23 @@ class SlamAllocator
 
         bool isPointerValid(uintptr_t mem);
 
+        size_t allocSize(uintptr_t mem);
+
         static SlamAllocator &instance()
         {
             return m_Instance;
         }
+
+#ifdef USE_DEBUG_ALLOCATOR
+    inline size_t headerSize()
+    {
+        return sizeof(AllocHeader);
+    }
+    inline size_t footerSize()
+    {
+        return sizeof(AllocFooter);
+    }
+#endif
 
 #if CRIPPLINGLY_VIGILANT
     void setVigilance(bool b)

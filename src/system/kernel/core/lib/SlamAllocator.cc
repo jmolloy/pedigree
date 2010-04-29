@@ -398,7 +398,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     // Add in room for the allocation footer
     nBytes += sizeof(AllocHeader) + sizeof(AllocFooter);
 
-    // Find nearest power of 2.
+    // Find nearest power of 2, if needed.
     size_t powerOf2 = 1;
     size_t lg2 = 0;
     while (powerOf2 < nBytes || powerOf2 < OBJECT_MINIMUM_SIZE)
@@ -456,6 +456,19 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #endif
 
     return ret;
+}
+
+size_t SlamAllocator::allocSize(uintptr_t mem)
+{
+    if(!mem)
+        return 0;
+    
+    // Grab the header
+    AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
+
+    // If the cache is null, then the pointer is corrupted.
+    assert(head->cache != 0);
+    return head->cache->objectSize();
 }
 
 void SlamAllocator::free(uintptr_t mem)
