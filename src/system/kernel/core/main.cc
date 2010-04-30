@@ -140,13 +140,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   machine.initialise();
 
-  // Initialise the Kernel Elf class
-  if (KernelElf::instance().initialise(bsInf) == false)
-    panic("KernelElf::initialise() failed");
-
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
+
+  // Initialise the Kernel Elf class
+  if (KernelElf::instance().initialise(bsInf) == false)
+    panic("KernelElf::initialise() failed");
 
 #ifdef ARM_COMMON
   NOTICE("ARM build now boots properly. Now hanging forever...");
