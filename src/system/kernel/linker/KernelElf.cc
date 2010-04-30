@@ -109,7 +109,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
         for (size_t i = 1; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
         {
-            const char *pStr;
+            const char *pStr = 0;
 
             if (ST_TYPE(pSymbol->info) == 3)
             {
@@ -144,14 +144,14 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
                     binding = SymbolTable::Global;
             }
 
-            if (*pStr != '\0')
+            if (pStr && (*pStr != '\0'))
             {
                 m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
             }
             pSymbol++;
         }
     }
-
+    
     return true;
 }
 
