@@ -207,23 +207,23 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define KERNEL_SPACE_START reinterpret_cast<void*>(0xC0000000)
+#define KERNEL_SPACE_START                  reinterpret_cast<void*>(0xC0000000)
 
-#define USERSPACE_VIRTUAL_HEAP reinterpret_cast<void*> (0x50000000)
-#define USERSPACE_VIRTUAL_STACK reinterpret_cast<void*>(0xC0000000)
-#define USERSPACE_VIRTUAL_STACK_SIZE 0x100000
-#define VIRTUAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFFBFF000)
-#define VIRTUAL_PAGE_TABLES reinterpret_cast<void*>(0xFFC00000)
-#define KERNEL_VIRTUAL_TEMP1 reinterpret_cast<void*>(0xFFBFC000)
-#define KERNEL_VIRTUAL_TEMP2 reinterpret_cast<void*>(0xFFBFD000)
-#define KERNEL_VIRTUAL_TEMP3 reinterpret_cast<void*>(0xFFBFE000)
-#define KERNEL_VIRTUAL_HEAP reinterpret_cast<void*>(0xC0000000)
-#define KERNEL_VIRUTAL_PAGE_DIRECTORY reinterpret_cast<void*>(0xFF7FF000)
-#define KERNEL_VIRTUAL_ADDRESS reinterpret_cast<void*>(0xFF400000 - 0x100000)
+#define USERSPACE_VIRTUAL_HEAP              reinterpret_cast<void*> (0x50000000)
+#define USERSPACE_VIRTUAL_STACK             reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_VIRTUAL_STACK_SIZE        0x100000
+#define VIRTUAL_PAGE_DIRECTORY              reinterpret_cast<void*>(0xFFBFF000)
+#define VIRTUAL_PAGE_TABLES                 reinterpret_cast<void*>(0xFFC00000)
+#define KERNEL_VIRTUAL_TEMP1                reinterpret_cast<void*>(0xFFBFC000)
+#define KERNEL_VIRTUAL_TEMP2                reinterpret_cast<void*>(0xFFBFD000)
+#define KERNEL_VIRTUAL_TEMP3                reinterpret_cast<void*>(0xFFBFE000)
+#define KERNEL_VIRTUAL_HEAP                 reinterpret_cast<void*>(0xC0000000)
+#define KERNEL_VIRUTAL_PAGE_DIRECTORY       reinterpret_cast<void*>(0xFF7FF000)
+#define KERNEL_VIRTUAL_ADDRESS              reinterpret_cast<void*>(0xFF400000 - 0x100000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB reinterpret_cast<void*>(0xF0000000)
-#define KERNEL_VIRTUAL_STACK reinterpret_cast<void*>(0xFF3F6000)
-#define KERNEL_VIRTUAL_MEMORYREGION_SIZE 0x10000000
-#define KERNEL_STACK_SIZE 0x8000
+#define KERNEL_VIRTUAL_PAGESTACK_4GB        reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK                reinterpret_cast<void*>(0xFF3F6000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE    0x10000000
+#define KERNEL_STACK_SIZE                   0x8000
 
 #endif
