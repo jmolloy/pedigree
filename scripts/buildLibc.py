@@ -21,7 +21,7 @@ import tempfile
 import shutil
 import os
 
-def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
+def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     
     print "Building libc..."
     
@@ -37,6 +37,7 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
 
     glue = glue_name
     shutil.copy(glue, tmpdir + "/" + os.path.basename(glue_name))
+    shutil.copy(pedigree_c_name, tmpdir + "/" + os.path.basename(pedigree_c_name))
 
     objs_to_remove = ["init", "getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty", "basename"]
 
@@ -46,7 +47,7 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
         except:
             continue
 
-    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.o -lgcc")
+    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.o -L. -lpedigree-glue -lpedigree-c -lgcc")
     os.system(ar + " cru " + buildOut + ".a *.o")
 
     for i in os.listdir("."):
@@ -56,4 +57,4 @@ def doLibc(builddir, inputLibcA, glue_name, ar, cc, libgcc):
     os.rmdir(tmpdir)
 
 import sys
-doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], "") # sys.argv[6])
+doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], "")
