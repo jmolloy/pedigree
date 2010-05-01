@@ -10,6 +10,7 @@ tmp = env.Clone()
 
 # Change to then name of this module
 driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = driverdir + '/ata.o'
 
 env.Alias("drivers", objname)
@@ -34,12 +35,12 @@ include = [
 # To add a library add to the list below
 libraries = [
     'gcc',
-    'supc++'
+    'kernelrtti'
 ]
 
 # To add a library path add to the list below
 libpaths = [
-    '#',
+    imagesdir + 'libraries',
     env['LIBGCC']
 ]
 

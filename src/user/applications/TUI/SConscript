@@ -60,7 +60,7 @@ libraries = [
     'freetype',
     'libpng',
     'libz',
-    'supc++'
+    'kernelrtti'
 ]
 
 # To add a library path add to the list below
