@@ -59,7 +59,11 @@ extern void *dlmallocSbrk(ssize_t incr);
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.
+#ifndef USE_DEBUG_ALLOCATOR
 #define OVERRUN_CHECK                   1
+#else
+#define OVERRUN_CHECK                   0
+#endif
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
 /// object size. Also adds a small amount of backtrace information.
