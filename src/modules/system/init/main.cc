@@ -111,10 +111,6 @@ static bool findDisks(Device *pDev)
     return false;
 }
 
-void hashesoneoneone(Device *pDev)
-{
-}
-
 void init()
 {
     static HugeStaticString str;
