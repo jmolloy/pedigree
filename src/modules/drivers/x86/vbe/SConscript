@@ -35,8 +35,7 @@ include = [
 
 # To add a library add to the list below
 libraries = [
-    'gcc',
-    'kernelrtti'
+    'gcc'
 ]
 
 # To add a library path add to the list below

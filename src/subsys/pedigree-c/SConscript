@@ -62,16 +62,20 @@ tmp['CPPPATH'] = include
 tmp['LIBS'] = libraries
 tmp['LIBPATH'] = libpaths
 
-# TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
+# Avoid pulling in -fPIC for the kernel module
+tmp.Program(pedigree_c_objname, pedigree_c_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
+
+tmp_lib = tmp.Clone()
+
+# -fPIC for libpedigree-c
 glueFlags = " -fno-exceptions "
 if env['ARCH_TARGET'] == 'X64':
     glueFlags += " -fPIC "
 
-tmp['CFLAGS'] = tmp['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
-tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
-tmp['CFLAGS'] += glueFlags
-tmp['CXXFLAGS'] += glueFlags
-tmp['LD'] = tmp['LINK'] = tmp['LD'].replace('gcc', 'ld')
+tmp_lib['CFLAGS'] = tmp_lib['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_lib['CXXFLAGS'] = tmp_lib['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_lib['CFLAGS'] += glueFlags
+tmp_lib['CXXFLAGS'] += glueFlags
+tmp_lib['LD'] = tmp_lib['LINK'] = tmp_lib['LD'].replace('gcc', 'ld')
 
-tmp.Program(pedigree_c_objname, pedigree_c_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
-tmp.Library(libpedigree_c_objname, libpedigree_c_files)
+tmp_lib.Library(libpedigree_c_objname, libpedigree_c_files)
