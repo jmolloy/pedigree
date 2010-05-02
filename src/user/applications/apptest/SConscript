@@ -11,6 +11,7 @@ tmp = env.Clone()
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = appdir + '/apptest'
 
 # Part of the apps target
@@ -46,13 +47,14 @@ include += ['.']
 
 # To add a library add to the list below
 if env['ARCH_TARGET'] == 'X86':
-    libraries = ['pedigree'] #, 'supc++']
+    libraries = ['pedigree', 'kernelrtti']
 else:
-    libraries = ['c', 'm', 'gcc'] #, 'supc++']
+    libraries = ['c', 'm', 'gcc', 'kernelrtti']
 
 # To add a library path add to the list below
 libpaths = [
-    builddir
+    builddir,
+    imagesdir + 'libraries'
 ]
 
 ####################################
