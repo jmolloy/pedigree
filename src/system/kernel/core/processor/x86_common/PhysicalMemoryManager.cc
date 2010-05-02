@@ -288,9 +288,18 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         NOTICE(" " << Hex << MemoryMap->address << " - " << (MemoryMap->address + MemoryMap->length) << ", type: " << MemoryMap->type);
 
         if (MemoryMap->type == 1)
+        {
             for (uint64_t i = MemoryMap->address;i < (MemoryMap->length + MemoryMap->address);i += getPageSize())
+            {
+                // Worry about regions > 4 GB once we've got regions under 4 GB completely done.
+                // We can't do anything over 4 GB because the PageStack class uses
+                // VirtualAddressSpace to map in its stack!
+                if(i >= 0x100000000ULL)
+                    break;
                 if (i >= 0x1000000)
                     m_PageStack.free(i);
+            }
+        }
 
         MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
     }
@@ -364,6 +373,11 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         if((MemoryMap->address) > ((uintptr_t) -1))
         {
             WARNING("Memory region " << MemoryMap->address << " not used.");
+        }
+        else if(MemoryMap->address >= 0x100000000ULL)
+        {
+            // Skip >= 4 GB for now, will initialise later.
+            break;
         }
         else if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
@@ -533,14 +547,17 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
     size_t index = 0;
     if (physicalAddress >= 0x100000000ULL)
     {
-#if defined(X86)                                
+#if defined(X86)
         return;
-#elif defined(X64)                              
+#elif defined(X64)
         index = 1;
         if (physicalAddress >= 0x1000000000ULL)
             index = 2;
 #endif                                          
     }
+        // Don't attempt to map address zero.
+        if(!m_Stack[index])
+            return;
 
         // Expand the stack if necessary
         if (m_StackMax[index] == m_StackSize[index])
@@ -587,8 +604,7 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
         // Set the locations for the page stacks in the virtual address space
         m_Stack[0] = KERNEL_VIRTUAL_PAGESTACK_4GB;
 #if defined(X64)
-        // TODO: What about ranges above 4GB
-        m_Stack[1] = 0;
-        m_Stack[2] = 0;
+        m_Stack[1] = 0; //KERNEL_VIRTUAL_PAGESTACK_ABV4GB1;
+        m_Stack[2] = 0; //KERNEL_VIRTUAL_PAGESTACK_ABV4GB2;
 #endif
     }
