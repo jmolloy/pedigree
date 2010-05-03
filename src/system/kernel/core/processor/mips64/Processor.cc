@@ -23,7 +23,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   m_Initialised = 1;
 }
 
-void Processor::initialise2()
+void Processor::initialise2(const BootstrapStruct_t &Info)
 {
   // TODO
 

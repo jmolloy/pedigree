@@ -70,7 +70,7 @@ class Processor
      *  after the whole machine specific interface has been initialised.
      *\brief second/last stage in the initialisation of the processor-specific interface
      *\note This function should only be called once and by main() */
-    static void initialise2() INITIALISATION_ONLY;
+    static void initialise2(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
     /** End of the kernel core initialisation reached, the initialisation functions
      *  and data may now get unmapped/freed. */
     static void initialisationDone();
