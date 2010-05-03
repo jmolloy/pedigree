@@ -227,10 +227,11 @@ void init()
     Log::instance().installCallback(logger);
 #endif
 
-    str += "Loading init program (root»/applications/login)\n";
+    str += "Loading init program (root»/applications/TUI)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
+#ifdef THREADS
     // At this point we're uninterruptible, as we're forking.
     Spinlock lock;
     lock.acquire();
@@ -252,6 +253,9 @@ void init()
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
     lock.release();
+#else
+    #warning the init module is almost useless without threads.
+#endif
 }
 void destroy()
 {

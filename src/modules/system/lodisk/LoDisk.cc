@@ -21,7 +21,8 @@
 #include <ServiceManager.h>
 
 FileDisk::FileDisk(String file, AccessType mode) :
-    m_pFile(0), m_Mode(mode), m_Cache(), m_MemRegion("FileDisk"), m_nAlignPoints(0)
+    m_pFile(0), m_Mode(mode), m_Cache(), m_MemRegion("FileDisk"),
+    m_ReqMutex(false), m_nAlignPoints(0)
 {
     m_pFile = VFS::instance().find(file);
     if(!m_pFile)
@@ -68,6 +69,8 @@ bool FileDisk::initialise()
 
 uintptr_t FileDisk::read(uint64_t location)
 {
+    LockGuard<Mutex> guard(m_ReqMutex);
+    
     if (location % 512)
         FATAL("Read with location % 512.");
 
@@ -100,6 +103,7 @@ uintptr_t FileDisk::read(uint64_t location)
 
 void FileDisk::write(uint64_t location)
 {
+    LockGuard<Mutex> guard(m_ReqMutex);
     if(!m_pFile)
         return;
 

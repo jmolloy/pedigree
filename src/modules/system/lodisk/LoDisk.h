@@ -53,7 +53,8 @@ class FileDisk : public Disk
         };
 
         FileDisk() :
-            m_pFile(0), m_Mode(Standard), m_Cache(), m_MemRegion("FileDisk-Failed")
+            m_pFile(0), m_Mode(Standard), m_Cache(),
+            m_MemRegion("FileDisk-Failed"), m_ReqMutex(false)
         {
             FATAL("I require a constructor with arguments!");
         }
@@ -90,6 +91,9 @@ class FileDisk : public Disk
 
         // Our region of memory
         MemoryRegion m_MemRegion;
+
+        // Mutex to ensure only one request runs at a time
+        Mutex m_ReqMutex;
 
         uint64_t m_AlignPoints[8];
         size_t m_nAlignPoints;
