@@ -158,14 +158,14 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   KernelCoreSyscallManager::instance().initialise();
 
-  // Initialise the processor-specific interface
-  // Bootup of the other Application Processors and related tasks
-  Processor::initialise2();
-
-  Processor::setInterrupts(true);
-
   // Initialise the kernel log.
   Log::instance().initialise();
+
+  // Initialise the processor-specific interface
+  // Bootup of the other Application Processors and related tasks
+  Processor::initialise2(bsInf);
+
+  Processor::setInterrupts(true);
 
   // Initialise the input manager
   InputManager::instance().initialise();
