@@ -51,6 +51,13 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     /** Initialise the page stack
      *\param[in] Info reference to the multiboot information structure */
     void initialise(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
+    
+    /** Initialise the page stack, with ranges above 4 GB. Requires ranges
+     *  below 4 GB to be available (call initialise first).
+     *\param[in] Info reference to the multiboot information structure */
+#ifdef X64
+    void initialise64(const BootstrapStruct_t &Info) INITIALISATION_ONLY;
+#endif
 
     /** Unmap & free the .init section */
     void initialisationDone();

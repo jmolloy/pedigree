@@ -70,7 +70,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   m_Initialised = 1;
 }
 
-void Processor::initialise2()
+void Processor::initialise2(const BootstrapStruct_t &Info)
 {
   size_t nProcessors = 1;
 
@@ -88,6 +88,10 @@ void Processor::initialise2()
     if (nProcessors != 1)
       Multiprocessor::initialise2();
   #endif
+
+  // Initialise the 64-bit physical memory management
+  X86CommonPhysicalMemoryManager &physicalMemoryManager = X86CommonPhysicalMemoryManager::instance();
+  physicalMemoryManager.initialise64(Info);
 
   m_Initialised = 2;
 }
