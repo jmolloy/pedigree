@@ -456,11 +456,7 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
         {
             WARNING("Memory region " << MemoryMap->address << " not used.");
         }
-        else if(MemoryMap->address < 0x100000000ULL)
-        {
-            continue;
-        }
-        else if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
+        else if ((MemoryMap->address >= 0x100000000ULL) && (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false))
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
         MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
@@ -468,7 +464,7 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
 
     // Print the ranges
 #if defined(VERBOSE_MEMORY_MANAGER)             
-    NOTICE("64-bit physical memory ranges:");
+    NOTICE("physical memory ranges, 64-bit added:");
     for (size_t i = 0;i < m_PhysicalRanges.size();i++)
     {
         NOTICE(" " << Hex << m_PhysicalRanges.getRange(i).address << " - " << (m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length));
@@ -647,11 +643,26 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
             X64VirtualAddressSpace &AddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
 #endif
 
-            if (AddressSpace.mapPageStructures(physicalAddress,
-                                               adjust_pointer(m_Stack[index], m_StackMax[index]),
-                                               VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write)
-                == true)
-                return;
+            if(!index)
+            {
+                if (AddressSpace.mapPageStructures(physicalAddress,
+                                                   adjust_pointer(m_Stack[index], m_StackMax[index]),
+                                                   VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write)
+                    == true)
+                    return;
+            }
+            else
+            {
+#if defined(X64)
+                if (AddressSpace.mapPageStructuresAbove4GB(physicalAddress,
+                                                   adjust_pointer(m_Stack[index], m_StackMax[index]),
+                                                   VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write)
+                    == true)
+                    return;
+#else
+                FATAL("PageStack::free - index > 0 when not built as x86_64");
+#endif
+            }
  
             m_StackMax[index] += getPageSize();
         }

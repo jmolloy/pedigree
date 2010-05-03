@@ -382,7 +382,44 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
     *pageTableEntry = physAddress | flags;
     return true;
   }
+  return false;
+}
 
+bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAddress,
+                                               void *virtualAddress,
+                                               size_t flags)
+{
+  size_t Flags = toFlags(flags);
+  size_t pml4Index = PML4_INDEX(virtualAddress);
+  uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
+
+  // Is a page directory pointer table present?
+  if (conditionalTableEntryAllocation(pml4Entry, Flags) == true)
+    return true;
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  // Is a page directory present?
+  if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, Flags) == true)
+    return true;
+
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+  // Is a page table present?
+  if (conditionalTableEntryAllocation(pageDirectoryEntry, Flags) == true)
+    return true;
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
+
+  // Is a page already present?
+  if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
+  {
+    *pageTableEntry = physAddress | flags;
+    return true;
+  }
   return false;
 }
 void *X64VirtualAddressSpace::allocateStack()
@@ -584,6 +621,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
     memset(physicalAddress(reinterpret_cast<void*>(physAddress)),
            0,
            PhysicalMemoryManager::getPageSize());
+
     return true;
   }
 

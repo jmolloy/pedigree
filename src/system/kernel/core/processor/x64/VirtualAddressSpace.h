@@ -73,6 +73,9 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     bool mapPageStructures(physical_uintptr_t physAddress,
                            void *virtualAddress,
                            size_t flags);
+    bool mapPageStructuresAbove4GB(physical_uintptr_t physAddress,
+                           void *virtualAddress,
+                           size_t flags);
 
     /** The destructor cleans up the address space */
     virtual ~X64VirtualAddressSpace();
