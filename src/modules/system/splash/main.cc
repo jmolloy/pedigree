@@ -277,8 +277,7 @@ void init()
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-2, g_ProgressY-2, g_ProgressW+4, g_ProgressH+4, g_ProgressBorderCol);
     g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
 
-    Log &log = Log::instance();
-    log.installCallback(&g_StreamLogger);
+    Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
     InputManager::instance().installCallback(InputManager::Key, keyCallback);

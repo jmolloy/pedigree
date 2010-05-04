@@ -175,10 +175,10 @@ public:
   void initialise();
 
   /** Installs an output callback */
-  void installCallback(LogCallback *callback);
+  void installCallback(LogCallback *pCallback, bool bSkipBacklog=false);
 
   /** Removes an output callback */
-  void removeCallback(LogCallback *callback);
+  void removeCallback(LogCallback *pCallback);
 
   /** Adds an entry to the log.
    *\param[in] str the null-terminated ASCII string that should be added */

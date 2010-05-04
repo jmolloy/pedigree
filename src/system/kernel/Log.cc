@@ -87,13 +87,17 @@ void Log::initialise ()
         installCallback(&g_SerialCallback);
 }
 
-void Log::installCallback(LogCallback *callback)
+void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
 {
     {
         LockGuard<Spinlock> guard(m_Lock);
-        m_OutputCallbacks.pushBack(callback);
+        m_OutputCallbacks.pushBack(pCallback);
     }
-    
+
+    // Some callbacks want to skip a (potentially) massive backlog
+    if(bSkipBacklog)
+        return;
+
     // Call the callback for the existing, flushed, log entries
     size_t entry = m_StaticEntryStart;
     while(1)
@@ -103,6 +107,25 @@ void Log::installCallback(LogCallback *callback)
             break;
         else
         {
+            switch(m_StaticLog[entry].type)
+            {
+                case Notice:
+                    pCallback->callback("(NN) ");
+                    break;
+                case Warning:
+                    pCallback->callback("(WW) ");
+                    break;
+                case Error:
+                    pCallback->callback("(EE) ");
+                    break;
+                case Fatal:
+                    pCallback->callback("(FF) ");
+                    break;
+            }
+            pCallback->callback(m_StaticLog[entry].str);
+            pCallback->callback("\n");
+            /* NOTE: It seems useless to me, fell free to revert, if it doesn't for you. eddyb
+
             // Process the buffer - specifically, need to handle newlines
             String buffer(static_cast<const char*>(m_StaticLog[entry].str));
             List<String*> lines = buffer.tokenise('\n');
@@ -110,20 +133,21 @@ void Log::installCallback(LogCallback *callback)
             {
                 // Sigh, the tokenise removes all our newlines, and we can't edit
                 // the String referenced by the iterator...
-                callback->callback(static_cast<const char*>(*(*it)));
-                callback->callback("\n");
+                pCallback->callback(static_cast<const char*>(*(*it)));
+                pCallback->callback("\n");
             }
+            */
         }
     }
 }
-void Log::removeCallback(LogCallback *callback)
+void Log::removeCallback(LogCallback *pCallback)
 {
     LockGuard<Spinlock> guard(m_Lock);
     for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
         it != m_OutputCallbacks.end();
         it++)
     {
-        if(*it == callback)
+        if(*it == pCallback)
         {
             m_OutputCallbacks.erase(it);
             return;
