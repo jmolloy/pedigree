@@ -32,11 +32,15 @@ include = [
     '.'
 ]
 
+kernelrtti = "kernelrtti"
+if env['ARCH'] == 'X64':
+    kernelrtti += "-nopic"  # Don't use an -fPIC version of the RTTI library to avoid
+                            # references to a GOT we can't provide.
+
 # To add a library add to the list below
 libraries = [
     'gcc',
-    'kernelrtti-nopic' # Don't use an -fPIC version of the RTTI library to avoid
-                       # references to a GOT we can't provide.
+    kernelrtti
 ]
 
 # To add a library path add to the list below
