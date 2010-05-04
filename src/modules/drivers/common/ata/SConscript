@@ -33,7 +33,7 @@ include = [
 ]
 
 kernelrtti = "kernelrtti"
-if env['ARCH'] == 'X64':
+if env['ARCH_TARGET'] == 'X64':
     kernelrtti += "-nopic"  # Don't use an -fPIC version of the RTTI library to avoid
                             # references to a GOT we can't provide.
 
