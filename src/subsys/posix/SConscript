@@ -74,6 +74,7 @@ include = [
     './include',
     '#/src/system/include',
     '#/src/modules/system',
+    '#/src/subsys/pedigree-c',
     '.'
 ]
 

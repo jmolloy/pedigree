@@ -41,6 +41,9 @@ int h_errno; // required by networking code
 
 #include <pedigree_config.h>
 
+#define PEDIGREE_SYSCALLS_LIBC
+#include <pedigree-syscalls.h>
+
 #define BS8(x) (x)
 #define BS16(x) (((x&0xFF00)>>8)|((x&0x00FF)<<8))
 #define BS32(x) (((x&0xFF000000)>>24)|((x&0x00FF0000)>>8)|((x&0x0000FF00)<<8)|((x&0x000000FF)<<24))
