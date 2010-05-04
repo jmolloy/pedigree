@@ -107,36 +107,29 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
             break;
         else
         {
+            HugeStaticString str;
             switch(m_StaticLog[entry].type)
             {
                 case Notice:
-                    pCallback->callback("(NN) ");
+                    str += "(NN) ";
                     break;
                 case Warning:
-                    pCallback->callback("(WW) ");
+                    str += "(WW) ";
                     break;
                 case Error:
-                    pCallback->callback("(EE) ");
+                    str += "(EE) ";
                     break;
                 case Fatal:
-                    pCallback->callback("(FF) ");
+                    str += "(FF) ";
                     break;
             }
-            pCallback->callback(m_StaticLog[entry].str);
-            pCallback->callback("\n");
-            /* NOTE: It seems useless to me, fell free to revert, if it doesn't for you. eddyb
+            str += m_StaticLog[entry].str;
+            str += "\n";
 
-            // Process the buffer - specifically, need to handle newlines
-            String buffer(static_cast<const char*>(m_StaticLog[entry].str));
-            List<String*> lines = buffer.tokenise('\n');
-            for(List<String*>::Iterator it = lines.begin(); it != lines.end(); it++)
-            {
-                // Sigh, the tokenise removes all our newlines, and we can't edit
-                // the String referenced by the iterator...
-                pCallback->callback(static_cast<const char*>(*(*it)));
-                pCallback->callback("\n");
-            }
-            */
+            /// \note This could send a massive batch of log entries on the
+            ///       callback. If the callback isn't designed to handle big
+            ///       buffers this may fail.
+            pCallback->callback(str);
         }
     }
 }
