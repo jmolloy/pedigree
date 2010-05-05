@@ -424,34 +424,42 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
 }
 void *X64VirtualAddressSpace::allocateStack()
 {
+    return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+}
+void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
+{
+    if(stackSz == 0)
+        stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
+    return doAllocateStack(stackSz);
+}
+void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
+{
+  m_Lock.acquire();
+  
   // Get a virtual address for the stack
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
   {
     pStack = m_freeStacks.popBack();
+    m_Lock.release();
   }
   else
   {
     pStack = m_pStackTop;
+    m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
+    
+    m_Lock.release();
 
-    if (m_bKernelSpace)
-      m_pStackTop = adjust_pointer(m_pStackTop, -(KERNEL_STACK_SIZE + 0x1000));
-    else
-      m_pStackTop = adjust_pointer(m_pStackTop, -USERSPACE_VIRTUAL_STACK_SIZE);
-  }
-
-  // Map some pages if this is the kernel space
-  if (m_bKernelSpace)
-  {
-    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-    for (size_t i = 0;i < (KERNEL_STACK_SIZE / 0x1000);i++)
+    // Map it in
+    uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
+    for (size_t j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
     {
-      // TODO: Check return values
-      physical_uintptr_t page = physicalMemoryManager.allocatePage();
-  
-      map(page,
-          adjust_pointer(pStack, - ((i + 1) * 0x1000)),
-          VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = map(phys,
+                 reinterpret_cast<void*> (j + stackBottom),
+                 VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in doAllocateStack");
     }
   }
 
