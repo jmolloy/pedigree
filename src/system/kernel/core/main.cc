@@ -56,6 +56,10 @@
 
 #include <machine/InputManager.h>
 
+#ifdef THREADS
+#include <process/ZombieQueue.h>
+#endif
+
 void apmm()
 {
 }
@@ -164,6 +168,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2(bsInf);
+
+#ifdef THREADS
+  ZombieQueue::instance().initialise();
+#endif
 
   Processor::setInterrupts(true);
 

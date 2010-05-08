@@ -19,7 +19,6 @@ ZombieQueue ZombieQueue::m_Instance;
 
 ZombieQueue::ZombieQueue() : RequestQueue()
 {
-    initialise();
 }
 
 ZombieQueue::~ZombieQueue()

@@ -164,7 +164,7 @@ void Process::kill()
       NOTICE("Adding process to zombie queue for cleanup");
       
       ZombieQueue::instance().addProcess(this);
-      Processor::information().getScheduler().schedule(Thread::Zombie);
+      Processor::information().getScheduler().killCurrentThread();
       
       // Should never get here.
       FATAL("Process: should never get here");
