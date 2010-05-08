@@ -22,6 +22,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <process/Scheduler.h>
 #include <process/Process.h>
+#include <utilities/LockGuard.h>
 
 //
 // Page Table/Directory entry flags
@@ -58,6 +59,8 @@ X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP
                                                              reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
                                                              KERNEL_VIRTUAL_STACK);
 
+VirtualAddressSpace *g_pCurrentlyCloning = 0;
+
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
   return X64VirtualAddressSpace::m_KernelSpace;
@@ -77,6 +80,8 @@ bool X64VirtualAddressSpace::isAddressValid(void *virtualAddress)
 }
 bool X64VirtualAddressSpace::isMapped(void *virtualAddress)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+  
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
 
@@ -113,6 +118,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress,
                                  size_t flags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+  
   size_t Flags = toFlags(flags);
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -192,6 +199,8 @@ void X64VirtualAddressSpace::getMapping(void *virtualAddress,
 }
 void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+  
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint64_t *pageTableEntry = 0;
@@ -208,6 +217,8 @@ void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 }
 void X64VirtualAddressSpace::unmap(void *virtualAddress)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+  
   // Get a pointer to the page-table entry (Also checks whether the page is actually present
   // or marked swapped out)
   uint64_t *pageTableEntry = 0;
@@ -351,6 +362,8 @@ bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
                                                void *virtualAddress,
                                                size_t flags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+
   size_t Flags = toFlags(flags);
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -389,6 +402,8 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
                                                void *virtualAddress,
                                                size_t flags)
 {
+  LockGuard<Spinlock> guard(m_Lock);
+  
   size_t Flags = toFlags(flags);
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -468,9 +483,7 @@ void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 void X64VirtualAddressSpace::freeStack(void *pStack)
 {
   // Add the stack to the list
-  // TODO m_freeStacks.pushBack(pStack);
-
-  // TODO: Really free the stack
+  m_freeStacks.pushBack(pStack);
 }
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
@@ -489,7 +502,8 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 
 X64VirtualAddressSpace::X64VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0),
-    m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_bKernelSpace(false)
+    m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_bKernelSpace(false),
+    m_Lock(false, true)
 {
 
   // Allocate a new PageMapLevel4
@@ -509,7 +523,8 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
 
 X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4, void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4),
-    m_pStackTop(VirtualStack), m_freeStacks(), m_bKernelSpace(true)
+    m_pStackTop(VirtualStack), m_freeStacks(), m_bKernelSpace(true),
+    m_Lock(false, true)
 {
 }
 

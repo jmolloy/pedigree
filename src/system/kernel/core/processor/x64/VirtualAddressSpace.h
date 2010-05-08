@@ -20,6 +20,7 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
+#include <Spinlock.h>
 
 /** @addtogroup kernelprocessorx64
  * @{ */
@@ -141,6 +142,8 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     Vector<void*> m_freeStacks;
     /** Is this the kernel space? */
     bool m_bKernelSpace;
+    /** Lock to guard against multiprocessor reentrancy. */
+    Spinlock m_Lock;
 
 
     /** The kernel virtual address space */
