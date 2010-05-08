@@ -22,7 +22,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <process/Scheduler.h>
 #include <process/Process.h>
-#include <utilities/LockGuard.h>
+#include <LockGuard.h>
 
 //
 // Page Table/Directory entry flags

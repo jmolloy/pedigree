@@ -23,6 +23,7 @@
 #include <linker/Elf.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
+#include <process/ZombieQueue.h>
 
 #include <process/SignalEvent.h>
 
@@ -160,16 +161,16 @@ void Process::kill()
       m_pParent->m_DeadThreads.release();
   else
   {
-      NOTICE("Deleting this");
-      // No parent: delete us then delete the thread.
-      // delete this;
-
-      Processor::information().getScheduler().killCurrentThread();
+      NOTICE("Adding process to zombie queue for cleanup");
+      
+      ZombieQueue::instance().addProcess(this);
+      Processor::information().getScheduler().schedule(Thread::Zombie);
+      
       // Should never get here.
       FATAL("Process: should never get here");
   }
 
-
+  ZombieQueue::instance().addProcess(this);
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");
