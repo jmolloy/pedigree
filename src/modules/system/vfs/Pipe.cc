@@ -16,6 +16,21 @@
 
 #include "Pipe.h"
 #include "Filesystem.h"
+#include <utilities/ZombieQueue.h>
+
+class ZombiePipe : public ZombieObject
+{
+    public:
+        ZombiePipe(Pipe *pPipe) : m_pPipe(pPipe)
+        {
+        }
+        virtual ~ZombiePipe()
+        {
+            delete m_pPipe;
+        }
+    private:
+        Pipe *m_pPipe;
+};
 
 Pipe::Pipe() :
     File(), m_bIsAnonymous(true), m_bIsEOF(false), m_BufLen(0),
@@ -138,7 +153,7 @@ void Pipe::decreaseRefCount(bool bIsWriter)
         // If we're anonymous, die completely.
         if (m_bIsAnonymous)
         {
-            delete this;
+            ZombieQueue::instance().addObject(new ZombiePipe(this));
         }
     }
 }
