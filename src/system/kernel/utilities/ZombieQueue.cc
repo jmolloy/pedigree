@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- #include <process/ZombieQueue.h>
+ #include <utilities/ZombieQueue.h>
 
 ZombieQueue ZombieQueue::m_Instance;
 
@@ -26,26 +26,18 @@ ZombieQueue::~ZombieQueue()
     destroy();
 }
 
-void ZombieQueue::addProcess(Process *pProcess)
+void ZombieQueue::addObject(ZombieObject *pObject)
 {
-    addAsyncRequest(1, reinterpret_cast<uint64_t>(pProcess));
-}
-
-void ZombieQueue::addThread(Thread *pThread)
-{
-    addAsyncRequest(2, reinterpret_cast<uint64_t>(pThread));
+    addAsyncRequest(reinterpret_cast<uint64_t>(pObject));
 }
 
 uint64_t ZombieQueue::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                                      uint64_t p6, uint64_t p7, uint64_t p8)
 {
-    if(!p1 || !p2)
+    if(!p1)
         return 0;
     
-    if(p1 == 1)
-        delete reinterpret_cast<Process*>(p2);
-    else if(p1 == 2)
-        delete reinterpret_cast<Thread*>(p2);
+    delete reinterpret_cast<ZombieObject*>(p2);
     
     return 0;
 }

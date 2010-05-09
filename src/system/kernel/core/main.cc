@@ -57,7 +57,7 @@
 #include <machine/InputManager.h>
 
 #ifdef THREADS
-#include <process/ZombieQueue.h>
+#include <utilities/ZombieQueue.h>
 #endif
 
 void apmm()

@@ -20,12 +20,40 @@
 #include <utilities/RequestQueue.h>
 #include <Log.h>
 
-#include "Process.h"
-#include "Thread.h"
+#include <process/Process.h>
+
+/// Wrapper object for ZombieQueue so it can delete any type of object with
+/// the correct destructors called in MI situations.
+class ZombieObject
+{
+    public:
+        ZombieObject()
+        {
+        }
+        /// When inheriting this class, you delete your object here.
+        virtual ~ZombieObject()
+        {
+        }
+};
+
+/// Special wrapper object for Process
+class ZombieProcess : public ZombieObject
+{
+    public:
+        ZombieProcess(Process *pProcess) : m_pProcess(pProcess)
+        {
+        }
+        virtual ~ZombieProcess()
+        {
+            delete m_pProcess;
+        }
+    private:
+        Process *m_pProcess;
+};
 
 /** 
-  * ZombieQueue: takes zombie processes and threads, and frees them. Solves the
-  * problem where an object needs to be deleted by itself (delete this is BAD).
+  * ZombieQueue: takes zombie objects and frees them. This is used so those
+  * objects do not have to do something like "delete this", which is bad.
   */
 class ZombieQueue : public RequestQueue
 {
@@ -38,8 +66,7 @@ class ZombieQueue : public RequestQueue
             return m_Instance;
         }
 
-        void addProcess(Process *pProcess);
-        void addThread(Thread *pThread);
+        void addObject(ZombieObject *pObject);
 
     private:
         virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,

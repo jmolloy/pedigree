@@ -23,7 +23,7 @@
 #include <linker/Elf.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
-#include <process/ZombieQueue.h>
+#include <utilities/ZombieQueue.h>
 
 #include <process/SignalEvent.h>
 
@@ -124,7 +124,7 @@ void Process::kill()
   if(m_pParent)
 	NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
   else
-	NOTICE("Kill: " << m_Id << " (parent: < orphan :( >)");
+	NOTICE("Kill: " << m_Id << " (parent: <orphan>)");
 
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
@@ -163,14 +163,16 @@ void Process::kill()
   {
       NOTICE("Adding process to zombie queue for cleanup");
       
-      ZombieQueue::instance().addProcess(this);
+      ZombieQueue::instance().addObject(new ZombieProcess(this));
       Processor::information().getScheduler().killCurrentThread();
       
       // Should never get here.
       FATAL("Process: should never get here");
   }
 
-  ZombieQueue::instance().addProcess(this);
+  // We have a parent process, so we schedule this process' thread into the
+  // Zombie state and queue the process for removal.
+  ZombieQueue::instance().addObject(new ZombieProcess(this));
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");
