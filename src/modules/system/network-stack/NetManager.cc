@@ -21,8 +21,23 @@
 #include <network-stack/RawManager.h>
 #include <network-stack/RoutingTable.h>
 #include <network-stack/ConnectionBasedEndpoint.h>
+#include <utilities/ZombieQueue.h>
 
 NetManager NetManager::m_Instance;
+
+class ZombieSocket : public ZombieObject
+{
+    public:
+        ZombieSocket(Socket *pSocket) : m_pSocket(pSocket)
+        {
+        }
+        virtual ~ZombieSocket()
+        {
+            delete m_pSocket;
+        }
+    private:
+        Socket *m_pSocket;
+};
 
 uint64_t Socket::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
@@ -54,7 +69,7 @@ void Socket::decreaseRefCount(bool bIsWriter)
             }
             m_Endpoint->getManager()->returnEndpoint(m_Endpoint);
         }
-        delete this;
+        ZombieQueue::instance().addObject(new ZombieSocket(this));
     }
 }
 
