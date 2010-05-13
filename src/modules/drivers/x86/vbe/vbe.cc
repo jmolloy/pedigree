@@ -208,7 +208,11 @@ void entry()
   String str;
   str.sprintf("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
   Config::Result *pResult = Config::instance().query(str);
-  if (pResult->succeeded() && pResult->rows() == 1)
+  if(!pResult)
+  {
+      ERROR("vbe: Got no result when selecting displays");
+  }
+  else if (pResult->succeeded() && pResult->rows() == 1)
   {
       mode_id = pResult->getNum(0, "mode_id");
       delete pResult;
@@ -281,4 +285,4 @@ void exit()
 MODULE_NAME("vbe");
 MODULE_ENTRY(&entry);
 MODULE_EXIT(&exit);
-MODULE_DEPENDS("pci");
+MODULE_DEPENDS("pci", "config");

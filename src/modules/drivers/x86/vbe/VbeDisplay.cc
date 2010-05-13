@@ -42,6 +42,11 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     String str;
     str.sprintf("DELETE FROM 'display-modes' where display_id = %d", displayNum);
     Config::Result *pR = Config::instance().query(str);
+    if(!pR)
+    {
+        FATAL("VBE: Couldn't get a result.");
+        return;
+    }
     if (!pR->succeeded())
     {
         FATAL("VbeDisplay: Sql error: " << pR->errorMessage());

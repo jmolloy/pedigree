@@ -121,6 +121,12 @@ Config::~Config()
 
 Config::Result *Config::query(const char *sql)
 {
+    if(!*sql)
+    {
+        ERROR("Dud query string passed to Config::query");
+        return 0;
+    }
+
     char **result;
     int rows, cols;
     char *error;
