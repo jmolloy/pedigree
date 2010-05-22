@@ -55,7 +55,6 @@ void Spinlock::acquire()
       size_t atom = m_Atom;
       m_Atom = true;
 
-    // Break into the debugger, with the return address in EAX to make debugging easier
     FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
@@ -88,18 +87,12 @@ void Spinlock::release()
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
-      /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
+    /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
     ///       depends on the log spinlock, which may have deadlocked. So we actually
     ///       force the spinlock to release here, then hit the breakpoint.
     m_Atom = true;
 
-    // Break into the debugger, with the return address in EAX to make debugging easier
-#ifdef X86
-    asm volatile("mov %0, %%eax; mov %1, %%ebx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "m"(m_Atom));
-#endif
-#ifdef X64
-    asm volatile("mov %0, %%rax; mov %1, %%rbx; int3" : : "r"(reinterpret_cast<uintptr_t>(this)), "m"(m_Atom));
-#endif
+    FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
