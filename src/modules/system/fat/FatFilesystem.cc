@@ -72,14 +72,14 @@ bool FatFilesystem::initialise(Disk *pDisk)
     memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
 
     /** Validate the BPB and check for FAT FS */
+    String devName;
+    pDisk->getName(devName);
 
     /* check for EITHER a near jmp, or a jmp and a nop */
     if (m_Superblock.BS_jmpBoot[0] != 0xE9)
     {
         if (!(m_Superblock.BS_jmpBoot[0] == 0xEB && m_Superblock.BS_jmpBoot[2] == 0x90))
         {
-            String devName;
-            pDisk->getName(devName);
             ERROR("FAT: Superblock not found on device " << devName << " [" << m_Superblock.BS_jmpBoot[0] << ", " << m_Superblock.BS_jmpBoot[2] << "]");
             return false;
         }
@@ -135,17 +135,17 @@ bool FatFilesystem::initialise(Disk *pDisk)
     if (clusterCount < 4085)
     {
         m_Type = FAT12;
-        NOTICE("FAT12");
+        NOTICE("FAT: Device " << devName << " is type FAT12");
     }
     else if (clusterCount < 65525)
     {
         m_Type = FAT16;
-        NOTICE("FAT16");
+        NOTICE("FAT: Device " << devName << " is type FAT16");
     }
     else
     {
         m_Type = FAT32;
-        NOTICE("FAT32");
+        NOTICE("FAT: Device " << devName << " is type FAT32");
     }
 
     switch (m_Type)
