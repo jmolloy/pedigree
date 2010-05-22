@@ -90,6 +90,7 @@ void Spinlock::release()
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
     ///       depends on the log spinlock, which may have deadlocked. So we actually
     ///       force the spinlock to release here, then hit the breakpoint.
+    size_t atom = m_Atom;
     m_Atom = true;
 
     FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
