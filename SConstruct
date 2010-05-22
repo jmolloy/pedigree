@@ -61,6 +61,7 @@ opts.AddVariables(
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
     
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
+    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
     
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
     
@@ -190,9 +191,12 @@ if(env['AS'] == ''):
         env['AS'] = env['CROSS'] + "as"
 
 # Detect losetup presence
-tmp = commands.getoutput("which losetup")
-if(len(tmp) and not "no losetup" in tmp):
-    env['havelosetup'] = 1
+if not env['forcemtools']:
+    tmp = commands.getoutput("which losetup")
+    if(len(tmp) and not "no losetup" in tmp):
+        env['havelosetup'] = 1
+    else:
+        env['havelosetup'] = 0
 else:
     env['havelosetup'] = 0
 
