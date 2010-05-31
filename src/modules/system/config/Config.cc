@@ -17,8 +17,12 @@
 #include "Config.h"
 #include <utilities/utility.h>
 #include <Log.h>
+#include <process/Mutex.h>
+#include <LockGuard.h>
 
 extern sqlite3 *g_pSqlite;
+    
+Mutex g_sqlLock(false);
 
 Config Config::m_Instance;
 
@@ -31,7 +35,11 @@ Config::Result::Result(char **ppResult, size_t rows, size_t cols, char *error, i
 
 Config::Result::~Result()
 {
-    sqlite3_free_table(m_ppResult);
+    LockGuard<Mutex> guard(g_sqlLock);
+    
+    if(m_ppResult)
+        sqlite3_free_table(m_ppResult);
+    
     free(m_pError);
 }
 
@@ -126,6 +134,8 @@ Config::Result *Config::query(const char *sql)
         ERROR("Dud query string passed to Config::query");
         return 0;
     }
+    
+    LockGuard<Mutex> guard(g_sqlLock);
 
     char **result;
     int rows, cols;
