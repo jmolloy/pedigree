@@ -3,7 +3,7 @@
 #------------------------- All Architectures -------------------------#
 
 # Generic entry-level flags (that everyone should have)
-generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O2 '
+generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O0 '
 generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-exceptions '
 
 # -fno-rtti
@@ -98,7 +98,7 @@ x64_defines = generic_defines + general_x86_defines + x64_defines
 
 # ARM defines
 # TODO: Fix this to support other ARM chips and boards
-general_arm_defines = ['ARM_COMMON', 'LITTLE_ENDIAN', 'ARM926E', 'ARM_VERSATILE', 'BITS_32']
+general_arm_defines = ['ARM_COMMON', 'BITS_32']
 
 # ARM CFLAGS and CXXFLAGS
 default_arm_cflags = ' '
@@ -107,8 +107,8 @@ default_arm_cxxflags = ' '
 # ARM assembler flags
 default_arm_asflags = ''
 
-# ARM linker flags
-default_arm_linkflags = ' -T src/system/kernel/link-arm.ld '
+# ARM linker flags - [mach] is replaced with the machine type
+default_arm_linkflags = ' -T src/system/kernel/link-arm-[mach].ld '
 
 # ARM images directory
 default_arm_imgdir = '#/images/arm/'

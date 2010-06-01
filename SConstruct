@@ -72,6 +72,16 @@ opts.AddVariables(
     BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APCI).', 0),
     BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
 
+    # ARM options
+    BoolVariable('arm_integrator', 'Target the Integrator/CP development board', 0),
+    BoolVariable('arm_versatile', 'Target the Versatile/PB development board', 0),
+    BoolVariable('arm_beagle', 'Target the BeagleBoard', 0),
+
+    BoolVariable('arm_9', 'Target the ARM9 processor family (currently only ARM926E)', 0),
+    BoolVariable('arm_cortex_a8', 'Target an ARM Cortex-A8 processor', 0),
+
+    BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
+
     ####################################
     # These options are NOT TO BE USED on the command line!
     # They're here because they need to be saved through runs.
@@ -164,13 +174,38 @@ if(tmp != None):
         env['ARCH_TARGET'] = 'PPC'
     elif re.match('arm',tmp.group(1)) != None:
         defines = default_defines['arm']
+
+
+        # Handle input options
+        mach = ''
+        if env['arm_integrator']:
+            defines += ['ARM_INTEGRATOR']
+            mach = 'integrator'
+        elif env['arm_versatile']:
+            defines += ['ARM_VERSATILE']
+            mach = 'versatile'
+        elif env['arm_beagle']:
+            defines += ['ARM_BEAGLE']
+            mach = 'beagle'
+
+        if env['arm_9']:
+            defines += ['ARM926E'] # TODO: too specific.
+        elif env['arm_cortex_a8']:
+            defines += ['ARM_CORTEX_A8']
+
+        if env['arm_bigendian']:
+            defines += ['BIG_ENDIAN']
+        else:
+            defines += ['LITTLE_ENDIAN']
+        
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['arm'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['arm'])
         env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['arm'])
-        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['arm'])
+        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['arm']).replace('[mach]', mach)
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['arm']
         env['ARCH_TARGET'] = 'ARM'
+
 if(tmp == None or env['ARCH_TARGET'] == ''):
     print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
     Exit(1)
