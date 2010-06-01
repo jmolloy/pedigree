@@ -17,8 +17,9 @@
 .extern __start
 .global start
 start:
-    mov sp, $0x80000000
-    add sp, $0x8000
-    mov ip, sp
-    b __start
+    ldr sp, =stack+0x10000
+    bl __start
+
+.section .bss
+.comm stack, 0x10000
 

@@ -9,34 +9,29 @@ SECTIONS
     .text :
     {
         code = .; _code = .; __code = .;
-        *(.text)
-        . = ALIGN(4096);
+        *(.text*)
     }
 
     .data :
     {
         start_ctors = .;
-        *(.ctors)
+        *(.ctors*)
         end_ctors = .;
-        
 
         data = .; _data = .; __data = .;
-        *(.data)
-        *(.rodata)
-        
-        . = ALIGN(4096);
+        *(.data*)
+        *(.rodata*)
         
     	__strtab = .;
-	    *(.strtab)
+	    *(.strtab*)
     	__strtab_end = .;
     }
 
     .bss :
     {
         bss = .; _bss = .; __bss = .;
-        *(.bss)
-        *(.sbss)
-        . = ALIGN(4096);
+        *(.bss*)
+        *(.sbss*)
     }
 
     end = .; _end = .; __end = .;

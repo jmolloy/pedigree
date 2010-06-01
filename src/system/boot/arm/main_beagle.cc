@@ -1,72 +1,14 @@
 // C++ entry point 
 
-#if 0
-inline void writeChar(char c)
-{
-#if defined( ARM_VERSATILE )
-  volatile char *p = reinterpret_cast<volatile char*>(0x101f1000);
-#elif defined( ARM_INTEGRATOR )
-  volatile char *p = reinterpret_cast<volatile char*>(0x16000000);
-#else
-  #error No valid ARM board!
-#endif
-  *p = c;
-  asm volatile("" ::: "memory");
-#ifndef SERIAL_IS_FILE
-  *p = 0;
-  asm volatile("" ::: "memory");
-#endif
+extern "C" {
+volatile unsigned char *uart1 = (volatile unsigned char*) 0x4806A000;
+volatile unsigned char *uart2 = (volatile unsigned char*) 0x4806C000;
+volatile unsigned char *uart3 = (volatile unsigned char*) 0x49020000;
 }
 
-inline void writeStr(const char *str)
-{
-  char c;
-  while ((c = *str++))
-    writeChar(c);
-}
+/// \note Page/section references are from the OMAP35xx Technical Reference Manual
 
-void writeHex(unsigned int n)
-{
-    bool noZeroes = true;
-
-    int i;
-    unsigned int tmp;
-    for (i = 28; i > 0; i -= 4)
-    {
-        tmp = (n >> i) & 0xF;
-        if (tmp == 0 && noZeroes)
-        {
-            continue;
-        }
-    
-        if (tmp >= 0xA)
-        {
-            noZeroes = false;
-            writeChar (tmp-0xA+'a');
-        }
-        else
-        {
-            noZeroes = false;
-            writeChar( tmp+'0');
-        }
-    }
-  
-    tmp = n & 0xF;
-    if (tmp >= 0xA)
-    {
-        writeChar (tmp-0xA+'a');
-    }
-    else
-    {
-        writeChar( tmp+'0');
-    }
-
-}
-
-#endif
-
-/// Page/section references are from the OMAP35xx Technical Reference Manual
-
+/** UART/IrDA/CIR Registers */
 #define DLL_REG         0x00 // R/W
 #define RHR_REG         0x00 // R
 #define THR_REG         0x00 // W
@@ -99,12 +41,25 @@ void writeHex(unsigned int n)
 #define SYSS_REG        0x58 // R
 #define WER_REG         0x5C // RW
 
-extern "C" void __start()
+/// Gets a uart MMIO block given a number
+extern "C" volatile unsigned char *uart_get(int n)
 {
-    volatile unsigned int *usrleds = (volatile unsigned int*) 0x49056090;
-    usrleds[0] = 0x00600000;
-    
-    volatile unsigned char *uart = (volatile unsigned char*) 0x49020000; // 0x4806A000;
+    if(n == 1)
+        return uart1;
+    else if(n == 2)
+        return uart2;
+    else if(n == 3)
+        return uart3;
+    else
+        return 0;
+}
+
+/// Perform a software reset of a given UART
+extern "C" bool uart_softreset(int n)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return false;
 
     /** Reset the UART. Page 2677, section 17.5.1.1.1 **/
 
@@ -113,6 +68,16 @@ extern "C" void __start()
 
     // 2. Wait for the end of the reset operation
     while(!(uart[SYSS_REG] & 0x1));
+
+    return true;
+}
+
+/// Configure FIFOs and DMA to default values
+extern "C" bool uart_fifodefaults(int n)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return false;
 
     /** Configure FIFOs and DMA **/
 
@@ -163,6 +128,18 @@ extern "C" void __start()
     // 12. Restore the LCR_REG value stored in step 1
     uart[LCR_REG] = old_lcr_reg;
 
+    return true;
+}
+
+/// Configure the UART protocol (to defaults - 115200 baud, 8 character bits,
+/// no paruart_protoconfigity, 1 stop bit). Will also enable the UART for output as a side
+/// effect.
+extern "C" bool uart_protoconfig(int n)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return false;
+    
     /** Configure protocol, baud and interrupts **/
 
     // 1. Disable UART to access DLL_REG and DLH_REG
@@ -172,8 +149,8 @@ extern "C" void __start()
     uart[LCR_REG] = 0xBF;
 
     // 3. Enable access to IER_REG
-    efr_reg = uart[EFR_REG];
-    old_enhanced_en = efr_reg & 0x8;
+    unsigned char efr_reg = uart[EFR_REG];
+    unsigned char old_enhanced_en = efr_reg & 0x8;
     if(!(efr_reg & 0x8)) // Set ENHANCED_EN (bit 4) if not set
         efr_reg |= 0x8;
     uart[EFR_REG] = efr_reg; // Write back to the register
@@ -211,15 +188,25 @@ extern "C" void __start()
     // 13. Load the new UART mode
     uart[MDR1_REG] = 0;
 
+    return true;
+}
+
+/// Completely disable flow control on the UART
+extern "C" bool uart_disableflowctl(int n)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return false;
+
     /** Configure hardware flow control */
 
     // 1. Switch to configuration mode A to access the MCR_REG register
-    old_lcr_reg = uart[LCR_REG];
+    unsigned char old_lcr_reg = uart[LCR_REG];
     uart[LCR_REG] = 0x80;
 
     // 2. Enable submode TCR_TLR to access TCR_REG (part 1 of 2)
-    mcr_reg = uart[MCR_REG];
-    old_tcl_tlr = mcr_reg & 0x20;
+    unsigned char mcr_reg = uart[MCR_REG];
+    unsigned char old_tcl_tlr = mcr_reg & 0x20;
     if(!(mcr_reg & 0x20))
         mcr_reg |= 0x20;
     uart[MCR_REG] = mcr_reg;
@@ -228,8 +215,8 @@ extern "C" void __start()
     uart[LCR_REG] = 0xBF;
 
     // 4. Enable submode TCR_TLR to access the TCR_REG register (part 2 of 2)
-    efr_reg = uart[EFR_REG];
-    old_enhanced_en = efr_reg & 0x8;
+    unsigned char efr_reg = uart[EFR_REG];
+    unsigned char old_enhanced_en = efr_reg & 0x8;
     if(!(efr_reg & 0x8)) // Set ENHANCED_EN (bit 4) if not set
         efr_reg |= 0x8;
     uart[EFR_REG] = efr_reg; // Write back to the register
@@ -251,18 +238,99 @@ extern "C" void __start()
     // 9. Restore the LCR_REG value saved in step 1
     uart[LCR_REG] = old_lcr_reg;
 
-    usrleds[1] = 0x00200000;
+    return true;
+}
 
-    // Write some text.
-    uart[0] = 'H';
-    uart[0] = 'e';
-    uart[0] = 'l';
-    uart[0] = 'l';
-    uart[0] = 'o';
-    uart[0] = '!';
-    uart[0] = ' ';
-    uart[0] = ':';
-    uart[0] = 'D';
+extern "C" void uart_write(int n, char c)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return;
+
+    // Wait until the hold register is empty
+    while(!(uart[LSR_REG] & 0x20));
+    uart[THR_REG] = c;
+}
+
+extern "C" char uart_read(int n)
+{
+    volatile unsigned char *uart = uart_get(n);
+    if(!uart)
+        return 0;
+
+    // Wait for data in the receive FIFO
+    while(!(uart[LSR_REG] & 0x1));
+    return uart[RHR_REG];
+}
+
+extern "C" inline void writeStr(int n, const char *str)
+{
+  char c;
+  while ((c = *str++))
+    uart_write(n, c);
+}
+
+extern "C" void writeHex(int uart, unsigned int n)
+{
+    bool noZeroes = true;
+
+    int i;
+    unsigned int tmp;
+    for (i = 28; i > 0; i -= 4)
+    {
+        tmp = (n >> i) & 0xF;
+        if (tmp == 0 && noZeroes)
+        {
+            continue;
+        }
+    
+        if (tmp >= 0xA)
+        {
+            noZeroes = false;
+            uart_write(uart, tmp-0xA+'a');
+        }
+        else
+        {
+            noZeroes = false;
+            uart_write(uart, tmp+'0');
+        }
+    }
+  
+    tmp = n & 0xF;
+    if (tmp >= 0xA)
+    {
+        uart_write(uart, tmp-0xA+'a');
+    }
+    else
+    {
+        uart_write(uart, tmp+'0');
+    }
+
+}
+
+extern "C" void __start()
+{
+    volatile unsigned int *usrleds = (volatile unsigned int*) 0x49056090;
+    usrleds[0] = 0x00600000;
+
+    usrleds[1] = 0x00400000;
+
+    bool b = uart_softreset(3);
+    if(!b)
+        while(1);
+    b = uart_fifodefaults(3);
+    if(!b)
+        while(1);
+    b = uart_protoconfig(3);
+    if(!b)
+        while(1);
+    b = uart_disableflowctl(3);
+    if(!b)
+        while(1);
+
+    writeStr(3, "Hello World!");
+
+    usrleds[1] = 0x00200000;
     
     while (1);
 }
