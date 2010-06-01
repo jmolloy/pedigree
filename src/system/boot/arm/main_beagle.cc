@@ -4,6 +4,8 @@ extern "C" {
 volatile unsigned char *uart1 = (volatile unsigned char*) 0x4806A000;
 volatile unsigned char *uart2 = (volatile unsigned char*) 0x4806C000;
 volatile unsigned char *uart3 = (volatile unsigned char*) 0x49020000;
+
+volatile unsigned char *leds = (volatile unsigned char*) 0x49056000; // GPIO5
 }
 
 /// \note Page/section references are from the OMAP35xx Technical Reference Manual
@@ -308,13 +310,62 @@ extern "C" void writeHex(int uart, unsigned int n)
 
 }
 
+bool led_state(int n)
+{
+    char state = leds[0x96];
+    if((n == 0) && (state & 0x40))
+        return true;
+    else if((n == 1) && (state & 0x20))
+        return true;
+    else
+        return false;
+}
+
+void led_on(int n)
+{
+    if(led_state(n))
+        return; // Already on!
+
+    char states = leds[0x96];
+    if(n == 0)
+        states |= 0x40;
+    else if(n == 1)
+        states |= 0x20;
+    else
+        return;
+    leds[0x96] = states;
+}
+
+void led_off(int n)
+{
+    if(!led_state(n))
+        return; // Already off!
+
+    char states = 0;
+    if(n == 0)
+        states = 0x40;
+    else if(n == 1)
+        states = 0x20;
+    else
+        return;
+    leds[0x92] = states;
+}
+
+void led_toggle(int n)
+{
+    if(led_state(n))
+        led_off(n);
+    else
+        led_on(n);
+}
+
+void led_clear()
+{
+    leds[0x92] = 0x60;
+}
+
 extern "C" void __start()
 {
-    volatile unsigned int *usrleds = (volatile unsigned int*) 0x49056090;
-    usrleds[0] = 0x00600000;
-
-    usrleds[1] = 0x00400000;
-
     bool b = uart_softreset(3);
     if(!b)
         while(1);
@@ -327,10 +378,32 @@ extern "C" void __start()
     b = uart_disableflowctl(3);
     if(!b)
         while(1);
+    
+    led_clear();
+    led_on(0); // Switch on the USR0 LED to show we're active and thinking
 
-    writeStr(3, "Hello World!");
+    writeStr(3, "Pedigree for the BeagleBoard\r\n\r\n");
 
-    usrleds[1] = 0x00200000;
+    writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggler the USR1 LED.\r\nPress 0 to clear both LEDs.\r\n");
+    while(1)
+    {
+        char c = uart_read(3);
+        if(c == '1')
+        {
+            writeStr(3, "Toggling USR0 LED\r\n");
+            led_toggle(0);
+        }
+        else if(c == '2')
+        {
+            writeStr(3, "Toggling USR1 LED\r\n");
+            led_toggle(1);
+        }
+        else if(c == '0')
+        {
+            writeStr(3, "Clearing both USR0 and USR1 LEDs\r\n");
+            led_clear();
+        }
+    }
     
     while (1);
 }
