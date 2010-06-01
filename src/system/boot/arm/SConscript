@@ -11,9 +11,11 @@ basedir = Dir("#").abspath
 builddir = "#build"
 kerneldir = Dir("#" + env["PEDIGREE_BUILD_KERNEL"]).abspath
 objname = builddir + '/bootloader'
+uimage = builddir + '/uImage.bin'
 
 env.Alias("kernel", objname)
-env.Depends(objname, kerneldir + "/kernel")
+env.Alias("kernel", uimage)
+# env.Depends(objname, kerneldir + "/kernel")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -22,10 +24,13 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    'main.cc',
-    'Elf32.cc',
+#    'main.cc',
+#    'Elf32.cc',
     'arm_support.s'
 ]
+
+if env['arm_beagle']:
+    files += ['main_beagle.cc']
 
 # To include a new directory for includes, just add it to the list
 include = [
@@ -62,10 +67,15 @@ def makeAutogenH(target, source, env):
     f.write("};\n")
     f.close()
 
-env.Command("autogen.h", kerneldir + "/kernel", Action(makeAutogenH, "Building autogen.h..."))
+# env.Command("autogen.h", kerneldir + "/kernel", Action(makeAutogenH, "Building autogen.h..."))
 
-env['CPPPATH'] += [os.path.dirname(env.File('autogen.h').path)]
+# env['CPPPATH'] += [os.path.dirname(env.File('autogen.h').path)]
 
 if not len(files) == 0:
     #^-- Prevents 'no input files'
-    build = env.Program(objname,env.objects,LINKFLAGS="-nostdlib -T " + basedir + "/src/system/boot/arm/link-arm.ld")
+    build = env.Program(objname,env.objects,LINKFLAGS="-nostdlib -T " + basedir + "/src/system/boot/arm/link-arm-beagle.ld")
+
+if env['arm_beagle']:
+    # Set up the uboot image
+    env.Command(uimage, objname, 'mkimage -A arm -O linux -T kernel -C none -a 0x83000000 -e 0x83000000 -n "pedigree" -d ' + env.File(objname).abspath + ' ' + env.File(uimage).abspath)
+
