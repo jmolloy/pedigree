@@ -14,29 +14,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-# void __arm_vector_table();
-.global __arm_vector_table
-.extern arm_swint_handler
+.extern __start
+.global start
+start:
+    mov sp, $0x80000000
+    add sp, $0x8000
+    mov ip, sp
+    b __start
 
-intentry:
-  b arm_swint_handler
-
-# ARM vector table starting at 0x0
-__arm_vector_table:
-
-__armvec_reset:
-  ldr pc,=arm_reset_handler
-__armvec_undefinst:
-  ldr pc,=arm_instundef_handler
-__armvec_swint:
-  ldr pc,=arm_swint_handler
-__armvec_prefetchabort:
-.long 0
-__armvec_dataabort:
-.long 0
-__armvec_addrexcept:
-.long 0
-__armvec_irq:
-  ldr pc,=arm_irq_handler
-__armvec_fiq:
-  ldr pc,=arm_fiq_handler
