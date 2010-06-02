@@ -282,9 +282,7 @@ extern "C" void writeHex(int uart, unsigned int n)
     {
         tmp = (n >> i) & 0xF;
         if (tmp == 0 && noZeroes)
-        {
             continue;
-        }
     
         if (tmp >= 0xA)
         {
@@ -300,22 +298,10 @@ extern "C" void writeHex(int uart, unsigned int n)
   
     tmp = n & 0xF;
     if (tmp >= 0xA)
-    {
         uart_write(uart, tmp-0xA+'a');
-    }
     else
-    {
         uart_write(uart, tmp+'0');
-    }
-
 }
-
-/**
-
-(149 - 128) = bit 21 = 200000 - GPIO_149 is USR0. Should be 400000
-(150 - 128) = bit 22 = 400000 - GPIO_150 is USR1. Should be 200000
-
-*/
 
 /** GPIO implementation for the BeagleBoard */
 class BeagleGpio
@@ -329,11 +315,17 @@ class BeagleGpio
         void initialise()
         {
             m_gpio1 = (volatile unsigned int *) 0x48310000;
+            initspecific(1, m_gpio1);
             m_gpio2 = (volatile unsigned int *) 0x49050000;
+            initspecific(2, m_gpio2);
             m_gpio3 = (volatile unsigned int *) 0x49052000;
+            initspecific(3, m_gpio3);
             m_gpio4 = (volatile unsigned int *) 0x49054000;
+            initspecific(4, m_gpio4);
             m_gpio5 = (volatile unsigned int *) 0x49056000;
+            initspecific(5, m_gpio5);
             m_gpio6 = (volatile unsigned int *) 0x49058000;
+            initspecific(6, m_gpio6);
         }
 
         void clearpin(int pin)
@@ -404,8 +396,60 @@ class BeagleGpio
             // Read the data from the pin
             return (gpio[0xE] & (1 << base)) >> (base ? base - 1 : 0);
         }
+
+        void enableoutput(int pin)
+        {
+            // Grab the GPIO MMIO range for the pin
+            int base = 0;
+            volatile unsigned int *gpio = getGpioForPin(pin, &base);
+            if(!gpio)
+            {
+                writeStr(3, "BeagleGpio::enableoutput :No GPIO found for pin ");
+                writeHex(3, pin);
+                writeStr(3, "!\r\n");
+                return;
+            }
+
+            // Set the pin as an output (if it's an input, the bit is set)
+            if(gpio[0xD] & (1 << base))
+                gpio[0xD] ^= (1 << base);
+        }
         
     private:
+
+        /// Initialises a specific GPIO to a given set of defaults
+        void initspecific(int n, volatile unsigned int *gpio)
+        {
+            if(!gpio)
+                return;
+
+            // Write information about it
+            /// \todo When implementing within Pedigree, we'll have a much nicer
+            ///       interface for string manipulation and writing stuff to the
+            ///       UART.
+            unsigned int rev = gpio[0];
+            writeStr(3, "GPIO");
+            writeHex(3, n);
+            writeStr(3, ": revision ");
+            writeHex(3, (rev & 0xF0) >> 4);
+            writeStr(3, ".");
+            writeHex(3, rev & 0x0F);
+            writeStr(3, " - initialising: ");
+
+            // 1. Perform a software reset of the GPIO.
+            gpio[0x4] = 2;
+            while(gpio[0x5] & 1); // Poll GPIO_SYSSTATUS, bit 0
+
+            // 2. Disable all IRQs
+            gpio[0x7] = 0; // GPIO_IRQENABLE1
+            gpio[0xB] = 0; // GPIO_IRQENABLE2
+
+            // 3. Enable the module
+            gpio[0xC] = 0;
+
+            // Completed the reset and initialisation.
+            writeStr(3, "Done.\r\n");
+        }
 
         /// Gets the correct GPIO MMIO range for a given GPIO pin. The base
         /// indicates which bit represents this pin in registers, where relevant
@@ -472,14 +516,17 @@ extern "C" void __start()
     if(!b)
         while(1);
 
+    writeStr(3, "Pedigree for the BeagleBoard\r\n\r\n");
+
     gpio.initialise();
+
+    gpio.enableoutput(149);
+    gpio.enableoutput(150);
 
     gpio.drivepin(149); // Switch on the USR1 LED to show we're active and thinking
     gpio.clearpin(150);
 
-    writeStr(3, "Pedigree for the BeagleBoard\r\n\r\n");
-
-    writeStr(3, "Please press the USER button on the board to continue.\r\n");
+    writeStr(3, "\r\nPlease press the USER button on the board to continue.\r\n");
 
     while(!gpio.capturepin(7));
 
