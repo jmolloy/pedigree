@@ -1,12 +1,58 @@
-// C++ entry point 
+// C++ entry point
+
+#include "Elf32.h"
+
+// autogen.h contains the full kernel binary in a char array
+#include "autogen.h"
 
 extern "C" {
 volatile unsigned char *uart1 = (volatile unsigned char*) 0x4806A000;
 volatile unsigned char *uart2 = (volatile unsigned char*) 0x4806C000;
 volatile unsigned char *uart3 = (volatile unsigned char*) 0x49020000;
+};
 
-volatile unsigned char *leds = (volatile unsigned char*) 0x49056000; // GPIO5
-}
+extern int memset(void *buf, int c, size_t len);
+
+/// Bootstrap structure passed to the kernel entry point.
+struct BootstrapStruct_t
+{
+    uint32_t flags;
+
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+
+    uint32_t boot_device;
+
+    uint32_t cmdline;
+
+    uint32_t mods_count;
+    uint32_t mods_addr;
+
+    /* ELF information */
+    uint32_t num;
+    uint32_t size;
+    uint32_t addr;
+    uint32_t shndx;
+
+    uint32_t mmap_length;
+    uint32_t mmap_addr;
+
+    uint32_t drives_length;
+    uint32_t drives_addr;
+
+    uint32_t config_table;
+
+    uint32_t boot_loader_name;
+
+    uint32_t apm_table;
+
+    uint32_t vbe_control_info;
+    uint32_t vbe_mode_info;
+    uint32_t vbe_mode;
+    uint32_t vbe_interface_seg;
+    uint32_t vbe_interface_off;
+    uint32_t vbe_interface_len;
+} __attribute__((packed));
 
 /// \note Page/section references are from the OMAP35xx Technical Reference Manual
 
@@ -532,7 +578,7 @@ extern "C" void __start()
 
     writeStr(3, "USER button pressed, continuing...\r\n\r\n");
 
-    writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggler the USR1 LED.\r\nPress 0 to clear both LEDs.\r\n");
+    writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggler the USR1 LED.\r\nPress 0 to clear both LEDs. Hit ENTER to boot the kernel.\r\n");
     while(1)
     {
         char c = uart_read(3);
@@ -558,7 +604,45 @@ extern "C" void __start()
             gpio.clearpin(149);
             gpio.clearpin(150);
         }
+        else if((c == 13) || (c == 10))
+            break;
     }
+
+    writeStr(3, "\r\n\r\nPlease wait while the kernel is loaded...\r\n");
+
+    Elf32 elf("kernel");
+    writeStr(3, "Preparing file... ");
+    elf.load((uint8_t*)file, 0);
+    writeStr(3, "Done!\r\n");
+
+    writeStr(3, "Loading file into memory (please wait)... ");
+    elf.writeSections();
+    writeStr(3, "Done!\r\n");
+    int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
+
+    struct BootstrapStruct_t bs;
+    writeStr(3, "Creating bootstrap information structure... ");
+    memset(&bs, 0, sizeof(bs));
+    bs.shndx = elf.m_pHeader->shstrndx;
+    bs.num = elf.m_pHeader->shnum;
+    bs.size = elf.m_pHeader->shentsize;
+    bs.addr = (unsigned int)elf.m_pSectionHeaders;
+
+    // For every section header, set .addr = .offset + m_pBuffer.
+    for (int i = 0; i < elf.m_pHeader->shnum; i++)
+    {
+        elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
+    }
+    writeStr(3, "Done!\r\n");
+
+    // Just before running the kernel proper, turn off both LEDs so we can use
+    // their states for debugging the kernel.
+    gpio.clearpin(149);
+    gpio.clearpin(150);
+
+    // Run the kernel, finally
+    writeStr(3, "Now starting the Pedigree kernel.\r\n\r\n");
+    main(&bs);
     
     while (1);
 }

@@ -24,8 +24,7 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-#    'main.cc',
-#    'Elf32.cc',
+    'Elf32.cc',
     'arm_support.s'
 ]
 

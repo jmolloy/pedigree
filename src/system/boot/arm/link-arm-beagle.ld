@@ -5,6 +5,11 @@ ENTRY(start)
 SECTIONS
 {
     . = 0x80008000;
+
+    .init :
+    {
+        *(.init)
+    }    
     
     .text :
     {

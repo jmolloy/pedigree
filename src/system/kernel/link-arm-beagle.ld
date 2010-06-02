@@ -4,7 +4,7 @@ OUTPUT_ARCH(arm)
 ENTRY(start)
 SECTIONS
 {
-    . = 0x80020000;
+    . = 0x80100000;
     .text :
     {
         code = .; _code = .; __code = .;

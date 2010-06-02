@@ -15,8 +15,7 @@
  */
 
 #include "Elf32.h"
-//include <utilities/utility.h>
-extern void writeStr(const char *str);
+
 int strncpy(char *dest, const char *src, int len)
 {
   int i = 0;

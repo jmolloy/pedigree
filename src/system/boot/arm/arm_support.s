@@ -16,6 +16,8 @@
 
 .extern __start
 .global start
+
+.section .init
 start:
     ldr sp, =stack+0x10000
     bl __start

@@ -127,6 +127,17 @@ int loadModules(void *inf)
 /** Kernel entry point. */
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
+#ifdef ARM_BEAGLE
+    volatile uint8_t *leds = (volatile uint8_t*) 0x49056000;
+    leds[0x96] = 0x40;
+
+    volatile uint8_t *uart3 = (volatile uint8_t*) 0x49020000;
+    uart3[0] = ':';
+    uart3[0] = 'D';
+
+    while(1);
+#endif
+
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
