@@ -15,7 +15,7 @@ uimage = builddir + '/uImage.bin'
 
 env.Alias("kernel", objname)
 env.Alias("kernel", uimage)
-# env.Depends(objname, kerneldir + "/kernel")
+env.Depends(objname, kerneldir + "/kernel")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -67,9 +67,9 @@ def makeAutogenH(target, source, env):
     f.write("};\n")
     f.close()
 
-# env.Command("autogen.h", kerneldir + "/kernel", Action(makeAutogenH, "Building autogen.h..."))
+env.Command("autogen.h", kerneldir + "/kernel", Action(makeAutogenH, "Building autogen.h..."))
 
-# env['CPPPATH'] += [os.path.dirname(env.File('autogen.h').path)]
+env['CPPPATH'] += [os.path.dirname(env.File('autogen.h').path)]
 
 if not len(files) == 0:
     #^-- Prevents 'no input files'

@@ -73,9 +73,11 @@ include = [
 
 # To add a library add to the list below
 libraries = [
-    'gcc',
-    'kernelrtti'
+    'gcc'
 ]
+
+if env['ARCH_TARGET'] in ['X86', 'X64']:
+    libraries += ['kernelrtti']
 
 # To add a library path add to the list below
 libpaths = [
@@ -109,13 +111,20 @@ if 'ARM_VERSATILE' in env['CPPDEFINES']:
         ]
     include += ['machine/arm_versatile']
 
-if 'ARM926E' in env['CPPDEFINES']:
+if env['arm_9']:
     files += [Glob('core/processor/arm_926e/*.cc')]
     files += [Glob('core/processor/arm_926e/asm/*.S')]
+elif env['arm_7']:
+    files += [Glob('core/processor/arm7/*.cc')]
+    files += [Glob('core/processor/arm7/asm/*.S')]
 
 if env['ARCH_TARGET'] == 'ARM':
     files += ['boot-arm.cc']
     files += [Glob('core/processor/arm_common/*.cc')]
+
+if env['arm_beagle']:
+    files += [Glob('machine/arm_beagle/*.cc')]
+    files += [Glob('machine/arm_beagle/*.c')]
 
 if env['ARCH_TARGET'] == 'X86':
     files += [

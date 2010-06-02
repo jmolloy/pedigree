@@ -16,35 +16,40 @@
 
 #include "PhysicalMemoryManager.h"
 
-ArmCommonPhysicalMemoryManager ArmCommonPhysicalMemoryManager::m_Instance;
+Arm7PhysicalMemoryManager Arm7PhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
-  return ArmCommonPhysicalMemoryManager::instance();
+    return Arm7PhysicalMemoryManager::instance();
 }
 
-physical_uintptr_t ArmCommonPhysicalMemoryManager::allocatePage()
+physical_uintptr_t Arm7PhysicalMemoryManager::allocatePage()
 {
-  // TODO
-  return 0;
+    /// \todo Write.
+    return 0;
 }
-void ArmCommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
+void Arm7PhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
-  // TODO
+    /// \todo Write.
 }
-bool ArmCommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
+void Arm7PhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
+{
+    /// \todo Write.
+}
+bool Arm7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,
                                                     size_t pageConstraints,
                                                     size_t Flags,
                                                     physical_uintptr_t start)
 {
-  // TODO
-  return false;
+    /// \todo Write.
+    return false;
 }
 
-ArmCommonPhysicalMemoryManager::ArmCommonPhysicalMemoryManager()
+Arm7PhysicalMemoryManager::Arm7PhysicalMemoryManager()
 {
 }
-ArmCommonPhysicalMemoryManager::~ArmCommonPhysicalMemoryManager()
+Arm7PhysicalMemoryManager::~Arm7PhysicalMemoryManager()
 {
 }
+

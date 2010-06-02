@@ -190,8 +190,8 @@ if(tmp != None):
 
         if env['arm_9']:
             defines += ['ARM926E'] # TODO: too specific.
-        elif env['arm_cortex_a8']:
-            defines += ['ARM_CORTEX_A8']
+        elif env['arm_7']:
+            defines += ['ARM7']
 
         if env['arm_bigendian']:
             defines += ['BIG_ENDIAN']

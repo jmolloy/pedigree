@@ -14,28 +14,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM_COMMON_PHYSICALMEMORYMANAGER_H
-#define KERNEL_PROCESSOR_ARM_COMMON_PHYSICALMEMORYMANAGER_H
+#ifndef KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
+#define KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
 
 #include <processor/PhysicalMemoryManager.h>
 
-/** @addtogroup kernelprocessorarmcommon
+/** @addtogroup kernelprocessorArm7
  * @{ */
 
 /** The common arm implementation of the PhysicalMemoryManager
  *\brief Implementation of the PhysicalMemoryManager for common arm */
-class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
+class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
 {
   public:
-    /** Get the ArmCommonPhysicalMemoryManager instance
-     *\return instance of the ArmCommonPhysicalMemoryManager */
-    inline static ArmCommonPhysicalMemoryManager &instance(){return m_Instance;}
+    /** Get the Arm7PhysicalMemoryManager instance
+     *\return instance of the Arm7PhysicalMemoryManager */
+    inline static Arm7PhysicalMemoryManager &instance(){return m_Instance;}
 
     //
     // PhysicalMemoryManager Interface
     //
     virtual physical_uintptr_t allocatePage();
     virtual void freePage(physical_uintptr_t page);
+    virtual void freePageUnlocked(physical_uintptr_t page);
     virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t cPages,
                                 size_t pageConstraints,
@@ -44,20 +45,20 @@ class ArmCommonPhysicalMemoryManager : public PhysicalMemoryManager
 
   protected:
     /** The constructor */
-    ArmCommonPhysicalMemoryManager();
+    Arm7PhysicalMemoryManager();
     /** The destructor */
-    virtual ~ArmCommonPhysicalMemoryManager();
+    virtual ~Arm7PhysicalMemoryManager();
 
   private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    ArmCommonPhysicalMemoryManager(const ArmCommonPhysicalMemoryManager &);
+    Arm7PhysicalMemoryManager(const Arm7PhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    ArmCommonPhysicalMemoryManager &operator = (const ArmCommonPhysicalMemoryManager &);
+    Arm7PhysicalMemoryManager &operator = (const Arm7PhysicalMemoryManager &);
 
-    /** The ArmCommonPhysicalMemoryManager class instance */
-    static ArmCommonPhysicalMemoryManager m_Instance;
+    /** The Arm7PhysicalMemoryManager class instance */
+    static Arm7PhysicalMemoryManager m_Instance;
     
     /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
     virtual void unmapRegion(MemoryRegion *pRegion) {};

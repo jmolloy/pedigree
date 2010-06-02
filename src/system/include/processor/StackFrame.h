@@ -37,6 +37,9 @@
 #elif defined(PPC32)
   #include <processor/ppc32/StackFrame.h>
   #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
+#elif defined(ARM7)
+  #include <processor/arm7/StackFrame.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) ARM7##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for
