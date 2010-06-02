@@ -17,7 +17,9 @@
 #define _UTILITY_MEMORY_POOL
 
 #include <processor/types.h>
+#ifdef THREADS
 #include <process/Semaphore.h>
+#endif
 #include <processor/MemoryRegion.h>
 #include <utilities/ExtensibleBitmap.h>
 #include <processor/PhysicalMemoryManager.h>
@@ -60,7 +62,9 @@ class MemoryPool
     private:
         /// This Semaphore tracks the number of buffers allocated, and allows
         /// blocking when the buffers run out.
+#ifdef THREADS
         Semaphore m_BlockSemaphore;
+#endif
 
         /// Size of each buffer in this pool
         size_t m_BufferSize;

@@ -19,14 +19,19 @@
 #include <Log.h>
 
 MemoryPool::MemoryPool() :
-    m_BlockSemaphore(0), m_BufferSize(1024), m_Pool("memory-pool"),
-        m_bInitialised(false), m_AllocBitmap()
+#ifdef THREADS
+    m_BlockSemaphore(0),
+#endif
+    m_BufferSize(1024), m_Pool("memory-pool"), m_bInitialised(false),
+    m_AllocBitmap()
 {
 }
 
 MemoryPool::MemoryPool(const char *poolName) :
-    m_BlockSemaphore(0), m_BufferSize(1024), m_Pool(poolName),
-        m_bInitialised(false), m_AllocBitmap()
+#ifdef THREADS
+    m_BlockSemaphore(0),
+#endif
+    m_BufferSize(1024), m_Pool(poolName), m_bInitialised(false), m_AllocBitmap()
 {
 }
 
@@ -34,8 +39,10 @@ MemoryPool::~MemoryPool()
 {
     // Free all the buffers
     m_bInitialised = false;
+#ifdef THREADS
     while(!m_BlockSemaphore.getValue())
         m_BlockSemaphore.release();
+#endif
 }
 
 bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
@@ -71,7 +78,9 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
         return false;
 
     size_t nBuffers = (poolSize * 0x1000) / bufferSize;
+#ifdef THREADS
     m_BlockSemaphore.release(nBuffers);
+#endif
 
     return true;
 }
@@ -82,7 +91,9 @@ uintptr_t MemoryPool::allocate()
         return 0;
 
     /// \bug Race if another allocate() call occurs between the acquire and the doer
+#ifdef THREADS
     m_BlockSemaphore.acquire();
+#endif
     return allocateDoer();
 }
 
@@ -91,10 +102,14 @@ uintptr_t MemoryPool::allocateNow()
     if(!m_bInitialised)
         return 0;
 
+#ifdef THREADS
     if(m_BlockSemaphore.tryAcquire())
         return allocateDoer();
     else
         return 0;
+#else
+    return allocateDoer(); // can't block without threads
+#endif
 }
 
 uintptr_t MemoryPool::allocateDoer()
@@ -124,5 +139,8 @@ void MemoryPool::free(uintptr_t buffer)
     size_t n = (buffer - reinterpret_cast<uintptr_t>(m_Pool.virtualAddress())) / m_BufferSize;
     m_AllocBitmap.clear(n);
 
+#ifdef THREADS
     m_BlockSemaphore.release();
+#endif
 }
+
