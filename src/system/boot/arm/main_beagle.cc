@@ -438,7 +438,7 @@ class BeagleGpio
 
             // 1. Perform a software reset of the GPIO.
             gpio[0x4] = 2;
-            while(gpio[0x5] & 1); // Poll GPIO_SYSSTATUS, bit 0
+            while(!(gpio[0x5] & 1)); // Poll GPIO_SYSSTATUS, bit 0
 
             // 2. Disable all IRQs
             gpio[0x7] = 0; // GPIO_IRQENABLE1
