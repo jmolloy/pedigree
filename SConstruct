@@ -78,7 +78,7 @@ opts.AddVariables(
     BoolVariable('arm_beagle', 'Target the BeagleBoard', 0),
 
     BoolVariable('arm_9', 'Target the ARM9 processor family (currently only ARM926E)', 0),
-    BoolVariable('arm_cortex_a8', 'Target an ARM Cortex-A8 processor', 0),
+    BoolVariable('arm_7', 'Target the ARM7 processor family', 0),
 
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
