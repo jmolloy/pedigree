@@ -310,62 +310,155 @@ extern "C" void writeHex(int uart, unsigned int n)
 
 }
 
-bool led_state(int n)
+/**
+
+(149 - 128) = bit 21 = 200000 - GPIO_149 is USR0. Should be 400000
+(150 - 128) = bit 22 = 400000 - GPIO_150 is USR1. Should be 200000
+
+*/
+
+/** GPIO implementation for the BeagleBoard */
+class BeagleGpio
 {
-    char state = leds[0x96];
-    if((n == 0) && (state & 0x40))
-        return true;
-    else if((n == 1) && (state & 0x20))
-        return true;
-    else
-        return false;
-}
+    public:
+        BeagleGpio()
+        {}
+        ~BeagleGpio()
+        {}
 
-void led_on(int n)
-{
-    if(led_state(n))
-        return; // Already on!
+        void initialise()
+        {
+            m_gpio1 = (volatile unsigned int *) 0x48310000;
+            m_gpio2 = (volatile unsigned int *) 0x49050000;
+            m_gpio3 = (volatile unsigned int *) 0x49052000;
+            m_gpio4 = (volatile unsigned int *) 0x49054000;
+            m_gpio5 = (volatile unsigned int *) 0x49056000;
+            m_gpio6 = (volatile unsigned int *) 0x49058000;
+        }
 
-    char states = leds[0x96];
-    if(n == 0)
-        states |= 0x40;
-    else if(n == 1)
-        states |= 0x20;
-    else
-        return;
-    leds[0x96] = states;
-}
+        void clearpin(int pin)
+        {
+            // Grab the GPIO MMIO range for the pin
+            int base = 0;
+            volatile unsigned int *gpio = getGpioForPin(pin, &base);
+            if(!gpio)
+            {
+                writeStr(3, "BeagleGpio::drivepin : No GPIO found for pin ");
+                writeHex(3, pin);
+                writeStr(3, "!\r\n");
+                return;
+            }
 
-void led_off(int n)
-{
-    if(!led_state(n))
-        return; // Already off!
+            // Write to the CLEARDATAOUT register
+            gpio[0x24] = (1 << base);
+        }
 
-    char states = 0;
-    if(n == 0)
-        states = 0x40;
-    else if(n == 1)
-        states = 0x20;
-    else
-        return;
-    leds[0x92] = states;
-}
+        void drivepin(int pin)
+        {
+            // Grab the GPIO MMIO range for the pin
+            int base = 0;
+            volatile unsigned int *gpio = getGpioForPin(pin, &base);
+            if(!gpio)
+            {
+                writeStr(3, "BeagleGpio::drivepin : No GPIO found for pin ");
+                writeHex(3, pin);
+                writeStr(3, "!\r\n");
+                return;
+            }
 
-void led_toggle(int n)
-{
-    if(led_state(n))
-        led_off(n);
-    else
-        led_on(n);
-}
+            // Write to the SETDATAOUT register. We can set a specific bit in
+            // this register without needing to maintain the state of a full
+            // 32-bit register (zeroes have no effect).
+            gpio[0x25] = (1 << base);
+        }
 
-void led_clear()
-{
-    leds[0x92] = 0x60;
-}
+        bool pinstate(int pin)
+        {
+            // Grab the GPIO MMIO range for the pin
+            int base = 0;
+            volatile unsigned int *gpio = getGpioForPin(pin, &base);
+            if(!gpio)
+            {
+                writeStr(3, "BeagleGpio::pinstate : No GPIO found for pin ");
+                writeHex(3, pin);
+                writeStr(3, "!\r\n");
+                return false;
+            }
+
+            return (gpio[0x25] & (1 << base));
+        }
+
+        int capturepin(int pin)
+        {
+            // Grab the GPIO MMIO range for the pin
+            int base = 0;
+            volatile unsigned int *gpio = getGpioForPin(pin, &base);
+            if(!gpio)
+            {
+                writeStr(3, "BeagleGpio::capturepin :No GPIO found for pin ");
+                writeHex(3, pin);
+                writeStr(3, "!\r\n");
+                return 0;
+            }
+
+            // Read the data from the pin
+            return (gpio[0xE] & (1 << base)) >> (base ? base - 1 : 0);
+        }
+        
+    private:
+
+        /// Gets the correct GPIO MMIO range for a given GPIO pin. The base
+        /// indicates which bit represents this pin in registers, where relevant
+        volatile unsigned int *getGpioForPin(int pin, int *bit)
+        {
+            volatile unsigned int *gpio = 0;
+            if(pin < 32)
+            {
+                *bit = pin;
+                gpio = m_gpio1;
+            }
+            else if((pin >= 34) && (pin < 64))
+            {
+                *bit = pin - 34;
+                gpio = m_gpio2;
+            }
+            else if((pin >= 64) && (pin < 96))
+            {
+                *bit = pin - 64;
+                gpio = m_gpio3;
+            }
+            else if((pin >= 96) && (pin < 128))
+            {
+                *bit = pin - 96;
+                gpio = m_gpio4;
+            }
+            else if((pin >= 128) && (pin < 160))
+            {
+                *bit = pin - 128;
+                gpio = m_gpio5;
+            }
+            else if((pin >= 160) && (pin < 192))
+            {
+                *bit = pin - 160;
+                gpio = m_gpio6;
+            }
+            else
+                gpio = 0;
+            return gpio;
+        }
+        
+        volatile unsigned int *m_gpio1;
+        volatile unsigned int *m_gpio2;
+        volatile unsigned int *m_gpio3;
+        volatile unsigned int *m_gpio4;
+        volatile unsigned int *m_gpio5;
+        volatile unsigned int *m_gpio6;
+};
 
 extern "C" void __start()
 {
+    BeagleGpio gpio;
+    
     bool b = uart_softreset(3);
     if(!b)
         while(1);
@@ -378,11 +471,19 @@ extern "C" void __start()
     b = uart_disableflowctl(3);
     if(!b)
         while(1);
-    
-    led_clear();
-    led_on(0); // Switch on the USR0 LED to show we're active and thinking
+
+    gpio.initialise();
+
+    gpio.drivepin(149); // Switch on the USR1 LED to show we're active and thinking
+    gpio.clearpin(150);
 
     writeStr(3, "Pedigree for the BeagleBoard\r\n\r\n");
+
+    writeStr(3, "Please press the USER button on the board to continue.\r\n");
+
+    while(!gpio.capturepin(7));
+
+    writeStr(3, "USER button pressed, continuing...\r\n\r\n");
 
     writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggler the USR1 LED.\r\nPress 0 to clear both LEDs.\r\n");
     while(1)
@@ -391,17 +492,24 @@ extern "C" void __start()
         if(c == '1')
         {
             writeStr(3, "Toggling USR0 LED\r\n");
-            led_toggle(0);
+            if(gpio.pinstate(150))
+                gpio.clearpin(150);
+            else
+                gpio.drivepin(150);
         }
         else if(c == '2')
         {
             writeStr(3, "Toggling USR1 LED\r\n");
-            led_toggle(1);
+            if(gpio.pinstate(149))
+                gpio.clearpin(149);
+            else
+                gpio.drivepin(149);
         }
         else if(c == '0')
         {
             writeStr(3, "Clearing both USR0 and USR1 LEDs\r\n");
-            led_clear();
+            gpio.clearpin(149);
+            gpio.clearpin(150);
         }
     }
     
