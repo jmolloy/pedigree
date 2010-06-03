@@ -198,10 +198,10 @@ if(tmp != None):
         else:
             defines += ['LITTLE_ENDIAN']
         
-        env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['arm'])
-        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['arm'])
-        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['arm'])
-        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['arm']).replace('[mach]', mach)
+        env['CFLAGS'] = default_cflags['arm'] # safeAppend(env['CFLAGS'], default_cflags['arm'])
+        env['CXXFLAGS'] = default_cxxflags['arm'] # safeAppend(env['CXXFLAGS'], default_cxxflags['arm'])
+        env['ASFLAGS'] = default_asflags['arm'] # safeAppend(env['ASFLAGS'], default_asflags['arm'])
+        env['LINKFLAGS'] = default_linkflags['arm'].replace('[mach]', mach) # safeAppend(env['LINKFLAGS'], default_linkflags['arm']).replace('[mach]', mach)
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['arm']
         env['ARCH_TARGET'] = 'ARM'
