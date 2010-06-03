@@ -28,7 +28,10 @@
 class ArmBeagle : public Machine
 {
 public:
-  inline static Machine &instance(){return m_Instance;}
+  inline static Machine &instance()
+  {
+    return m_Instance;
+  }
 
   virtual void initialise();
   virtual Serial *getSerial(size_t n);
@@ -55,7 +58,7 @@ private:
    */
   virtual ~ArmBeagle();
 
-  ArmBeagleSerial m_Serial[2];
+  ArmBeagleSerial m_Serial[3];
   //SchedulerTimer m_SchedulerTimer;
   //Timer m_Timers;
   ArmBeagleVga m_Vga;

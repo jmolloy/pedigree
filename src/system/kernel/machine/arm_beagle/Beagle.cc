@@ -25,7 +25,9 @@ Machine &Machine::instance()
 
 void ArmBeagle::initialise()
 {
-//  m_Serial[0].setBase(0x101f1000);
+  m_Serial[0].setBase(0x49020000); // uart3, RS-232 output on board
+  m_Serial[1].setBase(0x4806A000); // uart1
+  m_Serial[2].setBase(0x4806C000); // uart2
   m_bInitialised = true;
 }
 Serial *ArmBeagle::getSerial(size_t n)
@@ -38,11 +40,11 @@ size_t ArmBeagle::getNumSerial()
 }
 Vga *ArmBeagle::getVga(size_t n)
 {
-  return &m_Vga;
+  return 0; // &m_Vga;
 }
 size_t ArmBeagle::getNumVga()
 {
-  return 1;
+  return 0;
 }
 IrqManager *ArmBeagle::getIrqManager()
 {
@@ -59,6 +61,7 @@ Timer *ArmBeagle::getTimer()
   // TODO
   return 0;
 }
+
 Keyboard *ArmBeagle::getKeyboard()
 {
   return &m_Keyboard;
