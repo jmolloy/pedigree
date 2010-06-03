@@ -47,7 +47,7 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
 {
   for(size_t i = 0; i < str.length(); i++)
     putCharVga(str[i], foreColour, backColour);
-  if(!Log::instance().echoToSerial())
+  if(Log::instance().echoToSerial())
   {
     for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
     {
