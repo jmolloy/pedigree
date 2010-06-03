@@ -35,7 +35,8 @@ class SerialLogger : public Log::LogCallback
     public:
         void callback(const char* str)
         {
-            Machine::instance().getSerial(0)->write(str);
+            for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
+                Machine::instance().getSerial(n)->write(str);
         }
 };
 
@@ -62,6 +63,7 @@ Log::~Log ()
 
 void Log::initialise ()
 {
+#ifndef ARM_BEAGLE
     char *cmdline = g_pBootstrapInfo->getCommandLine();
     if(cmdline)
     {
@@ -83,8 +85,10 @@ void Log::initialise ()
             }
         }
     }
+#endif
+    
     if(m_EchoToSerial)
-        installCallback(&g_SerialCallback);
+        installCallback(&g_SerialCallback, true);
 }
 
 void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
