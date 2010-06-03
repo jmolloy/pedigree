@@ -127,17 +127,6 @@ int loadModules(void *inf)
 /** Kernel entry point. */
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
-#ifdef ARM_BEAGLE
-    volatile uint8_t *leds = (volatile uint8_t*) 0x49056000;
-    leds[0x96] = 0x40;
-
-    volatile uint8_t *uart3 = (volatile uint8_t*) 0x49020000;
-    uart3[0] = ':';
-    uart3[0] = 'D';
-
-    while(1);
-#endif
-
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 
@@ -159,22 +148,21 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().initialise();
 #endif
 
+  // Initialise the kernel log.
+  Log::instance().initialise();
+
+#ifndef ARM_BEAGLE
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
-
-#ifdef ARM_COMMON
-  NOTICE("ARM build now boots properly. Now hanging forever...");
-  while(1);
 #endif
 
+#ifndef ARM_COMMON
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
 
   KernelCoreSyscallManager::instance().initialise();
-
-  // Initialise the kernel log.
-  Log::instance().initialise();
+#endif
 
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
@@ -184,10 +172,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   ZombieQueue::instance().initialise();
 #endif
 
+#ifndef ARM_COMMON // No ARM port is ready for interrupts yet.
   Processor::setInterrupts(true);
 
   // Initialise the input manager
   InputManager::instance().initialise();
+#endif
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -214,6 +204,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildFlags;
   str += "\n";
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
+
+#ifdef ARM_COMMON
+  NOTICE("ARM build now boots properly. Now hanging forever...");
+  while(1);
+#endif
 
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();
