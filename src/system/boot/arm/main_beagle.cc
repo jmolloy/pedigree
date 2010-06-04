@@ -615,9 +615,9 @@ extern "C" void __start()
     elf.load((uint8_t*)file, 0);
     writeStr(3, "Done!\r\n");
 
-    writeStr(3, "Loading file into memory (please wait)... ");
+    writeStr(3, "Loading file into memory (please wait) ");
     elf.writeSections();
-    writeStr(3, "Done!\r\n");
+    writeStr(3, " Done!\r\n");
     int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
 
     struct BootstrapStruct_t bs;

@@ -16,6 +16,8 @@
 
 #include "Elf32.h"
 
+extern volatile unsigned char *uart3;
+
 int strncpy(char *dest, const char *src, int len)
 {
   int i = 0;
@@ -182,6 +184,8 @@ bool Elf32::writeSections()
                         m_pSectionHeaders[i].size);
       }
     }
+    
+    uart3[0] = '.';
   }
   
   return true;
