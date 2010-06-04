@@ -113,20 +113,42 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   bool debugState = Machine::instance().getKeyboard()->getDebugState();
   Machine::instance().getKeyboard()->setDebugState(true);
 
+  DebuggerIO *pInterfaces[2] = {0};
+  
+#ifndef DONT_LOG_TO_SERIAL
+  static SerialIO serialIO(Machine::instance().getSerial(0));
+  serialIO.initialise();
+#endif
+
   /*
    * I/O implementations.
    */
-  static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
-  //localIO.initialise(); // Not needed - done in constructor.
+  int nInterfaces = 0;
+  if(Machine::instance().getNumVga()) // Not all machines have "VGA", so handle that
+  {
+    static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
 #ifdef DONT_LOG_TO_SERIAL
-  DebuggerIO *pInterfaces[] = {&localIO};
-  int nInterfaces = 1;
+    pInterfaces[0] = &localIO;
+    nInterfaces = 1;
 #else
-  static SerialIO serialIO(Machine::instance().getSerial(0));
-  serialIO.initialise();
-  DebuggerIO *pInterfaces[] = {&localIO, &serialIO};
-  int nInterfaces = 2;
+    pInterfaces[0] = &localIO;
+    pInterfaces[1] = &serialIO;
+    nInterfaces = 2;
 #endif
+  }
+#ifndef DONT_LOG_TO_SERIAL
+  else
+  {
+    pInterfaces[0] = &serialIO;
+    nInterfaces = 1;
+  }
+#endif
+
+  if(!nInterfaces)
+  {
+    // Oops, system doesn't support any output mechanisms!
+    ERROR_NOLOCK("This machine/CPU combination doesn't support any output methods for the debugger!");
+  }
 
   // IO interface.
   DebuggerIO *pIo = 0;
@@ -324,8 +346,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 
   }
   while (bKeepGoing);
-  localIO.destroy(); // Causes rememberMode to be called twice.
-#ifdef DONT_LOG_TO_SERIAL
+  if(Machine::instance().getNumVga())
+    pInterfaces[0]->destroy(); // Causes rememberMode to be called twice.
+#ifndef DONT_LOG_TO_SERIAL
   serialIO.destroy();
 #endif
 
