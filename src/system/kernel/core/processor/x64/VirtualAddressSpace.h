@@ -158,6 +158,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x10000000)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
+#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0xFFFFFFF000000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)

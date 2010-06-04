@@ -323,6 +323,7 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
             if ((*pdptEntry & PAGE_PRESENT) != PAGE_PRESENT)
                 continue;
 
+            bool canFreePdptEntry = false;
             for (uint64_t k = 0; k < 512; k++)
             {
                 uint64_t *pdEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdptEntry), k);
@@ -331,28 +332,49 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
 
                 /// \todo Deal with 2MB pages here.
 
+                bool bDidSkipPD = false;
                 for (uint64_t l = 0; l < 512; l++)
                 {
                     uint64_t *ptEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pdEntry), l);
                     if ((*ptEntry & PAGE_PRESENT) != PAGE_PRESENT)
                         continue;
-                  
-                    // Unused variable warning.
-                    //uint64_t flags = PAGE_GET_FLAGS(ptEntry);
 
                     void *virtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
                                                                      (i << 39) |
                                                                      (j << 30) |
                                                                      (k << 21) |
                                                                      (l << 12) );
-                  
-                    if (getKernelAddressSpace().isMapped(virtualAddress))
+
+                    // A little inefficient?
+                    if((virtualAddress >= KERNEL_SPACE_START) || (getKernelAddressSpace().isMapped(virtualAddress)))
+                    {
+                        bDidSkipPD = true;
                         continue;
+                    }
+                    
+                    NOTICE_NOLOCK("Blowing away " << reinterpret_cast<uintptr_t>(virtualAddress));
 
                     // Free the page.
                     /// \todo There's going to be a caveat with CoW here...
+                    unmap(virtualAddress);
                     PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(ptEntry));
+
+                    *ptEntry = 0;
                 }
+
+                // If we skipped at least one page in the table, don't free
+/*
+                if(!bDidSkipPD)
+                {
+                    NOTICE_NOLOCK("freeing table");
+                    
+                    // We didn't skip any, so free the table
+                    physical_uintptr_t phys = PAGE_GET_PHYSICAL_ADDRESS(pdEntry);
+                    *pdEntry = 0;
+                    PhysicalMemoryManager::instance().freePage(phys);
+                    Processor::invalidate(pdEntry);
+                }
+*/
             }
         }
     }
