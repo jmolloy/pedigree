@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,16 @@ class SerialLogger : public Log::LogCallback
         void callback(const char* str)
         {
             for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
+            {
                 Machine::instance().getSerial(n)->write(str);
+#ifndef SERIAL_IS_FILE
+                // Handle carriage return if we're writing to a real terminal
+                // Technically this will create a \n\r, but it will do the same
+                // thing. This may also be redundant, but better to be safe than
+                // sorry imho.
+                Machine::instance().getSerial(n)->write('\r');
+#endif
+            }
         }
 };
 
@@ -63,7 +72,7 @@ Log::~Log ()
 
 void Log::initialise ()
 {
-#ifndef ARM_BEAGLE
+#ifndef ARM_COMMON
     char *cmdline = g_pBootstrapInfo->getCommandLine();
     if(cmdline)
     {
@@ -128,7 +137,11 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
                     break;
             }
             str += m_StaticLog[entry].str;
+#ifndef SERIAL_IS_FILE
+            str += "\r\n"; // Handle carriage return
+#else
             str += "\n";
+#endif
 
             /// \note This could send a massive batch of log entries on the
             ///       callback. If the callback isn't designed to handle big
@@ -238,7 +251,11 @@ Log &Log::operator<< (Modifier type)
                     break;
             }
             str += m_Buffer.str;
+#ifndef SERIAL_IS_FILE
+            str += "\r\n"; // Handle carriage return
+#else
             str += "\n";
+#endif
 
             for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
                 it != m_OutputCallbacks.end();
