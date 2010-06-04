@@ -80,6 +80,8 @@ opts.AddVariables(
     BoolVariable('arm_9', 'Target the ARM9 processor family (currently only ARM926E)', 0),
     BoolVariable('arm_7', 'Target the ARM7 processor family', 0),
 
+    BoolVariable('arm_cortex_a8', 'Tune and optimise for the ARM Cortex A8 (use in conjunction with the `arm_7\' option.', 0),
+
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     ####################################
@@ -188,20 +190,28 @@ if(tmp != None):
             defines += ['ARM_BEAGLE']
             mach = 'beagle'
 
+        cflags = default_cflags['arm']
+        cxxflags = default_cxxflags['arm']
+        asflags = default_asflags['arm']
+        linkflags = default_linkflags['arm'].replace('[mach]', mach)
+
         if env['arm_9']:
             defines += ['ARM926E'] # TODO: too specific.
         elif env['arm_7']:
             defines += ['ARM7']
+            if env['arm_cortex_a8']:
+                cflags = safeAppend(cflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
+                cxxflags = safeAppend(cxxflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
 
+        env['CFLAGS'] = safeAppend(env['CFLAGS'], cflags)
+        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], cxxflags)
+        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], asflags)
+        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], linkflags)
+        
         if env['arm_bigendian']:
             defines += ['BIG_ENDIAN']
         else:
             defines += ['LITTLE_ENDIAN']
-        
-        env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['arm'])
-        env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['arm'])
-        env['ASFLAGS'] = safeAppend(env['ASFLAGS'], default_asflags['arm'])
-        env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], default_linkflags['arm'].replace('[mach]', mach))
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['arm']
         env['ARCH_TARGET'] = 'ARM'
