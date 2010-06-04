@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -186,7 +186,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   HugeStaticString str;
   str += "Pedigree - revision ";
   str += g_pBuildRevision;
+#ifndef DONT_LOG_TO_SERIAL
+  str += "\r\n=======================\r\n";
+#else
   str += "\n=======================\n";
+#endif
   bootIO.write(str, BootIO::White, BootIO::Black);
 
   str.clear();
@@ -196,13 +200,21 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += g_pBuildUser;
   str += " on ";
   str += g_pBuildMachine;
+#ifndef DONT_LOG_TO_SERIAL
+  str += "\r\n";
+#else
   str += "\n";
+#endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
   str.clear();
   str += "Build flags: ";
   str += g_pBuildFlags;
+#ifndef DONT_LOG_TO_SERIAL
+  str += "\r\n";
+#else
   str += "\n";
+#endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
 #ifdef ARM_COMMON
