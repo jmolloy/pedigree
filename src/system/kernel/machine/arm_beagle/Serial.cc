@@ -30,7 +30,7 @@ void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
     m_Base = reinterpret_cast<volatile uint8_t*>(nBaseAddr);
 
     // Reset the UART
-    /*softReset();
+    softReset();
 
     // Restore FIFO defaults
     if(!setFifoDefaults())
@@ -51,7 +51,7 @@ void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
     {
         m_Base = 0;
         return;
-    }*/
+    }
 }
 
 char ArmBeagleSerial::read()
