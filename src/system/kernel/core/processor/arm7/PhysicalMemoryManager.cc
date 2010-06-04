@@ -15,6 +15,10 @@
  */
 
 #include "PhysicalMemoryManager.h"
+#include "VirtualAddressSpace.h"
+#include <processor/Processor.h>
+#include <LockGuard.h>
+#include <Log.h>
 
 Arm7PhysicalMemoryManager Arm7PhysicalMemoryManager::m_Instance;
 
@@ -25,16 +29,24 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t Arm7PhysicalMemoryManager::allocatePage()
 {
-    /// \todo Write.
-    return 0;
+    LockGuard<Spinlock> guard(m_Lock);
+
+    /// \todo Cache compact if needed
+    physical_uintptr_t ptr = m_PageStack.allocate(0);
+    return ptr;
 }
 void Arm7PhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
-    /// \todo Write.
+    LockGuard<Spinlock> guard(m_Lock);
+
+    m_PageStack.free(page);
 }
 void Arm7PhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 {
-    /// \todo Write.
+    if(!m_Lock.acquired())
+        FATAL("Arm7PhysicalMemoryManager::freePageUnlocked called without an acquired lock");
+
+    m_PageStack.free(page);
 }
 bool Arm7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,
@@ -45,6 +57,28 @@ bool Arm7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     /// \todo Write.
     return false;
 }
+void Arm7PhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
+{
+}
+
+extern char __start, __end;
+void Arm7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
+{
+    // Define beginning and end ranges of usable RAM
+#ifdef ARM_BEAGLE
+    m_PhysicalRanges.free(0x80000000, 0x10000000);
+    for(physical_uintptr_t addr = 0x80000000; addr < 0x90000000; addr += 0x1000)
+    {
+        // Ignore any address within the kernel
+        if(!(addr > reinterpret_cast<physical_uintptr_t>(&__start) &&
+             addr < reinterpret_cast<physical_uintptr_t>(&__end)))
+            m_PageStack.free(addr);
+    }
+#endif
+
+    /// \todo MemoryRegion virtual address (m_VirtualMemoryRegions)
+    /// \todo Virtual memory for the above.
+}
 
 Arm7PhysicalMemoryManager::Arm7PhysicalMemoryManager()
 {
@@ -52,4 +86,41 @@ Arm7PhysicalMemoryManager::Arm7PhysicalMemoryManager()
 Arm7PhysicalMemoryManager::~Arm7PhysicalMemoryManager()
 {
 }
+
+physical_uintptr_t Arm7PhysicalMemoryManager::PageStack::allocate(size_t constraints)
+{
+    // Ignore all constraints, none relevant
+    physical_uintptr_t ret = 0;
+    if((m_StackMax != m_StackSize) && m_StackSize)
+    {
+        m_StackSize -= sizeof(physical_uintptr_t);
+        ret = m_Stack[m_StackSize / sizeof(physical_uintptr_t)];
+    }
+    return ret;
+}
+
+void Arm7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddress)
+{
+    // Input verification (machine-specific)
+#ifdef ARM_BEAGLE
+    if(physicalAddress < 0x80000000)
+        return;
+    else if(physicalAddress >= 0x90000000)
+        return;
+    else if(physicalAddress >= 0x80001000) /// \note temporary, smaller stack until it can be expanded
+        return;
+#endif
+
+    m_Stack[m_StackSize / sizeof(physical_uintptr_t)] = physicalAddress;
+    m_StackSize += sizeof(physical_uintptr_t);
+}
+
+Arm7PhysicalMemoryManager::PageStack::PageStack()
+{
+    m_StackMax = 0x1000;
+    m_StackSize = 0;
+}
+
+physical_uintptr_t Arm7PhysicalMemoryManager::PageStack::m_Stack[1024];
+
 

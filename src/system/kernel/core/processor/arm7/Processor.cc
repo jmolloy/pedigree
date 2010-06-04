@@ -17,17 +17,19 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include "InterruptManager.h"
+#include "PhysicalMemoryManager.h"
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  // Initialise this processor's interrupt handling
-   //MIPS32InterruptManager::initialiseProcessor();
+    // Initialise this processor's interrupt handling
+    //MIPS32InterruptManager::initialiseProcessor();
 
-  // TODO: Initialise the physical memory-management
+    // TODO: Initialise the physical memory-management
+    Arm7PhysicalMemoryManager::instance().initialise(Info);
 
-  // TODO
+    // TODO
 
-//   m_Initialised = 1;
+    m_Initialised = 1;
 }
 
 void Processor::initialise2(const BootstrapStruct_t &Info)

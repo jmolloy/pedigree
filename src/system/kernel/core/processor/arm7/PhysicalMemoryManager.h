@@ -17,7 +17,10 @@
 #ifndef KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
 #define KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
 
+#include <BootstrapInfo.h>
+#include <utilities/RangeList.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <Spinlock.h>
 
 /** @addtogroup kernelprocessorArm7
  * @{ */
@@ -36,12 +39,13 @@ class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
     //
     virtual physical_uintptr_t allocatePage();
     virtual void freePage(physical_uintptr_t page);
-    virtual void freePageUnlocked(physical_uintptr_t page);
     virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t cPages,
                                 size_t pageConstraints,
                                 size_t Flags,
                                 physical_uintptr_t start = -1);
+
+    void initialise(const BootstrapStruct_t &info);
 
   protected:
     /** The constructor */
@@ -57,11 +61,67 @@ class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
      *\note Not implemented (singleton) */
     Arm7PhysicalMemoryManager &operator = (const Arm7PhysicalMemoryManager &);
 
-    /** The Arm7PhysicalMemoryManager class instance */
-    static Arm7PhysicalMemoryManager m_Instance;
+    /** Same as freePage, but without the lock. Will panic if the lock is unlocked.
+      * \note Use in the wrong place and you die. */
+    virtual void freePageUnlocked(physical_uintptr_t page);
     
     /** Unmaps a memory region - called ONLY from MemoryRegion's destructor. */
-    virtual void unmapRegion(MemoryRegion *pRegion) {};
+    virtual void unmapRegion(MemoryRegion *pRegion);
+
+    /** The actual page stack contains is a Stack of the pages with the constraints
+     *  below4GB and below64GB and those pages without address size constraints.
+     *\brief The Stack of pages (below4GB, below64GB, no constraint). */
+    class PageStack
+    {
+      public:
+        /** Default constructor does nothing */
+        PageStack() INITIALISATION_ONLY;
+        /** Allocate a page with certain constraints
+         *\param[in] constraints either below4GB or below64GB or 0
+         *\return The physical address of the allocated page or 0 */
+        physical_uintptr_t allocate(size_t constraints);
+        /** Free a physical page
+         *\param[in] physicalAddress physical address of the page */
+        void free(physical_uintptr_t  physicalAddress);
+        /** The destructor does nothing */
+        inline ~PageStack(){}
+
+      private:
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack(const PageStack &);
+        /** The copy-constructor
+         *\note Not implemented */
+        PageStack &operator = (const PageStack &);
+
+        /** Pointer to the base address of the stack. The stack grows upwards. */
+#ifdef ARM_BEAGLE
+//        physical_uintptr_t m_Stack[0x10000000 / sizeof(physical_uintptr_t)]; // 256 MB, one entry per address
+        static physical_uintptr_t m_Stack[1024];
+#else
+        static physical_uintptr_t m_Stack[1];
+#endif
+        /** Size of the currently mapped stack */
+        size_t m_StackMax;
+        /** Currently used size of the stack */
+        size_t m_StackSize;
+    };
+
+    /** The page stack */
+    PageStack m_PageStack;
+
+    /** RangeList of free physical memory */
+    RangeList<uint64_t> m_PhysicalRanges;
+    
+    /** Virtual-memory available for MemoryRegions
+     *\todo rename this member (conflicts with PhysicalMemoryManager::m_MemoryRegions) */
+    RangeList<uintptr_t> m_VirtualMemoryRegions;
+
+    /** The Arm7PhysicalMemoryManager class instance */
+    static Arm7PhysicalMemoryManager m_Instance;
+
+    /** To guard against multiprocessor reentrancy. */
+    Spinlock m_Lock, m_RegionLock;
 };
 
 /** @} */
