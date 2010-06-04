@@ -67,7 +67,8 @@ void Arm7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
     // Define beginning and end ranges of usable RAM
 #ifdef ARM_BEAGLE
     m_PhysicalRanges.free(0x80000000, 0x10000000);
-    for(physical_uintptr_t addr = 0x80000000; addr < 0x90000000; addr += 0x1000)
+    /// \todo virtual memory, so we can dynamically expand this stack
+    for(physical_uintptr_t addr = 0x80000000; addr < /*0x90000000*/ 0x80001000; addr += 0x1000)
     {
         // Ignore any address within the kernel
         if(!(addr > reinterpret_cast<physical_uintptr_t>(&__start) &&
@@ -107,7 +108,7 @@ void Arm7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddre
         return;
     else if(physicalAddress >= 0x90000000)
         return;
-    else if(physicalAddress >= 0x80001000) /// \note temporary, smaller stack until it can be expanded
+    else if(physicalAddress >= 0x80001000) /// \todo temporary until we can map in stack expansion
         return;
 #endif
 
@@ -120,7 +121,5 @@ Arm7PhysicalMemoryManager::PageStack::PageStack()
     m_StackMax = 0x1000;
     m_StackSize = 0;
 }
-
-physical_uintptr_t Arm7PhysicalMemoryManager::PageStack::m_Stack[1024];
 
 

@@ -96,10 +96,10 @@ class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
 
         /** Pointer to the base address of the stack. The stack grows upwards. */
 #ifdef ARM_BEAGLE
-//        physical_uintptr_t m_Stack[0x10000000 / sizeof(physical_uintptr_t)]; // 256 MB, one entry per address
-        static physical_uintptr_t m_Stack[1024];
+        // physical_uintptr_t m_Stack[0x10000000 / sizeof(physical_uintptr_t)]; // 256 MB, one entry per address
+        physical_uintptr_t m_Stack[1024];
 #else
-        static physical_uintptr_t m_Stack[1];
+        physical_uintptr_t m_Stack[1];
 #endif
         /** Size of the currently mapped stack */
         size_t m_StackMax;
