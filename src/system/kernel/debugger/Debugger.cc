@@ -118,7 +118,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
    */
   static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   //localIO.initialise(); // Not needed - done in constructor.
-#ifndef DONT_LOG_TO_SERIAL
+#ifdef DONT_LOG_TO_SERIAL
   DebuggerIO *pInterfaces[] = {&localIO};
   int nInterfaces = 1;
 #else
