@@ -1,9 +1,9 @@
 diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
 --- gcc-4.3.2-orig/config.sub	2008-01-23 12:37:40.000000000 +1000
 +++ gcc-4.3.2/config.sub	2009-03-12 15:16:17.000000000 +1000
-@@ -1388,6 +1388,9 @@ case $os in
- 	-zvmoe)
- 		os=-zvmoe
+@@ -1409,6 +1409,9 @@ case $os in
+ 	-dicos*)
+ 		os=-dicos
  		;;
 +  -pedigree*)
 +    os=-pedigree
@@ -38,7 +38,7 @@ diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
 --- gcc-4.3.2-orig/gcc/config.gcc	2008-06-10 02:32:15.000000000 +1000
 +++ gcc-4.3.2/gcc/config.gcc	2009-03-12 16:51:59.000000000 +1000
-@@ -605,6 +605,12 @@ case ${target} in
+@@ -584,6 +584,12 @@ case ${target} in
      *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
    esac
    ;;
@@ -51,7 +51,7 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
  *-*-elf)
    # Assume that newlib is being used and so __cxa_atexit is provided.
    default_use_cxa_atexit=yes
-@@ -1070,6 +1076,16 @@ hppa[12]*-*-hpux11*)
+@@ -1014,6 +1014,16 @@ hppa[12]*-*-hpux11*)
  	use_collect2=yes
  	gas=yes
  	;;
@@ -71,9 +71,9 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
 diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/crossconfig.m4
 --- gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4	2008-01-15 10:15:43.000000000 +1000
 +++ gcc-4.3.2/libstdc++-v3/crossconfig.m4	2009-03-21 10:46:35.000000000 +1000
-@@ -232,6 +232,11 @@ case "${host}" in
-       ],
-       [AC_DEFINE(HAVE_SIGSETJMP, 1, [Define if sigsetjmp is available.])])
+@@ -140,6 +140,11 @@ case "${host}" in
+     GCC_CHECK_TLS
+     AM_ICONV
      ;;
 +  *-pedigree*)
 +    AC_CHECK_HEADERS([sys/types.h locale.h float.h])
@@ -81,8 +81,8 @@ diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/cro
 +    GLIBCXX_CHECK_COMPLEX_MATH_SUPPORT
 +    ;;
    *-mingw32*)
-     AC_CHECK_HEADERS([sys/types.h locale.h float.h])
      GLIBCXX_CHECK_LINKER_FEATURES
+     GLIBCXX_CHECK_MATH_SUPPORT
 diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
 --- gcc-4.4.1-orig/libgcc/config.host	2009-04-17 21:58:42.000000000 +1000
 +++ gcc-4.4.1/libgcc/config.host	2009-08-17 16:51:35.312742600 +1000
