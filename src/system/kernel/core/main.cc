@@ -217,7 +217,19 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
+  str.clear();
+  str += "Processor information: ";
+  Processor::identify(str);
+#ifndef DONT_LOG_TO_SERIAL
+  str += "\r\n";
+#else
+  str += "\n";
+#endif
+  bootIO.write(str, BootIO::LightGrey, BootIO::Black);
+
 #ifdef ARM_COMMON
+  asm volatile("swi $0x1");
+  
   NOTICE("ARM build now boots properly. Now hanging forever...");
   while(1);
 #endif

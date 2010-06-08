@@ -22,7 +22,7 @@
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
     // Initialise this processor's interrupt handling
-    //MIPS32InterruptManager::initialiseProcessor();
+    // ARM7InterruptManager::initialiseProcessor();
 
     // TODO: Initialise the physical memory-management
     Arm7PhysicalMemoryManager::instance().initialise(Info);
@@ -41,7 +41,89 @@ void Processor::initialise2(const BootstrapStruct_t &Info)
 
 void Processor::identify(HugeStaticString &str)
 {
-  str += "Arm7"; /// \todo Perhaps we can jazz this up a bit with a die ID or something?
+    // Read the Main ID register
+    union
+    {
+        uint32_t data;
+
+        struct {
+            uint32_t revision : 4;
+            uint32_t partnum : 10;
+            uint32_t arch : 4;
+            uint32_t variant : 4;
+            char implementer;
+        } PACKED;
+    } mainID;
+    asm volatile("mrc p15, 0, %0, c0, c0, 0" : "=r" (mainID.data));
+
+    // Grab the implementer of this chip
+    switch(mainID.implementer)
+    {
+        case 'A':
+            str += "ARM ";
+            break;
+        case 'D':
+            str += "DEC ";
+            break;
+        case 'M':
+            str += "Motorola/Freescale ";
+            break;
+        case 'Q':
+            str += "Qualcomm ";
+            break;
+        case 'V':
+            str += "Marvell ";
+            break;
+        case 'i':
+            str += "Intel ";
+            break;
+        default:
+            str += "Unknown ";
+            break;
+    }
+
+    // Grab the architecture
+    switch(mainID.arch)
+    {
+        case 0x1:
+            str += "ARMv4 ";
+            break;
+        case 0x2:
+            str += "ARMv4T ";
+            break;
+        case 0x3:
+            str += "ARMv5 ";
+            break;
+        case 0x4:
+            str += "ARMv5T ";
+            break;
+        case 0x5:
+            str += "ARMv5TE ";
+            break;
+        case 0x6:
+            str += "ARMv5TEJ ";
+            break;
+        case 0x7:
+            str += "ARMv6 ";
+            break;
+        case 0xF:
+            str += "ARMv7 or above ";
+            break;
+        default:
+            str += "(unknown architecture) ";
+            break;
+    }
+
+    // Append the part number
+    str += "(part number: ";
+    str.append(mainID.partnum);
+    str += ", revision maj=";
+
+    // Append the revision
+    str.append(mainID.variant);
+    str += " min=";
+    str.append(mainID.revision);
+    str += ")";
 }
 
 size_t Processor::getDebugBreakpointCount()
