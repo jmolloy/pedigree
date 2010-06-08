@@ -52,12 +52,41 @@ bool ArmV7VirtualAddressSpace::initialise()
 
 bool ArmV7VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  return true;
+    // No address is "invalid" in the sense that we're looking for here.
+    return true;
 }
 
 bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
 {
-  return true;
+    uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    uint32_t pdir_offset = addr >> 20;
+    uint32_t ptab_offset = (addr >> 12) & 0xFF;
+
+    // Grab the entry in the page directory
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
+    if(pdir[pdir_offset].descriptor.entry)
+    {
+        // What type is the entry?
+        switch(pdir[pdir_offset].descriptor.fault.type)
+        {
+            case 1:
+            {
+                // Page table walk.
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(pdir[pdir_offset].descriptor.pageTable.baseaddr << 10);
+                if(!ptbl[ptab_offset].descriptor.fault.type)
+                    return false;
+                break;
+            }
+            case 2:
+                // Section or supersection
+                WARNING("ArmV7VirtualAddressSpace::isAddressValid - sections and supersections not yet supported");
+                break;
+            default:
+                return false;
+        }
+    }
+
+    return true;
 }
 
 bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,

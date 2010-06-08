@@ -222,4 +222,20 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 
 /** @} */
 
+/** 1 GB given to userspace, 3 GB given to the kernel.
+  * The 3 GB region also contains all MMIO regions.
+  */
+
+#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
+#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x30000000)
+#define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
+#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
+#define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xC0000000)
+#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFF400000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xD0000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFF3FFFFC)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x20000000
+#define KERNEL_STACK_SIZE                       0x8000
+
 #endif
