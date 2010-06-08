@@ -23,6 +23,7 @@
 #ifdef DEBUGGER
   #include <Debugger.h>
 #endif
+#include <Log.h>
 
 #define SYSCALL_INTERRUPT_NUMBER 8
 #define BREAKPOINT_INTERRUPT_NUMBER 9
@@ -138,10 +139,61 @@ uintptr_t ARM7InterruptManager::syscall(Service_t service,
     return 0;
 }
 
-//extern "C" void mips32_exception(void);
+extern "C" void arm_swint_handler() __attribute__((interrupt("SWI")));
+extern "C" void arm_instundef_handler() __attribute__((interrupt("UNDEF")));
+extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
+extern "C" void arm_irq_handler() __attribute__((interrupt("IRQ")));
+extern "C" void arm_reset_handler() __attribute__((interrupt("ABORT")));
+extern "C" void arm_prefetch_abort_handler() __attribute__((interrupt("ABORT")));
+extern "C" void arm_data_abort_handler() __attribute__((interrupt("ABORT")));
+extern "C" void arm_addrexcept_handler() __attribute__((interrupt("ABORT")));
+
+extern "C" void arm_swint_handler()
+{
+  NOTICE_NOLOCK("swi");
+}
+
+extern "C" void arm_instundef_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_fiq_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_irq_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_reset_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_prefetch_abort_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_data_abort_handler()
+{
+  while( 1 );
+}
+
+extern "C" void arm_addrexcept_handler()
+{
+  while( 1 );
+}
+
+extern uint32_t *__arm_vector_table;
+extern uint32_t *__end_arm_vector_table;
 void ARM7InterruptManager::initialiseProcessor()
 {
-  /// \todo implement
+    /// \todo Move the interrupt vector table's base to somewhere in RAM where
+    ///       it can be read, instead of 0x0
 }
 
 void ARM7InterruptManager::interrupt(InterruptState &interruptState)
