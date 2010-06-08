@@ -14,32 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM7_STACKFRAME_H
-#define KERNEL_PROCESSOR_ARM7_STACKFRAME_H
+#if defined(DEBUGGER)
 
-#include <compiler.h>
-#include <processor/types.h>
-#include <processor/StackFrameBase.h>
+#include <processor/StackFrame.h>
 
-/** @addtogroup kernelprocessorARM7
- * @{ */
-
-/** mips32 StackFrame */
-class ARM7StackFrame : public StackFrameBase
+uintptr_t ARMV7StackFrame::getParameter(size_t n)
 {
-  public:
-    /** Creates a stack frame based on the given processor state and also the given
-     *  symbol name (mangled). */
-    inline ARM7StackFrame(const ProcessorState &State, uintptr_t basePointer, LargeStaticString mangledSymbol)
-      : StackFrameBase(State, basePointer, mangledSymbol){}
-    /** The destructor does nothing */
-    inline ~ARM7StackFrame(){}
-
-  private:
-    /** Returns the n'th 64-bit parameter in the stack frame. */
-    virtual uintptr_t getParameter(size_t n);
-};
-
-/** @} */
+    /// \todo Write.
+    return 0;
+}
 
 #endif

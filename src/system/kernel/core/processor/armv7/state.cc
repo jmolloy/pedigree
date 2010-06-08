@@ -16,7 +16,7 @@
 
 #include <processor/state.h>
 
-const char *ARM7InterruptStateRegisterName[17] =
+const char *ARMV7InterruptStateRegisterName[17] =
 {
   "r0",
   "r1",
@@ -37,7 +37,7 @@ const char *ARM7InterruptStateRegisterName[17] =
   "cpsr"
 };
 
-ARM7InterruptState::ARM7InterruptState() :
+ARMV7InterruptState::ARMV7InterruptState() :
     m_r0(), m_r1(), m_r2(), m_r3(),
     m_r4(), m_r5(), m_r6(), m_r7(),
     m_r8(), m_r9(), m_r10(), m_Fp(),
@@ -46,7 +46,7 @@ ARM7InterruptState::ARM7InterruptState() :
 {
 }
 
-ARM7InterruptState::ARM7InterruptState(const ARM7InterruptState &is) :
+ARMV7InterruptState::ARMV7InterruptState(const ARMV7InterruptState &is) :
     m_r0(is.m_r0), m_r1(is.m_r1), m_r2(is.m_r2), m_r3(is.m_r3),
     m_r4(is.m_r4), m_r5(is.m_r5), m_r6(is.m_r6), m_r7(is.m_r7),
     m_r8(is.m_r8), m_r9(is.m_r9), m_r10(is.m_r10), m_Fp(is.m_Fp),
@@ -55,7 +55,7 @@ ARM7InterruptState::ARM7InterruptState(const ARM7InterruptState &is) :
 {
 }
 
-ARM7InterruptState & ARM7InterruptState::operator=(const ARM7InterruptState &is)
+ARMV7InterruptState & ARMV7InterruptState::operator=(const ARMV7InterruptState &is)
 {
   m_r0 = is.m_r0; m_r1 = is.m_r1; m_r2 = is.m_r2; m_r3 = is.m_r3;
   m_r4 = is.m_r4; m_r5 = is.m_r5; m_r6 = is.m_r6; m_r7 = is.m_r7;
@@ -65,11 +65,11 @@ ARM7InterruptState & ARM7InterruptState::operator=(const ARM7InterruptState &is)
   return *this;
 }
 
-size_t ARM7InterruptState::getRegisterCount() const
+size_t ARMV7InterruptState::getRegisterCount() const
 {
   return 17;
 }
-processor_register_t ARM7InterruptState::getRegister(size_t index) const
+processor_register_t ARMV7InterruptState::getRegister(size_t index) const
 {
   switch (index)
   {
@@ -93,7 +93,7 @@ processor_register_t ARM7InterruptState::getRegister(size_t index) const
     default: return 0;
   }
 }
-const char *ARM7InterruptState::getRegisterName(size_t index) const
+const char *ARMV7InterruptState::getRegisterName(size_t index) const
 {
-  return ARM7InterruptStateRegisterName[index];
+  return ARMV7InterruptStateRegisterName[index];
 }

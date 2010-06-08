@@ -114,9 +114,9 @@ if 'ARM_VERSATILE' in env['CPPDEFINES']:
 if env['arm_9']:
     files += [Glob('core/processor/arm_926e/*.cc')]
     files += [Glob('core/processor/arm_926e/asm/*.S')]
-elif env['arm_7']:
-    files += [Glob('core/processor/arm7/*.cc')]
-    files += [Glob('core/processor/arm7/asm/*.S')]
+elif env['armv7']:
+    files += [Glob('core/processor/armv7/*.cc')]
+    files += [Glob('core/processor/armv7/asm/*.S')]
 
 if env['ARCH_TARGET'] == 'ARM':
     files += ['boot-arm.cc']

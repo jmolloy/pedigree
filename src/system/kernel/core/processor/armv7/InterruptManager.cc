@@ -63,18 +63,18 @@ const char *g_ExceptionNames[32] = {
   "Reserved",
 };
 
-ARM7InterruptManager ARM7InterruptManager::m_Instance;
+ARMV7InterruptManager ARMV7InterruptManager::m_Instance;
 
 SyscallManager &SyscallManager::instance()
 {
-  return ARM7InterruptManager::instance();
+  return ARMV7InterruptManager::instance();
 }
 InterruptManager &InterruptManager::instance()
 {
-  return ARM7InterruptManager::instance();
+  return ARMV7InterruptManager::instance();
 }
 
-bool ARM7InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
+bool ARMV7InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
   /// \todo Needs locking
   if (UNLIKELY(interruptNumber >= 256))
@@ -90,7 +90,7 @@ bool ARM7InterruptManager::registerInterruptHandler(size_t interruptNumber, Inte
 
 #ifdef DEBUGGER
 
-  bool ARM7InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
+  bool ARMV7InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
   {
     /// \todo Needs locking
     if (UNLIKELY(interruptNumber >= 256))
@@ -103,18 +103,18 @@ bool ARM7InterruptManager::registerInterruptHandler(size_t interruptNumber, Inte
     m_DbgHandler[interruptNumber] = handler;
     return true;
   }
-  size_t ARM7InterruptManager::getBreakpointInterruptNumber()
+  size_t ARMV7InterruptManager::getBreakpointInterruptNumber()
   {
     return 3;
   }
-  size_t ARM7InterruptManager::getDebugInterruptNumber()
+  size_t ARMV7InterruptManager::getDebugInterruptNumber()
   {
     return 1;
   }
 
 #endif
 
-bool ARM7InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
+bool ARMV7InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandler *handler)
 {
   //TODO: Needs locking
 
@@ -129,7 +129,7 @@ bool ARM7InterruptManager::registerSyscallHandler(Service_t Service, SyscallHand
   return true;
 }
 
-uintptr_t ARM7InterruptManager::syscall(Service_t service,
+uintptr_t ARMV7InterruptManager::syscall(Service_t service,
                                             uintptr_t function,
                                             uintptr_t p1, uintptr_t p2,
                                             uintptr_t p3, uintptr_t p4,
@@ -190,13 +190,13 @@ extern "C" void arm_addrexcept_handler()
 
 extern uint32_t *__arm_vector_table;
 extern uint32_t *__end_arm_vector_table;
-void ARM7InterruptManager::initialiseProcessor()
+void ARMV7InterruptManager::initialiseProcessor()
 {
     /// \todo Move the interrupt vector table's base to somewhere in RAM where
     ///       it can be read, instead of 0x0
 }
 
-void ARM7InterruptManager::interrupt(InterruptState &interruptState)
+void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
 {
   /// \todo Needs locking
   size_t intNumber = interruptState.getInterruptNumber();
@@ -235,7 +235,7 @@ void ARM7InterruptManager::interrupt(InterruptState &interruptState)
   }
 }
 
-ARM7InterruptManager::ARM7InterruptManager()
+ARMV7InterruptManager::ARMV7InterruptManager()
 {
   // Initialise the pointers to the interrupt handler
   for (size_t i = 0;i < 256;i++)
@@ -250,7 +250,7 @@ ARM7InterruptManager::ARM7InterruptManager()
   for (size_t i = 0;i < serviceEnd;i++)
     m_SyscallHandler[i] = 0;
 }
-ARM7InterruptManager::~ARM7InterruptManager()
+ARMV7InterruptManager::~ARMV7InterruptManager()
 {
 
 }

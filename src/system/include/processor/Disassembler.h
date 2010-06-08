@@ -76,7 +76,7 @@ protected:
 #ifdef PPC_COMMON
 #include <core/processor/ppc_common/Disassembler.h>
 #endif
-#ifdef ARM7
+#ifdef ARMV7
 #include <core/processor/arm_common/Disassembler.h>
 #endif
 

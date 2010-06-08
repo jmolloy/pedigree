@@ -78,9 +78,9 @@ opts.AddVariables(
     BoolVariable('arm_beagle', 'Target the BeagleBoard', 0),
 
     BoolVariable('arm_9', 'Target the ARM9 processor family (currently only ARM926E)', 0),
-    BoolVariable('arm_7', 'Target the ARM7 processor family', 0),
+    BoolVariable('armv7', 'Target the ARMv7 architecture family', 0),
 
-    BoolVariable('arm_cortex_a8', 'Tune and optimise for the ARM Cortex A8 (use in conjunction with the `arm_7\' option.', 0),
+    BoolVariable('arm_cortex_a8', 'Tune and optimise for the ARM Cortex A8 (use in conjunction with the `armv7\' option.', 0),
 
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
@@ -197,9 +197,10 @@ if(tmp != None):
 
         if env['arm_9']:
             defines += ['ARM926E'] # TODO: too specific.
-        elif env['arm_7']:
-            defines += ['ARM7']
+        elif env['armv7']:
+            defines += ['ARMV7']
             if env['arm_cortex_a8']:
+                # TODO: actually need to use VFP, not FPA
                 cflags = safeAppend(cflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
                 cxxflags = safeAppend(cxxflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
 

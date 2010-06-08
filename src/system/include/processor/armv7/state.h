@@ -14,17 +14,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM7_STATE_H
-#define KERNEL_PROCESSOR_ARM7_STATE_H
+#ifndef KERNEL_PROCESSOR_ARMV7_STATE_H
+#define KERNEL_PROCESSOR_ARMV7_STATE_H
 
 #include <compiler.h>
 #include <processor/types.h>
 
-/** @addtogroup kernelprocessorARM7
+/** @addtogroup kernelprocessorARMV7
  * @{ */
 
-/** ARM7 Interrupt State */
-class ARM7InterruptState
+/** ARMV7 Interrupt State */
+class ARMV7InterruptState
 {
   public:
     //
@@ -89,19 +89,19 @@ class ARM7InterruptState
     /** The default constructor
      *\note NOT implemented */
   public:
-    ARM7InterruptState();
+    ARMV7InterruptState();
 
     /** The copy-constructor
      *\note NOT implemented */
-    ARM7InterruptState(const ARM7InterruptState &);
+    ARMV7InterruptState(const ARMV7InterruptState &);
     /** The assignement operator
      *\note NOT implemented */
-    ARM7InterruptState &operator = (const ARM7InterruptState &);
+    ARMV7InterruptState &operator = (const ARMV7InterruptState &);
     /** The destructor
      *\note NOT implemented */
-    ~ARM7InterruptState() {}
+    ~ARMV7InterruptState() {}
     
-    /** ARM7 Registers and State **/
+    /** ARMV7 Registers and State **/
     uint32_t m_r0;
     uint32_t m_r1;
     uint32_t m_r2;
@@ -121,10 +121,10 @@ class ARM7InterruptState
     uint32_t m_Cpsr; // holds cpu mode, IRQ and FIQ status, and 4 flags (32-bit)
 } PACKED;
 
-typedef ARM7InterruptState ARM7SyscallState;
-typedef ARM7InterruptState ARM7ProcessorState;
+typedef ARMV7InterruptState ARMV7SyscallState;
+typedef ARMV7InterruptState ARMV7ProcessorState;
 
-class __attribute__((aligned(16))) ARM7SchedulerState
+class __attribute__((aligned(16))) ARMV7SchedulerState
 {
 public:
     uint32_t edi;
@@ -145,29 +145,29 @@ public:
 // Part of the Implementation
 //
 
-uintptr_t ARM7InterruptState::getStackPointer() const
+uintptr_t ARMV7InterruptState::getStackPointer() const
 {
   return m_Sp;
 }
-void ARM7InterruptState::setStackPointer(uintptr_t stackPointer)
+void ARMV7InterruptState::setStackPointer(uintptr_t stackPointer)
 {
 }
-uintptr_t ARM7InterruptState::getInstructionPointer() const
+uintptr_t ARMV7InterruptState::getInstructionPointer() const
 {
   return m_Pc;
 }
-void ARM7InterruptState::setInstructionPointer(uintptr_t instructionPointer)
+void ARMV7InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
-uintptr_t ARM7InterruptState::getBasePointer() const
+uintptr_t ARMV7InterruptState::getBasePointer() const
 {
   return m_Fp; // assume frame pointer = base pointer
 }
-void ARM7InterruptState::setBasePointer(uintptr_t basePointer)
+void ARMV7InterruptState::setBasePointer(uintptr_t basePointer)
 {
   m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
 }
-size_t ARM7InterruptState::getRegisterSize(size_t index) const
+size_t ARMV7InterruptState::getRegisterSize(size_t index) const
 {
 #if defined(BITS_32)
   return 4;
@@ -178,24 +178,24 @@ size_t ARM7InterruptState::getRegisterSize(size_t index) const
 #endif
 }
 
-bool ARM7InterruptState::kernelMode() const
+bool ARMV7InterruptState::kernelMode() const
 {
-  // TODO: the ARM7 is NOT always in kernel mode, handle this properly
+  // TODO: the ARMV7 is NOT always in kernel mode, handle this properly
   // This'll require some reading up on the CPSR mode bits
   return true;
 }
-size_t ARM7InterruptState::getInterruptNumber() const
+size_t ARMV7InterruptState::getInterruptNumber() const
 {
   // TODO: implement
   return 0;
 }
 
-size_t ARM7InterruptState::getSyscallService() const
+size_t ARMV7InterruptState::getSyscallService() const
 {
   // TODO: implement
   return 0;
 }
-size_t ARM7InterruptState::getSyscallNumber() const
+size_t ARMV7InterruptState::getSyscallNumber() const
 {
   // TODO: implement
   return 0;

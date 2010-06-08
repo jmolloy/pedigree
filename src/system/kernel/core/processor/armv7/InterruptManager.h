@@ -14,25 +14,25 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM7_INTERRUPTMANAGER_H
-#define KERNEL_PROCESSOR_ARM7_INTERRUPTMANAGER_H
+#ifndef KERNEL_PROCESSOR_ARMV7_INTERRUPTMANAGER_H
+#define KERNEL_PROCESSOR_ARMV7_INTERRUPTMANAGER_H
 
 #include <compiler.h>
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
 
-/** @addtogroup kernelprocessorARM7
+/** @addtogroup kernelprocessorARMV7
  * @{ */
 
 /** The interrupt handler on mips32 processors */
-class ARM7InterruptManager : public ::InterruptManager,
+class ARMV7InterruptManager : public ::InterruptManager,
                                public ::SyscallManager
 {
   public:
-    /** Get the ARM7InterruptManager class instance
-     *\return instance of the ARM7InterruptManager class */
-    inline static ARM7InterruptManager &instance(){return m_Instance;}
+    /** Get the ARMV7InterruptManager class instance
+     *\return instance of the ARMV7InterruptManager class */
+    inline static ARMV7InterruptManager &instance(){return m_Instance;}
 
     // InterruptManager Interface
     virtual bool registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler);
@@ -59,15 +59,15 @@ class ARM7InterruptManager : public ::InterruptManager,
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
     /** The constructor */
-    ARM7InterruptManager();
+    ARMV7InterruptManager();
     /** Copy constructor
      *\note NOT implemented */
-    ARM7InterruptManager(const ARM7InterruptManager &);
+    ARMV7InterruptManager(const ARMV7InterruptManager &);
     /** Assignment operator
      *\note NOT implemented */
-    ARM7InterruptManager &operator = (const ARM7InterruptManager &);
+    ARMV7InterruptManager &operator = (const ARMV7InterruptManager &);
     /** The destructor */
-    virtual ~ARM7InterruptManager();
+    virtual ~ARMV7InterruptManager();
 
     InterruptHandler *m_Handler[256];
 #ifdef DEBUGGER
@@ -78,7 +78,7 @@ class ARM7InterruptManager : public ::InterruptManager,
     SyscallHandler *m_SyscallHandler[/*SyscallManager::*/serviceEnd];
 
     /** The instance of the interrupt manager  */
-    static ARM7InterruptManager m_Instance;
+    static ARMV7InterruptManager m_Instance;
 };
 
 /** @} */
