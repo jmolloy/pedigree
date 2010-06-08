@@ -14,18 +14,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM7_VIRTUALADDRESSSPACE_H
-#define KERNEL_PROCESSOR_ARM7_VIRTUALADDRESSSPACE_H
+#ifndef KERNEL_PROCESSOR_ARMV7_VIRTUALADDRESSSPACE_H
+#define KERNEL_PROCESSOR_ARMV7_VIRTUALADDRESSSPACE_H
 
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
 
-/** @addtogroup kernelprocessorArm7
+/** @addtogroup kernelprocessorArmV7
  * @{ */
 
-/** The Arm7VirtualAddressSpace implements the VirtualAddressSpace class for the mip32
+/** The ArmV7VirtualAddressSpace implements the VirtualAddressSpace class for the mip32
     processor, which means it encompasses paging (KUSEG) and KSEG0, KSEG1, KSEG2.*/
-class Arm7VirtualAddressSpace : public VirtualAddressSpace
+class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
@@ -75,29 +75,29 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
 
   protected:
     /** The destructor does nothing */
-    virtual ~Arm7VirtualAddressSpace();
+    virtual ~ArmV7VirtualAddressSpace();
 
   private:
     
     /** Section B3.3 in the ARM Architecture Reference Manual (ARM7) */
     
-    /// \todo Document descriptor bits
     /// First level descriptor - roughly equivalent to a page directory entry
     /// on x86
     struct FirstLevelDescriptor
     {
-        /// Type of this descriptor:
+        /// Type field for descriptors
         /// 0 = fault
         /// 1 = page table
         /// 2 = section or supersection
         /// 3 = reserved
-        uint32_t type : 2;
         
         union {
             struct {
+                uint32_t type : 2;
                 uint32_t ignore : 30;
             } PACKED fault;
             struct {
+                uint32_t type : 2;
                 uint32_t sbz1 : 1;
                 uint32_t ns : 1;
                 uint32_t sbz2 : 1;
@@ -106,6 +106,7 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
                 uint32_t baseaddr : 22;
             } PACKED pageTable;
             struct {
+                uint32_t type : 2;
                 uint32_t b : 1;
                 uint32_t c : 1;
                 uint32_t xn : 1;
@@ -115,7 +116,7 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
                 uint32_t tex : 3;
                 uint32_t s : 1;
                 uint32_t nG : 1;
-                uint32_t type : 1; /// = 0 for section, 1 for supersection
+                uint32_t sectiontype : 1; /// = 0 for section, 1 for supersection
                 uint32_t ns : 1;
                 uint32_t base : 12;
             } PACKED section;
@@ -123,23 +124,24 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
             uint32_t entry;
         } descriptor;
     } PACKED;
-    
+
     /// Second level descriptor - roughly equivalent to a page table entry
     /// on x86
     struct SecondLevelDescriptor
     {
-        /// Type of this descriptor:
+        /// Type field for descriptors
         /// 0 = fault
         /// 1 = large page
         /// >2 = small page (NX at bit 0)
-        uint32_t type : 2;
         
         union
         {
             struct {
+                uint32_t type : 2;
                 uint32_t ignore : 30;
             } PACKED fault;
             struct {
+                uint32_t type : 2;
                 uint32_t b : 1;
                 uint32_t c : 1;
                 uint32_t ap1 : 2;
@@ -152,6 +154,7 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
                 uint32_t base : 16;
             } PACKED largepage;
             struct {
+                uint32_t type : 2;
                 uint32_t b : 1;
                 uint32_t c : 1;
                 uint32_t ap1 : 2;
@@ -162,7 +165,7 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
                 uint32_t base : 20;
             } PACKED smallpage;
             
-            uint32_t data;
+            uint32_t entry;
         } descriptor;
     } PACKED;
 
@@ -171,20 +174,20 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
      *\param[in] PhysicalPageDirectory physical address of the page directory
      *\param[in] VirtualPageDirectory virtual address of the page directory
      *\param[in] VirtualPageTables virtual address of the page tables */
-    Arm7VirtualAddressSpace(void *Heap,
+    ArmV7VirtualAddressSpace(void *Heap,
                            physical_uintptr_t PhysicalPageDirectory,
                            void *VirtualPageDirectory,
                            void *VirtualPageTables);
 
     /** The default constructor
      *\note NOT implemented */
-    Arm7VirtualAddressSpace();
+    ArmV7VirtualAddressSpace();
     /** The copy-constructor
      *\note NOT implemented */
-    Arm7VirtualAddressSpace(const Arm7VirtualAddressSpace &);
+    ArmV7VirtualAddressSpace(const ArmV7VirtualAddressSpace &);
     /** The copy-constructor
      *\note Not implemented */
-    Arm7VirtualAddressSpace &operator = (const Arm7VirtualAddressSpace &);
+    ArmV7VirtualAddressSpace &operator = (const ArmV7VirtualAddressSpace &);
 
     /** Initialises the kernel address space, called by Processor. */
     bool initialise();
@@ -214,7 +217,7 @@ class Arm7VirtualAddressSpace : public VirtualAddressSpace
     void *m_VirtualPageTables;
 
     /** The kernel virtual address space */
-    static Arm7VirtualAddressSpace m_KernelSpace;
+    static ArmV7VirtualAddressSpace m_KernelSpace;
 };
 
 /** @} */

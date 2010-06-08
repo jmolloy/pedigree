@@ -22,11 +22,11 @@
 #include <processor/PhysicalMemoryManager.h>
 #include "VirtualAddressSpace.h"
 
-Arm7VirtualAddressSpace Arm7VirtualAddressSpace::m_KernelSpace;
+ArmV7VirtualAddressSpace ArmV7VirtualAddressSpace::m_KernelSpace;
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
-  return Arm7VirtualAddressSpace::m_KernelSpace;
+  return ArmV7VirtualAddressSpace::m_KernelSpace;
 }
 
 VirtualAddressSpace *VirtualAddressSpace::create()
@@ -36,38 +36,38 @@ VirtualAddressSpace *VirtualAddressSpace::create()
   return 0;
 }
 
-Arm7VirtualAddressSpace::Arm7VirtualAddressSpace() :
+ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace() :
   VirtualAddressSpace(reinterpret_cast<void*> (0))
 {
 }
 
-Arm7VirtualAddressSpace::~Arm7VirtualAddressSpace()
+ArmV7VirtualAddressSpace::~ArmV7VirtualAddressSpace()
 {
 }
 
-bool Arm7VirtualAddressSpace::initialise()
-{
-  return true;
-}
-
-bool Arm7VirtualAddressSpace::isAddressValid(void *virtualAddress)
+bool ArmV7VirtualAddressSpace::initialise()
 {
   return true;
 }
 
-bool Arm7VirtualAddressSpace::isMapped(void *virtualAddress)
+bool ArmV7VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
   return true;
 }
 
-bool Arm7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
+bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
+{
+  return true;
+}
+
+bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
                                     void *virtualAddress,
                                     size_t flags)
 {
   return false;
 }
 
-void Arm7VirtualAddressSpace::getMapping(void *virtualAddress,
+void ArmV7VirtualAddressSpace::getMapping(void *virtualAddress,
                                            physical_uintptr_t &physicalAddress,
                                            size_t &flags)
 {
@@ -75,20 +75,20 @@ void Arm7VirtualAddressSpace::getMapping(void *virtualAddress,
   flags = 0;
 }
 
-void Arm7VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
+void ArmV7VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
 }
 
-void Arm7VirtualAddressSpace::unmap(void *virtualAddress)
+void ArmV7VirtualAddressSpace::unmap(void *virtualAddress)
 {
 }
 
-void *Arm7VirtualAddressSpace::allocateStack()
+void *ArmV7VirtualAddressSpace::allocateStack()
 {
   // TODO
   return 0;
 }
-void Arm7VirtualAddressSpace::freeStack(void *pStack)
+void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 {
   // TODO
 }

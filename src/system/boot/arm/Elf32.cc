@@ -18,6 +18,8 @@
 
 extern volatile unsigned char *uart3;
 
+extern "C"
+{
 int strncpy(char *dest, const char *src, int len)
 {
   int i = 0;
@@ -67,6 +69,7 @@ int strcmp(const char *p1, const char *p2)
     failed = 1;
 
   return failed;
+}
 }
 
 Elf32::Elf32(const char *name) :
