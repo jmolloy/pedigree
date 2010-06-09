@@ -23,8 +23,9 @@
 /** @addtogroup kernelprocessorArmV7
  * @{ */
 
-/** The ArmV7VirtualAddressSpace implements the VirtualAddressSpace class for the mip32
-    processor, which means it encompasses paging (KUSEG) and KSEG0, KSEG1, KSEG2.*/
+/** The ArmV7VirtualAddressSpace implements the VirtualAddressSpace class for the ARMv7
+  * architecture.
+  */
 class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
@@ -216,6 +217,14 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
     /** Virtual address of the page tables */
     void *m_VirtualPageTables;
 
+    /** Current top of the stacks */
+    void *m_pStackTop;
+    /** List of free stacks */
+    Vector<void*> m_freeStacks;
+
+    /** Lock to guard against multiprocessor reentrancy. */
+    Spinlock m_Lock;
+
     /** The kernel virtual address space */
     static ArmV7VirtualAddressSpace m_KernelSpace;
 };
@@ -228,6 +237,8 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x30000000)
+#define USERSPACE_PAGEDIR                       reinterpret_cast<void*>(0x3FFFF000) /// Top two page tables are allocated during initialisation to enable mapping here.
+#define USERSPACE_PAGETABLES                    reinterpret_cast<void*>(0x3FE00000)
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xC0000000)
@@ -235,6 +246,8 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xD0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFF3FFFFC)
+#define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
+#define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x20000000
 #define KERNEL_STACK_SIZE                       0x8000
 
