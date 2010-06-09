@@ -76,5 +76,5 @@ if not len(files) == 0:
 
 if env['arm_beagle']:
     # Set up the uboot image
-    env.Command(uimage, objname, 'arm-elf-objcopy -O binary ' + env.File(objname).abspath + ' ' + env.File(objname).abspath + '.flt && mkimage -A arm -O linux -T kernel -C none -a 0x80008000 -e 0x80008000 -n "pedigree" -d ' + env.File(objname).abspath + '.flt ' + env.File(uimage).abspath)
+    env.Command(uimage, objname, 'arm-elf-objcopy -O binary ' + env.File(objname).abspath + ' ' + env.File(objname).abspath + '.flt && mkimage -A arm -O linux -T kernel -C none -a 0x80008000 -e 0x80008000 -n "pedigree" -d ' + env.File(objname).abspath + '.flt ' + env.File(uimage).abspath + ' && cp ' + env.File(uimage).abspath + ' ' + env['uimage_target'])
 

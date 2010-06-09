@@ -83,6 +83,8 @@ opts.AddVariables(
     BoolVariable('arm_cortex_a8', 'Tune and optimise for the ARM Cortex A8 (use in conjunction with the `armv7\' option.', 0),
 
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
+    
+    ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 
     ####################################
     # These options are NOT TO BE USED on the command line!
