@@ -231,7 +231,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   asm volatile("swi $0x1");
   
   NOTICE("ARM build now boots properly. Now hanging forever...");
-  while(1);
+  while(1)
+  {
+      asm volatile("wfi");
+  }
 #endif
 
 #ifdef TRACK_LOCKS
@@ -258,7 +261,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     // Kernel idle thread.
     Processor::setInterrupts(true);
     
+#if defined(X86_COMMON)
     asm volatile ("hlt");
+#elif defined(ARM_COMMON)
+    asm volatile ("wfi");
+#else
+    // No instruction to halt the processor until a given event.
+#endif
     
 #ifdef THREADS
     Scheduler::instance().yield();
