@@ -47,6 +47,7 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
     virtual void *allocateStack();
+    virtual void *allocateStack(size_t stackSz);
     virtual void freeStack(void *pStack);
 
     //
@@ -78,7 +79,71 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
     /** The destructor does nothing */
     virtual ~ArmV7VirtualAddressSpace();
 
+    /** The constructor for already present paging structures
+     *\param[in] Heap virtual address of the beginning of the heap
+     *\param[in] PhysicalPageDirectory physical address of the page directory
+     *\param[in] VirtualPageDirectory virtual address of the page directory
+     *\param[in] VirtualPageTables virtual address of the page tables
+     *\param[in] VirtualStack virtual address of the next stacks
+     *\note This constructor is only used to construct the kernel VirtualAddressSpace */
+    ArmV7VirtualAddressSpace(void *Heap,
+                           physical_uintptr_t PhysicalPageDirectory,
+                           void *VirtualPageDirectory,
+                           void *VirtualPageTables,
+                           void *VirtualStack);
+
+    bool doIsMapped(void *virtualAddress);
+    bool doMap(physical_uintptr_t physicalAddress,
+               void *virtualAddress,
+               size_t flags);
+    void doGetMapping(void *virtualAddress,
+                      physical_uintptr_t &physicalAddress,
+                      size_t &flags);
+    void doSetFlags(void *virtualAddress, size_t newFlags);
+    void doUnmap(void *virtualAddress);
+    void *doAllocateStack(size_t sSize);
+
   private:
+
+    /** The constructor for already present paging structures
+     *\param[in] Heap virtual address of the beginning of the heap
+     *\param[in] PhysicalPageDirectory physical address of the page directory
+     *\param[in] VirtualPageDirectory virtual address of the page directory
+     *\param[in] VirtualPageTables virtual address of the page tables */
+    ArmV7VirtualAddressSpace(void *Heap,
+                           physical_uintptr_t PhysicalPageDirectory,
+                           void *VirtualPageDirectory,
+                           void *VirtualPageTables);
+
+    /** The default constructor
+     *\note NOT implemented */
+    ArmV7VirtualAddressSpace();
+    /** The copy-constructor
+     *\note NOT implemented */
+    ArmV7VirtualAddressSpace(const ArmV7VirtualAddressSpace &);
+    /** The copy-constructor
+     *\note Not implemented */
+    ArmV7VirtualAddressSpace &operator = (const ArmV7VirtualAddressSpace &);
+
+    /** Initialises the kernel address space, called by Processor. */
+    bool initialise();
+
+    /** Get the page table entry, if it exists and check whether a page is mapped or marked as
+     *  swapped out.
+     *\param[in] virtualAddress the virtual address
+     *\param[out] pageTableEntry pointer to the page table entry
+     *\return true, if the page table is present and the page mapped or marked swapped out, false
+     *        otherwise */
+    bool getPageTableEntry(void *virtualAddress,
+                           uint32_t *&pageTableEntry);
+    /** Convert the processor independant flags to the processor's representation of the flags
+     *\param[in] flags the processor independant flag representation
+     *\return the proessor specific flag representation */
+    uint32_t toFlags(size_t flags);
+    /** Convert processor's representation of the flags to the processor independant representation
+     *\param[in] Flags the processor specific flag representation
+     *\return the proessor independant flag representation */
+    size_t fromFlags(uint32_t Flags);
     
     /** Section B3.3 in the ARM Architecture Reference Manual (ARM7) */
     
@@ -170,46 +235,6 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
         } descriptor;
     } PACKED;
 
-    /** The constructor for already present paging structures
-     *\param[in] Heap virtual address of the beginning of the heap
-     *\param[in] PhysicalPageDirectory physical address of the page directory
-     *\param[in] VirtualPageDirectory virtual address of the page directory
-     *\param[in] VirtualPageTables virtual address of the page tables */
-    ArmV7VirtualAddressSpace(void *Heap,
-                           physical_uintptr_t PhysicalPageDirectory,
-                           void *VirtualPageDirectory,
-                           void *VirtualPageTables);
-
-    /** The default constructor
-     *\note NOT implemented */
-    ArmV7VirtualAddressSpace();
-    /** The copy-constructor
-     *\note NOT implemented */
-    ArmV7VirtualAddressSpace(const ArmV7VirtualAddressSpace &);
-    /** The copy-constructor
-     *\note Not implemented */
-    ArmV7VirtualAddressSpace &operator = (const ArmV7VirtualAddressSpace &);
-
-    /** Initialises the kernel address space, called by Processor. */
-    bool initialise();
-
-    /** Get the page table entry, if it exists and check whether a page is mapped or marked as
-     *  swapped out.
-     *\param[in] virtualAddress the virtual address
-     *\param[out] pageTableEntry pointer to the page table entry
-     *\return true, if the page table is present and the page mapped or marked swapped out, false
-     *        otherwise */
-    bool getPageTableEntry(void *virtualAddress,
-                           uint32_t *&pageTableEntry);
-    /** Convert the processor independant flags to the processor's representation of the flags
-     *\param[in] flags the processor independant flag representation
-     *\return the proessor specific flag representation */
-    uint32_t toFlags(size_t flags);
-    /** Convert processor's representation of the flags to the processor independant representation
-     *\param[in] Flags the processor specific flag representation
-     *\return the proessor independant flag representation */
-    size_t fromFlags(uint32_t Flags);
-
     /** Physical address of the page directory */
     physical_uintptr_t m_PhysicalPageDirectory;
     /** Virtual address of the page directory */
@@ -234,9 +259,6 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 /** 1 GB given to userspace, 3 GB given to the kernel.
   * The 3 GB region also contains all MMIO regions.
   */
-
-  // 1024 page tables maps a gig
-  // 3072 page tables map 3 GB
 
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x30000000)

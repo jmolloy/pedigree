@@ -53,6 +53,40 @@ ArmV7VirtualAddressSpace::~ArmV7VirtualAddressSpace()
 {
 }
 
+uint32_t ArmV7VirtualAddressSpace::toFlags(size_t flags)
+{
+    uint32_t ret = 0; // No access.
+    if(flags & KernelMode)
+    {
+        ret = 1; // Read/write in privileged mode, not usable in user mode
+    }
+    else
+    {
+        if(flags & Write)
+            ret = 3; // Read/write all
+        else
+            ret = 2; // Read/write privileged, read-only user
+    }
+    return ret;
+}
+
+size_t ArmV7VirtualAddressSpace::fromFlags(uint32_t flags)
+{
+    switch(flags)
+    {
+        case 0:
+            return 0; // Zero permissions
+        case 1:
+            return (Write | KernelMode);
+        case 2:
+            return 0; // Read-only by user mode... how to represent that?
+        case 3:
+            return Write; // Read/write all
+        default:
+            return 0;
+    }
+}
+
 bool ArmV7VirtualAddressSpace::initialise()
 {
   return true;
@@ -64,7 +98,46 @@ bool ArmV7VirtualAddressSpace::isAddressValid(void *virtualAddress)
     return true;
 }
 
+bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
+                                    void *virtualAddress,
+                                    size_t flags)
+{
+    return doMap(physicalAddress, virtualAddress, flags);
+}
+
+void ArmV7VirtualAddressSpace::unmap(void *virtualAddress)
+{
+    return doUnmap(virtualAddress);
+}
+
 bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
+{
+    return doIsMapped(virtualAddress);
+}
+
+void ArmV7VirtualAddressSpace::getMapping(void *virtualAddress,
+                                           physical_uintptr_t &physicalAddress,
+                                           size_t &flags)
+{
+    doGetMapping(virtualAddress, physicalAddress, flags);
+}
+
+void ArmV7VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
+{
+    return doSetFlags(virtualAddress, newFlags);
+}
+
+void *ArmV7VirtualAddressSpace::allocateStack()
+{
+  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+}
+
+void *ArmV7VirtualAddressSpace::allocateStack(size_t stackSz)
+{
+  return doAllocateStack(stackSz);
+}
+
+bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
 {
     uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
     uint32_t pdir_offset = addr >> 20;
@@ -80,7 +153,7 @@ bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
             case 1:
             {
                 // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(USERSPACE_PAGETABLES) + pdir_offset);
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
                 if(!ptbl[ptab_offset].descriptor.fault.type)
                     return false;
                 break;
@@ -97,7 +170,7 @@ bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
     return true;
 }
 
-bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
+bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
                                     void *virtualAddress,
                                     size_t flags)
 {
@@ -132,28 +205,31 @@ bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
         // so we handle that here.
         for(int i = 0; i < 4; i++)
         {
+            /// \note For later: when creating high-memory page table mappings, they should be in
+            ///       DOMAIN ONE - which holds all paging structures. This way they can be locked down
+            ///       appropriately.
             pdir[pdir_offset + i].descriptor.entry = page + (i * 1024);
             pdir[pdir_offset + i].descriptor.pageTable.type = 1;
             pdir[pdir_offset + i].descriptor.pageTable.sbz1 = pdir[pdir_offset + i].descriptor.pageTable.sbz2 = 0;
             pdir[pdir_offset + i].descriptor.pageTable.ns = 1;
-            pdir[pdir_offset + i].descriptor.pageTable.domain = 0;
+            pdir[pdir_offset + i].descriptor.pageTable.domain = 0; // DOMAIN0: Main memory
             pdir[pdir_offset + i].descriptor.pageTable.imp = 0;
 
             // Map in the page table we've just created so we can zero it.
             // mapaddr is the virtual address of the page table we just allocated
             // physical space for.
-            uintptr_t mapaddr = reinterpret_cast<uintptr_t>(USERSPACE_PAGETABLES);
+            uintptr_t mapaddr = reinterpret_cast<uintptr_t>(m_VirtualPageTables);
             mapaddr += ((pdir_offset + i) * 0x400);
             uint32_t ptbl_offset2 = (mapaddr >> 12) & 0xFF;
 
             // Grab the right page table for this new page
-            uintptr_t ptbl_addr = reinterpret_cast<uintptr_t>(USERSPACE_PAGETABLES) + (mapaddr >> 20);
+            uintptr_t ptbl_addr = reinterpret_cast<uintptr_t>(m_VirtualPageTables) + (mapaddr >> 20);
             SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor*>(ptbl_addr);
             ptbl[ptbl_offset2].descriptor.entry = page + (i * 1024);
             ptbl[ptbl_offset2].descriptor.smallpage.type = 2;
             ptbl[ptbl_offset2].descriptor.smallpage.b = 0;
             ptbl[ptbl_offset2].descriptor.smallpage.c = 0;
-            ptbl[ptbl_offset2].descriptor.smallpage.ap1 = 3; /// \todo access flags!
+            ptbl[ptbl_offset2].descriptor.smallpage.ap1 = 3; // Page table, give it READ/WRITE
             ptbl[ptbl_offset2].descriptor.smallpage.sbz = 0;
             ptbl[ptbl_offset2].descriptor.smallpage.ap2 = 0;
             ptbl[ptbl_offset2].descriptor.smallpage.s = 0;
@@ -180,7 +256,7 @@ bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
         ptbl[ptbl_offset].descriptor.smallpage.type = 2;
         ptbl[ptbl_offset].descriptor.smallpage.b = 0;
         ptbl[ptbl_offset].descriptor.smallpage.c = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo access flags!
+        ptbl[ptbl_offset].descriptor.smallpage.ap1 = toFlags(flags);
         ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
         ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
         ptbl[ptbl_offset].descriptor.smallpage.s = 0;
@@ -190,28 +266,57 @@ bool ArmV7VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
     return true;
 }
 
-void ArmV7VirtualAddressSpace::getMapping(void *virtualAddress,
+void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
                                            physical_uintptr_t &physicalAddress,
                                            size_t &flags)
 {
-  physicalAddress = 0;
-  flags = 0;
+    uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    uint32_t pdir_offset = addr >> 20;
+    uint32_t ptab_offset = (addr >> 12) & 0xFF;
+
+    // Grab the entry in the page directory
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
+    if(pdir[pdir_offset].descriptor.entry)
+    {
+        // What type is the entry?
+        switch(pdir[pdir_offset].descriptor.fault.type)
+        {
+            case 1:
+            {
+                // Page table walk.
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                if(!ptbl[ptab_offset].descriptor.fault.type)
+                    return;
+                else
+                {
+                    physicalAddress = ptbl[ptab_offset].descriptor.smallpage.base << 12;
+                    flags = fromFlags(ptbl[ptab_offset].descriptor.smallpage.ap1);
+                }
+                break;
+            }
+            case 2:
+                // Section or supersection
+                WARNING("ArmV7VirtualAddressSpace::isAddressValid - sections and supersections not yet supported");
+                break;
+            default:
+                return;
+        }
+    }
 }
 
-void ArmV7VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
+void ArmV7VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 {
 }
 
-void ArmV7VirtualAddressSpace::unmap(void *virtualAddress)
+void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
 {
 }
 
-void *ArmV7VirtualAddressSpace::allocateStack()
+void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
-  // TODO
   return 0;
 }
+
 void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 {
-  // TODO
 }
