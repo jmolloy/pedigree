@@ -235,6 +235,9 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
   * The 3 GB region also contains all MMIO regions.
   */
 
+  // 1024 page tables maps a gig
+  // 3072 page tables map 3 GB
+
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x30000000)
 #define USERSPACE_PAGEDIR                       reinterpret_cast<void*>(0x3FFFF000) /// Top two page tables are allocated during initialisation to enable mapping here.
@@ -242,12 +245,14 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xC0000000)
-#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFF400000)
+#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80100000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xD0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFF3FFFFC)
 #define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
 #define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
+#define KERNEL_PAGEDIR                          reinterpret_cast<void*>(0xFFFFE000) // 0xFFFF0000 is where we'll put the exception base vectors
+#define KERNEL_PAGETABLES                       reinterpret_cast<void*>(0xFFC00000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x20000000
 #define KERNEL_STACK_SIZE                       0x8000
 

@@ -80,7 +80,7 @@ bool ArmV7VirtualAddressSpace::isMapped(void *virtualAddress)
             case 1:
             {
                 // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(pdir[pdir_offset].descriptor.pageTable.baseaddr << 10);
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(USERSPACE_PAGETABLES) + pdir_offset);
                 if(!ptbl[ptab_offset].descriptor.fault.type)
                     return false;
                 break;
