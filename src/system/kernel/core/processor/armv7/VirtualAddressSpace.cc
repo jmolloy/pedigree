@@ -402,6 +402,7 @@ void ArmV7VirtualAddressSpace::freeStack(void *pStack)
     m_freeStacks.pushBack(pStack);
 }
 
+extern char __start, __end;
 ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
                                                physical_uintptr_t PhysicalPageDirectory,
                                                void *VirtualPageDirectory,
@@ -416,65 +417,80 @@ ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
     // We'll enable the MMU after the page directory is set up - only ever use
     // this function to construct the kernel address space, and only ever once.
     
-    // Need four page tables as well as the page directory to access the page
-    // directory and page tables via the virtual address.
-    physical_uintptr_t ptbl_paddr = PhysicalMemoryManager::instance().allocatePage();
-    uintptr_t          ptbl_vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES) + 0x2FF000;
+    // Map in the 4 MB we'll use for page tables - this region is pinned in
+    // PhysicalMemoryManager
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor*>(m_PhysicalPageDirectory);
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES);
+    uintptr_t paddr = 0x8FB00000;
+    for(size_t offset = 0; offset < 0x400000; offset += 0x100000)
+    {
+        uintptr_t baseAddr = vaddr + offset;
+        uint32_t pdir_offset = vaddr >> 20;
+        
+        // Map this block
+        pdir[pdir_offset].descriptor.entry = paddr + offset;
+        pdir[pdir_offset].descriptor.section.type = 2;
+        pdir[pdir_offset].descriptor.section.b = 0;
+        pdir[pdir_offset].descriptor.section.c = 0;
+        pdir[pdir_offset].descriptor.section.xn = 0;
+        pdir[pdir_offset].descriptor.section.domain = 1; // Paging structures = DOMAIN1
+        pdir[pdir_offset].descriptor.section.imp = 0;
+        pdir[pdir_offset].descriptor.section.ap1 = 3;
+        pdir[pdir_offset].descriptor.section.ap2 = 0;
+        pdir[pdir_offset].descriptor.section.tex = 0;
+        pdir[pdir_offset].descriptor.section.s = 1;
+        pdir[pdir_offset].descriptor.section.nG = 0;
+        pdir[pdir_offset].descriptor.section.sectiontype = 0;
+        pdir[pdir_offset].descriptor.section.ns = 0;
+    }
+    
+    // Page table for mapping in the page directory. This table will cover the
+    // last MB of the address space.
+    physical_uintptr_t ptbl_paddr = 0x8FB00000 + (0x400000 - 0x400);
     
     // Map in the page directory
-    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor*>(m_PhysicalPageDirectory);
-    SecondLevelDescriptor *ptbl1 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr);
-    SecondLevelDescriptor *ptbl2 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0x400);
-    SecondLevelDescriptor *ptbl3 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0x800);
-    SecondLevelDescriptor *ptbl4 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0xC00);
-    uint32_t pdir_offset = reinterpret_cast<uintptr_t>(m_VirtualPageDirectory) >> 20;
-    uint32_t ptbl_offset = ((ptbl_vaddr + 0xC00) >> 12) & 0xFF;
+    SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr);
+    vaddr = reinterpret_cast<uintptr_t>(m_VirtualPageDirectory);
+    uint32_t pdir_offset = vaddr >> 20;
+    uint32_t ptbl_offset = (vaddr >> 12) & 0xFF;
     pdir[pdir_offset].descriptor.entry = ptbl_paddr + 0xC00; // Last page table in the 4K block.
     pdir[pdir_offset].descriptor.pageTable.type = 1;
     pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
     pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
+    pdir[pdir_offset].descriptor.pageTable.domain = 1; // Paging structures = DOMAIN1
     pdir[pdir_offset].descriptor.pageTable.imp = 0;
-    ptbl4[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory;
-    ptbl4[ptbl_offset].descriptor.smallpage.type = 2;
-    ptbl4[ptbl_offset].descriptor.smallpage.b = 0;
-    ptbl4[ptbl_offset].descriptor.smallpage.c = 0;
-    ptbl4[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
-    ptbl4[ptbl_offset].descriptor.smallpage.ap2 = 0;
-    ptbl4[ptbl_offset].descriptor.smallpage.sbz = 0;
-    ptbl4[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
-    ptbl4[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+    ptbl[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory;
+    ptbl[ptbl_offset].descriptor.smallpage.type = 2;
+    ptbl[ptbl_offset].descriptor.smallpage.b = 0;
+    ptbl[ptbl_offset].descriptor.smallpage.c = 0;
+    ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
+    ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
+    ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
+    ptbl[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
+    ptbl[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
     
-    // Map in the rest of the top 4 MB of address space
-    for(int i = 0; i < 3; i++)
+    // Identity-map the kernel
+    size_t kernelSize = reinterpret_cast<uintptr_t>(&__end) - (reinterpret_cast<uintptr_t>(&__start) & ~0xFFFFF);
+    for(size_t offset = 0; offset < kernelSize; offset += 0x100000)
     {
-        uintptr_t           vaddr = ptbl_vaddr + (i * 0x400);
-        physical_uintptr_t  paddr = ptbl_paddr + (i * 0x400);
-        uint32_t pdir_offset = vaddr >> 20;
-        uint32_t ptbl_offset = (vaddr >> 12) & 0xFF;
+        uintptr_t baseAddr = kernelSize + offset;
+        pdir_offset = baseAddr >> 20;
         
-        pdir[pdir_offset].descriptor.entry = paddr;
-        pdir[pdir_offset].descriptor.pageTable.type = 1;
-        pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
-        pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
-        pdir[pdir_offset].descriptor.pageTable.imp = 0;
-        
-        SecondLevelDescriptor *ptbl = 0;
-        if(i == 0)
-            ptbl = ptbl1;
-        else if(i == 1)
-            ptbl = ptbl2;
-        else
-            ptbl = ptbl3;
-        
-        ptbl[ptbl_offset].descriptor.entry = paddr;
-        ptbl[ptbl_offset].descriptor.smallpage.type = 2;
-        ptbl[ptbl_offset].descriptor.smallpage.b = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.c = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
-        ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
-        ptbl[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+        // Map this block
+        pdir[pdir_offset].descriptor.entry = baseAddr;
+        pdir[pdir_offset].descriptor.section.type = 2;
+        pdir[pdir_offset].descriptor.section.b = 0;
+        pdir[pdir_offset].descriptor.section.c = 0;
+        pdir[pdir_offset].descriptor.section.xn = 0;
+        pdir[pdir_offset].descriptor.section.domain = 2; // Kernel = DOMAIN2
+        pdir[pdir_offset].descriptor.section.imp = 0;
+        pdir[pdir_offset].descriptor.section.ap1 = 3;
+        pdir[pdir_offset].descriptor.section.ap2 = 0;
+        pdir[pdir_offset].descriptor.section.tex = 0;
+        pdir[pdir_offset].descriptor.section.s = 1;
+        pdir[pdir_offset].descriptor.section.nG = 0;
+        pdir[pdir_offset].descriptor.section.sectiontype = 0;
+        pdir[pdir_offset].descriptor.section.ns = 0;
     }
 }
 

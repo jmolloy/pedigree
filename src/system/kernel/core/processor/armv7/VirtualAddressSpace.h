@@ -179,8 +179,9 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
                 uint32_t xn : 1;
                 uint32_t domain : 4; /// extended base address for supersection
                 uint32_t imp : 1;
-                uint32_t ap : 1;
+                uint32_t ap1 : 2;
                 uint32_t tex : 3;
+                uint32_t ap2 : 1;
                 uint32_t s : 1;
                 uint32_t nG : 1;
                 uint32_t sectiontype : 1; /// = 0 for section, 1 for supersection
@@ -310,7 +311,7 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
 #define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
 #define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
 #define KERNEL_PAGEDIR                          reinterpret_cast<void*>(0xFFFFE000) // 0xFFFF0000 is where we'll put the exception base vectors
-#define KERNEL_PAGETABLES                       reinterpret_cast<void*>(0xFFC00000)
+#define KERNEL_PAGETABLES                       reinterpret_cast<void*>(0xFF000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x20000000
 #define KERNEL_STACK_SIZE                       0x8000
 

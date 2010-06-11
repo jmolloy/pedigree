@@ -73,7 +73,11 @@ void Arm7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
         // Ignore any address within the kernel
         if(!(addr > reinterpret_cast<physical_uintptr_t>(&__start) &&
              addr < reinterpret_cast<physical_uintptr_t>(&__end)))
+        {
+            // Ignore some pinned addresses
+            if(!(addr > 0x8FB00000) && (addr < 0x8FF00000))
             m_PageStack.free(addr);
+        }
     }
 #endif
 
