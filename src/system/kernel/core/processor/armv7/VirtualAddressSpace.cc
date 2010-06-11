@@ -296,7 +296,7 @@ void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
             }
             case 2:
                 // Section or supersection
-                WARNING("ArmV7VirtualAddressSpace::isAddressValid - sections and supersections not yet supported");
+                WARNING("ArmV7VirtualAddressSpace::doGetMapping - sections and supersections not yet supported");
                 break;
             default:
                 return;
@@ -310,6 +310,32 @@ void ArmV7VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 
 void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
 {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    uint32_t pdir_offset = addr >> 20;
+    uint32_t ptab_offset = (addr >> 12) & 0xFF;
+
+    // Grab the entry in the page directory
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
+    if(pdir[pdir_offset].descriptor.entry)
+    {
+        // What type is the entry?
+        switch(pdir[pdir_offset].descriptor.fault.type)
+        {
+            case 1:
+            {
+                // Page table walk.
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                ptbl[ptab_offset].descriptor.fault.type = 0; // Unmap.
+                break;
+            }
+            case 2:
+                // Section or supersection
+                pdir[pdir_offset].descriptor.fault.type = 0;
+                break;
+            default:
+                return;
+        }
+    }
 }
 
 void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
