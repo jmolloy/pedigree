@@ -30,7 +30,8 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 {
   /** Processor::switchAddressSpace() needs access to m_PhysicalPageDirectory */
   friend class Processor;
-  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+  /** VirtualAddressSpace::create needs access to the constructor */
+  friend VirtualAddressSpace *VirtualAddressSpace::create();
   public:
     //
     // VirtualAddressSpace Interface
@@ -249,9 +250,44 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 
     /** Lock to guard against multiprocessor reentrancy. */
     Spinlock m_Lock;
+};
+
+/** The kernel's VirtualAddressSpace on ArmV7 */
+class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
+{
+  /** ArmV7VirtualAddressSpace needs access to m_Instance */
+  friend class ArmV7VirtualAddressSpace;
+  /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_Instance */
+  friend VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace();
+  public:
+    //
+    // VirtualAddressSpace Interface
+    //
+    virtual bool isMapped(void *virtualAddress);
+    virtual bool map(physical_uintptr_t physicalAddress,
+                     void *virtualAddress,
+                     size_t flags);
+    virtual void getMapping(void *virtualAddress,
+                            physical_uintptr_t &physicalAddress,
+                            size_t &flags);
+    virtual void setFlags(void *virtualAddress, size_t newFlags);
+    virtual void unmap(void *virtualAddress);
+    virtual void *allocateStack();
+
+  private:
+    /** The constructor */
+    ArmV7KernelVirtualAddressSpace();
+    /** The destructor */
+    ~ArmV7KernelVirtualAddressSpace();
+    /** The copy-constructor
+     *\note NOT implemented (Singleton) */
+    ArmV7KernelVirtualAddressSpace(const ArmV7KernelVirtualAddressSpace &);
+    /** The assignment operator
+     *\note NOT implemented (Singleton) */
+    ArmV7KernelVirtualAddressSpace &operator = (const ArmV7KernelVirtualAddressSpace &);
 
     /** The kernel virtual address space */
-    static ArmV7VirtualAddressSpace m_KernelSpace;
+    static ArmV7KernelVirtualAddressSpace m_Instance;
 };
 
 /** @} */

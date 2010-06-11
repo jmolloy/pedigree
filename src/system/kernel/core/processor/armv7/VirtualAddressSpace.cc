@@ -23,8 +23,6 @@
 #include <LockGuard.h>
 #include "VirtualAddressSpace.h"
 
-ArmV7VirtualAddressSpace ArmV7VirtualAddressSpace::m_KernelSpace;
-
 /** Array of free pages, used during the mapping algorithms in case a new page
     table needs to be mapped, which must be done without relinquishing the lock
     (which means we can't call the PMM!)
@@ -32,16 +30,16 @@ ArmV7VirtualAddressSpace ArmV7VirtualAddressSpace::m_KernelSpace;
     There is one page per processor. */
 physical_uintptr_t g_EscrowPages[256]; /// \todo MAX_PROCESSORS
 
+ArmV7KernelVirtualAddressSpace ArmV7KernelVirtualAddressSpace::m_Instance;
+
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
-  return ArmV7VirtualAddressSpace::m_KernelSpace;
+  return ArmV7KernelVirtualAddressSpace::m_Instance;
 }
 
 VirtualAddressSpace *VirtualAddressSpace::create()
 {
-  // TODO
-  //return new X86VirtualAddressSpace();
-  return 0;
+  return new ArmV7VirtualAddressSpace();
 }
 
 ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace() :
@@ -402,4 +400,126 @@ void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 {
     // Add the stack to the list
     m_freeStacks.pushBack(pStack);
+}
+
+ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
+                                               physical_uintptr_t PhysicalPageDirectory,
+                                               void *VirtualPageDirectory,
+                                               void *VirtualPageTables,
+                                               void *VirtualStack)
+  : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
+    m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
+    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock(false, true)
+{
+    // The kernel address space is initialised by this function. We don't have
+    // the MMU on yet, so we can modify the page directory to our heart's content.
+    // We'll enable the MMU after the page directory is set up - only ever use
+    // this function to construct the kernel address space, and only ever once.
+    
+    // Need four page tables as well as the page directory to access the page
+    // directory and page tables via the virtual address.
+    physical_uintptr_t ptbl_paddr = PhysicalMemoryManager::instance().allocatePage();
+    uintptr_t          ptbl_vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES) + 0x2FF000;
+    
+    // Map in the page directory
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor*>(m_PhysicalPageDirectory);
+    SecondLevelDescriptor *ptbl1 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr);
+    SecondLevelDescriptor *ptbl2 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0x400);
+    SecondLevelDescriptor *ptbl3 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0x800);
+    SecondLevelDescriptor *ptbl4 = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr + 0xC00);
+    uint32_t pdir_offset = reinterpret_cast<uintptr_t>(m_VirtualPageDirectory) >> 20;
+    uint32_t ptbl_offset = ((ptbl_vaddr + 0xC00) >> 12) & 0xFF;
+    pdir[pdir_offset].descriptor.entry = ptbl_paddr + 0xC00; // Last page table in the 4K block.
+    pdir[pdir_offset].descriptor.pageTable.type = 1;
+    pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
+    pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
+    pdir[pdir_offset].descriptor.pageTable.imp = 0;
+    ptbl4[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory;
+    ptbl4[ptbl_offset].descriptor.smallpage.type = 2;
+    ptbl4[ptbl_offset].descriptor.smallpage.b = 0;
+    ptbl4[ptbl_offset].descriptor.smallpage.c = 0;
+    ptbl4[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
+    ptbl4[ptbl_offset].descriptor.smallpage.ap2 = 0;
+    ptbl4[ptbl_offset].descriptor.smallpage.sbz = 0;
+    ptbl4[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
+    ptbl4[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+    
+    // Map in the rest of the top 4 MB of address space
+    for(int i = 0; i < 3; i++)
+    {
+        uintptr_t           vaddr = ptbl_vaddr + (i * 0x400);
+        physical_uintptr_t  paddr = ptbl_paddr + (i * 0x400);
+        uint32_t pdir_offset = vaddr >> 20;
+        uint32_t ptbl_offset = (vaddr >> 12) & 0xFF;
+        
+        pdir[pdir_offset].descriptor.entry = paddr;
+        pdir[pdir_offset].descriptor.pageTable.type = 1;
+        pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
+        pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
+        pdir[pdir_offset].descriptor.pageTable.imp = 0;
+        
+        SecondLevelDescriptor *ptbl = 0;
+        if(i == 0)
+            ptbl = ptbl1;
+        else if(i == 1)
+            ptbl = ptbl2;
+        else
+            ptbl = ptbl3;
+        
+        ptbl[ptbl_offset].descriptor.entry = paddr;
+        ptbl[ptbl_offset].descriptor.smallpage.type = 2;
+        ptbl[ptbl_offset].descriptor.smallpage.b = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.c = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
+        ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
+        ptbl[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+    }
+}
+
+ArmV7KernelVirtualAddressSpace::ArmV7KernelVirtualAddressSpace() :
+    ArmV7VirtualAddressSpace(KERNEL_VIRTUAL_HEAP,
+                             PhysicalMemoryManager::instance().allocatePage(),
+                             KERNEL_PAGEDIR,
+                             KERNEL_PAGETABLES,
+                             KERNEL_VIRTUAL_STACK)
+{
+    for(int i = 0; i < 256; i++)
+        g_EscrowPages[i] = 0;
+}
+
+ArmV7KernelVirtualAddressSpace::~ArmV7KernelVirtualAddressSpace()
+{
+}
+
+bool ArmV7KernelVirtualAddressSpace::isMapped(void *virtualAddress)
+{
+  return doIsMapped(virtualAddress);
+}
+bool ArmV7KernelVirtualAddressSpace::map(physical_uintptr_t physicalAddress,
+                                       void *virtualAddress,
+                                       size_t flags)
+{
+  return doMap(physicalAddress, virtualAddress, flags);
+}
+void ArmV7KernelVirtualAddressSpace::getMapping(void *virtualAddress,
+                                              physical_uintptr_t &physicalAddress,
+                                              size_t &flags)
+{
+  doGetMapping(virtualAddress, physicalAddress, flags);
+}
+void ArmV7KernelVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
+{
+  doSetFlags(virtualAddress, newFlags);
+}
+void ArmV7KernelVirtualAddressSpace::unmap(void *virtualAddress)
+{
+  doUnmap(virtualAddress);
+}
+void *ArmV7KernelVirtualAddressSpace::allocateStack()
+{
+  void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
+
+  return pStack;
 }
