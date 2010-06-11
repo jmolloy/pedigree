@@ -306,6 +306,32 @@ void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
 
 void ArmV7VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    uint32_t pdir_offset = addr >> 20;
+    uint32_t ptab_offset = (addr >> 12) & 0xFF;
+
+    // Grab the entry in the page directory
+    FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
+    if(pdir[pdir_offset].descriptor.entry)
+    {
+        // What type is the entry?
+        switch(pdir[pdir_offset].descriptor.fault.type)
+        {
+            case 1:
+            {
+                // Page table walk.
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                ptbl[ptab_offset].descriptor.smallpage.ap1 = toFlags(newFlags);
+                break;
+            }
+            case 2:
+                // Section or supersection
+                WARNING("ArmV7VirtualAddressSpace::doSetFlags - sections and supersections not yet supported");
+                break;
+            default:
+                return;
+        }
+    }
 }
 
 void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
@@ -340,9 +366,40 @@ void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
 
 void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
-  return 0;
+    m_Lock.acquire();
+
+    // Get a virtual address for the stack
+    void *pStack = 0;
+    if (m_freeStacks.count() != 0)
+    {
+        pStack = m_freeStacks.popBack();
+
+        m_Lock.release();
+    }
+    else
+    {
+        pStack = m_pStackTop;
+        m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
+
+        m_Lock.release();
+
+        // Map it in
+        uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
+        for (size_t j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
+        {
+            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+            bool b = map(phys,
+                     reinterpret_cast<void*> (j + stackBottom),
+                     VirtualAddressSpace::Write);
+            if (!b)
+                WARNING("map() failed in doAllocateStack");
+        }
+    }
+    return pStack;
 }
 
 void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 {
+    // Add the stack to the list
+    m_freeStacks.pushBack(pStack);
 }
