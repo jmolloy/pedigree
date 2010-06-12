@@ -419,7 +419,7 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
     for(size_t offset = 0; offset < 0x400000; offset += 0x100000)
     {
         uintptr_t baseAddr = vaddr + offset;
-        uint32_t pdir_offset = vaddr >> 20;
+        uint32_t pdir_offset = baseAddr >> 20;
         
         // Map this block
         pdir[pdir_offset].descriptor.entry = paddr + offset;
@@ -467,7 +467,7 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
     size_t kernelSize = reinterpret_cast<uintptr_t>(&__end) - (reinterpret_cast<uintptr_t>(&__start) & ~0xFFFFF);
     for(size_t offset = 0; offset < kernelSize; offset += 0x100000)
     {
-        uintptr_t baseAddr = kernelSize + offset;
+        uintptr_t baseAddr = (reinterpret_cast<uintptr_t>(&__start) & ~0xFFFFF) + offset;
         pdir_offset = baseAddr >> 20;
         
         // Map this block
@@ -486,6 +486,25 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
         pdir[pdir_offset].descriptor.section.sectiontype = 0;
         pdir[pdir_offset].descriptor.section.ns = 0;
     }
+
+    /// \note Temporary
+    // Map in the UART3 section
+    vaddr = 0x49000000;
+    pdir_offset = vaddr >> 20;
+    pdir[pdir_offset].descriptor.entry = vaddr;
+    pdir[pdir_offset].descriptor.section.type = 2;
+    pdir[pdir_offset].descriptor.section.b = 0;
+    pdir[pdir_offset].descriptor.section.c = 0;
+    pdir[pdir_offset].descriptor.section.xn = 0;
+    pdir[pdir_offset].descriptor.section.domain = 2; // Kernel = DOMAIN2
+    pdir[pdir_offset].descriptor.section.imp = 0;
+    pdir[pdir_offset].descriptor.section.ap1 = 3;
+    pdir[pdir_offset].descriptor.section.ap2 = 0;
+    pdir[pdir_offset].descriptor.section.tex = 0;
+    pdir[pdir_offset].descriptor.section.s = 1;
+    pdir[pdir_offset].descriptor.section.nG = 0;
+    pdir[pdir_offset].descriptor.section.sectiontype = 0;
+    pdir[pdir_offset].descriptor.section.ns = 0;
 
     // Set up the required control registers before turning on the MMU
     Processor::writeTTBR1(m_PhysicalPageDirectory);
