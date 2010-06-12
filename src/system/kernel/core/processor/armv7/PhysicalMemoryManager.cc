@@ -206,7 +206,7 @@ physical_uintptr_t ArmV7PhysicalMemoryManager::PageStack::allocate(size_t constr
     if((m_StackMax != m_StackSize) && m_StackSize)
     {
         m_StackSize -= sizeof(physical_uintptr_t);
-        ret = m_Stack[m_StackSize / sizeof(physical_uintptr_t)];
+        ret = *(reinterpret_cast<uint32_t*>(m_Stack) + m_StackSize / sizeof(physical_uintptr_t));
     }
     return ret;
 }
@@ -219,21 +219,31 @@ void ArmV7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddr
         return;
     else if(physicalAddress >= 0x90000000)
         return;
-    else if(physicalAddress >= 0x8F000000) /// \todo temporary until we can map in stack expansion
-        return;
 #endif
 
-    if((m_StackSize + sizeof(physical_uintptr_t)) >= m_StackMax)
+    // No stack, no free.
+    if(!m_Stack)
         return;
 
-    m_Stack[m_StackSize / sizeof(physical_uintptr_t)] = physicalAddress;
+    // Expand the stack if we need to
+    if(m_StackMax == m_StackSize)
+    {
+        ArmV7VirtualAddressSpace &AddressSpace = static_cast<ArmV7VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+        if(!AddressSpace.map(physicalAddress, adjust_pointer(m_Stack, m_StackMax), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write))
+            return;
+
+        m_StackMax += getPageSize();
+    }
+
+    *(reinterpret_cast<physical_uintptr_t*>(m_Stack) + (m_StackSize / sizeof(physical_uintptr_t))) = physicalAddress;
     m_StackSize += sizeof(physical_uintptr_t);
 }
 
 ArmV7PhysicalMemoryManager::PageStack::PageStack()
 {
-    m_StackMax = 0x1000;
+    m_StackMax = 0;
     m_StackSize = 0;
+    m_Stack = KERNEL_VIRTUAL_PAGESTACK_4GB;
 }
 
 

@@ -182,7 +182,8 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
         pageTables = KERNEL_PAGETABLES;
 
     // Check if we have an allocated escrow page - if we don't, allocate it.
-    if (g_EscrowPages[Processor::id()] == 0)
+    // The kernel address space already has all page tables pre-allocated.
+    if ((g_EscrowPages[Processor::id()] == 0) && (pageTables == USERSPACE_PAGETABLES))
     {
         g_EscrowPages[Processor::id()] = PhysicalMemoryManager::instance().allocatePage();
         if (g_EscrowPages[Processor::id()] == 0)
@@ -270,9 +271,6 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
         ptbl[ptbl_offset].descriptor.smallpage.s = 0;
         ptbl[ptbl_offset].descriptor.smallpage.nG = 1;
     }
-
-    // Test the lookup
-    memset(virtualAddress, 0xab, 15);
 
     return true;
 }
@@ -485,27 +483,6 @@ bool ArmV7KernelVirtualAddressSpace::initialiseKernelAddressSpace()
         pdir[pdir_offset].descriptor.section.sectiontype = 0;
         pdir[pdir_offset].descriptor.section.ns = 0;
     }
-
-    /// \note Temporary
-    // Map in the UART3 section
-    /*
-    vaddr = 0x49000000;
-    pdir_offset = vaddr >> 20;
-    pdir[pdir_offset].descriptor.entry = vaddr;
-    pdir[pdir_offset].descriptor.section.type = 2;
-    pdir[pdir_offset].descriptor.section.b = 0;
-    pdir[pdir_offset].descriptor.section.c = 0;
-    pdir[pdir_offset].descriptor.section.xn = 0;
-    pdir[pdir_offset].descriptor.section.domain = 2; // Kernel = DOMAIN2
-    pdir[pdir_offset].descriptor.section.imp = 0;
-    pdir[pdir_offset].descriptor.section.ap1 = 3;
-    pdir[pdir_offset].descriptor.section.ap2 = 0;
-    pdir[pdir_offset].descriptor.section.tex = 0;
-    pdir[pdir_offset].descriptor.section.s = 1;
-    pdir[pdir_offset].descriptor.section.nG = 0;
-    pdir[pdir_offset].descriptor.section.sectiontype = 0;
-    pdir[pdir_offset].descriptor.section.ns = 0;
-    */
 
     // Pre-allocate and define all the remaining kernel page tables.
     vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES);
