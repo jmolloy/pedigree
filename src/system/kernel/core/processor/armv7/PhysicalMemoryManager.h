@@ -96,7 +96,7 @@ class ArmV7PhysicalMemoryManager : public PhysicalMemoryManager
 
         /** Pointer to the base address of the stack. The stack grows upwards. */
 #ifdef ARM_BEAGLE
-        // physical_uintptr_t m_Stack[0x10000000 / sizeof(physical_uintptr_t)]; // 256 MB, one entry per address
+        //physical_uintptr_t m_Stack[0x10000000 / sizeof(physical_uintptr_t)]; // 256 MB, one entry per address
         physical_uintptr_t m_Stack[1024];
 #else
         physical_uintptr_t m_Stack[1];
@@ -112,6 +112,9 @@ class ArmV7PhysicalMemoryManager : public PhysicalMemoryManager
 
     /** RangeList of free physical memory */
     RangeList<uint64_t> m_PhysicalRanges;
+
+    /** RangeList of non-RAM memory */
+    RangeList<uint64_t> m_NonRAMRanges;
     
     /** Virtual-memory available for MemoryRegions */
     RangeList<uintptr_t> m_VirtualMemoryRegions;

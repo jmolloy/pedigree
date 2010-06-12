@@ -31,7 +31,7 @@ void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
     // Map in the base
     if(!PhysicalMemoryManager::instance().allocateRegion(m_BaseRegion,
                                                          1,
-                                                         0,
+                                                         PhysicalMemoryManager::continuous,
                                                          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode,
                                                          nBaseAddr))
     {

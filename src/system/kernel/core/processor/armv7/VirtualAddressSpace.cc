@@ -22,6 +22,7 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <LockGuard.h>
 #include "VirtualAddressSpace.h"
+#include <machine/Machine.h>
 
 /** Array of free pages, used during the mapping algorithms in case a new page
     table needs to be mapped, which must be done without relinquishing the lock
@@ -168,10 +169,18 @@ bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
     return true;
 }
 
+extern "C" void writeHex(unsigned int n);
 bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
                                     void *virtualAddress,
                                     size_t flags)
 {
+    // Determine which range of page tables to use
+    void *pageTables = 0;
+    if(reinterpret_cast<uintptr_t>(virtualAddress) < 0x40000000)
+        pageTables = USERSPACE_PAGETABLES;
+    else
+        pageTables = KERNEL_PAGETABLES;
+
     // Check if we have an allocated escrow page - if we don't, allocate it.
     if (g_EscrowPages[Processor::id()] == 0)
     {
@@ -192,6 +201,7 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
 
     // Is there a page table for this page yet?
     FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
+
     if(!pdir[pdir_offset].descriptor.entry)
     {
         // There isn't - allocate one.
@@ -237,9 +247,9 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
             memset(reinterpret_cast<void*>(mapaddr), 0, 1024);
         }
     }
-    
+
     // Grab the virtual address for the page table for this page
-    uintptr_t mapaddr = reinterpret_cast<uintptr_t>(USERSPACE_PAGETABLES);
+    uintptr_t mapaddr = reinterpret_cast<uintptr_t>(pageTables);
     mapaddr += pdir_offset * 0x400;
 
     // Perform the mapping, if necessary
@@ -260,6 +270,9 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
         ptbl[ptbl_offset].descriptor.smallpage.s = 0;
         ptbl[ptbl_offset].descriptor.smallpage.nG = 1;
     }
+
+    // Test the lookup
+    memset(virtualAddress, 0xab, 15);
 
     return true;
 }
@@ -404,7 +417,7 @@ void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 
 extern char __start, __end;
 
-bool ArmV7KernelVirtualAddressSpace::initialise()
+bool ArmV7KernelVirtualAddressSpace::initialiseKernelAddressSpace()
 {
     // The kernel address space is initialised by this function. We don't have
     // the MMU on yet, so we can modify the page directory to our heart's content.
@@ -414,60 +427,46 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
     // Map in the 4 MB we'll use for page tables - this region is pinned in
     // PhysicalMemoryManager
     FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor*>(m_PhysicalPageDirectory);
-    uintptr_t vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES);
-    uintptr_t paddr = 0x8FB00000;
-    for(size_t offset = 0; offset < 0x400000; offset += 0x100000)
-    {
-        uintptr_t baseAddr = vaddr + offset;
-        uint32_t pdir_offset = baseAddr >> 20;
-        
-        // Map this block
-        pdir[pdir_offset].descriptor.entry = paddr + offset;
-        pdir[pdir_offset].descriptor.section.type = 2;
-        pdir[pdir_offset].descriptor.section.b = 0;
-        pdir[pdir_offset].descriptor.section.c = 0;
-        pdir[pdir_offset].descriptor.section.xn = 0;
-        pdir[pdir_offset].descriptor.section.domain = 1; // Paging structures = DOMAIN1
-        pdir[pdir_offset].descriptor.section.imp = 0;
-        pdir[pdir_offset].descriptor.section.ap1 = 3;
-        pdir[pdir_offset].descriptor.section.ap2 = 0;
-        pdir[pdir_offset].descriptor.section.tex = 0;
-        pdir[pdir_offset].descriptor.section.s = 1;
-        pdir[pdir_offset].descriptor.section.nG = 0;
-        pdir[pdir_offset].descriptor.section.sectiontype = 0;
-        pdir[pdir_offset].descriptor.section.ns = 0;
-    }
+    memset(pdir, 0, 0x4000);
+
+    uint32_t pdir_offset = 0, ptbl_offset = 0;
+    uintptr_t vaddr = 0, paddr = 0;
     
     // Page table for mapping in the page directory. This table will cover the
     // last MB of the address space.
     physical_uintptr_t ptbl_paddr = 0x8FB00000 + (0x400000 - 0x400);
+    memset(reinterpret_cast<void*>(0x8FB00000), 0, 0x400000);
     
     // Map in the page directory
     SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr);
     vaddr = reinterpret_cast<uintptr_t>(m_VirtualPageDirectory);
-    uint32_t pdir_offset = vaddr >> 20;
-    uint32_t ptbl_offset = (vaddr >> 12) & 0xFF;
-    pdir[pdir_offset].descriptor.entry = ptbl_paddr + 0xC00; // Last page table in the 4K block.
+    pdir_offset = vaddr >> 20;
+
+    pdir[pdir_offset].descriptor.entry = ptbl_paddr; // Last page table in the 4K block.
     pdir[pdir_offset].descriptor.pageTable.type = 1;
     pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
     pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
     pdir[pdir_offset].descriptor.pageTable.domain = 1; // Paging structures = DOMAIN1
     pdir[pdir_offset].descriptor.pageTable.imp = 0;
-    ptbl[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory;
-    ptbl[ptbl_offset].descriptor.smallpage.type = 2;
-    ptbl[ptbl_offset].descriptor.smallpage.b = 0;
-    ptbl[ptbl_offset].descriptor.smallpage.c = 0;
-    ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
-    ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
-    ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
-    ptbl[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
-    ptbl[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+    for(int i = 0; i < 4; i++) // 4 pages in the page directory
+    {
+        ptbl_offset = ((vaddr + (i * 0x1000)) >> 12) & 0xFF;
+        ptbl[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory + 0x1000;
+        ptbl[ptbl_offset].descriptor.smallpage.type = 2;
+        ptbl[ptbl_offset].descriptor.smallpage.b = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.c = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; /// \todo Correct flags
+        ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
+        ptbl[ptbl_offset].descriptor.smallpage.s = 1; // Shareable
+        ptbl[ptbl_offset].descriptor.smallpage.nG = 0; // Global, hint to MMU
+    }
     
     // Identity-map the kernel
-    size_t kernelSize = reinterpret_cast<uintptr_t>(&__end) - (reinterpret_cast<uintptr_t>(&__start) & ~0xFFFFF);
+    size_t kernelSize = reinterpret_cast<uintptr_t>(&__end) - 0x80000000;
     for(size_t offset = 0; offset < kernelSize; offset += 0x100000)
     {
-        uintptr_t baseAddr = (reinterpret_cast<uintptr_t>(&__start) & ~0xFFFFF) + offset;
+        uintptr_t baseAddr = 0x80000000 + offset;
         pdir_offset = baseAddr >> 20;
         
         // Map this block
@@ -489,6 +488,7 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
 
     /// \note Temporary
     // Map in the UART3 section
+    /*
     vaddr = 0x49000000;
     pdir_offset = vaddr >> 20;
     pdir[pdir_offset].descriptor.entry = vaddr;
@@ -505,10 +505,61 @@ bool ArmV7KernelVirtualAddressSpace::initialise()
     pdir[pdir_offset].descriptor.section.nG = 0;
     pdir[pdir_offset].descriptor.section.sectiontype = 0;
     pdir[pdir_offset].descriptor.section.ns = 0;
+    */
+
+    // Pre-allocate and define all the remaining kernel page tables.
+    vaddr = reinterpret_cast<uintptr_t>(KERNEL_PAGETABLES);
+    paddr = 0x8FB00000;
+    for(size_t offset = 0; offset < 0x400000; offset += 0x100000)
+    {
+        uintptr_t baseAddr = vaddr + offset;
+        pdir_offset = baseAddr >> 20;
+        
+        // Map this block
+        pdir[pdir_offset].descriptor.entry = paddr + offset;
+        pdir[pdir_offset].descriptor.section.type = 2;
+        pdir[pdir_offset].descriptor.section.b = 0;
+        pdir[pdir_offset].descriptor.section.c = 0;
+        pdir[pdir_offset].descriptor.section.xn = 0;
+        pdir[pdir_offset].descriptor.section.domain = 1; // Paging structures = DOMAIN1
+        pdir[pdir_offset].descriptor.section.imp = 0;
+        pdir[pdir_offset].descriptor.section.ap1 = 3;
+        pdir[pdir_offset].descriptor.section.ap2 = 0;
+        pdir[pdir_offset].descriptor.section.tex = 0;
+        pdir[pdir_offset].descriptor.section.s = 1;
+        pdir[pdir_offset].descriptor.section.nG = 0;
+        pdir[pdir_offset].descriptor.section.sectiontype = 0;
+        pdir[pdir_offset].descriptor.section.ns = 0;
+
+        // Virtual address base of the region this 1 MB of page tables maps
+        uintptr_t blockVBase = offset << 10;
+
+        // 1024 page tables in this 1 MB region
+        for(int i = 0; i < 1024; i++)
+        {
+            // First virtual address mapped by this page table
+            uintptr_t firstVaddr = blockVBase + (i * 0x100000);
+
+            // Physical address of the page table (as mapped above)
+            uintptr_t ptbl_paddr = paddr + offset + (i * 0x400);
+
+            // Do NOT overwrite existing mappings. That'll negate the above.
+            pdir_offset = firstVaddr >> 20;
+            if(pdir[pdir_offset].descriptor.entry)
+                continue;
+            pdir[pdir_offset].descriptor.entry = ptbl_paddr;
+            pdir[pdir_offset].descriptor.pageTable.type = 1;
+            pdir[pdir_offset].descriptor.pageTable.sbz1 = pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
+            pdir[pdir_offset].descriptor.pageTable.ns = 0; // Shareable
+            pdir[pdir_offset].descriptor.pageTable.domain = 1; // Paging structures = DOMAIN1
+            pdir[pdir_offset].descriptor.pageTable.imp = 0;
+        }
+    }
 
     // Set up the required control registers before turning on the MMU
+    Processor::writeTTBR0(0);
     Processor::writeTTBR1(m_PhysicalPageDirectory);
-    Processor::writeTTBCR(2); // 0b010 = 4 KB TTBR0 directory, 1 GB space
+    Processor::writeTTBCR(2); // 0b010 = 4 KB TTBR0 directory, 1/3 GB split for user/kernel
     asm volatile("MCR p15,0,%0,c3,c0,0" : : "r" (0xFFFFFFFF)); // Manager access to all domains for now
 
     // Switch on the MMU
@@ -534,13 +585,15 @@ ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
 
 ArmV7KernelVirtualAddressSpace::ArmV7KernelVirtualAddressSpace() :
     ArmV7VirtualAddressSpace(KERNEL_VIRTUAL_HEAP,
-                             PhysicalMemoryManager::instance().allocatePage(),
+                             0x8FAFC000,
                              KERNEL_PAGEDIR,
                              KERNEL_PAGETABLES,
                              KERNEL_VIRTUAL_STACK)
 {
     for(int i = 0; i < 256; i++)
         g_EscrowPages[i] = 0;
+
+    initialiseKernelAddressSpace();
 }
 
 ArmV7KernelVirtualAddressSpace::~ArmV7KernelVirtualAddressSpace()

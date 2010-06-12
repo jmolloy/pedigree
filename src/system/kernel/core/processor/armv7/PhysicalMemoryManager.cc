@@ -64,8 +64,18 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             panic("PhysicalMemoryManager::allocateRegion(): function misused");
 
         // Remove the memory from the range-lists (if desired/possible)
-        if(!m_PhysicalRanges.allocateSpecific(start, cPages * getPageSize()))
-            return false;
+#ifdef ARM_BEAGLE // Beagleboard RAM locations
+        if((start < 0x80000000) || (start >= 0x90000000))
+        {
+            if(!m_NonRAMRanges.allocateSpecific(start, cPages * getPageSize()))
+                return false;
+        }
+        else
+#endif
+        {
+            if(!m_PhysicalRanges.allocateSpecific(start, cPages * getPageSize()))
+                return false;
+        }
 
         // Allocate the virtual address space
         uintptr_t vAddress;
@@ -108,7 +118,7 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         // Allocate the virtual address space
         uintptr_t vAddress;
         if (m_VirtualMemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
-                                     vAddress)
+                                            vAddress)
             == false)
         {
             WARNING("AllocateRegion: MemoryRegion allocation failed.");
@@ -158,23 +168,21 @@ void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
 {
     // Define beginning and end ranges of usable RAM
 #ifdef ARM_BEAGLE
-    m_PhysicalRanges.free(0x80000000, 0x10000000);
     /// \todo virtual memory, so we can dynamically expand this stack
-    for(physical_uintptr_t addr = 0x80000000; addr < /*0x90000000*/ 0x80001000; addr += 0x1000)
+    for(physical_uintptr_t addr = reinterpret_cast<physical_uintptr_t>(&__end);
+        addr < 0x8F000000;
+        addr += 0x1000)
     {
-        // Ignore any address within the kernel
-        if(!(addr > reinterpret_cast<physical_uintptr_t>(&__start) &&
-             addr < reinterpret_cast<physical_uintptr_t>(&__end)))
-        {
-            // Ignore some pinned addresses
-            if(!(addr > 0x8FB00000) && (addr < 0x8FF00000))
-                m_PageStack.free(addr);
-        }
+        m_PageStack.free(addr);
     }
 
-    m_PhysicalRanges.allocateSpecific(reinterpret_cast<physical_uintptr_t>(&__start),
-                                      reinterpret_cast<physical_uintptr_t>(&__end) - reinterpret_cast<physical_uintptr_t>(&__start));
-    m_PhysicalRanges.allocateSpecific(0x8FB00000, 0x400000);
+    m_PhysicalRanges.free(0x80000000, 0x10000000);
+    m_PhysicalRanges.allocateSpecific(0x80000000,
+                                      reinterpret_cast<physical_uintptr_t>(&__end) - 0x80000000);
+    m_PhysicalRanges.allocateSpecific(0x8FAFC000, 0x404000);
+    
+    m_NonRAMRanges.free(0, 0x80000000);
+    m_NonRAMRanges.free(0x90000000, 0x60000000);
 #endif
 
     // Initialise the range of virtual space for MemoryRegions
@@ -182,7 +190,9 @@ void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
                          KERNEL_VIRTUAL_MEMORYREGION_SIZE);
 }
 
-ArmV7PhysicalMemoryManager::ArmV7PhysicalMemoryManager()
+ArmV7PhysicalMemoryManager::ArmV7PhysicalMemoryManager() :
+    m_PageStack(), m_PhysicalRanges(), m_VirtualMemoryRegions(),
+    m_Lock(false, true), m_RegionLock(false, true)
 {
 }
 ArmV7PhysicalMemoryManager::~ArmV7PhysicalMemoryManager()
@@ -209,9 +219,12 @@ void ArmV7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddr
         return;
     else if(physicalAddress >= 0x90000000)
         return;
-    else if(physicalAddress >= 0x80001000) /// \todo temporary until we can map in stack expansion
+    else if(physicalAddress >= 0x8F000000) /// \todo temporary until we can map in stack expansion
         return;
 #endif
+
+    if((m_StackSize + sizeof(physical_uintptr_t)) >= m_StackMax)
+        return;
 
     m_Stack[m_StackSize / sizeof(physical_uintptr_t)] = physicalAddress;
     m_StackSize += sizeof(physical_uintptr_t);

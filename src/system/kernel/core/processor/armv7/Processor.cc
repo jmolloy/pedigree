@@ -28,9 +28,6 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
     // Initialise the physical memory-management
     ArmV7PhysicalMemoryManager::instance().initialise(Info);
 
-    // Initialise the kernel virtual address space
-    ArmV7KernelVirtualAddressSpace::m_Instance.initialise();
-
     m_Initialised = 1;
 }
 

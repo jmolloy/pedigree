@@ -53,7 +53,7 @@ class RangeList
     public:
       /** Construct a Range */
       inline Range(T Address, T Length)
-        : address(Address), length(Length){}
+          : address(Address), length(Length) {}
 
       /** Beginning address of the range */
       T address;

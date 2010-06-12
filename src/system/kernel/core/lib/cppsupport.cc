@@ -114,31 +114,8 @@ extern "C" void *realloc(void *p, size_t sz)
     return tmp;
 }
 
-#ifdef ARM_COMMON
-
-/// \note Temporary until virtual memory etc is implemented
-
-#ifdef ARM_BEAGLE
-#define ARM_HEAP_BASE 0x88000000
-#endif
-
-uintptr_t currHeapBase = ARM_HEAP_BASE;
-
-void *arm_malloc(size_t size)
-{
-    void *ret = reinterpret_cast<void *>(currHeapBase);
-    currHeapBase += size;
-    return ret;
-}
-#endif
-
 void *operator new (size_t size) throw()
 {
-#ifdef ARM_COMMON
-    /// \todo implement virtual memory for SlamAllocator
-    return arm_malloc(size);
-#endif
-
 #ifdef USE_DEBUG_ALLOCATOR
     
     /// \todo underflow flag
@@ -209,7 +186,7 @@ void *operator new (size_t size) throw()
 
 #endif
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 #else
@@ -218,11 +195,6 @@ void *operator new (size_t size) throw()
 }
 void *operator new[] (size_t size) throw()
 {
-#ifdef ARM_COMMON
-    /// \todo implement virtual memory for SlamAllocator
-    return arm_malloc(size);
-#endif
-
 #ifdef USE_DEBUG_ALLOCATOR
     
     /// \todo underflow flag
@@ -272,7 +244,7 @@ void *operator new[] (size_t size) throw()
     // All done, return the address
     return reinterpret_cast<void*>(dataPointer);
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 #else
@@ -289,11 +261,6 @@ void *operator new[] (size_t size, void* memory) throw()
 }
 void operator delete (void * p)
 {
-#ifdef ARM_COMMON
-    /// \todo implement virtual memory for SlamAllocator
-    return;
-#endif
-
 #ifdef USE_DEBUG_ALLOCATOR
     if(p == 0) return;
 
@@ -306,18 +273,13 @@ void operator delete (void * p)
     return;
 #endif
 
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
     SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
 void operator delete[] (void * p)
 {
-#ifdef ARM_COMMON
-    /// \todo implement virtual memory for SlamAllocator
-    return;
-#endif
-
 #ifdef USE_DEBUG_ALLOCATOR
     if(p == 0) return;
 
@@ -330,7 +292,7 @@ void operator delete[] (void * p)
     return;
 #endif
 
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
     SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
