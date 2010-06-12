@@ -228,7 +228,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
 #ifdef ARM_COMMON
-  // asm volatile("swi $0x1");
+  asm volatile("swi $0x1");
   
   NOTICE("ARM build now boots properly. Now hanging forever...");
   while(1)

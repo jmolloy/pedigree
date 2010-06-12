@@ -51,6 +51,7 @@ SECTIONS
     
     .ivt :
     {
+        . = ALIGN(65536); /* Needs to be on a 64 KB boundary to map properly. */
         *(.ivt);
     }
 

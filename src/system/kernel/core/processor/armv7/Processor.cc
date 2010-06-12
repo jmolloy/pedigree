@@ -23,7 +23,7 @@
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
     // Initialise this processor's interrupt handling
-    // ARMV7InterruptManager::initialiseProcessor();
+    ARMV7InterruptManager::initialiseProcessor();
 
     // Initialise the physical memory-management
     ArmV7PhysicalMemoryManager::instance().initialise(Info);
@@ -33,9 +33,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
-  // TODO
-
-//   m_Initialised = 2;
+    // m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)

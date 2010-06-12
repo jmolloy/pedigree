@@ -155,45 +155,62 @@ extern "C" void arm_swint_handler()
 
 extern "C" void arm_instundef_handler()
 {
+  NOTICE_NOLOCK("undefined instruction");
   while( 1 );
 }
 
 extern "C" void arm_fiq_handler()
 {
+  NOTICE_NOLOCK("FIQ");
   while( 1 );
 }
 
 extern "C" void arm_irq_handler()
 {
+  NOTICE_NOLOCK("IRQ");
   while( 1 );
 }
 
 extern "C" void arm_reset_handler()
 {
+  NOTICE_NOLOCK("reset");
   while( 1 );
 }
 
 extern "C" void arm_prefetch_abort_handler()
 {
+  NOTICE_NOLOCK("prefetch abort");
   while( 1 );
 }
 
 extern "C" void arm_data_abort_handler()
 {
+  NOTICE_NOLOCK("data abort");
   while( 1 );
 }
 
 extern "C" void arm_addrexcept_handler()
 {
+  NOTICE_NOLOCK("address exception");
   while( 1 );
 }
 
-extern uint32_t *__arm_vector_table;
-extern uint32_t *__end_arm_vector_table;
+extern uint32_t __arm_vector_table;
+extern uint32_t __end_arm_vector_table;
 void ARMV7InterruptManager::initialiseProcessor()
 {
-    /// \todo Move the interrupt vector table's base to somewhere in RAM where
-    ///       it can be read, instead of 0x0
+    // Map in the ARM vector table to 0xFFFF0000
+    if(!VirtualAddressSpace::getKernelAddressSpace().map(reinterpret_cast<physical_uintptr_t>(&__arm_vector_table),
+                                                         reinterpret_cast<void*>(0xFFFF0000),
+                                                         VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
+        return;
+
+    // Switch to the high vector for the exception base
+    uint32_t sctlr = 0;
+    asm volatile("MRC p15,0,%0,c1,c0,0" : "=r" (sctlr));
+    if(!(sctlr & 0x2000))
+        sctlr |= 0x2000;
+    asm volatile("MCR p15,0,%0,c1,c0,0" : : "r" (sctlr));
 }
 
 void ARMV7InterruptManager::interrupt(InterruptState &interruptState)

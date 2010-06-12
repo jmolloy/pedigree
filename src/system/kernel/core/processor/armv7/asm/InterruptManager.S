@@ -54,8 +54,3 @@ __arm_vector_table:
     __armvec_fiq:
         ldr pc,=arm_fiq_handler
 __end_arm_vector_table:
-
-
-#    __armvec_addrexcept:
-#        ldr pc,=arm_addrexcept_handler
-
