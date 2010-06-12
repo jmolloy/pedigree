@@ -666,7 +666,7 @@ extern "C" void __start()
 
     writeStr(3, "USER button pressed, continuing...\r\n\r\n");
 
-    writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggler the USR1 LED.\r\nPress 0 to clear both LEDs. Hit ENTER to boot the kernel.\r\n");
+    writeStr(3, "Press 1 to toggle the USR0 LED, and 2 to toggle the USR1 LED.\r\nPress 0 to clear both LEDs. Hit ENTER to boot the kernel.\r\n");
     while(1)
     {
         char c = uart_read(3);
@@ -798,7 +798,7 @@ extern "C" void __start()
     gpio.clearpin(150);
 
     // Run the kernel, finally
-    writeStr(3, "Now starting the Pedigree kernel.\r\n\r\n");
+    writeStr(3, "Now starting the Pedigree kernel (can take a while, please wait).\r\n\r\n");
     main(&bs);
 #endif
     
