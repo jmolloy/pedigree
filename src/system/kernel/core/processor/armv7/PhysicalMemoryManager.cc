@@ -17,17 +17,18 @@
 #include "PhysicalMemoryManager.h"
 #include "VirtualAddressSpace.h"
 #include <processor/Processor.h>
+#include <processor/MemoryRegion.h>
 #include <LockGuard.h>
 #include <Log.h>
 
-Arm7PhysicalMemoryManager Arm7PhysicalMemoryManager::m_Instance;
+ArmV7PhysicalMemoryManager ArmV7PhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
-    return Arm7PhysicalMemoryManager::instance();
+    return ArmV7PhysicalMemoryManager::instance();
 }
 
-physical_uintptr_t Arm7PhysicalMemoryManager::allocatePage()
+physical_uintptr_t ArmV7PhysicalMemoryManager::allocatePage()
 {
     LockGuard<Spinlock> guard(m_Lock);
 
@@ -35,34 +36,125 @@ physical_uintptr_t Arm7PhysicalMemoryManager::allocatePage()
     physical_uintptr_t ptr = m_PageStack.allocate(0);
     return ptr;
 }
-void Arm7PhysicalMemoryManager::freePage(physical_uintptr_t page)
+void ArmV7PhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
     m_PageStack.free(page);
 }
-void Arm7PhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
+void ArmV7PhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 {
     if(!m_Lock.acquired())
-        FATAL("Arm7PhysicalMemoryManager::freePageUnlocked called without an acquired lock");
+        FATAL("ArmV7PhysicalMemoryManager::freePageUnlocked called without an acquired lock");
 
     m_PageStack.free(page);
 }
-bool Arm7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
+bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,
                                                     size_t pageConstraints,
                                                     size_t Flags,
                                                     physical_uintptr_t start)
 {
-    /// \todo Write.
+    LockGuard<Spinlock> guard(m_RegionLock);
+
+    // Allocate a specific physical memory region (always physically continuous)
+    if (start != static_cast<physical_uintptr_t>(-1))
+    {
+        if ((pageConstraints & continuous) != continuous)
+            panic("PhysicalMemoryManager::allocateRegion(): function misused");
+
+        // Remove the memory from the range-lists (if desired/possible)
+        if(!m_PhysicalRanges.allocateSpecific(start, cPages * getPageSize()))
+            return false;
+
+        // Allocate the virtual address space
+        uintptr_t vAddress;
+
+        if (m_VirtualMemoryRegions.allocate(cPages * getPageSize(), vAddress)
+            == false)
+        {
+            WARNING("AllocateRegion: MemoryRegion allocation failed.");
+            return false;
+        }
+
+        // Map the physical memory into the allocated space
+        VirtualAddressSpace *virtualAddressSpace;
+        if(vAddress > 0x40000000) // > 1 GB = kernel address space
+            virtualAddressSpace = &VirtualAddressSpace::getKernelAddressSpace();
+        else
+            virtualAddressSpace = &Processor::information().getVirtualAddressSpace();
+        for (size_t i = 0;i < cPages;i++)
+            if (virtualAddressSpace->map(start + i * PhysicalMemoryManager::getPageSize(),
+                                        reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                        Flags)
+                == false)
+           { 
+                m_VirtualMemoryRegions.free(vAddress, cPages * PhysicalMemoryManager::getPageSize());
+                WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                return false;
+            }
+
+        // Set the memory-region's members
+        Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
+        Region.m_PhysicalAddress = start;
+        Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
+
+        // Add to the list of memory-regions
+        PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
+        return true;
+    }
+    else
+    {
+        // Allocate the virtual address space
+        uintptr_t vAddress;
+        if (m_VirtualMemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
+                                     vAddress)
+            == false)
+        {
+            WARNING("AllocateRegion: MemoryRegion allocation failed.");
+            return false;
+        }
+
+        uint32_t start = 0;
+        VirtualAddressSpace *virtualAddressSpace;
+        if(vAddress > 0x40000000) // > 1 GB = kernel address space
+            virtualAddressSpace = &VirtualAddressSpace::getKernelAddressSpace();
+        else
+            virtualAddressSpace = &Processor::information().getVirtualAddressSpace();
+
+        {
+            // Map the physical memory into the allocated space
+            for (size_t i = 0;i < cPages;i++)
+            {
+                physical_uintptr_t page = m_PageStack.allocate(pageConstraints);
+                if (virtualAddressSpace->map(page,
+                                            reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                            Flags)
+                    == false)
+                {
+                    WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                    return false;
+                }
+            }
+        }
+
+        // Set the memory-region's members
+        Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
+        Region.m_PhysicalAddress = start;
+        Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
+
+        // Add to the list of memory-regions
+        PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
+        return true;
+    }
     return false;
 }
-void Arm7PhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
+void ArmV7PhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
 {
 }
 
 extern char __start, __end;
-void Arm7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
+void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
 {
     // Define beginning and end ranges of usable RAM
 #ifdef ARM_BEAGLE
@@ -76,23 +168,28 @@ void Arm7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
         {
             // Ignore some pinned addresses
             if(!(addr > 0x8FB00000) && (addr < 0x8FF00000))
-            m_PageStack.free(addr);
+                m_PageStack.free(addr);
         }
     }
+
+    m_PhysicalRanges.allocateSpecific(reinterpret_cast<physical_uintptr_t>(&__start),
+                                      reinterpret_cast<physical_uintptr_t>(&__end) - reinterpret_cast<physical_uintptr_t>(&__start));
+    m_PhysicalRanges.allocateSpecific(0x8FB00000, 0x400000);
 #endif
 
-    /// \todo MemoryRegion virtual address (m_VirtualMemoryRegions)
-    /// \todo Virtual memory for the above.
+    // Initialise the range of virtual space for MemoryRegions
+    m_VirtualMemoryRegions.free(reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MEMORYREGION_ADDRESS),
+                         KERNEL_VIRTUAL_MEMORYREGION_SIZE);
 }
 
-Arm7PhysicalMemoryManager::Arm7PhysicalMemoryManager()
+ArmV7PhysicalMemoryManager::ArmV7PhysicalMemoryManager()
 {
 }
-Arm7PhysicalMemoryManager::~Arm7PhysicalMemoryManager()
+ArmV7PhysicalMemoryManager::~ArmV7PhysicalMemoryManager()
 {
 }
 
-physical_uintptr_t Arm7PhysicalMemoryManager::PageStack::allocate(size_t constraints)
+physical_uintptr_t ArmV7PhysicalMemoryManager::PageStack::allocate(size_t constraints)
 {
     // Ignore all constraints, none relevant
     physical_uintptr_t ret = 0;
@@ -104,7 +201,7 @@ physical_uintptr_t Arm7PhysicalMemoryManager::PageStack::allocate(size_t constra
     return ret;
 }
 
-void Arm7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddress)
+void ArmV7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddress)
 {
     // Input verification (machine-specific)
 #ifdef ARM_BEAGLE
@@ -120,7 +217,7 @@ void Arm7PhysicalMemoryManager::PageStack::free(physical_uintptr_t physicalAddre
     m_StackSize += sizeof(physical_uintptr_t);
 }
 
-Arm7PhysicalMemoryManager::PageStack::PageStack()
+ArmV7PhysicalMemoryManager::PageStack::PageStack()
 {
     m_StackMax = 0x1000;
     m_StackSize = 0;

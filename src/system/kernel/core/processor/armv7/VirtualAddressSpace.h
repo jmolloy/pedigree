@@ -32,6 +32,7 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
   friend class Processor;
   /** VirtualAddressSpace::create needs access to the constructor */
   friend VirtualAddressSpace *VirtualAddressSpace::create();
+  friend class ArmV7KernelVirtualAddressSpace;
   public:
     //
     // VirtualAddressSpace Interface
@@ -256,6 +257,8 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
 /** The kernel's VirtualAddressSpace on ArmV7 */
 class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
 {
+  /** Give Processor access to m_Instance */
+  friend class Processor;
   /** ArmV7VirtualAddressSpace needs access to m_Instance */
   friend class ArmV7VirtualAddressSpace;
   /** VirtualAddressSpace::getKernelAddressSpace() needs access to m_Instance */
@@ -274,6 +277,8 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
     virtual void *allocateStack();
+
+    virtual bool initialise();
 
   private:
     /** The constructor */

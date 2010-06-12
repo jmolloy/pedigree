@@ -18,16 +18,18 @@
 #include <Log.h>
 #include "InterruptManager.h"
 #include "PhysicalMemoryManager.h"
+#include "VirtualAddressSpace.h"
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
     // Initialise this processor's interrupt handling
     // ARMV7InterruptManager::initialiseProcessor();
 
-    // TODO: Initialise the physical memory-management
-    Arm7PhysicalMemoryManager::instance().initialise(Info);
+    // Initialise the physical memory-management
+    ArmV7PhysicalMemoryManager::instance().initialise(Info);
 
-    // TODO
+    // Initialise the kernel virtual address space
+    ArmV7KernelVirtualAddressSpace::m_Instance.initialise();
 
     m_Initialised = 1;
 }
@@ -171,5 +173,48 @@ void Processor::setSingleStep(bool bEnable, InterruptState &state)
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
-  ERROR("ARM has no address space support yet");
+    const ArmV7VirtualAddressSpace &armAddressSpace = static_cast<const ArmV7VirtualAddressSpace&>(AddressSpace);
+
+    // Do we need to set a new page directory?
+    if (readTTBR0() != armAddressSpace.m_PhysicalPageDirectory)
+    {
+        // Set the new page directory
+        writeTTBR0(armAddressSpace.m_PhysicalPageDirectory);
+
+        // Update the information in the ProcessorInformation structure
+        ProcessorInformation &processorInformation = Processor::information();
+        processorInformation.setVirtualAddressSpace(AddressSpace);
+    }
+}
+
+physical_uintptr_t Processor::readTTBR0()
+{
+    physical_uintptr_t ret = 0;
+    asm volatile("MRC p15,0,%0,c2,c0,0" : "=r" (ret));
+    return ret;
+}
+physical_uintptr_t Processor::readTTBR1()
+{
+    physical_uintptr_t ret = 0;
+    asm volatile("MRC p15,0,%0,c2,c0,1" : "=r" (ret));
+    return ret;
+}
+physical_uintptr_t Processor::readTTBCR()
+{
+    physical_uintptr_t ret = 0;
+    asm volatile("MRC p15,0,%0,c2,c0,2" : "=r" (ret));
+    return ret;
+}
+
+void Processor::writeTTBR0(physical_uintptr_t value)
+{
+    asm volatile("MCR p15,0,%0,c2,c0,0" : : "r" (value));
+}
+void Processor::writeTTBR1(physical_uintptr_t value)
+{
+    asm volatile("MCR p15,0,%0,c2,c0,1" : : "r" (value));
+}
+void Processor::writeTTBCR(uint32_t value)
+{
+    asm volatile("MCR p15,0,%0,c2,c0,2" : : "r" (value));
 }

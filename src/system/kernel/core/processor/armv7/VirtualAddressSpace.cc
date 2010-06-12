@@ -403,14 +403,8 @@ void ArmV7VirtualAddressSpace::freeStack(void *pStack)
 }
 
 extern char __start, __end;
-ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
-                                               physical_uintptr_t PhysicalPageDirectory,
-                                               void *VirtualPageDirectory,
-                                               void *VirtualPageTables,
-                                               void *VirtualStack)
-  : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
-    m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
-    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock(false, true)
+
+bool ArmV7KernelVirtualAddressSpace::initialise()
 {
     // The kernel address space is initialised by this function. We don't have
     // the MMU on yet, so we can modify the page directory to our heart's content.
@@ -492,6 +486,31 @@ ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
         pdir[pdir_offset].descriptor.section.sectiontype = 0;
         pdir[pdir_offset].descriptor.section.ns = 0;
     }
+
+    // Set up the required control registers before turning on the MMU
+    Processor::writeTTBR1(m_PhysicalPageDirectory);
+    Processor::writeTTBCR(2); // 0b010 = 4 KB TTBR0 directory, 1 GB space
+    asm volatile("MCR p15,0,%0,c3,c0,0" : : "r" (0xFFFFFFFF)); // Manager access to all domains for now
+
+    // Switch on the MMU
+    uint32_t sctlr = 0;
+    asm volatile("MRC p15,0,%0,c1,c0,0" : "=r" (sctlr));
+    if(!(sctlr & 1))
+        sctlr |= 1;
+    asm volatile("MCR p15,0,%0,c1,c0,0" : : "r" (sctlr));
+
+    return true;
+}
+
+ArmV7VirtualAddressSpace::ArmV7VirtualAddressSpace(void *Heap,
+                                               physical_uintptr_t PhysicalPageDirectory,
+                                               void *VirtualPageDirectory,
+                                               void *VirtualPageTables,
+                                               void *VirtualStack)
+  : VirtualAddressSpace(Heap), m_PhysicalPageDirectory(PhysicalPageDirectory),
+    m_VirtualPageDirectory(VirtualPageDirectory), m_VirtualPageTables(VirtualPageTables),
+    m_pStackTop(VirtualStack), m_freeStacks(), m_Lock(false, true)
+{
 }
 
 ArmV7KernelVirtualAddressSpace::ArmV7KernelVirtualAddressSpace() :

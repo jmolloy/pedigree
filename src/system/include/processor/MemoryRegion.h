@@ -35,6 +35,8 @@ class MemoryRegion
   friend class X86CommonPhysicalMemoryManager;
   /** As does PpcCommonPhysicalMemoryManager. */
   friend class PpcCommonPhysicalMemoryManager;
+  /** As does ArmV7PhysicalMemoryManager. */
+  friend class ArmV7PhysicalMemoryManager;
   public:
     /** The default constructor does nothing  */
     inline MemoryRegion(const char *pName)

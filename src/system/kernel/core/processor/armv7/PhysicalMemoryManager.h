@@ -14,25 +14,25 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
-#define KERNEL_PROCESSOR_ARM7_PHYSICALMEMORYMANAGER_H
+#ifndef KERNEL_PROCESSOR_ARMV7_PHYSICALMEMORYMANAGER_H
+#define KERNEL_PROCESSOR_ARMV7_PHYSICALMEMORYMANAGER_H
 
 #include <BootstrapInfo.h>
 #include <utilities/RangeList.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Spinlock.h>
 
-/** @addtogroup kernelprocessorArm7
+/** @addtogroup kernelprocessorArmV7
  * @{ */
 
 /** The common arm implementation of the PhysicalMemoryManager
  *\brief Implementation of the PhysicalMemoryManager for common arm */
-class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
+class ArmV7PhysicalMemoryManager : public PhysicalMemoryManager
 {
   public:
-    /** Get the Arm7PhysicalMemoryManager instance
-     *\return instance of the Arm7PhysicalMemoryManager */
-    inline static Arm7PhysicalMemoryManager &instance(){return m_Instance;}
+    /** Get the ArmV7PhysicalMemoryManager instance
+     *\return instance of the ArmV7PhysicalMemoryManager */
+    inline static ArmV7PhysicalMemoryManager &instance(){return m_Instance;}
 
     //
     // PhysicalMemoryManager Interface
@@ -49,17 +49,17 @@ class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
 
   protected:
     /** The constructor */
-    Arm7PhysicalMemoryManager();
+    ArmV7PhysicalMemoryManager();
     /** The destructor */
-    virtual ~Arm7PhysicalMemoryManager();
+    virtual ~ArmV7PhysicalMemoryManager();
 
   private:
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    Arm7PhysicalMemoryManager(const Arm7PhysicalMemoryManager &);
+    ArmV7PhysicalMemoryManager(const ArmV7PhysicalMemoryManager &);
     /** The copy-constructor
      *\note Not implemented (singleton) */
-    Arm7PhysicalMemoryManager &operator = (const Arm7PhysicalMemoryManager &);
+    ArmV7PhysicalMemoryManager &operator = (const ArmV7PhysicalMemoryManager &);
 
     /** Same as freePage, but without the lock. Will panic if the lock is unlocked.
       * \note Use in the wrong place and you die. */
@@ -113,12 +113,11 @@ class Arm7PhysicalMemoryManager : public PhysicalMemoryManager
     /** RangeList of free physical memory */
     RangeList<uint64_t> m_PhysicalRanges;
     
-    /** Virtual-memory available for MemoryRegions
-     *\todo rename this member (conflicts with PhysicalMemoryManager::m_MemoryRegions) */
+    /** Virtual-memory available for MemoryRegions */
     RangeList<uintptr_t> m_VirtualMemoryRegions;
 
-    /** The Arm7PhysicalMemoryManager class instance */
-    static Arm7PhysicalMemoryManager m_Instance;
+    /** The ArmV7PhysicalMemoryManager class instance */
+    static ArmV7PhysicalMemoryManager m_Instance;
 
     /** To guard against multiprocessor reentrancy. */
     Spinlock m_Lock, m_RegionLock;
