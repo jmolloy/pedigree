@@ -18,6 +18,7 @@
 #define MACHINE_ARM_BEAGLE_SERIAL_H
 
 #include <machine/Serial.h>
+#include <processor/MemoryRegion.h>
 
 /// Implements the UART interface on the BeagleBoard
 class ArmBeagleSerial : public Serial
@@ -84,6 +85,9 @@ class ArmBeagleSerial : public Serial
 
         /** Base address for MMIO */
         volatile uint8_t *m_Base;
+
+        /** MemoryRegion for the MMIO base */
+        MemoryRegion m_BaseRegion;
 };
 
 #endif

@@ -15,8 +15,10 @@
  */
 
 #include "Serial.h"
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
 
-ArmBeagleSerial::ArmBeagleSerial() : m_Base(0)
+ArmBeagleSerial::ArmBeagleSerial() : m_Base(0), m_BaseRegion("beagle-uart")
 {
 }
 
@@ -26,8 +28,19 @@ ArmBeagleSerial::~ArmBeagleSerial()
 
 void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
 {
+    // Map in the base
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_BaseRegion,
+                                                         1,
+                                                         0,
+                                                         VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode,
+                                                         nBaseAddr))
+    {
+        // Failed to allocate the region!
+        return;
+    }
+
     // Set base MMIO address for UART and configure appropriately.
-    m_Base = reinterpret_cast<volatile uint8_t*>(nBaseAddr);
+    m_Base = reinterpret_cast<volatile uint8_t*>(m_BaseRegion.virtualAddress());
 
     // Reset the UART
     softReset();
