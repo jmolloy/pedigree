@@ -575,8 +575,9 @@ struct FirstLevelDescriptor
             uint32_t xn : 1;
             uint32_t domain : 4; /// extended base address for supersection
             uint32_t imp : 1;
-            uint32_t ap : 1;
+            uint32_t ap1 : 2;
             uint32_t tex : 3;
+            uint32_t ap2 : 1;
             uint32_t s : 1;
             uint32_t nG : 1;
             uint32_t sectiontype : 1; /// = 0 for section, 1 for supersection
@@ -699,59 +700,44 @@ extern "C" void __start()
     writeStr(3, "\r\n\r\nVirtual memory test starting...\r\n");
 
     FirstLevelDescriptor *pdir = (FirstLevelDescriptor*) 0x80100000;
-    SecondLevelDescriptor *ptbl = (SecondLevelDescriptor*) 0x80200000;
-    SecondLevelDescriptor *ptbl2 = (SecondLevelDescriptor*) 0x80201000;
+    memset(pdir, 0, 0x4000);
 
-    memset(pdir, 0, 0x1000 * 4);
-    memset(ptbl, 0, 1024);
-
-    // Set up the two page tables
     uint32_t base1 = 0x80000000; // Currently running code
-    uint32_t base2 = 0x49020000; // UART3
+    uint32_t base2 = 0x49000000; // UART3
 
-    uint32_t pdir_offset = base1 >> 20; // Enter base address first, then control bits
-    pdir[pdir_offset].descriptor.pageTable.type = 1;
-    pdir[pdir_offset].descriptor.pageTable.sbz1 = 0;
-    pdir[pdir_offset].descriptor.pageTable.ns = 0;
-    pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
-    pdir[pdir_offset].descriptor.pageTable.domain = 0;
-    pdir[pdir_offset].descriptor.pageTable.imp = 0;
-    pdir[pdir_offset].descriptor.pageTable.baseaddr = 0x80200000 >> 10;
-    
+    // First section covers the current code, identity mapped.
+    uint32_t pdir_offset = base1 >> 20;
+    pdir[pdir_offset].descriptor.entry = base1;
+    pdir[pdir_offset].descriptor.section.type = 2;
+    pdir[pdir_offset].descriptor.section.b = 0;
+    pdir[pdir_offset].descriptor.section.c = 0;
+    pdir[pdir_offset].descriptor.section.xn = 0;
+    pdir[pdir_offset].descriptor.section.domain = 0;
+    pdir[pdir_offset].descriptor.section.imp = 0;
+    pdir[pdir_offset].descriptor.section.ap1 = 3;
+    pdir[pdir_offset].descriptor.section.ap2 = 0;
+    pdir[pdir_offset].descriptor.section.tex = 0;
+    pdir[pdir_offset].descriptor.section.s = 1;
+    pdir[pdir_offset].descriptor.section.nG = 0;
+    pdir[pdir_offset].descriptor.section.sectiontype = 0;
+    pdir[pdir_offset].descriptor.section.ns = 0;
+
+    // Second section covers the UART, identity mapped.
     pdir_offset = base2 >> 20;
-    pdir[pdir_offset].descriptor.pageTable.type = 1;
-    pdir[pdir_offset].descriptor.pageTable.sbz1 = 0;
-    pdir[pdir_offset].descriptor.pageTable.ns = 0;
-    pdir[pdir_offset].descriptor.pageTable.sbz2 = 0;
-    pdir[pdir_offset].descriptor.pageTable.domain = 0;
-    pdir[pdir_offset].descriptor.pageTable.imp = 0;
-    pdir[pdir_offset].descriptor.pageTable.baseaddr = 0x80201000 >> 10;
-
-    uint32_t ptbl_offset = 0;
-    for(int i = 0; i < 256; i++)
-    {
-        ptbl_offset = i;
-        ptbl[ptbl_offset].descriptor.entry = base1 + (i * 0x1000);
-        ptbl[ptbl_offset].descriptor.smallpage.type = 2;
-        ptbl[ptbl_offset].descriptor.smallpage.b = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.c = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.ap1 = 3; // Full access.
-        ptbl[ptbl_offset].descriptor.smallpage.ap2 = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.sbz = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.s = 0;
-        ptbl[ptbl_offset].descriptor.smallpage.nG = 0;
-    }
-    
-    ptbl_offset = (base2 >> 12) & 0xFF;
-    ptbl2[ptbl_offset].descriptor.entry = base2;
-    ptbl2[ptbl_offset].descriptor.smallpage.type = 2;
-    ptbl2[ptbl_offset].descriptor.smallpage.b = 0;
-    ptbl2[ptbl_offset].descriptor.smallpage.c = 0;
-    ptbl2[ptbl_offset].descriptor.smallpage.ap1 = 3;
-    ptbl2[ptbl_offset].descriptor.smallpage.ap2 = 0;
-    ptbl2[ptbl_offset].descriptor.smallpage.sbz = 0;
-    ptbl2[ptbl_offset].descriptor.smallpage.s = 0;
-    ptbl2[ptbl_offset].descriptor.smallpage.nG = 0;
+    pdir[pdir_offset].descriptor.entry = base2;
+    pdir[pdir_offset].descriptor.section.type = 2;
+    pdir[pdir_offset].descriptor.section.b = 0;
+    pdir[pdir_offset].descriptor.section.c = 0;
+    pdir[pdir_offset].descriptor.section.xn = 0;
+    pdir[pdir_offset].descriptor.section.domain = 0;
+    pdir[pdir_offset].descriptor.section.imp = 0;
+    pdir[pdir_offset].descriptor.section.ap1 = 3;
+    pdir[pdir_offset].descriptor.section.ap2 = 0;
+    pdir[pdir_offset].descriptor.section.tex = 0;
+    pdir[pdir_offset].descriptor.section.s = 1;
+    pdir[pdir_offset].descriptor.section.nG = 0;
+    pdir[pdir_offset].descriptor.section.sectiontype = 0;
+    pdir[pdir_offset].descriptor.section.ns = 0;
 
     writeStr(3, "Writing to TTBR0 and enabling access to domain 0...\r\n");
 
