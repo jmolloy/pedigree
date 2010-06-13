@@ -235,7 +235,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   LargeStaticString desc("Debugger running at startup");
   Debugger::instance().start(state, desc);
 #else
-  NOTICE("ARM build now boots properly. Now hanging forever...");
+  NOTICE_NOLOCK("ARM build now boots properly. Now hanging forever...");
   while(1)
   {
       asm volatile("wfi");

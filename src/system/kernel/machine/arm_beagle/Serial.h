@@ -19,9 +19,10 @@
 
 #include <machine/Serial.h>
 #include <processor/MemoryRegion.h>
+#include <processor/InterruptManager.h>
 
 /// Implements the UART interface on the BeagleBoard
-class ArmBeagleSerial : public Serial
+class ArmBeagleSerial : public Serial, public InterruptHandler
 {
     public:
       ArmBeagleSerial();
@@ -31,6 +32,8 @@ class ArmBeagleSerial : public Serial
       virtual char read();
       virtual char readNonBlock();
       virtual void write(char c);
+
+      virtual void interrupt(size_t nInterruptNumber, InterruptState &state);
 
     private:
 

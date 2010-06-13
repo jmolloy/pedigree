@@ -26,8 +26,8 @@ Machine &Machine::instance()
 void ArmBeagle::initialise()
 {
   m_Serial[0].setBase(0x49020000); // uart3, RS-232 output on board
-  m_Serial[1].setBase(0x4806A000); // uart1
-  m_Serial[2].setBase(0x4806C000); // uart2
+  //m_Serial[1].setBase(0x4806A000); // uart1
+  //m_Serial[2].setBase(0x4806C000); // uart2
   m_bInitialised = true;
 }
 Serial *ArmBeagle::getSerial(size_t n)

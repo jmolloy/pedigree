@@ -24,4 +24,3 @@ start:
 
 .section .bss
 .comm stack, 0x10000
-

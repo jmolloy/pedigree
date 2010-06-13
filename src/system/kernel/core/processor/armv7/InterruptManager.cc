@@ -78,13 +78,22 @@ InterruptManager &InterruptManager::instance()
 
 bool ARMV7InterruptManager::registerInterruptHandler(size_t interruptNumber, InterruptHandler *handler)
 {
+  /// \todo This is very machine-specific...
+  volatile uint32_t *mpuIntcRegisters = reinterpret_cast<volatile uint32_t*>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress());
+  if(!mpuIntcRegisters)
+    return false;
+
   /// \todo Needs locking
-  if (UNLIKELY(interruptNumber >= 256))
+  if (UNLIKELY(interruptNumber >= 96))
     return false;
   if (UNLIKELY(handler != 0 && m_Handler[interruptNumber] != 0))
     return false;
   if (UNLIKELY(handler == 0 && m_Handler[interruptNumber] == 0))
     return false;
+
+  // Unmask this interrupt
+  size_t n = (interruptNumber % 96) / 32;
+  mpuIntcRegisters[INTCPS_MIR_CLEAR + (n * 8)] = 1 << (interruptNumber % 32);
 
   m_Handler[interruptNumber] = handler;
   return true;
@@ -93,14 +102,22 @@ bool ARMV7InterruptManager::registerInterruptHandler(size_t interruptNumber, Int
 #ifdef DEBUGGER
 
   bool ARMV7InterruptManager::registerInterruptHandlerDebugger(size_t interruptNumber, InterruptHandler *handler)
-  {
+  {  
+    volatile uint32_t *mpuIntcRegisters = reinterpret_cast<volatile uint32_t*>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress());
+    if(!mpuIntcRegisters)
+        return false;
+
     /// \todo Needs locking
-    if (UNLIKELY(interruptNumber >= 256))
+    if (UNLIKELY(interruptNumber >= 96))
       return false;
     if (UNLIKELY(handler != 0 && m_DbgHandler[interruptNumber] != 0))
       return false;
     if (UNLIKELY(handler == 0 && m_DbgHandler[interruptNumber] == 0))
       return false;
+
+    // Unmask this interrupt
+    size_t n = (interruptNumber % 96) / 32;
+    mpuIntcRegisters[INTCPS_MIR_CLEAR + (n * 8)] = 1 << (interruptNumber % 32);
 
     m_DbgHandler[interruptNumber] = handler;
     return true;
@@ -228,11 +245,7 @@ void ARMV7InterruptManager::initialiseProcessor()
 
     // Perform a reset of the MPU INTC
     mpuIntcRegisters[INTCPS_SYSCONFIG] = 2;
-    while(mpuIntcRegisters[INTCPS_SYSSTATUS] & 1);
-
-    // Dump the revision of the controller
-    uint32_t revision = mpuIntcRegisters[0];
-    NOTICE_NOLOCK("MPU interrupt controller at " << Hex << reinterpret_cast<uintptr_t>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress()) << "  - revision " << Dec << ((revision >> 4) & 0xF) << "." << (revision & 0xF) << Hex);
+    while((mpuIntcRegisters[INTCPS_SYSSTATUS] & 1) == 0);
 
     // Set up the functional clock auto-idle and the synchronizer clock auto-gating
     mpuIntcRegisters[INTCPS_IDLE] = 0;
@@ -241,15 +254,23 @@ void ARMV7InterruptManager::initialiseProcessor()
     for(size_t m = 0; m < 96; m++)
     {
         // Priority: 0 (highest), route to IRQ (not FIQ)
-        mpuIntcRegisters[INTCPS_ILR + (m * 4)] = 0;
+        mpuIntcRegisters[INTCPS_ILR + m] = 0;
     }
 
     // Mask all interrupts (when an interrupt line is registered, it will be
-    // unmasked.)
+    // unmasked)
     for(size_t n = 0; n < 3; n++)
     {
-        mpuIntcRegisters[INTCPS_MIR_SET + (n * 0x20)] = 0xFFFFFFFF;
+        mpuIntcRegisters[INTCPS_MIR_SET + (n * 8)] = 0xFFFFFFFF;
+        mpuIntcRegisters[INTCPS_ISR_CLEAR + (n * 8)] = 0xFFFFFFFF;
     }
+
+    // Disable the priority threshold
+    mpuIntcRegisters[INTCPS_THRESHOLD] = 0xFF;
+
+    // Reset IRQ and FIQ output in case any are pending
+    mpuIntcRegisters[INTCPS_CONTROL] = 3;
+
 }
 
 void ARMV7InterruptManager::interrupt(InterruptState &interruptState)

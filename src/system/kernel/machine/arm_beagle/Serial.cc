@@ -17,6 +17,7 @@
 #include "Serial.h"
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
+#include <machine/Machine.h>
 
 ArmBeagleSerial::ArmBeagleSerial() : m_Base(0), m_BaseRegion("beagle-uart")
 {
@@ -65,6 +66,15 @@ void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
         m_Base = 0;
         return;
     }
+
+    // Install the IRQ handler
+    /// \todo this is the UART3 IRQ... needs to be set for each UART
+    InterruptManager::instance().registerInterruptHandler(74, this);
+}
+
+void ArmBeagleSerial::interrupt(size_t nInterruptNumber, InterruptState &state)
+{
+    Machine::instance().getSerial(0)->write("irq");
 }
 
 char ArmBeagleSerial::read()
@@ -212,7 +222,7 @@ bool ArmBeagleSerial::configureProtocol()
     m_Base[LCR_REG] = 0;
 
     // 9. Load new interrupt configuration
-    m_Base[IER_REG] = 0; // No interrupts wanted at this stage
+    m_Base[IER_REG] = 0x0D; // RHR interrupt. // No interrupts wanted at this stage
 
     // 10. Switch to configuration mode B to access the EFR_REG register
     m_Base[LCR_REG] = 0xBF;

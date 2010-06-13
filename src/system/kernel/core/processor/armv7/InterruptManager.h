@@ -89,25 +89,25 @@ class ARMV7InterruptManager : public ::InterruptManager,
     enum Registers
     {
         INTCPS_REVISION         = 0x00, // R
-        INTCPS_SYSCONFIG        = 0x10, // RW
-        INTCPS_SYSSTATUS        = 0x14, // R
-        INTCPS_SIR_IRQ          = 0x40, // R
-        INTCPS_SIR_FIQ          = 0x44, // R
-        INTCPS_CONTROL          = 0x48, // RW
-        INTCPS_PROTECTION       = 0x4C, // RW
-        INTCPS_IDLE             = 0x50, // RW
-        INTCPS_IRQ_PRIORITY     = 0x60, // RW
-        INTCPS_FIQ_PRIORITY     = 0x64, // RW
-        INTCPS_THRESHOLD        = 0x68, // RW
-        INTCPS_ITR              = 0x80, // R, multiple entries
-        INTCPS_MIR              = 0x84, // RW, as above
-        INTCPS_MIR_CLEAR        = 0x88, // W, as above
-        INTCPS_MIR_SET          = 0x8C, // W, as above
-        INTCPS_ISR_SET          = 0x90, // RW, as above
-        INTCPS_ISR_CLEAR        = 0x94, // W, as above
-        INTCPS_PENDING_IRQ      = 0x98, // R, as above
-        INTCPS_PENDING_FIQ      = 0x9C, // R, as above
-        INTCPS_ILR              = 0x100, // RW, multiple entries
+        INTCPS_SYSCONFIG        = 0x10 / 4, // RW
+        INTCPS_SYSSTATUS        = 0x14 / 4, // R
+        INTCPS_SIR_IRQ          = 0x40 / 4, // R
+        INTCPS_SIR_FIQ          = 0x44 / 4, // R
+        INTCPS_CONTROL          = 0x48 / 4, // RW
+        INTCPS_PROTECTION       = 0x4C / 4, // RW
+        INTCPS_IDLE             = 0x50 / 4, // RW
+        INTCPS_IRQ_PRIORITY     = 0x60 / 4, // RW
+        INTCPS_FIQ_PRIORITY     = 0x64 / 4, // RW
+        INTCPS_THRESHOLD        = 0x68 / 4, // RW
+        INTCPS_ITR              = 0x80 / 4, // R, multiple entries
+        INTCPS_MIR              = 0x84 / 4, // RW, as above
+        INTCPS_MIR_CLEAR        = 0x88 / 4, // W, as above
+        INTCPS_MIR_SET          = 0x8C / 4, // W, as above
+        INTCPS_ISR_SET          = 0x90 / 4, // RW, as above
+        INTCPS_ISR_CLEAR        = 0x94 / 4, // W, as above
+        INTCPS_PENDING_IRQ      = 0x98 / 4, // R, as above
+        INTCPS_PENDING_FIQ      = 0x9C / 4, // R, as above
+        INTCPS_ILR              = 0x100 / 4, // RW, multiple entries
     };
 };
 
