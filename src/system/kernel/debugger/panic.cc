@@ -114,12 +114,30 @@ void panic( const char* msg )
   /*
    * I/O implementations.
    */
-  LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
   SerialIO serialIO(Machine::instance().getSerial(0));
-  SerialIO serialIO2(Machine::instance().getSerial(1));
 
-  DebuggerIO *pInterfaces[] = {&localIO, &serialIO, &serialIO2};
-  int nInterfaces = 3;
+  DebuggerIO *pInterfaces[2] = {0};
+
+  int nInterfaces = 0;
+  if(Machine::instance().getNumVga()) // Not all machines have "VGA", so handle that
+  {
+    static LocalIO localIO(Machine::instance().getVga(0), Machine::instance().getKeyboard());
+#ifdef DONT_LOG_TO_SERIAL
+    pInterfaces[0] = &localIO;
+    nInterfaces = 1;
+#else
+    pInterfaces[0] = &localIO;
+    pInterfaces[1] = &serialIO;
+    nInterfaces = 2;
+#endif
+  }
+#ifndef DONT_LOG_TO_SERIAL
+  else
+  {
+    pInterfaces[0] = &serialIO;
+    nInterfaces = 1;
+  }
+#endif
 
   for( int nIFace = 0; nIFace < nInterfaces; nIFace++ )
     _panic( msg, pInterfaces[nIFace] );
