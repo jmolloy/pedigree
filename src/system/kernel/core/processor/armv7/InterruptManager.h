@@ -21,6 +21,7 @@
 #include <processor/types.h>
 #include <processor/SyscallManager.h>
 #include <processor/InterruptManager.h>
+#include <processor/MemoryRegion.h>
 
 /** @addtogroup kernelprocessorARMV7
  * @{ */
@@ -54,10 +55,11 @@ class ARMV7InterruptManager : public ::InterruptManager,
      *\todo and some smp/acpi function */
     static void initialiseProcessor();
 
-  private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */
     static void interrupt(InterruptState &interruptState);
+
+  private:
     /** The constructor */
     ARMV7InterruptManager();
     /** Copy constructor
@@ -77,8 +79,36 @@ class ARMV7InterruptManager : public ::InterruptManager,
     /** The syscall handlers */
     SyscallHandler *m_SyscallHandler[/*SyscallManager::*/serviceEnd];
 
+    /** MemoryRegion for the MPU MMIO base */
+    static MemoryRegion m_MPUINTCRegion;
+
     /** The instance of the interrupt manager  */
     static ARMV7InterruptManager m_Instance;
+
+    /** Interrupt controller registers */
+    enum Registers
+    {
+        INTCPS_REVISION         = 0x00, // R
+        INTCPS_SYSCONFIG        = 0x10, // RW
+        INTCPS_SYSSTATUS        = 0x14, // R
+        INTCPS_SIR_IRQ          = 0x40, // R
+        INTCPS_SIR_FIQ          = 0x44, // R
+        INTCPS_CONTROL          = 0x48, // RW
+        INTCPS_PROTECTION       = 0x4C, // RW
+        INTCPS_IDLE             = 0x50, // RW
+        INTCPS_IRQ_PRIORITY     = 0x60, // RW
+        INTCPS_FIQ_PRIORITY     = 0x64, // RW
+        INTCPS_THRESHOLD        = 0x68, // RW
+        INTCPS_ITR              = 0x80, // R, multiple entries
+        INTCPS_MIR              = 0x84, // RW, as above
+        INTCPS_MIR_CLEAR        = 0x88, // W, as above
+        INTCPS_MIR_SET          = 0x8C, // W, as above
+        INTCPS_ISR_SET          = 0x90, // RW, as above
+        INTCPS_ISR_CLEAR        = 0x94, // W, as above
+        INTCPS_PENDING_IRQ      = 0x98, // R, as above
+        INTCPS_PENDING_FIQ      = 0x9C, // R, as above
+        INTCPS_ILR              = 0x100, // RW, multiple entries
+    };
 };
 
 /** @} */

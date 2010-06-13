@@ -22,9 +22,6 @@
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-    // Initialise this processor's interrupt handling
-    ARMV7InterruptManager::initialiseProcessor();
-
     // Initialise the physical memory-management
     ArmV7PhysicalMemoryManager::instance().initialise(Info);
 
@@ -33,7 +30,10 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
-    // m_Initialised = 2;
+    // Initialise this processor's interrupt handling
+    ARMV7InterruptManager::initialiseProcessor();
+
+    m_Initialised = 2;
 }
 
 void Processor::identify(HugeStaticString &str)
@@ -152,12 +152,36 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
-  /// \todo Implement.
+    /// \todo FIQs count too
+    if(m_Initialised >= 2) // Interrupts are only initialised at phase 2
+    {
+        uint32_t cpsr = 0;
+        asm volatile("MRS %0, cpsr" : "=r" (cpsr));
+        if(bEnable && (!(cpsr & 0x80)))
+        {
+            cpsr |= 0x80;
+            asm volatile("MSR cpsr, %0" : : "r" (cpsr));
+        }
+        else if(!bEnable && (cpsr & 0x80))
+        {
+            cpsr ^= 0x80;
+            asm volatile("MSR cpsr, %0" : : "r" (cpsr));
+        }
+    }
 }
 
 bool Processor::getInterrupts()
 {
-  return false;
+    /// \todo FIQs count too
+    if(m_Initialised >= 2) // Interrupts are only initialised at phase 2
+    {
+        NOTICE_NOLOCK("getInterrupts");
+        uint32_t cpsr = 0;
+        asm volatile("MRS %0, cpsr" : "=r" (cpsr));
+        return (cpsr & 0x80);
+    }
+    else
+        return false;
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)

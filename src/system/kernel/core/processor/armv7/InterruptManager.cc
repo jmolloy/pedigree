@@ -65,6 +65,8 @@ const char *g_ExceptionNames[32] = {
 
 ARMV7InterruptManager ARMV7InterruptManager::m_Instance;
 
+MemoryRegion ARMV7InterruptManager::m_MPUINTCRegion("mpu-intc");
+
 SyscallManager &SyscallManager::instance()
 {
   return ARMV7InterruptManager::instance();
@@ -168,7 +170,8 @@ extern "C" void arm_fiq_handler()
 extern "C" void arm_irq_handler()
 {
   NOTICE_NOLOCK("IRQ");
-  while( 1 );
+  InterruptState state; /// \todo Do something useful with this
+  ARMV7InterruptManager::interrupt(state);
 }
 
 extern "C" void arm_reset_handler()
@@ -199,6 +202,14 @@ extern uint32_t __arm_vector_table;
 extern uint32_t __end_arm_vector_table;
 void ARMV7InterruptManager::initialiseProcessor()
 {
+    // Map in the MPU interrupt controller
+    if(!PhysicalMemoryManager::instance().allocateRegion(ARMV7InterruptManager::m_MPUINTCRegion,
+                                                         1,
+                                                         PhysicalMemoryManager::continuous,
+                                                         VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode,
+                                                         0x48200000))
+        return;
+
     // Map in the ARM vector table to 0xFFFF0000
     if(!VirtualAddressSpace::getKernelAddressSpace().map(reinterpret_cast<physical_uintptr_t>(&__arm_vector_table),
                                                          reinterpret_cast<void*>(0xFFFF0000),
@@ -211,18 +222,60 @@ void ARMV7InterruptManager::initialiseProcessor()
     if(!(sctlr & 0x2000))
         sctlr |= 0x2000;
     asm volatile("MCR p15,0,%0,c1,c0,0" : : "r" (sctlr));
+
+    // Initialise the MPU INTC
+    volatile uint32_t *mpuIntcRegisters = reinterpret_cast<volatile uint32_t*>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress());
+
+    // Perform a reset of the MPU INTC
+    mpuIntcRegisters[INTCPS_SYSCONFIG] = 2;
+    while(mpuIntcRegisters[INTCPS_SYSSTATUS] & 1);
+
+    // Dump the revision of the controller
+    uint32_t revision = mpuIntcRegisters[0];
+    NOTICE_NOLOCK("MPU interrupt controller at " << Hex << reinterpret_cast<uintptr_t>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress()) << "  - revision " << Dec << ((revision >> 4) & 0xF) << "." << (revision & 0xF) << Hex);
+
+    // Set up the functional clock auto-idle and the synchronizer clock auto-gating
+    mpuIntcRegisters[INTCPS_IDLE] = 0;
+
+    // Program the base priority and enable FIQs where necessary for all IRQs
+    for(size_t m = 0; m < 96; m++)
+    {
+        // Priority: 0 (highest), route to IRQ (not FIQ)
+        mpuIntcRegisters[INTCPS_ILR + (m * 4)] = 0;
+    }
+
+    // Mask all interrupts (when an interrupt line is registered, it will be
+    // unmasked.)
+    for(size_t n = 0; n < 3; n++)
+    {
+        mpuIntcRegisters[INTCPS_MIR_SET + (n * 0x20)] = 0xFFFFFFFF;
+    }
 }
 
 void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
 {
-  /// \todo Needs locking
-  size_t intNumber = interruptState.getInterruptNumber();
+    volatile uint32_t *mpuIntcRegisters = reinterpret_cast<volatile uint32_t*>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress());
+    if(!mpuIntcRegisters)
+        return;
 
-  #ifdef DEBUGGER
-    // Call the kernel debugger's handler, if any
-    if (m_Instance.m_DbgHandler[intNumber] != 0)
-      m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
-  #endif
+    // Grab the interrupt number
+    size_t intNumber = mpuIntcRegisters[INTCPS_SIR_IRQ] & 0x7F;
+    NOTICE_NOLOCK("Interrupt " << Dec << intNumber << Hex);
+
+    #ifdef DEBUGGER
+        // Call the kernel debugger's handler, if any
+        if (m_Instance.m_DbgHandler[intNumber] != 0)
+            m_Instance.m_DbgHandler[intNumber]->interrupt(intNumber, interruptState);
+    #endif
+
+    // Call the interrupt handler if one exists
+    if (m_Instance.m_Handler[intNumber] != 0)
+        m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
+
+    // Ack the interrupt
+    mpuIntcRegisters[INTCPS_CONTROL] = 1; // Reset IRQ output and enable new IRQs
+
+#if 0 // Below is all exception/syscall stuff
 
   // Call the syscall handler, if it is the syscall interrupt
   if (intNumber == SYSCALL_INTERRUPT_NUMBER)
@@ -250,6 +303,8 @@ void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
     panic(e);
 #endif
   }
+
+#endif
 }
 
 ARMV7InterruptManager::ARMV7InterruptManager()

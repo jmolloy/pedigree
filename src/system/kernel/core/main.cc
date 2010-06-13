@@ -172,9 +172,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   ZombieQueue::instance().initialise();
 #endif
 
-#ifndef ARM_COMMON // No ARM port is ready for interrupts yet.
   Processor::setInterrupts(true);
 
+#ifndef ARM_COMMON // ARM isn't ready for InputManager
   // Initialise the input manager
   InputManager::instance().initialise();
 #endif
@@ -229,12 +229,18 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
 #ifdef ARM_COMMON
   asm volatile("swi $0x1");
-  
+
+#ifdef DEBUGGER_RUN_AT_START
+  InterruptState state;
+  LargeStaticString desc("Debugger running at startup");
+  Debugger::instance().start(state, desc);
+#else
   NOTICE("ARM build now boots properly. Now hanging forever...");
   while(1)
   {
       asm volatile("wfi");
   }
+#endif
 #endif
 
 #ifdef TRACK_LOCKS
