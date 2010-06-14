@@ -74,7 +74,53 @@ void ArmBeagleSerial::setBase(uintptr_t nBaseAddr)
 
 void ArmBeagleSerial::interrupt(size_t nInterruptNumber, InterruptState &state)
 {
-    Machine::instance().getSerial(0)->write("irq");
+    uint8_t intStatus = m_Base[IIR_REG];
+    switch((intStatus >> 1) & 0x1F)
+    {
+        case 0:
+            {
+            // Modem interrupt - reset by reading the modem status register
+            uint8_t c = m_Base[MSR_REG];
+            }
+            break;
+        case 1:
+            {
+            // THR interrupt - RX FIFO below threshold or THR empty
+            }
+            break;
+        case 2:
+            {
+            // RHR interrupt - data ready in the RX FIFO
+            while(m_Base[LSR_REG] & 0x1)
+                uint8_t c = m_Base[RHR_REG]; /// \todo Queue somewhere for input
+            }
+            break;
+        case 3:
+            {
+            // Receiver line status error
+            /// \todo Handle
+            }
+            break;
+        case 6:
+            {
+            // RX timeout - caused by stale data in the RX FIFO.
+            // Reset by reading from the FIFO
+            uint8_t c = m_Base[RHR_REG];
+            }
+            break;
+        case 8:
+            {
+            // XOFF/special character
+            /// \todo Handle
+            }
+            break;
+        case 16:
+            {
+            // CTS, RTS change of state from active to inactive
+            // Reset by the act of reading the IIR, as above
+            }
+            break;
+    }
 }
 
 char ArmBeagleSerial::read()
