@@ -49,21 +49,8 @@ __arm_vector_table:
         ldr pc,=arm_addrexcept_handler
 # 0x18 - IRQ (interrupt)
     __armvec_irq:
-        ldr pc,=arm_irq_handler_entry
+        ldr pc,=arm_irq_handler
 # 0x1C - FIQ (fast interrupt)
     __armvec_fiq:
         ldr pc,=arm_fiq_handler
 __end_arm_vector_table:
-
-.extern irq_stack
-
-arm_irq_handler_entry:
-    # Load IRQ stack
-    # It'd be nice if there was a way to initialise this while we're booting up
-    # rather than set this up in every IRQ
-    # TODO: investigate
-    ldr sp, =irq_stack+0x10000
-    b arm_irq_handler
-    
-    # TODO: restore old stack etc...
-    b .

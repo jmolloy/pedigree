@@ -34,9 +34,3 @@ _ZN9Processor15getStackPointerEv:
 _ZN9Processor21getInstructionPointerEv:
   mov r0,pc
   mov pc,lr
-
-.global irq_stack
-.section .bss
-
-.comm irq_stack, 0x10000
-
