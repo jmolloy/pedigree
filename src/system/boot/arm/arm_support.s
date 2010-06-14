@@ -19,8 +19,34 @@
 
 .section .init
 start:
-    ldr sp, =stack+0x10000
+
+    # Read the CPSR, mask out the lower 6 bits, and enter FIQ mode
+    mrs r0, cpsr
+    bic r0, r0, #0x3F
+    orr r1, r0, #0x11
+    msr cpsr_c, r1
+    
+    ldr sp, =stack_fiq+0x1000
+    
+    # Read the CPSR, mask out the lower 6 bits, and enter IRQ mode
+    mrs r0, cpsr
+    bic r0, r0, #0x3F
+    orr r1, r0, #0x12
+    msr cpsr_c, r1
+    
+    ldr sp, =stack_irq+0x1000
+    
+    # Read the CPSR, mask out the lower 6 bits, and enter SVC mode
+    mrs r0, cpsr
+    bic r0, r0, #0x3F
+    orr r1, r0, #0x13
+    msr cpsr_c, r1
+    
+    ldr sp, =stack_svc+0x10000
+    
     bl __start
 
 .section .bss
-.comm stack, 0x10000
+.comm stack_svc, 0x10000
+.comm stack_irq, 0x1000
+.comm stack_fiq, 0x1000
