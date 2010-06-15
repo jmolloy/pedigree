@@ -247,6 +247,10 @@ void ARMV7InterruptManager::initialiseProcessor()
     mpuIntcRegisters[INTCPS_SYSCONFIG] = 2;
     while((mpuIntcRegisters[INTCPS_SYSSTATUS] & 1) == 0);
 
+    // Write the MMIO address and hardware revisio to the console
+    uint32_t revision = mpuIntcRegisters[0];
+    NOTICE("MPU interrupt controller at " << Hex << reinterpret_cast<uintptr_t>(ARMV7InterruptManager::m_MPUINTCRegion.virtualAddress()) << "  - revision " << Dec << ((revision >> 4) & 0xF) << "." << (revision & 0xF) << Hex);
+
     // Set up the functional clock auto-idle and the synchronizer clock auto-gating
     mpuIntcRegisters[INTCPS_IDLE] = 0;
 
