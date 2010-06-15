@@ -95,9 +95,12 @@ void Log::initialise ()
         }
     }
 #endif
-    
+}
+
+void Log::initialise2()
+{
     if(m_EchoToSerial)
-        installCallback(&g_SerialCallback, true);
+        installCallback(&g_SerialCallback, false);
 }
 
 void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
@@ -115,7 +118,6 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
     size_t entry = m_StaticEntryStart;
     while(1)
     {
-        entry = (entry + 1) % LOG_ENTRIES;
         if(entry == m_StaticEntryEnd)
             break;
         else
@@ -148,6 +150,8 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
             ///       buffers this may fail.
             pCallback->callback(str);
         }
+
+        entry = (entry + 1) % LOG_ENTRIES;
     }
 }
 void Log::removeCallback(LogCallback *pCallback)

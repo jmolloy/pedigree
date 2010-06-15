@@ -132,6 +132,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   g_pBootstrapInfo = &bsInf;
 
+  // Initialise the kernel log.
+  Log::instance().initialise();
+
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
 
@@ -144,12 +147,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   machine.initialise();
 
+  // Initialise the serial callback for the kernel log, now that the machine
+  // abstraction is initialised.
+  Log::instance().initialise2();
+
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
 #endif
-
-  // Initialise the kernel log.
-  Log::instance().initialise();
 
 #ifndef ARM_BEAGLE
   // Initialise the Kernel Elf class

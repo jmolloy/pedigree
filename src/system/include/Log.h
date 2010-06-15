@@ -174,6 +174,9 @@ public:
    /** Initialises the Log */
   void initialise();
 
+   /** Initialises the Log serial line callback */
+  void initialise2();
+
   /** Installs an output callback */
   void installCallback(LogCallback *pCallback, bool bSkipBacklog=false);
 
