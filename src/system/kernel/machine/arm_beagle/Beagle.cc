@@ -25,9 +25,30 @@ Machine &Machine::instance()
 
 void ArmBeagle::initialise()
 {
+  extern SyncTimer g_SyncTimer;
+
   m_Serial[0].setBase(0x49020000); // uart3, RS-232 output on board
   //m_Serial[1].setBase(0x4806A000); // uart1
   //m_Serial[2].setBase(0x4806C000); // uart2
+
+  g_SyncTimer.initialise(0x48320000);
+
+  // m_Timers[0].initialise(0x48318000);
+
+  m_Timers[0].initialise(0x49032000);
+
+  /*
+  m_Timers[2].initialise(0x49034000);
+  m_Timers[3].initialise(0x49036000);
+  m_Timers[4].initialise(0x49038000);
+  m_Timers[5].initialise(0x4903A000);
+  m_Timers[6].initialise(0x4903C000);
+  m_Timers[7].initialise(0x4903E000);
+  m_Timers[8].initialise(0x49040000);
+  m_Timers[9].initialise(0x48086000);
+  m_Timers[10].initialise(0x48088000);
+  */
+
   m_bInitialised = true;
 }
 Serial *ArmBeagle::getSerial(size_t n)
@@ -36,7 +57,7 @@ Serial *ArmBeagle::getSerial(size_t n)
 }
 size_t ArmBeagle::getNumSerial()
 {
-  return 3; // 3 UARTs attached.
+  return 1; // 3 UARTs attached, only one initialised for now
 }
 Vga *ArmBeagle::getVga(size_t n)
 {
@@ -53,13 +74,11 @@ IrqManager *ArmBeagle::getIrqManager()
 }
 SchedulerTimer *ArmBeagle::getSchedulerTimer()
 {
-  // TODO
-  return 0;
+  return &m_Timers[0];
 }
 Timer *ArmBeagle::getTimer()
 {
-  // TODO
-  return 0;
+  return &m_Timers[0];
 }
 
 Keyboard *ArmBeagle::getKeyboard()

@@ -21,6 +21,7 @@
 #include "Serial.h"
 #include "Vga.h"
 #include "Keyboard.h"
+#include "GPTimer.h"
 
 /**
  * Concretion of the abstract Machine class for an ArmBeagle board.
@@ -59,8 +60,7 @@ private:
   virtual ~ArmBeagle();
 
   ArmBeagleSerial m_Serial[3];
-  //SchedulerTimer m_SchedulerTimer;
-  //Timer m_Timers;
+  GPTimer m_Timers[11];
   ArmBeagleVga m_Vga;
   ArmBeagleKeyboard m_Keyboard;
 

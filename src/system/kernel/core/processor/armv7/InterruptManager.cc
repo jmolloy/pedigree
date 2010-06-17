@@ -186,7 +186,6 @@ extern "C" void arm_fiq_handler()
 
 extern "C" void arm_irq_handler()
 {
-  NOTICE_NOLOCK("IRQ");
   InterruptState state; /// \todo Do something useful with this
   ARMV7InterruptManager::interrupt(state);
 }
@@ -285,7 +284,6 @@ void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
 
     // Grab the interrupt number
     size_t intNumber = mpuIntcRegisters[INTCPS_SIR_IRQ] & 0x7F;
-    NOTICE_NOLOCK("Interrupt " << Dec << intNumber << Hex);
 
     #ifdef DEBUGGER
         // Call the kernel debugger's handler, if any
