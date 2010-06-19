@@ -34,3 +34,42 @@ _ZN9Processor15getStackPointerEv:
 _ZN9Processor21getInstructionPointerEv:
   mov r0,pc
   mov pc,lr
+
+# bool Processor::saveState(SchedulerState &)
+.global _ZN9Processor9saveStateER19ARMV7SchedulerState
+# void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
+.global _ZN9Processor12restoreStateER19ARMV7SchedulerStatePVm
+# void Processor::restoreState(volatile uintptr_t *, SyscallState &)
+.global _ZN9Processor12restoreStateER19ARMV7InterruptStatePVm
+# void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
+#                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+.global _ZN9Processor10jumpKernelEPVmmmmmmm
+# void Processor::jumpUser(volatile uintptr_t *, uintptr_t, uintptr_t,
+#                          uintptr_t, uintptr_t, uintptr_t, uintptr_t)
+.global _ZN9Processor8jumpUserEPVmmmmmmm
+# void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
+.global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7SchedulerState
+
+# void Thread::threadExited()
+.extern _ZN6Thread12threadExitedEv
+# void PerProcessorScheduler::deleteThread(Thread *)
+.extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+
+_ZN9Processor9saveStateER19ARMV7SchedulerState:
+    mov r0, #0
+    mov pc, lr
+
+_ZN9Processor12restoreStateER19ARMV7SchedulerStatePVm:
+    mov pc, lr
+
+_ZN9Processor12restoreStateER19ARMV7InterruptStatePVm:
+    mov pc, lr
+
+_ZN9Processor10jumpKernelEPVmmmmmmm:
+    mov pc, lr
+
+_ZN9Processor8jumpUserEPVmmmmmmm:
+    mov pc, lr
+
+_ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7SchedulerState:
+    mov pc, lr
