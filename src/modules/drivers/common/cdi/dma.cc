@@ -32,6 +32,7 @@
  */
 int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, size_t length, void* buffer)
 {
+#ifdef X86_COMMON
     // All good
     handle->channel = channel;
     handle->mode = mode;
@@ -66,6 +67,9 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
         delete region;
         return -1;
     }
+#else
+    return -1; /// \todo Other architectures
+#endif
 }
 
 /**
@@ -75,9 +79,13 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
  */
 int cdi_dma_read(struct cdi_dma_handle* handle)
 {
+#ifdef X86_COMMON
     // Copy the memory across
     memcpy(handle->meta.realbuffer, handle->buffer, handle->length);
     return 0;
+#else
+    return -1;
+#endif
 }
 
 /**
@@ -87,9 +95,13 @@ int cdi_dma_read(struct cdi_dma_handle* handle)
  */
 int cdi_dma_write(struct cdi_dma_handle* handle)
 {
+#ifdef X86_COMMON
     // Copy the memory across
     memcpy(handle->buffer, handle->meta.realbuffer, handle->length);
     return 0;
+#else
+    return -1;
+#endif
 }
 
 /**
@@ -99,9 +111,13 @@ int cdi_dma_write(struct cdi_dma_handle* handle)
  */
 int cdi_dma_close(struct cdi_dma_handle* handle)
 {
+#ifdef X86_COMMON
     // Grab the region from the handle and free it
     MemoryRegion* region = reinterpret_cast<MemoryRegion*>(handle->meta.region);
     delete region;
 
     return 0;
+#else
+    return -1;
+#endif
 }
