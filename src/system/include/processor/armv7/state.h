@@ -101,43 +101,35 @@ class ARMV7InterruptState
      *\note NOT implemented */
     ~ARMV7InterruptState() {}
     
-    /** ARMV7 Registers and State **/
+    /** ARMV7 interrupt frame **/
+    uint32_t m_spsr;
     uint32_t m_r0;
     uint32_t m_r1;
     uint32_t m_r2;
     uint32_t m_r3;
-    uint32_t m_r4;
-    uint32_t m_r5;
-    uint32_t m_r6;
-    uint32_t m_r7;
-    uint32_t m_r8;
-    uint32_t m_r9;
-    uint32_t m_r10;
-    uint32_t m_Fp;
     uint32_t m_r12;
-    uint32_t m_Sp;
-    uint32_t m_Lnk;
-    uint32_t m_Pc;
-    uint32_t m_Cpsr; // holds cpu mode, IRQ and FIQ status, and 4 flags (32-bit)
+    uint32_t m_lr;
+    uint32_t m_pc;
 } PACKED;
 
 typedef ARMV7InterruptState ARMV7SyscallState;
 typedef ARMV7InterruptState ARMV7ProcessorState;
 
-class __attribute__((aligned(16))) ARMV7SchedulerState
+class __attribute__((aligned(8))) ARMV7SchedulerState
 {
 public:
-    uint32_t edi;
-    uint32_t esi;
-    uint32_t ebx;
-    uint32_t ebp;
-    uint32_t esp;
-    uint32_t eip;
-    
-    // bit 0: Has FPU
-    // bit 1: Used SSE
-    uint32_t flags;
-} __attribute__((aligned(16)));
+    uint32_t r4;
+    uint32_t r5;
+    uint32_t r6;
+    uint32_t r7;
+    uint32_t r8;
+    uint32_t r9;
+    uint32_t r10;
+    uint32_t r11;
+    uint32_t lr;
+    uint32_t usersp;
+    uint32_t userlr;
+} __attribute__((aligned(8)));
 
 /** @} */
 
@@ -147,25 +139,26 @@ public:
 
 uintptr_t ARMV7InterruptState::getStackPointer() const
 {
-  return m_Sp;
+    return reinterpret_cast<uintptr_t>(this); /// \todo Is this right?
 }
 void ARMV7InterruptState::setStackPointer(uintptr_t stackPointer)
 {
 }
 uintptr_t ARMV7InterruptState::getInstructionPointer() const
 {
-  return m_Pc;
+    return m_pc;
 }
 void ARMV7InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
 }
 uintptr_t ARMV7InterruptState::getBasePointer() const
 {
-  return m_Fp; // assume frame pointer = base pointer
+  //return m_Fp; // assume frame pointer = base pointer
+    return 0;
 }
 void ARMV7InterruptState::setBasePointer(uintptr_t basePointer)
 {
-  m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
+  // m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
 }
 size_t ARMV7InterruptState::getRegisterSize(size_t index) const
 {
@@ -182,7 +175,9 @@ bool ARMV7InterruptState::kernelMode() const
 {
   // TODO: the ARMV7 is NOT always in kernel mode, handle this properly
   // This'll require some reading up on the CPSR mode bits
-  return true;
+    uint32_t cpsr;
+    asm volatile("mrs %0, cpsr" : "=r" (cpsr));
+    return ((cpsr & 0x1F) != 0x10);
 }
 size_t ARMV7InterruptState::getInterruptNumber() const
 {

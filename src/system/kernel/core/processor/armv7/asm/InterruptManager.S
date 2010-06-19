@@ -49,8 +49,43 @@ __arm_vector_table:
         ldr pc,=arm_addrexcept_handler
 # 0x18 - IRQ (interrupt)
     __armvec_irq:
-        ldr pc,=arm_irq_handler
+        ldr pc,=arm_asm_irq_handler
 # 0x1C - FIQ (fast interrupt)
     __armvec_fiq:
         ldr pc,=arm_fiq_handler
 __end_arm_vector_table:
+
+.section .text
+
+arm_asm_irq_handler:
+
+    # Save r4-r6
+    stmia r13, {r4 - r6}
+    mov r4, r13
+    sub r5, lr, #4
+    mrs r6, spsr
+    
+    msr cpsr_c, #(3<<6 | 0x13)
+    
+    # Save return address
+    stmfd sp!, {r5}
+    
+    # C call trashed registers, and the supervisor LR
+    stmfd sp!, {r0-r3, r12, lr}
+    
+    # Save SPSR
+    stmfd sp!, {r6}
+    
+    # Restore R4-R6
+    ldmia r4, {r4 - r6}
+
+    # Call into the kernel - give it an interrupt frame
+    mov r0, sp
+    bl arm_irq_handler
+    
+    # Restore SPSR
+    ldmfd sp!, {r0}
+    msr spsr_cxsf, r0
+    
+    # Restore to where we were before the interrupt
+    ldmfd   sp!, { r0-r3, r12, lr, pc }^
