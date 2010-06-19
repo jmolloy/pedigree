@@ -108,7 +108,7 @@ void ArmBeagle::initialiseDeviceTree()
     pCtl->addresses().pushBack(new Device::Address(String("RFBI"), 0x48050800, 256, false));
     pCtl->addresses().pushBack(new Device::Address(String("Video Encoder"), 0x48050C00, 256, false));
     pCtl->setInterruptNumber(25);
-    pL4->addChild(pL4);
+    pL4->addChild(pCtl);
     pCtl->setParent(pL4);
 
     Device::root().addChild(pL4);
