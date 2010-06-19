@@ -56,20 +56,95 @@ _ZN9Processor21getInstructionPointerEv:
 .extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 
 _ZN9Processor9saveStateER19ARMV7SchedulerState:
+    # Store state
+    mov r12, lr
+    stmia r0, {r4 - r11, r12, sp}^
+    # , r13, r14}^
+
     mov r0, #0
-    mov pc, lr
+    bx lr
 
 _ZN9Processor12restoreStateER19ARMV7SchedulerStatePVm:
-    mov pc, lr
+    # Load state
+    ldmia r0, {r4 - r11, r12, sp}^
+    # , r13, r14}^
+    mov lr, r12
+    
+    # mov sp, r0
+    
+    # TODO: Save r4
+    
+    # Check for a passed lock, unlock if it exists
+    cmp r1, #0
+    beq .no_lock
+    mov r4, #1
+    str r4, [r1]
+.no_lock:
+    
+    # Restore old stack
+    # add sp, r0, #(11 * 4)
+    
+    bx lr
 
 _ZN9Processor12restoreStateER19ARMV7InterruptStatePVm:
-    mov pc, lr
+    # Load SP (== InterruptState location)
+    str sp, [r0]
+    
+    # TODO: Save r4
+    
+    # Check for a passed lock, unlock if it exists
+    cmp r1, #0
+    beq .no_lock1
+    mov r4, #1
+    str r4, [r1]
+.no_lock1:
 
+    # Done.
+    # TODO: Not done, gotta restore at least LR to get back to the right place
+    bx lr
+
+# void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
+#                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
 _ZN9Processor10jumpKernelEPVmmmmmmm:
-    mov pc, lr
+    
+    # Load the lock pointer
+    mov r8, r0
+    
+    # Save the jump destination for future reference
+    mov r9, r1
+    
+    # Note: we don't save all the registers we smash here because we're never
+    # returning from this function to the caller.
+    
+    # Load parameters
+    mov r4, r3
+    ldr r5, [sp]
+    ldr r6, [sp, #4]
+    ldr r7, [sp, #8]
+    
+    # Load the new stack pointer
+    cmp r2, #0
+    movne sp, r2
+    
+    # Check for a passed lock, unlock if it exists
+    cmp r8, #0
+    beq .no_lock2
+    mov r11, #1
+    str r11, [r8]
+.no_lock2:
+
+    # Load parameters for the call
+    mov r0, r4
+    mov r1, r5
+    mov r2, r6
+    mov r3, r7
+    
+    # Jump to the address - never to return
+    mov lr, #0
+    bx r9
 
 _ZN9Processor8jumpUserEPVmmmmmmm:
-    mov pc, lr
+    bx lr
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7SchedulerState:
-    mov pc, lr
+    bx lr

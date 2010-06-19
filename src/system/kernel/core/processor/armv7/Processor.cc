@@ -19,6 +19,7 @@
 #include "InterruptManager.h"
 #include "PhysicalMemoryManager.h"
 #include "VirtualAddressSpace.h"
+#include <process/initialiseMultitasking.h>
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
@@ -33,6 +34,11 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
+    // Initialise multitasking
+#ifdef THREADS
+    initialiseMultitasking();
+#endif
+
     m_Initialised = 2;
 }
 

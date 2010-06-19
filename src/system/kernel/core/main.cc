@@ -172,16 +172,16 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2(bsInf);
 
+#ifndef ARM_COMMON
 #ifdef THREADS
   ZombieQueue::instance().initialise();
+#endif
 #endif
 
   Processor::setInterrupts(true);
 
-#ifndef ARM_COMMON // ARM isn't ready for InputManager
   // Initialise the input manager
   InputManager::instance().initialise();
-#endif
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -238,6 +238,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().start(state, desc);
 #else
   NOTICE_NOLOCK("ARM build now boots properly. Now hanging forever...");
+
   while(1)
   {
       asm volatile("wfi");

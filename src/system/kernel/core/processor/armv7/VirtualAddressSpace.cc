@@ -592,6 +592,8 @@ void ArmV7KernelVirtualAddressSpace::getMapping(void *virtualAddress,
                                               size_t &flags)
 {
   doGetMapping(virtualAddress, physicalAddress, flags);
+  if(!(flags & KernelMode))
+      flags |= KernelMode;
 }
 void ArmV7KernelVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {

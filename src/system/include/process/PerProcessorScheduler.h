@@ -114,6 +114,10 @@ private:
 
     /** The current SchedulingAlgorithm */
     SchedulingAlgorithm *m_pSchedulingAlgorithm;
+
+#ifdef ARM_BEAGLE
+    size_t m_TickCount;
+#endif
 };
 
 #endif

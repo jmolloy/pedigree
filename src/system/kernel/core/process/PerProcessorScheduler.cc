@@ -39,7 +39,7 @@
 #endif
 
 PerProcessorScheduler::PerProcessorScheduler() :
-    m_pSchedulingAlgorithm(0)
+    m_pSchedulingAlgorithm(0), m_TickCount(0)
 {
 }
 
@@ -126,6 +126,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
 
     pNextThread->getLock().release();
 
+    // NOTICE_NOLOCK("calling saveState [schedule]");
     if (Processor::saveState(pCurrentThread->state()))
     {
         // Just context-restored, return.
@@ -288,7 +289,6 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     m_pSchedulingAlgorithm->addThread(pThread);
 
     // Now neither thread can be moved, we're safe to switch.
-
     pCurrentThread->setStatus(Thread::Ready);
     pThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pThread);
@@ -315,10 +315,12 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
                             reinterpret_cast<uintptr_t>(pStack),
                             reinterpret_cast<uintptr_t>(pParam));
     else
+    {
         Processor::jumpKernel(&pCurrentThread->getLock().m_Atom.m_Atom,
                               reinterpret_cast<uintptr_t>(pStartFunction),
                               reinterpret_cast<uintptr_t>(pStack),
                               reinterpret_cast<uintptr_t>(pParam));
+    }
 }
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
@@ -410,12 +412,20 @@ void PerProcessorScheduler::removeThread(Thread *pThread)
 
 void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
 {
-    schedule();
+#ifdef ARM_BEAGLE // Timer at 1 tick per ms, we want to run every 100 ms
+    m_TickCount++;
+    if((m_TickCount % 100) == 0)
+    {
+#endif
+        schedule();
 
-    // Check if the thread should exit.
-    Thread *pThread = Processor::information().getCurrentThread();
-    if (pThread->getUnwindState() == Thread::Exit)
-        pThread->getParent()->getSubsystem()->exit(0);
+        // Check if the thread should exit.
+        Thread *pThread = Processor::information().getCurrentThread();
+        if (pThread->getUnwindState() == Thread::Exit)
+            pThread->getParent()->getSubsystem()->exit(0);
+#ifdef ARM_BEAGLE
+    }
+#endif
 }
 
 void PerProcessorScheduler::threadStatusChanged(Thread *pThread)
