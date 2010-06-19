@@ -22,7 +22,7 @@
 #include <dma/IsaDma.h>
 
 #ifndef X86_COMMON
-#error ISA DMA not supported on non-x86 architectures. TODO: FIXME
+#warning ISA DMA not supported on non-x86 architectures. TODO: FIXME
 #endif
 
 /**
