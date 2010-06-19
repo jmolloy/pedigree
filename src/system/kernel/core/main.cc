@@ -155,11 +155,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().initialise();
 #endif
 
-#ifndef ARM_BEAGLE
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
-#endif
 
 #ifndef ARM_COMMON
   if (bsInf.isInitrdLoaded() == false)

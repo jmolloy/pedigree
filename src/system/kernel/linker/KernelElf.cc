@@ -169,12 +169,12 @@ KernelElf::~KernelElf()
 
 #ifdef PPC_COMMON
 #define MOD_START 0xe1000000
-#else
-#ifdef X86
+#elif defined(X86)
 #define MOD_START 0xfa000000
-#else
+#elif defined(X64)
 #define MOD_START 0xFFFFFFFFF0000000
-#endif
+#elif defined(ARMV7)
+#define MOD_START 0x60000000
 #endif
 #define MOD_LEN 0x400000
 
