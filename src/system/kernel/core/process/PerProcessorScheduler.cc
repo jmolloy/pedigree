@@ -39,7 +39,10 @@
 #endif
 
 PerProcessorScheduler::PerProcessorScheduler() :
-    m_pSchedulingAlgorithm(0), m_TickCount(0)
+    m_pSchedulingAlgorithm(0)
+#ifdef ARM_BEAGLE
+    , m_TickCount(0)
+#endif
 {
 }
 
