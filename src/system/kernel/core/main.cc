@@ -232,8 +232,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
 #ifdef ARM_COMMON
-  asm volatile("swi $0x1");
-
 #ifdef DEBUGGER_RUN_AT_START
   InterruptState state;
   LargeStaticString desc("Debugger running at startup");

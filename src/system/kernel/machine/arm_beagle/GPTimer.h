@@ -53,14 +53,17 @@ class GPTimer : public Timer, public SchedulerTimer, public InterruptHandler
 
     /** The default constructor */
     inline GPTimer() :
-        m_MmioBase("GPTimer"), m_bIrqInstalled(false), m_Handlers(),
-        m_Alarms(), m_TickCount(0)
-    {}
+        m_MmioBase("GPTimer"), m_bIrqInstalled(false), m_Irq(0),
+        m_Handlers(), m_Alarms(), m_TickCount(0)
+    {
+        for(int i = 0; i < MAX_TIMER_HANDLERS; i++)
+            m_Handlers[i] = 0;
+    }
     /** The destructor */
     inline virtual ~GPTimer(){}
 
     /** Initialises this timer */
-    void initialise(uintptr_t base);
+    void initialise(size_t timer, uintptr_t base);
 
     /** Get the current year
      *\return the current year */
@@ -149,6 +152,9 @@ class GPTimer : public Timer, public SchedulerTimer, public InterruptHandler
       * after all.
       */
     bool m_bIrqInstalled;
+
+    /** Internal IRQ number */
+    size_t m_Irq;
 
     /** All timer handlers installed */
     TimerHandler* m_Handlers[MAX_TIMER_HANDLERS];

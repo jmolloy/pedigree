@@ -14,10 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include "GPTimer.h"
+#include "Prcm.h"
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/Processor.h>
 #include <Log.h>
+
+#include <machine/Machine.h>
 
 SyncTimer g_SyncTimer;
 
@@ -51,7 +54,7 @@ uint32_t SyncTimer::getTickCount()
     return reinterpret_cast<uint32_t*>(m_MmioBase.virtualAddress())[4];
 }
 
-void GPTimer::initialise(uintptr_t base)
+void GPTimer::initialise(size_t timer, uintptr_t base)
 {
     // Map in the base
     if(!PhysicalMemoryManager::instance().allocateRegion(m_MmioBase,
@@ -64,7 +67,17 @@ void GPTimer::initialise(uintptr_t base)
         return;
     }
 
-    /// \todo Configure time sources
+    if(timer > 0)
+    {
+        // Use the SYS_CLK as our time source during reset
+        Prcm::instance().SelectClockPER(timer, Prcm::SYS_CLK);
+
+        // Enable the interface clock for the timer
+        Prcm::instance().SetIfaceClockPER(timer, true);
+
+        // Enable the functional clock for the timer
+        Prcm::instance().SetFuncClockPER(timer, true);
+    }
 
     volatile uint32_t *registers = reinterpret_cast<volatile uint32_t*>(m_MmioBase.virtualAddress());
 
@@ -72,6 +85,12 @@ void GPTimer::initialise(uintptr_t base)
     registers[TIOCP_CFG] = 2;
     registers[TSICR] = 2;
     while(!(registers[TISTAT] & 1));
+
+    if(timer > 0)
+    {
+        // Reset the clock source to the 32 kHz functional clock
+        Prcm::instance().SelectClockPER(timer, Prcm::FCLK_32K);
+    }
 
     // Dump the hardware revision
     uint32_t hardwareRevision = registers[TIDR];
@@ -81,56 +100,17 @@ void GPTimer::initialise(uintptr_t base)
            ((hardwareRevision >> 4) & 0xF) << "." <<
            (hardwareRevision & 0xF) << Hex);
 
-    // Props to geist & newos/lk for pointing out this method for getting
-    // a 1 ms tick.
-    registers[TCLR] = 0;
-    registers[TLDR] = -(32768 / 1000); // Load value - 32 kHz timer
+    // Section 16.2.4.2.1 in the OMAP35xx manual, page 2573
+    registers[TPIR] = 232000;
+    registers[TNIR] = -768000;
+    registers[TLDR] = 0xFFFFFFE0;
     registers[TTGR] = 1; // Trigger after one interval
 
     // Clear existing interrupts
     registers[TISR] = 7;
 
-    /// \note Testing - enable the IRQ
-    size_t irqNum = 0;
-    switch(base)
-    {
-        case 0x48318000:
-            irqNum = 37;
-            break;
-        case 0x49032000:
-            irqNum = 38;
-            break;
-        case 0x49034000:
-            irqNum = 39;
-            break;
-        case 0x49036000:
-            irqNum = 40;
-            break;
-        case 0x49038000:
-            irqNum = 41;
-            break;
-        case 0x4903A000:
-            irqNum = 42;
-            break;
-        case 0x4903C000:
-            irqNum = 43;
-            break;
-        case 0x4903E000:
-            irqNum = 44;
-            break;
-        case 0x49040000:
-            irqNum = 45;
-            break;
-        case 0x48086000:
-            irqNum = 46;
-            break;
-        case 0x48088000:
-            irqNum = 47;
-            break;
-    };
-    if(irqNum)
-        InterruptManager::instance().registerInterruptHandler(irqNum, this);
-    NOTICE("IRQ " << Dec << irqNum << Hex);
+    // Set the IRQ number for future reference
+    m_Irq = 37 + timer;
 
     // Enable the overflow interrupt
     registers[TIER] = 2;
@@ -141,33 +121,42 @@ void GPTimer::initialise(uintptr_t base)
 
 bool GPTimer::registerHandler(TimerHandler *handler)
 {
-  // Find a spare spot and install
-  size_t nHandler;
-  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
-  {
-    if(m_Handlers[nHandler] == 0)
+    // Find a spare spot and install
+    size_t nHandler;
+    for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
     {
-      m_Handlers[nHandler] = handler;
-      return true;
-    }
-  }
+        if(m_Handlers[nHandler] == 0)
+        {
+            m_Handlers[nHandler] = handler;
 
-  // No room!
-  return false;
+            if(!m_bIrqInstalled && m_Irq)
+            {
+                Spinlock install;
+                install.acquire();
+                m_bIrqInstalled = InterruptManager::instance().registerInterruptHandler(m_Irq, this);
+                install.release();
+            }
+
+            return true;
+        }
+    }
+
+    // No room!
+    return false;
 }
 
 bool GPTimer::unregisterHandler(TimerHandler *handler)
 {
-  size_t nHandler;
-  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
-  {
-    if(m_Handlers[nHandler] == handler)
+    size_t nHandler;
+    for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
     {
-      m_Handlers[nHandler] = 0;
-      return true;
+        if(m_Handlers[nHandler] == handler)
+        {
+            m_Handlers[nHandler] = 0;
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 void GPTimer::addAlarm(class Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
@@ -235,8 +224,6 @@ size_t GPTimer::removeAlarm(class Event *pEvent, bool bRetZero)
 void GPTimer::interrupt(size_t nInterruptnumber, InterruptState &state)
 {
     m_TickCount++;
-    if(!(m_TickCount % 1000))
-        NOTICE_NOLOCK(Dec << m_TickCount << Hex);
 
     // Call handlers
     size_t nHandler;
@@ -246,4 +233,8 @@ void GPTimer::interrupt(size_t nInterruptnumber, InterruptState &state)
         if(m_Handlers[nHandler])
             m_Handlers[nHandler]->timer(1000000, state);
     }
+
+    // Ack the interrupt source
+    volatile uint32_t *registers = reinterpret_cast<volatile uint32_t*>(m_MmioBase.virtualAddress());
+    registers[TISR] = registers[TISR];
 }
