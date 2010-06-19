@@ -45,7 +45,7 @@ public:
   virtual Keyboard *getKeyboard();
   virtual void setKeyboard(Keyboard *kb) {};
 
-  virtual void initialiseDeviceTree(){};
+  virtual void initialiseDeviceTree();
 
 private:
   /**

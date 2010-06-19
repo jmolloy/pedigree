@@ -17,11 +17,102 @@
 #include "Beagle.h"
 #include "Prcm.h"
 
+#include <machine/Device.h>
+#include <machine/Bus.h>
+#include <machine/Disk.h>
+#include <machine/Controller.h>
+#include <machine/Pci.h>
+
 ArmBeagle ArmBeagle::m_Instance;
 
 Machine &Machine::instance()
 {
   return ArmBeagle::instance();
+}
+
+void ArmBeagle::initialiseDeviceTree()
+{
+    Bus *pL4 = new Bus("L4-Interconnect");
+    pL4->setSpecificType(String("l4"));
+
+    Controller *pGpio1 = new Controller();
+    pGpio1->setSpecificType(String("gpio"));
+    pGpio1->addresses().pushBack(new Device::Address(String("mmio"), 0x48310000, 0x1000, false));
+    pGpio1->setInterruptNumber(29);
+    pL4->addChild(pGpio1);
+    pGpio1->setParent(pL4);
+
+    Controller *pGpio2 = new Controller();
+    pGpio2->setSpecificType(String("gpio"));
+    pGpio2->addresses().pushBack(new Device::Address(String("mmio"), 0x49050000, 0x1000, false));
+    pGpio2->setInterruptNumber(30);
+    pL4->addChild(pGpio2);
+    pGpio2->setParent(pL4);
+
+    Controller *pGpio3 = new Controller();
+    pGpio3->setSpecificType(String("gpio"));
+    pGpio3->addresses().pushBack(new Device::Address(String("mmio"), 0x49052000, 0x1000, false));
+    pGpio3->setInterruptNumber(31);
+    pL4->addChild(pGpio3);
+    pGpio3->setParent(pL4);
+
+    Controller *pGpio4 = new Controller();
+    pGpio4->setSpecificType(String("gpio"));
+    pGpio4->addresses().pushBack(new Device::Address(String("mmio"), 0x49054000, 0x1000, false));
+    pGpio4->setInterruptNumber(32);
+    pL4->addChild(pGpio4);
+    pGpio4->setParent(pL4);
+
+    Controller *pGpio5 = new Controller();
+    pGpio5->setSpecificType(String("gpio"));
+    pGpio5->addresses().pushBack(new Device::Address(String("mmio"), 0x49056000, 0x1000, false));
+    pGpio5->setInterruptNumber(33);
+    pL4->addChild(pGpio5);
+    pGpio5->setParent(pL4);
+
+    Controller *pGpio6 = new Controller();
+    pGpio6->setSpecificType(String("gpio"));
+    pGpio6->addresses().pushBack(new Device::Address(String("mmio"), 0x49058000, 0x1000, false));
+    pGpio6->setInterruptNumber(34);
+    pL4->addChild(pGpio6);
+    pGpio6->setParent(pL4);
+
+    Controller *pMmc1 = new Controller();
+    pMmc1->setSpecificType(String("mmc_sd_sdio"));
+    pMmc1->addresses().pushBack(new Device::Address(String("mmio"), 0x4809C000, 0x1000, false));
+    pMmc1->setInterruptNumber(83);
+    pL4->addChild(pMmc1);
+    pMmc1->setParent(pL4);
+
+    Controller *pMmc2 = new Controller();
+    pMmc2->setSpecificType(String("mmc_sd_sdio"));
+    pMmc2->addresses().pushBack(new Device::Address(String("mmio"), 0x480B4000, 0x1000, false));
+    pMmc2->setInterruptNumber(86);
+    pL4->addChild(pMmc2);
+    pMmc2->setParent(pL4);
+
+    Controller *pMmc3 = new Controller();
+    pMmc3->setSpecificType(String("mmc_sd_sdio"));
+    pMmc3->addresses().pushBack(new Device::Address(String("mmio"), 0x480AD000, 0x1000, false));
+    pMmc3->setInterruptNumber(94);
+    pL4->addChild(pMmc3);
+    pMmc3->setParent(pL4);
+
+    Controller *pCtl = new Controller();
+    pCtl->setSpecificType(String("display-subsys"));
+    pCtl->addresses().pushBack(new Device::Address(String("DSI Protocol Engine"), 0x4804FC00, 512, false));
+    pCtl->addresses().pushBack(new Device::Address(String("DSI_PHY"), 0x4804FE00, 64, false));
+    pCtl->addresses().pushBack(new Device::Address(String("DSI PLL Controller"), 0x4804FF00, 32, false));
+    pCtl->addresses().pushBack(new Device::Address(String("Display Subsystem"), 0x48050000, 512, false));
+    pCtl->addresses().pushBack(new Device::Address(String("Display Controller"), 0x48050400, 1024, false));
+    pCtl->addresses().pushBack(new Device::Address(String("RFBI"), 0x48050800, 256, false));
+    pCtl->addresses().pushBack(new Device::Address(String("Video Encoder"), 0x48050C00, 256, false));
+    pCtl->setInterruptNumber(25);
+    pL4->addChild(pL4);
+    pCtl->setParent(pL4);
+
+    Device::root().addChild(pL4);
+    pL4->setParent(&Device::root());
 }
 
 void ArmBeagle::initialise()
