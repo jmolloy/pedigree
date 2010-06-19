@@ -17,51 +17,95 @@
 #ifndef KERNEL_PROCESSOR_ARM_COMMON_PROCESSORINFORMATION_H
 #define KERNEL_PROCESSOR_ARM_COMMON_PROCESSORINFORMATION_H
 
+#include <process/Thread.h>
 #include <processor/types.h>
+#include <process/PerProcessorScheduler.h>
 #include <processor/VirtualAddressSpace.h>
 
-/** @addtogroup kernelprocessorarmcommon
+/** @addtogroup kernelprocessorarmv7
  * @{ */
 
-/** Common arm processor information structure */
-class ARMProcessorInformation
+/** ARMv7 processor information structure */
+class ArmCommonProcessorInformation
 {
   friend class Processor;
+  // friend class Multiprocessor;
   public:
+
     /** Get the current processor's VirtualAddressSpace
      *\return reference to the current processor's VirtualAddressSpace */
     inline VirtualAddressSpace &getVirtualAddressSpace() const
-      {return *m_VirtualAddressSpace;}
+    {
+        if (m_VirtualAddressSpace)
+            return *m_VirtualAddressSpace;
+        else
+            return VirtualAddressSpace::getKernelAddressSpace();
+    }
     /** Set the current processor's VirtualAddressSpace
      *\param[in] virtualAddressSpace reference to the new VirtualAddressSpace */
     inline void setVirtualAddressSpace(VirtualAddressSpace &virtualAddressSpace)
       {m_VirtualAddressSpace = &virtualAddressSpace;}
 
+    inline uintptr_t getKernelStack() const;
+    inline void setKernelStack(uintptr_t stack);
+#ifdef THREADS
+    inline Thread *getCurrentThread() const
+      {return m_pCurrentThread;}
+    inline void setCurrentThread(Thread *pThread)
+      {m_pCurrentThread = pThread;}
+
+    inline PerProcessorScheduler &getScheduler()
+      {return m_Scheduler;}
+#endif
+
   protected:
-    /** Construct a ARMProcessorInformation object
+    /** Construct a ArmCommonProcessor object
      *\param[in] processorId Identifier of the processor */
-    inline ARMProcessorInformation(ProcessorId processorId)
-      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()){}
+    inline ArmCommonProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
+      : m_ProcessorId(processorId), m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace())
+#ifdef THREADS
+      , m_pCurrentThread(0), m_Scheduler()
+#endif
+    {}
     /** The destructor does nothing */
-    inline virtual ~ARMProcessorInformation(){}
+    inline virtual ~ArmCommonProcessorInformation(){}
 
   private:
     /** Default constructor
      *\note NOT implemented */
-    ARMProcessorInformation();
+    ArmCommonProcessorInformation();
     /** Copy-constructor
      *\note NOT implemented */
-    ARMProcessorInformation(const ARMProcessorInformation &);
+    ArmCommonProcessorInformation(const ArmCommonProcessorInformation &);
     /** Assignment operator
      *\note NOT implemented */
-    ARMProcessorInformation &operator = (const ARMProcessorInformation &);
+    ArmCommonProcessorInformation &operator = (const ArmCommonProcessorInformation &);
 
     /** Identifier of that processor */
     ProcessorId m_ProcessorId;
     /** The current VirtualAddressSpace */
     VirtualAddressSpace *m_VirtualAddressSpace;
+#ifdef THREADS
+    /** The current thread */
+    Thread *m_pCurrentThread;
+    /** The processor's scheduler. */
+    PerProcessorScheduler m_Scheduler;
+#endif
 };
 
 /** @} */
+
+//
+// Part of the implementation
+//
+uintptr_t ArmCommonProcessorInformation::getKernelStack() const
+{
+    /// \todo Write - or is this TSS-specific from x86
+    return 0;
+}
+void ArmCommonProcessorInformation::setKernelStack(uintptr_t stack)
+{
+    /// \todo Write
+}
 
 #endif

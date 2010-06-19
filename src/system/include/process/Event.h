@@ -28,11 +28,16 @@
 
 #if defined(X86) || defined(X64) || defined(PPC32)
   #define EVENT_BASE                0x80000000
-  #define EVENT_HANDLER_TRAMPOLINE  (EVENT_BASE+0)
-  #define EVENT_HANDLER_TRAMPOLINE2 (EVENT_BASE+0x100) /// \todo Temporary fix so I can test my pthreads stuff...
-  #define EVENT_HANDLER_BUFFER      (EVENT_BASE+0x1000)
-  #define EVENT_HANDLER_END         (EVENT_HANDLER_BUFFER + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
+#elif defined(ARMV7)
+  #define EVENT_BASE                0x3F000000
+#else
+  #define EVENT_BASE                0
 #endif
+
+#define EVENT_HANDLER_TRAMPOLINE  (EVENT_BASE+0)
+#define EVENT_HANDLER_TRAMPOLINE2 (EVENT_BASE+0x100) /// \todo Temporary fix so I can test my pthreads stuff...
+#define EVENT_HANDLER_BUFFER      (EVENT_BASE+0x1000)
+#define EVENT_HANDLER_END         (EVENT_HANDLER_BUFFER + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
 
 /** The abstract base class for an asynchronous event. An event can hold any amount of information
     up to a hard maximum size of EVENT_LIMIT (usually 4096 bytes). An event is serialized using 

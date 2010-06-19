@@ -33,7 +33,7 @@ typedef size_t ProcessorId;
   #define PROCESSOR_SPECIFIC_NAME(x) MIPSCommon##x
 #elif defined(ARM_COMMON)
   #include <processor/arm_common/ProcessorInformation.h>
-  #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
+  #define PROCESSOR_SPECIFIC_NAME(x) ArmCommon##x
 #elif defined(PPC_COMMON)
   #include <processor/ppc_common/ProcessorInformation.h>
   #define PROCESSOR_SPECIFIC_NAME(x) PPCCommon##x
