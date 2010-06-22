@@ -102,7 +102,7 @@ general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS']
 
 # ARM CFLAGS and CXXFLAGS
 default_arm_cflags = ' '
-default_arm_cxxflags = ' -fno-rtti '
+default_arm_cxxflags = ' '
 
 # ARM assembler flags
 default_arm_asflags = ''

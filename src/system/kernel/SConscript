@@ -76,7 +76,7 @@ libraries = [
     'gcc'
 ]
 
-if env['ARCH_TARGET'] in ['X86', 'X64']:
+if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
     libraries += ['kernelrtti']
 
 # To add a library path add to the list below

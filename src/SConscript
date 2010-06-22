@@ -9,11 +9,11 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'system'
+    'system', 'modules'
 ]
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
-    subdirs += ['subsys', 'modules', 'user']
+    subdirs += ['subsys', 'user']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
