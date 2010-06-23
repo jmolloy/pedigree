@@ -35,6 +35,11 @@
 #define SYSCALL_TARGET_FOUND
 #endif
 
+#ifdef ARM_COMMON
+#include "syscall-arm.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
 #ifndef SYSCALL_TARGET_FOUND
 #error Syscall target not found!
 #endif

@@ -95,7 +95,7 @@ else:
     module_subdirs += ['init']
     
 if env['ARCH_TARGET'] == 'ARM':
-    module_subdirs = filter(lambda x: x not in ['TUI', 'linker', 'splash'], module_subdirs)
+    module_subdirs = filter(lambda x: x not in ['splash'], module_subdirs)
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
