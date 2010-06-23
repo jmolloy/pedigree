@@ -102,7 +102,7 @@ tmp.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LS
 
 # TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
 glueFlags = " -fno-exceptions "
-if env['ARCH_TARGET'] == 'X64':
+if env['ARCH_TARGET'] in ['X64', 'ARM']:
     glueFlags += " -fPIC "
 
 tmp_glue = tmp.Clone()

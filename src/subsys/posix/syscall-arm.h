@@ -23,7 +23,7 @@ static long syscall0(long function)
     long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret;
     asm volatile("mov r0, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num));
     return ret;
@@ -35,7 +35,7 @@ static long syscall1(long function, long p1)
     long ret;
     asm volatile("mov r0, %1; \
                   mov r1, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1));
     return ret;
@@ -48,7 +48,7 @@ static long syscall2(long function, long p1, long p2)
     asm volatile("mov r0, %1; \
                   mov r1, %1; \
                   mov r2, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2));
     return ret;
@@ -62,7 +62,7 @@ static long syscall3(long function, long p1, long p2, long p3)
                   mov r1, %1; \
                   mov r2, %1; \
                   mov r3, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
     return ret;
@@ -79,7 +79,7 @@ static long syscall4(long function, long p1, long p2, long p3, long p4)
                   mov r1, %1; \
                   mov r2, %1; \
                   mov r3, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
     */
@@ -95,7 +95,7 @@ static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
                   mov r1, %1; \
                   mov r2, %1; \
                   mov r3, %1; \
-                  swi; \
+                  swi #0; \
                   mov %0, r0; \
                   mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
     */

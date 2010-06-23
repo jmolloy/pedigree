@@ -69,7 +69,7 @@ tmp_lib = tmp.Clone()
 
 # -fPIC for libpedigree-c
 glueFlags = " -fno-exceptions "
-if env['ARCH_TARGET'] == 'X64':
+if env['ARCH_TARGET'] in ['X64', 'ARM']:
     glueFlags += " -fPIC "
 
 tmp_lib['CFLAGS'] = tmp_lib['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
