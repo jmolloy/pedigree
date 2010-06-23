@@ -58,8 +58,10 @@ if env['ARCH_TARGET'] == 'X86':
     suffix = '-i686'
 elif env['ARCH_TARGET'] == 'X64':
     suffix = '-amd64'
-if env['ARCH_TARGET'] == 'PPC':
+elif env['ARCH_TARGET'] == 'PPC':
     suffix = '-ppc'
+elif env['ARCH_TARGET'] == 'ARM':
+    suffix = '-arm'
 
 posix_files += ["sigret" + suffix + ".s"]
 
@@ -137,7 +139,9 @@ if env['ARCH_TARGET'] == 'X86':
 elif env['ARCH_TARGET'] == 'X64':
     libc_arch = 'amd64'
 elif env['ARCH_TARGET'] == 'PPC':
-    driver_arch = 'ppc'
+    libc_arch = 'ppc'
+elif env['ARCH_TARGET'] == 'ARM':
+    libc_arch = 'arm'
 
 base = tmp.Dir("#")
 baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")

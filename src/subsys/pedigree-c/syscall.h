@@ -18,7 +18,7 @@
 #define _PEDIGREE_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define PEDIGREEC_SYSCALL_SERVICE 4
+#define POSIX_SYSCALL_SERVICE 1
 
 #ifdef X86
 #include "syscall-i686.h"
@@ -32,6 +32,11 @@
 
 #ifdef PPC_COMMON
 #include "syscall-ppc.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
+#ifdef ARM_COMMON
+#include "syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 

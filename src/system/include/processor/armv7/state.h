@@ -84,6 +84,9 @@ class ARMV7InterruptState
     /** Get the syscall function number
      *\return the syscall function number */
     inline size_t getSyscallNumber() const;
+    /** Get the n'th parameter for this syscall. */
+    inline uintptr_t getSyscallParameter(size_t n) const;
+    inline void setSyscallReturnValue(uintptr_t val);
 
   private:
     /** The default constructor
@@ -173,27 +176,32 @@ size_t ARMV7InterruptState::getRegisterSize(size_t index) const
 
 bool ARMV7InterruptState::kernelMode() const
 {
-  // TODO: the ARMV7 is NOT always in kernel mode, handle this properly
-  // This'll require some reading up on the CPSR mode bits
     uint32_t cpsr;
     asm volatile("mrs %0, cpsr" : "=r" (cpsr));
     return ((cpsr & 0x1F) != 0x10);
 }
 size_t ARMV7InterruptState::getInterruptNumber() const
 {
-  // TODO: implement
-  return 0;
+    /// \todo implement
+    return 0;
 }
 
 size_t ARMV7InterruptState::getSyscallService() const
 {
-  // TODO: implement
-  return 0;
+    /// \todo implement
+    return 0;
 }
 size_t ARMV7InterruptState::getSyscallNumber() const
 {
-  // TODO: implement
-  return 0;
+    /// \todo implement
+    return 0;
+}
+uintptr_t ARMV7InterruptState::getSyscallParameter(size_t n) const
+{
+    return 0;
+}
+void ARMV7InterruptState::setSyscallReturnValue(uintptr_t val)
+{
 }
 
 #endif
