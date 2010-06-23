@@ -347,7 +347,14 @@ void PosixSubsystem::exit(int code)
 
     // Should NEVER get here.
     /// \note asm volatile
-    for (;;) asm volatile("xor %eax, %eax");
+    for (;;)
+#if defined(X86_COMMON)
+        asm volatile("xor %eax, %eax");
+#elif defined(ARM_COMMON)
+        asm volatile("mov r0, #0");
+#else
+        ;
+#endif
 }
 
 bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)

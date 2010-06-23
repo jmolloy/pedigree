@@ -582,7 +582,14 @@ int posix_exit(int code)
 
     // Should NEVER get here.
     /// \note asm volatile
-    for (;;) asm volatile("xor %eax, %eax");
+    for (;;)
+#if defined(X86_COMMON)
+        asm volatile("xor %eax, %eax");
+#elif defined(ARM_COMMON)
+        asm volatile("mov r0, #0");
+#else
+        ;
+#endif
 
     // Makes the compiler happyface again
     return 0;

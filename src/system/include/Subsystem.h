@@ -22,6 +22,8 @@ class Thread;
 #include <processor/state.h>
 class Process;
 
+#include <Log.h>
+
 /** The abstract base class for a generic application subsystem. This provides
   * a well-defined interface to the kernel that allows global behaviour to have
   * correct results on different applications. This also allows the kernel to
