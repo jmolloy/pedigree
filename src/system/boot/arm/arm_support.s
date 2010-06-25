@@ -16,9 +16,14 @@
 
 .extern __start
 .global start
+.global init_stacks
 
 .section .init
 start:
+    
+    bl __start
+
+init_stacks:
 
     # Read the CPSR, mask out the lower 6 bits, and enter FIQ mode
     mrs r0, cpsr
@@ -47,7 +52,7 @@ start:
     
     ldr sp, =stack_svc+0x10000
     
-    bl __start
+    bx lr
 
 .section .bss
 .comm stack_svc, 0x10000
