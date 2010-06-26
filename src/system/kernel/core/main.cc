@@ -60,6 +60,8 @@
 #include <utilities/ZombieQueue.h>
 #endif
 
+#include <Module.h>
+
 void apmm()
 {
 }
@@ -96,9 +98,23 @@ void apMain()
   return 0;
 }*/
 
+extern ModuleInfo *start_modinfo;
+extern ModuleInfo *end_modinfo;
+
 /** Loads all kernel modules */
 int loadModules(void *inf)
 {
+#ifdef STATIC_DRIVERS
+
+    while(start_modinfo != end_modinfo)
+    {
+        NOTICE("Module name: " << start_modinfo->name);
+        start_modinfo++;
+    }
+
+    return 0;
+
+#else
     BootstrapStruct_t bsInf = *static_cast<BootstrapStruct_t*>(inf);
 
     /// \note We have to do this before we call Processor::initialisationDone() otherwise the
@@ -122,6 +138,7 @@ int loadModules(void *inf)
     #endif
 
     return 0;
+#endif
 }
 
 /** Kernel entry point. */
@@ -159,10 +176,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
 
-#ifndef ARM_COMMON
+#ifndef STATIC_DRIVERS // initrd needed if drivers aren't statically linked.
   if (bsInf.isInitrdLoaded() == false)
     panic("Initrd module not loaded!");
+#endif
 
+#ifndef ARM_COMMON
   KernelCoreSyscallManager::instance().initialise();
 #endif
 

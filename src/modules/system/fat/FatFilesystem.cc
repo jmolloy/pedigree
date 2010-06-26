@@ -989,22 +989,6 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     return setEnt;
 }
 
-char toUpper(char c)
-{
-    if (c < 'a' || c > 'z')
-        return c; // special chars
-    c += ('A' - 'a');
-    return c;
-}
-
-char toLower(char c)
-{
-    if (c < 'A' || c > 'Z')
-        return c; // special chars
-    c -= ('A' - 'a');
-    return c;
-}
-
 String FatFilesystem::convertFilenameTo(String filename)
 {
     static NormalStaticString ret;
@@ -1260,16 +1244,14 @@ bool FatFilesystem::remove(File* parent, File* file)
     return true;
 }
 
-void initFat()
+static void initFat()
 {
     VFS::instance().addProbeCallback(&FatFilesystem::probe);
 }
 
-void destroyFat()
+static void destroyFat()
 {
 }
 
-MODULE_NAME("fat");
-MODULE_ENTRY(&initFat);
-MODULE_EXIT(&destroyFat);
-MODULE_DEPENDS("vfs");
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("fat", &initFat, &destroyFat, __mod_deps);

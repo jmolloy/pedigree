@@ -494,16 +494,13 @@ bool ConsoleManager::hasDataAvailable(File* file)
     return static_cast<bool>(pFile->m_pBackEnd->addRequest(1,CONSOLE_DATA_AVAILABLE, pFile->m_Param));
 }
 
-void initConsole()
+static void initConsole()
 {
 }
 
-void destroyConsole()
+static void destroyConsole()
 {
 }
 
-MODULE_NAME("console");
-MODULE_ENTRY(&initConsole);
-MODULE_EXIT(&destroyConsole);
-MODULE_DEPENDS("vfs");
-
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("console", &initConsole, &destroyConsole, __mod_deps);

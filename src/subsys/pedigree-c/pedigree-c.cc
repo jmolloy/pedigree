@@ -23,16 +23,14 @@
 
 PedigreeCSyscallManager g_PedigreeCSyscallManager;
 
-void init()
+static void init()
 {
     g_PedigreeCSyscallManager.initialise();
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("pedigree-c");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS(0);
+static const char *__mod_deps[] = {0};
+MODULE_INFO("pedigree-c", &init, &destroy, __mod_deps);

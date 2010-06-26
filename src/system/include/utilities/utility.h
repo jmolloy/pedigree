@@ -101,6 +101,22 @@ const char *strrchr(const char *str, int target);
 
 unsigned long strtoul(const char *nptr, char **endptr, int base);
 
+inline char toUpper(char c)
+{
+    if (c < 'a' || c > 'z')
+        return c; // special chars
+    c += ('A' - 'a');
+    return c;
+}
+
+inline char toLower(char c)
+{
+    if (c < 'A' || c > 'Z')
+        return c; // special chars
+    c -= ('A' - 'a');
+    return c;
+}
+
 #ifdef __cplusplus
 }
 #endif

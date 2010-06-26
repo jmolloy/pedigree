@@ -25,16 +25,14 @@
 
 PosixSyscallManager g_PosixSyscallManager;
 
-void init()
+static void init()
 {
   g_PosixSyscallManager.initialise();
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("posix");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS("console", "TUI");
+static const char *__mod_deps[] = {"console", "TUI", 0};
+MODULE_INFO("posix", &init, &destroy, __mod_deps);

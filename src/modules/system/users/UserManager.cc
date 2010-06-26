@@ -172,15 +172,13 @@ void UserManager::initialise()
   pProcess->setGroup(pUser->getDefaultGroup());
 }
 
-void init()
+static void init()
 {
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("users");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS(0);
+static const char *__mod_deps[] = {0};
+MODULE_INFO("users", &init, &destroy, __mod_deps);

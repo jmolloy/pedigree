@@ -45,6 +45,7 @@ extern "C" int atoi(const char *str)
     return strtoul(str, 0, 10);
 }
 
+/*
 extern "C" int memcmp(const void *s1, const void *s2, size_t n)
 {
     const unsigned char *c1 = reinterpret_cast<const unsigned char*>(s1);
@@ -54,6 +55,7 @@ extern "C" int memcmp(const void *s1, const void *s2, size_t n)
             return (c1[i]>c2[i]) ? 1 : -1;
     return 0;
 }
+*/
 
 int xClose(sqlite3_file *file)
 {
@@ -369,7 +371,7 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
 
 sqlite3 *g_pSqlite = 0;
 
-void init()
+static void init()
 {
     if (!g_pBootstrapInfo->isDatabaseLoaded())
         FATAL("Database not loaded, cannot continue.");
@@ -410,11 +412,9 @@ void init()
     sqlite3_create_function(g_pSqlite, "pedigree_callback", 3, SQLITE_ANY, 0, &xCallback2, 0, 0);
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("config");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS(0);
+static const char *__mod_deps[] = {0};
+MODULE_INFO("loopback", &init, &destroy, __mod_deps);

@@ -61,7 +61,5 @@ void exit()
 {
 }
 
-MODULE_NAME("nvidia");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("TUI", "pci", "vbe");
+const char *__mod_deps[] = {"TUI", "pci", "vbe", 0};
+MODULE_INFO("nvidia", &entry, &exit, __mod_deps);

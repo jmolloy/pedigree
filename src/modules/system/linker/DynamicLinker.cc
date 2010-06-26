@@ -386,16 +386,15 @@ bool DLTrapHandler::trap(uintptr_t address, bool bIsWrite)
     return pL->trap(address);
 }
 
-void init()
+static void init()
 {
     KernelCoreSyscallManager::instance().registerSyscall(KernelCoreSyscallManager::link, &DynamicLinker::resolvePlt);
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("linker");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS("vfs");
+
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("linker", &init, &destroy, __mod_deps);

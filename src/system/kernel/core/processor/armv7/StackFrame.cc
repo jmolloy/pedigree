@@ -24,4 +24,36 @@ uintptr_t ARMV7StackFrame::getParameter(size_t n)
     return 0;
 }
 
+void ARMV7StackFrame::construct(ProcessorState &state,
+                              uintptr_t returnAddress,
+                              unsigned int nParams,
+                              ...)
+{
+  // Obtain the stack pointer.
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+  
+  // How many parameters do we need to push?
+  // We push in reverse order but must iterate through the va_list in forward order,
+  // so we decrement the stack pointer here.
+  pStack -= nParams+1; // +1 for return address.
+  uintptr_t *pStackLowWaterMark = pStack;
+  
+  *pStack++ = returnAddress;
+  
+  va_list list;
+  va_start(list, nParams);
+  
+  for(int i = nParams-1; i >= 0; i--)
+  {
+    *pStack++ = va_arg(list, uintptr_t);
+  }
+  
+  va_end(list);
+  
+  // Write the new stack pointer back.
+  state.setStackPointer(reinterpret_cast<uintptr_t> (pStackLowWaterMark));
+}
+
+
+
 #endif

@@ -64,7 +64,7 @@ elif env['ARCH_TARGET'] == 'ARM':
     ]
     
     # Filter out useless drivers for ARM
-    driver_common_subdirs = filter(lambda x: x not in ['ata', 'dma', 'cdi'], driver_common_subdirs)
+    driver_common_subdirs = filter(lambda x: x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x', 'uhci'], driver_common_subdirs)
     cdi_drivers = []
 
 env['cdi_driver_list'] = cdi_drivers
@@ -95,7 +95,7 @@ else:
     module_subdirs += ['init']
     
 if env['ARCH_TARGET'] == 'ARM':
-    module_subdirs = filter(lambda x: x not in ['splash'], module_subdirs)
+    module_subdirs = filter(lambda x: x not in ['splash', 'TUI'], module_subdirs)
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
@@ -154,4 +154,9 @@ env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
 env.Alias("initrd", initrdFile)
-env.Command(initrdFile, None, '@echo Building initrd... && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
+
+if('STATIC_DRIVERS' in env['CPPDEFINES']):
+    env.Depends("kernel", initrdList) # Kernel depends on all drivers/modules
+    env['INITRD_LIST'] = initrdList
+else:
+    env.Command(initrdFile, None, '@echo Building initrd... && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)

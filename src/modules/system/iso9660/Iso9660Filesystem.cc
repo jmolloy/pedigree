@@ -229,22 +229,6 @@ uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
   return buff;
 }
 
-char toUpper(char c)
-{
-  if(c < 'a' || c > 'z')
-    return c; // special chars
-  c += ('A' - 'a');
-  return c;
-}
-
-char toLower(char c)
-{
-  if(c < 'A' || c > 'Z')
-    return c; // special chars
-  c -= ('A' - 'a');
-  return c;
-}
-
 bool Iso9660Filesystem::createFile(File *parent, String filename, uint32_t mask)
 {
   return false;
@@ -324,16 +308,14 @@ File *Iso9660Filesystem::fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNu
   }
 }
 
-void initIso9660()
+static void initIso9660()
 {
   VFS::instance().addProbeCallback(&Iso9660Filesystem::probe);
 }
 
-void destroyIso9660()
+static void destroyIso9660()
 {
 }
 
-MODULE_NAME("iso9660");
-MODULE_ENTRY(&initIso9660);
-MODULE_EXIT(&destroyIso9660);
-MODULE_DEPENDS("vfs");
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("iso9660", &initIso9660, &destroyIso9660, __mod_deps);

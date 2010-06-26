@@ -116,15 +116,13 @@ void FileDisk::align(uint64_t location)
     m_AlignPoints[m_nAlignPoints++] = location;
 }
 
-void init()
+static void init()
 {
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("lodisk");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS("vfs");
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("lodisk", &init, &destroy, __mod_deps);

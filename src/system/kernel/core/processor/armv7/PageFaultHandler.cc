@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008 James Molloy, JÃ¶rg PfÃ¤hler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,16 +14,27 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Module.h>
+#include <Log.h>
+#include <Debugger.h>
+#include <processor/PageFaultHandler.h>
+#include <process/Scheduler.h>
+#include <panic.h>
+#include <processor/PhysicalMemoryManager.h>
 
-static void entry()
+/// \todo Implement
+
+PageFaultHandler PageFaultHandler::m_Instance;
+
+bool PageFaultHandler::initialise()
+{
+    return true;
+}
+
+void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
 }
 
-static void exit()
+PageFaultHandler::PageFaultHandler() :
+    m_Handlers()
 {
-
 }
-
-static const char *__mod_deps[] = {"network-stack", 0};
-MODULE_INFO("loopback", &entry, &exit, __mod_deps);

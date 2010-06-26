@@ -868,11 +868,14 @@ NOTICE("stl: " << Hex << sparseTreeLoc  <<", dl: " << dataLoc << ", stz: " << sp
     uint8_t *data = new uint8_t[dataSz];
     memcpy(data, &buf[dataLoc], dataSz);
 
+#ifndef ARM_COMMON /// \todo Implement... even though there IS no keyboard on
+                   ///       most devices...
     extern uint8_t *g_pSparseTable;
     extern uint8_t *g_pDataTable;
 
     g_pSparseTable = sparseTree;
     g_pDataTable = data;
+#endif
 
     return 0;
 }

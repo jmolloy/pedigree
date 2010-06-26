@@ -201,7 +201,7 @@ DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
   return ret;
 }
 
-void entry()
+static void entry()
 {
 #ifdef X64
     //return;
@@ -572,11 +572,9 @@ void entry()
   NOTICE("DHCP Client: Complete");
 }
 
-void exit()
+static void exit()
 {
 }
 
-MODULE_NAME("dhcpclient");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("network-stack");
+static const char *__mod_deps[] = {"network-stack", 0};
+MODULE_INFO("dhcpclient", &entry, &exit, __mod_deps);

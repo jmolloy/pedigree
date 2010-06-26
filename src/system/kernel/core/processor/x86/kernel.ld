@@ -32,12 +32,20 @@ SECTIONS
     start_ctors = .;
     *(.ctors)
     end_ctors = .;
+    
+    start_module_ctors = .;
+    *(.module_ctors)
+    end_module_ctors = .;
 
 
     data = .; _data = .; __data = .;
     *(.data)
     *(.rodata*)
     . = ALIGN(4096);
+    
+    start_modinfo = .;
+    *(.modinfo);
+    end_modinfo = .;
   }
 
   .bss : AT(ADDR(.bss) - 0xFF300000)

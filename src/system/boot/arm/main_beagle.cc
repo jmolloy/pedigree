@@ -731,7 +731,7 @@ struct SecondLevelDescriptor
     } descriptor;
 } PACKED;
 
-extern "C" void __start(uint32_t r0, uint32_t machineType, uint32_t tagList)
+extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 {
     BeagleGpio gpio;
     
@@ -889,20 +889,6 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, uint32_t tagList)
         elf.m_pSectionHeaders[i].addr = elf.m_pSectionHeaders[i].offset + (uint32_t)elf.m_pBuffer;
     }
     writeStr(3, "Done!\r\n");
-
-    writeStr(3, "First tag: ");
-    writeHex(3, *reinterpret_cast<uint32_t*>(tagList));
-    writeStr(3, "\r\n");
-    writeStr(3, "Machine type: ");
-    writeHex(3, machineType);
-    writeStr(3, "\r\n");
-    writeStr(3, "r0: ");
-    writeHex(3, r0);
-    writeStr(3, "\r\n");
-    writeStr(3, "tag list: ");
-    writeHex(3, tagList);
-    writeStr(3, "\r\n");
-    while(1);
 
     // Just before running the kernel proper, turn off both LEDs so we can use
     // their states for debugging the kernel.

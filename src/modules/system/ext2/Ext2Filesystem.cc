@@ -447,16 +447,14 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
     }
 }
 
-void initExt2()
+static void initExt2()
 {
     VFS::instance().addProbeCallback(&Ext2Filesystem::probe);
 }
 
-void destroyExt2()
+static void destroyExt2()
 {
 }
 
-MODULE_NAME("ext2");
-MODULE_ENTRY(&initExt2);
-MODULE_EXIT(&destroyExt2);
-MODULE_DEPENDS("vfs");
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("ext2", &initExt2, &destroyExt2, __mod_deps);

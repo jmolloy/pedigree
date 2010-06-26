@@ -329,16 +329,13 @@ bool VFS::remove(String path, File *pStartNode)
     }
 }
 
-void initVFS()
+static void initVFS()
 {
 }
 
-void destroyVFS()
+static void destroyVFS()
 {
 }
 
-MODULE_NAME("vfs");
-MODULE_ENTRY(&initVFS);
-MODULE_EXIT(&destroyVFS);
-MODULE_DEPENDS(0);
-
+static const char *__mod_deps[] = {0};
+MODULE_INFO("vfs", &initVFS, &destroyVFS, __mod_deps);

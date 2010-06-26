@@ -95,7 +95,7 @@ bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dat
     return false;
 }
 
-void entry()
+static void entry()
 {
     // Install the Partition Service
     pService = new PartitionService;
@@ -108,14 +108,16 @@ void entry()
     searchNode(pDev);
 }
 
-void exit()
+static void exit()
 {
     ServiceManager::instance().removeService(String("partition"));
     delete pService;
     delete pFeatures;
 }
 
-MODULE_NAME("partition");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("ata");
+#ifndef ARM_COMMON // No ATA controller
+static const char *__mod_deps[] = {"ata", 0};
+#else
+static const char *__mod_deps[] = {0};
+#endif
+MODULE_INFO("partition", &entry, &exit, __mod_deps);

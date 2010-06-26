@@ -16,17 +16,15 @@
 
 #include <Module.h>
 
-void entry()
+static void entry()
 {
 
 }
 
-void exit()
+static void exit()
 {
 
 }
 
-MODULE_NAME("usb");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS(0);
+static const char *__mod_deps[] = {0};
+MODULE_INFO("usb", &entry, &exit, __mod_deps);

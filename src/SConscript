@@ -9,7 +9,7 @@ Import(['env'])
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    'system', 'subsys', 'modules'
+    'subsys', 'modules', 'system'
 ]
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:

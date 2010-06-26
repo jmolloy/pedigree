@@ -33,9 +33,10 @@ include = [
 ]
 
 # To add a library add to the list below
-libraries = [
-    'gcc'
-]
+if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+    libraries = []
+else:
+    libraries = ['gcc']
 
 # To add a library path add to the list below
 libpaths = [
@@ -54,4 +55,7 @@ if tmp['ARCH_TARGET'] == 'X64':
 #^-- Stupid way of doing it but I plan on adding processing.
 
 if not len(files) == 0:
-    build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
+    if "STATIC_DRIVERS" in env['CPPDEFINES']:
+        build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r')
+    else:
+        build = tmp.Program(objname,tmp.objects,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))

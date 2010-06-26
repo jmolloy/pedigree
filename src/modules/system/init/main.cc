@@ -111,7 +111,7 @@ static bool findDisks(Device *pDev)
     return false;
 }
 
-void init()
+static void init()
 {
     static HugeStaticString str;
 
@@ -257,7 +257,7 @@ void init()
     #warning the init module is almost useless without threads.
 #endif
 }
-void destroy()
+static void destroy()
 {
 }
 
@@ -314,12 +314,12 @@ void init_stage2()
 #endif
 }
 
-MODULE_NAME("init");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("vfs", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c");
+static const char *__mod_deps[] = {"vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c", 0};
 #elif PPC_COMMON
-MODULE_DEPENDS("vfs", "ext2", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c");
+static const char *__mod_deps[] = {"vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", 0};
+MODULE_DEPENDS();
+#elif ARM_COMMON
+static const char *__mod_deps[] = {"vfs" "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", 0};
 #endif
-
+MODULE_INFO("init", &init, &destroy, __mod_deps);

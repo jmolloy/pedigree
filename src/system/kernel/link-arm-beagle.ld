@@ -29,15 +29,22 @@ SECTIONS
         *(.init_array);
         *(.ctors);
         end_ctors = .;
+    
+        start_module_ctors = .;
+        *(.module_ctors);
+        end_module_ctors = .;
     }
 
     .data :
     {
-        
         . = ALIGN(4096);
         data = .; _data = .; __data = .;
         *(.data);
         *(.rodata*);
+        
+        start_modinfo = .;
+        *(.modinfo);
+        end_modinfo = .;
     }
 
     .bss :

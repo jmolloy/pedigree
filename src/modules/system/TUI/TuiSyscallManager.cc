@@ -276,20 +276,18 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     return 0;
 }
 
-void init()
+static void init()
 {
     g_TuiSyscallManager.initialise();
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("TUI");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
 #ifdef X86_COMMON
-MODULE_DEPENDS("console", "vbe");
+static const char *__mod_deps[] = {"console", "vbe", 0};
 #else
-MODULE_DEPENDS("console");
+static const char *__mod_deps[] = {"console", 0};
 #endif
+MODULE_INFO("TUI", &init, &destroy, __mod_deps);

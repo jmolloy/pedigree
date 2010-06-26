@@ -112,18 +112,15 @@ void NetworkStack::deRegisterDevice(Network *pDevice)
   }
 }
 
-void entry()
+static void entry()
 {
     // Initialise the DNS implementation
     Dns::instance().initialise();
 }
 
-void exit()
+static void exit()
 {
 }
 
-
-MODULE_NAME("network-stack");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("vfs");
+static const char *__mod_deps[] = {"vfs", 0};
+MODULE_INFO("network-stack", &entry, &exit, __mod_deps);
