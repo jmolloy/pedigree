@@ -11,7 +11,7 @@ generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno
 #generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=c++0x') + ' -fno-rtti -fno-exceptions '
 
 # Warning flags (that force us to write betterish code)
-warning_flags = '-Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
+warning_flags = '-Wfatal-errors -Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
 
 # Language-specific warnings
 warning_flags_c = '-Wnested-externs '
