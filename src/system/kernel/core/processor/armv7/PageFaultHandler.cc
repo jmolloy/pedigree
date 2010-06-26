@@ -34,7 +34,6 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
 }
 
-PageFaultHandler::PageFaultHandler() :
-    m_Handlers()
+PageFaultHandler::PageFaultHandler()
 {
 }
