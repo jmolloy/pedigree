@@ -13,6 +13,7 @@ kerneldir = Dir("#" + env["PEDIGREE_BUILD_KERNEL"]).abspath
 objname = builddir + '/bootloader'
 uimage = builddir + '/uImage.bin'
 ramdisk = builddir + '/ramdisk.gz'
+kernel = kerneldir + '/kernel'
 initrd = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
 
 env.Alias("kernel", objname)
@@ -81,6 +82,7 @@ if env['arm_beagle']:
     # Set up the uboot image
     # filesystem, firmware, kernel, multi, ramdisk, script, standalone
     kernelType = "linux"
-    env.Command(uimage, objname, 'arm-elf-objcopy -O binary ' + env.File(objname).abspath + ' ' + env.File(objname).abspath + '.flt && mkimage -A arm -O ' + kernelType + ' -T kernel -C none -a 0x80008000 -e 0x80008000 -n "pedigree" -d ' + env.File(objname).abspath + '.flt ' + env.File(uimage).abspath + ' && cp ' + env.File(uimage).abspath + ' ' + env['uimage_target'])
+    loadAddr = "0x87000000"
+    env.Command(uimage, objname, 'arm-elf-objcopy -O binary ' + env.File(objname).abspath + ' ' + env.File(objname).abspath + '.flt && mkimage -A arm -O ' + kernelType + ' -T kernel -C none -a ' + loadAddr + ' -e ' + loadAddr + ' -n "pedigree" -d ' + env.File(objname).abspath + '.flt ' + env.File(uimage).abspath + ' && cp ' + env.File(uimage).abspath + ' ' + env['uimage_target'])
     # env.Command(ramdisk, initrd, 'mkimage -A arm -O ' + kernelType + ' -T ramdisk -C gzip -a 0 -e 0 -n "pedigree-ramdisk" -d ' + env.File(initrd).abspath + ' ' + env.File(ramdisk).abspath + ' && cp ' + env.File(ramdisk).abspath + ' ' + env['uimage_target'])
 

@@ -309,7 +309,7 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x40000000)
-#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80100000)
+#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80008000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xA0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFF3FFFFC)
