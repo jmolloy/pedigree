@@ -40,9 +40,11 @@ files = [
     Glob('core/lib/*.cc'),
     Glob('core/lib/*.c'),
     Glob('config/*.cc'),
-    Glob('network/*.cc'),
-    env['INITRD_LIST']
+    Glob('network/*.cc')
 ]
+
+if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+    files += env['INITRD_LIST']
 
 if 'DEBUGGER' in env['CPPDEFINES']:
     files += [

@@ -875,13 +875,17 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
     writeStr(3, " Done!\r\n");
     int (*main)(struct BootstrapStruct_t*) = (int (*)(struct BootstrapStruct_t*)) elf.getEntryPoint();
 
-    struct BootstrapStruct_t bs;
+    struct BootstrapStruct_t *bs = reinterpret_cast<struct BootstrapStruct_t *>(0x80008000);
     writeStr(3, "Creating bootstrap information structure... ");
-    memset(&bs, 0, sizeof(bs));
-    bs.shndx = elf.m_pHeader->shstrndx;
-    bs.num = elf.m_pHeader->shnum;
-    bs.size = elf.m_pHeader->shentsize;
-    bs.addr = (unsigned int)elf.m_pSectionHeaders;
+    memset(bs, 0, sizeof(bs));
+    bs->shndx = elf.m_pHeader->shstrndx;
+    bs->num = elf.m_pHeader->shnum;
+    bs->size = elf.m_pHeader->shentsize;
+    bs->addr = (unsigned int)elf.m_pSectionHeaders;
+
+    // Repurpose these variables a little....
+    bs->mods_addr = reinterpret_cast<uint32_t>(elf.m_pBuffer);
+    bs->mods_count = sizeof file;
 
     // For every section header, set .addr = .offset + m_pBuffer.
     for (int i = 0; i < elf.m_pHeader->shnum; i++)
@@ -897,7 +901,7 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     // Run the kernel, finally
     writeStr(3, "Now starting the Pedigree kernel (can take a while, please wait).\r\n\r\n");
-    main(&bs);
+    main(bs);
 #endif
     
     while (1)

@@ -29,6 +29,18 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
     // Initialise this processor's interrupt handling
     ARMV7InterruptManager::initialiseProcessor();
 
+    // Map in the base ELF file we loaded from
+    /// \todo Unmap.
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    
+    uintptr_t mapBase   = Info.mods_addr;
+    size_t mapLen       = Info.mods_count;
+
+    for(size_t i = 0; i < mapLen; i+= 0x1000)
+    {
+        va.map(mapBase + i, reinterpret_cast<void*>(mapBase + i), VirtualAddressSpace::KernelMode);
+    }
+
     m_Initialised = 1;
 }
 

@@ -4,7 +4,7 @@ OUTPUT_ARCH(arm)
 ENTRY(start)
 SECTIONS
 {
-    . = 0x80008000;
+    . = 0x80100000;
     __start = .;
     
     .init :

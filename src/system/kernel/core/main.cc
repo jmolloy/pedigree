@@ -98,8 +98,10 @@ void apMain()
   return 0;
 }*/
 
+#ifdef STATIC_DRIVERS
 extern ModuleInfo *start_modinfo;
 extern ModuleInfo *end_modinfo;
+#endif
 
 /** Loads all kernel modules */
 int loadModules(void *inf)
@@ -141,21 +143,9 @@ int loadModules(void *inf)
 #endif
 }
 
-#ifdef ARM_COMMON
-extern "C"
-{
-    extern void init_stacks();
-};
-#endif
-
 /** Kernel entry point. */
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
-#ifdef ARM_COMMON
-  // Set up stacks for IRQ, FIQ and SVC modes
-  init_stacks();
-#endif
-
   // Firstly call the constructors of all global objects.
   initialiseConstructors();
 

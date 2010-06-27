@@ -148,6 +148,8 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7SchedulerState:
     bx lr
+    
+.section .init.text
 
 .global init_stacks
 init_stacks:
