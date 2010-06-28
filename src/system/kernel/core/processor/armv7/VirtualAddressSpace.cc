@@ -449,7 +449,7 @@ bool ArmV7KernelVirtualAddressSpace::initialiseKernelAddressSpace()
     for(int i = 0; i < 4; i++) // 4 pages in the page directory
     {
         ptbl_offset = ((vaddr + (i * 0x1000)) >> 12) & 0xFF;
-        ptbl[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory + 0x1000;
+        ptbl[ptbl_offset].descriptor.entry = m_PhysicalPageDirectory + (i * 0x1000);
         ptbl[ptbl_offset].descriptor.smallpage.type = 2;
         ptbl[ptbl_offset].descriptor.smallpage.b = 0;
         ptbl[ptbl_offset].descriptor.smallpage.c = 0;
