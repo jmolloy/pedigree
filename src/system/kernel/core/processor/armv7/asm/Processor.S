@@ -133,6 +133,11 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
     str r11, [r8]
 .no_lock2:
 
+    # Enable interrupts
+    mrs r0, cpsr
+    orr r0, r0, #0x80
+    msr cpsr_c, r0
+
     # Load parameters for the call
     mov r0, r4
     mov r1, r5
