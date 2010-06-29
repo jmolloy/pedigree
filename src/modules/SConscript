@@ -23,8 +23,11 @@ driver_common_subdirs = [
     # 'rtl8139',
     'loopback',
 
+    # Pedigree-specific SCSI layer
+    'scsi',
+
     # Pedigree-specific USB drivers
-    'uhci',
+    'usb-hcd',
 
     # CDI framework (NOT the drivers)
     'cdi',
@@ -62,9 +65,9 @@ elif env['ARCH_TARGET'] == 'ARM':
     driver_arch = 'arm',
     driver_arch_subdirs = [
     ]
-    
+
     # Filter out useless drivers for ARM
-    driver_common_subdirs = filter(lambda x: x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x', 'uhci'], driver_common_subdirs)
+    driver_common_subdirs = filter(lambda x: x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x'], driver_common_subdirs)
     cdi_drivers = []
 
 env['cdi_driver_list'] = cdi_drivers
@@ -93,7 +96,7 @@ if env['installer']:
     module_subdirs += ['installer']
 else:
     module_subdirs += ['init']
-    
+
 if env['ARCH_TARGET'] == 'ARM':
     module_subdirs = filter(lambda x: x not in ['splash', 'TUI'], module_subdirs)
 

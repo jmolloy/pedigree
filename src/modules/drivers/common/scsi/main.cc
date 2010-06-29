@@ -13,18 +13,20 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
-#include <machine/Controller.h>
-#include <usb/UsbHub.h>
+#include <Module.h>
 
-class UsbController : public Controller, public UsbHub
+void entry()
 {
-    public:
 
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
-};
+}
 
-#endif
+void exit()
+{
+
+}
+
+MODULE_NAME("scsi");
+MODULE_ENTRY(&entry);
+MODULE_EXIT(&exit);
+MODULE_DEPENDS(0);

@@ -13,18 +13,29 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
-#include <machine/Controller.h>
-#include <usb/UsbHub.h>
+#ifndef FTDISERIALDEVICE_H
+#define FTDISERIALDEVICE_H
 
-class UsbController : public Controller, public UsbHub
+#include <processor/types.h>
+#include <usb/UsbDevice.h>
+#include <machine/Serial.h>
+
+class FtdiSerialDevice : public UsbDevice, public Serial
 {
     public:
+        FtdiSerialDevice (UsbDevice *dev);
+        virtual ~FtdiSerialDevice();
 
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
+        virtual void setBase(uintptr_t nBaseAddr){}
+        virtual char read();
+        virtual char readNonBlock(){return 0;}
+        virtual void write(char c);
+
+        virtual void getName(String &str)
+        {
+            str = "USB FTDI Serial Device";
+        }
 };
 
 #endif

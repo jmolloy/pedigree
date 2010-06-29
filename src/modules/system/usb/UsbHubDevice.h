@@ -13,18 +13,30 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
-#include <machine/Controller.h>
+#ifndef USBHUBDEVICE_H
+#define USBHUBDEVICE_H
+
+#include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 
-class UsbController : public Controller, public UsbHub
+class UsbHubDevice : public UsbDevice, public UsbHub
 {
     public:
+        UsbHubDevice (UsbDevice *dev);
+        virtual ~UsbHubDevice();
 
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
+        virtual void getName(String &str)
+        {
+            str = "USB Hub Device";
+        }
+
+        virtual void doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
+
+    private:
+
+        size_t m_nPorts;
 };
 
 #endif

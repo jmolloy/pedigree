@@ -13,18 +13,18 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
-#include <machine/Controller.h>
-#include <usb/UsbHub.h>
+#include "ScsiController.h"
+#include "ScsiDisk.h"
 
-class UsbController : public Controller, public UsbHub
+void ScsiController::searchDisks()
 {
-    public:
-
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
-};
-
-#endif
+    for(size_t i = 0;i < getNumUnits();i++)
+    {
+        ScsiDisk *pDisk = new ScsiDisk();
+        if(pDisk->initialise(this, i))
+            addChild(pDisk);
+        else
+            delete pDisk;
+    }
+}

@@ -1,67 +1,82 @@
 /*
-* Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
-*
-* Permission to use, copy, modify, and distribute this software for any
-* purpose with or without fee is hereby granted, provided that the above
-* copyright notice and this permission notice appear in all copies.
-*
-* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-*/
+ * Copyright (c) 2010 Eduard Burtescu
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
 #include <usb/UsbConstants.h>
 #include <usb/UsbDevice.h>
-#include <usb/UsbManager.h>
+#include <usb/UsbHub.h>
 
-ssize_t UsbDevice::setup(UsbSetup *setup)
+ssize_t UsbDevice::syncSetup(Setup *setup)
 {
-    return UsbManager::instance().setup(m_Address, setup);
+    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, 0, USB_PID_SETUP, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
 }
 
-ssize_t UsbDevice::in(void *buff, size_t size)
+ssize_t UsbDevice::syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    return UsbManager::instance().in(m_Address, 0, buff, size);
+    if(!nEndpoint && nBytes > 8)
+    {
+        for(size_t i=0;i<nBytes;)
+        {
+            ssize_t nRet = dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_IN, pBuffer+i, (nBytes-i)<8?(nBytes-i):8);
+            if(nRet < 0)
+                return nRet;
+            i += nRet;
+        }
+        return nBytes;
+    }
+    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_IN, pBuffer, nBytes);
 }
 
-ssize_t UsbDevice::in(uint8_t endpoint, void *buff, size_t size)
+ssize_t UsbDevice::syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    return UsbManager::instance().in(m_Address, endpoint, buff, size);
+    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_OUT, pBuffer, nBytes);
 }
 
-ssize_t UsbDevice::out(void *buff, size_t size)
+ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len, uintptr_t pBuffer)
 {
-    return UsbManager::instance().out(m_Address, buff, size);
-}
-
-ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len)
-{
-    UsbSetup *stp = new UsbSetup;
-    stp->req_type=req_type;
-    stp->req=req;
-    stp->val=val;
-    stp->index=index;
-    stp->len=len;
-    return setup(stp);
+    Setup *pSetup = new Setup;
+    pSetup->req_type = req_type;
+    pSetup->req = req;
+    pSetup->val = val;
+    pSetup->index = index;
+    pSetup->len = len;
+    ssize_t ret = syncSetup(pSetup);
+    if(ret < 0)
+        return ret;
+    if(len)
+    {
+        if(req_type & 0x80)
+            ret = syncIn(0, pBuffer, len);
+        else
+            ret = syncOut(0, pBuffer, len);
+    }
+    if(ret < 0)
+        return ret;
+    if(req_type & 0x80)
+        return syncOut(0, 0, 0);
+    else
+        return syncIn(0, 0, 0);
 }
 
 int16_t UsbDevice::status()
 {
-    ssize_t r = control(0x80, 0, 0, 0, 2);
+    uint16_t s;
+    ssize_t r = control(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(&s));
     if(r<0)
         return r;
-    uint16_t s;
-    in(&s, 2);
     return s;
-}
-
-bool UsbDevice::assign(uint8_t addr)
-{
-    return control(0, 5, addr, 0, 0)>0;
 }
 
 bool UsbDevice::ping()
@@ -69,66 +84,75 @@ bool UsbDevice::ping()
     return status()>=0;
 }
 
-void *UsbDevice::getDescriptor(uint8_t des, uint8_t subdes, uint16_t size)
+bool UsbDevice::assignAddress(uint8_t nAddress)
 {
-    uint8_t *buff = new uint8_t[size];
-    if(control(0x80, 6, des<<8|subdes, 0, size)>0)
+    if(!control(0, 5, nAddress, 0))
     {
-        in(buff, size);
-        return buff;
+        m_nAddress = nAddress;
+        return true;
     }
-    delete [] buff;
+    return false;
+}
+
+bool UsbDevice::useConfiguration(uint8_t nConfig)
+{
+    m_pConfiguration = m_pDescriptor->pConfigurations[nConfig];
+    return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+}
+
+bool UsbDevice::useInterface(uint8_t nInterface)
+{
+    m_pInterface = m_pConfiguration->pInterfaces[nInterface];
+    return true;
+    //return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+}
+
+void *UsbDevice::getDescriptor(uint8_t des, uint8_t subdes, uint16_t nBytes, bool bInterface)
+{
+    uint8_t *pBuffer = new uint8_t[nBytes];
+    if(control(bInterface?0x81:0x80, 6, des<<8|subdes, bInterface?m_pInterface->pDescriptor->nInterface:0, nBytes, reinterpret_cast<uintptr_t>(pBuffer))<0) {
+        delete [] pBuffer;
+        return 0;
+    }
+    return pBuffer;
+}
+
+char *UsbDevice::getString(uint8_t nString)
+{
+    if(!nString)
+        return "";
+    uint8_t descriptorLength = *static_cast<uint8_t*>(getDescriptor(3, nString, 1));
+    char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
+    if(pBuffer)
+    {
+        size_t nStrLength = (descriptorLength - 2) / 2;
+        char *pString = new char[nStrLength+1];
+        for(size_t i=0;i<nStrLength;i++)
+            pString[i] = pBuffer[2+i*2];
+        pString[nStrLength] = 0;
+        delete pBuffer;
+        return pString;
+    }
     return 0;
 }
 
-UsbInfo *UsbDevice::getUsbInfo()
+void UsbDevice::populateDescriptors()
 {
-    UsbInfo *info = new UsbInfo;
-    info->dev = static_cast<UsbDeviceDescriptor *>(getDescriptor(1, 0, sizeof(UsbDeviceDescriptor)));
-    uint8_t *config = static_cast<uint8_t *>(getDescriptor(2, 0, 0xff));
-    info->conf = reinterpret_cast<UsbConfig *>(config);
-    uint8_t ln = info->conf->total_len-info->conf->len, off=info->conf->len;
-    while(ln)
+    uint8_t descriptorLength = *static_cast<uint8_t*>(getDescriptor(1, 0, 1));
+    m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, descriptorLength));
+    m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
+    m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
+    m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
+    for(size_t i = 0;i < m_pDescriptor->pDescriptor->nConfigurations;i++)
     {
-        if(config[off+1]==4&&config[off+2]==0)
+        uint16_t configLength = static_cast<uint16_t*>(getDescriptor(2, i, 4))[1];
+        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(2, i, configLength), configLength);
+        pConfig->sString = getString(pConfig->pDescriptor->nString);
+        for(size_t j = 0;j < pConfig->pInterfaces.count();j++)
         {
-            info->iface = reinterpret_cast<UsbInterface *>(&config[off]);
-            break;
+            Interface *pInterface = pConfig->pInterfaces[j];
+            pInterface->sString = getString(pInterface->pDescriptor->nString);
         }
-        ln-=config[off];
-        off+=config[off];
+        m_pDescriptor->pConfigurations.pushBack(pConfig);
     }
-    info->str_prod = getString(info->dev->str_prod);
-    info->str_ven = getString(info->dev->str_ven);
-    info->str_conf = getString(info->conf->str);
-    info->str_iface = getString(info->iface->str);
-    if(info->dev->dev_class)
-    {
-        info->usb_class = info->dev->dev_class;
-        info->usb_subclass = info->dev->dev_subclass;
-        info->usb_protocol = info->dev->dev_proto;
-    }
-    else
-    {
-        info->usb_class = info->iface->iface_class;
-        info->usb_subclass = info->iface->iface_subclass;
-        info->usb_protocol = info->iface->iface_proto;
-    }
-    return info;
-}
-
-char *UsbDevice::getString(uint8_t str)
-{
-    char *buff2 = static_cast<char *>(getDescriptor(3, str, 0xff));
-    if(buff2)
-    {
-        int sl=(buff2[0]-2)/2;
-        char *buff = new char[sl+1];
-        for(int i=0;i<sl;i++)
-            buff[i]=buff2[2+i*2];
-        buff[sl]=0;
-        delete buff2;
-        return buff;
-    }
-    return 0;
 }

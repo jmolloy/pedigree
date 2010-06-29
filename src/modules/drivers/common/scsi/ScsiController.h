@@ -13,18 +13,28 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
+#ifndef SCSICONTROLLER_H
+#define SCSICONTROLLER_H
+
+#include <processor/types.h>
 #include <machine/Controller.h>
-#include <usb/UsbHub.h>
 
-class UsbController : public Controller, public UsbHub
+/** Generic class for Scsi Controllers */
+class ScsiController: public Controller
 {
     public:
 
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
+        inline ScsiController(){}
+        inline virtual ~ScsiController(){}
+
+        virtual void sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;
+
+    protected:
+
+        virtual size_t getNumUnits() =0;
+
+        void searchDisks();
 };
 
 #endif

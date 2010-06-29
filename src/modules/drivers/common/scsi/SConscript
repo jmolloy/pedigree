@@ -10,9 +10,10 @@ tmp = env.Clone()
 
 # Change to then name of this module
 driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
-objname = driverdir + '/uhci.o'
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
+objname = driverdir + '/scsi.o'
 
-env.Alias("modules", objname)
+env.Alias("drivers", objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -33,11 +34,13 @@ include = [
 
 # To add a library add to the list below
 libraries = [
-    'gcc'
+    'gcc',
+    'kernelrtti'
 ]
 
 # To add a library path add to the list below
 libpaths = [
+    imagesdir + 'libraries',
     env['LIBGCC']
 ]
 
