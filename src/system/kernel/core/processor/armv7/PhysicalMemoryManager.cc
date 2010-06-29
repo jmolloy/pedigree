@@ -176,10 +176,17 @@ void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
         m_PageStack.free(addr);
     }
 
-    m_PhysicalRanges.free(0x80000000, 0x10000000);
+    size_t kernelSize = reinterpret_cast<physical_uintptr_t>(&__end) - reinterpret_cast<physical_uintptr_t>(&__start);
+    if(kernelSize % 4096)
+    {
+        kernelSize += 0x1000;
+        kernelSize &= ~0xFFF;
+    }
+
+    m_PhysicalRanges.free(0x80000000 + kernelSize, 0xF000000);
     m_PhysicalRanges.allocateSpecific(0x80000000,
                                       reinterpret_cast<physical_uintptr_t>(&__end) - 0x80000000);
-    m_PhysicalRanges.allocateSpecific(0x8FAFC000, 0x404000);
+    // m_PhysicalRanges.allocateSpecific(0x8FAFC000, 0x404000);
     
     m_NonRAMRanges.free(0, 0x80000000);
     m_NonRAMRanges.free(0x90000000, 0x60000000);
