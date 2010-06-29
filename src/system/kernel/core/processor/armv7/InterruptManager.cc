@@ -159,13 +159,13 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
 }
 
 extern "C" void arm_swint_handler() __attribute__((interrupt("SWI")));
-extern "C" void arm_instundef_handler() __attribute__((interrupt("UNDEF")));
+extern "C" void arm_instundef_handler()__attribute__((naked));
 extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
-extern "C" void arm_irq_handler(InterruptState &state); // __attribute__((interrupt("IRQ")));
-extern "C" void arm_reset_handler() __attribute__((interrupt("ABORT")));
-extern "C" void arm_prefetch_abort_handler() __attribute__((interrupt("ABORT")));
-extern "C" void arm_data_abort_handler() __attribute__((interrupt("ABORT")));
-extern "C" void arm_addrexcept_handler() __attribute__((interrupt("ABORT")));
+extern "C" void arm_irq_handler(InterruptState &state);
+extern "C" void arm_reset_handler() __attribute__((naked));
+extern "C" void arm_prefetch_abort_handler() __attribute__((naked));
+extern "C" void arm_data_abort_handler() __attribute__((naked));
+extern "C" void arm_addrexcept_handler() __attribute__((naked));
 
 extern "C" void arm_swint_handler()
 {
