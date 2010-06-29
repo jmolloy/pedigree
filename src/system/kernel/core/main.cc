@@ -131,7 +131,7 @@ int loadModules(void *inf)
         if(*tags == MODULE_TAG)
         {
             ModuleInfo *modinfo = reinterpret_cast<ModuleInfo*>(tags);
-            NOTICE("Module name: " << modinfo->name);
+            KernelElf::instance().loadModule(modinfo);
         }
 
         tags++;

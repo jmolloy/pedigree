@@ -279,6 +279,67 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     return module;
 }
 
+#ifdef STATIC_DRIVERS
+Module *KernelElf::loadModule(struct ModuleInfo *info, bool silent)
+{
+    Module *module = new Module;
+
+    module->buffer = 0;
+    module->buflen = 0;
+
+    module->name = info->name;
+    module->entry = info->entry;
+    module->exit = info->exit;
+    module->depends = info->dependencies;
+    DEBUG("KERNELELF: Preloaded module " << module->name);
+
+    g_BootProgressCurrent ++;
+    if (g_BootProgressUpdate && !silent)
+        g_BootProgressUpdate("moduleload");
+
+    m_Modules.pushBack(module);
+
+    // Can we load this module yet?
+    if (moduleDependenciesSatisfied(module))
+    {
+        executeModule(module);
+
+        g_BootProgressCurrent ++;
+        if (g_BootProgressUpdate && !silent)
+            g_BootProgressUpdate("moduleexec");
+
+        // Now check if we've allowed any currently pending modules to load.
+        bool somethingLoaded = true;
+        while (somethingLoaded)
+        {
+            somethingLoaded = false;
+            for (Vector<Module*>::Iterator it = m_PendingModules.begin();
+                it != m_PendingModules.end();
+                it++)
+            {
+                if (moduleDependenciesSatisfied(*it))
+                {
+                    executeModule(*it);
+                    g_BootProgressCurrent ++;
+                    if (g_BootProgressUpdate && !silent)
+                        g_BootProgressUpdate("moduleexec");
+
+                    m_PendingModules.erase(it);
+                    somethingLoaded = true;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        m_PendingModules.pushBack(module);
+    }
+
+    return module;
+}
+#endif
+
 void KernelElf::unloadModule(char *name, bool silent)
 {
     for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
@@ -429,24 +490,27 @@ void KernelElf::executeModule(Module *module)
 {
     m_LoadedModules.pushBack(module);
 
-    if (!module->elf.finaliseModule(module->buffer, module->buflen))
+    if(module->buffer)
     {
-        FATAL ("KERNELELF: Module relocation failed");
-        return;
-    }
-
-    // Check for a constructors list and execute.
-    uintptr_t startCtors = module->elf.lookupSymbol("start_ctors");
-    uintptr_t endCtors = module->elf.lookupSymbol("end_ctors");
-
-    if (startCtors && endCtors)
-    {
-        uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
-        while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
+        if (!module->elf.finaliseModule(module->buffer, module->buflen))
         {
-            void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
-            fp();
-            iterator++;
+            FATAL ("KERNELELF: Module relocation failed");
+            return;
+        }
+
+        // Check for a constructors list and execute.
+        uintptr_t startCtors = module->elf.lookupSymbol("start_ctors");
+        uintptr_t endCtors = module->elf.lookupSymbol("end_ctors");
+
+        if (startCtors && endCtors)
+        {
+            uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
+            while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
+            {
+                void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+                fp();
+                iterator++;
+            }
         }
     }
 

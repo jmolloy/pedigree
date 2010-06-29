@@ -24,6 +24,10 @@
 #include <utilities/Vector.h>
 #include <utilities/MemoryAllocator.h>
 
+#ifdef STATIC_DRIVERS
+#include <Module.h>
+#endif
+
 /** @addtogroup kernellinker
  * @{ */
 
@@ -63,6 +67,9 @@ class KernelElf : public Elf
         *\param silent If true will not update the boot progress(default is false).
         *\return A pointer to a Elf class describing the loaded module. */
         Module *loadModule(uint8_t *pModule, size_t len, bool silent=false);
+#ifdef STATIC_DRIVERS
+        Module *loadModule(struct ModuleInfo *info, bool silent = false);
+#endif
 
         /** Unloads the specified module. */
         void unloadModule(char *name, bool silent=false);
