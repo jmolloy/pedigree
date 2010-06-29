@@ -159,6 +159,14 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7Schedul
 .global init_stacks
 init_stacks:
 
+    # Read the CPSR, mask out the lower 6 bits, and enter Abort mode
+    mrs r0, cpsr
+    bic r0, r0, #0x3F
+    orr r1, r0, #0x17
+    msr cpsr_c, r1
+    
+    ldr sp, =stack_abort+0x1000
+
     # Read the CPSR, mask out the lower 6 bits, and enter FIQ mode
     mrs r0, cpsr
     bic r0, r0, #0x3F
@@ -192,4 +200,5 @@ init_stacks:
 .comm stack_svc, 0x10000
 .comm stack_irq, 0x1000
 .comm stack_fiq, 0x1000
+.comm stack_abort, 0x1000
 .comm irq_save, 0x10
