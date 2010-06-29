@@ -70,7 +70,7 @@ bool FileDisk::initialise()
 uintptr_t FileDisk::read(uint64_t location)
 {
     LockGuard<Mutex> guard(m_ReqMutex);
-    
+
     if (location % 512)
         FATAL("Read with location % 512.");
 
@@ -124,5 +124,4 @@ static void destroy()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("lodisk", &init, &destroy, __mod_deps);
+MODULE_INFO("lodisk", &init, &destroy, "vfs");

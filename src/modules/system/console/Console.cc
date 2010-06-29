@@ -502,5 +502,4 @@ static void destroyConsole()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("console", &initConsole, &destroyConsole, __mod_deps);
+MODULE_INFO("console", &initConsole, &destroyConsole, "vfs");

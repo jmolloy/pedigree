@@ -61,5 +61,4 @@ void exit()
 {
 }
 
-const char *__mod_deps[] = {"TUI", "pci", "vbe", 0};
-MODULE_INFO("nvidia", &entry, &exit, __mod_deps);
+MODULE_INFO("nvidia", &entry, &exit, "TUI", "pci", "vbe");

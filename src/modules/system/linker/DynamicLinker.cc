@@ -396,5 +396,4 @@ static void destroy()
 }
 
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("linker", &init, &destroy, __mod_deps);
+MODULE_INFO("linker", &init, &destroy, "vfs");

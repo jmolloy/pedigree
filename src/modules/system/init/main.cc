@@ -218,12 +218,12 @@ static void init()
     // Otherwise, just assume the default is interface zero
     if (!bRouteFound)
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
-        
+
 #if 0
     // Routes installed, start the UDP logger
     UdpLogger *logger = new UdpLogger();
     logger->initialise(IpAddress(Network::convertToIpv4(192, 168, 0, 1)));
-    
+
     Log::instance().installCallback(logger);
 #endif
 
@@ -315,11 +315,10 @@ void init_stage2()
 }
 
 #ifdef X86_COMMON
-static const char *__mod_deps[] = {"vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c", 0};
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c"
 #elif PPC_COMMON
-static const char *__mod_deps[] = {"vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", 0};
-MODULE_DEPENDS();
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c"
 #elif ARM_COMMON
-static const char *__mod_deps[] = {"vfs" "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", 0};
+#define __MOD_DEPS "vfs" "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c"
 #endif
-MODULE_INFO("init", &init, &destroy, __mod_deps);
+MODULE_INFO("init", &init, &destroy, __MOD_DEPS);

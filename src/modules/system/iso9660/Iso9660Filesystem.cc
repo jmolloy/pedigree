@@ -317,5 +317,4 @@ static void destroyIso9660()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("iso9660", &initIso9660, &destroyIso9660, __mod_deps);
+MODULE_INFO("iso9660", &initIso9660, &destroyIso9660, "vfs");

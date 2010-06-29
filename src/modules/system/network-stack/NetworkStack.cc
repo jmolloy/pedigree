@@ -46,12 +46,12 @@ uint64_t NetworkStack::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
 {
     // Make sure we have interrupts enabled, so we're interruptible.
     Processor::setInterrupts(true);
-    
+
     uintptr_t packet = static_cast<uintptr_t>(p1);
     size_t packetSize = static_cast<size_t>(p2);
     Network *pCard = reinterpret_cast<Network*>(p3);
     uint32_t offset = static_cast<uint32_t>(p4);
-    
+
     if(!packet || !packetSize)
         return 0;
 
@@ -60,10 +60,10 @@ uint64_t NetworkStack::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
   ///       so we can pass it on to the correct handler, rather than assuming
   ///       Ethernet.
   Ethernet::instance().receive(packetSize, packet, pCard, offset);
-  
+
   uint8_t *pack = reinterpret_cast<uint8_t*>(packet);
   delete [] pack;
-  
+
   return 0;
 }
 
@@ -71,9 +71,9 @@ void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint
 {
   if(!packet || !nBytes)
       return;
-      
+
   pCard->gotPacket();
-  
+
   // Some cards might be giving us a DMA address or something, so we copy
   // before passing on to the worker thread...
   uint8_t *safePacket = new uint8_t[nBytes + 1];
@@ -122,5 +122,4 @@ static void exit()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("network-stack", &entry, &exit, __mod_deps);
+MODULE_INFO("network-stack", &entry, &exit, "vfs");

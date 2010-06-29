@@ -337,5 +337,4 @@ static void destroyVFS()
 {
 }
 
-static const char *__mod_deps[] = {0};
-MODULE_INFO("vfs", &initVFS, &destroyVFS, __mod_deps);
+MODULE_INFO("vfs", &initVFS, &destroyVFS);

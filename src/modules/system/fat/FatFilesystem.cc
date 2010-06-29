@@ -1253,5 +1253,4 @@ static void destroyFat()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("fat", &initFat, &destroyFat, __mod_deps);
+MODULE_INFO("fat", &initFat, &destroyFat, "vfs");

@@ -34,5 +34,4 @@ static void destroy()
 {
 }
 
-static const char *__mod_deps[] = {"console", "TUI", 0};
-MODULE_INFO("posix", &init, &destroy, __mod_deps);
+MODULE_INFO("posix", &init, &destroy, "console", "TUI");

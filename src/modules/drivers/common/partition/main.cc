@@ -116,8 +116,7 @@ static void exit()
 }
 
 #ifndef ARM_COMMON // No ATA controller
-static const char *__mod_deps[] = {"ata", 0};
+MODULE_INFO("partition", &entry, &exit, "ata");
 #else
-static const char *__mod_deps[] = {0};
+MODULE_INFO("partition", &entry, &exit);
 #endif
-MODULE_INFO("partition", &entry, &exit, __mod_deps);

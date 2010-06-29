@@ -10,6 +10,7 @@ tmp = env.Clone()
 
 # Change to then name of this module
 moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = moduledir + '/usb.o'
 
 env.Alias("modules", objname)
@@ -28,6 +29,7 @@ files = [
 include = [
     '#/src/system/include',
     '#/src/modules/system',
+    '#/src/modules/drivers/common',
     '.'
 ]
 
@@ -35,10 +37,14 @@ include = [
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     libraries = []
 else:
-    libraries = ['gcc']
+    libraries = [
+        'gcc',
+        'kernelrtti'
+    ]
 
 # To add a library path add to the list below
 libpaths = [
+    imagesdir + 'libraries',
     env['LIBGCC']
 ]
 

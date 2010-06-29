@@ -17,7 +17,7 @@
 #ifndef MODULE_H
 #define MODULE_H
 
-#include <utilities/string.h>
+#include <utilities/utility.h>
 
 typedef void (*ModuleEntry)();
 typedef void (*ModuleExit)();
@@ -44,7 +44,9 @@ struct ModuleInfo
     const char **dependencies; // [MAX_DEPENDENCIES][MAX_NAME_LENGTH];
 };
 
-#define MODULE_INFO(name, entry, exit, deps) static ModuleInfo __module __attribute__((section(".modinfo"))) (name, entry, exit, deps);
+#define MODULE_INFO2(name, entry, exit, ...) \
+    static const char *__mod_deps[] = {__VA_ARGS__};\
+    static ModuleInfo __module __attribute__((section(".modinfo"))) (name, entry, exit, __mod_deps);
 
 #else
 
@@ -52,14 +54,15 @@ struct ModuleInfo
 #define MODULE_ENTRY(x) ModuleEntry g_pModuleEntry __attribute__((section(".modinfo"))) = x
 #define MODULE_EXIT(x) ModuleExit g_pModuleExit __attribute__((section(".modinfo"))) = x
 #define MODULE_DEPENDS(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
+#define MODULE_DEPENDS2(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__}
 
-#define MODULE_INFO(name, entry, exit, ...) do { \
-                                                MODULE_NAME(name); \
-                                                MODULE_ENTRY(entry); \
-                                                MODULE_EXIT(exit); \
-                                                MODULE_DEPENDS(__VA_ARGS__); \
-                                            } while(0);
+#define MODULE_INFO2(name, entry, exit, ...) MODULE_NAME(name); \
+                                            MODULE_ENTRY(entry); \
+                                            MODULE_EXIT(exit); \
+                                            MODULE_DEPENDS(__VA_ARGS__);
 
 #endif
+
+#define MODULE_INFO(...) MODULE_INFO2(__VA_ARGS__, 0)
 
 #endif

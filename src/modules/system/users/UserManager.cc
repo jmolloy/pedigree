@@ -180,5 +180,4 @@ static void destroy()
 {
 }
 
-static const char *__mod_deps[] = {0};
-MODULE_INFO("users", &init, &destroy, __mod_deps);
+MODULE_INFO("users", &init, &destroy);

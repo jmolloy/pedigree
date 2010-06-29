@@ -456,5 +456,4 @@ static void destroyExt2()
 {
 }
 
-static const char *__mod_deps[] = {"vfs", 0};
-MODULE_INFO("ext2", &initExt2, &destroyExt2, __mod_deps);
+MODULE_INFO("ext2", &initExt2, &destroyExt2, "vfs");
