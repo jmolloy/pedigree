@@ -51,10 +51,10 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
   {
     for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
     {
-        startColour(Machine::instance().getSerial(i), foreColour, backColour);
+        //startColour(Machine::instance().getSerial(i), foreColour, backColour);
         for(size_t j = 0; j < str.length(); j++)
           Machine::instance().getSerial(i)->write(str[j]);
-        endColour(Machine::instance().getSerial(i));
+        //endColour(Machine::instance().getSerial(i));
     }
   }
 

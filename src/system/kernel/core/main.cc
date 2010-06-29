@@ -174,9 +174,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   g_pBootstrapInfo = &bsInf;
 
-  // Initialise the kernel log.
-  Log::instance().initialise();
-
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
 
@@ -188,10 +185,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
   machine.initialise();
-
-  // Initialise the serial callback for the kernel log, now that the machine
-  // abstraction is initialised.
-  Log::instance().initialise2();
 
 #if defined(DEBUGGER)
   Debugger::instance().initialise();
@@ -275,6 +268,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
 
+  // Initialise the kernel log.
+  Log::instance().initialise();
+
 #ifdef ARM_COMMON
 #ifdef DEBUGGER_RUN_AT_START
   InterruptState state;
@@ -315,7 +311,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   {
     // Kernel idle thread.
     Processor::setInterrupts(true);
-    
+
 #if defined(X86_COMMON)
     asm volatile ("hlt");
 #elif defined(ARM_COMMON)
@@ -323,7 +319,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #else
     // No instruction to halt the processor until a given event.
 #endif
-    
+
 #ifdef THREADS
     Scheduler::instance().yield();
 #endif

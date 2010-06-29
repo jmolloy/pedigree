@@ -45,7 +45,7 @@ extern "C" int atoi(const char *str)
     return strtoul(str, 0, 10);
 }
 
-/*
+
 extern "C" int memcmp(const void *s1, const void *s2, size_t n)
 {
     const unsigned char *c1 = reinterpret_cast<const unsigned char*>(s1);
@@ -55,7 +55,7 @@ extern "C" int memcmp(const void *s1, const void *s2, size_t n)
             return (c1[i]>c2[i]) ? 1 : -1;
     return 0;
 }
-*/
+
 
 int xClose(sqlite3_file *file)
 {

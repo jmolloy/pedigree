@@ -45,7 +45,7 @@ struct ModuleInfo
 };
 
 #define MODULE_INFO2(name, entry, exit, ...) \
-    static const char *__mod_deps[] = {__VA_ARGS__, 0}; \
+    static const char *__mod_deps[] = {__VA_ARGS__}; \
     static ModuleInfo __module __attribute__((section(".modinfo"))) (name, entry, exit, __mod_deps);
 
 #else
@@ -59,7 +59,7 @@ struct ModuleInfo
 #define MODULE_INFO2(name, entry, exit, ...) MODULE_NAME(name); \
                                             MODULE_ENTRY(entry); \
                                             MODULE_EXIT(exit); \
-                                            MODULE_DEPENDS(__VA_ARGS__);
+                                            MODULE_DEPENDS2(__VA_ARGS__);
 
 #endif
 

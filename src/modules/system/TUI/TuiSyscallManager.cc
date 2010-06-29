@@ -286,8 +286,7 @@ static void destroy()
 }
 
 #ifdef X86_COMMON
-static const char *__mod_deps[] = {"console", "vbe", 0};
+MODULE_INFO("TUI", &init, &destroy, "console", "vbe");
 #else
-static const char *__mod_deps[] = {"console", 0};
+MODULE_INFO("TUI", &init, &destroy, "console");
 #endif
-MODULE_INFO("TUI", &init, &destroy, __mod_deps);

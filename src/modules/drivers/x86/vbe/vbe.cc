@@ -282,7 +282,4 @@ void exit()
 {
 }
 
-MODULE_NAME("vbe");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("pci", "config");
+MODULE_INFO("vbe", &entry, &exit, "pci", "config");

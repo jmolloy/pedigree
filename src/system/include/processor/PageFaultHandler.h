@@ -70,6 +70,10 @@ private:
      * Note not implemented.  */
     PageFaultHandler(const PageFaultHandler&);
 
+#ifndef ARM_COMMON
+    List<MemoryTrapHandler *> m_Handlers;
+#endif
+
     /** The PageFaultHandler instance */
     static PageFaultHandler m_Instance;
 };

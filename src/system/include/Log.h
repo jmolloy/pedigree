@@ -91,10 +91,10 @@
   { \
     Log::instance().m_Lock.acquire(); \
     Log::instance() << Log::Fatal << text << Flush; \
-	const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
+    const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
     Log::instance().m_Lock.release(); \
     Processor::breakpoint(); \
-	panic(panicstr); \
+    panic(panicstr); \
   } \
   while (0)
 
@@ -104,7 +104,7 @@
   { \
     Log::instance() << Log::Fatal << text << Flush; \
     Processor::breakpoint(); \
-	panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \
+    panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \
   } \
   while (0)
 
@@ -173,9 +173,6 @@ public:
 
    /** Initialises the Log */
   void initialise();
-
-   /** Initialises the Log serial line callback */
-  void initialise2();
 
   /** Installs an output callback */
   void installCallback(LogCallback *pCallback, bool bSkipBacklog=false);

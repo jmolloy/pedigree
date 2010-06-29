@@ -78,8 +78,8 @@ void Log::initialise ()
     {
         List<String*> cmds = String(cmdline).tokenise(' ');
         for (List<String*>::Iterator it = cmds.begin();
-        it != cmds.end();
-        it++)
+            it != cmds.end();
+            it++)
         {
             String *cmd = *it;
             if(*cmd == String("--disable-log-to-serial"))
@@ -95,10 +95,7 @@ void Log::initialise ()
         }
     }
 #endif
-}
 
-void Log::initialise2()
-{
     if(m_EchoToSerial)
         installCallback(&g_SerialCallback, false);
 }
