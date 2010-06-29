@@ -416,4 +416,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("loopback", &init, &destroy);
+MODULE_INFO("config", &init, &destroy);

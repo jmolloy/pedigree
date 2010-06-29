@@ -34,6 +34,14 @@ SECTIONS
         *(.module_ctors);
         end_module_ctors = .;
     }
+    
+    .modinfo :
+    {
+        . = ALIGN(4);
+        start_modinfo = .;
+        *(.modinfo*);
+        end_modinfo = .;
+    }
 
     .data :
     {
@@ -41,10 +49,6 @@ SECTIONS
         data = .; _data = .; __data = .;
         *(.data);
         *(.rodata*);
-        
-        start_modinfo = .;
-        *(.modinfo);
-        end_modinfo = .;
     }
 
     .bss :

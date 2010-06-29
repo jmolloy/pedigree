@@ -99,8 +99,11 @@ void apMain()
 }*/
 
 #ifdef STATIC_DRIVERS
-extern ModuleInfo *start_modinfo;
-extern ModuleInfo *end_modinfo;
+extern uintptr_t start_modinfo;
+extern uintptr_t end_modinfo;
+
+extern uintptr_t start_module_ctors;
+extern uintptr_t end_module_ctors;
 #endif
 
 /** Loads all kernel modules */
@@ -108,10 +111,30 @@ int loadModules(void *inf)
 {
 #ifdef STATIC_DRIVERS
 
-    while(start_modinfo != end_modinfo)
+    uint32_t *tags = reinterpret_cast<uint32_t*>(&start_modinfo);
+    uint32_t *lasttag = reinterpret_cast<uint32_t*>(&end_modinfo);
+
+    // Call static constructors before we start. If we don't... there won't be
+    // any properly initialised ModuleInfo structures :)
+    uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_module_ctors);
+    while (iterator < reinterpret_cast<uintptr_t*>(&end_module_ctors))
     {
-        NOTICE("Module name: " << start_modinfo->name);
-        start_modinfo++;
+        NOTICE(*iterator);
+        void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+        fp();
+        iterator++;
+    }
+
+    // Run through all the modules
+    while(tags != lasttag)
+    {
+        if(*tags == MODULE_TAG)
+        {
+            ModuleInfo *modinfo = reinterpret_cast<ModuleInfo*>(tags);
+            NOTICE("Module name: " << modinfo->name);
+        }
+
+        tags++;
     }
 
     return 0;
@@ -175,8 +198,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
   // Initialise the Kernel Elf class
+  NOTICE_NOLOCK("initialising kernelelf");
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
+  NOTICE_NOLOCK("done");
 
 #ifndef STATIC_DRIVERS // initrd needed if drivers aren't statically linked.
   if (bsInf.isInitrdLoaded() == false)
@@ -258,10 +283,12 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #else
   NOTICE_NOLOCK("ARM build now boots properly. Now hanging forever...");
 
+  /*
   while(1)
   {
       asm volatile("wfi");
   }
+  */
 #endif
 #endif
 
@@ -269,7 +296,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   g_LocksCommand.setReady();
 #endif
 
-#ifdef THREADS
+#if defined(THREADS) // && !defined(STATIC_DRIVERS)
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
 #else
   loadModules(&bsInf);
