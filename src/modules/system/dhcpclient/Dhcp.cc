@@ -576,5 +576,4 @@ static void exit()
 {
 }
 
-static const char *__mod_deps[] = {"network-stack", 0};
-MODULE_INFO("dhcpclient", &entry, &exit, __mod_deps);
+MODULE_INFO("dhcpclient", &entry, &exit, "network-stack");
