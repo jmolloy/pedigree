@@ -29,11 +29,22 @@ NetworkStack::NetworkStack() :
 {
   initialise();
 
-  // Try 16 MB, then 8 MB, then 4 MB, then give up
+#if defined(X86_COMMON)
+  // Lots of RAM to burn! Try 16 MB, then 8 MB, then 4 MB, then give up
   if(!m_MemPool.initialise(4096, 1600))
       if(!m_MemPool.initialise(2048, 1600))
         if(!m_MemPool.initialise(1024, 1600))
             ERROR("Couldn't get a valid buffer pool for networking use");
+#elif defined(ARM_COMMON)
+  // Probably very little RAM to burn - 4 MB then 2 MB, then 512 KB
+  NOTICE_NOLOCK("allocating memory pool");
+  if(!m_MemPool.initialise(1024, 1600))
+      if(!m_MemPool.initialise(512, 1600))
+        if(!m_MemPool.initialise(128, 1600))
+            ERROR("Couldn't get a valid buffer pool for networking use");
+#else
+#warning Unhandled architecture for the NetworkStack buffer pool
+#endif
 }
 
 NetworkStack::~NetworkStack()
