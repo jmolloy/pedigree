@@ -14,34 +14,49 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <usb/UsbConstants.h>
+#include <usb/Usb.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
+#include <processor/Processor.h>
+
+ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes)
+{
+    if(!pEndpoint)
+        FATAL("USB: UsbDevice::doSync called with invalid endpoint");
+    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    if(!pParentHub)
+        FATAL("USB: Orphaned UsbDevice!");
+    UsbEndpoint endpointInfo(m_nAddress, pEndpoint->nEndpoint, pEndpoint->bDataToggle);
+    if(nBytes > pEndpoint->nMaxPacketSize)
+    {
+        for(size_t i=0;i<nBytes;)
+        {
+            ssize_t nResult = pParentHub->doSync(endpointInfo, UsbPidIn, pBuffer+i, (nBytes-i)<pEndpoint->nMaxPacketSize?(nBytes-i):pEndpoint->nMaxPacketSize);
+            if(nResult < 0)
+                return nResult;
+            i += nResult;
+            pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
+        }
+        return nBytes;
+    }
+    ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
+    pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
+    return nResult;
+}
 
 ssize_t UsbDevice::syncSetup(Setup *setup)
 {
-    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, 0, USB_PID_SETUP, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
+    doSync(m_pEndpoints[0], UsbPidSetup, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
 }
 
 ssize_t UsbDevice::syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    if(!nEndpoint && nBytes > 8)
-    {
-        for(size_t i=0;i<nBytes;)
-        {
-            ssize_t nRet = dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_IN, pBuffer+i, (nBytes-i)<8?(nBytes-i):8);
-            if(nRet < 0)
-                return nRet;
-            i += nRet;
-        }
-        return nBytes;
-    }
-    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_IN, pBuffer, nBytes);
+    return doSync(m_pEndpoints[nEndpoint], UsbPidIn, pBuffer, nBytes);
 }
 
 ssize_t UsbDevice::syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    return dynamic_cast<UsbHub*>(m_pParent)->doSync(m_nAddress, nEndpoint, USB_PID_OUT, pBuffer, nBytes);
+    return doSync(m_pEndpoints[nEndpoint], UsbPidOut, pBuffer, nBytes);
 }
 
 ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len, uintptr_t pBuffer)
@@ -52,6 +67,7 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     pSetup->val = val;
     pSetup->index = index;
     pSetup->len = len;
+    m_pEndpoints[0]->bDataToggle = false;
     ssize_t ret = syncSetup(pSetup);
     if(ret < 0)
         return ret;
@@ -64,6 +80,7 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     }
     if(ret < 0)
         return ret;
+    m_pEndpoints[0]->bDataToggle = true;
     if(req_type & 0x80)
         return syncOut(0, 0, 0);
     else
@@ -103,6 +120,11 @@ bool UsbDevice::useConfiguration(uint8_t nConfig)
 bool UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->pInterfaces[nInterface];
+    for(size_t i = 0;i<m_pInterface->pEndpoints.count();i++)
+    {
+        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
+        m_pEndpoints[pEndpoint->nEndpoint] = pEndpoint;
+    }
     return true;
     //return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
 }
@@ -120,7 +142,11 @@ void *UsbDevice::getDescriptor(uint8_t des, uint8_t subdes, uint16_t nBytes, boo
 char *UsbDevice::getString(uint8_t nString)
 {
     if(!nString)
-        return "";
+    {
+        char *pString = new char[1];
+        pString[0] = '\0';
+        return pString;
+    }
     uint8_t descriptorLength = *static_cast<uint8_t*>(getDescriptor(3, nString, 1));
     char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
     if(pBuffer)

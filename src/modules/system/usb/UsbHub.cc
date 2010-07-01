@@ -124,10 +124,10 @@ void UsbHub::syncCallback(uintptr_t pParam, ssize_t ret)
     pController->m_SyncSemaphore.release();
 }
 
-ssize_t UsbHub::doSync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout)
+ssize_t UsbHub::doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout)
 {
     LockGuard<Mutex> guard(m_SyncMutex);
-    doAsync(nAddress, nEndpoint, nPid, pBuffer, nBytes, syncCallback, reinterpret_cast<uintptr_t>(static_cast<UsbHub*>(this)));
+    doAsync(endpointInfo, nPid, pBuffer, nBytes, syncCallback, reinterpret_cast<uintptr_t>(static_cast<UsbHub*>(this)));
     m_SyncSemaphore.acquire(1);/*, 0, timeout * 1000);
     if(Processor::information().getCurrentThread()->wasInterrupted())
         return -1;

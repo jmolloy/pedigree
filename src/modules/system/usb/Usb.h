@@ -13,18 +13,33 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef USBCONTROLLER_H
-#define USBCONTROLLER_H
 
-#include <machine/Controller.h>
-#include <usb/UsbHub.h>
+#ifndef USB_H
+#define USB_H
 
-class UsbController : public Controller, public UsbHub
-{
-    public:
+#include <processor/types.h>
 
-        inline UsbController() {}
-        inline virtual ~UsbController() {}
+enum UsbPid {
+    UsbPidSetup = 0x2d,
+    UsbPidIn = 0x69,
+    UsbPidOut = 0xe1,
 };
+
+enum UsbSpeed
+{
+    LowSpeed = 0,
+    FullSpeed,
+    HighSpeed,
+    SuperSpeed
+};
+
+typedef struct UsbEndpoint
+{
+    inline UsbEndpoint(uint8_t address, uint8_t endpoint, bool dataToggle) : nAddress(address), nEndpoint(endpoint), bDataToggle(dataToggle) {}
+
+    uint8_t nAddress;
+    uint8_t nEndpoint;
+    bool bDataToggle;
+} UsbEndpoint;
 
 #endif

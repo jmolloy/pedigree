@@ -18,7 +18,6 @@
 #define USBMASSSTORAGEDEVICE_H
 
 #include <processor/types.h>
-#include <usb/UsbConstants.h>
 #include <usb/UsbDevice.h>
 #include <scsi/ScsiController.h>
 

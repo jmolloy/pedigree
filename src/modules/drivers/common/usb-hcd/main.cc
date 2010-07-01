@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
+ * Copyright (c) 2010 Eduard Burtescu
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,10 +21,13 @@
 #include <Log.h>
 #include <Module.h>
 #include "Ehci.h"
+#include "Ohci.h"
 #include "Uhci.h"
 
 /// \note Set to 1 if you want to test USB
 #define TEST_USB 0
+/// \note Set to 1 if you want to have the system halted after USB finishes initialization
+#define TEST_USB_HALT 1
 
 enum HcdConstants {
     HCI_CLASS = 0x0C,       // Host Controller PCI class
@@ -60,6 +63,18 @@ void probeEhci(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pEhci);
 }
 
+void probeOhci(Device *pDev)
+{
+    NOTICE("USB: OHCI found");
+
+    // Create a new Ohci node
+    Ohci *pOhci = new Ohci(pDev);
+
+    // Replace pDev with pOhci.
+    pOhci->setParent(pDev->getParent());
+    pDev->getParent()->replaceChild(pDev, pOhci);
+}
+
 void probeUhci(Device *pDev)
 {
     NOTICE("USB: UHCI found");
@@ -72,27 +87,17 @@ void probeUhci(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pUhci);
 }
 
-void probeOhci(Device *pDev)
-{
-    WARNING("USB: OHCI found, not implemented yet!");
-    /*
-    // Create a new Ohci node
-    Ohci *pOhci = new Ohci(pDev);
-
-    // Replace pDev with pOhci.
-    pOhci->setParent(pDev->getParent());
-    pDev->getParent()->replaceChild(pDev, pOhci);
-    */
-}
-
 void entry()
 {
-#if (TEST_USB && X86_COMMON)
+    #if (TEST_USB && X86_COMMON)
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
-#endif
+    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
+    #if TEST_USB_HALT
+    while(true)asm volatile("sti;hlt");
+    #endif
+    #endif
 }
 
 void exit()

@@ -18,8 +18,7 @@
 //#include <machine/Timer.h>
 #include <processor/state.h>
 //#include <utilities/utility.h>
-#include <usb/UsbConstants.h>
-#include <usb/UsbController.h>
+#include <usb/UsbHub.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHumanInterfaceDevice.h>
 #include <machine/InputManager.h>
@@ -215,7 +214,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         return;
     }
 
-    dynamic_cast<UsbController*>(m_pParent)->addInterruptInHandler(m_nAddress, pInEndpoint->pDescriptor->nEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(m_nAddress, pInEndpoint->nEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
     //new Thread(Processor::information().getCurrentThread()->getParent(),
     //           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
     //           reinterpret_cast<void*> (this));

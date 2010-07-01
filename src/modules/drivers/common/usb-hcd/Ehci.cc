@@ -14,21 +14,17 @@
  * OR IN CONRTLCTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <processor/Processor.h>
 #include <machine/Controller.h>
 #include <machine/Machine.h>
-#include <usb/UsbConstants.h>
-#include <usb/UsbController.h>
+#include <processor/Processor.h>
+#include <usb/Usb.h>
 #include <utilities/assert.h>
 #include <Log.h>
 #include "Ehci.h"
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-Ehci::Ehci(Device* pDev) :
-    Device(pDev), m_pBase(0), m_nOpRegsOffset(0), m_pQHList(0), m_pQHListVirt(0), m_pQHListPhys(0),
-    m_pFrameList(0), m_pFrameListPhys(0), m_pqTDList(0), m_pqTDListVirt(0), m_pqTDListPhys(0),
-    m_pTransferPagesVirt(0), m_pTransferPagesPhys(0), m_TransferPagesAllocator(0, 0x5000), m_EhciMR("Ehci-MR")
+Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_EhciMR("Ehci-MR")
 {
     setSpecificType(String("EHCI"));
 
@@ -121,14 +117,14 @@ bool Ehci::irq(irq_id_t number, InterruptState &state)
             qTD *pqTD = &m_pqTDList[i];
             if(pqTD->status == 0x80)
                 continue;
-            bool bPeriodic = pQH->next_invalid;
+            bool bPeriodic = pQH->bNextInvalid;
             ssize_t ret = pqTD->status & 0x7c?-((pqTD->status & 0x7c)>>2):pQH->size-pqTD->nBytes;
-            if(pqTD->nPid == 1 && pQH->buffer && ret > 0)
-                memcpy(reinterpret_cast<void*>(pQH->buffer), &m_pTransferPagesVirt[pQH->offset], ret);
-            if(pQH->callback && (ret > 0 || !bPeriodic))
+            if(pqTD->nPid == 1 && pQH->pBuffer && ret > 0)
+                memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPagesVirt[pQH->offset], ret);
+            if(pQH->pCallback && (ret > 0 || !bPeriodic))
             {
-                void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->callback);
-                func(pQH->param, ret);
+                void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pCallback);
+                func(pQH->pParam, ret);
                 NOTICE("STOP "<<Dec<<pQH->nAddress<<":"<<pQH->nEndpoint<<" "<<(pqTD->nPid==0?" OUT ":(pqTD->nPid==1?" IN  ":(pqTD->nPid==2?"SETUP":"")))<<" "<<ret<<Hex);
             }
             if(!bPeriodic)
@@ -177,10 +173,10 @@ void Ehci::resume()
     while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & EHCI_STS_HALTED);
 }
 
-void Ehci::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
+void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<nAddress<<":"<<nEndpoint<<" "<<(nPid==USB_PID_OUT?" OUT ":(nPid==USB_PID_IN?" IN  ":(nPid==USB_PID_SETUP?"SETUP":"")))<<" "<<nBytes<<Hex);
+    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Pause the controller
     pause();
@@ -193,7 +189,7 @@ void Ehci::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t 
     uintptr_t nBufferOffset = 0;
     if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
         FATAL("USB: EHCI: Buffers full :(");
-    if(nPid != USB_PID_IN && pBuffer)
+    if(nPid != UsbPidIn && pBuffer)
         memcpy(&m_pTransferPagesVirt[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
     //NOTICE("===> "<<Dec<<nBytes<<"\t"<<nBufferOffset<<Hex);
 
@@ -214,27 +210,27 @@ void Ehci::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t 
     pQH->hrcl = 1;
     pQH->dtc = 1;
     pQH->speed = 2;
-    pQH->nEndpoint = nEndpoint;
+    pQH->nEndpoint = endpointInfo.nEndpoint;
     pQH->inactive_next = 1;
-    pQH->nAddress = nAddress;
+    pQH->nAddress = endpointInfo.nAddress;
     pQH->mult = 1;
     pQH->qtd_ptr = (m_pqTDListPhys>>5)+nQHIndex;
-    pQH->callback = reinterpret_cast<uintptr_t>(pCallback);
-    pQH->param = pParam;
-    pQH->buffer = pBuffer;
+    pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
+    pQH->pParam = pParam;
+    pQH->pBuffer = pBuffer;
     pQH->size = nBytes;
     pQH->offset = nBufferOffset;
 
     qTD *pqTD = &m_pqTDList[nQHIndex];
     memset(pqTD, 0, sizeof(qTD));
-    pqTD->next_invalid = 1;
-    pqTD->alt_next_invalid = 1;
-    pqTD->data_toggle = 0;
+    pqTD->bNextInvalid = 1;
+    pqTD->bAltNextInvalid = 1;
+    pqTD->data_toggle = endpointInfo.bDataToggle;
     pqTD->nBytes = nBytes;
     pqTD->ioc = 1;
     pqTD->cpage = nBufferOffset/0x1000;
     pqTD->cerr = 1;
-    pqTD->nPid = nPid==USB_PID_OUT?0:(nPid==USB_PID_IN?1:(nPid==USB_PID_SETUP?2:3));
+    pqTD->nPid = nPid==UsbPidOut?0:(nPid==UsbPidIn?1:(nPid==UsbPidSetup?2:3));
     pqTD->status = 0x80;
     pqTD->page0 = m_pTransferPagesPhys>>12;
     pqTD->coff = nBufferOffset%0x1000;
@@ -287,7 +283,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
 
     QH *pQH = &m_pQHList[nQHIndex];
     memset(pQH, 0, sizeof(QH));
-    pQH->next_invalid = 1;
+    pQH->bNextInvalid = 1;
     pQH->maxpacksz = 0x400;
     pQH->hrcl = 1;
     pQH->dtc = 1;
@@ -296,9 +292,9 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     pQH->nAddress = nAddress;
     pQH->mult = 1;
     pQH->qtd_ptr = (m_pqTDListPhys>>5)+nQHIndex;
-    pQH->callback = reinterpret_cast<uintptr_t>(pCallback);
-    pQH->param = pParam;
-    pQH->buffer = pBuffer;
+    pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
+    pQH->pParam = pParam;
+    pQH->pBuffer = pBuffer;
     pQH->size = nBytes;
     pQH->offset = nBufferOffset;
     NOTICE("lll "<<m_pqTDListPhys);
@@ -306,8 +302,8 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     qTD *pqTD = &m_pqTDList[nQHIndex];
     memset(pqTD, 0, sizeof(qTD));
     //pqTD->next = 0;
-    pqTD->next_invalid = 1;
-    pqTD->alt_next_invalid = 1;
+    pqTD->bNextInvalid = 1;
+    pqTD->bAltNextInvalid = 1;
     pqTD->data_toggle = 0;
     pqTD->nBytes = nBytes;
     pqTD->ioc = 1;

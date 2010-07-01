@@ -15,18 +15,14 @@
  */
 
 #include <machine/Machine.h>
-#include <machine/Pci.h>
 #include <processor/Processor.h>
-#include <usb/UsbConstants.h>
-#include <usb/UsbController.h>
+#include <usb/Usb.h>
 #include <Log.h>
 #include "Uhci.h"
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-Uhci::Uhci(Device* pDev) :
-    Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_pTDList(0), m_pTDListPhys(0), m_pAsyncQH(0), m_pAsyncQHPhys(0),
-    m_pFrameList(0), m_pFrameListPhys(0), m_pTransferPages(0), m_pTransferPagesPhys(0), m_UhciMR("Uhci-MR")
+Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR")
 {
     setSpecificType(String("UHCI"));
     // Allocate the memory region
@@ -80,11 +76,11 @@ Uhci::Uhci(Device* pDev) :
             break;
         if(nPortStatus & UHCI_PORTSC_CONN)
         {
-            m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_ENABLE, UHCI_PORTSC+i*2);
+            m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC+i*2);
             delay(50);
-            m_pBase->write16(UHCI_PORTSC_ENABLE | UHCI_PORTSC_CSCH | UHCI_PORTSC_EDCH, UHCI_PORTSC+i*2);
-            delay(50);
-            m_pBase->write16(UHCI_PORTSC_ENABLE | UHCI_PORTSC_CSCH | UHCI_PORTSC_EDCH, UHCI_PORTSC+i*2);
+            m_pBase->write16(0, UHCI_PORTSC+i*2);
+            //delay(50);
+            m_pBase->write16(UHCI_PORTSC_ENABLE/* | UHCI_PORTSC_EDCH*/, UHCI_PORTSC+i*2);
             NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" is connected");
             deviceConnected(i);
         }
@@ -113,14 +109,14 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                 break;
             // Call the callback, this TD is done
             ssize_t nReturn = pTD->status & 0x7e?-(pTD->status & 0x7e):(pTD->actlen + 1) % 0x800;
-            if(pTD->nPid == USB_PID_IN && pTD->buffer && nReturn >= 0)
+            if(pTD->nPid == UsbPidIn && pTD->buffer && nReturn >= 0)
                 memcpy(reinterpret_cast<void*>(pTD->buffer), &m_pTransferPages[pTD->buff-m_pTransferPagesPhys], nReturn);
             if(pTD->pCallback)
             {
                 void (*pCallback)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pTD->pCallback);
                 pCallback(pTD->param, nReturn);
             }
-            NOTICE("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==USB_PID_OUT?" OUT ":(pTD->nPid==USB_PID_IN?" IN  ":(pTD->nPid==USB_PID_SETUP?"SETUP":"")))<<" "<<nReturn<<Hex);
+            NOTICE("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==UsbPidOut?" OUT ":(pTD->nPid==UsbPidIn?" IN  ":(pTD->nPid==UsbPidSetup?"SETUP":"")))<<" "<<nReturn<<Hex);
             pTD = pTD->next_invalid?0:&m_pTDList[pTD->next & 0xfff];
         }
         m_pAsyncQH->pCurrent = pTD;
@@ -141,7 +137,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
             if(!pTD->status)
             {
                 ssize_t nReturn = (pTD->actlen + 1) % 0x800;
-                if(pTD->nPid == USB_PID_IN && pTD->buffer)
+                if(pTD->nPid == UsbPidIn && pTD->buffer)
                     memcpy(reinterpret_cast<void*>(pTD->buffer), &m_pTransferPages[pTD->buff-m_pTransferPagesPhys], nReturn);
                 if(pTD->pCallback)
                 {
@@ -161,16 +157,16 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     return true;
 }
 
-void Uhci::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
+void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<nAddress<<":"<<nEndpoint<<" "<<(nPid==USB_PID_OUT?" OUT ":(nPid==USB_PID_IN?" IN  ":(nPid==USB_PID_SETUP?"SETUP":"")))<<" "<<nBytes<<Hex);
+    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Pause the controller
     m_pBase->write16(0, UHCI_CMD);
 
     // Copy the buffer, if needed
-    if(nPid != USB_PID_IN && pBuffer)
+    if(nPid != UsbPidIn && pBuffer)
         memcpy(m_pTransferPages, reinterpret_cast<void*>(pBuffer), nBytes);
 
     // Fill the TD with data
@@ -184,14 +180,9 @@ void Uhci::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t 
     pTD->cerr = 1;
     pTD->spd = 0;
     pTD->nPid = nPid;
-    pTD->nAddress = nAddress;
-    pTD->nEndpoint = nEndpoint;
-    static bool dt;
-    if(nPid == USB_PID_SETUP)
-        dt = 0;
-    else
-        dt = !dt;
-    pTD->data_toggle = nBytes?dt:1;
+    pTD->nAddress = endpointInfo.nAddress;
+    pTD->nEndpoint = endpointInfo.nEndpoint;
+    pTD->data_toggle = endpointInfo.bDataToggle;
     pTD->maxlen = nBytes?nBytes-1:0x7ff;
     pTD->buff = m_pTransferPagesPhys;
     pTD->phys = (m_pTDListPhys+0*sizeof(TD))>>4;
@@ -225,7 +216,7 @@ void Uhci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     pTD->ioc = 1;
     pTD->speed = 1;
     pTD->spd = 0;
-    pTD->nPid = USB_PID_IN;
+    pTD->nPid = UsbPidIn;
     pTD->nAddress = nAddress;
     pTD->nEndpoint = nEndpoint;
     pTD->data_toggle = 0;

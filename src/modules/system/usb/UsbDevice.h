@@ -19,7 +19,6 @@
 
 #include <machine/Device.h>
 #include <processor/types.h>
-#include <usb/UsbConstants.h>
 #include <utilities/assert.h>
 
 class UsbDevice : public virtual Device
@@ -46,7 +45,12 @@ class UsbDevice : public virtual Device
 
         typedef struct Endpoint
         {
-            inline Endpoint(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)) {}
+            inline Endpoint(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
+                nEndpoint(pDescriptor->nEndpoint), bIn(pDescriptor->bDirection), bOut(!bIn),
+                nTransferType(pDescriptor->nTransferType), nMaxPacketSize(pDescriptor->nMaxPacketSize),
+                bDataToggle(false) {}
+            inline Endpoint() : nEndpoint(0), bIn(true), bOut(true),
+                nTransferType(Control), nMaxPacketSize(8) {}
 
             enum TransferTypes
             {
@@ -69,6 +73,14 @@ class UsbDevice : public virtual Device
                 uint8_t res2 : 5;
                 uint8_t nInterval;
             } PACKED *pDescriptor;
+
+            uint8_t nEndpoint;
+            bool bIn;
+            bool bOut;
+            uint8_t nTransferType;
+            uint16_t nMaxPacketSize;
+
+            bool bDataToggle;
         } Endpoint;
 
         typedef struct Interface
@@ -182,8 +194,18 @@ class UsbDevice : public virtual Device
         } DeviceDescriptor;
 
         /** Constructors and destructors */
-        inline UsbDevice() : m_nAddress(0), m_nPort(0) {};
-        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration) {};
+        inline UsbDevice() : m_nAddress(0), m_nPort(0)
+        {
+            memset(m_pEndpoints, 0, sizeof(m_pEndpoints));
+            m_pEndpoints[0] = new Endpoint();
+        }
+
+        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort),
+            m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration)
+        {
+            memcpy(m_pEndpoints, pDev->m_pEndpoints, sizeof(m_pEndpoints));
+        }
+
         virtual inline ~UsbDevice() {};
 
         /** Access to internal information */
@@ -220,6 +242,7 @@ class UsbDevice : public virtual Device
         }
 
         /** Transfer methods */
+        ssize_t doSync(Endpoint *pEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncSetup(Setup *pSetup);
         ssize_t syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
@@ -239,6 +262,7 @@ class UsbDevice : public virtual Device
         uint8_t m_nAddress;
         uint8_t m_nPort;
         Interface *m_pInterface;
+        Endpoint *m_pEndpoints[16];
 
     private:
 

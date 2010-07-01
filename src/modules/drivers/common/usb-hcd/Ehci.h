@@ -16,19 +16,16 @@
 #ifndef EHCI_H
 #define EHCI_H
 
-#include <machine/Controller.h>
 #include <machine/IrqHandler.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/types.h>
-#include <process/Semaphore.h>
-#include <usb/UsbConstants.h>
-#include <usb/UsbController.h>
+#include <usb/UsbHub.h>
 #include <utilities/ExtensibleBitmap.h>
 #include <utilities/MemoryAllocator.h>
 
 /** Device driver for the Ehci class */
-class Ehci : public UsbController, public IrqHandler, public RequestQueue
+class Ehci : public UsbHub, public IrqHandler, public RequestQueue
 {
     public:
         Ehci(Device* pDev);
@@ -36,10 +33,10 @@ class Ehci : public UsbController, public IrqHandler, public RequestQueue
 
         typedef struct qTD
         {
-            uint32_t next_invalid : 1;
+            uint32_t bNextInvalid : 1;
             uint32_t res0 : 4;
             uint32_t next : 27;
-            uint32_t alt_next_invalid : 1;
+            uint32_t bAltNextInvalid : 1;
             uint32_t res1 : 4;
             uint32_t alt_next : 27;
             uint32_t status : 8;
@@ -63,7 +60,7 @@ class Ehci : public UsbController, public IrqHandler, public RequestQueue
 
         typedef struct QH
         {
-            uint32_t next_invalid : 1;
+            uint32_t bNextInvalid : 1;
             uint32_t next_type : 2;
             uint32_t res0 : 2;
             uint32_t next : 27;
@@ -84,9 +81,9 @@ class Ehci : public UsbController, public IrqHandler, public RequestQueue
             uint32_t res1 : 5;
             uint32_t qtd_ptr : 27;
             qTD overlay;
-            uint32_t callback;
-            uint32_t param;
-            uint32_t buffer;
+            uint32_t pCallback;
+            uint32_t pParam;
+            uint32_t pBuffer;
             uint16_t size;
             uint16_t offset;
         } PACKED QH;
@@ -96,17 +93,16 @@ class Ehci : public UsbController, public IrqHandler, public RequestQueue
             str = "EHCI";
         }
 
-        virtual void doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        virtual Speed getSpeed()
+        virtual UsbSpeed getSpeed()
         {
-            return High;
+            return HighSpeed;
         }
 
         // IRQ handler callback.
         virtual bool irq(irq_id_t number, InterruptState &state);
-        IoBase *m_pBase;
 
     protected:
         uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
@@ -138,6 +134,8 @@ class Ehci : public UsbController, public IrqHandler, public RequestQueue
             EHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit
             EHCI_PORTSC_CONN = 0x1,     // Port Connected bit
         };
+
+        IoBase *m_pBase;
 
         void pause();
         void resume();

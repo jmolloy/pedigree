@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
+ * Copyright (c) 2010 Eduard Burtescu
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,18 +18,15 @@
 
 #include <machine/Device.h>
 #include <machine/IrqHandler.h>
-#include <process/Thread.h>
 #include <processor/IoBase.h>
-#include <processor/IoPort.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/types.h>
 #include <process/Semaphore.h>
-#include <usb/UsbConstants.h>
-#include <usb/UsbController.h>
+#include <usb/UsbHub.h>
 
 /** Device driver for the Uhci class */
-class Uhci : public UsbController, public IrqHandler
+class Uhci : public UsbHub, public IrqHandler
 {
     public:
         Uhci(Device* pDev);
@@ -86,12 +83,11 @@ class Uhci : public UsbController, public IrqHandler
             str = "UHCI";
         }
 
-        virtual void doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         // IRQ handler callback.
         virtual bool irq(irq_id_t number, InterruptState &state);
-        IoBase *m_pBase;
 
     private:
 
@@ -110,25 +106,27 @@ class Uhci : public UsbController, public IrqHandler
             UHCI_STS_INT = 0x01,        // On Completition Interrupt bit
 
             UHCI_PORTSC_PRES = 0x200,   // Port Reset bit
-            UHCI_PORTSC_EDCH = 0x8,     // Port Enable/Disable Change bit
+            //UHCI_PORTSC_EDCH = 0x8,     // Port Enable/Disable Change bit
             UHCI_PORTSC_ENABLE = 0x4,   // Port Enable bit
             UHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit
             UHCI_PORTSC_CONN = 0x1,     // Port Connected bit
         };
+
+        IoBase *m_pBase;
 
         uint8_t m_nPorts;
         uint16_t m_nFrames;
 
         Mutex m_Mutex;
 
+        uint32_t *m_pFrameList;
+        uintptr_t m_pFrameListPhys;
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
         QH *m_pAsyncQH;
         uintptr_t m_pAsyncQHPhys;
         QH *m_pPeriodicQH;
         uintptr_t m_pPeriodicQHPhys;
-        uint32_t *m_pFrameList;
-        uintptr_t m_pFrameListPhys;
         uint8_t *m_pTransferPages;
         uintptr_t m_pTransferPagesPhys;
         MemoryRegion m_UhciMR;

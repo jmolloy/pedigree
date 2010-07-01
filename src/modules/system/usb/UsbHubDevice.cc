@@ -36,9 +36,9 @@ UsbHubDevice::~UsbHubDevice()
 {
 }
 
-void UsbHubDevice::doAsync(uint8_t nAddress, uint8_t nEndpoint, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
+void UsbHubDevice::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    dynamic_cast<UsbHub*>(m_pParent)->doAsync(nAddress, nEndpoint, nPid, pBuffer, nBytes, pCallback, pParam);
+    dynamic_cast<UsbHub*>(m_pParent)->doAsync(endpointInfo, nPid, pBuffer, nBytes, pCallback, pParam);
 }
 
 void UsbHubDevice::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)

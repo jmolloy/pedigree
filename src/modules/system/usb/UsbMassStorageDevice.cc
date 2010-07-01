@@ -32,7 +32,6 @@ UsbMassStorageDevice::~UsbMassStorageDevice()
 #define nPacketSize 64
 void UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
-    NOTICE("hmm... "<<m_nAddress);
     Cbw *cb = new Cbw();
     cb->sig = 0x43425355;
     cb->tag = 0;
@@ -42,18 +41,20 @@ void UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
     cb->cmd_len = nCommandSize;
     memcpy(cb->cmd, reinterpret_cast<void*>(pCommand), nCommandSize);
 
-    syncOut(2, reinterpret_cast<uintptr_t>(cb), 31);
-    for(size_t i = 0;i<nRespBytes;i+=nPacketSize)
-    {
-        size_t nTrasnferBytes = (nRespBytes-i)<nPacketSize?nRespBytes-i:nPacketSize;
-        if((bWrite?syncOut(2, pRespBuffer+i, nTrasnferBytes):syncIn(1, pRespBuffer+i, nTrasnferBytes)) < 0)
-            ERROR("ERROR: fail transmit #"<<Dec<<(i/nPacketSize)<<Hex);
-    }
-    Csw myCs;
-    if(syncIn(1, reinterpret_cast<uintptr_t>(&myCs), 13) < 0)
-        ERROR("ERROR: oops, status err");
+    ssize_t nResult = syncOut(2, reinterpret_cast<uintptr_t>(cb), 31);
+    NOTICE("STAGE1 "<<Dec<<nResult<<Hex);
 
-    NOTICE("heh "<<((uint8_t*)pRespBuffer)[510]<<" "<<((uint8_t*)pRespBuffer)[511]<<" "<<myCs.status);
+    if(bWrite)
+        nResult = syncOut(2, pRespBuffer, nRespBytes);
+    else
+        nResult = syncIn(1, pRespBuffer, nRespBytes);
+    NOTICE("STAGE2 "<<Dec<<nResult<<Hex);
+
+    Csw myCs;
+    nResult = syncIn(1, reinterpret_cast<uintptr_t>(&myCs), 13);
+    NOTICE("STAGE3 "<<Dec<<nResult<<Hex);
+
+    NOTICE("FUN "<<((uint8_t*)pRespBuffer)[510]<<" "<<((uint8_t*)pRespBuffer)[511]<<" "<<myCs.status);
 }
 /*
 void UsbMassStorageDevice::readPage(uint64_t sector, uintptr_t buffer) {
