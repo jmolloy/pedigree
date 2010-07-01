@@ -24,24 +24,24 @@ typedef void (*ModuleExit)();
 
 #ifdef STATIC_DRIVERS
 
-// Arbitary limits, so sue me...
-#define MAX_DEPENDENCIES    32
-#define MAX_NAME_LENGTH     256
+#define MODULE_TAG          0xdeadbaba
 
 struct ModuleInfo
 {
     ModuleInfo(const char *newName, ModuleEntry newEntry, ModuleExit newExit, const char **newDeps)
     {
-        strcpy(name, newName);
+        tag = MODULE_TAG;
+        name = newName;
         entry = newEntry;
         exit = newExit;
         dependencies = newDeps;
     }
 
-    char name[MAX_NAME_LENGTH];
+    uint32_t tag;
+    const char *name;
     ModuleEntry entry;
     ModuleExit exit;
-    const char **dependencies; // [MAX_DEPENDENCIES][MAX_NAME_LENGTH];
+    const char **dependencies;
 };
 
 #define MODULE_INFO2(name, entry, exit, ...) \
