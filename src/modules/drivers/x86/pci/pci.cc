@@ -127,7 +127,11 @@ void entry()
         if ( (vendorAndDeviceId & 0xFFFF) == 0xFFFF || (vendorAndDeviceId & 0xFFFF) == 0 )
         {
           delete pDevice;
-          break;
+          /// \note In some cases there are gaps between functions,
+          /// so it shouldn't just skip the rest of the functions
+          /// left of the current device. eddyb
+          continue;
+          // break;
         }
 
         ConfigSpace cs;
