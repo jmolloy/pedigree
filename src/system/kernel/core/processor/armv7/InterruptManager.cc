@@ -205,6 +205,17 @@ extern "C" void arm_prefetch_abort_handler()
 extern "C" void arm_data_abort_handler()
 {
   NOTICE_NOLOCK("data abort");
+
+  uintptr_t dfar = 0;
+  asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
+
+  NOTICE_NOLOCK("Address: " << dfar);
+
+  uint32_t dfsr = 0;
+  asm volatile("MRC p15,0,%0,c5,c0,0" : "=r" (dfsr));
+
+  NOTICE_NOLOCK("Status: " << dfsr);
+
   while( 1 );
 }
 
