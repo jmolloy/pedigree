@@ -312,7 +312,7 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80008000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xA0000000)
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
-#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFF3FFFFC)
+#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFEFFF000)
 #define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
 #define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
 #define KERNEL_PAGEDIR                          reinterpret_cast<void*>(0xFFFB0000) // 0xFFFF0000 is where we'll put the exception base vectors
