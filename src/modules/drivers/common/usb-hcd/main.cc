@@ -87,7 +87,7 @@ void probeUhci(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pUhci);
 }
 
-void entry()
+static void entry()
 {
     #if (TEST_USB && X86_COMMON)
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
@@ -100,12 +100,9 @@ void entry()
     #endif
 }
 
-void exit()
+static void exit()
 {
 
 }
 
-MODULE_NAME("usb-hcd");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("pci", "usb");
+MODULE_INFO("usb-hcd", &entry, &exit, "pci", "usb");

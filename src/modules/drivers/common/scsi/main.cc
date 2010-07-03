@@ -16,17 +16,14 @@
 
 #include <Module.h>
 
-void entry()
+static void entry()
 {
 
 }
 
-void exit()
+static void exit()
 {
 
 }
 
-MODULE_NAME("scsi");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS(0);
+MODULE_INFO("scsi", &entry, &exit);
