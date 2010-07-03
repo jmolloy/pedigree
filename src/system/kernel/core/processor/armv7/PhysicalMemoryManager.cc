@@ -68,7 +68,10 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         if((start < 0x80000000) || (start >= 0x90000000))
         {
             if(!m_NonRAMRanges.allocateSpecific(start, cPages * getPageSize()))
-                return false;
+            {
+                if(!(pageConstraints & PhysicalMemoryManager::force))
+                    return false;
+            }
         }
         else
 #endif

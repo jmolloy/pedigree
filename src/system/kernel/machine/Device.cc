@@ -230,7 +230,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
                                                     VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
                                                     a))
         {
-            ERROR("Device::Address - allocateRegion failed!");
+            ERROR("Device::Address - allocateRegion for " << a << " failed!");
         }
         m_Io = pIo;
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
