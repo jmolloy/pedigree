@@ -48,15 +48,8 @@ public:
     bool initialise();
 
     /** Registers a trap handler. */
-#ifndef ARM_COMMON
     void registerHandler(MemoryTrapHandler *pHandler)
       {m_Handlers.pushBack(pHandler);}
-#else // No virtual memory or anything available to initialise the list at boot
-      // time.
-      /// \todo Fix that.
-    void registerHandler(MemoryTrapHandler *pHandler)
-      {}
-#endif
 
     //
     // InterruptHandler interface.
@@ -70,9 +63,7 @@ private:
      * Note not implemented.  */
     PageFaultHandler(const PageFaultHandler&);
 
-#ifndef ARM_COMMON
     List<MemoryTrapHandler *> m_Handlers;
-#endif
 
     /** The PageFaultHandler instance */
     static PageFaultHandler m_Instance;
