@@ -119,7 +119,6 @@ int loadModules(void *inf)
     uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_module_ctors);
     while (iterator < reinterpret_cast<uintptr_t*>(&end_module_ctors))
     {
-        NOTICE(*iterator);
         void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
         fp();
         iterator++;
@@ -191,10 +190,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
   // Initialise the Kernel Elf class
-  NOTICE_NOLOCK("initialising kernelelf");
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
-  NOTICE_NOLOCK("done");
 
 #ifndef STATIC_DRIVERS // initrd needed if drivers aren't statically linked.
   if (bsInf.isInitrdLoaded() == false)
@@ -209,16 +206,14 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2(bsInf);
 
-#ifndef ARM_COMMON
-#ifdef THREADS
-  ZombieQueue::instance().initialise();
-#endif
-#endif
-
   Processor::setInterrupts(true);
 
   // Initialise the input manager
   InputManager::instance().initialise();
+
+#ifdef THREADS
+  ZombieQueue::instance().initialise();
+#endif
 
   // Initialise the boot output.
   bootIO.initialise();
@@ -292,7 +287,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   g_LocksCommand.setReady();
 #endif
 
-#if defined(THREADS) // && !defined(STATIC_DRIVERS)
+#if defined(THREADS) && !defined(STATIC_DRIVERS)
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
 #else
   loadModules(&bsInf);
