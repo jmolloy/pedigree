@@ -371,8 +371,13 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
 
 sqlite3 *g_pSqlite = 0;
 
+#ifdef STATIC_DRIVERS
+#include "config_database.h"
+#endif
+
 static void init()
 {
+#ifndef STATIC_DRIVERS
     if (!g_pBootstrapInfo->isDatabaseLoaded())
         FATAL("Database not loaded, cannot continue.");
 
@@ -398,6 +403,10 @@ static void init()
     memcpy(g_pFile, region.virtualAddress(), sSize);
     g_FileSz = sSize;
     NOTICE("region.va: " << (uintptr_t)region.virtualAddress());
+#else
+    g_pFile = file;
+    g_FileSz = sizeof file;
+#endif
     sqlite3_initialize();
     NOTICE("Initialize fin");
     int ret = sqlite3_open("root»/.pedigree-root", &g_pSqlite);

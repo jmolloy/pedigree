@@ -11,8 +11,12 @@ tmp = env.Clone()
 # Change to then name of this module
 moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
 objname = moduledir + '/config.o'
+config_file = env.File('#src/modules/system/config/config_database.h')
 
 env.Alias("modules", objname)
+
+if('STATIC_DRIVERS' in env['CPPDEFINES']):
+    env.Depends(objname, config_file)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
