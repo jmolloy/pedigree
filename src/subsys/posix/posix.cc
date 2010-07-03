@@ -34,4 +34,9 @@ static void destroy()
 {
 }
 
-MODULE_INFO("posix", &init, &destroy, "console", "TUI");
+MODULE_INFO("posix", &init, &destroy,
+#ifdef ARM_COMMON
+            "console");
+#else
+            "console", "TUI");
+#endif

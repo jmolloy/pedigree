@@ -105,4 +105,10 @@ static void exit()
 
 }
 
-MODULE_INFO("usb-hcd", &entry, &exit, "pci", "usb");
+MODULE_INFO("usb-hcd", &entry, &exit,
+#ifndef ARM_COMMON
+            "pci", "usb"
+#else
+            "usb"
+#endif
+            );
