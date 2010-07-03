@@ -319,6 +319,6 @@ void init_stage2()
 #elif PPC_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c"
 #elif ARM_COMMON
-#define __MOD_DEPS "vfs" "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c"
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
