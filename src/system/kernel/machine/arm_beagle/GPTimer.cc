@@ -162,7 +162,8 @@ bool GPTimer::unregisterHandler(TimerHandler *handler)
 void GPTimer::addAlarm(class Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 {
 #ifdef THREADS
-    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000000+alarmUsecs+getTickCount(),
+    size_t time = (alarmSecs * 1000) + (alarmUsecs / 1000) + m_TickCount;
+    Alarm *pAlarm = new Alarm(pEvent, time,
                               Processor::information().getCurrentThread());
     m_Alarms.pushBack(pAlarm);
 #endif
@@ -232,6 +233,27 @@ void GPTimer::interrupt(size_t nInterruptnumber, InterruptState &state)
         // Timer delta is in nanoseconds
         if(m_Handlers[nHandler])
             m_Handlers[nHandler]->timer(1000000, state);
+    }
+
+    // Check for alarms.
+    while (true)
+    {
+        bool bDispatched = false;
+        for (List<Alarm*>::Iterator it = m_Alarms.begin();
+        it != m_Alarms.end();
+        it++)
+        {
+            Alarm *pA = *it;
+            if ( pA->m_Time <= m_TickCount )
+            {
+                pA->m_pThread->sendEvent(pA->m_pEvent);
+                m_Alarms.erase(it);
+                bDispatched = true;
+                break;
+            }
+        }
+        if (!bDispatched)
+            break;
     }
 
     // Ack the interrupt source
