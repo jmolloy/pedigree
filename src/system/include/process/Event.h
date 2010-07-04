@@ -29,7 +29,7 @@
 #if defined(X86) || defined(X64) || defined(PPC32)
   #define EVENT_BASE                0x80000000
 #elif defined(ARMV7)
-  #define EVENT_BASE                0x3F000000
+  #define EVENT_BASE                0xF0000000
 #else
   #define EVENT_BASE                0
 #endif

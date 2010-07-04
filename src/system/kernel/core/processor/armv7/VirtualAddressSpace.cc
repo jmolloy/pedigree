@@ -146,24 +146,13 @@ bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
     FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor *>(m_VirtualPageDirectory);
     if(pdir[pdir_offset].descriptor.entry)
     {
-        // What type is the entry?
-        switch(pdir[pdir_offset].descriptor.fault.type)
-        {
-            case 1:
-            {
-                // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
-                if(!ptbl[ptab_offset].descriptor.fault.type)
-                    return false;
-                break;
-            }
-            case 2:
-                // Section or supersection
-                WARNING("ArmV7VirtualAddressSpace::isAddressValid - sections and supersections not yet supported");
-                break;
-            default:
-                return false;
-        }
+        if(pdir[pdir_offset].descriptor.fault.type == 2)
+            return true; // No second-level table walk
+
+        // Knowing if a page is mapped is a global thing
+        SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+        if(!ptbl[ptab_offset].descriptor.fault.type)
+            return false;
     }
 
     return true;
@@ -304,9 +293,24 @@ void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
                 break;
             }
             case 2:
+            {
                 // Section or supersection
-                WARNING("ArmV7VirtualAddressSpace::doGetMapping - sections and supersections not yet supported");
+                if(pdir[pdir_offset].descriptor.section.sectiontype == 0)
+                {
+                    uintptr_t offset = addr % 0x100000;
+                    physicalAddress = (pdir[pdir_offset].descriptor.section.base << 20) + offset;
+                    flags = fromFlags(pdir[pdir_offset].descriptor.section.ap1);
+                }
+                else if(pdir[pdir_offset].descriptor.section.sectiontype == 1)
+                {
+                    uintptr_t offset = addr % 0x1000000;
+                    physicalAddress = (pdir[pdir_offset].descriptor.section.base << 20) + offset;
+                    flags = fromFlags(pdir[pdir_offset].descriptor.section.ap1);
+                }
+                else
+                    ERROR("doGetMapping: who knows what the hell this paging structure is");
                 break;
+            }
             default:
                 return;
         }
@@ -334,9 +338,18 @@ void ArmV7VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
                 break;
             }
             case 2:
+            {
                 // Section or supersection
-                WARNING("ArmV7VirtualAddressSpace::doSetFlags - sections and supersections not yet supported");
+                if(pdir[pdir_offset].descriptor.section.sectiontype == 0)
+                    pdir[pdir_offset].descriptor.section.ap1 = toFlags(newFlags);
+                else if(pdir[pdir_offset].descriptor.section.sectiontype == 1)
+                {
+                    WARNING("doSetFlags: supersections not handled yet");
+                }
+                else
+                    ERROR("doSetFlags: who knows what the hell this paging structure is");
                 break;
+            }
             default:
                 return;
         }
