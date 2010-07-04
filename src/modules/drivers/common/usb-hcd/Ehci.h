@@ -17,6 +17,7 @@
 #define EHCI_H
 
 #include <machine/IrqHandler.h>
+#include <processor/InterruptManager.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/types.h>
@@ -25,7 +26,13 @@
 #include <utilities/MemoryAllocator.h>
 
 /** Device driver for the Ehci class */
-class Ehci : public UsbHub, public IrqHandler, public RequestQueue
+class Ehci : public UsbHub,
+#ifdef X86_COMMON
+    public IrqHandler,
+#else
+    public InterruptHandler,
+#endif
+    public RequestQueue
 {
     public:
         Ehci(Device* pDev);
@@ -102,7 +109,11 @@ class Ehci : public UsbHub, public IrqHandler, public RequestQueue
         }
 
         // IRQ handler callback.
+#ifdef X86_COMMON
         virtual bool irq(irq_id_t number, InterruptState &state);
+#else
+        virtual void interrupt(size_t number, InterruptState &state);
+#endif
 
     protected:
         uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,

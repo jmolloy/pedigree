@@ -119,3 +119,59 @@ void Prcm::SetIfaceClockPER(size_t clock, bool enabled)
         val |= bit;
     *clksel = val;
 }
+
+void Prcm::SetFuncClockCORE(size_t n, size_t clock, bool enabled)
+{
+    if(!m_Base)
+        return;
+
+    // Bit to set
+    uint32_t bit = 1 << clock;
+
+    // CM_ICLKENn_CORE register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += CORE_CM;
+    if(n == 1)
+        vaddr += CM_FCLKEN1_CORE;
+    else if(n == 3)
+        vaddr += CM_FCLKEN3_CORE;
+    else
+        return;
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+    
+    // Set the value if needed
+    uint32_t val = *clksel;
+    if((!enabled) && (val & bit))
+        val ^= bit;
+    else if(enabled && (!(val & bit)))
+        val |= bit;
+    *clksel = val;
+}
+
+void Prcm::SetIfaceClockCORE(size_t n, size_t clock, bool enabled)
+{
+    if(!m_Base)
+        return;
+
+    // Bit to set
+    uint32_t bit = 1 << clock;
+
+    // CM_ICLKENn_CORE register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += CORE_CM;
+    if(n == 1)
+        vaddr += CM_ICLKEN1_CORE;
+    else if(n == 3)
+        vaddr += CM_ICLKEN3_CORE;
+    else
+        return;
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+    
+    // Set the value if needed
+    uint32_t val = *clksel;
+    if((!enabled) && (val & bit))
+        val ^= bit;
+    else if(enabled && (!(val & bit)))
+        val |= bit;
+    *clksel = val;
+}

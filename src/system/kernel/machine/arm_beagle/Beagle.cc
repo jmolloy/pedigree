@@ -111,6 +111,14 @@ void ArmBeagle::initialiseDeviceTree()
     pL4->addChild(pCtl);
     pCtl->setParent(pL4);
 
+    pCtl = new Controller();
+    pCtl->setSpecificType(String("ehci-controller"));
+    pCtl->setPciIdentifiers(0x0C, 0x03, 0, 0, 0x20); // EHCI PCI identifiers
+    pCtl->addresses().pushBack(new Device::Address(String("mmio"), 0x48064800, 1024, false));
+    pCtl->setInterruptNumber(77);
+    pL4->addChild(pCtl);
+    pCtl->setParent(pL4);
+
     Device::root().addChild(pL4);
     pL4->setParent(&Device::root());
 }

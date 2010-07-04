@@ -67,6 +67,21 @@ class Prcm
             CM_CLKSTST_PER          = 0x4C, // R
         };
 
+        enum Register_CORE
+        {
+            CM_FCLKEN1_CORE         = 0x00, // RW
+            CM_FCLKEN3_CORE         = 0x08, // RW
+            CM_ICLKEN1_CORE         = 0x10, // RW
+            CM_ICLKEN3_CORE         = 0x18, // RW
+            CM_IDLEST1_CORE         = 0x20, // R
+            CM_IDLEST3_CORE         = 0x28, // R
+            CM_AUTOIDLE1_CORE       = 0x30, // RW
+            CM_AUTOIDLE3_CORE       = 0x38, // RW
+            CM_CLKSEL_CORE          = 0x40, // RW
+            CM_CLKSTCTRL_CORE       = 0x48, // RW
+            CM_CLKSTST_CORE         = 0x4C, // R
+        };
+
         /** Initialises the PRCM from a specific base */
         void initialise(uintptr_t base);
 
@@ -78,6 +93,12 @@ class Prcm
 
         /** Handle interface clock enable/disable for PER */
         void SetIfaceClockPER(size_t clock, bool enabled);
+
+        /** Handle functional clock enable/disable for CORE */
+        void SetFuncClockCORE(size_t n, size_t clock, bool enabled);
+
+        /** Handle interface clock enable/disable for CORE */
+        void SetIfaceClockCORE(size_t n, size_t clock, bool enabled);
 
     private:
         static Prcm m_Instance;

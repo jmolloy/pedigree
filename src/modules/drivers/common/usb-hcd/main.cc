@@ -25,7 +25,7 @@
 #include "Uhci.h"
 
 /// \note Set to 1 if you want to test USB
-#define TEST_USB 0
+#define TEST_USB 1
 /// \note Set to 1 if you want to have the system halted after USB finishes initialization
 #define TEST_USB_HALT 1
 
@@ -89,15 +89,15 @@ void probeUhci(Device *pDev)
 
 static void entry()
 {
-    #if (TEST_USB && X86_COMMON)
+#if TEST_USB && (X86_COMMON || ARM_COMMON)
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
-    #if TEST_USB_HALT
+    #if TEST_USB_HALT && defined(X86_COMMON)
     while(true)asm volatile("sti;hlt");
     #endif
-    #endif
+#endif
 }
 
 static void exit()
@@ -109,6 +109,6 @@ MODULE_INFO("usb-hcd", &entry, &exit,
 #ifndef ARM_COMMON
             "pci", "usb"
 #else
-            "usb"
+            "usb-glue", "usb"
 #endif
             );

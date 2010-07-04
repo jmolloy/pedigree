@@ -17,6 +17,7 @@
 #include <machine/Controller.h>
 #include <machine/Machine.h>
 #include <processor/Processor.h>
+#include <processor/InterruptManager.h>
 #include <usb/Usb.h>
 #include <utilities/assert.h>
 #include <Log.h>
@@ -74,7 +75,11 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     //delay(500);
     //asm("sti");
     // Install the IRQ
+#ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+#else
+    InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
+#endif
     // Search for ports with devices and reset them
     for(int i=0;i<8;i++)
     {
@@ -98,7 +103,11 @@ Ehci::~Ehci()
 {
 }
 
+#ifdef X86_COMMON
 bool Ehci::irq(irq_id_t number, InterruptState &state)
+#else
+void Ehci::interrupt(size_t number, InterruptState &state)
+#endif
 {
     uint32_t status = m_pBase->read32(m_nOpRegsOffset+EHCI_STS);
     //NOTICE("IRQ "<<status);
@@ -150,7 +159,10 @@ bool Ehci::irq(irq_id_t number, InterruptState &state)
     }
     resume();
     m_pBase->write32(status, m_nOpRegsOffset+EHCI_STS);
+
+#ifdef X86_COMMON
     return true;
+#endif
 }
 
 void Ehci::pause()
