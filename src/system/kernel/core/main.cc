@@ -287,7 +287,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   g_LocksCommand.setReady();
 #endif
 
-#if defined(THREADS) && !defined(STATIC_DRIVERS)
+#if defined(THREADS)
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
 #else
   loadModules(&bsInf);
