@@ -122,9 +122,13 @@ class Ehci : public UsbHub,
     private:
 
         enum EhciConstants {
+            EHCI_CAPLENGTH = 0x00,      // Capability Registers Length
+            EHCI_HCSPARAMS = 0x04,      // Host Controller Structural Parameters
+
             EHCI_CMD = 0x00,            // Command register
             EHCI_STS = 0x04,            // Status register
             EHCI_INTR = 0x08,           // Intrerrupt Enable register
+            EHCI_CTRLDSEG = 0x10,       // Control Data Structure Segment Register
             EHCI_FRINDEX = 0x0c,        // Periodic Frame Index register
             EHCI_PERIODICLP = 0x14,     // Periodic List Pointer register
             EHCI_ASYNCLP = 0x18,        // Async List Pointer register

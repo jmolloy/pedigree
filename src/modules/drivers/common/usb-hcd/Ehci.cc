@@ -36,14 +36,16 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
         return;
     }
 
-    m_pQHListVirt = static_cast<uint8_t*>(m_EhciMR.virtualAddress());
-    m_pFrameList = static_cast<uint32_t*>(m_EhciMR.virtualAddress())+0x2000;
-    m_pqTDListVirt = static_cast<uint8_t*>(m_EhciMR.virtualAddress())+0x3000;
-    m_pTransferPagesVirt = static_cast<uint8_t*>(m_EhciMR.virtualAddress())+0x4000;
-    m_pQHListPhys = m_EhciMR.physicalAddress();
-    m_pFrameListPhys = m_EhciMR.physicalAddress()+0x2000;
-    m_pqTDListPhys = m_EhciMR.physicalAddress()+0x3000;
-    m_pTransferPagesPhys = m_EhciMR.physicalAddress()+0x4000;
+    uintptr_t virtualAddress = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
+    physical_uintptr_t physicalAddress = m_EhciMR.physicalAddress();
+    m_pQHListVirt = static_cast<uint8_t*>(virtualAddress);
+    m_pFrameList = static_cast<uint32_t*>(virtualAddress + 0x2000);
+    m_pqTDListVirt = static_cast<uint8_t*>(virtualAddress + 0x3000);
+    m_pTransferPagesVirt = static_cast<uint8_t*>(virtualAddress + 0x4000);
+    m_pQHListPhys = physicalAddress;
+    m_pFrameListPhys = physicalAddress + 0x2000;
+    m_pqTDListPhys = physicalAddress + 0x3000;
+    m_pTransferPagesPhys = physicalAddress + 0x4000;
     m_pQHList = reinterpret_cast<QH*>(m_pQHListVirt);
     m_pqTDList = reinterpret_cast<qTD*>(m_pqTDListVirt);
 
@@ -51,39 +53,66 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
-    m_nOpRegsOffset = m_pBase->read8(0);
+    m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
+
+    // Get structural capabilities to determine the number of physical ports
+    // we have available to us.
+    size_t nPorts = m_pBase->read8(EHCI_HCSPARAMS) & 0xF;
 
     // Don't reset a running controller
     pause();
 
+    delay(5);
+
     // Write reset command and wait for it to complete
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_HCRES, m_nOpRegsOffset+EHCI_CMD);
-    while(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & EHCI_CMD_HCRES);
-    NOTICE("USB: EHCI: Reseted");
+    uint32_t reg = m_pBase->read32(m_nOpRegsOffset + EHCI_CMD);
+    reg |= EHCI_CMD_HCRES;
+    m_pBase->write32(reg, m_nOpRegsOffset + EHCI_CMD);
+    while(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & EHCI_CMD_HCRES)
+        delay(5);
+    NOTICE("USB: EHCI: Reset complete, status: " << m_pBase->read32(m_nOpRegsOffset + EHCI_STS) << ".");
 
-    // Take over the ports
-    m_pBase->write32(1, m_nOpRegsOffset+EHCI_CFGFLAG);
-
-    // Enable interrupts
-    m_pBase->write32(0x3f, m_nOpRegsOffset+EHCI_INTR);
-
-    // Enable async list
-    //m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-
-    // Make sure we start back the controller
-    resume();
-    //delay(500);
-    //asm("sti");
     // Install the IRQ
 #ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
 #else
     InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
 #endif
+
+    // Zero the top 64 bits for addresses of EHCI data structures
+    m_pBase->write32(0, m_nOpRegsOffset + EHCI_CTRLDSEG);
+
+    // Enable interrupts
+    m_pBase->write32(0x3f, m_nOpRegsOffset + EHCI_INTR);
+
+    // Write the base address of the periodic frame list - all T-bits are set to one
+    m_pBase->write32(m_pFrameListPhys, m_nOpRegsOffset + EHCI_PERIODICLP);
+
+    delay(5);
+
+    // Enable async list
+    //m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+
+    // Set the desired interrupt threshold (frame list size = 4096 bytes)
+    uint32_t cmd = m_pBase->read32(m_nOpRegsOffset + EHCI_CMD);
+    cmd &= ~0xFF0000;
+    cmd |= 0x80000; // Maximum interrupt interval is 8 micro-frame
+
+    // Turn on the controller
+    resume();
+
+    delay(5);
+
+    // Take over the ports
+    m_pBase->write32(1, m_nOpRegsOffset+EHCI_CFGFLAG);
+
+    delay(500);
+
     // Search for ports with devices and reset them
-    for(int i=0;i<8;i++)
+    for(size_t i = 0; i < nPorts; i++)
     {
         // Reset the port if it's connected
+        NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
         if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
         {
             // Set the reset bit
@@ -110,7 +139,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t status = m_pBase->read32(m_nOpRegsOffset+EHCI_STS);
-    //NOTICE("IRQ "<<status);
+    NOTICE("IRQ "<<status);
     pause();
     if(status & EHCI_STS_PORTCH)
         for(int i=0;i<8;i++)
@@ -168,21 +197,24 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 void Ehci::pause()
 {
     // Return if we are already stopped
-    if(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & EHCI_STS_HALTED)
+    if(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED)
         return;
+
     // Clear run bit and wait until it's stopped
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset+EHCI_CMD);
-    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & EHCI_STS_HALTED));
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
+    while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
+        delay(5);
 }
 
 void Ehci::resume()
 {
     // Return if we are already running
-    if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & EHCI_STS_HALTED))
+    if(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
         return;
     // Set run bit and wait until it's running
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_RUN, m_nOpRegsOffset+EHCI_CMD);
-    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & EHCI_STS_HALTED);
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
+    while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED)
+        delay(5);
 }
 
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
