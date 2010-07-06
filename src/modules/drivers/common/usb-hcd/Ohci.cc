@@ -53,7 +53,11 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
     // Set Hcca pointer
     m_pBase->write32(m_pHccaPhys, OhciHcca);
     // Install the IRQ handler
+#ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+#else
+    InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
+#endif
     // Enable wanted interrupts and clean the interrupt status
     m_pBase->write32(0x4000007f, OhciInterruptStatus);
     m_pBase->write32(OhciInterruptMIE | OhciInterruptWbDoneHead, OhciInterruptEnable);
@@ -87,7 +91,11 @@ Ohci::~Ohci()
 {
 }
 
+#ifdef X86_COMMON
 bool Ohci::irq(irq_id_t number, InterruptState &state)
+#else
+void Ohci::interrupt(size_t number, InterruptState &state)
+#endif
 {
     uint32_t nStatus = m_pBase->read32(OhciInterruptStatus) & m_pBase->read32(OhciInterruptEnable);
     if(nStatus & OhciInterruptWbDoneHead)
@@ -170,7 +178,9 @@ bool Ohci::irq(irq_id_t number, InterruptState &state)
         // Resume the controller
         m_pBase->write32(OHCI_CMD_RUN, OHCI_CMD);
     }*/
+#ifdef X86_COMMON
     return true;
+#endif
 }
 
 void Ohci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)

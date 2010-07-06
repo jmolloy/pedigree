@@ -20,12 +20,18 @@
 #include <machine/IrqHandler.h>
 #include <processor/IoBase.h>
 #include <processor/MemoryRegion.h>
+#include <processor/InterruptManager.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/types.h>
 #include <usb/UsbHub.h>
 
 /** Device driver for the Ohci class */
-class Ohci : public UsbHub, public IrqHandler
+class Ohci : public UsbHub,
+#ifdef X86_COMMON
+    public IrqHandler
+#else
+    public InterruptHandler
+#endif
 {
     public:
         Ohci(Device* pDev);
@@ -90,7 +96,11 @@ class Ohci : public UsbHub, public IrqHandler
         virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         // IRQ handler callback.
+#ifdef X86_COMMON
         virtual bool irq(irq_id_t number, InterruptState &state);
+#else
+        virtual void interrupt(size_t number, InterruptState &state);
+#endif
 
     private:
 
