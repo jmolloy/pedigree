@@ -36,18 +36,18 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
         return;
     }
 
-    uintptr_t virtualAddress = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
+    uintptr_t virtualAddress           = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
     physical_uintptr_t physicalAddress = m_EhciMR.physicalAddress();
-    m_pQHListVirt = static_cast<uint8_t*>(virtualAddress);
-    m_pFrameList = static_cast<uint32_t*>(virtualAddress + 0x2000);
-    m_pqTDListVirt = static_cast<uint8_t*>(virtualAddress + 0x3000);
-    m_pTransferPagesVirt = static_cast<uint8_t*>(virtualAddress + 0x4000);
-    m_pQHListPhys = physicalAddress;
-    m_pFrameListPhys = physicalAddress + 0x2000;
-    m_pqTDListPhys = physicalAddress + 0x3000;
-    m_pTransferPagesPhys = physicalAddress + 0x4000;
-    m_pQHList = reinterpret_cast<QH*>(m_pQHListVirt);
-    m_pqTDList = reinterpret_cast<qTD*>(m_pqTDListVirt);
+    m_pQHListVirt           = reinterpret_cast<uint8_t*>(virtualAddress);
+    m_pFrameList            = reinterpret_cast<uint32_t*>(virtualAddress + 0x2000);
+    m_pqTDListVirt          = reinterpret_cast<uint8_t*>(virtualAddress + 0x3000);
+    m_pTransferPagesVirt    = reinterpret_cast<uint8_t*>(virtualAddress + 0x4000);
+    m_pQHListPhys           = physicalAddress;
+    m_pFrameListPhys        = physicalAddress + 0x2000;
+    m_pqTDListPhys          = physicalAddress + 0x3000;
+    m_pTransferPagesPhys    = physicalAddress + 0x4000;
+    m_pQHList               = reinterpret_cast<QH*>(m_pQHListVirt);
+    m_pqTDList              = reinterpret_cast<qTD*>(m_pqTDListVirt);
 
     dmemset(m_pFrameList, 1, 0x400);
 
