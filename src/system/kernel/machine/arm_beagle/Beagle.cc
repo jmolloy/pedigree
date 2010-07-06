@@ -16,6 +16,7 @@
 
 #include "Beagle.h"
 #include "Prcm.h"
+#include "I2C.h"
 
 #include <machine/Device.h>
 #include <machine/Bus.h>
@@ -111,6 +112,7 @@ void ArmBeagle::initialiseDeviceTree()
     pL4->addChild(pCtl);
     pCtl->setParent(pL4);
 
+#if 1
     pCtl = new Controller();
     pCtl->setSpecificType(String("ehci-controller"));
     pCtl->setPciIdentifiers(0x0C, 0x03, 0, 0, 0x20); // EHCI PCI identifiers
@@ -118,6 +120,15 @@ void ArmBeagle::initialiseDeviceTree()
     pCtl->setInterruptNumber(77);
     pL4->addChild(pCtl);
     pCtl->setParent(pL4);
+#else
+    pCtl = new Controller();
+    pCtl->setSpecificType(String("ohci-controller"));
+    pCtl->setPciIdentifiers(0x0C, 0x03, 0, 0, 0x10); // OHCI PCI identifiers
+    pCtl->addresses().pushBack(new Device::Address(String("mmio"), 0x48064400, 1024, false));
+    pCtl->setInterruptNumber(76);
+    pL4->addChild(pCtl);
+    pCtl->setParent(pL4);
+#endif
 
     Device::root().addChild(pL4);
     pL4->setParent(&Device::root());
@@ -146,6 +157,10 @@ void ArmBeagle::initialise()
   m_Timers[8].initialise(8, 0x49040000);
   m_Timers[9].initialise(9, 0x48086000);
   m_Timers[10].initialise(10, 0x48088000);
+
+  I2C::instance(0).initialise(0x48070000);
+  I2C::instance(1).initialise(0x48072000);
+  I2C::instance(2).initialise(0x48060000);
 
   m_bInitialised = true;
 }
