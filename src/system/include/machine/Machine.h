@@ -55,6 +55,7 @@ class Machine
      * Initialises the machine.
      */
     virtual void initialise() =0;
+    virtual void initialise2() {};
     inline bool isInitialised(){return m_bInitialised;}
 
     virtual void initialiseDeviceTree() = 0;

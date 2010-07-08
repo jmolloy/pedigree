@@ -17,6 +17,7 @@
 #include "Beagle.h"
 #include "Prcm.h"
 #include "I2C.h"
+#include "Gpio.h"
 
 #include <machine/Device.h>
 #include <machine/Bus.h>
@@ -136,13 +137,17 @@ void ArmBeagle::initialiseDeviceTree()
 
 void ArmBeagle::initialise()
 {
-  extern SyncTimer g_SyncTimer;
-
-  Prcm::instance().initialise(0x48004000);
-
   m_Serial[0].setBase(0x49020000); // uart3, RS-232 output on board
   //m_Serial[1].setBase(0x4806A000); // uart1
   //m_Serial[2].setBase(0x4806C000); // uart2
+
+  m_bInitialised = true;
+}
+void ArmBeagle::initialise2()
+{
+  extern SyncTimer g_SyncTimer;
+
+  Prcm::instance().initialise(0x48004000);
 
   g_SyncTimer.initialise(0x48320000);
 
@@ -162,7 +167,12 @@ void ArmBeagle::initialise()
   I2C::instance(1).initialise(0x48072000);
   I2C::instance(2).initialise(0x48060000);
 
-  m_bInitialised = true;
+  Gpio::instance().initialise(0x48310000,
+                              0x49050000,
+                              0x49052000,
+                              0x49054000,
+                              0x49056000,
+                              0x49058000);
 }
 Serial *ArmBeagle::getSerial(size_t n)
 {

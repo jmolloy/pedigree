@@ -35,6 +35,7 @@ public:
   }
 
   virtual void initialise();
+  virtual void initialise2();
   virtual Serial *getSerial(size_t n);
   virtual size_t getNumSerial();
   virtual Vga *getVga(size_t n);

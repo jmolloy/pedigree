@@ -189,6 +189,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   Debugger::instance().initialise();
 #endif
 
+  machine.initialise2();
+
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
@@ -265,23 +267,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the kernel log.
   Log::instance().initialise();
-
-#ifdef ARM_COMMON
-#ifdef DEBUGGER_RUN_AT_START
-  InterruptState state;
-  LargeStaticString desc("Debugger running at startup");
-  Debugger::instance().start(state, desc);
-#else
-  NOTICE_NOLOCK("ARM build now boots properly. Now hanging forever...");
-
-  /*
-  while(1)
-  {
-      asm volatile("wfi");
-  }
-  */
-#endif
-#endif
 
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();
