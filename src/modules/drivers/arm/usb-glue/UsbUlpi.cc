@@ -159,6 +159,12 @@ void UsbUlpi::initialise()
     usbClearBits(FunctionControl, 0x1B); // Enable the HS transceiver
     enablePhyAccess(false);
 
+    // Configure the DPLL5 clock
+    Prcm::instance().SelectClockPLL(4, (12 << 0) | (120 << 8));
+    Prcm::instance().SelectClockPLL(5, 1);
+    Prcm::instance().SetClockPLL(2, (7 << 4) | 7);
+    Prcm::instance().WaitPllIdleStatus(2, 0, false); // Waiting for the bit to go to one
+
     // Configure the L3 and L4 clocks
     Prcm::instance().SelectClockCORE(0, Prcm::L3_CLK_DIV2);
     Prcm::instance().SelectClockCORE(2, Prcm::L3_CLK_DIV2);
@@ -184,7 +190,14 @@ void UsbUlpi::initialise()
     // while it's still powering up
     Prcm::instance().WaitCoreIdleStatus(3, 2, true);
 
+    // Reset TLL
     uint32_t rev = tll_base[0];
+    NOTICE("USB TLL: Revision " << Dec << ((rev >> 4) & 0xF) << "." << (rev & 0xF) << Hex << ".");
+    tll_base[0x10 / 4] = 2;
+    while(!(tll_base[0x14 / 4])) delay(5);
+
+    // Disable all IDLE modes
+    tll_base[0x10 / 4] = (1 << 2) | (1 << 3) | (1 << 8);
 
     volatile uint32_t *uhh_base = reinterpret_cast<volatile uint32_t*>(m_MemRegionUHH.virtualAddress());
     NOTICE("USB UHH: Revision " << Dec << ((uhh_base[0] >> 4) & 0xF) << "." << (uhh_base[0] & 0xF) << Hex << ".");
