@@ -39,6 +39,9 @@ class I2C
         bool transmit(uint8_t addr, uintptr_t buffer, size_t len);
         bool receive(uint8_t addr, uintptr_t buffer, size_t maxlen);
 
+        bool write(uint8_t addr, uint8_t reg, uint8_t data);
+        uint8_t read(uint8_t addr, uint8_t reg);
+
     private:
 
         static I2C m_Instance[3];

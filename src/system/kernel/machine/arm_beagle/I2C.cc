@@ -84,6 +84,22 @@ void I2C::initialise(uintptr_t baseAddr)
     base[I2C_CNT] = 0;
 }
 
+bool I2C::write(uint8_t addr, uint8_t reg, uint8_t data)
+{
+    uint8_t buffer[] = {reg, data};
+    return transmit(addr, reinterpret_cast<uintptr_t>(buffer), 2);
+}
+
+uint8_t I2C::read(uint8_t addr, uint8_t reg)
+{
+    uint8_t buffer[] = {reg};
+    if(!transmit(addr, reinterpret_cast<uintptr_t>(buffer), 1))
+        return 0;
+    if(!receive(addr, reinterpret_cast<uintptr_t>(buffer), 1))
+        return 0;
+    return buffer[0];
+}
+
 bool I2C::transmit(uint8_t addr, uintptr_t buffer, size_t len)
 {
     volatile uint16_t *base = reinterpret_cast<volatile uint16_t*>(m_MmioBase.virtualAddress());
