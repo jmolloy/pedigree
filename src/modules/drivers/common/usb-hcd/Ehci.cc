@@ -293,8 +293,6 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     // Write the async list pointer
     m_pBase->write32(m_pQHListPhys+nQHIndex*64, m_nOpRegsOffset+EHCI_ASYNCLP);
 
-    //asm("sti");
-
     // Start the controller
     resume();
 }
@@ -365,8 +363,6 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
 
     // Write the periodic list frame index
     m_pBase->write32(nQHIndex, m_nOpRegsOffset+EHCI_FRINDEX);
-
-    //asm("sti");
 
     // Start the controller
     resume();
