@@ -48,7 +48,10 @@ void Prcm::initialise(uintptr_t base)
 void Prcm::SelectClockPER(size_t clock, Clock which)
 {
     if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
         return;
+    }
 
     if(clock == 0) // GPTIMER1 not handled
         return;
@@ -64,7 +67,7 @@ void Prcm::SelectClockPER(size_t clock, Clock which)
     // Set the value if needed
     uint32_t val = *clksel;
     if((which == FCLK_32K) && (val & bit))
-        val ^= bit;
+        val &= ~bit;
     else if((which == SYS_CLK) && (!(val & bit)))
         val |= bit;
     *clksel = val;
@@ -73,7 +76,10 @@ void Prcm::SelectClockPER(size_t clock, Clock which)
 void Prcm::SetFuncClockPER(size_t clock, bool enabled)
 {
     if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
         return;
+    }
 
     if(clock == 0) // GPTIMER1 not handled
         return;
@@ -89,7 +95,7 @@ void Prcm::SetFuncClockPER(size_t clock, bool enabled)
     // Set the value if needed
     uint32_t val = *clksel;
     if((!enabled) && (val & bit))
-        val ^= bit;
+        val &= ~bit;
     else if(enabled && (!(val & bit)))
         val |= bit;
     *clksel = val;
@@ -98,7 +104,10 @@ void Prcm::SetFuncClockPER(size_t clock, bool enabled)
 void Prcm::SetIfaceClockPER(size_t clock, bool enabled)
 {
     if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
         return;
+    }
 
     if(clock == 0) // GPTIMER1 not handled
         return;
@@ -114,7 +123,7 @@ void Prcm::SetIfaceClockPER(size_t clock, bool enabled)
     // Set the value if needed
     uint32_t val = *clksel;
     if((!enabled) && (val & bit))
-        val ^= bit;
+        val &= ~bit;
     else if(enabled && (!(val & bit)))
         val |= bit;
     *clksel = val;
@@ -123,12 +132,15 @@ void Prcm::SetIfaceClockPER(size_t clock, bool enabled)
 void Prcm::SetFuncClockCORE(size_t n, size_t clock, bool enabled)
 {
     if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
         return;
+    }
 
     // Bit to set
     uint32_t bit = 1 << clock;
 
-    // CM_ICLKENn_CORE register
+    // CM_FCLKENn_CORE register
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
     vaddr += CORE_CM;
     if(n == 1)
@@ -136,13 +148,16 @@ void Prcm::SetFuncClockCORE(size_t n, size_t clock, bool enabled)
     else if(n == 3)
         vaddr += CM_FCLKEN3_CORE;
     else
+    {
+        WARNING("PRCM: Invalid functional clock enable bank (CORE domain)");
         return;
+    }
     volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
     
     // Set the value if needed
     uint32_t val = *clksel;
     if((!enabled) && (val & bit))
-        val ^= bit;
+        val &= ~bit;
     else if(enabled && (!(val & bit)))
         val |= bit;
     *clksel = val;
@@ -151,7 +166,10 @@ void Prcm::SetFuncClockCORE(size_t n, size_t clock, bool enabled)
 void Prcm::SetIfaceClockCORE(size_t n, size_t clock, bool enabled)
 {
     if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
         return;
+    }
 
     // Bit to set
     uint32_t bit = 1 << clock;
@@ -164,13 +182,16 @@ void Prcm::SetIfaceClockCORE(size_t n, size_t clock, bool enabled)
     else if(n == 3)
         vaddr += CM_ICLKEN3_CORE;
     else
+    {
+        WARNING("PRCM: Invalid interface clock enable bank (CORE domain)");
         return;
+    }
     volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
     
     // Set the value if needed
     uint32_t val = *clksel;
     if((!enabled) && (val & bit))
-        val ^= bit;
+        val &= ~bit;
     else if(enabled && (!(val & bit)))
         val |= bit;
     *clksel = val;
