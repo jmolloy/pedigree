@@ -42,57 +42,57 @@ class Ehci : public UsbHub,
         {
             uint32_t bNextInvalid : 1;
             uint32_t res0 : 4;
-            uint32_t next : 27;
+            uint32_t pNext : 27;
             uint32_t bAltNextInvalid : 1;
             uint32_t res1 : 4;
-            uint32_t alt_next : 27;
-            uint32_t status : 8;
+            uint32_t pAltNext : 27;
+            uint32_t nStatus : 8;
             uint32_t nPid : 2;
-            uint32_t cerr : 2;
-            uint32_t cpage : 3;
-            uint32_t ioc : 1;
+            uint32_t nErr : 2;
+            uint32_t nPage : 3;
+            uint32_t bIoc : 1;
             uint32_t nBytes : 15;
-            uint32_t data_toggle : 1;
-            uint32_t coff : 12;
-            uint32_t page0 : 20;
+            uint32_t bDataToggle : 1;
+            uint32_t nOffset : 12;
+            uint32_t pPage0 : 20;
             uint32_t res2 : 12;
-            uint32_t page1 : 20;
+            uint32_t pPage1 : 20;
             uint32_t res3 : 12;
-            uint32_t page2 : 20;
+            uint32_t pPage2 : 20;
             uint32_t res4 : 12;
-            uint32_t page3 : 20;
+            uint32_t pPage3 : 20;
             uint32_t res5 : 12;
-            uint32_t page4 : 20;
+            uint32_t pPage4 : 20;
         } PACKED qTD;
 
         typedef struct QH
         {
             uint32_t bNextInvalid : 1;
-            uint32_t next_type : 2;
+            uint32_t nNextType : 2;
             uint32_t res0 : 2;
-            uint32_t next : 27;
+            uint32_t pNext : 27;
             uint32_t nAddress : 7;
-            uint32_t inactive_next : 1;
+            uint32_t bInactiveNext : 1;
             uint32_t nEndpoint : 4;
-            uint32_t speed : 2;
-            uint32_t dtc : 1;
+            uint32_t nSpeed : 2;
+            uint32_t bDataToggleSrc : 1;
             uint32_t hrcl : 1;
-            uint32_t maxpacksz : 11;
-            uint32_t ctrlend : 1;
-            uint32_t nakcrl : 4;
+            uint32_t nMaxPacketSize : 11;
+            uint32_t bControlEndpoint : 1;
+            uint32_t nNakReload : 4;
             uint32_t ism : 8;
             uint32_t scm : 8;
-            uint32_t hub : 7;
-            uint32_t port : 7;
+            uint32_t nHubAddress : 7;
+            uint32_t nHubPort : 7;
             uint32_t mult : 2;
             uint32_t res1 : 5;
-            uint32_t qtd_ptr : 27;
+            uint32_t pQTD : 27;
             qTD overlay;
             uint32_t pCallback;
             uint32_t pParam;
             uint32_t pBuffer;
-            uint16_t size;
-            uint16_t offset;
+            uint16_t nBufferSize;
+            uint16_t nBufferOffset;
         } PACKED QH;
 
         virtual void getName(String &str)
@@ -144,13 +144,17 @@ class Ehci : public UsbHub,
             EHCI_STS_PORTCH = 0x4,      // Port Change Detect bit
             EHCI_STS_INT = 0x1,         // On Completition Interrupt bit
 
+            EHCI_PORTSC_PPOW = 0x1000,  // Port Power bit
             EHCI_PORTSC_PRES = 0x100,   // Port Reset bit
             EHCI_PORTSC_ENCH = 0x8,     // Port Enable/Disable Change bit
+            EHCI_PORTSC_EN = 0x4,       // Port Enabled bit
             EHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit
             EHCI_PORTSC_CONN = 0x1,     // Port Connected bit
         };
 
         IoBase *m_pBase;
+
+        uint8_t m_nPorts;
 
         void pause();
         void resume();

@@ -14,8 +14,10 @@
  * OR IN CONRTLCTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <machine/Controller.h>
 #include <machine/Machine.h>
+#ifdef X86_COMMON
+#include <machine/Pci.h>
+#endif
 #include <processor/Processor.h>
 #include <processor/InterruptManager.h>
 #include <usb/Usb.h>
@@ -30,7 +32,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     setSpecificType(String("EHCI"));
 
     // Allocate the pages we need
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_EhciMR, 9, PhysicalMemoryManager::continuous, 0, -1))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_EhciMR, 9, PhysicalMemoryManager::continuous, 0))
     {
         ERROR("USB: EHCI: Couldn't allocate Memory Region!");
         return;
@@ -51,13 +53,20 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
 
     dmemset(m_pFrameList, 1, 0x400);
 
+//#ifdef X86_COMMON
+#if 0
+    uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
+    NOTICE("USB: EHCI: Pci command: "<<(nPciCmdSts&0xffff));
+    PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 7);
+#endif
+
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
     m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
 
     // Get structural capabilities to determine the number of physical ports
     // we have available to us.
-    size_t nPorts = m_pBase->read8(EHCI_HCSPARAMS) & 0xF;
+    m_nPorts = m_pBase->read8(EHCI_HCSPARAMS) & 0xF;
 
     // Don't reset a running controller
     pause();
@@ -65,9 +74,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     delay(5);
 
     // Write reset command and wait for it to complete
-    uint32_t reg = m_pBase->read32(m_nOpRegsOffset + EHCI_CMD);
-    reg |= EHCI_CMD_HCRES;
-    m_pBase->write32(reg, m_nOpRegsOffset + EHCI_CMD);
+    m_pBase->write32(EHCI_CMD_HCRES, m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & EHCI_CMD_HCRES)
         delay(5);
     NOTICE("USB: EHCI: Reset complete, status: " << m_pBase->read32(m_nOpRegsOffset + EHCI_STS) << ".");
@@ -83,20 +90,15 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     m_pBase->write32(0, m_nOpRegsOffset + EHCI_CTRLDSEG);
 
     // Enable interrupts
-    m_pBase->write32(0x3f, m_nOpRegsOffset + EHCI_INTR);
+    m_pBase->write32(0x3b, m_nOpRegsOffset + EHCI_INTR);
 
     // Write the base address of the periodic frame list - all T-bits are set to one
     m_pBase->write32(m_pFrameListPhys, m_nOpRegsOffset + EHCI_PERIODICLP);
 
     delay(5);
 
-    // Enable async list
-    //m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-
     // Set the desired interrupt threshold (frame list size = 4096 bytes)
-    uint32_t cmd = m_pBase->read32(m_nOpRegsOffset + EHCI_CMD);
-    cmd &= ~0xFF0000;
-    cmd |= 0x80000; // Maximum interrupt interval is 8 micro-frame
+    m_pBase->write32(0x80000, m_nOpRegsOffset+EHCI_CMD);
 
     // Turn on the controller
     resume();
@@ -106,26 +108,29 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     // Take over the ports
     m_pBase->write32(1, m_nOpRegsOffset+EHCI_CFGFLAG);
 
-    delay(500);
-
-    // Search for ports with devices and reset them
-    for(size_t i = 0; i < nPorts; i++)
-    {
-        // Reset the port if it's connected
-        NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
-        if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
-        {
-            // Set the reset bit
-            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) | EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+i*4);
-            delay(50);
-            // Unset the reset bit
-            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+i*4);
-            NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" is connected");
-            deviceConnected(i);
-        }
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4), m_nOpRegsOffset+EHCI_PORTSC+i*4);
-    }
+    // Set up the RequestQueue
     initialise();
+
+    // Search for ports with devices and initialise them
+    for(size_t i = 0; i < m_nPorts; i++)
+    {
+        NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" - status initially: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
+        if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_PPOW))
+        {
+            m_pBase->write32(EHCI_PORTSC_PPOW, m_nOpRegsOffset+EHCI_PORTSC+i*4);
+            delay(100);
+            NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" - status after power-up: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
+        }
+        // If connected, send it to the RequestQueue
+        if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
+            addSyncRequest(1, i);
+        else
+            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4), m_nOpRegsOffset+EHCI_PORTSC+i*4);
+    }
+
+    // Enable port status change interrupt and clear it from status
+    m_pBase->write32(EHCI_STS_PORTCH, m_nOpRegsOffset + EHCI_STS);
+    m_pBase->write32(0x3f, m_nOpRegsOffset + EHCI_INTR);
 }
 
 Ehci::~Ehci()
@@ -138,27 +143,27 @@ bool Ehci::irq(irq_id_t number, InterruptState &state)
 void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
 {
-    uint32_t status = m_pBase->read32(m_nOpRegsOffset+EHCI_STS);
-    NOTICE("IRQ "<<status);
-    pause();
-    if(status & EHCI_STS_PORTCH)
-        for(int i=0;i<8;i++)
+    uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & m_pBase->read32(m_nOpRegsOffset+EHCI_INTR);
+    NOTICE("IRQ "<<nStatus);
+    if(nStatus & EHCI_STS_PORTCH)
+        for(size_t i = 0;i < m_nPorts;i++)
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CSCH)
                 addAsyncRequest(1, i);
-    if(status & EHCI_STS_INT)
+    if(nStatus & EHCI_STS_INT)
     {
+        pause();
         for(size_t i = 0;i<128;i++)
         {
             if(!m_QHBitmap.test(i))
                 continue;
             QH *pQH = &m_pQHList[i];
             qTD *pqTD = &m_pqTDList[i];
-            if(pqTD->status == 0x80)
+            if(pqTD->nStatus == 0x80)
                 continue;
             bool bPeriodic = pQH->bNextInvalid;
-            ssize_t ret = pqTD->status & 0x7c?-((pqTD->status & 0x7c)>>2):pQH->size-pqTD->nBytes;
+            ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->nBufferSize-pqTD->nBytes;
             if(pqTD->nPid == 1 && pQH->pBuffer && ret > 0)
-                memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPagesVirt[pQH->offset], ret);
+                memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPagesVirt[pQH->nBufferOffset], ret);
             if(pQH->pCallback && (ret > 0 || !bPeriodic))
             {
                 void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pCallback);
@@ -167,27 +172,27 @@ void Ehci::interrupt(size_t number, InterruptState &state)
             }
             if(!bPeriodic)
             {
-                m_TransferPagesAllocator.free(pQH->offset, pQH->size);
+                m_TransferPagesAllocator.free(pQH->nBufferOffset, pQH->nBufferSize);
                 m_QHBitmap.clear(i);
             }
             else
             {
-                pqTD->status = 0x80;
-                pqTD->nBytes = pQH->size;
-                pqTD->cpage = pQH->offset/0x1000;
-                pqTD->coff = pQH->offset%0x1000;
-                pqTD->cerr = 0;
-                pqTD->page0 = m_pTransferPagesPhys>>12;
-                pqTD->page1 = (m_pTransferPagesPhys+0x1000)>>12;
-                pqTD->page2 = (m_pTransferPagesPhys+0x2000)>>12;
-                pqTD->page3 = (m_pTransferPagesPhys+0x3000)>>12;
-                pqTD->page4 = (m_pTransferPagesPhys+0x4000)>>12;
+                pqTD->nStatus = 0x80;
+                pqTD->nBytes = pQH->nBufferSize;
+                pqTD->nPage = pQH->nBufferOffset/0x1000;
+                pqTD->nOffset = pQH->nBufferOffset%0x1000;
+                pqTD->nErr = 0;
+                pqTD->pPage0 = m_pTransferPagesPhys>>12;
+                pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
+                pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
+                pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
+                pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
                 memcpy(&pQH->overlay, pqTD, sizeof(qTD));
             }
         }
+        resume();
     }
-    resume();
-    m_pBase->write32(status, m_nOpRegsOffset+EHCI_STS);
+    m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
 
 #ifdef X86_COMMON
     return true;
@@ -220,7 +225,7 @@ void Ehci::resume()
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
+    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Pause the controller
     pause();
@@ -235,53 +240,52 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
         FATAL("USB: EHCI: Buffers full :(");
     if(nPid != UsbPidIn && pBuffer)
         memcpy(&m_pTransferPagesVirt[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
-    //NOTICE("===> "<<Dec<<nBytes<<"\t"<<nBufferOffset<<Hex);
 
     // Get an unused QH
     size_t nQHIndex = m_QHBitmap.getFirstClear();
     if(nQHIndex > 127)
         FATAL("USB: EHCI: QH/qTD space full :(");
     m_QHBitmap.set(nQHIndex);
-    //NOTICE("===> "<<Dec<<nQHIndex<<Hex);
 
     QH *pQH = &m_pQHList[nQHIndex];
     memset(pQH, 0, sizeof(QH));
-    pQH->next = (m_pQHListPhys>>5)+nQHIndex*2;
-    pQH->next_type = 1;
-    pQH->nakcrl = 1;
-    pQH->ctrlend = 0;
-    pQH->maxpacksz = 0x400;
+    pQH->pNext = (m_pQHListPhys>>5)+nQHIndex*2;
+    pQH->nNextType = 1;
+    pQH->nNakReload = 1;
+    pQH->nMaxPacketSize = 8;
     pQH->hrcl = 1;
-    pQH->dtc = 1;
-    pQH->speed = 2;
+    pQH->bDataToggleSrc = 1;
+    pQH->nSpeed = endpointInfo.speed;
     pQH->nEndpoint = endpointInfo.nEndpoint;
-    pQH->inactive_next = 1;
+    pQH->bInactiveNext = 1;
     pQH->nAddress = endpointInfo.nAddress;
+    pQH->nHubAddress = endpointInfo.speed != HighSpeed?endpointInfo.nHubAddress:0;
+    pQH->nHubPort = endpointInfo.speed != HighSpeed?endpointInfo.nHubPort:0;
     pQH->mult = 1;
-    pQH->qtd_ptr = (m_pqTDListPhys>>5)+nQHIndex;
+    pQH->pQTD = (m_pqTDListPhys>>5)+nQHIndex;
     pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
     pQH->pParam = pParam;
     pQH->pBuffer = pBuffer;
-    pQH->size = nBytes;
-    pQH->offset = nBufferOffset;
+    pQH->nBufferSize = nBytes;
+    pQH->nBufferOffset = nBufferOffset;
 
     qTD *pqTD = &m_pqTDList[nQHIndex];
     memset(pqTD, 0, sizeof(qTD));
     pqTD->bNextInvalid = 1;
     pqTD->bAltNextInvalid = 1;
-    pqTD->data_toggle = endpointInfo.bDataToggle;
+    pqTD->bDataToggle = endpointInfo.bDataToggle;
     pqTD->nBytes = nBytes;
-    pqTD->ioc = 1;
-    pqTD->cpage = nBufferOffset/0x1000;
-    pqTD->cerr = 1;
+    pqTD->bIoc = 1;
+    pqTD->nPage = nBufferOffset/0x1000;
+    pqTD->nErr = 1;
     pqTD->nPid = nPid==UsbPidOut?0:(nPid==UsbPidIn?1:(nPid==UsbPidSetup?2:3));
-    pqTD->status = 0x80;
-    pqTD->page0 = m_pTransferPagesPhys>>12;
-    pqTD->coff = nBufferOffset%0x1000;
-    pqTD->page1 = (m_pTransferPagesPhys+0x1000)>>12;
-    pqTD->page2 = (m_pTransferPagesPhys+0x2000)>>12;
-    pqTD->page3 = (m_pTransferPagesPhys+0x3000)>>12;
-    pqTD->page4 = (m_pTransferPagesPhys+0x4000)>>12;
+    pqTD->nStatus = 0x80;
+    pqTD->pPage0 = m_pTransferPagesPhys>>12;
+    pqTD->nOffset = nBufferOffset%0x1000;
+    pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
+    pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
+    pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
+    pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
 
     memcpy(&pQH->overlay, pqTD, sizeof(qTD));
 
@@ -313,53 +317,48 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     uintptr_t nBufferOffset = 0;
     if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
         FATAL("USB: EHCI: Buffers full :(");
-    //NOTICE("===> "<<Dec<<nBytes<<"\t"<<nBufferOffset<<Hex);
 
     // Get an unused QH
     size_t nQHIndex = m_QHBitmap.getFirstClear();
     if(nQHIndex > 127)
         FATAL("USB: EHCI: QH/qTD space full :(");
     m_QHBitmap.set(nQHIndex);
-    //NOTICE("===> "<<Dec<<nQHIndex<<Hex);
 
     m_pFrameList[nQHIndex] = m_pQHListPhys|((nQHIndex*2)<<5)|2;
-    NOTICE("llm "<<m_pFrameList[nQHIndex]);
 
     QH *pQH = &m_pQHList[nQHIndex];
     memset(pQH, 0, sizeof(QH));
     pQH->bNextInvalid = 1;
-    pQH->maxpacksz = 0x400;
+    pQH->nMaxPacketSize = 0x400;
     pQH->hrcl = 1;
-    pQH->dtc = 1;
-    pQH->speed = 2;
+    pQH->bDataToggleSrc = 1;
+    pQH->nSpeed = 2;//endpointInfo.speed;
     pQH->nEndpoint = nEndpoint;
     pQH->nAddress = nAddress;
     pQH->mult = 1;
-    pQH->qtd_ptr = (m_pqTDListPhys>>5)+nQHIndex;
+    pQH->pQTD = (m_pqTDListPhys>>5)+nQHIndex;
     pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
     pQH->pParam = pParam;
     pQH->pBuffer = pBuffer;
-    pQH->size = nBytes;
-    pQH->offset = nBufferOffset;
-    NOTICE("lll "<<m_pqTDListPhys);
+    pQH->nBufferSize = nBytes;
+    pQH->nBufferOffset = nBufferOffset;
 
     qTD *pqTD = &m_pqTDList[nQHIndex];
     memset(pqTD, 0, sizeof(qTD));
-    //pqTD->next = 0;
     pqTD->bNextInvalid = 1;
     pqTD->bAltNextInvalid = 1;
-    pqTD->data_toggle = 0;
+    pqTD->bDataToggle = 0;
     pqTD->nBytes = nBytes;
-    pqTD->ioc = 1;
-    pqTD->cpage = nBufferOffset/0x1000;
+    pqTD->bIoc = 1;
+    pqTD->nPage = nBufferOffset/0x1000;
     pqTD->nPid = 1;
-    pqTD->status = 0x80;
-    pqTD->page0 = m_pTransferPagesPhys>>12;
-    pqTD->coff = nBufferOffset%0x1000;
-    pqTD->page1 = (m_pTransferPagesPhys+0x1000)>>12;
-    pqTD->page2 = (m_pTransferPagesPhys+0x2000)>>12;
-    pqTD->page3 = (m_pTransferPagesPhys+0x3000)>>12;
-    pqTD->page4 = (m_pTransferPagesPhys+0x4000)>>12;
+    pqTD->nStatus = 0x80;
+    pqTD->pPage0 = m_pTransferPagesPhys>>12;
+    pqTD->nOffset = nBufferOffset%0x1000;
+    pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
+    pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
+    pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
+    pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
 
     memcpy(&pQH->overlay, pqTD, sizeof(qTD));
 
@@ -375,8 +374,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
 uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
-    NOTICE("USB: EHCI: Port status change on port "<<Dec<<(p1+1)<<Hex<<", now "<<(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4)&EHCI_PORTSC_CONN?"connected":"disconnected"));
-    // Reset the port if it's connected
+    // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_CONN)
     {
         // Set the reset bit
@@ -384,10 +382,22 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
         delay(50);
         // Unset the reset bit
         m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
-        deviceConnected(p1);
+        // Wait for the reset to complete
+        while(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_PRES)
+            delay(5);
+        NOTICE("USB: EHCI: Port "<<Dec<<p1<<Hex<<" - status after reset: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4));
+        if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_EN)
+        {
+            NOTICE("USB: EHCI: Port "<<Dec<<p1<<Hex<<" is now connected");
+            deviceConnected(p1, HighSpeed);
+        }
     }
     else
+    {
+        NOTICE("USB: EHCI: Port "<<Dec<<p1<<Hex<<" is now disconnected");
         deviceDisconnected(p1);
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4), m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+        // Clean any bits that would remain
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4), m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+    }
     return 0;
 }

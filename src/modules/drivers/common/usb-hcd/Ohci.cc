@@ -26,7 +26,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
 {
     setSpecificType(String("OHCI"));
     // Allocate the memory region
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_OhciMR, 3, PhysicalMemoryManager::continuous, 0, -1))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_OhciMR, 3, PhysicalMemoryManager::continuous, 0))
     {
         ERROR("USB: OHCI: Couldn't allocate memory region!");
         return;
@@ -79,7 +79,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
             //delay(50);
             //m_pBase->write32(OhciRhPortStsEnable | OHCI_PORTSC_CSCH | OHCI_PORTSC_EDCH, OhciRhPortStatus+i*4);
             NOTICE("USB: OHCI: Port "<<Dec<<i<<Hex<<" is connected");
-            deviceConnected(i);
+            deviceConnected(i, FullSpeed);
         }
     }
     // Enable RootHubStatusChange interrupt now that it's safe to
@@ -98,6 +98,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t nStatus = m_pBase->read32(OhciInterruptStatus) & m_pBase->read32(OhciInterruptEnable);
+        NOTICE("IRQ "<<nStatus);
     if(nStatus & OhciInterruptWbDoneHead)
     {
         uint8_t nEDIndex = m_pHcca->pDoneHead >> 5 & 0x7f;
@@ -117,8 +118,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
         //if(nReturn < 0)
             NOTICE("STOP "<<Dec<<pED->nAddress<<":"<<pED->nEndpoint<<" "<<(pTD->nPid==1?" OUT ":(pTD->nPid==2?" IN  ":(pTD->nPid==0?"SETUP":"")))<<" "<<nReturn<<Hex);
     }
-    else
-        NOTICE("IRQ "<<nStatus);
+    //else
     m_pBase->write32(nStatus, OhciInterruptStatus);
     /*if(nStatus & OHCI_STS_INT)
     {
@@ -208,7 +208,8 @@ void Ohci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     memset(pED, 0, sizeof(ED));
     pED->nAddress = endpointInfo.nAddress;
     pED->nEndpoint = endpointInfo.nEndpoint;
-    pED->nMaxPacketSz = 8;
+    pED->bLoSpeed = endpointInfo.speed == LowSpeed;
+    pED->nMaxPacketSize = 8;
     pED->pHeadTD = (m_pTDListPhys+nEDIndex*sizeof(TD))>>4;
 
     TD *pTD = &m_pTDList[nEDIndex];

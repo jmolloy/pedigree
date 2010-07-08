@@ -17,6 +17,7 @@
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <machine/Device.h>
+#include <machine/Machine.h>
 #include <utilities/List.h>
 #include <Log.h>
 #include <Module.h>
@@ -105,10 +106,12 @@ static void exit()
 
 }
 
-MODULE_INFO("usb-hcd", &entry, &exit,
-#ifndef ARM_COMMON
-            "pci", "usb"
+#ifdef X86_COMMON
+MODULE_INFO("usb-hcd", &entry, &exit, "pci", "usb");
 #else
-            "usb-glue", "usb"
+#ifdef ARM_COMMON
+MODULE_INFO("usb-hcd", &entry, &exit, "usb-glue", "usb");
+#else
+MODULE_INFO("usb-hcd", &entry, &exit, "usb");
 #endif
-            );
+#endif

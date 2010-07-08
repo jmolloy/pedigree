@@ -27,7 +27,7 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         if(portStatus[0] & 1)
         {
             control(0x23, 3, 4, i+1);
-            deviceConnected(i);
+            deviceConnected(i, LowSpeed);
         }
     }
 }
@@ -38,6 +38,7 @@ UsbHubDevice::~UsbHubDevice()
 
 void UsbHubDevice::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
+    endpointInfo.nHubAddress = m_nAddress;
     dynamic_cast<UsbHub*>(m_pParent)->doAsync(endpointInfo, nPid, pBuffer, nBytes, pCallback, pParam);
 }
 

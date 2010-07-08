@@ -68,7 +68,7 @@ class Ohci : public UsbHub,
             uint32_t bLoSpeed : 1;
             uint32_t bSkip : 1;
             uint32_t bIso : 1;
-            uint32_t nMaxPacketSz : 11;
+            uint32_t nMaxPacketSize : 11;
             uint32_t res0 : 9;
             uint32_t pTailTD : 28;
             uint32_t bHalted : 1;

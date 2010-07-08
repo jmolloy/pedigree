@@ -15,6 +15,7 @@
  */
 
 #include <machine/Machine.h>
+#include <machine/Pci.h>
 #include <processor/Processor.h>
 #include <usb/Usb.h>
 #include <Log.h>
@@ -26,7 +27,7 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
 {
     setSpecificType(String("UHCI"));
     // Allocate the memory region
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, 3, PhysicalMemoryManager::continuous, 0, -1))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, 3, PhysicalMemoryManager::continuous, 0))
     {
         ERROR("USB: UHCI: Couldn't allocate memory region!");
         return;
@@ -47,12 +48,16 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     dmemset(m_pFrameList, m_pAsyncQHPhys | 2, 0x400);
     memset(m_pAsyncQH, 0, sizeof(QH));
     memset(m_pPeriodicQH, 0, sizeof(QH));
-    m_pAsyncQH->next = m_pPeriodicQHPhys>>4;
-    m_pAsyncQH->next_qh = 1;
-    m_pAsyncQH->elem_invalid = 1;
-    m_pPeriodicQH->next = m_pAsyncQHPhys>>4;
-    m_pPeriodicQH->next_qh = 1;
-    m_pPeriodicQH->elem_invalid = 1;
+    m_pAsyncQH->pNext = m_pPeriodicQHPhys>>4;
+    m_pAsyncQH->bNextQH = 1;
+    m_pAsyncQH->bElemInvalid = 1;
+    m_pPeriodicQH->pNext = m_pAsyncQHPhys>>4;
+    m_pPeriodicQH->bNextQH = 1;
+    m_pPeriodicQH->bElemInvalid = 1;
+
+    uint32_t nPciCrap = PciBus::instance().readConfigSpace(this, 1);
+    NOTICE("USB: UHCI: Pci command+status: "<<nPciCrap);
+    PciBus::instance().writeConfigSpace(this, 1, nPciCrap | 7);
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
@@ -74,15 +79,19 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
         uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC+i*2);
         if(nPortStatus == 0xffff || !(nPortStatus & 0x80))
             break;
+        NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
         if(nPortStatus & UHCI_PORTSC_CONN)
         {
             m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC+i*2);
             delay(50);
             m_pBase->write16(0, UHCI_PORTSC+i*2);
-            //delay(50);
+            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
+            delay(50);
             m_pBase->write16(UHCI_PORTSC_ENABLE/* | UHCI_PORTSC_EDCH*/, UHCI_PORTSC+i*2);
-            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" is connected");
-            deviceConnected(i);
+            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
+            bool bLoSpeed = m_pBase->read16(UHCI_PORTSC+i*2) & UHCI_PORTSC_LOSPEED;
+            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" is connected at "<<(bLoSpeed?"Low Speed":"Full Speed"));
+            deviceConnected(i, bLoSpeed?LowSpeed:FullSpeed);
         }
         m_nPorts++;
     }
@@ -105,51 +114,51 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
         while(pTD)
         {
             // Stop if we've reached a TD that is not finished
-            if(pTD->status == 0x80)
+            if(pTD->nStatus == 0x80)
                 break;
             // Call the callback, this TD is done
-            ssize_t nReturn = pTD->status & 0x7e?-(pTD->status & 0x7e):(pTD->actlen + 1) % 0x800;
-            if(pTD->nPid == UsbPidIn && pTD->buffer && nReturn >= 0)
-                memcpy(reinterpret_cast<void*>(pTD->buffer), &m_pTransferPages[pTD->buff-m_pTransferPagesPhys], nReturn);
+            ssize_t nReturn = pTD->nStatus & 0x7e?-(pTD->nStatus & 0x7e):(pTD->nActLen + 1) % 0x800;
+            if(pTD->nPid == UsbPidIn && pTD->pBuffer && nReturn >= 0)
+                memcpy(reinterpret_cast<void*>(pTD->pBuffer), &m_pTransferPages[pTD->pBuff-m_pTransferPagesPhys], nReturn);
             if(pTD->pCallback)
             {
                 void (*pCallback)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pTD->pCallback);
-                pCallback(pTD->param, nReturn);
+                pCallback(pTD->pParam, nReturn);
             }
             NOTICE("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==UsbPidOut?" OUT ":(pTD->nPid==UsbPidIn?" IN  ":(pTD->nPid==UsbPidSetup?"SETUP":"")))<<" "<<nReturn<<Hex);
-            pTD = pTD->next_invalid?0:&m_pTDList[pTD->next & 0xfff];
+            pTD = pTD->bNextInvalid?0:&m_pTDList[pTD->pNext & 0xfff];
         }
         m_pAsyncQH->pCurrent = pTD;
-        m_pAsyncQH->elem = pTD?pTD->phys:0;
-        m_pAsyncQH->elem_invalid = pTD?0:1;
+        m_pAsyncQH->pElem = pTD?pTD->pPhysAddr:0;
+        m_pAsyncQH->bElemInvalid = pTD?0:1;
 
         // Check every periodic TD
         pTD = m_pPeriodicQH->pCurrent;
         while(pTD)
         {
             // Stop if we've reached a TD that is not finished
-            if(pTD->status == 0x80)
+            if(pTD->nStatus == 0x80)
             {
                 m_pPeriodicQH->pCurrent = pTD;
                 break;
             }
             // Call the callback, this TD is done
-            if(!pTD->status)
+            if(!pTD->nStatus)
             {
-                ssize_t nReturn = (pTD->actlen + 1) % 0x800;
-                if(pTD->nPid == UsbPidIn && pTD->buffer)
-                    memcpy(reinterpret_cast<void*>(pTD->buffer), &m_pTransferPages[pTD->buff-m_pTransferPagesPhys], nReturn);
+                ssize_t nReturn = (pTD->nActLen + 1) % 0x800;
+                if(pTD->nPid == UsbPidIn && pTD->pBuffer)
+                    memcpy(reinterpret_cast<void*>(pTD->pBuffer), &m_pTransferPages[pTD->pBuff-m_pTransferPagesPhys], nReturn);
                 if(pTD->pCallback)
                 {
                     void (*pCallback)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pTD->pCallback);
-                    pCallback(pTD->param, nReturn);
+                    pCallback(pTD->pParam, nReturn);
                 }
             }
-            pTD->status = 0x80;
+            pTD->nStatus = 0x80;
             // Stop if we reached where we started
-            if(pTD->next == m_pPeriodicQH->pCurrent->phys)
+            if(pTD->pNext == m_pPeriodicQH->pCurrent->pPhysAddr)
                 break;
-            pTD = &m_pTDList[pTD->next & 0xfff];
+            pTD = &m_pTDList[pTD->pNext & 0xfff];
         }
         // Resume the controller
         m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
@@ -160,7 +169,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
+    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Pause the controller
     m_pBase->write16(0, UHCI_CMD);
@@ -172,29 +181,30 @@ void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     // Fill the TD with data
     TD *pTD = &m_pTDList[0];
     memset(pTD, 0, sizeof(TD));
-    pTD->next = m_pAsyncQH->pCurrent?m_pAsyncQH->pCurrent->phys:0;
-    pTD->next_invalid = m_pAsyncQH->pCurrent?0:1;
-    pTD->status = 0x80;
-    pTD->ioc = 1;
-    pTD->speed = 1;
-    pTD->cerr = 1;
-    pTD->spd = 0;
+    pTD->pNext = m_pAsyncQH->pCurrent?m_pAsyncQH->pCurrent->pPhysAddr:0;
+    pTD->bNextInvalid = m_pAsyncQH->pCurrent?0:1;
+    pTD->nStatus = 0x80;
+    pTD->bIoc = 1;
+    pTD->bLoSpeed = endpointInfo.speed == LowSpeed;
+    pTD->nErr = 1;
+    pTD->bSpd = 0;
     pTD->nPid = nPid;
     pTD->nAddress = endpointInfo.nAddress;
     pTD->nEndpoint = endpointInfo.nEndpoint;
-    pTD->data_toggle = endpointInfo.bDataToggle;
-    pTD->maxlen = nBytes?nBytes-1:0x7ff;
-    pTD->buff = m_pTransferPagesPhys;
-    pTD->phys = (m_pTDListPhys+0*sizeof(TD))>>4;
+    pTD->bDataToggle = endpointInfo.bDataToggle;
+    pTD->nMaxLen = nBytes?nBytes-1:0x7ff;
+    pTD->pBuff = m_pTransferPagesPhys;
+    pTD->pPhysAddr = (m_pTDListPhys+0*sizeof(TD))>>4;
     pTD->pCallback = reinterpret_cast<uintptr_t>(pCallback);
-    pTD->param = pParam;
-    pTD->buffer = pBuffer;
+    pTD->pParam = pParam;
+    pTD->pBuffer = pBuffer;
 
     // Change our async QH to include the new TD
-    m_pAsyncQH->elem = pTD->phys;
-    m_pAsyncQH->elem_invalid = 0;
+    m_pAsyncQH->pElem = pTD->pPhysAddr;
+    m_pAsyncQH->bElemInvalid = 0;
     m_pAsyncQH->pCurrent = pTD;
 
+    asm volatile("sti");
     // Resume the controller
     m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
 }
@@ -210,29 +220,29 @@ void Uhci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     // Fill the TD with data
     TD *pTD = &m_pTDList[1];
     memset(pTD, 0, sizeof(TD));
-    pTD->phys = (m_pTDListPhys+1*sizeof(TD))>>4;
-    pTD->next = m_pPeriodicQH->pCurrent?m_pPeriodicQH->pCurrent->next:pTD->phys;
-    pTD->status = 0x80;
-    pTD->ioc = 1;
-    pTD->speed = 1;
-    pTD->spd = 0;
+    pTD->pPhysAddr = (m_pTDListPhys+1*sizeof(TD))>>4;
+    pTD->pNext = m_pPeriodicQH->pCurrent?m_pPeriodicQH->pCurrent->pNext:pTD->pPhysAddr;
+    pTD->nStatus = 0x80;
+    pTD->bIoc = 1;
+    pTD->bLoSpeed = 1;
+    pTD->bSpd = 0;
     pTD->nPid = UsbPidIn;
     pTD->nAddress = nAddress;
     pTD->nEndpoint = nEndpoint;
-    pTD->data_toggle = 0;
-    pTD->maxlen = nBytes?nBytes-1:0x7ff;
-    pTD->buff = m_pTransferPagesPhys;
+    pTD->bDataToggle = 0;
+    pTD->nMaxLen = nBytes?nBytes-1:0x7ff;
+    pTD->pBuff = m_pTransferPagesPhys;
     pTD->pCallback = reinterpret_cast<uintptr_t>(pCallback);
-    pTD->param = pParam;
-    pTD->buffer = pBuffer;
+    pTD->pParam = pParam;
+    pTD->pBuffer = pBuffer;
 
     // Change our periodic QH to include the new TD
     if(m_pPeriodicQH->pCurrent)
-        m_pPeriodicQH->pCurrent->next = pTD->phys;
+        m_pPeriodicQH->pCurrent->pNext = pTD->pPhysAddr;
     else
     {
-        m_pPeriodicQH->elem = pTD->phys;
-        m_pPeriodicQH->elem_invalid = 0;
+        m_pPeriodicQH->pElem = pTD->pPhysAddr;
+        m_pPeriodicQH->bElemInvalid = 0;
     }
     m_pPeriodicQH->pCurrent = pTD;
 

@@ -15,6 +15,7 @@
  */
 
 #include <processor/Processor.h>
+#include <usb/Usb.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbHubDevice.h>
@@ -24,7 +25,7 @@
 #include <utilities/ExtensibleBitmap.h>
 #include <LockGuard.h>
 
-void UsbHub::deviceConnected(uint8_t nPort)
+void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 {
     //NOTICE("USB: Adding device on port "<<Dec<<nPort<<Hex<<"...");
     // Create a bitmap to hold the used addresses
@@ -48,6 +49,8 @@ void UsbHub::deviceConnected(uint8_t nPort)
     pDevice->assignAddress(nAddress);
     // Set port number
     pDevice->setPort(nPort);
+    // Set speed
+    pDevice->setPort(speed);
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();

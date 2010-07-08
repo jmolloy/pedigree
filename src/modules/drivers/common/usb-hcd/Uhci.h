@@ -34,46 +34,46 @@ class Uhci : public UsbHub, public IrqHandler
 
         typedef struct TD
         {
-            uint32_t next_invalid : 1;
-            uint32_t next_qh : 1;
-            uint32_t next_depth : 1;
+            uint32_t bNextInvalid : 1;
+            uint32_t bNextQH : 1;
+            uint32_t bNextDepth : 1;
             uint32_t res0 : 1;
-            uint32_t next : 28;
-            uint32_t actlen : 11;
+            uint32_t pNext : 28;
+            uint32_t nActLen : 11;
             uint32_t res1 : 5;
-            uint32_t status : 8;
-            uint32_t ioc : 1;
-            uint32_t iso : 1;
-            uint32_t speed : 1;
-            uint32_t cerr : 2;
-            uint32_t spd : 1;
+            uint32_t nStatus : 8;
+            uint32_t bIoc : 1;
+            uint32_t bIsochronus : 1;
+            uint32_t bLoSpeed : 1;
+            uint32_t nErr : 2;
+            uint32_t bSpd : 1;
             uint32_t res2 : 2;
             uint32_t nPid : 8;
             uint32_t nAddress : 7;
             uint32_t nEndpoint : 4;
-            uint32_t data_toggle : 1;
+            uint32_t bDataToggle : 1;
             uint32_t res3 : 1;
-            uint32_t maxlen : 11;
-            uint32_t buff;
+            uint32_t nMaxLen : 11;
+            uint32_t pBuff;
 
             //uint32_t periodic : 1;
-            uint32_t phys : 28;
+            uint32_t pPhysAddr : 28;
             uint32_t res4 : 4;
             uint32_t pCallback;
-            uint32_t param;
-            uint32_t buffer;
+            uint32_t pParam;
+            uint32_t pBuffer;
         } PACKED TD;
 
         typedef struct QH
         {
-            uint32_t next_invalid : 1;
-            uint32_t next_qh : 1;
+            uint32_t bNextInvalid : 1;
+            uint32_t bNextQH : 1;
             uint32_t res0 : 2;
-            uint32_t next : 28;
-            uint32_t elem_invalid : 1;
-            uint32_t elem_qh : 1;
+            uint32_t pNext : 28;
+            uint32_t bElemInvalid : 1;
+            uint32_t bElemQH : 1;
             uint32_t res1 : 2;
-            uint32_t elem : 28;
+            uint32_t pElem : 28;
             TD *pCurrent;
             uint8_t res2[24-sizeof(uintptr_t)];
         } PACKED QH;
@@ -106,6 +106,7 @@ class Uhci : public UsbHub, public IrqHandler
             UHCI_STS_INT = 0x01,        // On Completition Interrupt bit
 
             UHCI_PORTSC_PRES = 0x200,   // Port Reset bit
+            UHCI_PORTSC_LOSPEED = 0x100,// Port has Low Speed Device attached bit
             //UHCI_PORTSC_EDCH = 0x8,     // Port Enable/Disable Change bit
             UHCI_PORTSC_ENABLE = 0x4,   // Port Enable bit
             UHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit

@@ -35,11 +35,26 @@ enum UsbSpeed
 
 typedef struct UsbEndpoint
 {
-    inline UsbEndpoint(uint8_t address, uint8_t endpoint, bool dataToggle) : nAddress(address), nEndpoint(endpoint), bDataToggle(dataToggle) {}
+    inline UsbEndpoint(uint8_t address, uint8_t endpoint, bool dataToggle, UsbSpeed _speed) :
+        nAddress(address), nEndpoint(endpoint), bDataToggle(dataToggle), speed(_speed), nHubAddress(0) {}
 
     uint8_t nAddress;
     uint8_t nEndpoint;
     bool bDataToggle;
+    UsbSpeed speed;
+    uint8_t nHubAddress;
+    uint8_t nHubPort;
+
+    const char *dumpSpeed()
+    {
+        if(speed == HighSpeed)
+            return "High Speed";
+        if(speed == FullSpeed)
+            return "Full Speed";
+        if(speed == LowSpeed)
+            return "Low Speed";
+        return "";
+    }
 } UsbEndpoint;
 
 #endif

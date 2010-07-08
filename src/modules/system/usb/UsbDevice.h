@@ -19,6 +19,7 @@
 
 #include <machine/Device.h>
 #include <processor/types.h>
+#include <usb/Usb.h>
 #include <utilities/assert.h>
 
 class UsbDevice : public virtual Device
@@ -200,7 +201,7 @@ class UsbDevice : public virtual Device
             m_pEndpoints[0] = new Endpoint();
         }
 
-        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort),
+        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed),
             m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration)
         {
             memcpy(m_pEndpoints, pDev->m_pEndpoints, sizeof(m_pEndpoints));
@@ -232,6 +233,15 @@ class UsbDevice : public virtual Device
             m_nPort = nPort;
         }
 
+        UsbSpeed getSpeed()
+        {
+            return m_Speed;
+        }
+        void setSpeed(UsbSpeed speed)
+        {
+            m_Speed = speed;
+        }
+
         DeviceDescriptor *getDescriptor()
         {
             return m_pDescriptor;
@@ -261,6 +271,7 @@ class UsbDevice : public virtual Device
 
         uint8_t m_nAddress;
         uint8_t m_nPort;
+        UsbSpeed m_Speed;
         Interface *m_pInterface;
         Endpoint *m_pEndpoints[16];
 

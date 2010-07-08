@@ -26,7 +26,8 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
         FATAL("USB: Orphaned UsbDevice!");
-    UsbEndpoint endpointInfo(m_nAddress, pEndpoint->nEndpoint, pEndpoint->bDataToggle);
+    UsbEndpoint endpointInfo(m_nAddress, pEndpoint->nEndpoint, pEndpoint->bDataToggle, m_Speed);
+    endpointInfo.nHubPort = m_nPort;
     if(nBytes > pEndpoint->nMaxPacketSize)
     {
         for(size_t i=0;i<nBytes;)
