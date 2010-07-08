@@ -33,8 +33,11 @@ class Prcm
 
         enum Clock
         {
-            FCLK_32K,
-            SYS_CLK
+            FCLK_32K    = 0,
+            SYS_CLK     = 1,
+
+            L3_CLK_DIV1 = 1,
+            L3_CLK_DIV2 = 2,
         };
 
         enum ModuleBases
@@ -99,6 +102,12 @@ class Prcm
 
         /** Handle interface clock enable/disable for CORE */
         void SetIfaceClockCORE(size_t n, size_t clock, bool enabled);
+
+        /** Waits for a bit in the IDLEST CORE register to change state. */
+        void WaitCoreIdleStatus(size_t n, size_t clock, bool waitForOn);
+
+        /** Handle source clock selection for CORE */
+        void SelectClockCORE(size_t clock, Clock which);
 
     private:
         static Prcm m_Instance;

@@ -73,6 +73,38 @@ void Prcm::SelectClockPER(size_t clock, Clock which)
     *clksel = val;
 }
 
+void Prcm::SelectClockCORE(size_t clock, Clock which)
+{
+    if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
+        return;
+    }
+
+    uint32_t bit = 1 << clock;
+    uint32_t set = which << clock;
+
+    uint32_t mask = 0;
+    if(clock == 0)
+        mask = 0x3;
+    else if(clock == 2)
+        mask = 0xC;
+    else
+        mask = bit;
+
+    // CM_CLKSEL_CORE register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += CORE_CM;
+    vaddr += CM_CLKSEL_CORE;
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+    
+    // Set the value if needed
+    uint32_t val = *clksel;
+    val &= ~mask;
+    val |= set;
+    *clksel = val;
+}
+
 void Prcm::SetFuncClockPER(size_t clock, bool enabled)
 {
     if(!m_Base)
@@ -195,4 +227,37 @@ void Prcm::SetIfaceClockCORE(size_t n, size_t clock, bool enabled)
     else if(enabled && (!(val & bit)))
         val |= bit;
     *clksel = val;
+}
+
+void Prcm::WaitCoreIdleStatus(size_t n, size_t clock, bool waitForOn)
+{
+    if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
+        return;
+    }
+
+    // Bit to set
+    uint32_t bit = 1 << clock;
+
+    // CM_ICLKENn_CORE register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += CORE_CM;
+    if(n == 1)
+        vaddr += CM_IDLEST1_CORE;
+    else if(n == 3)
+        vaddr += CM_IDLEST3_CORE;
+    else
+    {
+        WARNING("PRCM: Invalid idle status bank (CORE domain)");
+        return;
+    }
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+
+    // When the bit transitions to zero, the module is accessible
+    /// \todo delays or something
+    if(waitForOn)
+        while(*clksel & bit);
+    else
+        while(!(*clksel & bit));
 }
