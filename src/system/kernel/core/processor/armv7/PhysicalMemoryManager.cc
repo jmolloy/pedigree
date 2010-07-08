@@ -171,8 +171,14 @@ void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
 {
     // Define beginning and end ranges of usable RAM
 #ifdef ARM_BEAGLE
-    /// \todo virtual memory, so we can dynamically expand this stack
-    for(physical_uintptr_t addr = reinterpret_cast<physical_uintptr_t>(&__end);
+    physical_uintptr_t addr = 0;
+    for(addr = reinterpret_cast<physical_uintptr_t>(&__end);
+        addr < 0x87000000;
+        addr += 0x1000)
+    {
+        m_PageStack.free(addr);
+    }
+    for(addr = 0x88000000;
         addr < 0x8F000000;
         addr += 0x1000)
     {
@@ -189,7 +195,7 @@ void ArmV7PhysicalMemoryManager::initialise(const BootstrapStruct_t &info)
     m_PhysicalRanges.free(0x80000000 + kernelSize, 0xF000000);
     m_PhysicalRanges.allocateSpecific(0x80000000,
                                       reinterpret_cast<physical_uintptr_t>(&__end) - 0x80000000);
-    // m_PhysicalRanges.allocateSpecific(0x8FAFC000, 0x404000);
+    m_PhysicalRanges.allocateSpecific(0x87000000, 0x1000000);
     
     m_NonRAMRanges.free(0, 0x80000000);
     m_NonRAMRanges.free(0x90000000, 0x60000000);
