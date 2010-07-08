@@ -85,6 +85,22 @@ class Prcm
             CM_CLKSTST_CORE         = 0x4C, // R
         };
 
+        enum Registers_PLL
+        {
+            CM_CLKEN_PLL            = 0x00, // RW
+            CM_CLKEN2_PLL           = 0x04, // RW
+            CM_IDLEST_CKGEN         = 0x20, // R
+            CM_IDLEST2_CKGEN        = 0x24, // R
+            CM_AUTOIDLE_PLL         = 0x30, // RW
+            CM_AUTOIDLE2_PLL        = 0x34, // RW
+            CM_CLKSEL1_PLL          = 0x40, // RW
+            CM_CLKSEL2_PLL          = 0x44, // RW
+            CM_CLKSEL3_PLL          = 0x48, // RW
+            CM_CLKSEL4_PLL          = 0x4C, // RW
+            CM_CLKSEL5_PLL          = 0x50, // RW
+            CM_CLKOUT_CTRL          = 0x70, // RW
+        };
+
         /** Initialises the PRCM from a specific base */
         void initialise(uintptr_t base);
 
@@ -106,8 +122,18 @@ class Prcm
         /** Waits for a bit in the IDLEST CORE register to change state. */
         void WaitCoreIdleStatus(size_t n, size_t clock, bool waitForOn);
 
+        /** Waits for a bit in the IDLEST PLL register to change state. */
+        void WaitPllIdleStatus(size_t n, size_t clock, bool waitForOn);
+
         /** Handle source clock selection for CORE */
         void SelectClockCORE(size_t clock, Clock which);
+
+        /** Enables or disables a PLL clock (programmer chooses value) */
+        void SetClockPLL(size_t n, size_t value);
+
+        /** Clock selection for PLL. The register contents must be set by the
+          * programmer. */
+        void SelectClockPLL(size_t n, size_t value);
 
     private:
         static Prcm m_Instance;

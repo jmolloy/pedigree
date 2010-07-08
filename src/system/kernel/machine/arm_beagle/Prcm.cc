@@ -240,7 +240,7 @@ void Prcm::WaitCoreIdleStatus(size_t n, size_t clock, bool waitForOn)
     // Bit to set
     uint32_t bit = 1 << clock;
 
-    // CM_ICLKENn_CORE register
+    // CM_IDLESTn_CORE register
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
     vaddr += CORE_CM;
     if(n == 1)
@@ -260,4 +260,90 @@ void Prcm::WaitCoreIdleStatus(size_t n, size_t clock, bool waitForOn)
         while(*clksel & bit);
     else
         while(!(*clksel & bit));
+}
+
+void Prcm::WaitPllIdleStatus(size_t n, size_t clock, bool waitForOn)
+{
+    if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
+        return;
+    }
+
+    // Bit to set
+    uint32_t bit = 1 << clock;
+
+    // CM_IDLESTn_PLL register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += Clock_Control_Reg_CM;
+    if(n == 1)
+        vaddr += CM_IDLEST_CKGEN;
+    else if(n == 2)
+        vaddr += CM_IDLEST2_CKGEN;
+    else
+    {
+        WARNING("PRCM: Invalid idle status bank (CORE domain)");
+        return;
+    }
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+
+    // When the bit transitions to one, the clock is locked
+    /// \todo delays or something
+    if(waitForOn)
+        while(!(*clksel & bit));
+    else
+        while(*clksel & bit);
+}
+
+void Prcm::SelectClockPLL(size_t n, size_t value)
+{
+    if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
+        return;
+    }
+
+    // CM_CLKSELn_PLL register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += Clock_Control_Reg_CM;
+    if(n == 1)
+        vaddr += CM_CLKSEL1_PLL;
+    else if(n == 2)
+        vaddr += CM_CLKSEL2_PLL;
+    else if(n == 3)
+        vaddr += CM_CLKSEL3_PLL;
+    else if(n == 4)
+        vaddr += CM_CLKSEL4_PLL;
+    else if(n == 5)
+        vaddr += CM_CLKSEL5_PLL;
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+    
+    // Set it!
+    *clksel = value;
+}
+
+void Prcm::SetClockPLL(size_t n, size_t value)
+{
+    if(!m_Base)
+    {
+        ERROR("PRCM: Not initialised");
+        return;
+    }
+
+    // CM_CLKENn_PLL register
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(m_Base.virtualAddress());
+    vaddr += Clock_Control_Reg_CM;
+    if(n == 1)
+        vaddr += CM_CLKEN_PLL;
+    else if(n == 2)
+        vaddr += CM_CLKEN2_PLL;
+    else
+    {
+        WARNING("PRCM: Invalid interface clock enable bank (CORE domain)");
+        return;
+    }
+    volatile uint32_t *clksel = reinterpret_cast<volatile uint32_t*>(vaddr);
+    
+    // Set it!
+    *clksel = value;
 }
