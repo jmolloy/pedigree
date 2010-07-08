@@ -204,7 +204,8 @@ void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     m_pAsyncQH->bElemInvalid = 0;
     m_pAsyncQH->pCurrent = pTD;
 
-    asm volatile("sti");
+    //asm volatile("sti");
+    Processor::setInterrupts(true);
     // Resume the controller
     m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
 }

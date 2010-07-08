@@ -76,6 +76,7 @@ void probeOhci(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pOhci);
 }
 
+#ifdef X86_COMMON
 void probeUhci(Device *pDev)
 {
     NOTICE("USB: UHCI found");
@@ -87,6 +88,7 @@ void probeUhci(Device *pDev)
     pUhci->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pUhci);
 }
+#endif
 
 static void entry()
 {
@@ -94,7 +96,9 @@ static void entry()
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
+#ifdef X86_COMMON
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
+#endif
     #if TEST_USB_HALT && defined(X86_COMMON)
     while(true)asm volatile("sti;hlt");
     #endif

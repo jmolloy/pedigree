@@ -118,12 +118,13 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
         if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_PPOW))
         {
             m_pBase->write32(EHCI_PORTSC_PPOW, m_nOpRegsOffset+EHCI_PORTSC+i*4);
-            delay(100);
+            delay(20);
             NOTICE("USB: EHCI: Port "<<Dec<<i<<Hex<<" - status after power-up: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
         }
+
         // If connected, send it to the RequestQueue
         if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
-            addSyncRequest(1, i);
+            addRequest(1, i);
         else
             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4), m_nOpRegsOffset+EHCI_PORTSC+i*4);
     }

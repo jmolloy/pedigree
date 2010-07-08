@@ -22,8 +22,13 @@ subdirs = [
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob("*.cc")
+    "main.cc",
+    "Ehci.cc",
+    "Ohci.cc"
 ]
+
+if 'X86_COMMON' in env['CPPDEFINES']:
+    files += ['Uhci.cc']
 
 # To include a new directory for includes, just add it to the list
 include = [
