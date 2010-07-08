@@ -885,7 +885,7 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     // Repurpose these variables a little....
     bs->mods_addr = reinterpret_cast<uint32_t>(elf.m_pBuffer);
-    bs->mods_count = sizeof file;
+    bs->mods_count = (sizeof file) + 0x1000;
 
     // For every section header, set .addr = .offset + m_pBuffer.
     for (int i = 0; i < elf.m_pHeader->shnum; i++)
