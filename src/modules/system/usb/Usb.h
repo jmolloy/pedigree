@@ -19,10 +19,32 @@
 
 #include <processor/types.h>
 
+// PID types, ordered as they appear in the EHCI spec
 enum UsbPid {
+    // Token PID Types
+    UsbPidOut   = 0xe1,
+    UsbPidIn    = 0x69,
+    UsbPidSOF   = 0xa5,
     UsbPidSetup = 0x2d,
-    UsbPidIn = 0x69,
-    UsbPidOut = 0xe1,
+    
+    // Data PID Types
+    UsbPidData0 = 0xc3,
+    UsbPidData1 = 0x4b,
+    UsbPidData2 = 0x87,
+    UsbPidMdata = 0x0f,
+    
+    // Handshake PID Types
+    UsbPidAck   = 0xd2,
+    UsbPidNak   = 0x5a,
+    UsbPidStall = 0x1e,
+    UsbPidNyet  = 0x96,
+    
+    // Special PID Types
+    UsbPidPre   = 0x3c, // Token
+    UsbPidErr   = 0x3c, // Handshake
+    UsbPidSplit = 0x78,
+    UsbPidPing  = 0xb4,
+    UsbPidRsvd  = 0xf0
 };
 
 enum UsbSpeed
