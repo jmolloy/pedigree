@@ -38,18 +38,16 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
         return;
     }
 
-    uintptr_t virtualAddress           = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
-    physical_uintptr_t physicalAddress = m_EhciMR.physicalAddress();
-    m_pQHListVirt           = reinterpret_cast<uint8_t*>(virtualAddress);
-    m_pFrameList            = reinterpret_cast<uint32_t*>(virtualAddress + 0x2000);
-    m_pqTDListVirt          = reinterpret_cast<uint8_t*>(virtualAddress + 0x3000);
-    m_pTransferPagesVirt    = reinterpret_cast<uint8_t*>(virtualAddress + 0x4000);
-    m_pQHListPhys           = physicalAddress;
-    m_pFrameListPhys        = physicalAddress + 0x2000;
-    m_pqTDListPhys          = physicalAddress + 0x3000;
-    m_pTransferPagesPhys    = physicalAddress + 0x4000;
-    m_pQHList               = reinterpret_cast<QH*>(m_pQHListVirt);
-    m_pqTDList              = reinterpret_cast<qTD*>(m_pqTDListVirt);
+    uintptr_t virtualBase   = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
+    uintptr_t physicalBase  = m_EhciMR.physicalAddress();
+    m_pQHList               = reinterpret_cast<QH*>(virtualBase);
+    m_pFrameList            = reinterpret_cast<uint32_t*>(virtualBase + 0x2000);
+    m_pqTDList              = reinterpret_cast<qTD*>(virtualBase + 0x3000);
+    m_pTransferPages        = reinterpret_cast<uint8_t*>(virtualBase + 0x4000);
+    m_pQHListPhys           = physicalBase;
+    m_pFrameListPhys        = physicalBase + 0x2000;
+    m_pqTDListPhys          = physicalBase + 0x3000;
+    m_pTransferPagesPhys    = physicalBase + 0x4000;
 
     dmemset(m_pFrameList, 1, 0x400);
 
@@ -164,7 +162,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
             bool bPeriodic = pQH->bNextInvalid;
             ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->nBufferSize-pqTD->nBytes;
             if(pqTD->nPid == 1 && pQH->pBuffer && ret > 0)
-                memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPagesVirt[pQH->nBufferOffset], ret);
+                memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPages[pQH->nBufferOffset], ret);
             if(pQH->pCallback && (ret > 0 || !bPeriodic))
             {
                 void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pCallback);
@@ -208,8 +206,7 @@ void Ehci::pause()
 
     // Clear run bit and wait until it's stopped
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
-    while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
-        delay(5);
+    while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED));
 }
 
 void Ehci::resume()
@@ -219,8 +216,7 @@ void Ehci::resume()
         return;
     // Set run bit and wait until it's running
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
-    while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED)
-        delay(5);
+    while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED);
 }
 
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -231,16 +227,12 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     // Pause the controller
     pause();
 
-    // Enable async list
-    if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000))
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-
     // Get a buffer somewhere in our transfer pages
     uintptr_t nBufferOffset = 0;
     if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
         FATAL("USB: EHCI: Buffers full :(");
     if(nPid != UsbPidIn && pBuffer)
-        memcpy(&m_pTransferPagesVirt[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
+        memcpy(&m_pTransferPages[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
 
     // Get an unused QH
     size_t nQHIndex = m_QHBitmap.getFirstClear();
@@ -250,20 +242,20 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     QH *pQH = &m_pQHList[nQHIndex];
     memset(pQH, 0, sizeof(QH));
-    pQH->pNext = (m_pQHListPhys>>5)+nQHIndex*2;
+    pQH->pNext = (m_pQHListPhys+nQHIndex*sizeof(QH))>>5;
     pQH->nNextType = 1;
-    pQH->nNakReload = 1;
+    //pQH->nNakReload = 1;
     pQH->nMaxPacketSize = 8;
+    pQH->bControlEndpoint = endpointInfo.speed != HighSpeed && !endpointInfo.nEndpoint;
     pQH->hrcl = 1;
     pQH->bDataToggleSrc = 1;
     pQH->nSpeed = endpointInfo.speed;
     pQH->nEndpoint = endpointInfo.nEndpoint;
-    pQH->bInactiveNext = 1;
     pQH->nAddress = endpointInfo.nAddress;
     pQH->nHubAddress = endpointInfo.speed != HighSpeed?endpointInfo.nHubAddress:0;
     pQH->nHubPort = endpointInfo.speed != HighSpeed?endpointInfo.nHubPort:0;
     pQH->mult = 1;
-    pQH->pQTD = (m_pqTDListPhys>>5)+nQHIndex;
+    pQH->pQTD = (m_pqTDListPhys+nQHIndex*sizeof(qTD))>>5;
     pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
     pQH->pParam = pParam;
     pQH->pBuffer = pBuffer;
@@ -290,11 +282,23 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     memcpy(&pQH->overlay, pqTD, sizeof(qTD));
 
+    // Make sure we've disabled the async schedule
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000);
+
     // Write the async list pointer
-    m_pBase->write32(m_pQHListPhys+nQHIndex*64, m_nOpRegsOffset+EHCI_ASYNCLP);
+    m_pBase->write32(m_pQHListPhys+nQHIndex*sizeof(QH), m_nOpRegsOffset+EHCI_ASYNCLP);
+
+    // Enable async schedule
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
 
     // Start the controller
     resume();
+
+    NOTICE("USB: EHCI: Waiting 500ms for the transfer to complete...");
+    delay(500);
+    NOTICE("USB: EHCI: qTD status="<<pqTD->nStatus<<" QH overlay status="<<pQH->overlay.nStatus<<" USBSTS="<<m_pBase->read32(m_nOpRegsOffset+EHCI_STS));
 }
 
 void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -304,12 +308,12 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     // Pause the controller
     pause();
 
-    // Enable periodic list
+    // Make sure we've got the periodic schedule enabled
     if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x4000))
     {
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_PERIODICLE, m_nOpRegsOffset+EHCI_CMD);
-        // Write the periodic list pointer
+        // Write the periodic list pointer then enable the period schedule
         m_pBase->write32(m_pFrameListPhys, m_nOpRegsOffset+EHCI_PERIODICLP);
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_PERIODICLE, m_nOpRegsOffset+EHCI_CMD);
     }
 
     // Get a buffer somewhere in our transfer pages
@@ -335,7 +339,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     pQH->nEndpoint = nEndpoint;
     pQH->nAddress = nAddress;
     pQH->mult = 1;
-    pQH->pQTD = (m_pqTDListPhys>>5)+nQHIndex;
+    pQH->pQTD = (m_pqTDListPhys+nQHIndex*sizeof(qTD))>>5;
     pQH->pCallback = reinterpret_cast<uintptr_t>(pCallback);
     pQH->pParam = pParam;
     pQH->pBuffer = pBuffer;

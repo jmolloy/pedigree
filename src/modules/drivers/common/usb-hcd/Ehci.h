@@ -152,19 +152,17 @@ class Ehci : public UsbHub,
             EHCI_PORTSC_CONN = 0x1,     // Port Connected bit
         };
 
-        IoBase *m_pBase;
-
-        uint8_t m_nPorts;
-
         void pause();
         void resume();
 
+        IoBase *m_pBase;
+
         uint8_t m_nOpRegsOffset;
+        uint8_t m_nPorts;
 
         Mutex m_Mutex;
 
         QH *m_pQHList;
-        uint8_t *m_pQHListVirt;
         uintptr_t m_pQHListPhys;
         ExtensibleBitmap m_QHBitmap;
 
@@ -172,10 +170,9 @@ class Ehci : public UsbHub,
         uintptr_t m_pFrameListPhys;
 
         qTD *m_pqTDList;
-        uint8_t *m_pqTDListVirt;
         uintptr_t m_pqTDListPhys;
 
-        uint8_t *m_pTransferPagesVirt;
+        uint8_t *m_pTransferPages;
         uintptr_t m_pTransferPagesPhys;
         MemoryAllocator m_TransferPagesAllocator;
 
