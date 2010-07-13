@@ -47,7 +47,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_
 
 ssize_t UsbDevice::syncSetup(Setup *setup)
 {
-    doSync(m_pEndpoints[0], UsbPidSetup, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
+    return doSync(m_pEndpoints[0], UsbPidSetup, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
 }
 
 ssize_t UsbDevice::syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
