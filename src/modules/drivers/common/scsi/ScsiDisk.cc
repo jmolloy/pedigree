@@ -53,6 +53,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
 
     // Get the capacity of the device
     getCapacityInternal(&m_NumBlocks, &m_BlockSize);
+    DEBUG_LOG("ScsiDisk: Capacity: " << Dec << m_NumBlocks << " blocks, each " << m_BlockSize << " bytes - " << (m_BlockSize * m_NumBlocks) << Hex << " bytes in total.");
 
     // Chat to the partition service and let it pick up that we're around now
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
@@ -94,6 +95,11 @@ bool ScsiDisk::readSense(Sense *sense)
 
     /// \todo get the amount of data received from the SCSI device
     memcpy(sense, response, sizeof(Sense));
+
+    // Dump the sense information
+    DEBUG_LOG("    Sense information:");
+    for(size_t i = 0; i < sizeof(Sense); i++)
+        DEBUG_LOG("        [" << Dec << i << Hex << "] " << response[i]);
 
     delete [] response;
 
