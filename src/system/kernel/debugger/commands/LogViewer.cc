@@ -135,6 +135,9 @@ const char *LogViewer::getLine1(size_t index, DebuggerIO::Colour &colour, Debugg
   colour = DebuggerIO::White;
   switch (level)
   {
+    case Log::Debug:
+      colour = DebuggerIO::LightBlue;
+      break;
     case Log::Notice:
       colour = DebuggerIO::Green;
       break;

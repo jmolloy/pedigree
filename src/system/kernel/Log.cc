@@ -122,6 +122,9 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
             HugeStaticString str;
             switch(m_StaticLog[entry].type)
             {
+                case Debug:
+                    str += "(DD) ";
+                    break;
                 case Notice:
                     str += "(NN) ";
                     break;
@@ -238,6 +241,9 @@ Log &Log::operator<< (Modifier type)
             HugeStaticString str;
             switch(m_Buffer.type)
             {
+                case Debug:
+                    str += "(DD) ";
+                    break;
                 case Notice:
                     str = "(NN) ";
                     break;

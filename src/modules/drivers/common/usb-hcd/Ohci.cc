@@ -49,7 +49,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
 
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
-    NOTICE("USB: OHCI: Pci command: "<<(nPciCmdSts&0xffff));
+    DEBUG_LOG("USB: OHCI: Pci command: "<<(nPciCmdSts&0xffff));
     PciBus::instance().writeConfigSpace(this, 1, (nPciCmdSts & ~0x4) | 0x4);
 #endif
 
@@ -73,7 +73,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
     // Enable control and bulk lists
     m_pBase->write32(OhciControlListsEnable | OhciControlStateRunning, OhciControl);
 
-    NOTICE("USB: OHCI: Reseted");
+    DEBUG_LOG("USB: OHCI: Reseted");
     // Get the number of ports
     m_nPorts = m_pBase->read32(OhciRhDescriptorA) & 0xf;
     for(size_t i = 0;i<m_nPorts;i++)
@@ -87,7 +87,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
             //m_pBase->write32(OhciRhPortStsEnable | OHCI_PORTSC_CSCH | OHCI_PORTSC_EDCH, OhciRhPortStatus+i*4);
             //delay(50);
             //m_pBase->write32(OhciRhPortStsEnable | OHCI_PORTSC_CSCH | OHCI_PORTSC_EDCH, OhciRhPortStatus+i*4);
-            NOTICE("USB: OHCI: Port "<<Dec<<i<<Hex<<" is connected");
+            DEBUG_LOG("USB: OHCI: Port "<<Dec<<i<<Hex<<" is connected");
             deviceConnected(i, FullSpeed);
         }
     }
@@ -107,7 +107,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t nStatus = m_pBase->read32(OhciInterruptStatus) & m_pBase->read32(OhciInterruptEnable);
-        NOTICE("IRQ "<<nStatus);
+        DEBUG_LOG("IRQ "<<nStatus);
     if(nStatus & OhciInterruptWbDoneHead)
     {
         uint8_t nEDIndex = m_pHcca->pDoneHead >> 5 & 0x7f;
@@ -125,7 +125,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
         m_TransferPagesAllocator.free(pTD->nBufferOffset, pTD->nBufferSize);
         m_EDBitmap.clear(nEDIndex);
         //if(nReturn < 0)
-            NOTICE("STOP "<<Dec<<pED->nAddress<<":"<<pED->nEndpoint<<" "<<(pTD->nPid==1?" OUT ":(pTD->nPid==2?" IN  ":(pTD->nPid==0?"SETUP":"")))<<" "<<nReturn<<Hex);
+            DEBUG_LOG("STOP "<<Dec<<pED->nAddress<<":"<<pED->nEndpoint<<" "<<(pTD->nPid==1?" OUT ":(pTD->nPid==2?" IN  ":(pTD->nPid==0?"SETUP":"")))<<" "<<nReturn<<Hex);
     }
     //else
     m_pBase->write32(nStatus, OhciInterruptStatus);
@@ -195,7 +195,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
 void Ohci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
+    DEBUG_LOG("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Get a buffer somewhere in our transfer pages
     uintptr_t nBufferOffset = 0;

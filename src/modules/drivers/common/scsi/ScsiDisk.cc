@@ -202,24 +202,24 @@ uintptr_t ScsiDisk::read(uint64_t location)
 
     Sense s;
 
-    NOTICE("SCSI: trying read(10)");
+    DEBUG_LOG("SCSI: trying read(10)");
     pCommand = new ScsiCommands::Read10(pageNumber / m_BlockSize, 4096 / m_BlockSize);
     bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
-    NOTICE("SCSI: trying read(12)");
+    DEBUG_LOG("SCSI: trying read(12)");
     pCommand = new ScsiCommands::Read12(pageNumber / m_BlockSize, 4096 / m_BlockSize);
     bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
-    NOTICE("SCSI: trying read(16)");
+    DEBUG_LOG("SCSI: trying read(16)");
     pCommand = new ScsiCommands::Read16(pageNumber / m_BlockSize, 4096 / m_BlockSize);
     bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
-        ERROR("SCSI: none worked");
+        ERROR("SCSI: no read function worked");
 
     return buffer + pageOffset;
 }

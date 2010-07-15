@@ -56,7 +56,7 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
     // Currently we only support the default configuration
     if(pDes->pConfigurations.count() > 1)
-        NOTICE("USB: TODO: multiple configuration devices");
+        DEBUG_LOG("USB: TODO: multiple configuration devices");
     pDevice->useConfiguration(0);
     Vector<UsbDevice::Interface*> pInterfaces = pDevice->getConfiguration()->pInterfaces;
     for(size_t i = 0;i<pInterfaces.count();i++)
@@ -80,7 +80,7 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         }
         // Set the right interface
         pDevice->useInterface(i);
-        NOTICE("USB: Device: "<<pDes->sVendor<<" "<<pDes->sProduct<<", class "<<Dec<<pInterface->pDescriptor->nClass<<":"<<pInterface->pDescriptor->nSubclass<<":"<<pInterface->pDescriptor->nProtocol<<Hex);
+        NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
         // TODO: make this a bit more general... harcoding some numbers and some class names doesn't sound good :|
         addChild(pDevice);
         if(pInterface->pDescriptor->nClass == 9)

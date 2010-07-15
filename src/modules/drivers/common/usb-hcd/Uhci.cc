@@ -56,7 +56,7 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     m_pPeriodicQH->bElemInvalid = 1;
 
     uint32_t nPciCrap = PciBus::instance().readConfigSpace(this, 1);
-    NOTICE("USB: UHCI: Pci command+status: "<<nPciCrap);
+    DEBUG_LOG("USB: UHCI: Pci command+status: "<<nPciCrap);
     PciBus::instance().writeConfigSpace(this, 1, nPciCrap | 7);
 
     // Grab the ports
@@ -72,25 +72,25 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
 
-    NOTICE("USB: UHCI: Reseted");
+    DEBUG_LOG("USB: UHCI: Reseted");
 
     for(size_t i = 0;i<7;i++)
     {
         uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC+i*2);
         if(nPortStatus == 0xffff || !(nPortStatus & 0x80))
             break;
-        NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
+        DEBUG_LOG("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
         if(nPortStatus & UHCI_PORTSC_CONN)
         {
             m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC+i*2);
             delay(50);
             m_pBase->write16(0, UHCI_PORTSC+i*2);
-            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
+            DEBUG_LOG("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
             delay(50);
             m_pBase->write16(UHCI_PORTSC_ENABLE/* | UHCI_PORTSC_EDCH*/, UHCI_PORTSC+i*2);
-            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
+            DEBUG_LOG("USB: UHCI: Port "<<Dec<<i<<Hex<<" got "<<m_pBase->read16(UHCI_PORTSC+i*2));
             bool bLoSpeed = m_pBase->read16(UHCI_PORTSC+i*2) & UHCI_PORTSC_LOSPEED;
-            NOTICE("USB: UHCI: Port "<<Dec<<i<<Hex<<" is connected at "<<(bLoSpeed?"Low Speed":"Full Speed"));
+            DEBUG_LOG("USB: UHCI: Port "<<Dec<<i<<Hex<<" is connected at "<<(bLoSpeed?"Low Speed":"Full Speed"));
             deviceConnected(i, bLoSpeed?LowSpeed:FullSpeed);
         }
         m_nPorts++;
@@ -125,7 +125,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                 void (*pCallback)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pTD->pCallback);
                 pCallback(pTD->pParam, nReturn);
             }
-            NOTICE("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==UsbPidOut?" OUT ":(pTD->nPid==UsbPidIn?" IN  ":(pTD->nPid==UsbPidSetup?"SETUP":"")))<<" "<<nReturn<<Hex);
+            DEBUG_LOG("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==UsbPidOut?" OUT ":(pTD->nPid==UsbPidIn?" IN  ":(pTD->nPid==UsbPidSetup?"SETUP":"")))<<" "<<nReturn<<Hex);
             pTD = pTD->bNextInvalid?0:&m_pTDList[pTD->pNext & 0xfff];
         }
         m_pAsyncQH->pCurrent = pTD;
@@ -169,7 +169,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    NOTICE("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
+    DEBUG_LOG("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 
     // Pause the controller
     m_pBase->write16(0, UHCI_CMD);

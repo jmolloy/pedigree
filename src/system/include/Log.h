@@ -27,6 +27,20 @@
 /** @addtogroup kernel
  * @{ */
 
+/** Add a debug item to the log */
+#ifdef DEBUG_LOGGING
+#define DEBUG_LOG(text) \
+  do \
+  { \
+    Log::instance().m_Lock.acquire(); \
+    Log::instance() << Log::Debug << text << Flush; \
+    Log::instance().m_Lock.release(); \
+  } \
+  while (0)
+#else
+#define DEBUG_LOG(text)
+#endif
+
 /** Add a notice to the log */
 #define NOTICE(text) \
   do \
@@ -156,6 +170,7 @@ public:
   /** Severity level of the log entry */
   enum SeverityLevel
   {
+    Debug,
     Notice,
     Warning,
     Error,
