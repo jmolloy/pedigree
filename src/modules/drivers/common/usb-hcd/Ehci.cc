@@ -51,11 +51,10 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
 
     dmemset(m_pFrameList, 1, 0x400);
 
-//#ifdef X86_COMMON
-#if 0
+#ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
     NOTICE("USB: EHCI: Pci command: "<<(nPciCmdSts&0xffff));
-    PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 7);
+    PciBus::instance().writeConfigSpace(this, 1, (nPciCmdSts & ~0x4) | 0x4);
 #endif
 
     // Grab the ports
