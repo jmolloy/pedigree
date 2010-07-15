@@ -50,7 +50,7 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     // Set port number
     pDevice->setPort(nPort);
     // Set speed
-    pDevice->setPort(speed);
+    pDevice->setSpeed(speed);
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();

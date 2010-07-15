@@ -34,12 +34,12 @@ namespace ScsiCommands
     class Read10 : public ScsiCommand
     {
         public:
-            inline Read10(uint32_t lba, uint32_t length)
+            inline Read10(uint32_t nLba, uint32_t nSectors)
             {
                 memset(&command, 0, sizeof(command));
                 command.nOpCode = 0x28;
-                command.nLba = HOST_TO_BIG32(lba);
-                command.nLength = HOST_TO_BIG16(length);
+                command.nLba = HOST_TO_BIG32(nLba);
+                command.nSectors = HOST_TO_BIG16(nSectors);
             }
 
             virtual size_t serialise(uintptr_t &addr)
@@ -58,7 +58,7 @@ namespace ScsiCommands
                 uint8_t res1 : 3;
                 uint32_t nLba;
                 uint8_t res2;
-                uint16_t nLength;
+                uint16_t nSectors;
                 uint8_t nControl;
             } PACKED command;
     };
@@ -66,12 +66,12 @@ namespace ScsiCommands
     class Read12 : public ScsiCommand
     {
         public:
-            inline Read12(uint32_t lba, uint32_t length)
+            inline Read12(uint32_t nLba, uint32_t nSectors)
             {
                 memset(&command, 0, sizeof(command));
                 command.nOpCode = 0xa8;
-                command.nLba = lba;
-                command.nLength = length;
+                command.nLba = HOST_TO_BIG32(nLba);
+                command.nSectors = HOST_TO_BIG32(nSectors);
             }
 
             virtual size_t serialise(uintptr_t &addr)
@@ -89,7 +89,7 @@ namespace ScsiCommands
                 uint8_t bDPO : 1;
                 uint8_t res1 : 3;
                 uint32_t nLba;
-                uint32_t nLength;
+                uint32_t nSectors;
                 uint8_t res2;
                 uint8_t nControl;
             } PACKED command;
@@ -98,12 +98,12 @@ namespace ScsiCommands
     class Read16 : public ScsiCommand
     {
         public:
-            inline Read16(uint32_t lba, uint32_t length)
+            inline Read16(uint32_t nLba, uint32_t nSectors)
             {
                 memset(&command, 0, sizeof(command));
                 command.nOpCode = 0x88;
-                command.nLba = lba;
-                command.nLength = length;
+                command.nLba = HOST_TO_BIG64(nLba);
+                command.nSectors = HOST_TO_BIG32(nSectors);
             }
 
             virtual size_t serialise(uintptr_t &addr)
@@ -121,7 +121,7 @@ namespace ScsiCommands
                 uint8_t bDPO : 1;
                 uint8_t res1 : 3;
                 uint64_t nLba;
-                uint32_t nLength;
+                uint32_t nSectors;
                 uint8_t res2;
                 uint8_t nControl;
             } PACKED command;

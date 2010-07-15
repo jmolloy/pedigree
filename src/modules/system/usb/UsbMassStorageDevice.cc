@@ -21,78 +21,63 @@
 #include <utilities/Cache.h>
 #include <ServiceManager.h>
 
-UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(1)
+UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(1), m_nInEndpoint(0), m_nOutEndpoint(0)
 {
+    for(uint8_t i = 1;i<16;i++)
+    {
+        Endpoint *pEndpoint = m_pEndpoints[i];
+        if(!m_nInEndpoint && pEndpoint->nTransferType == Endpoint::Bulk && pEndpoint->bIn)
+            m_nInEndpoint = i;
+        if(!m_nOutEndpoint && pEndpoint->nTransferType == Endpoint::Bulk && pEndpoint->bOut)
+            m_nOutEndpoint = i;
+        if(m_nInEndpoint && m_nOutEndpoint)
+            break;
+    }
+
+    if(!m_nInEndpoint)
+    {
+        ERROR("USB: MSD: No IN endpoint");
+        return;
+    }
+
+    if(!m_nOutEndpoint)
+    {
+        ERROR("USB: MSD: No OUT endpoint");
+        return;
+    }
+
     searchDisks();
 }
 
 UsbMassStorageDevice::~UsbMassStorageDevice()
 {
 }
-#define nPacketSize 64
+
 bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
-    Cbw *cb = new Cbw();
-    cb->sig = 0x43425355;
-    cb->tag = 0;
-    cb->data_len = nRespBytes;
-    cb->flags = bWrite?0:0x80;
-    cb->lun = nUnit;
-    cb->cmd_len = nCommandSize;
-    memcpy(cb->cmd, reinterpret_cast<void*>(pCommand), nCommandSize);
+    Cbw *pCbw = new Cbw();
+    pCbw->sig = 0x43425355;
+    pCbw->tag = 0;
+    pCbw->data_len = nRespBytes;
+    pCbw->flags = bWrite?0:0x80;
+    pCbw->lun = nUnit;
+    pCbw->cmd_len = nCommandSize;
+    memcpy(pCbw->cmd, reinterpret_cast<void*>(pCommand), nCommandSize);
 
-    ssize_t nResult = syncOut(1 /* 2 */, reinterpret_cast<uintptr_t>(cb), 31);
-    NOTICE("STAGE1 "<<Dec<<nResult<<Hex);
+    ssize_t nResult = syncOut(m_nOutEndpoint, reinterpret_cast<uintptr_t>(pCbw), 31);
+
+    NOTICE("USB: MSD: CBW finished with "<<Dec<<nResult<<Hex);
 
     if(bWrite)
-        nResult = syncOut(1 /* 2 */, pRespBuffer, nRespBytes);
+        nResult = syncOut(m_nOutEndpoint, pRespBuffer, nRespBytes);
     else
-        nResult = syncIn(2 /* 1 */, pRespBuffer, nRespBytes);
-    NOTICE("STAGE2 "<<Dec<<nResult<<Hex);
+        nResult = syncIn(m_nInEndpoint, pRespBuffer, nRespBytes);
+    NOTICE("USB: MSD: "<<(bWrite?"OUT":"IN")<<" finished with  "<<Dec<<nResult<<Hex);
 
-    Csw myCs;
-    nResult = syncIn(2 /* 1 */, reinterpret_cast<uintptr_t>(&myCs), 13);
-    NOTICE("STAGE3 "<<Dec<<nResult<<Hex);
+    Csw csw;
+    nResult = syncIn(m_nInEndpoint, reinterpret_cast<uintptr_t>(&csw), 13);
+    NOTICE("USB: MSD: CSW finished with "<<Dec<<nResult<<Hex);
 
-    NOTICE("FUN "<<((uint8_t*)pRespBuffer)[510]<<" "<<((uint8_t*)pRespBuffer)[511]<<" "<<myCs.status);
-
-    return true;
+    NOTICE("USB: MSD: Command finished 510:511="<<((uint8_t*)pRespBuffer)[510]<<":"<<((uint8_t*)pRespBuffer)[511]<<" STS="<<csw.status<<" SIG="<<csw.sig);
+    return !csw.status;
 }
-/*
-void UsbMassStorageDevice::readPage(uint64_t sector, uintptr_t buffer) {
-    Cbw *cb = new Cbw();
-    cb->sig = 0x43425355;
-    cb->tag = 0;
-    cb->data_len = 4096;
-    cb->flags = 0x80;
-    cb->lun = 0;
-    cb->cmd_len = 10;
-    cb->cmd[0] = 0x28;
-    cb->cmd[1] = 0;
-    cb->cmd[2] = (sector >> 24) & 0xff;
-    cb->cmd[3] = (sector >> 16) & 0xff;
-    cb->cmd[4] = (sector >> 8) & 0xff;
-    cb->cmd[5] = sector & 0xff;
-    cb->cmd[6] = 0;
-    cb->cmd[7] = 0;
-    cb->cmd[8] = 8;
-    cb->cmd[9] = 0;
-
-    int lol = syncOut(2, reinterpret_cast<uintptr_t>(cb), 31);
-    bool success = true;
-    for(size_t i = 0;i<4096;i+=512){
-        ssize_t lol = syncIn(1, buffer+i, 512);
-        if(lol < 0) {
-            ERROR("ERROR: done read "<<Dec<<(i/512)<<" as "<<lol<<Hex);
-            success = false;
-            break;
-        }
-    }
-    Csw myCs;
-    if(syncIn(1, reinterpret_cast<uintptr_t>(&myCs), 13) < 0){
-        ERROR("ERROR: oops");
-        readPage(sector, buffer);
-        }
-        NOTICE("heh "<<((uint8_t*)buffer)[510]<<" "<<((uint8_t*)buffer)[511]<<" "<<myCs.status);
-}
-*/

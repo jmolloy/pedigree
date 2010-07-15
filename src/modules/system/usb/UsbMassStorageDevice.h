@@ -54,6 +54,8 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
         } Csw;
 
         size_t m_nUnits;
+        uint8_t m_nInEndpoint;
+        uint8_t m_nOutEndpoint;
 
     protected:
 

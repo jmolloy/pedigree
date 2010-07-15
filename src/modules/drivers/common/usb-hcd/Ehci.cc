@@ -287,13 +287,7 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     // Write the async list pointer
     m_pBase->write32(m_pQHListPhys+nQHIndex*sizeof(QH), m_nOpRegsOffset+EHCI_ASYNCLP);
-        // Make sure we've got the periodic schedule enabled
-    if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x4000))
-    {
-        // Write the periodic list pointer then enable the period schedule
-        m_pBase->write32(m_pFrameListPhys, m_nOpRegsOffset+EHCI_PERIODICLP);
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_PERIODICLE, m_nOpRegsOffset+EHCI_CMD);
-    }
+
     // Start the controller
     resume();
 
