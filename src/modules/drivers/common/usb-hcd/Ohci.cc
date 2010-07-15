@@ -44,6 +44,12 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x1000), m_
 
     memset(m_pHcca, 0, 0x800);
 
+#ifdef X86_COMMON
+    uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
+    NOTICE("USB: OHCI: Pci command: "<<(nPciCmdSts&0xffff));
+    PciBus::instance().writeConfigSpace(this, 1, (nPciCmdSts & ~0x4) | 0x4);
+#endif
+
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
     // Set reset bit
