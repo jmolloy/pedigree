@@ -92,10 +92,6 @@ bool ScsiDisk::readSense(Sense *sense)
         return false;
     }
 
-    NOTICE("Response etc:");
-    for(int i = 0; i < 18; i++)
-        NOTICE("Byte " << Dec << i << Hex << ": " << response[i]);
-
     /// \todo get the amount of data received from the SCSI device
     memcpy(sense, response, sizeof(Sense));
 
@@ -118,14 +114,10 @@ bool ScsiDisk::unitReady()
     do
     {
         success = sendCommand(pCommand, 0, 0, true);
-        NOTICE("Attempt #" << Dec << (5 - retry) << Hex << ": " << success);
 
         if(!success)
             delay(100);
     } while((!success) && (readSense(&s)) && --retry);
-
-    NOTICE("Response code: " << s.ResponseCode);
-    NOTICE("Sense key: " << s.SenseKey);
 
     delete pCommand;
 
@@ -168,9 +160,7 @@ bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
 bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
     uintptr_t pCommandBuffer = 0;
-    NOTICE("pCommand is " << reinterpret_cast<uintptr_t>(pCommand));
     size_t nCommandSize = pCommand->serialise(pCommandBuffer);
-    NOTICE("ScsiDisk::sendCommand - buffer is at " << pCommandBuffer << ", size is " << Dec << nCommandSize << Hex);
     return m_pController->sendCommand(m_nUnit, pCommandBuffer, nCommandSize, pRespBuffer, nRespBytes, bWrite);
 }
 
