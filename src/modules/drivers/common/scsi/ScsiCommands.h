@@ -83,6 +83,61 @@ namespace ScsiCommands
             } PACKED command;
     };
 
+    class StartStop : public ScsiCommand
+    {
+        public:
+            inline StartStop(bool imm, uint8_t newpower, bool eject_load, bool start, uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x1b;
+                command.imm = imm ? 1 : 0;
+                command.setup = (start ? 1 : 0) | ((eject_load ? 1 : 0) << 1) | (newpower << 4);
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t imm;
+                uint16_t rsvd;
+                uint8_t setup;
+                uint8_t control;
+            } PACKED command;
+    };
+
+    class ReadCapacity10 : public ScsiCommand
+    {
+        public:
+            inline ReadCapacity10(uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x25;
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t obsolete_rsvd;
+                uint32_t lba;
+                uint8_t rsvd[2];
+                uint8_t pmi;
+                uint8_t control;
+            } PACKED command;
+    };
+
     class Read10 : public ScsiCommand
     {
         public:
