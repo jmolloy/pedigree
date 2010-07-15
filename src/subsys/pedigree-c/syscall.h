@@ -18,7 +18,7 @@
 #define _PEDIGREE_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define POSIX_SYSCALL_SERVICE 1
+#define PEDIGREE_C_SYSCALL_SERVICE 4
 
 #ifdef X86
 #include "syscall-i686.h"
