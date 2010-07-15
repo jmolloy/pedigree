@@ -14,11 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "ScsiDisk.h"
-#include "ScsiController.h"
 #include <utilities/assert.h>
 #include <utilities/Cache.h>
 #include <ServiceManager.h>
+#include "ScsiDisk.h"
+#include "ScsiCommands.h"
+#include "ScsiController.h"
 
 ScsiDisk::ScsiDisk() : m_Cache(), m_nAlignPoints(0)
 {
@@ -56,9 +57,11 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     return true;
 }
 
-void ScsiDisk::sendCommand(uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
+bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
-    m_pController->sendCommand(m_nUnit, pCommand, nCommandSize, pRespBuffer, nRespBytes, bWrite);
+    uintptr_t pCommandBuffer = 0;
+    size_t nCommandSize = pCommand->serialise(pCommandBuffer);
+    return m_pController->sendCommand(m_nUnit, pCommandBuffer, nCommandSize, pRespBuffer, nRespBytes, bWrite);
 }
 /*
 void ScsiDisk::readPage(uint64_t sector, uintptr_t buffer) {
@@ -110,17 +113,27 @@ uintptr_t ScsiDisk::read(uint64_t location)
 
     buffer = m_Cache.insert(pageNumber);
 
-    uint64_t sector = pageNumber / 512;
+    bool bOk;
+    ScsiCommand *pCommand;
 
-    uint8_t cmd[6];
-    cmd[0] = 8;
-    cmd[1] = (sector >> 16) & 0x1f;
-    cmd[2] = (sector >> 8) & 0xff;
-    cmd[3] = sector & 0xff;
-    cmd[4] = 8;
-    cmd[5] = 0;
-
-    sendCommand(reinterpret_cast<uintptr_t>(cmd), 6, buffer, 4096);
+    NOTICE("SCSI: trying read(10)");
+    pCommand = new ScsiCommands::Read10(pageNumber / 512, 8);
+    bOk = sendCommand(pCommand, buffer, 4096);
+    delete pCommand;
+    if(bOk)
+        return buffer + pageOffset;
+    NOTICE("SCSI: trying read(12)");
+    pCommand = new ScsiCommands::Read12(pageNumber / 512, 8);
+    bOk = sendCommand(pCommand, buffer, 4096);
+    delete pCommand;
+    if(bOk)
+        return buffer + pageOffset;
+    NOTICE("SCSI: trying read(16)");
+    pCommand = new ScsiCommands::Read16(pageNumber / 512, 8);
+    bOk = sendCommand(pCommand, buffer, 4096);
+    delete pCommand;
+    if(bOk)
+        ERROR("SCSI: none worked");
 
     return buffer + pageOffset;
 }
@@ -132,6 +145,6 @@ void ScsiDisk::write(uint64_t location)
 
 void ScsiDisk::align(uint64_t location)
 {
-    assert (m_nAlignPoints < 8);
+    assert(m_nAlignPoints < 8);
     m_AlignPoints[m_nAlignPoints++] = location;
 }

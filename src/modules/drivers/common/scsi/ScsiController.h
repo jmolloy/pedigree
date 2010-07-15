@@ -28,7 +28,7 @@ class ScsiController: public Controller
         inline ScsiController(){}
         inline virtual ~ScsiController(){}
 
-        virtual void sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;
+        virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;
 
     protected:
 

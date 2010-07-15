@@ -287,17 +287,24 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     // Write the async list pointer
     m_pBase->write32(m_pQHListPhys+nQHIndex*sizeof(QH), m_nOpRegsOffset+EHCI_ASYNCLP);
+        // Make sure we've got the periodic schedule enabled
+    if(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x4000))
+    {
+        // Write the periodic list pointer then enable the period schedule
+        m_pBase->write32(m_pFrameListPhys, m_nOpRegsOffset+EHCI_PERIODICLP);
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_PERIODICLE, m_nOpRegsOffset+EHCI_CMD);
+    }
+    // Start the controller
+    resume();
 
     // Enable async schedule
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
     while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
 
-    // Start the controller
-    resume();
-
-    NOTICE("USB: EHCI: Waiting 500ms for the transfer to complete...");
-    delay(500);
-    NOTICE("USB: EHCI: qTD status="<<pqTD->nStatus<<" QH overlay status="<<pQH->overlay.nStatus<<" USBSTS="<<m_pBase->read32(m_nOpRegsOffset+EHCI_STS));
+    //asm("sti");
+    //NOTICE("USB: EHCI: Waiting 500ms for the transfer to complete...");
+    //delay(5000);
+    //NOTICE("USB: EHCI: qTD status="<<pqTD->nStatus<<" QH overlay status="<<pQH->overlay.nStatus<<" USBSTS="<<m_pBase->read32(m_nOpRegsOffset+EHCI_STS));
 }
 
 void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -326,7 +333,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
         FATAL("USB: EHCI: QH/qTD space full :(");
     m_QHBitmap.set(nQHIndex);
 
-    m_pFrameList[nQHIndex] = m_pQHListPhys|((nQHIndex*2)<<5)|2;
+    m_pFrameList[nQHIndex] = (m_pQHListPhys+nQHIndex*sizeof(QH))|2;
 
     QH *pQH = &m_pQHList[nQHIndex];
     memset(pQH, 0, sizeof(QH));

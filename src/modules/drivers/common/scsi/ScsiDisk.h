@@ -20,6 +20,7 @@
 #include <processor/types.h>
 #include <machine/Disk.h>
 #include <utilities/Cache.h>
+#include "ScsiCommands.h"
 
 class ScsiDisk : public Disk
 {
@@ -40,7 +41,7 @@ class ScsiDisk : public Disk
 
     private:
 
-        void sendCommand(uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite=false);
+        bool sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite=false);
 
         class ScsiController* m_pController;
         size_t m_nUnit;
