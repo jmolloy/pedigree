@@ -29,11 +29,19 @@ class ScsiDisk : public Disk
         struct Sense
         {
             uint8_t ResponseCode;
-            uint8_t SenseKey;
+            uint8_t Obsolete;
+            uint32_t SenseKey : 4;
+            uint32_t rsvd : 1;
+            uint32_t ili : 1;
+            uint32_t eom : 1;
+            uint32_t filemark : 1;
+            uint32_t info;
+            uint8_t addLen;
+            uint32_t commandInfo;
             uint8_t Asc;
             uint8_t AscQ;
-            uint8_t Rsvd[3];
-            uint8_t Add_Len;
+            uint8_t fieldCode;
+            uint8_t senseKeySpecific[3];
         } __attribute__((packed));
 
         struct Inquiry
@@ -73,6 +81,8 @@ class ScsiDisk : public Disk
 
         bool sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite=false);
 
+        bool getCapacityInternal(size_t *blockNumber, size_t *blockSize);
+
         class ScsiController* m_pController;
         size_t m_nUnit;
 
@@ -80,6 +90,22 @@ class ScsiDisk : public Disk
 
         uint64_t m_AlignPoints[8];
         size_t m_nAlignPoints;
+
+        size_t m_NumBlocks;
+        size_t m_BlockSize;
+
+        /** Default block size for a device */
+        inline size_t defaultBlockSize()
+        {
+            /*
+            if(m_Type == CdDvd)
+                return 2048;
+            else
+            */
+            {
+                return 512;
+            }
+        }
 };
 
 #endif

@@ -22,7 +22,9 @@
 #include "ScsiCommands.h"
 #include "ScsiController.h"
 
-ScsiDisk::ScsiDisk() : m_Cache(), m_nAlignPoints(0)
+#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+
+ScsiDisk::ScsiDisk() : m_Cache(), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0)
 {
 }
 
@@ -35,6 +37,22 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     m_pController = pController;
     m_pParent = pController;
     m_nUnit = nUnit;
+
+    // Turn on the unit - go ACTIVE
+    ScsiCommand *pCommand = new ScsiCommands::StartStop(false, 1, true, true);
+    bool success = sendCommand(pCommand, 0, 0);
+    if(!success)
+        return false;
+
+    // Ensure the unit is ready before we attempt to do anything more
+    if(!unitReady())
+    {
+        ERROR("ScsiDisk: disk never became ready.");
+        return false;
+    }
+
+    // Get the capacity of the device
+    getCapacityInternal(&m_NumBlocks, &m_BlockSize);
 
     // Chat to the partition service and let it pick up that we're around now
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
@@ -62,14 +80,26 @@ bool ScsiDisk::readSense(Sense *sense)
 {
     memset(sense, 0xFF, sizeof(Sense));
 
+    // Maximum size of sense data is 252 bytes
     ScsiCommand *pCommand = new ScsiCommands::ReadSense(0, sizeof(Sense));
 
-    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(sense), sizeof(Sense), true);
+    uint8_t *response = new uint8_t[sizeof(Sense)];
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(response), sizeof(Sense));
     if(!success)
     {
         WARNING("ScsiDisk: SENSE command failed");
+        delete [] response;
         return false;
     }
+
+    NOTICE("Response etc:");
+    for(int i = 0; i < 18; i++)
+        NOTICE("Byte " << Dec << i << Hex << ": " << response[i]);
+
+    /// \todo get the amount of data received from the SCSI device
+    memcpy(sense, response, sizeof(Sense));
+
+    delete [] response;
 
     return ((sense->ResponseCode & 0x70) == 0x70);
 }
@@ -77,56 +107,87 @@ bool ScsiDisk::readSense(Sense *sense)
 bool ScsiDisk::unitReady()
 {
     Sense s;
+    memset(&s, 0, sizeof(Sense));
 
     ScsiCommand *pCommand = new ScsiCommands::UnitReady();
+
+    readSense(&s);
 
     bool success = false;
     int retry = 5;
     do
     {
         success = sendCommand(pCommand, 0, 0, true);
+        NOTICE("Attempt #" << Dec << (5 - retry) << Hex << ": " << success);
+
+        if(!success)
+            delay(100);
     } while((!success) && (readSense(&s)) && --retry);
 
-    return (((s.ResponseCode & 0x70) == 0x70) && ((s.SenseKey == 0x06) || (s.SenseKey == 0x02)));
+    NOTICE("Response code: " << s.ResponseCode);
+    NOTICE("Sense key: " << s.SenseKey);
+
+    delete pCommand;
+
+    return (((s.ResponseCode & 0x70) == 0x70) && ((s.SenseKey == 0x06) || (s.SenseKey == 0x02) || (s.SenseKey == 0x00)));
+}
+
+bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
+{
+    if(!unitReady())
+    {
+        WARNING("ScsiDisk::getCapacityInternal - returning to defaults, unit not ready");
+        *blockNumber = 0;
+        *blockSize = defaultBlockSize();
+        return false;
+    }
+
+    struct Capacity
+    {
+        uint32_t LBA;
+        uint32_t BlockSize;
+    } __attribute__((packed)) capacity;
+    memset(&capacity, 0, sizeof(Capacity));
+
+    ScsiCommand *pCommand = new ScsiCommands::ReadCapacity10();
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(&capacity), sizeof(Capacity), false);
+    delete pCommand;
+    if(!success)
+    {
+        WARNING("ScsiDisk::getCapacityInternal - READ CAPACITY command failed");
+        return false;
+    }
+
+    *blockNumber = BIG_TO_HOST32(capacity.LBA);
+    uint32_t blockSz = BIG_TO_HOST32(capacity.BlockSize);
+    *blockSize = blockSz ? blockSz : defaultBlockSize();
+
+    return true;
 }
 
 bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
     uintptr_t pCommandBuffer = 0;
+    NOTICE("pCommand is " << reinterpret_cast<uintptr_t>(pCommand));
     size_t nCommandSize = pCommand->serialise(pCommandBuffer);
+    NOTICE("ScsiDisk::sendCommand - buffer is at " << pCommandBuffer << ", size is " << Dec << nCommandSize << Hex);
     return m_pController->sendCommand(m_nUnit, pCommandBuffer, nCommandSize, pRespBuffer, nRespBytes, bWrite);
 }
-/*
-void ScsiDisk::readPage(uint64_t sector, uintptr_t buffer) {
-    Cbw *cb = new Cbw();
-    cb->sig = 0x43425355;
-    cb->tag = 0;
-    cb->data_len = 4096;
-    cb->flags = 0x80;
-    cb->lun = 0;
-    cb->cmd_len = 6;
-    cb->cmd[0] = 8;
-    cb->cmd[1] = (sector >> 16) & 0x1f;
-    cb->cmd[2] = (sector >> 8) & 0xff;
-    cb->cmd[3] = sector & 0xff;
-    cb->cmd[4] = 8;
-    cb->cmd[5] = 0;
-
-    syncOut(2, cb, 31);
-    for(size_t i = 0;i<4096;i+=64){
-        //NOTICE("start read "<<(i/64));
-        ssize_t lol = syncIn(1, reinterpret_cast<void*>(buffer+i), 64);
-        if(lol < 0)
-            ERROR("done read "<<(i/64)<<" as "<<lol);
-    }
-    if(syncIn(1, 0, 13) < 0)
-        readPage(sector, buffer);
-}*/
 
 uintptr_t ScsiDisk::read(uint64_t location)
 {
     if (location % 512)
         FATAL("Read with location % 512.");
+    if(!unitReady())
+    {
+        ERROR("ScsiDisk::read - unit not ready");
+        return 0;
+    }
+    if((location / m_BlockSize) > m_NumBlocks)
+    {
+        ERROR("ScsiDisk::read - location too high");
+        return 0;
+    }
 
     // Look through the align points.
     uint64_t alignPoint = 0;
@@ -149,21 +210,23 @@ uintptr_t ScsiDisk::read(uint64_t location)
     bool bOk;
     ScsiCommand *pCommand;
 
+    Sense s;
+
     NOTICE("SCSI: trying read(10)");
-    pCommand = new ScsiCommands::Read10(pageNumber / 512, 1);
-    bOk = sendCommand(pCommand, buffer, 512);
+    pCommand = new ScsiCommands::Read10(pageNumber / m_BlockSize, 4096 / m_BlockSize);
+    bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
     NOTICE("SCSI: trying read(12)");
-    pCommand = new ScsiCommands::Read12(pageNumber / 512, 1);
-    bOk = sendCommand(pCommand, buffer, 512);
+    pCommand = new ScsiCommands::Read12(pageNumber / m_BlockSize, 4096 / m_BlockSize);
+    bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
     NOTICE("SCSI: trying read(16)");
-    pCommand = new ScsiCommands::Read16(pageNumber / 512, 1);
-    bOk = sendCommand(pCommand, buffer, 512);
+    pCommand = new ScsiCommands::Read16(pageNumber / m_BlockSize, 4096 / m_BlockSize);
+    bOk = sendCommand(pCommand, buffer, 4096);
     delete pCommand;
     if(bOk)
         ERROR("SCSI: none worked");
