@@ -32,7 +32,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
     setSpecificType(String("EHCI"));
 
     // Allocate the pages we need
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_EhciMR, 9, PhysicalMemoryManager::continuous, 0))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_EhciMR, 9, PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write))
     {
         ERROR("USB: EHCI: Couldn't allocate Memory Region!");
         return;
