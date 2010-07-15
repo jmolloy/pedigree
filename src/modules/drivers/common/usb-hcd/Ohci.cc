@@ -18,6 +18,9 @@
 #include <processor/Processor.h>
 #include <usb/Usb.h>
 #include <Log.h>
+#ifdef X86_COMMON
+#include <machine/Pci.h>
+#endif
 #include "Ohci.h"
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
