@@ -30,7 +30,7 @@ UsbMassStorageDevice::~UsbMassStorageDevice()
 {
 }
 #define nPacketSize 64
-void UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
+bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
     Cbw *cb = new Cbw();
     cb->sig = 0x43425355;
@@ -41,20 +41,22 @@ void UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
     cb->cmd_len = nCommandSize;
     memcpy(cb->cmd, reinterpret_cast<void*>(pCommand), nCommandSize);
 
-    ssize_t nResult = syncOut(2, reinterpret_cast<uintptr_t>(cb), 31);
+    ssize_t nResult = syncOut(1 /* 2 */, reinterpret_cast<uintptr_t>(cb), 31);
     NOTICE("STAGE1 "<<Dec<<nResult<<Hex);
 
     if(bWrite)
-        nResult = syncOut(2, pRespBuffer, nRespBytes);
+        nResult = syncOut(1 /* 2 */, pRespBuffer, nRespBytes);
     else
-        nResult = syncIn(1, pRespBuffer, nRespBytes);
+        nResult = syncIn(2 /* 1 */, pRespBuffer, nRespBytes);
     NOTICE("STAGE2 "<<Dec<<nResult<<Hex);
 
     Csw myCs;
-    nResult = syncIn(1, reinterpret_cast<uintptr_t>(&myCs), 13);
+    nResult = syncIn(2 /* 1 */, reinterpret_cast<uintptr_t>(&myCs), 13);
     NOTICE("STAGE3 "<<Dec<<nResult<<Hex);
 
     NOTICE("FUN "<<((uint8_t*)pRespBuffer)[510]<<" "<<((uint8_t*)pRespBuffer)[511]<<" "<<myCs.status);
+
+    return true;
 }
 /*
 void UsbMassStorageDevice::readPage(uint64_t sector, uintptr_t buffer) {

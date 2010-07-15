@@ -38,8 +38,8 @@ namespace ScsiCommands
             {
                 memset(&command, 0, sizeof(command));
                 command.nOpCode = 0x28;
-                command.nLba = lba;
-                command.nLength = length;
+                command.nLba = HOST_TO_BIG32(lba);
+                command.nLength = HOST_TO_BIG16(length);
             }
 
             virtual size_t serialise(uintptr_t &addr)

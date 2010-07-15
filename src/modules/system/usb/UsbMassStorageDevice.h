@@ -27,7 +27,7 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
         UsbMassStorageDevice (UsbDevice *dev);
         virtual ~UsbMassStorageDevice();
 
-        virtual void sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
+        virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
 
         virtual void getName(String &str)
         {

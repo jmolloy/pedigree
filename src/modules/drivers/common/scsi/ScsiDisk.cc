@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <processor/types.h>
 #include <utilities/assert.h>
 #include <utilities/Cache.h>
 #include <ServiceManager.h>
