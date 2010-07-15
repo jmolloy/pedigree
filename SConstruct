@@ -48,6 +48,7 @@ opts.AddVariables(
 
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
+    BoolVariable('debug_logging','Whether to enable debug-level logging, which can dump massive amounts of data to the kernel log. Probable performance hit too, use at your own risk.',1),
 
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
@@ -261,7 +262,7 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
 else:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'acpi']
+additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'acpi', 'debug_logging']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
