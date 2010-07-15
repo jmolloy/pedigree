@@ -300,11 +300,6 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     // Enable async schedule
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
     while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
-
-    //asm("sti");
-    //NOTICE("USB: EHCI: Waiting 500ms for the transfer to complete...");
-    //delay(5000);
-    //NOTICE("USB: EHCI: qTD status="<<pqTD->nStatus<<" QH overlay status="<<pQH->overlay.nStatus<<" USBSTS="<<m_pBase->read32(m_nOpRegsOffset+EHCI_STS));
 }
 
 void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
