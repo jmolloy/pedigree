@@ -154,7 +154,8 @@ void UsbUlpi::initialise()
 
     // Set the controller as active
     usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
-    usbSetBits(0xAC, 1 << 5); // Enable OTG
+    // usbSetBits(0xAC, 1 << 5); // Enable OTG - 0xAC = POWER_CTRL
+	usbClearBits(0xAC, 1 << 5); // Disable OTG
     usbSetBits(FunctionControl, 4); // FS termination enabled
     usbClearBits(FunctionControl, 0x1B); // Enable the HS transceiver
     enablePhyAccess(false);
