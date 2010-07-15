@@ -31,6 +31,58 @@ class ScsiCommand
 
 namespace ScsiCommands
 {
+    class UnitReady : public ScsiCommand
+    {
+        public:
+            inline UnitReady(uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0;
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint32_t rsvd;
+                uint8_t control;
+            } PACKED command;
+    };
+
+    class ReadSense : public ScsiCommand
+    {
+        public:
+            inline ReadSense(uint8_t desc, uint8_t len, uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x03;
+                command.desc = desc;
+                command.len = len;
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t desc;
+                uint16_t rsvd;
+                uint8_t len;
+                uint8_t control;
+            } PACKED command;
+    };
+
     class Read10 : public ScsiCommand
     {
         public:
