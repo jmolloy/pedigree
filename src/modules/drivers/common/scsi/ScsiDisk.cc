@@ -58,6 +58,38 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     return true;
 }
 
+bool ScsiDisk::readSense(Sense *sense)
+{
+    memset(sense, 0xFF, sizeof(Sense));
+
+    ScsiCommand *pCommand = new ScsiCommands::ReadSense(0, sizeof(Sense));
+
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(sense), sizeof(Sense), true);
+    if(!success)
+    {
+        WARNING("ScsiDisk: SENSE command failed");
+        return false;
+    }
+
+    return ((sense->ResponseCode & 0x70) == 0x70);
+}
+
+bool ScsiDisk::unitReady()
+{
+    Sense s;
+
+    ScsiCommand *pCommand = new ScsiCommands::UnitReady();
+
+    bool success = false;
+    int retry = 5;
+    do
+    {
+        success = sendCommand(pCommand, 0, 0, true);
+    } while((!success) && (readSense(&s)) && --retry);
+
+    return (((s.ResponseCode & 0x70) == 0x70) && ((s.SenseKey == 0x06) || (s.SenseKey == 0x02)));
+}
+
 bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
     uintptr_t pCommandBuffer = 0;
@@ -118,20 +150,20 @@ uintptr_t ScsiDisk::read(uint64_t location)
     ScsiCommand *pCommand;
 
     NOTICE("SCSI: trying read(10)");
-    pCommand = new ScsiCommands::Read10(pageNumber / 512, 8);
-    bOk = sendCommand(pCommand, buffer, 4096);
+    pCommand = new ScsiCommands::Read10(pageNumber / 512, 1);
+    bOk = sendCommand(pCommand, buffer, 512);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
     NOTICE("SCSI: trying read(12)");
-    pCommand = new ScsiCommands::Read12(pageNumber / 512, 8);
-    bOk = sendCommand(pCommand, buffer, 4096);
+    pCommand = new ScsiCommands::Read12(pageNumber / 512, 1);
+    bOk = sendCommand(pCommand, buffer, 512);
     delete pCommand;
     if(bOk)
         return buffer + pageOffset;
     NOTICE("SCSI: trying read(16)");
-    pCommand = new ScsiCommands::Read16(pageNumber / 512, 8);
-    bOk = sendCommand(pCommand, buffer, 4096);
+    pCommand = new ScsiCommands::Read16(pageNumber / 512, 1);
+    bOk = sendCommand(pCommand, buffer, 512);
     delete pCommand;
     if(bOk)
         ERROR("SCSI: none worked");
