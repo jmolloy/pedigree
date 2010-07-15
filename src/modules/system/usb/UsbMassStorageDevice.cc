@@ -79,7 +79,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
         else
             nResult = syncIn(m_nInEndpoint, pRespBuffer, nRespBytes);
 
-        NOTICE("USB: MSD: "<< (bWrite ? "OUT" : "IN") << " finished with  " << Dec << nResult << Hex);
+        NOTICE("USB: MSD: " << (bWrite ? "OUT" : "IN") << " finished with  " << Dec << nResult << Hex);
 
         if(nResult < 0)
             return false;
@@ -87,8 +87,8 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
     Csw csw;
     nResult = syncIn(m_nInEndpoint, reinterpret_cast<uintptr_t>(&csw), 13);
-    NOTICE("USB: MSD: CSW finished with "<<Dec<<nResult<<Hex);
+    NOTICE("USB: MSD: CSW finished with " << Dec << nResult << Hex);
 
-    NOTICE("USB: MSD: Command finished 510:511="<<((uint8_t*)pRespBuffer)[510]<<":"<<((uint8_t*)pRespBuffer)[511]<<" STS="<<csw.status<<" SIG="<<csw.sig);
+    NOTICE("USB: MSD: Command finished STS = " << csw.status << " SIG=" << csw.sig);
     return !csw.status;
 }
