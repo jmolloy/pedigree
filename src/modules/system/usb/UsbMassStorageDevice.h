@@ -44,14 +44,14 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
             uint8_t lun;
             uint8_t cmd_len;
             uint8_t cmd[16];
-        } Cbw;
+        } PACKED Cbw;
 
         typedef struct Csw {
             uint32_t sig;
             uint32_t tag;
             uint32_t residue;
             uint8_t status;
-        } Csw;
+        } PACKED Csw;
 
         size_t m_nUnits;
         uint8_t m_nInEndpoint;

@@ -56,23 +56,34 @@ UsbMassStorageDevice::~UsbMassStorageDevice()
 bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
 {
     Cbw *pCbw = new Cbw();
-    pCbw->sig = 0x43425355;
+    memset(pCbw, 0, sizeof(Cbw));
+    pCbw->sig = HOST_TO_LITTLE32(0x43425355);
     pCbw->tag = 0;
-    pCbw->data_len = nRespBytes;
-    pCbw->flags = bWrite?0:0x80;
+    pCbw->data_len = HOST_TO_LITTLE32(nRespBytes);
+    pCbw->flags = bWrite ? 0 : 0x80;
     pCbw->lun = nUnit;
     pCbw->cmd_len = nCommandSize;
     memcpy(pCbw->cmd, reinterpret_cast<void*>(pCommand), nCommandSize);
 
     ssize_t nResult = syncOut(m_nOutEndpoint, reinterpret_cast<uintptr_t>(pCbw), 31);
 
-    NOTICE("USB: MSD: CBW finished with "<<Dec<<nResult<<Hex);
+    NOTICE("USB: MSD: CBW finished with " << Dec << nResult << Hex);
 
-    if(bWrite)
-        nResult = syncOut(m_nOutEndpoint, pRespBuffer, nRespBytes);
-    else
-        nResult = syncIn(m_nInEndpoint, pRespBuffer, nRespBytes);
-    NOTICE("USB: MSD: "<<(bWrite?"OUT":"IN")<<" finished with  "<<Dec<<nResult<<Hex);
+    if(nResult < 0)
+        return false;
+
+    if(nRespBytes)
+    {
+        if(bWrite)
+            nResult = syncOut(m_nOutEndpoint, pRespBuffer, nRespBytes);
+        else
+            nResult = syncIn(m_nInEndpoint, pRespBuffer, nRespBytes);
+
+        NOTICE("USB: MSD: "<< (bWrite ? "OUT" : "IN") << " finished with  " << Dec << nResult << Hex);
+
+        if(nResult < 0)
+            return false;
+    }
 
     Csw csw;
     nResult = syncIn(m_nInEndpoint, reinterpret_cast<uintptr_t>(&csw), 13);
