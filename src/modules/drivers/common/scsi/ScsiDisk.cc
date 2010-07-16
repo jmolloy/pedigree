@@ -174,11 +174,6 @@ uintptr_t ScsiDisk::read(uint64_t location)
 {
     if (location % 512)
         FATAL("Read with location % 512.");
-    if(!unitReady())
-    {
-        ERROR("ScsiDisk::read - unit not ready");
-        return 0;
-    }
     if((location / m_BlockSize) > m_NumBlocks)
     {
         ERROR("ScsiDisk::read - location too high");
@@ -207,6 +202,13 @@ uintptr_t ScsiDisk::read(uint64_t location)
     ScsiCommand *pCommand;
 
     Sense s;
+
+	// Wait for the unit to be ready before reading
+    if(!unitReady())
+    {
+        ERROR("ScsiDisk::read - unit not ready");
+        return 0;
+    }
 
     DEBUG_LOG("SCSI: trying read(10)");
     pCommand = new ScsiCommands::Read10(pageNumber / m_BlockSize, 4096 / m_BlockSize);
