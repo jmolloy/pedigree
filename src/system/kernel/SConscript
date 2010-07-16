@@ -109,6 +109,7 @@ if 'X86_COMMON' in env['CPPDEFINES']:
     
     if 'DEBUGGER' in env['CPPDEFINES']:
         files += [Glob('debugger/libudis86/*.c')]
+        files += commonFiles
     else:
 		files += filter(lambda x: x.path not in [env.File('core/processor/x86_common/Disassembler.cc').path], commonFiles)
     include += ['machine/x86_common/x86_emu/x86emu/']
