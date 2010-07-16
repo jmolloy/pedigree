@@ -112,10 +112,10 @@ class ArmV7PhysicalMemoryManager : public PhysicalMemoryManager
     PageStack m_PageStack;
 
     /** RangeList of free physical memory */
-    RangeList<uint64_t> m_PhysicalRanges;
+    RangeList<physical_uintptr_t> m_PhysicalRanges;
 
     /** RangeList of non-RAM memory */
-    RangeList<uint64_t> m_NonRAMRanges;
+    RangeList<physical_uintptr_t> m_NonRAMRanges;
     
     /** Virtual-memory available for MemoryRegions */
     RangeList<uintptr_t> m_VirtualMemoryRegions;

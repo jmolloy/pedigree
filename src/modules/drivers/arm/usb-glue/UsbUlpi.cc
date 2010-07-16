@@ -154,8 +154,7 @@ void UsbUlpi::initialise()
 
     // Set the controller as active
     usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
-    // usbSetBits(0xAC, 1 << 5); // Enable OTG - 0xAC = POWER_CTRL
-	usbClearBits(0xAC, 1 << 5); // Disable OTG
+    usbSetBits(0xAC, 1 << 5); // Enable OTG - 0xAC = POWER_CTRL
     usbSetBits(FunctionControl, 4); // FS termination enabled
     usbClearBits(FunctionControl, 0x1B); // Enable the HS transceiver
     enablePhyAccess(false);
@@ -208,11 +207,12 @@ void UsbUlpi::initialise()
     while(!(uhh_base[0x14 / 4])) delay(5);
 
     // Set up idle mode
-    uhh_base[0x10 / 4] = (1 << 2) | (1 << 3) | (1 << 8) | (1 << 12); // No idle
+    uint32_t cfg = (1 << 2) | (1 << 3) | (1 << 8) | (1 << 12); // No idle
+    uhh_base[0x10 / 4] = cfg;
 
     // Configure ULPI bypass configuration
-    uhh_base[0x40 / 4] = (1 << 2) | (1 << 3) | (1 << 4);
-    uhh_base[0x40 / 4] = 0x700; // Connect all three ports, ULPI not UTMI
+    cfg = (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 8) | (1 << 9) | (1 << 10); // Connect all three ports, ULPI not UTMI
+    uhh_base[0x40 / 4] = cfg;
 
     // Restore the PHY
     delay(10);

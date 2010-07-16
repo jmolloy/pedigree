@@ -118,6 +118,16 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     }
     else
     {
+        // Allocate continuous memory if we need to
+        bool bContinuous = false;
+        physical_uintptr_t physAddr = 0;
+        if(pageConstraints & PhysicalMemoryManager::continuous)
+        {
+            bContinuous = true;
+            if(!m_PhysicalRanges.allocate(cPages * getPageSize(), physAddr))
+                return false;
+        }
+
         // Allocate the virtual address space
         uintptr_t vAddress;
         if (m_VirtualMemoryRegions.allocate(cPages * PhysicalMemoryManager::getPageSize(),
@@ -139,7 +149,11 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             // Map the physical memory into the allocated space
             for (size_t i = 0;i < cPages;i++)
             {
-                physical_uintptr_t page = m_PageStack.allocate(pageConstraints);
+                physical_uintptr_t page = 0;
+                if(bContinuous)
+                    page = physAddr + (i * PhysicalMemoryManager::getPageSize());
+                else
+                    page = m_PageStack.allocate(pageConstraints);
                 if (virtualAddressSpace->map(page,
                                             reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
                                             Flags)
@@ -153,7 +167,7 @@ bool ArmV7PhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
 
         // Set the memory-region's members
         Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
-        Region.m_PhysicalAddress = start;
+        Region.m_PhysicalAddress = bContinuous ? physAddr : 0; // If any mapping is done non-continuously, use getMapping
         Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
 
         // Add to the list of memory-regions
