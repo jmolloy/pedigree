@@ -123,6 +123,7 @@ class Ehci : public UsbHub,
 
         enum EhciConstants {
             EHCI_CAPLENGTH = 0x00,      // Capability Registers Length
+            EHCI_HCIVERSION = 0x02,     // Host Controller Interface Version
             EHCI_HCSPARAMS = 0x04,      // Host Controller Structural Parameters
 
             EHCI_CMD = 0x00,            // Command register
@@ -143,6 +144,7 @@ class Ehci : public UsbHub,
             EHCI_STS_HALTED = 0x1000,   // Host Controller Halted bit
             EHCI_STS_PORTCH = 0x4,      // Port Change Detect bit
             EHCI_STS_INT = 0x1,         // On Completition Interrupt bit
+            EHCI_STS_ERR = 0x2,         // Error bit
 
             EHCI_PORTSC_PPOW = 0x1000,  // Port Power bit
             EHCI_PORTSC_PRES = 0x100,   // Port Reset bit

@@ -228,10 +228,13 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     // Get a buffer somewhere in our transfer pages
     uintptr_t nBufferOffset = 0;
-    if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
-        FATAL("USB: EHCI: Buffers full :(");
-    if(nPid != UsbPidIn && pBuffer)
-        memcpy(&m_pTransferPages[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
+    if(nBytes)
+    {
+        if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
+            FATAL("USB: EHCI: Buffers full :(");
+        if(nPid != UsbPidIn && pBuffer)
+            memcpy(&m_pTransferPages[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
+    }
 
     // Get an unused QH
     size_t nQHIndex = m_QHBitmap.getFirstClear();
@@ -243,7 +246,7 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     memset(pQH, 0, sizeof(QH));
     pQH->pNext = (m_pQHListPhys+nQHIndex*sizeof(QH))>>5;
     pQH->nNextType = 1;
-    //pQH->nNakReload = 1;
+    // pQH->nNakReload = 1;
     pQH->nMaxPacketSize = 8;
     pQH->bControlEndpoint = endpointInfo.speed != HighSpeed && !endpointInfo.nEndpoint;
     pQH->hrcl = 1;
@@ -330,7 +333,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     pQH->nMaxPacketSize = 0x400;
     pQH->hrcl = 1;
     pQH->bDataToggleSrc = 1;
-    pQH->nSpeed = 2;//endpointInfo.speed;
+    pQH->nSpeed = 2; //endpointInfo.speed;
     pQH->nEndpoint = nEndpoint;
     pQH->nAddress = nAddress;
     pQH->mult = 1;
@@ -373,19 +376,45 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
     // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_CONN)
     {
-        // Set the reset bit
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) | EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
-        delay(50);
-        // Unset the reset bit
-        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
-        // Wait for the reset to complete
-        while(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_PRES)
-            delay(5);
-        DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" - status after reset: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4));
-        if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_EN)
+        while(1)
         {
-            DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" is now connected");
-            deviceConnected(p1, HighSpeed);
+            pause();
+
+            // Set the reset bit
+            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) | EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+            delay(50);
+            // Unset the reset bit
+            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+            // Wait for the reset to complete
+            while(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_PRES)
+                delay(5);
+            DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" - status after reset: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4));
+            if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_EN)
+            {
+                DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" is now connected");
+                deviceConnected(p1, HighSpeed);
+
+                // Check device status
+                uint32_t status = m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+                if(!(status & EHCI_PORTSC_EN))
+                {
+                    // Why isn't the port enabled?
+                    if(status & 0x400)
+                    {
+                        WARNING("EHCI: Port " << Dec << p1 << Hex << " is in fact a low-speed device.");
+                        break;
+                    }
+                    else
+                    {
+                        // Reset states as needed
+                        m_pBase->write32(status, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
+                        continue; // Reset the port
+                    }
+                }
+                else
+                    break;
+            }
+
         }
     }
     else
