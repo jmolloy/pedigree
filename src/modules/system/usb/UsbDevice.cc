@@ -121,23 +121,50 @@ bool UsbDevice::useConfiguration(uint8_t nConfig)
 bool UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->pInterfaces[nInterface];
+    // Gathering endpoints
     for(size_t i = 0;i<m_pInterface->pEndpoints.count();i++)
     {
         Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
-        m_pEndpoints[pEndpoint->nEndpoint] = pEndpoint;
+        if(!m_pEndpoints[pEndpoint->nEndpoint])
+            m_pEndpoints[pEndpoint->nEndpoint] = pEndpoint;
+        else
+        {
+            // Found a multiple-purpose endpoint
+            Endpoint *pOldEndpoint = m_pEndpoints[pEndpoint->nEndpoint];
+            Endpoint *pNewEndpoint = new Endpoint(pOldEndpoint);
+            // In case our previous endpoint was obtained from two endpoints,
+            // delete it. Strange, but can happen
+            if(!pOldEndpoint->pDescriptor)
+                delete pOldEndpoint;
+            pNewEndpoint->bIn = pNewEndpoint->bIn || pEndpoint->bIn;
+            pNewEndpoint->bOut = pNewEndpoint->bOut || pEndpoint->bOut;
+            pNewEndpoint->nMaxPacketSize = pNewEndpoint->nMaxPacketSize < pEndpoint->nMaxPacketSize?pNewEndpoint->nMaxPacketSize:pEndpoint->nMaxPacketSize;
+            m_pEndpoints[pEndpoint->nEndpoint] = pNewEndpoint;
+        }
     }
     return true;
     //return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
 }
 
-void *UsbDevice::getDescriptor(uint8_t des, uint8_t subdes, uint16_t nBytes, bool bInterface)
+void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
 {
     uint8_t *pBuffer = new uint8_t[nBytes];
-    if(control(bInterface?0x81:0x80, 6, des<<8|subdes, bInterface?m_pInterface->pDescriptor->nInterface:0, nBytes, reinterpret_cast<uintptr_t>(pBuffer))<0) {
+    uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+    if(control(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
+    {
         delete [] pBuffer;
         return 0;
     }
     return pBuffer;
+}
+
+uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType)
+{
+    uint8_t pLength;
+    uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+    if(control(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
+        return 0;
+    return pLength;
 }
 
 char *UsbDevice::getString(uint8_t nString)
@@ -148,7 +175,7 @@ char *UsbDevice::getString(uint8_t nString)
         pString[0] = '\0';
         return pString;
     }
-    uint8_t descriptorLength = *static_cast<uint8_t*>(getDescriptor(3, nString, 1));
+    uint8_t descriptorLength = getDescriptorLength(3, nString);
     char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
     if(pBuffer)
     {
@@ -165,14 +192,15 @@ char *UsbDevice::getString(uint8_t nString)
 
 void UsbDevice::populateDescriptors()
 {
-    uint8_t descriptorLength = *static_cast<uint8_t*>(getDescriptor(1, 0, 1));
-    m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, descriptorLength));
+    m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, getDescriptorLength(1, 0)));
     m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
     m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
     m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
     for(size_t i = 0;i < m_pDescriptor->pDescriptor->nConfigurations;i++)
     {
-        uint16_t configLength = static_cast<uint16_t*>(getDescriptor(2, i, 4))[1];
+        uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(2, i, 4));
+        uint16_t configLength = pPartialConfig[1];
+        delete pPartialConfig;
         ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(2, i, configLength), configLength);
         pConfig->sString = getString(pConfig->pDescriptor->nString);
         for(size_t j = 0;j < pConfig->pInterfaces.count();j++)

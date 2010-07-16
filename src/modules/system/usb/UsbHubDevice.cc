@@ -20,7 +20,10 @@
 
 UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 {
-    for(size_t i=0;i<8;i++)
+    HubDescriptor *pDescriptor = new HubDescriptor(getDescriptor(0, 0, getDescriptorLength(0, 0, RequestType::Class), RequestType::Class));
+    NOTICE("USB: HUB: Found a hub with "<<Dec<<pDescriptor->nPorts<<Hex<<" ports and hubCharacteristics="<<pDescriptor->hubCharacteristics);
+    m_nPorts = pDescriptor->nPorts;
+    for(size_t i=0;i<m_nPorts;i++)
     {
         uint16_t portStatus[2];
         control(0xa3, 0, 0, i+1, 4, reinterpret_cast<uintptr_t>(&portStatus));
@@ -38,7 +41,8 @@ UsbHubDevice::~UsbHubDevice()
 
 void UsbHubDevice::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    endpointInfo.nHubAddress = m_nAddress;
+    if(m_Speed == HighSpeed && endpointInfo.speed != HighSpeed && !endpointInfo.nHubAddress)
+        endpointInfo.nHubAddress = m_nAddress;
     dynamic_cast<UsbHub*>(m_pParent)->doAsync(endpointInfo, nPid, pBuffer, nBytes, pCallback, pParam);
 }
 

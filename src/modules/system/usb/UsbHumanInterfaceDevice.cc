@@ -76,7 +76,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
     //control(0x21, 0x0b, 1, m_pInterface->pDescriptor->nInterface);
 
     uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
-    uint8_t *pHidReportDescriptor = reinterpret_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, true));
+    uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, RequestRecipient::Interface));
     int64_t nLogMin = undefined, nLogMax = undefined,
             nPhysMin = undefined, nPhysMax = undefined,
             nUsageMin = undefined, nUsageMax = undefined,
@@ -198,23 +198,25 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
     m_pOldReportBuffer = new uint8_t[m_pReport->nBytes];
     memset(m_pOldReportBuffer, 0, m_pReport->nBytes);
 
-    Endpoint *pInEndpoint = 0;
-    for(size_t i = 0;i<m_pInterface->pEndpoints.count();i++)
+    uint8_t nInEndpoint = 0;
+
+    for(uint8_t i = 1;i<16;i++)
     {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
-        if(pEndpoint->pDescriptor->nTransferType == Endpoint::Interrupt)
+        Endpoint *pEndpoint = m_pEndpoints[i];
+        if(pEndpoint->nTransferType == Endpoint::Interrupt && pEndpoint->bIn)
         {
-            pInEndpoint = pEndpoint;
+            nInEndpoint = i;
             break;
         }
     }
-    if(!pInEndpoint)
+
+    if(!nInEndpoint)
     {
-        ERROR("USB: HID: No IN endpoint");
+        ERROR("USB: HID: No Interrupt IN endpoint");
         return;
     }
 
-    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(m_nAddress, pInEndpoint->nEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(m_nAddress, nInEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
     //new Thread(Processor::information().getCurrentThread()->getParent(),
     //           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
     //           reinterpret_cast<void*> (this));

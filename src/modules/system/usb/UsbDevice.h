@@ -22,6 +22,27 @@
 #include <usb/Usb.h>
 #include <utilities/assert.h>
 
+namespace RequestType
+{
+    enum RequestType
+    {
+        Standard = 0x00,
+        Class = 0x20,
+        Vendor = 0x40
+    };
+};
+
+namespace RequestRecipient
+{
+    enum RequestRecipient
+    {
+        Device = 0x00,
+        Interface = 0x01,
+        Endpoint = 0x02,
+        Other = 0x03
+    };
+};
+
 class UsbDevice : public virtual Device
 {
     public:
@@ -50,7 +71,10 @@ class UsbDevice : public virtual Device
                 nEndpoint(pDescriptor->nEndpoint), bIn(pDescriptor->bDirection), bOut(!bIn),
                 nTransferType(pDescriptor->nTransferType), nMaxPacketSize(pDescriptor->nMaxPacketSize),
                 bDataToggle(false) {}
-            inline Endpoint() : nEndpoint(0), bIn(true), bOut(true),
+            inline Endpoint(Endpoint *pEndpoint) : pDescriptor(0), nEndpoint(pEndpoint->nEndpoint),
+                bIn(pEndpoint->bIn), bOut(pEndpoint->bOut), nTransferType(pEndpoint->nTransferType),
+                nMaxPacketSize(pEndpoint->nMaxPacketSize), bDataToggle(pEndpoint->bDataToggle) {}
+            inline Endpoint() : pDescriptor(0), nEndpoint(0), bIn(true), bOut(true),
                 nTransferType(Control), nMaxPacketSize(8) {}
 
             enum TransferTypes
@@ -263,7 +287,8 @@ class UsbDevice : public virtual Device
         bool assignAddress(uint8_t nAddress);
         bool useConfiguration(uint8_t nConfig);
         bool useInterface(uint8_t nInterface);
-        void *getDescriptor(uint8_t des, uint8_t subdes, uint16_t nBytes, bool bInterface=false);
+        void *getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType=0);
+        uint8_t getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType=0);
         char *getString(uint8_t nString);
         void populateDescriptors();
 

@@ -36,6 +36,23 @@ class UsbHubDevice : public UsbDevice, public UsbHub
 
     private:
 
+        typedef struct HubDescriptor
+        {
+            inline HubDescriptor(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
+                nPorts(pDescriptor->nPorts), hubCharacteristics(pDescriptor->hubCharacteristics) {}
+
+            struct Descriptor
+            {
+                uint8_t nLength;
+                uint8_t nType;
+                uint8_t nPorts;
+                uint16_t hubCharacteristics;
+            } PACKED *pDescriptor;
+
+            uint8_t nPorts;
+            uint16_t hubCharacteristics;
+        } HubDescriptor;
+
         size_t m_nPorts;
 };
 

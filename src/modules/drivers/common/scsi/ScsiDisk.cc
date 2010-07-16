@@ -201,8 +201,6 @@ uintptr_t ScsiDisk::read(uint64_t location)
     bool bOk;
     ScsiCommand *pCommand;
 
-    Sense s;
-
 	// Wait for the unit to be ready before reading
     if(!unitReady())
     {
