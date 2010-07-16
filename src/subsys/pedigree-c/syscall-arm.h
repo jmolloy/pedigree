@@ -20,7 +20,7 @@
 
 static long syscall0(long function)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret;
     asm volatile("mov r0, %1; \
                   swi #0; \
@@ -30,7 +30,7 @@ static long syscall0(long function)
 
 static long syscall1(long function, long p1)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret;
     asm volatile("mov r0, %1; \
                   mov r1, %1; \
@@ -41,7 +41,7 @@ static long syscall1(long function, long p1)
 
 static long syscall2(long function, long p1, long p2)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret;
     asm volatile("mov r0, %1; \
                   mov r1, %1; \
@@ -53,7 +53,7 @@ static long syscall2(long function, long p1, long p2)
 
 static long syscall3(long function, long p1, long p2, long p3)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret;
     asm volatile("mov r0, %1; \
                   mov r1, %1; \
@@ -68,7 +68,7 @@ static long syscall3(long function, long p1, long p2, long p3)
 
 static long syscall4(long function, long p1, long p2, long p3, long p4)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret = 0;
     /*
     asm volatile("mov r0, %1; \
@@ -83,7 +83,7 @@ static long syscall4(long function, long p1, long p2, long p3, long p4)
 
 static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
 {
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
+    long num = ((PEDIGREE_C_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
     long ret = 0;
     /*
     asm volatile("mov r0, %1; \
