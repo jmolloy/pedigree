@@ -63,7 +63,7 @@ class Ehci : public UsbHub,
             uint32_t pPage3 : 20;
             uint32_t res5 : 12;
             uint32_t pPage4 : 20;
-        } PACKED qTD;
+        } PACKED __attribute__((aligned(32))) qTD;
 
         typedef struct QH
         {
@@ -93,7 +93,7 @@ class Ehci : public UsbHub,
             uint32_t pBuffer;
             uint16_t nBufferSize;
             uint16_t nBufferOffset;
-        } PACKED QH;
+        } PACKED __attribute__((aligned(32))) QH;
 
         virtual void getName(String &str)
         {

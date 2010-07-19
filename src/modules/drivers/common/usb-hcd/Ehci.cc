@@ -159,6 +159,13 @@ void Ehci::interrupt(size_t number, InterruptState &state)
             if(pqTD->nStatus == 0x80)
                 continue;
             bool bPeriodic = pQH->bNextInvalid;
+			if(nStatus & EHCI_STS_ERR)
+			{
+				ERROR("USB ERROR!");
+				ERROR("qTD Status: " << pqTD->nBytes << " [overlay status=" << pQH->overlay.nStatus << "]");
+				ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
+				ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
+			}
             ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->nBufferSize-pqTD->nBytes;
             if(pqTD->nPid == 1 && pQH->pBuffer && ret > 0)
                 memcpy(reinterpret_cast<void*>(pQH->pBuffer), &m_pTransferPages[pQH->nBufferOffset], ret);
