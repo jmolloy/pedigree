@@ -94,13 +94,13 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_TransferPagesAllocator(0, 0x5000), m_
 
     delay(5);
 
-    // Set the desired interrupt threshold (frame list size = 4096 bytes)
-    m_pBase->write32(0x80000, m_nOpRegsOffset+EHCI_CMD);
-
     // Turn on the controller
     resume();
 
     delay(5);
+
+    // Set the desired interrupt threshold (frame list size = 4096 bytes)
+    m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset+EHCI_CMD);
 
     // Take over the ports
     m_pBase->write32(1, m_nOpRegsOffset+EHCI_CFGFLAG);
@@ -384,11 +384,13 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
     // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_CONN)
     {
-        while(1)
+        int retry;
+        for(retry = 0; retry < 3; retry++)
         {
-            pause();
+            resume();
 
             // Set the reset bit
+            DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" - status before reset: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4));
             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) | EHCI_PORTSC_PRES, m_nOpRegsOffset+EHCI_PORTSC+p1*4);
             delay(50);
             // Unset the reset bit
@@ -400,12 +402,16 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_EN)
             {
                 DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" is now connected");
+
+                delay(1000);
                 deviceConnected(p1, HighSpeed);
 
                 // Check device status
                 uint32_t status = m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4);
                 if(!(status & EHCI_PORTSC_EN))
                 {
+                    WARNING("EHCI: Port " << Dec << p1 << Hex << " ended up disabled somehow [" << status << "]");
+
                     // Why isn't the port enabled?
                     if(status & 0x400)
                     {
@@ -422,8 +428,10 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
                 else
                     break;
             }
-
         }
+
+        if(retry == 3)
+            WARNING("EHCI: Port " << Dec << p1 << Hex << " could not be connected");
     }
     else
     {
