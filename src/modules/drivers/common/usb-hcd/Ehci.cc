@@ -162,9 +162,9 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 			if(nStatus & EHCI_STS_ERR)
 			{
 				ERROR("USB ERROR!");
-				ERROR("qTD Status: " << pqTD->nBytes << " [overlay status=" << pQH->nStatus << "]");
-				ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->nErr << "]");
-				ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->nNakCounter << "]");
+				ERROR("qTD Status: " << pqTD->nBytes << " [overlay status=" << pQH->overlay.nStatus << "]");
+				ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
+				ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
 				ERROR("qTD PID: " << pqTD->nPid << ".");
 			}
             ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->nBufferSize-pqTD->nBytes;
@@ -193,7 +193,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
                 pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
                 pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
-                // memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+                memcpy(&pQH->overlay, pqTD, sizeof(qTD));
             }
         }
         resume();
@@ -254,7 +254,7 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
     memset(pQH, 0, sizeof(QH));
     pQH->pNext = (m_pQHListPhys+nQHIndex*sizeof(QH))>>5;
     pQH->nNextType = 1;
-    // pQH->nNakReload = 1;
+    pQH->nNakReload = 15;
     pQH->nMaxPacketSize = 8;
     pQH->bControlEndpoint = endpointInfo.speed != HighSpeed && !endpointInfo.nEndpoint;
     pQH->hrcl = 1;
@@ -274,23 +274,23 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
     qTD *pqTD = &m_pqTDList[nQHIndex];
     memset(pqTD, 0, sizeof(qTD));
-    pqTD->bNextInvalid = pQH->bQNextInvalid = 1;
-    pqTD->bAltNextInvalid = pQH->bQAltNextInvalid = 1;
-    pqTD->bDataToggle = pQH->bDataToggle = endpointInfo.bDataToggle;
-    pqTD->nBytes = pQH->nBytes = nBytes;
-    pqTD->bIoc = pQH->bIoc = 1;
-    pqTD->nPage = pQH->nPage = nBufferOffset/0x1000;
-    pqTD->nErr = pQH->nErr = 1;
-    pqTD->nPid = pQH->nPid = nPid==UsbPidOut?0:(nPid==UsbPidIn?1:(nPid==UsbPidSetup?2:3));
-    pqTD->nStatus = pQH->nStatus = 0x80;
-    pqTD->pPage0 = pQH->pPage0 = m_pTransferPagesPhys>>12;
-    pqTD->nOffset = pQH->nOffset = nBufferOffset%0x1000;
-    pqTD->pPage1 = pQH->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
-    pqTD->pPage2 = pQH->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
-    pqTD->pPage3 = pQH->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
-    pqTD->pPage4 = pQH->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
+    pqTD->bNextInvalid = 1;
+    pqTD->bAltNextInvalid = 1;
+    pqTD->bDataToggle = endpointInfo.bDataToggle;
+    pqTD->nBytes = nBytes;
+    pqTD->bIoc = 1;
+    pqTD->nPage = nBufferOffset/0x1000;
+    pqTD->nErr = 1;
+    pqTD->nPid = nPid==UsbPidOut?0:(nPid==UsbPidIn?1:(nPid==UsbPidSetup?2:3));
+    pqTD->nStatus = 0x80;
+    pqTD->pPage0 = m_pTransferPagesPhys>>12;
+    pqTD->nOffset = nBufferOffset%0x1000;
+    pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
+    pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
+    pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
+    pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
 
-    // memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+    memcpy(&pQH->overlay, pqTD, sizeof(qTD));
 
     // Make sure we've disabled the async schedule
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
@@ -369,7 +369,7 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
     pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
 
-    // memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+    memcpy(&pQH->overlay, pqTD, sizeof(qTD));
 
     // Write the periodic list frame index
     m_pBase->write32(nQHIndex, m_nOpRegsOffset+EHCI_FRINDEX);

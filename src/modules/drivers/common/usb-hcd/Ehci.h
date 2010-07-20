@@ -63,6 +63,12 @@ class Ehci : public UsbHub,
             uint32_t pPage3 : 20;
             uint32_t res5 : 12;
             uint32_t pPage4 : 20;
+
+			uint32_t extend0;
+			uint32_t extend1;
+			uint32_t extend2;
+			uint32_t extend3;
+			uint32_t extend4;
         } __attribute__((aligned(32))) qTD;
 
         typedef struct QH
@@ -88,35 +94,7 @@ class Ehci : public UsbHub,
             uint32_t res1 : 5;
             uint32_t pQTD : 27;
 
-            // qTD overlay;
-
-			/* qTD Overlay */
-			uint32_t bQNextInvalid : 1;
-            uint32_t res2 : 4;
-            uint32_t pQNext : 27;
-            uint32_t bQAltNextInvalid : 1;
-            uint32_t nNakCounter : 4;
-            uint32_t pQAltNext : 27;
-            uint32_t nStatus : 8;
-            uint32_t nPid : 2;
-            uint32_t nErr : 2;
-            uint32_t nPage : 3;
-            uint32_t bIoc : 1;
-            uint32_t nBytes : 15;
-            uint32_t bDataToggle : 1;
-            uint32_t nOffset : 12;
-            uint32_t pPage0 : 20;
-			uint32_t nCProgMask : 8;
-            uint32_t res4 : 4;
-            uint32_t pPage1 : 20;
-			uint32_t nFrameTag : 5;
-            uint32_t nSBytes : 7;
-            uint32_t pPage2 : 20;
-            uint32_t res6 : 12;
-            uint32_t pPage3 : 20;
-            uint32_t res7 : 12;
-            uint32_t pPage4 : 20;
-			/* End qTD Overlay */
+            qTD overlay;
 
             uint32_t pCallback;
             uint32_t pParam;
