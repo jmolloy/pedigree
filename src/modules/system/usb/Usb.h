@@ -18,6 +18,7 @@
 #define USB_H
 
 #include <processor/types.h>
+#include <utilities/List.h>
 
 // PID types, ordered as they appear in the EHCI spec
 enum UsbPid {
@@ -53,6 +54,17 @@ enum UsbSpeed
     FullSpeed,
     HighSpeed,
     SuperSpeed
+};
+
+struct QHMetaData
+{
+    // uintptr_t pCallback;
+    List<uint32_t*> pParam; /// Stores all results from each qTD in this queue head
+	uintptr_t pSemaphore;
+    uintptr_t pBuffer;
+    uint16_t nBufferSize;
+    uint16_t nBufferOffset;
+	size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
 };
 
 typedef struct UsbEndpoint

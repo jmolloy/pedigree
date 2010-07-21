@@ -124,7 +124,7 @@ class Ehci : public UsbHub,
 
 		virtual uintptr_t createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes);
 
-		virtual uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData);
+		virtual uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData);
 
     protected:
         uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,

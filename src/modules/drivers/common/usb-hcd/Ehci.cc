@@ -150,52 +150,61 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     if(nStatus & EHCI_STS_INT)
     {
         pause();
-        for(size_t i = 0;i<128;i++)
+        for(size_t i = 0; i < 128; i++)
         {
             if(!m_QHBitmap.test(i))
                 continue;
             QH *pQH = &m_pQHList[i];
-            qTD *pqTD = &m_pqTDList[i];
-            if(pqTD->nStatus == 0x80)
-                continue;
-            bool bPeriodic = pQH->bNextInvalid;
-			if(nStatus & EHCI_STS_ERR)
+
+			/// \todo When we have more than one QH running, this will be invalid
+			for(size_t j = 0; j < 128; j++)
 			{
-				ERROR("USB ERROR!");
-				ERROR("qTD Status: " << pqTD->nBytes << " [overlay status=" << pQH->overlay.nStatus << "]");
-				ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
-				ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
-				ERROR("qTD PID: " << pqTD->nPid << ".");
+				if(!m_TDBitmap.test(i))
+					continue;
+
+				qTD *pqTD = &m_pqTDList[j];
+				if(pqTD->nStatus == 0x80)
+					continue;
+				bool bPeriodic = pQH->bNextInvalid;
+				if(nStatus & EHCI_STS_ERR)
+				{
+					ERROR("USB ERROR!");
+					ERROR("qTD Status: " << pqTD->nBytes << " [overlay status=" << pQH->overlay.nStatus << "]");
+					ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
+					ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
+					ERROR("qTD PID: " << pqTD->nPid << ".");
+				}
+				ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->pMetaData->nBufferSize-pqTD->nBytes;
+				if(pqTD->nPid == 1 && pQH->pMetaData->pBuffer && ret > 0) /// \todo Transfers should come from the qTD not the QH here
+					memcpy(reinterpret_cast<void*>(pQH->pMetaData->pBuffer), &m_pTransferPages[pQH->pMetaData->nBufferOffset], ret);
+				if(pQH->pMetaData->pSemaphore && (ret > 0 || !bPeriodic))
+				{
+					// void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pMetaData->pCallback);
+					pQH->pMetaData->pParam.pushBack(reinterpret_cast<uint32_t*>(ret));
+					reinterpret_cast<Semaphore*>(pQH->pMetaData->pSemaphore)->release();
+					DEBUG_LOG("STOP "<<Dec<<pQH->nAddress<<":"<<pQH->nEndpoint<<" "<<(pqTD->nPid==0?" OUT ":(pqTD->nPid==1?" IN  ":(pqTD->nPid==2?"SETUP":"")))<<" "<<ret<<Hex);
+				}
+				if(!bPeriodic)
+				{
+					/// \todo Buffer information should come from the qTD not the QH here
+					// m_TransferPagesAllocator.free(pQH->pMetaData->nBufferOffset, pQH->pMetaData->nBufferSize);
+					// m_QHBitmap.clear(i);
+				}
+				else
+				{
+					pqTD->nStatus = 0x80;
+					pqTD->nBytes = pQH->pMetaData->nBufferSize;
+					pqTD->nPage = pQH->pMetaData->nBufferOffset/0x1000;
+					pqTD->nOffset = pQH->pMetaData->nBufferOffset%0x1000;
+					pqTD->nErr = 0;
+					pqTD->pPage0 = m_pTransferPagesPhys>>12;
+					pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
+					pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
+					pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
+					pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
+					memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+				}
 			}
-            ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->pMetaData->nBufferSize-pqTD->nBytes;
-            if(pqTD->nPid == 1 && pQH->pMetaData->pBuffer && ret > 0) /// \todo Transfers should come from the qTD not the QH here
-                memcpy(reinterpret_cast<void*>(pQH->pMetaData->pBuffer), &m_pTransferPages[pQH->pMetaData->nBufferOffset], ret);
-            if(pQH->pMetaData->pCallback && (ret > 0 || !bPeriodic))
-            {
-                void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pMetaData->pCallback);
-                func(pQH->pMetaData->pParam, ret);
-                DEBUG_LOG("STOP "<<Dec<<pQH->nAddress<<":"<<pQH->nEndpoint<<" "<<(pqTD->nPid==0?" OUT ":(pqTD->nPid==1?" IN  ":(pqTD->nPid==2?"SETUP":"")))<<" "<<ret<<Hex);
-            }
-            if(!bPeriodic)
-            {
-				/// \todo Buffer information should come from the qTD not the QH here
-                m_TransferPagesAllocator.free(pQH->pMetaData->nBufferOffset, pQH->pMetaData->nBufferSize);
-                m_QHBitmap.clear(i);
-            }
-            else
-            {
-                pqTD->nStatus = 0x80;
-                pqTD->nBytes = pQH->pMetaData->nBufferSize;
-                pqTD->nPage = pQH->pMetaData->nBufferOffset/0x1000;
-                pqTD->nOffset = pQH->pMetaData->nBufferOffset%0x1000;
-                pqTD->nErr = 0;
-                pqTD->pPage0 = m_pTransferPagesPhys>>12;
-                pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
-                pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
-                pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
-                pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
-                memcpy(&pQH->overlay, pqTD, sizeof(qTD));
-            }
         }
         resume();
     }
@@ -229,6 +238,8 @@ void Ehci::resume()
 
 uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes)
 {
+	NOTICE("createTD");
+
 	// Atomic operation: find clear bit, set it
 	size_t nIndex = 0;
 	{
@@ -247,7 +258,9 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 		{
 			physical_uintptr_t phys = 0; size_t flags = 0;
 			va.getMapping(reinterpret_cast<void*>(pNext), phys, flags);
-			pqTD->pNext = phys;
+			phys += pNext & 0xFFF;
+			NOTICE("qTD next = " << pNext << ", phys = " << phys);
+			pqTD->pNext = phys >> 5;
 		}
 		else // Next pointer isn't mapped!
 		{
@@ -270,7 +283,7 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 	// Active, we want an interrupt on completion, and reset the error counter
     pqTD->nStatus = 0x80;
     pqTD->bIoc = 1;
-    pqTD->nErr = 3; // Up to 3 retries of this transaction
+    pqTD->nErr = 1; // Up to 3 retries of this transaction
 
 	// Get a buffer somewhere in our transfer pages
     uintptr_t nBufferOffset = 0;
@@ -283,7 +296,9 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 			return 0;
 		}
         if((pqTD->nPid != 1) && pData) // Not an IN transfer
+		{
             memcpy(&m_pTransferPages[nBufferOffset], pData, nBytes);
+		}
     }
 
 	// Set up the transfer
@@ -303,9 +318,11 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 	return reinterpret_cast<uintptr_t>(pqTD);
 }
 
-uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
+uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
 {
-	if(!pNext || !pFirstQTD)
+	NOTICE("createQH");
+
+	if(!pFirstQTD)
 		return 0;
 
 	// Atomic operation: find clear bit, set it
@@ -321,6 +338,7 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEnd
 
 	// Loop back on this QH for now
 	/// \todo Live queue and dequeue
+	/// \todo Get from the pNext parameter
     pQH->pNext = (m_pQHListPhys + nIndex * sizeof(QH)) >> 5;
     pQH->nNextType = 1;
 
@@ -328,7 +346,7 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEnd
     pQH->nNakReload = 15;
 
 	// Handle 64 byte control packets
-    pQH->nMaxPacketSize = 64;
+    pQH->nMaxPacketSize = 8;
 
 	// Head of the reclaim list - if zero, this QH is "idle"
     pQH->hrcl = head;
@@ -351,13 +369,15 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEnd
     pQH->mult = 1;
 
 	// Address of the first qTD
-	if(pNext)
+	if(pFirstQTD)
 	{
 		VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-		if(va.isMapped(reinterpret_cast<void*>(pNext)))
+		if(va.isMapped(reinterpret_cast<void*>(pFirstQTD)))
 		{
 			physical_uintptr_t phys = 0; size_t flags = 0;
-			va.getMapping(reinterpret_cast<void*>(pNext), phys, flags);
+			va.getMapping(reinterpret_cast<void*>(pFirstQTD), phys, flags);
+			phys += pFirstQTD & 0xFFF;
+			NOTICE("qTD " << pFirstQTD << " has phys address " << phys);
 			pQH->pQTD = phys >> 5;
 		}
 		else // Next pointer isn't mapped!
@@ -366,16 +386,65 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEnd
 			return 0;
 		}
 	}
-	
+
+	// Transfer overlay
+	memcpy(&pQH->overlay, reinterpret_cast<void*>(pFirstQTD), sizeof(qTD));
+
 	// Set the metadata
 	pQH->pMetaData = pMetaData;
+
+	// Setup semaphores etc
+	pQH->pMetaData->qTDCount = qTDCount;
+	pMetaData->pSemaphore = reinterpret_cast<uintptr_t>(new Semaphore(0));
 
 	// Complete
 	return reinterpret_cast<uintptr_t>(pQH);
 }
 
-void doAsync(uintptr_t queueHead)
+void Ehci::doAsync(uintptr_t queueHead)
 {
+	NOTICE("Ehci::doAsync");
+
+	if(!queueHead)
+		return;
+
+	physical_uintptr_t physQueueHead = 0;
+	VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+	if(va.isMapped(reinterpret_cast<void*>(queueHead)))
+	{
+		size_t flags = 0;
+		va.getMapping(reinterpret_cast<void*>(queueHead), physQueueHead, flags);
+		NOTICE("queueHead " << queueHead << " is at phys " << physQueueHead);
+	}
+	else
+	{
+		WARNING("EHCI: doAsync: didn't get a valid queue head pointer [" << queueHead << "].");
+		return;
+	}
+
+	QH *pQH = reinterpret_cast<QH*>(queueHead);
+    // LockGuard<Mutex> guard(m_Mutex);
+    DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << pQH->nSpeed << " " << pQH->pMetaData->qTDCount << " transactions" << Hex);
+
+    // Pause the controller
+    pause();
+
+    // Disable the asynchronous schedule, and wait for it to become disabled
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000);
+
+    // Write the async list head pointer
+    m_pBase->write32(physQueueHead, m_nOpRegsOffset+EHCI_ASYNCLP);
+
+    // Start the controller
+    resume();
+
+    // Re-enable the asynchronous schedule, and wait for it to become enabled
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
+
+	// Wait for the request to complete
+	reinterpret_cast<Semaphore*>(pQH->pMetaData->pSemaphore)->acquire(pQH->pMetaData->qTDCount);
 }
 
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -422,8 +491,8 @@ void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 	QHMetaData *pMetaData = new QHMetaData;
 	pQH->pMetaData = pMetaData;
 
-    pMetaData->pCallback = reinterpret_cast<uintptr_t>(pCallback);
-    pMetaData->pParam = pParam;
+    // pMetaData->pCallback = reinterpret_cast<uintptr_t>(pCallback);
+    // pMetaData->pParam = pParam;
     pMetaData->pBuffer = pBuffer;
     pMetaData->nBufferSize = nBytes;
     pMetaData->nBufferOffset = nBufferOffset;
@@ -505,8 +574,8 @@ void Ehci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
 	QHMetaData *pMetaData = new QHMetaData;
 	pQH->pMetaData = pMetaData;
 
-    pMetaData->pCallback = reinterpret_cast<uintptr_t>(pCallback);
-    pMetaData->pParam = pParam;
+    // pMetaData->pCallback = reinterpret_cast<uintptr_t>(pCallback);
+    // pMetaData->pParam = pParam;
     pMetaData->pBuffer = pBuffer;
     pMetaData->nBufferSize = nBytes;
     pMetaData->nBufferOffset = nBufferOffset;

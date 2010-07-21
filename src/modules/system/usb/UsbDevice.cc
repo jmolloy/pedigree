@@ -68,6 +68,55 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     pSetup->val = val;
     pSetup->index = index;
     pSetup->len = len;
+
+#if 0
+    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    if(!pParentHub)
+        ERROR("USB: Orphaned UsbDevice!");
+
+	// uintptr_t createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes)
+	uintptr_t handshakeTD = pParentHub->createTD(0, true, req_type & 0x80, false, 0, 0);
+	uintptr_t dataTD = 0;
+	if(len)
+		dataTD = pParentHub->createTD(handshakeTD, false, req_type & 0x80, false, reinterpret_cast<void*>(pBuffer), len);
+	uintptr_t setupTD = pParentHub->createTD(0 /* len ? dataTD : handshakeTD */, false, false, true, pSetup, sizeof(Setup));
+
+	UsbEndpoint endpointInfo(m_nAddress, m_pEndpoints[0]->nEndpoint, m_pEndpoints[0]->bDataToggle, m_Speed);
+    endpointInfo.nHubPort = m_nPort;
+
+	QHMetaData *pMetaData = new QHMetaData;
+	pMetaData->pBuffer = pBuffer;
+	pMetaData->nBufferSize = len;
+	// pMetaData->qTDCount = len ? 3 : 2;
+
+		/*
+	uintptr_t pCallback;
+    uint32_t pParam;
+    uintptr_t pBuffer;
+    uint16_t nBufferSize;
+    uint16_t nBufferOffset;
+	size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
+		*/
+
+	// uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
+	uintptr_t queueHead = pParentHub->createQH(0, setupTD, len ? 3 : 2, true, endpointInfo, pMetaData);
+
+	NOTICE("Queue head: " << queueHead);
+	NOTICE("TDs: " << setupTD << ", " << dataTD << ", " << handshakeTD << ".");
+
+	if(!queueHead)
+		return -1;
+
+	pParentHub->doAsync(queueHead);
+
+	ssize_t ret0, ret1, ret2;
+	ret0 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
+	ret2 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
+	if(len)
+		ret1 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
+	NOTICE("Results: " << ret0 << ", " << ret1 << " [ign if non-data SETUP], " << ret2 << ".");
+	return ret2;
+#else
     m_pEndpoints[0]->bDataToggle = false;
     ssize_t ret = syncSetup(pSetup);
     if(ret < 0)
@@ -86,6 +135,7 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
         return syncOut(0, 0, 0);
     else
         return syncIn(0, 0, 0);
+#endif
 }
 
 int16_t UsbDevice::status()
