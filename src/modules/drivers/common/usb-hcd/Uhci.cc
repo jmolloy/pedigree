@@ -165,7 +165,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     }
     return true;
 }
-
+/*
 void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
@@ -247,4 +247,4 @@ void Uhci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
 
     // Resume the controller
     m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
-}
+}*/

@@ -198,25 +198,25 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
     m_pOldReportBuffer = new uint8_t[m_pReport->nBytes];
     memset(m_pOldReportBuffer, 0, m_pReport->nBytes);
 
-    uint8_t nInEndpoint = 0;
+    Endpoint *pInEndpoint = 0;
 
     for(uint8_t i = 1;i<16;i++)
     {
         Endpoint *pEndpoint = m_pEndpoints[i];
         if(pEndpoint->nTransferType == Endpoint::Interrupt && pEndpoint->bIn)
         {
-            nInEndpoint = i;
+            pInEndpoint = pEndpoint;
             break;
         }
     }
 
-    if(!nInEndpoint)
+    if(!pInEndpoint)
     {
         ERROR("USB: HID: No Interrupt IN endpoint");
         return;
     }
-
-    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(m_nAddress, nInEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pInEndpoint->nEndpoint, m_Speed, pInEndpoint->nMaxPacketSize);
+    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
     //new Thread(Processor::information().getCurrentThread()->getParent(),
     //           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
     //           reinterpret_cast<void*> (this));

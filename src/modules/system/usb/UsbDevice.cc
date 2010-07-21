@@ -22,15 +22,14 @@
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes)
-{
+{/*
     FATAL("doSync");
     if(!pEndpoint)
         FATAL("USB: UsbDevice::doSync called with invalid endpoint");
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
         FATAL("USB: Orphaned UsbDevice!");
-    UsbEndpoint endpointInfo(m_nAddress, pEndpoint->nEndpoint, pEndpoint->bDataToggle, m_Speed);
-    endpointInfo.nHubPort = m_nPort;
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, pEndpoint->nMaxPacketSize, m_Speed);
     if(nBytes > pEndpoint->nMaxPacketSize)
     {
         for(size_t i=0;i<nBytes;)
@@ -45,7 +44,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_
     }
     ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
     pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
-    return nResult;
+    return nResult;*/
 }
 
 ssize_t UsbDevice::syncSetup(Setup *setup)
@@ -71,58 +70,48 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     pSetup->val = val;
     pSetup->index = index;
     pSetup->len = len;
-    
-    NOTICE("Control request - op=" << req);
 
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
         ERROR("USB: Orphaned UsbDevice!");
 
-    bool dataToggle = !(len > 0);
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, 0, m_Speed, 64);
 
-    // Handshake TD - IN when we send data to the device, OUT when we receive. Zero-length.
-    NOTICE("STATUS(" << dataToggle << ")");
-	uintptr_t handshakeTD = pParentHub->createTD(0, dataToggle, req_type & 0x80, false, 0, 0);
+    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
 
-    // Data TD - handles data transfer
-	uintptr_t dataTD = 0;
-	if(len)
+    // Setup Transfer - handles the SETUP phase of the transfer
+    NOTICE("SETUP(" << req_type << ", " << req << ", " << val << ", " << index << ")");
+    pParentHub->addTransferToTransaction(nTransaction, false, UsbPidSetup, reinterpret_cast<uintptr_t>(pSetup), sizeof(Setup));
+
+    // Data Transfer - handles data transfer
+    if(len)
     {
-        NOTICE("Data transfer: OUT = " << (!(req_type & 0x80)) << ", buffer at " << pBuffer << ", length is " << len);
-        NOTICE("DATA(" << !dataToggle << ")");
-		dataTD = pParentHub->createTD(handshakeTD, !dataToggle, !(req_type & 0x80), false, reinterpret_cast<void*>(pBuffer), len);
+        NOTICE("DATA(" << ((req_type & 0x80) ? "IN" : "OUT") << ", buffer=" << pBuffer << ", length=" << Dec << len << Hex);
+        pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidIn : UsbPidOut, pBuffer, len);
     }
 
-    // Setup TD - handles the SETUP phase of the transfer
-    NOTICE("SETUP(0)");
-	uintptr_t setupTD = pParentHub->createTD(len ? dataTD : handshakeTD, false, false, true, pSetup, sizeof(Setup));
+    // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
+    NOTICE("STATUS(" << ((req_type & 0x80) ? "OUT" : "IN") << ")");
+    pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
 
-	UsbEndpoint endpointInfo(m_nAddress, m_pEndpoints[0]->nEndpoint, m_pEndpoints[0]->bDataToggle, m_Speed);
-    endpointInfo.nHubPort = m_nPort;
+    //if(!queueHead)
+    //    return -1;
 
-	QHMetaData *pMetaData = new QHMetaData;
-	pMetaData->pBuffer = pBuffer;
-	pMetaData->nBufferSize = len;
-
-    uintptr_t queueHead = pParentHub->createQH(0, setupTD, len ? 3 : 2, true, endpointInfo, pMetaData);
-
-	if(!queueHead)
-		return -1;
-
-	pParentHub->doAsync(queueHead);
-
-	ssize_t ret0 = 0, ret1 = 0, ret2 = 0;
-	ret2 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront()); /// \todo Fix reverse qTD order
-	if(len)
-		ret1 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
-	ret0 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
-	NOTICE("Results: " << ret0 << ", " << ret1 << " [ign if non-data SETUP], " << ret2 << ".");
+    pParentHub->doAsync(nTransaction);
+    while(true)asm("sti;hlt");
+/*
+    ssize_t ret0 = 0, ret1 = 0, ret2 = 0;
+    ret2 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront()); /// \todo Fix reverse qTD order
+    if(len)
+        ret1 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
+    ret0 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
+    NOTICE("Results: " << ret0 << ", " << ret1 << " [ign if non-data SETUP], " << ret2 << ".");
     if(ret0 < 0)
         return ret0;
     else if(len && (ret1 < 0))
         return ret1;
     else
-        return ret2;
+        return ret2;*/
 }
 
 int16_t UsbDevice::status()
@@ -146,7 +135,7 @@ bool UsbDevice::assignAddress(uint8_t nAddress)
         m_nAddress = nAddress;
 
         delay(300);
-        
+
         NOTICE("TEST A");
         status();
         NOTICE("DONE");

@@ -191,7 +191,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
     return true;
 #endif
 }
-
+/*
 void Ohci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
@@ -252,7 +252,8 @@ void Ohci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, ui
 
 void Ohci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    /*LockGuard<Mutex> guard(m_Mutex);
+    /// \note not implemented
+    LockGuard<Mutex> guard(m_Mutex);
 
     // Pause the controller
     m_pBase->write32(0, OHCI_CMD);
@@ -287,5 +288,5 @@ void Ohci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     m_pPeriodicED->pCurrent = pTD;
 
     // Resume the controller
-    m_pBase->write32(OHCI_CMD_RUN, OHCI_CMD);*/
-}
+    m_pBase->write32(OHCI_CMD_RUN, OHCI_CMD);
+}*/

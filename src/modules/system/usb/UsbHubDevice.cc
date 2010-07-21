@@ -38,7 +38,7 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 UsbHubDevice::~UsbHubDevice()
 {
 }
-
+/*
 void UsbHubDevice::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     if(m_Speed == HighSpeed && endpointInfo.speed != HighSpeed && !endpointInfo.nHubAddress)
@@ -49,4 +49,4 @@ void UsbHubDevice::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBu
 void UsbHubDevice::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(nAddress, nEndpoint, pBuffer, nBytes, pCallback, pParam);
-}
+}*/

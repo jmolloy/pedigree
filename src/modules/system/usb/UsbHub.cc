@@ -124,15 +124,15 @@ void UsbHub::getUsedAddresses(ExtensibleBitmap *pBitmap)
     }
 }
 
-void UsbHub::syncCallback(uintptr_t pParam, ssize_t ret)
+void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
 {
     if(!pParam)
         return;
-    UsbHub *pController = reinterpret_cast<UsbHub*>(pParam);
-    pController->m_SyncRet = ret;
-    pController->m_SyncSemaphore.release();
+    UsbHub *pHub = reinterpret_cast<UsbHub*>(pParam);
+    pHub->m_SyncRet = nResult;
+    pHub->m_SyncSemaphore.release();
 }
-
+/*
 ssize_t UsbHub::doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout)
 {
     LockGuard<Mutex> guard(m_SyncMutex);
@@ -141,6 +141,7 @@ ssize_t UsbHub::doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer
     if(Processor::information().getCurrentThread()->wasInterrupted())
         return -1;
     else
-        */
+        */ /*
     return m_SyncRet;
 }
+*/
