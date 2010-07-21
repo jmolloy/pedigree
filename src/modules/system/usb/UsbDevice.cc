@@ -78,18 +78,23 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     if(!pParentHub)
         ERROR("USB: Orphaned UsbDevice!");
 
+    bool dataToggle = !(len > 0);
+
     // Handshake TD - IN when we send data to the device, OUT when we receive. Zero-length.
-	uintptr_t handshakeTD = pParentHub->createTD(0, true, req_type & 0x80, false, 0, 0);
+    NOTICE("STATUS(" << dataToggle << ")");
+	uintptr_t handshakeTD = pParentHub->createTD(0, dataToggle, req_type & 0x80, false, 0, 0);
 
     // Data TD - handles data transfer
 	uintptr_t dataTD = 0;
 	if(len)
     {
         NOTICE("Data transfer: OUT = " << (!(req_type & 0x80)) << ", buffer at " << pBuffer << ", length is " << len);
-		dataTD = pParentHub->createTD(handshakeTD, false, !(req_type & 0x80), false, reinterpret_cast<void*>(pBuffer), len);
+        NOTICE("DATA(" << !dataToggle << ")");
+		dataTD = pParentHub->createTD(handshakeTD, !dataToggle, !(req_type & 0x80), false, reinterpret_cast<void*>(pBuffer), len);
     }
 
     // Setup TD - handles the SETUP phase of the transfer
+    NOTICE("SETUP(0)");
 	uintptr_t setupTD = pParentHub->createTD(len ? dataTD : handshakeTD, false, false, true, pSetup, sizeof(Setup));
 
 	UsbEndpoint endpointInfo(m_nAddress, m_pEndpoints[0]->nEndpoint, m_pEndpoints[0]->bDataToggle, m_Speed);
@@ -99,7 +104,7 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
 	pMetaData->pBuffer = pBuffer;
 	pMetaData->nBufferSize = len;
 
-	uintptr_t queueHead = pParentHub->createQH(0, setupTD, len ? 3 : 2, true, endpointInfo, pMetaData);
+    uintptr_t queueHead = pParentHub->createQH(0, setupTD, len ? 3 : 2, true, endpointInfo, pMetaData);
 
 	if(!queueHead)
 		return -1;
@@ -139,6 +144,12 @@ bool UsbDevice::assignAddress(uint8_t nAddress)
     if(!control(0, 5, nAddress, 0))
     {
         m_nAddress = nAddress;
+
+        delay(300);
+        
+        NOTICE("TEST A");
+        status();
+        NOTICE("DONE");
 
         //int16_t ret = status();
         //NOTICE("status: " << ret);

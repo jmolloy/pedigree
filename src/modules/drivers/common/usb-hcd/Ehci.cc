@@ -367,9 +367,10 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, 
     pQH->nAddress = endpointInfo.nAddress;
 
 	// Bandwidth multiplier - number of transactions that can be performed in a microframe
-    pQH->mult = 2;
+    pQH->mult = 1;
 
 	// Address of the first qTD
+    physical_uintptr_t test = 0;
 	if(pFirstQTD)
 	{
 		VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
