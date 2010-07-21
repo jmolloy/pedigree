@@ -151,12 +151,12 @@ bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
             return true; // No second-level table walk
 
         // Knowing if a page is mapped is a global thing
-        SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
-        if(!ptbl[ptab_offset].descriptor.fault.type)
-            return false;
+        SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + (pdir_offset * 0x400));
+        if(ptbl[ptab_offset].descriptor.fault.type)
+            return true;
     }
 
-    return true;
+    return false;
 }
 
 extern "C" void writeHex(unsigned int n);
@@ -284,7 +284,7 @@ void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
             case 1:
             {
                 // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + (pdir_offset * 0x400));
                 if(!ptbl[ptab_offset].descriptor.fault.type)
                     return;
                 else
@@ -335,7 +335,7 @@ void ArmV7VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
             case 1:
             {
                 // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + (pdir_offset * 0x400));
                 ptbl[ptab_offset].descriptor.smallpage.ap1 = toFlags(newFlags);
                 break;
             }
@@ -374,7 +374,7 @@ void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
             case 1:
             {
                 // Page table walk.
-                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + pdir_offset);
+                SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor *>(reinterpret_cast<uintptr_t>(m_VirtualPageTables) + (pdir_offset * 0x400));
                 ptbl[ptab_offset].descriptor.fault.type = 0; // Unmap.
                 break;
             }
