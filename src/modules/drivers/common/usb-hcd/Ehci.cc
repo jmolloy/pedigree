@@ -27,6 +27,26 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
+#define INDEX_FROM_QTD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(qTD)))
+#define PHYS_QTD(idx)		(m_pqTDListPhys + ((idx) * sizeof(qTD)))
+
+#define GET_PAGE(param, page, qhIndex) \
+do \
+{ \
+    if(va.isMapped(reinterpret_cast<void*>(pBufferPageStart + (page) * 0x1000))) \
+    { \
+        physical_uintptr_t phys = 0; size_t flags = 0; \
+        va.getMapping(reinterpret_cast<void*>(pBufferPageStart + (page) * 0x1000), phys, flags); \
+        (param) = phys >> 12; \
+    } \
+    else \
+    { \
+        ERROR("EHCI: addTransferToTransaction: Buffer (page " << Dec << (page) << Hex << ") isn't mapped!"); \
+        m_QHBitmap.clear((qhIndex)); \
+        return; \
+    } \
+} while(0)
+
 Ehci::Ehci(Device* pDev) : Device(pDev), m_EhciMR("Ehci-MR")
 {
     setSpecificType(String("EHCI"));
@@ -155,7 +175,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
             QH *pQH = &m_pQHList[i];
             bool bPeriodic = pQH->pMetaData->bPeriodic;
 
-            size_t nQTDIndex = pQH->pMetaData->pFirstQTD;
+            size_t nQTDIndex = pQH->pMetaData->nFirstQTDIndex;
             /// \todo When we have more than one QH running, this will be invalid
             while(true)
             {
@@ -176,7 +196,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                     else
                         nResult = pqTD->nBufferSize - pqTD->nBytes;
                     DEBUG_LOG("DONE " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
-                    if(pQH->pMetaData->pCallback && (nResult > 0 || !bPeriodic))
+                    if(pQH->pMetaData->pCallback && ((nQTDIndex == INDEX_FROM_QTD(pQH->pMetaData->pLastQTD)) || nResult < 0)) //   (nResult > 0 || !bPeriodic))
                     {
                         NOTICE("DUNNO WHAT TODO");
                         //pQH->pMetaData->pParam.pushBack(reinterpret_cast<uint32_t*>(ret));
@@ -208,12 +228,14 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 if(pqTD->bNextInvalid)
                     break;
                 else
-                    nQTDIndex = ((pqTD->pNext << 5) % 0x1000) / sizeof(qTD);
+                    nQTDIndex = ((pqTD->pNext << 5) & 0xFFF) / sizeof(qTD);
             }
         }
         resume();
     }
     m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
+
+	NOTICE("IRQ DONE");
 
 #ifdef X86_COMMON
     return true;
@@ -248,8 +270,11 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
     {
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_qTDBitmap.getFirstClear();
-        if(nIndex >= 0x1000 / sizeof(qTD))
-            FATAL("USB: EHCI: qTD space full");
+        if(nIndex >= (0x1000 / sizeof(qTD)))
+		{
+            ERROR("USB: EHCI: qTD space full");
+			return;
+		}
         m_qTDBitmap.set(nIndex);
     }
 
@@ -284,41 +309,31 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
 
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-        #define GET_PAGE(param, page) \
-        do \
-        { \
-            if(va.isMapped(reinterpret_cast<void*>(pBufferPageStart + page * 0x1000))) \
-            { \
-                physical_uintptr_t phys = 0; size_t flags = 0; \
-                va.getMapping(reinterpret_cast<void*>(pBufferPageStart + page * 0x1000), phys, flags); \
-                param = phys >> 12; \
-            } \
-            else \
-            { \
-                ERROR("EHCI: addTransferToTransaction: Buffer (page " << Dec << page << Hex << ") isn't mapped!"); \
-                m_QHBitmap.clear(nIndex); \
-                return; \
-            } \
-        } while(0)
-
-        GET_PAGE(pqTD->pPage0, 0);
-        GET_PAGE(pqTD->pPage1, 1);
-        GET_PAGE(pqTD->pPage2, 2);
-        GET_PAGE(pqTD->pPage3, 3);
-        GET_PAGE(pqTD->pPage4, 4);
+        GET_PAGE(pqTD->pPage0, 0, nIndex);
+        GET_PAGE(pqTD->pPage1, 1, nIndex);
+        GET_PAGE(pqTD->pPage2, 2, nIndex);
+        GET_PAGE(pqTD->pPage3, 3, nIndex);
+        GET_PAGE(pqTD->pPage4, 4, nIndex);
     }
 
     // Grab transaction's QH and add our qTD to it
     QH *pQH = &m_pQHList[nTransaction];
     if(pQH->pMetaData->pLastQTD)
     {
-        pQH->pMetaData->pLastQTD->pNext = (m_pqTDListPhys + nIndex * sizeof(qTD)) >> 5;
+        pQH->pMetaData->pLastQTD->pNext = PHYS_QTD(nIndex) >> 5;
         pQH->pMetaData->pLastQTD->bNextInvalid = 0;
+
+		if(pQH->pMetaData->pLastQTD == pQH->pMetaData->pFirstQTD)
+		{
+			pQH->overlay.pNext = pQH->pMetaData->pLastQTD->pNext;
+			pQH->overlay.bNextInvalid = pQH->pMetaData->pLastQTD->bNextInvalid;
+		}
     }
     else
     {
-        pQH->pMetaData->pFirstQTD = nIndex;
-        pQH->pQTD = (m_pqTDListPhys + nIndex * sizeof(qTD)) >> 5;
+		pQH->pMetaData->pFirstQTD = pqTD;
+        pQH->pMetaData->nFirstQTDIndex = nIndex;
+        pQH->pQTD = PHYS_QTD(nIndex) >> 5;
         memcpy(&pQH->overlay, pqTD, sizeof(qTD));
     }
     pQH->pMetaData->pLastQTD = pqTD;
@@ -331,7 +346,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(ui
     {
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_QHBitmap.getFirstClear();
-        if(nIndex >= 0x2000 / sizeof(QH))
+        if(nIndex >= (0x2000 / sizeof(QH)))
             FATAL("USB: EHCI: QH space full");
         m_QHBitmap.set(nIndex);
     }
@@ -567,28 +582,11 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    #define GET_PAGE(param, page) \
-    do \
-    { \
-        if(va.isMapped(reinterpret_cast<void*>(pBufferPageStart + page * 0x1000))) \
-        { \
-            physical_uintptr_t phys = 0; size_t flags = 0; \
-            va.getMapping(reinterpret_cast<void*>(pBufferPageStart + page * 0x1000), phys, flags); \
-            param = phys >> 12; \
-        } \
-        else \
-        { \
-            ERROR("EHCI: addTransferToTransaction: Buffer (page " << Dec << page << Hex << ") isn't mapped!"); \
-            m_QHBitmap.clear(nQHIndex); \
-            return; \
-        } \
-    } while(0)
-
-    GET_PAGE(pqTD->pPage0, 0);
-    GET_PAGE(pqTD->pPage1, 1);
-    GET_PAGE(pqTD->pPage2, 2);
-    GET_PAGE(pqTD->pPage3, 3);
-    GET_PAGE(pqTD->pPage4, 4);
+    GET_PAGE(pqTD->pPage0, 0, nQHIndex);
+    GET_PAGE(pqTD->pPage1, 1, nQHIndex);
+    GET_PAGE(pqTD->pPage2, 2, nQHIndex);
+    GET_PAGE(pqTD->pPage3, 3, nQHIndex);
+    GET_PAGE(pqTD->pPage4, 4, nQHIndex);
     /*pqTD->pPage0 = m_pTransferPagesPhys>>12;
     pqTD->nOffset = nBufferOffset%0x1000;
     pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;

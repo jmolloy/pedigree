@@ -106,7 +106,8 @@ class Ehci : public UsbHub,
                 uintptr_t pParam;
 
                 bool bPeriodic;
-                uintptr_t pFirstQTD;
+                uintptr_t nFirstQTDIndex;
+				qTD *pFirstQTD;
                 qTD *pLastQTD;
                 //List<uint32_t*> pParam; /// Stores all results from each qTD in this queue head
                 //uintptr_t pSemaphore;

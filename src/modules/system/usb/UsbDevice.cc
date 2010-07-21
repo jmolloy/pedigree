@@ -78,6 +78,7 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, 0, m_Speed, 64);
 
     uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
+	NOTICE("Transaction: " << nTransaction);
 
     // Setup Transfer - handles the SETUP phase of the transfer
     NOTICE("SETUP(" << req_type << ", " << req << ", " << val << ", " << index << ")");
