@@ -96,11 +96,7 @@ class Ehci : public UsbHub,
 
             qTD overlay;
 
-            uint32_t pCallback;
-            uint32_t pParam;
-            uint32_t pBuffer;
-            uint16_t nBufferSize;
-            uint16_t nBufferOffset;
+            QHMetaData *pMetaData;
         } __attribute__((aligned(32))) QH;
 
         virtual void getName(String &str)
@@ -109,6 +105,7 @@ class Ehci : public UsbHub,
         }
 
         virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+		virtual void doAsync(uintptr_t queueHead);
         virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         virtual UsbSpeed getSpeed()
@@ -124,6 +121,10 @@ class Ehci : public UsbHub,
 #endif
 
         void irq_thread();
+
+		virtual uintptr_t createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes);
+
+		virtual uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData);
 
     protected:
         uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
@@ -183,6 +184,7 @@ class Ehci : public UsbHub,
 
         qTD *m_pqTDList;
         uintptr_t m_pqTDListPhys;
+        ExtensibleBitmap m_TDBitmap;
 
         uint8_t *m_pTransferPages;
         uintptr_t m_pTransferPagesPhys;
