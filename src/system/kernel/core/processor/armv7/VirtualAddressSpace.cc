@@ -139,6 +139,7 @@ void *ArmV7VirtualAddressSpace::allocateStack(size_t stackSz)
 bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
 {
     uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    addr &= ~0xFFF;
     uint32_t pdir_offset = addr >> 20;
     uint32_t ptab_offset = (addr >> 12) & 0xFF;
 
@@ -269,6 +270,7 @@ void ArmV7VirtualAddressSpace::doGetMapping(void *virtualAddress,
                                            size_t &flags)
 {
     uintptr_t addr = reinterpret_cast<uintptr_t>(virtualAddress);
+    addr &= ~0xFFF;
     uint32_t pdir_offset = addr >> 20;
     uint32_t ptab_offset = (addr >> 12) & 0xFF;
 
