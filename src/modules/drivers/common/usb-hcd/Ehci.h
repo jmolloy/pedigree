@@ -69,7 +69,7 @@ class Ehci : public UsbHub,
 			uint32_t extend2;
 			uint32_t extend3;
 			uint32_t extend4;
-        } __attribute__((aligned(32))) qTD;
+        } PACKED __attribute__((aligned(32))) qTD;
 
         typedef struct QH
         {
@@ -97,7 +97,7 @@ class Ehci : public UsbHub,
             qTD overlay;
 
             QHMetaData *pMetaData;
-        } __attribute__((aligned(32))) QH;
+        } PACKED __attribute__((aligned(32))) QH;
 
         virtual void getName(String &str)
         {

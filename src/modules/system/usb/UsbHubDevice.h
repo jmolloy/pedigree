@@ -47,7 +47,7 @@ class UsbHubDevice : public UsbDevice, public UsbHub
 			UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
 			if(!pParent)
 				return 0;
-			return pParent->createQH(pNext, pFirstQTD, head, endpointInfo);
+			return pParent->createQH(pNext, pFirstQTD, qTDCount, head, endpointInfo, pMetaData);
 		}
 
     private:

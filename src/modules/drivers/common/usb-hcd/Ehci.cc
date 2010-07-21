@@ -159,10 +159,11 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 			/// \todo When we have more than one QH running, this will be invalid
 			for(size_t j = 0; j < 128; j++)
 			{
-				if(!m_TDBitmap.test(i))
+				if(!m_TDBitmap.test(j))
 					continue;
 
 				qTD *pqTD = &m_pqTDList[j];
+                NOTICE("qTD #" << Dec << j << Hex << " status: " << pqTD->nStatus);
 				if(pqTD->nStatus == 0x80)
 					continue;
 				bool bPeriodic = pQH->bNextInvalid;
@@ -175,20 +176,22 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 					ERROR("qTD PID: " << pqTD->nPid << ".");
 				}
 				ssize_t ret = pqTD->nStatus & 0x7c?-((pqTD->nStatus & 0x7c)>>2):pQH->pMetaData->nBufferSize-pqTD->nBytes;
-				if(pqTD->nPid == 1 && pQH->pMetaData->pBuffer && ret > 0) /// \todo Transfers should come from the qTD not the QH here
-					memcpy(reinterpret_cast<void*>(pQH->pMetaData->pBuffer), &m_pTransferPages[pQH->pMetaData->nBufferOffset], ret);
+				if((pqTD->nPid == 1) && (pQH->pMetaData->pBuffer) && (ret > 0)) /// \todo Transfers should come from the qTD not the QH here... should also go into a different buffer?
+					memcpy(reinterpret_cast<void*>(pQH->pMetaData->pBuffer), &m_pTransferPages[(pqTD->nPage * 0x1000) + pqTD->nOffset], ret);
 				if(pQH->pMetaData->pSemaphore && (ret > 0 || !bPeriodic))
 				{
-					// void (*func)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pQH->pMetaData->pCallback);
 					pQH->pMetaData->pParam.pushBack(reinterpret_cast<uint32_t*>(ret));
 					reinterpret_cast<Semaphore*>(pQH->pMetaData->pSemaphore)->release();
 					DEBUG_LOG("STOP "<<Dec<<pQH->nAddress<<":"<<pQH->nEndpoint<<" "<<(pqTD->nPid==0?" OUT ":(pqTD->nPid==1?" IN  ":(pqTD->nPid==2?"SETUP":"")))<<" "<<ret<<Hex);
+
+                    pQH->pMetaData->qTDCount--;
 				}
 				if(!bPeriodic)
 				{
-					/// \todo Buffer information should come from the qTD not the QH here
-					// m_TransferPagesAllocator.free(pQH->pMetaData->nBufferOffset, pQH->pMetaData->nBufferSize);
-					// m_QHBitmap.clear(i);
+					m_TransferPagesAllocator.free((pqTD->nPage * 0x1000) + pqTD->nOffset, pqTD->nBytes);
+                    if(!pQH->pMetaData->qTDCount)
+					    m_QHBitmap.clear(i);
+                    m_TDBitmap.clear(j);
 				}
 				else
 				{
@@ -238,8 +241,6 @@ void Ehci::resume()
 
 uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes)
 {
-	NOTICE("createTD");
-
 	// Atomic operation: find clear bit, set it
 	size_t nIndex = 0;
 	{
@@ -259,7 +260,6 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 			physical_uintptr_t phys = 0; size_t flags = 0;
 			va.getMapping(reinterpret_cast<void*>(pNext), phys, flags);
 			phys += pNext & 0xFFF;
-			NOTICE("qTD next = " << pNext << ", phys = " << phys);
 			pqTD->pNext = phys >> 5;
 		}
 		else // Next pointer isn't mapped!
@@ -279,6 +279,7 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 		pqTD->nPid = 0;
 	else
 		pqTD->nPid = 1;
+    NOTICE("TD PID: " << pqTD->nPid);
 
 	// Active, we want an interrupt on completion, and reset the error counter
     pqTD->nStatus = 0x80;
@@ -320,10 +321,11 @@ uintptr_t Ehci::createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bI
 
 uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
 {
-	NOTICE("createQH");
-
 	if(!pFirstQTD)
+    {
+        WARNING("EHCI: createQH: No first qTD specified!");
 		return 0;
+    }
 
 	// Atomic operation: find clear bit, set it
 	size_t nIndex = 0;
@@ -346,7 +348,7 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, 
     pQH->nNakReload = 15;
 
 	// Handle 64 byte control packets
-    pQH->nMaxPacketSize = 8;
+    pQH->nMaxPacketSize = 64;
 
 	// Head of the reclaim list - if zero, this QH is "idle"
     pQH->hrcl = head;
@@ -364,9 +366,8 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, 
     pQH->nEndpoint = endpointInfo.nEndpoint;
     pQH->nAddress = endpointInfo.nAddress;
 
-	// Bandwidth multiplier
-	/// \todo better comment
-    pQH->mult = 1;
+	// Bandwidth multiplier - number of transactions that can be performed in a microframe
+    pQH->mult = 2;
 
 	// Address of the first qTD
 	if(pFirstQTD)
@@ -377,11 +378,11 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, 
 			physical_uintptr_t phys = 0; size_t flags = 0;
 			va.getMapping(reinterpret_cast<void*>(pFirstQTD), phys, flags);
 			phys += pFirstQTD & 0xFFF;
-			NOTICE("qTD " << pFirstQTD << " has phys address " << phys);
 			pQH->pQTD = phys >> 5;
 		}
 		else // Next pointer isn't mapped!
 		{
+            WARNING("EHCI: createQH: First qTD isn't mapped!");
 			m_QHBitmap.clear(nIndex);
 			return 0;
 		}
@@ -403,8 +404,6 @@ uintptr_t Ehci::createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, 
 
 void Ehci::doAsync(uintptr_t queueHead)
 {
-	NOTICE("Ehci::doAsync");
-
 	if(!queueHead)
 		return;
 
@@ -414,7 +413,7 @@ void Ehci::doAsync(uintptr_t queueHead)
 	{
 		size_t flags = 0;
 		va.getMapping(reinterpret_cast<void*>(queueHead), physQueueHead, flags);
-		NOTICE("queueHead " << queueHead << " is at phys " << physQueueHead);
+        physQueueHead += queueHead & 0xFFF;
 	}
 	else
 	{
@@ -423,7 +422,7 @@ void Ehci::doAsync(uintptr_t queueHead)
 	}
 
 	QH *pQH = reinterpret_cast<QH*>(queueHead);
-    // LockGuard<Mutex> guard(m_Mutex);
+    LockGuard<Mutex> guard(m_Mutex);
     DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << pQH->nSpeed << " " << pQH->pMetaData->qTDCount << " transactions" << Hex);
 
     // Pause the controller
@@ -449,6 +448,8 @@ void Ehci::doAsync(uintptr_t queueHead)
 
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
+    FATAL("old doAsync called");
+
     LockGuard<Mutex> guard(m_Mutex);
     DEBUG_LOG("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
 

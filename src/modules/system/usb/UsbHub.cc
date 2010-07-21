@@ -25,6 +25,8 @@
 #include <utilities/ExtensibleBitmap.h>
 #include <LockGuard.h>
 
+#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+
 void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 {
     //NOTICE("USB: Adding device on port "<<Dec<<nPort<<Hex<<"...");
@@ -52,6 +54,9 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     // Assign the address we've chosen
     if(!pDevice->assignAddress(nAddress))
         return;
+
+    delay(100);
+
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
