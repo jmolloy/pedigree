@@ -121,6 +121,8 @@ class Ehci : public UsbHub,
 
                 QH *pPrev;
                 QH *pNext;
+
+                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
             }  MetaData;
 
             MetaData *pMetaData;

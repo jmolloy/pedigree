@@ -197,20 +197,10 @@ Ehci::~Ehci()
 {
 }
 
-int threadStub(void *p)
-{
-    Ehci *pEhci = reinterpret_cast<Ehci*>(p);
-    pEhci->doDequeue();
-    return 0;
-}
-
 void Ehci::doDequeue()
 {
     // Absolutely cannot have queue insetions during a dequeue
     LockGuard<Mutex> guard(m_Mutex);
-
-    // Modifying the schedule, pause the controller
-    pause();
 
     for(size_t i = 1; i < 128; i++)
     {
@@ -219,34 +209,49 @@ void Ehci::doDequeue()
 
         QH *pQH = &m_pQHList[i];
 
+        // Is this QH valid?
+        if(!pQH->pMetaData)
+        {
+            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's not even initialised.");
+            continue;
+        }
+
+        // Is this QH even linked!?
+        if(!pQH->pMetaData->bIgnore)
+        {
+            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's still active.");
+            continue;
+        }
+
         /// \todo Won't dequeue on error!
         if(!pQH->pMetaData->qTDCount)
         {
-            NOTICE_NOLOCK("Dequeue for " << Dec << i << Hex << "...");
-
-            // If we're the tail, we need to update that pointer to let future
-            // queue insertions work
-            if(pQH == m_pCurrentQueueTail);
+            // Remove all qTDs
+            size_t nQTDIndex = INDEX_FROM_QTD(pQH->pMetaData->pFirstQTD);
+            while(true)
             {
-                m_pCurrentQueueTail = pQH->pMetaData->pPrev;
+                m_qTDBitmap.clear(nQTDIndex);
+
+                qTD *pqTD = &m_pqTDList[nQTDIndex];
+                bool shouldBreak = pqTD->bNextInvalid;
+                if(!shouldBreak)
+                    nQTDIndex = ((pqTD->pNext << 5) & 0xFFF) / sizeof(qTD);
+
+                memset(pqTD, 0, sizeof(qTD));
+
+                if(shouldBreak)
+                    break;
             }
 
-            // Was the reclaim head bit set?
-            if(pQH->hrcl)
-                pQH->pMetaData->pNext->hrcl = 1; // Make sure there's always a reclaim head
+            // Completely invalidate the QH
+            memset(pQH, 0, sizeof(QH));
 
-            // This queue head is done, dequeue.
-            /// \todo This dequeue shouldn't actually happen yet, section 4.8.2 in the EHCI spec
-            pQH->pMetaData->pPrev->pNext = pQH->pMetaData->pNext->pNext;
-            pQH->pMetaData->pPrev->pMetaData->pNext = pQH->pMetaData->pNext;
+            DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
 
             // This QH is done
             m_QHBitmap.clear(i);
         }
     }
-
-    // Done with the schedule, resume
-    resume();
 }
 
 #ifdef X86_COMMON
@@ -261,7 +266,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
         for(size_t i = 0;i < m_nPorts;i++)
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CSCH)
                 addAsyncRequest(1, i);
-    pause();
+
     if(nStatus & EHCI_STS_INT)
     {
         for(size_t i = 1; i < 128; i++)
@@ -270,12 +275,16 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 continue;
 
             QH *pQH = &m_pQHList[i];
+            if(pQH->pMetaData->bIgnore)
+                continue;
+
             bool bPeriodic = pQH->pMetaData->bPeriodic;
 
             size_t nQTDIndex = INDEX_FROM_QTD(pQH->pMetaData->pFirstQTD);
             while(true)
             {
                 qTD *pqTD = &m_pqTDList[nQTDIndex];
+
                 if(pqTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
@@ -303,6 +312,10 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 						{
 							pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
 						}
+
+                        // Caused by error?
+                        if(nResult < 0)
+                            pQH->pMetaData->qTDCount = 1; // Decrement will occur in following block
 					}
                     if(!bPeriodic)
                     {
@@ -313,11 +326,31 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         /// \todo Errors will leave qTDs active!
                         if(!pQH->pMetaData->qTDCount) // This count starts from one, not zero
                         {
-                            // Interrupt on Async Advance Doorbell - notifies us when the host controller
-                            // has evicted scheduled state, allowing us to perform a dequeue
+                            pQH->pMetaData->bIgnore = true;
+
+                            // Was the reclaim head bit set?
+                            if(pQH->hrcl)
+                                pQH->pMetaData->pNext->hrcl = 1; // Make sure there's always a reclaim head
+
+                            // This queue head is done, dequeue.
+                            QH *pPrev = pQH->pMetaData->pPrev;
+                            QH *pNext = pQH->pMetaData->pNext;
+
+                            // Main non-hardware linked list update
+                            pPrev->pMetaData->pNext = pNext;
+                            pNext->pMetaData->pPrev = pPrev;
+
+                            // Hardware linked list update
+                            pPrev->pNext = pQH->pNext;
+
+                            // Update the tail pointer if we need to
+                            if(pQH == m_pCurrentQueueTail)
+                                m_pCurrentQueueTail = pPrev;
+
+                            // Interrupt on Async Advance Doorbell - will run the dequeue thread to
+                            // clear bits in the QH and qTD bitmaps
                             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | (1 << 6), m_nOpRegsOffset + EHCI_CMD);
                         }
-                        m_qTDBitmap.clear(nQTDIndex);
                     }
                     // Interrupt qTDs need constant refresh
                     if(bPeriodic)
@@ -345,11 +378,8 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     }
         
     if(nStatus & EHCI_STS_ASYNCADVANCE)
-    {
-        new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
-    }
+        addAsyncRequest(1, 3);
 
-    resume();
     m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
 
 #ifdef X86_COMMON
@@ -465,7 +495,7 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
     }
     pQH->pMetaData->pLastQTD = pqTD;
 
-    //pQH->pMetaData->qTDCount++;
+    pQH->pMetaData->qTDCount++;
 }
 
 uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
@@ -522,8 +552,9 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     pQH->pMetaData->bPeriodic = false;
     pQH->pMetaData->pFirstQTD = 0;
     pQH->pMetaData->pLastQTD = 0;
-    //pQH->pMetaData->qTDCount = 0;
+    pQH->pMetaData->qTDCount = 0;
     pQH->pMetaData->nTotalBytes = 0;
+    pQH->pMetaData->bIgnore = false;
 
     // Complete
     return nIndex;
@@ -543,40 +574,40 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     pQH->pMetaData->pParam = pParam;
     DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
 
-    // Pause the controller, avoid races
-    pause();
-
     // Do we need to configure the asynchronous schedule?
     if(m_pCurrentQueueTail)
     {
-        // No, we don't. Configure away!
-        m_pCurrentQueueTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
-        m_pCurrentQueueTail->nNextType = 1; // QH
+        // Current QH needs to point to the schedule's head
+        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
+        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
+
+        QH *pOldTail = m_pCurrentQueueTail;
+
+        // Update the tail as soon as possible so if an IRQ fires we're safe
+        // (this QH isn't in the schedule yet, and so can't be dequeued!)
+        m_pCurrentQueueTail = pQH;
+
+        // Fix the linked list
+        pOldTail->pMetaData->pNext = pQH;
+        pOldTail->pMetaData->pPrev = pQH;
+
+        // And the current tail needs to point to this QH
+        pOldTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
+        pOldTail->nNextType = 1; // QH
 
         // This QH is NOT the queue head. If we leave this set to one, and the
         // reclaim bit is set, the controller will think it's executed a full
         // circle, when in fact it's only partway there.
         pQH->hrcl = 0;
 
-        // Complete the ring
-        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
-        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
-
         // Enter the information for correct dequeue
         pQH->pMetaData->pNext = m_pCurrentQueueHead;
-        pQH->pMetaData->pPrev = m_pCurrentQueueTail;
-
-        // Fix the linked list
-        m_pCurrentQueueTail->pMetaData->pNext = pQH;
-        m_pCurrentQueueHead->pMetaData->pPrev = pQH;
-
-        // Update the tail
-        m_pCurrentQueueTail = pQH;
+        pQH->pMetaData->pPrev = pOldTail;
 
         // No longer reclaiming
         m_pCurrentQueueHead->hrcl = 1;
 
-        // Linked in, resume and all done
+        // Ensure the controller is started
         resume();
         return;
     }
@@ -676,6 +707,13 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
+    // Dequeue request?
+    if(p1 == 3)
+    {
+        doDequeue();
+        return 0;
+    }
+
     // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_CONN)
     {

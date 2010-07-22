@@ -145,11 +145,11 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     // Send the async request
     doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
     // Wait for the semaphore to release
-    pSyncParam->semaphore.acquire(1);//, 0, timeout * 1000);
+    pSyncParam->semaphore.acquire(1); // , timeout / 1000);
     // Delete our structure and return the result
     delete pSyncParam;
-    //if(Processor::information().getCurrentThread()->wasInterrupted())
-    //    return -1;
-    //else
+    if(Processor::information().getCurrentThread()->wasInterrupted())
+        return -0xbeef;
+    else
         return pSyncParam->nResult;
 }

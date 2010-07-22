@@ -95,13 +95,16 @@ static void entry()
 #if TEST_USB && (X86_COMMON || ARM_COMMON)
     // Interrupts may get disabled on the way here, so make sure they are enabled
     Processor::setInterrupts(true);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
+    NOTICE("TODO: Integrate new changes into UHCI and OHCI.");
+    /// \todo Integrate new transaction creation and execution into UHCI and OHCI
+    //Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
+    //Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
 #ifdef X86_COMMON
     // Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
 #endif
     #if TEST_USB_HALT
+    NOTICE("Halting!");
     Processor::setInterrupts(false);
     Processor::halt();
     #endif

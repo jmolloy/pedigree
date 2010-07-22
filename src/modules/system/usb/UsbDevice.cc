@@ -171,6 +171,11 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
 {
     uint8_t *pBuffer = new uint8_t[nBytes];
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+
+    /// \todo Proper language ID handling!
+    if(nDescriptor == 3)
+        nIndex = 0x0409; // English (US)
+
     if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
     {
         delete [] pBuffer;
@@ -183,6 +188,11 @@ uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescript
 {
     uint8_t pLength;
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+
+    /// \todo Proper language ID handling
+    if(nDescriptor == 3)
+        nIndex = 0x0409; // English (US)
+
     if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
         return 0;
     return pLength;
@@ -196,6 +206,15 @@ char *UsbDevice::getString(uint8_t nString)
         pString[0] = '\0';
         return pString;
     }
+
+    // Get string information!
+    uint8_t infoLength = getDescriptorLength(3, 0);
+    char *pData = static_cast<char*>(getDescriptor(3, 0, infoLength));
+    for(uint8_t i = 0; i < infoLength; i++)
+    {
+        NOTICE("pData[" << Dec << i << Hex << "] = " << static_cast<uint32_t>(pData[i]));
+    }
+
     uint8_t descriptorLength = getDescriptorLength(3, nString);
     char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
     if(pBuffer)
@@ -214,6 +233,7 @@ char *UsbDevice::getString(uint8_t nString)
 void UsbDevice::populateDescriptors()
 {
     m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, getDescriptorLength(1, 0)));
+    DEBUG_LOG("Vendor: " << m_pDescriptor->pDescriptor->nVendorString << ", Product: " << m_pDescriptor->pDescriptor->nProductString << ", Serial: " << m_pDescriptor->pDescriptor->nSerialString << ".");
     m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
     m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
     m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);

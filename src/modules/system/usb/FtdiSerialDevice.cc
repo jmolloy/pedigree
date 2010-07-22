@@ -21,13 +21,13 @@
 
 FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 {
-    control(0x40, 0, 0, 0);
+    controlRequest(0x40, 0, 0, 0);
 
     uint16_t nDivisor = (48000000 / 2) / FTDI_BAUD_RATE, nSubdivisor = nDivisor % 8, nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
     nDivisor /= 8;
     nSubdivisor = nSubdivisors[nSubdivisor];
     NOTICE("DD "<<((nSubdivisor&3)<<14 | nDivisor)<<" "<<(nSubdivisor>>2));
-    control(0x40, 3, (nSubdivisor&3)<<14 | nDivisor, nSubdivisor>>2);// 0x4138
+    controlRequest(0x40, 3, (nSubdivisor&3)<<14 | nDivisor, nSubdivisor>>2);// 0x4138
     /*write('A');
     write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');
     write('B');
