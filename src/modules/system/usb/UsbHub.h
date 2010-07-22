@@ -25,6 +25,7 @@
 
 class UsbHub : public virtual Device
 {
+	friend class UsbDevice; // m_Sync variables
     public:
 
         inline UsbHub() : m_SyncSemaphore(0) {}
@@ -48,18 +49,7 @@ class UsbHub : public virtual Device
             return LowSpeed;
         }
 
-        /// Creates a qTD with link fields as necessary that handles a single transaction
-        /// \param pNext Null = end of queue, else pointer to next qTD
-        //virtual uintptr_t createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes)
-        //{
-        //    return 0;
-        //}
-
-        /// Creates a QH with link fields as necessary that handles an endpoint
-        //virtual uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
-        //{
-        //   return 0;
-        //}
+		virtual ssize_t sync();
 
     private:
 

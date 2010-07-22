@@ -109,12 +109,15 @@ class Ehci : public UsbHub,
                 uintptr_t nFirstQTDIndex;
 				qTD *pFirstQTD;
                 qTD *pLastQTD;
-                //List<uint32_t*> pParam; /// Stores all results from each qTD in this queue head
-                //uintptr_t pSemaphore;
+
+                // List<ssize_t*> pParam; /// Stores all results from each qTD in this queue head
+                // uintptr_t pSemaphore;
+
                 //uintptr_t pBuffer;
                 //uint16_t nBufferSize;
                 //uint16_t nBufferOffset;
-                //size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
+
+                size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
             }  MetaData;
 
             MetaData *pMetaData;

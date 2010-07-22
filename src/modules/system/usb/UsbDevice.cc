@@ -18,6 +18,7 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 #include <processor/Processor.h>
+#include <utilities/PointerGuard.h>
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
@@ -45,6 +46,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_
     ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
     pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
     return nResult;*/
+	return -1;
 }
 
 ssize_t UsbDevice::syncSetup(Setup *setup)
@@ -62,6 +64,15 @@ ssize_t UsbDevice::syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
     return doSync(m_pEndpoints[nEndpoint], UsbPidOut, pBuffer, nBytes);
 }
 
+void UsbDevice::syncCallback(uintptr_t pParam, ssize_t nResult)
+{
+    if(!pParam)
+        return;
+    UsbHub *pHub = reinterpret_cast<UsbHub*>(pParam);
+    pHub->m_SyncRet = nResult;
+    pHub->m_SyncSemaphore.release();
+}
+
 ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len, uintptr_t pBuffer)
 {
     Setup *pSetup = new Setup;
@@ -71,48 +82,35 @@ ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t
     pSetup->index = index;
     pSetup->len = len;
 
+	PointerGuard<Setup> guard(pSetup);
+
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
         ERROR("USB: Orphaned UsbDevice!");
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, 0, m_Speed, 64);
 
-    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
-	NOTICE("Transaction: " << nTransaction);
+    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo, syncCallback);
+	if(nTransaction == static_cast<uintptr_t>(-1))
+	{
+		ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
+		return -1;
+	}
 
     // Setup Transfer - handles the SETUP phase of the transfer
-    NOTICE("SETUP(" << req_type << ", " << req << ", " << val << ", " << index << ")");
     pParentHub->addTransferToTransaction(nTransaction, false, UsbPidSetup, reinterpret_cast<uintptr_t>(pSetup), sizeof(Setup));
 
     // Data Transfer - handles data transfer
     if(len)
-    {
-        NOTICE("DATA(" << ((req_type & 0x80) ? "IN" : "OUT") << ", buffer=" << pBuffer << ", length=" << Dec << len << Hex);
         pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidIn : UsbPidOut, pBuffer, len);
-    }
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
-    NOTICE("STATUS(" << ((req_type & 0x80) ? "OUT" : "IN") << ")");
     pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
 
-    //if(!queueHead)
-    //    return -1;
-
     pParentHub->doAsync(nTransaction);
-    while(true)asm("sti;hlt");
-/*
-    ssize_t ret0 = 0, ret1 = 0, ret2 = 0;
-    ret2 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront()); /// \todo Fix reverse qTD order
-    if(len)
-        ret1 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
-    ret0 = reinterpret_cast<ssize_t>(pMetaData->pParam.popFront());
-    NOTICE("Results: " << ret0 << ", " << ret1 << " [ign if non-data SETUP], " << ret2 << ".");
-    if(ret0 < 0)
-        return ret0;
-    else if(len && (ret1 < 0))
-        return ret1;
-    else
-        return ret2;*/
+
+	// Wait for the transaction to complete, return result
+	return pParentHub->sync();
 }
 
 int16_t UsbDevice::status()
@@ -134,16 +132,6 @@ bool UsbDevice::assignAddress(uint8_t nAddress)
     if(!control(0, 5, nAddress, 0))
     {
         m_nAddress = nAddress;
-
-        delay(300);
-
-        NOTICE("TEST A");
-        status();
-        NOTICE("DONE");
-
-        //int16_t ret = status();
-        //NOTICE("status: " << ret);
-
         return true;
     }
     return false;
@@ -189,13 +177,9 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
     if(control(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
     {
-        NOTICE("getDescriptor fail");
-        while(1);
         delete [] pBuffer;
         return 0;
     }
-    NOTICE("getDescriptor success");
-    while(1);
     return pBuffer;
 }
 

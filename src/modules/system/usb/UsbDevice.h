@@ -307,6 +307,8 @@ class UsbDevice : public virtual Device
 
         UsbDevice(const UsbDevice &d);
         const UsbDevice& operator = (const UsbDevice& d);
+
+		static void syncCallback(uintptr_t pParam, ssize_t ret);
 };
 
 #endif

@@ -54,9 +54,6 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     // Assign the address we've chosen
     if(!pDevice->assignAddress(nAddress))
         return;
-
-    delay(100);
-
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
@@ -132,6 +129,14 @@ void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
     pHub->m_SyncRet = nResult;
     pHub->m_SyncSemaphore.release();
 }
+
+ssize_t UsbHub::sync()
+{
+    LockGuard<Mutex> guard(m_SyncMutex);
+	m_SyncSemaphore.acquire(); /// \todo Timeout
+	return m_SyncRet;
+}
+
 /*
 ssize_t UsbHub::doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout)
 {

@@ -160,7 +160,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & m_pBase->read32(m_nOpRegsOffset+EHCI_INTR);
-    DEBUG_LOG("IRQ "<<nStatus);
+    DEBUG_LOG("EHCI IRQ " << nStatus);
     if(nStatus & EHCI_STS_PORTCH)
         for(size_t i = 0;i < m_nPorts;i++)
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CSCH)
@@ -180,7 +180,6 @@ void Ehci::interrupt(size_t number, InterruptState &state)
             while(true)
             {
                 qTD *pqTD = &m_pqTDList[nQTDIndex];
-                NOTICE("qTD #" << Dec << nQTDIndex << Hex << " status: " << pqTD->nStatus);
                 if(pqTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
@@ -196,19 +195,25 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                     else
                         nResult = pqTD->nBufferSize - pqTD->nBytes;
                     DEBUG_LOG("DONE " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
-                    if(pQH->pMetaData->pCallback && ((nQTDIndex == INDEX_FROM_QTD(pQH->pMetaData->pLastQTD)) || nResult < 0)) //   (nResult > 0 || !bPeriodic))
-                    {
-                        NOTICE("DUNNO WHAT TODO");
-                        //pQH->pMetaData->pParam.pushBack(reinterpret_cast<uint32_t*>(ret));
-                        //reinterpret_cast<Semaphore*>(pQH->pMetaData->pSemaphore)->release();
 
-                        //pQH->pMetaData->qTDCount--;
-                    }
+					// Last qTD or error condition?
+					if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
+					{
+						// Valid callback?
+						if(pQH->pMetaData->pCallback)
+						{
+							pQH->pMetaData->pCallback(reinterpret_cast<uintptr_t>(this), nResult);
+						}
+
+						// Either way, it's a handled qTD
+						pQH->pMetaData->qTDCount--;
+					}
                     if(!bPeriodic)
                     {
-                        //if(!pQH->pMetaData->qTDCount)
-                        //    m_QHBitmap.clear(i);
-                        //m_qTDBitmap.clear(j);
+						/// \todo Errors will leave qTDs unfreed
+                        if(!pQH->pMetaData->qTDCount)
+                            m_QHBitmap.clear(i);
+                        m_qTDBitmap.clear(nQTDIndex);
                     }
                     else
                     {
@@ -234,8 +239,6 @@ void Ehci::interrupt(size_t number, InterruptState &state)
         resume();
     }
     m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
-
-	NOTICE("IRQ DONE");
 
 #ifdef X86_COMMON
     return true;
@@ -302,7 +305,6 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
     // Get a buffer somewhere in our transfer pages
     if(nBytes)
     {
-
         // Configure transfer pages
         uintptr_t nBufferPageOffset = pBuffer % 0x1000, pBufferPageStart = pBuffer - nBufferPageOffset;
         pqTD->nOffset = nBufferPageOffset;
@@ -337,6 +339,8 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
         memcpy(&pQH->overlay, pqTD, sizeof(qTD));
     }
     pQH->pMetaData->pLastQTD = pqTD;
+
+	pQH->pMetaData->qTDCount++;
 }
 
 uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -347,7 +351,10 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(ui
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_QHBitmap.getFirstClear();
         if(nIndex >= (0x2000 / sizeof(QH)))
-            FATAL("USB: EHCI: QH space full");
+		{
+            ERROR("USB: EHCI: QH space full");
+			return static_cast<uintptr_t>(-1);
+		}
         m_QHBitmap.set(nIndex);
     }
 
@@ -364,7 +371,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(ui
     pQH->nNakReload = 15;
 
     // Head of the reclaim list - if zero, this QH is "idle"
-    pQH->hrcl = true;//head;
+    pQH->hrcl = true;
 
     // LS/FS handling
     pQH->nHubAddress = endpointInfo.speed != HighSpeed ? endpointInfo.nHubAddress : 0;
@@ -390,7 +397,10 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(ui
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
     pQH->pMetaData->bPeriodic = false;
+    pQH->pMetaData->pFirstQTD = 0;
+    pQH->pMetaData->nFirstQTDIndex = 0;
     pQH->pMetaData->pLastQTD = 0;
+	pQH->pMetaData->qTDCount = 0;
 
     // Complete
     return nIndex;
@@ -399,7 +409,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(ui
 void Ehci::doAsync(uintptr_t nTransaction)
 {
     LockGuard<Mutex> guard(m_Mutex);
-    if(/* !nTransaction || */!m_QHBitmap.test(nTransaction))
+    if((nTransaction == static_cast<uintptr_t>(-1)) || !m_QHBitmap.test(nTransaction))
     {
         ERROR("EHCI: doAsync: didn't get a valid transaction id [" << nTransaction << "].");
         return;
@@ -407,6 +417,7 @@ void Ehci::doAsync(uintptr_t nTransaction)
 
     QH *pQH = &m_pQHList[nTransaction];
     DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
+	size_t nTransactions = pQH->pMetaData->qTDCount;
 
     // Pause the controller
     pause();
@@ -424,9 +435,6 @@ void Ehci::doAsync(uintptr_t nTransaction)
     // Re-enable the asynchronous schedule, and wait for it to become enabled
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
     while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
-
-    // Wait for the request to complete
-    //reinterpret_cast<Semaphore*>(pQH->pMetaData->pSemaphore)->acquire(pQH->pMetaData->qTDCount);
 }
 /*
 void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
