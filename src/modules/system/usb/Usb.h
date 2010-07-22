@@ -65,8 +65,7 @@ enum UsbError
     CrcError,
     TransactionError
 };
-/*
-*/
+
 typedef struct UsbEndpoint
 {
     inline UsbEndpoint(uint8_t address, uint8_t hubPort, uint8_t endpoint, UsbSpeed _speed, size_t maxPacketSize) :

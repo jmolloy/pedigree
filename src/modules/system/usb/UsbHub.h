@@ -25,37 +25,40 @@
 
 class UsbHub : public virtual Device
 {
-	friend class UsbDevice; // m_Sync variables
     public:
 
-        inline UsbHub() : m_SyncSemaphore(0) {}
+        inline UsbHub() {}
         inline virtual ~UsbHub() {}
 
-        virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes){}
-        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0){return 0;}
-        virtual void doAsync(uintptr_t pTransaction){}
-        virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0){}
+        virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes) {}
+        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo)
+        {
+            return static_cast<uintptr_t>(-1);
+        }
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0) {}
+        virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0) {}
 
         void deviceConnected(uint8_t nPort, UsbSpeed speed);
         void deviceDisconnected(uint8_t nPort);
 
         void getUsedAddresses(ExtensibleBitmap *pBitmap);
 
-        //ssize_t doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout=5000);
-        //ssize_t doSync(uintptr_t queueHead);
+        ssize_t doSync(uintptr_t nTransaction, uint32_t timeout=5000);
 
         virtual UsbSpeed getHubSpeed()
         {
             return LowSpeed;
         }
 
-		virtual ssize_t sync();
-
     private:
 
-        Mutex m_SyncMutex;
-        Semaphore m_SyncSemaphore;
-        ssize_t m_SyncRet;
+        typedef struct SyncParam
+        {
+            inline SyncParam() : semaphore(0), nResult(-1) {}
+
+            Semaphore semaphore;
+            ssize_t nResult;
+        } SyncParam;
 
         static void syncCallback(uintptr_t pParam, ssize_t ret);
 };

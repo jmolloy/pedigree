@@ -42,7 +42,10 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     // Get first unused address and check it
     uint8_t nAddress = pUsedAddresses->getFirstClear();
     if(nAddress > 127)
-        FATAL("USB: HUB: Out of addresses!");
+    {
+        ERROR("USB: HUB: Out of addresses!");
+        return;
+    }
 
     // Create the UsbDevice instance and set us as parent
     UsbDevice *pDevice = new UsbDevice();
@@ -53,7 +56,10 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     pDevice->setSpeed(speed);
     // Assign the address we've chosen
     if(!pDevice->assignAddress(nAddress))
+    {
+        ERROR("USB: HUB: address assignation failed!");
         return;
+    }
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
@@ -84,7 +90,7 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         // Set the right interface
         pDevice->useInterface(i);
         NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
-        // TODO: make this a bit more general... harcoding some numbers and some class names doesn't sound good :|
+        /// \todo make this a bit more general. harcoding some numbers and some class names doesn't sound good
         addChild(pDevice);
         if(pInterface->pDescriptor->nClass == 9)
             replaceChild(pDevice, new UsbHubDevice(pDevice));
@@ -125,28 +131,24 @@ void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
 {
     if(!pParam)
         return;
-    UsbHub *pHub = reinterpret_cast<UsbHub*>(pParam);
-    pHub->m_SyncRet = nResult;
-    pHub->m_SyncSemaphore.release();
+    SyncParam *pSyncParam = reinterpret_cast<SyncParam*>(pParam);
+    pSyncParam->nResult = nResult;
+    pSyncParam->semaphore.release();
 }
 
-ssize_t UsbHub::sync()
-{
-    LockGuard<Mutex> guard(m_SyncMutex);
-	m_SyncSemaphore.acquire(); /// \todo Timeout
-	return m_SyncRet;
-}
 
-/*
-ssize_t UsbHub::doSync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, size_t nBytes, uint32_t timeout)
+ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
 {
-    LockGuard<Mutex> guard(m_SyncMutex);
-    doAsync(endpointInfo, nPid, pBuffer, nBytes, syncCallback, reinterpret_cast<uintptr_t>(static_cast<UsbHub*>(this)));
-    m_SyncSemaphore.acquire(1);/*, 0, timeout * 1000);
-    if(Processor::information().getCurrentThread()->wasInterrupted())
-        return -1;
-    else
-        */ /*
-    return m_SyncRet;
+    // Create a structure to hold the semaphore and the result
+    SyncParam *pSyncParam = new SyncParam();
+    // Send the async request
+    doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
+    // Wait for the semaphore to release
+    pSyncParam->semaphore.acquire(1);//, 0, timeout * 1000);
+    // Delete our structure and return the result
+    delete pSyncParam;
+    //if(Processor::information().getCurrentThread()->wasInterrupted())
+    //    return -1;
+    //else
+        return pSyncParam->nResult;
 }
-*/

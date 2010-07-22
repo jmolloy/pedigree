@@ -31,24 +31,10 @@ class UsbHubDevice : public UsbDevice, public UsbHub
             str = "USB Hub Device";
         }
 
-     /*   virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
-        virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
-
-        virtual uintptr_t createTD(uintptr_t pNext, bool bToggle, bool bDirection, bool bIsSetup, void *pData, size_t nBytes)
-        {
-            UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-            if(!pParent)
-                return 0;
-            return pParent->createTD(pNext, bToggle, bDirection, bIsSetup, pData, nBytes);
-        }
-
-        virtual uintptr_t createQH(uintptr_t pNext, uintptr_t pFirstQTD, size_t qTDCount, bool head, UsbEndpoint &endpointInfo, QHMetaData *pMetaData)
-        {
-            UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-            if(!pParent)
-                return 0;
-            return pParent->createQH(pNext, pFirstQTD, qTDCount, head, endpointInfo, pMetaData);
-        }*/
+        virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
+        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
     private:
 

@@ -49,11 +49,14 @@ class UsbDevice : public virtual Device
 
         typedef struct Setup
         {
-            uint8_t req_type;
-            uint8_t req;
-            uint16_t val;
-            uint16_t index;
-            uint16_t len;
+            inline Setup(uint8_t requestType, uint8_t request, uint16_t value, uint16_t index, uint16_t length) :
+                nRequestType(requestType), nRequest(request), nValue(value), nIndex(index), nLength(length) {}
+
+            uint8_t nRequestType;
+            uint8_t nRequest;
+            uint16_t nValue;
+            uint16_t nIndex;
+            uint16_t nLength;
         } PACKED Setup;
 
         typedef struct UnknownDescriptor
@@ -276,14 +279,13 @@ class UsbDevice : public virtual Device
         }
 
         /** Transfer methods */
-        ssize_t doSync(Endpoint *pEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes);
+        ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncSetup(Setup *pSetup);
         ssize_t syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
 
-        ssize_t control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len=0, uintptr_t pBuffer=0);
+        ssize_t controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
         int16_t status();
-        bool ping();
         bool assignAddress(uint8_t nAddress);
         bool useConfiguration(uint8_t nConfig);
         bool useInterface(uint8_t nInterface);
@@ -307,8 +309,6 @@ class UsbDevice : public virtual Device
 
         UsbDevice(const UsbDevice &d);
         const UsbDevice& operator = (const UsbDevice& d);
-
-		static void syncCallback(uintptr_t pParam, ssize_t ret);
 };
 
 #endif

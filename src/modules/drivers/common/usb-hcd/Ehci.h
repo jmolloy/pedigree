@@ -106,9 +106,9 @@ class Ehci : public UsbHub,
                 uintptr_t pParam;
 
                 bool bPeriodic;
-                uintptr_t nFirstQTDIndex;
-				qTD *pFirstQTD;
+                qTD *pFirstQTD;
                 qTD *pLastQTD;
+                size_t nTotalBytes;
 
                 // List<ssize_t*> pParam; /// Stores all results from each qTD in this queue head
                 // uintptr_t pSemaphore;
@@ -117,7 +117,7 @@ class Ehci : public UsbHub,
                 //uint16_t nBufferSize;
                 //uint16_t nBufferOffset;
 
-                size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
+                //size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
             }  MetaData;
 
             MetaData *pMetaData;
@@ -129,8 +129,8 @@ class Ehci : public UsbHub,
         }
 
         virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
-        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
-        virtual void doAsync(uintptr_t pTransaction);
+        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         virtual UsbSpeed getSpeed()

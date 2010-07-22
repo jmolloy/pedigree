@@ -73,7 +73,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         return;
     }
 
-    //control(0x21, 0x0b, 1, m_pInterface->pDescriptor->nInterface);
+    //controlRequest(0x21, 0x0b, 1, m_pInterface->pDescriptor->nInterface);
 
     uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
     uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, RequestRecipient::Interface));

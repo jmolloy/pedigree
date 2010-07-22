@@ -22,16 +22,31 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_t pBuffer, size_t nBytes)
-{/*
-    FATAL("doSync");
+ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
+{
     if(!pEndpoint)
-        FATAL("USB: UsbDevice::doSync called with invalid endpoint");
+    {
+        ERROR("USB: UsbDevice::doSync called with invalid endpoint");
+        return -1;
+    }
+
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
-        FATAL("USB: Orphaned UsbDevice!");
-    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, pEndpoint->nMaxPacketSize, m_Speed);
-    if(nBytes > pEndpoint->nMaxPacketSize)
+    {
+        ERROR("USB: Orphaned UsbDevice!");
+        return -1;
+    }
+
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, m_Speed, pEndpoint->nMaxPacketSize);
+    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
+    if(nTransaction == static_cast<uintptr_t>(-1))
+    {
+        ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
+        return -1;
+    }
+
+    pParentHub->addTransferToTransaction(nTransaction, pEndpoint->bDataToggle, pid, pBuffer, nBytes);
+    /*if(nBytes > pEndpoint->nMaxPacketSize)
     {
         for(size_t i=0;i<nBytes;)
         {
@@ -42,11 +57,12 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, uint8_t nPid, uintptr_
             pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
         }
         return nBytes;
-    }
-    ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
+    }*/
+
+    //ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
+    ssize_t nResult = pParentHub->doSync(nTransaction);
     pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
-    return nResult;*/
-	return -1;
+    return nResult;
 }
 
 ssize_t UsbDevice::syncSetup(Setup *setup)
@@ -64,83 +80,63 @@ ssize_t UsbDevice::syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
     return doSync(m_pEndpoints[nEndpoint], UsbPidOut, pBuffer, nBytes);
 }
 
-void UsbDevice::syncCallback(uintptr_t pParam, ssize_t nResult)
+ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength, uintptr_t pBuffer)
 {
-    if(!pParam)
-        return;
-    UsbHub *pHub = reinterpret_cast<UsbHub*>(pParam);
-    pHub->m_SyncRet = nResult;
-    pHub->m_SyncSemaphore.release();
-}
-
-ssize_t UsbDevice::control(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index, uint16_t len, uintptr_t pBuffer)
-{
-    Setup *pSetup = new Setup;
-    pSetup->req_type = req_type;
-    pSetup->req = req;
-    pSetup->val = val;
-    pSetup->index = index;
-    pSetup->len = len;
-
-	PointerGuard<Setup> guard(pSetup);
+    // Setup structure - holds request details
+    Setup *pSetup = new Setup(nRequestType, nRequest, nValue, nIndex, nLength);
+    PointerGuard<Setup> guard(pSetup);
 
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
+    {
         ERROR("USB: Orphaned UsbDevice!");
+        return -1;
+    }
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, 0, m_Speed, 64);
 
-    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo, syncCallback);
-	if(nTransaction == static_cast<uintptr_t>(-1))
-	{
-		ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
-		return -1;
-	}
+    uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
+    if(nTransaction == static_cast<uintptr_t>(-1))
+    {
+        ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
+        return -1;
+    }
 
     // Setup Transfer - handles the SETUP phase of the transfer
     pParentHub->addTransferToTransaction(nTransaction, false, UsbPidSetup, reinterpret_cast<uintptr_t>(pSetup), sizeof(Setup));
 
     // Data Transfer - handles data transfer
-    if(len)
-        pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidIn : UsbPidOut, pBuffer, len);
+    if(nLength)
+        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & 0x80 ? UsbPidIn : UsbPidOut, pBuffer, nLength);
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
-    pParentHub->addTransferToTransaction(nTransaction, true, req_type & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
+    pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
 
-    pParentHub->doAsync(nTransaction);
-
-	// Wait for the transaction to complete, return result
-	return pParentHub->sync();
+    // Wait for the transaction to complete, return result
+    return pParentHub->doSync(nTransaction);
 }
 
 int16_t UsbDevice::status()
 {
-    uint16_t s;
-    ssize_t r = control(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(&s));
-    if(r<0)
-        return r;
-    return s;
-}
-
-bool UsbDevice::ping()
-{
-    return status()>=0;
+    uint16_t nStatus;
+    ssize_t nResult = controlRequest(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(&nStatus));
+    if(nResult < 0)
+        return nResult;
+    return nStatus;
 }
 
 bool UsbDevice::assignAddress(uint8_t nAddress)
 {
-    if(!control(0, 5, nAddress, 0))
-    {
-        m_nAddress = nAddress;
-        return true;
-    }
-    return false;
+    if(controlRequest(0, 5, nAddress, 0) < 0)
+        return false;
+    m_nAddress = nAddress;
+    return true;
 }
 
 bool UsbDevice::useConfiguration(uint8_t nConfig)
 {
     m_pConfiguration = m_pDescriptor->pConfigurations[nConfig];
-    return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+    return !controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
 }
 
 bool UsbDevice::useInterface(uint8_t nInterface)
@@ -168,14 +164,14 @@ bool UsbDevice::useInterface(uint8_t nInterface)
         }
     }
     return true;
-    //return !control(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+    //return !controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
 }
 
 void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
 {
     uint8_t *pBuffer = new uint8_t[nBytes];
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
-    if(control(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
+    if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
     {
         delete [] pBuffer;
         return 0;
@@ -187,7 +183,7 @@ uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescript
 {
     uint8_t pLength;
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
-    if(control(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
+    if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
         return 0;
     return pLength;
 }
