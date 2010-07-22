@@ -50,7 +50,7 @@ do \
     } \
 } while(0)
 
-Ehci::Ehci(Device* pDev) : Device(pDev), m_EhciMR("Ehci-MR")
+Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0), m_EhciMR("Ehci-MR")
 {
     setSpecificType(String("EHCI"));
 
@@ -115,10 +115,51 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_EhciMR("Ehci-MR")
 
     delay(5);
 
+    // Create a dummy QH and qTD
+    m_QHBitmap.set(0); m_qTDBitmap.set(0);
+    QH *pDummyQH = &m_pQHList[0];
+    qTD *pDummyTD = &m_pqTDList[0];
+    memset(pDummyQH, 0, sizeof(QH));
+    memset(pDummyTD, 0, sizeof(qTD));
+
+    // Configure the dummy TD
+    pDummyTD->bNextInvalid = pDummyTD->bAltNextInvalid = 1;
+
+    // Configure the dummy QH
+    pDummyQH->pNext = m_pQHListPhys >> 5;
+    pDummyQH->nNextType = 1;
+
+    pDummyQH->pQTD = m_pqTDListPhys >> 5;
+    pDummyQH->mult = 1;
+    pDummyQH->hrcl = 1;
+
+    pDummyQH->pMetaData = new QH::MetaData;
+    memset(pDummyQH->pMetaData, 0, sizeof(QH::MetaData));
+    pDummyQH->pMetaData->pFirstQTD = 0;
+    pDummyQH->pMetaData->pLastQTD = pDummyTD;
+    pDummyQH->pMetaData->pNext = pDummyQH;
+    pDummyQH->pMetaData->pPrev = pDummyQH;
+    pDummyQH->pMetaData->qTDCount = 1; // Will never actually complete
+
+    memcpy(&pDummyQH->overlay, pDummyTD, sizeof(qTD));
+
+    m_pCurrentQueueHead = m_pCurrentQueueTail = pDummyQH;
+
+    // Disable the asynchronous schedule, and wait for it to become disabled
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000);
+
+    // Write the async list head pointer
+    m_pBase->write32(m_pQHListPhys, m_nOpRegsOffset+EHCI_ASYNCLP);
+
     // Turn on the controller
     resume();
 
     delay(5);
+
+    // Enable the asynchronous schedule, and wait for it to become enabled
+    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
+    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
 
     // Set the desired interrupt threshold (frame list size = 4096 bytes)
     m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset+EHCI_CMD);
@@ -156,6 +197,58 @@ Ehci::~Ehci()
 {
 }
 
+int threadStub(void *p)
+{
+    Ehci *pEhci = reinterpret_cast<Ehci*>(p);
+    pEhci->doDequeue();
+    return 0;
+}
+
+void Ehci::doDequeue()
+{
+    // Absolutely cannot have queue insetions during a dequeue
+    LockGuard<Mutex> guard(m_Mutex);
+
+    // Modifying the schedule, pause the controller
+    pause();
+
+    for(size_t i = 1; i < 128; i++)
+    {
+        if(!m_QHBitmap.test(i))
+            continue;
+
+        QH *pQH = &m_pQHList[i];
+
+        /// \todo Won't dequeue on error!
+        if(!pQH->pMetaData->qTDCount)
+        {
+            NOTICE_NOLOCK("Dequeue for " << Dec << i << Hex << "...");
+
+            // If we're the tail, we need to update that pointer to let future
+            // queue insertions work
+            if(pQH == m_pCurrentQueueTail);
+            {
+                m_pCurrentQueueTail = pQH->pMetaData->pPrev;
+            }
+
+            // Was the reclaim head bit set?
+            if(pQH->hrcl)
+                pQH->pMetaData->pNext->hrcl = 1; // Make sure there's always a reclaim head
+
+            // This queue head is done, dequeue.
+            /// \todo This dequeue shouldn't actually happen yet, section 4.8.2 in the EHCI spec
+            pQH->pMetaData->pPrev->pNext = pQH->pMetaData->pNext->pNext;
+            pQH->pMetaData->pPrev->pMetaData->pNext = pQH->pMetaData->pNext;
+
+            // This QH is done
+            m_QHBitmap.clear(i);
+        }
+    }
+
+    // Done with the schedule, resume
+    resume();
+}
+
 #ifdef X86_COMMON
 bool Ehci::irq(irq_id_t number, InterruptState &state)
 #else
@@ -168,13 +261,14 @@ void Ehci::interrupt(size_t number, InterruptState &state)
         for(size_t i = 0;i < m_nPorts;i++)
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CSCH)
                 addAsyncRequest(1, i);
+    pause();
     if(nStatus & EHCI_STS_INT)
     {
-        pause();
-        for(size_t i = 0; i < 128; i++)
+        for(size_t i = 1; i < 128; i++)
         {
             if(!m_QHBitmap.test(i))
                 continue;
+
             QH *pQH = &m_pQHList[i];
             bool bPeriodic = pQH->pMetaData->bPeriodic;
 
@@ -185,14 +279,14 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 if(pqTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
-                    if(pqTD->nStatus & 0x7c || nStatus & EHCI_STS_ERR)
+                    if((pqTD->nStatus & 0x7c) && (nStatus & EHCI_STS_ERR))
                     {
                         ERROR("USB ERROR!");
                         ERROR("qTD Status: " << pqTD->nStatus << " [overlay status=" << pQH->overlay.nStatus << "]");
                         ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
                         ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
                         ERROR("qTD PID: " << pqTD->nPid << ".");
-                        nResult = -pqTD->nStatus & 0x7c;
+                        nResult = -(pqTD->nStatus & 0x7c);
                     }
                     else
                     {
@@ -201,32 +295,29 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                     }
                     DEBUG_LOG("qTD DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
 
-                    // Last qTD or error condition?
-                    if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
+					// Last qTD or error condition?
+					if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
+					{
+						// Valid callback?
+						if(pQH->pMetaData->pCallback)
+						{
+							pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
+						}
+					}
+                    if(!bPeriodic)
                     {
-                        // Valid callback?
-                        if(pQH->pMetaData->pCallback)
-                        {
-                            pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
-                            DEBUG_LOG("QH DONE " << Dec << nResult << " " << pQH->pMetaData->nTotalBytes << Hex);
-                        }
+						// A handled qTD, hurrah!
+						pQH->pMetaData->qTDCount--;
 
-                        // Either way, it's a handled QH
-                        //pQH->pMetaData->qTDCount--;
-                        if(!bPeriodic)
+						/// \todo Errors will leave qTDs unfreed
+                        /// \todo Errors will leave qTDs active!
+                        if(!pQH->pMetaData->qTDCount) // This count starts from one, not zero
                         {
-                            size_t n = INDEX_FROM_QTD(pQH->pMetaData->pFirstQTD);
-                            while(true)
-                            {
-                                m_qTDBitmap.clear(n);
-                                if(m_pqTDList[n].bNextInvalid)
-                                    break;
-                                else
-                                    n = ((m_pqTDList[n].pNext << 5) & 0xFFF) / sizeof(qTD);
-                            }
-                            m_QHBitmap.clear(i);
+                            // Interrupt on Async Advance Doorbell - notifies us when the host controller
+                            // has evicted scheduled state, allowing us to perform a dequeue
+                            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | (1 << 6), m_nOpRegsOffset + EHCI_CMD);
                         }
-                        break;
+                        m_qTDBitmap.clear(nQTDIndex);
                     }
                     // Interrupt qTDs need constant refresh
                     if(bPeriodic)
@@ -244,14 +335,21 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         memcpy(&pQH->overlay, pqTD, sizeof(qTD));
                     }
                 }
+
                 if(pqTD->bNextInvalid)
                     break;
                 else
                     nQTDIndex = ((pqTD->pNext << 5) & 0xFFF) / sizeof(qTD);
             }
         }
-        resume();
     }
+        
+    if(nStatus & EHCI_STS_ASYNCADVANCE)
+    {
+        new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+    }
+
+    resume();
     m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
 
 #ifdef X86_COMMON
@@ -331,10 +429,19 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
         GET_PAGE(pqTD->pPage0, 0, nIndex);
-        GET_PAGE(pqTD->pPage1, 1, nIndex);
-        GET_PAGE(pqTD->pPage2, 2, nIndex);
-        GET_PAGE(pqTD->pPage3, 3, nIndex);
-        GET_PAGE(pqTD->pPage4, 4, nIndex);
+        if(nBytes >= 0x1000)
+            GET_PAGE(pqTD->pPage1, 1, nIndex);
+        if(nBytes >= 0x2000)
+            GET_PAGE(pqTD->pPage2, 2, nIndex);
+        if(nBytes >= 0x3000)
+            GET_PAGE(pqTD->pPage3, 3, nIndex);
+        if(nBytes >= 0x4000)
+            GET_PAGE(pqTD->pPage4, 4, nIndex);
+        if(nBytes >= 0x5000)
+        {
+            ERROR("EHCI: addTransferToTransaction: Too many bytes for a single transaction!");
+            return;
+        }
     }
 
     // Grab transaction's QH and add our qTD to it
@@ -388,7 +495,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     // NAK counter reload = 15
     pQH->nNakReload = 15;
 
-    // Head of the reclaim list - if zero, this QH is "idle"
+    // Head of the reclaim list
     pQH->hrcl = true;
 
     // LS/FS handling
@@ -436,111 +543,49 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     pQH->pMetaData->pParam = pParam;
     DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
 
-    // Pause the controller
+    // Pause the controller, avoid races
     pause();
 
-    // Disable the asynchronous schedule, and wait for it to become disabled
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000);
-
-    // Write the async list head pointer
-    m_pBase->write32(m_pQHListPhys + nTransaction * sizeof(QH), m_nOpRegsOffset+EHCI_ASYNCLP);
-
-    // Start the controller
-    resume();
-
-    // Re-enable the asynchronous schedule, and wait for it to become enabled
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
-}
-/*
-void Ehci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
-{
-    FATAL("old doAsync called");
-
-    LockGuard<Mutex> guard(m_Mutex);
-    DEBUG_LOG("START "<<Dec<<endpointInfo.nAddress<<":"<<endpointInfo.nEndpoint<<" "<<endpointInfo.dumpSpeed()<<" "<<(nPid==UsbPidOut?" OUT ":(nPid==UsbPidIn?" IN  ":(nPid==UsbPidSetup?"SETUP":"")))<<" "<<nBytes<<Hex);
-
-    // Pause the controller
-    pause();
-
-    // Get a buffer somewhere in our transfer pages
-    uintptr_t nBufferOffset = 0;
-    if(nBytes)
+    // Do we need to configure the asynchronous schedule?
+    if(m_pCurrentQueueTail)
     {
-        if(!m_TransferPagesAllocator.allocate(nBytes, nBufferOffset))
-            FATAL("USB: EHCI: Buffers full :(");
-        if(nPid != UsbPidIn && pBuffer)
-            memcpy(&m_pTransferPages[nBufferOffset], reinterpret_cast<void*>(pBuffer), nBytes);
+        // No, we don't. Configure away!
+        m_pCurrentQueueTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
+        m_pCurrentQueueTail->nNextType = 1; // QH
+
+        // This QH is NOT the queue head. If we leave this set to one, and the
+        // reclaim bit is set, the controller will think it's executed a full
+        // circle, when in fact it's only partway there.
+        pQH->hrcl = 0;
+
+        // Complete the ring
+        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
+        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
+
+        // Enter the information for correct dequeue
+        pQH->pMetaData->pNext = m_pCurrentQueueHead;
+        pQH->pMetaData->pPrev = m_pCurrentQueueTail;
+
+        // Fix the linked list
+        m_pCurrentQueueTail->pMetaData->pNext = pQH;
+        m_pCurrentQueueHead->pMetaData->pPrev = pQH;
+
+        // Update the tail
+        m_pCurrentQueueTail = pQH;
+
+        // No longer reclaiming
+        m_pCurrentQueueHead->hrcl = 1;
+
+        // Linked in, resume and all done
+        resume();
+        return;
     }
-
-    // Get an unused QH
-    size_t nQHIndex = m_QHBitmap.getFirstClear();
-    if(nQHIndex > 127)
-        FATAL("USB: EHCI: QH/qTD space full :(");
-    m_QHBitmap.set(nQHIndex);
-
-    QH *pQH = &m_pQHList[nQHIndex];
-    memset(pQH, 0, sizeof(QH));
-    pQH->pNext = (m_pQHListPhys+nQHIndex*sizeof(QH))>>5;
-    pQH->nNextType = 1;
-    pQH->nNakReload = 15;
-    pQH->nMaxPacketSize = 8;
-    pQH->bControlEndpoint = endpointInfo.speed != HighSpeed && !endpointInfo.nEndpoint;
-    pQH->hrcl = 1;
-    pQH->bDataToggleSrc = 1;
-    pQH->nSpeed = endpointInfo.speed;
-    pQH->nEndpoint = endpointInfo.nEndpoint;
-    pQH->nAddress = endpointInfo.nAddress;
-    pQH->nHubAddress = endpointInfo.speed != HighSpeed?endpointInfo.nHubAddress:0;
-    pQH->nHubPort = endpointInfo.speed != HighSpeed?endpointInfo.nHubPort:0;
-    pQH->mult = 1;
-    pQH->pQTD = (m_pqTDListPhys+nQHIndex*sizeof(qTD))>>5;
-
-    QHMetaData *pMetaData = new QHMetaData;
-    pQH->pMetaData = pMetaData;
-
-    // pMetaData->pCallback = reinterpret_cast<uintptr_t>(pCallback);
-    // pMetaData->pParam = pParam;
-    pMetaData->pBuffer = pBuffer;
-    pMetaData->nBufferSize = nBytes;
-    pMetaData->nBufferOffset = nBufferOffset;
-
-    qTD *pqTD = &m_pqTDList[nQHIndex];
-    memset(pqTD, 0, sizeof(qTD));
-    pqTD->bNextInvalid = 1;
-    pqTD->bAltNextInvalid = 1;
-    pqTD->bDataToggle = endpointInfo.bDataToggle;
-    pqTD->nBytes = nBytes;
-    pqTD->bIoc = 1;
-    pqTD->nPage = nBufferOffset/0x1000;
-    pqTD->nErr = 1;
-    pqTD->nPid = nPid==UsbPidOut?0:(nPid==UsbPidIn?1:(nPid==UsbPidSetup?2:3));
-    pqTD->nStatus = 0x80;
-    pqTD->pPage0 = m_pTransferPagesPhys>>12;
-    pqTD->nOffset = nBufferOffset%0x1000;
-    pqTD->pPage1 = (m_pTransferPagesPhys+0x1000)>>12;
-    pqTD->pPage2 = (m_pTransferPagesPhys+0x2000)>>12;
-    pqTD->pPage3 = (m_pTransferPagesPhys+0x3000)>>12;
-    pqTD->pPage4 = (m_pTransferPagesPhys+0x4000)>>12;
-
-    memcpy(&pQH->overlay, pqTD, sizeof(qTD));
-
-    // Make sure we've disabled the async schedule
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) & ~EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-    while(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000);
-
-    // Write the async list pointer
-    m_pBase->write32(m_pQHListPhys+nQHIndex*sizeof(QH), m_nOpRegsOffset+EHCI_ASYNCLP);
-
-    // Start the controller
-    resume();
-
-    // Enable async schedule
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset+EHCI_CMD);
-    while(!(m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & 0x8000));
+    else
+    {
+        ERROR("EHCI: Queue tail is null!");
+    }
 }
-*/
+
 void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
     LockGuard<Mutex> guard(m_Mutex);
