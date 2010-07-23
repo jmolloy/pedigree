@@ -197,6 +197,13 @@ Ehci::~Ehci()
 {
 }
 
+int threadStub(void *p)
+{
+    Ehci *pEhci = reinterpret_cast<Ehci*>(p);
+    pEhci->doDequeue();
+    return 0;
+}
+
 void Ehci::doDequeue()
 {
     // Absolutely cannot have queue insetions during a dequeue
@@ -274,6 +281,10 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 continue;
 
             QH *pQH = &m_pQHList[i];
+            if(!pQH->pMetaData) // This QH isn't actually ready to be handled yet.
+                continue;
+            if(!(pQH->pMetaData->pPrev && pQH->pMetaData->pNext)) // This QH isn't actually linked yet
+                continue;
             if(pQH->pMetaData->bIgnore)
                 continue;
 
@@ -301,7 +312,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         nResult = pqTD->nBufferSize - pqTD->nBytes;
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
-                    DEBUG_LOG("qTD DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
+                    DEBUG_LOG("qTD #" << Dec << nQTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
 
                     // Last qTD or error condition?
                     if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
@@ -371,16 +382,29 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                     }
                 }
 
+                size_t oldIndex = nQTDIndex;
+
                 if(pqTD->bNextInvalid)
                     break;
                 else
                     nQTDIndex = ((pqTD->pNext << 5) & 0xFFF) / sizeof(qTD);
+
+                if(nQTDIndex == oldIndex)
+                {
+                    ERROR("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - circular reference!");
+                    break;
+                }
+                else if(pqTD->pNext == 0)
+                {
+                    ERROR("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - null pNext pointer (and T bit not set)!");
+                    break;
+                }
             }
         }
     }
         
     if(nStatus & EHCI_STS_ASYNCADVANCE)
-        addAsyncRequest(1, 3);
+        new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
     m_pBase->write32(nStatus, m_nOpRegsOffset+EHCI_STS);
 
@@ -519,8 +543,6 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     memset(pQH, 0, sizeof(QH));
 
     // Loop back on this QH for now
-    /// \todo Live queue and dequeue
-    /// \todo Get from the pNext parameter
     pQH->pNext = (m_pQHListPhys + nIndex * sizeof(QH)) >> 5;
     pQH->nNextType = 1;
 
@@ -550,13 +572,17 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     pQH->mult = 1;
 
     // Setup the metadata
-    pQH->pMetaData = new QH::MetaData();
-    pQH->pMetaData->bPeriodic = false;
-    pQH->pMetaData->pFirstQTD = 0;
-    pQH->pMetaData->pLastQTD = 0;
-    pQH->pMetaData->qTDCount = 0;
-    pQH->pMetaData->nTotalBytes = 0;
-    pQH->pMetaData->bIgnore = false;
+    QH::MetaData *pMetaData = new QH::MetaData();
+    pMetaData->bPeriodic = false;
+    pMetaData->pFirstQTD = 0;
+    pMetaData->pLastQTD = 0;
+    pMetaData->qTDCount = 0;
+    pMetaData->pNext = 0;
+    pMetaData->pPrev = 0;
+    pMetaData->nTotalBytes = 0;
+    pMetaData->bIgnore = false;
+
+    pQH->pMetaData = pMetaData;
 
     // Complete
     return nIndex;
@@ -574,7 +600,7 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     QH *pQH = &m_pQHList[nTransaction];
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
-    DEBUG_LOG("START " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
+    DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
 
     // Do we need to configure the asynchronous schedule?
     if(m_pCurrentQueueTail)
@@ -714,13 +740,6 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
-    // Dequeue request?
-    if(p1 == 3)
-    {
-        doDequeue();
-        return 0;
-    }
-
     // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4) & EHCI_PORTSC_CONN)
     {
