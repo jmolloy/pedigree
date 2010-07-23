@@ -207,14 +207,6 @@ char *UsbDevice::getString(uint8_t nString)
         return pString;
     }
 
-    // Get string information!
-    uint8_t infoLength = getDescriptorLength(3, 0);
-    char *pData = static_cast<char*>(getDescriptor(3, 0, infoLength));
-    for(uint8_t i = 0; i < infoLength; i++)
-    {
-        NOTICE("pData[" << Dec << i << Hex << "] = " << static_cast<uint32_t>(pData[i]));
-    }
-
     uint8_t descriptorLength = getDescriptorLength(3, nString);
     char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
     if(pBuffer)
