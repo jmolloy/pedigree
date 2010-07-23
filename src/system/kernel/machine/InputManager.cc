@@ -15,6 +15,8 @@
  */
 
 #include <machine/InputManager.h>
+#include <machine/Machine.h>
+#include <machine/Timer.h>
 #include <LockGuard.h>
 #include <Log.h>
 
@@ -71,7 +73,7 @@ class InputEvent : public Event
 InputManager InputManager::m_Instance;
 
 InputManager::InputManager() :
-    m_KeyQueue(), m_QueueLock(), m_KeyCallbacks()
+    m_KeyQueue(), m_KeyStates(), m_nKeysDown(0), m_QueueLock(), m_nTickCount(0), m_KeyCallbacks()
 #ifdef THREADS
     , m_KeyQueueSize(0), m_pThread(0)
 #endif
@@ -91,27 +93,6 @@ void InputManager::initialise()
                            reinterpret_cast<void*> (this));
 #else
     WARNING("InputManager: No thread support, no worker thread will be active");
-#endif
-}
-
-void InputManager::keyPressed(uint64_t key)
-{
-#ifdef THREADS
-    LockGuard<Spinlock> guard(m_QueueLock);
-    m_KeyQueue.pushBack(key);
-    m_KeyQueueSize.release();
-#else
-    // No need for locking, as no threads exist
-    for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
-        it != m_KeyCallbacks.end();
-        it++)
-    {
-        if(*it)
-        {
-            callback_t func = (*it)->func;
-            func(key);
-        }
-    }
 #endif
 }
 
@@ -152,6 +133,63 @@ void InputManager::removeCallback(CallbackType type, callback_t callback, Thread
             }
         }
     }
+}
+
+void InputManager::keyDown(uint64_t key)
+{
+    LockGuard<Spinlock> guard(m_QueueLock);
+
+    if(!m_nKeysDown)
+        Machine::instance().getTimer()->registerHandler(this);
+
+    // Is the key already considered "down"?
+    if(!m_KeyStates.lookup(key))
+    {
+        m_KeyStates.insert(key, true);
+        m_nKeysDown++;
+    
+        // First keypress always sent straight away, repeating keystrokes
+        // are transferred as necessary
+        m_KeyQueue.pushBack(key);
+        m_KeyQueueSize.release();
+    }
+}
+
+void InputManager::keyUp(uint64_t key)
+{
+    LockGuard<Spinlock> guard(m_QueueLock);
+
+    // Is the key actually pressed?
+    if(m_KeyStates.lookup(key))
+    {
+        m_KeyStates.remove(key);
+        m_nKeysDown--;
+    }
+}
+
+void InputManager::timer(uint64_t delta, InterruptState &state)
+{
+    LockGuard<Spinlock> guard(m_QueueLock);
+
+    m_nTickCount++;
+    if(m_nTickCount >= 30000000)
+    {
+
+        for(Tree<uint64_t, bool>::Iterator it = m_KeyStates.begin(); it != m_KeyStates.end(); ++it)
+        {
+            if(!it.value())
+                continue;
+
+            m_KeyQueue.pushBack(it.key());
+            m_KeyQueueSize.release();
+        }
+
+        m_nTickCount = 0;
+    }
+
+    // If we've got no more keys being held down, release the handler
+    if(!m_nKeysDown)
+        Machine::instance().getTimer()->unregisterHandler(this);
 }
 
 int InputManager::trampoline(void *ptr)

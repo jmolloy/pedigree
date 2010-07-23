@@ -266,7 +266,9 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
         m_BufEnd = m_BufEnd%BUFLEN;
         m_BufLength.release(1);
 
-        InputManager::instance().keyPressed(c);
+        /// \todo Return the old keyPress *alongside* keyDown/keyUp so this isn't ugly.
+        InputManager::instance().keyDown(c);
+        InputManager::instance().keyUp(c);
     }
 
     return true;

@@ -20,12 +20,13 @@
 #include <processor/types.h>
 #include <utilities/List.h>
 #include <process/Semaphore.h>
+#include <machine/Timer.h>
 #include <Spinlock.h>
 
 /**
  * Global manager for all input from HID devices.
  */
-class InputManager
+class InputManager : public TimerHandler
 {
     private:
         /// Callback function type
@@ -56,7 +57,13 @@ class InputManager
         }
 
         /// Called whenever a key is pressed and needs to be added to the queue
-        void keyPressed(uint64_t key);
+        // void keyPressed(uint64_t key);
+
+        /// Called when a key transitions to the "down" state
+        void keyDown(uint64_t key);
+
+        /// Called when a key transitions to the "up" state
+        void keyUp(uint64_t key);
 
         /// Installs a callback for a specific item
         void installCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
@@ -69,6 +76,10 @@ class InputManager
 
         /// Main worker thread
         void mainThread();
+
+        /// Timer callback to handle repeating key press states
+        /// when a key is held in the down state.
+        void timer(uint64_t delta, InterruptState &state);
 
     private:
         /// Static instance
@@ -89,14 +100,23 @@ class InputManager
 #endif
         };
 
-        /// Key press queue
+        /// Key press queue (for distribution to applications)
         List<uint64_t> m_KeyQueue;
+
+        /// Current key states (for periodic callbacks while a key is down)
+        Tree<uint64_t, bool> m_KeyStates;
+
+        /// Number of keys presently in the "down" state
+        size_t m_nKeysDown;
 
         /// Spinlock for work on queues.
         /// \note Using a Spinlock here because a lot of our work will happen
         ///       in the middle of an IRQ where it's potentially dangerous to
         ///       reschedule (which may happen with a Mutex or Semaphore).
         Spinlock m_QueueLock;
+
+        /// Tick count for timers
+        size_t m_nTickCount;
 
         /// Callback list
         /// \todo When more callback types are created, add handling for them
