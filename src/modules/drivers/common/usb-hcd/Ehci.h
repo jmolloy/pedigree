@@ -202,6 +202,8 @@ class Ehci : public UsbHub,
 
         Mutex m_Mutex;
 
+        Spinlock m_QueueListChangeLock;
+
         QH *m_pQHList;
         uintptr_t m_pQHListPhys;
         ExtensibleBitmap m_QHBitmap;

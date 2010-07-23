@@ -223,7 +223,6 @@ void Ehci::doDequeue()
             continue;
         }
 
-        /// \todo Won't dequeue on error!
         if(!pQH->pMetaData->qTDCount)
         {
             // Remove all qTDs
@@ -345,7 +344,10 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 
                             // Update the tail pointer if we need to
                             if(pQH == m_pCurrentQueueTail)
+                            {
+                                LockGuard<Spinlock> guard(m_QueueListChangeLock); // Atomic operation
                                 m_pCurrentQueueTail = pPrev;
+                            }
 
                             // Interrupt on Async Advance Doorbell - will run the dequeue thread to
                             // clear bits in the QH and qTD bitmaps
@@ -577,32 +579,37 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     // Do we need to configure the asynchronous schedule?
     if(m_pCurrentQueueTail)
     {
-        // Current QH needs to point to the schedule's head
-        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
-        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
-
-        QH *pOldTail = m_pCurrentQueueTail;
-
-        // Update the tail as soon as possible so if an IRQ fires we're safe
-        // (this QH isn't in the schedule yet, and so can't be dequeued!)
-        m_pCurrentQueueTail = pQH;
-
-        // Fix the linked list
-        pOldTail->pMetaData->pNext = pQH;
-        pOldTail->pMetaData->pPrev = pQH;
-
-        // And the current tail needs to point to this QH
-        pOldTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
-        pOldTail->nNextType = 1; // QH
-
         // This QH is NOT the queue head. If we leave this set to one, and the
         // reclaim bit is set, the controller will think it's executed a full
         // circle, when in fact it's only partway there.
         pQH->hrcl = 0;
 
+        // Current QH needs to point to the schedule's head
+        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
+        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
+
         // Enter the information for correct dequeue
         pQH->pMetaData->pNext = m_pCurrentQueueHead;
-        pQH->pMetaData->pPrev = pOldTail;
+        pQH->pMetaData->pPrev = m_pCurrentQueueTail;
+
+        QH *pOldTail = m_pCurrentQueueTail;
+
+        {
+            // Atomic operation - modifying both the housekeeping and the
+            // hardware linked lists
+            LockGuard<Spinlock> guard(m_QueueListChangeLock);
+
+            // Update the tail pointer
+            m_pCurrentQueueTail = pQH;
+
+            // The current tail needs to point to this QH
+            pOldTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
+            pOldTail->nNextType = 1; // QH
+
+            // Finally, fix the linked list
+            pOldTail->pMetaData->pNext = pQH;
+            pOldTail->pMetaData->pPrev = pQH;
+        }
 
         // No longer reclaiming
         m_pCurrentQueueHead->hrcl = 1;
