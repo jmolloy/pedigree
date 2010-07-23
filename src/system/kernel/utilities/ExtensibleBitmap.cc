@@ -76,14 +76,11 @@ void ExtensibleBitmap::set(size_t n)
     // Check if the bit we'll set replaces the first clear bit
     if(n == m_nFirstClearBit)
     {
-        for(size_t i = n+1;i<=sizeof(uintptr_t)*8+m_nMaxBit+1;i++)
+        do
         {
-            if(!test(i))
-            {
-                m_nFirstClearBit = i;
-                break;
-            }
+            m_nFirstClearBit++;
         }
+        while(test(m_nFirstClearBit));
     }
 
     /*if(n == m_nLastClearBit)

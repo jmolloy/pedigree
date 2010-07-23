@@ -53,6 +53,10 @@ class ExtensibleBitmap
         /** Returns the index of the first clear bit. */
         inline size_t getFirstClear()
         {
+            while(test(m_nFirstClearBit))
+            {
+                m_nFirstClearBit++;
+            }
             return m_nFirstClearBit;
         }
         /** Returns the index of the last set bit. */
