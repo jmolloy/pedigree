@@ -233,29 +233,29 @@ char *UsbDevice::getString(uint8_t nString)
 void UsbDevice::populateDescriptors()
 {
     m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, getDescriptorLength(1, 0)));
-	if(!m_pDescriptor)
-		return; /// \todo Better error handling
-	
-	// Debug dump of the device descriptor
-	DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdUsbRelease & 0xFF) << ".");
-	DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->pDescriptor->nClass << "/" << m_pDescriptor->pDescriptor->nSubclass << "/" << m_pDescriptor->pDescriptor->nProtocol);
-	DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->pDescriptor->nMaxPacketSize << Hex << " bytes.");
-	DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->pDescriptor->nVendorId << ":" << m_pDescriptor->pDescriptor->nProductId << ".");
-	DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
-	DEBUG_LOG("Device has " << Dec << m_pDescriptor->pDescriptor->nConfigurations << Hex << " configurations");
+    if(!m_pDescriptor)
+        return; /// \todo Better error handling
+    
+    // Debug dump of the device descriptor
+    DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdUsbRelease & 0xFF) << ".");
+    DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->pDescriptor->nClass << "/" << m_pDescriptor->pDescriptor->nSubclass << "/" << m_pDescriptor->pDescriptor->nProtocol);
+    DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->pDescriptor->nMaxPacketSize << Hex << " bytes.");
+    DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->pDescriptor->nVendorId << ":" << m_pDescriptor->pDescriptor->nProductId << ".");
+    DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
+    DEBUG_LOG("Device has " << Dec << m_pDescriptor->pDescriptor->nConfigurations << Hex << " configurations");
 
-	if(m_pDescriptor->pDescriptor->nVendorString)
-	    m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
-	else
-		m_pDescriptor->sVendor = "";
-	if(m_pDescriptor->pDescriptor->nProductString)
-		m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
-	else
-		m_pDescriptor->sProduct = "";
-	if(m_pDescriptor->pDescriptor->nSerialString)
-		m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
-	else
-		m_pDescriptor->sSerial = "";
+    if(m_pDescriptor->pDescriptor->nVendorString)
+        m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
+    else
+        m_pDescriptor->sVendor = "";
+    if(m_pDescriptor->pDescriptor->nProductString)
+        m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
+    else
+        m_pDescriptor->sProduct = "";
+    if(m_pDescriptor->pDescriptor->nSerialString)
+        m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
+    else
+        m_pDescriptor->sSerial = "";
     for(size_t i = 0;i < m_pDescriptor->pDescriptor->nConfigurations;i++)
     {
         uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(2, i, 4));
