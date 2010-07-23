@@ -145,13 +145,25 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
     mov r3, r7
     
     # Jump to the address - never to return
-    mov lr, #0
+    ldr lr, =_ZN6Thread12threadExitedEv
     bx r9
 
 _ZN9Processor8jumpUserEPVmmmmmmm:
     bx lr
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7SchedulerState:
+
+    # r0 = Thread to delete
+    # r1 = New thread state
+
+    # Load state, including stack pointer
+    ldmia r1, {r4 - r11, r12, sp}^
+    mov lr, r12
+   
+    # Delete the thread completely (r0 preserved above)
+    bl _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+    
+    # Complete the restore
     bx lr
     
 .section .init.text
