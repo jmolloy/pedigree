@@ -303,25 +303,25 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                     }
                     DEBUG_LOG("qTD DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
 
-					// Last qTD or error condition?
-					if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
-					{
-						// Valid callback?
-						if(pQH->pMetaData->pCallback)
-						{
-							pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
-						}
+                    // Last qTD or error condition?
+                    if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
+                    {
+                        // Valid callback?
+                        if(pQH->pMetaData->pCallback)
+                        {
+                            pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
+                        }
 
                         // Caused by error?
                         if(nResult < 0)
                             pQH->pMetaData->qTDCount = 1; // Decrement will occur in following block
-					}
+                    }
                     if(!bPeriodic)
                     {
-						// A handled qTD, hurrah!
-						pQH->pMetaData->qTDCount--;
+                        // A handled qTD, hurrah!
+                        pQH->pMetaData->qTDCount--;
 
-						/// \todo Errors will leave qTDs unfreed
+                        /// \todo Errors will leave qTDs unfreed
                         /// \todo Errors will leave qTDs active!
                         if(!pQH->pMetaData->qTDCount) // This count starts from one, not zero
                         {
