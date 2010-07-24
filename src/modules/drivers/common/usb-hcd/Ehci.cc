@@ -356,8 +356,9 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                             // Update the tail pointer if we need to
                             if(pQH == m_pCurrentQueueTail)
                             {
-                                LockGuard<Spinlock> guard(m_QueueListChangeLock); // Atomic operation
+                                m_QueueListChangeLock.acquire(); // Atomic operation
                                 m_pCurrentQueueTail = pPrev;
+                                m_QueueListChangeLock.release();
                             }
 
                             // Interrupt on Async Advance Doorbell - will run the dequeue thread to
