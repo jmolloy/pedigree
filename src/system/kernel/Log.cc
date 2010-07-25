@@ -123,19 +123,19 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
             switch(m_StaticLog[entry].type)
             {
                 case Debug:
-                    str += "(DD) ";
+                    str = "(DD) ";
                     break;
                 case Notice:
-                    str += "(NN) ";
+                    str = "(NN) ";
                     break;
                 case Warning:
-                    str += "(WW) ";
+                    str = "(WW) ";
                     break;
                 case Error:
-                    str += "(EE) ";
+                    str = "(EE) ";
                     break;
                 case Fatal:
-                    str += "(FF) ";
+                    str = "(FF) ";
                     break;
             }
             str += m_StaticLog[entry].str;
@@ -238,11 +238,11 @@ Log &Log::operator<< (Modifier type)
         {
             // We have output callbacks installed. Build the string we'll pass
             // to each callback *now* and then send it.
-            HugeStaticString str;
+            StaticString<LOG_LENGTH + 8> str; // Don't use up heaps of stack space if we can help it.
             switch(m_Buffer.type)
             {
                 case Debug:
-                    str += "(DD) ";
+                    str = "(DD) ";
                     break;
                 case Notice:
                     str = "(NN) ";
@@ -255,6 +255,9 @@ Log &Log::operator<< (Modifier type)
                     break;
                 case Fatal:
                     str = "(FF) ";
+                    break;
+                default:
+                    str = "(XX) ";
                     break;
             }
             str += m_Buffer.str;
