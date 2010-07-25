@@ -37,6 +37,13 @@
     Log::instance().m_Lock.release(); \
   } \
   while (0)
+
+#define DEBUG_LOG_NOLOCK(text) \
+  do \
+  { \
+    Log::instance() << Log::Debug << text << Flush; \
+  } \
+  while (0)
 #else
 #define DEBUG_LOG(text)
 #endif
