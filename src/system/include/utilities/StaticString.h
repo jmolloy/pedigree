@@ -75,7 +75,7 @@ public:
   /**
    * Destructor.
    */
-  ~StaticString()
+  inline virtual ~StaticString()
   {
   }
 
