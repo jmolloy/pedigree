@@ -60,7 +60,6 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         ERROR("USB: HUB: address assignment failed!");
         return;
     }
-    NOTICE("Assigned address!");
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();

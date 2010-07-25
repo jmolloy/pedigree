@@ -116,7 +116,7 @@ ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16
 
 int16_t UsbDevice::status()
 {
-    uint16_t nStatus;
+    static uint16_t nStatus = 0;
     ssize_t nResult = controlRequest(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(&nStatus));
     if(nResult < 0)
         return nResult;
@@ -174,7 +174,7 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
 
 uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType)
 {
-    uint8_t pLength;
+    static uint8_t pLength = 0;
     uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
 
     /// \todo Proper language ID handling
@@ -217,12 +217,14 @@ void UsbDevice::populateDescriptors()
         return; /// \todo Better error handling
     
     // Debug dump of the device descriptor
+#ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdUsbRelease & 0xFF) << ".");
     DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->pDescriptor->nClass << "/" << m_pDescriptor->pDescriptor->nSubclass << "/" << m_pDescriptor->pDescriptor->nProtocol);
     DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->pDescriptor->nMaxPacketSize << Hex << " bytes.");
     DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->pDescriptor->nVendorId << ":" << m_pDescriptor->pDescriptor->nProductId << ".");
     DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
     DEBUG_LOG("Device has " << Dec << m_pDescriptor->pDescriptor->nConfigurations << Hex << " configurations");
+#endif
 
     if(m_pDescriptor->pDescriptor->nVendorString)
         m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
