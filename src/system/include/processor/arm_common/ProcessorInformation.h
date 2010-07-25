@@ -100,12 +100,60 @@ class ArmCommonProcessorInformation
 //
 uintptr_t ArmCommonProcessorInformation::getKernelStack() const
 {
-    /// \todo Write - or is this TSS-specific from x86
-    return 0;
+    uintptr_t ret = 0;
+
+    // Switch to IRQ mode
+    uint32_t cpsr = 0;
+    asm volatile("mrs %0, cpsr" : "=r" (cpsr));
+    uint32_t oldMode = cpsr & 0x3F;
+    if(oldMode != 0x12)
+    {
+        cpsr &= ~0x3F;
+        cpsr |= 0x12;
+        asm volatile("msr cpsr_c, %0" : : "r" (cpsr));
+    }
+
+    // Load new stack and all that
+    asm volatile("mov %0, sp" : "=r" (ret));
+
+    // Switch back to the previous mode
+    if(oldMode != 0x12)
+    {
+        cpsr &= ~0x3F;
+        cpsr |= oldMode;
+        asm volatile("msr cpsr_c, %0" : : "r" (cpsr));
+    }
+
+    return ret;
 }
 void ArmCommonProcessorInformation::setKernelStack(uintptr_t stack)
 {
-    /// \todo Write
+    // Handle IRQ save location
+    /*
+    stack -= 0x10;
+
+    // Switch to IRQ mode
+    uint32_t cpsr = 0;
+    asm volatile("mrs %0, cpsr" : "=r" (cpsr));
+    uint32_t oldMode = cpsr & 0x3F;
+    if(oldMode != 0x12)
+    {
+        cpsr &= ~0x3F;
+        cpsr |= 0x12;
+        asm volatile("msr cpsr_c, %0" : : "r" (cpsr));
+    }
+
+    // Load new stack and all that
+    asm volatile("mov sp, %0; mov r13, %1" : : "r" (stack), "r" (stack + 0x10) : "sp", "r13");
+
+    // Switch back to the previous mode
+    if(oldMode != 0x12)
+    {
+        cpsr &= ~0x3F;
+        cpsr |= oldMode;
+        asm volatile("msr cpsr_c, %0" : : "r" (cpsr));
+    }
+    */
 }
 
 #endif
