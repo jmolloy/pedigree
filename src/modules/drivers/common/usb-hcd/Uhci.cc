@@ -23,52 +23,73 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR")
+Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR"),
+                           m_QueueListChangeLock(), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0)
 {
     setSpecificType(String("UHCI"));
+
     // Allocate the memory region
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, 3, PhysicalMemoryManager::continuous, 0))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, 3, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
     {
         ERROR("USB: UHCI: Couldn't allocate memory region!");
         return;
     }
-    uint8_t *pVirtBase = static_cast<uint8_t*>(m_UhciMR.virtualAddress());
-    m_pFrameList = reinterpret_cast<uint32_t*>(pVirtBase);
-    m_pAsyncQH = reinterpret_cast<QH*>(pVirtBase+0x1000);
-    m_pPeriodicQH = reinterpret_cast<QH*>(pVirtBase+0x1000+sizeof(QH));
-    m_pTDList = reinterpret_cast<TD*>(pVirtBase+0x1000+sizeof(QH)*2);
-    m_pTransferPages = pVirtBase+0x2000;
 
-    m_pFrameListPhys = m_UhciMR.physicalAddress();
-    m_pAsyncQHPhys = m_UhciMR.physicalAddress()+0x1000;
-    m_pPeriodicQHPhys = m_UhciMR.physicalAddress()+0x1000+sizeof(QH);
-    m_pTDListPhys = m_UhciMR.physicalAddress()+0x1000+sizeof(QH)*2;
-    m_pTransferPagesPhys = m_UhciMR.physicalAddress()+0x2000;
+    uintptr_t pVirtBase = reinterpret_cast<uintptr_t>(m_UhciMR.virtualAddress());
+    physical_uintptr_t pPhysBase = m_UhciMR.physicalAddress();
 
-    dmemset(m_pFrameList, m_pAsyncQHPhys | 2, 0x400);
+    m_pFrameList        = reinterpret_cast<uint32_t*>(pVirtBase);
+    m_pQHList           = reinterpret_cast<QH*>(pVirtBase + 0x1000);
+    m_pTDList           = reinterpret_cast<TD*>(pVirtBase + 0x2000);
+
+    m_pFrameListPhys    = pPhysBase;
+    m_pQHListPhys       = pPhysBase + 0x1000;
+    m_pTDListPhys       = pPhysBase + 0x2000;
+
+    // Allocate room for the Periodic and Async QHs
+    size_t nPeriodicIndex = m_QHBitmap.getFirstClear();
+    m_QHBitmap.set(nPeriodicIndex);
+    size_t nAsyncIndex = m_QHBitmap.getFirstClear();
+    m_QHBitmap.set(nAsyncIndex);
+
+    m_pAsyncQH = &m_pQHList[nAsyncIndex];
+    m_pPeriodicQH = &m_pQHList[nPeriodicIndex];
+
+    dmemset(m_pFrameList, (m_pQHListPhys + (nAsyncIndex * sizeof(QH))) | 2, 0x400);
+
     memset(m_pAsyncQH, 0, sizeof(QH));
     memset(m_pPeriodicQH, 0, sizeof(QH));
-    m_pAsyncQH->pNext = m_pPeriodicQHPhys>>4;
+
+    m_pAsyncQH->pNext = (m_pQHListPhys + (nPeriodicIndex * sizeof(QH))) >> 4;
     m_pAsyncQH->bNextQH = 1;
     m_pAsyncQH->bElemInvalid = 1;
-    m_pPeriodicQH->pNext = m_pAsyncQHPhys>>4;
+
+    m_pPeriodicQH->pNext = (m_pQHListPhys + (nAsyncIndex * sizeof(QH))) >> 4;
     m_pPeriodicQH->bNextQH = 1;
     m_pPeriodicQH->bElemInvalid = 1;
 
-    uint32_t nPciCrap = PciBus::instance().readConfigSpace(this, 1);
-    DEBUG_LOG("USB: UHCI: Pci command+status: "<<nPciCrap);
-    PciBus::instance().writeConfigSpace(this, 1, nPciCrap | 7);
+    m_pCurrentQueueTail = m_pCurrentQueueHead = m_pAsyncQH;
+
+    uint32_t nCommand = PciBus::instance().readConfigSpace(this, 1);
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: UHCI: Pci command+status: " << nCommand);
+#endif
+    PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x4);
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+
     // Set reset bit
     m_pBase->write16(UHCI_CMD_GRES, UHCI_CMD);
     delay(50);
     m_pBase->write16(0, UHCI_CMD);
+
     // Write frame list pointer
     m_pBase->write32(m_pFrameListPhys, UHCI_FRLP);
+
     // Enable wanted interrupts
     m_pBase->write16(0xf, UHCI_INTR);
+
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
 
@@ -165,6 +186,19 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     }
     return true;
 }
+
+void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
+{
+}
+uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
+{
+    return static_cast<uintptr_t>(-1);
+}
+
+void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
+{
+}
+
 /*
 void Uhci::doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {

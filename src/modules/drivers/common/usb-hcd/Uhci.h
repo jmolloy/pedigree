@@ -83,6 +83,11 @@ class Uhci : public UsbHub, public IrqHandler
             str = "UHCI";
         }
 
+        virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
+        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+        
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+
         //virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         //virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
@@ -122,15 +127,35 @@ class Uhci : public UsbHub, public IrqHandler
 
         uint32_t *m_pFrameList;
         uintptr_t m_pFrameListPhys;
+
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
+        ExtensibleBitmap m_qTDBitmap;
+
         QH *m_pAsyncQH;
-        uintptr_t m_pAsyncQHPhys;
         QH *m_pPeriodicQH;
-        uintptr_t m_pPeriodicQHPhys;
+
+        QH *m_pQHList;
+        uintptr_t m_pQHListPhys;
+
+        ExtensibleBitmap m_QHBitmap;
+
         uint8_t *m_pTransferPages;
         uintptr_t m_pTransferPagesPhys;
+
         MemoryRegion m_UhciMR;
+
+
+
+        Spinlock m_QueueListChangeLock;
+
+        // Pointer to the current queue tail, which allows insertion of new queue
+        // heads to the asynchronous schedule.
+        QH *m_pCurrentQueueTail;
+
+        // Pointer to the current queue head. Used to fill pNext automatically
+        // for new queue heads inserted to the asynchronous schedule.
+        QH *m_pCurrentQueueHead;
 
         Uhci(const Uhci&);
         void operator =(const Uhci&);
