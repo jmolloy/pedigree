@@ -153,8 +153,8 @@ class Ehci : public UsbHub,
         void doDequeue();
 
     protected:
-        uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                    uint64_t p6, uint64_t p7, uint64_t p8);
+        virtual uint64_t executeRequest(uint64_t p1 = 0, uint64_t p2 = 0, uint64_t p3 = 0, uint64_t p4 = 0, uint64_t p5 = 0,
+                                        uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
     private:
 

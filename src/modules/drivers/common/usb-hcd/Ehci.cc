@@ -183,7 +183,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
         // If connected, send it to the RequestQueue
         if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
-            addRequest(1, i);
+            executeRequest(i);
         else
             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4), m_nOpRegsOffset+EHCI_PORTSC+i*4);
     }
@@ -267,7 +267,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset+EHCI_STS) & m_pBase->read32(m_nOpRegsOffset+EHCI_INTR);
-    DEBUG_LOG("EHCI IRQ " << nStatus);
+    DEBUG_LOG_NOLOCK("EHCI IRQ " << nStatus);
     if(nStatus & EHCI_STS_PORTCH)
         for(size_t i = 0;i < m_nPorts;i++)
             if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CSCH)
@@ -298,13 +298,13 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 if(pqTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
-                    if((pqTD->nStatus & 0x7c) && (nStatus & EHCI_STS_ERR))
+                    if((pqTD->nStatus & 0x7c) || (nStatus & EHCI_STS_ERR))
                     {
-                        ERROR("USB ERROR!");
-                        ERROR("qTD Status: " << pqTD->nStatus << " [overlay status=" << pQH->overlay.nStatus << "]");
-                        ERROR("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
-                        ERROR("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
-                        ERROR("qTD PID: " << pqTD->nPid << ".");
+                        ERROR_NOLOCK(((nStatus & EHCI_STS_ERR) ? "USB" : "qTD") << " ERROR!");
+                        ERROR_NOLOCK("qTD Status: " << pqTD->nStatus << " [overlay status=" << pQH->overlay.nStatus << "]");
+                        ERROR_NOLOCK("qTD Error Counter: " << pqTD->nErr << " [overlay counter=" << pQH->overlay.nErr << "]");
+                        ERROR_NOLOCK("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
+                        ERROR_NOLOCK("qTD PID: " << pqTD->nPid << ".");
                         nResult = -(pqTD->nStatus & 0x7c);
                     }
                     else
@@ -312,7 +312,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         nResult = pqTD->nBufferSize - pqTD->nBytes;
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
-                    DEBUG_LOG("qTD #" << Dec << nQTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
+                    DEBUG_LOG_NOLOCK("qTD #" << Dec << nQTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
 
                     // Last qTD or error condition?
                     if((nResult < 0) || (pqTD == pQH->pMetaData->pLastQTD))
@@ -392,18 +392,18 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 
                 if(nQTDIndex == oldIndex)
                 {
-                    ERROR("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - circular reference!");
+                    ERROR_NOLOCK("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - circular reference!");
                     break;
                 }
                 else if(pqTD->pNext == 0)
                 {
-                    ERROR("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - null pNext pointer (and T bit not set)!");
+                    ERROR_NOLOCK("EHCI: QH #" << Dec << i << Hex << "'s qTD list is invalid - null pNext pointer (and T bit not set)!");
                     break;
                 }
             }
         }
     }
-        
+
     if(nStatus & EHCI_STS_ASYNCADVANCE)
         new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
