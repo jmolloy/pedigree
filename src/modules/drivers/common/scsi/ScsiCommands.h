@@ -31,6 +31,36 @@ class ScsiCommand
 
 namespace ScsiCommands
 {
+    class Inquiry : public ScsiCommand
+    {
+        public:
+            inline Inquiry(uint16_t len = 0, bool enableVitalData = false, uint8_t pageCode = 0, uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x12;
+                command.epvd = enableVitalData;
+                if(enableVitalData)
+                    command.pageCode = pageCode;
+                command.len = HOST_TO_BIG16(len);
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t epvd;
+                uint8_t pageCode;
+                uint16_t len;
+                uint8_t control;
+            } PACKED command;
+    };
+
     class UnitReady : public ScsiCommand
     {
         public:
@@ -107,6 +137,43 @@ namespace ScsiCommands
                 uint8_t imm;
                 uint16_t rsvd;
                 uint8_t setup;
+                uint8_t control;
+            } PACKED command;
+    };
+
+    class SendDiagnostic : public ScsiCommand
+    {
+        public:
+            inline SendDiagnostic(bool selfTest, uint8_t selfTestCode = 0, uintptr_t params = 0, size_t paramLen = 0, bool deviceOffline = false, bool unitOffline = false, uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x1d;
+                command.unitOffline = unitOffline;
+                command.devOffline = deviceOffline;
+                command.selfTest = selfTest;
+                command.pf = 0;
+                command.selfTestCode = selfTestCode;
+                command.paramListLen = HOST_TO_BIG16(paramLen);
+                command.control = ctl;
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint32_t unitOffline : 1;
+                uint32_t devOffline : 1;
+                uint32_t selfTest : 1;
+                uint32_t rsvd1 : 1;
+                uint32_t pf : 1;
+                uint32_t selfTestCode : 3;
+                uint8_t rsvd2;
+                uint16_t paramListLen;
                 uint8_t control;
             } PACKED command;
     };
