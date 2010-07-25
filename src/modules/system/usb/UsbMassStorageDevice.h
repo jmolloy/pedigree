@@ -36,6 +36,10 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
 
     private:
 
+        bool massStorageReset();
+
+        bool clearEndpointHalt(uint8_t nEndpoint);
+
         typedef struct Cbw {
             uint32_t sig;
             uint32_t tag;
