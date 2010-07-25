@@ -216,6 +216,10 @@ extern "C" void arm_data_abort_handler()
 
   NOTICE_NOLOCK("Status: " << dfsr);
 
+  uintptr_t linkreg = 0;
+  asm volatile("mov %0, lr" : "=r" (linkreg));
+  NOTICE_NOLOCK("Link register: " << linkreg);
+
   while( 1 );
 }
 
