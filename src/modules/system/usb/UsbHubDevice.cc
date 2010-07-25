@@ -18,25 +18,105 @@
 #include <usb/UsbHub.h>
 #include <usb/UsbHubDevice.h>
 
+#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+
 UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 {
     HubDescriptor *pDescriptor = new HubDescriptor(getDescriptor(0, 0, getDescriptorLength(0, 0, RequestType::Class), RequestType::Class));
-    NOTICE("USB: HUB: Found a hub with "<<Dec<<pDescriptor->nPorts<<Hex<<" ports and hubCharacteristics="<<pDescriptor->hubCharacteristics);
+    DEBUG_LOG("USB: HUB: Found a hub with " << Dec << pDescriptor->nPorts << Hex << " ports and hubCharacteristics = " << pDescriptor->hubCharacteristics);
     m_nPorts = pDescriptor->nPorts;
-    for(size_t i=0;i<m_nPorts;i++)
+    for(size_t i = 0; i < m_nPorts; i++)
     {
-        uint16_t portStatus[2];
-        controlRequest(0xa3, 0, 0, i+1, 4, reinterpret_cast<uintptr_t>(&portStatus));
-        if(portStatus[0] & 1)
+        // Grab this port's status
+        uint32_t portStatus = getPortStatus(i);
+
+        // Is power on?
+        if(!(portStatus & (1 << 8)))
         {
-            controlRequest(0x23, 3, 4, i+1);
-            deviceConnected(i, LowSpeed);
+            DEBUG_LOG("USB: HUB: Powering up port " << Dec << i << Hex << " [status = " << portStatus << "]...");
+
+            // Power it on
+            setPortFeature(i, PortPower);
+
+            // Delay while the power goes on
+            delay(50);
+
+            // Done.
+            portStatus = getPortStatus(i);
+
+            // If port power never went on, skip this port
+            if(!(portStatus & (1 << 8)))
+            {
+                DEBUG_LOG("USB: HUB: Port " << Dec << i << Hex << " couldn't be powered up.");
+                continue;
+            }
+            
+            DEBUG_LOG("USB: HUB: Powered up port " << Dec << i << Hex << " [status = " << portStatus << "]...");
+        }
+
+        // Reset the port
+        setPortFeature(i, PortReset);
+
+        // Delay while the reset completes
+        delay(50);
+
+        // Wait for completion
+        while(true)
+            if(!(getPortStatus(i) & (1 << 4)))
+                break;
+
+        // Port has been powered on and now reset, check to see if it's enabled and a device is connected
+        portStatus = getPortStatus(i);
+        if(portStatus & 0x3)
+        {
+            // Got a device - what type?
+            if(portStatus & (1 << 10))
+            {
+                // High-speed
+                DEBUG_LOG("USB: HUB: Hub port " << Dec << i << Hex << " has a high-speed device attached to it.");
+                deviceConnected(i, HighSpeed);
+            }
+            else if(portStatus & (1 << 9))
+            {
+                // Low-speed
+                DEBUG_LOG("USB: HUB: Hub port " << Dec << i << Hex << " has a low-speed device attached to it.");
+                deviceConnected(i, LowSpeed);
+            }
+            else
+            {
+                // Low-speed
+                DEBUG_LOG("USB: HUB: Hub port " << Dec << i << Hex << " has a full-speed device attached to it.");
+                deviceConnected(i, FullSpeed);
+            }
+        }
+        else
+        {
+            // Disable the port's power, no device on it
+            clearPortFeature(i, PortPower);
         }
     }
 }
 
 UsbHubDevice::~UsbHubDevice()
 {
+}
+
+bool UsbHubDevice::setPortFeature(size_t port, PortFeatureSelectors feature)
+{
+    return !controlRequest(0x23, 3, feature, port + 1, 0, 0);
+}
+
+bool UsbHubDevice::clearPortFeature(size_t port, PortFeatureSelectors feature)
+{
+    return !controlRequest(0x23, 1, feature, (port + 1) & 0xFF, 0, 0);
+}
+
+uint32_t UsbHubDevice::getPortStatus(size_t port)
+{
+    static uint32_t portStatus = 0;
+    controlRequest(0xA3, 0, 0, port + 1, 4, reinterpret_cast<uintptr_t>(&portStatus));
+
+    return portStatus;
 }
 
 void UsbHubDevice::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)

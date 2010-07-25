@@ -38,6 +38,36 @@ class UsbHubDevice : public UsbDevice, public UsbHub
 
     private:
 
+        enum HubFeatureSelectors
+        {
+            HubLocalPower   = 0,
+            HubOverCurrent  = 1,
+        };
+
+        enum PortFeatureSelectors
+        {
+            PortConnection  = 0,
+            PortEnable      = 1,
+            PortSuspend     = 2,
+            PortOverCurrent = 3,
+            PortReset       = 4,
+            PortPower       = 8,
+            PortLowSpeed    = 9,
+            CPortConnection = 16,
+            CPortEnable     = 17,
+            CPortSuspend    = 18,
+            CPortOverCurrent= 19,
+            CPortReset      = 20,
+            PortTest        = 21,
+            PortIndicator   = 22,
+        };
+
+        bool setPortFeature(size_t port, PortFeatureSelectors feature);
+        bool clearPortFeature(size_t port, PortFeatureSelectors feature);
+
+        /// Top 32 bits hold change status
+        uint32_t getPortStatus(size_t port);
+
         typedef struct HubDescriptor
         {
             inline HubDescriptor(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
