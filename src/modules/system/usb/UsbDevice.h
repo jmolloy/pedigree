@@ -71,9 +71,13 @@ class UsbDevice : public virtual Device
         typedef struct Endpoint
         {
             inline Endpoint(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
-                nEndpoint(pDescriptor->nEndpoint), bIn(pDescriptor->bDirection), bOut(!bIn),
+                nEndpoint(pDescriptor->nEndpoint), bIn(false), bOut(false),
                 nTransferType(pDescriptor->nTransferType), nMaxPacketSize(pDescriptor->nMaxPacketSize),
-                bDataToggle(false) {}
+                bDataToggle(false)
+            {
+                bIn = pDescriptor->bDirection;
+                bOut = !bIn;
+            }
             inline Endpoint(Endpoint *pEndpoint) : pDescriptor(0), nEndpoint(pEndpoint->nEndpoint),
                 bIn(pEndpoint->bIn), bOut(pEndpoint->bOut), nTransferType(pEndpoint->nTransferType),
                 nMaxPacketSize(pEndpoint->nMaxPacketSize), bDataToggle(pEndpoint->bDataToggle) {}

@@ -37,6 +37,8 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         return -1;
     }
 
+    ssize_t nResult = 0;
+
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, m_Speed, pEndpoint->nMaxPacketSize);
     uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
     if(nTransaction == static_cast<uintptr_t>(-1))
@@ -44,24 +46,20 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
         return -1;
     }
-
-    pParentHub->addTransferToTransaction(nTransaction, pEndpoint->bDataToggle, pid, pBuffer, nBytes);
-    /*if(nBytes > pEndpoint->nMaxPacketSize)
+    
+    size_t byteOffset = 0;
+    while(nBytes)
     {
-        for(size_t i=0;i<nBytes;)
-        {
-            ssize_t nResult = pParentHub->doSync(endpointInfo, UsbPidIn, pBuffer+i, (nBytes-i)<pEndpoint->nMaxPacketSize?(nBytes-i):pEndpoint->nMaxPacketSize);
-            if(nResult < 0)
-                return nResult;
-            i += nResult;
-            pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
-        }
-        return nBytes;
-    }*/
+        size_t nBytesThisTransaction = nBytes > pEndpoint->nMaxPacketSize ? pEndpoint->nMaxPacketSize : nBytes;
 
-    //ssize_t nResult = pParentHub->doSync(endpointInfo, nPid, pBuffer, nBytes);
-    ssize_t nResult = pParentHub->doSync(nTransaction);
-    pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
+        pParentHub->addTransferToTransaction(nTransaction, pEndpoint->bDataToggle, pid, pBuffer + byteOffset, nBytesThisTransaction);
+        byteOffset += nBytesThisTransaction;
+        nBytes -= nBytesThisTransaction;
+
+        pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
+    }
+
+    nResult = pParentHub->doSync(nTransaction);
     return nResult;
 }
 
@@ -143,24 +141,14 @@ bool UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->pInterfaces[nInterface];
     // Gathering endpoints
-    for(size_t i = 0;i<m_pInterface->pEndpoints.count();i++)
+    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
     {
         Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
-        if(!m_pEndpoints[pEndpoint->nEndpoint])
-            m_pEndpoints[pEndpoint->nEndpoint] = pEndpoint;
+        if(!m_pEndpoints[i + 1])
+            m_pEndpoints[i + 1] = pEndpoint;
         else
         {
-            // Found a multiple-purpose endpoint
-            Endpoint *pOldEndpoint = m_pEndpoints[pEndpoint->nEndpoint];
-            Endpoint *pNewEndpoint = new Endpoint(pOldEndpoint);
-            // In case our previous endpoint was obtained from two endpoints,
-            // delete it. Strange, but can happen
-            if(!pOldEndpoint->pDescriptor)
-                delete pOldEndpoint;
-            pNewEndpoint->bIn = pNewEndpoint->bIn || pEndpoint->bIn;
-            pNewEndpoint->bOut = pNewEndpoint->bOut || pEndpoint->bOut;
-            pNewEndpoint->nMaxPacketSize = pNewEndpoint->nMaxPacketSize < pEndpoint->nMaxPacketSize?pNewEndpoint->nMaxPacketSize:pEndpoint->nMaxPacketSize;
-            m_pEndpoints[pEndpoint->nEndpoint] = pNewEndpoint;
+            ERROR("Endpoint #" << Dec << (i + 1) << Hex << " already exists!");
         }
     }
     return true;
