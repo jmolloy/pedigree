@@ -137,6 +137,9 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
                 case Fatal:
                     str = "(FF) ";
                     break;
+                default:
+                    str = "(XX) ";
+                    break;
             }
             str += m_StaticLog[entry].str;
 #ifndef SERIAL_IS_FILE
@@ -238,7 +241,7 @@ Log &Log::operator<< (Modifier type)
         {
             // We have output callbacks installed. Build the string we'll pass
             // to each callback *now* and then send it.
-            StaticString<LOG_LENGTH + 8> str; // Don't use up heaps of stack space if we can help it.
+            HugeStaticString str;
             switch(m_Buffer.type)
             {
                 case Debug:
