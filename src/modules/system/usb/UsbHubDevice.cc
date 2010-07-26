@@ -67,7 +67,8 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 
         // Port has been powered on and now reset, check to see if it's enabled and a device is connected
         portStatus = getPortStatus(i);
-        if(portStatus & 0x3)
+        DEBUG_LOG("USB: HUB: Port status is " << portStatus);
+        if((portStatus & 0x3) == 0x3)
         {
             // Got a device - what type?
             if(portStatus & (1 << 10))
@@ -86,7 +87,7 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
             {
                 // Low-speed
                 DEBUG_LOG("USB: HUB: Hub port " << Dec << i << Hex << " has a full-speed device attached to it.");
-                deviceConnected(i, FullSpeed);
+                deviceConnected(i, HighSpeed);
             }
         }
         else
@@ -132,7 +133,7 @@ uintptr_t UsbHubDevice::createTransaction(UsbEndpoint endpointInfo)
     UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParent)
         return static_cast<uintptr_t>(-1);
-    if(m_Speed == HighSpeed && endpointInfo.speed != HighSpeed && !endpointInfo.nHubAddress)
+    if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && !endpointInfo.nHubAddress)
         endpointInfo.nHubAddress = m_nAddress;
     return pParent->createTransaction(endpointInfo);
 }

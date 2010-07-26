@@ -163,7 +163,7 @@ class UsbDevice : public virtual Device
                     }
                     else if(pCurrentInterface)
                     {
-                        if(nType == 5)
+                        if((nType == 5) && (pCurrentInterface->pDescriptor->nEndpoints))
                         {
                             assert(pCurrentInterface->pEndpoints.count() < pCurrentInterface->pDescriptor->nEndpoints);
                             pCurrentInterface->pEndpoints.pushBack(new Endpoint(&pBuffer[nOffset]));
