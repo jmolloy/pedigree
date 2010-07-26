@@ -38,7 +38,7 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
 
         bool massStorageReset();
 
-        bool clearEndpointHalt(uint8_t nEndpoint);
+        bool clearEndpointHalt(Endpoint *pEndpoint);
 
         typedef struct Cbw {
             uint32_t sig;
@@ -58,8 +58,8 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
         } PACKED Csw;
 
         size_t m_nUnits;
-        uint8_t m_nInEndpoint;
-        uint8_t m_nOutEndpoint;
+        Endpoint *m_pInEndpoint;
+        Endpoint *m_pOutEndpoint;
 
     protected:
 

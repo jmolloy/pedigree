@@ -55,7 +55,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
         return -1;
     }
-    
+
     size_t byteOffset = 0;
     while(nBytes)
     {
@@ -72,19 +72,14 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
     return nResult;
 }
 
-ssize_t UsbDevice::syncSetup(Setup *setup)
+ssize_t UsbDevice::syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    return doSync(m_pEndpoints[0], UsbPidSetup, reinterpret_cast<uintptr_t>(setup), sizeof(Setup));
+    return doSync(pEndpoint, UsbPidIn, pBuffer, nBytes);
 }
 
-ssize_t UsbDevice::syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
+ssize_t UsbDevice::syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
-    return doSync(m_pEndpoints[nEndpoint], UsbPidIn, pBuffer, nBytes);
-}
-
-ssize_t UsbDevice::syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes)
-{
-    return doSync(m_pEndpoints[nEndpoint], UsbPidOut, pBuffer, nBytes);
+    return doSync(pEndpoint, UsbPidOut, pBuffer, nBytes);
 }
 
 ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength, uintptr_t pBuffer)
@@ -120,16 +115,21 @@ ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16
     pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
 
     // Wait for the transaction to complete, return result
-    return pParentHub->doSync(nTransaction);
+    ssize_t nResult = pParentHub->doSync(nTransaction);
+    if(nResult < 0)
+        return nResult; // Error code
+    else
+        return nResult; // - sizeof(Setup); // Total bytes transferred minus the setup
 }
 
 int16_t UsbDevice::status()
 {
-    static uint16_t nStatus = 0;
-    ssize_t nResult = controlRequest(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(&nStatus));
+    uint16_t *nStatus = new uint16_t();
+    PointerGuard<uint16_t> guard(nStatus);
+    ssize_t nResult = controlRequest(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(nStatus));
     if(nResult < 0)
         return nResult;
-    return nStatus;
+    return *nStatus;
 }
 
 bool UsbDevice::assignAddress(uint8_t nAddress)
@@ -143,37 +143,26 @@ bool UsbDevice::assignAddress(uint8_t nAddress)
 bool UsbDevice::useConfiguration(uint8_t nConfig)
 {
     m_pConfiguration = m_pDescriptor->pConfigurations[nConfig];
-    return !controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+    return controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0) >= 0;
 }
 
 bool UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->pInterfaces[nInterface];
-    // Gathering endpoints
-    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
-    {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
-        if(!m_pEndpoints[i + 1])
-            m_pEndpoints[i + 1] = pEndpoint;
-        else
-        {
-            ERROR("Endpoint #" << Dec << (i + 1) << Hex << " already exists!");
-        }
-    }
     return true;
-    //return !controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0);
+    //return controlRequest(0, 9, m_pInterface->pDescriptor->nAlternateSetting, 0) >= 0;
 }
 
 void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
 {
     uint8_t *pBuffer = new uint8_t[nBytes];
-    uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+    uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
 
     /// \todo Proper language ID handling!
     if(nDescriptor == 3)
         nIndex = 0x0409; // English (US)
 
-    if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
+    if(controlRequest(0x80 | requestType, 6, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
     {
         delete [] pBuffer;
         return 0;
@@ -184,13 +173,13 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
 uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType)
 {
     static uint8_t pLength = 0;
-    uint16_t nIndex = requestType & RequestRecipient::Interface?m_pInterface->pDescriptor->nInterface:0;
+    uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
 
     /// \todo Proper language ID handling
     if(nDescriptor == 3)
         nIndex = 0x0409; // English (US)
 
-    if(controlRequest(0x80|requestType, 6, nDescriptor<<8|nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
+    if(controlRequest(0x80 | requestType, 6, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
         return 0;
     return pLength;
 }
@@ -224,7 +213,7 @@ void UsbDevice::populateDescriptors()
     m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, getDescriptorLength(1, 0)));
     if(!m_pDescriptor)
         return; /// \todo Better error handling
-    
+
     // Debug dump of the device descriptor
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdUsbRelease & 0xFF) << ".");

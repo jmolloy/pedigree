@@ -200,9 +200,9 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
 
     Endpoint *pInEndpoint = 0;
 
-    for(uint8_t i = 1;i<16;i++)
+    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
     {
-        Endpoint *pEndpoint = m_pEndpoints[i];
+        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
         if(pEndpoint->nTransferType == Endpoint::Interrupt && pEndpoint->bIn)
         {
             pInEndpoint = pEndpoint;
@@ -215,11 +215,9 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         ERROR("USB: HID: No Interrupt IN endpoint");
         return;
     }
+
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pInEndpoint->nEndpoint, m_Speed, pInEndpoint->nMaxPacketSize);
     dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
-    //new Thread(Processor::information().getCurrentThread()->getParent(),
-    //           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-    //           reinterpret_cast<void*> (this));
 }
 
 UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()

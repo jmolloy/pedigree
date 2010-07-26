@@ -78,11 +78,6 @@ class UsbDevice : public virtual Device
                 bIn = pDescriptor->bDirection;
                 bOut = !bIn;
             }
-            inline Endpoint(Endpoint *pEndpoint) : pDescriptor(0), nEndpoint(pEndpoint->nEndpoint),
-                bIn(pEndpoint->bIn), bOut(pEndpoint->bOut), nTransferType(pEndpoint->nTransferType),
-                nMaxPacketSize(pEndpoint->nMaxPacketSize), bDataToggle(pEndpoint->bDataToggle) {}
-            inline Endpoint() : pDescriptor(0), nEndpoint(0), bIn(true), bOut(true),
-                nTransferType(Control), nMaxPacketSize(8) {}
 
             enum TransferTypes
             {
@@ -226,17 +221,10 @@ class UsbDevice : public virtual Device
         } DeviceDescriptor;
 
         /** Constructors and destructors */
-        inline UsbDevice() : m_nAddress(0), m_nPort(0)
-        {
-            memset(m_pEndpoints, 0, sizeof(m_pEndpoints));
-            m_pEndpoints[0] = new Endpoint();
-        }
+        inline UsbDevice() : m_nAddress(0), m_nPort(0) {}
 
         inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed),
-            m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration)
-        {
-            memcpy(m_pEndpoints, pDev->m_pEndpoints, sizeof(m_pEndpoints));
-        }
+            m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration) {}
 
         virtual inline ~UsbDevice() {};
 
@@ -284,9 +272,8 @@ class UsbDevice : public virtual Device
 
         /** Transfer methods */
         ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
-        ssize_t syncSetup(Setup *pSetup);
-        ssize_t syncIn(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
-        ssize_t syncOut(uint8_t nEndpoint, uintptr_t pBuffer, size_t nBytes);
+        ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
+        ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
 
         ssize_t controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
         int16_t status();
@@ -304,7 +291,6 @@ class UsbDevice : public virtual Device
         uint8_t m_nPort;
         UsbSpeed m_Speed;
         Interface *m_pInterface;
-        Endpoint *m_pEndpoints[16];
 
     private:
 

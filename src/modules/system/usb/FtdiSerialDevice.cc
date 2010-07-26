@@ -16,25 +16,46 @@
 
 #include <usb/UsbDevice.h>
 #include <usb/FtdiSerialDevice.h>
+#include <utilities/PointerGuard.h>
 
 #define FTDI_BAUD_RATE 9600
 
-FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
+FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
+    // Reset the device
     controlRequest(0x40, 0, 0, 0);
 
+    // Calculate the divisor and subdivisor for the baud rate
     uint16_t nDivisor = (48000000 / 2) / FTDI_BAUD_RATE, nSubdivisor = nDivisor % 8, nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
     nDivisor /= 8;
     nSubdivisor = nSubdivisors[nSubdivisor];
-    NOTICE("DD "<<((nSubdivisor&3)<<14 | nDivisor)<<" "<<(nSubdivisor>>2));
-    controlRequest(0x40, 3, (nSubdivisor&3)<<14 | nDivisor, nSubdivisor>>2);// 0x4138
-    /*write('A');
-    write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');
-    write('B');
-    write(' ');write(' ');write(' ');write(' ');write(' ');
-    write('C');
-    write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');write(' ');
-    write('B');*/
+
+    // Set the divisor and subdivisor (0x4138 / 0x00 for 9600)
+    controlRequest(0x40, 3, (nSubdivisor & 3) << 14 | nDivisor, nSubdivisor >> 2);
+
+    // Get the in and out endpoints
+    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
+    {
+        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
+        if(!m_pInEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bIn)
+            m_pInEndpoint = pEndpoint;
+        if(!m_pOutEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bOut)
+            m_pOutEndpoint = pEndpoint;
+        if(m_pInEndpoint && m_pOutEndpoint)
+            break;
+    }
+
+    if(!m_pInEndpoint)
+    {
+        ERROR("USB: FTDI: No IN endpoint");
+        return;
+    }
+
+    if(!m_pOutEndpoint)
+    {
+        ERROR("USB: FTDI: No OUT endpoint");
+        return;
+    }
 }
 
 FtdiSerialDevice::~FtdiSerialDevice()
@@ -43,12 +64,15 @@ FtdiSerialDevice::~FtdiSerialDevice()
 
 char FtdiSerialDevice::read()
 {
-    char c = 0;
-    syncIn(1, reinterpret_cast<uintptr_t>(&c), 1);
-    return c;
+    char *pChar = new char(0);
+    PointerGuard<char> guard(pChar);
+    syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pChar), 1);
+    return *pChar;
 }
 
 void FtdiSerialDevice::write(char c)
 {
-    syncOut(2, reinterpret_cast<uintptr_t>(&c), 1);
+    char *pChar = new char(c);
+    PointerGuard<char> guard(pChar);
+    syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pChar), 1);
 }

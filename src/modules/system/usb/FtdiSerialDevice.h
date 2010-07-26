@@ -36,6 +36,11 @@ class FtdiSerialDevice : public UsbDevice, public Serial
         {
             str = "USB FTDI Serial Device";
         }
+
+    private:
+
+        Endpoint *m_pInEndpoint;
+        Endpoint *m_pOutEndpoint;
 };
 
 #endif
