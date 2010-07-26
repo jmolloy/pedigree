@@ -220,7 +220,9 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     uint16_t nStatus = m_pBase->read16(UHCI_STS);
     m_pBase->write16(nStatus, UHCI_STS);
 
+#ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("UHCI IRQ " << nStatus);
+#endif
 
     bool bDequeue = false;
     if(nStatus & UHCI_STS_INT)
@@ -468,7 +470,6 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
     {
         // Current QH needs to point to the schedule's head
         size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
-        NOTICE("queue head index is " << queueHeadIndex);
         pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 4;
         pQH->bNextInvalid = 0;
         pQH->bNextQH = 1;
@@ -495,8 +496,6 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
             // Finally, fix the linked list
             pOldTail->pMetaData->pNext = pQH;
             pOldTail->pMetaData->pPrev = pQH;
-
-            DEBUG_LOG("queued, waiting for IRQ");
         }
     }
     else

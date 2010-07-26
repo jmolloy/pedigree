@@ -21,6 +21,7 @@
 #include "ScsiDisk.h"
 #include "ScsiCommands.h"
 #include "ScsiController.h"
+#include <utilities/PointerGuard.h>
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
@@ -38,12 +39,13 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     m_pParent = pController;
     m_nUnit = nUnit;
 
-    Inquiry data;
+    Inquiry *data = new Inquiry;
+    PointerGuard<Inquiry> guard(data);
 
     // Inquire as to the device's state
     /// \todo Use this data to change how read() and write() work
     ScsiCommand *pCommand = new ScsiCommands::Inquiry(sizeof(Inquiry), false);
-    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(&data), sizeof(Inquiry));
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(data), sizeof(Inquiry));
     if(!success)
     {
         ERROR("ScsiDisk: INQUIRY failed!");
@@ -56,25 +58,26 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     if(!unitReady())
     {
         // Grab sense data
-        Sense s;
-        readSense(&s);
-        DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s.SenseKey << ", asc=" << s.Asc << ", ascq=" << s.AscQ << "]");
+        Sense *s = new Sense;
+        PointerGuard<Sense> guard2(s);
+        readSense(s);
+        DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
-        if(s.SenseKey == 0x2)
+        if(s->SenseKey == 0x2)
         {
-            if(s.Asc == 0x4)
+            if(s->Asc == 0x4)
             {
-                if(s.AscQ == 0x2) // Logical Unit Not Ready, START UNIT Required
+                if(s->AscQ == 0x2) // Logical Unit Not Ready, START UNIT Required
                 {
                     // Start the unit
                     pCommand = new ScsiCommands::StartStop(false, true, 1, true);
                     success = sendCommand(pCommand, 0, 0, true);
                     if(!success)
                     {
-                        readSense(&s);
-                        ERROR("ScsiDisk: unit startup failed! Sense data: [sk=" << s.SenseKey << ", asc=" << s.Asc << ", ascq=" << s.AscQ << "]");
-                        delete pCommand;
+                        readSense(s);
+                        ERROR("ScsiDisk: unit startup failed! Sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
                     }
+                    delete pCommand;
                 }
             }
         }
@@ -84,15 +87,15 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
         // Attempt to see if the unit is ready again
         if(!unitReady())
         {
-            readSense(&s);
-            DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s.SenseKey << ", asc=" << s.Asc << ", ascq=" << s.AscQ << "]");
+            readSense(s);
+            DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
             delay(100);
 
             if(!unitReady())
             {
-                readSense(&s);
-                ERROR("ScsiDisk: disk never became ready. Sense data: [sk=" << s.SenseKey << ", asc=" << s.Asc << ", ascq=" << s.AscQ << "]");
+                readSense(s);
+                ERROR("ScsiDisk: disk never became ready. Sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
                 return false;
             }
         }
@@ -172,16 +175,13 @@ bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
         *blockSize = defaultBlockSize();
         return false;
     }
-
-    struct Capacity
-    {
-        uint32_t LBA;
-        uint32_t BlockSize;
-    } __attribute__((packed)) capacity;
-    memset(&capacity, 0, sizeof(Capacity));
+    
+    Capacity *capacity = new Capacity;
+    PointerGuard<Capacity> guard(capacity);
+    memset(capacity, 0, sizeof(Capacity));
 
     ScsiCommand *pCommand = new ScsiCommands::ReadCapacity10();
-    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(&capacity), sizeof(Capacity), false);
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(capacity), sizeof(Capacity), false);
     delete pCommand;
     if(!success)
     {
@@ -189,8 +189,8 @@ bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
         return false;
     }
 
-    *blockNumber = BIG_TO_HOST32(capacity.LBA);
-    uint32_t blockSz = BIG_TO_HOST32(capacity.BlockSize);
+    *blockNumber = BIG_TO_HOST32(capacity->LBA);
+    uint32_t blockSz = BIG_TO_HOST32(capacity->BlockSize);
     *blockSize = blockSz ? blockSz : defaultBlockSize();
 
     return true;
@@ -213,7 +213,7 @@ uintptr_t ScsiDisk::read(uint64_t location)
         return 0;
     }
 
-    // Look through the align points.
+    // Look through the align points->
     uint64_t alignPoint = 0;
     for (size_t i = 0; i < m_nAlignPoints; i++)
         if (m_AlignPoints[i] <= location && m_AlignPoints[i] > alignPoint)

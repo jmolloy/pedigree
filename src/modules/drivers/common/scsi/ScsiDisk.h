@@ -58,6 +58,12 @@ class ScsiDisk : public Disk
             uint8_t ProdRev[4];
         } __attribute__((packed));
 
+        struct Capacity
+        {
+            uint32_t LBA;
+            uint32_t BlockSize;
+        } __attribute__((packed));
+
     public:
         ScsiDisk();
         virtual ~ScsiDisk();

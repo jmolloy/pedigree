@@ -177,8 +177,9 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
             return false;
     }
 
-    Csw csw;
-    nResult = syncIn(m_nInEndpoint, reinterpret_cast<uintptr_t>(&csw), 13);
+    Csw *csw = new Csw;
+    PointerGuard<Csw> guard2(csw);
+    nResult = syncIn(m_nInEndpoint, reinterpret_cast<uintptr_t>(csw), 13);
 
     /// \todo Handle stall here
     if(nResult < 0)
@@ -187,7 +188,8 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
         return false;
     }
 
-    DEBUG_LOG("USB: MSD: Command finished STS = " << csw.status << " SIG=" << csw.sig);
+    DEBUG_LOG("USB: MSD: Command finished STS = " << csw->status << " SIG=" << csw->sig);
 
-    return !csw.status;
+    return !csw->status;
 }
+
