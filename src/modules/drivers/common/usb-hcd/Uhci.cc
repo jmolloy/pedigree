@@ -23,6 +23,26 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
+#define INDEX_FROM_QTD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(TD)))
+#define PHYS_QTD(idx)        (m_pTDListPhys + ((idx) * sizeof(TD)))
+
+#define GET_PAGE(param, buffer, qhIndex) \
+do \
+{ \
+    if(va.isMapped(reinterpret_cast<void*>((buffer)))) \
+    { \
+        physical_uintptr_t phys = 0; size_t flags = 0; \
+        va.getMapping(reinterpret_cast<void*>((buffer)), phys, flags); \
+        (param) = (phys >> 12) + ((buffer) & 0xFFF); \
+    } \
+    else \
+    { \
+        ERROR("UHCI: addTransferToTransaction: Buffer (page " << Dec << (buffer) << Hex << ") isn't mapped!"); \
+        m_QHBitmap.clear((qhIndex)); \
+        return; \
+    } \
+} while(0)
+
 Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR"),
                            m_QueueListChangeLock(), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0)
 {
@@ -126,12 +146,13 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 {
     uint16_t nStatus = m_pBase->read16(UHCI_STS);
     m_pBase->write16(nStatus, UHCI_STS);
+#if 0 /// \todo Finish backport of transaction stuff from EHCI
     if(nStatus & UHCI_STS_INT)
     {
         // Pause the controller
         m_pBase->write16(0, UHCI_CMD);
         // Check every async TD
-        TD *pTD = m_pAsyncQH->pCurrent;
+        TD *pTD = m_pAsyncQH->pMetaData->pFirstQTD;
         while(pTD)
         {
             // Stop if we've reached a TD that is not finished
@@ -139,15 +160,15 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                 break;
             // Call the callback, this TD is done
             ssize_t nReturn = pTD->nStatus & 0x7e?-(pTD->nStatus & 0x7e):(pTD->nActLen + 1) % 0x800;
-            if(pTD->nPid == UsbPidIn && pTD->pBuffer && nReturn >= 0)
-                memcpy(reinterpret_cast<void*>(pTD->pBuffer), &m_pTransferPages[pTD->pBuff-m_pTransferPagesPhys], nReturn);
+            //if(pTD->nPid == UsbPidIn && pTD->pBuffer && nReturn >= 0)
+            //    memcpy(reinterpret_cast<void*>(pTD->pBuffer), &m_pTransferPages[pTD->pBuff-m_pTransferPagesPhys], nReturn);
             if(pTD->pCallback)
             {
                 void (*pCallback)(uintptr_t, ssize_t) = reinterpret_cast<void(*)(uintptr_t, ssize_t)>(pTD->pCallback);
                 pCallback(pTD->pParam, nReturn);
             }
             DEBUG_LOG("STOP "<<Dec<<pTD->nAddress<<":"<<pTD->nEndpoint<<" "<<(pTD->nPid==UsbPidOut?" OUT ":(pTD->nPid==UsbPidIn?" IN  ":(pTD->nPid==UsbPidSetup?"SETUP":"")))<<" "<<nReturn<<Hex);
-            pTD = pTD->bNextInvalid?0:&m_pTDList[pTD->pNext & 0xfff];
+            pTD = pTD->bNextInvalid?0:&m_pTDList[(pTD->pNext & 0xfff) / sizeof(TD)];
         }
         m_pAsyncQH->pCurrent = pTD;
         m_pAsyncQH->pElem = pTD?pTD->pPhysAddr:0;
@@ -184,19 +205,176 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
         // Resume the controller
         m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
     }
+#endif
     return true;
 }
 
 void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
 {
+    // Atomic operation: find clear bit, set it
+    size_t nIndex = 0;
+    {
+        LockGuard<Mutex> guard(m_Mutex);
+        nIndex = m_qTDBitmap.getFirstClear();
+        if(nIndex >= (0x1000 / sizeof(TD)))
+        {
+            ERROR("USB: UHCI: TD space full");
+            return;
+        }
+        m_qTDBitmap.set(nIndex);
+    }
+
+    // Grab the TD
+    TD *pTD = &m_pTDList[nIndex];
+    memset(pTD, 0, sizeof(TD));
+    pTD->bNextInvalid = 1; // Assume next is invalid, will be zeroed if another TD is linked
+
+    // Grab the QH
+    QH *pQH = &m_pQHList[pTransaction];
+
+    // Active, interrupt on completion, and only allow one retry
+    pTD->nStatus = 0x80;
+    pTD->bIoc = 1;
+    pTD->nErr = 1;
+
+    // PID for this transfer
+    switch(pid)
+    {
+        case UsbPidSetup:
+            pTD->nPid = 2;
+            break;
+        case UsbPidIn:
+            pTD->nPid = 1;
+            break;
+        case UsbPidOut:
+            pTD->nPid = 0;
+            break;
+        default:
+            pTD->nPid = 3;
+    }
+
+    // Speed information
+    /// \todo Needs QH metadata to be implemented!
+    pTD->bLoSpeed = pQH->pMetaData->endpointInfo.speed == LowSpeed;
+
+    // Don't care about short packet detection
+    pTD->bSpd = 0;
+
+    // Endpoint information
+    /// \todo Needs QH metadata to be implemented!
+    pTD->nAddress = pQH->pMetaData->endpointInfo.nAddress;
+    pTD->nEndpoint = pQH->pMetaData->endpointInfo.nEndpoint;
+    pTD->bDataToggle = bToggle;
+
+    // Transfer information
+    pTD->nMaxLen = nBytes ? nBytes - 1 : 0x7ff;
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    GET_PAGE(pTD->pBuff, pBuffer, pTransaction); /// \todo TD clear on error?
+
+    // Link into the existing TD list
+    if(pQH->pMetaData->pLastQTD)
+    {
+        pQH->pMetaData->pLastQTD->pNext = PHYS_QTD(nIndex) >> 4;
+        pQH->pMetaData->pLastQTD->bNextInvalid = 0;
+        pQH->pMetaData->pLastQTD->bNextQH = 0;
+    }
+    else
+    {
+        pQH->pMetaData->pFirstQTD = pTD;
+        pQH->pElem = PHYS_QTD(nIndex) >> 4;
+        pQH->bElemInvalid = 0;
+        pQH->bElemQH = 0;
+    }
+    pQH->pMetaData->pLastQTD = pTD;
+
+    pQH->pMetaData->qTDCount++;
 }
+
 uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
 {
-    return static_cast<uintptr_t>(-1);
+    // Atomic operation: find clear bit, set it
+    size_t nIndex = 0;
+    {
+        LockGuard<Mutex> guard(m_Mutex);
+        nIndex = m_QHBitmap.getFirstClear();
+        if(nIndex >= (0x2000 / sizeof(QH)))
+        {
+            ERROR("USB: UHCI: QH space full");
+            return static_cast<uintptr_t>(-1);
+        }
+        m_QHBitmap.set(nIndex);
+    }
+
+    // Grab the QH
+    QH *pQH = &m_pQHList[nIndex];
+    memset(pQH, 0, sizeof(QH));
+
+    // Only need to configure metadata, everything else is set during linkage and TD creation
+    pQH->pMetaData = new QH::MetaData;
+    memset(pQH->pMetaData, 0, sizeof(QH::MetaData));
+    pQH->pMetaData->endpointInfo = endpointInfo;
+
+    return nIndex;
 }
 
 void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
+    LockGuard<Mutex> guard(m_Mutex);
+    if((pTransaction == static_cast<uintptr_t>(-1)) || !m_QHBitmap.test(pTransaction))
+    {
+        ERROR("UHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
+        return;
+    }
+
+    // Configure remaining metadata
+    QH *pQH = &m_pQHList[pTransaction];
+    pQH->pMetaData->pCallback = pCallback;
+    pQH->pMetaData->pParam = pParam;
+
+    // Do we need to configure the asynchronous schedule?
+    if(m_pCurrentQueueTail)
+    {
+        /// \todo UHCI QHs etc
+#if 0
+        // This QH is NOT the queue head. If we leave this set to one, and the
+        // reclaim bit is set, the controller will think it's executed a full
+        // circle, when in fact it's only partway there.
+        pQH->hrcl = 0;
+
+        // Current QH needs to point to the schedule's head
+        size_t queueHeadIndex = (reinterpret_cast<uintptr_t>(m_pCurrentQueueHead) & 0xFFF) / sizeof(QH);
+        pQH->pNext = (m_pQHListPhys + (queueHeadIndex * sizeof(QH))) >> 5;
+
+        // Enter the information for correct dequeue
+        pQH->pMetaData->pNext = m_pCurrentQueueHead;
+        pQH->pMetaData->pPrev = m_pCurrentQueueTail;
+
+        QH *pOldTail = m_pCurrentQueueTail;
+
+        {
+            // Atomic operation - modifying both the housekeeping and the
+            // hardware linked lists
+            LockGuard<Spinlock> guard(m_QueueListChangeLock);
+
+            // Update the tail pointer
+            m_pCurrentQueueTail = pQH;
+
+            // The current tail needs to point to this QH
+            pOldTail->pNext = (m_pQHListPhys + (nTransaction * sizeof(QH))) >> 5;
+            pOldTail->nNextType = 1; // QH
+
+            // Finally, fix the linked list
+            pOldTail->pMetaData->pNext = pQH;
+            pOldTail->pMetaData->pPrev = pQH;
+        }
+
+#endif
+        return;
+    }
+    else
+    {
+        ERROR("UHCI: Queue tail is null!");
+    }
 }
 
 /*

@@ -100,7 +100,7 @@ class Ehci : public UsbHub,
 
             qTD overlay;
 
-            typedef struct MetaData
+            struct MetaData
             {
                 void (*pCallback)(uintptr_t, ssize_t);
                 uintptr_t pParam;
@@ -123,9 +123,7 @@ class Ehci : public UsbHub,
                 QH *pNext;
 
                 bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
-            }  MetaData;
-
-            MetaData *pMetaData;
+            } *pMetaData;
         } PACKED ALIGN(32) QH;
 
         virtual void getName(String &str)

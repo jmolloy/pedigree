@@ -55,14 +55,7 @@ class Uhci : public UsbHub, public IrqHandler
             uint32_t res3 : 1;
             uint32_t nMaxLen : 11;
             uint32_t pBuff;
-
-            //uint32_t periodic : 1;
-            uint32_t pPhysAddr : 28;
-            uint32_t res4 : 4;
-            uint32_t pCallback;
-            uint32_t pParam;
-            uint32_t pBuffer;
-        } PACKED TD;
+        } PACKED __attribute__((aligned(32))) TD;
 
         typedef struct QH
         {
@@ -74,9 +67,27 @@ class Uhci : public UsbHub, public IrqHandler
             uint32_t bElemQH : 1;
             uint32_t res1 : 2;
             uint32_t pElem : 28;
-            TD *pCurrent;
-            uint8_t res2[24-sizeof(uintptr_t)];
-        } PACKED QH;
+
+            struct MetaData
+            {
+                void (*pCallback)(uintptr_t, ssize_t);
+                uintptr_t pParam;
+
+                UsbEndpoint &endpointInfo;
+
+                bool bPeriodic;
+                TD *pFirstQTD;
+                TD *pLastQTD;
+                size_t nTotalBytes;
+
+                size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
+
+                QH *pPrev;
+                QH *pNext;
+
+                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
+            } *pMetaData;
+        } PACKED __attribute__((aligned(32))) QH;
 
         virtual void getName(String &str)
         {

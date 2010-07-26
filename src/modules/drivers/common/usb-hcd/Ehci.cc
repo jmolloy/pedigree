@@ -619,7 +619,7 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
 #endif
 
-    // Do we need to configure the asynchronous schedule?
+    // Link in to the asynchronous schedule
     if(m_pCurrentQueueTail)
     {
         // This QH is NOT the queue head. If we leave this set to one, and the
