@@ -37,6 +37,15 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         return -1;
     }
 
+    if(!nBytes)
+        return 0;
+
+    if(nBytes && (pBuffer & 0xF))
+    {
+        ERROR("USB: Input pointer wasn't properly aligned [" << pBuffer << ", " << nBytes << "]");
+        return -1;
+    }
+
     ssize_t nResult = 0;
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, m_Speed, pEndpoint->nMaxPacketSize);
