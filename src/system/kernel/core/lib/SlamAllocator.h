@@ -214,7 +214,7 @@ public:
 #endif
 #endif
             SlamCache *cache;
-        };
+        } __attribute__((aligned(16)));
 
         struct AllocFooter
         {
@@ -224,7 +224,7 @@ public:
 #endif
             size_t magic;
 #endif
-        };
+        } __attribute__((aligned(16)));
 private:
         bool m_bInitialised;
 
