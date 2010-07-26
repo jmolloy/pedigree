@@ -55,6 +55,9 @@ class Uhci : public UsbHub, public IrqHandler
             uint32_t res3 : 1;
             uint32_t nMaxLen : 11;
             uint32_t pBuff;
+
+            // Custom qTD fields
+            uint16_t nBufferSize;
         } PACKED __attribute__((aligned(32))) TD;
 
         typedef struct QH
@@ -105,6 +108,8 @@ class Uhci : public UsbHub, public IrqHandler
         // IRQ handler callback.
         virtual bool irq(irq_id_t number, InterruptState &state);
 
+        void doDequeue();
+
     private:
 
         enum UhciConstants {
@@ -119,6 +124,7 @@ class Uhci : public UsbHub, public IrqHandler
             UHCI_CMD_HCRES = 0x02,      // Host Controller Reset bit
             UHCI_CMD_RUN = 0x01,        // Run bit
 
+            UHCI_STS_ERR = 0x02,        // UHCI Error
             UHCI_STS_INT = 0x01,        // On Completition Interrupt bit
 
             UHCI_PORTSC_PRES = 0x200,   // Port Reset bit
@@ -155,8 +161,6 @@ class Uhci : public UsbHub, public IrqHandler
         uintptr_t m_pTransferPagesPhys;
 
         MemoryRegion m_UhciMR;
-
-
 
         Spinlock m_QueueListChangeLock;
 

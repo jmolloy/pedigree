@@ -205,7 +205,7 @@ Ehci::~Ehci()
 {
 }
 
-int threadStub(void *p)
+static int threadStub(void *p)
 {
     Ehci *pEhci = reinterpret_cast<Ehci*>(p);
     pEhci->doDequeue();
