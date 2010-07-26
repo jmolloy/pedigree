@@ -25,11 +25,6 @@
 #include "Ohci.h"
 #include "Uhci.h"
 
-/// \note Set to 1 if you want to test USB
-#define TEST_USB 1
-/// \note Set to 1 if you want to have the system halted after USB finishes initialization
-#define TEST_USB_HALT 1
-
 enum HcdConstants {
     HCI_CLASS = 0x0C,       // Host Controller PCI class
     HCI_SUBCLASS = 0x03,    // Host Controller PCI subclass
@@ -92,7 +87,6 @@ void probeUhci(Device *pDev)
 
 static void entry()
 {
-#if TEST_USB && (X86_COMMON || ARM_COMMON)
     // Interrupts may get disabled on the way here, so make sure they are enabled
     Processor::setInterrupts(true);
     NOTICE("TODO: Integrate new changes into OHCI.");
@@ -102,12 +96,6 @@ static void entry()
     //Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
 #ifdef X86_COMMON
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
-#endif
-    #if TEST_USB_HALT
-    NOTICE("Halting!");
-    Processor::setInterrupts(false);
-    Processor::halt();
-    #endif
 #endif
 }
 

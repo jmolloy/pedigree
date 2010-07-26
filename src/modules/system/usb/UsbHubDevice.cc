@@ -67,7 +67,6 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 
         // Port has been powered on and now reset, check to see if it's enabled and a device is connected
         portStatus = getPortStatus(i);
-        DEBUG_LOG("USB: HUB: Port status is " << portStatus);
         if((portStatus & 0x3) == 0x3)
         {
             // Got a device - what type?
