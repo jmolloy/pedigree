@@ -253,7 +253,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                     if((pqTD->nStatus & 0x7c) || (nStatus & UHCI_STS_ERR))
                     {
 #ifdef USB_VERBOSE_DEBUG
-                        ERROR_NOLOCK(((nStatus & EHCI_STS_ERR) ? "USB" : "qTD") << " ERROR!");
+                        ERROR_NOLOCK(((nStatus & UHCI_STS_ERR) ? "USB" : "qTD") << " ERROR!");
                         ERROR_NOLOCK("qTD Status: " << pqTD->nStatus);
 #endif
                         nResult = -(pqTD->nStatus & 0x7c);
@@ -264,7 +264,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
 #ifdef USB_VERBOSE_DEBUG
-                    DEBUG_LOG_NOLOCK("qTD #" << Dec << nQTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << " " << (pqTD->nPid==0?"OUT":(pqTD->nPid==1?"IN":(pqTD->nPid==2?"SETUP":""))) << " " << nResult << Hex);
+                    DEBUG_LOG_NOLOCK("qTD #" << Dec << nQTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pqTD->nAddress << ":" << pqTD->nEndpoint << " " << (pqTD->nPid==UsbPidOut?"OUT":(pqTD->nPid==UsbPidIn?"IN":(pqTD->nPid==UsbPidSetup?"SETUP":""))) << " " << nResult << Hex);
 #endif
 
                     // Last qTD or error condition?
@@ -380,20 +380,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     pTD->nErr = 1;
 
     // PID for this transfer
-    switch(pid)
-    {
-        case UsbPidSetup:
-            pTD->nPid = 2;
-            break;
-        case UsbPidIn:
-            pTD->nPid = 1;
-            break;
-        case UsbPidOut:
-            pTD->nPid = 0;
-            break;
-        default:
-            pTD->nPid = 3;
-    }
+    pTD->nPid = pid;
 
     // Speed information
     pTD->bLoSpeed = pQH->pMetaData->endpointInfo.speed == LowSpeed;
@@ -601,3 +588,4 @@ void Uhci::addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t 
     // Resume the controller
     m_pBase->write16(UHCI_CMD_RUN, UHCI_CMD);
 }*/
+
