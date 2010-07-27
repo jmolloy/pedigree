@@ -149,7 +149,6 @@ void Thread::setStatus(Thread::Status s)
 
 void Thread::threadExited()
 {
-  NOTICE("Thread exited");
   Processor::information().getScheduler().killCurrentThread();
 }
 
