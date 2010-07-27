@@ -62,12 +62,18 @@ Process::~Process()
 {
   Scheduler::instance().removeProcess(this);
   Thread *pThread = m_Threads[0];
-  m_Threads.erase(m_Threads.begin());
+  if(m_Threads.count())
+    m_Threads.erase(m_Threads.begin());
+  else
+      WARNING("Process with an empty thread list, potentially unstable situation");
+  if(!pThread && m_Threads.count())
+      WARNING("Process with a null entry for the first thread, potentially unstable situation");
   if (pThread != Processor::information().getCurrentThread())
       delete pThread; // Calls Scheduler::remove and this::remove.
-  else
+  else if(pThread)
       pThread->setParent(0);
-  delete m_pSubsystem;
+  if(m_pSubsystem)
+    delete m_pSubsystem;
 
   Spinlock lock;
   lock.acquire(); // Disables interrupts.
